@@ -1,0 +1,302 @@
+			NWTC_Subs Change Log
+			--------------------
+
+2004-03-19  M. Buhl, J. Jonkman, B. Jonkman
+ The first official release of NWTC_Subs.  So far, the only routines included
+ are those needed by FAST, TurbSim, and WT_Perf.
+
+2004-04-22  M. Buhl
+ I added CompDR() to NWTC_Subs.f90.  It calculates the blade-segment lengths
+  from the node locations.
+
+2004-05-03  M. Buhl
+ I changed the variable Rn to Re to use the most-common notation for Reynolds number.
+
+2004-06-22  M. Buhl
+ I copied FileSize(), WrML(), and Is_NaN() from Crunch to SysVF.F90.
+
+v1.00a-mlb  2004-07-02  M. Buhl
+ I added a new NWTCVer variable to NWTC_Mods\ProgMod().  I modified NWTC_Subs\DispNVD()
+   to display the library version in addition to the calling program name and version.
+ I increased the string length of ProgVer to accomodate the text added for high-
+   precision versions.
+ I modified NWTC_Subs\CompDR() to generate an error if the blade length is off by more
+   than 0.5% and a warning if it is off by 0.1%.  Craig H. asked for that.
+
+
+v1.00a-mlb  2004-07-07  M. Buhl
+ I added INTERFACE blocks to NWTC_Subs to allow the use of the routines to read variables
+   or arrays in a generic fashion.
+ I created many routines All?Ary1,2,3 to allocated arrays of up to three dimensions
+   and added an INTERFACE block to allow the use of the generic routine AllocAry.
+   I creates routines for REAL, INTEGER, LOGICAL, and CHARACTER arrays for a total
+   of 12 routines.
+ I had to fix the ReadCAry() routine in NWTC_Subs.f90.  I can't imagine it had ever
+   worked.
+
+v1.00c-mlb  2004-10-15  M. Buhl
+ I added an IMPLICIT NONE to the top of the NWTC_Subs.f90 module and eliminated all
+   the others in the individual routines.
+
+v1.00d-mlb  2005-02-04  M. Buhl
+ I replaced all the $ editing with ADVANCE='NO', which is standard Fortran.  I moved all
+   the changed routines and the routines that called them in SysVF.f90 to NWTC_Subs.f90.
+ I added ReadStr() to NWTC_Subs.
+
+v1.00e-mlb  2005-02-24  M. Buhl
+ I added PiBy2, TwoPi, and TwoPi8 to the NWTC_Const module.
+ I added AeroName and AeroVer to the ProgMod() module in NWTC_Mods.f90.
+ I added a MPi2Pi routine to ensure an angle is between -Pi and Pi.
+ I added Jason's AddOrSub2Pi.
+
+v1.00e-mlb  2005-02-25  M. Buhl
+ I added OpenFUnkFile.
+ I added PiConsts and removed their initializations in NWTC_Consts.
+
+v1.00e-mlb  2005-03-21  M. Buhl
+ I added the Get_Env function to SysVF.f90.
+
+v1.00e-mlb  2005-04-12  M. Buhl
+ I added the GL_Loc function to NWTC_Subs.f90.
+
+v1.00e-mlb  2005-06-13  M. Buhl
+ I started to add InterpAF() to NWTC_Subs.f90.  It interpolates airfoil tables.
+   This major effort will be addressed later.
+ I added BSortReal() to NWTC_Subs.f90.  It bubble sorts an array of reals.
+ I added SortUnion, which takes two sorted lists and generates a sorted union
+   of the two.
+
+v1.00e-mlb  2005-06-24  M. Buhl
+ I added subroutine Warn, which works like Abort, but doesn't stop the program.
+ I changed the OPEN in OpenUnf to use BINARY instead of UNFORMATTED.
+
+v1.00e-mlb  2005-06-27  M. Buhl
+ I added the variables UnfForm and Endian to SysMods.
+ I added OpenUInfile() and OpenUOutfile() to NWTC_Subs.f90 for unformatted files.
+ I removed OpenUnf() from SysVF.f90.
+
+v1.00e-mlb  2005-07-05  M. Buhl
+ I added CheckArgs() (from FAST) to NWTC_Subs.f90.
+ I added ACTION="WRITE" to the open statement in OpenFOutFile().
+
+v1.00e-mlb  2005-07-18  M. Buhl
+ I had to add "USE Sys_Subs" to CheckArgs() in NWTC_Subs.f90.  Don't know how it
+   could have worked before.
+
+v1.00e-mlb  2005-07-22  M. Buhl
+ I added a Beep flag to NWTC_Output and modified Abort() and Warn() to test the
+   flag.
+
+v1.00e-mlb  2005-07-25  M. Buhl
+ I added double-precision versions of all the Pi constants in both the module and
+   the initializing routine.
+ I added the AeroData derived type to NWTC_Aero to hold interpolated values.
+ I added the new routine AeroInt, which is a superset of GetCoefs that also
+   interpolates the header data for the AeroDyn airfoil tables.
+ I added Cn and Cc to the airfoil tables for the dynamic stall calculations.
+   I updated GetAF to fill those tables.
+
+v1.00e-mlb  2005-07-25  M. Buhl
+ I added a test in GetAF to ensure that the alpha range is from -180 to 180.
+
+v1.00e-mlb  2005-08-11  M. Buhl
+ I modified ReadCVar and ReadStr so the echoed strings are quote delimited.
+
+v1.00e-mlb  2005-11-04  M. Buhl
+ I created NameOFile() to name the output file based upon the name of the input
+   file that is retrieved from the command line.  This routine uses the Fortran
+   2000 intrinsic functions for accessing the command line that came from the
+   F2KCLI library.
+
+v1.00f-mlb  2005-11-04  M. Buhl
+ I reorganized the routines and modules.  From NWTC_Subs.f90, I created NWTC_IO.f90,
+   NWTC_Num.f90, and NWTC_Aero.  I moved variables from NWTC_mods.f90 to the
+   appropriate file headers.  I moved the USE and IMPLICIT NONE statements from
+   individual routines to the file headers.  I eliminated all the alpha comments.
+
+v1.00f-mlb  2005-11-04  M. Buhl
+ I moved OpenBin in SysVF.f90 to NWTC_IO.f90 and changed it so it calls OpenBinFile
+   in SysVF.f90.  I pass an Error flag between the two so the system-specific routine
+   no longer calls Abort(), which caused a circular reference.
+
+v1.00f-mlb  2005-11-10  B. Jonkman, M. Buhl
+ Bonnie found and fixed bugs that crop up in certain situations for FindLine() and WrScr().
+ Marshall added GET_COMMAND_COUNT(), GET_COMMAND(), and GET_COMMAND_ARGUMENT() to SysSubs
+   to mimic the built-in Fortran 2000 routines.
+ Jason requested a complex version of InterpStp().  I renamed InterpStp() to InterpStpReal(),
+   created an InterpStpComp(), and created a generic interface so invoking InterpStp()
+   works with either.  I did something similar for InterpBin().
+
+v1.00  2005-11-10  M. Buhl
+ I released version 1.00 to the web.
+
+v1.01  2005-11-10  B. Jonkman
+ Bonnie found an error in NWTC_Num.f90/SortUnion() and fixed it.
+
+v1.02  2005-11-15  M. Buhl
+ Gunjit complained that my Rho interfered withi his Rho.  I decided that it would be better to
+   refer to the air density with a more-specific name, so I renamed Rho to AirDens.  I'll have
+   to fix WT_Perf and AeroDyn.
+ Gunjit also found that I forgot to compute R2D and R2D_D.  While fixing that, I noticed I was
+   using single-precision constants to compute DP Pi constants.
+
+v1.03  2006-01-30  M. Buhl
+ I found a problem with OpenUOutfile.  It really seemed to want to open an input file instead.
+
+v1.10  2006-02-02  M. Buhl
+ I added functions Mean and StdDev to NWTC_Num.f90.
+
+v1.11  2006-02-02  M. Buhl
+ I modified the output statement in NWTC_IO.f90\DispNVD() to eliminate the extra space between
+   the name of the library and the version information.
+
+v1.12  2006-02-02  B. Jonkman, M. Buhl
+ Bonnie improved NWTC_IO.f90\CheckArgs().
+ At Bonnie's urging, Marshall added NWTC_Init() to NWTC_Library.f90.  It calls all routines that
+   need to be to make the library work.  Currently, only PiConsts() is included.  He also added
+   some notes to the top on the file.
+ Bonnie also came up with a mod to NWTC_IO.f90\GetRoot() to deal with people entering file names
+   with "." in the path, but no real extension.  Marshall added logic to deal with "." and "..".
+ Bonnie also suggested we come up with KIND parameters for all types, so Marshall added a bunch
+   to the precision modules.
+ In NWTC_IO.f90\CheckArgs(), Marshall changed declarations to use default INTEGERs instead of
+   4-byte INTEGERs.
+ Marshall created NWTC_IO.f90\ReadNum() to read a word stringfrom input and test to see if it
+   starts with a T or F.  If not, it returns the word which can be read for an integer or real.
+   This prevents True or False from being valid numeric input.  Both ReadIVar() and ReadRVar()
+   were modified to use ReadNum().
+
+v1.01.03  2006-04-25  M. Buhl
+ For WT_Perf, I added the constants TwoByPi and TwoByPi_D to NWTC_Num.f90.
+ I removed the declaration for FirstChr in NWTC_IO.f90\ReadNum() as it was not being used.
+ I modified NWTC_Aero.f90\GetAF() because the allocations for AF_Table%Tab(ITab)%FTB and
+   AF_Table%Tab(ITab)%FTBC use the incorrect number of alphas.  I also had to modify an IF for
+   the same reason.
+
+v1.01.04  2006-05-12  M. Buhl
+ Kelly Londenberg pointed out that I used the wrong index in an error statement in NWTC_Aero.f90\GetAF().
+   Instead of NumSeg I needed to use ISeg.
+
+v1.01.05  2006-09-20  M. Buhl
+ I changed the unit number for the console (CU) in SysVF.f90 to 7 to work around a bug in IVF that
+   manifests itself when using list-directed prints.  I also created a variable to specify the record
+   length for the console (ConRecL) and defaulted it to 120.  I had to modify OpenCon to use the new
+   variable.
+
+v1.01.06  2007-04-06  M. Buhl
+ I renamed NWTC_Num.f90\StdDev() to StdDevFn().
+ I got rid of some redundant "Use Precision" and "IMPLICIT NONE" statements.
+ I re-added the All?Ary? routines to NWTC_IO.f90.  I do not remember why I removed them.
+
+v1.01.07  2007-09-05  M. Buhl
+ I changed Abort() to ProgAbort() and Warn() to ProgWarn() to avoid conflicts with built-in
+   routines.
+
+v1.01.08  2007-09-26  M. Buhl
+ I modified ReadLVar() so it checks to see if the variable name is not "ECHO" before echoing it.
+
+v1.01.09  2008-01-18  M. Buhl
+ Bonnie spotted an error in SingPrec.f90 where I said B4Ki should hold a number as big as 10^10
+   instead of 10^9.  I also modified DoubPrec.f90 to do integers the same way as SingPrec.f90.
+
+v1.01.10  2008-11-14  M. Buhl
+ When I tried to compile with WT_Perf, I was informed that IOS was not declared in SysIVF.f90\FileSize().
+
+v1.01.11, 2009-12-03  M. Buhl
+ I replace the call to ProgExit in NWTC_IO.f90\ProgAbort() with "STOP 1".
+
+v1.02.00 2010-03-16 B. Jonkman
+ I fixed an error in NWTC_IO.f90\Flt2LStr() that incorrectly removed zeros after the exponent.
+ I fixed typos in NWTC_Aero.f90\AeroInt() and \GetCoefs() where the function GetCoeff() was
+   called using the index for the wrong airfoil table. The results shouldn't change, but the
+   interpolation might be faster now.
+ I added subroutines OpenBInpFile(), ReadRAryLines(), ReadCAryLines(), and ReadAryLines()
+   to NWTC_IO.f90.
+ I modified NWTC_IO.f90\DispNVD() to use NWTCName instead of hard-coding the name.
+ I added subroutine OpenBinInpFile() to Sys*.f90 (I've not tested it in Gnu or IFL)
+ I added subroutine Get_CWD() to Sys*.f90 (I've not tested it in Gnu or IFL)
+ I've removed variables AeroName and AeroVer from NWTC_Aero.f90 and AirDens, KinVisc,
+   and SpdSound from NWTC_Aero.f90. (None of these variables they were used in the library.)
+ I created a SysMATLAB.f90 file so that we can write to the MATLAB command window when we use
+   Simulink. I moved the WrNR() routine from NWTC_IO to the Sys*.f90 files.  WrNR is not
+   "system-specific" per se, but it is the only function outside Sys*.f90 that uses unit CU
+   to write to the screen.  Since we don't use CU in Matlab, I moved the routine.  This allows
+   all of the Matlab-specific routines to be in one file.
+ I added subroutines OpenEcho() and CloseEcho() to NWTC_IO.f90.
+ I added optional arguments to subroutines that have potential for errors (calling ProgAbort)
+   so that they return an error flag instead of aborting the program.  This will allow us to
+   clean up after ourselves when linking with other programs (like Matlab, using the FAST
+   S_Function).  This involves changes in NWTC_NUM.f90, NWTC_IO.f90, and NWTC_Aero.f90. I did
+   NOT change NWTC_Aero.f90\GetAF() because an optional ErrStat argument in that subroutine
+   will be a pain.
+ I removed the "STOP 1" call from NWTC_IO.f90\ProgAbort() and added some comments to
+   Sys*.f90\ProgExit() to replace EXIT() with STOP, if your compiler doesn't support
+   the EXIT() subroutine.
+ I changed the length of the argument, Arg, in NWTC_IO.f90\CheckArgs() from 99 to "LEN(InputFile)"
+   to allow input file names from the command line to be larger than 99 characters.
+ I added Jason Jonkman's SUBROUTINE SmllRotTrans() to NWTC_Num.f90. This routine was previously
+   in FAST and HydroCalc.
+
+v1.03.00  2011-11-05  B. Jonkman, M. Buhl, D. Maniaci
+ Marshall modified NWTC_Aero.f90 in many places to add the possibility of having Cp,min data in the airfoil tables.
+ Marshall modified NWTC_Aero.f90 in many places to add the ability to read control settings in the airfoil tables.
+ Dave modified error messages to direct the users to discussions on the NWTC Design Codes
+   forums that describe the particular error/warning.
+ Bonnie added FUNCTIONs IndexCharAry() and CROSS_PRODUCT() to NWTC_Num.f90.
+  Marshall started to change WrOver() to use standard Fortran, but FLUSH doesn't seem to work, so he left it as
+    it was and commented out the new stuff.
+  Marshall added WaitTime() to NWTC_IO.
+  Marshall changed CU from 7 to 6 in SysIVF.
+  Marshall tried to replace "CALL FLUSH ( Unit )" with "FLUSH ( Unit )" in FlushOut() in SysIVF, which is a new standard
+    Fortran 2003 statement, but there was a problem with ADAMS, so he commented out the changes.  We'll have to
+    track that problem down.  We should also eventually eliminate FlushOut() altogether.
+
+v1.03.01  2011-Jan-13  M. Buhl
+ I fixed a bug in WrScr() that manifested itself in IVF v12 where we created a format with a
+   "0X" in it.  We now have an IF that eliminates the skip if the indent is zero.
+
+v1.04.00a-bjj, 6 Apr 2011, B. Jonkman
+  I added FUNCTIONs EqualRealNos(), PathIsRelative() and ReadOutputList() and SUBROUTINE GetNewUnit() to NWTC_IO.f90
+  I added an extra if statement to IndexCharAry() because it was missing the last value of the array.
+
+  I fixed the logic in NWTC_IO.f90\GetRoot() so that a file named ".\wind\test" returns RootName = ".\wind\test"
+    instead of RootName = "".
+
+v1.04.00b-hs, 20 Apr 2011, H. Song (in progress)
+  I added SUBROUTINE RombergInt to NWTC_Num.f90 .
+  I updated the version number in NWTC_IO.f90 .
+
+v1.04.00c-mlb, 2011-Jun-21  M. Buhl
+  I added John Michalakes version of SysGnu.f90, but had to change the console file in OpenCon to 'CONOUT$'.
+  I had to comment out the "USE NWTC_Library" from Huimin's RombergInt() routine in NWTC_Num.f90.
+  I had to break a long line in two in Huimun's RombergInt().
+
+v1.04.00d-bjj,  Dec 2011, B. Jonkman
+  I added NWTC_SharedDataTypes.f90 to the archive. I hope to add a USE SharedDataTypes in MODULE NWTC_Library, but
+    for now, I will wait until we update AeroDyn because it defines these same data types in MODULE SharedTypes
+    
+  I modified NWTC_Init() so that the ProgName and ProgVer variables are optional function paramters. This removes
+    the need to set those variables separately in the calling program's code. I also write a message stating
+    that the NWTC Subroutine Library {version number) is running. I removed the message in DispNDV() that states
+    what version of the NWTC Subroutine Library is running so there won't be duplicate messages.
+
+  I modified FlushOut() and FileSize() in SysIVF.f90 to explicitly use an INTEGER(4) in calls to FLUSH() and FSTAT() 
+    (per documentation of the FLUSH() and FSTAT() routines).
+    
+  I changed CU from 6 back to 7 in SysIVF.f90 because Adams (2011 in particular) crashes with opening the console using CU 6.
+  
+
+ To do:
+   Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
+   Fix SysGnu.f90 (subroutines OpenCon(), WrOver(), WrNR(), & maybe others are not working properly): https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=540   
+ 
+   Create new read array routines that read an array from multiple lines.
+   Fix NWTC_Aero.f90\AeroInt() to interpolate between control settings.
+
+   Suggestion from Marshall:
+
+      Add the optional UsrAlarm to ProgExit. (Requires moving BEEP from NWTC_IO)
+
+      Are we going to add optional arguments to these kinds of routines to return
+      to the calling routine with an error flag?
+
