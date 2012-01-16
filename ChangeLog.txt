@@ -1,0 +1,121 @@
+========================================================================
+    HydroDyn Change Log
+========================================================================
+
+v1.00.00a-bjj  6-Apr-2011 B. Jonkman
+   Linked with NWTC_Library v1.04.00a-bjj
+
+   I added ErrStat to be used everywhere there was a ProgAbort statement (and
+     added the TrapErrors = .TRUE. argument). This required many subroutines
+     to have new ErrStat arguments, too.  I also added ErrStat to all the
+     calls to OpenFInpFile().
+     
+   I separated the 3 modules in HydroCalc.f90 into Waves.f90, FloatingPlatform.f90,
+     and FixedBottomSupportStructure.f90.
+     
+   I replaced all INTEGER(4) declarations with INTEGER instead.
+       
+   I modified the FFT_Module in FFTMod so it 
+      1) returns an error status instead of aborting, and
+      2) contains no internal global data
+      This required changes to the subroutines in HydroDyn that call FFT_Module routines.
+   
+   I added derived types to the HydroDyn "sub" modules. 
+      In the initialization routines, I replaced all the INTENT(IN) variables with these
+         derived data types, not always documenting the changes in the code (b/c I just
+         replaced variable names with the new variable names).
+   
+      In the Waves module, I made the data type that stores the "module" data PUBLIC. This is
+         because the FloatingPlatform and FixedBottomSupportStructure modules use a lot of 
+         data from the Waves module and it became very troublesome to decide how to encapsulate
+         the Wave data.
+   
+   I added NWaveElev, WaveElevxi(:), and WaveElevyi(:) to the Wave section of the input file
+   I added LineNodes and LSNodes to the mooring lines section of the input file... and then I
+      took LSNodes out of the input file (per jmj) and made LSNodes evenly distributed nodes 
+      in the middle of elements of equal length along the mooring line.
+   
+   I made the UserLine subroutine, formerly in FloatingPltformLD() into the module UserLineModule,
+      which is stored in the UserLine.f90 source file.  It contains initialization and termination
+      routines as well as the UserLine subroutine.  Because each line can contain different numbers
+      of LineNodes, I had to rework the data structures of the lines a bit.  This also included
+      changing the lines in the main FloatingPlatform module.
+      
+   I replaced inputs MPNodes, MPDiam, MPCA, and MPCD from the tower/monopile input section and
+      inputs PtfmNodes, PtfmDraft, PtfmDiam, and PtfmCD from the floating platform input section  
+      with sections called Joints, Member Properties, and Members. These new sections define a 
+      more general discretization for the hydrodynamics module.
+      
+   I removed NWaveKin and WaveKinNd from the input file. These values are now replaced by the
+      new member/node numbering scheme allowing the first 9 members and their first 9 nodes to
+      be output variables.
+      
+   I created a new output module stored in Hydro_IO.f90. This module is really part of HydroDyn 
+      (but contains a lot of code that could be reproduced in other modules).  It checks for
+      valid inputs, as well as opens, writes and closes the output file.
+      
+   I added many new outputs, including 
+      - replacing WaveElev with 9 new elevation outputs: Wave{1,2,...9}Elev
+      - adding Ln{1,2,...9}Nd{1,2,...9}Ten, Ln{1,2,...9}Nd{1,2,...9}xi, 
+               Ln{1,2,...9}Nd{1,2,...9}yi,  Ln{1,2,...9}Nd{1,2,...9}yi
+      - replacing Wave{1,2,...9}A{x,y,z}i and Wave{1,2,...9}V{x,y,z}i with
+        M{1,2,...9}N{1,2,...9}FA{x,y,z}i and M{1,2,...9}N{1,2,...9}FV{x,y,z}i. The new numbering 
+        corresponds to the fluid acceleration/velocity on the ith node N of member M as defined
+        in the new input file.
+      
+   I modified the Waves module to initialize the RANDOM_NUMBER with the correct number of seeds
+      on any system.  The intrinsic random number generator does not state how many seeds it 
+      requires -- on IVF and CVF it uses 2 seeds; in gfortran, it needs 8 seeds (because
+      it uses a different algorithm to generate the random numbers).
+            
+   UserTwrLd() was moved to FAST.            
+            
+v1.00.00b-jbj  30-Sep-2011 J. and B. Jonkman
+   Linked with NWTC_Library v1.04.00d-bjj
+   
+   We added the changes from FAST 6.10d-bjj.
+   We modified the input file to contain the WaveNDAmp input parameter.
+            
+v1.00.00c-bjj  30-Sep-2011 B. Jonkman (in progress)
+   I renamed the FUNCTION HD_GetValue() to HD_GetValue_CHAR() and added FUNCTION HD_GetValue_AllOuts(). 
+      I then made a generic interface called HD_GetValue() to call the appropriate version of the 
+      FUNCTION. HD_GetValue_AllOuts() accepts the parameter values from MODULE HD_Output so that all
+      calculated outputs are available. (I didn't want to use the character version of the function
+      because of the high overhead associated with searching the nearly 1000 available output character
+      strings for a match.)
+
+   I renamed the Wave_IsAllocated() function to Waves_IsAllocated() because the module name is "Waves".
+   I renamed the Wave_Terminate() function to Waves_Terminate() because the module name is "Waves".
+   I added a Waves_GetUndisturbedElev() function to the waves module. This function returns the nearest-neighbor wave elevation, given time and x and y position.  I also needed to add the WaveElevxi and WaveElevyi arrays into the Waves_DataType
+
+
+___________________________________    
+TO DO:
+___________________________________    
+
+- Update the HydroDynOutlistParameters.xlsx file with descriptions
+- figure out how to deal with "per unit length" and "point" loads -- this must be specified as an output of initialization and used in the integration scheme from the CalculateLoads routine.
+    we need to modify the AD_Init() output interface to match HD_Init(); both will need to return a new type describing how the output loads are normalized.
+       e.g.: TYPE(AeroLoadConfig)
+               TYPE(PointType), ALLOCATABLE :: Points (:)
+               TYPE(LineType) , ALLOCATABLE :: Lines  (:)
+               INTEGER :: ...
+             END TYPE
+    
+       e.g.: TYPE(ALLAeroLoadConfig)
+               INTEGER :: Blade
+               INTEGER :: Hub
+               INTEGER :: ...
+             END TYPE
+         
+     where the valid entries for these integers are 0 for point loads, 1 for loads per unit length, 2 for "per unit area", 3 for "per unit volume"
+     so that we know how to interpret the loads outside of HydroDyn.
+
+- Add ErrStat to user-defined routines
+- user current and wave spectrum: make separate source files, modules, and send arrays (do not call in a loop as is currently done)
+- create .hds "hydrodyn summary file" with "HARVESTED RANDOM" seeds from "RANDOM_NUMBER" and add "all that fun stuff" - like statistical summaries from TurbSim (FUTURE work; not urgent)
+            
+-- ADD subroutines LoadStates() and SaveStates() so that the simulation can be started in the middle (this would be ideal for something like Simulink, I think. John M. also mentioned it for another application with FAST/OpenFOAM).
+
+
+/////////////////////////////////////////////////////////////////////////////
