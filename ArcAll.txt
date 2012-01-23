@@ -427,6 +427,7 @@ CertTest\TstFiles\Test13_SFunc.fsm
 
 CertTest\TstFiles\Test14.fsm
 CertTest\TstFiles\Test14.eig
+CertTest\TstFiles\Test14.lin
 CertTest\TstFiles\Test14_ADAMS_LIN.out
 CertTest\TstFiles\Test14.opt
 

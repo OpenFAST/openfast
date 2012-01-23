@@ -15,16 +15,7 @@ REAL(ReKi)                   :: CRatioBEA                                       
 REAL(ReKi)                   :: CRatioBGJ                                       ! The ratio of CMatrix to KMatrix for the blade torsion     deflection.
 REAL(ReKi)                   :: CRatioTEA                                       ! The ratio of CMatrix to KMatrix for the tower extensional deflection.
 REAL(ReKi)                   :: CRatioTGJ                                       ! The ratio of CMatrix to KMatrix for the tower torsion     deflection.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
-!jmj Also, add an undocumented feature for modeling the hydrodynamic loading on
-!jmj   a monopile.  Do this by reading in addition inputs from the platform
-!jmj   file if they exist:
 REAL(ReKi), PARAMETER        :: FrSrfcSpc =  5.0                                ! Distance between points on the still water level plane along the incident wave propogation heading direction for depicting the free surface where the elevation of the incident waves will be computed used for free surface GRAPHICS. (meters)  !JASON: MAKE THIS AN ACTUAL INPUT TO THE PROGRAM IN ADAMSFile WHEN YOU DOCUMENT THESE ROUTINES!!!!!
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 REAL(ReKi)                   :: GBoxLength                                      ! Length, width, height of the gearbox for gearbox GRAPHICS.
 REAL(ReKi)                   :: GenLength                                       ! Length of the generator used for gen. GRAPHICS.
 REAL(ReKi)                   :: GenRad                                          ! Radius of the generator used for gen. GRAPHICS.
@@ -40,21 +31,11 @@ REAL(ReKi)                   :: ThkOvrChrd                                      
 REAL(ReKi)                   :: TwrBaseRad                                      ! Tower base radius used for linearly tapered tower GRAPHICS.
 REAL(ReKi)                   :: TwrTopRad                                       ! Tower top  radius used for linearly tapered tower GRAPHICS.
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Simplify the SFORCE used to generate free surface GRAPHICS in the
-!jmj   FAST-to-ADAMS preprocessor.  Also, eliminate the free surface DOFs
-!jmj   during a linearization analysis:
-!jmj Also, replace the hard-coded mooring line restoring calculation with a
-!jmj   general purpose, quasi-static solution based on the analytical catenary
-!jmj   cable equations with seabed interaction:
 INTEGER(4)                   :: NFreeSrfc = -1                                  ! Number of points on free surface (not including the zero'th point) where the elevation of the incident waves will be computed (computed every FrSrfcSpc meters along the incident wave propogation heading direction for a length of the rotor diameter).
 INTEGER(4)                   :: NLnNodes  = 10                                  ! Number of nodes per line for mooring line GRAPHICS.  !JASON: MAKE THIS AN ACTUAL INPUT TO THE PROGRAM IN ADAMSFile WHEN YOU DOCUMENT THESE ROUTINES!!!!!
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
 INTEGER(4)                   :: NSides                                          ! The number of sides used in GRAPHICS CYLINDER and FRUSTUM statements.
 
-!bjj chg: LOGICAL(1)                   :: MakeLINacf                                      ! Switch for making an ADAMS/LINEAR control command file.  To prevent an ADAMS/LINEAR control command file to be made, and to not include the RESULTS statement in the ADAMS dataset, set to .FALSE.
 LOGICAL                      :: MakeLINacf                                      ! Switch for making an ADAMS/LINEAR control command file.  To prevent an ADAMS/LINEAR control command file to be made, and to not include the RESULTS statement in the ADAMS dataset, set to .FALSE.
-!bjj chg: LOGICAL(1)                   :: SaveGrphcs                                      ! Switch to determine whether or note GRAPHICS output is saved in an ADAMS analysis.
 LOGICAL                      :: SaveGrphcs                                      ! Switch to determine whether or note GRAPHICS output is saved in an ADAMS analysis.
 
 
@@ -68,33 +49,17 @@ MODULE AeroElem
 
 
 USE                             Precision
-!bjj start of proposed change
 USE                             AeroDyn  ! for type;  Precision is also included so the previous line could be removed, too.
-!bjj end of proposed change
 
 
-!bjj rm:REAL(ReKi)                   :: ElAeroLoc (3)                                   ! Vector location of the current aerodynamic element relative to the undeflected tower top.
-!bjj start of proposed change
-!rmREAL(ReKi)                   :: VES       (3)                                   ! Absolute velocity of blade point S in frame E.
-!bjj end of proposed change
-!BJJ RM:REAL(ReKi)                   :: ElRad                                           ! Radius of the curent element measured radially from the center of rotor rotation.
 
-!bjj start of proposed change
 TYPE(AllAeroMarkers)          :: ADAeroMarkers
-!TYPE(Marker)                   :: ADCurrentMarker
 TYPE(AeroLoadsOptions)        :: ADIntrfaceOptions
-!TYPE(CalcOutput),ALLOCATABLE  :: ADCurrentOutputs(:,:)
 TYPE(AllAeroLoads)            :: ADAeroLoads
 TYPE(AeroConfig)              :: ADInterfaceComponents                        ! The configuration markers that make up the bodies where aerodynamic calculations will be needed
 
-!REAL(ReKi), ALLOCATABLE, SAVE  :: ElAeroFrc(:,:,:) ! Array of DFN, DFT, PMA aero forces and moment on elements
-
 
 INTEGER                       :: NumADBldNodes = 0                               ! Number of blade nodes in AeroDyn
-!bjj rm:LOGICAL                       :: ADFirstLoop
-!bjj rm:REAL(ReKi)                    :: Prev_Aero_t = 0.0   ! Last time aero forces were updated - set to -1 so aero calcs are done at t = 0
-
-!bjj end of proposed change
 
 
 END MODULE AeroElem
@@ -255,17 +220,9 @@ MODULE Constants
 USE                             Precision
 
 
-!rmREAL(ReKi), PARAMETER        :: D2R      =  0.017453293                         ! Factor to convert degrees to radians.
 REAL(ReKi), PARAMETER        :: Inv2Pi   =  0.15915494                          ! 0.5/Pi.
-!rmREAL(ReKi), PARAMETER        :: Pi       =  3.1415927                           ! Ratio of a circle's circumference to its diameter.
-!rmREAL(ReKi), PARAMETER        :: PiOvr2   =  1.5707963                           ! Pi/2.
-!rmREAL(ReKi), PARAMETER        :: R2D      = 57.295780                            ! Factor to convert radians to degrees.
-!rmREAL(ReKi), PARAMETER        :: RPM2RPS  =  0.10471976                          ! Factor to convert revolutions per minute to radians per second.
-!rmREAL(ReKi), PARAMETER        :: RPS2RPM  =  9.5492966                           ! Factor to convert radians per second to revolutions per minute.
-!rmREAL(ReKi), PARAMETER        :: TwoPi    =  6.2831853                           ! 2*Pi.
 REAL(ReKi)                   :: TwoPiNB                                         ! 2*Pi/NumBl.  This constant is calculated in fast_io.f90/Inputs()
-!rm
-!rm
+
 END MODULE Constants
 !=======================================================================
 MODULE DOFs
@@ -347,7 +304,6 @@ INTEGER(4), ALLOCATABLE      :: PYE      (:)                                    
 INTEGER(4), ALLOCATABLE      :: SrtPS    (:)                                    ! Sorted (from smallest to largest DOF index) version of PS().
 INTEGER(4), ALLOCATABLE      :: SrtPSNAUG(:)                                    ! SrtPS() with the additional value of NAUG.
 
-!bjj chg: LOGICAL(1), ALLOCATABLE      :: DOF_Flag (:)                                    ! Array which stores values of the feature flags for each DOF.
 LOGICAL,    ALLOCATABLE      :: DOF_Flag (:)                                    ! Array which stores values of the feature flags for each DOF.
 
 CHARACTER(99), ALLOCATABLE   :: DOF_Desc (:)                                    ! Array which stores descriptions of each DOF.
@@ -408,7 +364,6 @@ REAL(ReKi)                   :: TEC_Xe1                                         
 INTEGER(4)                   :: GenDir                                          ! Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS).
 INTEGER(4)                   :: TEC_NPol                                        ! Number of poles for Thevenin-equivalent circuit.
 
-!bjj chg: LOGICAL(1)                   :: GBRevers                                        ! Gearbox reversal flag.
 LOGICAL                      :: GBRevers                                        ! Gearbox reversal flag.
 
 
@@ -424,14 +379,6 @@ USE                             Precision
 
 
 REAL(ReKi)                   :: AirDens                                         ! Air density = RHO.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
-!jmj Also, add an undocumented feature for modeling the hydrodynamic loading on
-!jmj   a monopile.  Do this by reading in addition inputs from the platform
-!jmj   file if they exist:
 REAL(ReKi)                   :: CurrDIDir = 0.0                                 ! Depth-independent current heading direction.
 REAL(ReKi)                   :: CurrDIV   = 0.0                                 ! Depth-independent current velocity.
 REAL(ReKi)                   :: CurrNSDir = 0.0                                 ! Near-surface current heading direction.
@@ -439,17 +386,8 @@ REAL(ReKi)                   :: CurrNSRef = 0.0                                 
 REAL(ReKi)                   :: CurrNSV0  = 0.0                                 ! Near-surface current velocity at still water level.
 REAL(ReKi)                   :: CurrSSDir = 0.0                                 ! Sub-surface current heading direction.
 REAL(ReKi)                   :: CurrSSV0  = 0.0                                 ! Sub-surface current velocity at still water level.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 REAL(ReKi)                   :: Gravity                                         ! Gravitational acceleration.
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
-!jmj Also, add an undocumented feature for modeling the hydrodynamic loading on
-!jmj   a monopile.  Do this by reading in addition inputs from the platform
-!jmj   file if they exist:
 REAL(ReKi)                   :: WaveDir   = 0.0                                 ! Wave heading direction.
 REAL(ReKi)                   :: WaveDT    = 0.0                                 ! Time step for incident wave calculations.
 REAL(ReKi)                   :: WaveHs    = 0.0                                 ! Significant wave height.
@@ -464,11 +402,7 @@ INTEGER(4)                   :: WaveStMod = 0                                   
 INTEGER(4)                   :: WaveMod   = 0                                   ! Incident wave kinematics model switch.
 INTEGER(4)                   :: WaveSeed (2) = 0                                ! Random seeds of incident waves.
 
-!bjj start of proposed change v6.02d-bjj
-!rmCHARACTER(99)                :: GHWvFile  = ''                                  ! The root name of GH Bladed files containing wave data.
 CHARACTER(1024)              :: GHWvFile  = ''                                  ! The root name of GH Bladed files containing wave data.
-!bjj end of proposed change v6.02d-bjj
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
 END MODULE EnvCond
@@ -478,18 +412,8 @@ MODULE Features
 
    ! This MODULE stores input variables for feature switches.
 
-!bjj chg: changed all of these from LOGICAL(1) to LOGICAL
 LOGICAL                   :: CompAero                                        ! Compute aerodynamic forces switch.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
-!jmj Also, add an undocumented feature for modeling the hydrodynamic loading on
-!jmj   a monopile.  Do this by reading in addition inputs from the platform
-!jmj   file if they exist:
 LOGICAL                   :: CompHydro = .FALSE.                             ! Compute hydrodynamic forces switch.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.
 LOGICAL                   :: DrTrDOF                                         ! Drivetrain rotational-flexibility DOF.
@@ -523,15 +447,11 @@ MODULE General
 
 INTEGER(4)                   :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
 INTEGER(4)                   :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
-!bjj rmINTEGER(4), PARAMETER        :: FlagType  = 1                                   ! Switch for telling if a variable is a flag.
-!bjj rmINTEGER(4), PARAMETER        :: Numeric   = 2                                   ! Switch for telling if a variable is a number.
 INTEGER(4)                   :: PtfmModel                                       ! Platform model {0: none, 1: onshore, 2: fixed bottom offshore, 3: floating offshore} (switch).
-!bjj rmINTEGER(4), PARAMETER        :: String    = 3                                   ! Switch for telling if a variable is a string.
 INTEGER(4)                   :: StrtTime (8)                                    ! Start time of simulation.
 INTEGER(4)                   :: UnAC      = 24                                  ! I/O unit number for the ADAMS control output file (.acf) useful for an ADAMS SIMULATE analysis.
 INTEGER(4)                   :: UnAD      = 23                                  ! I/O unit number for the ADAMS dataset output file (.adm).
 INTEGER(4)                   :: UnAL      = 25                                  ! I/O unit number for the ADAMS control output file (.acf) useful for an ADAMS LINEAR analysis.
-!bjj rm: INTEGER(4)                   :: UnEc      = 19                                  ! I/O unit number for the echo file. -- bjj: in NWTC_Library now
 INTEGER(4)                   :: UnIn      = 20                                  ! I/O unit number for the input files.
 INTEGER(4)                   :: UnLn      = 26                                  ! I/O unit number for the FAST linear output file (.lin).
 INTEGER(4)                   :: UnNoSpec  = 27                                  ! I/O unit number for the noise spectr output file.
@@ -539,31 +459,11 @@ INTEGER(4)                   :: UnNoSPL   = 28                                  
 INTEGER(4)                   :: UnOu      = 21                                  ! I/O unit number for the tabular output file.
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
-!bjj chg: changed all 4 from LOGICAL(1) to LOGICAL
 LOGICAL                      :: Cmpl4SFun = .FALSE.                             ! Is FAST being compiled as an S-Function for Simulink?
 LOGICAL                      :: Furling                                         ! Read in additional model properties for furling turbine?
 LOGICAL                      :: SumDisp                                         ! Display summary data on screen?
 LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
-!bjj start of proposed change v6.02d-bjj
-!rmCHARACTER(99)                :: ADAMSFile                                       ! The name of the file containing ADAMS-specific data inputs.
-!rmCHARACTER(99)                :: ADFile                                          ! The name of the AeroDyn input file.
-!rmCHARACTER(99), ALLOCATABLE   :: BldFile  (:)                                    ! The names of the blade-data input files.
-!rmCHARACTER(1024)              :: DirRoot                                         ! The name of the root file including the full path to the current working directory.
-!rmCHARACTER(99)                :: DynBrkFi                                        ! The name of the dynamic generator brake input file.
-!rmCHARACTER(99)                :: FTitle                                          ! The title line from the primary input file.
-!rmCHARACTER(99)                :: FurlFile                                        ! The name of the furling-data input file.
-!rmCHARACTER(99)                :: LinFile                                         ! The name of the file containing FAST linearization control input parameters.
-!rmCHARACTER(99)                :: NoiseFile                                       ! The name of the file containing aerodynamic noise input parameters.
-!rm!bjj rmCHARACTER(99)                :: OutFile                                         ! The name of the output file.
-!rmCHARACTER(99)                :: PriFile   = 'primary.fst'                       ! The name of the primary input file.  Can be overwritten on command line.
-!rm!bjj Start of proposed change vXX NWTC_Lib
-!rm!rmCHARACTER( 4), PARAMETER     :: ProgName  = 'FAST'                              ! The name of this program.
-!rm!rmCHARACTER(62)                :: ProgVer                                         ! The version of this program.
-!rm!bjj End of proposed change vXX NWTC_Lib
-!rmCHARACTER(99)                :: PtfmFile                                        ! The name of the platform-data input file.
-!rmCHARACTER(99)                :: RootName                                        ! The root name of the input and output files.
-!rmCHARACTER(99)                :: TwrFile                                         ! The name of the tower-data input file.
 CHARACTER(1024)              :: ADAMSFile                                       ! The name of the file containing ADAMS-specific data inputs.
 CHARACTER(1024)              :: ADFile                                          ! The name of the AeroDyn input file.
 CHARACTER(1024), ALLOCATABLE :: BldFile  (:)                                    ! The names of the blade-data input files.
@@ -577,7 +477,6 @@ CHARACTER(1024)              :: PriFile   = 'primary.fst'                       
 CHARACTER(1024)              :: PtfmFile                                        ! The name of the platform-data input file.
 CHARACTER(1024)              :: RootName                                        ! The root name of the input and output files.
 CHARACTER(1024)              :: TwrFile                                         ! The name of the tower-data input file.
-!bjj end of proposed change v6.02d-bjj
 
 
 END MODULE General
@@ -610,7 +509,6 @@ REAL(ReKi)                   :: TTDspFA                                         
 REAL(ReKi)                   :: TTDspSS                                         ! Initial side-to-side tower-top displacement.
 REAL(ReKi)                   :: TeetDefl  = 0.0                                 ! Initial or fixed teeter angle. (Initialized to zero b/c the 3-blader requires it to be zero)
 
-!bjj chg: LOGICAL(1), ALLOCATABLE      :: DOF_FlagInit(:)                                 ! Array which stores initial values of the feature flags for each DOF (at the start of the simulation).
 LOGICAL,    ALLOCATABLE      :: DOF_FlagInit(:)                                 ! Array which stores initial values of the feature flags for each DOF (at the start of the simulation).
 
 
@@ -645,9 +543,7 @@ INTEGER(4)                   :: NInputs                                         
 INTEGER(4)                   :: NStep                                           ! Number of time steps in one Period.
 INTEGER(4)                   :: TrimCase                                        ! Trim case {1: find nacelle yaw, 2: find generator torque, 3: find collective blade pitch} (switch) [used only when CalcStdy=True and GenDOF=True]
 
-!bjj chg: LOGICAL(1)                   :: CalcStdy                                        ! Calculate periodic steady state condition (False: linearize about zero) (switch).
 LOGICAL                      :: CalcStdy                                        ! Calculate periodic steady state condition (False: linearize about zero) (switch).
-!bjj chg: LOGICAL(1)                   :: IgnoreMOD = .FALSE.                             ! Ignore the use of function MOD in SUBROUTINE CalcOuts()?
 LOGICAL                      :: IgnoreMOD = .FALSE.                             ! Ignore the use of function MOD in SUBROUTINE CalcOuts()?
 
 
@@ -706,12 +602,8 @@ MODULE Modes
 USE                             Precision
 
 
-!eab Start of proposed change.  v6.10b-eab  24-Jul-2008.
-!eab Allow the mode shape to be described by a polynomial greater than sixth 
-!eab   order. Do this by setting the order of the polynomial to a parameter.
 INTEGER(4), PARAMETER        :: PolyOrd = 6                                     ! Order of the polynomial describing the mode shape.
 
-!eab End of proposed change.  v6.10b-eab  24-Jul-2008.
 REAL(ReKi), ALLOCATABLE      :: BldEdgSh (:,:)                                  ! Blade-edge-mode shape coefficients.
 REAL(ReKi), ALLOCATABLE      :: BldFl1Sh (:,:)                                  ! Blade-flap-mode-1 shape coefficients.
 REAL(ReKi), ALLOCATABLE      :: BldFl2Sh (:,:)                                  ! Blade-flap-mode-2 shape coefficients.
@@ -719,24 +611,13 @@ REAL(ReKi), ALLOCATABLE      :: FreqBE   (:,:,:)                                
 REAL(ReKi), ALLOCATABLE      :: FreqBF   (:,:,:)                                ! Blade flapwise natural frequencies (both w/ and w/o centrifugal stiffening)
 REAL(ReKi)                   :: FreqTFA  (2,2)                                  ! Computed fore-aft tower natural frequencies.
 REAL(ReKi)                   :: FreqTSS  (2,2)                                  ! Computed side-to-side tower natural frequencies.
-!eab Start of proposed change.  v6.10b-eab  24-Jul-2008.
-!eab Allow shape coefficient arrays to exceed the sixth position so as to
-!eab   accommodate all coefficients of a polynomial of any order.
-!remove6.10b   REAL(ReKi)                   :: TwFAM1Sh (2:6)                                  ! Tower fore-aft mode-1 shape coefficients.
-!remove6.10b   REAL(ReKi)                   :: TwFAM2Sh (2:6)                                  ! Tower fore-aft mode-2 shape coefficients.
-!remove6.10b   REAL(ReKi)                   :: TwSSM1Sh (2:6)                                  ! Tower side-to-side mode-1 shape coefficients.
-!remove6.10b   REAL(ReKi)                   :: TwSSM2Sh (2:6)                                  ! Tower side-to-side mode-2 shape coefficients.
 REAL(ReKi)                   :: TwFAM1Sh (2:PolyOrd)                            ! Tower fore-aft mode-1 shape coefficients.
 REAL(ReKi)                   :: TwFAM2Sh (2:PolyOrd)                            ! Tower fore-aft mode-2 shape coefficients.    
 REAL(ReKi)                   :: TwSSM1Sh (2:PolyOrd)                            ! Tower side-to-side mode-1 shape coefficients.
 REAL(ReKi)                   :: TwSSM2Sh (2:PolyOrd)                            ! Tower side-to-side mode-2 shape coefficients.
-!eab End of proposed change.  v6.10b-eab  24-Jul-2008.
 
-!bjj chg: LOGICAL(1)                   :: CalcBMode                                       ! T: calculate blade mode shapes internally, F: use blade mode shapes from the blade file.
 LOGICAL                      :: CalcBMode                                       ! T: calculate blade mode shapes internally, F: use blade mode shapes from the blade file.
-!bjj chg: LOGICAL(1), ALLOCATABLE      :: CalcBModes(:)                                   ! Holds CalcBMode for all of the blades.
 LOGICAL,    ALLOCATABLE      :: CalcBModes(:)                                   ! Holds CalcBMode for all of the blades.
-!bjj chg: LOGICAL(1)                   :: CalcTMode                                       ! T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file.
 LOGICAL                      :: CalcTMode                                       ! T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file.
 
 
@@ -758,12 +639,7 @@ CONTAINS
 
       REAL(ReKi), INTENT(IN )    :: FlexL          ! Length of flexible beam, (m)
       REAL(ReKi), INTENT(IN )    :: Fract          ! Fractional distance along flexible beam, 0<=Frac<=1
-!eab Start of proposed change.  v6.10b-eab  24-Jul-2008.
-!eab Allow the shape coefficient array to exceed the sixth position so as to
-!eab   accommodate all coefficients of a polynomial of any order.
-!remove6.10b      REAL(ReKi), INTENT(IN )    :: ModShpAry(2:6)                              ! Array holding mode shape coefficients
       REAL(ReKi), INTENT(IN )    :: ModShpAry(2:PolyOrd)                        ! Array holding mode shape coefficients
-!eab End of proposed change.  v6.10b-eab  24-Jul-2008.
       REAL(ReKi)                 :: SHP            ! The shape function returned by this function.
 
       INTEGER(4), INTENT(IN )    :: Deriv          ! Which derivative to compute Deriv = 0 (regular function SHP), 1 (D(SHP)/DZ), 2 (D2(SHP)/DZ2)
@@ -780,11 +656,7 @@ CONTAINS
       Swtch(Deriv) = 1
       SHP          = 0.0
 
-!eab Start of proposed change.  v6.10b-eab  24-Jul-2008.
-!eab Loop through all mode shape terms.
-!remove6.10b      DO I = 2,6
       DO I = 2,PolyOrd
-!eab End of proposed change.  v6.10b-eab  24-Jul-2008.
          CoefTmp = Swtch(0) + ( Swtch(1)*I ) + ( Swtch(2)*I*( I - 1 ) )
 
          IF ( (I == 2) .AND. (Deriv == 2) ) THEN
@@ -839,34 +711,8 @@ END TYPE OutPar
    ! NOTE: These variables are declared in numerical order, instead of
    !       alphabetical order.
    ! NOTE: If an index for computing a NEW output channel is ever designated to
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
-!jmj Also, add an undocumented feature for outputting the incident wave
-!jmj   elevation at the platform reference point and the incident wave
-!jmj   kinematics at up to 9 nodes along the undeflected tower [not floating]
-!jmj   or undisplaced platform [floating]:
-!remove6.02a   !       be greater than 286, reDIMENSION array AllOuts() accordingly.
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
-!jmj Also, replace the hard-coded mooring line restoring calculation with a
-!jmj   general purpose, quasi-static solution based on the analytical catenary
-!jmj   cable equations with seabed interaction:
-!remove6.02b   !       be greater than 389, reDIMENSION array AllOuts() accordingly.
    !       be greater than 533, reDIMENSION array AllOuts() accordingly.
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
-!jmj Also, replace the hard-coded mooring line restoring calculation with a
-!jmj   general purpose, quasi-static solution based on the analytical catenary
-!jmj   cable equations with seabed interaction:
-!remove6.02b   ! NOTE: If an index ever becomes greater or equal to 500, the logic to
    ! NOTE: If an index ever becomes greater or equal to 1000, the logic to
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
    !       create ARRAY/1 in the FAST-to-ADAMS preprocessor will have to be
    !       changed.
 
@@ -908,12 +754,6 @@ INTEGER(4), PARAMETER        :: Spn4ALzb1            =  24
 INTEGER(4), PARAMETER        :: Spn5ALxb1            =  25
 INTEGER(4), PARAMETER        :: Spn5ALyb1            =  26
 INTEGER(4), PARAMETER        :: Spn5ALzb1            =  27
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations.  While doing this,
-!jmj   renumber the remaining output PARAMETERs accordingly, without further
-!jmj   documentation:
 INTEGER(4), PARAMETER        :: Spn6ALxb1            =  28
 INTEGER(4), PARAMETER        :: Spn6ALyb1            =  29
 INTEGER(4), PARAMETER        :: Spn6ALzb1            =  30
@@ -926,7 +766,6 @@ INTEGER(4), PARAMETER        :: Spn8ALzb1            =  36
 INTEGER(4), PARAMETER        :: Spn9ALxb1            =  37
 INTEGER(4), PARAMETER        :: Spn9ALyb1            =  38
 INTEGER(4), PARAMETER        :: Spn9ALzb1            =  39
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
    ! Blade 2 Tip Motions:
 
@@ -944,11 +783,6 @@ INTEGER(4), PARAMETER        :: TipRDzc2             =  50
 INTEGER(4), PARAMETER        :: TipClrnc2            =  51
 
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
-!jmj While doing this, renumber the remaining output PARAMETERs accordingly,
-!jmj   without further documentation:
    ! Blade 2 Local Span Motions:
 
 INTEGER(4), PARAMETER        :: Spn1ALxb2            =  52
@@ -980,7 +814,6 @@ INTEGER(4), PARAMETER        :: Spn9ALyb2            =  77
 INTEGER(4), PARAMETER        :: Spn9ALzb2            =  78
 
 
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
    ! Blade 3 Tip Motions:
 
 INTEGER(4), PARAMETER        :: TipDxc3              =  79
@@ -997,9 +830,6 @@ INTEGER(4), PARAMETER        :: TipRDzc3             =  89
 INTEGER(4), PARAMETER        :: TipClrnc3            =  90
 
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
    ! Blade 3 Local Span Motions:
 
 INTEGER(4), PARAMETER        :: Spn1ALxb3            =  91
@@ -1031,7 +861,6 @@ INTEGER(4), PARAMETER        :: Spn9ALyb3            = 116
 INTEGER(4), PARAMETER        :: Spn9ALzb3            = 117
 
 
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
    ! Blade Pitch Motions:
 
 INTEGER(4), PARAMETER        :: PtchPMzc1            = 118
@@ -1136,10 +965,6 @@ INTEGER(4), PARAMETER        :: TwHt4ALzt            = 184
 INTEGER(4), PARAMETER        :: TwHt5ALxt            = 185
 INTEGER(4), PARAMETER        :: TwHt5ALyt            = 186
 INTEGER(4), PARAMETER        :: TwHt5ALzt            = 187
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
 INTEGER(4), PARAMETER        :: TwHt6ALxt            = 188
 INTEGER(4), PARAMETER        :: TwHt6ALyt            = 189
 INTEGER(4), PARAMETER        :: TwHt6ALzt            = 190
@@ -1152,7 +977,6 @@ INTEGER(4), PARAMETER        :: TwHt8ALzt            = 196
 INTEGER(4), PARAMETER        :: TwHt9ALxt            = 197
 INTEGER(4), PARAMETER        :: TwHt9ALyt            = 198
 INTEGER(4), PARAMETER        :: TwHt9ALzt            = 199
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
    ! Platform Motions:
@@ -1224,10 +1048,6 @@ INTEGER(4), PARAMETER        :: Spn4MLzb1            = 254
 INTEGER(4), PARAMETER        :: Spn5MLxb1            = 255
 INTEGER(4), PARAMETER        :: Spn5MLyb1            = 256
 INTEGER(4), PARAMETER        :: Spn5MLzb1            = 257
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
 INTEGER(4), PARAMETER        :: Spn6MLxb1            = 258
 INTEGER(4), PARAMETER        :: Spn6MLyb1            = 259
 INTEGER(4), PARAMETER        :: Spn6MLzb1            = 260
@@ -1240,7 +1060,6 @@ INTEGER(4), PARAMETER        :: Spn8MLzb1            = 266
 INTEGER(4), PARAMETER        :: Spn9MLxb1            = 267
 INTEGER(4), PARAMETER        :: Spn9MLyb1            = 268
 INTEGER(4), PARAMETER        :: Spn9MLzb1            = 269
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
    ! Blade 2 Root Loads:
@@ -1257,9 +1076,6 @@ INTEGER(4), PARAMETER        :: RootMxb2             = 278
 INTEGER(4), PARAMETER        :: RootMyb2             = 279
 
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
    ! Blade 2 Local Span Loads:
 
 INTEGER(4), PARAMETER        :: Spn1MLxb2            = 280
@@ -1291,7 +1107,6 @@ INTEGER(4), PARAMETER        :: Spn9MLyb2            = 305
 INTEGER(4), PARAMETER        :: Spn9MLzb2            = 306
 
 
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
    ! Blade 3 Root Loads:
 
 INTEGER(4), PARAMETER        :: RootFxc3             = 307
@@ -1306,9 +1121,6 @@ INTEGER(4), PARAMETER        :: RootMxb3             = 315
 INTEGER(4), PARAMETER        :: RootMyb3             = 316
 
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
    ! Blade 3 Local Span Loads:
 
 INTEGER(4), PARAMETER        :: Spn1MLxb3            = 317
@@ -1340,7 +1152,6 @@ INTEGER(4), PARAMETER        :: Spn9MLyb3            = 342
 INTEGER(4), PARAMETER        :: Spn9MLzb3            = 343
 
 
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
    ! Hub and Rotor Loads:
 
 INTEGER(4), PARAMETER        :: LSShftFxa            = 344
@@ -1433,10 +1244,6 @@ INTEGER(4), PARAMETER        :: TwHt4MLzt            = 402
 INTEGER(4), PARAMETER        :: TwHt5MLxt            = 403
 INTEGER(4), PARAMETER        :: TwHt5MLyt            = 404
 INTEGER(4), PARAMETER        :: TwHt5MLzt            = 405
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
 INTEGER(4), PARAMETER        :: TwHt6MLxt            = 406
 INTEGER(4), PARAMETER        :: TwHt6MLyt            = 407
 INTEGER(4), PARAMETER        :: TwHt6MLzt            = 408
@@ -1449,7 +1256,6 @@ INTEGER(4), PARAMETER        :: TwHt8MLzt            = 414
 INTEGER(4), PARAMETER        :: TwHt9MLxt            = 415
 INTEGER(4), PARAMETER        :: TwHt9MLyt            = 416
 INTEGER(4), PARAMETER        :: TwHt9MLzt            = 417
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
    ! Platform Loads:
@@ -1468,10 +1274,6 @@ INTEGER(4), PARAMETER        :: PtfmMyi              = 428
 INTEGER(4), PARAMETER        :: PtfmMzi              = 429
 
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Replace the hard-coded mooring line restoring calculation with a general
-!jmj   purpose, quasi-static solution based on the analytical catenary cable
-!jmj   equations with seabed interaction:
    ! Mooring Line Loads:
 
 INTEGER(4), PARAMETER        :: Fair1Ten             = 430
@@ -1512,7 +1314,6 @@ INTEGER(4), PARAMETER        :: Anch9Ten             = 464
 INTEGER(4), PARAMETER        :: Anch9Ang             = 465
 
 
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
 
    ! Wind Motions:
 
@@ -1537,11 +1338,6 @@ INTEGER(4), PARAMETER        :: TFinCPFy             = 478
 
 
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for outputting the incident wave elevation at
-!jmj   the platform reference point and the incident wave kinematics at up to 9
-!jmj   nodes along the undeflected tower [not floating] or undisplaced platform
-!jmj   [floating]:
    ! Wave Motions:
 
 INTEGER(4), PARAMETER        :: WaveElev             = 479
@@ -1603,46 +1399,21 @@ INTEGER(4), PARAMETER        :: Wave9Azi             = 533
 
 
 
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
 INTEGER(4), PARAMETER        :: MaxOutPts            = 200                      ! The maximum number of output channels which can be outputted by the code.
 
 
-!bjj rm NWTC_Lib: CHARACTER(1), PARAMETER      :: Tab                  = CHAR( 9 )                ! The tab character.
 
 
    ! Regular variables:
 
 ! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE VARIABLE BELOW:
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
-!jmj Also, add an undocumented feature for outputting the incident wave
-!jmj   elevation at the platform reference point and the incident wave
-!jmj   kinematics at up to 9 nodes along the undeflected tower [not floating]
-!jmj   or undisplaced platform [floating]:
-!remove6.02aREAL(ReKi)                   :: AllOuts  (0:286)                                ! An array holding the value of all of the calculated (not selected) output channels.
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Add blade strain gage output parameters for the local loads and motions of
-!jmj   blades 2 and 3:
-!jmj Also, replace the hard-coded mooring line restoring calculation with a
-!jmj   general purpose, quasi-static solution based on the analytical catenary
-!jmj   cable equations with seabed interaction:
-!remove6.02bREAL(ReKi)                   :: AllOuts  (0:389)                                ! An array holding the value of all of the calculated (not selected) output channels.
 REAL(ReKi)                   :: AllOuts  (0:533)                                ! An array holding the value of all of the calculated (not selected) output channels.
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 ! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE PREVIOUS VARIABLE:
 REAL(ReKi), ALLOCATABLE      :: LinAccES (:,:,:)                                ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: LinAccET (:,:)                                  ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Replace the hard-coded mooring line restoring calculation with a general
-!jmj   purpose, quasi-static solution based on the analytical catenary cable
-!jmj   equations with seabed interaction:
 REAL(ReKi), ALLOCATABLE      :: LSNodes  (:,:)                                  ! Unstretched arc distance along mooring line from anchor to each node where the line position and tension can be output (meters).
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
 REAL(ReKi), ALLOCATABLE      :: FrcS0B   (:,:)                                  ! Total force at the blade root (point S(0)) due to the blade.
 REAL(ReKi), ALLOCATABLE      :: FTHydro  (:,:)                                  ! Total hydrodynamic force per unit length acting on the tower at point T.
 REAL(ReKi), ALLOCATABLE      :: MFHydro  (:,:)                                  ! Total hydrodynamic moment per unit length acting on a tower element (body F) at point T.
@@ -1654,60 +1425,24 @@ REAL(ReKi), ALLOCATABLE      :: OutData  (:)                                    
 REAL(ReKi)                   :: ShftGagL                                        ! Distance from hub or teeter pin to shaft strain gages.
 REAL(ReKi)                   :: SttsTime                                        ! Amount of time between screen status messages (sec).
 REAL(ReKi)                   :: TStart                                          ! Time to begin tabular output.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for outputting the incident wave elevation at
-!jmj   the platform reference point and the incident wave kinematics at up to 9
-!jmj   nodes along the undeflected tower [not floating] or undisplaced platform
-!jmj   [floating]:
 REAL(ReKi)                   :: WaveElevxi(1) = (/ 0.0 /)                       ! xi-coordinates for points where the incident wave elevation can be output (meters).
 REAL(ReKi)                   :: WaveElevyi(1) = (/ 0.0 /)                       ! yi-coordinates for points where the incident wave elevation can be output (meters).
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
-!remove6.02aINTEGER(4)                   :: BldGagNd (5)                                    ! Nodes closest to the blade strain gages.
 INTEGER(4)                   :: BldGagNd (9)                                    ! Nodes closest to the blade strain gages.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 INTEGER(4)                   :: DecFact                                         ! Decimation factor for tabular output.
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Replace the hard-coded mooring line restoring calculation with a general
-!jmj   purpose, quasi-static solution based on the analytical catenary cable
-!jmj   equations with seabed interaction:
 !JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
 INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
 INTEGER(4)                   :: NBlGages                                        ! Number of blade strain gages.
 INTEGER(4)                   :: NTwGages                                        ! Number of tower strain gages.
 INTEGER(4)                   :: NumOuts                                         ! Number of parameters in the output list.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for outputting the incident wave elevation at
-!jmj   the platform reference point and the incident wave kinematics at up to 9
-!jmj   nodes along the undeflected tower [not floating] or undisplaced platform
-!jmj   [floating]:
 INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
 INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 INTEGER(4), ALLOCATABLE      :: OutInd   (:)                                    ! Array of indices for OutData(:)
 INTEGER(4), ALLOCATABLE      :: OutSign  (:)                                    ! Sign of output channel (+1 = normal, -1 = reversed).
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Increase the upper limit for the number of blade and tower strain gage
-!jmj   locations from 5 to 9 and add new output parameters for the local loads
-!jmj   and motions at the additional strain gage locations:
-!jmj Also, add an undocumented feature for outputting the incident wave
-!jmj   elevation at the platform reference point and the incident wave
-!jmj   kinematics at up to 9 nodes along the undeflected tower [not floating]
-!jmj   or undisplaced platform [floating]:
-!remove6.02aINTEGER(4)                   :: TwrGagNd (5)                                    ! Nodes closest to the tower strain gages.
 INTEGER(4)                   :: TwrGagNd (9)                                    ! Nodes closest to the tower strain gages.
 INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
-!bjj chg: LOGICAL(1)                   :: Echo                                            ! Flag for echoing input to the echo file.
-!bjj rm NWTC_Library: LOGICAL                      :: Echo                                            ! Flag for echoing input to the echo file.
 LOGICAL                      :: WrEcho
-!bjj chg: LOGICAL(1)                   :: TabDelim                                        ! Flag to cause tab-delimited output.
 LOGICAL                      :: TabDelim                                        ! Flag to cause tab-delimited output.
 
 CHARACTER(20)                :: OutFmt                                          ! Output format for tabular data.
@@ -1718,11 +1453,7 @@ TYPE (OutPar), ALLOCATABLE   :: OutParam (:)                                    
 
 END MODULE Output
 !=======================================================================
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Rename MODULE PlatformLd() to Platform():
-!remove6.02aMODULE PlatformLd
 MODULE Platform
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
    ! This MODULE stores input variables for platform loading.
@@ -1730,10 +1461,6 @@ MODULE Platform
 
 USE                             Precision
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Replace the hard-coded mooring line restoring calculation with a general
-!jmj   purpose, quasi-static solution based on the analytical catenary cable
-!jmj   equations with seabed interaction:
 REAL(ReKi), ALLOCATABLE      :: LAnchxi  (:)                                    ! xi-coordinate of each anchor   in the inertial frame        coordinate system.
 REAL(ReKi), ALLOCATABLE      :: LAnchyi  (:)                                    ! yi-coordinate of each anchor   in the inertial frame        coordinate system.
 REAL(ReKi), ALLOCATABLE      :: LAnchzi  (:)                                    ! zi-coordinate of each anchor   in the inertial frame        coordinate system.
@@ -1746,69 +1473,29 @@ REAL(ReKi), ALLOCATABLE      :: LMassDen (:)                                    
 REAL(ReKi), ALLOCATABLE      :: LSeabedCD(:)                                    ! Coefficient of seabed static friction drag of each mooring line (a negative value indicates no seabed).
 REAL(ReKi), ALLOCATABLE      :: LTenTol  (:)                                    ! Convergence tolerance within Newton-Raphson iteration of each mooring line specified as a fraction of tension.
 REAL(ReKi), ALLOCATABLE      :: LUnstrLen(:)                                    ! Unstretched length of each mooring line.
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Start of proposed change.  v6.10a-jmj  21-Feb-2007.
-!jmj Make sure the seabed GRAPHICS in FAST-to-ADAMS has a radius at least as
-!jmj   large as the maximum mooring line anchor radius:
 REAL(ReKi)                   :: MaxLRadAnch  = 0.0                              ! Maximum value of input array LRadAnch.
-!jmj End of proposed change.  v6.10a-jmj  21-Feb-2007.
 
 REAL(ReKi)                   :: PtfmAM (6,6) = 0.0                              ! Platform added mass matrix.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
 REAL(ReKi)                   :: PtfmCD                                          ! Effective platform normalized hydrodynamic viscous drag coefficient in calculation of viscous drag term from Morison's equation.
 REAL(ReKi)                   :: PtfmDiam                                        ! Effective platform diameter in calculation of viscous drag term from Morison's equation.
 REAL(ReKi)                   :: PtfmDraft                                       ! Effective platform draft    in calculation of viscous drag term from Morison's equation.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 REAL(ReKi)                   :: PtfmFt   (6) = 0.0                              ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the platform force at the platform reference (point Z) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the platform moment acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()'s.
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
 REAL(ReKi)                   :: PtfmVol0                                        ! Displaced volume of water when the platform is in its undisplaced position.
 REAL(ReKi)                   :: RdtnDT                                          ! Time step for wave radiation kernel calculations.
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Put in some logic to ensure that the hydrodynamic loads are time invariant
-!jmj   when linearizing a model:
-!remove6.02bREAL(ReKi)                   :: RdtnTMax                                        ! Analysis time for wave radiation kernel calculations.
 REAL(ReKi)                   :: RdtnTMax     = 0.0                              ! Analysis time for wave radiation kernel calculations.
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
-!jmj Start of proposed change.  v6.02b-jmj  15-Nov-2006.
-!jmj Replace the hard-coded mooring line restoring calculation with a general
-!jmj   purpose, quasi-static solution based on the analytical catenary cable
-!jmj   equations with seabed interaction:
 INTEGER(4)                   :: LineMod                                         ! Mooring line model switch.
 INTEGER(4)                   :: NumLines     = 0                                ! Number of mooring lines.
-!jmj End of proposed change.  v6.02b-jmj  15-Nov-2006.
 
 INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile)
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading and
-!jmj   mooring system dynamics for floating wind turbines.  Do this by allowing
-!jmj   a keyword in place of the integers 0 or 1 in input PtfmLdMod when
-!jmj   PtfmModel = 3:
 INTEGER(4)                   :: PtfmNodes                                       ! Number of platform nodes used in calculation of viscous drag term from Morison's equation.
 
-!bjj start of proposed change v6.02d-bjj
-!rmCHARACTER(99)                :: WAMITFile                                       ! Root name of WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst extension), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1 extension), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 extension).
 CHARACTER(1024)              :: WAMITFile                                       ! Root name of WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst extension), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1 extension), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 extension).
-!bjj end of proposed change v6.02d-bjj
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Rename MODULE PlatformLd() to Platform():
-!remove6.02aEND MODULE PlatformLd
 END MODULE Platform
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 !=======================================================================
 MODULE RotorFurling
 
@@ -1848,12 +1535,7 @@ USE                             Precision
 REAL(ReKi)                   :: AngAccEBt(3)                                    ! Portion of the angular acceleration of the base plate                                                (body B) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
 REAL(ReKi)                   :: AngAccERt(3)                                    ! Portion of the angular acceleration of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
 REAL(ReKi)                   :: AngAccEXt(3)                                    ! Portion of the angular acceleration of the platform                                                  (body X) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading on a
-!jmj   monopile.  Do this by reading in addition inputs from the platform file
-!jmj   if they exist:
 REAL(ReKi), ALLOCATABLE      :: AngAccEFt(:,:)                                  ! Portion of the angular acceleration of tower element J                                               (body F) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 REAL(ReKi), ALLOCATABLE      :: AngPosHM (:,:,:)                                ! Angular position of eleMent J of blade K                                          (body M) in the hub           (body H          ).
 REAL(ReKi)                   :: AngPosXB (3)                                    ! Angular position of the base plate                                                (body B) in the platform      (body X          ).
@@ -1882,9 +1564,7 @@ REAL(ReKi), ALLOCATABLE      :: LinAccETt(:,:)                                  
 REAL(ReKi)                   :: LinAccEZt (3)                                   ! Portion of the linear acceleration of the platform reference (point Z) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
 REAL(ReKi)                   :: LinVelEIMU(3)                                   ! Linear velocity of the nacelle IMU  (point IMU) in the inertia frame.
 REAL(ReKi)                   :: LinVelEZ  (3)                                   ! Linear velocity of platform reference (point Z) in the inertia frame.
-!bjj start of propsoed change
 REAL(ReKi), ALLOCATABLE      :: LinVelESm2 (:)                                  ! The m2-component (closest to tip) of LinVelES.
-!bjj end of proposed change
 REAL(ReKi)                   :: MAAero   (3)                                    ! The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin.
 REAL(ReKi), ALLOCATABLE      :: MFAero   (:,:)                                  ! The aerodynamic moment per unit length acting on the tower at point T.
 REAL(ReKi), ALLOCATABLE      :: MFHydrot (:,:)                                  ! Portion of the hydrodynamic moment per unit length acting on a tower element (body F) at point T associated with everything but the QD2T()'s.
@@ -1977,9 +1657,6 @@ REAL(ReKi)                   :: TMax                                            
 REAL(ReKi)                   :: ZTime    = 0.0                                  ! Current simulation time.
 
 REAL(4)                      :: UsrTime1                                        ! User CPU time for simulation initialization.
-!!bjj start of proposed change
-!REAL(ReKi)                   :: UsrTime0                                        ! Initial time
-!!bjj end of proposed change
 
 INTEGER(4)                   :: Step     = 0                                    ! Current simulation time step.
 
@@ -2009,7 +1686,6 @@ REAL(ReKi)                   :: TFinQ     = 0.0                                 
 INTEGER(4)                   :: TFinMod   = 0                                   ! Tail fin aerodynamics model switch. (Initialized to zero b/c not all models read in FurlFile)
 INTEGER(4)                   :: TFinNFoil = 1                                   ! Tail fin airfoil number. (iniated to first airfoil number)
 
-!bjj chg: LOGICAL(1)                   :: SubAxInd  = .FALSE.                             ! Subtract average rotor axial induction when computing relative wind-inflow at tail fin?
 LOGICAL                      :: SubAxInd  = .FALSE.                             ! Subtract average rotor axial induction when computing relative wind-inflow at tail fin?
 
 
@@ -2094,24 +1770,14 @@ REAL(ReKi)                   :: AdjSSSt                                         
 REAL(ReKi)                   :: AdjTwMa                                          ! Factor to adjust tower mass density.
 REAL(ReKi), ALLOCATABLE      :: AxRedTFA  (:,:,:)                                ! The axial-reduction terms for the fore-aft tower mode shapes.
 REAL(ReKi), ALLOCATABLE      :: AxRedTSS  (:,:,:)                                ! The axial-reduction terms for the side-to-side tower mode shapes.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading on a
-!jmj   monopile.  Do this by reading in addition inputs from the platform file
-!jmj   if they exist:
 REAL(ReKi), ALLOCATABLE      :: CAT       (:)                                   ! Interpolated, normalized hydrodynamic added mass   coefficient in Morison's equation.
 REAL(ReKi), ALLOCATABLE      :: CDT       (:)                                   ! Interpolated, normalized hydrodynamic viscous drag coefficient in Morison's equation.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 REAL(ReKi), ALLOCATABLE      :: cgOffTFA  (:)                                    ! Interpolated tower fore-aft mass cg offset.
 REAL(ReKi), ALLOCATABLE      :: cgOffTSS  (:)                                    ! Interpolated tower side-to-side mass cg offset.
 REAL(ReKi)                   :: CTFA      (2,2)                                  ! Generalized damping of tower in fore-aft direction.
 REAL(ReKi)                   :: CTSS      (2,2)                                  ! Generalized damping of tower in side-to-side direction.
 REAL(ReKi), ALLOCATABLE      :: DHNodes   (:)                                    ! Length of variable-length tower elements
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading on a
-!jmj   monopile.  Do this by reading in addition inputs from the platform file
-!jmj   if they exist:
 REAL(ReKi), ALLOCATABLE      :: DiamT     (:)                                   ! Interpolated tower diameter in Morison's equation.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 REAL(ReKi)                   :: FAStTunr  (2)                                    ! Tower fore-aft modal stiffness tuners.
 REAL(ReKi), ALLOCATABLE      :: HNodes    (:)                                    ! Location of variable-spaced tower nodes (relative to the tower rigid base height)
 REAL(ReKi), ALLOCATABLE      :: HNodesNorm(:)                                    ! Normalized location of variable-spaced tower nodes (relative to the tower rigid base height) (0 < HNodesNorm(:) < 1)
@@ -2132,24 +1798,14 @@ REAL(ReKi), ALLOCATABLE      :: TwFAcgOf  (:)                                   
 REAL(ReKi), ALLOCATABLE      :: TwFAIner  (:)                                    ! Tower fore-aft (about yt-axis) mass inertia per unit length for a given input station.
 REAL(ReKi), ALLOCATABLE      :: TwFAStif  (:)                                    ! Tower fore-aft stiffness for a given input station.
 REAL(ReKi), ALLOCATABLE      :: TwGJStif  (:)                                    ! Tower torsional stiffness for a given input station.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading on a
-!jmj   monopile.  Do this by reading in addition inputs from the platform file
-!jmj   if they exist:
 REAL(ReKi)                   :: TwrAM     (6,6) = 0.0                           ! Added mass matrix of the current tower element per unit length.
 REAL(ReKi)                   :: TwrCA    = 0.0                                  ! Normalized hydrodynamic added mass   coefficient in Morison's equation.
 REAL(ReKi)                   :: TwrCD    = 0.0                                  ! Normalized hydrodynamic viscous drag coefficient in Morison's equation.
 REAL(ReKi)                   :: TwrDiam  = 0.0                                  ! Tower diameter in Morison's equation.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 REAL(ReKi)                   :: TwrFADmp  (2)                                    ! Tower fore-aft structural damping ratios.
 REAL(ReKi), ALLOCATABLE      :: TwrFASF   (:,:,:)                                ! Tower fore-aft shape functions.
 REAL(ReKi)                   :: TwrFlexL                                         ! Height / length of the flexible portion of the tower.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading on a
-!jmj   monopile.  Do this by reading in addition inputs from the platform file
-!jmj   if they exist:
 REAL(ReKi)                   :: TwrFt     (6)   = 0.0                            ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower element (point T) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the tower moment acting at the current tower element (body F) / (point T) per unit length associated with everything but the QD2T()'s.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 REAL(ReKi)                   :: TwrSSDmp  (2)                                    ! Tower side-to-side structural damping ratios.
 REAL(ReKi), ALLOCATABLE      :: TwrSSSF   (:,:,:)                                ! Tower side-to-side shape functions.
@@ -2159,12 +1815,7 @@ REAL(ReKi), ALLOCATABLE      :: TwSSStif  (:)                                   
 
 INTEGER(4)                   :: NTwInpSt                                        ! Number of tower input stations.
 INTEGER(4)                   :: TTopNode                                        ! Index of the additional node located at the tower-top = TwrNodes + 1
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add an undocumented feature for modeling the hydrodynamic loading on a
-!jmj   monopile.  Do this by reading in addition inputs from the platform file
-!jmj   if they exist:
 INTEGER(4)                   :: TwrLdMod = 0                                    ! Tower loading model switch.
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 INTEGER(4)                   :: TwrNodes                                        ! Number of tower nodes used in the analysis.
 
 
@@ -2215,9 +1866,6 @@ REAL(ReKi), ALLOCATABLE      :: PreCone   (:)                                   
 REAL(ReKi)                   :: ProjArea                                        ! Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft).
 REAL(ReKi)                   :: PtfmCM    = 0.0                                 ! Downward distance from the ground [onshore] or MSL [offshore] to the platform CM. (Initialized to zero b/c not all models read in PtfmFile)
 REAL(ReKi)                   :: PtfmRef   = 0.0                                 ! Downward distance from the ground [onshore] or MSL [offshore] to the platform reference point. (Initialized to zero b/c not all models read in PtfmFile)
-!bjj start of proposed change
-!rmREAL(ReKi)                   :: RefHH                                           ! Vertical distance between AeroDyn's wind reference (hub) height (variable HH     ) and FAST's inertia frame reference point (variable PtfmRef); that is, RefHH    = HH      + PtfmRef.
-!bjj end of proposed change
 REAL(ReKi)                   :: RefTwrHt                                        ! Vertical distance between FAST's undisplaced tower       height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt + PtfmRef.
 REAL(ReKi)                   :: RFrlCMxn  = 0.0                                 ! Downwind distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)
 REAL(ReKi)                   :: RFrlCMyn  = 0.0                                 ! Lateral  distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)
@@ -2338,11 +1986,8 @@ INTEGER(4)                   :: PCMode                                          
 INTEGER(4)                   :: VSContrl                                        ! Variable-speed-generator control switch.
 INTEGER(4)                   :: YCMode                                          ! Yaw control mode
 
-!bjj chg: LOGICAL(1), ALLOCATABLE      :: BegPitMan(:)                                    ! .TRUE. before the override pitch manuever has begun (begin pitch manuever).
 LOGICAL,    ALLOCATABLE      :: BegPitMan(:)                                    ! .TRUE. before the override pitch manuever has begun (begin pitch manuever).
-!bjj chg: LOGICAL(1)                   :: GenTiStp                                        ! Stop generator based upon T: time or F: generator power = 0.
 LOGICAL                      :: GenTiStp                                        ! Stop generator based upon T: time or F: generator power = 0.
-!bjj chg: LOGICAL(1)                   :: GenTiStr                                        ! Start generator based upon T: time or F: generator speed.
 LOGICAL                      :: GenTiStr                                        ! Start generator based upon T: time or F: generator speed.
 
 

@@ -6,25 +6,19 @@ PROGRAM FAST
 
 
 USE                             ADAMSInput
-!bjj rm NWTC_Library USE                             Constants
 USE                             DOFs
 USE                             General
 USE                             InitCond
 USE                             Linear
 USE                             SimCont
-!bjj rm NWTC_Library: USE                             SysSubs
-!bjj Start of proposed change vXX
 USE                             NWTC_Library
-!USE                             AeroSubs,       ONLY: AD_Terminate
 USE                             AeroDyn
-!USE                             FAST_SysSubs       ! UserTime()
 USE                             FAST_IO_Subs       ! Begin(), Input(), PrintSum(), RunTimes()
 USE                             FASTsubs           ! Initialize(), TimeMarch()
 USE                             FAST2ADAMSSubs     ! MakeAdm(), MakeACF(), MakeACF_Lin
 USE                             FAST_Lin_Subs      ! CalcSteady(), Linearize()
 USE                             HydroDyn
 USE                             Noise
-!bjj End of proposed change
 
 
 IMPLICIT                        NONE
@@ -32,25 +26,17 @@ IMPLICIT                        NONE
 
    ! Local variables:
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Initialize the value of GenTrq if CalcStdy is False:
 REAL(ReKi)                   :: GBoxTrq                                         ! Unused gearbox torque on the LSS side in N-m.
 
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 INTEGER(4)                   :: L                                               ! Generic index.
 
-!bjj Start of proposed change
-!rmCHARACTER( 8)                :: DumDate                                         ! A dummy variable to hold the date string.
-!rmCHARACTER(10)                :: DumTime                                         ! A dummy variable to hold the time string.
-!rmCHARACTER( 5)                :: Zone
 INTEGER                       :: ErrStat
-!bjj end of proposed change
 
 
-!bjj start of proposed change
+   ! Get the current time.
+
 CALL DATE_AND_TIME ( Values=StrtTime )                                           ! Let's time the whole simulation
-CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
-!bjj end of proposed change
+CALL CPU_TIME ( UsrTime1 )                                                       ! Initial time (this zeros the start time when used as a MATLAB function)
 
 
    ! Open the console for standard output.
@@ -62,15 +48,8 @@ CALL OpenCon
 
 CALL SetVersion
 
-!bjj Start of proposed change vXX
-!rmCALL WrScr1 ( ' Running '//ProgName//TRIM( ProgVer )//'.' )
-!CALL WrScr1 ( ' Running '//TRIM(ProgName)//' '//TRIM( ProgVer )//'.' )
-!bjj End of proposed change
-
-!bjj Start of proposed change vXX NWTC_Lib
-CALL NWTC_Init()     ! sets the pi constants
+CALL NWTC_Init()                                                                 ! sets the pi constants
 CALL DispNVD()
-!bjj End of proposed change
 
    ! Open and read input files, initialize global parameters.
 
@@ -118,19 +97,6 @@ ENDIF
 IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
 
-   ! Get the current time.
-
-!bjj start of proposed change
-!rm   CALL DATE_AND_TIME ( DumDate, DumTime, Zone, StrtTime )
-!bjj start of proposed change
-!rm  UsrTime1 = UserTime()
-!   CALL DATE_AND_TIME ( Values=StrtTime )
-!   CALL CPU_TIME ( UsrTime1 )
-!bjj end of proposed change
-
-
-
-
    ! Run a time-marching simulation or create a periodic linearized model as
    !   appropriate:
 
@@ -163,11 +129,8 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
          ENDDO                ! L - Equally-spaced azimuth steps
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Initialize the value of GenTrq if CalcStdy is False:
 
          CALL DrvTrTrq ( RotSpeed, GBoxTrq )
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
       ENDIF
 
@@ -187,23 +150,13 @@ ENDIF
 
 
 
-!bjj Start of proposed change vXX
-!rmCALL WrScr1 ( ' '//ProgName//' completed normally.' )
-!RMCALL WrScr1 ( ' '//TRIM(ProgName)//' completed normally.' )
-!RMCALL UsrAlarm
 CALL FAST_Terminate( ErrStat )
 CALL AD_Terminate(   ErrStat )
 CALL Hydro_Terminate( )
 CALL Noise_Terminate( )
 IF ( BEEP ) CALL UsrAlarm
-!bjj End of proposed change vXX
 
 
-!bjj Start of proposed change vXX
-!rm!JASON: Link NWTC_Subs.f90 and NWTC_Mods.f90 after AeroDyn is fully interfaced to these routines.  When you do this, replace all CALLs to EXIT() with CALLs to ProgExit() in order to get rid of the /stand Warnings.
-!rmCALL EXIT ( 0 )
 CALL NormStop( )
-!CALL ProgExit( 0 )
-!bjj End of proposed change
 END PROGRAM FAST
 !=======================================================================

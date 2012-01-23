@@ -1,10 +1,8 @@
-!BJJ Start of proposed change vXX NWTC_Lib
 MODULE FAST_Lin_Subs
 
    USE   NWTC_Library
 
 CONTAINS
-!bjj end of proposed change
 !=======================================================================
 SUBROUTINE CalcSteady
 
@@ -20,7 +18,6 @@ SUBROUTINE CalcSteady
    ! FAST Modules:
 
 USE                             Blades
-!bjj rm NWTC_Library: USE                             Constants
 USE                             DOFs
 USE                             DriveTrain
 USE                             Features
@@ -29,22 +26,15 @@ USE                             Linear
 USE                             Modes
 USE                             NacelleYaw
 USE                             SimCont
-!bjj rm NWTC_Library: USE                             SysSubs
 USE                             Tower
 USE                             TurbConf
 USE                             TurbCont
 
    ! AeroDyn Modules:
 
-!bjj rm NWTC_Library: USE                             Precision
-!bjj Start of proposed change AD_v12.70
 USE                             AeroDyn
-!USE                             AeroSubs, ONLY: GetHubWind
-!bjj End of proposed change
 
-!bjj start of proposed change vXX
 USE                             FASTsubs  !Solver
-!bjj end of proposed change
 
 IMPLICIT                        NONE
 
@@ -73,13 +63,11 @@ REAL(ReKi), ALLOCATABLE      :: QWeight   (:)                                   
 REAL(ReKi)                   :: RotAzimDif                                      ! The difference between the RotAzimop's and the current rotor azimuth angles.
 REAL(ReKi), ALLOCATABLE      :: RotAzimOp (:)                                   ! The rotor azimuth angles that we will linearize about.
 REAL(ReKi)                   :: SpeedErr                                        ! The relative rotor speed error for the current iteration.
-!bjj rm unused:REAL(ReKi)                   :: TiLstPrn  = 0.0                                 ! The time of the last print.
 
 INTEGER(4)                   :: I                                               ! Loops through all DOFs
 INTEGER(4)                   :: K                                               ! Loops through blades.
 INTEGER(4)                   :: L                                               ! Generic index.
 INTEGER(4)                   :: LStart                                          ! The index of the first azimuth step of Qop greater than or equal to the current azimuth step in Q(DOF_DrTr).
-!bjj:INTEGER(4)                   :: Sttus                                           ! Status returned by an attempted allocation.
 INTEGER                      :: Sttus                                           ! Status returned by an attempted allocation.
 
 CHARACTER(10)                :: AbsQDNStr                                       ! String containing the current value of AbsQDNorm.
@@ -90,12 +78,6 @@ CHARACTER( 4)                :: IterStr                                         
 CHARACTER(10)                :: PitchStr                                        ! String containing the current value of BlPitch(1).
 CHARACTER(10)                :: YawPosStr                                       ! String containing the current value of the command (demand) yaw angle.
 CHARACTER( 7)                :: ZTimeStr                                        ! String containing the current value of ZTime.
-
-
-   ! Global functions.
-
-!bjj rm AD 12.70b CHARACTER(15), EXTERNAL      :: Flt2LStr                                        ! A function to convert a floating-point number to a left-justified string.
-!bjj rm AD 12.70b CHARACTER(11), EXTERNAL      :: Int2LStr                                        ! A function to convert an interger to a left-justified string.
 
 
 
@@ -242,10 +224,7 @@ ENDDO             ! K - All blades
 
    ! Get the current hub-height wind speed:
 
-!bjj start of proposed change ad v13.00b
-!rmCALL GetHubWind( HHWndVec )
 HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), FASTHH /), Sttus )
-!bjj end of proposed change
 
 
    ! Begin the search for a steady state solution:
@@ -339,10 +318,7 @@ DO
    ! Make sure the wind hasn't changed.  If so, Abort since we can't find a
    !   periodic steady state solution with time varying winds.
 
-!bjj start of proposed change ad v13.00b
-!rm      CALL GetHubWind( HHWndVec )
       HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), FASTHH /), Sttus )
-!bjj end of proposed change
 
       IF ( ( HHWndVecS(1) /= HHWndVec(1) ) .OR. &
            ( HHWndVecS(2) /= HHWndVec(2) ) .OR. &
@@ -663,10 +639,7 @@ ELSE                                ! Rotor is spinning, therefore save the stat
    ! Make sure the wind hasn't changed.  If so, ProgAbort since we can't find a
    !   periodic steady state solution with time varying winds.
 
-!bjj start of proposed change ad v13.00b
-!rm      CALL GetHubWind( HHWndVec )
          HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), FASTHH /), Sttus )
-!bjj end of proposed change
 
          IF ( ( HHWndVecS(1) /= HHWndVec(1) ) .OR. &
               ( HHWndVecS(2) /= HHWndVec(2) ) .OR. &
@@ -730,7 +703,6 @@ ELSE                                ! Rotor is spinning, therefore save the stat
 ENDIF
 
 
-!bjj start of proposed change V6.02D-BJJ
    ! deallocate arrays
 IF ( ALLOCATED( CBEStart  ) ) DEALLOCATE( CBEStart  )
 IF ( ALLOCATED( CBFStart  ) ) DEALLOCATE( CBFStart  )
@@ -741,7 +713,6 @@ IF ( ALLOCATED( QStart    ) ) DEALLOCATE( QStart    )
 IF ( ALLOCATED( QWeight   ) ) DEALLOCATE( QWeight   )
 IF ( ALLOCATED( RotAzimOp ) ) DEALLOCATE( RotAzimOp )
 
-!bjj end of proposed change
 
 RETURN
 END SUBROUTINE CalcSteady
@@ -757,14 +728,10 @@ SUBROUTINE Linearize
    ! FAST Modules:
 
 USE                             Blades
-!bjj rm NWTC_Library: USE                             Constants
 USE                             DOFs
 USE                             DriveTrain
 USE                             Features
 USE                             General
-!bjj Start of proposed change  AD v12.70a-bjj
-!rm AD module: USE                             Identify
-!bjj End of proposed change
 USE                             InitCond
 USE                             Linear
 USE                             Modes
@@ -775,28 +742,15 @@ USE                             Tower
 USE                             TurbConf
 USE                             TurbCont
 
-!bjj start of proposed change vXX
 USE                             FASTsubs  !RtHS(), CalcOuts()
-!bjj end of proposed change
 
-!bjj start of proposed change
 USE                             AeroElem, ONLY: ADIntrfaceOptions
-!bjj end of proposed change
 
 
 
    ! AeroDyn Modules:
 
-!bjj rm:USE                             AeroTime, ONLY:TIMFLAG
-!bjj rm NWTC_Library: USE                             Precision
-!bjj STart of proposed change ad v12.70a-bjj
-!rmUSE                             Switch
-!rmUSE                             Wind
-!USE                             Identify, ONLY: AeroProg, AeroVer
-!USE                             Switch,   ONLY: HHWindFlag
-!USE                             Wind,     ONLY: V, VZ, HSHR, VSHR, VLinShr, VGust,DELTA
 USE                            AeroDyn
-!bjj End of proposed change
 
 IMPLICIT                        NONE
 
@@ -829,9 +783,7 @@ REAL(ReKi), ALLOCATABLE      :: FdMat    (:,:,:)                                
 REAL(ReKi), ALLOCATABLE      :: FMat     (:,:,:)                                ! Periodic input                 matrix (includes only active DOFs)--i.e. [F].
 REAL(ReKi)                   :: GenTrqop                                        ! Steady operating point generator torque.
 REAL(ReKi)                   :: HSHRop                                          ! Steady operating point horizontal shear coefficient
-!bjj start of proposed change AD v12.70w
 REAL(ReKi)                   :: LinPerturbations(7)                             ! A vector to send the HH wind speed perturbations to the wind module (replace this method!)
-!bjj end of proposed change AD v12.70w
 REAL(ReKi), ALLOCATABLE      :: MassMat  (:,:,:)                                ! Periodic mass                  matrix (includes only active DOFs).
 REAL(ReKi), ALLOCATABLE      :: StffMat  (:,:,:)                                ! Periodic stiffness             matrix (includes only active DOFs).
 REAL(ReKi)                   :: VGUSTop                                         ! Steady operating point horizontal hub height wind gust
@@ -843,9 +795,7 @@ REAL(ReKi)                   :: YawPosop                                        
 REAL(ReKi)                   :: YawRateop                                       ! Steady operating point command yaw rate.
 REAL(ReKi), ALLOCATABLE      :: Yop      (:,:)                                  ! Periodic steady state operating output measurements.
 
-!bjj start of proposed change AD v12.70w
 INTEGER                      :: ErrStat                                         ! Determines if an error was encountered in the Inflow Wind Module
-!bjj end of proposed change
 INTEGER(4)                   :: I                                               ! Generic index.
 INTEGER(4)                   :: I1                                              ! Loops through all active (enabled) DOFs (rows).
 INTEGER(4)                   :: I2                                              ! Loops through all active (enabled) DOFs (cols).
@@ -863,13 +813,7 @@ INTEGER(4)                   :: IndxVSHR  = 0                                   
 INTEGER(4)                   :: IndxVZ    = 0                                   ! Column index   of the vertical              wind speed disturbance in the [Bd] and [Dd] matrices.
 INTEGER(4)                   :: IndxYawPos   = 0                                ! Column index   of the nacelle yaw (position)       control   input in the [B ] and [D ] matrices.
 INTEGER(4)                   :: IndxYawRate  = 0                                ! Column index   of the nacelle rate                 control   input in the [B ] and [D ] matrices.
-!jmj Start of proposed change.  v6.10d-jmj  13-Aug-2009.
-!jmj Change IterRtHS from 1 to 2.  This eliminates a problem when linearizing
-!jmj   with GBoxEff < 100.0 as SgnPrvLSTQ may switch signs between calls to
-!jmj   RtHS():
-!remove6.10dINTEGER(4), PARAMETER        :: IterRtHS  = 1                                   ! Number of times to iterate on RtHS when pertubing DOFs and linearizing FAST.  As Karl Stol pointed out when developing SymDyn, the iteration for the induction factor in AeroDyn starts from the previous states of the induction factors for each element.  Thus, he has found that he gets better convergence when he calls AeroDyn multiple times for each time step.  He currently implements 4 loops when he linearizes his model.  Is this necessary in FAST as well?  This can be checked by iterating RtHS 4 times every time you perturb a DOF in Linearize()--then see if the state matrices change!!!!!  I am using the IterRtHS PARAMETER set to 4 to match SymDyn.
 INTEGER(4), PARAMETER        :: IterRtHS  = 2                                   ! Number of times to iterate on RtHS() when pertubing DOFs and linearizing FAST.  As Karl Stol pointed out when developing SymDyn, the iteration for the induction factor in AeroDyn starts from the previous states of the induction factors for each element.  Thus, he has found that he gets better convergence when he calls AeroDyn multiple times for each time step.  He currently implements 4 loops when he linearizes his model.  However, I found that only 2 was necessary.
-!jmj End of proposed change.  v6.10d-jmj  13-Aug-2009.
 INTEGER(4)                   :: K                                               ! Loops through blades.
 INTEGER(4)                   :: L                                               ! Generic index.
 INTEGER(4)                   :: Sttus                                           ! Status returned by an attempted allocation.
@@ -880,13 +824,6 @@ CHARACTER(  3)               :: FmtText   = '(A)'                               
 CHARACTER(200)               :: Frmt                                            ! A string to hold a format specifier.
 CHARACTER(200)               :: Frmt1                                           ! A string to hold a format specifier.
 CHARACTER(200)               :: Frmt2                                           ! A string to hold a format specifier.
-
-
-   ! Global functions.
-
-!bjj rm AD 12.70b CHARACTER(11), EXTERNAL      :: CurDate                                         ! A function that returns the durrent date in the form "dd-mmm-ccyy".
-!bjj rm AD 12.70b CHARACTER( 8), EXTERNAL      :: CurTime                                         ! A function that returns the durrent date in the form "hh:mm:ss".
-!bjj rm AD 12.70b CHARACTER(11), EXTERNAL      :: Int2LStr                                        ! A function to convert an interger to a left-justified string.
 
 
 
@@ -1040,29 +977,15 @@ ENDIF
                                              ! No need to store the current generator torque since we perturb this input slightly differently
 BlPitchop    = BlPitch                       ! Blade pitch
 GenTrqop     = GenTrq                        ! Generator torque
-!BJJ START of proposed change AD v12.70w
-!rmVop          = V                             ! Horizontal hub height wind speed
-!rmDELTAop      = DELTA                         ! Horizontal wind direction
-!rmVZop         = VZ                            ! Vertical wind speed
-!rmHSHRop       = HSHR                          ! Horizontal shear coefficient
-!rmVSHRop       = VSHR                          ! Vertical shear coefficient
-!rmVLINSHRop    = VLINSHR                       ! Vertical (linear) shear coefficient
-!rmVGUSTop      = VGUST                         ! Horizontal hub height wind gust
-!bjj end of proposed change
 
 
    ! Open the FAST linear file (.lin) and give it a heading:
 
 CALL OpenFOutFile ( UnLn, TRIM( RootName )//'.lin' )
 
-!bjj start of proposed change vXX
-!rmWRITE (UnLn,'(/,A)'   )  'This linearized model file was generated by '//ProgName//TRIM( ProgVer )// &
-!rm                         ' on '//CurDate()//' at '//CurTime()//'.'
-!rmWRITE (UnLn,FmtText   )  'The aerodynamic calculations were made by '//TRIM(AeroProg)//' '//TRIM(AeroVer)//'.'
 WRITE (UnLn,'(/,A)'   )  'This linearized model file was generated by '//TRIM(ProgName)//' '//TRIM( ProgVer )// &
                          ' on '//CurDate()//' at '//CurTime()//'.'
 WRITE (UnLn,FmtText   )  'The aerodynamic calculations were made by '//TRIM(AD_Prog%Name)//' '//TRIM(AD_Prog%Ver)//'.'
-!bjj end of proposed change
 WRITE (UnLn,'(/,1X,A)')  TRIM( FTitle )
 
 
@@ -1086,18 +1009,10 @@ ELSEIF ( TrimCase == 3 )  THEN      ! Collective blade pitch found
    WRITE(UnLn,FmtText        )  '   Type of steady state solution found                Trimmed collective blade pitch'// &
                                                                                                               ' (TrimCase = 3)'
 ENDIF
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Include the RotSpeed and AzimB1Up values in the <RootName>.lin file:
 WRITE   (UnLn,'(A,ES14.5)'   )  '   Azimuth-average rotor speed, RotSpeed      (rad/s) ', RotSpeed
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 IF ( RotSpeed == 0.0 )  THEN        ! Rotor is parked, therefore we will find a static equilibrium position.
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Include the RotSpeed and AzimB1Up values in the <RootName>.lin file:
-!remove6.02a   WRITE(UnLn,FmtText        )  '   Period of steady state solution              (sec) THE STEADY SOLUTION IS NOT PERIODIC!'// &
-!remove6.02a                                                                                                        ' (since RotSpeed = 0)'
    WRITE(UnLn,FmtText        )  '   Period of steady state solution              (sec) N/A (RotSpeed = 0.0)'
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 ELSE                                ! Rotor is spinning, therefore we will find a periodic steady state solution.
    WRITE(UnLn,'(A,ES14.5)'   )  '   Period of steady state solution              (sec) ', Period
 ENDIF
@@ -1107,11 +1022,7 @@ WRITE   (UnLn,'(A,ES14.5)'   )  '   Velocity 2-norm of steady state solution   (
 WRITE   (UnLn,'(A,I4)'       )  '   Number of equally-speced azimuth steps, NAzimStep  ', NAzimStep
 WRITE   (UnLn,'(A,I4)'       )  '   Order of linearized model, MdlOrder                ', MdlOrder
 IF ( MdlOrder == 1 )  THEN ! 1st order model
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Include the RotSpeed and AzimB1Up values in the <RootName>.lin file:
-!remove6.02a   WRITE(UnLn,'(A,I4,A,I4,A)')  '   Number of active (enabled) DOFs                    ', NActvDOF, ' (', 2*NActvDOF, ' states)'
    WRITE(UnLn,'(A,I4,A,I2,A)')  '   Number of active (enabled) DOFs                    ', NActvDOF, ' (', 2*NActvDOF, ' states)'
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 ELSE                       ! 2nd order model (MdlOrder = 2)
    WRITE(UnLn,'(A,I4)'       )  '   Number of active (enabled) DOFs                    ', NActvDOF
 ENDIF
@@ -1250,11 +1161,7 @@ IF ( NumOuts == 0 )  THEN     ! We have no output measurements
    WRITE   (UnLn,'(A)'               )  '   None selected'
 ELSE                          ! We have at least one output measurement
    DO I  = 1,NumOuts          ! Loop through all selected output channels
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Add a space between the OutName and the OutUnits:
-!remove6.02a      WRITE(UnLn,'(A,I3,A,A,A)'      )  '   Row ', I, ' = ', OutParam(I)%Name, OutParam(I)%Units
       WRITE(UnLn,'(A,I3,A,A,1X,A)'   )  '   Row ', I, ' = ', OutParam(I)%Name, OutParam(I)%Units
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
    ENDDO                      ! I - All selected output channels
 ENDIF
 
@@ -1267,15 +1174,6 @@ IF ( CalcStdy )  THEN   ! A steady state solution was found
 ELSE                    ! Linearize about initial conditions:
    CALL WrScr1( ' Linearizing FAST model about initial conditions.' )
 ENDIF
-
-
-   ! Make sure the hub-height wind file is never read-in again during the
-   !   linearization process (this is needed for the disturbances to work):
-
-!bjj start of proposed change v12.70w
-!bjj this needs to be replaced somehow!!!!
-!rmHHWindFlag = .FALSE.
-!bjj end of proposed change v12.70w
 
 
    ! Initialize linearized state matrices to zero:
@@ -1295,9 +1193,7 @@ IF ( MdlOrder == 2 )  THEN ! 2nd order model
 ENDIF
 
 
-!bjj start of proposed change
 ADIntrfaceOptions%LinearizeFlag = .TRUE.
-!bjj end of proposed change
 
 
    ! Linearize the FAST model at each azimuth step:
@@ -1323,7 +1219,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
 
    DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:      TIMFLAG = .TRUE.                             ! Make sure AeroDynamics are calculated even though time has not been incremented
       CALL RtHS
    ENDDO             ! I - Iteration on RtHS
    CALL CalcOuts
@@ -1358,7 +1253,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       QDT(PS(I2)) = QDop(PS(I2),L) + DelQD(PS(I2)) ! (+) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1373,7 +1267,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       QDT(PS(I2)) = QDop(PS(I2),L) - DelQD(PS(I2)) ! (-) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1405,7 +1298,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       QT (PS(I2)) = Qop (PS(I2),L) + DelQ (PS(I2)) ! (+) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1420,7 +1312,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       QT (PS(I2)) = Qop (PS(I2),L) - DelQ (PS(I2)) ! (-) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1470,7 +1361,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          QT(DOF_Yaw) = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1489,7 +1379,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          QT(DOF_Yaw) = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1533,7 +1422,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          QDT(DOF_Yaw) = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1552,7 +1440,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          QDT(DOF_Yaw) = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1587,7 +1474,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       DelGenTrq =            DelGenTq              ! (+) pertubation of generator torque
       GenTrq    = GenTrqop + DelGenTq              ! (+) pertubation of generator torque; NOTE: this pertubation of GenTrq is overwritten by the built-in or user-defined torque-speed models (which must add the value of DelGenTrq to it), unless trimming generator torque (TrimCase == 2)
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1603,7 +1489,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       DelGenTrq =          - DelGenTq              ! (-) pertubation of generator torque
       GenTrq    = GenTrqop - DelGenTq              ! (-) pertubation of generator torque; NOTE: this pertubation of GenTrq is overwritten by the built-in or user-defined torque-speed models (which must add the value of DelGenTrq to it), unless trimming generator torque (TrimCase == 2)
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1634,7 +1519,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       BlPitch = BlPitchop + DelBlPtch              ! (+) pertubation of rotor collective blade pitch
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1649,7 +1533,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       BlPitch = BlPitchop - DelBlPtch              ! (-) pertubation of rotor collective blade pitch
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1681,7 +1564,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
          BlPitch(K) = BlPitchop(K) + DelBlPtch        ! (+) pertubation of individual pitch of blade K
          DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:            TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
             CALL RtHS
          ENDDO             ! I - Iteration on RtHS
          CALL CalcOuts
@@ -1696,7 +1578,6 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
          BlPitch(K) = BlPitchop(K) - DelBlPtch        ! (-) pertubation of individual pitch of blade K
          DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:                  TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
             CALL RtHS
          ENDDO             ! I - Iteration on RtHS
          CALL CalcOuts
@@ -1729,15 +1610,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxV        > 0 )  THEN ! Yes, horizontal hub-height wind speed has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm      V       = Vop       + DelV                   ! (+) pertubation of horizontal hub-height wind speed
       LinPerturbations(2:) = 0.0
       LinPerturbations(1) = DelV
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1750,15 +1627,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      V       = Vop       - DelV                   ! (-) pertubation of horizontal hub-height wind speed
       LinPerturbations(2:) = 0.0
       LinPerturbations(1) = -1.0*DelV
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change AD v12.70w
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1771,11 +1644,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      V       = Vop                                ! Eliminate the horizontal hub-height wind speed pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -1790,15 +1660,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxDELTA    > 0 )  THEN ! Yes, horizontal wind direction has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm      DELTA   = DELTAop   + DelDELTA               ! (+) pertubation of horizontal wind direction
       LinPerturbations(:) = 0.0
       LinPerturbations(2) = DelDELTA
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1811,15 +1677,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      DELTA   = DELTAop   - DelDELTA               ! (-) pertubation of horizontal wind direction
       LinPerturbations(:) = 0.0
       LinPerturbations(2) = -1.0*DelDELTA
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1832,11 +1694,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      DELTA   = DELTAop                            ! Eliminate the horizontal hub-height wind speed pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -1851,15 +1710,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxVZ       > 0 )  THEN ! Yes, vertical wind speed has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm      VZ      = VZop      + DelVZ                  ! (+) pertubation of vertical wind speed
       LinPerturbations(:) = 0.0
       LinPerturbations(3) = DelVZ
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1872,15 +1727,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VZ      = VZop      - DelVZ                  ! (-) pertubation of vertical wind speed
       LinPerturbations(:) = 0.0
       LinPerturbations(3) = -1.0*DelVZ
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1893,11 +1744,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VZ      = VZop                               ! Eliminate the vertical wind speed pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -1912,15 +1760,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxHSHR     > 0 )  THEN ! Yes, horizontal wind shear has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm      HSHR    = HSHRop    + DelHSHR                ! (+) pertubation of horizontal wind shear
       LinPerturbations(:) = 0.0
       LinPerturbations(4) = DelHSHR
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1933,15 +1777,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      HSHR    = HSHRop    - DelHSHR                ! (-) pertubation of horizontal wind shear
       LinPerturbations(:) = 0.0
       LinPerturbations(4) = -1.0*DelHSHR
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1954,11 +1794,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      HSHR    = HSHRop                             ! Eliminate the horizontal wind shear pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -1973,15 +1810,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxVSHR     > 0 )  THEN ! Yes, vertical wind shear has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm      VSHR    = VSHRop    + DelVSHR                ! (+) pertubation of vertical wind shear
       LinPerturbations(:) = 0.0
       LinPerturbations(5) = DelVSHR
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -1994,15 +1827,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VSHR    = VSHRop    - DelVSHR                ! (-) pertubation of vertical wind shear
       LinPerturbations(:) = 0.0
       LinPerturbations(5) = -1.0*DelVSHR
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -2015,11 +1844,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VSHR    = VSHRop                             ! Eliminate the vertical wind shear pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -2034,15 +1860,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxVLSHR    > 0 )  THEN ! Yes, vertical wind shear (linear) has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm     VLINSHR = VLINSHRop + DelVLINSHR             ! (+) pertubation of vertical wind shear (linear)
       LinPerturbations(:) = 0.0
       LinPerturbations(6) = DelVLINSHR
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -2055,15 +1877,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VLINSHR = VLINSHRop - DelVLINSHR             ! (-) pertubation of vertical wind shear (linear)
       LinPerturbations(:) = 0.0
       LinPerturbations(6) = -1.0*DelVLINSHR
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -2076,11 +1894,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VLINSHR = VLINSHRop                          ! Eliminate the vertical wind shear (linear) pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -2095,15 +1910,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxVGUST    > 0 )  THEN ! Yes, horizontal hub-height wind gust has been selected as an input wind disturbance
 
-!bjj start of proposed change AD v12.70w
-!rm      VGUST   = VGUSTop   + DelVGUST               ! (+) pertubation of horizontal hub-height wind gust
       LinPerturbations(:) = 0.0
       LinPerturbations(7) = DelVGUST
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -2116,15 +1927,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VGUST   = VGUSTop   - DelVGUST               ! (-) pertubation of horizontal hub-height wind gust
       LinPerturbations(:) = 0.0
       LinPerturbations(7) = -1.0*DelVGUST
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
-!bjj end of proposed change
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-!bjj rm:               TIMFLAG = .TRUE.                          ! Make sure AeroDynamics are calculated even though time has not been incremented
          CALL RtHS
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts
@@ -2137,11 +1944,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-!bjj start of proposed change AD v12.70w
-!rm      VGUST   = VGUSTop                            ! Eliminate the horizontal hub-height wind gust pertubation throughout the rest of this analysis
       LinPerturbations(:) = 0.0
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
-!bjj end of proposed change
 
    ENDIF
 
@@ -2202,15 +2006,9 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
    ! Print the current azimuth step (according to the I/O azimuth convention):
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Include the RotSpeed and AzimB1Up values in the <RootName>.lin file:
-!remove6.02a      WRITE (UnLn,'(A,F6.2,A)')  '----------------------------- Azimuth = ',                                &
-!remove6.02a                                 MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + AzimB1Up + 90.0, 360.0 ), &
-!remove6.02a                                 ' deg -----------------------------'
       WRITE (UnLn,'(A,F6.2,A,F6.2,A)')  '--------- Azimuth = ',                                                    &
                                         MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + AzimB1Up + 90.0, 360.0 ), &
                                         ' deg (with respect to AzimB1Up = ', AzimB1Up, ' deg) ---------'
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
 
    ! Print the: XDop | Xop | AMat | BMat, then the: Yop | blank | CMat | DMat,
@@ -2593,15 +2391,9 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
    ! Print the current azimuth step (according to the I/O azimuth convention):
 
-!jmj Start of proposed change.  v6.02a-jmj  25-Aug-2006.
-!jmj Include the RotSpeed and AzimB1Up values in the <RootName>.lin file:
-!remove6.02a      WRITE (UnLn,'(A,F6.2,A)')  '----------------------------- Azimuth = ',                                &
-!remove6.02a                                 MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + AzimB1Up + 90.0, 360.0 ), &
-!remove6.02a                                 ' deg -----------------------------'
       WRITE (UnLn,'(A,F6.2,A,F6.2,A)')  '--------- Azimuth = ',                                                    &
                                         MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + AzimB1Up + 90.0, 360.0 ), &
                                         ' deg (with respect to AzimB1Up = ', AzimB1Up, ' deg) ---------'
-!jmj End of proposed change.  v6.02a-jmj  25-Aug-2006.
 
    ! Print the: QD2op | QDop | Qop | MassMat | DampMat | StffMat | FMat,
    !   then the: Yop | blank | blank | blank | VelC | DspC | DMat, as controlled by TabDelim
@@ -3127,7 +2919,6 @@ ENDIF
 
 CALL WrScr1( ' ' )
 
-!bjj start of proposed change V6.02D-BJJ
    ! deallocate arrays
 IF ( ALLOCATED( AMat      ) ) DEALLOCATE( AMat      )   
 IF ( ALLOCATED( BdMat     ) ) DEALLOCATE( BdMat     )   
@@ -3144,13 +2935,10 @@ IF ( ALLOCATED( FMat      ) ) DEALLOCATE( FMat      )
 IF ( ALLOCATED( MassMat   ) ) DEALLOCATE( MassMat   )   
 IF ( ALLOCATED( Stffmat   ) ) DEALLOCATE( Stffmat   )   
 IF ( ALLOCATED( Yop       ) ) DEALLOCATE( Yop       )   
-!bjj END of proposed change V6.02D-BJJ
 
 
 
 RETURN
 END SUBROUTINE Linearize
 !=======================================================================
-!BJJ Start of proposed change vXX NWTC_Lib
 END MODULE FAST_Lin_Subs
-!bjj end of proposed change
