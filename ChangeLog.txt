@@ -1,0 +1,666 @@
+                          TurbSim Change Log
+                          -----------------
+
+SNLWIND
+=======
+
+Pre v2.0  M. Buhl
+ I don't know the long history of the changes made.  Originally, there was
+ a code called SNLWIND from Sandia.  Paul Veers created the code.  Then,
+ Neil Kelley of NREL modified the code so that it would create three-component
+ winds and the code became SNLWIND-3D.
+
+
+SNLWIND-3D
+==========
+
+v2.00  M. Buhl
+ I modified the program so that it could also create binary files in BLADED
+ format.  I also cleaned it up some and put in some Fortran 90 features.
+
+v2.03  24-Nov-1997  M. Buhl
+ I ported the code to the Sun Fortran 90 compiler.  I had to change INT2( X )
+ to INT( X , 2 ).
+
+v2.04  02-Feb-1998  M. Buhl
+ I changed the DO loops for the output time histories to be 1 to NTRAN
+ instead of 1 to NTRAN-1.  I changed the program version date format.
+
+v2.05  19-Feb-1998  M. Buhl
+ I added a RECL=2 parameter to the OPEN for binary output so the files would
+ be smaller on the Sun.
+
+v2.06  18-May-1998  M. Buhl
+ Neil Kelley discovered that the version we had been using was one that
+ hadn't had two important changes made to it.  They were need for "smooth"
+ turbulence.  I added the corrections.
+
+v2.08  27-Aug-1998  M. Buhl
+ We discovered that when we have mean wind speeds with more precision than
+ a tenth of a meter per second, we get incompatible wind speeds between
+ the .wnd and .sum files.  This is because when we write the binary file,
+ we write out INT(10*UHUB), which truncates the value.  We modified the
+ calculation of UHUB so that we do UHUB=0.1*INT(10.0*UHUB) before using
+ it in the code.
+
+v3.??  23-Aug-1999  N. Kelley
+ This version computes the hub coherency first and the remainder of the
+ grid second.
+ The update to the binary files to limit the precision of UHUB and the
+ TIs has been included.
+
+v3.02c  24-Aug-1999  N. Kelley
+ Fixed problem with UHUB when ZREF and ZHUB were not the same.
+ Previously only affected non-IEC spectral models.
+
+
+SNLWIND-IEC
+===========
+
+v4.00ndk-a  27-Dec-1999  N. Kelley
+ Created an IEC-only version of the original cartesian SNLWIND-3DC,
+ Ver 3.02c called FFIELD_IEC.F
+
+ Changed method in which hub wind speed is estimated when the
+ reference height (ZREF) is not at the same elevation as the HUB
+ (ZHUB).  If both the hub height and the reference wind speed
+ height are within the rotor disk, the specified power law is
+ used.  If the ref ht is below the rotor disk, the log wind profile
+ is employed with an assumed roughness length (Z0) of 0.03 meters.
+
+ The target standard deviation for the Kaimal spectral model is
+ reduced by 2% prior to calculating the spectrum.  This slight
+ reduction brings the target and simulated turbulence intensities
+ into better agreement.
+
+
+SNwind
+======
+
+v1.00  17-Jan-2000  M. Buhl
+ Made a major overhaul of the program.
+ Converted all but the FFT routines to free-form.
+ Input file reworked.
+ Moved input code to GetInput.
+ I moved the FFT core routines to a separate file (FFTSubs.for).  I will
+ leave them in their (mostly) original state.
+ I fixed a bug in the original SNLWIND-IEC in the calculation of the mean
+ wind speed when the ref and hub heights differed.
+ I added a CPU timer.
+ I added a header to the HH turbulence-parameter file.
+ I added logic to output HH AeroDyn files.
+ I eliminated a bunch of unused variable declarations.
+ I moved SigmaIEC and MaxDims from COMMON to the GenUse module.
+ I moved HubHt and TurbModel from the arguments for the IEC routines and
+ put them in GenMod.
+ I added USEs from Genuse in SNWsubs.f90 and FFTsubs.f90.
+ I had to rename the "N" in GenUse to "NumGrids" and all its references, as
+ "N" was used in the FFTsubs.
+ I used dynamic allocation for the big arrays.
+ I converted the grid coordinates (Y and Z) from matrices to vectors.
+ I eliminated the maximum grid size and put in a test to make sure the grid
+ dimensions were even.
+ I added some debug statements and modified others.
+ I made some minor efficiency improvements.
+ I added CPU time to the summary file.
+ I converted many statistics accumulators to double precision.
+ I added a new function, PSF(), to compute the product of small factors
+ to ensure that we never get a number of time steps with factors larger
+ than 29.  This seems to have eliminated the problem that we thought was
+ due to going longer than 600 seconds.  The program seems much better
+ behaved now and runs faster too.
+ I optimized the equations for the Kaimal and von Karman spectra.
+ I changed the DEBUG_OUT for the Kaimal and von Karman spectra to
+ generate true PSDs.
+
+v1.01  01-Dec-2000  M. Buhl
+ I changed the informative message about generating the HH wind file so
+ that it says it's generating "<root>.hh" instead of "<root>.dat."
+ I changed the calculation of NumSteps so that it works properly (I hope).
+ Before, it found a number that factored to primes less than or equal to
+ 29.  Then, it made sure it was divisible by four.  This meant that the
+ number no longer necessarliy factored to small primes.  I did two things
+ to improve the situation.  I essentially divided the number by four,
+ then made sure that the result factored to small primes.  Then, I
+ multiplied that by 4 to get a number that was divisible by four *and*
+ factored to small primes.
+ I converted the code to use the Fortran intrinsics RANDOM_SEED() and
+ RANDOM_NUMBER().  I also changed the code so that it generates all the
+ random numbers in one call and stores them in an array.  SNwind now runs
+ almost twice as fast as it did before because of the new RNG.
+ I cleaned up PSF() to eliminate some useless code and fixed a bug.  It
+ seems I had left 19 out of my list of primes!
+ I eliminated the limits on the random seed.  All valid 32-bit integers
+ (even negative ones) are OK.
+ I eliminated the limit on the horizontal mean flow angle.
+
+v1.02  14-Dec-2000  M. Buhl
+ Kirk Pierce found that the wind file was not as long as advertized when
+ he used a binary file with ADAMS.  The problem turned out to be that I
+ was telling the header of the binary file there were NumFreq time steps,
+ but only outputting NumOutSteps to the file.  I changed NumFreq there to
+ NumOutSteps/2 to eliminate the problem.
+
+v1.03  12-Jan-2001  M. Buhl
+ I found that when I was generating AeroDyn HH wind files for high wind
+ speeds, I overflowed the field for the vertical wind speed.  I had to
+ modify SNwind.f90\snwind() to fix it.  While I was at it, I changed the
+ file header to use one line for column titles and one for units.  The
+ old version used two lines for titles and none for units.  You still
+ can't use the auto-column-detection feature of Crunch to determine the
+ headings because of the "!" at the beginnings of the line.
+
+v1.10  20-Apr-2001  P. Moriarty, M. Buhl
+ Pat enhanced the code so that one could enter the TI in percent in addition
+ to the standard "A" or "B" turbulence.  That required changes to
+ snwind.f90\snwind() and SNWsubs.f90\GetInp(), and he added the new variables
+ PerTurbInt and NumTurbInp to modules.f90\genmod().  We modified SNwind.f90\SNwind()
+ so that we output either "A", "B", or "User Specified" to the summary file.
+ Also in that routine, we modified the calculation of SigmaIEC and TurbInt
+ to that it is done appropriately when a value is entered.
+ I changed the string Version so that it is no longer set in GenMod with an
+ initialization string.  Now, I call the new routine SetVersion.f90\SetVersion()
+ from snwind.f90\snwind() to set it.  This eliminates the need to recompile
+ every file that USEd GenMod whenever the version changes.
+
+v1.11  20-Apr-2001  M. Buhl
+ When trying to run with a very small TI, I got domain errors on the SQRT()s
+ used in calculating the stats.  I modified the calls so that they did a MAX()
+ of the calculated value and 0 to eliminate the errors.
+
+v1.12a	M. Buhl
+ I added the ability to use two seeds instead of one.
+
+v1.12b  12-May-2003  M. Buhl
+ I moved the stuff from between the two big DO loops to be either before both
+ or after both.  I then converted the two loops into one.
+
+v1.12c  13-May-2003  M. Buhl
+ I made it so that when using the non-correlated spectra, I dimension the bug
+ Matrix array for only one component and reuse it for the three components.
+ I took the logic in two IVec DO loops that calculate Matrix and TRH and converted
+ it to subroutines (SpecMat and VMat).  I moved the logic between the routines to
+ be either before the loops or after.  I then merged the two loops into one.
+
+v1.12d  14-May-2003  M. Buhl
+ I converted the Temp array to a scalar and (in SpecMat) put the equations for
+ Matrix inside the loops instead of creating a separate loop after the Temp
+ array had been files.  This sped the code up by about 12%.
+
+v1.20  03-Jun-2003  M. Buhl
+ I rolled up all the alpha changes into this new version.  I eliminated all
+ alpha comments.
+
+v1.21 17-Oct-2003 B. Jonkman
+ I added a third dimension to the variable ExCoDW to account for its dependance on
+ frequency and modified the coherency calculations which were previously calculated 
+ incorrectly.
+
+==========================================================================================================================++
+TurbSim 
+==========================================================================================================================++
+
+v1.00a  15-Mar-2004 B. Jonkman
+  I made many major changes to the code:
+  I removed the old Sandia FFT routines and replaced them with CXML ones.  These new
+    routines have been written with code specific to Compaq VF, so the code will not
+    be quite as portable anymore.
+  I added two more random number generators. The user now has a choice of the one that
+    was in SNWind, the one from SNLWND-3D, or "RanLux," which has been pretty thoroughly
+    tested in academia.
+  I replaced the SysCVF.f90, ModCVF.f90 and GenUse.f90 with the new NWTC subroutines. I
+    updated the rest of the code to reflect these changes and to make use of some new
+    I/O subroutines.
+  I added the SMOOTH model and three wind farm spectral models back into the code.  
+  I removed the restriction that the grid be an even number of points and removed the 
+    vector that stored the hub point (VHub). The hub point is now stored in the main
+    velocity array with all of the other points.  
+  I removed the limitation that the grid be square and/or have the same vertical and
+    horizontal spatial resolution.
+  I changed the SpecMat() subroutine to compute the Cholesky factorizations more
+    efficiently.  This sped up the code about 30%.  The new factorization algorithm
+    allowed me to elimate some of the large matrices, such as ExCoDW, which significantly 
+    decreased the amount of memory required (on the order of 66-75% less, depending on 
+    which input options are set). 
+  I added the ability to generate Marshall's "lollipop" wind points, a rectangular grid 
+    with a line of points at the tower centerline going from the bottom of the grid to 
+    the ground.  At this point, it generates ".twr" files, but AeroDyn cannot read them 
+    yet.
+  I added more parameters in the input file for the new spectral models, new output
+    types, new coherent turbulence parameters, and grid sizes.
+  I added more checks on the validity of input values and removed variables that weren't
+    necessary, and made some multi-dimensional arrays one-dimensional.
+  I added maximum TKE and CTKE to the summary file as well as instantaneous values to the 
+    hub-height GenPro and formatted files.
+  I added coherent turbulence calculations to the code.  When the "smooth" model is used with
+    a positive Richardson number, we have the ability to add coherent events to a background FF
+    wind field.  TurbSim generates a time step file with scaling values, which AeroDyn reads
+    along with the background FF file.  AeroDyn adds the two fields internally instead of us 
+    trying to store high-resolution grids (which, by the way, AeroDyn isn't currently capable 
+    of reading anyway) that take up a lot of space and would most likely slow AeroDyn down 
+    considerably.
+  I added the ability to output fewer timesteps than are computed.  We now use analysis time
+    to determine the frequencies and to perform the FFT, but write out only the first usable 
+    output time steps.
+  We've modified some of the coherence scaling and updated the input file so that values that
+     shouldn't change for a given event dataset are not in the TurbSim input file.
+  I updated the AeroDyn/Bladed format of the .wnd files.  These new files have more precision
+     than the old format, and they don't have the limit of 32 grid points that the previous
+     format had either.
+
+v1.00b-bjj 9-September-2004  -- B. Jonkman
+  I added the latest version of the NWTC subroutines to the code.  This required me to change
+     a couple of names in TurbSim. 
+  I modified the subroutine WriteEvents() so that the DNS files, which are 5 digits long 
+     can be displayed.  Previously the program printed only 4 digits.
+  I added a parameter that indicates whether we're using DNS or LES files (this added another
+     line in the input file).
+
+v1.00c-bjj 28-Oct-2004 -- B. Jonkman
+  I removed the normal distribution from the expected length and replaced it with a 
+    nearly-lognormal distribution, calculated from NWTC\LIST data.  The previous 
+    distribution was creating many zero-length coherent turbulence files.
+  Marshall decided that we should be able to use other extensions on the input file
+    name, so I removed the assumption that all input files end in ".inp".
+  I modified the output so that hub height files print out the requested output time, not the
+    entire analysis time.
+
+v1.00d-bjj 19-Jan-2005 -- B. Jonkman
+  I added another model, "NWTCUP", to better reflect the NWTC inflow conditions.  This
+  model uses the basic WF_UPW spectra, but uses different scaling for the cross-correlation
+  coefficients and the corresponding correlation matrix. I also updated the calculated 
+  Z/L parameter for this NWTCUP model and modified the u* calculations so that the 
+  resulting spectra levels match the observed ones.  The predicted CTKE for coherent 
+  structures was modified for runs with 0<=Ri<=0.05 with CTKE larger than 30 m^2/s^2.
+
+v1.00e-bjj 1-March-2005 -- B. Jonkman
+  I modified the scaling for the IEC models so that they reflect the IEC 61400-1, Edition 3
+  standards.  The Edition 2 scaling parameters can also be used when specified by "-ed2" 
+  (i.e. "a-ed2", "b-ed2", or "13.4-ed2") on the turbulence characteristic input line.
+  I also moved the Roughness Length from the "Non-IEC Meteorological Boundary 
+  Conditions" section to the "Meteorological Boundary Conditions" section after I noticed 
+  that the value we've been using for the logarithmic vertical wind profile wasn't specified 
+  in the IEC standard.  This will allow people to use other roughness lengths if they feel 
+  like it (of course it only makes a difference in IEC models if they use tower points or 
+  specify a reference wind speed at a height outside of the rotor disk).
+
+v1.00f-bjj 26-May-2005 -- B. Jonkman
+  I added the /traceback option in the project settings, at Marshall's request, so that he can debug better.
+
+  I've added "KHTest" as an option for the NWTCUP model (in the turbulence characteristic line).
+  This option removes much of the randomization that normally occurs in the coherent structure
+  scaling.  It must read a file named "Events.xtm" which basically concatenates the most extreme
+  LES events and scales them so that the Max CTKE is at least 30 m^2/s^2 and has 25 Hz bandwidth.
+  One event that starts 25% of the way through the time series and lasts for at least half of the
+  length of the time series will be superimposed on the background.  It is scaled to the size of 
+  the rotor.
+
+v1.00g-bjj 5-July-2005 B. Jonkman
+  I created a new format for TurbSim binary files.  These files will have the maximum precision posible,
+  given one slope/offset for each wind component.  They will also eliminate the problem of having to read
+  the summary file to figure out how to scale the binary file.  All of the relevant info is stored in
+  the binary file.
+
+v1.00h-bjj 15-Oct-2005 B. Jonkman
+  I found a bug in calculating the default VW cross-correlation coefficients in 2 of the wind farm models
+  (UPW & 14D). They were using the reference wind speed, not the hub wind speed like the other 2 ccc were.
+  I traced this back to SNLWIND-3D so it's been there a while.
+  
+  I modified how the mean wind speed and TI of points surrounding the hub are calculated when the hub does
+  not land on a grid point.  I'm not convinced it was always using the correct points.
+  
+  I also found a small issue in the Richardson Number to Z/L calculation for the NWTCUP model so I fixed it.
+  It was going a little bit outside the range of data we'd calculated.
+
+  We've started adding Lamar LLJ data so I created the hooks for a GP_LLJ spectral model, and I'm adding the
+  details as we analyze the Lamar data.
+  
+  I replaced the CXML FFT routines with some FFTPACK routines from www.netlib.org.  I moved the PSF() function
+  to a new FFT_module and Marshall is probably going to make that module part of the NWTC library. ('Cause Jason
+  wants to use it and the FFT routines in FAST, too.)  Replacing the CXML library allowed me to move the
+  code to the new Intel compiler (IVF 9.0).  The new compiler seems to run the IEC cases around 10% faster and
+  the other spectral models about 25% faster.  I then made some algorithm changes in calculating the v and w 
+  component IEC spectral matrices: Since I know the Cholesky factorization of Veer's H matrix on those components
+  is just a diagonal matrix containing the square root of the spectral values, I can save some computations.  
+  That sped up the IEC cases by another 20-30%.  I then replaced my Cholesky factorization with the LAPACK 
+  version from www.netlib.org.  I don't have the optimized BLAS library (from MKL or ATLAS), but after 
+  compiling this new code, I achieved results about 40% faster on the smaller matrices (5x5 grid) and 70% 
+  faster on 13x13 grids. I also perform a Cholesky factorization on the coherence matrix and then multiply 
+  it on the left by the diagonal spectral matrix instead of multiplying the coherence matrix on both sides by 
+  the spectral matrix and then performing the Cholesky factorization.  That saves one matrix multiply.
+  Added up, TurbSim now runs at least 40-80% faster than it did before I moved to the IVF compiler.
+  
+  I fixed a formatting error in the summary file: If the number of points in the horizontal grid dimension was
+  larger than 14, the standard deviations at each height were printed on two lines, in the wrong columns.
+  
+  I changed the calculation of the number of points to use the CEILING() function instead of NINT() at Jason's
+  suggestion.  Because of the way we add points to make the FFT faster, this will probably not effect any results.
+  (It wouldn't be different except in some rare case where NINT(x = (UsableTime + GridWidth/UHub )/TimeStep) is
+  already a multiple of 4 and a multiple of small prime numbers and NINT(x) /= CEILING(x), but you still probably
+  wouldn't notice unless your turbine was completely yawed at the end of your simulation and the tip of the blade
+  was between the last 2 grids in the x direction.)
+  
+  I noticed that the GenPro hh binary files were written with some parameters as 4-byte reals and others as 8-byte 
+  reals. This change happened when Marshall made the stats calculations double precision.  I modified the code so  
+  that it writes all the values as 4-bytes (or whatever ReKi is).  
+  
+  I made some changes to the IEC spectral models: (1) We'd been using local velocities for the spectral and coherence
+  functions, but the standard says we should be using Vhub.  (This was an error in SNLWIND-3D and SNwind, too.) 
+  (2) I also noticed that we were using a coherence decrement of 8.8 for Ed. 3 scaling, but that has been changed to 
+  12 in the latest & final(?) draft.  It now uses the value specified in the standard.  (3) After some discussion with 
+  Neil, we also decided that we shouldn't be using the coherence-squared function in the IEC since coh() is specified.  
+  Hopefully, we've fixed all the problems with the IEC scaling now.  
+  
+****************************************************************************************************************************
+v1.0 4-Nov-2005 B. Jonkman  
+****************************************************************************************************************************
+  I rolled up all the alpha changes into this new version and eliminated the alpha comments. I added an abort statement
+  if people try to use the GP_LLJ model since I don't have all the changes for that model made yet.
+  
+****************************************************************************************************************************
+v1.01 24-Jan-2006 B. Jonkman  
+****************************************************************************************************************************
+  Nora Paoletti pointed out that our definition of the U-component TI was inconsistent so we changed it to be Usig/UTBar
+  instead of Usig/UBar.  
+ 
+  I also fixed a bug in the way the mean flow angles were applied.  They worked in some cases (like when the horizontal
+  angle was zero), but the trigonometry was done incorrectly for the general case. 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.02a 30-Nov-2005 B. Jonkman
+  I added the cross-correlation-coefficients for the GP_LLJ model.
+ 
+v1.02b 26-Jan-2006 B. Jonkman
+  I created the function GP_TURB() to calculate the target spectral shape for the GP_LLJ model, based on my analysis
+  of 30-minute records of Lamar data.
+  I added the relationship between the Businger-Dyer predicted diabatic u* and the measured u* for the GP_LLJ model.
+  
+v1.02c 27-Jan-2006 B. Jonkman
+  I updated the NWTC subroutine library to version 1.12.  This required me to remove CheckArgs() and WrSyntax() 
+  from TSsubs.f90 and modify every place that called a module from the NWTC subroutine library.  I also had to 
+  initialize the Pi constants at the beginning of TurbSim.f90.
+  
+v1.02d 1-Feb-2006 B. Jonkman
+  I started adding the direction, ustar, & z/l profiles that Neil calculated for the GP_LLJ model.  
+    
+v1.02e 1-Feb-2006 B. Jonkman
+  I reinitialized the pRNG before getting all of the random phases so that when you input the same seed(s) for all 
+  of the spectral models (for a given RNG), you will now get the same random phases. (Even the models that do 
+  some randomization for the coherent structures or other scaling parameters at the beginning of the program).
+  This won't change anything in the IEC models, but it will change other models that have more randomization.
+  
+v1.02f 2-Feb-2006 B. Jonkman
+  We've transformed the fluctuating velocity components along with the mean wind speed when the horizontal/vertical
+  flow angles are non-zero.  I updated the user's guide to indicate what these angles do, and not to use the horizontal
+  angles when you're generating FF files for AeroDyn.  (Large vertical flow angles should be avoided in AeroDyn, too.)
+  
+v1.02g 3-Feb-2006 B. Jonkman  
+  I added the scaling for the ETM model for sigma as defined in the IEC 61400-1, Ed. 3 standard. I reworded a couple
+  of things in the summary file so that they're (hopefully) a bit clearer.
+   
+v1.02h/
+v1.10a 17-Feb-2006 B. Jonkman   
+  I fixed an issue with the BTS file scaling when the turbulence model is "NONE"
+  I added the wind speed & direction profiles that Neil calculated. I added inputs for wind profile type and jet
+  height to the input file so I had to change this version number to 1.10a instead of 1.02h.  I also moved the 
+  power law exponent to allow IEC users to change it for the "S" cases.  I added default values for the jet height
+  and wind speed.
+  
+v1.10b/c B. Jonkman Feb-2006
+  -I eliminated most of the alpha comments from previous alpha versions.
+  -I modified the getInput() subroutine so that it is easier to read.  I've moved some of the code that used to be there
+  into some new subroutines.
+  -I added an input to allow IEC users to specify which standard they're using (ie. -1 or -2 or -3).   
+  -I allowed the -3 standard to work like the -1 standard except use a different default power law exponent.
+  -I added different ustar & z/l profiles for the GP_LLJ when the wind profile is not "JET".
+
+****************************************************************************************************************************
+v1.10 10-Apr-2006 B. Jonkman
+****************************************************************************************************************************
+   I removed the alpha comments from the alpha versions and updated the user's guide.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.11a-bjj 30-May-2006 B. Jonkman
+   I modified the WrBinBladed() and WrBinTURBSIM() subroutines in TSsubs so that binary files are written more 
+   efficiently.
+   
+v1.11b-bjj 14-Aug-2006 B. Jonkman
+   Leandro Orsi noticed a problem with BLADED-style .wnd files when he used very low turbulence and then 
+   compared the FAST results with results from .hh files.  The problem is a result of the scaling from 
+   32-bit reals to 16-bit integers when the u-component turbulence intensity is low and gets worse with 
+   higher shears.  I've modified the TI(u) that used in the "Normalizing Parameters for Binary Data" section
+   so that, while it is NOT the actual TI, it is the value used to scale the data.
+   
+   I also noticed that the TI from the four points surrounding the hub is calculated very strangely.  It really needs
+   to be the TI of the interpolated hub point, not the TI of a time series made up of concatenating the 4 points around
+   the hub.  I added a bilinear interpolation scheme to come up with a representative hub time series.
+   
+v1.11c-bjj 22-Aug-2006 B. Jonkman
+   After looking through the documentation of the GP_LLJ model, Neil decided we should modify the z/L calculation.
+   We recalculated the relationship between Ri and z/L for both the GP_LLJ and NWTCUP models.
+   
+   I noticed that the wind farm downwind models were producing strange target spectra for cases where z/L was 
+   0.5 or more.  After looking into it, we determined that the emperical scaling was being extrapolated far beyond
+   the observed values. I set some limits on the scaling and it seems to behave much better now. The upwind wind
+   farm model (and thus the NWTC model) is limited to -1.0 <= Z/L <= 0.15, and the downwind wind farm models are
+   limited to -1.0 <= Z/L <= 0.4.
+   
+   I also fixed a small error in calculating the spectral scaling for the stable v component in the GP_LLJ model.
+   
+v1.20a-bjj 10-Oct-2006 B. Jonkman
+   We decided that we should come up with spectral scaling for the NWTCUP model so it reflects the conditions
+   at the NWTC, not the wind farm upwind model.  We calculated scaling in the same way the Lamar GP_LLJ scaling is 
+   calculated.
+   
+   We have changed the SMOOTH model so that it uses the same coherent structure scaling as the Great Plains model 
+   (GP_LLJ) instead of the scaling that was developed for the NWTC.  The NWTCUP and wind farm models still use the
+   coherent structure scaling that was developed at the NWTC.
+
+****************************************************************************************************************************
+v1.20 20-Oct-2006 B. Jonkman
+****************************************************************************************************************************
+   I removed the alpha version comments and updated the user's guide and overview.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.21a-bjj 1-Nov-2006 B. Jonkman   
+   I fixed a small scaling issue with the low-frequency peaks on the unstable side of the NWTCUP spectra.
+   
+v1.21b-bjj 22-Jan-2007 B. Jonkman
+   We changed the coherent structure scaling for the wind farm models after analyzing the archived data collected 
+   from the San Gorgonio wind farm experiments in the 1990s. 
+   
+   At Marshall's request, I modified error messages to include the amount of memory that fails to be allocated when
+   grids that are too large for the amount of memory available are being used.  Marshall also found an error in
+   writing the binary .bts files when using non-square grids so I fixed it.
+   
+****************************************************************************************************************************
+v1.21 01-Feb-2007 B. Jonkman
+****************************************************************************************************************************
+   I added the Gradient Richardson Number information for the IEC models in the summary file (just so people know it's zero).
+   I removed the alpha version comments and updated the user's guide and overview.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.22a 16-Mar-2007 B. Jonkman
+   Although the code was using the 0.11 power law exponent as specified for the IEC extreme wind models, the summary 
+   file did not indicate that the input value was being overwritten for these cases.  The summary file now shows the
+   actual power law exponent that is being used.
+   
+v1.30a 27-Oct-2007 B. Jonkman
+   I added a modified version of the IEC Von Karman model, which allows for the length scale and standard deviation
+   to vary with height.  I also added a user-defined wind profile which, along with user-defined wind direction profiles
+   and the user-specified von Karman model parameters (standard deviation and length scale) is read in the 
+   subroutine GetUSR().
+   
+   I fixed an issue with the GP_LLJ model when the z/l profile contained a negative value even though the turbine layer 
+   Richardson Number was positive  (this occurred at low heights with certain combinations of Richardson Number and wind 
+   speed)
+   
+   The default power law exponent in the NWTCUP was using the IEC specifications instead of the values from the 
+   Wind Farm Upwind model as advertised.  I fixed that.
+   
+   The NWTCUP model occasionally allowed a negative u-star value as input.  I fixed that.
+   
+v1.30b-bjj 29-Nov-2007 B. Jonkman
+   I added an input for the ETM "c" parameter in the summary file.  This value is variable, per section 7.4.1 of the IEC
+   61400-1 Ed 3 standard.
+   
+   I added an input true/false switch to determine if IEC turbulence models should be scaled to get exactly the specified
+   standard deviation.  If this switch is set and one of the IEC turbulence models is chosen (IECKAI or IECVKM), the 
+   standard deviations of hub-height turbulence components are calculated. The time series are then multiplied by the 
+   target divided by the actual standard deviation.
+   
+   The longitudinal, lateral, and vertical hub-height stats were calculated after the rotation to the inertial frame.  
+   Since these wind components are defined as aligned with the flow, I now calculate these stats before rotating them.  
+   I added the stats for the U,V,W in the X, Y, and Z directions;  these are the stats from the rotation to the inertial 
+   frame.  I also changed some of the nomenclature in the summary file to indicate which reference frame is being used. 
+   
+   I've recalculated the TI to be the standard deviation divided by the mean longitudinal wind speed for the longitudinal, 
+   lateral, and vertical components (this is the way it was done before v1.01 for the u-component, but not the v or w 
+   components). I made this change to get better agreement between the calculated TI and the numbers specified in the 
+   IEC standard.
+   
+v1.30c-bjj 18-Jan-2008
+   I updated the NWTC subroutines to v1.01.09.  I changed all the Abort() subroutines to ProgAbort() and all the 
+   Warn() to ProgWarn() to coincide with changes in the NWTC subroutine library.
+
+   I changed the RandSeed array to be of default integer kind, not 32-bits. This removed possible incompatabilities 
+   with the subroutines that used default integers.
+      
+****************************************************************************************************************************
+v1.30 04-Apr-2008 B. Jonkman
+****************************************************************************************************************************
+   I removed the alpha version comments and updated the user's guide.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.31a-bjj 04-Jul-2008 B. Jonkman
+   I modified the RndJetHeight() function so that the Pearson IV deviate is produced in a separate subroutine, 
+   RndPearsonIV(), which just passes the parameters of the equation.  This allowed me to use the same 
+   Pearson IV function for calculating the length of coh structures that Neil derived for Seawest.  I updated
+   the coherent structure scaling for all three wind farm models in RndTcoh_WF() and CalcEvents().  I created
+   Rnd4ParmLogNorm() and removed RndTcoh_WFTA().
+   
+   I updated the coherence function for the NWTCUP, GP_LLJ, and all three wind farm models
+   The (u|v|w)-component "coherence decrement" lines have been changed to "coherence parameters" to reflect
+   that both parameters of the coherence function are input on that line.  The first parameter is the 
+   coherence decrement and the second is an offset of sorts (see the user's guide documentation for details)
+   I added the subroutine GetDefaultCoh() to calculate the default parameters for the coherence.
+      
+   I removed the non-standard compiler directives and replaced the !MSif defined() statements with logical 
+   values.  I had to add some blank subroutine & function definitions for the modified von karman model
+   definitions, which we don't distribute.
+      
+v1.31b-bjj 25-Jul-2008 B. Jonkman
+   I modified the cross-correlation matrix for the NWTCUP and GP_LLJ models so that the resulting wind 
+   speeds have the cross correlations desired.  Then we decided to replace the cross-correlation inputs
+   with Reynolds stresses, since that's what Neil was trying to match with the cross-correlation matrix
+   in the first place. I added GetDefaultRS() to calculate these default Reynolds stresses.
+   
+   I modified the summary file, removing some duplicate data and reorganizing the hub-point stats.
+   
+   I updated the default power-law exponent for the wind farm models (and hence the NWTCUP model) so that
+   there is no longer a discontinuity in those functions.  I fixed a bug in the default jet wind speed 
+   calculation (it could be negative in rare cases).  I modified the equations for calculating the 
+   default u* value for all the models, fixing the transitions between functions so the discontinuity is
+   less awkward.
+
+   We updated the coherent structure calculations for the WF models since CTKE was calculated using filtered
+   (measured) data on the original analysis.  The new calculations reflect the newer analysis.
+           
+   I modified the HH Binary files so they output UXtmp, UYtmp, and UZtmp instead of UTmp, VTmp and WTmp twice.
+   This change makes it identical to the formatted HH files as the user's guide indicates.
+      
+****************************************************************************************************************************
+v1.40 12-Sep-2008 B. Jonkman
+****************************************************************************************************************************
+I removed the alpha comments and updated the user's guide.
+I added a 64-bit compiled version of TurbSim to the archive.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.41a-bjj  06-Oct-2008 B. Jonkman
+  I closed the hub-height files which we opened but didn't close.  Leaving them open shouldn't be a problem for most 
+  applications, but it's better to close them explicitly.  I also moved some of the code in the main program to subroutines 
+  in TSsubs.f90 (e.g., the code for writing formatted FF files) and moved some variables from the main module to the 
+  subroutines where they were used.
+
+  I added the mean std of the grid points for each wind component in the summary file.  This change was requested by 
+  Dirk Stuedel.
+
+  I modified the default surface roughness for the NWTCUP model to 0.021 m (instead of using 0.018 m from the WF_UPW model).  
+  This is based on Neil's new analysis of NWTC/LIST data.
+
+v1.41b-bjj  06-Oct-2008 B. Jonkman
+  I changed the NWTCUP model to not override input u* values that are less than the diabatic values.  I don't like 
+  increasing the value that users input, and I believe that this "feature" was introduced to make up for the spectra
+  not matching when we used the WF_UPW model as its basis.
+            
+  I added new analysis for calculating ustar (u*D) for the NWTCUP model (it previously used a random distribution) and 
+  for the GP_LLJ model (it previously had 4 different relationships, based on coherent structure presence and stability).
+   
+  I changed the limits of the random residual for the NWTCUP model's u'v' default values so that they do not vary 
+  as much.   
+
+  I now limit zL so that it is no larger than +1.  Previously, this limit was 12.7 for NWTCUP and 5.6 for GP_LLJ.  There are
+  zL limits of +/-1 in several places so this will hopefully unify the values that are being used in different subroutines.
+  
+  I fixed the way the random sign for the default u'w' reynolds stress is calculated.  It is now a function of the 
+  magnitude of the stress, not just purely uniform.
+  
+v1.41c-bjj 20-Jan-2009 B. Jonkman
+  I found a bug that prevented using input values for the mean u'v' and v'w' Reynolds stresses with the SMOOTH model.  
+  I fixed it.
+  
+  I updated the local u* profile of the GP_LLJ model so that it better reflects the relationship between the input u* 
+  (rotor-disk average value) and the local u* values.  The input for disk-averaged u* is now calculated as the average of 
+  three values from the profile: at the top of the rotor, hub height, and at the bottom of the rotor disk.  The magnitude  
+  of the hub-height u'w' value is also tied to the profile.
+  
+  I also changed the algorithm for calculating the GP_LLJ profile z/L.  The profile now is offset so that the mean of the 
+  three values (rotor bottom, hub height, rotor top) is equal to the disk-averaged z/L calculated with the input  
+  Richardson number.
+  
+  I changed the calculation of the value for the disk-averaged M-O length parameter, L.  Using hub height instead of the  
+  mean turbine height (used previously) makes more sense: the z/L parameter used to estimate L is the rotor-disk average
+  value; z = HubHeight is the rotor-disk average height.
+  
+  I changed all of the ProgAbort() calls in TurbSim.f90 and TSsubs.f90 to TS_Abort(), a new subroutine created to write the  
+  error message to a summary file before aborting. It doesn't write the errors generated in NWTC_Library subroutines though.
+  
+v1.41d-bjj 20-Feb-2009 B. Jonkman
+  I modified the default ustar-D calculation for the GP_LLJ model.  I've returned it to the 1.41b-bjj model, and now modify  
+  the ustar profile to account for the default ustar-D value.
+  
+v1.41e-bjj 20-May-2009 B. Jonkman
+  I moved the ZL_profile and Ustar_profile deallocations.  They are only used for the PSD calculations so they don't need 
+  to be kept for the entire simulation.  
+  
+  I added the readBLgrid.m function to the TurbSim archive.
+  
+v1.41f-bjj 8-Jun-2009 B. Jonkman  
+  I updated the peak CTKE calculation for the GP_LLJ model.  It now is a function of RICH_NO, ustar, and height; 
+  previously it was just a random number.
+  
+v1.41g-bjj 10-Jun-2009 B. Jonkman
+   I merged the CohMat(), SpecMat(), and VMat() subroutines into a new subroutine called CohSpecVMat().  This allowed me  
+   to get rid of the Matrix(:,:) array, which was limiting the sizes of the grids we could generate.  Much larger grids  
+   can now be generated!
+   
+v1.41h-bjj-lanl   11-Jun-2009 B. Jonkman 
+   I removed the comments from the code.  I added a compareCTSfiles.m script for the CertTest to display changes in the 
+   cts files and updated the archive.
+   
+v1.50a-bjj-vdt 08-Jul-2009 B. Jonkman
+   I added a user-defined spectrum, read from a text file named "UsrSpec.inp".  This should be modified at some point 
+   to allow the file name and location to vary.  It uses spectral model 'USRINP', which at this point is undocumented.
+
+v1.50b-bjj  22-Jul-2009 B. Jonkman
+   I fixed the coherent structure time scale so that it is dependent on the velocity scale.
+   I modified the ScaleIEC parameter so that it gives the option to scale each point individually.  This additional 
+   scaling was requested by Dirk Stuedel.
+   
+****************************************************************************************************************************
+v1.50 25-Sep-2009 B. Jonkman
+****************************************************************************************************************************
+I removed the alpha comments and updated the user's guide.  The new user's guide has been expanded to include many figures, 
+tables, and equations.  Besides the additional theory in the user's guide, I added a quick-start guide in an appendix 
+for those who are less interested in the details (at Marshall Buhl's request).
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
