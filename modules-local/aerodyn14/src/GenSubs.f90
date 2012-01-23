@@ -1,91 +1,13 @@
- !bjj Start of proposed change v12.70b
  MODULE AeroGenSubs
 
 
    USE NWTC_LIBRARY
 
-!bjj rm SUBROUTINE SetProgName( )
-! FUNCTION Cross_Product(Vector1, Vector2)
 ! SUBROUTINE AllocArrays( Arg )
 ! SUBROUTINE ElemOpen( ElemFile )
 ! SUBROUTINE ElemOut( )
 
  CONTAINS
-!bjj: this function could be moved to NWTC Library... I am not using it here anymore, either.
-! FUNCTION Cross_Product(Vector1, Vector2)
-!   ! Cross_Product = Vector1 X Vector2 (resulting in a vector)
-!   
-!      IMPLICIT NONE
-!
-!
-!      ! Passed variables:
-!
-!   REAL(ReKi), INTENT(IN )         :: Vector1       (3)
-!   REAL(ReKi), INTENT(IN )         :: Vector2       (3)
-!
-!      ! Function definition
-!   REAL(ReKi)                      :: Cross_Product (3)   ! = Vector1 X Vector2 (resulting in a vector)
-!
-!
-!   Cross_Product(1) = Vector1(2)*Vector2(3) - Vector1(3)*Vector2(2)
-!   Cross_Product(2) = Vector1(3)*Vector2(1) - Vector1(1)*Vector2(3)
-!   Cross_Product(3) = Vector1(1)*Vector2(2) - Vector1(2)*Vector2(1)
-!
-!
-!   RETURN
-!END FUNCTION Cross_Product
- !Bjj end of proposed change
-
-!bjj start of proposed change v13.00
-!bjj remove this routine:
-!rm ! *****************************************************
-!rm   SUBROUTINE SetProgName
-!rm !  This subroutine writes the dynamic and aerodynamic
-!rm !   program names and versions to a string.
-!rm ! *****************************************************
-!rm
-!rm
-!rmUSE               Identify
-!rm
-!rm
-!rmIMPLICIT          NONE
-!rm
-!rm
-!rm   ! Local Variables:
-!rm
-!rm!bjj rm CHARACTER(80)  :: Frmt
-!rm!bjj rm CHARACTER(80)  :: MESAGE
-!rm
-!rm
-!rm
-!rmAeroProg = 'AeroDyn '
-!rm!bjj Start of proposed change v12.70-bjj
-!rm!rm AeroVer  = '(12.58, 28-Jun-2005)'
-!rmAeroVer  = '(12.70-bjj, 10-Jul-2009)'
-!rm!bjj End of proposed change
-!rmCreator  = 'Windward Engineering LC'
-!rm
-!rmSELECT CASE (TRIM(DynProg))
-!rm   CASE ('ADAMS','YawDyn','SymDyn','FAST') ! These are expected
-!rm   CASE DEFAULT
-!rm!bjj Start of proposed change v12.70-bjj
-!rm!bjj: is this necessary? I'd like to remove all instances of DynProg...
-!rm!rm   MESAGE = 'AeroDyn does not recognize the dynamics program name: '//Trim(DynProg)
-!rm!rm   Frmt   = '(A/, ''  Unexpected problems may occur during simulation.'')'
-!rm!rm   CALL ErrLog( MESAGE, Frmt, 'SetProgName', 801, 'WARN' )
-!rm      CALL ProgWarn( 'AeroDyn does not recognize the dynamics program name: '//Trim(DynProg)// &
-!rm                       '. Unexpected problems may occur during simulation.' )
-!rm!bjj End of proposed change v12.70-bjj
-!rmEND SELECT
-!rm
-!rmWRITE(Prog,'(A)') TRIM(AeroProg)//TRIM(AeroVer)//' in '// &
-!rm                     TRIM(DynProg)//TRIM(DynVer)
-!rm
-!rm
-!rm
-!rmRETURN
-!rmEND SUBROUTINE SetProgName
-!bjj end of proposed change
  ! ****************************************************
    SUBROUTINE AllocArrays ( Arg )
  !  Allocates space to the phenomenal number of arrays
@@ -99,9 +21,6 @@ USE             Blade
 USE             DynInflow
 USE             Element
 USE             ElOutParams
-!bjj Start of proposed change v12.70-bjj
-!rm USE             InducedVel  !bjj THIS ISN'T USED?
-!bjj End of proposed change
 USE             Switch
 
 
@@ -148,9 +67,7 @@ IF (Arg(1:7) == 'Element') THEN
 
       IF (.NOT. ALLOCATED(AFE)) ALLOCATE ( AFE(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AFE array.' )
-!bjj start of proposed change v13.00b
       AFE(:,:) = 0.0
-!bjj start of proposed change v13.00b
 
 
       IF (.NOT. ALLOCATED(AFE1)) ALLOCATE ( AFE1(NELM,NB) , STAT=Sttus )
@@ -171,9 +88,7 @@ IF (Arg(1:7) == 'Element') THEN
 
       IF (.NOT. ALLOCATED(BEDSEP)) ALLOCATE ( BEDSEP(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for BEDSEP array.' )
-!bjj start of proposed change v13.00b
       BEDSEP(:,:) = .FALSE.
-!bjj end of proposed change v13.00b
 
       IF (.NOT. ALLOCATED(CDO)) ALLOCATE ( CDO(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDO array.' )
@@ -306,9 +221,7 @@ IF (Arg(1:7) == 'Element') THEN
 
       IF (.NOT. ALLOCATED(TAU)) ALLOCATE ( TAU(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for TAU array.' )
-!bjj start of proposed change v13.00b
       TAU(:,:) = 0.0
-!bjj end of proposed change
 
       IF (.NOT. ALLOCATED(XN)) ALLOCATE ( XN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for XN array.' )
@@ -362,9 +275,7 @@ IF (Arg(1:7) == 'Element') THEN
 
 ELSEIF (Arg(1:7) == 'ElPrint') THEN
 
-!BJJ START OF PROPOSED CHANGE
    IF ( NumElOut > 0 ) THEN
-!BJJ END OF PROPOSED CHANGE
       IF (.NOT. ALLOCATED(AAA)) ALLOCATE ( AAA(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AAA array.' )
 
@@ -411,11 +322,9 @@ ELSEIF (Arg(1:7) == 'ElPrint') THEN
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for ElPrNum array.' )
       ElPrNum ( : ) = 0
 
-!BJJ START OF PROPOSED CHANGE
    END IF
 
    IF ( NumWndElOut > 0 ) THEN
-!BJJ END OF PROPOSED CHANGE
 
       IF (.NOT. ALLOCATED(WndElPrNum)) ALLOCATE ( WndElPrNum(NumWndElOut) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for WndElPrNum array.' )
@@ -430,9 +339,7 @@ ELSEIF (Arg(1:7) == 'ElPrint') THEN
       IF (.NOT. ALLOCATED(SaveVZ)) ALLOCATE ( SaveVZ(NumWndElOut,NB) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for SaveVZ array.' )
 
-!BJJ START OF PROPOSED CHANGE
    END IF
-!BJJ END OF PROPOSED CHANGE
 
 ELSEIF (Arg(1:8) == 'Aerodata') THEN
 
@@ -478,7 +385,6 @@ END SUBROUTINE AllocArrays
 USE               Blade    ! We need the number of blades for the wind output
 
 USE               ElOutParams
-!bjj rm NWTC_Lib:USE               Constant
 USE               Element
 USE               Switch
 
@@ -494,7 +400,6 @@ CHARACTER(  *) :: ElemFile
    ! Local Variables:
 
 INTEGER(4)     :: JE
-!rm not used:INTEGER(4)     :: mode
 
 INTEGER(4)     :: JB       ! Counter for number of blades
 
@@ -504,26 +409,18 @@ CHARACTER(140) :: Frmt
 CHARACTER(  3) :: Prs_Unit
 
 
-!bjj:   ! YES, the file name should be fixed, but for now
-!bjj    ! this works....
 IF (NumWndElOut > 0) THEN
-!bjj Start of proposed change v12.70b-bjj
-!rm      CALL OpenOutFile (UnWndOut, TRIM(ElemFile)//'.wind')
    CALL OpenFOutFile (UnWndOut, TRIM(ElemFile)//'.wind')
    WRITE (UnWndOut,"( 'This file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )")  &
         TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
-!bjj End of proposed change
 ENDIF
 
 
  ! Open the Element Print file if requested
 IF (ELEMPRN) THEN
-!bjj Start of proposed change v12.70b-bjj
-!rm      CALL OpenOutFile (UnElem, TRIM(ElemFile))
    CALL OpenFOutFile (UnElem, TRIM(ElemFile))
    WRITE (UnElem,"( 'This file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )")  &
         TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
-!bjj End of proposed change
 ELSE
    RETURN
 ENDIF
@@ -662,11 +559,7 @@ USE               Blade       ! Get the number of blades
 
 USE               ElOutParams
 USE               AeroTime
-!bjj rm NWTC_Lib:USE               Constant
 USE               Switch
-!bjj Start of proposed change v12.70
-!rm USE               DynInflow !NOT USED
-!bjj End of proposed change
 
 
 IMPLICIT          NONE
@@ -675,7 +568,6 @@ IMPLICIT          NONE
    ! Local Variables:
 
 INTEGER(4)     :: JE
-!rm not used: INTEGER(4)     :: mode
 
 INTEGER(4)     :: JB    ! Counter for number of blades
 
@@ -748,169 +640,6 @@ ENDIF ! ELEMPRN
 
 RETURN
 END SUBROUTINE ElemOut
-
-
-!bjj start of proposed change
-!rm! ***********************************************************
-!rm   SUBROUTINE ErrLog ( MESAGE, ErrFrmt, Sub, IDADAMS, ErrType )
-!rm!  Logs errors from YawDyn to a file for future access.
-!rm
-!rm!  D. Laino  11/00 Windward Engineering
-!rm! ***********************************************************
-!rm
-!rmUSE                          AeroTime
-!rmUSE                          ErrCount
-!rmUSE                          Identify
-!rm
-!rmUSE                          AD_IOParams, ONLY: UnErrLog
-!rm
-!rmIMPLICIT                     NONE
-!rm
-!rm
-!rm   ! Passed Variables:
-!rm
-!rmINTEGER(4)                :: IDADAMS
-!rm
-!rmCHARACTER( *)             :: ErrFrmt
-!rmCHARACTER( *)             :: ErrType
-!rmCHARACTER( *)             :: MESAGE
-!rmCHARACTER( *)             :: Sub
-!rm
-!rm
-!rm   ! Local Variables:
-!rm
-!rmINTEGER(4)                :: IERR
-!rm
-!rmLOGICAL                   :: Exists
-!rmLOGICAL,    SAVE          :: FrstPass = .TRUE.
-!rmLOGICAL,    SAVE          :: LogFlag  = .TRUE.
-!rm
-!rmCHARACTER(60)             :: Frmt
-!rmCHARACTER(80)             :: Text
-!rm
-!rm
-!rm   ! Global Functions:
-!rm
-!rm!bjj rm 12.70b-bjj CHARACTER(11), EXTERNAL   :: CurDate
-!rm!bjj rm 12.70b-bjj CHARACTER( 8), EXTERNAL   :: CurTime
-!rm!bjj rm 12.70b-bjj CHARACTER(15), EXTERNAL   :: Flt2LStr
-!rm!bjj rm 12.70b-bjj CHARACTER(11), EXTERNAL   :: Int2LStr
-!rm
-!rm
-!rm
-!rmIF (LogFlag .AND. ErrType /= 'INFO') THEN
-!rm   INQUIRE ( FILE='Error.log' , EXIST=Exists )
-!rm
-!rm   IF ( Exists )  THEN
-!rm      Frmt = '(////,A)'
-!rm   ELSE
-!rm      Frmt = '(''Error log started on             at       '',/A)'
-!rm      WRITE(Frmt(24:35),'(A11)') CurDate()
-!rm      WRITE(Frmt(39:44),'(A5 )') CurTime()
-!rm   ENDIF
-!rm
-!rm   OPEN(UNIT = UnErrLog, FILE = 'error.log', STATUS = 'UNKNOWN',  &
-!rm                   POSITION = 'APPEND', IOSTAT = IERR )
-!rm
-!rm   IF (IERR /= 0)  THEN
-!rm      CALL WrScr ( 'ERROR OPENING FILE error.log')
-!rm      Text = 'IOSTAT='//TRIM(Int2LStr(IERR))//' FILE INDEX= 99'
-!rm      CALL WrScr ( Text)
-!rm      CALL WrScr ('CHECK FILE')
-!rm      CALL USRMES ( .TRUE. ,  &
-!rm                   ' The error log could not be accessed.  '// &
-!rm                   '  Errors will no longer be logged for this simulation.' &
-!rm                     , IDADAMS , 'WARN' )
-!rm      LogFlag = .FALSE.
-!rm   ENDIF
-!rmENDIF
-!rm
-!rmIF (LogFlag .AND. ErrType /= 'INFO') THEN
-!rm   IF (FrstPass) THEN
-!rm      NumWarn = 0
-!rm      NumErr  = 0
-!rm      WRITE(UnErrLog,Frmt)'============================================================ '
-!rm      WRITE(UnErrLog,'(A/A)')'Errors logged by '//TRIM(Prog) , &
-!rm                     ' on '//CurDate()//' at '//CurTime()//'.'
-!rm      FrstPass = .FALSE.
-!rm   ENDIF
-!rm
-!rm   IF (ErrType == 'WARN') THEN
-!rm      NumWarn = NumWarn + 1
-!rm      WRITE(UnErrLog,'(//,A,I2)')  'Simulation Warning #',NumWarn
-!rm   ELSE
-!rm      NumErr = NumErr + 1
-!rm      WRITE(UnErrLog,'(//,A,I2)')  'Simulation Error #',NumErr
-!rm   ENDIF
-!rm   WRITE(UnErrLog,'(A)')' Simulation Time = '//TRIM(Flt2LStr(REAL( TIME, ReKi )))//' seconds.'
-!rm   WRITE(UnErrLog,'(A)')  ' Error detected in Subroutine '//TRIM(Sub)//'.'
-!rm   WRITE(UnErrLog, ErrFrmt) TRIM(MESAGE)
-!rm   SELECT CASE (ErrType)
-!rm    CASE ('WARN')
-!rm      WRITE(UnErrLog,'(/1x,A)')'Warning Generated! Simulation continuing...'
-!rm    CASE ('ERROR')
-!rm      WRITE(UnErrLog,'(/1x,A)')'Non-Fatal Error. Simulation continuing...'
-!rm    CASE ('FAULT')
-!rm      WRITE(UnErrLog,'(/1x,A)')'FATAL ERROR. SIMULATION ABORTED.'
-!rm   END SELECT !ErrType
-!rm   CLOSE (UnErrLog)
-!rmENDIF
-!rm
-!rmSELECT CASE (ErrType)
-!rm CASE ('INFO')
-!rm   SELECT CASE (TRIM(DynProg))
-!rm      CASE ('ADAMS')
-!rm         CALL USRMES (.TRUE., MESAGE, IDADAMS, ErrType)
-!rm      CASE DEFAULT
-!rm!bjj Start of proposed change v12.70b
-!rm!RM   CALL WrScr1 (TRIM(MESAGE), TRIM(ErrFrmt))
-!rm!bjj: this doesn't work for all formats      WRITE( Text, ErrFrmt ) TRIM(MESAGE)
-!rm      CALL WrScr1 ( Mesage )
-!rm!bjj End of proposed change
-!rm   END SELECT
-!rm CASE ('WARN')
-!rm   Text = ' Program warning in Subroutine '//TRIM(Sub)//'.'
-!rm   CALL WrScr1 (Text)
-!rm!bjj Start of proposed change v12.70b
-!rm!RM   CALL WrScr (TRIM(MESAGE), ErrFrmt)
-!rm!this doesn't work for all formats:   WRITE( Text, ErrFrmt ) TRIM(MESAGE)
-!rm   CALL WrScr ( Mesage )
-!rm!bjj End of proposed change
-!rm   CALL USRMES (.TRUE., 'Warning in '//TRIM(Sub), IDADAMS, ErrType)
-!rm CASE ('ERROR')
-!rm   Text = ' Program error in Subroutine '//TRIM(Sub)//'.'
-!rm   CALL WrScr1 (Text)
-!rm!bjj Start of proposed change v12.70b
-!rm!RM   CALL WrScr (TRIM(MESAGE), ErrFrmt)
-!rm!this doesn't work for all formats:   WRITE( Text, ErrFrmt ) TRIM(MESAGE)
-!rm   CALL WrScr ( Mesage )
-!rm!bjj End of proposed change
-!rm   CALL USRMES (.TRUE., 'Non-fatal error in '//TRIM(Sub), IDADAMS, ErrType)
-!rm CASE ('FAULT')
-!rm!bjj Start of proposed change v12.70b
-!rm!rm   Text = ' FATAL ERROR in Subroutine '//TRIM(Sub)//'.'
-!rm!rm   CALL WrScr (Text,'(/,50(''*''),/A)')
-!rm!rm   CALL WrScr (TRIM(MESAGE), ErrFrmt)
-!rm!rm   CALL WrScr (' ','(A,50(''*''))')
-!rm   CALL WrScr1('**************************************************')
-!rm   Text = ' FATAL ERROR in Subroutine '//TRIM(Sub)//'.'
-!rm   CALL WrScr (Text)
-!rm   CALL WrScr ( MESAGE )
-!rm   CALL WrScr( '**************************************************')
-!rm!bjj End of proposed change
-!rm   Text = TRIM(Int2LStr(NumWarn))// &
-!rm         ' warnings recorded in error.log file for this simulation.'
-!rm   CALL WrScr1 (Text)
-!rm   Text = TRIM(Int2LStr(NumErr))// &
-!rm         ' errors recorded in error.log file for this simulation.'
-!rm   CALL WrScr (Text)
-!rm   CALL USRMES (.TRUE., 'FATAL ERROR in '//TRIM(Sub), IDADAMS, ErrType)
-!rmEND SELECT !ErrType
-!rm
-!rm
-!rmRETURN
-!rmEND SUBROUTINE ErrLog
 !=======================================================================
 
 END MODULE AeroGenSubs
-!BJJ end of proposed change

@@ -762,6 +762,11 @@ v13.00.00a-bjj 31-Mar-2010  B. and J. Jonkman
  We renumbered the archive with the new numbering scheme: X.XX.XX
 
 
+v13.00.00a-bjj was added to the NWTC Subversion (SVN) server.
+ SVN Revision 2 removed all change comments and was renamed v13.00.00.
+
+
+-------------------------------------------------------------------------------
 To do:
 
  Add INTENT to all passed parameters.
