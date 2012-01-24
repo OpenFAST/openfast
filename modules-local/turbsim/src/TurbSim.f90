@@ -388,7 +388,7 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    ENDIF
 
-   IF ( WrADTWR .AND. .NOT. WrADFF )  THEN
+   IF ( WrADTWR .AND. (WrBLFF .OR. .NOT. WrADFF) )  THEN
 
       CALL OpenBin ( UATWR, TRIM( RootName )//'.twr', 2 )
 
@@ -463,7 +463,8 @@ Zbottom = HubHt + 0.5*RotorDiameter                         ! height of the high
 Zbottom = Zbottom - GridRes_Z * REAL(NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
 IF ( Zbottom <= 0.0 ) THEN
-   CALL TS_Abort ( 'The lowest grid point is below the ground.  Adjust the appropriate values in the input file.' )
+   CALL TS_Abort ( 'The lowest grid point ('//TRIM(Flt2LStr(Zbottom))// ' m) must be above the ground. '//&
+                   'Adjust the appropriate values in the input file.' )
 ENDIF
 
 NumGrid_Y2 = INT( ( NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
@@ -695,8 +696,8 @@ IF ( WrACT ) THEN
    !   TmpPLExp = PLExp 
    !   PLExp    = MIN( 2.0, 1.35*PLExp )        ! Increase the shear of the background (?)
 
-      ScaleVel =            getWindSpeed(UHub,HubHt,Zbottom+ScaleWid,RotorDiameter,PROFILE=WindProfileType)   !Velocity at the top of the wave
-      ScaleVel = ScaleVel - getWindSpeed(UHub,HubHt,Zbottom,         RotorDiameter,PROFILE=WindProfileType)   !Shear across the wave
+      ScaleVel =            getWindSpeed(UHub,HubHt,Zbottom+ScaleWid,RotorDiameter,PROFILE=WindProfileType)   ! Velocity at the top of the wave
+      ScaleVel = ScaleVel - getWindSpeed(UHub,HubHt,Zbottom,         RotorDiameter,PROFILE=WindProfileType)   ! Shear across the wave
       ScaleVel = 0.5 * ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
       
    !   PLExp = TmpPLExp
@@ -1226,7 +1227,7 @@ ENDIF
    ! random phases, regardless of previous randomizations in this code.
 
 RandSeed(1) = RandSeedTmp
-CALL RndInit
+CALL RndInit()
 
    ! Let's go ahead and get all the random numbers we will need for the entire
    ! run.  This (hopefully) will be faster than getting them one at a time,
@@ -1236,22 +1237,25 @@ CALL RndInit
 IF (RNG_type == 'NORMAL') THEN  
 
       !The first two real numbers in the RandSeed array are used as seeds
+      !The number of seeds needed are compiler specific, thus we can't assume only 2 seeds anymore
 
    CALL RANDOM_NUMBER ( RandNum )
 
    ! Let's harvest the random seeds so that they can be used for the next run if desired.
    ! Write them to the summary file.
 
-   CALL RANDOM_SEED ( GET=RandSeed(1:2) )
+   CALL RANDOM_SEED ( GET=RandSeedAry )
 
-   FormStr = "(//,'Harvested Random Seeds after Generation of the Random Numbers:')"
+   FormStr = "(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)"
    WRITE(US,FormStr)
 
-   FormStr = "(/,I13,' Harvested seed #1')"
-   WRITE(US,FormStr)  RandSeed(1)
+   DO I = 1,SIZE( RandSeedAry )
+      FormStr = "(I13,' Harvested seed #',I2)"
+      WRITE(US,FormStr)  RandSeedAry(I), I
+   END DO
 
-   FormStr = "(I13,' Harvested seed #2')"
-   WRITE(US,FormStr)  RandSeed(2)
+   DEALLOCATE(RandSeedAry, STAT=AllocStat)
+
 
 ELSEIF (RNG_type == 'RANLUX') THEN
 
@@ -1760,7 +1764,7 @@ DO IT=1,NumSteps
 
    IF ( IT <= NumOutSteps ) THEN
       IF ( WrADHH )  THEN
-         WRITE (UAHH,'(F8.3,3F8.2,3F8.3,F8.2)')  Time, UHTmp, R2D*ATAN2( UYTmp , UXTmp ), &
+         WRITE (UAHH,'(F8.3,3F8.2,3F8.3,F8.2)')  Time, UHTmp, -1.0*R2D*ATAN2( UYTmp , UXTmp ), &
                                                    UZTmp, 0.0, PLExp, 0.0, 0.0 
 !bjj: Should we output instantaneous horizontal shear, instead of 0?  
 !     Should the power law exponent be an instantaneous value, too?
@@ -2183,7 +2187,9 @@ IF ( WrBLFF .OR. WrADTWR .OR. WrADFF )  THEN
 
    IF ( WrADFF ) THEN
       CALL WrBinTURBSIM
-   ELSE  !IF ( WrBLFF .OR. (WrADTWR .AND. .NOT. WrADFF) )  THEN
+   END IF   
+   
+   IF ( WrBLFF .OR. (WrADTWR .AND. .NOT. WrADFF) ) THEN
 
          ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
          ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values

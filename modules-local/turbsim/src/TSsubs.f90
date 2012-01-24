@@ -762,6 +762,7 @@ REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
 REAL(ReKi)                 :: DistLC
 REAL(ReKi), ALLOCATABLE    :: DistU(:)
 REAL(ReKi), ALLOCATABLE    :: DistZMExp(:)
+REAL(ReKi)                 :: dY             ! the lateral distance between two points
 REAL(ReKi)                 :: Ph             ! Phase angle.
 REAL(ReKi)                 :: SPh            ! Sine of the random phase
 REAL(ReKi)                 :: UM             ! The mean wind speed of the two points
@@ -823,7 +824,7 @@ POINT_I: DO IZ=1,ZLim   !NumGrid_Z
             DO IY=1,IYmax(IZ) !NumGrid_Y
       
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exists the IY loop
+               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IY loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
@@ -847,7 +848,19 @@ POINT_J:       DO JZ=1,IZ
 
                      JJ1       = JJ - 1
                      Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
-                     Dist(Indx)= SQRT( ( Y(I) - Y(J) )**2  + ( Z(IZ) - Z(JZ) )**2 )
+
+                     IF ( .NOT. PeriodicY ) THEN
+                        Dist(Indx)= SQRT( ( Y(I) - Y(J) )**2  + ( Z(IZ) - Z(JZ) )**2 )
+                     ELSE
+                        dY = Y(I) - Y(J)
+                        IF (dY > 0.5*GridWidth ) THEN
+                           dY = dY - GridWidth - GridRes_Y
+                        ELSE IF (dY < -0.5*GridWidth ) THEN 
+                           dY = dY + GridWidth + GridRes_Y
+                        END IF
+
+                        Dist(Indx)= SQRT( ( dY )**2  + ( Z(IZ) - Z(JZ) )**2 )
+                     END IF
 
                      IF ( (TurbModel(1:3) == 'IEC')  .OR. (TurbModel == 'MODVKM')) THEN
                         DistU(Indx) = Dist(Indx)/UHub
@@ -955,10 +968,9 @@ DO IVec = 1,3
          CALL SPPTRF( 'L', NTot, TRH, Stat )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NTot'; returns Stat
 
          IF ( Stat /= 0 ) THEN
-
             CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
                            TRIM(Int2LStr(IFreq))//' ('//TRIM(Flt2LStr(Freq(IFreq)))//' Hz)'//&
-                        '. The '//Comp(IVec)//'-component spectral matrix cannot be factored.  '//&
+                        '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
                         'Check the input file for invalid physical properties or modify the coherence exponent '//&
                         'or grid spacing.')
          ENDIF
@@ -2328,7 +2340,7 @@ CALL ReadCVar( UI, InFile, Line, "the number of the IEC standard", "Number of th
          CASE ( 1 )
             IF (IECedition < 1 ) THEN  ! Set up the default
                IF ( TurbModel(4:6) == 'VKM' ) THEN
-                  IECedition = 2   ! The von Karman model is not spedified in edition 3 of the -1 standard
+                  IECedition = 2   ! The von Karman model is not specified in edition 3 of the -1 standard
                ELSE
                   IECedition = 3
                ENDIF
@@ -2584,8 +2596,8 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
             CALL TS_Abort( ' The IEC turbulence type must be NTM for the logarithmic wind profile.' )
 !bjj check that IEC_WindType == IEC_NTM for non-IEC
          ENDIF
-      CASE ( 'PL','P' )
-      CASE ( 'IEC','N/A' )
+      CASE ( 'PL',  'P' )
+      CASE ( 'IEC', 'N/A' )
       CASE ( 'USR', 'U' )
       CASE DEFAULT
          CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", or default.' )
@@ -3998,7 +4010,7 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
                ! Remove the hub height direction so that we have a relative direction, then
                ! add the mean flow angle. (Note that the Chebyshev profile is clockwise looking
-               ! upwind, but the horizontal angle is counter-clockwise looking upwind.)
+               ! from above, but the horizontal angle is counter-clockwise looking from above.)
 
             UHangle = HFlowAng - (UHangle - tmpWS(1)) ! This is the counter-clockwise angle of the wind
 
@@ -6157,11 +6169,43 @@ USE                                 TSMods
 IMPLICIT                            NONE
 
 REAL(ReKi)                       :: RN(1)
+INTEGER                          :: I           ! loop counter
+INTEGER                          :: NumSeeds    ! number of seeds in the intrinsic random number generator 
+INTEGER                          :: Sttus       ! allocation status
 
 
 IF (RNG_type == 'NORMAL') THEN
 
-   CALL RANDOM_SEED ( PUT=RandSeed(1:2) )
+
+      ! determine the number of seeds necessary (gfortran needs 8 or 12 seeds, not just 2)
+      
+   CALL RANDOM_SEED ( SIZE = NumSeeds )
+      
+   IF ( NumSeeds /= 2 ) THEN
+      CALL ProgWarn( ' The random number generator in use differs from the original code provided by NREL. This pRNG uses ' &
+                        //TRIM(Int2LStr(NumSeeds))//' seeds instead of the 2 in the TurbSim input file.')
+   END IF
+
+   IF ( .NOT. ALLOCATED( RandSeedAry ) ) THEN
+      ALLOCATE ( RandSeedAry ( NumSeeds ), STAT=Sttus)
+      IF (Sttus/= 0 ) THEN
+         CALL ProgAbort( ' Error allocating space for RandSeedAry array.' )
+         RETURN
+      END IF   
+   END IF
+
+
+         ! We'll just populate this with odd seeds = Seed(1) and even seeds = Seed(2)
+   DO I = 1,NumSeeds,2
+      RandSeedAry(I) = RandSeed(1)
+   END DO
+   DO I = 2,NumSeeds,2
+      RandSeedAry(I) = RandSeed(2)
+   END DO
+                     
+                  
+   CALL RANDOM_SEED ( PUT=RandSeedAry )
+   
 
 ELSEIF (RNG_type == 'RANLUX') THEN
 
@@ -7216,7 +7260,7 @@ INTEGER                     :: AllocStat
    ENDIF ! WrBLFF
 
 
-   IF ( WrADTWR .AND. .NOT. WrADFF ) THEN
+   IF ( WrADTWR .AND. ( WrBLFF .OR. .NOT. WrADFF ) ) THEN
       IF ( ExtraHubPT ) THEN
          IZ = ZLim - NumGrid_Z - 1
          I  = NumGrid_Z*NumGrid_Y + 2

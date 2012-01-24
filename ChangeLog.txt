@@ -664,3 +664,13 @@ I removed the alpha comments and updated the user's guide.  The new user's guide
 tables, and equations.  Besides the additional theory in the user's guide, I added a quick-start guide in an appendix 
 for those who are less interested in the details (at Marshall Buhl's request).
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+v1.51a-bjj  25-Oct-2009 B. Jonkman
+   I noticed two bugs that have existed for a while and fixed them both: (1) If you asked for .bts, .wnd and .twr files 
+   all at the same time, the .wnd file would not get generated; (2) the direction in the .hh files was measured 
+   counter-clockwise from above (the right-hand rule; 0 along positive X), but AeroDyn expects wind direction measured clockwise
+   from above (0 along positive X [left-hand rule?]).
+
+v1.05.01b-bjj 24-Jan-2012 B. Jonkman
+  I modified the intrinsic random number generator so that it should be able to run with gfortran (which assumes 8 or 12
+    seeds instead of just 2).
