@@ -50,13 +50,15 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
    INTEGER                    :: K
 
    CHARACTER(1024)            :: LINE
-
+   CHARACTER(1024)            :: FilePath             ! The path name of the AeroDyn input file (so files listed in it can be defined relative to the main input file location)
 
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
-   CALL OpenFInpFile(UnIn, TRIM(AeroInFile))
+   CALL OpenFInpFile(UnIn, TRIM(AeroInFile), ErrStat)
+   IF (ErrStat /= 0 ) RETURN
 
+   CALL GetPath( AeroInFile, FilePath )
 
    !-------------------------------------------------------------------------------------------------
    ! If the echo file is open, write the header...
@@ -249,6 +251,7 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
       ! Read in the wind file name
    CALL ReadVar( UnIn, AeroInFile, WindFileName, 'WindFileName', 'Name of the wind file', ErrStat)
    IF ( ErrStat /= 0 ) RETURN
+   IF ( PathIsRelative( WindFileName ) ) WindFileName = TRIM(FilePath)//TRIM(WindFileName)
 
       ! Read in the wind reference (hub) height above ground
    CALL ReadVar( UnIn, AeroInFile, HH, 'RefHt', 'Wind reference height', ErrStat)
@@ -279,6 +282,8 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
          ! Read in the tower drag file name
       CALL ReadVar( UnIn, AeroInFile, TwrFile, 'TwrFile', 'Tower data file name', ErrStat)
       IF ( ErrStat /= 0 ) RETURN
+      
+      IF ( PathIsRelative( TwrFile ) ) TwrFile = TRIM(FilePath)//TRIM(TwrFile)
 
    ELSE
       !----------------------------------------------------------------------------------------------
@@ -288,7 +293,6 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
 
       TwrPotent = .FALSE.     ! We don't want to read the tower file!
       TwrShadow = .FALSE.     ! We don't want to read the tower file!
-
 
          ! Read in the tower shadow deficit
       IF ( INDEX( 'FTft', Line(:1) ) > 0 )  THEN
@@ -376,6 +380,10 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
 
    CALL ReadAryLines( UnIn, AeroInFile, FoilNm(1:NumFoil), NumFoil, 'FoilNm', 'Airfoil file names', ErrStat )
    IF ( ErrStat /= 0 ) RETURN
+
+   DO K=1,NumFoil
+      IF ( PathIsRelative( FoilNm(K) ) ) FoilNm(K) = TRIM(FilePath)//TRIM( FoilNm(K) )
+   END DO      
 
 
       ! Read in the number of blade elements
@@ -634,8 +642,8 @@ CHARACTER(*),  INTENT(IN):: WindFileName
 
    ! Local Variables:
 
-INTEGER(4)               :: IElm
-INTEGER(4)               :: IFoil
+INTEGER                  :: IElm
+INTEGER                  :: IFoil
 
 CHARACTER(  2)           :: Dst_Unit
 CHARACTER(150)           :: Frmt
@@ -873,13 +881,13 @@ REAL(ReKi), ALLOCATABLE      :: CLPosPI(:)
 REAL(ReKi), ALLOCATABLE      :: CMNegPI(:)
 REAL(ReKi), ALLOCATABLE      :: CMPosPI(:)
 
-INTEGER(4)                   :: IPHI
-INTEGER(4)                   :: I
-INTEGER(4)                   :: K
+INTEGER                      :: IPHI
+INTEGER                      :: I
+INTEGER                      :: K
 INTEGER                      :: Sttus
-INTEGER(4)                   :: NFOILID
-INTEGER(4)                   :: NumLines
-INTEGER(4)                   :: NUNIT
+INTEGER                      :: NFOILID
+INTEGER                      :: NumLines
+INTEGER                      :: NUNIT
 INTEGER                      :: IOS
 
 LOGICAL                      :: ALPosPI
@@ -1430,6 +1438,11 @@ REAL(ReKi)                 :: VN
 !DJL END of proposed change
 
 
+   ! initialize TanInd variables
+A (J,IBLADE) = 0.0
+AP(J,IBLADE) = 0.0
+
+
  !-mlb  Check for being at the center of rotation.
  ! If we are at the center of rotation, the induction equations
  !  are undefined, so let's just USE zeros.
@@ -1497,12 +1510,12 @@ ELSE
 !DJL End of proposed change
 
  !       USE dynamic inflow model to find A
-         CALL VINDINF( J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes VT
+         CALL VINDINF( J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes VT, A, and AP
       ELSE
  !       USE momentum balance to find A
-         CALL VIND( J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes VT
+         CALL VIND( J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes VT, A, and AP
  !       Apply skewed-wake correction, if applicable
-         IF( SKEW ) CALL VNMOD( J, IBlade, RLOCAL, PSI )
+         IF( SKEW ) CALL VNMOD( J, IBlade, RLOCAL, PSI ) !changes A
       ENDIF
    ELSE
  !    Ignore the wake calculation entirely
@@ -1634,8 +1647,8 @@ REAL(ReKi)                    :: VNA
 REAL(ReKi)                    :: VT2_Inv
 REAL(ReKi)                    :: VTA
 
-INTEGER(4)                    :: ICOUNT
-INTEGER(4)                    :: MAXICOUNT
+INTEGER                       :: ICOUNT
+INTEGER                       :: MAXICOUNT
 INTEGER                       :: Sttus
 
 
@@ -1772,14 +1785,14 @@ IMPLICIT                      NONE
 REAL(ReKi),INTENT(IN)      :: VNW
 REAL(ReKi),INTENT(IN)      :: VX
 
-INTEGER(4),INTENT(IN)      :: IBLADE
-INTEGER(4),INTENT(IN)      :: J
+INTEGER   ,INTENT(IN)      :: IBLADE
+INTEGER   ,INTENT(IN)      :: J
 
 CHARACTER(  *),INTENT(IN)  :: VID
 
    ! Local Variables:
 
-INTEGER(4), SAVE           :: NERRORS = 0
+INTEGER   , SAVE           :: NERRORS = 0
 
 LOGICAL,    SAVE           :: AFLAG   = .FALSE.
 
@@ -1842,7 +1855,7 @@ REAL(ReKi),INTENT(IN)      :: VT
 REAL(ReKi),INTENT(IN)      :: VT2_Inv
 REAL(ReKi),INTENT(OUT)     :: VTA
 
-INTEGER(4),INTENT(IN)      :: J
+INTEGER   ,INTENT(IN)      :: J
 
    ! Local Variables:
 
@@ -1975,7 +1988,7 @@ REAL(ReKi), INTENT(IN)     :: SPHI
 REAL(ReKi), INTENT(IN)     :: RLOCAL
 REAL(ReKi), INTENT(OUT)    :: TIPLOSS
 
-INTEGER(4), INTENT(IN)     :: J
+INTEGER   , INTENT(IN)     :: J
 
 
    ! Local Variables:
@@ -1985,7 +1998,7 @@ REAL(ReKi)                 :: OLDDist7       ! previous element distance to r/R 
 REAL(ReKi)                 :: percentR
 REAL(ReKi), SAVE           :: TLpt7 ! Tiploss factor at r/R = 0.7
 
-INTEGER(4)                 :: Jpt7 = 0 ! The element closest to r/R = 0.7
+INTEGER                    :: Jpt7 = 0 ! The element closest to r/R = 0.7
 
 LOGICAL,    SAVE           :: FirstPass = .TRUE.
 
@@ -2072,7 +2085,6 @@ ENDIF
 RETURN
 END SUBROUTINE GetPrandtlLoss
 
-! *************** bjj start of proposed change v13.00c FOR PJM ***************
 !====================================================================================================
 SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
 !  Computes tower shadow or dam influence on the blade
@@ -2167,6 +2179,8 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
          IF( .NOT. AFLAG) THEN
             CALL ProgWarn( ' Tower model temporarily disabled due to possible tower strike.'// &
                            ' This message will not be repeated though the condition may persist.' )
+               !write a blank line (so FAST doesn't write over it)
+            CALL WrScr( ' ' ) 
             AFLAG = .TRUE.
          ENDIF
 
@@ -2447,7 +2461,6 @@ FUNCTION AD_WindVelocityWithDisturbance( InputPosition, ErrStat  )
             CALL MPi2Pi( angle )
             angle = ABS( angle )
 
-
             IF ( angle <= PiBy2 ) THEN  ! Skip cases where we are upwind of the tower -- bjj: DOES THIS ACTUALLY WORK? WHAT ABOUT
 
                radius = SQRT( InputPosition(1)**2 + InputPosition(2)**2 )                             ! bjj: shouldn't this be relative to the hub position?
@@ -2624,13 +2637,13 @@ REAL(ReKi)                 :: P2
 REAL(ReKi)                 :: SRFP
 REAL(ReKi)                 :: TEMP
 
-INTEGER(4)                 :: I
-INTEGER(4)                 :: I1
-INTEGER(4)                 :: I1P1
-INTEGER(4)                 :: I2
-INTEGER(4)                 :: I2P1
-INTEGER(4)                 :: N
-INTEGER(4)                 :: NP1
+INTEGER                    :: I
+INTEGER                    :: I1
+INTEGER                    :: I1P1
+INTEGER                    :: I2
+INTEGER                    :: I2P1
+INTEGER                    :: N
+INTEGER                    :: NP1
 
 
 ANE(J,IBLADE) = ALPHA
@@ -2810,9 +2823,9 @@ REAL(ReKi)                 :: ETA
 REAL(ReKi)                 :: CA
 REAL(ReKi)                 :: SA
 
-INTEGER(4)                 :: I
-INTEGER(4)                 :: J
-INTEGER(4)                 :: K
+INTEGER                    :: I
+INTEGER                    :: J
+INTEGER                    :: K
 
 
 
@@ -2904,8 +2917,8 @@ IMPLICIT                      NONE
 
    ! Local Variables:
 
-INTEGER(4)                 :: I
-INTEGER(4)                 :: K
+INTEGER                    :: I
+INTEGER                    :: K
 
 CHARACTER(70)              :: Frmt
 
@@ -2979,9 +2992,9 @@ REAL(ReKi)                 :: P
 REAL(ReKi)                 :: SA
 REAL(ReKi)                 :: VREL
 
-INTEGER(4)                 :: I
-INTEGER(4)                 :: N
-INTEGER(4)                 :: NP1
+INTEGER                    :: I
+INTEGER                    :: N
+INTEGER                    :: NP1
 
 
 
@@ -3184,10 +3197,10 @@ REAL(ReKi),INTENT(IN)      :: CNA1
 REAL(ReKi),INTENT(IN)      :: CNS1
 REAL(ReKi),INTENT(IN)      :: CNSL1
 
-INTEGER(4),INTENT(IN)      :: IFOIL
+INTEGER   ,INTENT(IN)      :: IFOIL
 INTEGER,   INTENT(IN)      :: J
 INTEGER,   INTENT(IN)      :: IBlade
-INTEGER(4),INTENT(IN)      :: NFT
+INTEGER   ,INTENT(IN)      :: NFT
 
    ! Local Variables:
 
@@ -3206,10 +3219,10 @@ REAL(ReKi)                 :: SRFPC
 REAL(ReKi)                 :: TEMP
 REAL(ReKi)                 :: TFE
 
-INTEGER(4)                 :: I1
-INTEGER(4)                 :: I1P1
-INTEGER(4)                 :: I2
-INTEGER(4)                 :: I2P1
+INTEGER                    :: I1
+INTEGER                    :: I1P1
+INTEGER                    :: I2
+INTEGER                    :: I2P1
 
 
 TFE  = TF
@@ -3510,7 +3523,7 @@ REAL(ReKi),INTENT(OUT)     :: CDA
 REAL(ReKi),INTENT(OUT)     :: CLA
 REAL(ReKi),INTENT(OUT)     :: CMA
 
-INTEGER(4),INTENT(IN)      :: I      ! NFOIL(J)
+INTEGER   ,INTENT(IN)      :: I      ! NFOIL(J)
 INTEGER,   INTENT(OUT)     :: ErrStat
 
    ! Local Variables:
@@ -3524,11 +3537,11 @@ REAL(ReKi)                 :: CMA2
 REAL(ReKi)                 :: P1
 REAL(ReKi)                 :: P2
 
-INTEGER(4)                 :: N1
-INTEGER(4)                 :: N1P1
-INTEGER(4)                 :: N2
-INTEGER(4)                 :: N2P1
-INTEGER(4)                 :: NTAB
+INTEGER                    :: N1
+INTEGER                    :: N1P1
+INTEGER                    :: N2
+INTEGER                    :: N2P1
+INTEGER                    :: NTAB
 
 
 IF (.NOT. ALLOCATED(NFoil) ) THEN
@@ -3739,7 +3752,7 @@ REAL(ReKi)                 :: fElem
 REAL(ReKi)                 :: Rzero
 REAL(ReKi)                 :: WindPsi
 
-INTEGER(4)                 :: mode
+INTEGER                    :: mode
 
 
 
@@ -3799,9 +3812,9 @@ USE            Element
 IMPLICIT       NONE
 
 
-INTEGER(4)  :: iblad
-INTEGER(4)  :: ielem
-INTEGER(4)  :: mode
+INTEGER     :: iblad
+INTEGER     :: ielem
+INTEGER     :: mode
 
 
 
@@ -3851,13 +3864,13 @@ REAL(ReKi)                 :: v2
 REAL(ReKi)                 :: v3
 REAL(ReKi)                 :: Vplane2
 
-INTEGER(4)                 :: i
-INTEGER(4)                 :: iElem
-INTEGER(4)                 :: irow
-INTEGER(4)                 :: jBlade
-INTEGER(4)                 :: jcol
-INTEGER(4)                 :: k
-INTEGER(4)                 :: mode
+INTEGER                    :: i
+INTEGER                    :: iElem
+INTEGER                    :: irow
+INTEGER                    :: jBlade
+INTEGER                    :: jcol
+INTEGER                    :: k
+INTEGER                    :: mode
 
 
  ! Initialize the MRvector & NJVector.
@@ -4047,7 +4060,7 @@ USE            DynInflow
 IMPLICIT       NONE
 
 
-INTEGER(4)  :: i
+INTEGER     :: i
 !rm not used:INTEGER(4)  :: mode
 
 
@@ -4102,9 +4115,9 @@ REAL(ReKi)                 :: RHSsin ( maxInfl0+1:maxInfl )
 
    ! Local Variables:
 
-INTEGER(4)                 :: i
-INTEGER(4)                 :: NumOut
-INTEGER(4)                 :: UnDyn = 80
+INTEGER                    :: i
+INTEGER                    :: NumOut
+INTEGER                    :: UnDyn = 80
 
 LOGICAL                    :: OnePass = .TRUE.
 
@@ -4180,9 +4193,9 @@ REAL(ReKi)                 :: v2
 REAL(ReKi)                 :: v3
 REAL(ReKi)                 :: Vplane2
 
-INTEGER(4)                 :: i
-INTEGER(4)                 :: k
-INTEGER(4)                 :: mode
+INTEGER                    :: i
+INTEGER                    :: k
+INTEGER                    :: mode
 
 
 
@@ -4342,6 +4355,7 @@ CALL ABPRECOR ( xAlpha, old_Alph, dAlph_dt, DT0, maxInfl, 1 )
 CALL ABPRECOR ( xBeta,  old_Beta, dBeta_dt, DT0, maxInfl, maxInfl0+1 )
 
  ! Calculate the new lambda_m.
+!bjj: why are there 2 do loops? can't they be combined???? (assuming maxInfl0 < maxInfl) or is one of these supposed to be sin?
 xLambda_M= 0.
 DO k = 1, maxInfl0-1
    xLambda_M = xLambda_M + xLcos(1,k) * xAlpha(k)
@@ -4394,10 +4408,8 @@ REAL(ReKi)                 :: A2P
 REAL(ReKi)                 :: Rzero
 REAL(ReKi)                 :: SWRLARG
 REAL(ReKi)                 :: Windpsi
-!bjj rm v12.70-bjj: REAL(ReKi)                 :: xphi    !bjj: a function
 
-INTEGER(4)                 :: mode
-
+INTEGER                    :: mode
 
 
  ! Rzero is the non-dimensional radius.
@@ -4455,6 +4467,8 @@ IF ( SWIRL ) THEN
    IF ( SWRLARG > 0.0 ) THEN
       A2P = 0.5 * ( -1.0 + SQRT( SWRLARG ) )
       VT  = VT * ( 1.0 + A2P)
+! bjj: this value was not properly set before. We could also just replace the local A2P variable with AP() instead.
+      AP(iRadius,iBlade) = A2P
    ENDIF
 
 ENDIF
@@ -4475,8 +4489,8 @@ IMPLICIT                      NONE
 
 
    ! Passed Variables:
-INTEGER(4),INTENT(IN)      :: N
-INTEGER(4),INTENT(IN)      :: N0
+INTEGER   ,INTENT(IN)      :: N
+INTEGER   ,INTENT(IN)      :: N0
 
 REAL(ReKi),INTENT(IN)      :: DT
 REAL(ReKi),INTENT(IN)      :: DFDT ( N0:N, 4 )
@@ -4487,7 +4501,7 @@ REAL(ReKi),INTENT(IN)      :: OLDF ( N0:N )
 
 REAL(ReKi)                 :: DFDT0
 
-INTEGER(4)                 :: I
+INTEGER                    :: I
 
 
 
@@ -4526,7 +4540,7 @@ IMPLICIT                      NONE
    ! Passed Variables:
 REAL(ReKi),INTENT(IN)      :: X
 
-INTEGER(4),INTENT(IN)      :: matrixMode
+INTEGER   ,INTENT(IN)      :: matrixMode
 
 
    ! Local Variables:
@@ -4599,9 +4613,9 @@ IMPLICIT                      NONE
 
 
    ! Passed Variables:
-INTEGER(4),INTENT(IN)      :: invMode
-INTEGER(4),INTENT(IN)      :: N
-INTEGER(4),INTENT(IN)      :: N0
+INTEGER   ,INTENT(IN)      :: invMode
+INTEGER   ,INTENT(IN)      :: N
+INTEGER   ,INTENT(IN)      :: N0
 
 REAL(ReKi),INTENT(INOUT)   :: A0   (      N   ,      N    )
 REAL(ReKi),INTENT(INOUT)   :: A1   ( N0+1:N   , N0+1:N    )
@@ -4610,8 +4624,8 @@ REAL(ReKi),INTENT(INOUT)   :: A1   ( N0+1:N   , N0+1:N    )
 
 REAL(ReKi)                 :: DUMMY(      N-N0,      N-N0 )
 
-INTEGER(4)                 :: I
-INTEGER(4)                 :: J
+INTEGER                    :: I
+INTEGER                    :: J
 
 
 
@@ -4665,28 +4679,28 @@ IMPLICIT                      NONE
 
 
    ! Passed Variables:
-INTEGER(4),INTENT(IN)      :: n
+INTEGER   ,INTENT(IN)      :: n
 
 REAL(ReKi),INTENT(INOUT)   :: a(n,n)
 
    ! Local Variables:
 
-INTEGER(4), PARAMETER      :: NMAX = 6
+INTEGER   , PARAMETER      :: NMAX = 6
 
 REAL(ReKi)                 :: big
 REAL(ReKi)                 :: dum
 REAL(ReKi)                 :: pivinv
 
-INTEGER(4)                 :: i
-INTEGER(4)                 :: icol
-INTEGER(4)                 :: indxc(NMAX)
-INTEGER(4)                 :: indxr(NMAX)
-INTEGER(4)                 :: ipiv(NMAX)
-INTEGER(4)                 :: irow
-INTEGER(4)                 :: j
-INTEGER(4)                 :: k
-INTEGER(4)                 :: l
-INTEGER(4)                 :: ll
+INTEGER                    :: i
+INTEGER                    :: icol
+INTEGER                    :: indxc(NMAX)
+INTEGER                    :: indxr(NMAX)
+INTEGER                    :: ipiv(NMAX)
+INTEGER                    :: irow
+INTEGER                    :: j
+INTEGER                    :: k
+INTEGER                    :: l
+INTEGER                    :: ll
 
 
 
@@ -4767,10 +4781,10 @@ IMPLICIT                      NONE
    ! Passed Variables:
 
 REAL(ReKi)                  :: FGAMMA
-INTEGER(4),INTENT(IN)       :: J
-INTEGER(4),INTENT(IN)       :: M
-INTEGER(4),INTENT(IN)       :: N
-INTEGER(4),INTENT(IN)       :: R
+INTEGER   ,INTENT(IN)       :: J
+INTEGER   ,INTENT(IN)       :: M
+INTEGER   ,INTENT(IN)       :: N
+INTEGER   ,INTENT(IN)       :: R
 
 
 IF ( MOD(R+M,2) == 0 ) THEN
@@ -4812,14 +4826,14 @@ IMPLICIT                      NONE
 
 REAL(ReKi)                 :: HFUNC
 
-INTEGER(4),INTENT(IN)      :: M
-INTEGER(4),INTENT(IN)      :: N
+INTEGER   ,INTENT(IN)      :: M
+INTEGER   ,INTENT(IN)      :: N
 
 
    ! Local Variables:
 
-INTEGER(4)                 :: NMM   ! n minus M
-INTEGER(4)                 :: NPM   ! N plus M
+INTEGER                    :: NMM   ! n minus M
+INTEGER                    :: NPM   ! N plus M
 
 
 
@@ -4850,11 +4864,11 @@ IMPLICIT                   NONE
 
 
    ! Passed Variables:
-INTEGER(4),INTENT(IN)   :: I
+INTEGER   ,INTENT(IN)   :: I
 
    ! Local Variables:
 
-INTEGER(4)              :: K
+INTEGER                 :: K
 
 
 
@@ -4897,15 +4911,15 @@ IMPLICIT                      NONE
 REAL(ReKi),INTENT(IN)      :: Rzero
 REAL(ReKi)                 :: xphi
 
-INTEGER(4),INTENT(IN)      :: mode
+INTEGER   ,INTENT(IN)      :: mode
 
 
 
 
 IF ( Rzero < 0. ) THEN
-   CALL ProgAbort( 'Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be larger than 0.')
+   CALL ProgAbort( 'Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be larger than 0 in xphi().')
 ELSE IF ( Rzero > 1. ) THEN
-   CALL ProgAbort( 'Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be smaller than 1.')
+   CALL ProgAbort( 'Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be smaller than 1 in xphi().')
 ENDIF
 
 SELECT CASE ( mode )
@@ -4948,18 +4962,18 @@ IMPLICIT                     NONE
 REAL(ReKi)                :: phis
 REAL(ReKi),INTENT(IN)     :: Rzero
 
-INTEGER(4),INTENT(IN)     :: j
-INTEGER(4),INTENT(IN)     :: r
+INTEGER   ,INTENT(IN)     :: j
+INTEGER   ,INTENT(IN)     :: r
 
    ! Local Variables:
 
-INTEGER(4)                :: q
+INTEGER                   :: q
 
 
 IF ( Rzero < 0. ) THEN
-   CALL ProgAbort('Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be larger than 0.' )
+   CALL ProgAbort('Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be larger than 0 in phis().' )
 ELSE IF ( Rzero > 1. ) THEN
-   CALL ProgAbort('Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be smaller than 1.' )
+   CALL ProgAbort('Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be smaller than 1 in phis().' )
 ENDIF
 
 phis = 0.
@@ -5192,7 +5206,7 @@ SUBROUTINE CheckRComp( ADFile, HubRadius, TipRadius, ErrStat )
    REAL(ReKi)                 :: DRSum                      ! Sum of DRs--should be close to TipRadius
    REAL(ReKi), PARAMETER      :: EPS = EPSILON(HubRadius)   ! A small value used to compare two numbers
 
-   INTEGER(4)                 :: I                          ! Generic index.
+   INTEGER                    :: I                          ! Generic index.
 
    CHARACTER(33)              :: DRChange                   ! A string showing how to change DR to get campatibility
 
@@ -5266,4 +5280,4 @@ SUBROUTINE CheckRComp( ADFile, HubRadius, TipRadius, ErrStat )
 END SUBROUTINE CheckRComp
 
 
-END MODULE
+END MODULE AeroSubs

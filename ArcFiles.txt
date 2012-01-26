@@ -23,6 +23,7 @@ Source/InflowWind/FORMAT_FF_Sum_File.pdf
 Source/InflowWind/Source/CTWind.f90
 Source/InflowWind/Source/FDWind.f90
 Source/InflowWind/Source/FFWind.f90
+Source/InflowWind/Source/HAWCWind.f90
 Source/InflowWind/Source/HHWind.f90
 Source/InflowWind/Source/InflowWindMod.f90
 Source/InflowWind/Source/SharedInflowDefs.f90

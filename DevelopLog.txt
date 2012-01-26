@@ -247,3 +247,17 @@ v13.00.00a-bjj 31-Mar-2010 B. and J. Jonkman
    and GetVNVT(). It is called once per time step, with the positions,
    orientations, and velocities for all elements passed at one time. 
  
+v13.00.01a-bjj 25-Jan-2012 B. Jonkman
+ When file names in the input file are relative (not hardcoded), they are now relative
+   to the directory containing the input file (not the current working directory).
+ I fixed some instances where the lines in the code exceeded 132 characters.
+ I modified some error messages to indicate where the error occurred.
+ I modified AeroMods.f90 and AeroSubs.f90 to use default INTEGER kinds instead of INTEGER(4).
+ I updated the AP(J,I) array in SUBROUTINE VindInf(). Previously, a local A2P variable was set, 
+   but the output was not. Thus, AP was always zero when SWIRL and DYNIN were used. (this bug 
+   was reported on the forums by Qiang Liu). I also initialize the A() and AP() arrays because I
+   do not believe they were always properly set. (some of the IF statements didn't change the 
+   values of these arrays before saving them in the output array).
+ 
+
+   
