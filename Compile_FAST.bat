@@ -30,10 +30,10 @@ REM ----------------------------------------------------------------------------
 
 SET IVF_LOC=C:\Program Files\Intel\Compiler\Fortran\10.1.024\IA32\Bin
 
-SET NWTC_Lib_Loc=D:\DATA\Fortran\Fortran Subs\NWTC_subs\v1.02.00\Source
-SET AeroDyn_Loc=D:\DATA\Fortran\IVF Projects\AeroDyn\Release\Source
-SET Wind_Loc=D:\DATA\Fortran\IVF Projects\AeroDyn\Release\Source\InflowWind\Source
-SET FAST_Loc=D:\DATA\Fortran\IVF Projects\FAST\Release\Source
+SET NWTC_Lib_Loc=D:\DATA\DesignCodes\miscellaneous\nwtc_subs\SVNdirectory\source
+SET AeroDyn_Loc=D:\DATA\DesignCodes\simulators\AeroDyn\SVNdirectory\trunk\Source
+SET Wind_Loc=D:\DATA\DesignCodes\simulators\AeroDyn\SVNdirectory\trunk\Source\InflowWind\Source
+SET FAST_Loc=D:\DATA\DesignCodes\simulators\FAST\SVNdirectory\trunk\Source
 
 
 REM ----------------------------------------------------------------------------
@@ -56,6 +56,7 @@ SET Wind_Files=
 SET Wind_Files=%Wind_Files%  "%Wind_Loc%\SharedInflowDefs.f90"
 SET Wind_Files=%Wind_Files%  "%Wind_Loc%\HHWind.f90"
 SET Wind_Files=%Wind_Files%  "%Wind_Loc%\FFWind.f90"
+SET Wind_Files=%Wind_Files%  "%Wind_Loc%\HAWCWind.f90"
 SET Wind_Files=%Wind_Files%  "%Wind_Loc%\FDWind.f90"
 SET Wind_Files=%Wind_Files%  "%Wind_Loc%\CTWind.f90"
 SET Wind_Files=%Wind_Files%  "%Wind_Loc%\UserWind.f90"

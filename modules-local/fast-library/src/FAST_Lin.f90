@@ -1118,31 +1118,38 @@ ELSE                          ! We have at least one input wind disturbance
 
       CASE ( 1 )                    ! Horizontal hub height wind speed
          IndxV     = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxV    , ' = horizontal hub-height wind speed  (m/s) ', Vop      , ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxV    , ' = horizontal hub-height wind speed  (m/s) ', Vop      , &
+                                                                                                                  ' op - INVALID'
 
       CASE ( 2 )                    ! Horizontal wind direction
          IndxDELTA = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxDELTA, ' = horizontal wind direction         (rad) ', DELTAop  , ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxDELTA, ' = horizontal wind direction         (rad) ', DELTAop  , &
+                                                                                                                  ' op - INVALID'
 
       CASE ( 3 )                    ! Vertical wind speed
          IndxVZ    = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVZ   , ' = vertical wind speed               (m/s) ', VZop     , ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVZ   , ' = vertical wind speed               (m/s) ', VZop     , &
+                                                                                                                  ' op - INVALID'
 
       CASE ( 4 )                    ! Horizontal shear coefficient
          IndxHSHR  = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxHSHR , ' = horizontal shear parameter          (-) ', HSHRop   , ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxHSHR , ' = horizontal shear parameter          (-) ', HSHRop   , &
+                                                                                                                  ' op - INVALID'
 
       CASE ( 5 )                    ! Vertical shear coefficient
          IndxVSHR  = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVSHR , ' = vertical power law shear exponent   (-) ', VSHRop   , ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVSHR , ' = vertical power law shear exponent   (-) ', VSHRop   , &
+                                                                                                                  ' op - INVALID'
 
       CASE ( 6 )                    ! Vertical (linear) shear coefficient
          IndxVLSHR = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVLSHR, ' = linear vertical shear parameter     (-) ', VLINSHRop, ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVLSHR, ' = linear vertical shear parameter     (-) ', VLINSHRop, &
+                                                                                                                  ' op - INVALID'
 
       CASE ( 7 )                    ! Horizontal hub height wind gust
          IndxVGUST = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVGUST, ' = horizontal hub-height wind gust   (m/s) ', VGUSTop  , ' op'
+         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVGUST, ' = horizontal hub-height wind gust   (m/s) ', VGUSTop  , &
+                                                                                                                  ' op - INVALID'
 
       ENDSELECT
 
