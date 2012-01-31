@@ -151,6 +151,8 @@ Create integer arrays that describe how the above boundary nodes are
 connected, using elements described above:
 \begin{verbatim}
 integer Npoint               ! number of point elements
+integer Nline2               ! number of 2-node line elements
+integer Nline3               ! number of 3-node line elements
 integer Ntri3                ! number of 3-node triangle elements
 integer Ntri6                ! number of 6-node triangle elements
 integer Nquad4               ! number of 4-node quadrilateral elements
@@ -163,8 +165,10 @@ integer Nwedge6              ! number of 6-node wedge elements
 integer Nwedge15             ! number of 15-node wedgeelements
 
 integer element_point(Npoint)        ! point connectivity
-integer element_line2(2,Ntri3)       ! 2-node line connectivity
-integer element_line3(3,Ntri6)       ! 3-node line connectivity
+integer element_line2(2,Nline2)      ! 2-node line connectivity
+integer element_line3(3,Nline3)      ! 3-node line connectivity
+integer element_line2(2,Ntri3)       ! 3-node triangle connectivity
+integer element_line3(3,Ntri6)       ! 6-node triangle connectivity
 integer element_quad4(4,Nquad4)      ! 4-node quad connectivity
 integer element_quad8(8,Nquad8)      ! 8-node quad connectivity
 integer element_tet4(4,Ntet4)        ! 3-node tet connectivity
