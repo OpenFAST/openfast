@@ -1,0 +1,4 @@
+#!/bin/csh
+
+/bin/rm -f *.pdf *.aux *.dvi *.log
+

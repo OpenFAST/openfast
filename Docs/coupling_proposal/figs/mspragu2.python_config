@@ -1,0 +1,35 @@
+##############################################################################
+#
+# Python config
+#
+
+# Hackish detection of python versions.  There must be a cleaner way to do this
+# with tcsh syntax instead of calling awk!
+set PYVER_MINOR = `python -V | & awk '{print $2}'`
+set PYVER_MAJOR = `echo $PYVER_MINOR | awk -F '.' '{printf("%d.%d",$1,$2)}'`
+
+#setenv PYTHONSTARTUP ~/.pythonstartup.py
+
+set PP=.:$HOME/code/python:
+set PP=${PP}:$HOME/usr/lib/python:$HOME/usr/local/lib/python
+set PP=${PP}:$HOME/usr/lib/python/scitools/lib
+set PP=${PP}:$HOME/usr/lib/python${PYVER_MAJOR}/site-packages
+set PP=${PP}:/sw/lib/python${PYVER_MAJOR}/site-packages
+set PP=${PP}:$HOME/research/mwadap
+set PP=${PP}:/sw/lib/python${PYVER_MAJOR}
+set PP=${PP}:/sw/bin
+setenv PYTHONPATH $PP
+
+setenv PYTHONDOCS /sw/share/doc/python25/Doc/html
+#setenv PYTHONDOCS /usr/share/doc/python-docs-${PYVER_MINOR}/html
+
+setenv PYMACSDIR $HOME/usr/local/python/pymacs
+
+# Boost.Python config
+setenv PYTHON_ROOT /usr/
+
+# FC_VENDOR is the default Fortran compiler used by f2py
+#setenv FC_VENDOR Intel
+#setenv FC_VENDOR Lahey
+setenv FC_VENDOR Gnu
+##############################################################################

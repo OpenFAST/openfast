@@ -1,0 +1,219 @@
+%% 
+%% This is file `subfigure.sty',
+%% generated with the docstrip utility.
+%% 
+%% The original source files were:
+%% 
+%% subfigure.dtx  (with options: `package')
+%% 
+%% Copyright (C) 1988-1995 Steven Douglas Cochran. 
+%% 
+%% This file is NOT the source for subfigure, because almost all comments 
+%% have been stripped from it. It is NOT the preferred form of subfigure 
+%% for making modifications to it. 
+%% 
+%% Therefore you can NOT redistribute and/or modify THIS file. You can 
+%% however redistribute the complete source (subfigure.dtx and 
+%% subfigure.ins) and/or modify it under the terms of the GNU General 
+%% Public License as published by the Free Software Foundation; either 
+%% version 2, or (at your option) any later version. 
+%% 
+%% The subfigure package is distributed in the hope that it will be 
+%% useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
+%% of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+%% GNU General Public License for more details. 
+%% 
+%% You should have received a copy of the GNU General Public License 
+%% along with this program; if not, write to the Free Software 
+%% Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @LaTeX-style-file{
+%%    Author     = "Steven Douglas Cochran",
+%%    Version    = "2.0",
+%%    Date       = "1995/03/06",
+%%    Time       = "14:43:14",
+%%    Filename   = "subfigure.sty",
+%%    Address    = "Digital Mapping Laboratory, School of Computer Science
+%%                  Carnegie-Mellon University, 5000 Forbes Avenue
+%%                  Pittsburgh, PA 15213-3891, USA",
+%%    Telephone  = "(412) 268-5654",
+%%    FAX        = "(412) 268-5576",
+%%    Email      = "sdc+@CS.CMU.EDU (Internet)",
+%%    CodeTable  = "ISO/ASCII",
+%%    Keywords   = "LaTeX2e, float, figure, table",
+%%    Supported  = "yes",
+%%    Abstract   = "LaTeX package for providing support for the
+%%                  inclusion of small, `sub,' figures and tables.  It
+%%                  simplifies the positioning, captioning and
+%%                  labeling of them within a single figure or table
+%%                  environment.  In addition, this package allows
+%%                  such sub-captions to be written to the List of
+%%                  Figures or List of Tables if desired."
+%% }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\ifx\if@compatibility\undefined\else
+  \NeedsTeXFormat{LaTeX2e}
+  \ProvidesPackage{subfigure}[1995/03/06 v2.0 subfigure package]
+  \typeout{Package: subfigure 1995/03/06 v2.0}
+\fi
+\newif\ifsubcaphang
+\newif\ifsubcapcenter
+\newif\ifsubcapcenterlast
+\newif\ifsubcapnooneline
+\newcommand{\subfigtopskip}{10pt}
+\newcommand{\subfigbottomskip}{10pt}
+\newcommand{\subfigcapskip}{10pt}
+\newcommand{\subfigcapmargin}{10pt}
+\newcommand{\subcapsize}{}
+\newcommand{\subcaplabelfont}{}
+\newcounter{subfigure}[figure]
+%\def\thesubfigure{(\alph{subfigure})}
+\def\thesubfigure{}
+\newcommand{\@thesubfigure}{{\subcaplabelfont\thesubfigure}\space}
+\let\p@subfigure\thefigure
+\let\ext@subfigure\ext@figure
+\newcommand{\l@subfigure}{%
+  \@dottedxxxline{\ext@subfigure}{2}{3.9em}{2.3em}}
+\newcounter{lofdepth}
+\setcounter{lofdepth}{1}
+\newcounter{subtable}[table]
+\def\thesubtable{(\alph{subtable})}
+\newcommand{\@thesubtable}{{\subcaplabelfont\thesubtable}\space}
+\let\p@subtable\thetable
+\let\ext@subtable\ext@table
+\newcommand{\l@subtable}{%
+  \@dottedxxxline{\ext@subtable}{2}{3.9em}{2.3em}}
+\newcounter{lotdepth}
+\setcounter{lotdepth}{1}
+\ifx\if@compatibility\undefined
+  \subcaphangfalse
+  \subcapcenterfalse
+  \subcapcenterlastfalse
+  \def\subcapsize{\footnotesize}
+\else
+  \DeclareOption{normal}{%
+    \subcaphangfalse
+    \subcapcenterfalse
+    \subcapcenterlastfalse
+    \subcapnoonelinefalse}
+  \DeclareOption{hang}{\subcaphangtrue}
+  \DeclareOption{center}{\subcapcentertrue}
+  \DeclareOption{centerlast}{\subcapcenterlasttrue}
+  \DeclareOption{nooneline}{\subcapnoonelinetrue}
+  \DeclareOption{isu}{\ExecuteOption{hang}}
+  \DeclareOption{anne}{\ExecuteOption{centerlast}}
+  \DeclareOption{scriptsize}{\renewcommand{\subcapsize}{\scriptsize}}
+  \DeclareOption{footnotesize}{\renewcommand{\subcapsize}{\footnotesize}}
+  \DeclareOption{small}{\renewcommand{\subcapsize}{\small}}
+  \DeclareOption{normalsize}{\renewcommand{\subcapsize}{\normalsize}}
+  \DeclareOption{large}{\renewcommand{\subcapsize}{\large}}
+  \DeclareOption{Large}{\renewcommand{\subcapsize}{\Large}}
+  \DeclareOption{up}{\renewcommand{\subcaplabelfont}{\upshape}}
+  \DeclareOption{it}{\renewcommand{\subcaplabelfont}{\itshape}}
+  \DeclareOption{sl}{\renewcommand{\subcaplabelfont}{\slshape}}
+  \DeclareOption{sc}{\renewcommand{\subcaplabelfont}{\scshape}}
+  \DeclareOption{md}{\renewcommand{\subcaplabelfont}{\mdseries}}
+  \DeclareOption{bf}{\renewcommand{\subcaplabelfont}{\bfseries}}
+  \DeclareOption{rm}{\renewcommand{\subcaplabelfont}{\rmfamily}}
+  \DeclareOption{sf}{\renewcommand{\subcaplabelfont}{\sffamily}}
+  \DeclareOption{tt}{\renewcommand{\subcaplabelfont}{\ttfamily}}
+  \ExecuteOptions{normal,footnotesize}
+  \ProcessOptions
+\fi
+\newcommand{\subfigure}{%
+  \bgroup
+    \advance\csname c@\@captype\endcsname\@ne
+    \refstepcounter{sub\@captype}%
+    \leavevmode
+    \@ifnextchar [%
+      {\@subfloat{sub\@captype}}%
+      {\@subfloat{sub\@captype}[\@empty]}}
+\let\subtable\subfigure
+\def\@subfloat#1[#2]#3{%
+    \setbox\@tempboxa \hbox{#3}%
+    \@tempdima=\wd\@tempboxa
+    \vtop{%
+      \vbox{
+        \vskip\subfigtopskip
+        \box\@tempboxa}%
+      \ifx \@empty#2\relax \else
+        \vskip\subfigcapskip
+        \@subcaption{#1}{#2}%
+      \fi
+      \vskip\subfigbottomskip}%
+  \egroup}
+\newcommand{\@subfigcaptionlist}{}
+\newcommand{\@subcaption}[2]{%
+  \begingroup
+    \let\label\@gobble
+    \def\protect{\string\string\string}%
+    \xdef\@subfigcaptionlist{%
+      \@subfigcaptionlist,%
+      {\protect\numberline {\@currentlabel}%
+       \noexpand{\ignorespaces #2}}}%
+  \endgroup
+  \@nameuse{@make#1caption}{\@nameuse{@the#1}}{#2}}
+\newcommand{\@makesubfigurecaption}[2]{%
+  \setbox\@tempboxa \hbox{%
+    \subcapsize
+    \ignorespaces #1%
+    \ignorespaces #2}%
+  \@tempdimb=-\subfigcapmargin
+  \multiply\@tempdimb\tw@
+  \advance\@tempdimb\@tempdima
+    \hbox to\@tempdima{%
+      \hfil
+      \ifdim \wd\@tempboxa >\@tempdimb
+         \subfig@caption{#1}{#2}%
+      \else\ifsubcapnooneline
+         \subfig@caption{#1}{#2}%
+      \else
+        \box\@tempboxa
+      \fi\fi
+      \hfil}}
+\let\@makesubtablecaption\@makesubfigurecaption
+\newcommand{\subfig@caption}[2]{%
+  \ifsubcaphang
+    \sbox{\@tempboxa}{%
+      \subcapsize
+      \ignorespaces #1}%
+    \addtolength{\@tempdimb}{-\wd\@tempboxa}%
+    \usebox{\@tempboxa}%
+    \subfig@captionpar{\@tempdimb}{#2}%
+  \else
+    \subfig@captionpar{\@tempdimb}{#1#2}%
+  \fi}
+\newcommand{\subfig@captionpar}[2]{%
+  \parbox[t]{#1}{%
+    \strut
+    \ifsubcapcenter
+      \setlength{\leftskip}{\@flushglue}%
+      \setlength{\rightskip}{\@flushglue}%
+      \setlength{\parfillskip}{\z@skip}%
+    \else\ifsubcapcenterlast
+      \addtolength{\leftskip}{0pt plus 1fil}%
+      \addtolength{\rightskip}{0pt plus -1fil}%
+      \setlength{\parfillskip}{0pt plus 2fil}%
+    \fi\fi
+    \subcapsize
+    \ignorespaces #2%
+    \par}}
+\newcommand{\@dottedxxxline}[6]{%
+  \ifnum #2>\@nameuse{c@#1depth}\else
+    \@dottedtocline{0}{#3}{#4}{#5}{#6}
+  \fi}
+\let\subfig@oldcaption\@caption
+\long\def\@caption#1[#2]#3{%
+  \subfig@oldcaption{#1}[{#2}]{#3}%
+  \@for \@tempa:=\@subfigcaptionlist \do {%
+    \ifx\@empty\@tempa\relax \else
+      \addcontentsline
+        {\@nameuse{ext@sub#1}}%
+        {sub#1}%
+        {\@tempa}%
+    \fi}%
+  \gdef\@subfigcaptionlist{}}
+\endinput
+%% 
+%% End of file `subfigure.sty'.

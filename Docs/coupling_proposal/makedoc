@@ -1,0 +1,5 @@
+#!/bin/csh
+
+latex doc
+dvipdfm doc
+
