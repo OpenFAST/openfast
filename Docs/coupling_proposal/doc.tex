@@ -328,39 +328,30 @@ Each element of a Load vector contains:
 \end{verbatim}
 
 These are not accessed directly; rather, the elements are set or retrieved using routines in the 
-FIMMR API.
+FIMMR API.  The information shown in Section \ref{sec:internal} that represents the various aspects of
+a mesh being passed through the coupling interface is packed into the State and Component vectors, which
+can then be passed between different modules as one-dimensional arrays of simple data types even if the modules
+are written in different languages.  This avoids avoids the troublesome issue of passing derived data types between
+C and Fortran.  The Component Vectors, which are integer arrays, contain the mesh layout and topologies as well
+as indices for each point of an element into the real typed State Vectors that contain the values for the 
+different properties such as Position, Orientation, Force, Momentum, etc.  Users of the interface are specifically
+advised against assuming anything about the layout of the State and Component vectors; nor would it be useful
+or advisable for users to access the contents of the vectors directly.  One reason for this is that the 
+actual layout is apt to change over time.  Relying on the FIMMR interface routines will ensure that 
+changes or extensions to the underlying data representation will have no effect on existing
+interface-compatible code.
 
-The following is a conceptual definition of a subroutine in a FAST module that uses the FIMMR API: 
-
-\begin{verbatim}
-!===========================================================================
-FUNCTION AD_CalculateLoads( ...                                            &
-                           ,InMarkers, Configuration                       &
-                           ,OutLoads                                       &
-                           ,Blades, Hub, RotorFurl, Nacelle, Tower, Tail   &
-                          )
-!---------------------------------------------------------------------------
-   USE                           AeroTime
-   USE                           AeroSubs
-   USE                           domain_mod
-
-      ! Passed parameters
-
-      ! Markers associated with mesh points
-   REAL( ReKi ),           INTENT(IN   ) :: InMarkers(:)    ! these are opaque
-   REAL( ReKi ),           INTENT(IN   ) :: ConfigMarkers(:)
-      ! Loads associated with mesh points
-   REAL( ReKi ),           INTENT(  OUT) :: OutLoads(:)
-      ! Component meshes
-   INTEGER,                INTENT(IN   ) :: Blades(:,:)     
-   INTEGER,                INTENT(IN   ) :: Hub(:)
-   INTEGER,                INTENT(IN   ) :: RotorFurl(:)
-   INTEGER,                INTENT(IN   ) :: Nacelle(:)
-   INTEGER,                INTENT(IN   ) :: Tower(:)
-\end{verbatim}
-
-A complete listing of the sample routine showing calls to the FIMMR API routines is listed
+Some of the envisioned interface routines for accessing or storing elements in State Vectors passed through
+the FIMMR interface are listed below and described in the subsections that follow in this Section.
+A complete listing of a sample routine showing calls to the FIMMR API routines is listed
 in Section \ref{sec:listing}.
+The MeshRet set of FIMMR routines below are fuctions used to retrieve elements 
+from a State Vector (provided as one argument) 
+using the indexing and other layout information encoded into the Component Vector for a particular 
+structural componet; for example, a turbine blade.  Another set, the MeshPut subroutines, are
+used to store elements back into a vector.  The last routine sketched below is a utility that allows 
+copying between two sets of State/Component vectors to store or retrieve a local copy of the mesh
+within a routine.
 
 
 \subsection{MeshRetMarkerOrient}
