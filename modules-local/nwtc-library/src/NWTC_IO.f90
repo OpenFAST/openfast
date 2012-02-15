@@ -15,9 +15,7 @@ MODULE NWTC_IO
    !     FUNCTION   CurTime       ( )
    !     SUBROUTINE DispNVD       ( )
    !     FUNCTION   Flt2LStr      ( FltNum )
-!BJJ start of proposed change v1.04.00a-bjj
    !     SUBROUTINE GetNewUnit    ( UnIn )
-!BJJ end of proposed change v1.04.00a-bjj
    !     SUBROUTINE GetPath       ( GivenFil, PathName )
    !     SUBROUTINE GetRoot       ( GivenFil, RootName )
    !     SUBROUTINE GetTokens     ( Line, NumTok, Tokens, Error )
@@ -34,9 +32,7 @@ MODULE NWTC_IO
    !     SUBROUTINE OpenUInfile   ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenUInBEFile ( Un, InFile, RecLen [, ErrStat] )
    !     SUBROUTINE OpenUOutfile  ( Un, OutFile [, ErrStat] )
-!BJJ start of proposed change v1.04.00a-bjj
    !     FUNCTION   PathIsRelative( GivenFil )
-!BJJ end of proposed change v1.04.00a-bjj
    !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] )
    !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
    !     SUBROUTINE ProgWarn      ( Message )
@@ -50,10 +46,8 @@ MODULE NWTC_IO
    !     SUBROUTINE ReadIVar      ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] )
    !     SUBROUTINE ReadLAry      ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadLVar      ( UnIn, Fil, LogVar, VarName, VarDescr [, ErrStat] )
-!BJJ start of proposed change v1.04.00a-bjj
    !     SUBROUTINE ReadNum       ( UnIn, Fil, Word, VarName, ErrStat )
    !     SUBROUTINE ReadOutputList( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat )
-!BJJ end of proposed change v1.04.00a-bjj
    !     SUBROUTINE ReadRAry      ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadRAryLines ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadRVar      ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] )
@@ -83,7 +77,7 @@ MODULE NWTC_IO
    LOGICAL                      :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
    CHARACTER(23)                :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
-   CHARACTER(29)                :: NWTCVer  = ' (v1.04.00d-bjj, 21-Jul-2011)'   ! The version (including date) of the NWTC Subroutine Library.
+   CHARACTER(29)                :: NWTCVer  = ' (v1.04.00e-bjj, 15-Feb-2011)'   ! The version (including date) of the NWTC Subroutine Library.
    CHARACTER(20)                :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER      :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -138,6 +132,14 @@ MODULE NWTC_IO
 !     MODULE PROCEDURE ReadIAryLines         ! Not coded yet
 !     MODULE PROCEDURE ReadLAryLines         ! Not coded yet
       MODULE PROCEDURE ReadRAryLines
+   END INTERFACE
+
+
+      ! Create interface for a generic Num2LStr that actually uses specific routines.
+
+   INTERFACE Num2LStr
+      MODULE PROCEDURE Int2LStr
+      MODULE PROCEDURE Flt2LStr
    END INTERFACE
 
 
@@ -918,19 +920,12 @@ CONTAINS
    SUBROUTINE DispNVD
 
 
-!bjj start of proposed change v1.04.00d-bjj
-!rm typos:      ! This routine displays the name of the program, it's version, and it's release date.
       ! This routine displays the name of the program, its version, and its release date.
-!bjj end of proposed change v1.04.00d-bjj
 
 
       ! Print out program name, version, and date.
 
    CALL WrScr1 ( ' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
-!bjj start of proposed change v1.04.00d-bjj
-!bjj: this is now written to the screen in NWTC_Init() so we won't write it twice:
-!rm   CALL WrScr  ( ' Linked with '//TRIM( NWTCName )//TRIM( NWTCVer )//'.' )
-!bjj end of proposed change v1.04.00d-bjj
 
 
    RETURN
@@ -999,7 +994,6 @@ CONTAINS
    RETURN
    END FUNCTION Flt2LStr !  ( FltNum )
 !=======================================================================
-!bjj start of proposed change v1.04.00a-bjj
    SUBROUTINE GetNewUnit ( UnIn )
 
       ! This routine returns a unit number not currently in use.
@@ -1035,7 +1029,6 @@ CONTAINS
    RETURN   
    END SUBROUTINE GetNewUnit !  ( UnIn )
 !=======================================================================
-!bjj end of proposed change v1.04.00a-bjj
 
    SUBROUTINE GetPath ( GivenFil, PathName )
 
@@ -1106,15 +1099,6 @@ CONTAINS
       IF ( GivenFil(I:I) == '.' )  THEN
 
 
-!bjj start of proposed change v1.04.00a-bjj
-!bjj: this logic says that a file named ".\wind\test" has no "RootName" because it's all a file extension
-!     I think is should be all RootName and no extension because of the directories
-!rm         IF ( I == 1 ) THEN
-!rm            RootName = ''
-!rm            RETURN
-!rm         END IF
-!bjj end of proposed change v1.04.00a-bjj
-
          IF ( I < LEN_TRIM( GivenFil ) ) THEN                   ! Make sure the index I is okay
             IF ( INDEX( '\/', GivenFil(I+1:I+1)) == 0 ) THEN    ! Make sure we don't have the RootName in a different directory
                RootName = GivenFil(:I-1)
@@ -1122,14 +1106,11 @@ CONTAINS
                RootName = GivenFil                              ! This does not have a file extension
             END IF
          ELSE
-!bjj start of proposed change v1.04.00a-bjj
-!rm            RootName = GivenFil(:I-1)
             IF ( I == 1 ) THEN
                RootName = ''
             ELSE
                RootName = GivenFil(:I-1)
             END IF
-!bjj end of proposed change v1.04.00a-bjj
          END IF
 
          RETURN
@@ -1738,7 +1719,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END SUBROUTINE OpenUOutfile ! ( Un, InFile [,ErrStat] )
 !=======================================================================
-!bjj start of proposed change v1.04.00a-bjj
    FUNCTION PathIsRelative ( GivenFil )
 
 
@@ -1777,7 +1757,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END FUNCTION PathIsRelative ! ( GivenFil )
 !=======================================================================
-!bjj end of proposed change v1.04.00a-bjj
    SUBROUTINE PremEOF ( Fil , Variable, TrapErrors )
 
 
@@ -2272,7 +2251,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE ReadNum ! ( UnIn, Fil, Word, VarName [, ErrStat] )
-!bjj start of proposed change v1.04.00a-bjj
 !=======================================================================
    SUBROUTINE ReadOutputList ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat )
 
@@ -2353,7 +2331,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE ReadOutputList ! ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr [, ErrStat] )
-!bjj end of proposed change v1.04.00a-bjj
 !=======================================================================
    SUBROUTINE ReadRAry ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat )
 
@@ -2542,7 +2519,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE ReadStr ! ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
-! Start of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 !=======================================================================
    SUBROUTINE WaitTime ( WaitSecs )
 
@@ -2580,7 +2556,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE WaitTime ! ( Seconds )
-! End of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 !=======================================================================
    SUBROUTINE WrPr ( Str )
 

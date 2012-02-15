@@ -621,8 +621,6 @@ CONTAINS
       ! This routine opens the console for standard output.
 
 
-   USE                             IFPORT
-
 
 
    RETURN

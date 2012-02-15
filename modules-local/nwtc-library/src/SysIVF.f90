@@ -44,19 +44,14 @@ MODULE SysSubs
 
 
    INTEGER                      :: ConRecL  = 120                               ! The record length for console output.
-! Start of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
-!   INTEGER                      :: CU       = 7                                 ! The I/O unit for the console.
-!bjj start of proposed change v1.04.00d-bjj
 !bjj: ADAMS crashes when you use UNIT 6
 !rm   INTEGER                      :: CU       = 6                                 ! The I/O unit for the console.
    INTEGER                      :: CU       = 7                                 ! The I/O unit for the console.
-!bjj end of proposed change v1.04.00d-bjj
-! End of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 
    INTEGER                      :: NL_Len   = 2                                 ! The number of characters used for a new line.
 
    CHARACTER(10)                :: Endian   = 'BIG_ENDIAN'                      ! The internal format of numbers.
-   CHARACTER( 1)                :: PathSep  = '\'                               ! The path separater.
+   CHARACTER( 1)                :: PathSep  = '\'                               ! The path separator. (bjj: would be nice to call this "filesep" to match MATLAB)
    CHARACTER( 1)                :: SwChar   = '/'                               ! The switch character for command-line options.
    CHARACTER( 6)                :: UnfForm  = 'BINARY'                          ! The string to specify unformatted I/O files.
 
@@ -111,11 +106,7 @@ CONTAINS
    INTEGER                      :: IOS
    INTEGER                      :: StatArray(12)
    INTEGER                      :: Status
-!bjj start of proposed change v1.04.00d-bjj
-!bjj FSTAT requires a 4-byte integer
-!rm   INTEGER                      :: Unit
    INTEGER(B4Ki)                :: Unit
-!bjj end of proposed change v1.04.00d-bjj
 
 
 !bjj: Unit is not defined!!!!....
@@ -211,15 +202,9 @@ CONTAINS
 
 
 
-! Start of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
-!bjj start of proposed change v1.04.00d-bjj
-!bjj FLUSH requires a 4-byte integer
-!rm   CALL FLUSH ( Unit )
    CALL FLUSH ( INT(Unit, B4Ki) )
-!bjj end of proposed change v1.04.00d-bjj
 !bjj: ADAMS does not compile well with this, so I'll put it back to the subroutine form:
 !   FLUSH ( Unit )
-! End of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 
 
    RETURN
@@ -789,14 +774,10 @@ CONTAINS
 
 
 
-! Start of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 !mlb Leave this as it was until FLUSH get fixed.
    WRITE (CU,'(''+'',A)')  Str
 !   WRITE (CU,'(A)',ADVANCE='NO')  CHAR( 13 )//' '//Str
 
-!bjj rm:   CALL FLUSH ( CU )
-!   FLUSH CU
-! End of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 
 
    RETURN
@@ -832,14 +813,12 @@ CONTAINS
    MaxLen = 98
    Indent = LEN_TRIM( Str ) - LEN_TRIM( ADJUSTL( Str ) )
    MaxLen = MaxLen - Indent
-! Start of proposed change.  v1.03.00d-mlb, 12-Jan-2011,  M. Buhl
    IF ( Indent > 0 )  THEN
       Frm    = '(1X,  X,A)'
       WRITE (Frm(5:6),'(I2)')  Indent
    ELSE
       Frm    = '(1X,A)'
    END IF
-! End of proposed change.  v1.03.00d-mlb, 12-Jan-2011,  M. Buhl
 
 
 
@@ -867,10 +846,11 @@ CONTAINS
 
    ENDDO
 
-! Start of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
-   WRITE (CU,Frm)  TRIM( ADJUSTL( Str(Beg:Beg+LStr-1) ) )
-!   WRITE (*,Frm)  TRIM( ADJUSTL( Str(Beg:Beg+LStr-1) ) )
-! End of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
+   IF ( LStr > 0 ) THEN
+      WRITE (CU,Frm)  TRIM( ADJUSTL( Str(Beg:Beg+LStr-1) ) )
+   ELSE
+      WRITE (CU,'()')
+   END IF      
 
 
    RETURN

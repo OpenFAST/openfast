@@ -10,7 +10,7 @@ MODULE NWTC_Library
          !     NWTC_Num.f90
 
          ! Your project must include one, but not both, of the following files:
-         !     DoubPrec.f90 - for double-precision arithmetic for floating-points variables.  You may have to set a compiler option to have constants use double precision. (bjj Note: Double-precision variables are now Quad-precision.)
+         !     DoubPrec.f90 - for double-precision arithmetic for floating-points variables.  You may have to set a compiler option to have constants use double precision. 
          !     SingPrec.f90 - for single-precision arithmetic for floating-points variables.
 
          ! Your project must include one, and only one, of the following files:
@@ -39,8 +39,6 @@ MODULE NWTC_Library
 CONTAINS
 
 !=======================================================================
-!bjj start of proposed change v1.04.00d-bjj
-!rm   SUBROUTINE NWTC_Init( ProgNameIn, ProgVerIn )
    SUBROUTINE NWTC_Init( ProgNameIn, ProgVerIn )
    
       ! passed parameters
@@ -59,23 +57,19 @@ CONTAINS
    IF ( PRESENT( ProgVerIn ) ) THEN
       ProgVer = ProgVerIn      
    END IF         
-!bjj end of proposed change v1.04.00d-bjj
 
 
       ! This routine calls all required initialization routines.
 
    CALL PiConsts
 
-! Start of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 !mlb Let's get rid of this once FLUSH works.
    CALL OpenCon( )
-! End of proposed change.  v1.03.00d-mlb, 2-Nov-2010,  M. Buhl
 
 
-!bjj start of proposed change v1.04.00d-bjj
       ! Write the version of the NWTC subroutine library that we are running
    CALL WrScr  ( ' Using '//TRIM( NWTCName )//TRIM( NWTCVer )//'.' )
-!bjj end of proposed change v1.04.00d-bjj
+
 
    RETURN
    END SUBROUTINE NWTC_Init

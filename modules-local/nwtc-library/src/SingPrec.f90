@@ -13,6 +13,7 @@ INTEGER, PARAMETER              :: B4Ki     = SELECTED_INT_KIND(  9 )           
 INTEGER, PARAMETER              :: B8Ki     = SELECTED_INT_KIND( 18 )           ! Default kind for eight-byte whole numbers.
 INTEGER, PARAMETER              :: DbKi     = SELECTED_REAL_KIND( 14, 300 )     ! Default kind for double-precision, floating-point numbers.
 INTEGER, PARAMETER              :: QuKi     = SELECTED_REAL_KIND( 20, 500 )     ! Kind for 16-byte, floating-point numbers.
+INTEGER, PARAMETER              :: R8Ki     = SELECTED_REAL_KIND( 14, 300 )     ! Default kind for eight-byte floating-point numbers.
 INTEGER, PARAMETER              :: ReKi     = SELECTED_REAL_KIND(  6,  30 )     ! Default kind for floating-point numbers.
 INTEGER, PARAMETER              :: SiKi     = SELECTED_REAL_KIND(  6,  30 )     ! Kind for four-byte, floating-point numbers.
 

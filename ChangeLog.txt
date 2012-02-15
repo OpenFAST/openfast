@@ -285,6 +285,17 @@ v1.04.00d-bjj,  Dec 2011, B. Jonkman
     
   I changed CU from 6 back to 7 in SysIVF.f90 because Adams (2011 in particular) crashes with opening the console using CU 6.
   
+v1.04.00e-bjj, 15 Feb 2012 B. Jonkman
+  I added R8Ki to the Precision module so that we have an 8-byte type that doesn't change between single (SingPrec.f90) 
+    and double precision (DoubPrec.f90).
+  I removed alpha change comments.
+  I added Num2LStr() as a generic INTERFACE for Int2LStr() and Flt2LStr().
+  I modified SmllRotTrans() to optionally display an additional message when a warning first occurs.
+  I updated WrScr() in Sys*.f90 to avoid errors when the string to write is blank (reported by Arnold Ramsland).
+
+
+
+
 
  To do:
    Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
@@ -299,4 +310,3 @@ v1.04.00d-bjj,  Dec 2011, B. Jonkman
 
       Are we going to add optional arguments to these kinds of routines to return
       to the calling routine with an error flag?
-

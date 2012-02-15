@@ -22,10 +22,8 @@ MODULE NWTC_Num
    !     FUNCTION   Mean          ( Ary, AryLen )                               ! Function to calculate the mean value of a vector array.
    !     SUBROUTINE MPi2Pi        ( Angle )
    !     SUBROUTINE PiConsts
-!hs start of proposed change v1.04.00b-hs
    !     SUBROUTINE RombergInt    ( f, a, b, R, err, eps, ErrStat )
-!hs end of proposed change v1.04.00b-hs
-   !     SUBROUTINE SmllRotTrans  ( RotationType, Theta1, Theta2, Theta3, TransMat )
+   !     SUBROUTINE SmllRotTrans  ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
    !     SUBROUTINE SortUnion     ( Ary1, N1, Ary2, N2, Ary, N )
    !     FUNCTION   StdDevFn      ( Ary, AryLen, Mean )                         ! Function to calculate the standard deviation of a vector array.
 
@@ -177,7 +175,6 @@ CONTAINS
    RETURN
    END SUBROUTINE BSortReal ! ( RealAry, NumPts )
 !=======================================================================
-!bjj start of proposed change v1.00.03c-bjj
    FUNCTION Cross_Product(Vector1, Vector2)
 
       ! This function computes the cross product of two 3-element arrays:
@@ -335,7 +332,6 @@ CONTAINS
 
    END FUNCTION GetSmllRotAngs ! ( DCMat, PMat, ErrStat )
 !=======================================================================
-!bjj end of proposed change
    SUBROUTINE GL_Pts ( IPt, NPts, Loc, Wt, ErrStat )
 
       ! This funtion returns the non-dimensional (-1:+1) location of the given Gauss-Legendre Quadrature point and its weight.
@@ -462,7 +458,6 @@ CONTAINS
    RETURN
    END SUBROUTINE GL_Pts ! ( IPt, NPts, Loc, Wt [, ErrStat] )
 !=======================================================================
-!bjj start of proposed change v1.00.03c-bjj
    FUNCTION IndexCharAry( CVal, CAry )
 
 
@@ -499,13 +494,11 @@ CONTAINS
    ILo = 1
    IHi = SIZE(CAry)
 
-!bjj start of proposed change v1.04.00a-bjj
    IF (     CVal == CAry(ILo) ) THEN
       IndexCharAry = ILo
    ELSEIF ( CVal == CAry(IHi) ) THEN
       IndexCharAry = IHi
    ELSE
-!bjj end of proposed change v1.04.00a-bjj
       IndexCharAry = -1
 
 
@@ -526,16 +519,13 @@ CONTAINS
 
       END DO
 
-!bjj start of proposed change v1.04.00a-bjj
    END IF
-!bjj end of proposed change v1.04.00a-bjj
 
 
    RETURN
 
    END FUNCTION IndexCharAry
 !=======================================================================
-!bjj end of proposed change
    FUNCTION InterpBinComp( XVal, XAry, YAry, ILo, AryLen )
 
 
@@ -1019,7 +1009,6 @@ CONTAINS
    RETURN
    END SUBROUTINE PiConsts
 !=======================================================================
-!hs start of proposed change v1.04.00b-hs
    SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
 
       ! This routine is used to integrate funciton f over the interval [a, b]. This routine
@@ -1040,9 +1029,6 @@ CONTAINS
       !      RETURN
       !   END FUNCTION f
 
-!Start of proposed change v1.04.00c-mlb 2011-06-21
-!v1.04.00c-mlb   USE NWTC_LIBRARY
-!End of proposed change v1.04.00c-mlb 2011-06-21
    IMPLICIT NONE
 
       ! Argument declarations:
@@ -1121,8 +1107,7 @@ CONTAINS
    RETURN
 END SUBROUTINE RombergInt
 !=======================================================================
-!hs end of proposed change v1.04.00b-hs
-   SUBROUTINE SmllRotTrans( RotationType, Theta1, Theta2, Theta3, TransMat )
+   SUBROUTINE SmllRotTrans( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
 
 
       ! This routine computes the 3x3 transformation matrix, TransMat,
@@ -1163,28 +1148,29 @@ END SUBROUTINE RombergInt
 
       ! Passed Variables:
 
-   REAL(ReKi), INTENT(IN )      :: Theta1                                          ! The small rotation about X1, (rad).
-   REAL(ReKi), INTENT(IN )      :: Theta2                                          ! The small rotation about X2, (rad).
-   REAL(ReKi), INTENT(IN )      :: Theta3                                          ! The small rotation about X3, (rad).
-   REAL(ReKi), INTENT(OUT)      :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
+   REAL(ReKi), INTENT(IN )             :: Theta1                                          ! The small rotation about X1, (rad).
+   REAL(ReKi), INTENT(IN )             :: Theta2                                          ! The small rotation about X2, (rad).
+   REAL(ReKi), INTENT(IN )             :: Theta3                                          ! The small rotation about X3, (rad).
+   REAL(ReKi), INTENT(OUT)             :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
 
-   CHARACTER(*), INTENT(IN)     :: RotationType                                    ! The type of rotation; used to inform the user where a large rotation is occuring upon such an event.
+   CHARACTER(*), INTENT(IN)            :: RotationType                                    ! The type of rotation; used to inform the user where a large rotation is occuring upon such an event.
+   CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          ! an additional message to be displayed as a warning (typically the simulation time)
 
 
       ! Local Variables:
 
-   REAL(ReKi)                   :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-   REAL(ReKi), PARAMETER        :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(ReKi)                   :: Theta11                                         ! = Theta1^2
-   REAL(ReKi)                   :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                   :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                   :: Theta22                                         ! = Theta2^2
-   REAL(ReKi)                   :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                   :: Theta33                                         ! = Theta3^2
-   REAL(ReKi)                   :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
-   REAL(ReKi)                   :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(ReKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(ReKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(ReKi)                          :: Theta11                                         ! = Theta1^2
+   REAL(ReKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(ReKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(ReKi)                          :: Theta22                                         ! = Theta2^2
+   REAL(ReKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(ReKi)                          :: Theta33                                         ! = Theta3^2
+   REAL(ReKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
+   REAL(ReKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
 
-   LOGICAL,    SAVE             :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
+   LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
 
 
 
@@ -1193,9 +1179,13 @@ END SUBROUTINE RombergInt
 
    IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
 
+               
       CALL ProgWarn(' Small angle assumption violated in SUBROUTINE SmllRotTrans() due to'// &
                      ' a large '//TRIM(RotationType)//'. The solution may be inaccurate.'// &
                      ' Simulation continuing, but future warnings will be suppressed.')
+      IF ( PRESENT(ErrTxt) ) THEN
+         CALL WrScr(' Additional debugging message: '//TRIM(Num2LStr(Time))//' s' )
+      END IF
 
       FrstWarn = .FALSE.   ! Don't enter here again!
 
