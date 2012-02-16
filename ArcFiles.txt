@@ -8,6 +8,7 @@ Disclaimer.txt
 DISCON.f90
 FAST.exe
 OutList.txt
+OutListParameters.xlsx
 ModeShapePolyFitting.xls
 
 Simulink\FAST_SFunc.mexw32

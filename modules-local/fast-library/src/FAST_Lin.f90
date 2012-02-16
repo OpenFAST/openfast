@@ -2039,13 +2039,13 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                        TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   , TAB//'|'//TAB, 'op        '  , TAB//'|',   TAB,             &
-                                         'A - State ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'B - Input ', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,    &
-                                         'Bd - Dstrb', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'A - State ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'B - Input ', ( TAB, '          ', I2 = 1,NInputs-1 ), TAB//'|',   TAB,      &
+                                         'Bd - Dstrb', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   , TAB//'|'//TAB, 'States    '  , TAB//'|',   TAB,             &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,    &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1 ), TAB//'|',   TAB,      &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), TAB//'|'//TAB, Qop (PS(I1),L), TAB//'|',                    &
                                          ( TAB,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )              , TAB//'|', &
@@ -2062,13 +2062,13 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|',   TAB,             &
-                                         'C - Output', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,    &
-                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'C - Output', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,NInputs-1 ), TAB//'|',   TAB,      &
+                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|',   TAB,             &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,    &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1 ), TAB//'|',   TAB,      &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop  (I     ,L), TAB//'|'//TAB, '          '  , TAB//'|',                    &
                                          ( TAB,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF )              , TAB//'|', &
@@ -2086,11 +2086,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                        TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   , TAB//'|'//TAB, 'op        '  , TAB//'|',   TAB,             &
-                                         'A - State ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'B - Input ', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'A - State ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'B - Input ', ( TAB, '          ', I2 = 1,NInputs-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   , TAB//'|'//TAB, 'States    '  , TAB//'|',   TAB,             &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), TAB//'|'//TAB, Qop (PS(I1),L), TAB//'|',                    &
                                          ( TAB,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )              , TAB//'|', &
@@ -2105,11 +2105,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|',   TAB,             &
-                                         'C - Output', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'C - Output', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,NInputs-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|',   TAB,             &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop  (I     ,L), TAB//'|'//TAB, '          '  , TAB//'|',                    &
                                          ( TAB,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF )              , TAB//'|', &
@@ -2132,11 +2132,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                        TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   , TAB//'|'//TAB, 'op        '  , TAB//'|',   TAB,             &
-                                         'A - State ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Bd - Dstrb', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'A - State ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Bd - Dstrb', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   , TAB//'|'//TAB, 'States    '  , TAB//'|',   TAB,             &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), TAB//'|'//TAB, Qop (PS(I1),L), TAB//'|',                    &
                                          ( TAB,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )              , TAB//'|', &
@@ -2151,11 +2151,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|',   TAB,             &
-                                         'C - Output', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'C - Output', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|',   TAB,             &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop  (I     ,L), TAB//'|'//TAB, '          '  , TAB//'|',                    &
                                          ( TAB,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF )              , TAB//'|', &
@@ -2170,9 +2170,9 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                Frmt2 = '('  //TRIM( OutFmt )//',3(A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   , TAB//'|'//TAB, 'op        '  , TAB//'|',   TAB, &
-                                         'A - State ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'A - State ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   , TAB//'|'//TAB, 'States    '  , TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), TAB//'|'//TAB, Qop (PS(I1),L), TAB//'|', &
                                          ( TAB,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )
@@ -2185,9 +2185,9 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|',   TAB, &
-                                         'C - Output', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'C - Output', ( TAB, '          ', I2 = 1,2*NActvDOF-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,2*NActvDOF-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop  (I     ,L), TAB//'|'//TAB, '          '  , TAB//'|', &
                                          ( TAB,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF )
@@ -2218,13 +2218,13 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                        TRIM(Int2LStr(NDisturbs))//'(1X,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   ,     ' | ',     'op        '  ,     ' |',                   &
-                                         'A - State ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'B - Input ', (      '          ', I2 = 1,(NInputs-1) ),     ' |',          &
-                                         'Bd - Dstrb', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'A - State ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'B - Input ', (      '          ', I2 = 1,NInputs-1 ),     ' |',            &
+                                         'Bd - Dstrb', (      '          ', I2 = 1,NDisturbs-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   ,     ' | ',     'States    '  ,     ' |',                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) ),     ' |',          &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1 ),     ' |',            &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L),     ' | ',     Qop (PS(I1),L),     ' |',                   &
                                          (      AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )              ,     ' |', &
@@ -2241,13 +2241,13 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn'  ,     ' |',                   &
-                                         'C - Output', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'D - Trnsmt', (      '          ', I2 = 1,(NInputs-1) ),     ' |',          &
-                                         'Dd - DTsmt', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'C - Output', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'D - Trnsmt', (      '          ', I2 = 1,NInputs-1 ),     ' |',            &
+                                         'Dd - DTsmt', (      '          ', I2 = 1,NDisturbs-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  '  ,     ' |',                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) ),     ' |',          &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1 ),     ' |',            &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I       ,L),     ' | ',     '          '  ,     ' |',                   &
                                          (      CMat(I          ,I2,L), I2 = 1,2*NActvDOF )              ,     ' |', &
@@ -2265,11 +2265,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                        TRIM(Int2LStr(NInputs))//'(1X,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   ,     ' | ',     'op        '  ,     ' |',                   &
-                                         'A - State ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'B - Input ', (      '          ', I2 = 1,(NInputs-1) )
+                                         'A - State ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'B - Input ', (      '          ', I2 = 1,NInputs-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   ,     ' | ',     'States    '  ,     ' |',                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L),     ' | ',     Qop (PS(I1),L),     ' |',                   &
                                          (      AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )              ,     ' |', &
@@ -2284,11 +2284,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn'  ,     ' |',                   &
-                                         'C - Output', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'D - Trnsmt', (      '          ', I2 = 1,(NInputs-1) )
+                                         'C - Output', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'D - Trnsmt', (      '          ', I2 = 1,NInputs-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  '  ,     ' |',                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I       ,L),     ' | ',     '          '  ,     ' |',                   &
                                          (      CMat(I          ,I2,L), I2 = 1,2*NActvDOF )              ,     ' |', &
@@ -2311,11 +2311,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                        TRIM(Int2LStr(NDisturbs))//'(1X,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   ,     ' | ',     'op        '  ,     ' |',                   &
-                                         'A - State ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Bd - Dstrb', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'A - State ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Bd - Dstrb', (      '          ', I2 = 1,NDisturbs-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   ,     ' | ',     'States    '  ,     ' |',                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L),     ' | ',     Qop (PS(I1),L),     ' |',                   &
                                          (      AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )              ,     ' |', &
@@ -2330,11 +2330,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn'  ,     ' |',                   &
-                                         'C - Output', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Dd - DTsmt', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'C - Output', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Dd - DTsmt', (      '          ', I2 = 1,NDisturbs-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  '  ,     ' |',                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) ),     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I       ,L),     ' | ',     '          '  ,     ' |',                   &
                                          (      CMat(I          ,I2,L), I2 = 1,2*NActvDOF )              ,     ' |', &
@@ -2349,9 +2349,9 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                Frmt2 = '('  //TRIM( OutFmt )//',3(A),'//TRIM(Int2LStr(2*NActvDOF))//'(1X,'//TRIM( OutFmt )//'))'
 
                WRITE       (UnLn,Frmt )  'op State  '   ,     ' | ',     'op        '  ,     ' |',       &
-                                         'A - State ', (      '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'A - State ', (      '          ', I2 = 1,2*NActvDOF-1 )
                WRITE       (UnLn,Frmt )  'Derivativs'   ,     ' | ',     'States    '  ,     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QDop (PS(I1),L),     ' | ',     Qop (PS(I1),L),     ' |',       &
                                          (      AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )
@@ -2364,9 +2364,9 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
                IF ( NumOuts /= 0 )  THEN  ! We have at least one output measurement
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn'  ,     ' |',       &
-                                         'C - Output', (      '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'C - Output', (      '          ', I2 = 1,2*NActvDOF-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  '  ,     ' |',       &
-                                         'Matrix    ', (      '          ', I2 = 1,(2*NActvDOF-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,2*NActvDOF-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I       ,L),     ' | ',     '          '  ,     ' |',       &
                                          (      CMat(I          ,I2,L), I2 = 1,2*NActvDOF )
@@ -2429,18 +2429,18 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   , TAB//'|'//TAB, 'op        '  , TAB//'|'//TAB,             &
                                          'op        ',  TAB//'|',   TAB,                                            &
-                                         'M - Mass  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'C - Damp  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'K - Stiff ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'F - Input ', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,  &
-                                         'Fd - Dstrb', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'M - Mass  ', ( TAB, '          ', I2 = 1,NActvDOF-1  ), TAB//'|',   TAB,  &
+                                         'C - Damp  ', ( TAB, '          ', I2 = 1,NActvDOF-1  ), TAB//'|',   TAB,  &
+                                         'K - Stiff ', ( TAB, '          ', I2 = 1,NActvDOF-1  ), TAB//'|',   TAB,  &
+                                         'F - Input ', ( TAB, '          ', I2 = 1,NInputs-1   ), TAB//'|',   TAB,  &
+                                         'Fd - Dstrb', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                WRITE       (UnLn,Frmt )  'Accleratns'   , TAB//'|'//TAB, 'Velocities'  , TAB//'|'//TAB,             &
                                          'Displcmnts',  TAB//'|',   TAB,                                            &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,  &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1 ), TAB//'|',   TAB,   &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1 ), TAB//'|',   TAB,    &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), TAB//'|'//TAB, QDop(PS(I1),L), TAB//'|'//TAB,             &
                                          Qop(PS(I1),L), TAB//'|',                                                   &
@@ -2455,18 +2455,18 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|'//TAB,             &
                                          'This colmn',  TAB//'|',   TAB,                                            &
-                                         'This matrx', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'VelC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'DspC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,  &
-                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'This matrx', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'VelC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'DspC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,NInputs-1    ), TAB//'|',   TAB, &
+                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,NDisturbs-1  )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|'//TAB,             &
                                          'is blank  ',  TAB//'|',   TAB,                                            &
-                                         'is blank  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) ), TAB//'|',   TAB,  &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'is blank  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1    ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1  )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L), TAB//'|'//TAB, '          '  , TAB//'|'//TAB,             &
                                          '          ',  TAB//'|',                                                   &
@@ -2493,16 +2493,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   , TAB//'|'//TAB, 'op        '  , TAB//'|'//TAB,             &
                                          'op        ',  TAB//'|',   TAB,                                            &
-                                         'M - Mass  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'C - Damp  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'K - Stiff ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'F - Input ', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'M - Mass  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'C - Damp  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'K - Stiff ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'F - Input ', ( TAB, '          ', I2 = 1,NInputs-1    )
                WRITE       (UnLn,Frmt )  'Accleratns'   , TAB//'|'//TAB, 'Velocities'  , TAB//'|'//TAB,             &
                                          'Displcmnts',  TAB//'|',   TAB,                                            &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1    )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), TAB//'|'//TAB, QDop(PS(I1),L), TAB//'|'//TAB,             &
                                          Qop(PS(I1),L), TAB//'|',                                                   &
@@ -2516,16 +2516,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|'//TAB,             &
                                          'This colmn',  TAB//'|',   TAB,                                            &
-                                         'This matrx', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'VelC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'DspC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'This matrx', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'VelC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'DspC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'D - Trnsmt', ( TAB, '          ', I2 = 1,NInputs-1    )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|'//TAB,             &
                                          'is blank  ',  TAB//'|',   TAB,                                            &
-                                         'is blank  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NInputs-1) )
+                                         'is blank  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NInputs-1    )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L), TAB//'|'//TAB, '          '  , TAB//'|'//TAB,             &
                                          '          ',  TAB//'|',                                                   &
@@ -2558,16 +2558,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   , TAB//'|'//TAB, 'op        '  , TAB//'|'//TAB,             &
                                          'op        ',  TAB//'|',   TAB,                                            &
-                                         'M - Mass  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'C - Damp  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'K - Stiff ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Fd - Dstrb', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'M - Mass  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'C - Damp  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'K - Stiff ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Fd - Dstrb', ( TAB, '          ', I2 = 1,NDisturbs-1  )
                WRITE       (UnLn,Frmt )  'Accleratns'   , TAB//'|'//TAB, 'Velocities'  , TAB//'|'//TAB,             &
                                          'Displcmnts',  TAB//'|',   TAB,                                            &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1  )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), TAB//'|'//TAB, QDop(PS(I1),L), TAB//'|'//TAB,             &
                                          Qop(PS(I1),L), TAB//'|',                                                   &
@@ -2581,16 +2581,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|'//TAB,             &
                                          'This colmn',  TAB//'|',   TAB,                                            &
-                                         'This matrx', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'VelC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'DspC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'This matrx', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'VelC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'DspC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Dd - DTsmt', ( TAB, '          ', I2 = 1,NDisturbs-1  )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|'//TAB,             &
                                          'is blank  ',  TAB//'|',   TAB,                                            &
-                                         'is blank  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NDisturbs-1) )
+                                         'is blank  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NDisturbs-1  )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L), TAB//'|'//TAB, '          '  , TAB//'|'//TAB,             &
                                          '          ',  TAB//'|',                                                   &
@@ -2614,14 +2614,14 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   , TAB//'|'//TAB, 'op        '  , TAB//'|'//TAB,             &
                                          'op        ',  TAB//'|',   TAB,                                            &
-                                         'M - Mass  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'C - Damp  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'K - Stiff ', ( TAB, '          ', I2 = 1,(NActvDOF-1) )
+                                         'M - Mass  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'C - Damp  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'K - Stiff ', ( TAB, '          ', I2 = 1,NActvDOF-1   )
                WRITE       (UnLn,Frmt )  'Accleratns'   , TAB//'|'//TAB, 'Velocities'  , TAB//'|'//TAB,             &
                                          'Displcmnts',  TAB//'|',   TAB,                                            &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) )
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), TAB//'|'//TAB, QDop(PS(I1),L), TAB//'|'//TAB,             &
                                          Qop(PS(I1),L), TAB//'|',                                                   &
@@ -2634,14 +2634,14 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   , TAB//'|'//TAB, 'This colmn'  , TAB//'|'//TAB,             &
                                          'This colmn',  TAB//'|',   TAB,                                            &
-                                         'This matrx', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'VelC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'DspC - Out', ( TAB, '          ', I2 = 1,(NActvDOF-1) )
+                                         'This matrx', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'VelC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'DspC - Out', ( TAB, '          ', I2 = 1,NActvDOF-1   )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   , TAB//'|'//TAB, 'is blank  '  , TAB//'|'//TAB,             &
                                          'is blank  ',  TAB//'|',   TAB,                                            &
-                                         'is blank  ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) ), TAB//'|',   TAB, &
-                                         'Matrix    ', ( TAB, '          ', I2 = 1,(NActvDOF-1) )
+                                         'is blank  ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   ), TAB//'|',   TAB, &
+                                         'Matrix    ', ( TAB, '          ', I2 = 1,NActvDOF-1   )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L), TAB//'|'//TAB, '          '  , TAB//'|'//TAB,             &
                                          '          ',  TAB//'|',                                                   &
@@ -2681,18 +2681,18 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   ,     ' | ',     'op        ' ,      ' | ',                 &
                                          'op        ' ,     ' |',                                                   &
-                                         'M - Mass  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'C - Damp  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'K - Stiff ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'F - Input ', (      '          ', I2 = 1,(NInputs-1) ),     ' |',         &
-                                         'Fd - Dstrb', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'M - Mass  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'C - Damp  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'K - Stiff ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'F - Input ', (      '          ', I2 = 1,NInputs-1    ),     ' |',        &
+                                         'Fd - Dstrb', (      '          ', I2 = 1,NDisturbs-1  )
                WRITE       (UnLn,Frmt )  'Accleratns'   ,     ' | ',     'Velocities' ,      ' | ',                 &
                                          'Displcmnts' ,     ' |',                                                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) ),     ' |',         &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1    ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1  )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),     ' | ',     QDop(PS(I1),L),     ' | ',                 &
                                          Qop(PS(I1),L),     ' |',                                                   &
@@ -2707,18 +2707,18 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn' ,      ' | ',                 &
                                          'This colmn' ,     ' |',                                                   &
-                                         'This matrx', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'VelC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'DspC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'D - Trnsmt', (      '          ', I2 = 1,(NInputs-1) ),     ' |',         &
-                                         'Dd - DTsmt', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'This matrx', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'VelC - Out', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'DspC - Out', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'D - Trnsmt', (      '          ', I2 = 1,NInputs-1    ),     ' |',        &
+                                         'Dd - DTsmt', (      '          ', I2 = 1,NDisturbs-1  )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  ' ,      ' | ',                 &
                                          'is blank  ' ,     ' |',                                                   &
-                                         'is blank  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) ),     ' |',         &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'is blank  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1   ),     ' |',         &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1  )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L),     ' | ',     '          ' ,      ' | ',                 &
                                          '          ' ,     ' |',                                                   &
@@ -2745,16 +2745,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   ,     ' | ',     'op        ' ,      ' | ',                 &
                                          'op        ' ,     ' |',                                                   &
-                                         'M - Mass  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'C - Damp  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'K - Stiff ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'F - Input ', (      '          ', I2 = 1,(NInputs-1) )
+                                         'M - Mass  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'C - Damp  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'K - Stiff ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'F - Input ', (      '          ', I2 = 1,NInputs-1  )
                WRITE       (UnLn,Frmt )  'Accleratns'   ,     ' | ',     'Velocities' ,      ' | ',                 &
                                          'Displcmnts' ,     ' |',                                                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1  )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),     ' | ',     QDop(PS(I1),L),     ' | ',                 &
                                          Qop(PS(I1),L),     ' |',                                                   &
@@ -2768,16 +2768,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn' ,      ' | ',                 &
                                          'This colmn' ,     ' |',                                                   &
-                                         'This matrx', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'VelC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'DspC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'D - Trnsmt', (      '          ', I2 = 1,(NInputs-1) )
+                                         'This matrx', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'VelC - Out', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'DspC - Out', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'D - Trnsmt', (      '          ', I2 = 1,NInputs-1   )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  ' ,      ' | ',                 &
                                          'is blank  ' ,     ' |',                                                   &
-                                         'is blank  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NInputs-1) )
+                                         'is blank  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NInputs-1  )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L),     ' | ',     '          ' ,      ' | ',                 &
                                          '          ' ,     ' |',                                                   &
@@ -2809,16 +2809,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   ,     ' | ',     'op        ' ,      ' | ',                 &
                                          'op        ' ,     ' |',                                                   &
-                                         'M - Mass  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'C - Damp  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'K - Stiff ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Fd - Dstrb', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'M - Mass  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'C - Damp  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'K - Stiff ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Fd - Dstrb', (      '          ', I2 = 1,NDisturbs-1  )
                WRITE       (UnLn,Frmt )  'Accleratns'   ,     ' | ',     'Velocities' ,      ' | ',                 &
                                          'Displcmnts' ,     ' |',                                                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1  )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),     ' | ',     QDop(PS(I1),L),     ' | ',                 &
                                          Qop(PS(I1),L),     ' |',                                                   &
@@ -2832,16 +2832,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn' ,      ' | ',                 &
                                          'This colmn' ,     ' |',                                                   &
-                                         'This matrx', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'VelC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'DspC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Dd - DTsmt', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'This matrx', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'VelC - Out', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'DspC - Out', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Dd - DTsmt', (      '          ', I2 = 1,NDisturbs-1  )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  ' ,      ' | ',                 &
                                          'is blank  ' ,     ' |',                                                   &
-                                         'is blank  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NDisturbs-1) )
+                                         'is blank  ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1   ),     ' |',        &
+                                         'Matrix    ', (      '          ', I2 = 1,NDisturbs-1  )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L),     ' | ',     '          ' ,      ' | ',                 &
                                          '          ' ,     ' |',                                                   &
@@ -2865,14 +2865,14 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
                WRITE       (UnLn,Frmt )  'op        '   ,     ' | ',     'op        ' ,      ' | ',                 &
                                          'op        ' ,     ' |',                                                   &
-                                         'M - Mass  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'C - Damp  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'K - Stiff ', (      '          ', I2 = 1,(NActvDOF-1) )
+                                         'M - Mass  ', (      '          ', I2 = 1,NActvDOF-1 ),       ' |',        &
+                                         'C - Damp  ', (      '          ', I2 = 1,NActvDOF-1 ),       ' |',        &
+                                         'K - Stiff ', (      '          ', I2 = 1,NActvDOF-1 )
                WRITE       (UnLn,Frmt )  'Accleratns'   ,     ' | ',     'Velocities' ,      ' | ',                 &
                                          'Displcmnts' ,     ' |',                                                   &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) )
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1 ),     ' |',          &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1 ),     ' |',          &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1 )
                DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
                   WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),     ' | ',     QDop(PS(I1),L),     ' | ',                 &
                                          Qop(PS(I1),L),     ' |',                                                   &
@@ -2885,14 +2885,14 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                   WRITE    (UnLn,'()' )   ! a blank line
                   WRITE    (UnLn,Frmt )  'op Output '   ,     ' | ',     'This colmn' ,      ' | ',                 &
                                          'This colmn' ,     ' |',                                                   &
-                                         'This matrx', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'VelC - Out', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'DspC - Out', (      '          ', I2 = 1,(NActvDOF-1) )
+                                         'This matrx', (      '          ', I2 = 1,NActvDOF-1 ),     ' |',          &
+                                         'VelC - Out', (      '          ', I2 = 1,NActvDOF-1 ),     ' |',          &
+                                         'DspC - Out', (      '          ', I2 = 1,NActvDOF-1 )
                   WRITE    (UnLn,Frmt )  'Measurmnts'   ,     ' | ',     'is blank  ' ,      ' | ',                 &
                                          'is blank  ' ,     ' |',                                                   &
-                                         'is blank  ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) ),     ' |',        &
-                                         'Matrix    ', (      '          ', I2 = 1,(NActvDOF-1) )
+                                         'is blank  ', (      '          ', I2 = 1,NActvDOF-1 ),     ' |',          &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1 ),     ' |',          &
+                                         'Matrix    ', (      '          ', I2 = 1,NActvDOF-1 )
                   DO I  = 1,NumOuts    ! Loop through all selected output channels
                      WRITE (UnLn,Frmt2)  Yop(I,       L),     ' | ',     '          ' ,      ' | ',                 &
                                          '          ' ,     ' |',                                                   &
