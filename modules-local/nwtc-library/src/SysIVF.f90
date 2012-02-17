@@ -812,6 +812,7 @@ CONTAINS
 
    MaxLen = 98
    Indent = LEN_TRIM( Str ) - LEN_TRIM( ADJUSTL( Str ) )
+   Indent = MIN( Indent, MaxLen-2 )                                              ! at least 2 characters per line
    MaxLen = MaxLen - Indent
    IF ( Indent > 0 )  THEN
       Frm    = '(1X,  X,A)'

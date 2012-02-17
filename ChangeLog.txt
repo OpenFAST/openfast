@@ -293,7 +293,8 @@ v1.04.00e-bjj, 15 Feb 2012 B. Jonkman
   I modified SmllRotTrans() to optionally display an additional message when a warning first occurs.
   I updated WrScr() in Sys*.f90 to avoid errors when the string to write is blank (reported by Arnold Ramsland).
 
-
+v1.04.00 16-Feb-2012 B. Jonkman
+  I modified SysMatlab.f90 to fix issues with the WRITE() function in IVF 12.0.
 
 
 

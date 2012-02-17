@@ -760,9 +760,12 @@ CONTAINS
    MaxLen = 98
    Indent = LEN_TRIM( Str ) - LEN_TRIM( ADJUSTL( Str ) )
    MaxLen = MaxLen - Indent
-   Frm    = '(1X,  X,A)'
-   WRITE (Frm(5:6),'(I2)')  Indent
-
+   IF ( Indent > 0 )  THEN
+      Frm    = '(1X,  X,A)'
+      WRITE (Frm(5:6),'(I2)')  Indent
+   ELSE
+      Frm    = '(1X,A)'
+   END IF
 
 
    !  Break long messages into multiple lines.
@@ -791,8 +794,11 @@ CONTAINS
 
    ENDDO
 
-   
-   WRITE (Str2,Frm)  ADJUSTL( Str(Beg:Beg+LStr-1) )
+   IF ( LStr > 0 ) THEN
+      WRITE (Str2,Frm)  ADJUSTL( Str(Beg:Beg+LStr-1) )
+   ELSE
+      Str2=''
+   END IF      
    Stat = mexPrintf(TRIM(Str2)//ACHAR(10))   
 
 
