@@ -1184,7 +1184,7 @@ END SUBROUTINE RombergInt
                      ' a large '//TRIM(RotationType)//'. The solution may be inaccurate.'// &
                      ' Simulation continuing, but future warnings will be suppressed.')
       IF ( PRESENT(ErrTxt) ) THEN
-         CALL WrScr(' Additional debugging message: '//TRIM(Num2LStr(Time))//' s' )
+         CALL WrScr(' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(Num2LStr(Time))//' s' )
       END IF
 
       FrstWarn = .FALSE.   ! Don't enter here again!
