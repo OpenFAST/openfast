@@ -5,7 +5,7 @@
 @ECHO 
 @ECHO  The syntax for creating an archive is "Archive <version>"
 @ECHO.
-@ECHO  Example:  "archive 1301"
+@ECHO  Example:  "archive 13.01.00"
 
 @GOTO Done
 

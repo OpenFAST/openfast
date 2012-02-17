@@ -5,7 +5,7 @@
 @ECHO 
 @ECHO  The syntax for updating files on the AeroDyn page is "update_web <version>"
 @ECHO.
-@ECHO  Example:  "update_web 410"
+@ECHO  Example:  "update_web 13.01.00"
 
 @GOTO Done
 
