@@ -42,10 +42,8 @@ Source\UserSubs.f90
 Source\UserVSCont_KP.f90
 
 CertTest\ADAMSCertTest.bat
-CertTest\ADAMSCertTest.out
 CertTest\Bell.txt
 CertTest\CertTest.bat
-CertTest\CertTest.out
 CertTest\DateTime.exe
 CertTest\FASTCertTestCases.xls
 CertTest\Noise.ipt
