@@ -3749,6 +3749,7 @@ v7.00.01 20-Jan-2012 B. Jonkman
      Using Microsoft Visual Studio .NET 2003.
  
 v7.00.02a-bjj, 26-Jan-2012  B. Jonkman
+ None of these changes effects the simulation results.
  Compiled with AeroDyn v13.00.01a-bjj.
  I fixed a format string that caused the program to crash with FAST input file
    values Echo = .TRUE. and PtfmModel = 2 or 3.  
@@ -3769,7 +3770,8 @@ v7.00.02a-bjj, 26-Jan-2012  B. Jonkman
    that those values are invalid. (They are always listed as 0 because FAST doesn't know  
    that data, which is internal to the InflowWind module.)   
    
-v7.01.00a-bjj, 15-Feb-2012  B. Jonkman
+v7.01.00a-bjj, 16-Feb-2012  B. Jonkman
+ None of these changes effects the simulation results.
  Compiled with NWTC Library v1.04.00e-bjj.
  I added OutListParameters.xlsx to the archive to replace OutList.txt. 
  I modified the FAST_IO.f90/ChckOutLst() subroutine to avoid the optimization
@@ -3809,8 +3811,8 @@ v7.01.00a-bjj, 15-Feb-2012  B. Jonkman
        Spn<1,2,...9>RD<x,y,z>b<1,2,3>  - local rotational deflection 
        TwHt<1,2,...9>TD<x,y,z>t        - local translational deflection 
        TwHt<1,2,...9>RD<x,y,z>t        - local rotational deflection 
-       TwHt<1,2,...9>TP<x,y,z>i        - global translational deflection 
-       TwHt<1,2,...9>RP<x,y,z>i        - global rotational deflection 
+       TwHt<1,2,...9>TP<x,y,z>i        - global translational position 
+       TwHt<1,2,...9>RP<x,y,z>i        - global rotational position 
    -I added outputs for internal DOFs in FAST (they are invalid in Adams):
        Q[D,D2]_B<1,2,3>E1,  Q[D,D2]_B<1,2,3>F1,  Q[D,D2]_B<1,2,3>F2,
        Q[D,D2]_Teet,        Q[D,D2]_DrTr,        Q[D,D2]_GeAz,
@@ -3851,11 +3853,15 @@ v7.01.00a-bjj, 15-Feb-2012  B. Jonkman
    nacelle is now larger than the gearbox.
  I added ProgAbort statements if PreCrvRef(I) or PreSwpRef(I) are not zero when Adams
    models are built. Adams2AD does not work correctly when there is precurve or presweep.
-   Previously it aborted only when the precurve or presweep was nonzero at the root.      
-   
+   Previously it aborted only when the precurve or presweep was nonzero at the root.  This 
+   will be fixed in a future version of FAST-to-ADAMS.      
+ I added tests for (some of) the new outputs to the CertTest.  
+ At the request of MLB, I changed SUBROUTINEs Initialize, Begin, and Input to FAST_Initialize, 
+   FAST_Begin, and FAST_Input.    
    
  Compilation info: 
-     Linked with NWTC Library v1.04.00e-bjj and AeroDyn v13.00.01a-bjj
-     Compiled with IVF 10.1.024; Simulink compiled with Matlab R2011a.
-     Using Microsoft Visual Studio .NET 2003.
+     Linked with NWTC Library v1.04.00 and AeroDyn v13.00.01a-bjj
+     Compiled with Intel(R) Visual Fortran Composer XE 2011 Integration for Microsoft 
+     Visual Studio* 2008, 12.0.3470.2008 (IVF 12.0.1.127)
+     Simulink compiled with Matlab R2011a.
    

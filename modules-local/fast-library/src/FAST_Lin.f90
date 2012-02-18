@@ -1118,38 +1118,36 @@ ELSE                          ! We have at least one input wind disturbance
 
       CASE ( 1 )                    ! Horizontal hub height wind speed
          IndxV     = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxV    , ' = horizontal hub-height wind speed  (m/s) ', Vop      , &
-                                                                                                                  ' op - INVALID'
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxV    , ' = horizontal hub-height wind speed  (m/s) ', &
+                                                                                 ': See selected wind file for op'
 
       CASE ( 2 )                    ! Horizontal wind direction
          IndxDELTA = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxDELTA, ' = horizontal wind direction         (rad) ', DELTAop  , &
-                                                                                                                  ' op - INVALID'
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxDELTA, ' = horizontal wind direction         (rad) ', &
+                                                                                 ': See selected wind file for op'
 
       CASE ( 3 )                    ! Vertical wind speed
          IndxVZ    = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVZ   , ' = vertical wind speed               (m/s) ', VZop     , &
-                                                                                                                  ' op - INVALID'
-
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxVZ   , ' = vertical wind speed               (m/s) ', &
+                                                                                 ': See selected wind file for op'
       CASE ( 4 )                    ! Horizontal shear coefficient
          IndxHSHR  = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxHSHR , ' = horizontal shear parameter          (-) ', HSHRop   , &
-                                                                                                                  ' op - INVALID'
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxHSHR , ' = horizontal shear parameter          (-) ', &
+                                                                                 ': See selected wind file for op'
 
       CASE ( 5 )                    ! Vertical shear coefficient
          IndxVSHR  = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVSHR , ' = vertical power law shear exponent   (-) ', VSHRop   , &
-                                                                                                                  ' op - INVALID'
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxVSHR , ' = vertical power law shear exponent   (-) ', &
+                                                                                 ': See selected wind file for op'
 
       CASE ( 6 )                    ! Vertical (linear) shear coefficient
          IndxVLSHR = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVLSHR, ' = linear vertical shear parameter     (-) ', VLINSHRop, &
-                                                                                                                  ' op - INVALID'
-
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxVLSHR, ' = linear vertical shear parameter     (-) ', &
+                                                                                 ': See selected wind file for op'
       CASE ( 7 )                    ! Horizontal hub height wind gust
          IndxVGUST = I
-         WRITE(UnLn,'(A,I1,A,ES14.5,A)')  '   Column ', IndxVGUST, ' = horizontal hub-height wind gust   (m/s) ', VGUSTop  , &
-                                                                                                                  ' op - INVALID'
+         WRITE(UnLn,'(A,I1,A,A)')  '   Column ', IndxVGUST, ' = horizontal hub-height wind gust   (m/s) ', &
+                                                                                 ': See selected wind file for op'
 
       ENDSELECT
 

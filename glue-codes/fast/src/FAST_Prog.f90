@@ -13,8 +13,8 @@ USE                             Linear
 USE                             SimCont
 USE                             NWTC_Library
 USE                             AeroDyn
-USE                             FAST_IO_Subs       ! Begin(), Input(), PrintSum(), RunTimes()
-USE                             FASTsubs           ! Initialize(), TimeMarch()
+USE                             FAST_IO_Subs       ! FAST_Begin(), FAST_Input(), PrintSum(), RunTimes()
+USE                             FASTsubs           ! FAST_Initialize(), TimeMarch()
 USE                             FAST2ADAMSSubs     ! MakeAdm(), MakeACF(), MakeACF_Lin
 USE                             FAST_Lin_Subs      ! CalcSteady(), Linearize()
 USE                             HydroDyn
@@ -53,13 +53,13 @@ CALL DispNVD()
 
    ! Open and read input files, initialize global parameters.
 
-CALL Begin
-CALL Input
+CALL FAST_Begin()
+CALL FAST_Input()
 
 
    ! Set up initial values for all degrees of freedom.
 
-CALL Initialize
+CALL FAST_Initialize()
 
 
 
