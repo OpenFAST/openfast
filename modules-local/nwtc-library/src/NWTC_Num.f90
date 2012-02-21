@@ -30,6 +30,7 @@ MODULE NWTC_Num
 
    USE                             NWTC_IO
 
+   IMPLICIT NONE
 
 !=======================================================================
 
@@ -1184,7 +1185,7 @@ END SUBROUTINE RombergInt
                      ' a large '//TRIM(RotationType)//'. The solution may be inaccurate.'// &
                      ' Simulation continuing, but future warnings will be suppressed.')
       IF ( PRESENT(ErrTxt) ) THEN
-         CALL WrScr(' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(Num2LStr(Time))//' s' )
+         CALL WrScr(' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt) )
       END IF
 
       FrstWarn = .FALSE.   ! Don't enter here again!
