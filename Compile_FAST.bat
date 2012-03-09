@@ -35,7 +35,7 @@ REM ----------------------------------------------------------------------------
 REM ------------------------- LOCAL PATHS --------------------------------------
 REM ----------------------------------------------------------------------------
 REM -- USERS WILL NEED TO EDIT THESE PATHS TO POINT TO FOLDERS ON THEIR LOCAL --
-REM ------- NOTE: do not use quotation marks around the path names!!!! ---------
+REM -- MACHINES.  NOTE: do not use quotation marks around the path names!!!! ---
 REM ----------------------------------------------------------------------------
 REM NWTC_Lib_Loc is the location of the NWTC subroutine library files
 REM AeroDyn_Loc  is the location of the AeroDyn source files

@@ -771,7 +771,6 @@ REAL(ReKi)                   :: DelGenTq                                        
 REAL(ReKi)                   :: DelHSHR                                         ! Magnitude of pertubation in horizontal shear coefficient.
 REAL(ReKi), ALLOCATABLE      :: DelQ     (:)                                    ! Pertubations of displacements about the periodic steady state operating points.
 REAL(ReKi), ALLOCATABLE      :: DelQD    (:)                                    ! Pertubations of velocities    about the periodic steady state operating points.
-REAL(ReKi)                   :: DELTAop                                         ! Steady operating point horizontal wind direction.
 REAL(ReKi)                   :: DelV                                            ! Magnitude of pertubation in horizontal hub height wind speed (same as SymDyn).
 REAL(ReKi)                   :: DelVGUST                                        ! Magnitude of pertubation in horizontal hub height wind gust (same as SymDyn).
 REAL(ReKi)                   :: DelVLINSHR                                      ! Magnitude of pertubation in vertical (linear) shear coefficient (same as SymDyn).
@@ -782,15 +781,9 @@ REAL(ReKi)                   :: DelYawRate                                      
 REAL(ReKi), ALLOCATABLE      :: FdMat    (:,:,:)                                ! Periodic input disturbance     matrix (includes only active DOFs)--i.e. [Fd].
 REAL(ReKi), ALLOCATABLE      :: FMat     (:,:,:)                                ! Periodic input                 matrix (includes only active DOFs)--i.e. [F].
 REAL(ReKi)                   :: GenTrqop                                        ! Steady operating point generator torque.
-REAL(ReKi)                   :: HSHRop                                          ! Steady operating point horizontal shear coefficient
 REAL(ReKi)                   :: LinPerturbations(7)                             ! A vector to send the HH wind speed perturbations to the wind module (replace this method!)
 REAL(ReKi), ALLOCATABLE      :: MassMat  (:,:,:)                                ! Periodic mass                  matrix (includes only active DOFs).
 REAL(ReKi), ALLOCATABLE      :: StffMat  (:,:,:)                                ! Periodic stiffness             matrix (includes only active DOFs).
-REAL(ReKi)                   :: VGUSTop                                         ! Steady operating point horizontal hub height wind gust
-REAL(ReKi)                   :: VLINSHRop                                       ! Steady operating point vertical (linear) shear coefficient
-REAL(ReKi)                   :: Vop                                             ! Steady operating point horizontal hub height wind speed
-REAL(ReKi)                   :: VSHRop                                          ! Steady operating point vertical shear coefficient
-REAL(ReKi)                   :: VZop                                            ! Steady operating point vertical wind speed
 REAL(ReKi)                   :: YawPosop                                        ! Steady operating point command yaw angle (position).
 REAL(ReKi)                   :: YawRateop                                       ! Steady operating point command yaw rate.
 REAL(ReKi), ALLOCATABLE      :: Yop      (:,:)                                  ! Periodic steady state operating output measurements.

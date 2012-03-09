@@ -3864,3 +3864,9 @@ v7.01.00a-bjj, 16-Feb-2012  B. Jonkman
      Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003     
      Simulink compiled with Matlab R2011a.
    
+v7.01.01a-bjj 06-March-2012
+ The IDCntrl array had indexes mixed up; the allocation statement was the reverse of what was 
+   used in the call to MakeADM_WrICArrays().   
+ I removed some extra space on lines in FAST2ADAMS.f90 that were too long. (reported by Andrew Ning)
+ I added a parameter to use to easily make the changes required to model the OC3 Hywind.
+ I removed the link to the FAST Verification Page from the FAST web page.   
