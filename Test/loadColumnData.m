@@ -51,7 +51,7 @@ switch num_args
     otherwise
         error('Invalid number of input arguments in loadColumnData().');
 end  
-
+%%
 specificCols = isnumeric(uc);
     
 if (specificCols)
@@ -100,7 +100,7 @@ end
 % Get the requested columns
 t  = M(:,tc);
 u  = M(:,uc);
-
+%%
 if num_argOut > 2
 	% Get text strings from column headers
     nCells = length(uc)+1;
@@ -124,6 +124,10 @@ if num_argOut > 2
         
         fclose(fid);
 
+        if length(tmp) < 1
+            return;
+        end
+        
         if tmp(1) == '!' && tmpUnit(1) == '!'
             tmp     = tmp(2:length(tmp));        
             tmpUnit = tmpUnit(2:length(tmpUnit));
@@ -135,7 +139,7 @@ if num_argOut > 2
             tmp1 = textscan( tmp, '%s', mx );
             tmp1 = tmp1{1};
             
-            if num_argOut > 3   
+            if num_argOut > 3 
                 tmp2 = textscan( tmpUnit, '%s', mx );                        
                 tmp2 = tmp2{1};
             end            
@@ -175,7 +179,7 @@ if num_argOut > 2
                 txt{i} = 'BLANK';
             end
             if num_argOut > 3   
-                if NewIX <= length(tmp2)
+                if NewIX <= length(tmp2) && rSkip(1) > tr + 1
                     units{i} = strtrim(tmp2{NewIX});
                 else
                     units{i} = '(-)';
@@ -183,8 +187,13 @@ if num_argOut > 2
             end
         end
         txt{nCells} = strtrim(tmp1{1});
-        if num_argOut > 3   
-            units{nCells} = strtrim(tmp2{1});
+        
+        if num_argOut > 3  
+            if rSkip(1) > tr + 1
+                units{nCells} = strtrim(tmp2{1});
+            else
+                units{nCells} = '(-)';
+            end                
         end
                        
 	end % fid > 0

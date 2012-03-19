@@ -1979,7 +1979,10 @@ CALL WrScr1(' Reading the input file "'//TRIM(InFile)//'".' )
 
 FormStr = "( / 'Runtime Options:' / )"
 WRITE (US,FormStr)
-READ (UI,'(//)')
+CALL ReadCom( UI, InFile, "File Heading Line 1" )
+CALL ReadCom( UI, InFile, "File Heading Line 2" )
+CALL ReadCom( UI, InFile, "Runtime Options Heading" )
+!READ (UI,'(//)')
 
 
    ! ---------- Read Random seed 1 -----------------------
@@ -2127,7 +2130,9 @@ FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specifie
 
 FormStr = "( // 'Turbine/Model Specifications:' / )"
 WRITE (US,FormStr)
-READ (UI,'(/)')
+CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 1" )
+CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
+!READ (UI,'(/)')
 
 
    ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
@@ -2257,7 +2262,9 @@ WRITE (US,FormStr)  HFlowAng
 
 FormStr = "( // 'Meteorological Boundary Conditions:' / )"
 WRITE (US,FormStr)
-READ (UI,'(/)')
+!READ (UI,'(/)')
+CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 1" )
+CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2" )
 
 
    ! ------------ Read in the turbulence model. ---------------------------------------------
@@ -2734,7 +2741,10 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' ) THEN
 
    FormStr = "( // 'Non-IEC Meteorological Boundary Conditions:' / )"
    WRITE (US,FormStr)
-   READ (UI,'(/)')
+   !READ (UI,'(/)')
+   CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1" )
+   CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2" )
+   
 
 
       ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------
@@ -2810,7 +2820,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
          ZL = 3.132*MIN( RICH_NO, REAL(0.1367,ReKi) ) / (1.0 - 6.762*MIN( RICH_NO, REAL(0.1367,ReKi) ))
       ENDIF
 
-   ELSE
+   ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181–189.
 
       IF ( RICH_NO <= 0.0 ) THEN
          ZL = RICH_NO
@@ -3071,7 +3081,9 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
       FormStr = "( // 'Coherent Turbulence Scaling Parameters:' / )"
       WRITE (US,FormStr)
-      READ (UI,'(/)')                        ! Read header line
+      !READ (UI,'(/)')                        ! Read header line
+      CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 1" )
+      CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 2" )
 
 
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
@@ -4017,7 +4029,7 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
          ENDIF
 
 
-      CASE ( 'LOG', 'L' )
+      CASE ( 'LOG', 'L' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
          IF ( Ht > 0.0 .AND. RefHt > 0.0 .AND. RefHt /= Z0 ) THEN
 
@@ -5736,7 +5748,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
       ! Local declarations:
 
 !  CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
-   CHARACTER(38)                :: Frmt = "( A10, 2X, , A )"                       ! Output format for real parameters
+   CHARACTER(38)                :: Frmt = "( A10, 2X, A )"                         ! Output format for real parameters
 
 
    CALL ReadCVar( UnIn, Fil, CharLine, VarName, VarDescr )
@@ -5919,7 +5931,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
 
 !  CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
-   CHARACTER(38)                :: Frmt = "( F10.3, 2X, , A )"                     ! Output format for real parameters
+   CHARACTER(38)                :: Frmt = "( F10.3, 2X, A )"                       ! Output format for real parameters
 
 
    CALL ReadCVar( UnIn, Fil, CharLine, VarName, VarDescr )
@@ -7168,7 +7180,7 @@ INTEGER                     :: AllocStat
 
    Ztmp  = ( HubHt - GridHeight / 2.0 - Z(1) )  ! This is the grid offset
 
-   WRITE (US,'')
+   WRITE (US,'()')
    WRITE (US,FormStr)  'Height Offset', Ztmp, ' m'
    WRITE (US,FormStr)  'Grid Base    ', Z(1), ' m'
 

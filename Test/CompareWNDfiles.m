@@ -34,7 +34,7 @@ function CompareWNDfiles(FileName1,FileName2)
     
     if dt_1 ~= dt_2
         fprintf( '%2s%s\n', '','Time steps not the same: ');
-        fprintf( '%5s%10s = %3.0f, %10s = %3.0f\n', '','File 1', dt_1, 'File 2', dt_2);
+        fprintf( '%5s%10s = %6.4f, %10s = %6.4f\n', '','File 1', dt_1, 'File 2', dt_2);
     end
       
         % Velocity(timestep,component,iy,iz)    

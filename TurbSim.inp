@@ -1,4 +1,4 @@
-TurbSim Input File. Valid for TurbSim v1.50, 25-Sep-2009 
+TurbSim Input File. Valid for TurbSim v1.05.01, 24-Jan-2012 
 
 ---------Runtime Options-----------------------------------
 2318573             RandSeed1       - First random seed  (-2147483648 to 2147483647) 
