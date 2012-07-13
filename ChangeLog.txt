@@ -76,22 +76,41 @@ v1.00.00b-jbj  30-Sep-2011 J. and B. Jonkman
    We added the changes from FAST 6.10d-bjj.
    We modified the input file to contain the WaveNDAmp input parameter.
             
-v1.00.00c-bjj  30-Sep-2011 B. Jonkman (in progress)
+v1.00.00c-bjj  30-Sep-2011 B. Jonkman 
    I renamed the FUNCTION HD_GetValue() to HD_GetValue_CHAR() and added FUNCTION HD_GetValue_AllOuts(). 
       I then made a generic interface called HD_GetValue() to call the appropriate version of the 
       FUNCTION. HD_GetValue_AllOuts() accepts the parameter values from MODULE HD_Output so that all
       calculated outputs are available. (I didn't want to use the character version of the function
       because of the high overhead associated with searching the nearly 1000 available output character
       strings for a match.)
-
    I renamed the Wave_IsAllocated() function to Waves_IsAllocated() because the module name is "Waves".
    I renamed the Wave_Terminate() function to Waves_Terminate() because the module name is "Waves".
-   I added a Waves_GetUndisturbedElev() function to the waves module. This function returns the nearest-neighbor wave elevation, given time and x and y position.  I also needed to add the WaveElevxi and WaveElevyi arrays into the Waves_DataType
+   I added a Waves_GetUndisturbedElev() function to the waves module. This function returns the nearest-
+      neighbor wave elevation, given time and x and y position.  I also needed to add the WaveElevxi and 
+      WaveElevyi arrays into the Waves_DataType.
+      
+v1.00.01d-bjj  Nov-2011 B. Jonkman (not complete; on file server not SVN)
+   I updated the wording in the input file for a modification to the WaveMod input.
+   I added a HydroDyn summary file (do we want this optional?)
+   I modified the SUBROUTINE ApplyFFT_cx() in FFTMod.f90 so that when it compares a real number with 0.0,
+     it uses the EqualRealNos() routine from the NWTC Subroutine Library. Otherwise, 1E-38 was not 
+     considered 0.0 so it produced an error.
+     
+   I added the function HD_CheckLin() to provide error checks that a linearization analysis can be performed. 
+   I modified the wording for an error check on inputs CA1 and CA2 for fixed bottom structures (it was wrong before).
+   
+   I am in the process of changing all the time variables to double precision
 
-
+v1.00.01e-bjj 06-July-2012 B. Jonkman 
+  I removed all of the change comments because this code is now in SVN (starting with v1.00.00c-bjj)
+  I finished changing all of the time variables to double precision.
+  
+  
 ___________________________________    
 TO DO:
 ___________________________________    
+
+look at the zero-length arrays passed through catenary()
 
 - Update the HydroDynOutlistParameters.xlsx file with descriptions
 - figure out how to deal with "per unit length" and "point" loads -- this must be specified as an output of initialization and used in the integration scheme from the CalculateLoads routine.
@@ -115,7 +134,5 @@ ___________________________________
 - user current and wave spectrum: make separate source files, modules, and send arrays (do not call in a loop as is currently done)
 - create .hds "hydrodyn summary file" with "HARVESTED RANDOM" seeds from "RANDOM_NUMBER" and add "all that fun stuff" - like statistical summaries from TurbSim (FUTURE work; not urgent)
             
--- ADD subroutines LoadStates() and SaveStates() so that the simulation can be started in the middle (this would be ideal for something like Simulink, I think. John M. also mentioned it for another application with FAST/OpenFOAM).
-
 
 /////////////////////////////////////////////////////////////////////////////
