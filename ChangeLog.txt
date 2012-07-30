@@ -1,0 +1,43 @@
+InflowWind Change Log
+===============================================================================
+Initial release with AeroDyn v13.00.00a-bjj
+
+Updates:
+-------------------------------------------------------------------------------
+v1.00.01a-bjj
+ -  I added the version number to this set of subroutines.
+ -  I fixed a bug (first reported by C. Hansen) where the subroutines did not  
+      allow HH files with only 1 line of data. 
+ -  I fixed a potential problem that would cause the program to crash ungracefully
+      if the first byte of the FF file is invalid. Now it will print an error
+      message and return to the calling routine.
+ -  I added a parameter for undefined WindType instead of just using 0 all the 
+      time. I wanted people to see that 0 is not allowed for new wind types
+      when they look at SharedTypes.f90.
+ -  I added the ability to read wind files generated in HAWC format. 
+ -  I replaced the logic used to determine if the file names in the CTP input
+      file were relative with the new FUNCTION PathIsRelative() from the 
+      NWTC Library v1.04.00a-bjj.
+ -  I fixed some logic in GetWindType() that incorrectly identified the file
+      extension for files entered with no extension but with "." entered as
+      the current directory (e.g. ".\wind\test" or "..\wind\AnotherTest")
+ 
+ v1.00.01b-bjj 14-Nov-2011
+ -  In HAWCWind.f90, I modified HW_Init(): The error statement after reading
+      from the binary files is more descriptive. The read statement was fixed
+      so that the code could be compiled in double precision while still reading
+      binary data stored in single precision .
+ 
+ 
+ 
+ To Do:
+ - Replace all global data with data types and make calling program store it
+ - Create new input file for the module
+ - remove all *_ADHack_* subroutines
+ - Pick a name (WindInflow or InflowWind or ??) and make module name/routines consistant
+ - Split FF wind type into different categories (BLADED, TurbSim, TurbSim's BLADED)
+ - Create periodic wind files from TurbSim
+ - add ability to superimpose wind types
+ - add user-defined wind profile?
+ - add steady wind case (no turbulence, just add the wind profile from HAWC?)
+ - add CTWind capability to test program (?)
