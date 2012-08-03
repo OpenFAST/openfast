@@ -28,6 +28,13 @@ v1.00.01a-bjj
       so that the code could be compiled in double precision while still reading
       binary data stored in single precision .
  
+v1.01.00a-bjj, 01-Aug-2012
+ -  I updated FFWind.f90 to read TurbSim periodic wind files. ".bts" files contain
+      information to determine if the file contains a full period; ".sum" files
+      corresponding to ".wnd" binary files contain text to relay this information.
+      If the file is periodic, the first grid in the file is located at X=0 m;
+      otherwise it is located at X=GridWidth/2 m (like it worked before). Periodic
+      files will not have interpolation errors because the wind file is too short.
  
  
  To Do:
@@ -36,7 +43,6 @@ v1.00.01a-bjj
  - remove all *_ADHack_* subroutines
  - Pick a name (WindInflow or InflowWind or ??) and make module name/routines consistant
  - Split FF wind type into different categories (BLADED, TurbSim, TurbSim's BLADED)
- - Create periodic wind files from TurbSim
  - add ability to superimpose wind types
  - add user-defined wind profile?
  - add steady wind case (no turbulence, just add the wind profile from HAWC?)
