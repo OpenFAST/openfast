@@ -39,16 +39,14 @@ CALL DATE_AND_TIME ( Values=StrtTime )                                          
 CALL CPU_TIME ( UsrTime1 )                                                       ! Initial time (this zeros the start time when used as a MATLAB function)
 
 
-   ! Open the console for standard output.
 
-CALL OpenCon
+   ! Set version & initialize NWTC Library (open console, set pi constants)
 
+CALL SetVersion
+CALL NWTC_Init()                                                                 ! sets the pi constants
 
    ! Tell our nice users what they're running.
 
-CALL SetVersion
-
-CALL NWTC_Init()                                                                 ! sets the pi constants
 CALL DispNVD()
 
    ! Open and read input files, initialize global parameters.

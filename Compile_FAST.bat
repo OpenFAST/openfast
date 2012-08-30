@@ -14,16 +14,16 @@ REM    prompt, you must call the compiler's script to set internal variables.
 REM    TIP: Right click on the IVF Compiler's Command Prompt shortcut, click
 REM    properties, and copy the target (without cmd.exe and/or its switches) here:
 
-CALL "C:\Program Files (x86)\Intel\ComposerXE-2011\bin\ipsxe-comp-vars.bat" ia32 vs2008
+rem CALL "C:\Program Files (x86)\Intel\ComposerXE-2011\bin\ipsxe-comp-vars.bat" ia32 vs2008
 
-REM IF "%INTEL_SHARED%"=="" CALL "C:\Program Files\Intel\Compiler\Fortran\10.1.024\IA32\Bin\IFORTVARS.bat"
+IF "%INTEL_SHARED%"=="" CALL "C:\Program Files\Intel\Compiler\Fortran\10.1.024\IA32\Bin\IFORTVARS.bat"
 
 
 REM ----------------------------------------------------------------------------
 REM -------------------- LOCAL VARIABLES ---------------------------------------
 REM ----------------------------------------------------------------------------
 
-SET ROOT_NAME=FAST
+SET ROOT_NAME=FAST_test
 
 SET COMPOPTS=/threads  /O2 /inline:speed /traceback /Qzero /Qsave /real_size:32 /assume:byterecl 
 rem SET LINKOPTS=/link /stack:64000000
@@ -43,15 +43,15 @@ REM Wind_Loc     is the location of the AeroDyn wind inflow source files
 REM FAST_LOC     is the location of the FAST source files
 REM ----------------------------------------------------------------------------
 
-SET NWTC_Lib_Loc=C:\Users\bjonkman\Data\DesignCodes\NWTC Library\source
-SET AeroDyn_Loc=C:\Users\bjonkman\Data\DesignCodes\AeroDyn\Source
-SET Wind_Loc=C:\Users\bjonkman\Data\DesignCodes\AeroDyn\Source\InflowWind\Source
-SET FAST_Loc=C:\Users\bjonkman\Data\DesignCodes\FAST\Source
+rem SET NWTC_Lib_Loc=C:\Users\bjonkman\Data\DesignCodes\NWTC Library\source
+rem SET AeroDyn_Loc=C:\Users\bjonkman\Data\DesignCodes\AeroDyn\Source
+rem SET Wind_Loc=C:\Users\bjonkman\Data\DesignCodes\AeroDyn\Source\InflowWind\Source
+rem SET FAST_Loc=C:\Users\bjonkman\Data\DesignCodes\FAST\Source
 
-REM SET NWTC_Lib_Loc=D:\DATA\DesignCodes\miscellaneous\nwtc_subs\SVNdirectory\source
-REM SET AeroDyn_Loc=D:\DATA\DesignCodes\simulators\AeroDyn\SVNdirectory\trunk\Source
-REM SET Wind_Loc=D:\DATA\DesignCodes\simulators\AeroDyn\SVNdirectory\trunk\Source\InflowWind\Source
-REM SET FAST_Loc=D:\DATA\DesignCodes\simulators\FAST\SVNdirectory\trunk\Source
+SET NWTC_Lib_Loc=D:\DATA\DesignCodes\miscellaneous\nwtc_subs\SVNdirectory\source
+SET AeroDyn_Loc=D:\DATA\DesignCodes\simulators\AeroDyn\SVNdirectory\trunk\Source
+SET Wind_Loc=D:\DATA\DesignCodes\simulators\AeroDyn\SVNdirectory\trunk\Source\InflowWind\Source
+SET FAST_Loc=D:\DATA\DesignCodes\simulators\FAST\SVNdirectory\trunk\Source
 
 
 REM ----------------------------------------------------------------------------

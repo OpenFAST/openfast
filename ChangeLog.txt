@@ -3864,9 +3864,49 @@ v7.01.00a-bjj, 16-Feb-2012  B. Jonkman
      Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003     
      Simulink compiled with Matlab R2011a.
    
-v7.01.01a-bjj 06-March-2012
+v7.01.01a-bjj 06-March-2012  B. Jonkman
  The IDCntrl array had indexes mixed up; the allocation statement was the reverse of what was 
    used in the call to MakeADM_WrICArrays().   
  I removed some extra space on lines in FAST2ADAMS.f90 that were too long. (reported by Andrew Ning)
  I added a parameter to use to easily make the changes required to model the OC3 Hywind.
- I removed the link to the FAST Verification Page from the FAST web page.   
+ I removed the link to the FAST Verification Page from the FAST web page.
+ I modified the OutListParameters.xlsx file: Per jmj, I removed the word "local" from the "Convention"
+   column of inputs Spn{1,2,..,9}TD{y,y,z}b{1,2,3}, which incorrectly said 
+   "Directed about the local {x,y,z}b1-axis".
+   
+v7.01.01b-bjj 16-May-2012  B. Jonkman
+ I updated the call to read AzimB1Up so that the echo file (and message when an error occurred) no
+   longer says it is the blade-tip radius. This was reported by uesr Felix Hess.
+   
+v7.01.01c-bjj 13-Aug-2012 B. Jonkman   
+  The WAMITFile and GHWvFile variables didn't include logic for PathIsRelative() so when people ran FAST 
+    from different directories, it couldn't always find these file. I fixed the issue.
+  I added code to output binary output files, named .outb. These files will require more memory to run,
+    but they should run faster if the text files are not output. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
+    
+v7.02.00a-bjj 28-Aug-2012 B. Jonkman
+  I modified the input file, adding a line for "OutFileFmt", which is a switch indicating if the tabular
+    output should be (1) a text file, (2) a binary file, or (3) both text and binary files. There are two
+    types of binary output: (1) one that includes the time channel stored as packed 32-bit integers, and 
+    (2) one that does not contain the entire time channel; it contains only the first time and the time 
+    increment (rate), which implies that we cannot output variable time steps in the same file. FAST will
+    generate files in format (2) when it is a standalone program, but format (1) when it is compiled as
+    an SFunc in Simulink (Simulink does not necessarily output data at a constant rate). This different 
+    format is indicated by an integer FileID in the binary file header (note that post-processors MUST 
+    have output at a constant rate to work properly.) I added this OutFileFmt to the FAST2ADAMS datasets 
+    for use in A2AD. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
+  The input parameter TMax does not have the upper limit limiataion of 9999.999 seconds when only binary 
+    tabular (time-marching) output is requested. The limit still exists for tabular text output. See
+    https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=147
+  I replaced the code to read the OutList input parameter with the ReadOutputList() subroutine from the
+    NWTC Subroutine Library. (HydroDyn uses the same code.)
+    
+ Compilation info: 
+     Linked with 
+       NWTC Library v1.04.02a-bjj, 22-Aug-2012 B. Jonkman
+       AeroDyn v13.00.01a-bjj, 16-Feb-2012 B. Jonkman 
+       InflowWind v1.01.00b-bjj, 10-Aug-2012, B. Jonkman      
+     Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003     
+     Simulink compiled with Matlab R2011a.
+    
+  

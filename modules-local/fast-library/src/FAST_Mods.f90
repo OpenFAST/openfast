@@ -455,6 +455,7 @@ INTEGER(4)                   :: UnLn      = 26                                  
 INTEGER(4)                   :: UnNoSpec  = 27                                  ! I/O unit number for the noise spectr output file.
 INTEGER(4)                   :: UnNoSPL   = 28                                  ! I/O unit number for the noise SPL output file.
 INTEGER(4)                   :: UnOu      = 21                                  ! I/O unit number for the tabular output file.
+INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
 LOGICAL                      :: Cmpl4SFun = .FALSE.                             ! Is FAST being compiled as an S-Function for Simulink?
@@ -1864,6 +1865,8 @@ USE                             NWTC_Library
 ! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE VARIABLE BELOW:
 REAL(ReKi)                   :: AllOuts  (0:MaxOutPts)                          ! An array holding the value of all of the calculated (not only selected) output channels.
 ! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE PREVIOUS VARIABLE:
+REAL(DbKi), ALLOCATABLE      :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
+REAL(ReKi), ALLOCATABLE      :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
 REAL(ReKi), ALLOCATABLE      :: LinAccES (:,:,:)                                ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: LinAccET (:,:)                                  ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: LSNodes  (:,:)                                  ! Unstretched arc distance along mooring line from anchor to each node where the line position and tension can be output (meters).
@@ -1882,22 +1885,31 @@ REAL(ReKi)                   :: WaveElevxi(1) = (/ 0.0 /)                       
 REAL(ReKi)                   :: WaveElevyi(1) = (/ 0.0 /)                       ! yi-coordinates for points where the incident wave elevation can be output (meters).
 
 INTEGER(4)                   :: BldGagNd (9)                                    ! Nodes closest to the blade strain gages.
+INTEGER                      :: CurrOutStep                                     ! Time index into the AllOutData arrat
 INTEGER(4)                   :: DecFact                                         ! Decimation factor for tabular output.
 !JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
 INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
 INTEGER(4)                   :: NBlGages                                        ! Number of blade strain gages.
 INTEGER(4)                   :: NTwGages                                        ! Number of tower strain gages.
 INTEGER(4)                   :: NumOuts                                         ! Number of parameters in the output list.
+INTEGER(IntKi)               :: NOutSteps                                       ! Maximum number of output steps
 INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
 INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
 INTEGER(4)                   :: TwrGagNd (9)                                    ! Nodes closest to the tower strain gages.
 INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
 
+INTEGER(B2Ki), PARAMETER     :: FileFmtID_WithTime    = 1                       ! ID for OutputFileFmtID to specify that the time channel should be included in the output file (use if the output can occur at variable times)
+INTEGER(B2Ki), PARAMETER     :: FileFmtID_WithoutTime = 2                       ! ID for OutputFileFmtID to specify that the time channel does not need to be included in the output file (used only with constant time-step output)
+INTEGER(B2Ki)                :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
+
 LOGICAL                      :: WrEcho
+LOGICAL                      :: WrBinOutFile  = .true.                          ! Write a binary output file? (.outb)
+LOGICAL                      :: WrTxtOutFile  = .true.                          ! Write a text (formatted) output file? (.out)
 LOGICAL                      :: TabDelim                                        ! Flag to cause tab-delimited output.
 
 CHARACTER(20)                :: OutFmt                                          ! Output format for tabular data.
 CHARACTER(10)                :: OutList  (MaxOutPts)                            ! List of output parameters.
+CHARACTER(1024)              :: FileDesc                                        ! Description of run to include in binary output file
 
 TYPE(OutParmType),ALLOCATABLE:: OutParam (:)                                    ! Names and units of all output parameters.
 
