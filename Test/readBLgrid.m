@@ -16,7 +16,7 @@ function [velocity, y, z, nz, ny, dz, dy, dt, zHub, z1, SummVars] = readBLgrid(F
 % z1             - vertical location of bottom of grid [m above ground level]
 % SumVars        - variables from the summary file (zHub, Clockwise, UBAR, TI_u, TI_v, TI_w)
 
-
+%%
 len    = length(FileName);
 ending = FileName(len-3:len);
 
@@ -198,14 +198,17 @@ while ( true )
     findx = strfind(line,'HEIGHT OFFSET');
 
     if ~isempty(findx)
-        lindx = length(line);
+        lindx = length(line);        
         findx = strfind(line,'=')+1;
+        if isempty(findx)
+            findx = 1;
+        end
         ZGoffset = str2double( strtok(line(findx:lindx))); %z grid offset
         break;
     end            
 end  
 fclose(fid_sum);      
-
+%%
 %-----------------------------------------
 %READ THE GRID DATA FROM THE BINARY FILE
 %-----------------------------------------                   
