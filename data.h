@@ -29,14 +29,17 @@ typedef struct node_struct {
   struct node_struct * members ;
 
 /* I/O flags */
-  unsigned int     nest_mask ;
   int     restart ;
   int     boundary   ;
   int     namelist   ;
   char    namelistsection[NAMELEN] ;
-  struct node_struct * next ;
-  struct node_struct * next4d ;
 
+/* Fields for Modname */
+  struct node_struct * module_ddt_list ;
+
+#ifdef FUTURE
+  unsigned int     nest_mask ;
+  struct node_struct * next4d ;
   char force_aux_fields[2048] ;
   char force_fcn_name[2048] ;
   char interpd_aux_fields[2048] ;
@@ -45,6 +48,11 @@ typedef struct node_struct {
   char interpu_fcn_name[2048] ;
   char smoothu_fcn_name[2048] ;
   char smoothu_aux_fields[2048] ;
+#endif
+
+/* CTRL */
+  int gen_wrapper ;
+  struct node_struct * next ;
 
 /* fields used by rconfig nodes */
   char nentries[NAMELEN] ;
@@ -110,6 +118,7 @@ EXTERN node_t * Xposes ;
 EXTERN node_t * FourD ;
 EXTERN node_t * Swaps ;
 EXTERN node_t * Cycles ;
+EXTERN node_t * ModNames ;
 
 EXTERN node_t Domain ;
 

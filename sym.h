@@ -83,6 +83,7 @@ struct sym_node
 /* internal name of variable associated with dataname entry, July 2004 */
     char internal_name[64] ;
 /* fields associated with integer scalar variables */
+    unsigned long info ;
     unsigned long assigned ; 	/* pointer to assignment statement */
     unsigned long thisif ;
     int iflev ;

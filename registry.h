@@ -21,6 +21,12 @@ enum len_defined_how { DOMAIN_STANDARD , NAMELIST , CONSTANT } ;
 enum type_type       { SIMPLE , DERIVED } ;
 enum proc_orient     { ALL_Z_ON_PROC , ALL_X_ON_PROC , ALL_Y_ON_PROC } ;
 
+/* wrapping options */
+#define WRAP_HIDDEN_FIELD      2
+#define WRAP_EXPOSED_FIELD     1
+#define WRAP_NONE              0
+
+
 /* node_kind  mask settings */
 #define FIELD      1
 #define I1         2
@@ -29,7 +35,7 @@ enum proc_orient     { ALL_Z_ON_PROC , ALL_X_ON_PROC , ALL_Y_ON_PROC } ;
 #define MEMBER    16
 #define TYPE      32
 #define DIM       64
-#define PACKAGE  128
+#define MODNAME  128
 #define HALO     256
 #define PERIOD   512
 #define SWAP    1024

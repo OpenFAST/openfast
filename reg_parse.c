@@ -27,7 +27,7 @@
 #define FIELD_TYPE      3
 #define FIELD_SYM       4
 #define FIELD_DIMS      5
-#define FIELD_IO        6
+#define FIELD_CTRL      6
 #define FIELD_DNAME     7
 #define FIELD_DESCRIP   8
 #define FIELD_UNITS     9
@@ -37,7 +37,7 @@
 #define F_TYPE     2
 #define F_SYM      3
 #define F_DIMS     4
-#define F_IO       5
+#define F_CTRL     5
 #define F_DNAME    6
 #define F_DESCRIP  7
 #define F_UNITS    8
@@ -280,10 +280,23 @@ reg_parse( FILE * infile )
     {
       node_t * field_struct ;
       node_t * type_struct ;
+      node_t * modname_struct ;
+
+// FAST registry construct a list of module nodes
+      modname_struct = get_modname_entry( tokens[ FIELD_MODNAME ] ) ;
+      if ( modname_struct == NULL ) 
+      {
+        modname_struct = new_node( MODNAME ) ;
+        strcpy( modname_struct->name, tokens[FIELD_MODNAME] ) ;
+         modname_struct->module_ddt_list = NULL ;
+        add_node_to_end( modname_struct , &ModNames ) ;
+      }
+//
 
       if ( !defining_state_field && ! defining_i1_field && 
            !defining_rconfig_field && !strcmp(tokens[FIELD_OF],"domain") )
        { fprintf(stderr,"Registry warning: 'domain' is a reserved registry type name. Cannot 'typedef domain'\n") ; }
+
 
       type_struct = get_type_entry( tokens[ FIELD_OF ] ) ;
       if ( type_struct == NULL ) 
@@ -310,7 +323,10 @@ fprintf(stderr,"calling add_node_to_end %d %s\n",__LINE__,tokens[FIELD_OF]) ;
       for ( i = 0 ; i < MAX_STREAMS ; i++ ) { 
         reset_mask( field_struct->io_mask, i ) ;
       }
+#endif
 
+// process CTRL keys -- only 'h' (hidden) and 'e' (exposed).  Default is not to generate a wrapper,
+// so something must be specified, either h or e
       {
 	char prev = '\0' ;
 	char x ;
@@ -318,147 +334,20 @@ fprintf(stderr,"calling add_node_to_end %d %s\n",__LINE__,tokens[FIELD_OF]) ;
 	int len_of_tok ;
         char fcn_name[2048], aux_fields[2048] ;
 
-        strcpy(tmp,tokens[FIELD_IO]) ;
+        strcpy(tmp,tokens[FIELD_CTRL]) ;
         if (( p = index(tmp,'=') ) != NULL ) { *p = '\0' ; }
         for ( i = 0 ; i < strlen(tmp) ; i++ )
         {
 	  x = tolower(tmp[i]) ;
-          if ( x == 'h' || x == 'i' ) {
-            char c, *p, *pp ;
-            int unitid ;
-            int stream ;
-            unsigned int * mask ;
-            stream = ( x == 'h' )?HISTORY_STREAM:INPUT_STREAM ;
-            mask = field_struct->io_mask ;
-            set_mask( mask , stream ) ;
-            strcpy(tmp1, &(tmp[++i])) ;
-            for ( p = tmp1  ; *p ; i++, p++ ) { 
-              c = tolower(*p) ; if ( c >= 'a' && c <= 'z' ) { *p = '\0' ; i-- ; break ; }
-              reset_mask( mask , stream ) ;
-            }
-            for ( p = tmp1  ; *p ; p++ ) { 
-              x = *p ;
-              if ( x >= '0' && x <= '9' ) { 
-                set_mask( mask , stream + x - '0' ) ; 
-              }
-	      else if ( x == '{' ) {
-                strcpy(tmp2,p+1) ;
-                if (( pp = index(tmp2,'}') ) != NULL ) {
-                  *pp = '\0' ;
-                  unitid = atoi(tmp2) ;  /* JM 20100416 */
-                  if ( unitid >= 0  || unitid < MAX_STREAMS && stream + unitid < MAX_HISTORY ) {
-                    set_mask( mask , stream + unitid   ) ;
-                  }
-                  p = p + strlen(tmp2) + 1 ;
-                } else {
-                  fprintf(stderr,"registry syntax error: unmatched {} in the io string for definition of %s\n",tokens[FIELD_SYM]) ;
-                  exit(9) ;
-                }
-              }
-            }
+          if        ( x == 'h' ) {
+            field_struct->gen_wrapper = WRAP_HIDDEN_FIELD ;
+          } else if ( x == 'e' ) {
+            field_struct->gen_wrapper = WRAP_EXPOSED_FIELD ;
+          } else {
+            field_struct->gen_wrapper = WRAP_NONE ;  /* default */
           }
         }
-
-        for ( i = 0 ; i < (len_of_tok = strlen(tokens[FIELD_IO])) ; i++ )
-        {
-          int unitid = -1 ;
-	  x = tolower(tokens[FIELD_IO][i]) ;
-	  if ( x == '{' ) {
-            int ii,iii ;
-            char * pp ;
-            char tmp[NAMELEN] ;
-            strcpy(tmp,tokens[FIELD_IO]) ;   
-
-            if (( pp = index(tmp,'}') ) != NULL ) {
-              *pp = '\0' ;
-              iii = pp - (tmp + i + 1) ;
-              unitid = atoi(tmp+i+1) ;  /* JM 20091102 */
-              if ( unitid >= 0  || unitid < MAX_STREAMS  && unitid < MAX_HISTORY ) {
-                if        ( prev == 'i' ) {
-                  set_mask( field_struct->io_mask , unitid + MAX_HISTORY  ) ;
-                } else if ( prev == 'h' ) {
-                  set_mask( field_struct->io_mask , unitid   ) ;
-                }
-              }
-              i += iii ;
-              continue ;
-            } else {
-              fprintf(stderr,"registry syntax error: unmatched {} in the io string for definition of %s\n",tokens[FIELD_SYM]) ;
-              exit(9) ;
-            }
-
-	  } else if ( x >= 'a' && x <= 'z' ) {
-	    if ( x == 'r' ) { field_struct->restart = 1 ; set_mask( field_struct->io_mask , RESTART_STREAM   ) ; }
-	    if ( x == 'b' ) { field_struct->boundary  = 1 ; set_mask( field_struct->io_mask , BOUNDARY_STREAM   ) ; }
-	    if ( x == 'f' || x == 'd' || x == 'u' || x == 's' ) { 
-                               strcpy(aux_fields,"") ;
-                               strcpy(fcn_name,"") ; 
-	                       if ( tokens[FIELD_IO][i+1] == '(' )     /* catch a possible error */
-                               {
-				 fprintf(stderr,
-				    "Registry warning: syntax error in %c specifier of IO field for %s\n",x,tokens[FIELD_SYM]) ;
-				 fprintf(stderr,
-				    "                  equal sign needed before left paren\n") ;
-			       }
-
-	                       if ( tokens[FIELD_IO][i+1] == '=' ) 
-			       {
-				 int ii, jj, state ;
-				 state = 0 ;
-				 jj = 0 ;
-				 for ( ii = i+3 ; ii < len_of_tok ; ii++ )
-				 {
-				   if ( tokens[FIELD_IO][ii] == ')' ) { if (state == 0 )fcn_name[jj] = '\0' ; aux_fields[jj] = '\0' ; break ; }
-				   if ( tokens[FIELD_IO][ii] == ':' ) { fcn_name[jj] = '\0' ; jj= 0 ; state++ ; continue ;}
-				   if ( tokens[FIELD_IO][ii] == ',' && state == 0 ) {
-				     fprintf(stderr,
-                                             "Registry warning: syntax error in %c specifier of IO field for %s\n",x,
-                                             tokens[FIELD_SYM]) ;
-				   }
-				   if ( state == 0 )  /* looking for interpolation fcn name */
-				   {
-				     fcn_name[jj++] = tokens[FIELD_IO][ii] ;
-				   }
-				   if ( state > 0 )
-				   {
-				     aux_fields[jj++] = tokens[FIELD_IO][ii] ;
-				   }
-				 }
-				 i = ii ;
-			       }
-                               else
-			       {
-				 if ( x == 'f' || x == 'd' ) strcpy(fcn_name,"interp_fcn") ;
-				 if ( x == 'u' ) strcpy(fcn_name,"copy_fcn") ;
-				 if ( x == 's' ) strcpy(fcn_name,"smoother") ;
-			       }
-	                       if      ( x == 'f' )  { 
-                                 field_struct->nest_mask |= FORCE_DOWN ; 
-                                 strcpy(field_struct->force_fcn_name, fcn_name ) ;
-                                 strcpy(field_struct->force_aux_fields, aux_fields ) ;
-                               }
-                               else if ( x == 'd' )  { 
-                                 field_struct->nest_mask |= INTERP_DOWN ; 
-                                 strcpy(field_struct->interpd_fcn_name, fcn_name ) ;
-                                 strcpy(field_struct->interpd_aux_fields, aux_fields ) ;
-                               }
-                               else if ( x == 's' )  { 
-                                 field_struct->nest_mask |= SMOOTH_UP ; 
-                                 strcpy(field_struct->smoothu_fcn_name, fcn_name ) ;
-                                 strcpy(field_struct->smoothu_aux_fields, aux_fields ) ;
-                               }
-                               else if ( x == 'u' )  { 
-                                 field_struct->nest_mask |= INTERP_UP ; 
-                                 strcpy(field_struct->interpu_fcn_name, fcn_name ) ;
-                                 strcpy(field_struct->interpu_aux_fields, aux_fields ) ;
-                               }
-            }
-	    prev = x ;
-	  }
-        }
       }
-// FUTURE
-#endif
 
       field_struct->dname[0] = '\0' ;
       if ( strcmp( tokens[FIELD_DNAME], "-" ) ) /* that is, if not equal "-" */
@@ -478,6 +367,7 @@ fprintf(stderr,"calling add_node_to_end %d %s\n",__LINE__,tokens[FIELD_OF]) ;
 #endif
 
       add_node_to_end( field_struct , &(type_struct->fields) ) ;
+      add_node_to_end( field_struct, &(modname_struct->module_ddt_list) ) ;
 
     }
 

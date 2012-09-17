@@ -135,6 +135,7 @@ main( int argc, char *argv[], char *env[] )
   init_parser() ;
   init_type_table() ;
   init_dim_table() ;
+  init_modname_table() ;
 
   if ( !strcmp(fname_in,"") ) fp_in = stdin ;
   else
@@ -176,6 +177,11 @@ main( int argc, char *argv[], char *env[] )
   fclose(fp_tmp) ;
 
   check_dimspecs() ;
+
+printf("calling gen_module_files\n") ;
+  gen_module_files( "inc" ) ;
+printf("back from gen_module_files\n") ;
+
 
 #if 0
   gen_state_struct( "inc" ) ;

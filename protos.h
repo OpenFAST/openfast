@@ -33,6 +33,7 @@ int make_entries_uniq ( char * fname ) ;
 int add_warning ( char * fname ) ;
 
 node_t * get_type_entry ( char * typename ) ;
+node_t * get_modname_entry ( char * modname ) ;
 node_t * get_rconfig_entry( char * name ) ;
 node_t * get_entry ( char * name , node_t * node ) ;
 node_t * get_entry_r ( char * name , char * use , node_t * node ) ;

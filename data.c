@@ -16,6 +16,13 @@
 #define MAXTOKENS 30
 
 int
+init_modname_table()
+{
+  ModNames = NULL ;
+  return(0) ;
+}
+
+int
 init_dim_table()
 {
   Dim = NULL ;
@@ -40,6 +47,7 @@ add_node_to_end ( node_t * node , node_t ** list )
   return(0) ;
 }
 
+#if 0
 int
 add_node_to_end_4d ( node_t * node , node_t ** list )
 {
@@ -54,7 +62,6 @@ add_node_to_end_4d ( node_t * node , node_t ** list )
   return(0) ;
 }
 
-#if 0
 int
 show_nodelist( node_t * p )
 {
@@ -167,6 +174,7 @@ set_mark ( int val , node_t * lst )
   return(0) ;
 }
 
+#if 0
 int
 set_mark_4d ( int val , node_t * lst )
 {
@@ -180,4 +188,5 @@ set_mark_4d ( int val , node_t * lst )
   }
   return(0) ;
 }
+#endif
 

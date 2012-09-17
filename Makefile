@@ -4,9 +4,9 @@ CC_TOOLS = gcc
 CFLAGS = #-ansi
 LDFLAGS =
 DEBUG = -g 
-OBJ = registry.o my_strtok.o reg_parse.o data.o type.o misc.o sym.o symtab_gen.o
+OBJ = registry.o my_strtok.o reg_parse.o data.o type.o misc.o sym.o symtab_gen.o gen_module_files.o
 
-registry : $(OBJ) standard.exe
+registry : $(OBJ)
 	$(CC_TOOLS) -o registry $(DEBUG) $(LDFLAGS) $(OBJ)
 
 .c.o :
@@ -18,6 +18,8 @@ clean clena:
 # regenerate this list with "makedepend -Y *.c"
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
+
+gen_module_files.o: protos.h registry.h data.h
 
 data.o: registry.h protos.h data.h
 gen_allocs.o: protos.h registry.h data.h

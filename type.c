@@ -77,6 +77,7 @@ set_state_dims ( char * dims , node_t * node )
   return (0) ;
 }
  
+#if 0
 node_t *
 get_4d_entry ( char * name )
 {
@@ -91,11 +92,18 @@ get_4d_entry ( char * name )
   }
   return(NULL) ;
 }
+#endif
 
 node_t *
 get_type_entry ( char * typename )
 {
   return(get_entry(typename,Type)) ;
+}
+
+node_t *
+get_modname_entry ( char * modname )
+{
+  return(get_entry(modname,ModNames)) ;
 }
 
 node_t *
