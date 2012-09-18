@@ -6,6 +6,7 @@ typedef struct node_struct {
   int     node_kind ;
   int     type_type ;
   char          name[NAMELEN] ;
+  char          nickname[NAMELEN] ;
   struct node_struct  * fields ;
   struct node_struct  * type ;
   int           ndims ;

@@ -212,13 +212,15 @@ reg_parse( FILE * infile )
   /* Had to increase size for SOA from 4096 to 7000, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE] ;
   char *p, *q ;
-  char *tokens[MAXTOKENS], *toktmp[MAXTOKENS] ; 
+  char *tokens[MAXTOKENS], *toktmp[MAXTOKENS],*ditto[MAXTOKENS] ; 
   int i, ii ;
   int defining_state_field, defining_rconfig_field, defining_i1_field ;
 
   parseline[0] = '\0' ;
 
   max_time_level = 1 ;
+
+  for ( i = 0 ; i < MAXTOKENS ; i++ ) { ditto[i] = (char *)malloc(NAMELEN) ; strcpy(ditto[i],"-") ; }
 
 /* main parse loop over registry lines */
   while ( fgets ( inln , INLN_SIZE , infile ) != NULL )
@@ -234,7 +236,7 @@ reg_parse( FILE * infile )
       }
     }
 
-    make_lower( parseline ) ;
+    //make_lower( parseline ) ;
     if (( p = index( parseline , '#' ))  != NULL  ) *p = '\0' ; /* discard comments (dont worry about quotes for now) */
     if (( p = index( parseline , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
     for ( i = 0 ; i < MAXTOKENS ; i++ ) tokens[i] = NULL ; 
@@ -248,6 +250,11 @@ reg_parse( FILE * infile )
     for ( i = 0 ; i < MAXTOKENS ; i++ )
     {
       if ( tokens[i] == NULL ) tokens[i] = "-" ;
+      if ( strcmp(tokens[i],"^") ) {   // that is, if *not* ^
+        strcpy(ditto[i],tokens[i]) ;
+      } else {                         // if is ^
+        strcpy(tokens[i],ditto[i]) ;
+      }
     }
 
 /* remove quotes from quoted entries */
@@ -283,12 +290,22 @@ reg_parse( FILE * infile )
       node_t * modname_struct ;
 
 // FAST registry construct a list of module nodes
-      modname_struct = get_modname_entry( tokens[ FIELD_MODNAME ] ) ;
+fprintf(stderr,"modname %s\n",tokens[ FIELD_MODNAME ]) ;
+      modname_struct = get_modname_entry( make_lower_temp(tokens[ FIELD_MODNAME ]) ) ;
       if ( modname_struct == NULL ) 
       {
+        char *p ;
         modname_struct = new_node( MODNAME ) ;
         strcpy( modname_struct->name, tokens[FIELD_MODNAME] ) ;
-         modname_struct->module_ddt_list = NULL ;
+        // if a shortname is indicated after a slash, record that, otherwise use full name for both 
+        if ( (p = index(modname_struct->name,'/')) != NULL ) {
+          *p = '\0' ;
+          strcpy( modname_struct->nickname, p+1 ) ;
+        } else {
+          strcpy( modname_struct->nickname, modname_struct->name ) ;
+        }
+        
+        modname_struct->module_ddt_list = NULL ;
         add_node_to_end( modname_struct , &ModNames ) ;
       }
 //
