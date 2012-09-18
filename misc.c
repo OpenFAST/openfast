@@ -406,10 +406,9 @@ bdy_indicator( int bdy )
 int
 print_warning( FILE * fp , char * fname )
 {
-fprintf(fp,"!STARTOFREGISTRYGENERATEDINCLUDE '%s'\n", fname) ;
+fprintf(fp,"!STARTOFREGISTRYGENERATEDFILE '%s'\n", fname) ;
 fprintf(fp,"!\n") ;
-fprintf(fp,"! WARNING This file is generated automatically by use_registry\n") ;
-fprintf(fp,"! using the data base in the file named Registry.\n") ;
+fprintf(fp,"! WARNING This file is generated automatically by the FAST registry\n") ;
 fprintf(fp,"! Do not edit.  Your changes to this file will be lost.\n") ;
 fprintf(fp,"!\n") ;
 return(0) ;
@@ -418,7 +417,7 @@ return(0) ;
 int
 close_the_file( FILE * fp )
 {
-fprintf(fp,"!ENDOFREGISTRYGENERATEDINCLUDE\n") ;
+fprintf(fp,"!ENDOFREGISTRYGENERATEDFILE\n") ;
 fclose(fp) ;
 }
 
