@@ -13,10 +13,6 @@
 #include "data.h"
 #include "sym.h"
 
-/* read in the Registry file and build the internal representation of the registry */
-
-#define MAXTOKENS 1000
-
 /* fields for state entries (note, these get converted to field entries in the
    reg_parse routine; therefore, only TABLE needs to be looked at */
 #define TABLE 0
@@ -93,6 +89,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile )
 
           fprintf(stderr,"including %s\n",include_file_name ) ;
           pre_parse( dir , include_fp , outfile ) ;
+          fprintf(stderr,"back from including %s\n",include_file_name ) ;
 
           fclose( include_fp ) ;
         } else {
@@ -236,6 +233,7 @@ reg_parse( FILE * infile )
       }
     }
 
+fprintf(stderr,"%s\n",parseline) ;
     //make_lower( parseline ) ;
     if (( p = index( parseline , '#' ))  != NULL  ) *p = '\0' ; /* discard comments (dont worry about quotes for now) */
     if (( p = index( parseline , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
@@ -243,18 +241,20 @@ reg_parse( FILE * infile )
     i = 0 ;
 
     if ((tokens[i] = my_strtok(parseline)) != NULL ) i++ ; 
-
     while (( tokens[i] = my_strtok(NULL) ) != NULL && i < MAXTOKENS ) i++ ;
     if ( i <= 0 ) continue ;
+
 
     for ( i = 0 ; i < MAXTOKENS ; i++ )
     {
       if ( tokens[i] == NULL ) tokens[i] = "-" ;
+fprintf(stderr,"ditto %d %s ",i,tokens[i]) ;
       if ( strcmp(tokens[i],"^") ) {   // that is, if *not* ^
         strcpy(ditto[i],tokens[i]) ;
       } else {                         // if is ^
-        strcpy(tokens[i],ditto[i]) ;
+        tokens[i] = ditto[i] ;
       }
+fprintf(stderr,"%s %s\n",ditto[i],tokens[i]) ;
     }
 
 /* remove quotes from quoted entries */
@@ -290,7 +290,6 @@ reg_parse( FILE * infile )
       node_t * modname_struct ;
 
 // FAST registry construct a list of module nodes
-fprintf(stderr,"modname %s\n",tokens[ FIELD_MODNAME ]) ;
       modname_struct = get_modname_entry( make_lower_temp(tokens[ FIELD_MODNAME ]) ) ;
       if ( modname_struct == NULL ) 
       {
@@ -306,14 +305,8 @@ fprintf(stderr,"modname %s\n",tokens[ FIELD_MODNAME ]) ;
         }
         
         modname_struct->module_ddt_list = NULL ;
-        add_node_to_end( modname_struct , &ModNames ) ;
+        add_node_to_beg( modname_struct , &ModNames ) ;
       }
-//
-
-      if ( !defining_state_field && ! defining_i1_field && 
-           !defining_rconfig_field && !strcmp(tokens[FIELD_OF],"domain") )
-       { fprintf(stderr,"Registry warning: 'domain' is a reserved registry type name. Cannot 'typedef domain'\n") ; }
-
 
       type_struct = get_type_entry( tokens[ FIELD_OF ] ) ;
       if ( type_struct == NULL ) 
@@ -321,8 +314,9 @@ fprintf(stderr,"modname %s\n",tokens[ FIELD_MODNAME ]) ;
         type_struct = new_node( TYPE ) ;
         strcpy( type_struct->name, tokens[FIELD_OF] ) ;
         type_struct->type_type = DERIVED ;
-fprintf(stderr,"calling add_node_to_end %d %s\n",__LINE__,tokens[FIELD_OF]) ;
         add_node_to_end( type_struct , &Type ) ;
+        add_node_to_beg( type_struct, &(modname_struct->module_ddt_list) ) ;
+fprintf(stderr,"adding type_struct %s to %s \n",type_struct->name,modname_struct->name) ;
       }
 
       field_struct = new_node( FIELD ) ;
@@ -334,13 +328,6 @@ fprintf(stderr,"calling add_node_to_end %d %s\n",__LINE__,tokens[FIELD_OF]) ;
 
       if ( set_state_dims( tokens[FIELD_DIMS], field_struct ) )
        { fprintf(stderr,"Registry warning: some problem with dimstring %s\n", tokens[FIELD_DIMS] ) ; }
-
-#ifdef FUTURE
-      field_struct->restart  = 0 ; field_struct->boundary  = 0 ;
-      for ( i = 0 ; i < MAX_STREAMS ; i++ ) { 
-        reset_mask( field_struct->io_mask, i ) ;
-      }
-#endif
 
 // process CTRL keys -- only 'h' (hidden) and 'e' (exposed).  Default is not to generate a wrapper,
 // so something must be specified, either h or e
@@ -383,12 +370,12 @@ fprintf(stderr,"calling add_node_to_end %d %s\n",__LINE__,tokens[FIELD_OF]) ;
 	  		   tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
 
-      add_node_to_end( field_struct , &(type_struct->fields) ) ;
-      add_node_to_end( field_struct, &(modname_struct->module_ddt_list) ) ;
+fprintf(stderr,"adding %s to %s\n",field_struct->name,type_struct->name ) ;
+      add_node_to_beg( field_struct , &(type_struct->fields) ) ;
 
     }
 
-/* dimespec entry */
+/* dimspec entry */
     else if ( !strcmp( tokens[ TABLE ] , "dimspec" ) )
     {
       node_t * dim_struct ;
@@ -455,7 +442,7 @@ int
 set_state_type( char * typename, node_t * state_entry )
 {
   if ( typename == NULL ) return(1) ;
-  return (( state_entry->type = get_type_entry( typename )) == NULL )  ;
+  return (( state_entry->type = get_type_entry( make_lower_temp(typename) )) == NULL )  ;
 }
 
 int

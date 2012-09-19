@@ -22,9 +22,10 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "real" )      ; add_node_to_end ( p , &Type ) ;
   p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "reki" )      ; add_node_to_end ( p , &Type ) ;
   p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "logical" )   ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "character*256" ) ; add_node_to_end ( p , &Type ) ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "character" ) ; add_node_to_end ( p , &Type ) ;
   p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "doubleprecision" ) ; add_node_to_end ( p , &Type ) ;
   p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "dbki" ) ; add_node_to_end ( p , &Type ) ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "meshtype" ) ; add_node_to_end ( p , &Type ) ;
   return(0) ;
 }
 
@@ -123,7 +124,7 @@ get_entry ( char * name , node_t * node )
   if ( node == NULL ) return (NULL)  ;
   for ( p = node ; p != NULL ; p = p->next )
   {
-    if ( !strcmp( name , "character" ) )
+    if ( !strncmp( name , "character", 9 ) )
     {
       if ( !strncmp( p->name , name, 9 ) )
       {

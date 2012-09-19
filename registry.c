@@ -156,23 +156,27 @@ main( int argc, char *argv[], char *env[] )
     strcpy( dir , fname_in ) ;
     if ( ( e = rindex ( dir , '/' ) ) != NULL ) { *e = '\0' ; } else { strcpy( dir, "." ) ; } 
   }
+fprintf(stderr,"calling pre_parse %s\n",dir) ;
   if ( pre_parse( dir, fp_in, fp_tmp ) ) {
     fprintf(stderr,"Problem with Registry File %s\n", fname_in ) ;
     goto cleanup ;
   }
+fprintf(stderr,"back from pre_parse\n") ;
   sym_forget() ;
 
   fclose(fp_in) ;
   fclose(fp_tmp) ;
 
+fprintf(stderr,"opening fname_tmp %s\n",fname_tmp ) ;
   if (( fp_tmp = fopen( fname_tmp , "r" )) == NULL )
   {
     fprintf(stderr,"Registry program cannot open %s for reading. Ending.\n", fname_tmp ) ;
     goto cleanup ;
   }
 
-
+fprintf(stderr,"calling reg_parse\n") ;
   reg_parse(fp_tmp) ;
+fprintf(stderr,"back from reg_parse\n") ;
 
   fclose(fp_tmp) ;
 
@@ -219,6 +223,7 @@ printf("back from gen_module_files\n") ;
 #endif
 
 cleanup:
+exit(0) ;
 #ifdef _WIN32
    sprintf(command,"del /F /Q %s\n",fname_tmp );
 #else

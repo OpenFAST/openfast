@@ -6,6 +6,7 @@
 /* #define MAX_ARGLINE 175    WRF uses 128 by default, but the nested chem version hit the continuation line limit for efc so it had to be increased, wig 14-Oct-2004 */
 #define MAX_ARGLINE 128   /* welp, 175 means lines longer than 130 chars, which is a Fortran no no */
 #define MAX_TYPEDEFS 50   /* typedef history -ajb */
+#define MAXTOKENS 30
 
 /* defines of system commands */
 #define UNIQSORT "/bin/sort -u"

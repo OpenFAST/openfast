@@ -13,8 +13,6 @@
 #include "protos.h"
 #include "data.h"
 
-#define MAXTOKENS 30
-
 int
 init_modname_table()
 {
@@ -46,6 +44,22 @@ add_node_to_end ( node_t * node , node_t ** list )
   }
   return(0) ;
 }
+
+int
+add_node_to_beg ( node_t * node , node_t ** list )
+{
+  node_t * p ;
+  if ( *list == NULL )
+    { *list = node ; }
+  else
+  {
+    p = (*list)->next ;
+    *list = node ;
+    (*list)->next = p ;
+  }
+  return(0) ;
+}
+
 
 #if 0
 int
