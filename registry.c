@@ -223,7 +223,6 @@ printf("back from gen_module_files\n") ;
 #endif
 
 cleanup:
-exit(0) ;
 #ifdef _WIN32
    sprintf(command,"del /F /Q %s\n",fname_tmp );
 #else

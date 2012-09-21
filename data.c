@@ -50,10 +50,16 @@ add_node_to_beg ( node_t * node , node_t ** list )
 {
   node_t * p ;
   if ( *list == NULL )
-    { *list = node ; }
+  { 
+fprintf(stderr,"   add_node_to_beg: node %s to new list\n", node->name) ;
+    *list = node ;
+    (*list)->next = NULL ;
+  }
   else
   {
-    p = (*list)->next ;
+fprintf(stderr,"   add_node_to_beg: node %s to existing list. CH %s CN %08x\n", node->name,(*list)->name,(*list)->next) ;
+if ( (*list)->next ) fprintf(stderr,"    CN name %s\n",(*list)->next->name ) ;
+    p = (*list) ;
     *list = node ;
     (*list)->next = p ;
   }

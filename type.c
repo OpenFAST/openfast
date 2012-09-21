@@ -131,7 +131,7 @@ get_entry ( char * name , node_t * node )
         return(p) ;
       }
     } else {
-      if ( !strcmp( p->name , name ) )
+      if ( !strcmp( make_lower_temp(p->name) , make_lower_temp(name) ) )
       {
         return(p) ;
       }

@@ -3,17 +3,19 @@
 #include "data.h"
 
 int init_dim_table()   ;
-int make_lower( char * s1 ) ;
+char * make_lower( char * s1 ) ;
 char * make_lower_temp( char * s1 ) ;
 int reg_parse( FILE * infile ) ;
 int set_dim_len ( char * dimspec , node_t * dim_entry ) ;
 int set_dim_order ( char * dimorder , node_t * dim_entry ) ;
 int set_dim_orient ( char * dimorient , node_t * dim_entry ) ;
 int add_node_to_end ( node_t * node , node_t ** list ) ;
+int add_node_to_beg ( node_t * node , node_t ** list ) ;
 int add_node_to_end_4d ( node_t * node , node_t ** list ) ;
 int init_type_table() ;
 int set_state_type ( char * typename , node_t * node ) ;
 int set_state_dims ( char * dims , node_t * node ) ;
+int set_ctrl       ( char * ctrl , node_t * node ) ;
 int gen_state_struct ( char * fname ) ;
 
 #if 0

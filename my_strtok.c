@@ -83,7 +83,7 @@ foundit:
 }
 #endif
 
-int
+char *
 make_lower( char * s1 )
 {
   char * p ;
@@ -98,18 +98,20 @@ make_lower( char * s1 )
       *p = tolower(*p) ;
     }
   }
-  return(0) ;
+  return(s1) ;
 }
 
 /* do not store the result of this routine */
-static char t[1024] ;  
+#define LENRING 50
+static char t[LENRING][NAMELEN] ;  
+static int tcurs = 0 ;
 char *
 make_lower_temp( char * s1 )
 {
   char * p, *q ;
   int state ;
   state = 0 ;
-  for ( p = s1, q = t  ; *p ; p++, q++ )
+  for ( p = s1, q = t[tcurs]  ; *p ; p++, q++ )
   {
     if      ( state == 0 && *p == '"' ) state = 1 ;
     else if ( state == 1 && *p == '"' ) state = 0 ;
@@ -120,7 +122,9 @@ make_lower_temp( char * s1 )
     }
   }
   *q = '\0' ;
-  return(t) ;
+  q = t[tcurs] ;
+  tcurs = (tcurs+1)%LENRING ;
+  return(q) ;
 }
 
 

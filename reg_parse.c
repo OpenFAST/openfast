@@ -233,7 +233,6 @@ reg_parse( FILE * infile )
       }
     }
 
-fprintf(stderr,"%s\n",parseline) ;
     //make_lower( parseline ) ;
     if (( p = index( parseline , '#' ))  != NULL  ) *p = '\0' ; /* discard comments (dont worry about quotes for now) */
     if (( p = index( parseline , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
@@ -248,13 +247,11 @@ fprintf(stderr,"%s\n",parseline) ;
     for ( i = 0 ; i < MAXTOKENS ; i++ )
     {
       if ( tokens[i] == NULL ) tokens[i] = "-" ;
-fprintf(stderr,"ditto %d %s ",i,tokens[i]) ;
       if ( strcmp(tokens[i],"^") ) {   // that is, if *not* ^
         strcpy(ditto[i],tokens[i]) ;
       } else {                         // if is ^
         tokens[i] = ditto[i] ;
       }
-fprintf(stderr,"%s %s\n",ditto[i],tokens[i]) ;
     }
 
 /* remove quotes from quoted entries */
@@ -269,28 +266,18 @@ fprintf(stderr,"%s %s\n",ditto[i],tokens[i]) ;
     defining_rconfig_field = 0 ;
     defining_i1_field = 0 ;
 
-/* state entry */
-    if      ( !strcmp( tokens[ TABLE ] , "state" ) )
-    {
-      /* turn a state entry into a typedef to define a field in the top-level built-in type domain */
-      tokens[TABLE] = "typedef" ;
-      for ( i = MAXTOKENS-1 ; i >= 2 ; i-- ) tokens[i] = tokens[i-1] ; /* shift the fields to the left */
-      tokens[FIELD_OF] = "domain" ;
-                 if ( !strcmp( tokens[FIELD_TYPE], "double" ) ) tokens[FIELD_TYPE] = "doubleprecision" ; 
-      defining_state_field = 1 ;
-    }
-
-    /* NOTE: fall through */
-
 /* typedef entry */
     if ( !strcmp( tokens[ TABLE ] , "typedef" ) )
     {
       node_t * field_struct ;
       node_t * type_struct ;
       node_t * modname_struct ;
+      char tmpstr[NAMELEN] ;
 
 // FAST registry construct a list of module nodes
-      modname_struct = get_modname_entry( make_lower_temp(tokens[ FIELD_MODNAME ]) ) ;
+      strcpy(tmpstr, make_lower_temp(tokens[ FIELD_MODNAME ])) ;
+      if ( (p = index(tmpstr,'/')) != NULL ) *p = '\0' ;
+      modname_struct = get_modname_entry( tmpstr ) ;
       if ( modname_struct == NULL ) 
       {
         char *p ;
@@ -305,53 +292,40 @@ fprintf(stderr,"%s %s\n",ditto[i],tokens[i]) ;
         }
         
         modname_struct->module_ddt_list = NULL ;
-        add_node_to_beg( modname_struct , &ModNames ) ;
+        modname_struct->next            = NULL ;
+        add_node_to_end( modname_struct , &ModNames ) ;
+      }
+{ node_t *p; for ( p = ModNames ; p ; p=p->next ) { fprintf(stderr,"=== ModName: %s\n",p->name) ; } }
+
+      if ( strcmp(modname_struct->nickname,"") ) {
+        sprintf(tmpstr,"%s_%s",modname_struct->nickname,make_lower_temp( tokens[ FIELD_OF ])) ;
+      } else {
+        sprintf(tmpstr,"%s",make_lower_temp( tokens[ FIELD_OF ])) ; 
       }
 
-      type_struct = get_type_entry( tokens[ FIELD_OF ] ) ;
+fprintf(stderr,"A modname_struct %08x module_ddt_list %08x \n",modname_struct,modname_struct->module_ddt_list ) ;
+      type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
       if ( type_struct == NULL ) 
       {  
         type_struct = new_node( TYPE ) ;
-        strcpy( type_struct->name, tokens[FIELD_OF] ) ;
+        strcpy( type_struct->name, tmpstr ) ;
         type_struct->type_type = DERIVED ;
-        add_node_to_end( type_struct , &Type ) ;
-        add_node_to_beg( type_struct, &(modname_struct->module_ddt_list) ) ;
-fprintf(stderr,"adding type_struct %s to %s \n",type_struct->name,modname_struct->name) ;
+        type_struct->next      = NULL ;
+        add_node_to_end( type_struct, &(modname_struct->module_ddt_list) ) ;
       }
+
+fprintf(stderr,"B modname_struct %08x module_ddt_list %08x \n",modname_struct,modname_struct->module_ddt_list ) ;
+{ node_t *p; for ( p = modname_struct->module_ddt_list ; p ; p=p->next ) { fprintf(stderr,"*** ddtlist: %08x %08x %s\n",p,p->next,p->name) ; } }
+
 
       field_struct = new_node( FIELD ) ;
-
       strcpy( field_struct->name, tokens[FIELD_SYM] ) ;
-
       if ( set_state_type( tokens[FIELD_TYPE], field_struct ) )
-       { fprintf(stderr,"Registry warning: type %s used before defined \n",tokens[FIELD_TYPE] ) ; }
-
+       { fprintf(stderr,"Registry warning: type %s used before defined for %s\n",tokens[FIELD_TYPE],tokens[FIELD_SYM] ) ; }
       if ( set_state_dims( tokens[FIELD_DIMS], field_struct ) )
-       { fprintf(stderr,"Registry warning: some problem with dimstring %s\n", tokens[FIELD_DIMS] ) ; }
-
-// process CTRL keys -- only 'h' (hidden) and 'e' (exposed).  Default is not to generate a wrapper,
-// so something must be specified, either h or e
-      {
-	char prev = '\0' ;
-	char x ;
-        char tmp[NAMELEN], tmp1[NAMELEN], tmp2[NAMELEN] ;
-	int len_of_tok ;
-        char fcn_name[2048], aux_fields[2048] ;
-
-        strcpy(tmp,tokens[FIELD_CTRL]) ;
-        if (( p = index(tmp,'=') ) != NULL ) { *p = '\0' ; }
-        for ( i = 0 ; i < strlen(tmp) ; i++ )
-        {
-	  x = tolower(tmp[i]) ;
-          if        ( x == 'h' ) {
-            field_struct->gen_wrapper = WRAP_HIDDEN_FIELD ;
-          } else if ( x == 'e' ) {
-            field_struct->gen_wrapper = WRAP_EXPOSED_FIELD ;
-          } else {
-            field_struct->gen_wrapper = WRAP_NONE ;  /* default */
-          }
-        }
-      }
+       { fprintf(stderr,"Registry warning: some problem with dimstring %s for %s\n", tokens[FIELD_DIMS],tokens[FIELD_SYM] ) ; }
+      if ( set_ctrl( tokens[FIELD_CTRL], field_struct ) )
+       { fprintf(stderr,"Registry warning: some problem with ctrl %s for %s\n", tokens[FIELD_CTRL],tokens[FIELD_SYM] ) ; }
 
       field_struct->dname[0] = '\0' ;
       if ( strcmp( tokens[FIELD_DNAME], "-" ) ) /* that is, if not equal "-" */
@@ -370,8 +344,9 @@ fprintf(stderr,"adding type_struct %s to %s \n",type_struct->name,modname_struct
 	  		   tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
 
-fprintf(stderr,"adding %s to %s\n",field_struct->name,type_struct->name ) ;
-      add_node_to_beg( field_struct , &(type_struct->fields) ) ;
+fprintf(stderr,"adding field_struct %s to type_struct %s\n",field_struct->name,type_struct->name ) ;
+
+      add_node_to_end( field_struct , &(type_struct->fields) ) ;
 
     }
 
@@ -389,11 +364,6 @@ fprintf(stderr,"adding %s to %s\n",field_struct->name,type_struct->name ) ;
       add_node_to_end( dim_struct , &Dim ) ;
     }
 
-#if 0
-     fprintf(stderr,"vvvvvvvvvvvvvvvvvvvvvvvvvvv\n") ;
-     show_nodelist( Type ) ;
-     fprintf(stderr,"^^^^^^^^^^^^^^^^^^^^^^^^^^^\n") ;
-#endif
      parseline[0] = '\0' ;  /* reset parseline */
   }
 
@@ -497,6 +467,32 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
   else
   {
     return(1) ;
+  }
+  return(0) ;
+}
+
+int
+set_ctrl( char *ctrl , node_t * field_struct )
+// process CTRL keys -- only 'h' (hidden) and 'e' (exposed).  Default is not to generate a wrapper,
+// so something must be specified, either h or e
+{
+  char prev = '\0' ;
+  char x ;
+  char tmp[NAMELEN] ;
+  char *p ;
+  int i ;
+  strcpy(tmp,ctrl) ;
+  if (( p = index(tmp,'=') ) != NULL ) { *p = '\0' ; }
+  for ( i = 0 ; i < strlen(tmp) ; i++ )
+  {
+    x = tolower(tmp[i]) ;
+    if        ( x == 'h' ) {
+      field_struct->gen_wrapper = WRAP_HIDDEN_FIELD ;
+    } else if ( x == 'e' ) {
+      field_struct->gen_wrapper = WRAP_EXPOSED_FIELD ;
+    } else {
+      field_struct->gen_wrapper = WRAP_NONE ;  /* default */
+    }
   }
   return(0) ;
 }
