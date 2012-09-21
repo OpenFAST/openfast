@@ -15,6 +15,7 @@ int
 gen_module( FILE * fp , const node_t * ModName )
 {
   node_t * q, * r ;
+  int i ;
 
 // gen preamble
   {
@@ -23,15 +24,37 @@ gen_module( FILE * fp , const node_t * ModName )
   }
 
 // generate each derived data type
-fprintf(stderr,">> %s \n",ModName->name ) ;
   for ( q = ModName->module_ddt_list ; q ; q = q->next )
   {
-fprintf(stderr,">>   %s \n",q->name ) ;
-    fprintf(fp,"q->name %s\n",q->name) ;
+    fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->name) ;
     for ( r = q->fields ; r ; r = r->next )
     { 
-fprintf(stderr,">>     %s \n",r->name ) ;
+      fprintf(fp,"    %s ",r->type->mapsto ) ;
+      if ( r->ndims > 0 )
+      {
+        if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
+        {
+          fprintf(fp,", DIMENSION(") ;
+          for ( i = 0 ; i < r->ndims ; i++ )
+          {
+            fprintf(fp,":") ;
+            if ( i < r->ndims-1 ) fprintf(fp,",") ;
+          }
+          fprintf(fp,"), ALLOCATABLE ") ;
+        } else {
+          fprintf(fp,", DIMENSION(") ;
+          for ( i = 0 ; i < r->ndims ; i++ )
+          {
+            fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
+            if ( i < r->ndims-1 ) fprintf(fp,",") ;
+          }
+          fprintf(fp,") ") ;
+        }
+      }
+      fprintf(fp," :: %s \n",r->name) ;
+
     }
+    fprintf(fp,"  END TYPE PUBLIC %s\n",q->name) ;
   }
 
 }

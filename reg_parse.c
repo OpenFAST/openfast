@@ -385,7 +385,7 @@ get_dim_entry( char *s )
     strncpy(dim_struct->dim_name,s,1) ;
     if ( set_dim_len( s, dim_struct ) )
     { 
-      fprintf(stderr,"Registry warning: problem with dimspec (%s)\n",s ) ;
+      fprintf(stderr,"Registry warning: get_dim_entry: problem with dimspec (%s)\n",s ) ;
     }
     else
     {
@@ -406,12 +406,14 @@ set_state_type( char * typename, node_t * state_entry )
 int
 set_dim_len ( char * dimspec , node_t * dim_entry )
 {
+fprintf(stderr,"set_dim_len: dimspec %s %s \n",dimspec, dim_entry->name) ;
+  dim_entry->deferred = 0 ;
   if      (!strcmp( dimspec , "standard_domain" ))
    { dim_entry->len_defined_how = DOMAIN_STANDARD ; }
-  else if (!strncmp( dimspec, "constant=" , 9 ) || isNum(dimspec[0]) )
+  else if (!strncmp( dimspec, "constant=" , 9 ) || isNum(dimspec[0]) || dimspec[0] == ':' || dimspec[0] == '(' )
   {
     char *p, *colon, *paren ;
-    p = isNum(dimspec[0])?dimspec:&(dimspec[9]) ;
+    p = (isNum(dimspec[0])||dimspec[0]==':'||dimspec[0]=='(')?dimspec:&(dimspec[9]) ;
     /* check for colon */
     if (( colon = index(p,':')) != NULL )
     {
@@ -422,7 +424,7 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
       }
       else
       {
-        fprintf(stderr,"WARNING: illegal syntax (missing opening paren) for constant: %s\n",p) ;
+        dim_entry->deferred = 1 ;
       }
       dim_entry->coord_end   = atoi(colon+1) ;
     }

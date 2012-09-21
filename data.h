@@ -6,6 +6,7 @@ typedef struct node_struct {
   int     node_kind ;
   int     type_type ;
   char          name[NAMELEN] ;
+  char          mapsto[NAMELEN] ;
   char          nickname[NAMELEN] ;
   struct node_struct  * fields ;
   struct node_struct  * type ;
@@ -13,9 +14,6 @@ typedef struct node_struct {
   struct node_struct  * dims[MAXDIMS] ;
   int     proc_orient ;    /* ALL_[ZXY]_ON_PROC which dimension is all on processor */
   int           ntl ;
-  int           stag_x ;
-  int           stag_y ;
-  int           stag_z ;
   int           subject_to_communication ;
   int           boundary_array ;
   int           boundary_array_4d ;
@@ -74,6 +72,7 @@ typedef struct node_struct {
   int  dim_order ;                 /* order that dimensions are specified
                                       in framework */
   int  subgrid ;                  /* 1=subgrid dimension */
+  int  deferred ;                 /* a deferred-shape dimension, that is, a colon */
 
 /* fields used by Package nodes */
   char pkg_assoc[NAMELEN] ;

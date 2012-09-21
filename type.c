@@ -17,15 +17,33 @@ int
 init_type_table()
 {
   node_t *p ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "integer" )   ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "intki" )   ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "real" )      ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "reki" )      ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "logical" )   ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "character" ) ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "doubleprecision" ) ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "dbki" ) ; add_node_to_end ( p , &Type ) ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE ; strcpy( p->name , "meshtype" ) ; add_node_to_end ( p , &Type ) ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "integer" )         ;
+                                                strcpy( p->mapsto, "INTEGER(IntKI)")  ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "intki" )           ;
+                                                strcpy( p->mapsto, "INTEGER(IntKI)")  ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
+                                                strcpy( p->mapsto, "REAL(ReKI)")      ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "reki" )            ;
+                                                strcpy( p->mapsto, "REAL(ReKI)")      ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "logical" )         ;
+                                                strcpy( p->mapsto, "LOGICAL")         ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "character" )       ;
+                                                strcpy( p->mapsto, "CHARACTER") /**/  ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "doubleprecision" ) ;
+                                                strcpy( p->mapsto, "REAL(DbKi)")      ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "dbki" )            ;
+                                                strcpy( p->mapsto, "REAL(DbKi)")      ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
+                                                strcpy( p->mapsto, "TYPE(MeshType)")  ;
+                                                add_node_to_end ( p , &Type )         ;
   return(0) ;
 }
 
@@ -36,15 +54,15 @@ set_state_dims ( char * dims , node_t * node )
   node_t *d, *d1 ;
   char *c ;
   char dspec[NAMELEN] ;
-  int star, inbrace ;
+  int inbrace ;
+  int i, deferred ;
 
   if ( dims == NULL ) dims = "-" ;
   modifiers = 0 ;
-  node->proc_orient = ALL_Z_ON_PROC ;  /* default */
   node->ndims = 0 ;
   node->boundary_array = 0 ;
 
-  star = 0 ;
+fprintf(stderr,"set_state_dims %s, node %s\n",dims,node->name) ;
   inbrace = 0 ;
   node->subgrid = 0 ;
   strcpy(dspec,"") ;
@@ -66,15 +84,35 @@ set_state_dims ( char * dims , node_t * node )
       if ( inbrace ) {
         continue ;
       }
-      if (( d = get_dim_entry ( dspec )) == NULL ) { return(1) ; }
-      d1 = new_node( DIM) ;  /* make a copy */
-      *d1 = *d ;
-      if ( star ) { d1->subgrid = 1 ;  node->subgrid |= (1<<node->ndims) ; }  /* Mark the node has having a subgrid dim */
+      d1 = new_node(DIM) ;  /* make a copy */
+      if (( d = get_dim_entry ( dspec )) != NULL ) {
+         *d1 = *d ;
+      } else {
+         set_dim_len( dspec , d1 ) ;
+      }
       node->dims[node->ndims++] = d1 ;
-      star = 0 ;
       strcpy(dspec,"") ;
     }
   }
+  // check to make sure that if any dimension is deferred they all most be 
+
+  if ( node->ndims > 0 ) {
+    deferred = node->dims[0]->deferred ;
+    for ( i = 1 ; i < node->ndims ; i++ )
+    {
+      if ( deferred != node->dims[i]->deferred ) {
+        if ( node->dims[i]->deferred ) {
+          fprintf(stderr, 
+            "Registry warning: dimension %d of %s is allocatable while others are not.\n",i,node->name) ;
+        } else {
+          fprintf(stderr, 
+            "Registry warning: dimension %d of %s is not allocatable while others are.\n",i,node->name) ;
+        }
+      }
+      if ( node->dims[i]->deferred ) deferred = 1 ;
+    }
+  }
+
   return (0) ;
 }
  
