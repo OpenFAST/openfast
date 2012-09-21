@@ -12,6 +12,41 @@
 #include "FAST_preamble.h"
 
 int
+gen_copy( FILE * fp, const node_t * ModName, char * inout ) 
+{
+  char tmp[NAMELEN] ;
+  node_t *q, * r ;
+  fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n", ModName->nickname,inout,inout,inout ) ;
+  fprintf(fp,"  TYPE(%s_%sType), INTENT(IN   ) :: Src%sData\n",ModName->nickname,inout,inout) ;
+  fprintf(fp,"  TYPE(%s_%sType), INTENT(  OUT) :: Dst%sData\n",ModName->nickname,inout,inout) ;
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ; 
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ; 
+  fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ; 
+  fprintf(fp,"! \n") ;
+  fprintf(fp,"  ErrStat = ErrID_None\n") ;
+  fprintf(fp,"  ErrMsg  = \"\"\n") ;
+
+  sprintf(tmp,"%s_%sType",ModName->nickname,inout) ;
+  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL ) 
+  {
+    fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,inout,tmp) ;
+  } else {
+    for ( r = q->fields ; r ; r = r->next )
+    { 
+      if ( !strcmp( r->type->name, "meshtype" ) ) {
+        fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErMsg )\n",inout,r->name,inout,r->name,inout) ;
+      } else {
+        fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",inout,r->name,inout,r->name,inout) ;
+      }
+    }
+  }
+
+  fprintf(fp," END SUBROUTINE %s_Copy%s\n", ModName->nickname,inout,inout ) ;
+  return(0) ;
+}
+
+
+int
 gen_module( FILE * fp , const node_t * ModName )
 {
   node_t * q, * r ;
@@ -57,6 +92,10 @@ gen_module( FILE * fp , const node_t * ModName )
     fprintf(fp,"  END TYPE PUBLIC %s\n",q->mapsto) ;
   }
   fprintf(fp,"CONTAINS\n") ;
+
+  gen_copy( fp, ModName, "Input" ) ;
+  gen_copy( fp, ModName, "Output" ) ;
+
   fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
 
 }
