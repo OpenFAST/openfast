@@ -26,7 +26,7 @@ gen_module( FILE * fp , const node_t * ModName )
 // generate each derived data type
   for ( q = ModName->module_ddt_list ; q ; q = q->next )
   {
-    fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->name) ;
+    fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
     for ( r = q->fields ; r ; r = r->next )
     { 
       fprintf(fp,"    %s ",r->type->mapsto ) ;
@@ -54,8 +54,10 @@ gen_module( FILE * fp , const node_t * ModName )
       fprintf(fp," :: %s \n",r->name) ;
 
     }
-    fprintf(fp,"  END TYPE PUBLIC %s\n",q->name) ;
+    fprintf(fp,"  END TYPE PUBLIC %s\n",q->mapsto) ;
   }
+  fprintf(fp,"CONTAINS\n") ;
+  fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
 
 }
 

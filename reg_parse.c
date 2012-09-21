@@ -270,7 +270,7 @@ reg_parse( FILE * infile )
       node_t * modname_struct ;
       char tmpstr[NAMELEN] ;
 
-// FAST registry construct a list of module nodes
+// FAST registry, construct a list of module nodes
       strcpy(tmpstr, make_lower_temp(tokens[ FIELD_MODNAME ])) ;
       if ( (p = index(tmpstr,'/')) != NULL ) *p = '\0' ;
       modname_struct = get_modname_entry( tmpstr ) ;
@@ -292,22 +292,28 @@ reg_parse( FILE * infile )
         add_node_to_end( modname_struct , &ModNames ) ;
       }
 
+// FAST registry, construct list of derived data types specified for the Module 
       if ( strcmp(modname_struct->nickname,"") ) {
         sprintf(tmpstr,"%s_%s",modname_struct->nickname,make_lower_temp( tokens[ FIELD_OF ])) ;
       } else {
         sprintf(tmpstr,"%s",make_lower_temp( tokens[ FIELD_OF ])) ; 
       }
-
       type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
       if ( type_struct == NULL ) 
       {  
         type_struct = new_node( TYPE ) ;
         strcpy( type_struct->name, tmpstr ) ;
+        if ( strcmp(modname_struct->nickname,"") ) {
+          sprintf(type_struct->mapsto,"%s_%s",modname_struct->nickname, tokens[ FIELD_OF ]) ;
+        } else {
+          sprintf(type_struct->mapsto,"%s", tokens[ FIELD_OF ]) ; 
+        }
         type_struct->type_type = DERIVED ;
         type_struct->next      = NULL ;
         add_node_to_end( type_struct, &(modname_struct->module_ddt_list) ) ;
       }
 
+// FAST registry, construct the list of fields in the derived types in the Module
       field_struct = new_node( FIELD ) ;
       strcpy( field_struct->name, tokens[FIELD_SYM] ) ;
       if ( set_state_type( tokens[FIELD_TYPE], field_struct ) )
@@ -399,14 +405,28 @@ get_dim_entry( char *s )
 int
 set_state_type( char * typename, node_t * state_entry )
 {
+  node_t *p ;
+  int retval ;
+  
   if ( typename == NULL ) return(1) ;
-  return (( state_entry->type = get_type_entry( make_lower_temp(typename) )) == NULL )  ;
+  retval = 0 ;
+  if ( ( state_entry->type = get_type_entry( make_lower_temp(typename) )) == NULL ) {
+    if ( !strncmp(make_lower_temp(typename),"character",9) ) 
+    {
+      p = new_node( TYPE ) ;
+      strcpy( p->name, make_lower_temp(typename) ) ;
+      strcpy( p->mapsto, typename ) ;
+      add_node_to_end( p , &(state_entry->type) ) ;
+    } else {
+      retval = 1 ;
+    }
+  }
+  return(retval) ;
 }
 
 int
 set_dim_len ( char * dimspec , node_t * dim_entry )
 {
-fprintf(stderr,"set_dim_len: dimspec %s %s \n",dimspec, dim_entry->name) ;
   dim_entry->deferred = 0 ;
   if      (!strcmp( dimspec , "standard_domain" ))
    { dim_entry->len_defined_how = DOMAIN_STANDARD ; }

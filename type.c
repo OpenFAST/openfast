@@ -32,9 +32,13 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "logical" )         ;
                                                 strcpy( p->mapsto, "LOGICAL")         ;
                                                 add_node_to_end ( p , &Type )         ;
+#if 0
+// these have to be handled individually because people can and will put lengths after them
+// so can't make a generic type node here
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "character" )       ;
                                                 strcpy( p->mapsto, "CHARACTER") /**/  ;
                                                 add_node_to_end ( p , &Type )         ;
+#endif
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "doubleprecision" ) ;
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
@@ -62,7 +66,6 @@ set_state_dims ( char * dims , node_t * node )
   node->ndims = 0 ;
   node->boundary_array = 0 ;
 
-fprintf(stderr,"set_state_dims %s, node %s\n",dims,node->name) ;
   inbrace = 0 ;
   node->subgrid = 0 ;
   strcpy(dspec,"") ;
