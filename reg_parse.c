@@ -86,11 +86,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile )
         if ( (p=index(include_file_name,'\n')) != NULL ) *p = '\0' ;
         fprintf(stderr,"opening %s\n",include_file_name) ;
         if (( include_fp = fopen( include_file_name , "r" )) != NULL ) {
-
-          fprintf(stderr,"including %s\n",include_file_name ) ;
           pre_parse( dir , include_fp , outfile ) ;
-          fprintf(stderr,"back from including %s\n",include_file_name ) ;
-
           fclose( include_fp ) ;
         } else {
           fprintf(stderr,"Registry warning: cannot open %s. Ignoring.\n", include_file_name ) ;
@@ -295,7 +291,6 @@ reg_parse( FILE * infile )
         modname_struct->next            = NULL ;
         add_node_to_end( modname_struct , &ModNames ) ;
       }
-{ node_t *p; for ( p = ModNames ; p ; p=p->next ) { fprintf(stderr,"=== ModName: %s\n",p->name) ; } }
 
       if ( strcmp(modname_struct->nickname,"") ) {
         sprintf(tmpstr,"%s_%s",modname_struct->nickname,make_lower_temp( tokens[ FIELD_OF ])) ;
@@ -303,7 +298,6 @@ reg_parse( FILE * infile )
         sprintf(tmpstr,"%s",make_lower_temp( tokens[ FIELD_OF ])) ; 
       }
 
-fprintf(stderr,"A modname_struct %08x module_ddt_list %08x \n",modname_struct,modname_struct->module_ddt_list ) ;
       type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
       if ( type_struct == NULL ) 
       {  
@@ -313,10 +307,6 @@ fprintf(stderr,"A modname_struct %08x module_ddt_list %08x \n",modname_struct,mo
         type_struct->next      = NULL ;
         add_node_to_end( type_struct, &(modname_struct->module_ddt_list) ) ;
       }
-
-fprintf(stderr,"B modname_struct %08x module_ddt_list %08x \n",modname_struct,modname_struct->module_ddt_list ) ;
-{ node_t *p; for ( p = modname_struct->module_ddt_list ; p ; p=p->next ) { fprintf(stderr,"*** ddtlist: %08x %08x %s\n",p,p->next,p->name) ; } }
-
 
       field_struct = new_node( FIELD ) ;
       strcpy( field_struct->name, tokens[FIELD_SYM] ) ;
@@ -343,8 +333,6 @@ fprintf(stderr,"B modname_struct %08x module_ddt_list %08x \n",modname_struct,mo
           { fprintf(stderr,"Registry warning: type item %s of type %s can not be multi-dimensional ",
 	  		   tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
-
-fprintf(stderr,"adding field_struct %s to type_struct %s\n",field_struct->name,type_struct->name ) ;
 
       add_node_to_end( field_struct , &(type_struct->fields) ) ;
 
