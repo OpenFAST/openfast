@@ -113,9 +113,9 @@ gen_module_files ( char * dirname )
   for ( p = ModNames ; p ; p = p->next )
   {
     if ( strlen(dirname) > 0 ) 
-      { sprintf(fname,"%s/%s",dirname,p->name) ; }
+      { sprintf(fname,"%s/%s.f90",dirname,p->name) ; }
     else                       
-      { sprintf(fname,"%s",p->name) ; }
+      { sprintf(fname,"%s.f90",p->name) ; }
     if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
     print_warning(fp,fname) ;
     gen_module ( fp , p ) ;
