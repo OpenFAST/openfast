@@ -24,10 +24,10 @@ init_type_table()
                                                 strcpy( p->mapsto, "INTEGER(IntKI)")  ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
-                                                strcpy( p->mapsto, "REAL(ReKI)")      ;
+                                                strcpy( p->mapsto, "REAL(ReKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "reki" )            ;
-                                                strcpy( p->mapsto, "REAL(ReKI)")      ;
+                                                strcpy( p->mapsto, "REAL(ReKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "logical" )         ;
                                                 strcpy( p->mapsto, "LOGICAL")         ;
