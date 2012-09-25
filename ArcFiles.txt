@@ -6,6 +6,7 @@ RunTurbSim.pl
 TurbSim_AD.ctp
 TurbSim.exe
 TurbSim.inp
+TurbSim_Hydro.inp
 TurbSim.pdf
 TurbSim64.exe
 TurbSimOverview.pdf

@@ -680,4 +680,11 @@ v1.05.01c-bjj 24-Feb-2012 B. Jonkman
   I replaced READ(UI,'') statements with calls to ReadCom() in the NWTC Subroutine Library to avoid ungraceful crashing
     when the input file is too small.
     
-    
+v1.06.00 21-Sep-2012 L. Kilcher
+  Added the "TIDAL" spectral model to the code.
+  Added a "H2L" mean profile type, which should always and only be used with the "TIDAL" spectral model (otherwise, throws error).
+  Added test case for the TIDAL spectral model.
+  Added "TurbSim_Tidal.inp" input file as an example input file for the TIDAL spectral model.
+  Updated documentation to include this spectral model and mean profile type.
+  Updated all .inp files in repository: version number, added "TIDAL" to spectral models list, added "H2L" to WindProfileType list.
+

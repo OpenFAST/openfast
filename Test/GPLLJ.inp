@@ -1,4 +1,4 @@
-TurbSim Input File. Valid for TurbSim v1.50, 25-Sep-2009. Input File for Certification Test.
+TurbSim Input File. Valid for TurbSim v1.06.00, 21-Sep-2012. Input File for Certification Test.
 
 ---------Runtime Options-----------------------------------
 234516           RandSeed1       - First random seed  (-2147483648 to 2147483647)
@@ -27,12 +27,12 @@ True             Clockwise       - Clockwise rotation looking downwind? (used on
  0               HFlowAng        - Horizontal mean flow (skew) angle [degrees]
 
 --------Meteorological Boundary Conditions-------------------
-"GP_LLJ"         TurbModel       - Turbulence model ("IECKAI"=Kaimal, "IECVKM"=von Karman, "GP_LLJ", "NWTCUP", "SMOOTH", "WF_UPW", "WF_07D", "WF_14D", or "NONE")
+"GP_LLJ"         TurbModel       - Turbulence model ("IECKAI"=Kaimal, "IECVKM"=von Karman, "GP_LLJ", "NWTCUP", "SMOOTH", "WF_UPW", "WF_07D", "WF_14D", "TIDAL" or "NONE")
 1                IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
 "A"              IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP, not used for other models)
 NTM              IEC_WindType    - IEC turbulence type ("NTM"=normal, "xETM"=extreme turbulence, "xEWM1"=extreme 1-year wind, "xEWM50"=extreme 50-year wind, where x=wind turbine class 1, 2, or 3)
 default          ETMc            - IEC ETM "c" parameter [m/s] (or "default")
-default          WindProfileType - Wind profile type ("JET"=Low-level jet,"LOG"=Logarithmic,"PL"=Power law, "IEC"=PL on rotor & LOG elsewhere, or "default")
+default          WindProfileType - Wind profile type ("JET";"LOG"=logarithmic;"PL"=power law;"H2L"=Log law for TIDAL spectral model;"IEC"=PL on rotor disk, LOG elsewhere; or "default")
 85.00            RefHt           - Height of the reference wind speed [m]
 12.0             URef            - Mean (total) wind speed at the reference height [m/s]
 350              ZJetMax         - Jet height [m] (used only for JET wind profile, valid 70-490 m)

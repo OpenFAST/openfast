@@ -428,9 +428,9 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
 
       ! Compute the mean interarrival time and the expected length of events
 
-   SELECT CASE ( TurbModel )
+   SELECT CASE ( TRIM(TurbModel) )
 
-      CASE ( 'NWTCUP', 'NONE  ', 'USRVKM' )
+      CASE ( 'NWTCUP', 'NONE', 'USRVKM' )
          lambda = -0.000904*Rich_No + 0.000562*WindSpeed + 0.001389
          lambda = 1.0 / lambda
 
@@ -440,7 +440,7 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
             CALL RndModLogNorm( ExpectedTime, Height )
          ENDIF
 
-      CASE ( 'GP_LLJ', 'SMOOTH' )
+      CASE ( 'GP_LLJ', 'SMOOTH' , 'TIDAL', 'RIVER') ! HYDRO: added 'TIDAL' and 'RIVER' to the spectral models that get handled this way.
          iA     =        0.001797800 + (7.17399E-10)*Height**3.021144723
          iB     =  EXP(-10.590340100 - (4.92440E-05)*Height**2.5)
          iC     = SQRT(  3.655013599 + (8.91203E-06)*Height**3  )
@@ -1638,6 +1638,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
 
    USE                     TSMods, ONLY : GridHeight
    USE                     TSMods, ONLY : HubHt
+   USE                     TSMods, ONLY : H_ref                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : RICH_NO
    USE                     TSMods, ONLY : RotorDiameter
    USE                     TSMods, ONLY : TurbModel
@@ -1695,7 +1696,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    !-------------------------------------------------------------------------------------------------
 
    CALL  RndUnif( rndSgn )
-   SELECT CASE ( TurbModel )
+   SELECT CASE ( TRIM(TurbModel) )
 
       CASE ( 'GP_LLJ' )
 
@@ -1743,6 +1744,8 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
          UW = 0.0
          UWskip = .true.
 
+      CASE ( 'TIDAL', 'RIVER' ) ! HYDROTURBSIM specific.
+         UW = -Ustar2*(1-HubHt/H_ref)
       CASE DEFAULT
 
          UW = -Ustar2
@@ -2274,11 +2277,15 @@ CALL ReadCVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
    TurbModel = ADJUSTL( TurbModel )
    CALL Conv2UC( TurbModel )
 
-   SELECT CASE ( TurbModel )
+   SELECT CASE ( TRIM(TurbModel) )
       CASE ( 'IECKAI' )
          TMName = 'IEC Kaimal'
       CASE ( 'IECVKM' )
          TMName = 'IEC von Karman'
+      CASE ( 'TIDAL' )
+         TMName = 'Tidal Channel Turbulence'
+      CASE ( 'RIVER' )
+         TMName = 'River Turbulence'
       CASE ( 'IECMAN' )
          TMName = 'IEC Mann'
       CASE ( 'SMOOTH' )
@@ -2289,7 +2296,7 @@ CALL ReadCVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
          TMName = 'NREL 7D Spacing Wind Farm'
       CASE ( 'WF_14D' )
          TMName = 'NREL 14D Spacing Wind Farm'
-      CASE ( 'NONE  ' )
+      CASE ( 'NONE'   )
          TMName = 'No fluctuating wind components'
       CASE ( 'MODVKM' )
          TMName = 'Modified von Karman'
@@ -2305,7 +2312,7 @@ CALL ReadCVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
       CASE DEFAULT
 !BONNIE: add the UsrVKM model to this list when the model is complete as well as USRINP
          CALL TS_Abort ( 'The turbulence model must be "IECKAI", "IECVKM", "SMOOTH",' &
-                    //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", or "NONE".' )
+                    //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", or "NONE".' )
 
    END SELECT  ! TurbModel
 
@@ -2401,6 +2408,31 @@ CALL ReadCVar( UI, InFile, Line, "the number of the IEC standard", "Number of th
    ! ------------ Read in the IEC turbulence characteristic. ---------------------------------------------
 
 CALL ReadCVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbulence characteristic")
+!!$! -- begin block --
+!!$! This block reads turbulence intensity, and stores it in the variable TurbIntH20.  This variable is not currently used, but will be soon for user-specified turbulence intensity for the HYDRO spectral models.
+!!$! This code is copied from TurbSim.f90
+!!$READ (Line,*,IOSTAT=IOS)  PerTurbInt ! This is to read the 
+!!$IECTurbC = ADJUSTL( Line )
+!!$IF ( IOS /= 0 ) THEN
+!!$   CALL Conv2UC(IECTurbC)
+!!$   IF ( IECTurbC == 'A' ) THEN
+!!$      TurbIntH20  = 0.16
+!!$   ELSEIF ( IECTurbC == 'B' ) THEN
+!!$      TurbIntH20  = 0.14
+!!$   ELSEIF ( IECTurbC == 'C' ) THEN
+!!$      TurbIntH20  = 0.12
+!!$   ELSEIF ( IECTurbC == 'K' ) THEN
+!!$      TurbIntH20  = 0.16
+!!$   ELSE   ! We should never get here, but just to be complete...
+!!$      !print *, IECTurbC
+!!$      CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
+!!$   ENDIF
+!!$ELSE
+!!$   TurbIntH20 = 0.01*PerTurbInt
+!!$ENDIF
+!!$! -- end block --
+   
+
 
    IF ( ( TurbModel(1:3) == 'IEC' ) .OR. ( TurbModel == 'MODVKM' ) ) THEN
 
@@ -2578,11 +2610,13 @@ CALL ReadRVarDefault( UI, InFile, ETMc, "the ETM c parameter", 'IEC Extreme Turb
    ! ------------ Read in the wind profile type -----------------------------------------------------------------
 
 UseDefault = .TRUE.         ! Calculate the default value
-SELECT CASE ( TurbModel )
+SELECT CASE ( TRIM(TurbModel) )
    CASE ( 'GP_LLJ' )
       WindProfileType = 'JET'
    CASE ( 'IECKAI','IECVKM','IECMAN','MODVKM' )
       WindProfileType = 'IEC'
+   CASE ( 'TIDAL' )
+      WindProfileType = 'H2L'
    CASE ( 'USRVKM' )
       WindProfileType = 'USR'
    CASE DEFAULT
@@ -2604,11 +2638,20 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
 !bjj check that IEC_WindType == IEC_NTM for non-IEC
          ENDIF
       CASE ( 'PL',  'P' )
+      CASE ( 'H2L', 'H' )
+         IF ( TRIM(TurbModel)/='TIDAL' ) THEN
+            CALL TS_Abort(  'The "H2L" mean profile type should be used only with the "TIDAL" spectral model.' )
+         ENDIF
       CASE ( 'IEC', 'N/A' )
       CASE ( 'USR', 'U' )
       CASE DEFAULT
-         CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", or default.' )
+         CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' )
    END SELECT
+
+   IF ( TRIM(TurbModel)=='TIDAL' .AND. TRIM(WindProfileType) /= "H2L" ) THEN
+      WindProfileType = 'H2L'
+      CALL TS_Warn  ( 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', .TRUE.)
+   ENDIF
 
    IF ( KHTest ) THEN
       IF ( TRIM(WindProfileType) /= 'IEC' .AND. TRIM(WindProfileType) /= 'PL' ) THEN
@@ -2628,7 +2671,7 @@ CALL ReadRVar( UI, InFile, RefHt, "the reference height", "Reference height [m]"
 
 FormStr = "( F10.3 , 2X , 'Reference height [m]' )"
 WRITE (US,FormStr)  RefHt
-
+H_ref = RefHt ! Define the variable H_ref, for later use in HYDRO spectral models (RefHt gets modified later in the code)
 
    ! ------------ Read in the reference wind speed. -----------------------------------------------------
 
@@ -2691,7 +2734,7 @@ END SELECT
 getPLExp = .NOT. UseDefault
 
 CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law exponent", UseDefault, &
-               IGNORE=( ((INDEX( 'JLU', WindProfileType(1:1) ) > 0.)) .OR. &
+               IGNORE=( ((INDEX( 'JLUH', WindProfileType(1:1) ) > 0.)) .OR. &
                          IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 ) )
 
    IF ( .NOT. UseDefault ) THEN  ! We didn't use a default (we entered a number on the line)
@@ -2726,7 +2769,8 @@ SELECT CASE ( TurbModel )
       Z0 = 0.030 ! Represents smooth, homogenous terrain
 END SELECT
 
-CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness length [m]", UseDefault)
+CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness length [m]", UseDefault, &
+                       IGNORE=TRIM(TurbModel)=='TIDAL')
 
    IF ( Z0 <= 0.0 ) THEN
       CALL TS_Abort ( 'The surface roughness length must be a positive number or "default".')
@@ -2788,9 +2832,13 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
       ENDIF
    ENDIF
 
-
-   FormStr = "( F10.3 , 2X , 'Gradient Richardson number' )"
-   WRITE (US,FormStr)  RICH_NO
+   IF ( TRIM(TurbModel)=='TIDAL' ) THEN
+      WRITE (US,"( A10, 2X, A )")  "N/A", 'Gradient Richardson number'
+      RICH_NO = 0
+   ELSE      
+      FormStr = "( F10.3 , 2X , 'Gradient Richardson number' )"
+      WRITE (US,FormStr)  RICH_NO
+   END IF
 
       ! ***** Calculate M-O z/L parameter   :  z/L is a number in (-inf, 1] *****
 
@@ -2820,7 +2868,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
          ZL = 3.132*MIN( RICH_NO, REAL(0.1367,ReKi) ) / (1.0 - 6.762*MIN( RICH_NO, REAL(0.1367,ReKi) ))
       ENDIF
 
-   ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181–189.
+   ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181-189.
 
       IF ( RICH_NO <= 0.0 ) THEN
          ZL = RICH_NO
@@ -2895,6 +2943,11 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
                                            
       CASE ( 'NWTCUP' )
          UStar = 0.2716 + 0.7573*UstarDiab**1.2599
+
+      CASE ( 'TIDAL', 'RIVER' )
+         ! Use a constant drag coefficient for the HYDRO spectral models.
+         UStar = Uref*0.05 ! This corresponds to a drag coefficient of 0.0025.
+         !UStar = Uref*0.04 ! This corresponds to a drag coefficient of 0.0016.
 
    END SELECT
 
@@ -3845,9 +3898,15 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
                !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
                getWindSpeedAry(:) = URef*( LOG( Ht(:) / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )
 !            ENDIF
-
+               
 !         ENDIF
+      CASE ( 'H2L', 'H' )
 
+               ! Calculate the windspeed.
+               ! RefHt and URef both get modified consistently, therefore RefHt is used instead of H_ref.
+               !print *, RefHt,H_ref,URef,Ustar ! Need to include H_ref from TSmods for this print statement to work.
+               getWindSpeedAry(:) = LOG(Ht(:)/RefHt)*Ustar/0.41+URef
+            
       CASE ( 'PL', 'P' )
 
 !         IF ( RefHt > 0.0 .AND. Ht > 0.0 ) THEN
@@ -4052,6 +4111,13 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
          ELSE
             getWindSpeedVal = 0.0
          ENDIF
+
+      CASE ( 'H2L', 'H' )
+               ! Calculate the windspeed.
+               ! RefHt and URef both get modified consistently, therefore RefHt is used instead of H_ref.
+               !print *, RefHt,H_ref,URef,Ustar ! need to include H_ref from TSmods for this print statement to work.
+               getWindSpeedVal = LOG(Ht/RefHt)*Ustar/0.41+URef
+
 
       CASE ( 'PL', 'P' )
 
@@ -5511,7 +5577,7 @@ IF ( KHtest ) THEN
    RETURN
 ENDIF
 
-SELECT CASE ( TurbModel )
+SELECT CASE ( TRIM(TurbModel) )
 
    CASE ('WF_UPW', 'NWTCUP')
       IF ( Ri_No > 0.0 ) THEN
@@ -5527,7 +5593,8 @@ SELECT CASE ( TurbModel )
          PowerLawExp = 0.127704032 + 0.031228952*EXP(Ri_No/0.0805173)
       ENDIF
 
-   CASE ('SMOOTH', 'GP_LLJ')
+   CASE ('SMOOTH', 'GP_LLJ', 'TIDAL', 'RIVER')
+      ! A 1/7 power law seems to work ok for HYDRO spectral models also...
       PowerLawExp = 0.143
 
    CASE DEFAULT
@@ -5559,7 +5626,7 @@ REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
 
 
-SELECT CASE ( TurbModel )
+SELECT CASE ( TRIM(TurbModel) )
    CASE ( 'GP_LLJ' )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
          CALL GP_Turb   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
@@ -5575,6 +5642,8 @@ SELECT CASE ( TurbModel )
       CALL NWTC_Turb  ( Ht, Ucmp, Work )
    CASE ( 'SMOOTH' )
       CALL St_Turb   ( Ht, Ucmp, Work )
+   CASE ( 'TIDAL', 'RIVER' )
+      CALL Tidal_Turb  ( Ucmp, Work )
    CASE ( 'USRINP' )
       CALL UsrSpec   ( Ht, Ucmp, Work )
    CASE ( 'USRVKM' )
@@ -6875,12 +6944,61 @@ ENDIF
 RETURN
 END SUBROUTINE ST_Turb
 !=======================================================================
+SUBROUTINE Tidal_Turb ( Shr_DuDz, Spec )
+   ! HYDROTURBSIM specific.
+
+   ! This subroutine defines the 3-D turbulence expected in a tidal channel.
+   ! It is similar to the 'smooth' spectral model (RISO; Hojstrup, Olesen and Larsen) for wind,
+   ! but is scaled by the TKE (SigmaU**2), and du/dz rather than Ustar and u/z.  
+   ! The fit is based on data from Puget Sound, estimated by L. Kilcher.
+   ! The use of this subroutine requires that variables have the units of meters and seconds.
+   ! Note that this model does not require height.
+   
+
+USE                     TSMods
+
+IMPLICIT                NONE
+
+   ! Passed variables
+
+REAL(ReKi),INTENT(IN) :: Shr_DuDz                ! Shear (du/dz)
+REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD
+
+   ! Internal variables
+
+REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
+REAL(ReKi)            :: tmpX                   ! Temporary variable for calculation of Spec
+REAL(ReKi)            :: tmpvec(3)              ! Temporary vector for calculation of Spec
+REAL(ReKi)            :: tmpa (3)               ! Spectra coefficients
+REAL(ReKi)            :: tmpb (3)               ! Spectra coefficients
+INTEGER               :: I                      ! DO LOOP counter
+
+
+SELECT CASE ( TRIM(TurbModel) )
+   CASE ( 'TIDAL' )
+      tmpa = (/ 0.193, 0.053 , 0.0362 /)*TwoPi ! These coefficients were calculated using Shr_DuDz in units of 'radians', so we multiply these coefficients by 2*pi.
+      tmpb = (/ 0.201, 0.0234, 0.0124 /)*(TwoPi**Exp1)
+   CASE ( 'RIVER' )
+      ! THESE ARE NOT VERIFIED YET!!!, therefore they are undocumented.
+      tmpa = (/ 0.081, 0.056 , 0.026 /)*TwoPi
+      tmpb = (/ 0.16, 0.025, 0.020 /)*(TwoPi**Exp1)
+END SELECT
+
+tmpvec = tmpa*(/Sigma_U2, Sigma_V2, Sigma_W2/)/Shr_DuDz
+
+DO I = 1,NumFreq  
+   tmpX  = (Freq(I)/Shr_DuDz)**Exp1
+   Spec(I,1) = tmpvec(1) / (1.0 + tmpb(1)*tmpX)
+   Spec(I,2) = tmpvec(2) / (1.0 + tmpb(2)*tmpX)
+   Spec(I,3) = tmpvec(3) / (1.0 + tmpb(3)*tmpX)
+ENDDO
+
+RETURN
+END SUBROUTINE Tidal_Turb
+!=======================================================================
 !!!!bjj Start of proposed change
 !!!SUBROUTINE TestSpec ( Ht, Ucmp, Spec )
 !!!
-!!!
-!!!   ! This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
-!!!   ! the use of this subroutine requires that all variables have the units of meters and seconds.
 !!!
 !!!USE                     TSMods
 !!!

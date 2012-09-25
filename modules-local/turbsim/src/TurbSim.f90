@@ -14,6 +14,7 @@ PROGRAM TurbSim
    ! v1.40      12-Sep-2008  B. Jonkman  (NWTC subs v1.01.09)
    ! v1.41h     11-Jun-2009  B. Jonkman  (NWTC subs v1.01.09)
    ! v1.50      25-Sep-2009  B. Jonkman  (NWTC subs v1.01.09)
+   ! V1.06.00   21-Sep-2012  L. Kilcher & B. Jonkman (NWTC Library v1.04.01)
    !
    ! This program simulates a full field of turbulent winds at points in space
    ! in a rectangular Cartesian plane perpendicular to the mean wind direction.
@@ -304,25 +305,31 @@ ENDIF
    ! Determine if coherent turbulence should be generated
 
 !BONNIE: UPPER LIMIT ON RICH_NO?
-IF ( WrACT .AND. ( (TurbModel(1:3) == 'IEC' .OR. TurbModel == 'MODVKM' .OR. TurbModel == 'USRINP') &
-                    .OR. Rich_No <= -0.05 ) ) THEN
-   FormStr = "( // 'A Richardson number greater than -0.05 and a non-IEC spectral model "// &
-                   "are required for coherent turbulence time step files.' )"
-   WRITE (US, FormStr)
+IF ( WrACT ) THEN
+   IF ( TurbModel(1:3) == 'IEC' .OR. TurbModel == 'MODVKM' .OR. TurbModel == 'USRINP' .OR. TurbModel(1:5) == 'TIDAL' ) THEN
+      FormStr = "( // 'Coherent turbulence time step files are not available for IEC or TIDAL spectral models.')"
 
-   CALL TS_Warn( ' A coherent turbulence time step file cannot be generated.', .TRUE. )
-   WrACT = .FALSE.
-ELSE      
-
-   IF ( WrACT .AND. .NOT. ( WrADFF .OR. WrBLFF ) ) THEN
+      WRITE (US, FormStr)
+      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with the '//TRIM(TurbModel)//' model.', .TRUE. )
+      WrACT = .FALSE.
+      
+   ELSEIF ( Rich_No <= -0.05 ) THEN
+      FormStr = "( // 'Coherent turbulence time step files are not available when "// &
+                      "the Richardson number is less than or equal to -0.05.')"
+      
+      WRITE (US, FormStr)
+      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', .TRUE. )
+      WrACT = .FALSE.
+      
+   ELSEIF ( .NOT. ( WrADFF .OR. WrBLFF ) ) THEN
       WrBLFF = .TRUE.
       CALL WrScr1( ' AeroDyn/BLADED Full-Field files will be generated along with the coherent turbulence file.' )
-! We can't default to this file type at this point because AeroDyn can't read the .bts files yet.      
+!BJJ fix in next release: We can't default to this file type at this point because AeroDyn can't read the .bts files yet.      
       !WrADFF = .TRUE.
       !CALL WrScr1( ' AeroDyn Full-Field files will be generated along with the coherent turbulence file.' )
    ENDIF
-
-ENDIF
+      
+ENDIF !WrAct
 
       ! Warn if EWM is used with incompatible times
       
@@ -889,8 +896,11 @@ IF ( ( TurbModel  == 'IECKAI' ) .OR. ( TurbModel  == 'IECVKM' ) .OR. ( TurbModel
 
 ! Ustar = SigmaIEC/2.15 ! Value based on equating original Kaimal spectrum with IEC formulation
 
-ELSE
+ELSEIF ( TRIM(TurbModel) == 'TIDAL' ) THEN
+   WRITE (US,FormStr2)         "Gradient Richardson number                      ", "N/A"
+   WRITE (US,FormStr)          "Mean velocity at hub height                     ", UHub,                      " m/s"     
    
+ELSE   
    LC = 0.0    ! The length scale is not defined for the non-IEC models
  
    WRITE (US,FormStr)          "Gradient Richardson number                      ", RICH_NO,                   ""
@@ -931,6 +941,12 @@ SELECT CASE ( TRIM(WindProfileType) )
       PLExp = LOG( WTmp/VTmp ) / LOG( (HubHt+TmpReal)/(HubHt-TmpReal) )  !TmpReal = RotorDiameter/2
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Logarithmic"      
+      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
+
+   CASE ('H2L','H')
+      PLExp = LOG( WTmp/VTmp ) / LOG( (HubHt+TmpReal)/(HubHt-TmpReal) )  !TmpReal = RotorDiameter/2
+      
+      WRITE (US,FormStr2)      "Velocity profile type                           ", "Logarithmic (H2L)"      
       WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
 
    CASE ('PL','P')
@@ -1127,10 +1143,22 @@ IF (PSD_OUT) THEN
    FormStr = "( I4,"//TRIM( Int2LStr( NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
 ENDIF
 
+
+   ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
+
+IF ( TurbModel(1:5) == 'TIDAL' .OR. TurbModel(1:5) == 'RIVER' ) THEN
+      ! Calculate the shear, DUDZ, for all heights.
+   ALLOCATE ( DUDZ(ZLim) , STAT=AllocStat ) ! Shear
+   DUDZ(1)=(U(2)-U(1))/(Z(2)-Z(1))
+   DUDZ(ZLim)=(U(ZLim)-U(ZLim-1))/(Z(ZLim)-Z(ZLim-1))
+   DO I = 2,ZLim-1
+      DUDZ(I)=(U(I+1)-U(I-1))/(Z(I+1)-Z(I-1))
+   ENDDO
+ENDIF
+
    ! Calculate the single point Power Spectral Densities. 
 
 JZ = 0   ! The index for numbering the points on the grid
-
 DO IZ=1,ZLim
 
          ! The continuous, one-sided PSDs are evaluated at discrete
@@ -1140,6 +1168,13 @@ DO IZ=1,ZLim
 !bonnie: fix this so the the IEC runs differently?? It doesn't need as large an array here anymore...
       IF ( TurbModel(1:3) == 'IEC' ) THEN
          CALL PSDcal( HubHt, UHub  )
+      ELSEIF ( TurbModel(1:5) == 'TIDAL' .OR. TurbModel(1:5) == 'RIVER' ) THEN ! HydroTurbSim specific.
+         !print *, Ustar
+         !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
+         Sigma_U2=4.5*Ustar*Ustar*EXP(-2*Z(IZ)/H_ref)
+         Sigma_V2=0.5*Sigma_U2
+         Sigma_W2=0.2*Sigma_U2
+         CALL PSDCal( Z(IZ) , DUDZ(IZ) )
       ELSEIF ( ALLOCATED( ZL_profile ) ) THEN
          CALL PSDcal( Z(IZ), U(IZ), ZL_profile(IZ), Ustar_profile(IZ) )
       ELSE
@@ -1199,6 +1234,7 @@ ENDIF
 
 IF ( ALLOCATED( Work  ) )  DEALLOCATE( Work  )
 
+IF ( ALLOCATED( DUDZ            ) )  DEALLOCATE( DUDZ            )
 IF ( ALLOCATED( Z_USR           ) )  DEALLOCATE( Z_USR           )
 IF ( ALLOCATED( U_USR           ) )  DEALLOCATE( U_USR           )
 IF ( ALLOCATED( WindDir_USR     ) )  DEALLOCATE( WindDir_USR     )
@@ -1369,9 +1405,9 @@ CALL ExitFFT
 
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
-SELECT CASE ( TurbModel )
+SELECT CASE ( TRIM(TurbModel) )
       
-   CASE ('GP_LLJ','NWTCUP', 'SMOOTH', 'WF_UPW', 'WF_07D', 'WF_14D', 'USRVKM')
+   CASE ('GP_LLJ','NWTCUP', 'SMOOTH', 'WF_UPW', 'WF_07D', 'WF_14D', 'USRVKM', 'TIDAL', 'RIVER') ! Do reynolds stress for HYDRO also.
                
             ! Calculate coefficients for obtaining "correct" Reynold's stresses at the hub
          UWsum = 0.0
@@ -2039,9 +2075,9 @@ IF ( WrACT ) THEN
 
          ! Determine the maximum predicted CTKE
          
-         SELECT CASE ( TurbModel )
+         SELECT CASE ( TRIM(TurbModel) )
          
-            CASE ( 'NWTCUP',  'NONE  ', 'USRVKM' )
+            CASE ( 'NWTCUP',  'NONE', 'USRVKM' )
             
                IF (KHtest) THEN
                   CTKE = 30.0 !Scale for large coherence
@@ -2069,7 +2105,7 @@ IF ( WrACT ) THEN
                   
                ENDIF !KHTest
                
-            CASE ( 'GP_LLJ', 'SMOOTH' )          
+            CASE ( 'GP_LLJ', 'SMOOTH' , 'TIDAL', 'RIVER' )          
 
                CTKE = pkCTKE_LLJ(Zbottom+0.5*ScaleWid)
                
