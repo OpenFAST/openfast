@@ -68,13 +68,13 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout )
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"    ! Local variables\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Re_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Re_Xfered\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: Re_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Re_CurrSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Db_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Db_Xfered\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: Db_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Db_CurrSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xfered\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_CurrSz\n") ;
   fprintf(fp," ! buffers to store meshes, if any\n") ;
 
@@ -91,9 +91,9 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout )
 
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
-  fprintf(fp,"  Re_Xfered  = 0\n") ;
-  fprintf(fp,"  Db_Xfered  = 0\n") ;
-  fprintf(fp,"  Int_Xfered  = 0\n") ;
+  fprintf(fp,"  Re_Xferred  = 0\n") ;
+  fprintf(fp,"  Db_Xferred  = 0\n") ;
+  fprintf(fp,"  Int_Xferred  = 0\n") ;
 
   frst = 1 ;
   for ( r = q->fields ; r ; r = r->next )
@@ -211,13 +211,13 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout )
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"    ! Local variables\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Re_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Re_Xfered\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: Re_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Re_CurrSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Db_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Db_Xfered\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: Db_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Db_CurrSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xfered\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_CurrSz\n") ;
   fprintf(fp," ! buffers to store meshes, if any\n") ;
   for ( r = q->fields ; r ; r = r->next ) 
@@ -239,9 +239,9 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout )
   fprintf(fp,"    !\n") ;
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
-  fprintf(fp,"  Re_Xfered  = 1\n") ;
-  fprintf(fp,"  Db_Xfered  = 1\n") ;
-  fprintf(fp,"  Int_Xfered  = 1\n") ;
+  fprintf(fp,"  Re_Xferred  = 1\n") ;
+  fprintf(fp,"  Db_Xferred  = 1\n") ;
+  fprintf(fp,"  Int_Xferred  = 1\n") ;
 
    // Unpack data
   for ( r = q->fields ; r ; r = r->next )
@@ -251,11 +251,6 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout )
   if (frst == 1) {fprintf(fp," ! first call MeshPack to get correctly sized buffers for unpacking\n") ;frst=0;}
   fprintf(fp,"  CALL MeshPack( %sData%%%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMess ) ! %s \n",
                                inout,  r->name,r->name,  r->name,    r->name,                     r->name ) ;
-    }
-  }
-  for ( r = q->fields ; r ; r = r->next )
-  {
-    if ( !strcmp( r->type->name, "meshtype" ) ) {
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -289,11 +284,9 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout )
       }
     }
   }
-  fprintf(fp,"  Re_Xfered   = Re_Xferred-1\n") ;
-  fprintf(fp,"  Db_Xfered   = Db_Xferred-1\n") ;
-  fprintf(fp,"  Int_Xfered  = Int_Xferred-1\n") ;
-//STOPPED HERE
-  fprintf(fp,"  Int_Xfered  = 1\n") ;
+  fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
+  fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
+  fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
   fprintf(fp," END SUBROUTINE %s_Pack%s\n\n", ModName->nickname,inout ) ;
   return(0) ;
 }
@@ -338,6 +331,10 @@ int
 gen_modname_pack( FILE *fp , const node_t * ModName )
 {
   char tmp[NAMELEN] ;
+  char *typenames[] = { "Input", "Param", "ContState", "DiscState", "ConstrState",
+                       "OtherState", "Output", 0L } ;
+  char **typename ;
+
   node_t *q, * r ;
   fprintf(fp," SUBROUTINE %s_Pack( Re_RetAry, Db_RetAry, IntRetAry,\n",ModName->nickname) ;
   fprintf(fp,"                     InData, ParamData, ContStateData, DiscStateData, &\n") ;
@@ -357,33 +354,127 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
   fprintf(fp,"    ! Local variables\n" ) ;
-  fprintf(fp,"  INTEGER(IntKi)                         :: ArySz\n") ;
   fprintf(fp,"  REAL(ReKi), POINTER                    :: Re_Ary(:)\n") ;
   fprintf(fp,"  REAL(DbKi), POINTER                    :: Db_Ary(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi), POINTER                :: Int_Ary(:)\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Re_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Re_Xfered\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Re_CurrSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Db_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Db_Xfered\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Db_CurrSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Int_BufSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xfered\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: Int_CurrSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Re_BufSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Re_Xferred\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Re_CurrSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Db_BufSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Db_Xferred\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Db_CurrSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Int_BufSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Int_Xferred\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Int_CurrSz\n") ;
 
-  fprintf(fp,"  INTEGER(IntKi)                         :: BytesXferred\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                         :: CurrentSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                         :: ErrStat2\n") ;
   fprintf(fp,"  CHARACTER(Len(ErrMsg))                 :: ErrMsg2\n" )  ;
   fprintf(fp,"    ! Executable statements\n") ;
-  fprintf(fp,"  Re_Xfered  = 0\n") ;
-  fprintf(fp,"  Db_Xfered  = 0\n") ;
-  fprintf(fp,"  Int_Xfered  = 0\n") ;
-  fprintf(fp,"  NULLIFY(Re_Ary) ; NULLIFY(Db_Ary) ; NULLIFY( Int_Ary )\n") ;
-  fprintf(fp,"  CALL %s_PackInput(Re_Ary,Db_Ary,Int_Ary,ErrStat2,ErrMsg2)\n",ModName->nickname) ;
+  fprintf(fp,"  Re_Xferred  = 1\n") ;
+  fprintf(fp,"  Db_Xferred  = 1\n") ;
+  fprintf(fp,"  Int_Xferred  = 1\n") ;
 
+  for ( typename = typenames ; *typename ; typename++ ) {
+  fprintf(fp,"    ! Ppack %s\n",*typename) ;
+  fprintf(fp,"  NULLIFY(Re_Ary) ; NULLIFY(Db_Ary) ; NULLIFY( Int_Ary )\n") ;
+  fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename) ;
+  fprintf(fp,"  IF ( ASSOCIATED( Re_Ary ) ) THEN\n") ;
+  fprintf(fp,"    Re_RetAry(Re_Xferred:Re_Xferred+SIZE(Re_Ary)-1)=Re_Ary\n") ;
+  fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE( Re_Ary )\n") ;
+  fprintf(fp,"    DEALLOCATE(Re_Ary)\n" ) ;
+  fprintf(fp,"  ENDIF\n") ;
+  fprintf(fp,"  IF ( ASSOCIATED( Db_Ary ) ) THEN\n") ;
+  fprintf(fp,"    Db_RetAry(Db_Xferred:Db_Xferred+SIZE(Db_Ary)-1)=Db_Ary\n") ;
+  fprintf(fp,"    Db_Xferred = Db_Xferred + SIZE( Db_Ary )\n") ;
+  fprintf(fp,"    DEALLOCATE(Db_Ary)\n" ) ;
+  fprintf(fp,"  ENDIF\n") ;
+  fprintf(fp,"  IF ( ASSOCIATED( Int_Ary ) ) THEN\n") ;
+  fprintf(fp,"    Int_RetAry(Int_Xferred:Int_Xferred+SIZE(Int_Ary)-1)=Int_Ary\n") ;
+  fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE( Int_Ary )\n") ;
+  fprintf(fp,"    DEALLOCATE(Int_Ary)\n" ) ;
+  fprintf(fp,"  ENDIF\n") ;
+  }
+
+  fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
+  fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
+  fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
+  fprintf(fp," END SUBROUTINE %s_Pack\n\n", ModName->nickname ) ;
 }
 
+int
+gen_modname_unpack( FILE *fp , const node_t * ModName )
+{
+  char tmp[NAMELEN] ;
+  char *typenames[] = { "Input", "Param", "ContState", "DiscState", "ConstrState",
+                       "OtherState", "Output", 0L } ;
+  char **typename ;
+
+  node_t *q, * r ;
+  fprintf(fp," SUBROUTINE %s_Pack( Re_RetAry, Db_RetAry, IntRetAry,\n",ModName->nickname) ;
+  fprintf(fp,"                     InData, ParamData, ContStateData, DiscStateData, &\n") ;
+  fprintf(fp,"                     ConstrStateData, OtherStateData, OutData, ErrStat, ErrMsg\n" ) ;
+  fprintf(fp,"  TYPE(%s_InputType),      INTENT(  OUT) :: InData\n",          ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ParameterType),  INTENT(  OUT) :: ParamData\n",       ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousType), INTENT(  OUT) :: ContStateData\n",   ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_DiscreteType),   INTENT(  OUT) :: DiscStateData\n",   ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ConstraintType), INTENT(  OUT) :: ConstrStateData\n", ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_OtherStateType), INTENT(  OUT) :: OtherStateData\n",  ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_OutputType),     INTENT(  OUT) :: OutData\n",         ModName->nickname) ;
+  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,  INTENT(IN   ) :: Re_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,  INTENT(IN   ) :: Db_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,  INTENT(IN   ) :: Int_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
+  fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
+  fprintf(fp,"  ErrStat = ErrID_None\n") ;
+  fprintf(fp,"  ErrMsg  = \"\"\n") ;
+  fprintf(fp,"    ! Local variables\n" ) ;
+  fprintf(fp,"  REAL(ReKi), POINTER                    :: Re_Ary(:)\n") ;
+  fprintf(fp,"  REAL(DbKi), POINTER                    :: Db_Ary(:)\n") ;
+  fprintf(fp,"  INTEGER(IntKi), POINTER                :: Int_Ary(:)\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Re_BufSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Re_Xferred\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Re_CurrSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Db_BufSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Db_Xferred\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Db_CurrSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Int_BufSz\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Int_Xferred\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                         :: Int_CurrSz\n") ;
+
+  fprintf(fp,"  INTEGER(IntKi)                         :: ErrStat2\n") ;
+  fprintf(fp,"  CHARACTER(Len(ErrMsg))                 :: ErrMsg2\n" )  ;
+  fprintf(fp,"    ! Executable statements\n") ;
+  fprintf(fp,"  Re_Xferred  = 1\n") ;
+  fprintf(fp,"  Db_Xferred  = 1\n") ;
+  fprintf(fp,"  Int_Xferred  = 1\n") ;
+
+  for ( typename = typenames ; *typename ; typename++ ) {
+  fprintf(fp,"    ! Unpack %s\n",*typename) ;
+  fprintf(fp,"  NULLIFY(Re_Ary) ; NULLIFY(Db_Ary) ; NULLIFY( Int_Ary )\n") ;
+  fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename) ;
+  fprintf(fp,"  IF ( ASSOCIATED( Re_Ary ) ) THEN\n") ;
+  fprintf(fp,"    Re_Ary = Re_RetAry(Re_Xferred:Re_Xferred+SIZE(Re_Ary)-1)\n") ;
+  fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE( Re_Ary )\n") ;
+  fprintf(fp,"  ENDIF\n") ;
+  fprintf(fp,"  IF ( ASSOCIATED( Db_Ary ) ) THEN\n") ;
+  fprintf(fp,"    DB_Ary = Db_RetAry(Db_Xferred:Db_Xferred+SIZE(Db_Ary)-1)\n") ;
+  fprintf(fp,"    Db_Xferred = Db_Xferred + SIZE( Db_Ary )\n") ;
+  fprintf(fp,"  ENDIF\n") ;
+  fprintf(fp,"  IF ( ASSOCIATED( Int_Ary ) ) THEN\n") ;
+  fprintf(fp,"    Int_Ary = Int_RetAry(Int_Xferred:Int_Xferred+SIZE(Int_Ary)-1)\n") ;
+  fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE( Int_Ary )\n") ;
+  fprintf(fp,"  ENDIF\n") ;
+  fprintf(fp,"  CALL %s_Unpack%s(Re_Ary,Db_Ary,Int_Ary,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename) ;
+  fprintf(fp,"  IF ( ASSOCIATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
+  fprintf(fp,"  IF ( ASSOCIATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
+  fprintf(fp,"  IF ( ASSOCIATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
+  }
+
+  fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
+  fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
+  fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
+  fprintf(fp," END SUBROUTINE %s_Pack\n\n", ModName->nickname ) ;
+}
 
 
 int
@@ -462,6 +553,9 @@ gen_module( FILE * fp , const node_t * ModName )
   gen_destroy( fp, ModName, "Parameter" ) ;
   gen_pack( fp, ModName, "Parameter" ) ;
   gen_unpack( fp, ModName, "Parameter" ) ;
+
+  gen_modname_pack( fp, ModName ) ;
+  gen_modname_unpack( fp, ModName ) ;
 
   fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
 
