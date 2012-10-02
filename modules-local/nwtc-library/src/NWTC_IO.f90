@@ -77,7 +77,7 @@ MODULE NWTC_IO
    LOGICAL                      :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
    CHARACTER(23)                :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
-   CHARACTER(29)                :: NWTCVer  = ' (v1.04.01, 21-Feb-2012)'        ! The version (including date) of the NWTC Subroutine Library.
+   CHARACTER(29)                :: NWTCVer  = ' (v1.04.02, 27-Sep-2012)'        ! The version (including date) of the NWTC Subroutine Library.
    CHARACTER(20)                :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER      :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -997,7 +997,7 @@ CONTAINS
    SUBROUTINE GetNewUnit ( UnIn )
 
       ! This routine returns a unit number not currently in use.
-      
+
 
       ! Argument declarations.
 
@@ -1008,7 +1008,7 @@ CONTAINS
 
    INTEGER, SAVE                :: Un   = 10                                    ! Unit number; saved between calls (and a GLOBAL) variable
    LOGICAL                      :: Opened                                       ! Flag indicating whether or not a file is opened.
-   
+
 
 
       ! See if unit is connected to an open file. Check the next largest number until it is not opened.
@@ -1016,17 +1016,17 @@ CONTAINS
    DO
 
       INQUIRE ( UNIT=Un , OPENED=Opened )
-      
+
       IF ( .NOT. Opened )  EXIT
       Un = Un + 1
-      
+
 !      IF ( Un > 99 ) Un = 10                                                     !some systems don't like unit numbers > 99, but we also don't want an infinite loop
 
    END DO
 
    UnIn = Un
-   
-   RETURN   
+
+   RETURN
    END SUBROUTINE GetNewUnit !  ( UnIn )
 !=======================================================================
 
@@ -1724,7 +1724,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
       ! Let's determine in the given file name is absolute or relative.
       !
-      ! We'll consider an absolute path one that satisfies one of the 
+      ! We'll consider an absolute path one that satisfies one of the
       ! following four criteria:
       !     1) It contains ":/"
       !     2) It contains ":\"
@@ -1745,7 +1745,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    PathIsRelative = .FALSE.
 
    IF ( ( INDEX( GivenFil, ':/') == 0 ) .AND. ( INDEX( GivenFil, ':\') == 0 ) ) THEN   ! No drive is specified (by ':\' or ':/')
-   
+
       IF ( INDEX( '/\', GivenFil(1:1) ) == 0 ) THEN                                    ! The file name doesn't start with '\' or '/'
 
          PathIsRelative = .TRUE.
@@ -2279,7 +2279,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    CHARACTER(1000)              :: OutLine
    CHARACTER(3)                 :: EndOfFile
-   
+
 !   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real array parameters
 
       ! Initialize some values
@@ -2287,11 +2287,11 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    IF ( PRESENT(ErrStat) ) ErrStat = 0
    MaxAryLen  = SIZE(CharAry)
    AryLenRead = 0
-   
-   CharAry = ''   
+
+   CharAry = ''
 
 
- 
+
       ! Read in all of the lines containing output parameters and store them in CharAry(:).
       ! The end of this list is specified with the line beginning with END.
 
@@ -2302,7 +2302,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
          IF ( ErrStat /= 0 ) RETURN
       ELSE
          CALL ReadVar ( UnIn, Fil, OutLine, AryName, AryDescr  )
-      END IF      
+      END IF
 
       EndOfFile = OutLine(1:3)            ! EndOfFile is the 1st 3 characters of OutLine
       CALL Conv2UC( EndOfFile )           ! Convert EndOfFile to upper case
@@ -2311,23 +2311,23 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
       NumWords = CountWords( OutLine )    ! The number of words in OutLine.
 
       AryLenRead = AryLenRead + NumWords  ! The total number of output channels read in so far.
-      
+
          ! Check to see if the maximum # allowable in the array has been reached.
-         
-      IF ( AryLenRead > MaxAryLen )  THEN    
-      
+
+      IF ( AryLenRead > MaxAryLen )  THEN
+
          CALL ProgAbort ( ' The maximum number of output channels allowed is ' &
                      //TRIM( Int2LStr(MaxAryLen) )//'.', PRESENT(ErrStat)      )
          ErrStat = 1
          RETURN
-         
-      ELSE
-      
-         CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )      
-         
-      END IF                     
 
-   END DO        
+      ELSE
+
+         CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )
+
+      END IF
+
+   END DO
 
    RETURN
    END SUBROUTINE ReadOutputList ! ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr [, ErrStat] )
