@@ -299,6 +299,9 @@ v1.04.00 16-Feb-2012 B. Jonkman
 v1.04.01 21-Feb-2012 B. Jonkman
   I added IMPLICIT NONE to NWTC_Num.f90 and fixed an error in the SmllRotTrans() message.
 
+v1.04.02 27-Sep-2012 A. Platt
+  I corrected the equation for CpminInt within the GetCoefs subroutine. The equation now uses the correct variables.
+
 
  To do:
    Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
