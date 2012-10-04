@@ -232,6 +232,7 @@ reg_parse( FILE * infile )
     //make_lower( parseline ) ;
     if (( p = index( parseline , '#' ))  != NULL  ) *p = '\0' ; /* discard comments (dont worry about quotes for now) */
     if (( p = index( parseline , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
+    if (( p = index( parseline , '\r' )) != NULL  ) *p = '\0' ; /* discard carriage returns (happens on Windows)*/
     for ( i = 0 ; i < MAXTOKENS ; i++ ) tokens[i] = NULL ; 
     i = 0 ;
 

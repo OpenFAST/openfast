@@ -562,7 +562,6 @@ gen_module( FILE * fp , const node_t * ModName )
           fprintf(fp,") ") ;
         }
       }
-fprintf(stderr,"%d %s %s\n", r->dims[0], r->name, r->inival ) ;
       if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
         fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
       } else {
