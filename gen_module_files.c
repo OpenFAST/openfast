@@ -278,11 +278,11 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout )
     } else  {
       sprintf(tmp2,"SIZE(%sData%%%s)\n",inout,r->name) ;
       if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"  %Data%%%s = ReKiBuf ( Re_Xferred )\n",inout,r->name) ;
+  fprintf(fp,"  %sData%%%s = ReKiBuf ( Re_Xferred )\n",inout,r->name) ;
   fprintf(fp,"  Re_Xferred   = Re_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
       }
       else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
-  fprintf(fp,"  %Data%%%s = DbKiBuf ( Db_Xferred )\n",inout,r->name) ;
+  fprintf(fp,"  %sData%%%s = DbKiBuf ( Db_Xferred )\n",inout,r->name) ;
   fprintf(fp,"  Db_Xferred   = Db_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
       }
       else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
@@ -543,7 +543,7 @@ gen_module( FILE * fp , const node_t * ModName )
       fprintf(fp,"    %s ",r->type->mapsto ) ;
       if ( r->ndims > 0 )
       {
-        if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
+        if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
         {
           fprintf(fp,", DIMENSION(") ;
           for ( i = 0 ; i < r->ndims ; i++ )
@@ -562,7 +562,12 @@ gen_module( FILE * fp , const node_t * ModName )
           fprintf(fp,") ") ;
         }
       }
-      fprintf(fp," :: %s \n",r->name) ;
+fprintf(stderr,"%d %s %s\n", r->dims[0], r->name, r->inival ) ;
+      if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
+        fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
+      } else {
+        fprintf(fp," :: %s \n",r->name) ;
+      }
 
     }
     fprintf(fp,"  END TYPE PUBLIC %s\n",q->mapsto) ;

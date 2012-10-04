@@ -18,7 +18,7 @@ typedef struct node_struct {
   int           boundary_array ;
   int           boundary_array_4d ;
   char    use[NAMELEN] ;
-  char    dname[NAMELEN] ;
+  char    inival[NAMELEN] ;
   char    descrip[NAMELEN] ;
   char    units[NAMELEN] ;
 

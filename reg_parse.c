@@ -23,8 +23,8 @@
 #define FIELD_TYPE      3
 #define FIELD_SYM       4
 #define FIELD_DIMS      5
-#define FIELD_CTRL      6
-#define FIELD_DNAME     7
+#define FIELD_INIVAL     6
+#define FIELD_CTRL      7
 #define FIELD_DESCRIP   8
 #define FIELD_UNITS     9
 
@@ -33,8 +33,8 @@
 #define F_TYPE     2
 #define F_SYM      3
 #define F_DIMS     4
-#define F_CTRL     5
-#define F_DNAME    6
+#define F_INIVAL    4
+#define F_CTRL     6
 #define F_DESCRIP  7
 #define F_UNITS    8
 
@@ -323,9 +323,9 @@ reg_parse( FILE * infile )
       if ( set_ctrl( tokens[FIELD_CTRL], field_struct ) )
        { fprintf(stderr,"Registry warning: some problem with ctrl %s for %s\n", tokens[FIELD_CTRL],tokens[FIELD_SYM] ) ; }
 
-      field_struct->dname[0] = '\0' ;
-      if ( strcmp( tokens[FIELD_DNAME], "-" ) ) /* that is, if not equal "-" */
-        { strcpy( field_struct->dname , tokens[FIELD_DNAME] ) ; }
+      field_struct->inival[0] = '\0' ;
+      if ( strcmp( tokens[FIELD_INIVAL], "-" ) ) /* that is, if not equal "-" */
+        { strcpy( field_struct->inival , tokens[FIELD_INIVAL] ) ; }
       strcpy(field_struct->descrip,"-") ;
       if ( strcmp( tokens[FIELD_DESCRIP], "-" ) ) /* that is, if not equal "-" */
         { strcpy( field_struct->descrip , tokens[FIELD_DESCRIP] ) ; }
