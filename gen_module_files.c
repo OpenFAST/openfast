@@ -304,7 +304,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout )
 {
   char tmp[NAMELEN] ;
   node_t *q, * r ;
-  fprintf(fp," SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg )\n",ModName->nickname,inout );
+  fprintf(fp," SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg )\n",ModName->nickname,inout,inout );
   fprintf(fp,"  TYPE(%s_%sType), INTENT(IN   ) :: %sData\n",ModName->nickname,inout,inout) ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
@@ -569,7 +569,7 @@ gen_module( FILE * fp , const node_t * ModName )
       }
 
     }
-    fprintf(fp,"  END TYPE PUBLIC %s\n",q->mapsto) ;
+    fprintf(fp,"  END TYPE %s\n",q->mapsto) ;
   }
   fprintf(fp,"CONTAINS\n") ;
 
@@ -623,9 +623,9 @@ gen_module_files ( char * dirname )
   for ( p = ModNames ; p ; p = p->next )
   {
     if ( strlen(dirname) > 0 ) 
-      { sprintf(fname,"%s/%s.f90",dirname,p->name) ; }
+      { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
     else                       
-      { sprintf(fname,"%s.f90",p->name) ; }
+      { sprintf(fname,"%s_Types.f90",p->name) ; }
     if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
     print_warning(fp,fname) ;
     gen_module ( fp , p ) ;

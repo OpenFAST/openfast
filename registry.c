@@ -177,43 +177,8 @@ main( int argc, char *argv[], char *env[] )
 
   check_dimspecs() ;
 
-  gen_module_files( "inc" ) ;
+  gen_module_files( "." ) ;
 
-
-#if 0
-  gen_state_struct( "inc" ) ;
-  gen_state_subtypes( "inc" ) ;
-  gen_alloc( "inc" ) ;
-  /* gen_alloc_count( "inc" ) ; */
-  gen_dealloc( "inc" ) ;
-  gen_scalar_indices( "inc" ) ;
-  gen_module_state_description( "frame" ) ;
-  gen_actual_args( "inc" ) ;
-  gen_actual_args_new( "inc" ) ;
-  gen_dummy_args( "inc" ) ;
-  gen_dummy_args_new( "inc" ) ;
-  gen_dummy_decls( "inc" ) ;
-  gen_dummy_decls_new( "inc" ) ;
-  gen_i1_decls( "inc" ) ;
-  gen_namelist_statements("inc") ;
-  gen_namelist_defines ( "inc", 0 ) ;  /* without dimension statements  */
-  gen_namelist_defines ( "inc", 1 ) ;  /* with dimension statements     */
-  gen_namelist_defaults ( "inc" ) ;
-  gen_namelist_script ( "inc" ) ;
-  gen_get_nl_config( "inc" ) ;
-  gen_config_assigns( "inc" ) ;
-  gen_config_reads( "inc" ) ;
-  gen_wrf_io( "inc" ) ;
-  gen_model_data_ord( "inc" ) ;
-  gen_nest_interp( "inc" ) ;
-  gen_scalar_derefs( "inc" ) ;
-  gen_streams("inc") ;
-
-/* this has to happen after gen_nest_interp, which adds halos to the AST */
-  gen_comms( "inc" ) ;    /* this is either package supplied (by copying a */
-                          /* gen_comms.c file into this directory) or a    */
-                          /* stubs routine.                                */
-#endif
 
 cleanup:
 #ifdef _WIN32
