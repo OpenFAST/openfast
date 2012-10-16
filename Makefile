@@ -6,14 +6,17 @@ LDFLAGS =
 DEBUG = -g 
 OBJ = registry.o my_strtok.o reg_parse.o data.o type.o misc.o sym.o symtab_gen.o gen_module_files.o
 
-registry : $(OBJ)
-	$(CC_TOOLS) -o registry $(DEBUG) $(LDFLAGS) $(OBJ)
+registry.exe : $(OBJ)
+	$(CC_TOOLS) -o registry.exe $(DEBUG) $(LDFLAGS) $(OBJ)
 
 .c.o :
 	$(CC_TOOLS) $(CFLAGS) -c $(DEBUG) $<
 
 clean clena:
 	/bin/rm -f $(OBJ) gen_comms.c standard.o
+
+superclean : clean
+	/bin/rm -f registry.exe
 
 # regenerate this list with "makedepend -Y *.c"
 
