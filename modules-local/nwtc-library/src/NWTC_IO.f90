@@ -23,6 +23,7 @@ MODULE NWTC_IO
    !     FUNCTION   Int2LStr      ( Intgr )
    !     SUBROUTINE NameOFile     ( InArg, OutExten, OutFile )
    !     SUBROUTINE NormStop      ( )
+   !     FUNCTION   Num2LStr      ( Num )           ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
    !     SUBROUTINE OpenBin       ( Un, OutFile, RecLen [, ErrStat] )
    !     SUBROUTINE OpenBInpFile  ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenEcho      ( Un, InFile [, ErrStat] )
@@ -37,7 +38,7 @@ MODULE NWTC_IO
    !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
    !     SUBROUTINE ProgWarn      ( Message )
    !     SUBROUTINE ReadAry       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )         ! Generic interface for ReadCAry, ReadIAry, ReadLAry, and ReadRAry.
-   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )         ! Generic interface for ReadCAryLines, and ReadRAryLines.
+   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )         ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
    !     SUBROUTINE ReadCAry      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadCAryLines ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadCom       ( UnIn, Fil, ComName [, ErrStat] )
@@ -62,29 +63,41 @@ MODULE NWTC_IO
 
    USE                             SysSubs
 
+   IMPLICIT  NONE
 
 !=======================================================================
 
+   TYPE, PUBLIC :: ProgDesc !bjj: do we want to add date as well?
+      CHARACTER(20)              :: Name
+      CHARACTER(99)              :: Ver
+   END TYPE ProgDesc
+
+   INTEGER(IntKi), PARAMETER     :: ErrID_None   = 0
+   INTEGER(IntKi), PARAMETER     :: ErrID_Info   = 1
+   INTEGER(IntKi), PARAMETER     :: ErrID_Warn   = 2
+   INTEGER(IntKi), PARAMETER     :: ErrID_Severe = 3
+   INTEGER(IntKi), PARAMETER     :: ErrID_Fatal  = 4
+
+   INTEGER(IntKi)                :: AbortErrLev  = ErrID_Fatal
 
       ! Global I/O-related variables.
 
-   INTEGER, PARAMETER           :: FlgType  = 1                                 ! Switch for telling if a variable is a flag.
-   INTEGER, PARAMETER           :: NumType  = 2                                 ! Switch for telling if a variable is a number.
-   INTEGER, PARAMETER           :: StrType  = 3                                 ! Switch for telling if a variable is a string.
-   INTEGER                      :: UnEc     = 19                                ! I/O unit number for the echo file.
+   INTEGER(IntKi), PARAMETER     :: FlgType  = 1                                 ! Switch for telling if a variable is a flag.
+   INTEGER(IntKi), PARAMETER     :: NumType  = 2                                 ! Switch for telling if a variable is a number.
+   INTEGER(IntKi), PARAMETER     :: StrType  = 3                                 ! Switch for telling if a variable is a string.
+   INTEGER                       :: UnEc     = 19                                ! I/O unit number for the echo file.
 
-   LOGICAL                      :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
-   LOGICAL                      :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
+   LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
+   LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   CHARACTER(23)                :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
-   CHARACTER(29)                :: NWTCVer  = ' (v1.04.02, 27-Sep-2012)'        ! The version (including date) of the NWTC Subroutine Library.
-   CHARACTER(20)                :: ProgName = ' '                               ! The name of the calling program.
-   CHARACTER(99)                :: ProgVer                                      ! The version (including date) of the calling program.
-   CHARACTER(1), PARAMETER      :: Tab      = CHAR( 9 )                         ! The tab character.
+   CHARACTER(23)                 :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
+   CHARACTER(29)                 :: NWTCVer  = ' (v1.05.00, 15-Oct-2012)'        ! The version (including date) of the NWTC Subroutine Library.
+   CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
+   CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
+   CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
 
 
 !=======================================================================
-
 
       ! Create interface for a generic AllocAry that actually uses specific routines.
 
@@ -114,7 +127,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadCVar
       MODULE PROCEDURE ReadIVar
       MODULE PROCEDURE ReadLVar
-      MODULE PROCEDURE ReadRVar
+      MODULE PROCEDURE ReadR4Var     ! 4-byte real
+      MODULE PROCEDURE ReadR8Var     ! 8-byte real
+      MODULE PROCEDURE ReadR16Var    ! 16-byte real
    END INTERFACE
 
 
@@ -124,27 +139,75 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadCAry
       MODULE PROCEDURE ReadIAry
       MODULE PROCEDURE ReadLAry
-      MODULE PROCEDURE ReadRAry
+      MODULE PROCEDURE ReadRAry ! replace with routines for 4-, 8-, and 16-byte reals
    END INTERFACE
+
 
    INTERFACE ReadAryLines
       MODULE PROCEDURE ReadCAryLines
+      MODULE PROCEDURE ReadRAryLines4
+      MODULE PROCEDURE ReadRAryLines8
+      MODULE PROCEDURE ReadRAryLines16
 !     MODULE PROCEDURE ReadIAryLines         ! Not coded yet
 !     MODULE PROCEDURE ReadLAryLines         ! Not coded yet
-      MODULE PROCEDURE ReadRAryLines
    END INTERFACE
 
 
       ! Create interface for a generic Num2LStr that actually uses specific routines.
 
    INTERFACE Num2LStr
-      MODULE PROCEDURE Int2LStr
-      MODULE PROCEDURE Flt2LStr
+      MODULE PROCEDURE Int2LStr        ! default integers
+      MODULE PROCEDURE R2LStr4         ! 4-byte  reals
+      MODULE PROCEDURE R2LStr8         ! 8-byte  reals
+      MODULE PROCEDURE R2LStr16        ! 16-byte reals
    END INTERFACE
 
 
 CONTAINS
 
+!=======================================================================
+   SUBROUTINE AdjRealStr( NumStr )
+
+      ! This routine adjusts strings created from real numbers (4, 8, or 16-byte)
+      ! It removes leading spaces and trailing zeros. It is intended to be called
+      ! from routines R2LStr4, R2LStr8, and R2LStr16.
+
+   CHARACTER(*), INTENT(INOUT) :: NumStr       ! String representing a real number (e.g., from R2LStr4)
+
+         ! Local declarations.
+
+   INTEGER                      :: IC          ! Character index.
+
+
+   NumStr = ADJUSTL( NumStr )
+
+
+      ! Replace trailing zeros and possibly the decimal point with blanks.
+      ! Stop trimming once we find the decimal point or a nonzero.
+
+
+      ! Don't remove (important!) trailing zeros if they are in the exponent:
+
+   IF (INDEX( NumStr, "E" ) > 0 ) RETURN
+   IF (INDEX( NumStr, "e" ) > 0 ) RETURN
+
+      ! These are not in the exponent
+
+   DO IC=LEN_TRIM( NumStr ),1,-1
+
+      IF ( NumStr(IC:IC) == '.' )  THEN
+         NumStr(IC:IC) = ' '
+         RETURN
+      ELSE IF ( NumStr(IC:IC) /= '0' )  THEN
+         RETURN
+      END IF
+
+      NumStr(IC:IC) = ' '
+
+   END DO ! IC
+
+
+   END SUBROUTINE AdjRealStr
 !=======================================================================
    SUBROUTINE AllCAry1 ( Ary, AryDim, Descr, ErrStat )
 
@@ -654,7 +717,13 @@ CONTAINS
 
       ! Argument declarations:
    INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                      ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT)    :: InputFile                                    ! The name of the input file specified on the command line.
+!bjj: I made this INOUT instead of OUT so that a default input name can be used
+!bjj: MLB requests no default InputFile names be allowed; generate error when there is InputFile listed
+!Thus, change to
+! CALL WrScr1   ( '    '//TRIM( ProgName )//' ['//SwChar//'h] <InputFile>' )
+! and add error when NumArg == 0
+
+   CHARACTER(*), INTENT(INOUT)  :: InputFile                                    ! The name of the input file specified on the command line.
 
 
       ! Local declarations:
@@ -937,6 +1006,8 @@ CONTAINS
       ! This function converts a floating point number to a left-aligned
       ! string.  It eliminates trailing zeroes and even the decimal
       ! point if it is not a fraction.
+      ! This function remains here only for backward compatibility. New
+      ! code should use Num2LStr instead.
 
 
       ! Function declaration.
@@ -967,29 +1038,7 @@ CONTAINS
 
    WRITE (Flt2LStr,'(1PG15.5)')  FltNum
 
-   Flt2LStr = ADJUSTL( Flt2LStr )
-
-
-      ! Replace trailing zeros and possibly the decimal point with blanks.
-      ! Stop trimming once we find the decimal point or a nonzero.
-
-   IF (INDEX( Flt2Lstr, "E" ) > 0 ) RETURN
-   IF (INDEX( Flt2Lstr, "e" ) > 0 ) RETURN
-
-
-   DO IC=LEN_TRIM( Flt2LStr ),1,-1
-
-      IF ( Flt2LStr(IC:IC) == '.' )  THEN
-         Flt2LStr(IC:IC) = ' '
-         RETURN
-      ELSE IF ( Flt2LStr(IC:IC) /= '0' )  THEN
-         RETURN
-      END IF
-
-      Flt2LStr(IC:IC) = ' '
-
-   END DO ! IC
-
+   CALL AdjRealStr( Flt2LStr )
 
    RETURN
    END FUNCTION Flt2LStr !  ( FltNum )
@@ -1836,6 +1885,112 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END SUBROUTINE ProgWarn ! ( Message )
 !=======================================================================
+   FUNCTION R2LStr4 ( FltNum )
+
+      ! This function converts a 4-byte floating point number to
+      ! a left-aligned string.  It eliminates trailing zeroes
+      ! and even the decimal point if it is not a fraction.
+
+
+      ! Function declaration.
+
+   CHARACTER(15)                :: R2LStr4                                         ! This function.
+
+
+      ! Argument declarations.
+
+   REAL(SiKi), INTENT(IN)       :: FltNum                                          ! The floating-point number to convert.
+
+
+      ! Return a 0 if that's what we have.
+
+   IF ( FltNum == 0.0_SiKi )  THEN
+      R2LStr4 = '0'
+      RETURN
+   END IF
+
+
+      ! Write the number into the string using G format and left justify it.
+
+   WRITE (R2LStr4,'(1PG15.5)')  FltNum
+
+   CALL AdjRealStr( R2LStr4 )
+
+
+   RETURN
+   END FUNCTION R2LStr4 !  ( FltNum )
+!=======================================================================
+   FUNCTION R2LStr8 ( FltNum )
+
+      ! This function converts a 8-byte floating point number to
+      ! a left-aligned string.  It eliminates trailing zeroes
+      ! and even the decimal point if it is not a fraction.
+
+
+      ! Function declaration.
+
+   CHARACTER(15)                :: R2LStr8                                         ! This function.
+
+
+      ! Argument declarations.
+
+   REAL(R8Ki), INTENT(IN)       :: FltNum                                          ! The floating-point number to convert.
+
+
+      ! Return a 0 if that's what we have.
+
+   IF ( FltNum == 0.0_R8Ki )  THEN
+      R2LStr8 = '0'
+      RETURN
+   END IF
+
+
+      ! Write the number into the string using G format and left justify it.
+
+   WRITE (R2LStr8,'(1PG15.5)')  FltNum
+
+   CALL AdjRealStr( R2LStr8 )
+
+
+   RETURN
+   END FUNCTION R2LStr8 !  ( FltNum )
+!=======================================================================
+   FUNCTION R2LStr16 ( FltNum )
+
+      ! This function converts a 16-byte floating point number to
+      ! a left-aligned string.  It eliminates trailing zeroes
+      ! and even the decimal point if it is not a fraction.
+
+
+      ! Function declaration.
+
+   CHARACTER(15)                :: R2LStr16                                        ! This function.
+
+
+      ! Argument declarations.
+
+   REAL(QuKi), INTENT(IN)       :: FltNum                                          ! The floating-point number to convert.
+
+
+      ! Return a 0 if that's what we have.
+
+   IF ( FltNum == 0.0_QuKi )  THEN
+      R2LStr16 = '0'
+      RETURN
+   END IF
+
+
+      ! Write the number into the string using G format and left justify it.
+
+   WRITE (R2LStr16,'(1PG15.5)')  FltNum
+
+   CALL AdjRealStr( R2LStr16 )
+
+
+   RETURN
+   END FUNCTION R2LStr16 !  ( FltNum )
+
+!======================================================================
    SUBROUTINE ReadCAry ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr, ErrStat )
 
 
@@ -2255,7 +2410,10 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    SUBROUTINE ReadOutputList ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat )
 
 
-      ! This routine reads a AryLen values into a real array from the next AryLen lines of the input file.
+      ! This routine reads up to MaxAryLen values from an input file and store them in CharAry(:).
+      ! These values represent the names of output channels, and they are specified in the format
+      ! required for OutList(:) in FAST input files.
+      ! The end of this list is specified with the line beginning with the 3 characters "END".
 
 
       ! Argument declarations:
@@ -2280,7 +2438,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    CHARACTER(1000)              :: OutLine
    CHARACTER(3)                 :: EndOfFile
 
-!   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real array parameters
 
       ! Initialize some values
 
@@ -2328,6 +2485,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
       END IF
 
    END DO
+
 
    RETURN
    END SUBROUTINE ReadOutputList ! ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr [, ErrStat] )
@@ -2426,10 +2584,152 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END SUBROUTINE ReadRAryLines ! ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
 !=======================================================================
-  SUBROUTINE ReadRVar ( UnIn, Fil, RealVar, VarName, VarDescr, ErrStat )
+   SUBROUTINE ReadRAryLines4 ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat )
+
+
+      ! This routine reads a AryLen values into a real array from the next AryLen lines of the input file.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
+   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                         ! Error status; if present, program does not abort on error
+
+   REAL(SiKi), INTENT(OUT)      :: RealAry(AryLen)                                 ! Real (4-byte) array being read.
+
+   CHARACTER(*), INTENT(IN)     :: Fil                                             ! Name of the input file.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        ! Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                      :: Ind                                             ! Index into the real array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real array parameters
+
+
+   IF ( PRESENT(ErrStat) ) ErrStat = 0
+
+   DO Ind=1,AryLen
+      READ (UnIn,*,IOSTAT=IOS)  RealAry(Ind)
+
+      CALL CheckIOS ( IOS, Fil, TRIM( AryName )//'('//TRIM( Int2LStr( Ind ) )//')', NumType, PRESENT(ErrStat) )
+
+      IF (IOS /= 0) THEN
+         IF ( PRESENT(ErrStat) ) ErrStat = IOS
+         RETURN
+      ENDIF
+
+      IF ( Echo )  THEN
+         WRITE (UnEc,Frmt)  RealAry(Ind), TRIM( AryName )//'('//TRIM( Int2LStr( Ind ) )//')', AryDescr
+      END IF
+   END DO
+
+   RETURN
+   END SUBROUTINE ReadRAryLines4 ! ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
+!=======================================================================
+   SUBROUTINE ReadRAryLines8 ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat )
+
+
+      ! This routine reads a AryLen values into a real array from the next AryLen lines of the input file.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
+   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                         ! Error status; if present, program does not abort on error
+
+   REAL(R8Ki), INTENT(OUT)      :: RealAry(AryLen)                                 ! Real (8-byte) array being read.
+
+   CHARACTER(*), INTENT(IN)     :: Fil                                             ! Name of the input file.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        ! Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                      :: Ind                                             ! Index into the real array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real array parameters
+
+
+   IF ( PRESENT(ErrStat) ) ErrStat = 0
+
+   DO Ind=1,AryLen
+      READ (UnIn,*,IOSTAT=IOS)  RealAry(Ind)
+
+      CALL CheckIOS ( IOS, Fil, TRIM( AryName )//'('//TRIM( Int2LStr( Ind ) )//')', NumType, PRESENT(ErrStat) )
+
+      IF (IOS /= 0) THEN
+         IF ( PRESENT(ErrStat) ) ErrStat = IOS
+         RETURN
+      ENDIF
+
+      IF ( Echo )  THEN
+         WRITE (UnEc,Frmt)  RealAry(Ind), TRIM( AryName )//'('//TRIM( Int2LStr( Ind ) )//')', AryDescr
+      END IF
+   END DO
+
+   RETURN
+   END SUBROUTINE ReadRAryLines8 ! ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
+!=======================================================================
+   SUBROUTINE ReadRAryLines16 ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat )
+
+
+      ! This routine reads a AryLen values into a real array from the next AryLen lines of the input file.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
+   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                         ! Error status; if present, program does not abort on error
+
+   REAL(QuKi), INTENT(OUT)      :: RealAry(AryLen)                                 ! Real (16-byte) array being read.
+
+   CHARACTER(*), INTENT(IN)     :: Fil                                             ! Name of the input file.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        ! Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                      :: Ind                                             ! Index into the real array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real array parameters
+
+
+   IF ( PRESENT(ErrStat) ) ErrStat = 0
+
+   DO Ind=1,AryLen
+      READ (UnIn,*,IOSTAT=IOS)  RealAry(Ind)
+
+      CALL CheckIOS ( IOS, Fil, TRIM( AryName )//'('//TRIM( Int2LStr( Ind ) )//')', NumType, PRESENT(ErrStat) )
+
+      IF (IOS /= 0) THEN
+         IF ( PRESENT(ErrStat) ) ErrStat = IOS
+         RETURN
+      ENDIF
+
+      IF ( Echo )  THEN
+         WRITE (UnEc,Frmt)  RealAry(Ind), TRIM( AryName )//'('//TRIM( Int2LStr( Ind ) )//')', AryDescr
+      END IF
+   END DO
+
+   RETURN
+   END SUBROUTINE ReadRAryLines16 ! ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
+!=======================================================================
+   SUBROUTINE ReadRVar ( UnIn, Fil, RealVar, VarName, VarDescr, ErrStat )
 
 
       ! This routine reads a single real variable from the next line of the input file.
+      ! New code should use ReadVar instead of this routine.
 
 
       ! Argument declarations:
@@ -2476,6 +2776,159 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE ReadRVar ! ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] )
+!=======================================================================
+  SUBROUTINE ReadR4Var ( UnIn, Fil, RealVar, VarName, VarDescr, ErrStat )
+
+
+      ! This routine reads a single double (real) variable from the next line of the input file.
+
+
+      ! Argument declarations:
+
+   REAL(SiKi), INTENT(OUT)      :: RealVar                                         ! Real (4-byte) variable being read.
+   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                         ! Error status; if present, program does not abort on error
+
+   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+
+   CHARACTER( *), INTENT(IN)    :: Fil                                             ! Name of the input file.
+   CHARACTER( *), INTENT(IN)    :: VarDescr                                        ! Text string describing the variable.
+   CHARACTER( *), INTENT(IN)    :: VarName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
+   CHARACTER(30)                :: Word                                            ! String to hold the first word on the line.
+
+
+
+   IF ( PRESENT(ErrStat) ) THEN
+      CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat )
+      IF (ErrStat /= 0) RETURN
+   ELSE
+      CALL ReadNum ( UnIn, Fil, Word, VarName )
+   END IF
+
+   READ (Word,*,IOSTAT=IOS)  RealVar
+
+   CALL CheckIOS ( IOS, Fil, VarName, NumType, PRESENT(ErrStat) )
+
+   IF ( PRESENT(ErrStat) ) THEN
+      ErrStat = IOS
+      IF (IOS /= 0) RETURN
+   END IF
+
+   IF ( Echo )  THEN
+      WRITE (UnEc,Frmt)  RealVar, VarName, VarDescr
+   END IF
+
+
+   RETURN
+  END SUBROUTINE ReadR4Var ! ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] )
+!=======================================================================
+  SUBROUTINE ReadR8Var ( UnIn, Fil, RealVar, VarName, VarDescr, ErrStat )
+
+
+      ! This routine reads a single double (real) variable from the next line of the input file.
+
+
+      ! Argument declarations:
+
+   REAL(R8Ki), INTENT(OUT)      :: RealVar                                         ! Real (8-byte) variable being read.
+   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                         ! Error status; if present, program does not abort on error
+
+   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+
+   CHARACTER( *), INTENT(IN)    :: Fil                                             ! Name of the input file.
+   CHARACTER( *), INTENT(IN)    :: VarDescr                                        ! Text string describing the variable.
+   CHARACTER( *), INTENT(IN)    :: VarName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
+   CHARACTER(30)                :: Word                                            ! String to hold the first word on the line.
+
+
+
+   IF ( PRESENT(ErrStat) ) THEN
+      CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat )
+      IF (ErrStat /= 0) RETURN
+   ELSE
+      CALL ReadNum ( UnIn, Fil, Word, VarName )
+   END IF
+
+   READ (Word,*,IOSTAT=IOS)  RealVar
+
+   CALL CheckIOS ( IOS, Fil, VarName, NumType, PRESENT(ErrStat) )
+
+   IF ( PRESENT(ErrStat) ) THEN
+      ErrStat = IOS
+      IF (IOS /= 0) RETURN
+   END IF
+
+   IF ( Echo )  THEN
+      WRITE (UnEc,Frmt)  RealVar, VarName, VarDescr
+   END IF
+
+
+   RETURN
+  END SUBROUTINE ReadR8Var ! ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] )
+!=======================================================================
+  SUBROUTINE ReadR16Var ( UnIn, Fil, RealVar, VarName, VarDescr, ErrStat )
+
+
+      ! This routine reads a single double (real) variable from the next line of the input file.
+
+
+      ! Argument declarations:
+
+   REAL(QuKi), INTENT(OUT)      :: RealVar                                         ! Real (16-byte) variable being read.
+   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                         ! Error status; if present, program does not abort on error
+
+   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+
+   CHARACTER( *), INTENT(IN)    :: Fil                                             ! Name of the input file.
+   CHARACTER( *), INTENT(IN)    :: VarDescr                                        ! Text string describing the variable.
+   CHARACTER( *), INTENT(IN)    :: VarName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
+   CHARACTER(30)                :: Word                                            ! String to hold the first word on the line.
+
+
+
+   IF ( PRESENT(ErrStat) ) THEN
+      CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat )
+      IF (ErrStat /= 0) RETURN
+   ELSE
+      CALL ReadNum ( UnIn, Fil, Word, VarName )
+   END IF
+
+   READ (Word,*,IOSTAT=IOS)  RealVar
+
+   CALL CheckIOS ( IOS, Fil, VarName, NumType, PRESENT(ErrStat) )
+
+   IF ( PRESENT(ErrStat) ) THEN
+      ErrStat = IOS
+      IF (IOS /= 0) RETURN
+   END IF
+
+   IF ( Echo )  THEN
+      WRITE (UnEc,Frmt)  RealVar, VarName, VarDescr
+   END IF
+
+
+   RETURN
+   END SUBROUTINE ReadR16Var ! ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] )
 !=======================================================================
    SUBROUTINE ReadStr ( UnIn, Fil, CharVar, VarName, VarDescr, ErrStat )
 

@@ -9,18 +9,14 @@ MODULE SysSubs
 
    ! It contains the following routines:
 
-   !     FUNCTION    COMMAND_ARGUMENT_COUNT()
    !     SUBROUTINE  FileSize ( FileName, Size )
    !     SUBROUTINE  FindLine ( Str , MaxLen , StrEnd )
    !     SUBROUTINE  FlushOut ( Unit )
    !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                      ! Please use GET_COMMAND_ARGUMENT() instead.
    !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                ! Please use COMMAND_ARGUMENT_COUNT() instead.
-   !     SUBROUTINE  GET_COMMAND ( Command, Length, Status )
-   !     SUBROUTINE  GET_COMMAND_ARGUMENT ( Number, Value, Length, Status )
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Get_Env( EnvVar )                                                      ! Please use GET_ENVIRONMENT_VARIABLE() instead.
-   !     FUNCTION    GET_ENVIRONMENT_VARIABLE( Name, Value, Length, Status, Trim_Name )
-   !     FUNCTION    Is_NaN( DblNum )
+   !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
@@ -59,36 +55,36 @@ MODULE SysSubs
 CONTAINS
 
 !=======================================================================
-   FUNCTION COMMAND_ARGUMENT_COUNT()
-
-
-      ! This routine returns the number of argumenta entered on the command line..
-
-      ! Note: This routine will be available intrinsically in Fortran 2000.
-
-
-   USE                             IFPORT
-
-
-      ! Function declaration.
-
-   INTEGER                      :: COMMAND_ARGUMENT_COUNT                       ! This function.  The command line.
-
-
-
-      ! Determine the mumber of arguments.  Load the program name into the result.
-
-   COMMAND_ARGUMENT_COUNT = IArgC()
-
-
-   RETURN
-   END FUNCTION COMMAND_ARGUMENT_COUNT ! ()
+   !FUNCTION COMMAND_ARGUMENT_COUNT()
+   !
+   !
+   !   ! This routine returns the number of argumenta entered on the command line..
+   !
+   !   ! Note: This routine will be available intrinsically in Fortran 2000.
+   !
+   !
+   !USE                             IFPORT
+   !
+   !
+   !   ! Function declaration.
+   !
+   !INTEGER                      :: COMMAND_ARGUMENT_COUNT                       ! This function.  The command line.
+   !
+   !
+   !
+   !   ! Determine the mumber of arguments.  Load the program name into the result.
+   !
+   !COMMAND_ARGUMENT_COUNT = IArgC()
+   !
+   !
+   !RETURN
+   !END FUNCTION COMMAND_ARGUMENT_COUNT ! ()
 !=======================================================================
    SUBROUTINE FileSize ( FileName, Size )
 
 
-      ! This routine calls the routine FSTAT to obtain the size
-      ! of the specify file or returns -1 on error.
+      ! This routine calls the routine FSTAT to obtain the file size
+      ! corresponding to a file unit number or returns -1 on error.
 
 
    USE                             IFPORT
@@ -215,7 +211,7 @@ CONTAINS
 
       ! This routine gets Arg_Num'th argument from the command line.
 
-   ! Note: The functionality in this routine was replaced by GET_COMMAND_ARGUMENT(), which will be available intrinsically in Fortran 2000.
+   ! Note: The functionality in this routine was replaced by GET_COMMAND_ARGUMENT(), which is available intrinsically in Fortran 2000.
 
 
    USE                             IFPORT
@@ -236,8 +232,9 @@ CONTAINS
 
 
 
-   CALL GETARG ( Arg_Num, Arg, Status )
+   CALL GET_COMMAND_ARGUMENT ( Arg_Num, Arg, Status )
 
+   
    IF ( LEN_TRIM( Arg ) > 0 )  THEN
       Error = .FALSE.
    ELSE
@@ -265,114 +262,114 @@ CONTAINS
 
 
 
-   Arg_Num = IARGC()
+   Arg_Num = COMMAND_ARGUMENT_COUNT()
 
 
    RETURN
    END SUBROUTINE Get_Arg_Num ! ( Arg_Num )
 !=======================================================================
-   SUBROUTINE GET_COMMAND ( Command, Length, Status )
-
-
-      ! This routine returns the string associated with the full command line.
-      ! It tries as best it can to mimic the Fortran 2000 intrinsic subroutine by the same name.
-
-
-   USE                                    IFPORT
-
-
-      ! Argument declarations.
-
-   INTEGER, OPTIONAL, INTENT(OUT)      :: Length                                ! The length of the value of the environment variable.
-   INTEGER, OPTIONAL, INTENT(OUT)      :: Status                                ! The status indication what happened.
-
-   CHARACTER(*), OPTIONAL, INTENT(OUT) :: Command                               ! The command line.
-
-
-      ! Local parameter declarations.
-
-   INTEGER, PARAMETER                  :: MaxLen = 500                          ! The maximum length permitted for an environment variable value.
-
-
-      ! Local declarations.
-
-   INTEGER                             :: CallStat                              ! Status of the call.
-   INTEGER                             :: IArg                                  ! Argument index.
-
-   CHARACTER(MaxLen)                   :: Arg                                   ! The current argument.
-   CHARACTER(MaxLen)                   :: ReturnVal                             ! The value that will be returned.
-
-
-
-      ! Initialize the result with the program name.
-
-   CALL GETARG ( 0, ReturnVal, CallStat )
-
-
-      ! Loop through all the arguments and build the total command line.
-
-   DO IArg=1,IArgC()
-      CALL GETARG ( IArg, Arg, CallStat )
-      ReturnVal = TRIM( ReturnVal )//' '//TRIM( Arg )
-   END DO ! IArg
-
-
-      ! When asking the OS about the variable, trim the name unless Trim_Name is false.
-
-   IF ( PRESENT( Command ) )  Command = ReturnVal
-   IF ( PRESENT( Length  ) )  Length  = LEN_TRIM( ReturnVal )
-   IF ( PRESENT( Status  ) )  Status  = 0
-
-
-   RETURN
-   END SUBROUTINE GET_COMMAND ! ( Command, Length, Status )
+   !SUBROUTINE GET_COMMAND ( Command, Length, Status )
+   !
+   !
+   !   ! This routine returns the string associated with the full command line.
+   !   ! It tries as best it can to mimic the Fortran 2000 intrinsic subroutine by the same name.
+   !
+   !
+   !USE                                    IFPORT
+   !
+   !
+   !   ! Argument declarations.
+   !
+   !INTEGER, OPTIONAL, INTENT(OUT)      :: Length                                ! The length of the value of the environment variable.
+   !INTEGER, OPTIONAL, INTENT(OUT)      :: Status                                ! The status indication what happened.
+   !
+   !CHARACTER(*), OPTIONAL, INTENT(OUT) :: Command                               ! The command line.
+   !
+   !
+   !   ! Local parameter declarations.
+   !
+   !INTEGER, PARAMETER                  :: MaxLen = 500                          ! The maximum length permitted for an environment variable value.
+   !
+   !
+   !   ! Local declarations.
+   !
+   !INTEGER                             :: CallStat                              ! Status of the call.
+   !INTEGER                             :: IArg                                  ! Argument index.
+   !
+   !CHARACTER(MaxLen)                   :: Arg                                   ! The current argument.
+   !CHARACTER(MaxLen)                   :: ReturnVal                             ! The value that will be returned.
+   !
+   !
+   !
+   !   ! Initialize the result with the program name.
+   !
+   !CALL GETARG ( 0, ReturnVal, CallStat )
+   !
+   !
+   !   ! Loop through all the arguments and build the total command line.
+   !
+   !DO IArg=1,IArgC()
+   !   CALL GETARG ( IArg, Arg, CallStat )
+   !   ReturnVal = TRIM( ReturnVal )//' '//TRIM( Arg )
+   !END DO ! IArg
+   !
+   !
+   !   ! When asking the OS about the variable, trim the name unless Trim_Name is false.
+   !
+   !IF ( PRESENT( Command ) )  Command = ReturnVal
+   !IF ( PRESENT( Length  ) )  Length  = LEN_TRIM( ReturnVal )
+   !IF ( PRESENT( Status  ) )  Status  = 0
+   !
+   !
+   !RETURN
+   !END SUBROUTINE GET_COMMAND ! ( Command, Length, Status )
 !=======================================================================
-   SUBROUTINE GET_COMMAND_ARGUMENT ( Number, Value, Length, Status )
-
-
-      ! This routine returns the string associated with the Numberth command-line argument.
-      ! It tries as best it can to mimic the Fortran 2000 intrinsic function by the same name.
-
-
-   USE                                    IFPORT
-
-
-      ! Argument declarations.
-
-   INTEGER, OPTIONAL, INTENT(OUT)      :: Length                                ! The length of the value of the environment variable.
-   INTEGER, INTENT(IN)                 :: Number                                ! The number of the argument desired.
-   INTEGER, OPTIONAL, INTENT(OUT)      :: Status                                ! The status indication what happened.
-
-   CHARACTER(*), OPTIONAL, INTENT(OUT) :: Value                                 ! The command line argument.
-
-
-      ! Local parameter declarations.
-
-   INTEGER, PARAMETER                  :: MaxLen = 500                          ! The maximum length permitted for an environment variable value.
-
-
-      ! Local declarations.
-
-   INTEGER                             :: CallStat                              ! The status of the intrinsic call.
-
-   CHARACTER(MaxLen)                   :: ReturnVal                             ! The value that will be returned.
-
-
-
-      ! Get the argument.
-
-   CALL GETARG ( Number, ReturnVal, CallStat )
-
-
-      ! Load up the return values.
-
-   IF ( PRESENT( Value  ) )  Value  = ReturnVal
-   IF ( PRESENT( Length ) )  Length = LEN_TRIM( ReturnVal )
-   IF ( PRESENT( Status ) )  Status = CallStat
-
-
-   RETURN
-   END SUBROUTINE GET_COMMAND_ARGUMENT ! ( Number, Value, Length, Status )
+   !SUBROUTINE GET_COMMAND_ARGUMENT ( Number, Value, Length, Status )
+   !
+   !
+   !   ! This routine returns the string associated with the Numberth command-line argument.
+   !   ! It tries as best it can to mimic the Fortran 2000 intrinsic function by the same name.
+   !
+   !
+   !USE                                    IFPORT
+   !
+   !
+   !   ! Argument declarations.
+   !
+   !INTEGER, OPTIONAL, INTENT(OUT)      :: Length                                ! The length of the value of the environment variable.
+   !INTEGER, INTENT(IN)                 :: Number                                ! The number of the argument desired.
+   !INTEGER, OPTIONAL, INTENT(OUT)      :: Status                                ! The status indication what happened.
+   !
+   !CHARACTER(*), OPTIONAL, INTENT(OUT) :: Value                                 ! The command line argument.
+   !
+   !
+   !   ! Local parameter declarations.
+   !
+   !INTEGER, PARAMETER                  :: MaxLen = 500                          ! The maximum length permitted for an environment variable value.
+   !
+   !
+   !   ! Local declarations.
+   !
+   !INTEGER                             :: CallStat                              ! The status of the intrinsic call.
+   !
+   !CHARACTER(MaxLen)                   :: ReturnVal                             ! The value that will be returned.
+   !
+   !
+   !
+   !   ! Get the argument.
+   !
+   !CALL GETARG ( Number, ReturnVal, CallStat )
+   !
+   !
+   !   ! Load up the return values.
+   !
+   !IF ( PRESENT( Value  ) )  Value  = ReturnVal
+   !IF ( PRESENT( Length ) )  Length = LEN_TRIM( ReturnVal )
+   !IF ( PRESENT( Status ) )  Status = CallStat
+   !
+   !
+   !RETURN
+   !END SUBROUTINE GET_COMMAND_ARGUMENT ! ( Number, Value, Length, Status )
 !=======================================================================
    SUBROUTINE Get_CWD ( DirName, Status )
 
@@ -425,86 +422,88 @@ CONTAINS
    RETURN
    END FUNCTION Get_Env ! ( EnvVar )
 !=======================================================================
-   FUNCTION GET_ENVIRONMENT_VARIABLE( Name, Value, Length, Status, Trim_Name )
-
-
-      ! This routine returns the string associated with the Name environment variable in the OS.
-      ! It tries as best it can to mimic the Fortran 2000 intrinsic function by the same name.
-
-
-   USE                                    IFPORT
-
-
-      ! Argument declarations.
-
-   INTEGER, OPTIONAL, INTENT(OUT)      :: Length                                ! The length of the value of the environment variable.
-   INTEGER, OPTIONAL, INTENT(OUT)      :: Status                                ! The status indication what happened.
-
-   LOGICAL, OPTIONAL, INTENT(IN)       :: Trim_Name                             ! Treat trailing blanks in Name as significant if true.
-
-   CHARACTER(*), INTENT(IN)            :: Name                                  ! The environment variable to look up.
-   CHARACTER(*), OPTIONAL, INTENT(OUT) :: Value                                 ! The found value of the environment variable, Name.
-
-
-      ! Local parameter declarations.
-
-   INTEGER, PARAMETER                  :: MaxLen = 500                          ! The maximum length permitted for an environment variable value.
-
-
-      ! Function declaration.
-
-   CHARACTER(MaxLen)                   :: GET_ENVIRONMENT_VARIABLE              ! This function.  The value of the environment variable.
-
-
-      ! Local declarations.
-
-   CHARACTER(MaxLen)                   :: ReturnVal                             ! The value that will be returned.
-
-
-
-      ! When asking the OS about the variable, trim the name unless Trim_Name is false.
-
-   IF ( PRESENT( Trim_Name ) )  THEN
-      IF ( Trim_Name )  THEN
-         CALL GetEnv ( TRIM( Name ), ReturnVal )
-      ELSE
-         CALL GetEnv ( Name, ReturnVal )
-      END IF
-   ELSE
-      CALL GetEnv ( TRIM( Name ), ReturnVal )
-   END IF
-
-   IF ( PRESENT( Value ) )  Value = ReturnVal
-
-   IF ( PRESENT( Length ) )  Length = LEN_TRIM( ReturnVal )
-
-
-      ! If requested, set the status of the OS request.
-
-      ! Because the VF-specific GetEnv() is less capable than the Fortran 2000 intrinsic, we can't distinguish
-      ! between a variable whose value is all blanks and one that is not set.
-
-   IF ( PRESENT( Status ) )  THEN
-      IF ( LEN_TRIM( ReturnVal ) == 0 )  THEN
-         Status = 1
-      ELSE
-         Status = 0
-      END IF
-   END IF
-
-   GET_ENVIRONMENT_VARIABLE = ReturnVal
-
-
-   RETURN
-   END FUNCTION GET_ENVIRONMENT_VARIABLE ! ( Name, Value, Length, Status, Trim_Name )
+   !FUNCTION GET_ENVIRONMENT_VARIABLE( Name, Value, Length, Status, Trim_Name )
+   !
+   !
+   !   ! This routine returns the string associated with the Name environment variable in the OS.
+   !   ! It tries as best it can to mimic the Fortran 2000 intrinsic function by the same name.
+   !
+   !
+   !USE                                    IFPORT
+   !
+   !
+   !   ! Argument declarations.
+   !
+   !INTEGER, OPTIONAL, INTENT(OUT)      :: Length                                ! The length of the value of the environment variable.
+   !INTEGER, OPTIONAL, INTENT(OUT)      :: Status                                ! The status indication what happened.
+   !
+   !LOGICAL, OPTIONAL, INTENT(IN)       :: Trim_Name                             ! Treat trailing blanks in Name as significant if true.
+   !
+   !CHARACTER(*), INTENT(IN)            :: Name                                  ! The environment variable to look up.
+   !CHARACTER(*), OPTIONAL, INTENT(OUT) :: Value                                 ! The found value of the environment variable, Name.
+   !
+   !
+   !   ! Local parameter declarations.
+   !
+   !INTEGER, PARAMETER                  :: MaxLen = 500                          ! The maximum length permitted for an environment variable value.
+   !
+   !
+   !   ! Function declaration.
+   !
+   !CHARACTER(MaxLen)                   :: GET_ENVIRONMENT_VARIABLE              ! This function.  The value of the environment variable.
+   !
+   !
+   !   ! Local declarations.
+   !
+   !CHARACTER(MaxLen)                   :: ReturnVal                             ! The value that will be returned.
+   !
+   !
+   !
+   !   ! When asking the OS about the variable, trim the name unless Trim_Name is false.
+   !
+   !IF ( PRESENT( Trim_Name ) )  THEN
+   !   IF ( Trim_Name )  THEN
+   !      CALL GetEnv ( TRIM( Name ), ReturnVal )
+   !   ELSE
+   !      CALL GetEnv ( Name, ReturnVal )
+   !   END IF
+   !ELSE
+   !   CALL GetEnv ( TRIM( Name ), ReturnVal )
+   !END IF
+   !
+   !IF ( PRESENT( Value ) )  Value = ReturnVal
+   !
+   !IF ( PRESENT( Length ) )  Length = LEN_TRIM( ReturnVal )
+   !
+   !
+   !   ! If requested, set the status of the OS request.
+   !
+   !   ! Because the VF-specific GetEnv() is less capable than the Fortran 2000 intrinsic, we can't distinguish
+   !   ! between a variable whose value is all blanks and one that is not set.
+   !
+   !IF ( PRESENT( Status ) )  THEN
+   !   IF ( LEN_TRIM( ReturnVal ) == 0 )  THEN
+   !      Status = 1
+   !   ELSE
+   !      Status = 0
+   !   END IF
+   !END IF
+   !
+   !GET_ENVIRONMENT_VARIABLE = ReturnVal
+   !
+   !
+   !RETURN
+   !END FUNCTION GET_ENVIRONMENT_VARIABLE ! ( Name, Value, Length, Status, Trim_Name )
 !=======================================================================
    FUNCTION Is_NaN( DblNum )
 
 
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
+      ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
+      ! backwards compatibility. 
 
 
-   USE                             IFPORT
+   USE, INTRINSIC :: ieee_arithmetic
 
 
       ! Argument declarations.
@@ -518,8 +517,8 @@ CONTAINS
 
 
 
-   Is_NaN = IsNaN( DblNum )
-
+   Is_NaN = IEEE_IS_NAN( DblNum )
+       
 
    RETURN
    END FUNCTION Is_NaN ! ( DblNum )
@@ -548,7 +547,8 @@ CONTAINS
 
       ! Open output file.  Make sure it worked.
 
-   OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='BINARY' , ACCESS='SEQUENTIAL', RECL=RecLen , IOSTAT=IOS )
+!   OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='BINARY' , ACCESS='SEQUENTIAL', RECL=RecLen , IOSTAT=IOS )
+   OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=IOS )
 
    IF ( IOS /= 0 )  THEN
       Error = .TRUE.
@@ -586,11 +586,11 @@ CONTAINS
       ! Open input file.
 
       ! For DEC Visual Fortran, use FORM='BINARY'.
-      ! For Sun or MS FPS, use FORM='UNFORMATTED'.  For Lahey LF90, try
-      ! FORM='TRANSPARENT' (untested).
+      ! For Sun or MS FPS, use FORM='UNFORMATTED'.  
+      ! For Lahey LF90, try FORM='TRANSPARENT' (untested).
 
 
-   OPEN( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='BINARY', IOSTAT=IOS, ACTION='READ' )
+   OPEN( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='STREAM', IOSTAT=IOS, ACTION='READ' )
 
    IF ( IOS /= 0 )  THEN
       Error = .TRUE.

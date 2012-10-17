@@ -302,9 +302,37 @@ v1.04.01 21-Feb-2012 B. Jonkman
 v1.04.02 27-Sep-2012 A. Platt
   I corrected the equation for CpminInt within the GetCoefs subroutine. The equation now uses the correct variables.
 
+v1.05.00 15-Oct-2012 B. Jonkman
+  I modified the InFile intent to INOUT in CheckArgs().
+  I added IMPLICIT NONE to all of the modules where it was missing.
+  I added IntKi and BytesPer* PARAMETERS to the Precision MODULE.
+  I added the ProgDesc TYPE, AbortErrLev variable, and ErrID_* PARAMETERS to NWTC_IO
+  I created new functions R2LStr4, R2LStr8, and R2LStr16 to replace Flt2LStr, particularly in the Num2LStr INTERFACE;
+    new functions ReadR4Var, ReadR8Var, ReadR16Var replace ReadRVar in the ReadVar INTERFACE;
+    new functions ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16 replace ReadRAryLines in the ReadAryLines INTERFACE
+  
+  I removed subroutine InterpAF because it has never been used (and serves no purpose) See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=388
+  I removed DoubPrecGnu.f90 from the archive because it is not necessary. gfortran (v4.6 and later) works with DoubPrec.f90.
+  I removed SysVF.f90 from the archive, because it has been replaced with SysIVF.f90.
+  I removed SysCVF.f90 because CVF is an old compiler that we want to discourage people from using. 
+  I removed NWTC_SharedDataTypes.f90 from the archive because it will not be necessary for the new framework.
+  I removed subroutines/functions COMMAND_ARGUMENT_COUNT, GET_COMMAND, GET_COMMAND_ARGUMENT, and GET_ENVIRONMENT_VARIABLE 
+    from SysIVF.f90, SysIFL.f90, and SysMatlab.f90 because they are part of the Fortran 2003 standard.
+  I modified FUNCTION Is_NaN() to use the intrinsic IEEE_IS_NAN function, which is part of the Fortran 2003 standard.
+  I updated the OpenBinFile() and OpenBinInpFile() routines in SysIVF.f90 to use FORM='UNFORMATTED' , ACCESS='STREAM' instead of FORM='BINARY'. 
 
+  I added BufferRoutines.f90 to the archive for use with the FAST framework template. 
+  I added a placeholder for the ModMesh module (new FAST framework) and added ModMesh.f90 to the archive.
+ 
+  I added constants called NaN, Inf, NaN_D, and Inf_D to store the IEEE values of NaN and Inf. (Document these in handbook???)
+  I renamed the PiConst() subroutine to SetConstants() because we are using it set the NaN and Inf values, too.
+
+==========================================================
  To do:
+   *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
+   
    Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
+   Fix ErrStat to use the new ErrID_* levels
    Fix SysGnu.f90 (subroutines OpenCon(), WrOver(), WrNR(), & maybe others are not working properly): https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=540   
  
    Create new read array routines that read an array from multiple lines.

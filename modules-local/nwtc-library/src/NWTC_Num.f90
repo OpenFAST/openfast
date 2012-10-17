@@ -21,7 +21,7 @@ MODULE NWTC_Num
    !     SUBROUTINE LocateStp     ( XVal, XAry, Ind, AryLen )
    !     FUNCTION   Mean          ( Ary, AryLen )                               ! Function to calculate the mean value of a vector array.
    !     SUBROUTINE MPi2Pi        ( Angle )
-   !     SUBROUTINE PiConsts
+   !     SUBROUTINE SetConstants
    !     SUBROUTINE RombergInt    ( f, a, b, R, err, eps, ErrStat )
    !     SUBROUTINE SmllRotTrans  ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
    !     SUBROUTINE SortUnion     ( Ary1, N1, Ary2, N2, Ary, N )
@@ -38,6 +38,8 @@ MODULE NWTC_Num
       ! Global numeric-related variables.
 
    REAL(DbKi)                   :: D2R_D                                        ! Factor to convert degrees to radians in double precision.
+   REAL(DbKi)                   :: Inf_D                                        ! IEEE value for NaN (not-a-number) in double precision 
+   REAL(DbKi)                   :: NaN_D                                        ! IEEE value for Inf (infinity) in double precision
    REAL(DbKi)                   :: Pi_D                                         ! Ratio of a circle's circumference to its diameter in double precision.
    REAL(DbKi)                   :: PiBy2_D                                      ! Pi/2 in double precision.
    REAL(DbKi)                   :: R2D_D                                        ! Factor to convert radians to degrees in double precision.
@@ -45,8 +47,11 @@ MODULE NWTC_Num
    REAL(DbKi)                   :: RPS2RPM_D                                    ! Factor to convert radians per second to revolutions per minute in double precision.
    REAL(DbKi)                   :: TwoByPi_D                                    ! 2/Pi in double precision.
    REAL(DbKi)                   :: TwoPi_D                                      ! 2*Pi in double precision.
-
+   
+   
    REAL(ReKi)                   :: D2R                                          ! Factor to convert degrees to radians.
+   REAL(ReKi)                   :: Inf                                          ! IEEE value for NaN (not-a-number)
+   REAL(ReKi)                   :: NaN                                          ! IEEE value for Inf (infinity)
    REAL(ReKi)                   :: Pi                                           ! Ratio of a circle's circumference to its diameter.
    REAL(ReKi)                   :: PiBy2                                        ! Pi/2.
    REAL(ReKi)                   :: R2D                                          ! Factor to convert radians to degrees.
@@ -319,7 +324,7 @@ CONTAINS
 
                ! check that the angles are, in fact, small
       IF ( ANY( ABS(GetSmllRotAngs) > LrgAngle ) ) THEN
-         CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Flt2LStr(LrgAngle))//' radians.' )
+         CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
          ErrStat = 1
       END IF
 
@@ -982,11 +987,14 @@ CONTAINS
    RETURN
    END SUBROUTINE MPi2Pi
 !=======================================================================
-   SUBROUTINE PiConsts
+   SUBROUTINE SetConstants( )
 
+      ! This routine computes numeric constants stored in the NWTC Library
 
-      ! This routine computes constants based upon Pi.
+   USE, INTRINSIC :: ieee_arithmetic
 
+      
+      ! Constants based upon Pi:
 
    Pi_D      = ACOS( -1.0_DbKi )
    D2R_D     = Pi_D/180.0_DbKi
@@ -1005,10 +1013,19 @@ CONTAINS
    RPS2RPM = 30.0/Pi
    TwoByPi = 2.0/Pi
    TwoPi   = 2.0*Pi
+   
+   
+      ! IEEE constants:
+      
+   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
 
-
+   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+   Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
+   
+   
    RETURN
-   END SUBROUTINE PiConsts
+   END SUBROUTINE SetConstants
 !=======================================================================
    SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
 

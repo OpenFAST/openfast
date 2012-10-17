@@ -3,8 +3,12 @@
 @SET ARCHROOT=NWTC_Lib
 @SET PROGNAME=NWTC_Library
 
-@SET WINZIP="C:\Program Files\WinZip\WZZip"
-@SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
+rem @SET WINZIP="C:\Program Files\WinZip\WZZip"
+rem @SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
+
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
+
 
 @IF NOT "%1"==""  GOTO DeleteOld
 
