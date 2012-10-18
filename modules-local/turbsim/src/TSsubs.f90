@@ -3157,7 +3157,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
       IF ( KHtest ) THEN
 
          CText = 'les'
-         CTEventFile = TRIM(CTEventPath)//'\Events.xtm'
+         CTEventFile = TRIM(CTEventPath)//PathSep//'Events.xtm'
 
          CALL WrScr( ' LES events will be used for the KH test.' )
 
@@ -3177,7 +3177,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
              ENDIF
          ENDIF
 
-         CTEventFile = TRIM(CTEventPath)//'\Events.'//TRIM(CText)
+         CTEventFile = TRIM(CTEventPath)//PathSep//'Events.'//TRIM(CText)
 
       ENDIF
 
@@ -7823,7 +7823,7 @@ ENDIF
 
 
       WRITE ( InpFile, '(I5.5)' ) EventName( PtrCurr%EventNum )
-      InpFile = TRIM( CTEventPath )//'\Event'//TRIM( InpFile)//'.dat'
+      InpFile = TRIM( CTEventPath )//PathSep//'Event'//TRIM( InpFile)//'.dat'
 
       CALL OpenFInpFile( UnIn, InpFile )
 

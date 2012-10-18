@@ -688,3 +688,6 @@ v1.06.00 21-Sep-2012 L. Kilcher
   Updated documentation to include this spectral model and mean profile type.
   Updated all .inp files in repository: version number, added "TIDAL" to spectral models list, added "H2L" to WindProfileType list.
 
+v1.06.01a-bjj 19-Oct-2012 B. Jonkman
+  I replaced the hardcoded "\" file path separator with the variable PathSep from the NWTC Subroutine Library. The previous method
+    prevented the CTS files to be generated on Linux/Mac. (Note there may still be a problem *reading* them in InflowWind.)
