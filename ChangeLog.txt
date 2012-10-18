@@ -327,6 +327,9 @@ v1.05.00 15-Oct-2012 B. Jonkman
   I added constants called NaN, Inf, NaN_D, and Inf_D to store the IEEE values of NaN and Inf. (Document these in handbook???)
   I renamed the PiConst() subroutine to SetConstants() because we are using it set the NaN and Inf values, too.
 
+  I split the the SysGnu.f90 file into two, SysGnuLinux.f90 and SysGnuWin.f90. These are for the gfortran compiler on the respective
+    platforms. The difference is in the unit number for the ConOut subroutine. The linux version should work with a mac as well.
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
