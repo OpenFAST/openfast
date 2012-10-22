@@ -16,7 +16,7 @@ MODULE SysSubs
    !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                ! Please use COMMAND_ARGUMENT_COUNT() instead.
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Get_Env( EnvVar )                                                      ! Please use GET_ENVIRONMENT_VARIABLE() instead.
-   !     FUNCTION    Is_NaN( DblNum )
+   !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
    !     SUBROUTINE  OpenCon
@@ -491,6 +491,9 @@ CONTAINS
 
 
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
+      ! BJJ: this routine is used in CRUNCH.
+      ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
+      ! backwards compatibility. 
 
 
    USE                             IFPORT

@@ -21,8 +21,8 @@ MODULE NWTC_Num
    !     SUBROUTINE LocateStp     ( XVal, XAry, Ind, AryLen )
    !     FUNCTION   Mean          ( Ary, AryLen )                               ! Function to calculate the mean value of a vector array.
    !     SUBROUTINE MPi2Pi        ( Angle )
-   !     SUBROUTINE SetConstants
    !     SUBROUTINE RombergInt    ( f, a, b, R, err, eps, ErrStat )
+   !     SUBROUTINE SetConstants
    !     SUBROUTINE SmllRotTrans  ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
    !     SUBROUTINE SortUnion     ( Ary1, N1, Ary2, N2, Ary, N )
    !     FUNCTION   StdDevFn      ( Ary, AryLen, Mean )                         ! Function to calculate the standard deviation of a vector array.
@@ -987,46 +987,6 @@ CONTAINS
    RETURN
    END SUBROUTINE MPi2Pi
 !=======================================================================
-   SUBROUTINE SetConstants( )
-
-      ! This routine computes numeric constants stored in the NWTC Library
-
-   USE, INTRINSIC :: ieee_arithmetic
-
-      
-      ! Constants based upon Pi:
-
-   Pi_D      = ACOS( -1.0_DbKi )
-   D2R_D     = Pi_D/180.0_DbKi
-   R2D_D     = 180.0_DbKi/Pi_D
-   PiBy2_D   = Pi_D/2.0_DbKi
-   RPM2RPS_D = Pi_D/30.0_DbKi
-   RPS2RPM_D = 30.0_DbKi/Pi_D
-   TwoByPi_D = 2.0_DbKi/Pi_D
-   TwoPi_D   = 2.0_DbKi*Pi_D
-
-   Pi      = ACOS( -1.0 )
-   D2R     = Pi/180.0
-   R2D     = 180.0/Pi
-   PiBy2   = Pi/2.0
-   RPM2RPS = Pi/30.0
-   RPS2RPM = 30.0/Pi
-   TwoByPi = 2.0/Pi
-   TwoPi   = 2.0*Pi
-   
-   
-      ! IEEE constants:
-      
-   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
-   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
-
-   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
-   Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
-   
-   
-   RETURN
-   END SUBROUTINE SetConstants
-!=======================================================================
    SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
 
       ! This routine is used to integrate funciton f over the interval [a, b]. This routine
@@ -1124,6 +1084,60 @@ CONTAINS
 
    RETURN
 END SUBROUTINE RombergInt
+!=======================================================================
+   SUBROUTINE SetConstants( )
+
+      ! This routine computes numeric constants stored in the NWTC Library
+
+!   USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented 
+
+      ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
+   REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
+   REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number                                        
+
+      
+      ! Constants based upon Pi:
+
+   Pi_D      = ACOS( -1.0_DbKi )
+   D2R_D     = Pi_D/180.0_DbKi
+   R2D_D     = 180.0_DbKi/Pi_D
+   PiBy2_D   = Pi_D/2.0_DbKi
+   RPM2RPS_D = Pi_D/30.0_DbKi
+   RPS2RPM_D = 30.0_DbKi/Pi_D
+   TwoByPi_D = 2.0_DbKi/Pi_D
+   TwoPi_D   = 2.0_DbKi*Pi_D
+
+   Pi      = ACOS( -1.0_ReKi )
+   D2R     = Pi/180.0_ReKi
+   R2D     = 180.0_ReKi/Pi
+   PiBy2   = Pi/2.0_ReKi
+   RPM2RPS = Pi/30.0_ReKi
+   RPS2RPM = 30.0_ReKi/Pi
+   TwoByPi =  2.0_ReKi/Pi
+   TwoPi   =  2.0_ReKi*Pi
+   
+   
+      ! IEEE constants:
+      
+!   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+!   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+!
+!   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+!   Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
+   
+      ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
+   Neg   = -1.0_ReKi
+   Neg_D = -1.0_DbKi
+   
+   NaN_D = SQRT ( Neg_D )
+   Inf_D = Pi_D / 0.0_DbKi
+
+   NaN   = SQRT ( Neg )
+   Inf   = Pi / 0.0_ReKi
+   
+   
+   RETURN
+   END SUBROUTINE SetConstants
 !=======================================================================
    SUBROUTINE SmllRotTrans( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
 

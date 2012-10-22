@@ -284,6 +284,9 @@ CONTAINS
 
 
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
+      ! BJJ: this routine is used in CRUNCH.
+      ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
+      ! backwards compatibility. 
 
 
    USE                             IFPORT

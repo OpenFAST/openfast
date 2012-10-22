@@ -19,8 +19,9 @@ MODULE SysSubs
    !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
+   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT: 
+   !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
-   !      per MLB, this can be removed, but only if CU is OUTPUT_UNIT: SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  ProgExit ( StatCode )
    !     SUBROUTINE  UsrAlarm
    !     FUNCTION    UserTime()                                                             ! Removed: Replace by F95 intrinsic, CPU_TIME().
@@ -499,11 +500,12 @@ CONTAINS
 
 
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
+      ! BJJ: this routine is used in CRUNCH.
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
       ! backwards compatibility. 
 
-
-   USE, INTRINSIC :: ieee_arithmetic
+   USE                             IFPORT !remove with use of next line (not implemented in all versions of the IVF compiler)
+!  USE, INTRINSIC :: ieee_arithmetic
 
 
       ! Argument declarations.
@@ -517,7 +519,8 @@ CONTAINS
 
 
 
-   Is_NaN = IEEE_IS_NAN( DblNum )
+!   Is_NaN = IEEE_IS_NAN( DblNum )
+  Is_NaN = IsNaN( DblNum )
        
 
    RETURN

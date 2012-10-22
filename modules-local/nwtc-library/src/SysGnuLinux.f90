@@ -6,11 +6,6 @@ MODULE SysSubs
 
    ! SysGnu.f90 is specifically for the GNU Fortran (gfortran) compiler on Linux. This should also work for gfortran on MAC.
 
-   ! 20110512, jm updated to use ACCESS='STREAM' for binary OPEN
-   !           modified definition of char string UnfForm, below
-   !           removed 3rd arg. from calls to GETARG, as
-   !           recommended by H. Currin.
-
 
    ! It contains the following routines:
 
@@ -25,7 +20,7 @@ MODULE SysSubs
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Get_Env( EnvVar )                                                      ! Please use GET_ENVIRONMENT_VARIABLE() instead.
    !     FUNCTION    GET_ENVIRONMENT_VARIABLE( Name, Value, Length, Status, Trim_Name )
-   !     FUNCTION    Is_NaN( DblNum )
+   !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
@@ -471,6 +466,10 @@ CONTAINS
 
 
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
+      ! BJJ: this routine is used in CRUNCH.
+      ! Note that IsNaN does not exist in earlier versions of gfortran (e.g., 4.2.1), 
+      ! but does exist in version 4.4. It should be replaced with the standard 
+      ! IEEE_IS_NAN when gfortran implements it.
 
 
       ! Argument declarations.

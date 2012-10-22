@@ -1,4 +1,6 @@
 MODULE ModMesh
+! (c) 2012 National Renewable Energy Laboratory
+!
 !BJJ: This is a place holder for a module John Michalaches and Ilene Carpenter are writing. 
 ! This will be part of the NWTC Subroutine Library.
 
