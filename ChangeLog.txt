@@ -302,7 +302,7 @@ v1.04.01 21-Feb-2012 B. Jonkman
 v1.04.02 27-Sep-2012 A. Platt
   I corrected the equation for CpminInt within the GetCoefs subroutine. The equation now uses the correct variables.
 
-v1.05.00 15-Oct-2012 B. Jonkman
+v1.05.00 22-Oct-2012 B. Jonkman, A. Platt
   I modified the InFile intent to INOUT in CheckArgs().
   I added IMPLICIT NONE to all of the modules where it was missing.
   I added IntKi and BytesPer* PARAMETERS to the Precision MODULE.
@@ -318,17 +318,18 @@ v1.05.00 15-Oct-2012 B. Jonkman
   I removed NWTC_SharedDataTypes.f90 from the archive because it will not be necessary for the new framework.
   I removed subroutines/functions COMMAND_ARGUMENT_COUNT, GET_COMMAND, GET_COMMAND_ARGUMENT, and GET_ENVIRONMENT_VARIABLE 
     from SysIVF.f90, SysIFL.f90, and SysMatlab.f90 because they are part of the Fortran 2003 standard.
-  I modified FUNCTION Is_NaN() to use the intrinsic IEEE_IS_NAN function, which is part of the Fortran 2003 standard.
   I updated the OpenBinFile() and OpenBinInpFile() routines in SysIVF.f90 to use FORM='UNFORMATTED' , ACCESS='STREAM' instead of FORM='BINARY'. 
 
-  I added BufferRoutines.f90 to the archive for use with the FAST framework template. 
+  I added BufferRoutines.f90 to the archive for use with the FAST framework template.
   I added a placeholder for the ModMesh module (new FAST framework) and added ModMesh.f90 to the archive.
  
-  I added constants called NaN, Inf, NaN_D, and Inf_D to store the IEEE values of NaN and Inf. (Document these in handbook???)
+  I added constants called NaN, Inf, NaN_D, and Inf_D to store the IEEE values of NaN and Inf.
   I renamed the PiConst() subroutine to SetConstants() because we are using it set the NaN and Inf values, too.
 
-  I split the the SysGnu.f90 file into two, SysGnuLinux.f90 and SysGnuWin.f90. These are for the gfortran compiler on the respective
+  Andy Platt split the the SysGnu.f90 file into two, SysGnuLinux.f90 and SysGnuWin.f90. These are for the gfortran compiler on the respective
     platforms. The difference is in the unit number for the ConOut subroutine. The linux version should work with a mac as well.
+
+  John Michalakes created a Makefile for the library, and I added it to the archive.
 
 ==========================================================
  To do:
