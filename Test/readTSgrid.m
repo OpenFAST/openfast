@@ -88,6 +88,7 @@ if fid > 0
        [v cnt] = fread( fid, nv, fileFmt ); % read the velocity components for one time step
        if ( cnt < nv ) 
            disp([ it nt ny nz nffc nv cnt])
+           fclose(fid);
            error(['Could not read entire file: at grid record ' num2str( (it-1)*(nv+nvTwr)+cnt ) ' of ' num2str(nt*(nv+nvTwr))]);
        end
 
@@ -119,7 +120,9 @@ if fid > 0
 
     end %it
 
+    fclose(fid);
 else
+    fclose(fid);
     error(['Could not open the wind file: ' ADFileName]) ;
 end
 
