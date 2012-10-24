@@ -31,9 +31,9 @@ rem @SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
 
 :DoIt
 @ECHO.
-@ECHO ------------------------------------------
+@ECHO -------------------------------------------------------------------------
 @ECHO Archiving %PROGNAME% for general Windows distribution.
-@ECHO ------------------------------------------
+@ECHO -------------------------------------------------------------------------
 @ECHO.
 @%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
@@ -41,9 +41,9 @@ rem @SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
 @DEL ARCHTMP.zip, ARCHTMP.exe
 
 @ECHO.
-@ECHO ---------------------------------
+@ECHO -------------------------------------------------------------------------
 @ECHO Archiving %PROGNAME% for maintenance.
-@ECHO ---------------------------------
+@ECHO -------------------------------------------------------------------------
 @ECHO.
 @%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcMaint.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
@@ -51,9 +51,9 @@ rem @SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
 @DEL ARCHTMP.zip, ARCHTMP.exe
 
 @ECHO.
-@ECHO ---------------------------------
-@ECHO Archiving %PROGNAME% for general distribution (TAR.GZ).
-@ECHO ---------------------------------
+@ECHO -------------------------------------------------------------------------
+@ECHO Archiving %PROGNAME% for general distribution (tar.gz).
+@ECHO -------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
 @%TARZIP% a -ttar ARCHTMP @ArcFiles.txt
