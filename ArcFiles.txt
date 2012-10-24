@@ -9,7 +9,8 @@ Source\NWTC_IO.f90
 Source\NWTC_Library.f90
 Source\NWTC_Num.f90
 Source\SingPrec.f90
-Source\SysGnu.f90
+Source\SysGnuLinux.f90
+Source\SysGnuWin.f90
 Source\SysIFL.f90
 Source\SysIVF.f90
 Source\SysMatlab.f90

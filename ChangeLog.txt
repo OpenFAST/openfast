@@ -302,7 +302,7 @@ v1.04.01 21-Feb-2012 B. Jonkman
 v1.04.02 27-Sep-2012 A. Platt
   I corrected the equation for CpminInt within the GetCoefs subroutine. The equation now uses the correct variables.
 
-v1.05.00 22-Oct-2012 B. Jonkman, A. Platt
+v1.05.00 24-Oct-2012 B. Jonkman (with help from A. Platt)
   I modified the InFile intent to INOUT in CheckArgs().
   I added IMPLICIT NONE to all of the modules where it was missing.
   I added IntKi and BytesPer* PARAMETERS to the Precision MODULE.
@@ -330,6 +330,8 @@ v1.05.00 22-Oct-2012 B. Jonkman, A. Platt
     platforms. The difference is in the unit number for the ConOut subroutine. The linux version should work with a mac as well.
 
   John Michalakes created a Makefile for the library, and I added it to the archive.
+  I added the pdf with NWTC Library documentation to the archive.
+  I modified the archive to also generate tar.gz files for non-windows users.
 
 ==========================================================
  To do:
