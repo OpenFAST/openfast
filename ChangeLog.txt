@@ -3876,13 +3876,14 @@ v7.01.01a-bjj 06-March-2012  B. Jonkman
    
 v7.01.01b-bjj 16-May-2012  B. Jonkman
  I updated the call to read AzimB1Up so that the echo file (and message when an error occurred) no
-   longer says it is the blade-tip radius. This was reported by uesr Felix Hess.
+   longer says it is the blade-tip radius. This was reported by user Felix Hess.
    
 v7.01.01c-bjj 13-Aug-2012 B. Jonkman   
   The WAMITFile and GHWvFile variables didn't include logic for PathIsRelative() so when people ran FAST 
     from different directories, it couldn't always find these file. I fixed the issue.
-  I added code to output binary output files, named .outb. These files will require more memory to run,
-    but they should run faster if the text files are not output. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
+  I added code to output binary output files, named .outb. These files store the output channels as 
+    packed 16-bit integers. They will require more memory to run, but they should run faster if the text 
+    files are not output. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
     
 v7.02.00a-bjj 28-Aug-2012 B. Jonkman
   I modified the input file, adding a line for "OutFileFmt", which is a switch indicating if the tabular
@@ -3895,7 +3896,7 @@ v7.02.00a-bjj 28-Aug-2012 B. Jonkman
     format is indicated by an integer FileID in the binary file header (note that post-processors MUST 
     have output at a constant rate to work properly.) I added this OutFileFmt to the FAST2ADAMS datasets 
     for use in A2AD. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
-  The input parameter TMax does not have the upper limit limiataion of 9999.999 seconds when only binary 
+  The input parameter TMax does not have the upper limit limitation of 9999.999 seconds when only binary 
     tabular (time-marching) output is requested. The limit still exists for tabular text output. See
     https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=147
   I replaced the code to read the OutList input parameter with the ReadOutputList() subroutine from the
@@ -3907,6 +3908,12 @@ v7.02.00a-bjj 28-Aug-2012 B. Jonkman
        AeroDyn v13.00.01a-bjj, 16-Feb-2012 B. Jonkman 
        InflowWind v1.01.00b-bjj, 10-Aug-2012, B. Jonkman      
      Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003     
-     Simulink compiled with Matlab R2011a.
+     Simulink compiled with Matlab R2008b.
     
+  
+v7.02.00b-bjj 28-Aug-2012 B. Jonkman
+  I added ReadFASTbinary.m file to the archive.
+  I added Paul Fleming's changes for creating making FAST a DLL for Labview. This involved creating a new 
+    FAST_RT_DLL.f90 file and adding a Cmpl4LV switch.
+
   

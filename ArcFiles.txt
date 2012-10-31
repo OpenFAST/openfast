@@ -6,12 +6,10 @@ Compile_FAST.bat
 DFORRT.DLL
 Disclaimer.txt
 DISCON.f90
-FAST.exe
 OutList.txt
 OutListParameters.xlsx
 ModeShapePolyFitting.xls
 
-Simulink\FAST_SFunc.mexw32
 Simulink\Read_FAST_Input.m
 Simulink\Simsetup.m
 Simulink\Samples\OpenLoop.mdl
@@ -49,6 +47,7 @@ CertTest\Noise.ipt
 CertTest\Pitch.ipt
 CertTest\Platform.dat
 CertTest\PlotCertTestResults.m
+CertTest\ReadFASTbinary.m
 CertTest\Simulink_CertTest.m
 CertTest\Spd_Trq.dat
 CertTest\Update.bat

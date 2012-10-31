@@ -330,6 +330,7 @@ REAL(ReKi)                   :: GenSpRat                                        
 REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
 REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque.
 REAL(ReKi)                   :: HSSBrDT                                         ! Time it takes for HSS brake to reach full deployment once deployed.
+REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
 REAL(ReKi)                   :: HSSBrTqF                                        ! Fully deployed HSS brake torque
 REAL(ReKi)                   :: HSSBrTrq                                        ! Instantaneous HSS brake torque
 REAL(ReKi)                   :: HSSBrTrqC                                       ! A copy of the value of HSSBrTrq calculated in SUBROUTINE DrvTrTrq().
@@ -458,7 +459,8 @@ INTEGER(4)                   :: UnOu      = 21                                  
 INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
-LOGICAL                      :: Cmpl4SFun = .FALSE.                             ! Is FAST being compiled as an S-Function for Simulink?
+LOGICAL                      :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
+LOGICAL                      :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
 LOGICAL                      :: Furling                                         ! Read in additional model properties for furling turbine?
 LOGICAL                      :: SumDisp                                         ! Display summary data on screen?
 LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
