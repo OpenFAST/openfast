@@ -68,3 +68,4 @@ rem @SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
 @SET PROGNAME=
 @SET WINZIP=
 @SET WINZIPSE=
+@SET TARZIP=
