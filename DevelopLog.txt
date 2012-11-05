@@ -261,5 +261,6 @@ v13.00.01a-bjj 25-Jan-2012 B. Jonkman
    enabled during compilation, this change does not effect any results except that the
    tangential induction is now properly output in the element output file.
  
-
+v13.00.01b-bjj, 28-Aug-2012 B. Jonkman
+ I removed the ProgDesc type from ShardTypes.f90 and placed it in the NWTC 
    

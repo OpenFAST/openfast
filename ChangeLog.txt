@@ -767,6 +767,9 @@ v13.00.00a-bjj was added to the NWTC Subversion (SVN) server.
  
 v13.00.01a-bjj 16-Feb-2012 B. Jonkman 
  See DevelopLog.txt
+ 
+v13.00.01b-bjj, 28-Aug-2012 B. Jonkman   
+ Modifications for NWTC Library v1.05.00.
 
 -------------------------------------------------------------------------------
 To do:

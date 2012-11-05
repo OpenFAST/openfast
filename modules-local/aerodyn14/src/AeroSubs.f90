@@ -541,9 +541,9 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
                   IF ( NTables(K) > 1 ) THEN
                      IF ( ( MulTabLoc < MulTabMet(K,1) ) .OR. ( MulTabLoc > MulTabMet(K,NTables(K) ) ))THEN  !bjj: why don't we have this error elsewhere??? can't MulTabLoc change?
                         CALL ProgWarn( 'Error interpolating between airfoil tables. '// &
-                                 ' Initial interpolation value = '//TRIM(Flt2LStr(MulTabLoc))// &
-                                 ' is outside table range of '//TRIM(Flt2LStr(MulTabMet(K,1)))// &
-                                 ' to '//TRIM(Flt2LStr(MulTabMet(K,NTables(K))))// &
+                                 ' Initial interpolation value = '//TRIM(Num2LStr(MulTabLoc))// &
+                                 ' is outside table range of '//TRIM(Num2LStr(MulTabMet(K,1)))// &
+                                 ' to '//TRIM(Num2LStr(MulTabMet(K,NTables(K))))// &
                                  ' in airfoil file #'//TRIM(Int2LStr(K))//'.' )
                         ErrStat = 1
                         RETURN
@@ -713,7 +713,7 @@ IF ( WAKE ) THEN
    ELSE
       WRITE(UnADopt,'(A)') 'WAKE'//TAB//MESAGE//' [Normal flow induction factors calculated]'
    ENDIF
-   WRITE(UnADopt,'(A)') TRIM(Flt2LStr(ATOLER))//TAB// 'Convergence tolerance for induction factor'
+   WRITE(UnADopt,'(A)') TRIM(Num2LStr(ATOLER))//TAB// 'Convergence tolerance for induction factor'
 ELSE
    WRITE(UnADopt,'(A)') 'NONE'//TAB//MESAGE//' [NO induction factors calculated]'
    WRITE(UnADopt,'(A)') '[Not Used]'//TAB//'Convergence tolerance for induction factor'
@@ -748,7 +748,7 @@ ENDIF
 
 WRITE(UnADopt, '(A)') '"'//TRIM(WindFileName)//'"'//TAB//'  Wind file name'
 
-WRITE(UnADopt,'(A)') TRIM(Flt2LStr(HH))//TAB// 'Wind reference (hub) height, '//TRIM(Dst_Unit)
+WRITE(UnADopt,'(A)') TRIM(Num2LStr(HH))//TAB// 'Wind reference (hub) height, '//TRIM(Dst_Unit)
 
 IF ( PJM_Version ) THEN
    WRITE(UnADopt,'(L2, A)') TwrPotent, TAB//'Calculate tower potential flow [T or F]'
@@ -759,16 +759,16 @@ IF ( PJM_Version ) THEN
       WRITE(UnADopt,'(A)') '[none]'//TAB//'No tower drag properties file'
    ENDIF
 ELSE
-   WRITE(UnADopt,'(A)') TRIM(Flt2LStr(TwrShad))//TAB// 'Tower shadow centerline velocity deficit'
-   WRITE(UnADopt,'(A)') TRIM(Flt2LStr(ShadHWid))//TAB// 'Tower shadow half width, '//TRIM(Dst_Unit)
-   WRITE(UnADopt,'(A)') TRIM(Flt2LStr(T_Shad_Refpt))//TAB// 'Tower shadow reference point, '//TRIM(Dst_Unit)
+   WRITE(UnADopt,'(A)') TRIM(Num2LStr(TwrShad))//TAB// 'Tower shadow centerline velocity deficit'
+   WRITE(UnADopt,'(A)') TRIM(Num2LStr(ShadHWid))//TAB// 'Tower shadow half width, '//TRIM(Dst_Unit)
+   WRITE(UnADopt,'(A)') TRIM(Num2LStr(T_Shad_Refpt))//TAB// 'Tower shadow reference point, '//TRIM(Dst_Unit)
 END IF
 
 
-WRITE(UnADopt,'(A)') TRIM(Flt2LStr(RHO))//TAB// 'Air density, '//TRIM(Mass_Unit)//'/'//TRIM(Dst_Unit)//'^3'
-WRITE(UnADopt,'(A)') TRIM(Flt2LStr(KinVisc))//TAB// 'Kinematic air viscosity, '//TRIM(Dst_Unit)//'^2/sec'
+WRITE(UnADopt,'(A)') TRIM(Num2LStr(RHO))//TAB// 'Air density, '//TRIM(Mass_Unit)//'/'//TRIM(Dst_Unit)//'^3'
+WRITE(UnADopt,'(A)') TRIM(Num2LStr(KinVisc))//TAB// 'Kinematic air viscosity, '//TRIM(Dst_Unit)//'^2/sec'
 
-WRITE(UnADopt,'(A)') TRIM(Flt2LStr(DTAERO))//TAB// 'Time interval for aerodynamic calculations, sec'
+WRITE(UnADopt,'(A)') TRIM(Num2LStr(DTAERO))//TAB// 'Time interval for aerodynamic calculations, sec'
 
 WRITE(UnADopt,'(A)') TRIM(Int2LStr(NUMFOIL))//TAB// 'Number of airfoil files used. Files listed below:'
 DO IFoil = 1, NUMFOIL
@@ -1424,7 +1424,7 @@ REAL(ReKi)                 :: VN
 !DJL REAL(ReKi)                 :: SwitchTime = 0.0 ! The last time the GDW was switched on or off
 !DJL REAL(ReKi)                 :: Dyn_WT     = 0.0 ! The last time we passed GDW on threshold
 
-!DJL CHARACTER( 15)             :: Flt2LStr
+!DJL CHARACTER( 15)             :: Num2LStr
 !DJL CHARACTER(100)             :: MESAGE
 
 !DJL SAVE ! We need to save values for the next time
@@ -1473,7 +1473,7 @@ ELSE
 
 !DJL          IF ( TotalInf <= 0.1 ) THEN ! Deactivate GDW
 !DJL             MESAGE = " TotalInf has dropped below 0.1; GDW is being turned off. Time = " &
-!DJL                      //Flt2LStr(REAL(TIME, ReKi))
+!DJL                      //Num2LStr(REAL(TIME, ReKi))
 !DJL             CALL ErrLog ( MESAGE, '(A)', 'ELEMFRC', 301, 'WARN' )
 !DJL        DYN = .FALSE.
 !DJL             SwitchTime = REAL(TIME, ReKi)
@@ -1497,7 +1497,7 @@ ELSE
 
 !DJL       IF (DYNwait .AND. TIME - DYN_WT > 0.1) THEN ! Activate GDW
 !DJL          MESAGE = " TotalInf has returned above 0.1; GDW is being turned on. Time = " &
-!DJL                  //Flt2LStr(REAL(TIME, ReKi))
+!DJL                  //Num2LStr(REAL(TIME, ReKi))
 !DJL          CALL ErrLog ( MESAGE, '(A)', 'ELEMFRC', 302, 'WARN' )
 !DJL          DYNwait = .FALSE.
 !DJL          DYN = .TRUE.
@@ -1805,7 +1805,7 @@ NERRORS = NERRORS + 1
 
    CALL ProgWarn( ' High '//TRIM(VID)//' velocity encountered during induction factor calculation.' )
    CALL WrScr( '  Blade number '//TRIM(Int2LStr(IBLADE))//', Element number '//TRIM(Int2LStr(J )) )
-   CALL WrScr( '  VNW = '       //TRIM(Flt2LStr(VNW))//', '//TRIM(VID)//' = '//TRIM(Flt2LStr(VX)) )
+   CALL WrScr( '  VNW = '       //TRIM(Num2LStr(VNW))//', '//TRIM(VID)//' = '//TRIM(Num2LStr(VX)) )
 
 IF ( NERRORS >= 5 ) THEN
    AFLAG = .TRUE.
@@ -3129,7 +3129,7 @@ IF ( .NOT. SuperSonic .AND. XM >= 1.0 ) THEN
 
    CALL ProgWarn( ' Blade #'//TRIM(Int2LStr(IBLADE))//' element #'//TRIM(Int2LStr(J))//' is supersonic! '//&
                   ' Other elements are likely supersonic as well. Supersonic mach nos. will be set to '//&
-                  TRIM(Flt2LStr(XM))//' to attempt continuation.' )
+                  TRIM(Num2LStr(XM))//' to attempt continuation.' )
 ELSEIF (SuperSonic .AND. XM < 1.0) THEN
    SuperSonic = .FALSE.
    CALL ProgWarn( ' Supersonic condition has subsided with Blade #'// TRIM(Int2LStr(IBLADE))// &
@@ -3254,7 +3254,7 @@ CALL MPI2PI ( AFE(J,IBLADE) )
 
 IF ( ( AFE(J,IBLADE) < AL(IFOIL,1) ) .OR.  &
      ( AFE(J,IBLADE) > AL(IFOIL,NLIFT(IFOIL) ) ) ) THEN !bjj compare w/ MIN(MAX()) below.  Is NLIFT(IFOIL)=NFT ? yes!!!
-   CALL ProgAbort( ' Angle of attack = '//Flt2LStr(REAL( AFE(J,IBLADE)*R2D, ReKi ))// &
+   CALL ProgAbort( ' Angle of attack = '//Num2LStr(REAL( AFE(J,IBLADE)*R2D, ReKi ))// &
                    ' is outside table.' )
 ENDIF
 
@@ -3558,7 +3558,7 @@ NTAB = NLIFT(I)
 
 IF ( ( ALPHA < AL(I,1) ) .OR. ( ALPHA > AL(I,NTAB) ) )   THEN
 !bjj: This error message isn't necessarially accurate:
-   CALL ProgAbort( ' Angle of attack = '//TRIM(Flt2LStr(ALPHA*R2D))// &
+   CALL ProgAbort( ' Angle of attack = '//TRIM(Num2LStr(ALPHA*R2D))// &
                    ' deg is outside data table range. '// & !Blade #'//TRIM(Int2LStr(IBLADE))//&
                    ' Airfoil '//TRIM(Int2LStr(I))//'.' )
 !                   ' element '//TRIM(Int2LStr(J))//'.' )
@@ -4554,7 +4554,7 @@ INTEGER                    :: JCOL
  ! Check the value of X
 IF ( ( X < -1.) .OR. ( X > 1.) ) THEN
 !   IF ( ( X < 0.) .OR. ( X > 1.) ) THEN
-   CALL ProgAbort ( 'Value of X = '//TRIM(Flt2LStr(X))//' must be between -1 and 1.')
+   CALL ProgAbort ( 'Value of X = '//TRIM(Num2LStr(X))//' must be between -1 and 1.')
 ENDIF
 
 SELECT CASE ( matrixMode )
@@ -4917,9 +4917,9 @@ INTEGER   ,INTENT(IN)      :: mode
 
 
 IF ( Rzero < 0. ) THEN
-   CALL ProgAbort( 'Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be larger than 0 in xphi().')
+   CALL ProgAbort( 'Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be larger than 0 in xphi().')
 ELSE IF ( Rzero > 1. ) THEN
-   CALL ProgAbort( 'Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be smaller than 1 in xphi().')
+   CALL ProgAbort( 'Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be smaller than 1 in xphi().')
 ENDIF
 
 SELECT CASE ( mode )
@@ -4971,9 +4971,9 @@ INTEGER                   :: q
 
 
 IF ( Rzero < 0. ) THEN
-   CALL ProgAbort('Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be larger than 0 in phis().' )
+   CALL ProgAbort('Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be larger than 0 in phis().' )
 ELSE IF ( Rzero > 1. ) THEN
-   CALL ProgAbort('Value of Rzero = '//TRIM(Flt2LStr(Rzero))//' must be smaller than 1 in phis().' )
+   CALL ProgAbort('Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be smaller than 1 in phis().' )
 ENDIF
 
 phis = 0.
