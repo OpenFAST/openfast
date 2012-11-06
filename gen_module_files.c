@@ -48,7 +48,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 int
 gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
   node_t *q, * r ;
   int frst ;
 
@@ -187,8 +187,15 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       }
     } else  {
       sprintf(tmp2,"SIZE(InData%%%s)",r->name) ;
+      if      ( r->ndims==0 ) { strcpy(tmp3,"") ; }
+      else if ( r->ndims==1 ) { strcpy(tmp3,"") ; }
+      else if ( r->ndims==2 ) { sprintf(tmp3,"(1:(%s),1)",tmp2) ; }
+      else if ( r->ndims==3 ) { sprintf(tmp3,"(1:(%s),1,1)",tmp2) ; }
+      else if ( r->ndims==4 ) { sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ; }
+      else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
+      else                    { fprintf(stderr,"Registry WARNING: too man dimensions for %s\n",r->name) ; }
       if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  InData%%%s\n",(r->ndims>0)?tmp2:"1",r->name) ;
+  fprintf(fp,"  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  InData%%%s%s\n",(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
   fprintf(fp,"  Re_Xferred   = Re_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
       }
       else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
