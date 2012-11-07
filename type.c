@@ -139,7 +139,9 @@ get_4d_entry ( char * name )
 node_t *
 get_type_entry ( char * typename )
 {
-  return(get_entry(typename,Type)) ;
+  node_t * retval ;
+  retval = get_entry(typename,Type) ;
+  return(retval) ;
 }
 
 node_t *

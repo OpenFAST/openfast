@@ -317,7 +317,7 @@ reg_parse( FILE * infile )
 // FAST registry, construct the list of fields in the derived types in the Module
       field_struct = new_node( FIELD ) ;
       strcpy( field_struct->name, tokens[FIELD_SYM] ) ;
-      if ( set_state_type( tokens[FIELD_TYPE], field_struct ) )
+      if ( set_state_type( tokens[FIELD_TYPE], field_struct, Type, modname_struct->module_ddt_list ) )
        { fprintf(stderr,"Registry warning: type %s used before defined for %s\n",tokens[FIELD_TYPE],tokens[FIELD_SYM] ) ; }
       if ( set_state_dims( tokens[FIELD_DIMS], field_struct ) )
        { fprintf(stderr,"Registry warning: some problem with dimstring %s for %s\n", tokens[FIELD_DIMS],tokens[FIELD_SYM] ) ; }
@@ -404,22 +404,24 @@ get_dim_entry( char *s )
 }
 
 int
-set_state_type( char * typename, node_t * state_entry )
+set_state_type( char * typename, node_t * state_entry, node_t * typelist, node_t * ddtlist )
 {
   node_t *p ;
   int retval ;
   
   if ( typename == NULL ) return(1) ;
   retval = 0 ;
-  if ( ( state_entry->type = get_type_entry( make_lower_temp(typename) )) == NULL ) {
-    if ( !strncmp(make_lower_temp(typename),"character",9) ) 
-    {
-      p = new_node( TYPE ) ;
-      strcpy( p->name, make_lower_temp(typename) ) ;
-      strcpy( p->mapsto, typename ) ;
-      add_node_to_end( p , &(state_entry->type) ) ;
-    } else {
-      retval = 1 ;
+  if ( ( state_entry->type = get_entry( make_lower_temp(typename), ddtlist )) == NULL ) {
+    if ( ( state_entry->type = get_entry( make_lower_temp(typename), typelist )) == NULL ) {
+      if ( !strncmp(make_lower_temp(typename),"character",9) ) 
+      {
+        p = new_node( TYPE ) ;
+        strcpy( p->name, make_lower_temp(typename) ) ;
+        strcpy( p->mapsto, typename ) ;
+        add_node_to_end( p , &(state_entry->type) ) ;
+      } else {
+        retval = 1 ;
+      }
     }
   }
   return(retval) ;

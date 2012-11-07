@@ -13,7 +13,7 @@ int add_node_to_end ( node_t * node , node_t ** list ) ;
 int add_node_to_beg ( node_t * node , node_t ** list ) ;
 int add_node_to_end_4d ( node_t * node , node_t ** list ) ;
 int init_type_table() ;
-int set_state_type ( char * typename , node_t * node ) ;
+int set_state_type ( char * , node_t *, node_t *, node_t * ) ;
 int set_state_dims ( char * dims , node_t * node ) ;
 int set_ctrl       ( char * ctrl , node_t * node ) ;
 int gen_state_struct ( char * fname ) ;

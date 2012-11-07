@@ -579,7 +579,11 @@ gen_module( FILE * fp , const node_t * ModName )
     fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
     for ( r = q->fields ; r ; r = r->next )
     { 
-      fprintf(fp,"    %s ",r->type->mapsto ) ;
+      if ( r->type->type_type == DERIVED ) {
+        fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
+      } else {
+        fprintf(fp,"    %s ",r->type->mapsto ) ;
+      }
       if ( r->ndims > 0 )
       {
         if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
