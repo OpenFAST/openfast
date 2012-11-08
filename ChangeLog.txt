@@ -333,6 +333,9 @@ v1.05.00 24-Oct-2012 B. Jonkman (with help from A. Platt)
   I added the pdf with NWTC Library documentation to the archive.
   I modified the archive to also generate tar.gz files for non-windows users.
 
+v1.05.01a 8-Nov-2012 B. Jonkman
+  I replaced EqualRealNos with EqualRealNos4, EqualRealNos8, and EqualRealNos16 and made EqualRealNos an interface procedure.
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)

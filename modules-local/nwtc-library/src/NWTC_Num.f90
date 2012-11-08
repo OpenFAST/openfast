@@ -65,6 +65,14 @@ MODULE NWTC_Num
 
 !=======================================================================
 
+      ! Create interface for a generic EqualRealNos that uses specific routines.
+
+   INTERFACE EqualRealNos
+      MODULE PROCEDURE EqualRealNos4
+      MODULE PROCEDURE EqualRealNos8
+      MODULE PROCEDURE EqualRealNos16
+   END INTERFACE
+   
 
       ! Create interface for a generic InterpBin that actually uses specific routines.
 
@@ -251,41 +259,116 @@ CONTAINS
 !   END SUBROUTINE GetPermMat ! ( InpMat, PMat, ErrStat )
 
 !=======================================================================
-   FUNCTION EqualRealNos ( ReNum1, ReNum2 )
+   FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
 
       ! This function compares 2 real numbers and determines if they
       ! are "almost" equal, i.e. within some relative tolerance
+      ! ("Safe Comparisons" suggestion from http://www.lahey.com/float.htm)
 
       ! passed variables
 
-   REAL(ReKi), INTENT(IN )         :: ReNum1                      ! the first  real number to compare
-   REAL(ReKi), INTENT(IN )         :: ReNum2                      ! the second real number to compare
+   REAL(SiKi), INTENT(IN )         :: ReNum1                            ! the first  real number to compare
+   REAL(SiKi), INTENT(IN )         :: ReNum2                            ! the second real number to compare
 
-   LOGICAL                         :: EqualRealNos                ! the function definition -- returns .true. if the numbers are almost equal
+   LOGICAL                         :: EqualRealNos4                     ! the function definition -- returns .true. if the numbers are almost equal
 
       ! local variables
-   REAL(ReKi), PARAMETER           :: Eps = EPSILON(ReNum1)       ! machine precision
-   REAL(ReKi), PARAMETER           :: Tol = 100.*Eps / 2.         ! absolute tolerance (ignore the last 2 significant digits)
+   REAL(SiKi), PARAMETER           :: Eps = EPSILON(ReNum1)             ! machine precision
+   REAL(SiKi), PARAMETER           :: Tol = 100.0_SiKi*Eps / 2.0_SiKi   ! absolute tolerance (ignore the last 2 significant digits)
 
-   REAL(ReKi)                      :: Fraction
+   REAL(SiKi)                      :: Fraction
 
 
       ! make sure we're never trying to get more precision than Tol
 
-   Fraction = MAX( ABS(ReNum1+ReNum2), 1.0_ReKi )
+   Fraction = MAX( ABS(ReNum1+ReNum2), 1.0_SiKi )
 
 
 
       ! determine if ReNum1 and ReNum2 are approximately equal
 
-   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error, (comparison suggestion from Lahey.com)
-      EqualRealNos = .TRUE.
+   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error 
+      EqualRealNos4 = .TRUE.
    ELSE
-      EqualRealNos = .FALSE.
+      EqualRealNos4 = .FALSE.
    ENDIF
 
 
-   END FUNCTION EqualRealNos
+   END FUNCTION EqualRealNos4
+!=======================================================================
+  FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
+
+      ! This function compares 2 real numbers and determines if they
+      ! are "almost" equal, i.e. within some relative tolerance
+      ! ("Safe Comparisons" suggestion from http://www.lahey.com/float.htm)
+
+      ! passed variables
+
+   REAL(R8Ki), INTENT(IN )         :: ReNum1                            ! the first  real number to compare
+   REAL(R8Ki), INTENT(IN )         :: ReNum2                            ! the second real number to compare
+
+   LOGICAL                         :: EqualRealNos8                     ! the function definition -- returns .true. if the numbers are almost equal
+
+      ! local variables
+   REAL(R8Ki), PARAMETER           :: Eps = EPSILON(ReNum1)             ! machine precision
+   REAL(R8Ki), PARAMETER           :: Tol = 100.0_R8Ki*Eps / 2.0_R8Ki   ! absolute tolerance (ignore the last 2 significant digits)
+
+   REAL(R8Ki)                      :: Fraction
+
+
+      ! make sure we're never trying to get more precision than Tol
+
+   Fraction = MAX( ABS(ReNum1+ReNum2), 1.0_R8Ki )
+
+
+
+      ! determine if ReNum1 and ReNum2 are approximately equal
+
+   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error
+      EqualRealNos8 = .TRUE.
+   ELSE
+      EqualRealNos8 = .FALSE.
+   ENDIF
+
+
+  END FUNCTION EqualRealNos8
+!=======================================================================
+  FUNCTION EqualRealNos16 ( ReNum1, ReNum2 )
+
+      ! This function compares 2 real numbers and determines if they
+      ! are "almost" equal, i.e. within some relative tolerance
+      ! ("Safe Comparisons" suggestion from http://www.lahey.com/float.htm)
+
+      ! passed variables
+
+   REAL(QuKi), INTENT(IN )         :: ReNum1                            ! the first  real number to compare
+   REAL(QuKi), INTENT(IN )         :: ReNum2                            ! the second real number to compare
+
+   LOGICAL                         :: EqualRealNos16                    ! the function definition -- returns .true. if the numbers are almost equal
+
+      ! local variables
+   REAL(QuKi), PARAMETER           :: Eps = EPSILON(ReNum1)             ! machine precision
+   REAL(QuKi), PARAMETER           :: Tol = 100.0_QuKi*Eps / 2.0_QuKi   ! absolute tolerance (ignore the last 2 significant digits)
+
+   REAL(QuKi)                      :: Fraction
+
+
+      ! make sure we're never trying to get more precision than Tol
+
+   Fraction = MAX( ABS(ReNum1+ReNum2), 1.0_QuKi )
+
+
+
+      ! determine if ReNum1 and ReNum2 are approximately equal
+
+   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error
+      EqualRealNos16 = .TRUE.
+   ELSE
+      EqualRealNos16 = .FALSE.
+   ENDIF
+
+
+  END FUNCTION EqualRealNos16
 !=======================================================================
    FUNCTION GetSmllRotAngs ( DCMat, ErrStat )
 

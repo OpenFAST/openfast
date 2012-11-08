@@ -91,7 +91,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
    CHARACTER(23)                 :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
-   CHARACTER(29)                 :: NWTCVer  = ' (v1.05.00, 24-Oct-2012)'        ! The version (including date) of the NWTC Subroutine Library.
+   CHARACTER(29)                 :: NWTCVer  = ' (v1.05.01a, 8-Nov-2012)'        ! The version (including date) of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
