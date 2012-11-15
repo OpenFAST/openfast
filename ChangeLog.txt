@@ -770,6 +770,8 @@ v13.00.01a-bjj 16-Feb-2012 B. Jonkman
  
 v13.00.01b-bjj, 28-Aug-2012 B. Jonkman   
  Modifications for NWTC Library v1.05.00.
+ I removed InflowWind from the AeroDyn archive. InflowWind is now a module
+   on its own.
 
 -------------------------------------------------------------------------------
 To do:

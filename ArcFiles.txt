@@ -19,20 +19,4 @@ Source/AeroMods.f90
 Source/AeroSubs.f90
 Source/GenSubs.f90
 Source/SharedTypes.f90
-Source/InflowWind/ChangeLog.txt
-Source/InflowWind/FORMAT_FF_Sum_File.pdf
-Source/InflowWind/Source/CTWind.f90
-Source/InflowWind/Source/FDWind.f90
-Source/InflowWind/Source/FFWind.f90
-Source/InflowWind/Source/HAWCWind.f90
-Source/InflowWind/Source/HHWind.f90
-Source/InflowWind/Source/InflowWindMod.f90
-Source/InflowWind/Source/SharedInflowDefs.f90
-Source/InflowWind/Source/UserWind.f90
-Source/InflowWind/TestRoutines/Fortran/ReadMe.txt
-Source/InflowWind/TestRoutines/Fortran/WindInflow_Test.f90
-Source/InflowWind/TestRoutines/Matlab/intelf10msvs2003opts.bat
-Source/InflowWind/TestRoutines/Matlab/make_WindInflow_mexFunc.m
-Source/InflowWind/TestRoutines/Matlab/WindInflow_gateway.f90
-Source/InflowWind/TestRoutines/Matlab/WindInflow_mex.mexw32
 
