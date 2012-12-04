@@ -336,6 +336,10 @@ v1.05.00 24-Oct-2012 B. Jonkman (with help from A. Platt)
 v1.05.01a 8-Nov-2012 B. Jonkman
   I replaced EqualRealNos with EqualRealNos4, EqualRealNos8, and EqualRealNos16 and made EqualRealNos an interface procedure.
 
+v1.05.02a 4-Dec-2012 A. Platt
+  I replaced DispNVD with DispNVD0 (no arguments), DispNVD1 (argument of type ProgDesc), and DispNVD2 (two string arguments).
+  DispNVD is now an interface procedure.
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
