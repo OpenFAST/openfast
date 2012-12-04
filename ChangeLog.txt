@@ -3900,20 +3900,28 @@ v7.02.00a-bjj 28-Aug-2012 B. Jonkman
     tabular (time-marching) output is requested. The limit still exists for tabular text output. See
     https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=147
   I replaced the code to read the OutList input parameter with the ReadOutputList() subroutine from the
-    NWTC Subroutine Library. (HydroDyn uses the same code.)
-    
+    NWTC Subroutine Library. (HydroDyn uses the same code.)       
+  
+v7.02.00b-bjj 29-Oct-2012 B. Jonkman
+  I added ReadFASTbinary.m file to the archive.
+  I added Paul Fleming's changes for creating making FAST a DLL for LabVIEW. This involved creating a new 
+    FAST_RT_DLL.f90 file, adding a Cmpl4LV switch, and moving variable HSSBrFrac from a subroutine to a module.
+  I modified the Archive.bat file to include tar.gz format. I reworked the ArcAll.txt and ArcFiles.txt files as follows:
+    All archives contain files listed in ArcFiles.txt.
+    Windows archives contain files listed in ArcFiles.txt and ArcWin.txt
+    The maintenance/"all" archives contain files listed in ArcFiles.txt, ArcWin.txt, and ArcMaint.txt
+
+v7.02.00c-bjj 30-Nov-2012 B. Jonkman
+  I removed the (:) from LNodesX and LNodesZ so that the array bounds checking wouldn't complain in debug mode. 
+  I removed DFFORT.DLL from the archive (we no longer support CVF).
+  I added two files to the Windows archive: a batch file to compile DISCON.DLL, and a sample mex opts file
+    for Matlab with IVF 12 and Visual Studio 2010 Shell.
+  
  Compilation info: 
      Linked with 
-       NWTC Library v1.04.02a-bjj, 22-Aug-2012 B. Jonkman
-       AeroDyn v13.00.01a-bjj, 16-Feb-2012 B. Jonkman 
+       NWTC Library v1.05.01a-bjj, 8-Nov-2012 B. Jonkman
+       AeroDyn v13.00.01b-bjj, 28-Aug-2012 B. Jonkman 
        InflowWind v1.01.00b-bjj, 10-Aug-2012, B. Jonkman      
-     Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003     
-     Simulink compiled with Matlab R2008b.
-    
-  
-v7.02.00b-bjj 28-Aug-2012 B. Jonkman
-  I added ReadFASTbinary.m file to the archive.
-  I added Paul Fleming's changes for creating making FAST a DLL for Labview. This involved creating a new 
-    FAST_RT_DLL.f90 file and adding a Cmpl4LV switch.
+     Intel(R) Visual Fortran Compiler XE 12.1.3.300 [IA-32] with Microsoft Visual Studio 2010 Shell (Integrated) 
+     Simulink compiled with Matlab R2012a (32-bit).
 
-  

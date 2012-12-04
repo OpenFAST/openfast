@@ -33,7 +33,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcFilesWinOnly.txt
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe
@@ -45,7 +45,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcFilesWinOnly.txt @ArcMaint.txt 
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @ArcMaint.txt 
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%_all.exe

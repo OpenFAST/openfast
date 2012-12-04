@@ -1,11 +1,12 @@
 ArcWin.txt
 Archive.bat
 Compile_FAST.bat
-DFORRT.DLL
+Compile_DISCON_DLL.bat
 FAST.exe
 
 Simulink\FAST_SFunc.mexw32
 Simulink\Source\intelf10msvs2003opts.bat
+Simulink\Source\intelf12msvs2010shellopts.bat
 
 CertTest\ADAMSCertTest.bat
 
