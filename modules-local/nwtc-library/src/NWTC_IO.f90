@@ -163,6 +163,15 @@ MODULE NWTC_IO
    END INTERFACE
 
 
+      ! Create interface for DispNVD so that we can pass in the name of the program
+
+   INTERFACE DispNVD
+      MODULE PROCEDURE DispNVD0        ! No arguments.
+      MODULE PROCEDURE DispNVD1        ! Single argument of TYPE ProgDesc
+      MODULE PROCEDURE DispNVD2        ! Two arguments of TYPE character
+   END INTERFACE
+
+
 CONTAINS
 
 !=======================================================================
@@ -986,7 +995,7 @@ CONTAINS
    RETURN
    END FUNCTION CurTime ! ()
 !=======================================================================
-   SUBROUTINE DispNVD
+   SUBROUTINE DispNVD0
 
 
       ! This routine displays the name of the program, its version, and its release date.
@@ -998,7 +1007,43 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE DispNVD
+   END SUBROUTINE DispNVD0
+!=======================================================================
+   SUBROUTINE DispNVD1( ProgInfo )
+
+
+      ! This routine displays the name of the program, its version, and its release date.
+
+
+   IMPLICIT NONE
+   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    ! Contains the name and version info
+
+
+      ! Print out program name, version, and date.
+
+   CALL WrScr1 ( ' Running '//TRIM( ProgInfo%Name )//' '//Trim( ProgInfo%Ver )//'.' )
+
+
+   RETURN
+   END SUBROUTINE DispNVD1
+!=======================================================================
+   SUBROUTINE DispNVD2( Name, Ver )
+
+
+      ! This routine displays the name of the program, its version, and its release date passed in as strings
+
+   IMPLICIT NONE
+   CHARACTER(*),  INTENT(IN)           :: Name     ! String containing the name of the program using the library
+   CHARACTER(*),  INTENT(IN)           :: Ver      ! String containing the version and date info
+
+
+      ! Print out program name, version, and date.
+
+   CALL WrScr1 ( ' Running '//TRIM( Name )//' '//Trim( Ver )//'.' )
+
+
+   RETURN
+   END SUBROUTINE DispNVD2
 !=======================================================================
    FUNCTION Flt2LStr ( FltNum )
 
