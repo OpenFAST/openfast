@@ -23,7 +23,7 @@ MODULE NWTC_IO
    !     FUNCTION   Int2LStr      ( Intgr )
    !     SUBROUTINE NameOFile     ( InArg, OutExten, OutFile )
    !     SUBROUTINE NormStop      ( )
-   !     FUNCTION   Num2LStr      ( Num )           ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
+   !     FUNCTION   Num2LStr      ( Num )                                                             ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
    !     SUBROUTINE OpenBin       ( Un, OutFile, RecLen [, ErrStat] )
    !     SUBROUTINE OpenBInpFile  ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenEcho      ( Un, InFile [, ErrStat] )
@@ -37,12 +37,13 @@ MODULE NWTC_IO
    !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] )
    !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
    !     SUBROUTINE ProgWarn      ( Message )
-   !     SUBROUTINE ReadAry       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )         ! Generic interface for ReadCAry, ReadIAry, ReadLAry, and ReadRAry.
-   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )         ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
+   !     SUBROUTINE ReadAry       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )           ! Generic interface for ReadCAry, ReadIAry, ReadLAry, and ReadRAry.
+   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )           ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
    !     SUBROUTINE ReadCAry      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadCAryLines ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadCom       ( UnIn, Fil, ComName [, ErrStat] )
    !     SUBROUTINE ReadCVar      ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
+   !     SUBROUTINE ReadFASTbin   ( UnIn, FASTdata [, ErrLev, ErrMsg] )                               ! Read a FAST binary output file.
    !     SUBROUTINE ReadIAry      ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadIVar      ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] )
    !     SUBROUTINE ReadLAry      ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] )
@@ -53,7 +54,7 @@ MODULE NWTC_IO
    !     SUBROUTINE ReadRAryLines ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadRVar      ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] )
    !     SUBROUTINE ReadStr       ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
-   !     SUBROUTINE ReadVar       ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] )                 ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadRVar.
+   !     SUBROUTINE ReadVar       ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] )                   ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadRVar.
    !     SUBROUTINE WaitTime      ( WaitSecs )
    !     SUBROUTINE WrPr          ( Str )
    !     SUBROUTINE WrFileNR      ( Unit, Str )
@@ -67,10 +68,22 @@ MODULE NWTC_IO
 
 !=======================================================================
 
-   TYPE, PUBLIC :: ProgDesc !bjj: do we want to add date as well?
+   TYPE, PUBLIC :: ProgDesc
       CHARACTER(20)              :: Name
       CHARACTER(99)              :: Ver
+      CHARACTER(24)              :: Date
    END TYPE ProgDesc
+
+   TYPE, PUBLIC :: FASTdataType                                                  ! The derived type for holding FAST binary output data.
+      CHARACTER(1024)            :: File                                         ! The name of the binary input file containing FAST output.
+      CHARACTER(1024)            :: Descr                                        ! The file descriptor stored in the FAST binary output file.
+      INTEGER(B4Ki)              :: NumChans                                     ! The number of channels of FAST output data (including time).
+      INTEGER(B4Ki)              :: NumRecs                                      ! The number of records of FAST output data.
+      REAL(R8Ki)                 :: TimeStep                                     ! The time step.
+      CHARACTER(20), ALLOCATABLE :: ChanNames(:)                                 ! The channel names.
+      CHARACTER(20), ALLOCATABLE :: ChanUnits(:)                                 ! The channel units.
+      REAL(ReKi)   , ALLOCATABLE :: Data(:,:)                                    ! The channel data.  Time is stored in the first column.
+   END TYPE FASTdataType
 
    INTEGER(IntKi), PARAMETER     :: ErrID_None   = 0
    INTEGER(IntKi), PARAMETER     :: ErrID_Info   = 1
@@ -91,7 +104,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
    CHARACTER(23)                 :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
-   CHARACTER(29)                 :: NWTCVer  = ' (v1.05.01a, 8-Nov-2012)'        ! The version (including date) of the NWTC Subroutine Library.
+   CHARACTER(29)                 :: NWTCVer  = ' (v1.06.01a, 26-Nov-2012)'       ! The version (including date) of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -1065,11 +1078,6 @@ CONTAINS
    REAL(ReKi), INTENT(IN)       :: FltNum                                          ! The floating-point number to convert.
 
 
-      ! Local declarations.
-
-   INTEGER                      :: IC                                              ! Character index.
-
-
 
       ! Return a 0 if that's what we have.
 
@@ -1465,7 +1473,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)            :: Un                                          ! Logical unit for the input file.
+   INTEGER, INTENT(INOUT)         :: Un                                          ! Logical unit for the input file.
    INTEGER, INTENT(OUT), OPTIONAL :: ErrStat                                     ! Error status; if present, program does not abort on error
 
    CHARACTER(*), INTENT(IN)       :: InFile                                      ! Name of the input file.
@@ -1905,7 +1913,9 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    ELSE
       CALL WrScr1   ( ' Aborting program.' )
    END IF
-   CALL WrScr    ( ' ' )
+
+   CALL WrScr1   ( ' Hit the <Enter> key to continue.' )
+   READ (*,'()')
    CALL ProgExit ( 1 )
 
 
@@ -2208,6 +2218,338 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE ReadCVar ! ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
+!=======================================================================
+   SUBROUTINE ReadFASTbin ( UnIn, FASTdata , ErrLev, ErrMsg )
+
+      ! This routine reads the contents of a FAST binary output file (FASTbinFile) and stores it in FASTdata.
+      ! It is assumed that the name of the binary file is preloaded into FASTdata%File by the calling procedure.
+
+
+      ! Argument declarations.
+
+   INTEGER(IntKi), OPTIONAL, INTENT(OUT)  :: ErrLev                  ! An optional error level to be returned to the calling routine.
+   INTEGER(IntKi), INTENT(INOUT)          :: UnIn                    ! The IO unit for the FAST binary file.
+
+   CHARACTER(*), OPTIONAL, INTENT(OUT)    :: ErrMsg                  ! An optional error message to be returned to the calling routine.
+
+   TYPE (FASTdataType), INTENT(INOUT)     :: FASTdata                ! The derived type for holding FAST output data.
+
+
+      ! Local declarations.
+
+   REAL(R8Ki)                             :: TimeIncr                ! The increment for the time data when a time channel is not included.
+   REAL(R8Ki)                             :: TimeOff                 ! The offset for the time data when a time channel is included.
+   REAL(R8Ki)                             :: TimeOut1                ! The first output data when a time channel is not included.
+   REAL(R8Ki)                             :: TimeScl                 ! The slope for the time data when a time channel is included.
+
+   REAL(ReKi), ALLOCATABLE                :: ColMax(:)               ! The maximum value of the column data.
+   REAL(ReKi), ALLOCATABLE                :: ColMin(:)               ! The minimum value of the column data.
+
+   REAL(SiKi), ALLOCATABLE                :: ColOff(:)               ! The offset for the column data.
+   REAL(SiKi), ALLOCATABLE                :: ColScl(:)               ! The slope for the column data.
+
+   INTEGER(IntKi)                         :: IChan                   ! The channel index used for DO loops.
+   INTEGER(IntKi)                         :: IChr                    ! The character index used for DO loops.
+   INTEGER(IntKi)                         :: IRow                    ! The row index used for DO loops.
+   INTEGER(IntKi)                         :: LenDesc                 ! The length of the description string, DescStr.
+   INTEGER(IntKi), PARAMETER              :: MaxLenDesc = 1024       ! The maximum allowed length of the description string, DescStr.
+   INTEGER(IntKi), PARAMETER              :: MaxChrLen  = 10         ! The maximum length for channel names and units.
+
+   INTEGER(B4Ki), ALLOCATABLE             :: TmpTimeArray(:)         ! This array holds the normalized time channel that was read from the binary file.
+
+   INTEGER(B2Ki)                          :: FileType                ! The type of FAST data file (1: Time channel included in file; 2: Time stored as start time and step).
+   INTEGER(B2Ki), ALLOCATABLE             :: TmpInArray(:,:)         ! This array holds the normalized channels that were read from the binary file.
+
+   INTEGER(B1Ki), ALLOCATABLE             :: DescStrASCII(:)         ! The ASCII equivalent of DescStr.
+   INTEGER(B1Ki)                          :: TmpStrASCII(MaxChrLen)  ! The temporary ASCII equivalent of a channel name or units.
+
+
+      !  Open data file.
+
+   CALL OpenBInpFile ( UnIn, FASTdata%File, ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      RETURN
+   ENDIF
+
+
+      ! Process the requested data records of this file.
+
+   CALL WrScr1 ( ' =======================================================' )
+   CALL WrScr  ( ' Reading in data from file "'//TRIM( FASTdata%File )//'".' )
+   CALL WrScr  ( ' ' )
+
+
+      ! Read some of the header information.
+
+   READ (UnIn, IOSTAT=ErrLev)  FileType
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading FileType in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+
+   READ (UnIn, IOSTAT=ErrLev)  FASTdata%NumChans
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the number of channels in ReadFASTbin for file "' &
+                                      //TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+
+   READ (UnIn, IOSTAT=ErrLev)  FASTdata%NumRecs
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the number of records in ReadFASTbin for file "' &
+                                          //TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+
+   IF ( FileType == 1 )  THEN
+
+      READ (UnIn, IOSTAT=ErrLev)  TimeScl
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading TimeScl in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+
+      READ (UnIn, IOSTAT=ErrLev)  TimeOff
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading TimeOff in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+
+   ELSE
+
+      READ (UnIn, IOSTAT=ErrLev)  TimeOut1
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading TimeOut1 in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+
+      READ (UnIn, IOSTAT=ErrLev)  TimeIncr
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading TimeIncr in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+
+   END IF ! IF ( FileType == 1 )
+
+
+      ! Allocate the necessary arrays.
+
+   ALLOCATE ( ColMax( FASTdata%NumChans ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for ColMax array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( ColMin( FASTdata%NumChans ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for ColMin array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( ColOff( FASTdata%NumChans ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for ColOff array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( FASTdata%ChanNames( FASTdata%NumChans+1 ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for FASTdata%ChanNames array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( FASTdata%ChanUnits( FASTdata%NumChans+1 ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine( ErrID_Fatal, '>>Error allocating memory for FASTdata%ChanUnits array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( ColScl( FASTdata%NumChans ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for ColScl array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( TmpInArray( FASTdata%NumRecs, FASTdata%NumChans ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for the TmpInArray array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   IF ( FileType == 1 ) THEN
+      ALLOCATE ( TmpTimeArray( FASTdata%NumRecs ) , STAT=ErrLev )
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for the TmpTimeArray array in ReadFASTbin.' )
+         RETURN
+      ENDIF
+   END IF
+
+   ALLOCATE ( FASTdata%Data( FASTdata%NumRecs, FASTdata%NumChans+1 ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for the FASTdata%Data array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+
+      ! Read more of the header information.
+
+   READ (UnIn, IOSTAT=ErrLev)  ColScl
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the ColScl array in ReadFASTbin for file "' &
+                                          //TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+
+   READ (UnIn, IOSTAT=ErrLev)  ColOff
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the ColOff array in ReadFASTbin for file "' &
+                                          //TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+
+   READ (UnIn, IOSTAT=ErrLev)  LenDesc
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading LenDesc in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+   LenDesc = MIN( LenDesc, MaxLenDesc )
+
+   ALLOCATE ( DescStrASCII( LenDesc ) , STAT=ErrLev )
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error allocating memory for the DescStrASCII array in ReadFASTbin.' )
+      RETURN
+   ENDIF
+
+   READ (UnIn, IOSTAT=ErrLev)  DescStrASCII
+   IF ( ErrLev /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the DescStrASCII array in ReadFASTbin for file "' &
+                                      //TRIM( FASTdata%File )//'".' )
+      RETURN
+   ENDIF
+
+   FASTdata%Descr = ''
+
+   DO IChr=1,LenDesc
+      FASTdata%Descr(IChr:IChr) = CHAR( DescStrASCII(IChr) )
+   END DO
+
+   TmpStrASCII(:) = ICHAR( ' ' )
+   DO IChan=1,FASTdata%NumChans+1
+      READ (UnIn, IOSTAT=ErrLev)  TmpStrASCII
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the title of Channel #'//Int2LStr(  IChan )// &
+                                          ' in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+      FASTdata%ChanNames(IChan) = ''
+      DO IChr=1,MaxChrLen
+         FASTdata%ChanNames(IChan)(IChr:IChr) = CHAR( TmpStrASCII(IChr) )
+      END DO
+   END DO
+
+   TmpStrASCII(:) = ICHAR( ' ' )
+   DO IChan=1,FASTdata%NumChans+1
+      READ (UnIn, IOSTAT=ErrLev)  TmpStrASCII
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading the units of Channel #'//Int2LStr(  IChan )// &
+                                          ' in ReadFASTbin for file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+      FASTdata%ChanUnits(IChan) = ''
+      DO IChr=1,MaxChrLen
+         FASTdata%ChanUnits(IChan)(IChr:IChr) = CHAR( TmpStrASCII(IChr) )
+      END DO
+   END DO
+
+
+      ! If the file contains a time channel (as opposed to just initial time and time step), read it.
+      ! There are four bytes per time value.
+
+   IF ( FileType == 1 ) THEN
+
+      READ (UnIn, IOSTAT=ErrLev)  TmpTimeArray                                 ! Time data stored in normalized 32-bit integers
+      IF ( ErrLev /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, '>>Error reading time data from the FAST binary file "'//TRIM( FASTdata%File )//'".' )
+         RETURN
+      ENDIF
+
+   END IF ! FileType
+
+
+      ! Put time data in the data array.
+
+   IF ( FileType == 1 )  THEN
+      FASTdata%Data(:,1) = ( TmpTimeArray(:) - TimeOff )/TimeScl;
+      FASTdata%TimeStep  = FASTdata%Data(2,1) - FASTdata%Data(1,1)
+   ELSE
+      FASTdata%Data(:,1) = REAL( TimeOut1, DbKi ) + REAL( TimeIncr, DbKi )*[ (IRow, IRow=0,FASTdata%NumRecs-1 ) ];
+      FASTdata%TimeStep  = TimeIncr
+   END IF
+
+
+      ! Read the FAST channel data.
+
+   DO IRow=1,FASTdata%NumRecs
+      READ (UnIn, IOSTAT=ErrLev)  TmpInArray(IRow,:)
+   END DO ! IRow=1,FASTdata%NumRecs
+
+
+      ! Denormalize the data one row at a time and store it in the FASTdata%Data array.
+
+   DO IRow=1,FASTdata%NumRecs
+      FASTdata%Data(IRow,2:) = ( TmpInArray(IRow,:) - ColOff(:) )/ColScl(:)
+   END DO ! IRow=1,FASTdata%NumRecs
+
+
+   CALL ExitThisRoutine( ErrID_None, '' )
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up all the allocatable arrays, sets the error status/message and closes the binary file
+
+            ! Passed arguments
+
+         INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrLev)
+         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+
+            ! Set error status/message
+
+         ErrLev = ErrID
+         ErrMsg  = Msg
+
+
+            ! Deallocate arrays created in this routine.
+
+         IF ( ALLOCATED( ColMax             ) ) DEALLOCATE( ColMax             )
+         IF ( ALLOCATED( ColMin             ) ) DEALLOCATE( ColMin             )
+         IF ( ALLOCATED( ColOff             ) ) DEALLOCATE( ColOff             )
+         IF ( ALLOCATED( ColScl             ) ) DEALLOCATE( ColScl             )
+         IF ( ALLOCATED( DescStrASCII       ) ) DEALLOCATE( DescStrASCII       )
+         IF ( ALLOCATED( TmpInArray         ) ) DEALLOCATE( TmpInArray         )
+         IF ( ALLOCATED( TmpTimeArray       ) ) DEALLOCATE( TmpTimeArray       )
+
+
+            ! If there was an error, deallocate the arrays in the FASTdata structure.
+
+         IF ( ErrLev /= 0 )  THEN
+            IF ( ALLOCATED( FASTdata%ChanNames ) ) DEALLOCATE( FASTdata%ChanNames )
+            IF ( ALLOCATED( FASTdata%ChanUnits ) ) DEALLOCATE( FASTdata%ChanUnits )
+            IF ( ALLOCATED( FASTdata%Data      ) ) DEALLOCATE( FASTdata%Data      )
+         END IF ! ( ErrLev /= 0 )
+
+
+            ! Close file
+
+         CLOSE ( UnIn )
+
+      END SUBROUTINE ExitThisRoutine
+
+   END SUBROUTINE ReadFASTbin ! ( FASTbinData [, ErrLev] )
 !=======================================================================
    SUBROUTINE ReadIAry ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr, ErrStat )
 

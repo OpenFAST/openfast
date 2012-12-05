@@ -1,19 +1,19 @@
 MODULE ModMesh
 ! (c) 2012 National Renewable Energy Laboratory
 !
-!BJJ: This is a place holder for a module John Michalaches and Ilene Carpenter are writing. 
+!BJJ: This is a place holder for a module John Michalaches and Ilene Carpenter are writing.
 ! This will be part of the NWTC Subroutine Library.
 
 
  USE PRECISION
- 
+
    INTEGER(IntKi), PARAMETER :: MESH_NEWCOPY    = 1
    INTEGER(IntKi), PARAMETER :: MESH_SIBLING    = 2
    INTEGER(IntKi), PARAMETER :: MESH_UPDATECOPY = 3
 
 
 TYPE, PUBLIC :: MeshType
-   LOGICAL                 :: committed             ! Indicate whether this mesh is committed 
+   LOGICAL                 :: committed             ! Indicate whether this mesh is committed
    INTEGER(IntKi)          :: ios                   ! COMPONENT_INPUT/OUTPUT/STATE/PARAMETER
    INTEGER(IntKi)          :: RemapFlag             ! Remap flag: zero=noaction/ignore
                                                     !             nonzero=module_defined

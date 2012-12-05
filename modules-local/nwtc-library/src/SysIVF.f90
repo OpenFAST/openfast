@@ -19,7 +19,7 @@ MODULE SysSubs
    !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
-   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT: 
+   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
@@ -235,7 +235,7 @@ CONTAINS
 
    CALL GET_COMMAND_ARGUMENT ( Arg_Num, Arg, Status )
 
-   
+
    IF ( LEN_TRIM( Arg ) > 0 )  THEN
       Error = .FALSE.
    ELSE
@@ -502,7 +502,7 @@ CONTAINS
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
       ! BJJ: this routine is used in CRUNCH.
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
-      ! backwards compatibility. 
+      ! backwards compatibility.
 
    USE                             IFPORT !remove with use of next line (not implemented in all versions of the IVF compiler)
 !  USE, INTRINSIC :: ieee_arithmetic
@@ -574,7 +574,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
+   INTEGER, INTENT(INOUT)       :: Un                                           ! Logical unit for the input file.
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 
@@ -589,7 +589,7 @@ CONTAINS
       ! Open input file.
 
       ! For DEC Visual Fortran, use FORM='BINARY'.
-      ! For Sun or MS FPS, use FORM='UNFORMATTED'.  
+      ! For Sun or MS FPS, use FORM='UNFORMATTED'.
       ! For Lahey LF90, try FORM='TRANSPARENT' (untested).
 
 
@@ -854,7 +854,7 @@ CONTAINS
       WRITE (CU,Frm)  TRIM( ADJUSTL( Str(Beg:Beg+LStr-1) ) )
    ELSE
       WRITE (CU,'()')
-   END IF      
+   END IF
 
 
    RETURN
