@@ -274,17 +274,16 @@ v1.04.00c-mlb, 2011-Jun-21  M. Buhl
 v1.04.00d-bjj,  Dec 2011, B. Jonkman
   I added NWTC_SharedDataTypes.f90 to the archive. I hope to add a USE SharedDataTypes in MODULE NWTC_Library, but
     for now, I will wait until we update AeroDyn because it defines these same data types in MODULE SharedTypes
-    
+
   I modified NWTC_Init() so that the ProgName and ProgVer variables are optional function paramters. This removes
     the need to set those variables separately in the calling program's code. I also write a message stating
     that the NWTC Subroutine Library {version number) is running. I removed the message in DispNDV() that states
     what version of the NWTC Subroutine Library is running so there won't be duplicate messages.
 
-  I modified FlushOut() and FileSize() in SysIVF.f90 to explicitly use an INTEGER(4) in calls to FLUSH() and FSTAT() 
+  I modified FlushOut() and FileSize() in SysIVF.f90 to explicitly use an INTEGER(4) in calls to FLUSH() and FSTAT()
     (per documentation of the FLUSH() and FSTAT() routines).
-    
+
   I changed CU from 6 back to 7 in SysIVF.f90 because Adams (2011 in particular) crashes with opening the console using CU 6.
-  
 v1.04.00e-bjj, 15 Feb 2012 B. Jonkman
   I added R8Ki to the Precision module so that we have an 8-byte type that doesn't change between single (SingPrec.f90) 
     and double precision (DoubPrec.f90).
@@ -340,10 +339,17 @@ v1.05.02a 4-Dec-2012 A. Platt
   I replaced DispNVD with DispNVD0 (no arguments), DispNVD1 (argument of type ProgDesc), and DispNVD2 (two string arguments).
   DispNVD is now an interface procedure.
 
+
+v1.06.00a 26-Nov-2012  M. Buhl
+   I added FASTdataType to the global types in NWTC_IO.f90 and also added ReadFASTbin() to it.
+   Removed the unused IC declaration from Flt2LStr() in NWTC_IO.f90.
+   I changed the unit specifier in OpenBInpFile() and OpenBinInpFile from INTENT(IN) to INTENT(INOUT) in preparation for NEWUNIT
+   I added UnIn to the argument list for ReadFASTbin().
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
-   
+
    Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
    Fix ErrStat to use the new ErrID_* levels
    Fix SysGnu.f90 (subroutines OpenCon(), WrOver(), WrNR(), & maybe others are not working properly): https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=540   
