@@ -183,7 +183,7 @@ CONTAINS
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: Unit                                         ! The maximum length of the string.
+   INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
 
 
@@ -198,7 +198,7 @@ CONTAINS
 
       ! This routine gets Arg_Num'th argument from the command line.
 
-   ! Note: The functionality in this routine was replaced by GET_COMMAND_ARGUMENT(), which will be available intrinsically in Fortran 2000.
+   ! Note: The functionality in this routine was replaced by GET_COMMAND_ARGUMENT(), which is available intrinsically in Fortran 2000.
 
 
       ! Argument declarations.
@@ -537,7 +537,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
+   INTEGER, INTENT(INOUT)       :: Un                                           ! Logical unit for the input file.
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 

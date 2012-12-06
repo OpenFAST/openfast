@@ -340,11 +340,14 @@ v1.05.02a 4-Dec-2012 A. Platt
   DispNVD is now an interface procedure.
 
 
-v1.06.00a 26-Nov-2012  M. Buhl
+v1.06.00a 26-Nov-2012  M. Buhl, B. Jonkman
    I added FASTdataType to the global types in NWTC_IO.f90 and also added ReadFASTbin() to it.
    Removed the unused IC declaration from Flt2LStr() in NWTC_IO.f90.
    I changed the unit specifier in OpenBInpFile() and OpenBinInpFile from INTENT(IN) to INTENT(INOUT) in preparation for NEWUNIT
    I added UnIn to the argument list for ReadFASTbin().
+   
+   Bonnie added SysIVF_Labview.f90 to the archive and copied Marshall's changes to SysIVF.f90 to the other Sys*.f90 files.
+   
 
 ==========================================================
  To do:

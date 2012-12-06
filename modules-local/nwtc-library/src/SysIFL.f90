@@ -90,7 +90,9 @@ CONTAINS
       ! Argument declarations:
 
    INTEGER, INTENT(OUT)         :: Size
+
    CHARACTER(*), INTENT(IN)     :: FileName
+
 
       ! Local declarations:
 
@@ -188,7 +190,7 @@ CONTAINS
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: Unit                                         ! The maximum length of the string.
+   INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
 
 
@@ -225,6 +227,7 @@ CONTAINS
 
 
    CALL GET_COMMAND_ARGUMENT ( Arg_Num, Arg, Status )
+
 
    IF ( LEN_TRIM( Arg ) > 0 )  THEN
       Error = .FALSE.
@@ -493,7 +496,7 @@ CONTAINS
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
       ! BJJ: this routine is used in CRUNCH.
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
-      ! backwards compatibility. 
+      ! backwards compatibility.
 
 
    USE                             IFPORT
@@ -540,7 +543,7 @@ CONTAINS
 
       ! Open output file.  Make sure it worked.
 
-!  OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='BINARY' , ACCESS='SEQUENTIAL', RECL=RecLen , IOSTAT=IOS )
+!   OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='BINARY' , ACCESS='SEQUENTIAL', RECL=RecLen , IOSTAT=IOS )
    OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=IOS )
 
    IF ( IOS /= 0 )  THEN
@@ -564,7 +567,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
+   INTEGER, INTENT(INOUT)       :: Un                                           ! Logical unit for the input file.
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 
@@ -626,7 +629,7 @@ CONTAINS
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 
-   INTEGER, INTENT(IN)          :: RecLen                                       ! Size of records in the input file, in bytes. 
+   INTEGER, INTENT(IN)          :: RecLen                                       ! Size of records in the input file, in bytes.
 
    LOGICAL, INTENT(OUT)         :: Error                                        ! Flag to indicate the open failed.
 
@@ -640,7 +643,7 @@ CONTAINS
       ! Open input file.  Make sure it worked.
 
    ! The non-standard CONVERT keyword allows us to read UNIX binary files, whose bytes are in reverse order (i.e., stored in BIG ENDIAN format).
-   
+
    ! NOTE: using RecLen in bytes requires using the /assume:byterecl compiler option!
 
    OPEN ( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='DIRECT', RECL=RecLen, IOSTAT=IOS, &
@@ -679,7 +682,7 @@ CONTAINS
 !      IF ( StatCode < 0 ) THEN
 !         CALL WrScr( 'Invalid STOP code.' )
 !      END IF
-!            
+!
 !      STOP 1
 !   END IF
 
@@ -832,7 +835,7 @@ CONTAINS
       WRITE (CU,Frm)  TRIM( ADJUSTL( Str(Beg:Beg+LStr-1) ) )
    ELSE
       WRITE (CU,'()')
-   END IF      
+   END IF
 
 
    RETURN

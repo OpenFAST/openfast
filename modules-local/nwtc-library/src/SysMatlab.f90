@@ -1,5 +1,6 @@
 MODULE SysSubs
 
+
    ! This module contains routines with system-specific logic and references.
    ! It also contains standard (but not system-specific) routines it uses.
 
@@ -16,8 +17,9 @@ MODULE SysSubs
    !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
+   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
+   !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
-   !     SUBROUTINE  OpenCon
    !     SUBROUTINE  ProgExit ( StatCode )
    !     SUBROUTINE  UsrAlarm
    !     FUNCTION    UserTime()                                                             ! Removed: Replace by F95 intrinsic, CPU_TIME().
@@ -38,6 +40,7 @@ MODULE SysSubs
 
    INTEGER                      :: ConRecL  = 120                               ! The record length for console output.
    INTEGER                      :: CU       = 7                                 ! The I/O unit for the console.
+
    INTEGER                      :: NL_Len   = 2                                 ! The number of characters used for a new line.
 
    CHARACTER(10)                :: Endian   = 'BIG_ENDIAN'                      ! The internal format of numbers.
@@ -52,8 +55,8 @@ CONTAINS
    SUBROUTINE FileSize ( FileName, Size )
 
 
-      ! This routine calls the routine FSTAT to obtain the size
-      ! of the specify file or returns -1 on error.
+      ! This routine calls the routine FSTAT to obtain the file size
+      ! corresponding to a file unit number or returns -1 on error.
 
 
    USE                             IFPORT
@@ -71,7 +74,7 @@ CONTAINS
    INTEGER                      :: IOS
    INTEGER                      :: StatArray(12)
    INTEGER                      :: Status
-   INTEGER                      :: Unit
+   INTEGER(B4Ki)                :: Unit
 
 !bjj: Unit is not defined!!!!....
 
@@ -162,11 +165,13 @@ CONTAINS
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: Unit                                         ! The maximum length of the string.
+   INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
 
 
-   CALL FLUSH ( Unit )
+   CALL FLUSH ( INT(Unit, B4Ki) )
+!bjj: ADAMS does not compile well with this, so I'll put it back to the subroutine form:
+!   FLUSH ( Unit )
 
 
    RETURN
@@ -177,7 +182,7 @@ CONTAINS
 
       ! This routine gets Arg_Num'th argument from the command line.
 
-   ! Note: The functionality in this routine was replaced by GET_COMMAND_ARGUMENT(), which will be available intrinsically in Fortran 2000.
+   ! Note: The functionality in this routine was replaced by GET_COMMAND_ARGUMENT(), which is available intrinsically in Fortran 2000.
 
 
 
@@ -286,10 +291,10 @@ CONTAINS
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
       ! BJJ: this routine is used in CRUNCH.
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
-      ! backwards compatibility. 
+      ! backwards compatibility.
 
-
-   USE                             IFPORT
+   USE                             IFPORT !remove with use of next line (not implemented in all versions of the IVF compiler)
+!  USE, INTRINSIC :: ieee_arithmetic
 
 
       ! Argument declarations.
@@ -303,7 +308,8 @@ CONTAINS
 
 
 
-   Is_NaN = IsNaN( DblNum )
+!   Is_NaN = IEEE_IS_NAN( DblNum )
+  Is_NaN = IsNaN( DblNum )
 
 
    RETURN
@@ -333,7 +339,7 @@ CONTAINS
 
       ! Open output file.  Make sure it worked.
 
-!  OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='BINARY' , ACCESS='SEQUENTIAL', RECL=RecLen , IOSTAT=IOS )
+!   OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='BINARY' , ACCESS='SEQUENTIAL', RECL=RecLen , IOSTAT=IOS )
    OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=IOS )
 
    IF ( IOS /= 0 )  THEN
@@ -357,7 +363,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
+   INTEGER, INTENT(INOUT)       :: Un                                           ! Logical unit for the input file.
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 
@@ -367,10 +373,6 @@ CONTAINS
       ! Local declarations.
 
    INTEGER                      :: IOS                                          ! I/O status of OPEN.
-
-      ! NOTE: Do not explicitly declare the precision of this variable [as in
-      !       LOGICAL(1)] so that the statements using this variable work with
-      !       any compiler:
 
 
       ! Open input file.  Make sure it worked.
@@ -415,7 +417,7 @@ CONTAINS
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 
-   INTEGER, INTENT(IN)          :: RecLen                                       ! Size of records in the input file, in bytes. 
+   INTEGER, INTENT(IN)          :: RecLen                                       ! Size of records in the input file, in bytes.
 
    LOGICAL, INTENT(OUT)         :: Error                                        ! Flag to indicate the open failed.
 
@@ -561,7 +563,7 @@ CONTAINS
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
    CHARACTER(200)               :: Str2
-   
+
       ! Local declarations.
 
    INTEGER                      :: Beg                                          ! The beginning of the next line of text.
@@ -580,6 +582,7 @@ CONTAINS
 
    MaxLen = 98
    Indent = LEN_TRIM( Str ) - LEN_TRIM( ADJUSTL( Str ) )
+   Indent = MIN( Indent, MaxLen-2 )                                              ! at least 2 characters per line
    MaxLen = MaxLen - Indent
    IF ( Indent > 0 )  THEN
       Frm    = '(1X,  X,A)'
@@ -619,8 +622,8 @@ CONTAINS
       WRITE (Str2,Frm)  ADJUSTL( Str(Beg:Beg+LStr-1) )
    ELSE
       Str2=''
-   END IF      
-   Stat = mexPrintf(TRIM(Str2)//ACHAR(10))   
+   END IF
+   Stat = mexPrintf(TRIM(Str2)//ACHAR(10))
 
 
    RETURN
