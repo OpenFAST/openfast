@@ -195,7 +195,7 @@ CONTAINS
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: Unit                                         ! The maximum length of the string.
+   INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
 
 
