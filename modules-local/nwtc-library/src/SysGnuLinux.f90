@@ -23,8 +23,8 @@ MODULE SysSubs
    !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
-   !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  OpenCon
+   !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
    !     SUBROUTINE  UsrAlarm
    !     FUNCTION    UserTime()                                                             ! Removed: Replace by F95 intrinsic, CPU_TIME().
@@ -537,7 +537,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER, INTENT(INOUT)       :: Un                                           ! Logical unit for the input file.
+   INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
 
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
 
