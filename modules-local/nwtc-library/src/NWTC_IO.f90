@@ -103,8 +103,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   CHARACTER(23)                 :: NWTCName = 'NWTC Subroutine Library'         ! The name of the NWTC subroutine library.
-   CHARACTER(29)                 :: NWTCVer  = ' (v1.06.00b, 06-Dec-2012)'       ! The version (including date) of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00b', '06-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -1034,7 +1033,7 @@ CONTAINS
 
       ! Print out program name, version, and date.
 
-   CALL WrScr1 ( ' Running '//TRIM( ProgInfo%Name )//' '//Trim( ProgInfo%Ver )//' '//Trim( ProgInfo%Date )//'.' )
+   CALL WrScr1 ( ' Running '//TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//').' )
 
 
    RETURN
@@ -1044,6 +1043,7 @@ CONTAINS
 
 
       ! This routine displays the name of the program, its version, and its release date passed in as strings
+      ! This routine is depricated and for legacy purposes only. Please don't use for any new code (Dec-2012)
 
    IMPLICIT NONE
    CHARACTER(*),  INTENT(IN)           :: Name     ! String containing the name of the program using the library
@@ -1052,7 +1052,7 @@ CONTAINS
 
       ! Print out program name, version, and date.
 
-   CALL WrScr1 ( ' Running '//TRIM( Name )//' '//Trim( Ver )//'.' )
+   CALL WrScr1 ( ' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
 
 
    RETURN

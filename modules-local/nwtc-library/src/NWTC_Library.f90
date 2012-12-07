@@ -11,7 +11,7 @@ MODULE NWTC_Library
          !     ModMesh.f90
 
          ! Your project must include one, but not both, of the following files:
-         !     DoubPrec.f90 - for double-precision arithmetic for floating-points variables.  You may have to set a compiler option to have constants use double precision. 
+         !     DoubPrec.f90 - for double-precision arithmetic for floating-points variables.  You may have to set a compiler option to have constants use double precision.
          !     SingPrec.f90 - for single-precision arithmetic for floating-points variables.
 
          ! Your project must include one, and only one, of the following files:
@@ -45,35 +45,35 @@ CONTAINS
 
 !=======================================================================
    SUBROUTINE NWTC_Init( ProgNameIn, ProgVerIn )
-   
+
       ! passed parameters
-      
-   CHARACTER(*), INTENT(IN), OPTIONAL :: ProgNameIn      
+
+   CHARACTER(*), INTENT(IN), OPTIONAL :: ProgNameIn
    CHARACTER(*), INTENT(IN), OPTIONAL :: ProgVerIn
-   
-   
-   
+
+
+
       ! Initialize ProgName and ProgVer if parameters have been passed
-      
+
    IF ( PRESENT( ProgNameIN ) ) THEN
-      ProgName = ProgNameIN      
-   END IF            
+      ProgName = ProgNameIN
+   END IF
 
    IF ( PRESENT( ProgVerIn ) ) THEN
-      ProgVer = ProgVerIn      
-   END IF         
+      ProgVer = ProgVerIn
+   END IF
 
 
       ! This routine calls all required initialization routines.
 
-   CALL SetConstants() 
+   CALL SetConstants()
 
 !mlb Let's get rid of this once FLUSH works.
    CALL OpenCon( )
 
 
       ! Write the version of the NWTC subroutine library that we are running
-   CALL WrScr  ( ' Using '//TRIM( NWTCName )//TRIM( NWTCVer )//'.' )
+   CALL DispNVD( NWTC_Ver )
 
 
    RETURN
