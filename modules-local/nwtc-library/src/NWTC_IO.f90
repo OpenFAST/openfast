@@ -20,6 +20,7 @@ MODULE NWTC_IO
    !     SUBROUTINE GetRoot       ( GivenFil, RootName )
    !     SUBROUTINE GetTokens     ( Line, NumTok, Tokens, Error )
    !     SUBROUTINE GetWords      ( Line, Words, NumWords )
+   !     FUNCTION   GetNVD        ( ProgDesc )
    !     FUNCTION   Int2LStr      ( Intgr )
    !     SUBROUTINE NameOFile     ( InArg, OutExten, OutFile )
    !     SUBROUTINE NormStop      ( )
@@ -103,7 +104,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00b', '06-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00b-bjj', '07-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -1033,7 +1034,7 @@ CONTAINS
 
       ! Print out program name, version, and date.
 
-   CALL WrScr1 ( ' Running '//TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//').' )
+   CALL WrScr1 ( ' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
 
    RETURN
@@ -1130,6 +1131,29 @@ CONTAINS
 
    RETURN
    END SUBROUTINE GetNewUnit !  ( UnIn )
+!=======================================================================
+   FUNCTION GetNVD ( ProgInfo )
+   
+      ! This function converts the three strings contained in the ProgDesc
+      ! data type into a single string listing the program name,
+      ! version, and release date.
+   
+   
+      ! Argument declarations.
+      
+   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    ! Contains the name and version info
+   
+   
+      ! Function delcaration
+      
+   CHARACTER(200)                      :: GetNVD      ! A single string containing the name, date, and version info
+   
+      
+      ! Print all the version info into a nice string:
+   
+      GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+
+   END FUNCTION GetNVD 
 !=======================================================================
 
    SUBROUTINE GetPath ( GivenFil, PathName )
@@ -1342,7 +1366,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE GetWords ! ( Line, Words, NumWords )
-!=======================================================================
+!======================================================================= 
    FUNCTION Int2LStr ( Intgr )
 
 
