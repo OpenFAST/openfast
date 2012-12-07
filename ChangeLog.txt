@@ -332,7 +332,7 @@ v1.05.00 24-Oct-2012 B. Jonkman (with help from A. Platt)
   I added the pdf with NWTC Library documentation to the archive.
   I modified the archive to also generate tar.gz files for non-windows users.
 
-v1.05.01a 8-Nov-2012 B. Jonkman
+v1.05.01a-bjj 8-Nov-2012 B. Jonkman
   I replaced EqualRealNos with EqualRealNos4, EqualRealNos8, and EqualRealNos16 and made EqualRealNos an interface procedure.
 
 v1.05.02a 4-Dec-2012 A. Platt
@@ -347,6 +347,8 @@ v1.06.00a 26-Nov-2012  M. Buhl, B. Jonkman
 
    Bonnie added SysIVF_Labview.f90 to the archive and copied Marshall's changes to SysIVF.f90 to the other Sys*.f90 files.
 
+v1.06.00b-bjj 7-Dec-2012  B. Jonkman
+   I added a function called GetNVD() to return a single string with the program name, version, and date.
 
 ==========================================================
  To do:
