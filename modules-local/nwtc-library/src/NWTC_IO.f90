@@ -69,7 +69,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE, PUBLIC :: ProgDesc
-      CHARACTER(20)              :: Name
+      CHARACTER(24)              :: Name
       CHARACTER(99)              :: Ver
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
