@@ -46,7 +46,7 @@ init_type_table()
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
-                                                strcpy( p->mapsto, "TYPE(MeshType)")  ;
+                                                strcpy( p->mapsto, "MeshType")  ;
                                                 add_node_to_end ( p , &Type )         ;
   return(0) ;
 }
