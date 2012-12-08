@@ -579,38 +579,40 @@ gen_module( FILE * fp , const node_t * ModName )
     fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
     for ( r = q->fields ; r ; r = r->next )
     { 
-      if ( r->type->type_type == DERIVED ) {
-        fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
-      } else {
-        fprintf(fp,"    %s ",r->type->mapsto ) ;
-      }
-      if ( r->ndims > 0 )
-      {
-        if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
-        {
-          fprintf(fp,", DIMENSION(") ;
-          for ( i = 0 ; i < r->ndims ; i++ )
-          {
-            fprintf(fp,":") ;
-            if ( i < r->ndims-1 ) fprintf(fp,",") ;
-          }
-          fprintf(fp,"), ALLOCATABLE ") ;
+      if ( r->type != NULL ) {
+        if ( r->type->type_type == DERIVED ) {
+
+          fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
         } else {
-          fprintf(fp,", DIMENSION(") ;
-          for ( i = 0 ; i < r->ndims ; i++ )
+          fprintf(fp,"    %s ",r->type->mapsto ) ;
+        }
+        if ( r->ndims > 0 )
+        {
+          if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
           {
-            fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
-            if ( i < r->ndims-1 ) fprintf(fp,",") ;
+            fprintf(fp,", DIMENSION(") ;
+            for ( i = 0 ; i < r->ndims ; i++ )
+            {
+              fprintf(fp,":") ;
+              if ( i < r->ndims-1 ) fprintf(fp,",") ;
+            }
+            fprintf(fp,"), ALLOCATABLE ") ;
+          } else {
+            fprintf(fp,", DIMENSION(") ;
+            for ( i = 0 ; i < r->ndims ; i++ )
+            {
+              fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
+              if ( i < r->ndims-1 ) fprintf(fp,",") ;
+            }
+            fprintf(fp,") ") ;
           }
-          fprintf(fp,") ") ;
+        }
+        if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
+          fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
+        } else {
+          fprintf(fp," :: %s \n",r->name) ;
         }
       }
-      if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
-        fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
-      } else {
-        fprintf(fp," :: %s \n",r->name) ;
-      }
-
     }
     fprintf(fp,"  END TYPE %s\n",q->mapsto) ;
   }
