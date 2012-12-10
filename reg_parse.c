@@ -294,6 +294,7 @@ reg_parse( FILE * infile )
       }
       if ( !strcmp( tokens[ TABLE ] , "usefrom" ) ) 
       {
+        strcpy(modname_struct->nickname,"") ;  /* usefrom modules have blank nicknames */
         modname_struct->usefrom = 1 ;
       }
 
