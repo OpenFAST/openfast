@@ -567,96 +567,99 @@ gen_module( FILE * fp , const node_t * ModName )
   node_t * q, * r ;
   int i ;
 
+  if ( strlen(ModName->nickname) > 0 ) {
 // gen preamble
-  {
-    char ** p ;
-    for ( p = FAST_preamble ; *p ; p++ ) { fprintf( fp, *p, ModName->name ) ; }
-  }
+    {
+      char ** p ;
+      for ( p = FAST_preamble ; *p ; p++ ) { fprintf( fp, *p, ModName->name ) ; }
+    }
 
 // generate each derived data type
-  for ( q = ModName->module_ddt_list ; q ; q = q->next )
-  {
-    fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
-    for ( r = q->fields ; r ; r = r->next )
-    { 
-      if ( r->type != NULL ) {
-        if ( r->type->type_type == DERIVED ) {
-
-          fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
-        } else {
-          fprintf(fp,"    %s ",r->type->mapsto ) ;
-        }
-        if ( r->ndims > 0 )
-        {
-          if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
-          {
-            fprintf(fp,", DIMENSION(") ;
-            for ( i = 0 ; i < r->ndims ; i++ )
-            {
-              fprintf(fp,":") ;
-              if ( i < r->ndims-1 ) fprintf(fp,",") ;
+    for ( q = ModName->module_ddt_list ; q ; q = q->next )
+    {
+      if ( q->usefrom == 0 ) {
+        fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
+        for ( r = q->fields ; r ; r = r->next )
+        { 
+          if ( r->type != NULL ) {
+            if ( r->type->type_type == DERIVED ) {
+              fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
+            } else {
+              fprintf(fp,"    %s ",r->type->mapsto ) ;
             }
-            fprintf(fp,"), ALLOCATABLE ") ;
-          } else {
-            fprintf(fp,", DIMENSION(") ;
-            for ( i = 0 ; i < r->ndims ; i++ )
+            if ( r->ndims > 0 )
             {
-              fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
-              if ( i < r->ndims-1 ) fprintf(fp,",") ;
+              if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
+              {
+                fprintf(fp,", DIMENSION(") ;
+                for ( i = 0 ; i < r->ndims ; i++ )
+                {
+                  fprintf(fp,":") ;
+                  if ( i < r->ndims-1 ) fprintf(fp,",") ;
+                }
+                fprintf(fp,"), ALLOCATABLE ") ;
+              } else {
+                fprintf(fp,", DIMENSION(") ;
+                for ( i = 0 ; i < r->ndims ; i++ )
+                {
+                  fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
+                  if ( i < r->ndims-1 ) fprintf(fp,",") ;
+                }
+                fprintf(fp,") ") ;
+              }
             }
-            fprintf(fp,") ") ;
+            if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
+              fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
+            } else {
+              fprintf(fp," :: %s \n",r->name) ;
+            }
           }
         }
-        if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
-          fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
-        } else {
-          fprintf(fp," :: %s \n",r->name) ;
-        }
+        fprintf(fp,"  END TYPE %s\n",q->mapsto) ;
       }
     }
-    fprintf(fp,"  END TYPE %s\n",q->mapsto) ;
+    fprintf(fp,"CONTAINS\n") ;
+
+    gen_copy( fp, ModName, "Input", "Input" ) ;
+    gen_destroy( fp, ModName, "Input", "Input" ) ;
+    gen_pack( fp, ModName, "Input", "Input" ) ;
+    gen_unpack( fp, ModName, "Input", "Input" ) ;
+
+    gen_copy( fp, ModName, "Output", "Output" ) ;
+    gen_destroy( fp, ModName, "Output", "Output" ) ;
+    gen_pack( fp, ModName, "Output", "Output" ) ;
+    gen_unpack( fp, ModName, "Output", "Output" ) ;
+
+    gen_copy( fp, ModName, "ContState", "ContinuousState" ) ;
+    gen_destroy( fp, ModName, "ContState", "ContinuousState" ) ;
+    gen_pack( fp, ModName, "ContState", "ContinuousState" ) ;
+    gen_unpack( fp, ModName, "ContState", "ContinuousState" ) ;
+
+    gen_copy( fp, ModName, "DiscState", "DiscreteState" ) ;
+    gen_destroy( fp, ModName, "DiscState", "DiscreteState" ) ;
+    gen_pack( fp, ModName, "DiscState", "DiscreteState" ) ;
+    gen_unpack( fp, ModName, "DiscState", "DiscreteState" ) ;
+
+    gen_copy( fp, ModName, "ConstrState", "ConstraintState" ) ;
+    gen_destroy( fp, ModName, "ConstrState", "ConstraintState" ) ;
+    gen_pack( fp, ModName, "ConstrState", "ConstraintState" ) ;
+    gen_unpack( fp, ModName, "ConstrState", "ConstraintState" ) ;
+
+    gen_copy( fp, ModName, "OtherState", "OtherState" ) ;
+    gen_destroy( fp, ModName, "OtherState", "OtherState" ) ;
+    gen_pack( fp, ModName, "OtherState", "OtherState" ) ;
+    gen_unpack( fp, ModName, "OtherState", "OtherState" ) ;
+
+    gen_copy( fp, ModName, "Param", "Parameter" ) ;
+    gen_destroy( fp, ModName, "Param", "Parameter" ) ;
+    gen_pack( fp, ModName, "Param", "Parameter" ) ;
+    gen_unpack( fp, ModName, "Param", "Parameter" ) ;
+
+    gen_modname_pack( fp, ModName ) ;
+    gen_modname_unpack( fp, ModName ) ;
+
+    fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
   }
-  fprintf(fp,"CONTAINS\n") ;
-
-  gen_copy( fp, ModName, "Input", "Input" ) ;
-  gen_destroy( fp, ModName, "Input", "Input" ) ;
-  gen_pack( fp, ModName, "Input", "Input" ) ;
-  gen_unpack( fp, ModName, "Input", "Input" ) ;
-
-  gen_copy( fp, ModName, "Output", "Output" ) ;
-  gen_destroy( fp, ModName, "Output", "Output" ) ;
-  gen_pack( fp, ModName, "Output", "Output" ) ;
-  gen_unpack( fp, ModName, "Output", "Output" ) ;
-
-  gen_copy( fp, ModName, "ContState", "ContinuousState" ) ;
-  gen_destroy( fp, ModName, "ContState", "ContinuousState" ) ;
-  gen_pack( fp, ModName, "ContState", "ContinuousState" ) ;
-  gen_unpack( fp, ModName, "ContState", "ContinuousState" ) ;
-
-  gen_copy( fp, ModName, "DiscState", "DiscreteState" ) ;
-  gen_destroy( fp, ModName, "DiscState", "DiscreteState" ) ;
-  gen_pack( fp, ModName, "DiscState", "DiscreteState" ) ;
-  gen_unpack( fp, ModName, "DiscState", "DiscreteState" ) ;
-
-  gen_copy( fp, ModName, "ConstrState", "ConstraintState" ) ;
-  gen_destroy( fp, ModName, "ConstrState", "ConstraintState" ) ;
-  gen_pack( fp, ModName, "ConstrState", "ConstraintState" ) ;
-  gen_unpack( fp, ModName, "ConstrState", "ConstraintState" ) ;
-
-  gen_copy( fp, ModName, "OtherState", "OtherState" ) ;
-  gen_destroy( fp, ModName, "OtherState", "OtherState" ) ;
-  gen_pack( fp, ModName, "OtherState", "OtherState" ) ;
-  gen_unpack( fp, ModName, "OtherState", "OtherState" ) ;
-
-  gen_copy( fp, ModName, "Param", "Parameter" ) ;
-  gen_destroy( fp, ModName, "Param", "Parameter" ) ;
-  gen_pack( fp, ModName, "Param", "Parameter" ) ;
-  gen_unpack( fp, ModName, "Param", "Parameter" ) ;
-
-  gen_modname_pack( fp, ModName ) ;
-  gen_modname_unpack( fp, ModName ) ;
-
-  fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
 
 }
 
@@ -672,14 +675,16 @@ gen_module_files ( char * dirname )
   
   for ( p = ModNames ; p ; p = p->next )
   {
-    if ( strlen(dirname) > 0 ) 
-      { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
-    else                       
-      { sprintf(fname,"%s_Types.f90",p->name) ; }
-    if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
-    print_warning(fp,fname) ;
-    gen_module ( fp , p ) ;
-    close_the_file( fp ) ;
+    if ( strlen( p->nickname ) > 0 ) {
+      if ( strlen(dirname) > 0 ) 
+        { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
+      else                       
+        { sprintf(fname,"%s_Types.f90",p->name) ; }
+      if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
+      print_warning(fp,fname) ;
+      gen_module ( fp , p ) ;
+      close_the_file( fp ) ;
+    }
   }
   return(0) ;
 }

@@ -23,6 +23,10 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "intki" )           ;
                                                 strcpy( p->mapsto, "INTEGER(IntKI)")  ;
                                                 add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "b4ki" )           ;
+                                                strcpy( p->mapsto, "INTEGER(IntKI)")  ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
                                                 strcpy( p->mapsto, "REAL(ReKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
@@ -43,6 +47,9 @@ init_type_table()
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "dbki" )            ;
+                                                strcpy( p->mapsto, "REAL(DbKi)")      ;
+                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "r8Ki" )            ;
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
@@ -174,6 +181,7 @@ get_entry ( char * name , node_t * node )
         return(p) ;
       }
     } else {
+//fprintf(stderr,"name |%s|, p->name |%s|\n",name,p->name) ;
       if ( !strcmp( make_lower_temp(p->name) , make_lower_temp(name) ) )
       {
         return(p) ;

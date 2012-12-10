@@ -74,6 +74,8 @@ typedef struct node_struct {
   int  subgrid ;                  /* 1=subgrid dimension */
   int  deferred ;                 /* a deferred-shape dimension, that is, a colon */
 
+  int  usefrom ;
+
 /* fields used by Package nodes */
   char pkg_assoc[NAMELEN] ;
   char pkg_statevars[NAMELEN] ;

@@ -264,7 +264,7 @@ reg_parse( FILE * infile )
     defining_i1_field = 0 ;
 
 /* typedef entry */
-    if ( !strcmp( tokens[ TABLE ] , "typedef" ) )
+    if ( !strcmp( tokens[ TABLE ] , "typedef" ) || !strcmp( tokens[ TABLE ] , "usefrom" ) )
     {
       node_t * field_struct ;
       node_t * type_struct ;
@@ -292,6 +292,10 @@ reg_parse( FILE * infile )
         modname_struct->next            = NULL ;
         add_node_to_end( modname_struct , &ModNames ) ;
       }
+      if ( !strcmp( tokens[ TABLE ] , "usefrom" ) ) 
+      {
+        modname_struct->usefrom = 1 ;
+      }
 
 // FAST registry, construct list of derived data types specified for the Module 
       if ( strcmp(modname_struct->nickname,"") ) {
@@ -311,7 +315,8 @@ reg_parse( FILE * infile )
         }
         type_struct->type_type = DERIVED ;
         type_struct->next      = NULL ;
-        add_node_to_end( type_struct, &(modname_struct->module_ddt_list) ) ;
+        type_struct->usefrom   = modname_struct->usefrom ;
+        add_node_to_end( type_struct,(type_struct->usefrom)? &Type : &(modname_struct->module_ddt_list ) ) ;
       }
 
 // FAST registry, construct the list of fields in the derived types in the Module
@@ -340,6 +345,7 @@ reg_parse( FILE * infile )
           { fprintf(stderr,"Registry warning: type item %s of type %s can not be multi-dimensional ",
 	  		   tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
+      field_struct->usefrom   = type_struct->usefrom ;
 
       add_node_to_end( field_struct , &(type_struct->fields) ) ;
 
