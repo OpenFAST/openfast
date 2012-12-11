@@ -75,6 +75,8 @@ pre_parse( char * dir, FILE * infile, FILE * outfile )
   {
 /*** preprocessing directives ****/
     /* look for an include statement */
+    if (( p = index( inln , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
+    if (( p = index( inln , '\r' )) != NULL  ) *p = '\0' ; /* discard carriage returns (happens on Windows)*/
     for ( p = inln ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
     if ( !strncmp( make_lower_temp(p) , "include", 7 ) &&  ! ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) ) {
       FILE *include_fp ;
