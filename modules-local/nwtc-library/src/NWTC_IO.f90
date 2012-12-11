@@ -1133,27 +1133,27 @@ CONTAINS
    END SUBROUTINE GetNewUnit !  ( UnIn )
 !=======================================================================
    FUNCTION GetNVD ( ProgInfo )
-   
+
       ! This function converts the three strings contained in the ProgDesc
       ! data type into a single string listing the program name,
       ! version, and release date.
-   
-   
+
+
       ! Argument declarations.
-      
+
    TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    ! Contains the name and version info
-   
-   
+
+
       ! Function delcaration
-      
+
    CHARACTER(200)                      :: GetNVD      ! A single string containing the name, date, and version info
-   
-      
+
+
       ! Print all the version info into a nice string:
-   
+
       GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
 
-   END FUNCTION GetNVD 
+   END FUNCTION GetNVD
 !=======================================================================
 
    SUBROUTINE GetPath ( GivenFil, PathName )
@@ -1366,7 +1366,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE GetWords ! ( Line, Words, NumWords )
-!======================================================================= 
+!=======================================================================
    FUNCTION Int2LStr ( Intgr )
 
 
@@ -1938,8 +1938,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
       CALL WrScr1   ( ' Aborting program.' )
    END IF
 
-   CALL WrScr1   ( ' Hit the <Enter> key to continue.' )
-   READ (*,'()')
+   CALL ProgPause
    CALL ProgExit ( 1 )
 
 

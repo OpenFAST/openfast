@@ -10,19 +10,20 @@ MODULE SysSubs
    !     SUBROUTINE  FileSize ( FileName, Size )
    !     SUBROUTINE  FindLine ( Str , MaxLen , StrEnd )
    !     SUBROUTINE  FlushOut ( Unit )
-   !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                      ! Please use GET_COMMAND_ARGUMENT() instead.
-   !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                ! Please use COMMAND_ARGUMENT_COUNT() instead.
+   !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                       ! Please use GET_COMMAND_ARGUMENT() instead.
+   !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                 ! Please use COMMAND_ARGUMENT_COUNT() instead.
    !     SUBROUTINE  GET_CWD( DirName, Status )
-   !     FUNCTION    Get_Env( EnvVar )                                                      ! Please use GET_ENVIRONMENT_VARIABLE() instead.
-   !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
+   !     FUNCTION    Get_Env( EnvVar )                                                       ! Please use GET_ENVIRONMENT_VARIABLE() instead.
+   !     FUNCTION    Is_NaN( DblNum )                                                        ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
    ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
+   !     SUBROUTINE  ProgPause                                                               ! Do nothing because MatLab is stup
    !     SUBROUTINE  UsrAlarm
-   !     FUNCTION    UserTime()                                                             ! Removed: Replace by F95 intrinsic, CPU_TIME().
+   !     FUNCTION    UserTime()                                                              ! Removed: Replace by F95 intrinsic, CPU_TIME().
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
    !     SUBROUTINE  WrScr ( Str )
@@ -463,16 +464,27 @@ CONTAINS
    EXTERNAL                     :: mexErrMsgTxt                                  ! A MATLAB subroutine
 
 
-      ! Close the program      
+      ! Close the program
    IF ( StatCode == 0 ) THEN        ! A normal stop
       CALL mexErrMsgTxt( 'Normal stop.'//ACHAR(10) )    !I really don't want to call this function.... is there another to stop fortran execution without closing Matlab?
    ELSE                             ! an error occurred
-      CALL mexErrMsgTxt( 'Closing program.'//ACHAR(10) ) 
+      CALL mexErrMsgTxt( 'Closing program.'//ACHAR(10) )
    ENDIF
 
 
    RETURN
    END SUBROUTINE ProgExit ! ( StatCode )
+!=======================================================================
+   SUBROUTINE ProgPause
+
+
+      ! This routine does nothing, but is here to be compatible with the other Sys files.
+      ! MATLAB does not allow Fortran to read from the keyboard, so it is not possible to pause execution.
+
+
+
+   RETURN
+   END SUBROUTINE ProgPause
 !=======================================================================
    SUBROUTINE UsrAlarm
 
@@ -520,11 +532,11 @@ CONTAINS
       ! Argument declarations.
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
-   
+
    INTEGER                      :: Stat                                         ! Number of characters printed
    INTEGER, EXTERNAL            :: mexPrintF                                    ! Matlab function to print to the command window
-   
-   Stat = mexPrintF( ' '//TRIM(Str) ) 
+
+   Stat = mexPrintF( ' '//TRIM(Str) )
 
 
    RETURN
@@ -602,7 +614,7 @@ CONTAINS
       CALL FindLine ( Str(Beg:) , MaxLen , LStr )
 
       WRITE (Str2,Frm)  ADJUSTL( Str(Beg:Beg+LStr-1) )
-      Stat = mexPrintf(TRIM(Str2)//ACHAR(10)) 
+      Stat = mexPrintf(TRIM(Str2)//ACHAR(10))
       !call mexEvalString("drawnow;");  ! !bjj: may have to call this to dump string to the screen immediately.
 
 

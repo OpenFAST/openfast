@@ -12,19 +12,20 @@ MODULE SysSubs
    !     SUBROUTINE  FileSize ( FileName, Size )
    !     SUBROUTINE  FindLine ( Str , MaxLen , StrEnd )
    !     SUBROUTINE  FlushOut ( Unit )
-   !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                      ! Please use GET_COMMAND_ARGUMENT() instead.
-   !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                ! Please use COMMAND_ARGUMENT_COUNT() instead.
+   !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                       ! Please use GET_COMMAND_ARGUMENT() instead.
+   !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                 ! Please use COMMAND_ARGUMENT_COUNT() instead.
    !     SUBROUTINE  GET_CWD( DirName, Status )
-   !     FUNCTION    Get_Env( EnvVar )                                                      ! Please use GET_ENVIRONMENT_VARIABLE() instead.
-   !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
+   !     FUNCTION    Get_Env( EnvVar )                                                       ! Please use GET_ENVIRONMENT_VARIABLE() instead.
+   !     FUNCTION    Is_NaN( DblNum )                                                        ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
    ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
+   !     SUBROUTINE  ProgPause                                                               ! Pause output so the user has to hit <Enter> to continue.
    !     SUBROUTINE  UsrAlarm
-   !     FUNCTION    UserTime()                                                             ! Removed: Replace by F95 intrinsic, CPU_TIME().
+   !     FUNCTION    UserTime()                                                              ! Removed: Replace by F95 intrinsic, CPU_TIME().
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
    !     SUBROUTINE  WrScr ( Str )
@@ -266,7 +267,7 @@ CONTAINS
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
       ! BJJ: this routine is used in CRUNCH.
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
-      ! backwards compatibility. 
+      ! backwards compatibility.
 
 
 
@@ -349,7 +350,7 @@ CONTAINS
       ! Open input file.
 
       ! For DEC Visual Fortran, use FORM='BINARY'.
-      ! For Sun or MS FPS, use FORM='UNFORMATTED'.  
+      ! For Sun or MS FPS, use FORM='UNFORMATTED'.
       ! For Lahey LF90, try FORM='TRANSPARENT' (untested).
 
 
@@ -371,7 +372,7 @@ CONTAINS
       ! This routine opens the console for standard output.
       ! MODIFIED for labview: to call write all text to an output file (see SUBROUTINE OpenFOutFile())
 
-      
+
       ! Local declarations.
 
    INTEGER                      :: IOS                                          ! I/O status of OPEN.
@@ -380,9 +381,9 @@ CONTAINS
    OPEN ( CU , FILE='CONSOLE.TXT' , STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE"   )
 
 
-   
+
    IF ( IOS /= 0 )  THEN
-!     CALL WrScr( ' Cannot open CONSOLE.TXT. Another program like MS Excel may have locked it for writing.' ) 
+!     CALL WrScr( ' Cannot open CONSOLE.TXT. Another program like MS Excel may have locked it for writing.' )
       CALL ProgExit ( 1 )
    END IF
 
@@ -458,6 +459,22 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgExit ! ( StatCode )
+!=======================================================================
+   SUBROUTINE ProgPause
+
+
+      ! This routine pauses the program.
+
+
+
+   CALL WrScr ( '' )
+   CALL WrScr ( ' Hit the <Enter> key to continue.' )
+
+   READ (*,'()')
+
+
+   RETURN
+   END SUBROUTINE ProgPause
 !=======================================================================
    SUBROUTINE UsrAlarm
 

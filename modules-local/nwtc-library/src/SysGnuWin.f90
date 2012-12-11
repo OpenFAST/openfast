@@ -13,21 +13,24 @@ MODULE SysSubs
    !     SUBROUTINE  FileSize ( FileName, Size )
    !     SUBROUTINE  FindLine ( Str , MaxLen , StrEnd )
    !     SUBROUTINE  FlushOut ( Unit )
-   !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                      ! Please use GET_COMMAND_ARGUMENT() instead.
-   !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                ! Please use COMMAND_ARGUMENT_COUNT() instead.
+   !     SUBROUTINE  Get_Arg ( Arg_Num , Arg , Error )                                       ! Please use GET_COMMAND_ARGUMENT() instead.
+   !     SUBROUTINE  Get_Arg_Num ( Arg_Num )                                                 ! Please use COMMAND_ARGUMENT_COUNT() instead.
    !     SUBROUTINE  GET_COMMAND ( Command, Length, Status )
    !     SUBROUTINE  GET_COMMAND_ARGUMENT ( Number, Value, Length, Status )
    !     SUBROUTINE  GET_CWD( DirName, Status )
-   !     FUNCTION    Get_Env( EnvVar )                                                      ! Please use GET_ENVIRONMENT_VARIABLE() instead.
+   !     FUNCTION    Get_Env( EnvVar )                                                       ! Please use GET_ENVIRONMENT_VARIABLE() instead.
    !     FUNCTION    GET_ENVIRONMENT_VARIABLE( Name, Value, Length, Status, Trim_Name )
-   !     FUNCTION    Is_NaN( DblNum )                                                       ! Please use IEEE_IS_NAN() instead
+   !     FUNCTION    Is_NaN( DblNum )                                                        ! Please use IEEE_IS_NAN() instead
    !     SUBROUTINE  OpenBinFile ( Un, OutFile, RecLen, Error )
    !     SUBROUTINE  OpenBinInpFile( Un, InFile, Error )
    !     SUBROUTINE  OpenCon
+   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
+   !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
+   !     SUBROUTINE  ProgPause                                                               ! Pause output so the user has to hit <Enter> to continue.
    !     SUBROUTINE  UsrAlarm
-   !     FUNCTION    UserTime()                                                             ! Removed: Replace by F95 intrinsic, CPU_TIME().
+   !     FUNCTION    UserTime()                                                              ! Removed: Replace by F95 intrinsic, CPU_TIME().
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
    !     SUBROUTINE  WrScr ( Str )
@@ -467,8 +470,8 @@ CONTAINS
 
       ! This routine determines if a REAL(DbKi) variable holds a proper number.
       ! BJJ: this routine is used in CRUNCH.
-      ! Note that IsNaN does not exist in earlier versions of gfortran (e.g., 4.2.1), 
-      ! but does exist in version 4.4. It should be replaced with the standard 
+      ! Note that IsNaN does not exist in earlier versions of gfortran (e.g., 4.2.1),
+      ! but does exist in version 4.4. It should be replaced with the standard
       ! IEEE_IS_NAN when gfortran implements it.
 
 
@@ -660,6 +663,22 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgExit ! ( StatCode )
+!=======================================================================
+   SUBROUTINE ProgPause
+
+
+      ! This routine pauses the program.
+
+
+
+   CALL WrScr ( '' )
+   CALL WrScr ( ' Hit the <Enter> key to continue.' )
+
+   READ (*,'()')
+
+
+   RETURN
+   END SUBROUTINE ProgPause
 !=======================================================================
    SUBROUTINE UsrAlarm
 
