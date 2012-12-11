@@ -40,12 +40,16 @@ v1.01.00b-bjj, 10-Aug-2012, B. Jonkman
   - I fixed an error in the interpolation of tower files in the new
       periodic scheme when the time fell exactly between the two periods.
 
+v2.00.00a-adp, sometime, A. Platt
+  - Converted to modular framework.
+  - rename variables and routines to be consistent (from todo note).
+
  
  To Do:
  - Replace all global data with data types and make calling program store it
  - Create new input file for the module
  - remove all *_ADHack_* subroutines
- - Pick a name (WindInflow or InflowWind or ??) and make module name/routines consistant
+# - Pick a name (WindInflow or InflowWind or ??) and make module name/routines consistant -- done
  - Split FF wind type into different categories (BLADED, TurbSim, TurbSim's BLADED)
  - add ability to superimpose wind types
  - add user-defined wind profile?
