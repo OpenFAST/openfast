@@ -1,4 +1,4 @@
-REVNUM := `svn info ../.. |grep Revision: | grep -o [0-9]*`
+REVNUM:=`svn info |grep Revision: | grep -o [0-9]*`
 
 
 #doxygen bits
