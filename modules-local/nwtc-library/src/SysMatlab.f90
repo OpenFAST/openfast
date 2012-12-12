@@ -39,15 +39,16 @@ MODULE SysSubs
 !=======================================================================
 
 
-   INTEGER                      :: ConRecL  = 120                               ! The record length for console output.
-   INTEGER                      :: CU       = 7                                 ! The I/O unit for the console.
+   INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
+   INTEGER, PARAMETER            :: CU          = 7                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
-   INTEGER                      :: NL_Len   = 2                                 ! The number of characters used for a new line.
+   LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
 
-   CHARACTER(10)                :: Endian   = 'BIG_ENDIAN'                      ! The internal format of numbers.
-   CHARACTER( 1)                :: PathSep  = '\'                               ! The path separator. (bjj: would be nice to call this "filesep" to match MATLAB)
-   CHARACTER( 1)                :: SwChar   = '/'                               ! The switch character for command-line options.
-   CHARACTER( 6)                :: UnfForm  = 'BINARY'                          ! The string to specify unformatted I/O files.
+   CHARACTER(10), PARAMETER      :: Endian      = 'BIG_ENDIAN'                      ! The internal format of numbers.
+   CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separater.
+   CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.
+   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
 
 CONTAINS
@@ -474,17 +475,6 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgExit ! ( StatCode )
-!=======================================================================
-   SUBROUTINE ProgPause
-
-
-      ! This routine does nothing, but is here to be compatible with the other Sys files.
-      ! MATLAB does not allow Fortran to read from the keyboard, so it is not possible to pause execution.
-
-
-
-   RETURN
-   END SUBROUTINE ProgPause
 !=======================================================================
    SUBROUTINE UsrAlarm
 

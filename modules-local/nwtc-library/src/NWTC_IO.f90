@@ -6,6 +6,21 @@ MODULE NWTC_IO
 
    ! It contains the following routines:
 
+   !     SUBROUTINE AdjRealStr    ( NumStr )                                                          ! Removes leading spaces and trailing zeros from strings created by real numbers.
+   !     SUBROUTINE AllocAry      ( )                                                                 ! Generic interface for the All*Ary* routines.
+   !     SUBROUTINE AllCAry1      ( Ary, AryDim, Descr, ErrStat )                                     ! Allocate a 1-D CHARACTER array.
+   !     SUBROUTINE AllCAry2      ( Ary, AryDim1, AryDim2, Descr, ErrStat )                           ! Allocate a 2-D CHARACTER array.
+   !     SUBROUTINE AllCAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat )                  ! Allocate a 3-D CHARACTER array.
+   !     SUBROUTINE AllIAry1      ( Ary, AryDim, Descr, ErrStat )                                     ! Allocate a 1-D INTEGER array.
+   !     SUBROUTINE AllIAry2      ( Ary, AryDim1, AryDim2, Descr, ErrStat )                           ! Allocate a 2-D INTEGER array.
+   !     SUBROUTINE AllIAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat )                  ! Allocate a 3-D INTEGER array.
+   !     SUBROUTINE AllLAry1      ( Ary, AryDim, Descr, ErrStat )                                     ! Allocate a 1-D LOGICAL array.
+   !     SUBROUTINE AllLAry2      ( Ary, AryDim1, AryDim2, Descr, ErrStat )                           ! Allocate a 2-D LOGICAL array.
+   !     SUBROUTINE AllLAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat )                  ! Allocate a 3-D LOGICAL array.
+   !     SUBROUTINE AllRAry1      ( Ary, AryDim, Descr, ErrStat )                                     ! Allocate a 1-D REAL array.
+   !     SUBROUTINE AllRAry2      ( Ary, AryDim1, AryDim2, Descr, ErrStat )                           ! Allocate a 2-D REAL array.
+   !     SUBROUTINE AllRAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat )                  ! Allocate a 3-D REAL array.
+   !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat )         ! Allocate a 4-D REAL array.
    !     SUBROUTINE CheckArgs     ( InputFile [, ErrStat] )
    !     SUBROUTINE CheckIOS      ( IOS, Fil, Variable, VarType [, TrapErrors] )
    !     SUBROUTINE CloseEcho     ( )
@@ -13,14 +28,17 @@ MODULE NWTC_IO
    !     FUNCTION   CountWords    ( Line )
    !     FUNCTION   CurDate       ( )
    !     FUNCTION   CurTime       ( )
-   !     SUBROUTINE DispNVD       ( )
+   !     SUBROUTINE DispNVD       ( )                                                                 ! Generic interface for DispNVD0, DispNVD1, DispNVD2.
+   !     SUBROUTINE DispNVD0      ( )                                                                 ! Used when DispNVD() has no agruments.
+   !     SUBROUTINE DispNVD1      ( ProgInfo )                                                        ! Used when DispNVD() is called with an argument of ProgDesc type.
+   !     SUBROUTINE DispNVD2      ( Name, Ver )                                                       ! Used when DispNVD() is called with name and version.
    !     FUNCTION   Flt2LStr      ( FltNum )
    !     SUBROUTINE GetNewUnit    ( UnIn )
+   !     FUNCTION   GetNVD        ( ProgDesc )
    !     SUBROUTINE GetPath       ( GivenFil, PathName )
    !     SUBROUTINE GetRoot       ( GivenFil, RootName )
    !     SUBROUTINE GetTokens     ( Line, NumTok, Tokens, Error )
    !     SUBROUTINE GetWords      ( Line, Words, NumWords )
-   !     FUNCTION   GetNVD        ( ProgDesc )
    !     FUNCTION   Int2LStr      ( Intgr )
    !     SUBROUTINE NameOFile     ( InArg, OutExten, OutFile )
    !     SUBROUTINE NormStop      ( )
@@ -31,13 +49,17 @@ MODULE NWTC_IO
    !     SUBROUTINE OpenFInpFile  ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenFOutFile  ( Un, OutFile [, ErrStat] )
    !     SUBROUTINE OpenFUnkFile  ( Un, OutFile, FailAbt, Failed, Exists [, ErrStat] )
-   !     SUBROUTINE OpenUInfile   ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenUInBEFile ( Un, InFile, RecLen [, ErrStat] )
+   !     SUBROUTINE OpenUInfile   ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenUOutfile  ( Un, OutFile [, ErrStat] )
    !     FUNCTION   PathIsRelative( GivenFil )
    !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] )
    !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
+   !     SUBROUTINE ProgPause                                                                         ! Pause output so the user has to hit <Enter> to continue.
    !     SUBROUTINE ProgWarn      ( Message )
+   !     FUNCTION   R2LStr4       ( FltNum )                                                          ! Convert  4-byte REALs to left-justified strings.
+   !     FUNCTION   R2LStr8       ( FltNum )                                                          ! Convert  8-byte REALs to left-justified strings.
+   !     FUNCTION   R2LStr16      ( FltNum )                                                          ! Convert 16-byte REALs to left-justified strings.
    !     SUBROUTINE ReadAry       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )           ! Generic interface for ReadCAry, ReadIAry, ReadLAry, and ReadRAry.
    !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] )           ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
    !     SUBROUTINE ReadCAry      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] )
@@ -57,9 +79,9 @@ MODULE NWTC_IO
    !     SUBROUTINE ReadStr       ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
    !     SUBROUTINE ReadVar       ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] )                   ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadRVar.
    !     SUBROUTINE WaitTime      ( WaitSecs )
-   !     SUBROUTINE WrPr          ( Str )
    !     SUBROUTINE WrFileNR      ( Unit, Str )
    !     SUBROUTINE WrML          ( Str )
+   !     SUBROUTINE WrPr          ( Str )
    !     SUBROUTINE WrScr1        ( Str )
 
 
@@ -104,7 +126,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00b-bjj', '07-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00c-mlb', '12-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -264,7 +286,7 @@ CONTAINS
    RETURN
    END SUBROUTINE AllCAry1 ! ( Ary, AryDim, Descr )
 !=======================================================================
-   SUBROUTINE AllCAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat )
+   SUBROUTINE AllCAry2 ( Ary, AryDim1, AryDim2, Descr, ErrStat )
 
       ! This routine allocates a 2-D CHARACTER array.
 
@@ -680,57 +702,6 @@ CONTAINS
    RETURN
   END SUBROUTINE AllRAry4 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr )
 !=======================================================================
-!bjj: shouldn't this come after the next subroutine, alphabetically?
-   SUBROUTINE CheckIOS ( IOS, Fil, Variable, VarType, TrapErrors )
-
-
-      ! This routine checks the I/O status and prints either an end-of-file or
-      ! an invalid-input message, and then aborts the program.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: IOS                                          ! I/O status.
-   INTEGER, INTENT(IN)          :: VarType                                      ! Type of variable.
-
-   LOGICAL, INTENT(IN), OPTIONAL:: TrapErrors                                   ! Determines if the program should abort or return to calling function
-   LOGICAL                      :: TrapThisError                                ! The local version of TrapErrors
-
-   CHARACTER(*), INTENT(IN)     :: Fil                                          ! Name of input file.
-   CHARACTER(*), INTENT(IN)     :: Variable                                     ! Variable name.
-
-
-   IF ( PRESENT( TrapErrors ) ) THEN
-      TrapThisError = TrapErrors
-   ELSE
-      TrapThisError = .FALSE.
-   END IF
-
-
-   IF ( IOS < 0 )  THEN
-
-      CALL PremEOF ( TRIM( Fil ), Variable, TrapThisError )
-
-   ELSE IF ( IOS > 0 )  THEN
-
-      SELECTCASE ( VarType )
-
-      CASE ( NumType )
-         CALL WrScr1 ( ' Invalid numerical input for file "'//TRIM( Fil )//'".' )
-      CASE ( FlgType )
-         CALL WrScr1 ( ' Invalid logical input for file "'//TRIM( Fil )//'".' )
-      CASE ( StrType )
-         CALL WrScr1 ( ' Invalid character input for file "'//TRIM( Fil )//'".' )
-      ENDSELECT
-
-      CALL ProgAbort  ( ' The error occurred while trying to read '//TRIM( Variable )//'.', TrapThisError )
-
-   END IF
-
-
-   RETURN
-   END SUBROUTINE CheckIOS ! ( IOS, Fil, Variable, VarType )
-!=======================================================================
    SUBROUTINE CheckArgs ( InputFile, ErrStat )
 
 
@@ -784,10 +755,18 @@ CONTAINS
          IF ( Arg(1:1) == SwChar )  THEN
 
             CALL WrScr1   ( ' Syntax is:' )
-            CALL WrScr1   ( '    '//TRIM( ProgName )//' ['//SwChar//'h] [<InputFile>]' )
-            CALL WrScr1   ( ' where:' )
-            CALL WrScr1   ( '    '//SwChar//'h generates this help message.' )
-            CALL WrScr    ( '    <InputFile> is the name of the primary input file ['//TRIM( InputFile )//'].' )
+            IF ( LEN_TRIM( InputFile ) == 0 )  THEN
+               CALL WrScr1   ( '    '//TRIM( ProgName )//' ['//SwChar//'h] <InputFile>' )
+               CALL WrScr1   ( ' where:' )
+               CALL WrScr1   ( '    '//SwChar//'h generates this help message.' )
+               CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+            ELSE
+               CALL WrScr1   ( '    '//TRIM( ProgName )//' ['//SwChar//'h] [<InputFile>]' )
+               CALL WrScr1   ( ' where:' )
+               CALL WrScr1   ( '    '//SwChar//'h generates this help message.' )
+               CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
+                             //TRIM( InputFile )//'".' )
+            END IF
             CALL WrScr    ( ' ')
 
             IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
@@ -803,20 +782,70 @@ CONTAINS
                   ErrStat = 1
                   RETURN
                END IF
-            END IF
+            END IF ! ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )
 
          ELSE
             InputFile = Arg
-         END IF
+         END IF ! ( Arg(1:1) == SwChar )
 
-      END DO
+      END DO ! IArg
 
-   END IF
+   END IF ! ( NumArg .GT. 0 )
 
    IF ( PRESENT( ErrStat ) ) ErrStat = 0
 
    RETURN
    END SUBROUTINE CheckArgs
+!=======================================================================
+   SUBROUTINE CheckIOS ( IOS, Fil, Variable, VarType, TrapErrors )
+
+
+      ! This routine checks the I/O status and prints either an end-of-file or
+      ! an invalid-input message, and then aborts the program.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: IOS                                          ! I/O status.
+   INTEGER, INTENT(IN)          :: VarType                                      ! Type of variable.
+
+   LOGICAL, INTENT(IN), OPTIONAL:: TrapErrors                                   ! Determines if the program should abort or return to calling function
+   LOGICAL                      :: TrapThisError                                ! The local version of TrapErrors
+
+   CHARACTER(*), INTENT(IN)     :: Fil                                          ! Name of input file.
+   CHARACTER(*), INTENT(IN)     :: Variable                                     ! Variable name.
+
+
+   IF ( PRESENT( TrapErrors ) ) THEN
+      TrapThisError = TrapErrors
+   ELSE
+      TrapThisError = .FALSE.
+   END IF
+
+
+   IF ( IOS < 0 )  THEN
+
+      CALL PremEOF ( TRIM( Fil ), Variable, TrapThisError )
+
+   ELSE IF ( IOS > 0 )  THEN
+
+      SELECTCASE ( VarType )
+
+      CASE ( NumType )
+         CALL WrScr1 ( ' Invalid numerical input for file "'//TRIM( Fil )//'".' )
+      CASE ( FlgType )
+         CALL WrScr1 ( ' Invalid logical input for file "'//TRIM( Fil )//'".' )
+      CASE ( StrType )
+         CALL WrScr1 ( ' Invalid character input for file "'//TRIM( Fil )//'".' )
+      ENDSELECT
+
+      CALL ProgAbort  ( ' The error occurred while trying to read '//TRIM( Variable )//'.', TrapThisError )
+
+   END IF
+
+
+   RETURN
+   END SUBROUTINE CheckIOS ! ( IOS, Fil, Variable, VarType )
 !=======================================================================
    SUBROUTINE CloseEcho( )
 
@@ -1022,7 +1051,7 @@ CONTAINS
    RETURN
    END SUBROUTINE DispNVD0
 !=======================================================================
-   SUBROUTINE DispNVD1( ProgInfo )
+   SUBROUTINE DispNVD1 ( ProgInfo )
 
 
       ! This routine displays the name of the program, its version, and its release date.
@@ -1038,9 +1067,9 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE DispNVD1
+   END SUBROUTINE DispNVD1 ! ( ProgInfo )
 !=======================================================================
-   SUBROUTINE DispNVD2( Name, Ver )
+   SUBROUTINE DispNVD2 ( Name, Ver )
 
 
       ! This routine displays the name of the program, its version, and its release date passed in as strings
@@ -1057,7 +1086,7 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE DispNVD2
+   END SUBROUTINE DispNVD2 !  ( Name, Ver )
 !=======================================================================
    FUNCTION Flt2LStr ( FltNum )
 
@@ -1710,53 +1739,6 @@ CONTAINS
    RETURN
    END SUBROUTINE OpenFUnkFile ! ( Un, OutFile, FailAbt, Failed, Exists [,ErrStat] )
 !=======================================================================
-   SUBROUTINE OpenUInfile ( Un, InFile, ErrStat )
-
-
-      !  This routine opens an unformatted input file.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(OUT), OPTIONAL :: ErrStat                                    ! Error status; if present, program does not abort on error
-   INTEGER, INTENT(IN)         ::  Un                                           ! Logical unit for the input file
-
-   CHARACTER(*), INTENT(IN)    ::  InFile                                       ! Name of the input file
-
-
-      ! Local declarations.
-
-   INTEGER                     ::  IOS                                          ! Returned input/output status.
-
-   LOGICAL                      :: Exists                                       ! Flag indicating whether or not a file Exists.
-
-
-
-      ! See if input file Exists.
-
-   INQUIRE ( FILE=TRIM( InFile ) , EXIST=Exists )
-
-   IF ( .NOT. Exists )  THEN
-      CALL ProgAbort ( ' The input file, "'//TRIM( InFile )//'", was not found.', PRESENT(ErrStat) )
-      IF ( PRESENT(ErrStat) ) ErrStat = -1
-      RETURN
-   END IF
-
-
-      ! Open the file.
-
-   OPEN ( Un, FILE=TRIM( InFile ), STATUS='UNKNOWN', FORM=UnfForm, ACCESS='SEQUENTIAL', IOSTAT=IOS, ACTION='READ' )
-
-   IF ( PRESENT(ErrStat) ) ErrStat = IOS
-
-   IF ( IOS /= 0 )  CALL ProgAbort( ' Cannot open file "'//TRIM( InFile )// &
-                                    '".  Another program may have locked it for writing.', PRESENT(ErrStat) )
-
-
-
-   RETURN
-   END SUBROUTINE OpenUInfile ! ( Un, InFile [,ErrStat] )
-!=======================================================================
 SUBROUTINE OpenUInBEFile( Un, InFile, RecLen, ErrStat )
 
       !  This routine opens an unformatted input file of RecLen-byte data records
@@ -1810,6 +1792,53 @@ SUBROUTINE OpenUInBEFile( Un, InFile, RecLen, ErrStat )
    RETURN
 
 END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
+!=======================================================================
+   SUBROUTINE OpenUInfile ( Un, InFile, ErrStat )
+
+
+      !  This routine opens an unformatted input file.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(OUT), OPTIONAL :: ErrStat                                    ! Error status; if present, program does not abort on error
+   INTEGER, INTENT(IN)         ::  Un                                           ! Logical unit for the input file
+
+   CHARACTER(*), INTENT(IN)    ::  InFile                                       ! Name of the input file
+
+
+      ! Local declarations.
+
+   INTEGER                     ::  IOS                                          ! Returned input/output status.
+
+   LOGICAL                      :: Exists                                       ! Flag indicating whether or not a file Exists.
+
+
+
+      ! See if input file Exists.
+
+   INQUIRE ( FILE=TRIM( InFile ) , EXIST=Exists )
+
+   IF ( .NOT. Exists )  THEN
+      CALL ProgAbort ( ' The input file, "'//TRIM( InFile )//'", was not found.', PRESENT(ErrStat) )
+      IF ( PRESENT(ErrStat) ) ErrStat = -1
+      RETURN
+   END IF
+
+
+      ! Open the file.
+
+   OPEN ( Un, FILE=TRIM( InFile ), STATUS='UNKNOWN', FORM=UnfForm, ACCESS='SEQUENTIAL', IOSTAT=IOS, ACTION='READ' )
+
+   IF ( PRESENT(ErrStat) ) ErrStat = IOS
+
+   IF ( IOS /= 0 )  CALL ProgAbort( ' Cannot open file "'//TRIM( InFile )// &
+                                    '".  Another program may have locked it for writing.', PRESENT(ErrStat) )
+
+
+
+   RETURN
+   END SUBROUTINE OpenUInfile ! ( Un, InFile [,ErrStat] )
 !=======================================================================
    SUBROUTINE OpenUOutfile ( Un, OutFile, ErrStat )
 
@@ -1912,7 +1941,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END SUBROUTINE PremEOF ! ( Fil , Variable [, TrapErrors] )
 !=======================================================================
-   SUBROUTINE ProgAbort ( Message, TrapErrors )
+   SUBROUTINE ProgAbort ( Message, TrapErrors, TimeWait, ErrLevel )
 
 
       ! This routine outputs fatal error messages and stops the program.
@@ -1920,8 +1949,13 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
       ! Argument declarations.
 
-   LOGICAL, INTENT(IN), OPTIONAL:: TrapErrors                                   ! Determines if the program should abort or return to calling function
-   CHARACTER(*), INTENT(IN)     :: Message                                      ! Error message.
+   REAL(ReKi), INTENT(IN), OPTIONAL       :: TimeWait             ! Tells whether to wait for TimeWait s, or pause if <0.
+
+   INTEGER(IntKi), INTENT(IN), OPTIONAL   :: ErrLevel             ! The error level to report to the OS.
+
+   LOGICAL, INTENT(IN), OPTIONAL          :: TrapErrors           ! Determines if the program should abort or return to calling function
+
+   CHARACTER(*), INTENT(IN)               :: Message              ! Error message.
 
 
 
@@ -1937,12 +1971,44 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    ELSE
       CALL WrScr1   ( ' Aborting program.' )
    END IF
+   CALL WrScr ( '' )
 
-   CALL ProgPause
-   CALL ProgExit ( 1 )
+      ! Do we pause (<0), proceed (=0), or wait (>0)?
+
+   IF ( PRESENT( TimeWait ) )  THEN
+      IF ( ( TimeWait < 0.0 ) .AND. KBInputOK )  THEN
+         CALL ProgPause
+      ELSE IF ( TimeWait > 0.0 )  THEN
+         CALL WaitTime( TimeWait )
+      END IF
+   END IF
 
 
-   END SUBROUTINE ProgAbort ! ( Message [, TrapErrors] )
+      ! Do we report a specific error level to the OS or use the default of 1?
+
+   IF ( PRESENT( ErrLevel ) )  THEN
+      CALL ProgExit ( ErrLevel )
+   ELSE
+      CALL ProgExit ( 1 )
+   END IF
+
+
+   END SUBROUTINE ProgAbort ! ( Message [, TrapErrors, TimeWait, ErrLevel] )
+!=======================================================================
+   SUBROUTINE ProgPause
+
+
+      ! This routine pauses the program.
+
+
+
+   CALL WrScr ( ' Hit the <Enter> key to continue.' )
+
+   READ (*,'()')
+
+
+   RETURN
+   END SUBROUTINE ProgPause
 !=======================================================================
    SUBROUTINE ProgWarn ( Message )
 
@@ -3420,26 +3486,6 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END SUBROUTINE WaitTime ! ( Seconds )
 !=======================================================================
-   SUBROUTINE WrPr ( Str )
-
-
-      ! This routine writes out a prompt to the screen without
-      ! following it with a new line, though a new line precedes it.
-
-
-      ! Argument declarations:
-
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The prompt string to print.
-
-
-
-   CALL WrScr ( ' ' )
-   CALL WrNR  ( TRIM( Str )//' > ' )
-
-
-   RETURN
-   END SUBROUTINE WrPr ! ( Str )
-!=======================================================================
    SUBROUTINE WrFileNR ( Unit, Str )
 
 
@@ -3477,6 +3523,26 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    RETURN
    END SUBROUTINE WrML ! ( Str )
+!=======================================================================
+   SUBROUTINE WrPr ( Str )
+
+
+      ! This routine writes out a prompt to the screen without
+      ! following it with a new line, though a new line precedes it.
+
+
+      ! Argument declarations:
+
+   CHARACTER(*), INTENT(IN)     :: Str                                          ! The prompt string to print.
+
+
+
+   CALL WrScr ( ' ' )
+   CALL WrNR  ( TRIM( Str )//' > ' )
+
+
+   RETURN
+   END SUBROUTINE WrPr ! ( Str )
 !=======================================================================
    SUBROUTINE WrScr1 ( Str )
 

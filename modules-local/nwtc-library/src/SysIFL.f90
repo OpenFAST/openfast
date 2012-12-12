@@ -23,7 +23,6 @@ MODULE SysSubs
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
-   !     SUBROUTINE  ProgPause                                                               ! Pause output so the user has to hit <Enter> to continue.
    !     SUBROUTINE  UsrAlarm
    !     FUNCTION    UserTime()                                                              ! Removed: Replace by F95 intrinsic, CPU_TIME().
    !     SUBROUTINE  WrNR ( Str )
@@ -41,14 +40,16 @@ MODULE SysSubs
 !=======================================================================
 
 
-   INTEGER                      :: ConRecL  = 120                               ! The record length for console output.
-   INTEGER                      :: CU       = 7                                 ! The I/O unit for the console.
-   INTEGER                      :: NL_Len   = 1                                 ! The number of characters used for a new line.
+   INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
+   INTEGER, PARAMETER            :: CU          = 7                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
-   CHARACTER(10)                :: Endian   = 'BIG_ENDIAN'                      ! The internal format of numbers.
-   CHARACTER( 1)                :: PathSep  = '/'                               ! The path separater.
-   CHARACTER( 1)                :: SwChar   = '-'                               ! The switch character for command-line options.
-   CHARACTER( 6)                :: UnfForm  = 'BINARY'                          ! The string to specify unformatted I/O files.
+   LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
+
+   CHARACTER(10), PARAMETER      :: Endian      = 'BIG_ENDIAN'                      ! The internal format of numbers.
+   CHARACTER( 1), PARAMETER      :: PathSep     = '/'                               ! The path separater.
+   CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
+   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
 
 CONTAINS
@@ -691,22 +692,6 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgExit ! ( StatCode )
-!=======================================================================
-   SUBROUTINE ProgPause
-
-
-      ! This routine pauses the program.
-
-
-
-   CALL WrScr ( '' )
-   CALL WrScr ( ' Hit the <Enter> key to continue.' )
-
-   READ (*,'()')
-
-
-   RETURN
-   END SUBROUTINE ProgPause
 !=======================================================================
    SUBROUTINE UsrAlarm
 
