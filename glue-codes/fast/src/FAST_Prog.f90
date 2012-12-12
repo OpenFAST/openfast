@@ -21,16 +21,24 @@ USE                             HydroDyn
 USE                             Noise
 
 
+USE                             TurbConf, ONLY: NumBL
+USE                             Blades,   ONLY: BldNodes
+USE                             Tower,    ONLY: TwrNodes
+
+
 IMPLICIT                        NONE
 
 
    ! Local variables:
 
-REAL(ReKi)                   :: GBoxTrq                                         ! Unused gearbox torque on the LSS side in N-m.
+REAL(ReKi)                    :: GBoxTrq                                         ! Unused gearbox torque on the LSS side in N-m.
 
-INTEGER(4)                   :: L                                               ! Generic index.
+INTEGER                       :: L                                               ! Generic index.
 
-INTEGER                       :: ErrStat
+TYPE(StrD_CoordSys)           :: CoordSys                                        ! The coordinate systems to be set in linearization only
+
+INTEGER(IntKi)                :: ErrStat                                         ! Error status
+CHARACTER(1024)               :: ErrMsg                                          ! Error message
 
 
    ! Get the current time.
@@ -99,10 +107,8 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
    !   appropriate:
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
-
-
-      CALL TimeMarch
-
+      
+      CALL TimeMarch(  )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
@@ -110,9 +116,19 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       IF ( NActvDOF == 0 )  CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
 
 
+      CALL CoordSys_Alloc( CoordSys, NumBl, BldNodes, TwrNodes, ErrStat, ErrMsg )
+            
+      IF (ErrStat /= ErrID_none) THEN
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL ProgAbort( ErrMsg )
+         ELSE
+            CALL WrScr( ErrMsg )            
+         END IF
+      END IF
+      
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady
+         CALL CalcSteady( CoordSys )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
@@ -133,8 +149,12 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       ENDIF
 
 
-      CALL Linearize          ! Linearize the model about the steady-state solution.
+      CALL Linearize( CoordSys )          ! Linearize the model about the steady-state solution.
 
+      CALL CoordSys_Dealloc( CoordSys, ErrStat, ErrMsg )
+      IF (ErrStat /= ErrID_none) THEN
+         CALL WrScr( ErrMsg )
+      END IF      
 
    ENDIF
 

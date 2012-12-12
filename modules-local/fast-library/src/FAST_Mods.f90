@@ -1,3 +1,5 @@
+  
+   
 !=======================================================================
 MODULE ADAMSInput
 
@@ -138,76 +140,6 @@ INTEGER(4)                   :: TipNode                                         
 
 
 END MODULE Blades
-!=======================================================================
-MODULE CoordSys
-
-
-   ! This MODULE stores coordinate sytems used internally by FAST.  The 3
-   !   components of each vector correspond to the z1, z2, and z3 components
-   !   of the individual vectors.
-   ! NOTE: the orientations of most of these coordinate systems will change
-   !   every time step.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: a1       (3)                                    ! Vector / direction a1 (=  xt from the IEC coord. system).
-REAL(ReKi)                   :: a2       (3)                                    ! Vector / direction a2 (=  zt from the IEC coord. system).
-REAL(ReKi)                   :: a3       (3)                                    ! Vector / direction a3 (= -yt from the IEC coord. system).
-REAL(ReKi)                   :: b1       (3)                                    ! Vector / direction b1 (=  xp from the IEC coord. system).
-REAL(ReKi)                   :: b2       (3)                                    ! Vector / direction b2 (=  zp from the IEC coord. system).
-REAL(ReKi)                   :: b3       (3)                                    ! Vector / direction b3 (= -yp from the IEC coord. system).
-REAL(ReKi)                   :: c1       (3)                                    ! Vector / direction c1 (=  xs from the IEC coord. system).
-REAL(ReKi)                   :: c2       (3)                                    ! Vector / direction c2 (=  zs from the IEC coord. system).
-REAL(ReKi)                   :: c3       (3)                                    ! Vector / direction c3 (= -ys from the IEC coord. system).
-REAL(ReKi)                   :: d1       (3)                                    ! Vector / direction d1 (=  xn from the IEC coord. system).
-REAL(ReKi)                   :: d2       (3)                                    ! Vector / direction d2 (=  zn from the IEC coord. system).
-REAL(ReKi)                   :: d3       (3)                                    ! Vector / direction d3 (= -yn from the IEC coord. system).
-REAL(ReKi)                   :: e1       (3)                                    ! Vector / direction e1 (=  xa from the IEC coord. system).
-REAL(ReKi)                   :: e2       (3)                                    ! Vector / direction e2 (=  ya from the IEC coord. system).
-REAL(ReKi)                   :: e3       (3)                                    ! Vector / direction e3 (=  za from the IEC coord. system).
-REAL(ReKi)                   :: f1       (3)                                    ! Vector / direction f1.
-REAL(ReKi)                   :: f2       (3)                                    ! Vector / direction f2.
-REAL(ReKi)                   :: f3       (3)                                    ! Vector / direction f3.
-REAL(ReKi)                   :: g1       (3)                                    ! Vector / direction g1 (=  xh from the IEC coord. system).
-REAL(ReKi)                   :: g2       (3)                                    ! Vector / direction g2 (=  yh from the IEC coord. system).
-REAL(ReKi)                   :: g3       (3)                                    ! Vector / direction g3 (=  zh from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: i1       (:,:)                                  ! i1(K,:) = vector / direction i1 for blade K (=  xcK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: i2       (:,:)                                  ! i2(K,:) = vector / direction i2 for blade K (=  ycK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: i3       (:,:)                                  ! i3(K,:) = vector / direction i3 for blade K (=  zcK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: j1       (:,:)                                  ! j1(K,:) = vector / direction j1 for blade K (=  xbK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: j2       (:,:)                                  ! j2(K,:) = vector / direction j2 for blade K (=  ybK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: j3       (:,:)                                  ! j3(K,:) = vector / direction j3 for blade K (=  zbK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: m1       (:,:,:)                                ! m1(K,J,:) = vector / direction m1 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn).
-REAL(ReKi), ALLOCATABLE      :: m2       (:,:,:)                                ! m2(K,J,:) = vector / direction m2 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn).
-REAL(ReKi), ALLOCATABLE      :: m3       (:,:,:)                                ! m3(K,J,:) = vector / direction m3 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn).
-REAL(ReKi), ALLOCATABLE      :: n1       (:,:,:)                                ! n1(K,J,:) = vector / direction n1 for node J of blade K (= LxbK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: n2       (:,:,:)                                ! n2(K,J,:) = vector / direction n2 for node J of blade K (= LybK from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: n3       (:,:,:)                                ! n3(K,J,:) = vector / direction n3 for node J of blade K (= LzbK from the IEC coord. system).
-REAL(ReKi)                   :: p1       (3)                                    ! Vector / direction p1 (used to calc. and return tail aerodynamic loads from AeroDyn).
-REAL(ReKi)                   :: p2       (3)                                    ! Vector / direction p2 (used to calc. and return tail aerodynamic loads from AeroDyn).
-REAL(ReKi)                   :: p3       (3)                                    ! Vector / direction p3 (used to calc. and return tail aerodynamic loads from AeroDyn).
-REAL(ReKi)                   :: rf1      (3)                                    ! Vector / direction rf1 (rotor-furl coordinate system = d1 when rotor-furl angle = 0).
-REAL(ReKi)                   :: rf2      (3)                                    ! Vector / direction rf2 (rotor-furl coordinate system = d2 when rotor-furl angle = 0).
-REAL(ReKi)                   :: rf3      (3)                                    ! Vector / direction rf3 (rotor-furl coordinate system = d3 when rotor-furl angle = 0).
-REAL(ReKi)                   :: rfa      (3)                                    ! Vector / direction of the rotor-furl axis.
-REAL(ReKi), ALLOCATABLE      :: t1       (:,:)                                  ! Vector / direction t1 for tower node J (=  Lxt from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: t2       (:,:)                                  ! Vector / direction t2 for tower node J (=  Lzt from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: t3       (:,:)                                  ! Vector / direction t3 for tower node J (= -Lyt from the IEC coord. system).
-REAL(ReKi), ALLOCATABLE      :: te1      (:,:,:)                                ! te1(K,J,:) = vector / direction te1 for node J of blade K (used to calc. noise).
-REAL(ReKi), ALLOCATABLE      :: te2      (:,:,:)                                ! te2(K,J,:) = vector / direction te2 for node J of blade K (used to calc. noise).
-REAL(ReKi), ALLOCATABLE      :: te3      (:,:,:)                                ! te3(K,J,:) = vector / direction te3 for node J of blade K (used to calc. noise).
-REAL(ReKi)                   :: tf1      (3)                                    ! Vector / direction tf1 (tail-furl coordinate system = d1 when rotor-furl angle = 0).
-REAL(ReKi)                   :: tf2      (3)                                    ! Vector / direction tf2 (tail-furl coordinate system = d2 when rotor-furl angle = 0).
-REAL(ReKi)                   :: tf3      (3)                                    ! Vector / direction tf3 (tail-furl coordinate system = d3 when rotor-furl angle = 0).
-REAL(ReKi)                   :: tfa      (3)                                    ! Vector / direction of the tail-furl axis.
-REAL(ReKi)                   :: z1       (3)                                    ! Vector / direction z1 (=  xi from the IEC coord. system).
-REAL(ReKi)                   :: z2       (3)                                    ! Vector / direction z2 (=  zi from the IEC coord. system).
-REAL(ReKi)                   :: z3       (3)                                    ! Vector / direction z3 (= -yi from the IEC coord. system).
-
-
-END MODULE CoordSys
 !=======================================================================
 MODULE Constants
 
