@@ -285,7 +285,7 @@ v1.04.00d-bjj,  Dec 2011, B. Jonkman
 
   I changed CU from 6 back to 7 in SysIVF.f90 because Adams (2011 in particular) crashes with opening the console using CU 6.
 v1.04.00e-bjj, 15 Feb 2012 B. Jonkman
-  I added R8Ki to the Precision module so that we have an 8-byte type that doesn't change between single (SingPrec.f90) 
+  I added R8Ki to the Precision module so that we have an 8-byte type that doesn't change between single (SingPrec.f90)
     and double precision (DoubPrec.f90).
   I removed alpha change comments.
   I added Num2LStr() as a generic INTERFACE for Int2LStr() and Flt2LStr().
@@ -309,19 +309,19 @@ v1.05.00 24-Oct-2012 B. Jonkman (with help from A. Platt)
   I created new functions R2LStr4, R2LStr8, and R2LStr16 to replace Flt2LStr, particularly in the Num2LStr INTERFACE;
     new functions ReadR4Var, ReadR8Var, ReadR16Var replace ReadRVar in the ReadVar INTERFACE;
     new functions ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16 replace ReadRAryLines in the ReadAryLines INTERFACE
-  
+
   I removed subroutine InterpAF because it has never been used (and serves no purpose) See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=388
   I removed DoubPrecGnu.f90 from the archive because it is not necessary. gfortran (v4.6 and later) works with DoubPrec.f90.
   I removed SysVF.f90 from the archive, because it has been replaced with SysIVF.f90.
-  I removed SysCVF.f90 because CVF is an old compiler that we want to discourage people from using. 
+  I removed SysCVF.f90 because CVF is an old compiler that we want to discourage people from using.
   I removed NWTC_SharedDataTypes.f90 from the archive because it will not be necessary for the new framework.
-  I removed subroutines/functions COMMAND_ARGUMENT_COUNT, GET_COMMAND, GET_COMMAND_ARGUMENT, and GET_ENVIRONMENT_VARIABLE 
+  I removed subroutines/functions COMMAND_ARGUMENT_COUNT, GET_COMMAND, GET_COMMAND_ARGUMENT, and GET_ENVIRONMENT_VARIABLE
     from SysIVF.f90, SysIFL.f90, and SysMatlab.f90 because they are part of the Fortran 2003 standard.
-  I updated the OpenBinFile() and OpenBinInpFile() routines in SysIVF.f90 to use FORM='UNFORMATTED' , ACCESS='STREAM' instead of FORM='BINARY'. 
+  I updated the OpenBinFile() and OpenBinInpFile() routines in SysIVF.f90 to use FORM='UNFORMATTED' , ACCESS='STREAM' instead of FORM='BINARY'.
 
   I added BufferRoutines.f90 to the archive for use with the FAST framework template.
   I added a placeholder for the ModMesh module (new FAST framework) and added ModMesh.f90 to the archive.
- 
+
   I added constants called NaN, Inf, NaN_D, and Inf_D to store the IEEE values of NaN and Inf.
   I renamed the PiConst() subroutine to SetConstants() because we are using it set the NaN and Inf values, too.
 
@@ -350,14 +350,28 @@ v1.06.00a 26-Nov-2012  M. Buhl, B. Jonkman
 v1.06.00b-bjj 7-Dec-2012  B. Jonkman
    I added a function called GetNVD() to return a single string with the program name, version, and date.
 
+v1.06.00c-mlb  12-Dec-2012  M. Buhl
+o  I added some comments to CheckArgs() in NWTC_IO.f90.
+o  I redid the syntax output for CheckArgs() in NWTC_IO.f90 so it handled the situation where a *required* input file was omitted.
+o  I added optional arguments (TimeWait and ErrLevel) to ProgAbort() in NWTC_IO.f90.  TimeWait determines
+   whether to pause, proceed, or wait a specified amount of time before exiting the program.
+   ErrLevel sets the error level reported to the OS if specified.  Otherwise, it uses 1.
+o  I created ProgPause() in NWTC_IO.f90 to require the user to hit <Enter> to continue the program.
+o  I created the system-specific parameter KBInputOK that is set to true if keyboard input is allowed.
+o  I modified ProgAbort() to call ProgPause() only if KBInputOK is true.
+o  I made all the global variables in the Sys* files parameters.
+o  I changed all occurences of UnfForm being BINARY to UNFORMATTED in the Sys* files.
+o  I did some simple clean-up and dosumentation in NWTC_IO.f90.
+o  I added program Test_CheckArgs to the Source\Drivers folder to test the CheckArgs() routine in NWTC_IO.f90.
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
 
    Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
    Fix ErrStat to use the new ErrID_* levels
-   Fix SysGnu.f90 (subroutines OpenCon(), WrOver(), WrNR(), & maybe others are not working properly): https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=540   
- 
+   Fix SysGnu.f90 (subroutines OpenCon(), WrOver(), WrNR(), & maybe others are not working properly): https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=540
+
    Create new read array routines that read an array from multiple lines.
    Fix NWTC_Aero.f90\AeroInt() to interpolate between control settings.
 
