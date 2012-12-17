@@ -35,47 +35,49 @@ MODULE InflowWind_Subs
 
 CONTAINS
 !====================================================================================================
-FUNCTION GetWindType( FileName, ErrStat )
+SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 !  This subroutine checks the file FileName to see what kind of wind file we are using.  Used when
 !  the wind file type is unknown.
 !----------------------------------------------------------------------------------------------------
-
+!FIXME: may want to change this to a subroutine that sets stuff in the passed IfW_ParameterType variable
 
    IMPLICIT             NONE
 
 
       ! Passed Variables:
 
-   CHARACTER(*),INTENT(INOUT) :: FileName
-   INTEGER, INTENT(OUT)       :: ErrStat
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
+   INTEGER(IntKi),                  INTENT(  OUT)     :: ErrStat
+   CHARACTER(*),                    INTENT(  OUT)     :: ErrMsg
 
-      ! Function definition
-   INTEGER                    :: GetWindType
 
       ! Local Variables:
 
-   INTEGER                    :: IND
-   LOGICAL                    :: Exists
+   INTEGER                                            :: IND
+   LOGICAL                                            :: Exists
 
-   CHARACTER(  3)             :: FileNameEnd
-   CHARACTER(  8)             :: WndFilNam
+   CHARACTER(1024)                                    :: FileName       ! Temporary name holder
+   CHARACTER(  3)                                     :: FileNameEnd
+   CHARACTER(  8)                                     :: WndFilNam      ! Temporary name holder
 
-   CHARACTER(1024)            :: FileRoot
+   CHARACTER(1024)                                    :: FileRoot
 
 
-   ErrStat = 0
+   ErrStat  = 0
+   ErrMsg   = ""
 
    !-------------------------------------------------------------------------------------------------
    ! Check for user-defined wind file first; file starts with "USERWIND"
    !-------------------------------------------------------------------------------------------------
 
-   WndFilNam = FileName
-   CALL Conv2UC( WndFilNam )
+   WndFilNam = ParamData%WindFileName
+   FileName  = ParamData%WindFileName
+   CALL Conv2UC( WndFilNam )              ! convert name to upper case
 
    IF ( WndFilNam == 'USERWIND' )  THEN
 
       CALL WrScr1( ' Detected user-defined wind file.' )
-      GetWindType = UD_Wind
+      ParamData%WindFileType = UD_Wind
 
       RETURN
    END IF
@@ -83,11 +85,12 @@ FUNCTION GetWindType( FileName, ErrStat )
    !-------------------------------------------------------------------------------------------------
    ! Get the file extension (or at least what we expect the extension to be)
    !-------------------------------------------------------------------------------------------------
-   CALL GetRoot ( FileName, FileRoot )                      ! Get the root name
+   CALL GetRoot ( ParamData%WindFileName, ParamData%WindFileNameRoot )            ! Get the root name
 
-   IND = LEN_TRIM( FileRoot ) + 1
-   IF ( IND < LEN_TRIM( FileName ) ) THEN
-      FileNameEnd = FileName(IND+1:)                        ! Get the extenstion, starting at first character past (may not be the whole "extension")
+   IND = LEN_TRIM( ParamData%WindFileNameRoot ) + 1
+   IF ( IND < LEN_TRIM( ParamData%WindFileName ) ) THEN
+         ! Get the extention, starting at first character past (may not be the whole "extension")
+      FileNameEnd = ParamData%WindFileName(IND+1:)
       CALL Conv2UC (FileNameEnd)
    ELSE
       FileNameEnd = ""
@@ -101,7 +104,7 @@ FUNCTION GetWindType( FileName, ErrStat )
    IF ( IND == 0 ) THEN
       CALL WrScr1(' No file extension found. Assuming '//TRIM(FileName)// &
                   ' is a binary FF wind file with a ".wnd" extension.')
-      GetWindType = FF_Wind
+      ParamData%WindFileType = FF_Wind
       FileName = TRIM(FileName)//'.wnd'
       RETURN
    END IF
@@ -118,45 +121,45 @@ FUNCTION GetWindType( FileName, ErrStat )
          INQUIRE ( FILE=FileName(1:IND)//'sum' , EXIST=Exists )
          IF (Exists) THEN
             CALL WrScr1(' Assuming '//TRIM(FileName)//' is a binary FF wind file.')
-            GetWindType = FF_Wind
+            ParamData%WindFileType = FF_Wind
          ELSE
             CALL WrScr1(' Assuming '//TRIM(FileName)//' is a formatted HH wind file.')
-            GetWindType = HH_Wind
+            ParamData%WindFileType = HH_Wind
          END IF
 
       CASE ('BTS')
          CALL WrScr1(' Assuming '//TRIM(FileName)//' is a binary FF wind file.')
-         GetWindType = FF_Wind
+         ParamData%WindFileType = FF_Wind
 
       CASE ('CTP')
          CALL WrScr1(' Assuming '//TRIM(FileName)//' is a coherent turbulence wind file.')
-         GetWindType = CTP_Wind
+         ParamData%WindFileType = CTP_Wind
 
       CASE ('FDP')
          CALL WrScr1(' Assuming '//TRIM(FileName)//' is a binary 4-dimensional wind file.')
-         GetWindType = FD_Wind
+         ParamData%WindFileType = FD_Wind
 
       CASE ('HWC')
          CALL WrScr1(' Assuming '//TRIM(FileName)//' contains full-field wind parameters in HAWC format.')
-         GetWindType = HAWC_Wind
+         ParamData%WindFileType = HAWC_Wind
 
       CASE DEFAULT
          CALL WrScr1(' Assuming '//TRIM(FileName)//' is a formatted HH wind file.')
-         GetWindType = HH_Wind
+         ParamData%WindFileType = HH_Wind
 
    END SELECT
 
 
 RETURN
-END FUNCTION GetWindType
+END SUBROUTINE GetWindType
 !====================================================================================================
-SUBROUTINE InflowWind_LinearizePerturbation( IfW_ParamData, LinPerturbations, ErrStat )
+SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat )
 ! This function is used in FAST's linearization scheme.  It should be fixed at some point.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables
 
-   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: IfW_ParamData
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
 
    INTEGER,                         INTENT(OUT)       :: ErrStat
 
@@ -169,7 +172,7 @@ SUBROUTINE InflowWind_LinearizePerturbation( IfW_ParamData, LinPerturbations, Er
 
    ErrStat = 0
 
-   SELECT CASE ( IfW_ParamData%WindType )
+   SELECT CASE ( ParamData%WindFileType )
       CASE (HH_Wind)
 
          CALL HH_SetLinearizeDels( LinPerturbations, ErrStat )
@@ -214,7 +217,7 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !! 
 !!    ErrStat = 0
 !! 
-!!    SELECT CASE ( WindType )
+!!    SELECT CASE ( ParamData%WindFileType )
 !!       CASE (HH_Wind)
 !! 
 !! !      VXGBAR =  V * COS( DELTA )
@@ -310,7 +313,7 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !! 
 !! END FUNCTION InflowWind_ADhack_diskVel
 !====================================================================================================
-FUNCTION InflowWind_ADhack_DIcheck( IfW_ParamData, ErrStat )
+FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
 ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
 ! it performs a wind speed check for the dynamic inflow initialization
 ! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
@@ -318,7 +321,7 @@ FUNCTION InflowWind_ADhack_DIcheck( IfW_ParamData, ErrStat )
 
       ! Passed variables
 
-   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: IfW_ParamData
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
 
    INTEGER,                         INTENT(OUT)       :: ErrStat
 
@@ -328,7 +331,7 @@ FUNCTION InflowWind_ADhack_DIcheck( IfW_ParamData, ErrStat )
 
    ErrStat = 0
 
-   SELECT CASE ( IfW_ParamData%WindType )
+   SELECT CASE ( ParamData%WindFileType )
       CASE (HH_Wind, UD_Wind, FD_Wind )
 
          InflowWind_ADhack_DIcheck = 50  ! just return something greater than 8 m/s
