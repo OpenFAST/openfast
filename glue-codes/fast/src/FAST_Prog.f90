@@ -20,6 +20,9 @@ USE                             FAST_Lin_Subs      ! CalcSteady(), Linearize()
 USE                             HydroDyn
 USE                             Noise
 
+USE                             StructDyn
+USE                             StructDyn_Types
+
 
 USE                             TurbConf, ONLY: NumBL
 USE                             Blades,   ONLY: BldNodes
@@ -31,11 +34,13 @@ IMPLICIT                        NONE
 
    ! Local variables:
 
-REAL(ReKi)                    :: GBoxTrq                                         ! Unused gearbox torque on the LSS side in N-m.
+REAL(ReKi)                    :: GBoxTrq                                         ! Unused gearbox torque on the LSS side in N-m
 
-INTEGER                       :: L                                               ! Generic index.
+INTEGER                       :: L                                               ! Generic index
 
-TYPE(StrD_CoordSys)           :: CoordSys                                        ! The coordinate systems to be set in linearization only
+
+TYPE(StrD_OtherStateType)     :: OtherSt_StrD                                    ! The structural dynamics "other" states (including CoordSys) 
+TYPE(StrD_ParameterType)      :: p_StrD                                          ! The parameters of the structural dynamics module
 
 INTEGER(IntKi)                :: ErrStat                                         ! Error status
 CHARACTER(1024)               :: ErrMsg                                          ! Error message
@@ -60,12 +65,12 @@ CALL DispNVD()
    ! Open and read input files, initialize global parameters.
 
 CALL FAST_Begin()
-CALL FAST_Input()
+CALL FAST_Input( p_StrD, OtherSt_StrD, ErrStat, ErrMsg )
 
 
    ! Set up initial values for all degrees of freedom.
 
-CALL FAST_Initialize()
+CALL FAST_Initialize( p_StrD, OtherSt_StrD, ErrStat, ErrMsg )
 
 
 
@@ -108,7 +113,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  )     
+      CALL TimeMarch(  p_StrD, OtherSt_StrD, ErrStat, ErrMsg )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
@@ -116,7 +121,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       IF ( NActvDOF == 0 )  CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
 
 
-      CALL CoordSys_Alloc( CoordSys, NumBl, BldNodes, TwrNodes, ErrStat, ErrMsg )
+      CALL CoordSys_Alloc( OtherSt_StrD%CoordSys, NumBl, BldNodes, TwrNodes, ErrStat, ErrMsg )
             
       IF (ErrStat /= ErrID_none) THEN
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -128,7 +133,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady( CoordSys )
+         CALL CalcSteady( OtherSt_StrD%CoordSys )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
@@ -149,9 +154,9 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       ENDIF
 
 
-      CALL Linearize( CoordSys )          ! Linearize the model about the steady-state solution.
+      CALL Linearize( OtherSt_StrD%CoordSys )          ! Linearize the model about the steady-state solution.
 
-      CALL CoordSys_Dealloc( CoordSys, ErrStat, ErrMsg )
+      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg )
       IF (ErrStat /= ErrID_none) THEN
          CALL WrScr( ErrMsg )
       END IF      
