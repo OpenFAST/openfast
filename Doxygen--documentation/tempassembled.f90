@@ -7,11 +7,11 @@
 PROGRAM InflowWind_Test
 
    USE InflowWind
+   USE WindFile_Types
    USE SharedInflowDefs
 
    IMPLICIT NONE
 
-   INTEGER ErrStat
    TYPE(InflInitInfo)  :: InitWindData         ! data to initialize the module; TYPE defined in InflowWindMod.f90
 
    REAL(ReKi)          :: InpPosition(3)
@@ -21,8 +21,16 @@ PROGRAM InflowWind_Test
    REAL(ReKi)          :: dt
    INTEGER             :: I
 
+      ! Error Handling
 
-print*, "Test of flag CT_Flag: ",CT_Flag
+   INTEGER(IntKi)                                     :: ErrStat
+   CHARACTER(1024)                                    :: ErrMsg
+
+
+      ! All the shared types used in the module
+   TYPE( IfW_ParameterType )                          :: IfW_ParamData     ! Parameters
+
+
 
    !-------------------------------------------------------------------------------------------------
    ! Send the data required for initialization
@@ -30,8 +38,8 @@ print*, "Test of flag CT_Flag: ",CT_Flag
 
 !      InitWindData%WindFileName     = "D:\DATA\Fortran\IVF Projects\AeroDyn\Update\Source\InflowWind\TestData\GPLLJ_DNS\InOut.wnd"
 !      InitWindData%WindFileName     = "../TestRoutines/TestData/Periodic_Winds.wnd"    !! ff wind
-      InitWindData%WindFileName     = "Test-Data/InOut.wnd"    !! ff wind
-!      InitWindData%WindFileName     = "../Samples/Steady.wnd"  !! HH wind
+!      InitWindData%WindFileName     = "Test-Data/InOut.wnd"    !! ff wind
+      InitWindData%WindFileName     = "../Samples/Steady.wnd"  !! HH wind
 !      InitWindData%WindFileName     = "../Samples/les.fdp"  !! 4 D -- points to some other files. -- not work
       InitWindData%ReferenceHeight  = 80.   ! meters
       InitWindData%Width            = 100.  ! meters
@@ -40,7 +48,7 @@ print*, "Test of flag CT_Flag: ",CT_Flag
       InitWindData%WindFileType     = DEFAULT_Wind      ! let the module figure out what type of file it is...
 
 
-      CALL InflowWind_Init( InitWindData, ErrStat )
+      CALL IfW_Init( IfW_ParamData, InitWindData, ErrStat, ErrMsg )
 
 
       IF (errstat /=0) CALL ProgAbort('Error in Initialization routine')
@@ -59,7 +67,7 @@ print*, "Test of flag CT_Flag: ",CT_Flag
 
          Time = 0.0 + (I-1)*dt
 
-         MyWindSpeed = InflowWind_GetVelocity( Time, InpPosition, ErrStat )
+         MyWindSpeed = InflowWind_GetVelocity( IfW_ParamData, Time, InpPosition, ErrStat )
 
          !IF (ErrStat /=0) CALL ProgAbort('Error in getting wind speed')
 
@@ -70,7 +78,7 @@ print*, "Test of flag CT_Flag: ",CT_Flag
    !-------------------------------------------------------------------------------------------------
    ! Clean up the variables and close files
    !-------------------------------------------------------------------------------------------------
-    CALL InflowWind_Terminate( ErrStat )
+    CALL IfW_End( IfW_ParamData, ErrStat )
 
 
 END PROGRAM InflowWind_Test
@@ -92,13 +100,89 @@ MODULE SharedInflowDefs
 !----------------------------------------------------------------------------------------------------
 
    USE NWTC_Library                                               ! Precision module
+   IMPLICIT NONE
 
-   !-------------------------------------------------------------------------------------------------
-   ! Shared types
-   !-------------------------------------------------------------------------------------------------
 
-!FIXME: Setup the standard types here.
+      !---- Initialization data ---------------------------------------------------------------------
+   TYPE, PUBLIC :: IfW_InitInputType
+         ! Define inputs that the initialization routine may need here:
+         ! e.g., the name of the input file, the file root name, etc.
+      REAL(ReKi) :: DummyReal                                                 ! If you have initialization input data, remove this variable
+   END TYPE IfW_InitInputType
 
+
+      ! ..... States ..............................................................................................................
+
+   TYPE, PUBLIC :: IfW_ContinuousStateType
+         ! Define continuous (differentiable) states here:
+      REAL(ReKi) :: DummyContState                                            ! If you have continuous states, remove this variable
+         ! If you have loose coupling with a variable-step integrator, store the actual time associated with the continuous states
+         !    here (eg., REAL(DbKi) :: ContTime):
+   END TYPE IfW_ContinuousStateType
+
+
+   TYPE, PUBLIC :: IfW_DiscreteStateType
+         ! Define discrete (nondifferentiable) states here:
+      REAL(ReKi) :: DummyDiscState                                            ! If you have discrete states, remove this variable
+   END TYPE IfW_DiscreteStateType
+
+
+   TYPE, PUBLIC :: IfW_ConstraintStateType
+         ! Define constraint states here:
+      REAL(ReKi) :: DummyConstrState                                          !    If you have constraint states, remove this variable
+   END TYPE IfW_ConstraintStateType
+
+
+   TYPE, PUBLIC :: IfW_OtherStateType
+         ! Define any data that are not considered actual "states" here:
+         ! e.g. data used only for optimization purposes (indices for searching in an array, copies of previous calculations of output at a given time, etc.)
+      INTEGER(IntKi) :: DummyOtherState                                       !    If you have other/optimzation states, remove this variable
+   END TYPE IfW_OtherStateType
+
+
+      ! ..... Parameters ..........................................................................................................
+
+   TYPE, PUBLIC :: IfW_ParameterType
+
+         ! Define parameters here that might need to be accessed from the outside world:
+
+         ! The type of the file in use
+      INTEGER              :: WindType       = 0         ! This should be initially set to match the Undef_Wind parameter in the module
+
+         ! Flags
+      LOGICAL              :: CT_Flag        = .FALSE.   ! determines if coherent turbulence is used
+      LOGICAL              :: Initialized    = .FALSE.   ! did we run the initialization?
+
+   END TYPE IfW_ParameterType
+
+
+      ! ..... Inputs ..............................................................................................................
+
+   TYPE, PUBLIC :: IfW_InputType
+         ! Define inputs that are contained on the mesh here:
+!     TYPE(MeshType)                            ::
+         ! Define inputs that are not on this mesh here:
+      REAL(ReKi) :: DummyInput                                                ! If you have input data, remove this variable
+   END TYPE IfW_InputType
+
+
+      ! ..... Outputs .............................................................................................................
+
+   TYPE, PUBLIC :: IfW_OutputType
+         ! Define outputs that are contained on the mesh here:
+!     TYPE(MeshType)                            ::
+         ! Define outputs that are not on this mesh here:
+      REAL(ReKi) :: DummyOutput                                               ! If you have output data, remove this variable
+   END TYPE IfW_OutputType
+
+!-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-
+
+
+
+!This was commented out before.
 !   TYPE, PUBLIC :: InflLoc
 !      REAL(ReKi)                    :: Position(3)                ! X, Y, Z
 !   END TYPE InflLoc
@@ -113,22 +197,176 @@ MODULE SharedInflowDefs
    ! THEY MUST BE UNIQUE!
    !-------------------------------------------------------------------------------------------------
 
-!FIXME: I'm not sure what to do with these
-   INTEGER, PARAMETER, PUBLIC  :: DEFAULT_Wind = -1        ! Undetermined wind type; calls internal routine to guess what type of file it is.
-   INTEGER, PARAMETER, PUBLIC  :: Undef_Wind   =  0        ! This is the code for an undefined WindType
-   INTEGER, PARAMETER, PUBLIC  :: HH_Wind      =  1        ! Hub-Height wind file
-   INTEGER, PARAMETER, PUBLIC  :: FF_Wind      =  2        ! Binary full-field wind file
-   INTEGER, PARAMETER, PUBLIC  :: UD_Wind      =  3        ! User-defined wind
-   INTEGER, PARAMETER, PUBLIC  :: FD_Wind      =  4        ! 4-dimensional wind (LES)
-   INTEGER, PARAMETER, PUBLIC  :: CTP_Wind     =  5        ! Coherent turbulence wind field (superimpose KH billow on background wind)
-   INTEGER, PARAMETER, PUBLIC  :: HAWC_Wind    =  6        ! Binary full-field wind file in HAWC format
 
-!The following was moved. I don't know if it will get properly stored anymore.
-   INTEGER, SAVE                  :: WindType = Undef_Wind  ! Wind Type Flag
 
-!The following was moved. I don't know if it will get properly stored anymore.
-   LOGICAL, SAVE                  :: CT_Flag  = .FALSE.     ! determines if coherent turbulence is used
+
 END MODULE SharedInflowDefs
+
+
+
+!!FIXME: add these in at some point.
+!      ! ..... Jacobians ...........................................................................................................
+!
+!   TYPE, PUBLIC :: IfW_PartialOutputPInputType
+!
+!         ! Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
+!
+!      TYPE(IfW_InputType) :: DummyOutput                                    ! If you have output equations and input data, update this variable
+!
+!   END TYPE IfW_PartialOutputPInputType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialContStatePInputType
+!
+!         ! Define the Jacobian of the continuous state equations (X) with respect to the inputs (u), dX/du (or Partial X / Partial u):
+!
+!      TYPE(IfW_InputType) :: DummyContState                                 ! If you have continuous state equations and input data, update this variable
+!
+!   END TYPE IfW_PartialContStatePInputType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialDiscStatePInputType
+!
+!         ! Define the Jacobian of the discrete state equations (Xd) with respect to the inputs (u), dXd/du (or Partial Xd / Partial u):
+!
+!      TYPE(IfW_InputType) :: DummyDiscState                                 ! If you have discrete state equations and input data, update this variable
+!
+!   END TYPE IfW_PartialDiscStatePInputType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialConstrStatePInputType
+!
+!         ! Define the Jacobian of the constraint state equations (Z) with respect to the inputs (u), dZ/du (or Partial Z / Partial u):
+!
+!      TYPE(IfW_InputType) :: DummyConstrState                                ! If you have constraint state equations and input data, update this variable
+!
+!   END TYPE IfW_PartialConstrStatePInputType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialOutputPContStateType
+!
+!         ! Define the Jacobian of the output equations (Y) with respect to the continuous states (x), dY/dx (or Partial Y / Partial x):
+!
+!      TYPE(IfW_ContinuousStateType) :: DummyOutput                                    ! If you have output equations and continuous states, update this variable
+!
+!   END TYPE IfW_PartialOutputPContStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialContStatePContStateType
+!
+!         ! Define the Jacobian of the continuous state equations (X) with respect to the continuous states (x), dX/dx (or Partial X / Partial x):
+!
+!      TYPE(IfW_ContinuousStateType) :: DummyContState                                 ! If you have continuous state equations and continuous states, update this variable
+!
+!   END TYPE IfW_PartialContStatePContStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialDiscStatePContStateType
+!
+!         ! Define the Jacobian of the discrete state equations (Xd) with respect to the continuous states (x), dXd/dx (or Partial Xd / Partial x):
+!
+!      TYPE(IfW_ContinuousStateType) :: DummyDiscState                                 ! If you have discrete state equations and continuous states, update this variable
+!
+!   END TYPE IfW_PartialDiscStatePContStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialConstrStatePContStateType
+!
+!         ! Define the Jacobian of the constraint state equations (Z) with respect to the continuous states (x), dZ/dx (or Partial Z / Partial x):
+!
+!      TYPE(IfW_ContinuousStateType) :: DummyConstrState                                ! If you have constraint state equations and continuous states, update this variable
+!
+!   END TYPE IfW_PartialConstrStatePContStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialOutputPDiscStateType
+!
+!         ! Define the Jacobian of the output equations (Y) with respect to the discrete states (xd), dY/dxd (or Partial Y / Partial xd):
+!
+!      TYPE(IfW_DiscreteStateType) :: DummyOutput                                    ! If you have output equations and discrete states, update this variable
+!
+!   END TYPE IfW_PartialOutputPDiscStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialContStatePDiscStateType
+!
+!         ! Define the Jacobian of the continuous state equations (X) with respect to the discrete states (xd), dX/dxd (or Partial X / Partial xd):
+!
+!      TYPE(IfW_DiscreteStateType) :: DummyContState                                 ! If you have continuous state equations and discrete states, update this variable
+!
+!   END TYPE IfW_PartialContStatePDiscStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialDiscStatePDiscStateType
+!
+!         ! Define the Jacobian of the discrete state equations (Xd) with respect to the discrete states (xd), dXd/dxd (or Partial Xd / Partial xd):
+!
+!      TYPE(IfW_DiscreteStateType) :: DummyDiscState                                 ! If you have discrete state equations and discrete states, update this variable
+!
+!   END TYPE IfW_PartialDiscStatePDiscStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialConstrStatePDiscStateType
+!
+!         ! Define the Jacobian of the constraint state equations (Z) with respect to the discrete states (xd), dZ/dxd (or Partial Z / Partial xd):
+!
+!      TYPE(IfW_DiscreteStateType) :: DummyConstrState                                ! If you have constraint state equations and discrete states, update this variable
+!
+!   END TYPE IfW_PartialConstrStatePDiscStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialOutputPConstrStateType
+!
+!         ! Define the Jacobian of the output equations (Y) with respect to the constraint states (z), dY/dz (or Partial Y / Partial z):
+!
+!      TYPE(IfW_ConstraintStateType) :: DummyOutput                                    ! If you have output equations and constraint states, update this variable
+!
+!   END TYPE IfW_PartialOutputPConstrStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialContStatePConstrStateType
+!
+!         ! Define the Jacobian of the continuous state equations (X) with respect to the constraint states (z), dX/dz (or Partial X / Partial z):
+!
+!      TYPE(IfW_ConstraintStateType) :: DummyContState                                 ! If you have continuous state equations and constraint states, update this variable
+!
+!   END TYPE IfW_PartialContStatePConstrStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialDiscStatePConstrStateType
+!
+!         ! Define the Jacobian of the discrete state equations (Xd) with respect to the constraint states (z), dXd/dz (or Partial Xd / Partial z):
+!
+!      TYPE(IfW_ConstraintStateType) :: DummyDiscState                                 ! If you have discrete state equations and constraint states, update this variable
+!
+!   END TYPE IfW_PartialDiscStatePConstrStateType
+!
+!
+!   TYPE, PUBLIC :: IfW_PartialConstrStatePConstrStateType
+!
+!         ! Define the Jacobian of the constraint state equations (Z) with respect to the constraint states (z), dZ/dz (or Partial Z / Partial z):
+!
+!      TYPE(IfW_ConstraintStateType) :: DummyConstrState                                ! If you have constraint state equations and constraint states, update this variable
+!
+!   END TYPE IfW_PartialConstrStatePConstrStateType
+!
+MODULE   WindFile_Types
+!FIXME: I'm not sure what to do with these. This might be the wrong place to be keeping this information.
+!        -->   Can't make them parameters.
+!        -->   I think these are used locally only, not by any external code. Can't really tell though since they used
+!        -->   to be PUBLIC,PARAMETER.
+!
+!        --> Make these parameters within the module, but not shared to the outside world. Put in the subroutines?
+   INTEGER,PARAMETER          :: DEFAULT_Wind = -1    ! Undetermined wind type; calls internal routine to guess what type it is
+   INTEGER,PARAMETER          :: Undef_Wind   =  0    ! This is the code for an undefined WindType
+   INTEGER,PARAMETER          :: HH_Wind      =  1    ! Hub-Height wind file
+   INTEGER,PARAMETER          :: FF_Wind      =  2    ! Binary full-field wind file
+   INTEGER,PARAMETER          :: UD_Wind      =  3    ! User-defined wind
+   INTEGER,PARAMETER          :: FD_Wind      =  4    ! 4-dimensional wind (LES)
+   INTEGER,PARAMETER          :: CTP_Wind     =  5    ! Coherent turbulence wind field (superimpose KH billow on background wind)
+   INTEGER,PARAMETER          :: HAWC_Wind    =  6    ! Binary full-field wind file in HAWC format
+
+END MODULE   WindFile_Types
 MODULE CTWind
 ! This module uses reads coherent turbulence parameter (CTP) files and processes the data in them
 ! to get coherent turbulence which is later superimposed on a background wind field (the super-
@@ -146,6 +384,7 @@ MODULE CTWind
 
    USE                     NWTC_Library
    USE                     SharedInflowDefs
+   USE                     WindFile_Types
 
    IMPLICIT                NONE
    PRIVATE
@@ -1137,10 +1376,11 @@ MODULE FDWind
 !  7 Oct 2009    B. Jonkman, NREL/NWTC using subroutines from AeroDyn 12.57
 !----------------------------------------------------------------------------------------------------  
 
-    USE                     NWTC_Library
-    USE                     SharedInflowDefs
+   USE                     NWTC_Library
+   USE                     SharedInflowDefs
+   USE                     WindFile_Types
 
-    IMPLICIT                NONE
+   IMPLICIT                NONE
    PRIVATE
   
       ! FD_Wind
@@ -2405,6 +2645,7 @@ MODULE FFWind
 
    USE      NWTC_Library
    USE      SharedInflowDefs
+   USE                     WindFile_Types
 
    IMPLICIT NONE
 
@@ -4444,6 +4685,7 @@ MODULE HAWCWind
 
    USE      NWTC_Library
    USE      SharedInflowDefs
+   USE                     WindFile_Types
 
    IMPLICIT NONE
 
@@ -5136,6 +5378,7 @@ MODULE HHWind
 
    USE                     NWTC_Library
    USE                     SharedInflowDefs
+   USE                     WindFile_Types
    
    IMPLICIT                NONE
    PRIVATE
@@ -5733,6 +5976,7 @@ MODULE UserWind
 
    USE                           NWTC_Library
    USE                           SharedInflowDefs
+   USE                     WindFile_Types
 
    IMPLICIT                      NONE
    PRIVATE
@@ -5940,6 +6184,7 @@ MODULE InflowWind_Subs
 
    USE                              NWTC_Library
    USE                              SharedInflowDefs
+   USE                              WindFile_Types
 
    !-------------------------------------------------------------------------------------------------
    ! The included wind modules
@@ -5956,73 +6201,9 @@ MODULE InflowWind_Subs
    IMPLICIT                         NONE
 
 
+
 CONTAINS
 !====================================================================================================
-!FIXME: this becomes part of InflowWind_CalcOutput
-FUNCTION InflowWind_GetVelocity(Time, InputPosition, ErrStat)
-! Get the wind speed at a point in space and time
-!----------------------------------------------------------------------------------------------------
-
-      ! passed variables
-   REAL(ReKi),       INTENT(IN)  :: Time
-   REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
-   INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
-
-      ! local variables
-   TYPE(InflIntrpOut)            :: InflowWind_GetVelocity     ! U, V, W velocities
-   TYPE(InflIntrpOut)            :: CTWindSpeed             ! U, V, W velocities to superimpose on background wind
-
-
-   ErrStat = 0
-
-   SELECT CASE ( WindType )
-      CASE (HH_Wind)
-         InflowWind_GetVelocity = HH_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (FF_Wind)
-         InflowWind_GetVelocity = FF_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (UD_Wind)
-         InflowWind_GetVelocity = UsrWnd_GetWindSpeed( Time, InputPosition, ErrStat )
-
-      CASE (FD_Wind)
-         InflowWind_GetVelocity = FD_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (HAWC_Wind)
-         InflowWind_GetVelocity = HW_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_GetVelocity(). ' &
-                   //'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-         InflowWind_GetVelocity%Velocity(:) = 0.0
-
-   END SELECT
-
-
-   IF (ErrStat /= 0) THEN
-
-      InflowWind_GetVelocity%Velocity(:) = 0.0
-
-   ELSE
-
-         ! Add coherent turbulence to background wind
-
-      IF (CT_Flag) THEN
-
-         CTWindSpeed = CT_GetWindSpeed(Time, InputPosition, ErrStat)
-         IF (ErrStat /=0 ) RETURN
-
-         InflowWind_GetVelocity%Velocity(:) = InflowWind_GetVelocity%Velocity(:) + CTWindSpeed%Velocity(:)
-
-      ENDIF
-
-   ENDIF
-
-END FUNCTION InflowWind_GetVelocity
-!====================================================================================================
-!FIXME: move to subroutines
-!!    !====================================================================================================
 FUNCTION GetWindType( FileName, ErrStat )
 !  This subroutine checks the file FileName to see what kind of wind file we are using.  Used when
 !  the wind file type is unknown.
@@ -6138,23 +6319,26 @@ FUNCTION GetWindType( FileName, ErrStat )
 RETURN
 END FUNCTION GetWindType
 !====================================================================================================
-!FIXME: move to subroutines.
-SUBROUTINE InflowWind_LinearizePerturbation( LinPerturbations, ErrStat )
+SUBROUTINE InflowWind_LinearizePerturbation( IfW_ParamData, LinPerturbations, ErrStat )
 ! This function is used in FAST's linearization scheme.  It should be fixed at some point.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables
 
-   INTEGER,    INTENT(OUT)    :: ErrStat
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: IfW_ParamData
 
-   REAL(ReKi), INTENT(IN)     :: LinPerturbations(7)
+   INTEGER,                         INTENT(OUT)       :: ErrStat
+
+   REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
+
+
 
       ! Local variables
 
 
    ErrStat = 0
 
-   SELECT CASE ( WindType )
+   SELECT CASE ( IfW_ParamData%WindType )
       CASE (HH_Wind)
 
          CALL HH_SetLinearizeDels( LinPerturbations, ErrStat )
@@ -6173,130 +6357,129 @@ SUBROUTINE InflowWind_LinearizePerturbation( LinPerturbations, ErrStat )
 
 
 END SUBROUTINE InflowWind_LinearizePerturbation
+!! FIXME: This has been removed for now. I don't know what will happen to this after the conversion to the framework. Might still be needed at that point.
+!! !====================================================================================================
+!! FUNCTION InflowWind_ADhack_diskVel( Time, InpPosition, ErrStat )
+!! ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
+!! ! when a consensus on the definition of "average velocity" is determined, this function will be
+!! ! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
+!! !----------------------------------------------------------------------------------------------------
+!! 
+!!       ! Passed variables
+!! 
+!!    REAL(ReKi), INTENT(IN)     :: Time
+!!    REAL(ReKi), INTENT(IN)     :: InpPosition(3)
+!!    INTEGER, INTENT(OUT)       :: ErrStat
+!! 
+!!       ! Function definition
+!!    REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
+!! 
+!!       ! Local variables
+!!    TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
+!!    REAL(ReKi)                 :: Position(3)
+!!    INTEGER                    :: IY
+!!    INTEGER                    :: IZ
+!! 
+!! 
+!!    ErrStat = 0
+!! 
+!!    SELECT CASE ( WindType )
+!!       CASE (HH_Wind)
+!! 
+!! !      VXGBAR =  V * COS( DELTA )
+!! !      VYGBAR = -V * SIN( DELTA )
+!! !      VZGBAR =  VZ
+!! 
+!!          Position    = (/ REAL(0.0, ReKi), REAL(0.0, ReKi), InpPosition(3) /)
+!!          NewVelocity = HH_Get_ADHack_WindSpeed(Time, Position, ErrStat)
+!! 
+!!          InflowWind_ADhack_diskVel(:) = NewVelocity%Velocity(:)
+!! 
+!! 
+!!       CASE (FF_Wind)
+!! !      VXGBAR = MeanFFWS
+!! !      VYGBAR = 0.0
+!! !      VZGBAR = 0.0
+!! 
+!!          InflowWind_ADhack_diskVel(1)   = FF_GetValue('MEANFFWS', ErrStat)
+!!          InflowWind_ADhack_diskVel(2:3) = 0.0
+!! 
+!!       CASE (UD_Wind)
+!! !      VXGBAR = UWmeanU
+!! !      VYGBAR = UWmeanV
+!! !      VZGBAR = UWmeanW
+!! 
+!!          InflowWind_ADhack_diskVel(1)   = UsrWnd_GetValue('MEANU', ErrStat)
+!!          IF (ErrStat /= 0) RETURN
+!!          InflowWind_ADhack_diskVel(2)   = UsrWnd_GetValue('MEANV', ErrStat)
+!!          IF (ErrStat /= 0) RETURN
+!!          InflowWind_ADhack_diskVel(3)   = UsrWnd_GetValue('MEANW', ErrStat)
+!! 
+!!       CASE (FD_Wind)
+!! !      XGrnd = 0.0
+!! !      YGrnd = 0.5*RotDiam
+!! !      ZGrnd = 0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = FDWind( 1 )
+!! !      VYGBAR = FDWind( 2 )
+!! !      VZGBAR = FDWind( 3 )
+!! !
+!! !      XGrnd =  0.0
+!! !      YGrnd = -0.5*RotDiam
+!! !      ZGrnd =  0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = VXGBAR + FDWind( 1 )
+!! !      VYGBAR = VYGBAR + FDWind( 2 )
+!! !      VZGBAR = VZGBAR + FDWind( 3 )
+!! !
+!! !      XGrnd =  0.0
+!! !      YGrnd = -0.5*RotDiam
+!! !      ZGrnd = -0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = VXGBAR + FDWind( 1 )
+!! !      VYGBAR = VYGBAR + FDWind( 2 )
+!! !      VZGBAR = VZGBAR + FDWind( 3 )
+!! !
+!! !      XGrnd =  0.0
+!! !      YGrnd =  0.5*RotDiam
+!! !      ZGrnd = -0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = 0.25*( VXGBAR + FDWind( 1 ) )
+!! !      VYGBAR = 0.25*( VYGBAR + FDWind( 2 ) )
+!! !      VZGBAR = 0.25*( VZGBAR + FDWind( 3 ) )
+!! 
+!! 
+!!          Position(1) = 0.0
+!!          InflowWind_ADhack_diskVel(:) = 0.0
+!! 
+!!          DO IY = -1,1,2
+!!             Position(2)  =  IY*FD_GetValue('RotDiam',ErrStat)
+!! 
+!!             DO IZ = -1,1,2
+!!                Position(3)  = IZ*InpPosition(2) + InpPosition(3)
+!! 
+!!                NewVelocity = InflowWind_GetVelocity(Time, Position, ErrStat)
+!!                InflowWind_ADhack_diskVel(:) = InflowWind_ADhack_diskVel(:) + NewVelocity%Velocity(:)
+!!             END DO
+!!          END DO
+!!          InflowWind_ADhack_diskVel(:) = 0.25*InflowWind_ADhack_diskVel(:)
+!! 
+!!       CASE (HAWC_Wind)
+!!          InflowWind_ADhack_diskVel(1)   = HW_GetValue('UREF', ErrStat)
+!!          InflowWind_ADhack_diskVel(2:3) = 0.0
+!! 
+!!       CASE DEFAULT
+!!          CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_diskVel(). '// &
+!!                     'Call WindInflow_Init() before calling this function.' )
+!!          ErrStat = 1
+!! 
+!!    END SELECT
+!! 
+!!    RETURN
+!! 
+!! END FUNCTION InflowWind_ADhack_diskVel
 !====================================================================================================
-!FIXME: move to subroutines.
-FUNCTION InflowWind_ADhack_diskVel( Time, InpPosition, ErrStat )
-! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
-! when a consensus on the definition of "average velocity" is determined, this function will be
-! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
-!----------------------------------------------------------------------------------------------------
-
-      ! Passed variables
-
-   REAL(ReKi), INTENT(IN)     :: Time
-   REAL(ReKi), INTENT(IN)     :: InpPosition(3)
-   INTEGER, INTENT(OUT)       :: ErrStat
-
-      ! Function definition
-   REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
-
-      ! Local variables
-   TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
-   REAL(ReKi)                 :: Position(3)
-   INTEGER                    :: IY
-   INTEGER                    :: IZ
-
-
-   ErrStat = 0
-
-   SELECT CASE ( WindType )
-      CASE (HH_Wind)
-
-!      VXGBAR =  V * COS( DELTA )
-!      VYGBAR = -V * SIN( DELTA )
-!      VZGBAR =  VZ
-
-         Position    = (/ REAL(0.0, ReKi), REAL(0.0, ReKi), InpPosition(3) /)
-         NewVelocity = HH_Get_ADHack_WindSpeed(Time, Position, ErrStat)
-
-         InflowWind_ADhack_diskVel(:) = NewVelocity%Velocity(:)
-
-
-      CASE (FF_Wind)
-!      VXGBAR = MeanFFWS
-!      VYGBAR = 0.0
-!      VZGBAR = 0.0
-
-         InflowWind_ADhack_diskVel(1)   = FF_GetValue('MEANFFWS', ErrStat)
-         InflowWind_ADhack_diskVel(2:3) = 0.0
-
-      CASE (UD_Wind)
-!      VXGBAR = UWmeanU
-!      VYGBAR = UWmeanV
-!      VZGBAR = UWmeanW
-
-         InflowWind_ADhack_diskVel(1)   = UsrWnd_GetValue('MEANU', ErrStat)
-         IF (ErrStat /= 0) RETURN
-         InflowWind_ADhack_diskVel(2)   = UsrWnd_GetValue('MEANV', ErrStat)
-         IF (ErrStat /= 0) RETURN
-         InflowWind_ADhack_diskVel(3)   = UsrWnd_GetValue('MEANW', ErrStat)
-
-      CASE (FD_Wind)
-!      XGrnd = 0.0
-!      YGrnd = 0.5*RotDiam
-!      ZGrnd = 0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = FDWind( 1 )
-!      VYGBAR = FDWind( 2 )
-!      VZGBAR = FDWind( 3 )
-!
-!      XGrnd =  0.0
-!      YGrnd = -0.5*RotDiam
-!      ZGrnd =  0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = VXGBAR + FDWind( 1 )
-!      VYGBAR = VYGBAR + FDWind( 2 )
-!      VZGBAR = VZGBAR + FDWind( 3 )
-!
-!      XGrnd =  0.0
-!      YGrnd = -0.5*RotDiam
-!      ZGrnd = -0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = VXGBAR + FDWind( 1 )
-!      VYGBAR = VYGBAR + FDWind( 2 )
-!      VZGBAR = VZGBAR + FDWind( 3 )
-!
-!      XGrnd =  0.0
-!      YGrnd =  0.5*RotDiam
-!      ZGrnd = -0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = 0.25*( VXGBAR + FDWind( 1 ) )
-!      VYGBAR = 0.25*( VYGBAR + FDWind( 2 ) )
-!      VZGBAR = 0.25*( VZGBAR + FDWind( 3 ) )
-
-
-         Position(1) = 0.0
-         InflowWind_ADhack_diskVel(:) = 0.0
-
-         DO IY = -1,1,2
-            Position(2)  =  IY*FD_GetValue('RotDiam',ErrStat)
-
-            DO IZ = -1,1,2
-               Position(3)  = IZ*InpPosition(2) + InpPosition(3)
-
-               NewVelocity = InflowWind_GetVelocity(Time, Position, ErrStat)
-               InflowWind_ADhack_diskVel(:) = InflowWind_ADhack_diskVel(:) + NewVelocity%Velocity(:)
-            END DO
-         END DO
-         InflowWind_ADhack_diskVel(:) = 0.25*InflowWind_ADhack_diskVel(:)
-
-      CASE (HAWC_Wind)
-         InflowWind_ADhack_diskVel(1)   = HW_GetValue('UREF', ErrStat)
-         InflowWind_ADhack_diskVel(2:3) = 0.0
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_diskVel(). '// &
-                    'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-
-   END SELECT
-
-   RETURN
-
-END FUNCTION InflowWind_ADhack_diskVel
-!====================================================================================================
-!FIXME: move to subroutines.
-FUNCTION InflowWind_ADhack_DIcheck( ErrStat )
+FUNCTION InflowWind_ADhack_DIcheck( IfW_ParamData, ErrStat )
 ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
 ! it performs a wind speed check for the dynamic inflow initialization
 ! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
@@ -6304,7 +6487,9 @@ FUNCTION InflowWind_ADhack_DIcheck( ErrStat )
 
       ! Passed variables
 
-   INTEGER, INTENT(OUT)       :: ErrStat
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: IfW_ParamData
+
+   INTEGER,                         INTENT(OUT)       :: ErrStat
 
       ! Function definition
    REAL(ReKi)                 :: InflowWind_ADhack_DIcheck
@@ -6312,7 +6497,7 @@ FUNCTION InflowWind_ADhack_DIcheck( ErrStat )
 
    ErrStat = 0
 
-   SELECT CASE ( WindType )
+   SELECT CASE ( IfW_ParamData%WindType )
       CASE (HH_Wind, UD_Wind, FD_Wind )
 
          InflowWind_ADhack_DIcheck = 50  ! just return something greater than 8 m/s
@@ -6343,7 +6528,6 @@ END MODULE InflowWind_Subs
 
 
 !!----Remove this functionality for now. Might put it back in sometime after the conversion to the new framework ----
-!FIXME: Move these to subroutines.
 !!    FUNCTION InflowWind_GetMean(StartTime, EndTime, delta_time, InputPosition,  ErrStat )
 !!    !  This function returns the mean wind speed
 !!    !----------------------------------------------------------------------------------------------------
@@ -6573,27 +6757,53 @@ END MODULE InflowWind_Subs
 !!
 !!
 !!    END FUNCTION InflowWind_GetTI
-MODULE InflowWind
+!**********************************************************************************************************************************
 ! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
 ! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
 ! width (depending on the type of wind file being used).  This module calls appropriate routines
-! in the wind modules so that the type of wind becomes seamless to the user.  InflowWind_Terminate()
+! in the wind modules so that the type of wind becomes seamless to the user.  IfW_End()
 ! should be called when the program has finshed.
 !
 ! Data are assumed to be in units of meters and seconds.  Z is measured from the ground (NOT the hub!).
 !
-!  7 Oct 2009    Initial Release with AeroDyn 13.00.00      B. Jonkman, NREL/NWTC
-! 14 Nov 2011    v1.00.01b-bjj                              B. Jonkman
-!  1 Aug 2012    v1.01.00a-bjj                              B. Jonkman
-! 10 Aug 2012    v1.01.00b-bjj                              B. Jonkman
-!----------------------------------------------------------------------------------------------------
+!  7 Oct 2009    Initial Release with AeroDyn 13.00.00         B. Jonkman, NREL/NWTC
+! 14 Nov 2011    v1.00.01b-bjj                                 B. Jonkman
+!  1 Aug 2012    v1.01.00a-bjj                                 B. Jonkman
+! 10 Aug 2012    v1.01.00b-bjj                                 B. Jonkman
+!    Dec 2012    v2.00.00a-adp   conversion to Framework       A. Platt
+!
+!..................................................................................................................................
+! Files with this module:
+!  InflowWind_Subs.f90
+!  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
+!  
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2012  National Renewable Energy Laboratory
+!
+!    This file is part of InflowWind.
+!
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!    
+!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!    If not, see <http://www.gnu.org/licenses/>.
+!    
+!**********************************************************************************************************************************
+MODULE InflowWind
 
-   USE                              NWTC_Library
+
    USE                              SharedInflowDefs
-
-   !-------------------------------------------------------------------------------------------------
-   ! The included wind modules
-   !-------------------------------------------------------------------------------------------------
+!   USE                              InflowWind_Types   !FIXME: this file needs to be made.
+   USE                              NWTC_Library
+   USE                              WindFile_Types
+      
+      !-------------------------------------------------------------------------------------------------
+      ! The included wind modules
+      !-------------------------------------------------------------------------------------------------
 
    USE                              FFWind               ! full-field binary wind files
    USE                              HHWind               ! hub-height text wind files
@@ -6603,22 +6813,54 @@ MODULE InflowWind
    USE                              HAWCWind             ! full-field binary wind files in HAWC format
 
 
-   !-------------------------------------------------------------------------------------------------
-   ! The subroutines
-   !-------------------------------------------------------------------------------------------------
+      !-------------------------------------------------------------------------------------------------
+      ! The subroutines
+      !-------------------------------------------------------------------------------------------------
 
    USE                              InflowWind_Subs      ! all the subroutines live here now.
 
 
-   IMPLICIT                         NONE
+
+   
+   IMPLICIT NONE
    PRIVATE
+
+   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1           ! Update this value if the data types change (used in IfW_Pack())
+!FIXME: tie this to InitOut as well.
+   TYPE(ProgDesc), PARAMETER            :: IfW_ProgDesc = ProgDesc( 'InflowWind', 'v1.00.00', '27-Dec-2012' )
+
+!   CHARACTER(99),PARAMETER        :: InflowWindVer = 'InflowWind (v1.01.00b-bjj, 10-Aug-2012)'
+
+   
+      ! ..... Public Subroutines ...................................................................................................
+
+   PUBLIC :: IfW_Init                                 ! Initialization routine
+   PUBLIC :: IfW_End                                  ! Ending routine (includes clean up)
+   
+!   PUBLIC :: InflowWind_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
+!   PUBLIC :: InflowWind_CalcOutput                     ! Routine for computing outputs
+!   
+!   PUBLIC :: InflowWind_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+!   PUBLIC :: InflowWind_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
+!   PUBLIC :: InflowWind_UpdateDiscState                ! Tight coupling routine for updating discrete states
+!      
+!   PUBLIC :: InflowWind_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
+!   PUBLIC :: InflowWind_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the continuous states (x)
+!   PUBLIC :: InflowWind_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the discrete states (xd)
+!   PUBLIC :: InflowWind_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the constraint states (z)
+!   
+!   PUBLIC :: InflowWind_Pack                           ! Routine to pack (save) data into one array of bytes
+!   PUBLIC :: InflowWind_Unpack                         ! Routine to unpack an array of bytes into data structures usable by the module
+   
+!-=- Original bits follow -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 
    !-------------------------------------------------------------------------------------------------
    ! Private internal variables
    !-------------------------------------------------------------------------------------------------
 
 !FIXME: handle this differently -- should be allocated by the library function to get an open unit number
-! store as parameter in parametertype
+      ! store as parameter in parametertype
    INTEGER                        :: UnWind   = 91          ! The unit number used for wind inflow files
 
 
@@ -6633,67 +6875,128 @@ MODULE InflowWind
       REAL(ReKi)                  :: Width                  ! width of the HH file (was 2*R), in meters
    END TYPE InflInitInfo
 
-   PUBLIC                         :: InflowWind_Init           ! Initialization subroutine
-
 !FIXME: should not be public anymore
    PUBLIC                         :: InflowWind_GetVelocity    ! function to get wind speed at point in space and time
 
-   PUBLIC                         :: InflowWind_Terminate      ! subroutine to clean up
-
-!FIXME: not public anymore. may not exist when done.
+!FIXME: not public anymore. may not even exist when done.
 !   PUBLIC                         :: InflowWind_ADhack_diskVel ! used to keep old AeroDyn functionality--remove soon!
 !   PUBLIC                         :: InflowWind_ADhack_DIcheck ! used to keep old AeroDyn functionality--remove soon!
 
 !FIXME: not public anymore.
 !   PUBLIC                         :: InflowWind_LinearizePerturbation !used for linearization; should be modified
+
 !!----Removed during conversion to new framework: may put back in as part of OtherStates
 !!       PUBLIC                         :: InflowWind_GetMean        ! function to get the mean wind speed at a point in space
 !!       PUBLIC                         :: InflowWind_GetStdDev      ! function to calculate standard deviation at a point in space
 !!       PUBLIC                         :: InflowWind_GetTI          ! function to get TI at a point in space
 
-!FIXME: tie this to a type as well. Change to ProgDesc type
-   CHARACTER(99),PARAMETER        :: InflowWindVer = 'InflowWind (v1.01.00b-bjj, 10-Aug-2012)'
 
 CONTAINS
 !====================================================================================================
-!FIXME: change naming to new standard. InflowWind_Init or IfW_Init
-SUBROUTINE InflowWind_Init( FileInfo, ErrStat )
+!  SUBROUTINE ModName_Init( InitData, InputGuess, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+!                            OutData, Interval, ErrStat, ErrMsg )
+   SUBROUTINE IfW_Init( ParamData, FileInfo, ErrStat, ErrMsg )
+! This routine is called at the start of the simulation to perform initialization steps. 
+! The parameters are set here and not changed during the simulation.
+! The initial states and initial guess for the input are defined.
+!----------------------------------------------------------------------------------------------------
 !  Open and read the wind files, allocating space for necessary variables
 !
-!----------------------------------------------------------------------------------------------------
+!
+!      TYPE(ModName_InitInputType),       INTENT(IN   )  :: InitData          ! Input data for initialization
+!      TYPE(ModName_InputType),           INTENT(  OUT)  :: InputGuess        ! An initial guess for the input; the input mesh must be defined
+!      TYPE(ModName_ParameterType),       INTENT(  OUT)  :: ParamData         ! Parameters      
+!      TYPE(ModName_ContinuousStateType), INTENT(  OUT)  :: ContStates        ! Initial continuous states
+!      TYPE(ModName_DiscreteStateType),   INTENT(  OUT)  :: DiscStates        ! Initial discrete states
+!      TYPE(ModName_ConstraintStateType), INTENT(  OUT)  :: ConstrStateGuess  ! Initial guess of the constraint states
+!      TYPE(ModName_OtherStateType),      INTENT(  OUT)  :: OtherStates       ! Initial other/optimization states            
+!      TYPE(ModName_OutputType),          INTENT(  OUT)  :: OutData           ! Initial output (outputs are not calculated; only the output mesh is initialized)
+!      REAL(DbKi),                        INTENT(INOUT)  :: Interval          ! Coupling interval in seconds: the rate that (1) ModName_Step() is called in loose coupling and (2) ModName_UpdateDiscState() is called in tight coupling; Input is the suggested time from the glue code; Output is the actual coupling interval that will be used by the glue code.
+!
+         ! Passed variables
 
-      ! Passed variables
+!FIXME: this should be in the InitData of type InitInputType
+      TYPE(InflInitInfo),                    INTENT(IN   )  :: FileInfo    ! FIXME: THIS SHOULD BE ELSEWHERE
+      TYPE( Ifw_ParameterType ),             INTENT(INOUT)  :: ParamData      ! Parameters
 
-   TYPE(InflInitInfo), INTENT(IN)   :: FileInfo
-   INTEGER,            INTENT(OUT)  :: ErrStat
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat           ! Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
 
-      ! Local variables
 
-   TYPE(HH_Info)                    :: HHInitInfo
-   TYPE(CT_Backgr)                  :: BackGrndValues
+         ! Local variables
 
-   REAL(ReKi)                       :: Height
-   REAL(ReKi)                       :: HalfWidth
-   CHARACTER(1024)                  :: FileName
+      TYPE(HH_Info)                                      :: HHInitInfo
+      TYPE(CT_Backgr)                                    :: BackGrndValues
 
-!FIXME: not sure if want to track it this way or not.
-   IF ( WindType /= Undef_Wind ) THEN
+
+!FIXME: Should these be put someplace else???
+      REAL(ReKi)                                         :: Height
+      REAL(ReKi)                                         :: HalfWidth
+      CHARACTER(1024)                                    :: FileName
+
+
+         ! Initialize ErrStat
+         
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      
+      
+!FIXME: This might be done someplace else right now
+         ! Initialize the NWTC Subroutine Library (set pi constants)
+         
+      CALL NWTC_Init( )
+      CALL DispNVD( IfW_ProgDesc )
+!
+!
+!FIXME:
+!         ! Define parameters here:
+!         
+!      !ParamData%DT     = Interval             ! InflowWind does not dictate the time interval.
+                                                ! It only responds to the current time.
+!      !ParamData%       = 
+!
+!
+!FIXME: no states -- except maybe otherstates.
+!         ! Define initial states here
+!
+!      !ContStates%      = 
+!      !DiscStates%      = 
+!      !ConstrStateGuess%= 
+!      !OtherStates%     = 
+!
+!
+!FIXME: Don't think there are any initial guesses
+!         ! Define initial guess for the input here:
+!
+!      !InputGuess%      = 
+!
+!
+!         ! Define output initializations (set up mesh) here:
+!      !OutData%        =         
+         
+
+
+      ! check to see if we are already initialized
+
+   IF ( ParamData%Initialized ) THEN
       CALL WrScr( ' Wind inflow has already been initialized.' )
       ErrStat = 1
       RETURN
    ELSE
-      WindType = FileInfo%WindFileType
+!      WindType = FileInfo%WindFileType
       FileName = FileInfo%WindFileName
       CALL NWTC_Init()
-      CALL WrScr1( ' Using '//TRIM( InflowWindVer ) )
+      CALL DispNVD( IfW_ProgDesc )
+!      CALL WrScr1( ' Using '//TRIM( InflowWindVer ) )
 
    END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Get default wind type, based on file name, if requested
    !-------------------------------------------------------------------------------------------------
-   IF ( FileInfo%WindFileType == DEFAULT_Wind ) THEN
-      WindType = GetWindType( FileName, ErrStat )
+!   IF ( FileInfo%WindFileType == DEFAULT_Wind ) THEN
+   IF ( ParamData%WindType == DEFAULT_Wind ) THEN
+      ParamData%WindType = GetWindType( FileName, ErrStat )
    END IF
 
 
@@ -6702,23 +7005,25 @@ SUBROUTINE InflowWind_Init( FileInfo, ErrStat )
    ! Initialize the CTWind module and initialize the module of the other wind type.
    !-------------------------------------------------------------------------------------------------
 
-   IF ( WindType == CTP_Wind ) THEN
+   IF ( ParamData%WindType == CTP_Wind ) THEN
 
       CALL CT_Init(UnWind, FileName, BackGrndValues, ErrStat)
       IF (ErrStat /= 0) THEN
-         CALL InflowWind_Terminate( ErrStat )
-         WindType = Undef_Wind
+         CALL IfW_End( ParamData, ErrStat )
+         ParamData%WindType = Undef_Wind
          ErrStat  = 1
          RETURN
       END IF
 
       FileName = BackGrndValues%WindFile
-      WindType = BackGrndValues%WindFileType
-      CT_Flag  = BackGrndValues%CoherentStr
+      ParamData%WindType = BackGrndValues%WindFileType
+!      CT_Flag  = BackGrndValues%CoherentStr
+      ParamData%CT_Flag  = BackGrndValues%CoherentStr    ! This might be wrong
 
    ELSE
 
-      CT_Flag  = .FALSE.
+!      CT_Flag  = .FALSE.
+      ParamData%CT_Flag  = .FALSE.
 
    END IF
 
@@ -6727,7 +7032,7 @@ SUBROUTINE InflowWind_Init( FileInfo, ErrStat )
    ! Initialize based on the wind type
    !-------------------------------------------------------------------------------------------------
 
-   SELECT CASE ( WindType )
+   SELECT CASE ( ParamData%WindType )
 
       CASE (HH_Wind)
 
@@ -6737,7 +7042,7 @@ SUBROUTINE InflowWind_Init( FileInfo, ErrStat )
          CALL HH_Init( UnWind, FileName, HHInitInfo, ErrStat )
 
 !        IF (CT_Flag) CALL CT_SetRefVal(FileInfo%ReferenceHeight, 0.5*FileInfo%Width, ErrStat)
-         IF (ErrStat == 0 .AND. CT_Flag) CALL CT_SetRefVal(FileInfo%ReferenceHeight, REAL(0.0, ReKi), ErrStat)
+         IF (ErrStat == 0 .AND. ParamData%CT_Flag) CALL CT_SetRefVal(FileInfo%ReferenceHeight, REAL(0.0, ReKi), ErrStat)
 
 
       CASE (FF_Wind)
@@ -6747,7 +7052,7 @@ SUBROUTINE InflowWind_Init( FileInfo, ErrStat )
 
             ! Set CT parameters
 
-         IF ( ErrStat == 0 .AND. CT_Flag ) THEN
+         IF ( ErrStat == 0 .AND. ParamData%CT_Flag ) THEN
             Height     = FF_GetValue('HubHeight', ErrStat)
             IF ( ErrStat /= 0 ) Height = FileInfo%ReferenceHeight
 
@@ -6779,22 +7084,94 @@ SUBROUTINE InflowWind_Init( FileInfo, ErrStat )
 
    END SELECT
 
+
+      ! check error status. If no error, set flag to indicate we are initialized.
+
    IF ( ErrStat /= 0 ) THEN
-      CALL InflowWind_Terminate( ErrStat )  !Just in case we've allocated something
-      WindType = Undef_Wind
-      ErrStat  = 1
+      ParamData%Initialized = .FALSE.
+      ParamData%WindType    = Undef_Wind
+      ErrStat               = 1         !FIXME: change the error status to the framework convention
+      CALL IfW_End( ParamData, ErrStat )  !Just in case we've allocated something
+   ELSE
+      ParamData%Initialized = .TRUE.
    END IF
 
    RETURN
 
-END SUBROUTINE InflowWind_Init
+END SUBROUTINE IfW_Init
+!====================================================================================================
+!FIXME: this becomes part of InflowWind_CalcOutput
+FUNCTION InflowWind_GetVelocity(ParamData, Time, InputPosition, ErrStat)
+! Get the wind speed at a point in space and time
+!----------------------------------------------------------------------------------------------------
+
+      ! passed variables
+   TYPE(IfW_ParameterType),               INTENT(IN   )  :: ParamData
+   REAL(ReKi),       INTENT(IN)  :: Time
+   REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
+   INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
+
+      ! local variables
+   TYPE(InflIntrpOut)            :: InflowWind_GetVelocity     ! U, V, W velocities
+   TYPE(InflIntrpOut)            :: CTWindSpeed             ! U, V, W velocities to superimpose on background wind
+
+
+   ErrStat = 0
+
+   SELECT CASE ( ParamData%WindType )
+      CASE (HH_Wind)
+         InflowWind_GetVelocity = HH_GetWindSpeed(     Time, InputPosition, ErrStat )
+
+      CASE (FF_Wind)
+         InflowWind_GetVelocity = FF_GetWindSpeed(     Time, InputPosition, ErrStat )
+
+      CASE (UD_Wind)
+         InflowWind_GetVelocity = UsrWnd_GetWindSpeed( Time, InputPosition, ErrStat )
+
+      CASE (FD_Wind)
+         InflowWind_GetVelocity = FD_GetWindSpeed(     Time, InputPosition, ErrStat )
+
+      CASE (HAWC_Wind)
+         InflowWind_GetVelocity = HW_GetWindSpeed(     Time, InputPosition, ErrStat )
+
+      CASE DEFAULT
+         CALL WrScr(' Error: Undefined wind type in InflowWind_GetVelocity(). ' &
+                   //'Call WindInflow_Init() before calling this function.' )
+         ErrStat = 1
+         InflowWind_GetVelocity%Velocity(:) = 0.0
+
+   END SELECT
+
+
+   IF (ErrStat /= 0) THEN
+
+      InflowWind_GetVelocity%Velocity(:) = 0.0
+
+   ELSE
+
+         ! Add coherent turbulence to background wind
+
+      IF (ParamData%CT_Flag) THEN
+
+         CTWindSpeed = CT_GetWindSpeed(Time, InputPosition, ErrStat)
+         IF (ErrStat /=0 ) RETURN
+
+         InflowWind_GetVelocity%Velocity(:) = InflowWind_GetVelocity%Velocity(:) + CTWindSpeed%Velocity(:)
+
+      ENDIF
+
+   ENDIF
+
+END FUNCTION InflowWind_GetVelocity
 !====================================================================================================
 !FIXME: rename as per framework.
-SUBROUTINE InflowWind_Terminate( ErrStat )
+SUBROUTINE IfW_End( ParamData, ErrStat )
 ! Clean up the allocated variables and close all open files.  Reset the initialization flag so
 ! that we have to reinitialize before calling the routines again.
 !----------------------------------------------------------------------------------------------------
+   USE WindFile_Types
 
+   TYPE(IfW_ParameterType),         INTENT(INOUT)  :: ParamData   ! Parameters that typically don't change
    INTEGER, INTENT(OUT)       :: ErrStat     !bjj: do we care if there's an error on cleanup?
 
 
@@ -6805,7 +7182,7 @@ SUBROUTINE InflowWind_Terminate( ErrStat )
 
       ! End the sub-modules (deallocates their arrays and closes their files):
 
-   SELECT CASE ( WindType )
+   SELECT CASE ( ParamData%WindType )
 
       CASE (HH_Wind)
          CALL HH_Terminate(     ErrStat )
@@ -6826,7 +7203,7 @@ SUBROUTINE InflowWind_Terminate( ErrStat )
          ! Do nothing
 
       CASE DEFAULT  ! keep this check to make sure that all new wind types have a terminate function
-         CALL WrScr(' Undefined wind type in InflowWind_Terminate().' )
+         CALL WrScr(' InflowWind: Undefined wind type in IfW_End().' )
          ErrStat = 1
 
    END SELECT
@@ -6836,11 +7213,12 @@ SUBROUTINE InflowWind_Terminate( ErrStat )
 
 
       ! Reset the wind type so that the initialization routine must be called
-  WindType = Undef_Wind
-   CT_Flag  = .FALSE.
+   ParamData%WindType = Undef_Wind
+!FIXME: reset the initialization flag.
+   ParamData%CT_Flag  = .FALSE.
 
 
-END SUBROUTINE InflowWind_Terminate
+END SUBROUTINE IfW_End
 !====================================================================================================
 END MODULE InflowWind
 

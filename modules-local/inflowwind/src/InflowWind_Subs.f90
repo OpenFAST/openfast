@@ -15,6 +15,7 @@ MODULE InflowWind_Subs
 
    USE                              NWTC_Library
    USE                              SharedInflowDefs
+   USE                              WindFile_Types
 
    !-------------------------------------------------------------------------------------------------
    ! The included wind modules
@@ -31,73 +32,9 @@ MODULE InflowWind_Subs
    IMPLICIT                         NONE
 
 
+
 CONTAINS
 !====================================================================================================
-!FIXME: this becomes part of InflowWind_CalcOutput
-FUNCTION InflowWind_GetVelocity(Time, InputPosition, ErrStat)
-! Get the wind speed at a point in space and time
-!----------------------------------------------------------------------------------------------------
-
-      ! passed variables
-   REAL(ReKi),       INTENT(IN)  :: Time
-   REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
-   INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
-
-      ! local variables
-   TYPE(InflIntrpOut)            :: InflowWind_GetVelocity     ! U, V, W velocities
-   TYPE(InflIntrpOut)            :: CTWindSpeed             ! U, V, W velocities to superimpose on background wind
-
-
-   ErrStat = 0
-
-   SELECT CASE ( WindType )
-      CASE (HH_Wind)
-         InflowWind_GetVelocity = HH_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (FF_Wind)
-         InflowWind_GetVelocity = FF_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (UD_Wind)
-         InflowWind_GetVelocity = UsrWnd_GetWindSpeed( Time, InputPosition, ErrStat )
-
-      CASE (FD_Wind)
-         InflowWind_GetVelocity = FD_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (HAWC_Wind)
-         InflowWind_GetVelocity = HW_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_GetVelocity(). ' &
-                   //'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-         InflowWind_GetVelocity%Velocity(:) = 0.0
-
-   END SELECT
-
-
-   IF (ErrStat /= 0) THEN
-
-      InflowWind_GetVelocity%Velocity(:) = 0.0
-
-   ELSE
-
-         ! Add coherent turbulence to background wind
-
-      IF (CT_Flag) THEN
-
-         CTWindSpeed = CT_GetWindSpeed(Time, InputPosition, ErrStat)
-         IF (ErrStat /=0 ) RETURN
-
-         InflowWind_GetVelocity%Velocity(:) = InflowWind_GetVelocity%Velocity(:) + CTWindSpeed%Velocity(:)
-
-      ENDIF
-
-   ENDIF
-
-END FUNCTION InflowWind_GetVelocity
-!====================================================================================================
-!FIXME: move to subroutines
-!!    !====================================================================================================
 FUNCTION GetWindType( FileName, ErrStat )
 !  This subroutine checks the file FileName to see what kind of wind file we are using.  Used when
 !  the wind file type is unknown.
@@ -213,23 +150,26 @@ FUNCTION GetWindType( FileName, ErrStat )
 RETURN
 END FUNCTION GetWindType
 !====================================================================================================
-!FIXME: move to subroutines.
-SUBROUTINE InflowWind_LinearizePerturbation( LinPerturbations, ErrStat )
+SUBROUTINE InflowWind_LinearizePerturbation( IfW_ParamData, LinPerturbations, ErrStat )
 ! This function is used in FAST's linearization scheme.  It should be fixed at some point.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables
 
-   INTEGER,    INTENT(OUT)    :: ErrStat
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: IfW_ParamData
 
-   REAL(ReKi), INTENT(IN)     :: LinPerturbations(7)
+   INTEGER,                         INTENT(OUT)       :: ErrStat
+
+   REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
+
+
 
       ! Local variables
 
 
    ErrStat = 0
 
-   SELECT CASE ( WindType )
+   SELECT CASE ( IfW_ParamData%WindType )
       CASE (HH_Wind)
 
          CALL HH_SetLinearizeDels( LinPerturbations, ErrStat )
@@ -248,130 +188,129 @@ SUBROUTINE InflowWind_LinearizePerturbation( LinPerturbations, ErrStat )
 
 
 END SUBROUTINE InflowWind_LinearizePerturbation
+!! FIXME: This has been removed for now. I don't know what will happen to this after the conversion to the framework. Might still be needed at that point.
+!! !====================================================================================================
+!! FUNCTION InflowWind_ADhack_diskVel( Time, InpPosition, ErrStat )
+!! ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
+!! ! when a consensus on the definition of "average velocity" is determined, this function will be
+!! ! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
+!! !----------------------------------------------------------------------------------------------------
+!! 
+!!       ! Passed variables
+!! 
+!!    REAL(ReKi), INTENT(IN)     :: Time
+!!    REAL(ReKi), INTENT(IN)     :: InpPosition(3)
+!!    INTEGER, INTENT(OUT)       :: ErrStat
+!! 
+!!       ! Function definition
+!!    REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
+!! 
+!!       ! Local variables
+!!    TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
+!!    REAL(ReKi)                 :: Position(3)
+!!    INTEGER                    :: IY
+!!    INTEGER                    :: IZ
+!! 
+!! 
+!!    ErrStat = 0
+!! 
+!!    SELECT CASE ( WindType )
+!!       CASE (HH_Wind)
+!! 
+!! !      VXGBAR =  V * COS( DELTA )
+!! !      VYGBAR = -V * SIN( DELTA )
+!! !      VZGBAR =  VZ
+!! 
+!!          Position    = (/ REAL(0.0, ReKi), REAL(0.0, ReKi), InpPosition(3) /)
+!!          NewVelocity = HH_Get_ADHack_WindSpeed(Time, Position, ErrStat)
+!! 
+!!          InflowWind_ADhack_diskVel(:) = NewVelocity%Velocity(:)
+!! 
+!! 
+!!       CASE (FF_Wind)
+!! !      VXGBAR = MeanFFWS
+!! !      VYGBAR = 0.0
+!! !      VZGBAR = 0.0
+!! 
+!!          InflowWind_ADhack_diskVel(1)   = FF_GetValue('MEANFFWS', ErrStat)
+!!          InflowWind_ADhack_diskVel(2:3) = 0.0
+!! 
+!!       CASE (UD_Wind)
+!! !      VXGBAR = UWmeanU
+!! !      VYGBAR = UWmeanV
+!! !      VZGBAR = UWmeanW
+!! 
+!!          InflowWind_ADhack_diskVel(1)   = UsrWnd_GetValue('MEANU', ErrStat)
+!!          IF (ErrStat /= 0) RETURN
+!!          InflowWind_ADhack_diskVel(2)   = UsrWnd_GetValue('MEANV', ErrStat)
+!!          IF (ErrStat /= 0) RETURN
+!!          InflowWind_ADhack_diskVel(3)   = UsrWnd_GetValue('MEANW', ErrStat)
+!! 
+!!       CASE (FD_Wind)
+!! !      XGrnd = 0.0
+!! !      YGrnd = 0.5*RotDiam
+!! !      ZGrnd = 0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = FDWind( 1 )
+!! !      VYGBAR = FDWind( 2 )
+!! !      VZGBAR = FDWind( 3 )
+!! !
+!! !      XGrnd =  0.0
+!! !      YGrnd = -0.5*RotDiam
+!! !      ZGrnd =  0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = VXGBAR + FDWind( 1 )
+!! !      VYGBAR = VYGBAR + FDWind( 2 )
+!! !      VZGBAR = VZGBAR + FDWind( 3 )
+!! !
+!! !      XGrnd =  0.0
+!! !      YGrnd = -0.5*RotDiam
+!! !      ZGrnd = -0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = VXGBAR + FDWind( 1 )
+!! !      VYGBAR = VYGBAR + FDWind( 2 )
+!! !      VZGBAR = VZGBAR + FDWind( 3 )
+!! !
+!! !      XGrnd =  0.0
+!! !      YGrnd =  0.5*RotDiam
+!! !      ZGrnd = -0.5*RotDiam
+!! !      CALL FD_Interp
+!! !      VXGBAR = 0.25*( VXGBAR + FDWind( 1 ) )
+!! !      VYGBAR = 0.25*( VYGBAR + FDWind( 2 ) )
+!! !      VZGBAR = 0.25*( VZGBAR + FDWind( 3 ) )
+!! 
+!! 
+!!          Position(1) = 0.0
+!!          InflowWind_ADhack_diskVel(:) = 0.0
+!! 
+!!          DO IY = -1,1,2
+!!             Position(2)  =  IY*FD_GetValue('RotDiam',ErrStat)
+!! 
+!!             DO IZ = -1,1,2
+!!                Position(3)  = IZ*InpPosition(2) + InpPosition(3)
+!! 
+!!                NewVelocity = InflowWind_GetVelocity(Time, Position, ErrStat)
+!!                InflowWind_ADhack_diskVel(:) = InflowWind_ADhack_diskVel(:) + NewVelocity%Velocity(:)
+!!             END DO
+!!          END DO
+!!          InflowWind_ADhack_diskVel(:) = 0.25*InflowWind_ADhack_diskVel(:)
+!! 
+!!       CASE (HAWC_Wind)
+!!          InflowWind_ADhack_diskVel(1)   = HW_GetValue('UREF', ErrStat)
+!!          InflowWind_ADhack_diskVel(2:3) = 0.0
+!! 
+!!       CASE DEFAULT
+!!          CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_diskVel(). '// &
+!!                     'Call WindInflow_Init() before calling this function.' )
+!!          ErrStat = 1
+!! 
+!!    END SELECT
+!! 
+!!    RETURN
+!! 
+!! END FUNCTION InflowWind_ADhack_diskVel
 !====================================================================================================
-!FIXME: move to subroutines.
-FUNCTION InflowWind_ADhack_diskVel( Time, InpPosition, ErrStat )
-! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
-! when a consensus on the definition of "average velocity" is determined, this function will be
-! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
-!----------------------------------------------------------------------------------------------------
-
-      ! Passed variables
-
-   REAL(ReKi), INTENT(IN)     :: Time
-   REAL(ReKi), INTENT(IN)     :: InpPosition(3)
-   INTEGER, INTENT(OUT)       :: ErrStat
-
-      ! Function definition
-   REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
-
-      ! Local variables
-   TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
-   REAL(ReKi)                 :: Position(3)
-   INTEGER                    :: IY
-   INTEGER                    :: IZ
-
-
-   ErrStat = 0
-
-   SELECT CASE ( WindType )
-      CASE (HH_Wind)
-
-!      VXGBAR =  V * COS( DELTA )
-!      VYGBAR = -V * SIN( DELTA )
-!      VZGBAR =  VZ
-
-         Position    = (/ REAL(0.0, ReKi), REAL(0.0, ReKi), InpPosition(3) /)
-         NewVelocity = HH_Get_ADHack_WindSpeed(Time, Position, ErrStat)
-
-         InflowWind_ADhack_diskVel(:) = NewVelocity%Velocity(:)
-
-
-      CASE (FF_Wind)
-!      VXGBAR = MeanFFWS
-!      VYGBAR = 0.0
-!      VZGBAR = 0.0
-
-         InflowWind_ADhack_diskVel(1)   = FF_GetValue('MEANFFWS', ErrStat)
-         InflowWind_ADhack_diskVel(2:3) = 0.0
-
-      CASE (UD_Wind)
-!      VXGBAR = UWmeanU
-!      VYGBAR = UWmeanV
-!      VZGBAR = UWmeanW
-
-         InflowWind_ADhack_diskVel(1)   = UsrWnd_GetValue('MEANU', ErrStat)
-         IF (ErrStat /= 0) RETURN
-         InflowWind_ADhack_diskVel(2)   = UsrWnd_GetValue('MEANV', ErrStat)
-         IF (ErrStat /= 0) RETURN
-         InflowWind_ADhack_diskVel(3)   = UsrWnd_GetValue('MEANW', ErrStat)
-
-      CASE (FD_Wind)
-!      XGrnd = 0.0
-!      YGrnd = 0.5*RotDiam
-!      ZGrnd = 0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = FDWind( 1 )
-!      VYGBAR = FDWind( 2 )
-!      VZGBAR = FDWind( 3 )
-!
-!      XGrnd =  0.0
-!      YGrnd = -0.5*RotDiam
-!      ZGrnd =  0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = VXGBAR + FDWind( 1 )
-!      VYGBAR = VYGBAR + FDWind( 2 )
-!      VZGBAR = VZGBAR + FDWind( 3 )
-!
-!      XGrnd =  0.0
-!      YGrnd = -0.5*RotDiam
-!      ZGrnd = -0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = VXGBAR + FDWind( 1 )
-!      VYGBAR = VYGBAR + FDWind( 2 )
-!      VZGBAR = VZGBAR + FDWind( 3 )
-!
-!      XGrnd =  0.0
-!      YGrnd =  0.5*RotDiam
-!      ZGrnd = -0.5*RotDiam
-!      CALL FD_Interp
-!      VXGBAR = 0.25*( VXGBAR + FDWind( 1 ) )
-!      VYGBAR = 0.25*( VYGBAR + FDWind( 2 ) )
-!      VZGBAR = 0.25*( VZGBAR + FDWind( 3 ) )
-
-
-         Position(1) = 0.0
-         InflowWind_ADhack_diskVel(:) = 0.0
-
-         DO IY = -1,1,2
-            Position(2)  =  IY*FD_GetValue('RotDiam',ErrStat)
-
-            DO IZ = -1,1,2
-               Position(3)  = IZ*InpPosition(2) + InpPosition(3)
-
-               NewVelocity = InflowWind_GetVelocity(Time, Position, ErrStat)
-               InflowWind_ADhack_diskVel(:) = InflowWind_ADhack_diskVel(:) + NewVelocity%Velocity(:)
-            END DO
-         END DO
-         InflowWind_ADhack_diskVel(:) = 0.25*InflowWind_ADhack_diskVel(:)
-
-      CASE (HAWC_Wind)
-         InflowWind_ADhack_diskVel(1)   = HW_GetValue('UREF', ErrStat)
-         InflowWind_ADhack_diskVel(2:3) = 0.0
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_diskVel(). '// &
-                    'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-
-   END SELECT
-
-   RETURN
-
-END FUNCTION InflowWind_ADhack_diskVel
-!====================================================================================================
-!FIXME: move to subroutines.
-FUNCTION InflowWind_ADhack_DIcheck( ErrStat )
+FUNCTION InflowWind_ADhack_DIcheck( IfW_ParamData, ErrStat )
 ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
 ! it performs a wind speed check for the dynamic inflow initialization
 ! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
@@ -379,7 +318,9 @@ FUNCTION InflowWind_ADhack_DIcheck( ErrStat )
 
       ! Passed variables
 
-   INTEGER, INTENT(OUT)       :: ErrStat
+   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: IfW_ParamData
+
+   INTEGER,                         INTENT(OUT)       :: ErrStat
 
       ! Function definition
    REAL(ReKi)                 :: InflowWind_ADhack_DIcheck
@@ -387,7 +328,7 @@ FUNCTION InflowWind_ADhack_DIcheck( ErrStat )
 
    ErrStat = 0
 
-   SELECT CASE ( WindType )
+   SELECT CASE ( IfW_ParamData%WindType )
       CASE (HH_Wind, UD_Wind, FD_Wind )
 
          InflowWind_ADhack_DIcheck = 50  ! just return something greater than 8 m/s
@@ -418,7 +359,6 @@ END MODULE InflowWind_Subs
 
 
 !!----Remove this functionality for now. Might put it back in sometime after the conversion to the new framework ----
-!FIXME: Move these to subroutines.
 !!    FUNCTION InflowWind_GetMean(StartTime, EndTime, delta_time, InputPosition,  ErrStat )
 !!    !  This function returns the mean wind speed
 !!    !----------------------------------------------------------------------------------------------------
