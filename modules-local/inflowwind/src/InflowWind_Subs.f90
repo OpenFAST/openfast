@@ -12,6 +12,23 @@ MODULE InflowWind_Subs
 !  1 Aug 2012    v1.01.00a-bjj                              B. Jonkman
 ! 10 Aug 2012    v1.01.00b-bjj                              B. Jonkman
 !----------------------------------------------------------------------------------------------------
+!  
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2012  National Renewable Energy Laboratory
+!
+!    This file is part of InflowWind.
+!
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!    
+!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!    If not, see <http://www.gnu.org/licenses/>.
+!    
+!**********************************************************************************************************************************
 
    USE                              NWTC_Library
    USE                              SharedInflowDefs
@@ -30,8 +47,7 @@ MODULE InflowWind_Subs
 
 
    IMPLICIT                         NONE
-
-
+!NOTE: don't make this private. Then none of these routines will be available to the module. Don't make it public either because then anything can get to them.
 
 CONTAINS
 !====================================================================================================

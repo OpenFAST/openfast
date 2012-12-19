@@ -27,10 +27,10 @@ DOXYFILE_ENCODING      = UTF-8
 
 PROJECT_NAME           = InflowWind
 
-# The PROJECT_NUMBER = "Revision: 13 (last commit)"
+# The PROJECT_NUMBER = "Revision: 18 (last commit)"
 # This could be handy for archiving the generated documentation or
 # if some version control system is used.
-PROJECT_NUMBER = "Revision: 13 (last commit)"
+PROJECT_NUMBER = "Revision: 18 (last commit)"
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description for a project that appears at the top of each page and should give viewer a quick idea about the purpose of the project. Keep the description short.
 
