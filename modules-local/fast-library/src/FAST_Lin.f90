@@ -114,10 +114,10 @@ IF ( ( GenDOF ) .AND. ( TrimCase == 2 ) )  THEN ! We will be trimming generator 
 !   !   aerodynamic torque given in vector, MomLPRott.
 !   !   NOTE: Using this method requires the USE of MODULE RtHndSid() and
 !   !         declaration of global function, DotProd:
-!   GenTrq = 0.0      ! Define a dummy generator torque
-!   QT  = Q (:,IC(1)) ! Use initial conditions
-!   QDT = QD(:,IC(1)) ! for the DOFs
-!   CALL RtHS         ! Call the dynamics routine once
+!   GenTrq = 0.0                 ! Define a dummy generator torque
+!   x%QT  = Q (:,IC(1))          ! Use initial conditions
+!   x%QDT = QD(:,IC(1))          ! for the DOFs
+!   CALL RtHS ( p, CoordSys, x ) ! Call the dynamics routine once
 !   GenTrq = DotProd( MomLPRott, e1 )*GBoxEffFac/GBRatio ! Convert the aerodynamic torque to the HSS-side
 ENDIF
 
@@ -1217,12 +1217,12 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
    ! Also, calculate the periodic steady state operating output measurements:
    ! No need to perturb here since the DOF accelerations are linear terms.
 
-   QT  = Qop (:,L)
-   QDT = QDop(:,L)
+   x%QT  = Qop (:,L)
+   x%QDT = QDop(:,L)
 
 
    DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-      CALL RtHS( CoordSys )
+      CALL RtHS( p, CoordSys, x )
    ENDDO             ! I - Iteration on RtHS
    CALL CalcOuts( CoordSys )
 
@@ -1246,17 +1246,17 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
    !   the central difference pertubation method:
    ! Also, calculate the DOF velocity portion of the ouput matrix, [C]:
 
-   QT             = Qop (     :,L)                 ! Initialize all displacements to the operating point displacements
+   x%QT             = Qop (     :,L)                 ! Initialize all displacements to the operating point displacements
 
    DO I2 = 1,NActvDOF         ! Loop through all active (enabled) DOFs (cols)
 
 
-      QDT         = QDop(     :,L)                 ! Initialize all velocities    to the operating point velocities
+      x%QDT         = QDop(     :,L)                 ! Initialize all velocities    to the operating point velocities
 
 
-      QDT(PS(I2)) = QDop(PS(I2),L) + DelQD(PS(I2)) ! (+) pertubation of DOF velocity I2
+      x%QDT(PS(I2)) = QDop(PS(I2),L) + DelQD(PS(I2)) ! (+) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1268,9 +1268,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-      QDT(PS(I2)) = QDop(PS(I2),L) - DelQD(PS(I2)) ! (-) pertubation of DOF velocity I2
+      x%QDT(PS(I2)) = QDop(PS(I2),L) - DelQD(PS(I2)) ! (-) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1291,19 +1291,19 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
    ! Also, calculate the DOF displacement portion of the ouput matrix, [C]:
 
    IgnoreMOD      = .TRUE.                         ! Set IgnoreMOD to .TRUE. so that function MOD is ignored in SUBROUTINE CalcOuts()
-   QDT            = QDop(     :,L)                 ! Initialize all velocities    to the operating point velocities
+   x%QDT            = QDop(     :,L)                 ! Initialize all velocities    to the operating point velocities
 
    DO I2 = 1,NActvDOF         ! Loop through all active (enabled) DOFs (cols)
 
 
-      QT          = Qop (     :,L)                 ! Initialize all displacements to the operating point displacements
+      x%QT          = Qop (     :,L)                 ! Initialize all displacements to the operating point displacements
 
 
-      QT (PS(I2)) = Qop (PS(I2),L) + DelQ (PS(I2)) ! (+) pertubation of DOF displacement I2
+      x%QT (PS(I2)) = Qop (PS(I2),L) + DelQ (PS(I2)) ! (+) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, CoordSys, x )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          AMat(I1+NActvDOF,I2         ,L) = QD2T(PS(I1))
@@ -1313,11 +1313,11 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-      QT (PS(I2)) = Qop (PS(I2),L) - DelQ (PS(I2)) ! (-) pertubation of DOF displacement I2
+      x%QT (PS(I2)) = Qop (PS(I2),L) - DelQ (PS(I2)) ! (-) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, CoordSys, x )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          AMat(I1+NActvDOF,I2         ,L) = ( AMat(I1+NActvDOF,I2         ,L) - QD2T(PS(I1)) )/( 2.0*DelQ (PS(I2)) )  ! Central difference linearization
@@ -1335,8 +1335,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
    ! Initialize all displacements and velocities to the operating point values
    !   for the rest of the linearizations:
 
-   QT  = Qop (:,L)
-   QDT = QDop(:,L)
+   x%QT  = Qop (:,L)
+   x%QDT = QDop(:,L)
 
 
    ! --------------------- Control Inputs -------------------------------------
@@ -1361,10 +1361,10 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
          YawNeut     = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw angle, QT(DOF_Yaw).
-         QT(DOF_Yaw) = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
+         x%QT(DOF_Yaw) = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1379,10 +1379,10 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
          YawNeut     = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw angle, QT(DOF_Yaw).
-         QT(DOF_Yaw) = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
+         x%QT(DOF_Yaw) = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1397,7 +1397,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
          YawNeut     = YawPosop                    ! Eliminate the nacelle yaw angle pertubation throughout the rest of this analysis
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw angle, QT(DOF_Yaw).
-         QT(DOF_Yaw) = YawPosop                    ! Eliminate the nacelle yaw angle pertubation throughout the rest of this analysis
+         x%QT(DOF_Yaw) = YawPosop                    ! Eliminate the nacelle yaw angle pertubation throughout the rest of this analysis
       ENDIF
 
    ENDIF
@@ -1422,10 +1422,10 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
          YawRateNeut  = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw rate, QDT(DOF_Yaw).
-         QDT(DOF_Yaw) = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
+         x%QDT(DOF_Yaw) = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1440,10 +1440,10 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
          YawRateNeut  = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw rate, QDT(DOF_Yaw).
-         QDT(DOF_Yaw) = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
+         x%QDT(DOF_Yaw) = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1458,7 +1458,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
          YawRateNeut  = YawRateop                  ! Eliminate the nacelle yaw rate pertubation throughout the rest of this analysis
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw rate, QDT(DOF_Yaw).
-         QDT(DOF_Yaw) = YawRateop                  ! Eliminate the nacelle yaw rate pertubation throughout the rest of this analysis
+         x%QDT(DOF_Yaw) = YawRateop                  ! Eliminate the nacelle yaw rate pertubation throughout the rest of this analysis
       ENDIF
 
    ENDIF
@@ -1477,7 +1477,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       DelGenTrq =            DelGenTq              ! (+) pertubation of generator torque
       GenTrq    = GenTrqop + DelGenTq              ! (+) pertubation of generator torque; NOTE: this pertubation of GenTrq is overwritten by the built-in or user-defined torque-speed models (which must add the value of DelGenTrq to it), unless trimming generator torque (TrimCase == 2)
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1492,7 +1492,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       DelGenTrq =          - DelGenTq              ! (-) pertubation of generator torque
       GenTrq    = GenTrqop - DelGenTq              ! (-) pertubation of generator torque; NOTE: this pertubation of GenTrq is overwritten by the built-in or user-defined torque-speed models (which must add the value of DelGenTrq to it), unless trimming generator torque (TrimCase == 2)
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1522,7 +1522,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       BlPitch = BlPitchop + DelBlPtch              ! (+) pertubation of rotor collective blade pitch
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1536,7 +1536,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       BlPitch = BlPitchop - DelBlPtch              ! (-) pertubation of rotor collective blade pitch
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1567,7 +1567,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
          BlPitch(K) = BlPitchop(K) + DelBlPtch        ! (+) pertubation of individual pitch of blade K
          DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-            CALL RtHS( CoordSys )
+            CALL RtHS( p, CoordSys, x )
          ENDDO             ! I - Iteration on RtHS
          CALL CalcOuts( CoordSys )
 
@@ -1581,7 +1581,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
          BlPitch(K) = BlPitchop(K) - DelBlPtch        ! (-) pertubation of individual pitch of blade K
          DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-            CALL RtHS( CoordSys )
+            CALL RtHS( p, CoordSys, x )
          ENDDO             ! I - Iteration on RtHS
          CALL CalcOuts( CoordSys )
 
@@ -1618,7 +1618,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1635,7 +1635,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1668,7 +1668,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1685,7 +1685,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1718,7 +1718,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1735,7 +1735,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1768,7 +1768,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1785,7 +1785,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1818,7 +1818,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1835,7 +1835,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1868,7 +1868,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1885,7 +1885,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1918,7 +1918,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 
@@ -1935,7 +1935,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( CoordSys )
+         CALL RtHS( p, CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( CoordSys )
 

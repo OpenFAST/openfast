@@ -2189,11 +2189,11 @@ REAL(ReKi), ALLOCATABLE      :: PMomNTail(:,:)                                  
 REAL(ReKi), ALLOCATABLE      :: PMomX0Trb(:,:)                                  ! Partial moment at the platform   (body X) / tower base                        (point T(0)) due to the turbine.
 REAL(ReKi), ALLOCATABLE      :: PMomXAll (:,:)                                  ! Partial moment at the platform   (body X) / platform reference                (point Z   ) due to the everything.
 REAL(ReKi)                   :: PMXHydro (6,3)                                  ! Partial platform hydrodynamic moment at the platform (body X) / platform reference (point Z).
-REAL(ReKi), ALLOCATABLE      :: QDT      (:)                                    ! Current estimate of QD.
+!REAL(ReKi), ALLOCATABLE      :: QDT      (:)                                    ! Current estimate of QD.
 REAL(ReKi), ALLOCATABLE      :: QD2T     (:)                                    ! Solution (acceleration) vector.
 REAL(ReKi), ALLOCATABLE      :: QD2TC    (:)                                    ! A copy of the value of QD2T used in SUBROUTINE FixHSSBrTq().
 REAL(ReKi), ALLOCATABLE      :: OgnlGeAzRo(:)                                   ! The original elements of AugMat that formed the DOF_GeAz equation before application of known initial conditions.
-REAL(ReKi), ALLOCATABLE      :: QT       (:)                                    ! Current estimate of Q for each degree of freedom.
+!REAL(ReKi), ALLOCATABLE      :: QT       (:)                                    ! Current estimate of Q for each degree of freedom.
 REAL(ReKi)                   :: rO       (3)                                    ! Position vector from inertial frame origin             to tower-top / base plate (point O).
 REAL(ReKi), ALLOCATABLE      :: rQS      (:,:,:)                                ! Position vector from the apex of rotation (point Q   ) to a point on a blade (point S).
 REAL(ReKi), ALLOCATABLE      :: rS       (:,:,:)                                ! Position vector from inertial frame origin             to a point on a blade (point S).

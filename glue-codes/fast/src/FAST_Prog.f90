@@ -41,6 +41,7 @@ INTEGER                       :: L                                              
 
 TYPE(StrD_OtherStateType)     :: OtherSt_StrD                                    ! The structural dynamics "other" states (including CoordSys) 
 TYPE(StrD_ParameterType)      :: p_StrD                                          ! The parameters of the structural dynamics module
+TYPE(StrD_ContinuousStateType):: x_StrD                                          ! The structural dynamics continuous states
 
 INTEGER(IntKi)                :: ErrStat                                         ! Error status
 CHARACTER(1024)               :: ErrMsg                                          ! Error message
@@ -113,7 +114,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  p_StrD, OtherSt_StrD, ErrStat, ErrMsg )     
+      CALL TimeMarch(  p_StrD, x_StrD, OtherSt_StrD, ErrStat, ErrMsg )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
