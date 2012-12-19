@@ -126,7 +126,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00c-mlb', '12-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00c-mlb', '18-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.

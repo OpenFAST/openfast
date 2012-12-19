@@ -490,19 +490,6 @@ CONTAINS
    RETURN
    END FUNCTION Is_NaN ! ( DblNum )
 !=======================================================================
-   LOGICAL FUNCTION KBInputOK
-
-
-      ! This function returns true if the environment allows keyboard input.
-
-
-
-   KBInputOK = .TRUE.
-
-
-   RETURN
-   END FUNCTION KBInputOK
-!=======================================================================
    SUBROUTINE OpenBinFile ( Un, OutFile, RecLen, Error )
 
 
