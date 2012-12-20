@@ -18,13 +18,13 @@ init_type_table()
 {
   node_t *p ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "integer" )         ;
-                                                strcpy( p->mapsto, "INTEGER(IntKI)")  ;
+                                                strcpy( p->mapsto, "INTEGER(IntKi)")  ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "intki" )           ;
-                                                strcpy( p->mapsto, "INTEGER(IntKI)")  ;
+                                                strcpy( p->mapsto, "INTEGER(IntKi)")  ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "b4ki" )           ;
-                                                strcpy( p->mapsto, "INTEGER(IntKI)")  ;
+                                                strcpy( p->mapsto, "INTEGER(IntKi)")  ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
