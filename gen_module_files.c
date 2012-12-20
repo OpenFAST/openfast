@@ -33,8 +33,10 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   } else {
     for ( r = q->fields ; r ; r = r->next )
     { 
-      if ( !strcmp( r->type->name, "meshtype" ) ) {
-        fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",inout,r->name,inout,r->name,inout) ;
+      if ( r->type != NULL ) {
+        if ( !strcmp( r->type->name, "meshtype" ) ) {
+          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",inout,r->name,inout,r->name,inout) ;
+        }
       } else {
         fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",inout,r->name,inout,r->name,inout) ;
       }
@@ -390,9 +392,9 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(IN   ) :: ConstrStateData\n", ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(IN   ) :: OtherStateData\n",  ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OutputType),          INTENT(IN   ) :: OutData\n",         ModName->nickname) ;
-  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(  OUT) :: Re_RetAry(:)\n") ;
-  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(  OUT) :: Db_RetAry(:)\n") ;
-  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(  OUT) :: Int_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(ReKi), ALLOCATABLE,   INTENT(  OUT) :: Re_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(DbKi), ALLOCATABLE,   INTENT(  OUT) :: Db_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE,   INTENT(  OUT) :: Int_RetAry(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),               INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),                 INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"  LOGICAL, OPTIONAL,            INTENT(IN   ) :: SizeOnly\n") ;
