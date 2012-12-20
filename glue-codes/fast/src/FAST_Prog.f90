@@ -34,17 +34,25 @@ IMPLICIT                        NONE
 
    ! Local variables:
 
-REAL(ReKi)                    :: GBoxTrq                                         ! Unused gearbox torque on the LSS side in N-m
+REAL(ReKi)                       :: GBoxTrq                                      ! Unused gearbox torque on the LSS side in N-m
 
-INTEGER                       :: L                                               ! Generic index
+INTEGER                          :: L                                            ! Generic index
 
 
-TYPE(StrD_OtherStateType)     :: OtherSt_StrD                                    ! The structural dynamics "other" states (including CoordSys) 
-TYPE(StrD_ParameterType)      :: p_StrD                                          ! The parameters of the structural dynamics module
-TYPE(StrD_ContinuousStateType):: x_StrD                                          ! The structural dynamics continuous states
+TYPE(StrD_InitInputType)         :: InitInData_StrD                              ! Input data for initialization of the structural dynamics module
+TYPE(StrD_InitOutputType)        :: InitOutData_StrD                             ! Output data from initialization of the structural dynamics module
+TYPE(StrD_ContinuousStateType)   :: x_StrD                                       ! Continuous states of the structural dynamics module
+TYPE(StrD_DiscreteStateType)     :: xd_StrD                                      ! Discrete states of the structural dynamics module
+TYPE(StrD_ConstraintStateType)   :: z_StrD                                       ! Constraint states of the structural dynamics module
+TYPE(StrD_OtherStateType)        :: OtherSt_StrD                                 ! Other/optimization states of the structural dynamics module (including CoordSys) 
 
-INTEGER(IntKi)                :: ErrStat                                         ! Error status
-CHARACTER(1024)               :: ErrMsg                                          ! Error message
+TYPE(StrD_ParameterType)         :: p_StrD                                       ! Parameters of the structural dynamics module
+TYPE(StrD_InputType)             :: u_StrD                                       ! System inputs of the structural dynamics module
+TYPE(StrD_OutputType)            :: y_StrD                                       ! System outputs of the structural dynamics module
+
+
+INTEGER(IntKi)                   :: ErrStat                                      ! Error status
+CHARACTER(1024)                  :: ErrMsg                                       ! Error message
 
 
    ! Get the current time.
@@ -65,13 +73,13 @@ CALL DispNVD()
 
    ! Open and read input files, initialize global parameters.
 
-CALL FAST_Begin()
+CALL FAST_Begin( PriFile, RootName, DirRoot )
 CALL FAST_Input( p_StrD, OtherSt_StrD, ErrStat, ErrMsg )
 
 
    ! Set up initial values for all degrees of freedom.
 
-CALL FAST_Initialize( p_StrD, OtherSt_StrD, ErrStat, ErrMsg )
+CALL FAST_Initialize( p_StrD, x_StrD, y_StrD )
 
 
 
@@ -85,7 +93,7 @@ IF ( SumPrint )  CALL PrintSum
 
 IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
 
-   CALL MakeADM                        ! Make the ADAMS dataset file (.adm).
+   CALL MakeADM( p_StrD, x_StrD )      ! Make the ADAMS dataset file (.adm).
 
    CALL MakeACF                        ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
 
@@ -114,7 +122,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  p_StrD, x_StrD, OtherSt_StrD, ErrStat, ErrMsg )     
+      CALL TimeMarch(  p_StrD, x_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
@@ -134,7 +142,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady( OtherSt_StrD%CoordSys )
+         CALL CalcSteady( p_StrD, x_StrD, y_StrD, OtherSt_StrD )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
@@ -155,7 +163,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       ENDIF
 
 
-      CALL Linearize( OtherSt_StrD%CoordSys )          ! Linearize the model about the steady-state solution.
+      CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD )          ! Linearize the model about the steady-state solution.
 
       CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg )
       IF (ErrStat /= ErrID_none) THEN
@@ -163,6 +171,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       END IF      
 
    ENDIF
+   
 
 
    ! We're done!

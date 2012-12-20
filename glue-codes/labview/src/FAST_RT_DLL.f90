@@ -31,7 +31,7 @@ INTEGER						   :: FLen                    ! trim length of FileName_RT_Byte
 INTEGER                    :: I                       ! temporary loop counter
 
 
-IF (FLen > MaxFileNameLen ) CALL ProgAbort('File name is too long in FAST_RT_DLL_INIT.')
+IF ( FLen > MaxFileNameLen ) CALL ProgAbort('File name is too long in FAST_RT_DLL_INIT.')
 DO I=1,FLen
    FileName_RT_Char(I:I) = ACHAR(FileName_RT_Byte(I))
 END DO
@@ -46,7 +46,7 @@ PriFile = FileName_RT_Char(1:FLen)
 
 
      ! Open and read input files, initialize global parameters.
-CALL FAST_Begin()
+CALL FAST_Begin( PriFile, RootName, DirRoot )
 
 
 !Set compiler flag for Simulink
@@ -55,7 +55,7 @@ Cmpl4LV   = .TRUE.
 CALL FAST_Input()
 
    ! Set up initial values for all degrees of freedom.
-CALL FAST_Initialize()
+CALL FAST_Initialize(p,x,y)
 
 
 end subroutine FAST_RT_DLL_INIT
@@ -113,7 +113,7 @@ REAL(ReKi), INTENT(IN)       :: HSSBrFrac_RT                       ! Brake Fract
 
 
 !Run simulation
-Call TimeMarch()
+Call TimeMarch( p_StrD, x_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )
 
 
 !Copy outputs

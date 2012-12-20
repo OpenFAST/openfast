@@ -169,29 +169,29 @@ REAL(ReKi), ALLOCATABLE      :: QD       (:,:)                                  
 REAL(ReKi), ALLOCATABLE      :: QD2      (:,:)                                  ! Acceleration matrix.
 
 INTEGER(4), ALLOCATABLE      :: Diag     (:)                                    ! Array containing the indices of SrtPS() associated with each enabled DOF; that is, SrtPS(Diag(I)) = I.
-INTEGER(4), ALLOCATABLE      :: DOF_BE   (:,:)                                  ! DOF indices for blade edge.
-INTEGER(4), ALLOCATABLE      :: DOF_BF   (:,:)                                  ! DOF indices for blade flap.
-INTEGER(4), PARAMETER        :: DOF_DrTr = 14                                   ! DOF index for drivetrain rotational-flexibility.
-INTEGER(4), PARAMETER        :: DOF_GeAz = 13                                   ! DOF index for the generator azimuth.
-INTEGER(4), PARAMETER        :: DOF_Hv   =  3                                   ! DOF index for platform heave.
-INTEGER(4), PARAMETER        :: DOF_P    =  5                                   ! DOF index for platform pitch.
-INTEGER(4), PARAMETER        :: DOF_R    =  4                                   ! DOF index for platform roll.
-INTEGER(4), PARAMETER        :: DOF_RFrl = 12                                   ! DOF index for rotor-furl.
-INTEGER(4), PARAMETER        :: DOF_Sg   =  1                                   ! DOF index for platform surge.
-INTEGER(4), PARAMETER        :: DOF_Sw   =  2                                   ! DOF index for platform sway.
-INTEGER(4), PARAMETER        :: DOF_Teet = 22                                   ! DOF index for rotor-teeter.
-INTEGER(4), PARAMETER        :: DOF_TFA1 =  7                                   ! DOF index for 1st tower fore-aft mode.
-INTEGER(4), PARAMETER        :: DOF_TFA2 =  9                                   ! DOF index for 2nd tower fore-aft mode.
-INTEGER(4), PARAMETER        :: DOF_TFrl = 15                                   ! DOF index for tail-furl.
-INTEGER(4), PARAMETER        :: DOF_TSS1 =  8                                   ! DOF index for 1st tower side-to-side mode.
-INTEGER(4), PARAMETER        :: DOF_TSS2 = 10                                   ! DOF index for 2nd tower side-to-side mode.
-INTEGER(4), PARAMETER        :: DOF_Y    =  6                                   ! DOF index for platform yaw.
-INTEGER(4), PARAMETER        :: DOF_Yaw  = 11                                   ! DOF index for nacelle-yaw.
+!INTEGER(4), ALLOCATABLE      :: DOF_BE   (:,:)                                  ! DOF indices for blade edge.
+!INTEGER(4), ALLOCATABLE      :: DOF_BF   (:,:)                                  ! DOF indices for blade flap.
+!INTEGER(4), PARAMETER        :: DOF_DrTr = 14                                   ! DOF index for drivetrain rotational-flexibility.
+!INTEGER(4), PARAMETER        :: DOF_GeAz = 13                                   ! DOF index for the generator azimuth.
+!INTEGER(4), PARAMETER        :: DOF_Hv   =  3                                   ! DOF index for platform heave.
+!INTEGER(4), PARAMETER        :: DOF_P    =  5                                   ! DOF index for platform pitch.
+!INTEGER(4), PARAMETER        :: DOF_R    =  4                                   ! DOF index for platform roll.
+!INTEGER(4), PARAMETER        :: DOF_RFrl = 12                                   ! DOF index for rotor-furl.
+!INTEGER(4), PARAMETER        :: DOF_Sg   =  1                                   ! DOF index for platform surge.
+!INTEGER(4), PARAMETER        :: DOF_Sw   =  2                                   ! DOF index for platform sway.
+!INTEGER(4), PARAMETER        :: DOF_Teet = 22                                   ! DOF index for rotor-teeter.
+!INTEGER(4), PARAMETER        :: DOF_TFA1 =  7                                   ! DOF index for 1st tower fore-aft mode.
+!INTEGER(4), PARAMETER        :: DOF_TFA2 =  9                                   ! DOF index for 2nd tower fore-aft mode.
+!INTEGER(4), PARAMETER        :: DOF_TFrl = 15                                   ! DOF index for tail-furl.
+!INTEGER(4), PARAMETER        :: DOF_TSS1 =  8                                   ! DOF index for 1st tower side-to-side mode.
+!INTEGER(4), PARAMETER        :: DOF_TSS2 = 10                                   ! DOF index for 2nd tower side-to-side mode.
+!INTEGER(4), PARAMETER        :: DOF_Y    =  6                                   ! DOF index for platform yaw.
+!INTEGER(4), PARAMETER        :: DOF_Yaw  = 11                                   ! DOF index for nacelle-yaw.
 INTEGER(4), ALLOCATABLE      :: IC       (:)                                    ! Array which stores pointers to predictor-corrector results.
 INTEGER(4)                   :: NActvDOF                                        ! The number of active (enabled) DOFs in the model.
 INTEGER(4)                   :: NAug                                            ! Dimension of augmented solution matrix.
 INTEGER(4)                   :: NDOF                                            ! Number of total DOFs.
-INTEGER(4), PARAMETER        :: NMX      =  9                                   ! Used in updating predictor-corrector values.
+!INTEGER(4), PARAMETER        :: NMX      =  9                                   ! Used in updating predictor-corrector values.
 INTEGER(4)                   :: NPA                                             ! Number of DOFs                  that contribute to the angular velocity of the tail                                                      (body A) in the inertia frame.
 INTEGER(4)                   :: NPB                                             ! Number of DOFs                  that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame.
 INTEGER(4)                   :: NPCE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled.

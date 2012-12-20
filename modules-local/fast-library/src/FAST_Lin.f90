@@ -2,10 +2,11 @@ MODULE FAST_Lin_Subs
 
    USE   NWTC_Library
    USE   StructDyn_Types
+   USE   StructDyn_Parameters
 
 CONTAINS
 !=======================================================================
-SUBROUTINE CalcSteady( CoordSys )
+SUBROUTINE CalcSteady( p, x, y, OtherState )
 
 
    ! CalcSteady is used to march in time until a periodic steady state
@@ -40,7 +41,11 @@ USE                             FASTsubs  !Solver
 IMPLICIT                        NONE
 
    ! Passed variables
-TYPE(StrD_CoordSys)          :: CoordSys                                       ! Coordinate systems
+   
+TYPE(StrD_ParameterType),        INTENT(IN)    :: p                             ! Parameters of the structural dynamics module
+TYPE(StrD_ContinuousStateType),  INTENT(INOUT) :: x                             ! Continuous states of the structural dynamics module
+TYPE(StrD_OutputType),           INTENT(INOUT) :: y                             ! System outputs of the structural dynamics module
+TYPE(StrD_OtherStateType),       INTENT(INOUT) :: OtherState                    ! Other State data type for Structural dynamics module
 
    ! Local variables.
 
@@ -117,7 +122,7 @@ IF ( ( GenDOF ) .AND. ( TrimCase == 2 ) )  THEN ! We will be trimming generator 
 !   GenTrq = 0.0                 ! Define a dummy generator torque
 !   x%QT  = Q (:,IC(1))          ! Use initial conditions
 !   x%QDT = QD(:,IC(1))          ! for the DOFs
-!   CALL RtHS ( p, CoordSys, x ) ! Call the dynamics routine once
+!   CALL RtHS ( p, OtherState%CoordSys, x ) ! Call the dynamics routine once
 !   GenTrq = DotProd( MomLPRott, e1 )*GBoxEffFac/GBRatio ! Convert the aerodynamic torque to the HSS-side
 ENDIF
 
@@ -298,7 +303,7 @@ DO
 
    ! Call predictor-corrector routine:
 
-      CALL Solver( CoordSys )
+      CALL Solver( p, x, y, OtherState )
 
 
    ! Make sure the rotor azimuth is not greater or equal to 360 degrees:
@@ -610,7 +615,7 @@ ELSE                                ! Rotor is spinning, therefore save the stat
 
    ! Call predictor-corrector routine:
 
-         CALL Solver( CoordSys )
+         CALL Solver( p, x, y, OtherState )
 
 
    ! NOTE: we do not want to enforce the condition that the rotor azimuth be
@@ -720,7 +725,7 @@ IF ( ALLOCATED( RotAzimOp ) ) DEALLOCATE( RotAzimOp )
 RETURN
 END SUBROUTINE CalcSteady
 !=======================================================================
-SUBROUTINE Linearize( CoordSys )
+SUBROUTINE Linearize( p,x,y,OtherState )
 
 
    ! Linearize is used to perturb each displacement and velocity DOF
@@ -757,8 +762,13 @@ USE                            AeroDyn
 
 IMPLICIT                        NONE
 
+   ! passed variables:
+   
+TYPE(StrD_ParameterType),      INTENT(IN)       :: p                          ! The parameters of the structural dynamics module
+TYPE(StrD_ContinuousStateType),INTENT(INOUT)    :: x                          ! The structural dynamics module's continuous states
+TYPE(StrD_OtherStateType),     INTENT(INOUT)    :: OtherState                 ! The structural dynamics "other" states (including CoordSys coordinate systems) 
+TYPE(StrD_OutputType),         INTENT(INOUT)    :: y                          ! System outputs of the structural dynamics module
 
-TYPE(StrD_CoordSys), INTENT(INOUT) :: CoordSys
 
    ! Local variables:
 
@@ -1222,9 +1232,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
 
    DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-      CALL RtHS( p, CoordSys, x )
+      CALL RtHS( p, OtherState%CoordSys, x )
    ENDDO             ! I - Iteration on RtHS
-   CALL CalcOuts( CoordSys )
+   CALL CalcOuts( p, x, y, OtherState )
 
    IF ( MdlOrder == 2 )  THEN ! 2nd order model
 
@@ -1256,9 +1266,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       x%QDT(PS(I2)) = QDop(PS(I2),L) + DelQD(PS(I2)) ! (+) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          AMat(I1+NActvDOF,I2+NActvDOF,L) = QD2T(PS(I1))
@@ -1270,9 +1280,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       x%QDT(PS(I2)) = QDop(PS(I2),L) - DelQD(PS(I2)) ! (-) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          AMat(I1+NActvDOF,I2+NActvDOF,L) = ( AMat(I1+NActvDOF,I2+NActvDOF,L) - QD2T(PS(I1)) )/( 2.0*DelQD(PS(I2)) )  ! Central difference linearization
@@ -1301,9 +1311,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       x%QT (PS(I2)) = Qop (PS(I2),L) + DelQ (PS(I2)) ! (+) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( p, CoordSys, x )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          AMat(I1+NActvDOF,I2         ,L) = QD2T(PS(I1))
@@ -1315,9 +1325,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       x%QT (PS(I2)) = Qop (PS(I2),L) - DelQ (PS(I2)) ! (-) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( p, CoordSys, x )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          AMat(I1+NActvDOF,I2         ,L) = ( AMat(I1+NActvDOF,I2         ,L) - QD2T(PS(I1)) )/( 2.0*DelQ (PS(I2)) )  ! Central difference linearization
@@ -1364,9 +1374,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          x%QT(DOF_Yaw) = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxYawPos ,L) = QD2T(PS(I1))
@@ -1382,9 +1392,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          x%QT(DOF_Yaw) = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxYawPos ,L) = ( BMat(I1+NActvDOF,IndxYawPos ,L) - QD2T(PS(I1)) )/( 2.0*DelYawPos     )  ! Central difference linearization
@@ -1425,9 +1435,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          x%QDT(DOF_Yaw) = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxYawRate,L) = QD2T(PS(I1))
@@ -1443,9 +1453,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          x%QDT(DOF_Yaw) = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
       ENDIF
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxYawRate,L) = ( BMat(I1+NActvDOF,IndxYawRate,L) - QD2T(PS(I1)) )/( 2.0*DelYawRate    )  ! Central difference linearization
@@ -1477,9 +1487,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       DelGenTrq =            DelGenTq              ! (+) pertubation of generator torque
       GenTrq    = GenTrqop + DelGenTq              ! (+) pertubation of generator torque; NOTE: this pertubation of GenTrq is overwritten by the built-in or user-defined torque-speed models (which must add the value of DelGenTrq to it), unless trimming generator torque (TrimCase == 2)
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxGenTq  ,L) = QD2T(PS(I1))
@@ -1492,9 +1502,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       DelGenTrq =          - DelGenTq              ! (-) pertubation of generator torque
       GenTrq    = GenTrqop - DelGenTq              ! (-) pertubation of generator torque; NOTE: this pertubation of GenTrq is overwritten by the built-in or user-defined torque-speed models (which must add the value of DelGenTrq to it), unless trimming generator torque (TrimCase == 2)
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxGenTq  ,L) = ( BMat(I1+NActvDOF,IndxGenTq  ,L) - QD2T(PS(I1)) )/( 2.0*DelGenTq      )  ! Central difference linearization
@@ -1522,9 +1532,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       BlPitch = BlPitchop + DelBlPtch              ! (+) pertubation of rotor collective blade pitch
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxCPtch  ,L) = QD2T(PS(I1))
@@ -1536,9 +1546,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
       BlPitch = BlPitchop - DelBlPtch              ! (-) pertubation of rotor collective blade pitch
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BMat(I1+NActvDOF,IndxCPtch  ,L) = ( BMat(I1+NActvDOF,IndxCPtch  ,L) - QD2T(PS(I1)) )/( 2.0*DelBlPtch     )  ! Central difference linearization
@@ -1567,9 +1577,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
          BlPitch(K) = BlPitchop(K) + DelBlPtch        ! (+) pertubation of individual pitch of blade K
          DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-            CALL RtHS( p, CoordSys, x )
+            CALL RtHS( p, OtherState%CoordSys, x )
          ENDDO             ! I - Iteration on RtHS
-         CALL CalcOuts( CoordSys )
+         CALL CalcOuts( p, x, y, OtherState )
 
          DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
             BMat(I1+NActvDOF,IndxIPtch(K),L) = QD2T(PS(I1))
@@ -1581,9 +1591,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
          BlPitch(K) = BlPitchop(K) - DelBlPtch        ! (-) pertubation of individual pitch of blade K
          DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-            CALL RtHS( p, CoordSys, x )
+            CALL RtHS( p, OtherState%CoordSys, x )
          ENDDO             ! I - Iteration on RtHS
-         CALL CalcOuts( CoordSys )
+         CALL CalcOuts( p, x, y, OtherState )
 
          DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
             BMat(I1+NActvDOF,IndxIPtch(K),L) = ( BMat(I1+NActvDOF,IndxIPtch(K),L) - QD2T(PS(I1)) )/( 2.0*DelBlPtch     )   ! Central difference linearization
@@ -1618,9 +1628,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxV     ,L) = QD2T(PS(I1))
@@ -1635,9 +1645,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxV     ,L) = ( BdMat(I1+NActvDOF,IndxV     ,L) - QD2T(PS(I1)) )/( 2.0*DelV          )  ! Central difference linearization
@@ -1668,9 +1678,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxDELTA ,L) = QD2T(PS(I1))
@@ -1685,9 +1695,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxDELTA ,L) = ( BdMat(I1+NActvDOF,IndxDELTA ,L) - QD2T(PS(I1)) )/( 2.0*DelDELTA      )  ! Central difference linearization
@@ -1718,9 +1728,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVZ    ,L) = QD2T(PS(I1))
@@ -1735,9 +1745,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVZ    ,L) = ( BdMat(I1+NActvDOF,IndxVZ    ,L) - QD2T(PS(I1)) )/( 2.0*DelVZ         )  ! Central difference linearization
@@ -1768,9 +1778,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxHSHR  ,L) = QD2T(PS(I1))
@@ -1785,9 +1795,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxHSHR  ,L) = ( BdMat(I1+NActvDOF,IndxHSHR  ,L) - QD2T(PS(I1)) )/( 2.0*DelHSHR       )  ! Central difference linearization
@@ -1818,9 +1828,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVSHR  ,L) = QD2T(PS(I1))
@@ -1835,9 +1845,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVSHR  ,L) = ( BdMat(I1+NActvDOF,IndxVSHR  ,L) - QD2T(PS(I1)) )/( 2.0*DelVSHR       )  ! Central difference linearization
@@ -1868,9 +1878,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVLSHR ,L) = QD2T(PS(I1))
@@ -1885,9 +1895,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVLSHR ,L) = ( BdMat(I1+NActvDOF,IndxVLSHR ,L) - QD2T(PS(I1)) )/( 2.0*DelVLINSHR    )  ! Central difference linearization
@@ -1918,9 +1928,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVGUST ,L) = QD2T(PS(I1))
@@ -1935,9 +1945,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       CALL WindInf_LinearizePerturbation( LinPerturbations, ErrStat )
       IF (ErrStat /=0 ) CALL ProgAbort(' Error in wind speed linearization.')
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
-         CALL RtHS( p, CoordSys, x )
+         CALL RtHS( p, OtherState%CoordSys, x )
       ENDDO             ! I - Iteration on RtHS
-      CALL CalcOuts( CoordSys )
+      CALL CalcOuts( p, x, y, OtherState )
 
       DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
          BdMat(I1+NActvDOF,IndxVGUST ,L) = ( BdMat(I1+NActvDOF,IndxVGUST ,L) - QD2T(PS(I1)) )/( 2.0*DelVGUST      )  ! Central difference linearization
