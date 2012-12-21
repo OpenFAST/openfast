@@ -181,7 +181,6 @@ get_entry ( char * name , node_t * node )
         return(p) ;
       }
     } else {
-//fprintf(stderr,"name |%s|, p->name |%s|\n",name,p->name) ;
       if ( !strcmp( make_lower_temp(p->name) , make_lower_temp(name) ) )
       {
         return(p) ;
