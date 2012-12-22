@@ -22,11 +22,7 @@ USE                             Noise
 
 USE                             StructDyn
 USE                             StructDyn_Types
-
-
-USE                             TurbConf, ONLY: NumBL
-USE                             Blades,   ONLY: BldNodes
-USE                             Tower,    ONLY: TwrNodes
+USE                             StructDyn_Parameters
 
 
 IMPLICIT                        NONE
@@ -79,13 +75,13 @@ CALL FAST_Input( p_StrD, OtherSt_StrD, ErrStat, ErrMsg )
 
    ! Set up initial values for all degrees of freedom.
 
-CALL FAST_Initialize( p_StrD, x_StrD, y_StrD )
+CALL FAST_Initialize( p_StrD, x_StrD, y_StrD, OtherSt_StrD )
 
 
 
    ! Print summary information to "*.fsm"?
 
-IF ( SumPrint )  CALL PrintSum
+IF ( SumPrint )  CALL PrintSum( p_StrD )
 
 
 
@@ -93,17 +89,17 @@ IF ( SumPrint )  CALL PrintSum
 
 IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
 
-   CALL MakeADM( p_StrD, x_StrD )      ! Make the ADAMS dataset file (.adm).
+   CALL MakeADM( p_StrD, x_StrD, OtherSt_StrD )      ! Make the ADAMS dataset file (.adm).
 
-   CALL MakeACF                        ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
+   CALL MakeACF( p_StrD )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
 
    IF ( MakeLINacf )  THEN
 
       IF ( NActvDOF == 0 )  THEN ! The model has no DOFs
          CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//                   &
                       '_ADAMS_LIN.acf'' not created since the model has zero active DOFs.'   )
-      ELSE                       ! The model has at least one DOF
-         CALL MakeACF_LIN              ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
+      ELSE                             ! The model has at least one DOF
+         CALL MakeACF_LIN( p_StrD )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
       ENDIF
 
    ENDIF
@@ -130,7 +126,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       IF ( NActvDOF == 0 )  CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
 
 
-      CALL CoordSys_Alloc( OtherSt_StrD%CoordSys, NumBl, BldNodes, TwrNodes, ErrStat, ErrMsg )
+      CALL CoordSys_Alloc( OtherSt_StrD%CoordSys, p_StrD, ErrStat, ErrMsg )
             
       IF (ErrStat /= ErrID_none) THEN
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -148,9 +144,9 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
          DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
-            Qop  (:,L) = Q  (:,IC(1))  ! Initialize the operating
-            QDop (:,L) = QD (:,IC(1))  ! point values to the
-            QD2op(:,L) = QD2(:,IC(1))  ! initial conditions
+            Qop  (:,L) = OtherSt_StrD%Q  (:,IC(1))  ! Initialize the operating
+            QDop (:,L) = OtherSt_StrD%QD (:,IC(1))  ! point values to the
+            QD2op(:,L) = OtherSt_StrD%QD2(:,IC(1))  ! initial conditions
 
             Qop (DOF_GeAz,L) = QAzimInit + ( TwoPi/NAzimStep )*( L - 1 )               ! Make the op generator
             IF ( Qop(DOF_GeAz,L) >= TwoPi )  Qop(DOF_GeAz,L) = Qop(DOF_GeAz,L) - TwoPi ! azimuth DOF periodic
@@ -158,7 +154,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
          ENDDO                ! L - Equally-spaced azimuth steps
 
 
-         CALL DrvTrTrq ( RotSpeed, GBoxTrq )
+         CALL DrvTrTrq ( p_StrD, RotSpeed, GBoxTrq )
 
       ENDIF
 
@@ -184,6 +180,9 @@ ENDIF
 
 
 CALL FAST_Terminate( ErrStat )
+
+CALL StrD_End( u_StrD, p_StrD, x_StrD, xd_StrD, z_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )
+
 CALL AD_Terminate(   ErrStat )
 CALL Hydro_Terminate( )
 CALL Noise_Terminate( )

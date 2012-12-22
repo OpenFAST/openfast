@@ -55,7 +55,7 @@ Cmpl4LV   = .TRUE.
 CALL FAST_Input()
 
    ! Set up initial values for all degrees of freedom.
-CALL FAST_Initialize(p,x,y)
+CALL FAST_Initialize(p,x,y,OtherState)
 
 
 end subroutine FAST_RT_DLL_INIT
@@ -117,9 +117,9 @@ Call TimeMarch( p_StrD, x_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )
 
 
 !Copy outputs
-OutData_RT(1:NumOuts) = OutData(1:NumOuts)
+OutData_RT(1:p_StrD%NumOuts) = OutData(1:p_StrD%NumOuts)
 Time_RT = ZTime;
-OutData_RT(NumOuts+1) = TMax;
-OutData_RT(NumOuts+2) = Time_RT;
+OutData_RT(p_StrD%NumOuts+1) = TMax;
+OutData_RT(p_StrD%NumOuts+2) = Time_RT;
 
 end subroutine FAST_RT_DLL_SIM

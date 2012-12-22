@@ -134,27 +134,26 @@ REAL(ReKi), ALLOCATABLE      :: StrcTwst  (:)                                   
 REAL(ReKi), ALLOCATABLE      :: ThetaS    (:,:)                                 ! Structural twist for analysis nodes.
 REAL(ReKi), ALLOCATABLE      :: TwistedSF (:,:,:,:,:)                           ! Interpolated lineal blade mass density.
 
-INTEGER(4)                   :: BldNodes                                        ! Number of blade nodes used in the analysis.
 INTEGER(4)                   :: NBlInpSt                                        ! Number of blade input stations.
-INTEGER(4)                   :: TipNode                                         ! Index of the additional node located at the blade tip = BldNodes + 1
+!INTEGER(4)                   :: TipNode                                         ! Index of the additional node located at the blade tip = BldNodes + 1
 
 
 END MODULE Blades
 !=======================================================================
-MODULE Constants
-
-
-  ! This MODULE stores various constants.
-
-
-USE                             Precision
-
-
-REAL(ReKi), PARAMETER        :: Inv2Pi   =  0.15915494                          ! 0.5/Pi.
-REAL(ReKi)                   :: TwoPiNB                                         ! 2*Pi/NumBl.  This constant is calculated in fast_io.f90/Inputs()
-
-END MODULE Constants
-!=======================================================================
+!MODULE Constants
+!
+!
+!  ! This MODULE stores various constants.
+!
+!
+!USE                             Precision
+!
+!
+!!REAL(ReKi), PARAMETER        :: Inv2Pi   =  0.15915494                          ! 0.5/Pi.
+!REAL(ReKi)                   :: TwoPiNB                                         ! 2*Pi/NumBl.  This constant is calculated in fast_io.f90/Inputs()
+!
+!END MODULE Constants
+!!=======================================================================
 MODULE DOFs
 
 
@@ -164,34 +163,15 @@ MODULE DOFs
 USE                             Precision
 
 
-REAL(ReKi), ALLOCATABLE      :: Q        (:,:)                                  ! Displacement matrix.
-REAL(ReKi), ALLOCATABLE      :: QD       (:,:)                                  ! Velocity matrix.
-REAL(ReKi), ALLOCATABLE      :: QD2      (:,:)                                  ! Acceleration matrix.
+!REAL(ReKi), ALLOCATABLE      :: Q        (:,:)                                  ! Displacement matrix.
+!REAL(ReKi), ALLOCATABLE      :: QD       (:,:)                                  ! Velocity matrix.
+!REAL(ReKi), ALLOCATABLE      :: QD2      (:,:)                                  ! Acceleration matrix.
 
 INTEGER(4), ALLOCATABLE      :: Diag     (:)                                    ! Array containing the indices of SrtPS() associated with each enabled DOF; that is, SrtPS(Diag(I)) = I.
-!INTEGER(4), ALLOCATABLE      :: DOF_BE   (:,:)                                  ! DOF indices for blade edge.
-!INTEGER(4), ALLOCATABLE      :: DOF_BF   (:,:)                                  ! DOF indices for blade flap.
-!INTEGER(4), PARAMETER        :: DOF_DrTr = 14                                   ! DOF index for drivetrain rotational-flexibility.
-!INTEGER(4), PARAMETER        :: DOF_GeAz = 13                                   ! DOF index for the generator azimuth.
-!INTEGER(4), PARAMETER        :: DOF_Hv   =  3                                   ! DOF index for platform heave.
-!INTEGER(4), PARAMETER        :: DOF_P    =  5                                   ! DOF index for platform pitch.
-!INTEGER(4), PARAMETER        :: DOF_R    =  4                                   ! DOF index for platform roll.
-!INTEGER(4), PARAMETER        :: DOF_RFrl = 12                                   ! DOF index for rotor-furl.
-!INTEGER(4), PARAMETER        :: DOF_Sg   =  1                                   ! DOF index for platform surge.
-!INTEGER(4), PARAMETER        :: DOF_Sw   =  2                                   ! DOF index for platform sway.
-!INTEGER(4), PARAMETER        :: DOF_Teet = 22                                   ! DOF index for rotor-teeter.
-!INTEGER(4), PARAMETER        :: DOF_TFA1 =  7                                   ! DOF index for 1st tower fore-aft mode.
-!INTEGER(4), PARAMETER        :: DOF_TFA2 =  9                                   ! DOF index for 2nd tower fore-aft mode.
-!INTEGER(4), PARAMETER        :: DOF_TFrl = 15                                   ! DOF index for tail-furl.
-!INTEGER(4), PARAMETER        :: DOF_TSS1 =  8                                   ! DOF index for 1st tower side-to-side mode.
-!INTEGER(4), PARAMETER        :: DOF_TSS2 = 10                                   ! DOF index for 2nd tower side-to-side mode.
-!INTEGER(4), PARAMETER        :: DOF_Y    =  6                                   ! DOF index for platform yaw.
-!INTEGER(4), PARAMETER        :: DOF_Yaw  = 11                                   ! DOF index for nacelle-yaw.
 INTEGER(4), ALLOCATABLE      :: IC       (:)                                    ! Array which stores pointers to predictor-corrector results.
 INTEGER(4)                   :: NActvDOF                                        ! The number of active (enabled) DOFs in the model.
 INTEGER(4)                   :: NAug                                            ! Dimension of augmented solution matrix.
-INTEGER(4)                   :: NDOF                                            ! Number of total DOFs.
-!INTEGER(4), PARAMETER        :: NMX      =  9                                   ! Used in updating predictor-corrector values.
+!INTEGER(4)                   :: NDOF                                            ! Number of total DOFs.
 INTEGER(4)                   :: NPA                                             ! Number of DOFs                  that contribute to the angular velocity of the tail                                                      (body A) in the inertia frame.
 INTEGER(4)                   :: NPB                                             ! Number of DOFs                  that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame.
 INTEGER(4)                   :: NPCE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled.
@@ -1797,7 +1777,7 @@ USE                             NWTC_Library
    ! Regular variables:
 
 ! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE VARIABLE BELOW:
-REAL(ReKi)                   :: AllOuts  (0:MaxOutPts)                          ! An array holding the value of all of the calculated (not only selected) output channels.
+!REAL(ReKi)                   :: AllOuts  (0:MaxOutPts)                          ! An array holding the value of all of the calculated (not only selected) output channels.
 ! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE PREVIOUS VARIABLE:
 REAL(DbKi), ALLOCATABLE      :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
 REAL(ReKi), ALLOCATABLE      :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
@@ -1823,9 +1803,9 @@ INTEGER                      :: CurrOutStep                                     
 INTEGER(4)                   :: DecFact                                         ! Decimation factor for tabular output.
 !JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
 INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
-INTEGER(4)                   :: NBlGages                                        ! Number of blade strain gages.
-INTEGER(4)                   :: NTwGages                                        ! Number of tower strain gages.
-INTEGER(4)                   :: NumOuts                                         ! Number of parameters in the output list.
+!INTEGER(4)                   :: NBlGages                                        ! Number of blade strain gages.
+!INTEGER(4)                   :: NTwGages                                        ! Number of tower strain gages.
+!INTEGER(4)                   :: NumOuts                                         ! Number of parameters in the output list.
 INTEGER(IntKi)               :: NOutSteps                                       ! Maximum number of output steps
 INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
 INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
@@ -1841,11 +1821,11 @@ LOGICAL                      :: WrBinOutFile  = .true.                          
 LOGICAL                      :: WrTxtOutFile  = .true.                          ! Write a text (formatted) output file? (.out)
 LOGICAL                      :: TabDelim                                        ! Flag to cause tab-delimited output.
 
-CHARACTER(20)                :: OutFmt                                          ! Output format for tabular data.
+!CHARACTER(20)                :: OutFmt                                          ! Output format for tabular data.
 !CHARACTER(10)                :: OutList  (MaxOutPts)                           ! List of output parameters.
 CHARACTER(1024)              :: FileDesc                                        ! Description of run to include in binary output file
 
-TYPE(OutParmType),ALLOCATABLE:: OutParam (:)                                    ! Names and units of all output parameters.
+!TYPE(OutParmType),ALLOCATABLE:: OutParam (:)                                    ! Names and units of all output parameters.
 
    ! Let's make these parameters into arrays so we can loop through them
    
@@ -2189,11 +2169,9 @@ REAL(ReKi), ALLOCATABLE      :: PMomNTail(:,:)                                  
 REAL(ReKi), ALLOCATABLE      :: PMomX0Trb(:,:)                                  ! Partial moment at the platform   (body X) / tower base                        (point T(0)) due to the turbine.
 REAL(ReKi), ALLOCATABLE      :: PMomXAll (:,:)                                  ! Partial moment at the platform   (body X) / platform reference                (point Z   ) due to the everything.
 REAL(ReKi)                   :: PMXHydro (6,3)                                  ! Partial platform hydrodynamic moment at the platform (body X) / platform reference (point Z).
-!REAL(ReKi), ALLOCATABLE      :: QDT      (:)                                    ! Current estimate of QD.
 REAL(ReKi), ALLOCATABLE      :: QD2T     (:)                                    ! Solution (acceleration) vector.
 REAL(ReKi), ALLOCATABLE      :: QD2TC    (:)                                    ! A copy of the value of QD2T used in SUBROUTINE FixHSSBrTq().
 REAL(ReKi), ALLOCATABLE      :: OgnlGeAzRo(:)                                   ! The original elements of AugMat that formed the DOF_GeAz equation before application of known initial conditions.
-!REAL(ReKi), ALLOCATABLE      :: QT       (:)                                    ! Current estimate of Q for each degree of freedom.
 REAL(ReKi)                   :: rO       (3)                                    ! Position vector from inertial frame origin             to tower-top / base plate (point O).
 REAL(ReKi), ALLOCATABLE      :: rQS      (:,:,:)                                ! Position vector from the apex of rotation (point Q   ) to a point on a blade (point S).
 REAL(ReKi), ALLOCATABLE      :: rS       (:,:,:)                                ! Position vector from inertial frame origin             to a point on a blade (point S).
@@ -2386,7 +2364,7 @@ REAL(ReKi), ALLOCATABLE      :: TwSSStif  (:)                                   
 INTEGER(4)                   :: NTwInpSt                                        ! Number of tower input stations.
 INTEGER(4)                   :: TTopNode                                        ! Index of the additional node located at the tower-top = TwrNodes + 1
 INTEGER(4)                   :: TwrLdMod = 0                                    ! Tower loading model switch.
-INTEGER(4)                   :: TwrNodes                                        ! Number of tower nodes used in the analysis.
+!INTEGER(4)                   :: TwrNodes                                        ! Number of tower nodes used in the analysis.
 
 
 END MODULE Tower
@@ -2504,7 +2482,6 @@ REAL(ReKi)                   :: TwrRBHt                                         
 REAL(ReKi)                   :: UndSling                                        ! Undersling length.
 REAL(ReKi)                   :: Yaw2Shft  = 0.0                                 ! Lateral distance from the yaw axis to the rotor shaft. (Initialized to zero b/c not all models read in FurlFile)
 
-INTEGER(4)                   :: NumBl                                           ! Number of blades.
 INTEGER(4)                   :: PSpnElN   = 1                                   ! Number of the innermost blade element which is still part of the pitchable portion of the blade for partial-span pitch control.
 
 
