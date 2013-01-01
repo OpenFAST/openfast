@@ -84,6 +84,8 @@ typedef struct node_struct {
 /* fields used by Comm (halo, period, xpose)  nodes */
   char comm_define[2*8192] ;
 
+  int is_interface_type ;
+
 /* marker */
   int mark ;
 

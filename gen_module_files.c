@@ -14,11 +14,13 @@
 int
 gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong ) 
 {
-  char tmp[NAMELEN] ;
+  char tmp[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
-  fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n", ModName->nickname,inout,inout,inout ) ;
-  fprintf(fp,"  TYPE(%s_%s), INTENT(IN   ) :: Src%sData\n",ModName->nickname,inoutlong,inout) ;
-  fprintf(fp,"  TYPE(%s_%s), INTENT(  OUT) :: Dst%sData\n",ModName->nickname,inoutlong,inout) ;
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+  fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick,nonick ) ;
+  fprintf(fp,"  TYPE(%s), INTENT(IN   ) :: Src%sData\n",addnick,nonick) ;
+  fprintf(fp,"  TYPE(%s), INTENT(  OUT) :: Dst%sData\n",addnick,nonick) ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ; 
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ; 
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ; 
@@ -26,49 +28,55 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
 
-  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+//  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+//  sprintf(tmp,"%s",inoutlong) ;
+  sprintf(tmp,"%s",addnick) ;
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL ) 
   {
-    fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,inout,tmp) ;
+    fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
   } else {
     for ( r = q->fields ; r ; r = r->next )
     { 
       if ( r->type != NULL ) {
         if ( !strcmp( r->type->name, "meshtype" ) ) {
-          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",inout,r->name,inout,r->name,inout) ;
+          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,nonick,r->name) ;
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
           fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",
-                          ModName->nickname,r->name,inout,r->name,inout,r->name) ;
+                          ModName->nickname,r->name,nonick,r->name,nonick,r->name) ;
         } else {
-          fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",inout,r->name,inout,r->name) ;
+          fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
         }
       } 
     }
   }
 
-  fprintf(fp," END SUBROUTINE %s_Copy%s\n\n", ModName->nickname,inout ) ;
+  fprintf(fp," END SUBROUTINE %s_Copy%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
 }
 
 int
 gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int frst ;
 
-  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+//  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+//  sprintf(tmp,"%s",inoutlong) ;
+  sprintf(tmp,"%s",addnick) ;
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
-    fprintf(stderr,"Registry warning: generating %s_Pack%s: cannot find definition for %s\n",ModName->nickname,inout,tmp) ;
+    fprintf(stderr,"Registry warning: generating %s_Pack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
     return(1) ;
   }
 
-  fprintf(fp," SUBROUTINE %s_Pack%s( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )\n", ModName->nickname,inout ) ;
+  fprintf(fp," SUBROUTINE %s_Pack%s( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )\n", ModName->nickname,nonick) ;
   fprintf(fp,"  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)\n") ;
   fprintf(fp,"  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)\n") ;
-  fprintf(fp,"  TYPE(%s_%s),  INTENT(IN   ) :: InData\n",ModName->nickname,inoutlong ) ;
+  fprintf(fp,"  TYPE(%s),  INTENT(IN   ) :: InData\n",addnick ) ;
   fprintf(fp,"  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),     INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly\n") ;
@@ -88,10 +96,15 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
   for ( r = q->fields ; r ; r = r->next )
   {
-    if ( !strcmp( r->type->name, "meshtype" ) ) {
+    if ( r->type == NULL ) {
+      fprintf(stderr,"Registry warning generating %_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      return ; // EARLY RETURN
+    } else {
+      if ( !strcmp( r->type->name, "meshtype" ) ) {
   fprintf(fp,"  REAL(ReKi),     ALLOCATABLE :: Re_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  REAL(DbKi),     ALLOCATABLE :: Db_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE :: Int_%s_Buf(:)\n",r->name) ;
+      }
     }
   }
   fprintf(fp,"  OnlySize = .FALSE.\n") ;
@@ -119,7 +132,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"DO i = 1, SIZE(InData%%%s)\n",r->name  ) ;
       } else if ( r->ndims > 0 ) {
         fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
-      }
+    }
   if ( frst == 1 ) { fprintf(fp," ! Allocate mesh buffers, if any (we'll also get sizes from these) \n") ; frst = 0 ;}
   fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, OnlySize ) ! %s \n", 
                                  r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                              r->name ) ;
@@ -214,29 +227,33 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
     }
   }
 
-  fprintf(fp," END SUBROUTINE %s_Pack%s\n\n", ModName->nickname,inout ) ;
+  fprintf(fp," END SUBROUTINE %s_Pack%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
 }
 
 int
 gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int frst ;
 
-  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+//  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+//  sprintf(tmp,"%s",inoutlong) ;
+  sprintf(tmp,"%s",addnick) ;
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
-    fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,inout,tmp) ;
+    fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
     return(1) ;
   }
 
-  fprintf(fp," SUBROUTINE %s_Unpack%s( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )\n", ModName->nickname,inout ) ;
+  fprintf(fp," SUBROUTINE %s_Unpack%s( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )\n", ModName->nickname,nonick ) ;
   fprintf(fp,"  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)\n") ;
   fprintf(fp,"  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)\n") ;
-  fprintf(fp,"  TYPE(%s_%s), INTENT(  OUT) :: OutData\n",ModName->nickname,inoutlong ) ;
+  fprintf(fp,"  TYPE(%s), INTENT(  OUT) :: OutData\n",addnick ) ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"    ! Local variables\n") ;
@@ -254,10 +271,15 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp," ! buffers to store meshes, if any\n") ;
   for ( r = q->fields ; r ; r = r->next ) 
   {
-    if ( !strcmp( r->type->name, "meshtype" ) ) {
+    if ( r->type == NULL ) {
+      fprintf(stderr,"Registry warning generating %_Unpack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      return ; // EARLY RETURN
+    } else {
+      if ( !strcmp( r->type->name, "meshtype" ) ) {
   fprintf(fp,"  REAL(ReKi),    ALLOCATABLE :: Re_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  REAL(DbKi),    ALLOCATABLE :: Db_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  INTEGER(IntKi),    ALLOCATABLE :: Int_%s_Buf(:)\n",r->name) ;
+      }
     }
   }
   fprintf(fp,"    !\n") ;
@@ -322,7 +344,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
   fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
   fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
-  fprintf(fp," END SUBROUTINE %s_Unpack%s\n\n", ModName->nickname,inout ) ;
+  fprintf(fp," END SUBROUTINE %s_Unpack%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
 }
 
@@ -330,10 +352,13 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 int
 gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
-  char tmp[NAMELEN] ;
+  char tmp[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
-  fprintf(fp," SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg )\n",ModName->nickname,inout,inout );
-  fprintf(fp,"  TYPE(%s_%s), INTENT(INOUT) :: %sData\n",ModName->nickname,inoutlong,inout) ;
+
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+  fprintf(fp," SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick );
+  fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: %sData\n",addnick,nonick) ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: i\n") ;
@@ -341,33 +366,39 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
 
-  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+//  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
+//  sprintf(tmp,"%s",inoutlong) ;
+  sprintf(tmp,"%s",addnick) ;
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
-    fprintf(stderr,"Registry warning: generating %s_Destroy%s: cannot find definition for %s\n",ModName->nickname,inout,tmp) ;
+    fprintf(stderr,"Registry warning: generating %s_Destroy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
   } else {
     for ( r = q->fields ; r ; r = r->next )
     {
-      if ( !strcmp( r->type->name, "meshtype" ) ) {
-        if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",inout,r->name  ) ;
-        } else if ( r->ndims > 0 ) {
-          fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
-        }
-        fprintf(fp,"  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n",inout,r->name,(r->ndims==1)?"(i)":"") ;
-        if ( r->ndims > 0 ) {
+      if ( r->type == NULL ) {
+        fprintf(stderr,"Registry warning generating %_Destroy%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      } else {
+        if ( !strcmp( r->type->name, "meshtype" ) ) {
+          if ( r->ndims == 1 ) {
+  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",nonick,r->name  ) ;
+          } else if ( r->ndims > 0 ) {
+            fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
+          }
+          fprintf(fp,"  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"") ;
+          if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
-        }
-      } else if ( r->ndims > 0 ) {
-        if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
-        {
-          fprintf(fp,"  DEALLOCATE(%sData%%%s)\n",inout,r->name) ;
+          }
+        } else if ( r->ndims > 0 ) {
+          if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
+          {
+            fprintf(fp,"  DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
+          }
         }
       }
     }
   }
 
-  fprintf(fp," END SUBROUTINE %s_Destroy%s\n\n", ModName->nickname,inout ) ;
+  fprintf(fp," END SUBROUTINE %s_Destroy%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
 }
 
@@ -567,7 +598,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
 
 
 int
-gen_module( FILE * fp , const node_t * ModName )
+gen_module( FILE * fp , node_t * ModName )
 {
   node_t * q, * r ;
   int i ;
@@ -628,71 +659,40 @@ gen_module( FILE * fp , const node_t * ModName )
     {
       if ( q->usefrom == 0 ) {
 
-        char * ddtname, * ddtnamelong ;
-        if (( ddtname = index( q->name, '_' )) != NULL ) {
-           ddtname++ ;
-fprintf(stderr,">> %s %s \n",ModName->name, ddtname) ;
-           if      ( !strcmp(ddtname,"inputtype") ) {
-             ddtname = "Input" ; ddtnamelong = "InputType" ;
-           } else if ( !strcmp(ddtname,"outputtype") ) {
-             ddtname = "Output" ; ddtnamelong = "OutputType" ;
-           } else if ( !strcmp(ddtname,"continuousstatetype") ) {
-             ddtname = "ContState" ; ddtnamelong = "ContinuousStateType" ;
-           } else if ( !strcmp(ddtname,"discretestatetype") ) {
-             ddtname = "DiscState" ; ddtnamelong = "DiscreteStateType" ;
-           } else if ( !strcmp(ddtname,"constraintstatetype") ) {
-             ddtname = "ConstrState" ; ddtnamelong = "ConstraintStateType" ;
-           } else if ( !strcmp(ddtname,"otherstatetype") ) {
+        char * ddtname, * ddtnamelong, nonick[NAMELEN] ;
+        ddtname = q->name ;
+
+        remove_nickname(ModName->nickname,ddtname,nonick) ;
+        
+//fprintf(stderr,">> %s %s %s \n",ModName->name, ddtname, nonick) ;
+
+        if        ( !strcmp(nonick,"inputtype") ) {
+          ddtname = "Input" ; ddtnamelong = "InputType" ;
+        } else if ( !strcmp(nonick,"initinputtype") ) {
+          ddtname = "InitInput" ; ddtnamelong = "InitInputType" ;
+        } else if ( !strcmp(nonick,"outputtype") ) {
+          ddtname = "Output" ; ddtnamelong = "OutputType" ;
+        } else if ( !strcmp(nonick,"initoutputtype") ) {
+          ddtname = "InitOutput" ; ddtnamelong = "InitOutputType" ;
+        } else if ( !strcmp(nonick,"continuousstatetype") ) {
+          ddtname = "ContState" ; ddtnamelong = "ContinuousStateType" ;
+        } else if ( !strcmp(nonick,"discretestatetype") ) {
+          ddtname = "DiscState" ; ddtnamelong = "DiscreteStateType" ;
+        } else if ( !strcmp(nonick,"constraintstatetype") ) {
+          ddtname = "ConstrState" ; ddtnamelong = "ConstraintStateType" ;
+        } else if ( !strcmp(nonick,"otherstatetype") ) {
              ddtname = "OtherState" ; ddtnamelong = "OtherStateType" ;
-           } else if ( !strcmp(ddtname,"parametertype") ) {
-             ddtname = "Param" ; ddtnamelong = "ParameterType" ;
-           } else {
-             ddtnamelong = ddtname ;
-           }
-           gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
-           gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
-           gen_pack( fp, ModName, ddtname, ddtnamelong ) ;
-           gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
+        } else if ( !strcmp(nonick,"parametertype") ) {
+          ddtname = "Param" ; ddtnamelong = "ParameterType" ;
+        } else {
+          ddtnamelong = ddtname ;
         }
+        gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
+        gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
+        gen_pack( fp, ModName, ddtname, ddtnamelong ) ;
+        gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
       }
     }
-
-#if 0
-    gen_copy( fp, ModName, "Input", "Input" ) ;
-    gen_destroy( fp, ModName, "Input", "Input" ) ;
-    gen_pack( fp, ModName, "Input", "Input" ) ;
-    gen_unpack( fp, ModName, "Input", "Input" ) ;
-
-    gen_copy( fp, ModName, "Output", "Output" ) ;
-    gen_destroy( fp, ModName, "Output", "Output" ) ;
-    gen_pack( fp, ModName, "Output", "Output" ) ;
-    gen_unpack( fp, ModName, "Output", "Output" ) ;
-
-    gen_copy( fp, ModName, "ContState", "ContinuousState" ) ;
-    gen_destroy( fp, ModName, "ContState", "ContinuousState" ) ;
-    gen_pack( fp, ModName, "ContState", "ContinuousState" ) ;
-    gen_unpack( fp, ModName, "ContState", "ContinuousState" ) ;
-
-    gen_copy( fp, ModName, "DiscState", "DiscreteState" ) ;
-    gen_destroy( fp, ModName, "DiscState", "DiscreteState" ) ;
-    gen_pack( fp, ModName, "DiscState", "DiscreteState" ) ;
-    gen_unpack( fp, ModName, "DiscState", "DiscreteState" ) ;
-
-    gen_copy( fp, ModName, "ConstrState", "ConstraintState" ) ;
-    gen_destroy( fp, ModName, "ConstrState", "ConstraintState" ) ;
-    gen_pack( fp, ModName, "ConstrState", "ConstraintState" ) ;
-    gen_unpack( fp, ModName, "ConstrState", "ConstraintState" ) ;
-
-    gen_copy( fp, ModName, "OtherState", "OtherState" ) ;
-    gen_destroy( fp, ModName, "OtherState", "OtherState" ) ;
-    gen_pack( fp, ModName, "OtherState", "OtherState" ) ;
-    gen_unpack( fp, ModName, "OtherState", "OtherState" ) ;
-
-    gen_copy( fp, ModName, "Param", "Parameter" ) ;
-    gen_destroy( fp, ModName, "Param", "Parameter" ) ;
-    gen_pack( fp, ModName, "Param", "Parameter" ) ;
-    gen_unpack( fp, ModName, "Param", "Parameter" ) ;
-#endif
 
     gen_modname_pack( fp, ModName ) ;
     gen_modname_unpack( fp, ModName ) ;
@@ -728,5 +728,29 @@ gen_module_files ( char * dirname )
   return(0) ;
 }
 
+int
+remove_nickname( char *nickname, char *src, char *dst )
+{
+  char tmp[NAMELEN];
+  int n ;
+  strcpy(tmp,make_lower_temp(nickname)) ;
+  strcat(tmp,"_") ;
+  n = strlen(tmp) ;
+  if ( !strncmp(tmp,src,n) ) {
+    strcpy(dst,&(src[n])) ;
+  } else {
+    strcpy(dst,src) ;
+  }
+}
 
-
+int
+append_nickname( char *nickname, char *src, char *dst )
+{
+  int n ;
+  n = strlen(nickname) ;
+  if ( n > 0 ) {
+    sprintf(dst,"%s_%s",nickname,src) ;
+  } else {
+    strcpy(dst,src) ;
+  }
+}

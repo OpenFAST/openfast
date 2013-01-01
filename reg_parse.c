@@ -271,7 +271,7 @@ reg_parse( FILE * infile )
       node_t * field_struct ;
       node_t * type_struct ;
       node_t * modname_struct ;
-      char tmpstr[NAMELEN] ;
+      char tmpstr[NAMELEN], ddtname[NAMELEN] ;
 
 // FAST registry, construct a list of module nodes
       strcpy(tmpstr, make_lower_temp(tokens[ FIELD_MODNAME ])) ;
@@ -300,22 +300,24 @@ reg_parse( FILE * infile )
         modname_struct->usefrom = 1 ;
       }
 
+
 // FAST registry, construct list of derived data types specified for the Module 
+//  Only the FAST interface defined types should have the Module's nickname prepended
+      sprintf(ddtname,"%s",tokens[ FIELD_OF ]) ;
+      modname_struct->is_interface_type = 0 ;
       if ( strcmp(modname_struct->nickname,"") ) {
-        sprintf(tmpstr,"%s_%s",modname_struct->nickname,make_lower_temp( tokens[ FIELD_OF ])) ;
-      } else {
-        sprintf(tmpstr,"%s",make_lower_temp( tokens[ FIELD_OF ])) ; 
+        if ( is_a_fast_interface_type(tokens[FIELD_OF] ) ) {
+          sprintf(ddtname,"%s_%s",modname_struct->nickname,tokens[ FIELD_OF ]) ;
+          modname_struct->is_interface_type = 1 ;
+        }
       }
+      sprintf(tmpstr,"%s",make_lower_temp(ddtname)) ;
       type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
       if ( type_struct == NULL ) 
       {  
         type_struct = new_node( TYPE ) ;
         strcpy( type_struct->name, tmpstr ) ;
-        if ( strcmp(modname_struct->nickname,"") ) {
-          sprintf(type_struct->mapsto,"%s_%s",modname_struct->nickname, tokens[ FIELD_OF ]) ;
-        } else {
-          sprintf(type_struct->mapsto,"%s", tokens[ FIELD_OF ]) ; 
-        }
+        strcpy(type_struct->mapsto,ddtname) ;
         type_struct->type_type = DERIVED ;
         type_struct->next      = NULL ;
         type_struct->usefrom   = modname_struct->usefrom ;
@@ -532,3 +534,24 @@ init_parser()
 {
   return(0) ;
 }
+
+int 
+is_a_fast_interface_type( char *str )
+{
+   int retval ; 
+
+   retval =  (
+     !strcmp(make_lower_temp(str), "initinputtype")       ||
+     !strcmp(make_lower_temp(str), "initoutputtype")      ||
+     !strcmp(make_lower_temp(str), "inputtype")           ||
+     !strcmp(make_lower_temp(str), "outputtype")          ||
+     !strcmp(make_lower_temp(str), "continuousstatetype") ||
+     !strcmp(make_lower_temp(str), "discretestatetype")   ||
+     !strcmp(make_lower_temp(str), "constraintstatetype") ||
+     !strcmp(make_lower_temp(str), "otherstatetype")      ||
+     !strcmp(make_lower_temp(str), "parametertype")       ||
+            0 ) ;
+
+   return(retval) ;
+}
+
