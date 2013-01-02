@@ -46,13 +46,11 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           } else if ( r->ndims > 0 ) {
             fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
           }
-//        fprintf(fp,"  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"") ;
           fprintf(fp,"  CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"",nonick,r->name,(r->ndims==1)?"(i)":"") ;
           if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
           }
 
-//        fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,nonick,r->name) ;
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
           fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",
                           ModName->nickname,r->name,nonick,r->name,nonick,r->name) ;
@@ -113,7 +111,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       fprintf(stderr,"Registry warning generating %_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
-      if ( !strcmp( r->type->name, "meshtype" ) ) {
+      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
   fprintf(fp,"  REAL(ReKi),     ALLOCATABLE :: Re_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  REAL(DbKi),     ALLOCATABLE :: Db_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE :: Int_%s_Buf(:)\n",r->name) ;
@@ -147,7 +145,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
         fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
     }
   if ( frst == 1 ) { fprintf(fp," ! Allocate mesh buffers, if any (we'll also get sizes from these) \n") ; frst = 0 ;}
-  fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, OnlySize ) ! %s \n", 
+  fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, .TRUE. ) ! %s \n", 
                                  r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                              r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
@@ -158,6 +156,17 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
       }
+
+    } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+  fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
+                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+  fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
+  fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
+  fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf))Int_BufSz = Int_BufSz + SIZE( Int_%s_Buf ) ! %s\n",r->name,r->name,r->name) ;
+  fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf))  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
+  fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf))  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
+  fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf)) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
+
     } else if ( r->ndims == 0 ) {  // scalars
       if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
   fprintf(fp,"  Re_BufSz   = Re_BufSz   + 1  ! %s\n",r->name ) ;
@@ -198,6 +207,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   if ( frst == 1 ) { fprintf(fp," ! Allocate mesh buffers, if any (we'll also get sizes from these) \n") ; frst = 0 ;}
   fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, OnlySize ) ! %s \n",
                                  r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                              r->name ) ;
+
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -213,9 +223,30 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"  IF( ALLOCATED(Re_%s_Buf) )  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
+
       if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
       }
+
+    } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+  fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s, ErrStat, ErrMsg, OnlySize ) ! %s \n",
+                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+  fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
+  fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
+  fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
+  fprintf(fp,"  ENDIF\n" ) ;
+  fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
+  fprintf(fp,"    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_%s_Buf)-1 ) = Db_%s_Buf\n",r->name,r->name) ;
+  fprintf(fp,"    Db_Xferred = Db_Xferred + SIZE(Db_%s_Buf)\n",r->name) ;
+  fprintf(fp,"  ENDIF\n" ) ;
+  fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf)) THEN\n",r->name) ;
+  fprintf(fp,"    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_%s_Buf)-1 ) = Int_%s_Buf\n",r->name,r->name) ;
+  fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
+  fprintf(fp,"  ENDIF\n" ) ;
+  fprintf(fp,"  IF( ALLOCATED(Re_%s_Buf) )  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
+  fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
+  fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
+
     } else  {
       sprintf(tmp2,"SIZE(InData%%%s)",r->name) ;
       if      ( r->ndims==0 ) { strcpy(tmp3,"") ; }
@@ -288,7 +319,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
       fprintf(stderr,"Registry warning generating %_Unpack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
-      if ( !strcmp( r->type->name, "meshtype" ) ) {
+      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
   fprintf(fp,"  REAL(ReKi),    ALLOCATABLE :: Re_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  REAL(DbKi),    ALLOCATABLE :: Db_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  INTEGER(IntKi),    ALLOCATABLE :: Int_%s_Buf(:)\n",r->name) ;
@@ -332,12 +363,34 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  CALL MeshUnPack( OutData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg ) ! %s \n",
                                  r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                     r->name ) ;
+
   fprintf(fp,"  IF( ALLOCATED(Re_%s_Buf) )  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
       if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
       }
+
+    } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+
+  fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",ModName->nickname,r->name) ;
+  fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
+                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+  fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
+  fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
+  fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
+  fprintf(fp,"  ENDIF\n" ) ;
+  fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
+  fprintf(fp,"    Db_%s_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_%s_Buf)-1 )\n",r->name,r->name) ;
+  fprintf(fp,"    Db_Xferred = Db_Xferred + SIZE(Db_%s_Buf)\n",r->name) ;
+  fprintf(fp,"  ENDIF\n" ) ;
+  fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf)) THEN\n",r->name) ;
+  fprintf(fp,"    Int_%s_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_%s_Buf)-1 )\n",r->name,r->name) ;
+  fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
+  fprintf(fp,"  ENDIF\n" ) ;
+  fprintf(fp,"  CALL %s_Unpack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s, ErrStat, ErrMsg ) ! %s \n",
+                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+
     } else  {
       sprintf(tmp2,"SIZE(OutData%%%s)\n",r->name) ;
       if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
@@ -401,6 +454,11 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
           }
+        } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+//          fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",
+//                          ModName->nickname,r->name,nonick,r->name,nonick,r->name) ;
+          fprintf(fp,"  CALL %s_Destroy%s( %sData%%%s, ErrStat, ErrMsg )\n",
+                          ModName->nickname,r->name,nonick,r->name) ;
         } else if ( r->ndims > 0 ) {
           if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
           {
