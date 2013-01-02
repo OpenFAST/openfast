@@ -24,6 +24,8 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ; 
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ; 
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ; 
+  fprintf(fp,"! Local \n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: i\n") ;
   fprintf(fp,"! \n") ;
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
@@ -39,7 +41,18 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
     { 
       if ( r->type != NULL ) {
         if ( !strcmp( r->type->name, "meshtype" ) ) {
-          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,nonick,r->name) ;
+          if ( r->ndims == 1 ) {
+  fprintf(fp,"DO i = 1, SIZE(Src%sData%%%s)\n",nonick,r->name  ) ;
+          } else if ( r->ndims > 0 ) {
+            fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
+          }
+//        fprintf(fp,"  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"") ;
+          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"",nonick,r->name,(r->ndims==1)?"(i)":"") ;
+          if ( r->ndims > 0 ) {
+  fprintf(fp,"ENDDO\n") ;
+          }
+
+//        fprintf(fp,"  CALL MeshCopy( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,nonick,r->name) ;
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
           fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",
                           ModName->nickname,r->name,nonick,r->name,nonick,r->name) ;
