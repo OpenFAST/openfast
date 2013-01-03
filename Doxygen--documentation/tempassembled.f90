@@ -92,7 +92,7 @@ MODULE SharedInflowDefs
 
          ! Location
       REAL(ReKi)                    :: ReferenceHeight        ! reference height for HH and/or 4D winds (was hub height), in meters
-      REAL(ReKi)                    :: Width                  ! width of the HH file (was 2*R), in meters
+      REAL(ReKi)                    :: Width                  ! width of the HH file, in meters
 !NOTE: might be only for HH file
       REAL(ReKi)                    :: HalfWidth              ! half the width of the HH file (was 2*R), in meters
 
@@ -6766,31 +6766,31 @@ END MODULE InflowWind_Subs
 ! Files with this module:
 !  InflowWind_Subs.f90
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
-!  
+!
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 !    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!    
-!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
 !    If not, see <http://www.gnu.org/licenses/>.
-!    
+!
 !**********************************************************************************************************************************
-MODULE InflowWind
+MODULE InflowWind_Module
 
 
    USE                              SharedInflowDefs
-!   USE                              InflowWind_Types   !FIXME: this file needs to be made.
+!   USE                              InflowWind_Types   !FIXME: this file will replace SharedInflowDefs when I can get it to work with the framework registry generator.
    USE                              NWTC_Library
    USE                              WindFile_Types
-      
+
       !-------------------------------------------------------------------------------------------------
       ! The included wind modules
       !-------------------------------------------------------------------------------------------------
@@ -6811,7 +6811,7 @@ MODULE InflowWind
 
 
 
-   
+
    IMPLICIT NONE
    PRIVATE
 
@@ -6821,27 +6821,27 @@ MODULE InflowWind
 
 !   CHARACTER(99),PARAMETER        :: InflowWindVer = 'InflowWind (v1.01.00b-bjj, 10-Aug-2012)'
 
-   
+
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: IfW_Init                                 ! Initialization routine
    PUBLIC :: IfW_End                                  ! Ending routine (includes clean up)
-   
+
 !   PUBLIC :: InflowWind_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
 !   PUBLIC :: InflowWind_CalcOutput                     ! Routine for computing outputs
-!   
+!
 !   PUBLIC :: InflowWind_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 !   PUBLIC :: InflowWind_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
 !   PUBLIC :: InflowWind_UpdateDiscState                ! Tight coupling routine for updating discrete states
-!      
+!
 !   PUBLIC :: InflowWind_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
 !   PUBLIC :: InflowWind_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the continuous states (x)
 !   PUBLIC :: InflowWind_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the discrete states (xd)
 !   PUBLIC :: InflowWind_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the constraint states (z)
-!   
+!
 !   PUBLIC :: InflowWind_Pack                           ! Routine to pack (save) data into one array of bytes
 !   PUBLIC :: InflowWind_Unpack                         ! Routine to unpack an array of bytes into data structures usable by the module
-   
+
 !-=- Original bits follow -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
@@ -6876,10 +6876,10 @@ MODULE InflowWind
 
 CONTAINS
 !====================================================================================================
-!  SUBROUTINE ModName_Init( InitData, InputGuess, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-!                            OutData, Interval, ErrStat, ErrMsg )
-   SUBROUTINE IfW_Init( InitData, ParamData, Interval, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
+  SUBROUTINE IfW_Init( InitData, InputGuess, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                            OutData, Interval, ErrStat, ErrMsg )
+!   SUBROUTINE IfW_Init( InitData, ParamData, Interval, ErrStat, ErrMsg )
+! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
 !----------------------------------------------------------------------------------------------------
@@ -6889,14 +6889,13 @@ CONTAINS
          ! Initialization data and guesses
 
       TYPE( IfW_InitInputType ),          INTENT(IN   )  :: InitData          ! Input data for initialization
-!      TYPE(ModName_InputType),           INTENT(  OUT)  :: InputGuess        ! An initial guess for the input; the input mesh must be defined
-!      TYPE(ModName_ParameterType),       INTENT(  OUT)  :: ParamData         ! Parameters      
+      TYPE( IfW_InputType ),              INTENT(  OUT)  :: InputGuess        ! An initial guess for the input; the input mesh must be defined
       TYPE( Ifw_ParameterType ),          INTENT(  OUT)  :: ParamData         ! Parameters
-!      TYPE(ModName_ContinuousStateType), INTENT(  OUT)  :: ContStates        ! Initial continuous states
-!      TYPE(ModName_DiscreteStateType),   INTENT(  OUT)  :: DiscStates        ! Initial discrete states
-!      TYPE(ModName_ConstraintStateType), INTENT(  OUT)  :: ConstrStateGuess  ! Initial guess of the constraint states
-!      TYPE(ModName_OtherStateType),      INTENT(  OUT)  :: OtherStates       ! Initial other/optimization states            
-!      TYPE(ModName_OutputType),          INTENT(  OUT)  :: OutData           ! Initial output (outputs are not calculated; only the output mesh is initialized)
+      TYPE( IfW_ContinuousStateType ),    INTENT(  OUT)  :: ContStates        ! Initial continuous states
+      TYPE( IfW_DiscreteStateType ),      INTENT(  OUT)  :: DiscStates        ! Initial discrete states
+      TYPE( IfW_ConstraintStateType ),    INTENT(  OUT)  :: ConstrStateGuess  ! Initial guess of the constraint states
+      TYPE( IfW_OtherStateType ),         INTENT(  OUT)  :: OtherStates       ! Initial other/optimization states
+      TYPE( IfW_OutputType ),             INTENT(  OUT)  :: OutData           ! Initial output (outputs are not calculated; only the output mesh is initialized)
       REAL(DbKi),                         INTENT(INOUT)  :: Interval          ! Coupling interval in seconds: InflowWind does not change this.
 
 
@@ -6921,39 +6920,41 @@ CONTAINS
 
 
          ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+
+print*, "Wind Type: ",InitData%WindFileType
+
 !
 !FIXME:
 !         ! Define parameters here:
-!         
+!
 !      !ParamData%DT     = Interval             ! InflowWind does not dictate the time interval.
                                                 ! It only responds to the current time.
-!      !ParamData%       = 
+!      !ParamData%       =
 !
 !
 !FIXME: no states -- except maybe otherstates.
 !         ! Define initial states here
 !
-!      !ContStates%      = 
-!      !DiscStates%      = 
-!      !ConstrStateGuess%= 
-!      !OtherStates%     = 
+!      !ContStates%      =
+!      !DiscStates%      =
+!      !ConstrStateGuess%=
+!      !OtherStates%     =
 !
 !
 !FIXME: I think there are no initial guesses
 !         ! Define initial guess for the input here:
 !
-!      !InputGuess%      = 
+!      !InputGuess%      =
 !
 !
 !FIXME: setup the output data matrix.
 !         ! Define output initializations (set up mesh) here:
-!      !OutData%        =         
-         
+!      !OutData%        =
+
 
       ! check to see if we are already initialized
 
@@ -6991,7 +6992,10 @@ CONTAINS
 
       CALL CT_Init(UnWind, ParamData%WindFileName, BackGrndValues, ErrStat)
       IF (ErrStat /= 0) THEN
-         CALL IfW_End( ParamData, ErrStat )
+!         CALL IfW_End( ParamData, ErrStat )
+!FIXME: cannot call IfW_End here -- requires InitData to be INOUT. Not allowed by framework.
+!         CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+!                       OutData, ErrStat, ErrMsg )
          ParamData%WindFileType = Undef_Wind
          ErrStat  = 1
          RETURN
@@ -7072,7 +7076,9 @@ CONTAINS
       ParamData%Initialized = .FALSE.
       ParamData%WindFileType    = Undef_Wind
       ErrStat               = 1         !FIXME: change the error status to the framework convention
-      CALL IfW_End( ParamData, ErrStat )  !Just in case we've allocated something
+!      CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+!                    OutData, ErrStat, ErrMsg )  ! Just in case something did get allocated
+!FIXME: cannot call IfW_End here. The problem is that InitData might must be INOUT, but that isn't allowed here by the framework
    ELSE
       ParamData%Initialized = .TRUE.
    END IF
@@ -7146,14 +7152,29 @@ FUNCTION InflowWind_GetVelocity(ParamData, Time, InputPosition, ErrStat)
 END FUNCTION InflowWind_GetVelocity
 !====================================================================================================
 !FIXME: rename as per framework.
-SUBROUTINE IfW_End( ParamData, ErrStat )
+!SUBROUTINE IfW_End( ParamData, ErrStat )
+SUBROUTINE IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                    OutData, ErrStat, ErrMsg )
 ! Clean up the allocated variables and close all open files.  Reset the initialization flag so
 ! that we have to reinitialize before calling the routines again.
 !----------------------------------------------------------------------------------------------------
    USE WindFile_Types
 
-   TYPE(IfW_ParameterType),         INTENT(INOUT)  :: ParamData   ! Parameters that typically don't change
-   INTEGER, INTENT(OUT)       :: ErrStat     !bjj: do we care if there's an error on cleanup?
+         ! Initialization data and guesses
+
+      TYPE( IfW_InitInputType ),          INTENT(INOUT)  :: InitData          ! Input data for initialization
+      TYPE( Ifw_ParameterType ),          INTENT(INOUT)  :: ParamData         ! Parameters
+      TYPE( IfW_ContinuousStateType ),    INTENT(INOUT)  :: ContStates        ! Continuous states
+      TYPE( IfW_DiscreteStateType ),      INTENT(INOUT)  :: DiscStates        ! Discrete states
+      TYPE( IfW_ConstraintStateType ),    INTENT(INOUT)  :: ConstrStateGuess  ! Guess of the constraint states
+      TYPE( IfW_OtherStateType ),         INTENT(INOUT)  :: OtherStates       ! Other/optimization states
+      TYPE( IfW_OutputType ),             INTENT(INOUT)  :: OutData           ! Output data
+
+
+         ! Error Handling
+
+      INTEGER( IntKi ),                   INTENT(  OUT)  :: ErrStat
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
 
 
       ! Close the wind file, if it happens to be open
@@ -7201,108 +7222,942 @@ SUBROUTINE IfW_End( ParamData, ErrStat )
 
 END SUBROUTINE IfW_End
 !====================================================================================================
-END MODULE InflowWind
+END MODULE InflowWind_Module
 
 
 
-!****************************************************************************
+!**********************************************************************************************************************************
 !
-!  PROGRAM: InflowWind_Test  - This program tests the inflow wind module
+!  MODULE: IfW_Driver_Types  - This module contains types used by the InflowWind Driver program to store arguments passed in
 !
-!****************************************************************************
-!  
+!  The types listed here are used within the InflowWind Driver program to store the settings. These settings are read in as
+!  command line arguments, then stored within these types.
+!
+!**********************************************************************************************************************************
+!
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 !    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!    
-!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
 !    If not, see <http://www.gnu.org/licenses/>.
-!    
+!
 !**********************************************************************************************************************************
 
-PROGRAM InflowWind_Test
+MODULE Ifw_Driver_Types
 
-   USE InflowWind
+   USE NWTC_Library
    USE WindFile_Types
-   USE SharedInflowDefs
 
    IMPLICIT NONE
 
+      ! This contains flags to note if the settings were made.
+   TYPE     :: IfW_Driver_ArgFlags
+      LOGICAL                 :: WindFileType   = .FALSE.      ! specified a windfiletype
+      LOGICAL                 :: Height         = .FALSE.      ! specified a height
+      LOGICAL                 :: Width          = .FALSE.      ! specified a width
+      LOGICAL                 :: Xrange         = .FALSE.      ! specified a range of x
+      LOGICAL                 :: Yrange         = .FALSE.      ! specified a range of y
+      LOGICAL                 :: Zrange         = .FALSE.      ! specified a range of z
+      LOGICAL                 :: Trange         = .FALSE.      ! specified a range of time
+      LOGICAL                 :: Xres           = .FALSE.      ! specified a resolution in x
+      LOGICAL                 :: Yres           = .FALSE.      ! speficied a resolution in y
+      LOGICAL                 :: Zres           = .FALSE.      ! specified a resolution in z
+      LOGICAL                 :: Tres           = .FALSE.      ! specified a resolution in time
+      LOGICAL                 :: ParaPrint      = .FALSE.      ! create a ParaView file?
+      LOGICAL                 :: Summary        = .FALSE.      ! create a summary file?
+      LOGICAL                 :: fft            = .FALSE.      ! do an FFT
+      LOGICAL                 :: PointsFile     = .FALSE.      ! points file specified
+   END TYPE    IfW_Driver_ArgFlags
 
-   REAL(ReKi)          :: InpPosition(3)
-   TYPE(InflIntrpOut)  :: MyWindSpeed
-   REAL(ReKi)          :: Time
 
-   REAL(DbKi)          :: dt
-   INTEGER             :: I
+      ! This contains all the settings (possible passed in arguments).
+   TYPE     :: IfW_Driver_Args
+      INTEGER                 :: WindFileType   = DEFAULT_WIND ! the kind of windfile     -- set default to simplify things later
+      REAL( ReKi )            :: Height                        ! Reference height
+      REAL( ReKi )            :: Width                         ! Reference width
+      REAL( ReKi )            :: Xrange(1:2)                   ! range of x
+      REAL( ReKi )            :: Yrange(1:2)                   ! range of y
+      REAL( ReKi )            :: Zrange(1:2)                   ! range of z
+      REAL( ReKi )            :: Trange(1:2)                   ! range of time
+      REAL( ReKi )            :: Xres                          ! resolution of x
+      REAL( ReKi )            :: Yres                          ! resolution of y
+      REAL( ReKi )            :: Zres                          ! resolution of z
+      REAL( ReKi )            :: Tres                          ! resolution of time
+      REAL( ReKi )            :: fft(1:3)                      ! Coords to do an FFT
+      CHARACTER(1024)         :: PointsFile                    ! Filename of points file
+      CHARACTER(1024)         :: InputFile                     ! Filename of file to process
+   END TYPE    IfW_Driver_Args
+
+
+END MODULE IfW_Driver_Types
+!**********************************************************************************************************************************
+!
+!  MODULE: IfW_Driver_Subs  - This module contains subroutines used by the InflowWind Driver program
+!
+!**********************************************************************************************************************************
+!
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2012  National Renewable Energy Laboratory
+!
+!    This file is part of InflowWind.
+!
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
+!    If not, see <http://www.gnu.org/licenses/>.
+!
+!**********************************************************************************************************************************
+MODULE Ifw_Driver_Subs
+
+   USE NWTC_Library
+   IMPLICIT NONE
+
+
+CONTAINS
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+SUBROUTINE DispHelpText( ErrStat, ErrMsg )
+      !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+      ! Print out help information  !
+      !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+
+   USE NWTC_Library
+
+   IMPLICIT NONE
 
       ! Error Handling
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
+   CHARACTER(1024),                    INTENT(  OUT)  :: ErrMsg
 
+
+      !  Statement about usage
+   CALL WrScr("")
+   CALL WrScr("  Syntax:  InlowWind_Driver <filename> [options]")
+   CALL WrScr("")
+   CALL WrScr("       where:     <filename>     -- Name of wind file")
+   CALL WrScr("     options:     "//SwChar//"type[<type>]  -- type of the file, where <type> is               [N/A]")
+   CALL WrScr("                                    HH    -- HubHeight                                   ")
+   CALL WrScr("                                    FF    -- Full Field                                  ")
+   CALL WrScr("                                    UD    -- User Defined                                ")
+   CALL WrScr("                                    FD    -- 4-dimensional (.les)                        ")
+   CALL WrScr("                                    CTP   -- Coherent turbulence wind field on top of another")
+   CALL WrScr("                                    HAWC  -- HAWC formatted file                         ")
+   CALL WrScr("                  "//SwChar//"height[#]     -- height of the hub                         ")
+   CALL WrScr("                  "//SwChar//"width[#]      -- width of the windfield                    ")
+   CALL WrScr("                  "//SwChar//"x[#:#]        -- range of x (#'s are reals)                      [N/A]")
+   CALL WrScr("                  "//SwChar//"y[#:#]        -- range of y                                      [N/A]")
+   CALL WrScr("                  "//SwChar//"z[#:#]        -- range in z (ground = 0.0)                       [N/A]")
+   CALL WrScr("                  "//SwChar//"t[#:#]        -- range of time                                   [N/A]")
+   CALL WrScr("                  "//SwChar//"xres[#]       -- resolution in x                                 [N/A]")
+   CALL WrScr("                  "//SwChar//"yres[#]       -- resolution in y                                 [N/A]")
+   CALL WrScr("                  "//SwChar//"zres[#]       -- resolution in z                                 [N/A]")
+   CALL WrScr("                  "//SwChar//"tres[#]       -- resolution in time                              [N/A]")
+   CALL WrScr("                  "//SwChar//"paraprint     -- make an output file for ParaView                [N/A]")
+   CALL WrScr("                  "//SwChar//"summary       -- summarize in  .sum file                         [N/A]")
+   CALL WrScr("                  "//SwChar//"fft[X,Y,Z]    -- an fft over all t at X,Y,Z (outputs .fft file)  [N/A]")
+   CALL WrScr("                  "//SwChar//"points[FILE]  -- calculates at x,y,z coordinates specified in a  [N/A]")
+   CALL WrScr("                                    white space delimited FILE")
+   CALL WrScr("                  "//SwChar//"help          -- print this help menu and exits")
+   CALL WrScr("")
+   CALL WrScr("   If the type is not specified, attempts are made to figure out what it is.")
+   CALL WrScr("   Unspecified ranges and resolutions default to what is in the file.")
+   CALL WrScr("   Features marked [N/A] have not been implimented in this version.")
+!FIXME: Does the CTP get used with another? If so, specify in comment at end.
+   CALL WrScr("")
+
+
+END SUBROUTINE DispHelpText
+
+
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
+      !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+      ! Iterate through the input arguments !
+      !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+
+   USE NWTC_Library
+   USE IfW_Driver_Types
+
+   IMPLICIT NONE
+
+      ! Storing the arguments
+   TYPE( IfW_Driver_ArgFlags ),        INTENT(  OUT)  :: SettingsFlags        ! Flags indicating which arguments were specified
+   TYPE( IfW_Driver_Args ),            INTENT(  OUT)  :: Settings             ! Arguments passed in
+
+      ! Error Handling
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
+   CHARACTER(1024),                    INTENT(  OUT)  :: ErrMsg
+
+      ! Local variables
+   INTEGER(IntKi)                                     :: i
+   CHARACTER(1024)                                    :: arg
+   INTEGER(IntKi)                                     :: InputArgs
+   LOGICAL                                            :: FileNameGiven
+
+
+      ! initialize some things
+   FileNameGiven = .FALSE.
+   ErrStat = ErrID_None
+
+
+      ! Check how many arguments are passed in
+   InputArgs = COMMAND_ARGUMENT_COUNT()
+
+      ! exit if we don't have enough
+   IF (InputArgs == 0) THEN
+      ErrMsg   = "Insufficient Arguments."
+      ErrStat  = ErrID_Fatal     ! Cannot continue
+      RETURN
+   ENDIF
+
+
+      ! Loop through all the arguments, and store them
+   DO i=1,InputArgs
+      CALL get_command_argument(i, arg)
+
+         ! Check to see if it is a control parameter or the filename
+      IF ( INDEX( SwChar, arg(1:1) ) > 0 ) THEN
+
+            ! check to see if we asked for help
+         IF ( arg(2:5) == "help" ) THEN
+            CALL DispHelpText( ErrStat, ErrMsg )
+            CALL ProgExit(0)
+         ENDIF
+
+            ! Check the argument and put it where it belongs
+            ! chop the SwChar off before passing the argument
+         CALL ParseArg( Settings, SettingsFlags, arg(2:), ErrStat, ErrMsg )
+
+         IF ( ErrStat == ErrID_Warn ) CALL ProgWarn( ErrMsg )
+         IF ( ErrStat == ErrID_Fatal ) RETURN
+
+
+      ELSE
+
+            ! since there is no switch character, assume it is the filename, unless we already set one
+         IF ( FileNameGiven ) THEN
+            ErrMsg   = "Multiple input filenames given: "//TRIM(Settings%InputFile)//", "//TRIM(arg)
+            ErrStat  = ErrID_Fatal
+            RETURN
+         ELSE
+            Settings%InputFile = TRIM(arg)
+            FileNameGiven = .TRUE.
+         ENDIF
+
+      ENDIF
+   END DO
+
+
+      ! Check the arguments passed in:
+   IF ( .NOT. FileNameGiven ) THEN
+      ErrMsg   = "No filename given for file to open."
+      ErrStat  = ErrID_Fatal
+      RETURN
+   ENDIF
+
+
+   !-------------------------------------------------------------------------------
+   !-------------------------------------------------------------------------------
+      CONTAINS
+
+
+   !-------------------------------------------------------------------------------
+   FUNCTION StringToReal( StringIn, ErrStat )
+         !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+         ! Convert a string to a real number !
+         !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+
+      IMPLICIT NONE
+
+         ! Error Handling
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
+
+         ! Input
+      CHARACTER(*),                       INTENT(IN   )  :: StringIn
+
+         ! Returned value
+      REAL(ReKi)                                         :: StringToReal
+
+         ! Local Variables
+      INTEGER(IntKi)                                     :: TempIO         ! Temporary variable to hold the error status
+
+         read( StringIn, *, iostat=TempIO) StringToReal
+
+            ! If that isn't a number, only warn since we can continue by skipping this value
+         IF ( TempIO .ne. 0 ) ErrSTat  = ErrID_Warn
+
+   END FUNCTION StringToReal
+
+
+
+   !-------------------------------------------------------------------------------
+   SUBROUTINE ParseArg( Settings, SettingsFlags, ThisArg, ErrStat, ErrMsg )
+         !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+         ! Parse and store the input argument  !
+         !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+
+      USE NWTC_Library
+      USE IfW_Driver_Types
+      USE WindFile_Types
+
+      IMPLICIT NONE
+
+         ! Storing the arguments
+      TYPE( IfW_Driver_ArgFlags ),        INTENT(INOUT)  :: SettingsFlags        ! Flags indicating which arguments were specified
+      TYPE( IfW_Driver_Args ),            INTENT(INOUT)  :: Settings             ! Arguments passed in
+
+      CHARACTER(*),                       INTENT(IN   )  :: ThisArg              ! The current argument
+
+         ! Error Handling
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
+      CHARACTER(1024),                    INTENT(  OUT)  :: ErrMsg
+
+
+         ! local variables
+      INTEGER(IntKi)                                     :: Delim1               ! where the [ is
+      INTEGER(IntKi)                                     :: Delim2               ! where the ] is
+      INTEGER(IntKi)                                     :: DelimSep             ! where the : is
+      INTEGER(IntKi)                                     :: DelimSep2            ! where the : is
+      INTEGER(IntKi)                                     :: DelimSep3            ! where the : is
+      REAL(ReKi)                                         :: TempReal             ! temp variable to hold a real
+      INTEGER(IntKi)                                     :: TempIO               ! temp variable to store the IO error
+
+
+
+         ! Initialize some things
+      ErrStat  = ErrID_None
+      ErrMsg   = ""
+      TempIO   = 0
+
+         ! Get the delimiters -- returns 0 if there isn't one
+      Delim1   = INDEX(ThisArg,'[')
+      Delim2   = INDEX(ThisArg,']')
+      DelimSep = INDEX(ThisArg,':')
+
+
+         ! check that if there is an opening bracket, then there is a closing one
+      IF ( (Delim1 > 0 ) .and. (Delim2 < Delim1) ) THEN
+         ErrMsg   = "Syntax error in option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+         ErrStat  = ErrID_Warn
+         RETURN
+      ENDIF
+
+         ! check that if there is a colon, then there are brackets
+      IF ( (DelimSep > 0) .and. (Delim1 == 0) ) THEN
+         ErrMsg   = "Syntax error in option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+         ErrStat  = ErrID_Warn
+         RETURN
+      ENDIF
+
+
+         ! Now go through the full list of possible options. Store as appropriate
+
+         ! "type[#]"
+      IF    ( ThisArg(1:Delim1) == "type["      ) THEN
+         SELECT CASE (ThisArg(Delim1+1:Delim2-1))
+            CASE ('HH')    ! hub height
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = HH_Wind
+
+            CASE ('FF')    ! full field
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = FF_Wind
+
+            CASE ('UD')    ! User Defined
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = UD_Wind
+
+            CASE ('FD')    ! Four dimen
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = FD_Wind
+
+            CASE ('CTP')   ! coherent turbulence
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = CTP_Wind
+
+            CASE ('HAWC')  ! HAWC compatible
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = HAWC_Wind
+
+            CASE DEFAULT
+               ErrMsg   = "Invalid wind type. Ignoring option: '"//SwChar//TRIM(ThisArg)//"'."
+               ErrStat  = ErrID_Warn
+
+         END SELECT
+
+
+
+         ! "height[#]"
+      ELSEIF( ThisArg(1:Delim1) == "height["    ) THEN
+         TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Height = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Height = .TRUE.
+            Settings%Height      = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Height = .FALSE.
+         ENDIF
+
+
+         ! "width[#]"
+      ELSEIF( ThisArg(1:Delim1) == "width["     ) THEN
+         TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Width  = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Width  = .TRUE.
+            Settings%Width       = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Width  = .FALSE.
+         ENDIF
+
+
+
+         ! "x[#:#]"
+      ELSEIF( ThisArg(1:Delim1) == "x["         ) THEN
+
+            ! First Value
+         TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Xrange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Xrange = .TRUE.
+            Settings%Xrange(1)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Xrange = .FALSE.
+         ENDIF
+
+            ! Second Value
+         TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Xrange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Xrange = .TRUE.
+            Settings%Xrange(2)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Xrange = .FALSE.
+         ENDIF
+
+            ! Check the order of values
+         IF ( Settings%Xrange(1) > Settings%Xrange(2) ) THEN
+            ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
+            ErrStat  = ErrID_Warn
+            Settings%Xrange(1)   = 0.0
+            Settings%Xrange(2)   = 0.0
+            SettingsFlags%Xrange = .FALSE.
+         ENDIF
+
+
+         ! "y[#:#]"
+      ELSEIF( ThisArg(1:Delim1) == "y["         ) THEN
+
+            ! First Value
+         TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Yrange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Yrange = .TRUE.
+            Settings%Yrange(1)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Yrange = .FALSE.
+         ENDIF
+
+            ! Second Value
+         TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Yrange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Yrange = .TRUE.
+            Settings%Yrange(2)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Yrange = .FALSE.
+         ENDIF
+
+            ! Check the order of values
+         IF ( Settings%Yrange(1) > Settings%Yrange(2) ) THEN
+            ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
+            ErrStat  = 1
+            Settings%Yrange(1)   = 0.0
+            Settings%Yrange(2)   = 0.0
+            SettingsFlags%Yrange = .FALSE.
+         ENDIF
+
+
+         ! "z[#:#]"
+      ELSEIF( ThisArg(1:Delim1) == "z["         ) THEN
+
+            ! First Value
+         TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Zrange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Zrange = .TRUE.
+            Settings%Zrange(1)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Zrange = .FALSE.
+         ENDIF
+
+            ! Second Value
+         TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Zrange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Zrange = .TRUE.
+            Settings%Zrange(2)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Zrange = .FALSE.
+         ENDIF
+
+            ! Check the order of values
+         IF ( Settings%Zrange(1) > Settings%Zrange(2) ) THEN
+            ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
+            ErrStat  = 1
+            Settings%Zrange(1)   = 0.0
+            Settings%Zrange(2)   = 0.0
+            SettingsFlags%Zrange = .FALSE.
+         ENDIF
+
+
+         ! "t[#:#]"
+      ELSEIF( ThisArg(1:Delim1) == "t["         ) THEN
+
+            ! First Value
+         TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Trange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Trange = .TRUE.
+            Settings%Trange(1)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Trange = .FALSE.
+         ENDIF
+
+            ! Second Value
+         TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Trange = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Trange = .TRUE.
+            Settings%Trange(2)   = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Trange = .FALSE.
+         ENDIF
+
+            ! Check the order of values
+         IF ( Settings%Trange(1) > Settings%Trange(2) ) THEN
+            ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
+            Settings%Trange(1)   = 0.0
+            Settings%Trange(2)   = 0.0
+            ErrStat  = 1
+            SettingsFlags%Trange = .FALSE.
+         ENDIF
+
+
+         ! "xres[#]"
+      ELSEIF( ThisArg(1:Delim1) == "xres["      ) THEN
+         TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Xres   = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Xres   = .TRUE.
+            Settings%Xres        = abs(TempReal)
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Xres   = .FALSE.
+         ENDIF
+
+         ! "yres[#]"
+      ELSEIF( ThisArg(1:Delim1) == "yres["      ) THEN
+         TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Yres   = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Yres   = .TRUE.
+            Settings%Yres        = abs(TempReal)
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Yres   = .FALSE.
+         ENDIF
+
+         ! "zres[#]"
+      ELSEIF( ThisArg(1:Delim1) == "zres["      ) THEN
+         TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Zres   = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Zres   = .TRUE.
+            Settings%Zres        = abs(TempReal)
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Zres   = .FALSE.
+         ENDIF
+
+         ! "tres[#]"
+      ELSEIF( ThisArg(1:Delim1) == "tres["      ) THEN
+         TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%Tres   = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%Tres   = .TRUE.
+            Settings%Tres        = abs(TempReal)
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%Tres   = .FALSE.
+         ENDIF
+
+         ! "paraprint"
+      ELSEIF( ThisArg(1:9)      == "paraprint"  ) THEN
+         SettingsFlags%ParaPrint = .TRUE.
+         ErrMsg   = "Feature not implimented. Ignoring option '"//SwChar//TRIM(ThisArg)//"'."
+         ErrStat  = ErrID_Warn
+
+         ! "summary"
+      ELSEIF( ThisArg(1:8)      == "summary"    ) THEN
+         SettingsFlags%Summary   = .TRUE.
+         ErrMsg   = "Feature not implimented. Ignoring option '"//SwChar//TRIM(ThisArg)//"'."
+         ErrStat  = ErrID_Warn
+
+         ! "fft[X,Y,Z]"
+      ELSEIF( ThisArg(1:Delim1) == "fft["       ) THEN
+         DelimSep = INDEX(ThisArg,',')
+         DelimSep2= INDEX(ThisArg(DelimSep+1:),',') + DelimSep
+
+            ! First Value
+         TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%fft    = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%fft    = .TRUE.
+            Settings%fft(1)      = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%fft    = .FALSE.
+         ENDIF
+
+            ! Second Value
+         TempReal = StringToReal( ThisArg(DelimSep+1:DelimSep2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%fft    = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%fft    = .TRUE.
+            Settings%fft(2)      = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%fft    = .FALSE.
+         ENDIF
+
+            ! Third Value
+         TempReal = StringToReal( ThisArg(DelimSep2+1:Delim2-1), ErrStat )
+         IF ( ErrStat == ErrID_Warn ) THEN
+            ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            SettingsFlags%fft    = .FALSE.
+            RETURN
+         ELSEIF ( ErrStat == ErrID_None ) THEN
+            SettingsFlags%fft    = .TRUE.
+            Settings%fft(3)      = TempReal
+         ELSE
+            ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+            ErrStat  = ErrID_Fatal
+            SettingsFlags%fft    = .FALSE.
+         ENDIF
+
+         ! "points[FILE]"
+      ELSEIF( ThisArg(1:Delim1) == "points["    ) THEN
+         SettingsFlags%PointsFile= .TRUE.
+         Settings%PointsFile     = ThisArg(Delim1+1:Delim2-1)
+
+      ELSE
+         ErrMsg  = "Unrecognized option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+         ErrStat = ErrID_Warn
+      ENDIF
+
+   END SUBROUTINE ParseArg
+   !-------------------------------------------------------------------------------
+
+
+
+END SUBROUTINE RetrieveArgs
+
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+END MODULE Ifw_Driver_Subs
+!****************************************************************************
+!
+!  PROGRAM: InflowWind_Driver  - This program tests the inflow wind module
+!
+!****************************************************************************
+!
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2012  National Renewable Energy Laboratory
+!
+!    This file is part of InflowWind.
+!
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
+!    If not, see <http://www.gnu.org/licenses/>.
+!
+!**********************************************************************************************************************************
+
+PROGRAM InflowWind_Driver
+
+!   USE NWTC_Library       !NOTE: Not sure why this doesn't need to be specified
+   USE InflowWind_Module
+   USE WindFile_Types      !NOTE: would we prefer not to need this????
+   USE SharedInflowDefs
+   USE IfW_Driver_Types    ! Contains types and routines for handling the input arguments
+   USE IfW_Driver_Subs     ! Contains subroutines for the driver program
+
+   IMPLICIT NONE
+
+      ! Info on this code
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.00.00a-adp","31-Dec-2012")
+
+
+      ! Types needed here (from InflowWind module)
+   TYPE( IfW_InitInputType )                          :: IfW_InitInputData       ! Data for initialization -- this is where the input info goes
+   TYPE( IfW_InputType )                              :: IfW_InputData           ! input     -- contains xyz coords of interest
+   TYPE( IfW_ParameterType )                          :: IfW_ParamData           ! Parameters
+   TYPE( IfW_ContinuousStateType )                    :: IfW_ContStateData       ! Continous State Data  (not used here)
+   TYPE( IfW_DiscreteStateType )                      :: IfW_DiscStateData       ! Discrete State Data   (not used here)
+   TYPE( IfW_ConstraintStateType )                    :: IfW_ConstrStateData     ! Constraint State Data (not used here)
+   TYPE( IfW_OtherStateType )                         :: IfW_OtherStateData      ! Other State Data      (might use at some point)
+   TYPE( IfW_OutputType )                             :: IfW_OutputData          ! Output Data -- contains the velocities at xyz
+
+      ! Error Handling
    INTEGER(IntKi)                                     :: ErrStat
    CHARACTER(1024)                                    :: ErrMsg
 
 
-      ! All the shared types used in the module
-   TYPE( IfW_ParameterType )                          :: IfW_ParamData     ! Parameters
-   TYPE( IfW_InitInputType )                          :: IfW_InitData      ! data for initialization
+
+      ! Local variables for this code
+   TYPE( IfW_Driver_ArgFlags )                        :: SettingsFlags        ! Flags indicating which arguments were specified
+   TYPE( IfW_Driver_Args )                            :: Settings             ! Arguments passed in
+   REAL( DbKi )                                       :: TimeStep             ! Initial timestep (the glue code ditcates this)
+   REAL( DbKi )                                       :: Timer(1:2)           ! Keep track of how long this takes to run
+   INTEGER( IntKi )                                   :: InputArgs            ! Number of arguments passed in
+   LOGICAL                                            :: TempFileExist        ! Flag for inquiring file existence
 
 
-   !-------------------------------------------------------------------------------------------------
-   ! Send the data required for initialization
-   !-------------------------------------------------------------------------------------------------
 
-!      IfW_InitData%WindFileName     = "D:\DATA\Fortran\IVF Projects\AeroDyn\Update\Source\InflowWind\TestData\GPLLJ_DNS\InOut.wnd"
-!      IfW_InitData%WindFileName     = "../TestRoutines/TestData/Periodic_Winds.wnd"    !! ff wind
-!      IfW_InitData%WindFileName     = "Test-Data/InOut.wnd"    !! ff wind
-      IfW_InitData%WindFileName     = "../Samples/Steady.wnd"  !! HH wind
-!      IfW_InitData%WindFileName     = "../Samples/les.fdp"  !! 4 D -- points to some other files. -- not work
-      IfW_InitData%ReferenceHeight  = 80.   ! meters
-      IfW_InitData%Width            = 100.  ! meters
+   !--------------------------------------------------------------------------
+   !-=-=- Initialize the Library -=-=-
+   !--------------------------------------------------------------------------
 
-!     IfW_InitData%WindFileType     = FF_Wind
-      IfW_InitData%WindFileType     = DEFAULT_Wind      ! let the module figure out what type of file it is...
+   CALL NWTC_Init
+   CALL DispNVD(ProgInfo)
 
 
-      CALL IfW_Init( IfW_InitData, IfW_ParamData, dt, ErrStat, ErrMsg )
+!FIXME
+      ! Set the beep to false. This is a temporary workaround since the beepcode on linux may be incorrectly set. This may also be an artifact of my current development environment.
+   Beep = .FALSE.
 
 
-      IF (errstat /=0) CALL ProgAbort('Error in Initialization routine')
+   !--------------------------------------------------------------------------
+   !-=-=- Setup the program -=-=-
+   !--------------------------------------------------------------------------
+
+      ! Start the timer
+   CALL CPU_TIME( Timer(1) )
 
 
-   !-------------------------------------------------------------------------------------------------
-   ! Get the wind speeds at various times and positions
-   !-------------------------------------------------------------------------------------------------
-      dt     = 0.05 ! seconds
 
-      InpPosition(1) = 0.0                            ! longitudinal position front/back of tower
-      InpPosition(2) = 0.0                            ! lateral position left/right of tower
-      InpPosition(3) = IfW_InitData%ReferenceHeight   ! height relative to the ground
+   !--------------------------------------------------------------------------
+   !-=-=- Parse the command line inputs -=-=-
+   !--------------------------------------------------------------------------
 
-      DO I = 1,3 !time
+   CALL RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
 
-         Time = 0.0 + (I-1)*dt
-
-         MyWindSpeed = InflowWind_GetVelocity( IfW_ParamData, Time, InpPosition, ErrStat )
-
-         !IF (ErrStat /=0) CALL ProgAbort('Error in getting wind speed')
-
-         WRITE(*,*) TRIM(Num2LStr(ErrStat)), ' V(t=', TRIM(Num2LStr(Time)), ') = ', MyWindSpeed
-
-      END DO
-
-   !-------------------------------------------------------------------------------------------------
-   ! Clean up the variables and close files
-   !-------------------------------------------------------------------------------------------------
-    CALL IfW_End( IfW_ParamData, ErrStat )
+   IF ( ErrStat == ErrID_Fatal ) CALL ProgAbort( ErrMsg )
 
 
-END PROGRAM InflowWind_Test
+      ! Set the input file name and verify it exists
+
+   IfW_InitInputData%WindFileName      = Settings%InputFile
+
+   INQUIRE( file=Settings%InputFile, exist=TempFileExist )
+   IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find input file "//TRIM(Settings%InputFile))
+
+
+      ! In the event things are not specified on the input line, use the following
+
+   IfW_InitInputData%ReferenceHeight   = 80.                      ! meters  -- default
+   IfW_InitInputData%Width             = 100.                     ! meters
+   IfW_InitInputData%WindFileType      = DEFAULT_Wind             ! This must be preset before calling the initialization.
+   TimeStep                            = 10                       !seconds
+
+
+      ! If they are specified by input arguments, use the following
+
+   IF ( SettingsFlags%Height )         IfW_InitInputData%ReferenceHeight = Settings%Height
+   IF ( SettingsFlags%Width )          IfW_InitInputData%Width           = Settings%Width
+   IF ( SettingsFlags%WindFileType )   IfW_InitInputData%WindFileType    = Settings%WindFileType
+   IF ( SettingsFlags%Tres )           TimeStep                          = Settings%Tres
+
+
+
+      ! Sanity check: if an input points file is specified, make sure it actually exists.
+
+   IF ( SettingsFlags%PointsFile ) THEN
+      INQUIRE( file=Settings%PointsFile, exist=TempFileExist )
+      IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%InputFile))
+   ENDIF
+
+
+
+   !--------------------------------------------------------------------------
+   !-=-=- Initialize the Module -=-=-
+   !--------------------------------------------------------------------------
+   !  Initialize the IfW module --> it will initialize all its pieces
+
+   CALL IfW_Init( IfW_InitInputData, IfW_InputData, IfW_ParamData, &
+                  IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
+                  IfW_OutputData, TimeStep, ErrStat, ErrMsg )
+
+
+      ! Make sure no errors occured that give us reason to terminate now.
+
+   IF ( ErrStat == ErrID_Severe ) CALL ProgAbort( ErrMsg )
+   IF ( ErrStat == ErrID_Fatal )  CALL ProgAbort( ErrMsg )
+
+
+
+   !--------------------------------------------------------------------------
+   !-=-=- Other Setup -=-=-
+   !--------------------------------------------------------------------------
+   !  Setup any additional things
+   !  -- reset bounds to reasonable level (can't do more than what actually exists in the file)
+   !  -- setup the matrices for handling the data?
+
+
+
+
+
+   !FIXME: check that the FFT file can be made
+
+
+   !--------------------------------------------------------------------------
+   !-=-=- Time stepping loop -=-=-
+   !--------------------------------------------------------------------------
+   !  Loop through the time
+   !     -- send matrix of coordinates at each timestep --> ask for certain points at time T
+   !     -- should get back a matrix of wind velocities at each coordinate
+   !     -- Assemble the large matrix with all the small pieces
+
+!FIXME: write this routine
+!   CALL IfW_Calculate( )
+
+
+   !--------------------------------------------------------------------------
+   !-=-=- Calculate OtherStates -=-=-
+   !--------------------------------------------------------------------------
+   !  Iff we add in some averaging / TI / mean etc, it would be in OtherStates
+   !     -- Test that here.
+
+
+
+
+   !--------------------------------------------------------------------------
+   !-=-=- Output results -=-=-
+   !--------------------------------------------------------------------------
+   !  ParaPrint         -- will create a ParaView file that can be looked at
+   !  Write to screen   -- if ParaPrint isn't used
+
+
+   !--------------------------------------------------------------------------
+   !-=-=- We are done, so close everything down -=-=-
+   !--------------------------------------------------------------------------
+
+   CALL IfW_End(  IfW_InitInputData, IfW_ParamData, &
+                  IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
+                  IfW_OutputData, ErrStat, ErrMsg )
+
+
+
+
+
+
+
+
+END PROGRAM InflowWind_Driver
+
+
+
 
