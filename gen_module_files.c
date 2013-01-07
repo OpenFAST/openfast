@@ -497,9 +497,9 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(IN   ) :: ConstrStateData\n", ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(IN   ) :: OtherStateData\n",  ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OutputType),          INTENT(IN   ) :: OutData\n",         ModName->nickname) ;
-  fprintf(fp,"  INTEGER(ReKi), ALLOCATABLE,   INTENT(  OUT) :: Re_RetAry(:)\n") ;
-  fprintf(fp,"  INTEGER(DbKi), ALLOCATABLE,   INTENT(  OUT) :: Db_RetAry(:)\n") ;
-  fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE,   INTENT(  OUT) :: Int_RetAry(:)\n") ;
+  fprintf(fp,"  REAL(ReKi), ALLOCATABLE,      INTENT(  OUT) :: Re_RetAry(:)\n") ;
+  fprintf(fp,"  REAL(DbKi), ALLOCATABLE,      INTENT(  OUT) :: Db_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE,  INTENT(  OUT) :: Int_RetAry(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),               INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),                 INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"  LOGICAL, OPTIONAL,            INTENT(IN   ) :: SizeOnly\n") ;
@@ -609,8 +609,8 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(  OUT) :: ConstrStateData\n", ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(  OUT) :: OtherStateData\n",  ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OutputType),          INTENT(  OUT) :: OutData\n",         ModName->nickname) ;
-  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(IN   ) :: Re_RetAry(:)\n") ;
-  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(IN   ) :: Db_RetAry(:)\n") ;
+  fprintf(fp,"  REAL(ReKi), ALLOCATABLE,      INTENT(IN   ) :: Re_RetAry(:)\n") ;
+  fprintf(fp,"  REAL(DbKi), ALLOCATABLE,      INTENT(IN   ) :: Db_RetAry(:)\n") ;
   fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(IN   ) :: Int_RetAry(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
