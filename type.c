@@ -106,6 +106,9 @@ set_state_dims ( char * dims , node_t * node )
   }
   // check to make sure that if any dimension is deferred they all most be 
 
+  has_deferred_dim( node, 1 ) ;
+
+#if 0
   if ( node->ndims > 0 ) {
     deferred = node->dims[0]->deferred ;
     for ( i = 1 ; i < node->ndims ; i++ )
@@ -122,8 +125,32 @@ set_state_dims ( char * dims , node_t * node )
       if ( node->dims[i]->deferred ) deferred = 1 ;
     }
   }
+#endif
 
   return (0) ;
+}
+
+int
+has_deferred_dim( node_t * node, int noisy )
+{
+  int deferred, i ;
+  deferred = 0 ;
+  if ( node->ndims > 0 ) {
+    deferred = node->dims[0]->deferred ;
+    for ( i = 1 ; i < node->ndims ; i++ )
+    {
+      if ( deferred != node->dims[i]->deferred ) {
+        if ( node->dims[i]->deferred ) {
+          if ( noisy ) fprintf(stderr, 
+            "Registry warning: dimension %d of %s is allocatable while others are not.\n",i,node->name) ;
+        } else {
+          if ( noisy ) fprintf(stderr, 
+            "Registry warning: dimension %d of %s is not allocatable while others are.\n",i,node->name) ;
+        }
+      }
+      if ( node->dims[i]->deferred ) deferred = 1 ;
+    }
+  }
 }
  
 #if 0
