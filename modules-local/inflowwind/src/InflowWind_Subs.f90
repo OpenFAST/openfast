@@ -32,7 +32,7 @@ MODULE InflowWind_Subs
 
    USE                              NWTC_Library
    USE                              SharedInflowDefs
-   USE                              WindFile_Types
+   USE                              InflowWind_Module_Types
 
    !-------------------------------------------------------------------------------------------------
    ! The included wind modules
