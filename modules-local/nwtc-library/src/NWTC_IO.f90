@@ -23,6 +23,7 @@ MODULE NWTC_IO
    !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat )         ! Allocate a 4-D REAL array.
    !     SUBROUTINE CheckArgs     ( InputFile [, ErrStat] )
    !     SUBROUTINE CheckIOS      ( IOS, Fil, Variable, VarType [, TrapErrors] )
+   !     SUBROUTINE ChkRealFmtStr ( RealFmt, RealFmtVar, ErrStat, ErrMsg )                            ! Test to see if a specified string is a valid format for real numbers.
    !     SUBROUTINE CloseEcho     ( )
    !     SUBROUTINE Conv2UC       ( Str )
    !     FUNCTION   CountWords    ( Line )
@@ -126,7 +127,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.06.00c-mlb', '18-Dec-2012')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.001-mlb', '07-Jan-2013')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -796,6 +797,62 @@ CONTAINS
 
    RETURN
    END SUBROUTINE CheckArgs
+!=======================================================================
+   SUBROUTINE ChkRealFmtStr ( RealFmt, RealFmtVar, FmtWidth, ErrStat, ErrMsg )
+
+
+      ! Test to make sure we have a valid format string for real numbers.
+
+
+      ! Argument declarations.
+
+   INTEGER(IntKi), INTENT(OUT)      :: ErrStat                               ! An error level to be returned to the calling routine.
+   INTEGER(IntKi), INTENT(OUT)      :: FmtWidth                              ! The number of characters that will result from writes.
+
+   CHARACTER(*), INTENT(OUT)        :: ErrMsg                                ! An error message to be returned to the calling routine.
+
+   CHARACTER(*), INTENT(IN)         :: RealFmt                               ! The proposed format string.
+   CHARACTER(*), INTENT(IN)         :: RealFmtVar                            ! The name of the variable storing the format string.
+
+
+      ! Local delarations.
+
+   REAL, PARAMETER                  :: TestVal    = -1.0                     ! The value to test the format specifier with.
+
+   INTEGER                          :: IC                                    ! An implied DO index.
+   INTEGER                          :: IOS                                   ! An integer to store the I/O status of the attempted internal write.
+   INTEGER, PARAMETER               :: TestStrLen  = 20                      ! A parameter for specifying the length of RealStr.
+
+   CHARACTER(TestStrLen)            :: RealStr                               ! A string to test writing a real number to.
+
+
+
+      ! Try writing TestVal to RealStr using RealFmt as the format.
+      ! Determine the format width.
+
+   WRITE (RealStr,'('//RealFmt//')',IOSTAT=IOS)  TestVal
+
+   FmtWidth = Len_Trim( RealStr )
+
+
+       ! Check to see if the format is invalid or if it did not have even a reasonable width.
+
+   IF ( IOS /= 0 )  THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = ' The real-format specifier, '//TRIM(RealFmtVar)//', is invalid.  You set it to "'//TRIM( RealFmt )//'".'
+      FmtWidth = 0
+   ELSEIF ( INDEX( RealStr, '*' ) > 0 )  THEN
+      ErrStat = ErrID_Severe
+      ErrMsg = ' The real-format specifier, '//TRIM(RealFmtVar)//', is too narrow to print even '//TRIM(Num2LStr(TestVal)) &
+             //'.  You set it to "'//TRIM( RealFmt )//'".'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ' I put this in here just to be silly.  Will it still be here in 100 years? - MLB, 07-January-2013'
+   ENDIF
+
+
+   RETURN
+   END SUBROUTINE ChkRealFmtStr ! ( RealFmt, TrapErrors )
 !=======================================================================
    SUBROUTINE CheckIOS ( IOS, Fil, Variable, VarType, TrapErrors )
 

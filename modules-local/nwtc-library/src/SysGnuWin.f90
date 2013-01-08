@@ -46,7 +46,7 @@ MODULE SysSubs
 
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-   INTEGER, PARAMETER            :: CU          = 7                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
    INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
@@ -572,14 +572,14 @@ CONTAINS
  SUBROUTINE OpenCon
 
 
-      ! This routine opens the console for standard output.
+      ! This routine opens the console for standard output.  It is not needed for gfortran on Windows.
 
 
 
 !mlb_20-Jun-2011   OPEN ( CU , FILE='CON' , STATUS='UNKNOWN' , RECL=ConRecL )
-   OPEN ( CU , FILE='CONOUT$' , STATUS='UNKNOWN' , RECL=ConRecL )
+!   OPEN ( CU , FILE='CONOUT$' , STATUS='UNKNOWN' , RECL=ConRecL )
 
-   CALL FlushOut ( CU )
+!   CALL FlushOut ( CU )
 
 
    RETURN
@@ -675,34 +675,6 @@ CONTAINS
    RETURN
    END SUBROUTINE UsrAlarm
 !=======================================================================
-!   FUNCTION UserTime()
-!
-!
-!      ! This function returns the user CPU time.
-!
-!      ! The functionality of this routine was replaced by the F95 intrinsic, CPU_TIME().
-!
-!
-!      ! Passed variables.
-!
-!   REAL(4)                      :: UserTime                                        ! User CPU time.
-!
-!
-!      ! Local variables.
-!
-!   REAL(4)                      :: TimeAry (2)                                     ! TimeAry(1): User CPU time, TimeAry(2): System CPU time.
-!   REAL(4)                      :: TotTime                                         ! User CPU time plus system CPU time.
-!
-!
-!
-!
-!   TotTime  = DTIME( TimeAry )
-!   UserTime = TimeAry(1)
-!
-!
-!   RETURN
-!   END FUNCTION UserTime
-!=======================================================================
    SUBROUTINE WrNR ( Str )
 
 
@@ -732,8 +704,17 @@ CONTAINS
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
 
+      ! Local declarations.
 
-   WRITE (CU,'(''+'',A)')  Str
+   CHARACTER(1), PARAMETER      :: CR = ACHAR( 13 )                             ! The carriage return character.
+   CHARACTER(25)                :: Fmt = '(2A,   (" "))'                         ! The format specifier for the output.
+
+
+
+!   WRITE (Fmt(5:6),'(I2)')  ConRecL - LEN( Str )
+   WRITE (Fmt(5:7),'(I3)')  98 - LEN( Str )
+
+   WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
 
 
    RETURN
