@@ -364,13 +364,25 @@ o  I changed all occurences of UnfForm being BINARY to UNFORMATTED in the Sys* f
 o  I did some simple clean-up and dosumentation in NWTC_IO.f90.
 o  I added program Test_CheckArgs to the Source\Drivers folder to test the CheckArgs() routine in NWTC_IO.f90.
 
+v1.07.00a-mlb, 08-Jan-2013  M. Buhl
+o  Changes to SysGnuWin.f90
+   o  I changed CU from 7 to 6 in the global-variables section.
+   o  I removed LOGICAL FUNCTION KBInputOK().
+   o  I removed all the executable statements from OpenCon and added a comment that it is unneeded for gfortran.
+   o  I deleted FUNCTION UserTime() because that capability is now in the standard.
+   o  I rewrote WrOver() so that it works with gfortran.
+o  I created a test program, Test_OpenCon_GnuWin.f90, in Drivers to test OpenCon() with gfortran.
+o  I added the subroutine NWTC_IO.f90\ChkRealFmtStr() to test the validity for
+   strings to be used to generate formatted real numbers.
+o  I created a test program, Test_ChkRealFmtStr.f90, in Drivers to test ChkRealFmtStr().
+   I tested it with both IVF and gfortran on Windows.
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
 
    Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
    Fix ErrStat to use the new ErrID_* levels
-   Fix SysGnu.f90 (subroutines OpenCon(), WrOver(), WrNR(), & maybe others are not working properly): https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=540
 
    Create new read array routines that read an array from multiple lines.
    Fix NWTC_Aero.f90\AeroInt() to interpolate between control settings.
