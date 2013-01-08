@@ -153,6 +153,8 @@ void reset_mask ( unsigned int * mask , int e ) ;
 void set_mask ( unsigned int * mask , int e ) ;
 int get_mask ( unsigned int * mask , int e ) ;
 
+char * fast_interface_type_shortname (  char * ) ;
+
 #define PROTOS_H
 #endif
 

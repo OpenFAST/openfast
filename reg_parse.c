@@ -555,3 +555,33 @@ is_a_fast_interface_type( char *str )
    return(retval) ;
 }
 
+char *
+fast_interface_type_shortname( char *str )
+{
+   char * retval ;
+
+   retval = str ;
+
+   if        (  !strcmp(make_lower_temp(str), "initinputtype") )  {
+     retval = "InitInput" ;
+   } else if (  !strcmp(make_lower_temp(str), "initoutputtype") ) {
+     retval = "InitOutput" ;
+   } else if (  !strcmp(make_lower_temp(str), "inputtype") ) {
+     retval = "Input" ;
+   } else if (  !strcmp(make_lower_temp(str), "outputtype") ) {
+     retval = "Output" ;
+   } else if (  !strcmp(make_lower_temp(str), "continuousstatetype") ) {
+     retval = "ContState" ;
+   } else if (  !strcmp(make_lower_temp(str), "discretestatetype") )  {
+     retval = "DiscState" ;
+   } else if (  !strcmp(make_lower_temp(str), "constraintstatetype") ) {
+     retval = "ConstrState" ;
+   } else if (  !strcmp(make_lower_temp(str), "otherstatetype") ) {
+     retval = "OtherState" ;
+   } else if (  !strcmp(make_lower_temp(str), "parametertype") ) {
+     retval = "Param" ;
+   }
+
+   return(retval) ;
+}
+

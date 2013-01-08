@@ -52,8 +52,10 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           }
 
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+          char nonick2[NAMELEN] ;
+          remove_nickname(ModName->nickname,r->type->name,nonick2) ;
           fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",
-                          ModName->nickname,r->name,nonick,r->name,nonick,r->name) ;
+                          ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,nonick,r->name) ;
         } else {
           fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
         }
@@ -158,8 +160,10 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       }
 
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+      char nonick2[NAMELEN] ;
+      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
-                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf))Int_BufSz = Int_BufSz + SIZE( Int_%s_Buf ) ! %s\n",r->name,r->name,r->name) ;
@@ -229,8 +233,10 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       }
 
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+      char nonick2[NAMELEN] ;
+      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s, ErrStat, ErrMsg, OnlySize ) ! %s \n",
-                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -372,10 +378,11 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
       }
 
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
-
+      char nonick2[NAMELEN] ;
+      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
   fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",ModName->nickname,r->name) ;
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
-                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -389,7 +396,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  CALL %s_Unpack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s, ErrStat, ErrMsg ) ! %s \n",
-                        ModName->nickname,r->name, r->name, r->name, r->name, r->name, r->name ) ;
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, r->name ) ;
 
     } else  {
       sprintf(tmp2,"SIZE(OutData%%%s)\n",r->name) ;
@@ -455,10 +462,10 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"ENDDO\n") ;
           }
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
-//          fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s, Dst%sData%%%s, CtrlCode, ErrStat, ErrMsg )\n",
-//                          ModName->nickname,r->name,nonick,r->name,nonick,r->name) ;
+          char nonick2[NAMELEN] ;
+          remove_nickname(ModName->nickname,r->type->name,nonick2) ;
           fprintf(fp,"  CALL %s_Destroy%s( %sData%%%s, ErrStat, ErrMsg )\n",
-                          ModName->nickname,r->name,nonick,r->name) ;
+                          ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name) ;
         } else if ( r->ndims > 0 ) {
           if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
           {
@@ -737,27 +744,13 @@ gen_module( FILE * fp , node_t * ModName )
         
 //fprintf(stderr,">> %s %s %s \n",ModName->name, ddtname, nonick) ;
 
-        if        ( !strcmp(nonick,"inputtype") ) {
-          ddtname = "Input" ; ddtnamelong = "InputType" ;
-        } else if ( !strcmp(nonick,"initinputtype") ) {
-          ddtname = "InitInput" ; ddtnamelong = "InitInputType" ;
-        } else if ( !strcmp(nonick,"outputtype") ) {
-          ddtname = "Output" ; ddtnamelong = "OutputType" ;
-        } else if ( !strcmp(nonick,"initoutputtype") ) {
-          ddtname = "InitOutput" ; ddtnamelong = "InitOutputType" ;
-        } else if ( !strcmp(nonick,"continuousstatetype") ) {
-          ddtname = "ContState" ; ddtnamelong = "ContinuousStateType" ;
-        } else if ( !strcmp(nonick,"discretestatetype") ) {
-          ddtname = "DiscState" ; ddtnamelong = "DiscreteStateType" ;
-        } else if ( !strcmp(nonick,"constraintstatetype") ) {
-          ddtname = "ConstrState" ; ddtnamelong = "ConstraintStateType" ;
-        } else if ( !strcmp(nonick,"otherstatetype") ) {
-             ddtname = "OtherState" ; ddtnamelong = "OtherStateType" ;
-        } else if ( !strcmp(nonick,"parametertype") ) {
-          ddtname = "Param" ; ddtnamelong = "ParameterType" ;
+        if ( is_a_fast_interface_type( nonick ) ) {
+          ddtnamelong = nonick ;
+          ddtname = fast_interface_type_shortname( nonick ) ;
         } else {
           ddtnamelong = ddtname ;
         }
+
         gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_pack( fp, ModName, ddtname, ddtnamelong ) ;
