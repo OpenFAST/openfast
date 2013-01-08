@@ -347,7 +347,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
       }
   if (frst == 1) {fprintf(fp," ! first call MeshPack to get correctly sized buffers for unpacking\n") ;frst=0;}
-  fprintf(fp,"  CALL MeshPack( OutData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg , SizeOnly = .TRUE. ) ! %s \n",
+  fprintf(fp,"  CALL MeshPack( OutData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg , .TRUE. ) ! %s \n",
                                r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                     r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
@@ -611,7 +611,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  TYPE(%s_OutputType),          INTENT(  OUT) :: OutData\n",         ModName->nickname) ;
   fprintf(fp,"  REAL(ReKi), ALLOCATABLE,      INTENT(IN   ) :: Re_RetAry(:)\n") ;
   fprintf(fp,"  REAL(DbKi), ALLOCATABLE,      INTENT(IN   ) :: Db_RetAry(:)\n") ;
-  fprintf(fp,"  INTEGER(B1Ki), ALLOCATABLE,   INTENT(IN   ) :: Int_RetAry(:)\n") ;
+  fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE,   INTENT(IN   ) :: Int_RetAry(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"    ! Local variables\n" ) ;
