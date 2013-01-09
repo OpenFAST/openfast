@@ -254,6 +254,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
 
     } else  {
+      char * indent ;
       sprintf(tmp2,"SIZE(InData%%%s)",r->name) ;
       if      ( r->ndims==0 ) { strcpy(tmp3,"") ; }
       else if ( r->ndims==1 ) { strcpy(tmp3,"") ; }
@@ -262,20 +263,25 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       else if ( r->ndims==4 ) { sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ; }
       else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
       else                    { fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; }
+      indent = "" ;
       if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  IF ( ALLOCATED(InData%%%s) ) THEN\n", r->name ) ;
+        indent = "  " ;
       }
       if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  InData%%%s%s\n",(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
-  fprintf(fp,"    Re_Xferred   = Re_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
+  fprintf(fp,"  %sIF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  InData%%%s%s\n",
+           indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
+  fprintf(fp,"  %sRe_Xferred   = Re_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
       }
       else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
-  fprintf(fp,"    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) =  InData%%%s%s\n",(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
-  fprintf(fp,"    Db_Xferred   = Db_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
+  fprintf(fp,"  %sIF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) =  InData%%%s%s\n",
+           indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
+  fprintf(fp,"  %sDb_Xferred   = Db_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
       }
       else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
-  fprintf(fp,"    IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ) =  InData%%%s%s\n",(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
-  fprintf(fp,"    Int_Xferred   = Int_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
+  fprintf(fp,"  %sIF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ) =  InData%%%s%s\n",
+           indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
+  fprintf(fp,"  %sInt_Xferred   = Int_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
       }
       if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  ENDIF\n") ;

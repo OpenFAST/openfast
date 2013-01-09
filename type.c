@@ -151,6 +151,7 @@ has_deferred_dim( node_t * node, int noisy )
       if ( node->dims[i]->deferred ) deferred = 1 ;
     }
   }
+  return(deferred) ;
 }
  
 #if 0
