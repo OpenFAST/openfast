@@ -300,7 +300,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 int
 gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int frst ;
 
@@ -434,15 +434,22 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           indent = "  " ;
         }
         if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"  %sOutData%%%s%s = ReKiBuf ( Re_Xferred:ReXferred+(%s)-1 )\n",indent,r->name,tmp3,(r->ndims>0)?tmp2:"1") ;
+          
+          if ( r->ndims > 0 ) { sprintf(tmp4,"Re_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
+          else                { sprintf(tmp4,"Re_Xferred") ; }
+  fprintf(fp,"  %sOutData%%%s%s = ReKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
   fprintf(fp,"  %sRe_Xferred   = Re_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
         }
         else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
-  fprintf(fp,"  %sOutData%%%s%s = DbKiBuf ( Db_Xferred:ReXferred+(%s)-1 )\n",indent,r->name,tmp3,(r->ndims>0)?tmp2:"1") ;
+          if ( r->ndims > 0 ) { sprintf(tmp4,"Db_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
+          else                { sprintf(tmp4,"Db_Xferred") ; }
+  fprintf(fp,"  %sOutData%%%s%s = DbKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
   fprintf(fp,"  %sDb_Xferred   = Db_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
         }
         else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
-  fprintf(fp,"  %sOutData%%%s%s = IntKiBuf ( Int_Xferred:ReXferred+(%s)-1 )\n",indent,r->name,tmp3,(r->ndims>0)?tmp2:"1") ;
+          if ( r->ndims > 0 ) { sprintf(tmp4,"Int_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
+          else                { sprintf(tmp4,"Int_Xferred") ; }
+  fprintf(fp,"  %sOutData%%%s%s = IntKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
   fprintf(fp,"  %sInt_Xferred   = Int_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
         }
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
