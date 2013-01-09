@@ -263,7 +263,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
       else                    { fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; }
       if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-  fprintf(fp,"  IF ( ALLOCATED(%s) ) THEN\n", r->name ) ;
+  fprintf(fp,"  IF ( ALLOCATED(InData%%%s) ) THEN\n", r->name ) ;
       }
       if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
   fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  InData%%%s%s\n",(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
