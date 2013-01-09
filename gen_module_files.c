@@ -264,27 +264,31 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
       else                    { fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; }
       indent = "" ;
-      if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
+      if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+           !strcmp( r->type->mapsto, "REAL(DbKi)") ||
+           !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
+        if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  IF ( ALLOCATED(InData%%%s) ) THEN\n", r->name ) ;
-        indent = "  " ;
-      }
-      if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
+          indent = "  " ;
+        }
+        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
   fprintf(fp,"  %sIF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  InData%%%s%s\n",
-           indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
+             indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
   fprintf(fp,"  %sRe_Xferred   = Re_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
-      }
-      else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
+        }
+        else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
   fprintf(fp,"  %sIF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) =  InData%%%s%s\n",
-           indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
+             indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
   fprintf(fp,"  %sDb_Xferred   = Db_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
-      }
-      else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
+        }
+        else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
   fprintf(fp,"  %sIF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ) =  InData%%%s%s\n",
-           indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
+             indent,(r->ndims>0)?tmp2:"1",r->name,tmp3) ;
   fprintf(fp,"  %sInt_Xferred   = Int_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
-      }
-      if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
+        }
+        if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  ENDIF\n") ;
+        }
       }
     }
   }
@@ -296,7 +300,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 int
 gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int frst ;
 
@@ -392,7 +396,8 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-  fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",ModName->nickname,r->name) ;
+  fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",
+                        ModName->nickname,fast_interface_type_shortname(nonick2)) ;
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
@@ -411,18 +416,38 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, r->name ) ;
 
     } else  {
-      sprintf(tmp2,"SIZE(OutData%%%s)\n",r->name) ;
-      if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"  OutData%%%s = ReKiBuf ( Re_Xferred )\n",r->name) ;
-  fprintf(fp,"  Re_Xferred   = Re_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
-      }
-      else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
-  fprintf(fp,"  OutData%%%s = DbKiBuf ( Db_Xferred )\n",r->name) ;
-  fprintf(fp,"  Db_Xferred   = Db_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
-      }
-      else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
-  fprintf(fp,"  OutData%%%s = IntKiBuf ( Int_Xferred )\n",r->name) ;
-  fprintf(fp,"  Int_Xferred   = Int_Xferred   + %s\n",(r->ndims>0)?tmp2:"1"  ) ;
+      char * indent ;
+      sprintf(tmp2,"SIZE(OutData%%%s)",r->name) ;
+      if      ( r->ndims==0 ) { strcpy(tmp3,"") ; }
+      else if ( r->ndims==1 ) { strcpy(tmp3,"") ; }
+      else if ( r->ndims==2 ) { sprintf(tmp3,"(1:(%s),1)",tmp2) ; }
+      else if ( r->ndims==3 ) { sprintf(tmp3,"(1:(%s),1,1)",tmp2) ; }
+      else if ( r->ndims==4 ) { sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ; }
+      else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
+      else                    { fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; }
+      indent = "" ;
+      if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+           !strcmp( r->type->mapsto, "REAL(DbKi)") ||
+           !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
+        if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
+  fprintf(fp,"  IF ( ALLOCATED(OutData%%%s) ) THEN\n", r->name ) ;
+          indent = "  " ;
+        }
+        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
+  fprintf(fp,"  %sOutData%%%s%s = ReKiBuf ( Re_Xferred:ReXferred+(%s)-1 )\n",indent,r->name,tmp3,(r->ndims>0)?tmp2:"1") ;
+  fprintf(fp,"  %sRe_Xferred   = Re_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+        }
+        else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
+  fprintf(fp,"  %sOutData%%%s%s = DbKiBuf ( Db_Xferred:ReXferred+(%s)-1 )\n",indent,r->name,tmp3,(r->ndims>0)?tmp2:"1") ;
+  fprintf(fp,"  %sDb_Xferred   = Db_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+        }
+        else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
+  fprintf(fp,"  %sOutData%%%s%s = IntKiBuf ( Int_Xferred:ReXferred+(%s)-1 )\n",indent,r->name,tmp3,(r->ndims>0)?tmp2:"1") ;
+  fprintf(fp,"  %sInt_Xferred   = Int_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+        }
+        if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
+  fprintf(fp,"  ENDIF\n") ;
+        }
       }
     }
   }
