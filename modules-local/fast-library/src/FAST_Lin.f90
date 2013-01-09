@@ -20,7 +20,6 @@ SUBROUTINE CalcSteady( p, x, y, OtherState )
    ! FAST Modules:
 
 USE                             Blades
-USE                             DOFs
 USE                             DriveTrain
 USE                             Features
 USE                             InitCond
@@ -97,7 +96,7 @@ CHARACTER( 7)                :: ZTimeStr                                        
 
 KDamp    = 0.0                         ! Gain for artificially increasing the damping for the blades, tower, and drivetrain to aid in convergence (used during all steady state solution calculations).  !JASON: This didn't improve the convergence times much and, in fact, made the solution more unstable.  Thus, I disabled this by setting the gain to zero.
 KYawPos  = 0.1                         ! Gain (in rad) for adjusting the nacelle yaw command          from the relative rotor speed error (used with TrimCase = 3).
-KGenTrq  = 1.5*AvgNrmTpRd**3/GBRatio   ! Gain (in N-m) for adjusting the electrical generator torque  from the relative rotor speed error (used with TrimCase = 2).  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 1.5 is 1/10th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
+KGenTrq  = 1.5*p%AvgNrmTpRd**3/GBRatio ! Gain (in N-m) for adjusting the electrical generator torque  from the relative rotor speed error (used with TrimCase = 2).  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 1.5 is 1/10th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
 KBlPitch = 0.1                         ! Gain (in rad) for adjusting the rotor collective blade pitch from the relative rotor speed error (used with TrimCase = 3).
 
 
@@ -232,7 +231,7 @@ ENDDO             ! K - All blades
 
    ! Get the current hub-height wind speed:
 
-HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), FASTHH /), Sttus )
+HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
 
 
    ! Begin the search for a steady state solution:
@@ -326,7 +325,7 @@ DO
    ! Make sure the wind hasn't changed.  If so, Abort since we can't find a
    !   periodic steady state solution with time varying winds.
 
-      HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), FASTHH /), Sttus )
+      HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
 
       IF ( ( HHWndVecS(1) /= HHWndVec(1) ) .OR. &
            ( HHWndVecS(2) /= HHWndVec(2) ) .OR. &
@@ -648,7 +647,7 @@ ELSE                                ! Rotor is spinning, therefore save the stat
    ! Make sure the wind hasn't changed.  If so, ProgAbort since we can't find a
    !   periodic steady state solution with time varying winds.
 
-         HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), FASTHH /), Sttus )
+         HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
 
          IF ( ( HHWndVecS(1) /= HHWndVec(1) ) .OR. &
               ( HHWndVecS(2) /= HHWndVec(2) ) .OR. &
@@ -738,7 +737,6 @@ SUBROUTINE Linearize( p,x,y,OtherState )
    ! FAST Modules:
 
 USE                             Blades
-USE                             DOFs
 USE                             DriveTrain
 USE                             Features
 USE                             General
@@ -849,22 +847,22 @@ IF ( Sttus /= 0 )  THEN
    CALL ProgAbort ( ' Error allocating memory for the DelQD array.' )
 ENDIF
 
-ALLOCATE ( AMat(2*NActvDOF,2*NActvDOF,NAzimStep) , STAT=Sttus )
+ALLOCATE ( AMat(2*OtherState%DOFs%NActvDOF,2*OtherState%DOFs%NActvDOF,NAzimStep) , STAT=Sttus )
 IF ( Sttus /= 0 )  THEN
    CALL ProgAbort ( ' Error allocating memory for the AMat array.' )
 ENDIF
 
-ALLOCATE ( BMat(2*NActvDOF,NInputs,NAzimStep) , STAT=Sttus )
+ALLOCATE ( BMat(2*OtherState%DOFs%NActvDOF,NInputs,NAzimStep) , STAT=Sttus )
 IF ( Sttus /= 0 )  THEN
    CALL ProgAbort ( ' Error allocating memory for the BMat array.' )
 ENDIF
 
-ALLOCATE ( BdMat(2*NActvDOF,NDisturbs,NAzimStep) , STAT=Sttus )
+ALLOCATE ( BdMat(2*OtherState%DOFs%NActvDOF,NDisturbs,NAzimStep) , STAT=Sttus )
 IF ( Sttus /= 0 )  THEN
    CALL ProgAbort ( ' Error allocating memory for the BdMat array.' )
 ENDIF
 
-ALLOCATE ( CMat(p%NumOuts,2*NActvDOF,NAzimStep) , STAT=Sttus )
+ALLOCATE ( CMat(p%NumOuts,2*OtherState%DOFs%NActvDOF,NAzimStep) , STAT=Sttus )
 IF ( Sttus /= 0 )  THEN
    CALL ProgAbort ( ' Error allocating memory for the CMat array.' )
 ENDIF
@@ -891,27 +889,27 @@ ENDIF
 
 IF ( MdlOrder == 2 )  THEN ! 2nd order model
 
-   ALLOCATE ( MassMat(NActvDOF,NActvDOF,NAzimStep) , STAT=Sttus )
+   ALLOCATE ( MassMat(OtherState%DOFs%NActvDOF,OtherState%DOFs%NActvDOF,NAzimStep) , STAT=Sttus )
    IF ( Sttus /= 0 )  THEN
       CALL ProgAbort ( ' Error allocating memory for the MassMat array.' )
    ENDIF
 
-   ALLOCATE ( DampMat(NActvDOF,NActvDOF,NAzimStep) , STAT=Sttus )
+   ALLOCATE ( DampMat(OtherState%DOFs%NActvDOF,OtherState%DOFs%NActvDOF,NAzimStep) , STAT=Sttus )
    IF ( Sttus /= 0 )  THEN
       CALL ProgAbort ( ' Error allocating memory for the DampMat array.' )
    ENDIF
 
-   ALLOCATE ( StffMat(NActvDOF,NActvDOF,NAzimStep) , STAT=Sttus )
+   ALLOCATE ( StffMat(OtherState%DOFs%NActvDOF,OtherState%DOFs%NActvDOF,NAzimStep) , STAT=Sttus )
    IF ( Sttus /= 0 )  THEN
       CALL ProgAbort ( ' Error allocating memory for the StffMat array.' )
    ENDIF
 
-   ALLOCATE ( FMat(NActvDOF,NInputs,NAzimStep) , STAT=Sttus )
+   ALLOCATE ( FMat(OtherState%DOFs%NActvDOF,NInputs,NAzimStep) , STAT=Sttus )
    IF ( Sttus /= 0 )  THEN
       CALL ProgAbort ( ' Error allocating memory for the FMat array.' )
    ENDIF
 
-   ALLOCATE ( FdMat(NActvDOF,NDisturbs,NAzimStep) , STAT=Sttus )
+   ALLOCATE ( FdMat(OtherState%DOFs%NActvDOF,NDisturbs,NAzimStep) , STAT=Sttus )
    IF ( Sttus /= 0 )  THEN
       CALL ProgAbort ( ' Error allocating memory for the FdMat array.' )
    ENDIF
@@ -963,7 +961,7 @@ DelQD = DelQ
 
 DelYawPos  = 2.0 *D2R                        ! Pertubation in nacelle yaw angle (same as for DOFs) (rad)
 DelYawRate = 2.0 *D2R                        ! Pertubation in nacelle yaw rate  (same as for DOF velocities) (rad/s)
-DelGenTq   = ( 0.15*AvgNrmTpRd**3 )/GBRatio  ! Pertubation in generator torque.  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 0.15 is 1/100th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
+DelGenTq   = ( 0.15*p%AvgNrmTpRd**3 )/GBRatio  ! Pertubation in generator torque.  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 0.15 is 1/100th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
 DelBlPtch  = 0.2 *D2R                        ! Pertubation in blade pitch (same as SymDyn) (rad)
 DelV       = 0.1                             ! Pertubation in horizontal hub height wind speed (same as SymDyn) (m/s)
 DelDELTA   = 2.0 *D2R                        ! Pertubation in horizontal wind direction (rad)
@@ -1032,9 +1030,10 @@ WRITE   (UnLn,'(A,ES14.5)'   )  '   Velocity 2-norm of steady state solution   (
 WRITE   (UnLn,'(A,I4)'       )  '   Number of equally-speced azimuth steps, NAzimStep  ', NAzimStep
 WRITE   (UnLn,'(A,I4)'       )  '   Order of linearized model, MdlOrder                ', MdlOrder
 IF ( MdlOrder == 1 )  THEN ! 1st order model
-   WRITE(UnLn,'(A,I4,A,I2,A)')  '   Number of active (enabled) DOFs                    ', NActvDOF, ' (', 2*NActvDOF, ' states)'
+   WRITE(UnLn,'(A,I4,A,I2,A)')  '   Number of active (enabled) DOFs                    ', OtherState%DOFs%NActvDOF, &
+                                                                                  ' (', 2*OtherState%DOFs%NActvDOF, ' states)'
 ELSE                       ! 2nd order model (MdlOrder = 2)
-   WRITE(UnLn,'(A,I4)'       )  '   Number of active (enabled) DOFs                    ', NActvDOF
+   WRITE(UnLn,'(A,I4)'       )  '   Number of active (enabled) DOFs                    ', OtherState%DOFs%NActvDOF
 ENDIF
 WRITE   (UnLn,'(A,I4)'       )  '   Number of control inputs, NInputs                  ', NInputs
 WRITE   (UnLn,'(A,I4)'       )  '   Number of input wind disturbances, NDisturbs       ', NDisturbs
@@ -1045,14 +1044,14 @@ WRITE   (UnLn,'(A,I4)'       )  '   Number of output measurements               
 
 WRITE (UnLn,FmtHead)  'Order of States in Linearized State Matrices:'
 
-DO I = 1,NActvDOF                ! Loop through all active (enabled) DOFs
-   IF ( DOF_Flag(PS(I)) )  THEN  ! .TRUE. if DOF index PS(I) is active (enabled)
-      WRITE(UnLn,'(A,I2,A)'            )  '   Row/column ', I, ' = '//TRIM( DOF_Desc(PS(I)) )
+DO I = 1,OtherState%DOFs%NActvDOF                ! Loop through all active (enabled) DOFs
+   IF ( p%DOF_Flag(OtherState%DOFs%PS(I)) )  THEN  ! .TRUE. if DOF index PS(I) is active (enabled)
+      WRITE(UnLn,'(A,I2,A)'            )  '   Row/column ', I, ' = '//TRIM( p%DOF_Desc(OtherState%DOFs%PS(I)) )
    ENDIF
 ENDDO                            ! I - All active (enabled DOFs
 IF ( MdlOrder == 1 )  THEN       ! 1st order model
-   WRITE   (UnLn,'(A,I2,A,I2,A,I2,A)'  )  '   Row/column ', 1+NActvDOF, ' to ', 2*NActvDOF, &
-                                          ' = First derivatives of row/column  1 to ', NActvDOF, '.'
+   WRITE   (UnLn,'(A,I2,A,I2,A,I2,A)'  )  '   Row/column ', 1+OtherState%DOFs%NActvDOF, ' to ', 2*OtherState%DOFs%NActvDOF, &
+                                          ' = First derivatives of row/column  1 to ', OtherState%DOFs%NActvDOF, '.'
 ENDIF
 
 
@@ -1219,8 +1218,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    ! Add the identity partition, [I], to the state matrix, [A]:
 
-   DO I1 = 1,NActvDOF         ! Loop through all active (enabled) DOFs (rows)
-      AMat(I1,I1+NActvDOF,L) = 1.0
+   DO I1 = 1,OtherState%DOFs%NActvDOF         ! Loop through all active (enabled) DOFs (rows)
+      AMat(I1,I1+OtherState%DOFs%NActvDOF,L) = 1.0
    ENDDO                      ! I1 - All active (enabled) DOFs (rows)
 
 
@@ -1240,9 +1239,9 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( MdlOrder == 2 )  THEN ! 2nd order model
 
-      DO I2 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (cols)
-         DO I1 = 1,NActvDOF   ! Loop through all DOFs (rows)
-            MassMat(I1,I2,L) = AugMat(PS(I1),PS(I2))
+      DO I2 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (cols)
+         DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all DOFs (rows)
+            MassMat(I1,I2,L) = AugMat(OtherState%DOFs%PS(I1),OtherState%DOFs%PS(I2))
          ENDDO                ! I1 - All active (enabled) DOFs (rows)
       ENDDO                   ! I2 - All active (enabled) DOFs (cols)
 
@@ -1260,37 +1259,40 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    x%QT             = Qop (     :,L)                 ! Initialize all displacements to the operating point displacements
 
-   DO I2 = 1,NActvDOF         ! Loop through all active (enabled) DOFs (cols)
+   DO I2 = 1,OtherState%DOFs%NActvDOF         ! Loop through all active (enabled) DOFs (cols)
 
 
       x%QDT         = QDop(     :,L)                 ! Initialize all velocities    to the operating point velocities
 
 
-      x%QDT(PS(I2)) = QDop(PS(I2),L) + DelQD(PS(I2)) ! (+) pertubation of DOF velocity I2
+      x%QDT(OtherState%DOFs%PS(I2)) = QDop(OtherState%DOFs%PS(I2),L) + DelQD(OtherState%DOFs%PS(I2)) ! (+) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
          CALL RtHS( p, OtherState%CoordSys, x, OtherState )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         AMat(I1+NActvDOF,I2+NActvDOF,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         AMat(I1+OtherState%DOFs%NActvDOF,I2+OtherState%DOFs%NActvDOF,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         CMat(I          ,I2+NActvDOF,L) = OutData(I)
+         CMat(I          ,I2+OtherState%DOFs%NActvDOF,L) = OutData(I)
       ENDDO                   ! I - All selected output channels
 
 
-      x%QDT(PS(I2)) = QDop(PS(I2),L) - DelQD(PS(I2)) ! (-) pertubation of DOF velocity I2
+      x%QDT(OtherState%DOFs%PS(I2)) = QDop(OtherState%DOFs%PS(I2),L) - DelQD(OtherState%DOFs%PS(I2)) ! (-) pertubation of DOF velocity I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
          CALL RtHS( p, OtherState%CoordSys, x, OtherState )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         AMat(I1+NActvDOF,I2+NActvDOF,L) = ( AMat(I1+NActvDOF,I2+NActvDOF,L) - QD2T(PS(I1)) )/( 2.0*DelQD(PS(I2)) )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         AMat(I1+OtherState%DOFs%NActvDOF,I2+OtherState%DOFs%NActvDOF,L) = ( AMat(I1+OtherState%DOFs%NActvDOF,I2 &
+                                                                                    +OtherState%DOFs%NActvDOF,L) - &
+                                             QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelQD(OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         CMat(I          ,I2+NActvDOF,L) = ( CMat(I          ,I2+NActvDOF,L) - OutData(I)   )/( 2.0*DelQD(PS(I2)) )  ! Central difference linearization
+         CMat(I          ,I2+OtherState%DOFs%NActvDOF,L) = ( CMat(I ,I2+OtherState%DOFs%NActvDOF,L) - OutData(I)   )&
+                                                          /( 2.0*DelQD(OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1305,37 +1307,39 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
    IgnoreMOD      = .TRUE.                         ! Set IgnoreMOD to .TRUE. so that function MOD is ignored in SUBROUTINE CalcOuts()
    x%QDT            = QDop(     :,L)                 ! Initialize all velocities    to the operating point velocities
 
-   DO I2 = 1,NActvDOF         ! Loop through all active (enabled) DOFs (cols)
+   DO I2 = 1,OtherState%DOFs%NActvDOF         ! Loop through all active (enabled) DOFs (cols)
 
 
       x%QT          = Qop (     :,L)                 ! Initialize all displacements to the operating point displacements
 
 
-      x%QT (PS(I2)) = Qop (PS(I2),L) + DelQ (PS(I2)) ! (+) pertubation of DOF displacement I2
+      x%QT (OtherState%DOFs%PS(I2)) = Qop (OtherState%DOFs%PS(I2),L) + DelQ (OtherState%DOFs%PS(I2)) ! (+) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
          CALL RtHS( p, OtherState%CoordSys, x, OtherState )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         AMat(I1+NActvDOF,I2         ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         AMat(I1+OtherState%DOFs%NActvDOF,I2         ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          CMat(I          ,I2         ,L) = OutData(I)
       ENDDO                   ! I - All selected output channels
 
 
-      x%QT (PS(I2)) = Qop (PS(I2),L) - DelQ (PS(I2)) ! (-) pertubation of DOF displacement I2
+      x%QT (OtherState%DOFs%PS(I2)) = Qop (OtherState%DOFs%PS(I2),L) - DelQ (OtherState%DOFs%PS(I2)) ! (-) pertubation of DOF displacement I2
       DO I = 1,IterRtHS ! Loop through RtHS IterRtHS-times
          CALL RtHS( p, OtherState%CoordSys, x, OtherState )
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         AMat(I1+NActvDOF,I2         ,L) = ( AMat(I1+NActvDOF,I2         ,L) - QD2T(PS(I1)) )/( 2.0*DelQ (PS(I2)) )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         AMat(I1+OtherState%DOFs%NActvDOF,I2         ,L) = ( AMat(I1+OtherState%DOFs%NActvDOF,I2  ,L) &
+                                       - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelQ (OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         CMat(I          ,I2         ,L) = ( CMat(I          ,I2         ,L) - OutData(I)   )/( 2.0*DelQ (PS(I2)) )  ! Central difference linearization
+         CMat(I          ,I2         ,L) = ( CMat(I          ,I2         ,L) &
+                                     - OutData(I)   )/( 2.0*DelQ (OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1380,8 +1384,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxYawPos ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxYawPos ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxYawPos ,L) = OutData(I)
@@ -1398,8 +1402,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxYawPos ,L) = ( BMat(I1+NActvDOF,IndxYawPos ,L) - QD2T(PS(I1)) )/( 2.0*DelYawPos     )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxYawPos ,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxYawPos ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelYawPos     )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxYawPos ,L) = ( DMat(I          ,IndxYawPos ,L) - OutData(I)   )/( 2.0*DelYawPos     )  ! Central difference linearization
@@ -1441,8 +1445,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxYawRate,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxYawRate,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxYawRate,L) = OutData(I)
@@ -1459,8 +1463,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxYawRate,L) = ( BMat(I1+NActvDOF,IndxYawRate,L) - QD2T(PS(I1)) )/( 2.0*DelYawRate    )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxYawRate,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxYawRate,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelYawRate    )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxYawRate,L) = ( DMat(I          ,IndxYawRate,L) - OutData(I)   )/( 2.0*DelYawRate    )  ! Central difference linearization
@@ -1493,8 +1497,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxGenTq  ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxGenTq  ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxGenTq  ,L) = OutData(I)
@@ -1508,8 +1512,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxGenTq  ,L) = ( BMat(I1+NActvDOF,IndxGenTq  ,L) - QD2T(PS(I1)) )/( 2.0*DelGenTq      )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxGenTq  ,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxGenTq  ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelGenTq      )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxGenTq  ,L) = ( DMat(I          ,IndxGenTq  ,L) - OutData(I)   )/( 2.0*DelGenTq      )  ! Central difference linearization
@@ -1538,8 +1542,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxCPtch  ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxCPtch  ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxCPtch  ,L) = OutData(I)
@@ -1552,8 +1556,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BMat(I1+NActvDOF,IndxCPtch  ,L) = ( BMat(I1+NActvDOF,IndxCPtch  ,L) - QD2T(PS(I1)) )/( 2.0*DelBlPtch     )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BMat(I1+OtherState%DOFs%NActvDOF,IndxCPtch  ,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxCPtch  ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelBlPtch     )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DMat(I          ,IndxCPtch  ,L) = ( DMat(I          ,IndxCPtch  ,L) - OutData(I)   )/( 2.0*DelBlPtch     )  ! Central difference linearization
@@ -1583,8 +1587,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          ENDDO             ! I - Iteration on RtHS
          CALL CalcOuts( p, x, y, OtherState )
 
-         DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-            BMat(I1+NActvDOF,IndxIPtch(K),L) = QD2T(PS(I1))
+         DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+            BMat(I1+OtherState%DOFs%NActvDOF,IndxIPtch(K),L) = QD2T(OtherState%DOFs%PS(I1))
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
          DO I  = 1,p%NumOuts       ! Loop through all selected output channels
             DMat(I          ,IndxIPtch(K),L) = OutData(I)
@@ -1597,8 +1601,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          ENDDO             ! I - Iteration on RtHS
          CALL CalcOuts( p, x, y, OtherState )
 
-         DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-            BMat(I1+NActvDOF,IndxIPtch(K),L) = ( BMat(I1+NActvDOF,IndxIPtch(K),L) - QD2T(PS(I1)) )/( 2.0*DelBlPtch     )   ! Central difference linearization
+         DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+            BMat(I1+OtherState%DOFs%NActvDOF,IndxIPtch(K),L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxIPtch(K),L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelBlPtch     )   ! Central difference linearization
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
          DO I  = 1,p%NumOuts       ! Loop through all selected output channels
             DMat(I          ,IndxIPtch(K),L) = ( DMat(I          ,IndxIPtch(K),L) - OutData(I)   )/( 2.0*DelBlPtch     )   ! Central difference linearization
@@ -1634,8 +1638,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxV     ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxV     ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxV     ,L) = OutData(I)
@@ -1651,8 +1655,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxV     ,L) = ( BdMat(I1+NActvDOF,IndxV     ,L) - QD2T(PS(I1)) )/( 2.0*DelV          )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxV     ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxV     ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelV          )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxV     ,L) = ( DdMat(I          ,IndxV     ,L) - OutData(I)   )/( 2.0*DelV          )  ! Central difference linearization
@@ -1684,8 +1688,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxDELTA ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxDELTA ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxDELTA ,L) = OutData(I)
@@ -1701,8 +1705,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxDELTA ,L) = ( BdMat(I1+NActvDOF,IndxDELTA ,L) - QD2T(PS(I1)) )/( 2.0*DelDELTA      )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxDELTA ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxDELTA ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelDELTA      )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxDELTA ,L) = ( DdMat(I          ,IndxDELTA ,L) - OutData(I)   )/( 2.0*DelDELTA      )  ! Central difference linearization
@@ -1734,8 +1738,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVZ    ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVZ    ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVZ    ,L) = OutData(I)
@@ -1751,8 +1755,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVZ    ,L) = ( BdMat(I1+NActvDOF,IndxVZ    ,L) - QD2T(PS(I1)) )/( 2.0*DelVZ         )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVZ    ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVZ    ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVZ         )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVZ    ,L) = ( DdMat(I          ,IndxVZ    ,L) - OutData(I)   )/( 2.0*DelVZ         )  ! Central difference linearization
@@ -1784,8 +1788,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxHSHR  ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxHSHR  ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxHSHR  ,L) = OutData(I)
@@ -1801,8 +1805,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxHSHR  ,L) = ( BdMat(I1+NActvDOF,IndxHSHR  ,L) - QD2T(PS(I1)) )/( 2.0*DelHSHR       )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxHSHR  ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxHSHR  ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelHSHR       )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxHSHR  ,L) = ( DdMat(I          ,IndxHSHR  ,L) - OutData(I)   )/( 2.0*DelHSHR       )  ! Central difference linearization
@@ -1834,8 +1838,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVSHR  ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVSHR  ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVSHR  ,L) = OutData(I)
@@ -1851,8 +1855,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVSHR  ,L) = ( BdMat(I1+NActvDOF,IndxVSHR  ,L) - QD2T(PS(I1)) )/( 2.0*DelVSHR       )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVSHR  ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVSHR  ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVSHR       )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVSHR  ,L) = ( DdMat(I          ,IndxVSHR  ,L) - OutData(I)   )/( 2.0*DelVSHR       )  ! Central difference linearization
@@ -1884,8 +1888,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVLSHR ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVLSHR ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVLSHR ,L) = OutData(I)
@@ -1901,8 +1905,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVLSHR ,L) = ( BdMat(I1+NActvDOF,IndxVLSHR ,L) - QD2T(PS(I1)) )/( 2.0*DelVLINSHR    )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVLSHR ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVLSHR ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVLINSHR    )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVLSHR ,L) = ( DdMat(I          ,IndxVLSHR ,L) - OutData(I)   )/( 2.0*DelVLINSHR    )  ! Central difference linearization
@@ -1934,8 +1938,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVGUST ,L) = QD2T(PS(I1))
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVGUST ,L) = QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVGUST ,L) = OutData(I)
@@ -1951,8 +1955,8 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO             ! I - Iteration on RtHS
       CALL CalcOuts( p, x, y, OtherState )
 
-      DO I1 = 1,NActvDOF      ! Loop through all active (enabled) DOFs (rows)
-         BdMat(I1+NActvDOF,IndxVGUST ,L) = ( BdMat(I1+NActvDOF,IndxVGUST ,L) - QD2T(PS(I1)) )/( 2.0*DelVGUST      )  ! Central difference linearization
+      DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all active (enabled) DOFs (rows)
+         BdMat(I1+OtherState%DOFs%NActvDOF,IndxVGUST ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVGUST ,L) - QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVGUST      )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          DdMat(I          ,IndxVGUST ,L) = ( DdMat(I          ,IndxVGUST ,L) - OutData(I)   )/( 2.0*DelVGUST      )  ! Central difference linearization
@@ -1975,25 +1979,25 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( MdlOrder == 2 )  THEN ! 2nd order model
 
-      DO I2 = 1,NActvDOF         ! Loop through all active (enabled) DOFs (cols)
-         DO I1 = 1,NActvDOF      ! Loop through all DOFs (rows)
-            DO I3 = 1,NActvDOF   ! Loop through all active (enabled) DOFs (rows & cols):
-               DampMat(I1,I2,L) = DampMat(I1,I2,L) - MassMat(I1,I3,L)*AMat (I3+NActvDOF,I2+NActvDOF,L)
-               StffMat(I1,I2,L) = StffMat(I1,I2,L) - MassMat(I1,I3,L)*AMat (I3+NActvDOF,I2         ,L)
+      DO I2 = 1,OtherState%DOFs%NActvDOF         ! Loop through all active (enabled) DOFs (cols)
+         DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all DOFs (rows)
+            DO I3 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs (rows & cols):
+               DampMat(I1,I2,L) = DampMat(I1,I2,L) - MassMat(I1,I3,L)*AMat (I3+OtherState%DOFs%NActvDOF,I2+OtherState%DOFs%NActvDOF,L)
+               StffMat(I1,I2,L) = StffMat(I1,I2,L) - MassMat(I1,I3,L)*AMat (I3+OtherState%DOFs%NActvDOF,I2         ,L)
             ENDDO                ! I3 - All active (enabled) DOFs (rows & cols):
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       ENDDO                      ! I2 - All active (enabled) DOFs (cols)
       DO I2 = 1,NInputs          ! Loop through all control inputs
-         DO I1 = 1,NActvDOF      ! Loop through all DOFs (rows)
-            DO I3 = 1,NActvDOF   ! Loop through all active (enabled) DOFs (rows & cols):
-               FMat   (I1,I2,L) = FMat   (I1,I2,L) + MassMat(I1,I3,L)*BMat (I3+NActvDOF,I2         ,L)
+         DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all DOFs (rows)
+            DO I3 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs (rows & cols):
+               FMat   (I1,I2,L) = FMat   (I1,I2,L) + MassMat(I1,I3,L)*BMat (I3+OtherState%DOFs%NActvDOF,I2         ,L)
             ENDDO                ! I3 - All active (enabled) DOFs (rows & cols):
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       ENDDO                      ! I2 - All control inputs
       DO I2 = 1,NDisturbs        ! Loop through all input wind disturbances
-         DO I1 = 1,NActvDOF      ! Loop through all DOFs (rows)
-            DO I3 = 1,NActvDOF   ! Loop through all active (enabled) DOFs (rows & cols):
-               FdMat  (I1,I2,L) = FdMat  (I1,I2,L) + MassMat(I1,I3,L)*BdMat(I3+NActvDOF,I2         ,L)
+         DO I1 = 1,OtherState%DOFs%NActvDOF      ! Loop through all DOFs (rows)
+            DO I3 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs (rows & cols):
+               FdMat  (I1,I2,L) = FdMat  (I1,I2,L) + MassMat(I1,I3,L)*BdMat(I3+OtherState%DOFs%NActvDOF,I2         ,L)
             ENDDO                ! I3 - All active (enabled) DOFs (rows & cols):
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       ENDDO                      ! I2 - All input wind disturbances
@@ -2022,8 +2026,8 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
    ! Print the current azimuth step (according to the I/O azimuth convention):
 
       WRITE (UnLn,'(A,F6.2,A,F6.2,A)')  '--------- Azimuth = ',                                                    &
-                                        MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + AzimB1Up + 90.0, 360.0 ), &
-                                        ' deg (with respect to AzimB1Up = ', AzimB1Up, ' deg) ---------'
+                                        MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + p%AzimB1Up + 90.0, 360.0 ), &
+                                        ' deg (with respect to AzimB1Up = ', p%AzimB1Up, ' deg) ---------'
 
 
    ! Print the: XDop | Xop | AMat | BMat, then the: Yop | blank | CMat | DMat with appropriate delimiter (tab or space)
@@ -2033,49 +2037,49 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))// &
+            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))// &
                      '(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  ',   p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|', p%Delim, &
-                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'B - Input ', ( p%Delim, '          ', I2 = 1,NInputs-1 ),    p%Delim//'|', p%Delim, &
                                       'Bd - Dstrb', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
             WRITE       (UnLn,Frmt )  'Derivativs',   p%Delim//'|'//p%Delim, 'States    '  ,        p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1 ),    p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), p%Delim//'|'//p%Delim, Qop (PS(I1),L) , p%Delim//'|', &
-                                       ( p%Delim,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF) , p%Delim//'|', &
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QDop (OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, Qop (OtherState%DOFs%PS(I1),L) , p%Delim//'|', &
+                                       ( p%Delim,  AMat(I1         ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF) , p%Delim//'|', &
                                        ( p%Delim,  BMat(I1         ,I2,L), I2 = 1,NInputs )   , p%Delim//'|', &
                                        ( p%Delim,  BdMat(I1        ,I2,L), I2 = 1,NDisturbs )
             ENDDO                ! I1 - All active (enabled) DOFs
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), p%Delim//'|'//p%Delim, QDop(PS(I1),L) , p%Delim//'|', &
-                                       ( p%Delim,  AMat( I1+NActvDOF,I2,L), I2 = 1,2*NActvDOF), p%Delim//'|', &
-                                       ( p%Delim,  BMat( I1+NActvDOF,I2,L), I2 = 1,NInputs   ), p%Delim//'|', &
-                                       ( p%Delim,  BdMat(I1+NActvDOF,I2,L), I2 = 1,NDisturbs )
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L) , p%Delim//'|', &
+                                       ( p%Delim,  AMat( I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF), p%Delim//'|', &
+                                       ( p%Delim,  BMat( I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,NInputs   ), p%Delim//'|', &
+                                       ( p%Delim,  BdMat(I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,NDisturbs )
             ENDDO                ! I1 - All active (enabled) DOFs
 
             IF ( p%NumOuts /= 0 )  THEN  ! We have at least one output measurement
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'  ,        p%Delim//'|', p%Delim, &
-                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'D - Trnsmt', ( p%Delim, '          ', I2 = 1,NInputs-1 ),    p%Delim//'|', p%Delim, &
                                       'Dd - DTsmt', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '  ,        p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1 ),    p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop  (I     ,L), p%Delim//'|'//p%Delim, '          '        , p%Delim//'|', &
-                                       ( p%Delim,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF )    , p%Delim//'|', &
+                                       ( p%Delim,  CMat(I          ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF )    , p%Delim//'|', &
                                        ( p%Delim,  DMat(I          ,I2,L), I2 = 1,NInputs )       , p%Delim//'|', &
                                        ( p%Delim,  DdMat(I          ,I2,L), I2 = 1,NDisturbs )
                ENDDO                ! I - All selected output channels
@@ -2083,40 +2087,40 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          ELSE                       ! No input wind disturbances selected (same as above, except don't print the last NDisturbs columns)
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  ' ,  p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|', p%Delim, &
-                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'B - Input ', ( p%Delim, '          ', I2 = 1,NInputs-1 )
             WRITE       (UnLn,Frmt )  'Derivativs' ,  p%Delim//'|'//p%Delim, 'States    '  ,        p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1 )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), p%Delim//'|'//p%Delim, Qop (PS(I1),L), p%Delim//'|', &
-                                       ( p%Delim,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF),p%Delim//'|', &
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QDop (OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, Qop (OtherState%DOFs%PS(I1),L), p%Delim//'|', &
+                                       ( p%Delim,  AMat(I1         ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF),p%Delim//'|', &
                                        ( p%Delim,  BMat(I1         ,I2,L), I2 = 1,NInputs )
             ENDDO                ! I1 - All active (enabled) DOFs
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), p%Delim//'|'//p%Delim, QDop(PS(I1),L), p%Delim//'|', &
-                                       ( p%Delim,  AMat(I1+NActvDOF,I2,L), I2 = 1,2*NActvDOF),p%Delim//'|', &
-                                       ( p%Delim,  BMat(I1+NActvDOF,I2,L), I2 = 1,NInputs )
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L), p%Delim//'|', &
+                                       ( p%Delim,  AMat(I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF),p%Delim//'|', &
+                                       ( p%Delim,  BMat(I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,NInputs )
             ENDDO                ! I1 - All active (enabled) DOFs
 
             IF ( p%NumOuts /= 0 )  THEN  ! We have at least one output measurement
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output ' ,  p%Delim//'|'//p%Delim, 'This colmn'         , p%Delim//'|', p%Delim, &
-                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'D - Trnsmt', ( p%Delim, '          ', I2 = 1,NInputs-1 )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '        ,  p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1 )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop  (I     ,L), p%Delim//'|'//p%Delim, '          '  ,  p%Delim//'|', &
-                                       ( p%Delim,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF), p%Delim//'|', &
+                                       ( p%Delim,  CMat(I          ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF), p%Delim//'|', &
                                        ( p%Delim,  DMat(I          ,I2,L), I2 = 1,NInputs )
                ENDDO                ! I - All selected output channels
             ENDIF
@@ -2129,72 +2133,72 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  '  , p%Delim//'|'//p%Delim, 'op        '         , p%Delim//'|', p%Delim, &
-                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Bd - Dstrb', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
             WRITE       (UnLn,Frmt )  'Derivativs'  , p%Delim//'|'//p%Delim, 'States    '         , p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), p%Delim//'|'//p%Delim, Qop (PS(I1),L), p%Delim//'|', &
-                                       ( p%Delim,  AMat( I1        ,I2,L), I2 = 1,2*NActvDOF), p%Delim//'|', &
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QDop (OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, Qop (OtherState%DOFs%PS(I1),L), p%Delim//'|', &
+                                       ( p%Delim,  AMat( I1        ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF), p%Delim//'|', &
                                        ( p%Delim,  BdMat(I1        ,I2,L), I2 = 1,NDisturbs)
             ENDDO                ! I1 - All active (enabled) DOFs
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), p%Delim//'|'//p%Delim, QDop(PS(I1),L), p%Delim//'|', &
-                                       ( p%Delim,  AMat(I1+NActvDOF,I2,L), I2 = 1,2*NActvDOF), p%Delim//'|', &
-                                       ( p%Delim,  BdMat(I1+NActvDOF,I2,L), I2 = 1,NDisturbs)
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L), p%Delim//'|', &
+                                       ( p%Delim,  AMat(I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF), p%Delim//'|', &
+                                       ( p%Delim,  BdMat(I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,NDisturbs)
             ENDDO                ! I1 - All active (enabled) DOFs
 
             IF ( p%NumOuts /= 0 )  THEN  ! We have at least one output measurement
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'         , p%Delim//'|', p%Delim, &
-                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Dd - DTsmt', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
                WRITE    (UnLn,Frmt )  'Measurmnts'   , p%Delim//'|'//p%Delim, 'is blank  '        , p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop  (I     ,L), p%Delim//'|'//p%Delim, '          '  , p%Delim//'|', &
-                                       ( p%Delim,  CMat( I         ,I2,L), I2 = 1,2*NActvDOF), p%Delim//'|', &
+                                       ( p%Delim,  CMat( I         ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF), p%Delim//'|', &
                                        ( p%Delim,  DdMat(I         ,I2,L), I2 = 1,NDisturbs)
                ENDDO                ! I - All selected output channels
             ENDIF
 
          ELSE                       ! No input wind disturbances selected
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  '  , p%Delim//'|'//p%Delim, 'op        '  , p%Delim//'|', p%Delim, &
-                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 )
+                                      'A - State ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 )
             WRITE       (UnLn,Frmt )  'Derivativs'  , p%Delim//'|'//p%Delim, 'States    '  , p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QDop (PS(I1),L), p%Delim//'|'//p%Delim, Qop (PS(I1),L),p%Delim//'|', &
-                                       ( p%Delim,  AMat(I1         ,I2,L), I2 = 1,2*NActvDOF )
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 )
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QDop (OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, Qop (OtherState%DOFs%PS(I1),L),p%Delim//'|', &
+                                       ( p%Delim,  AMat(I1         ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF )
             ENDDO                ! I1 - All active (enabled) DOFs
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),p%Delim//'|'//p%Delim, QDop(PS(I1),L), p%Delim//'|', &
-                                       ( p%Delim,  AMat(I1+NActvDOF,I2,L), I2 = 1,2*NActvDOF )
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L),p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L), p%Delim//'|', &
+                                       ( p%Delim,  AMat(I1+OtherState%DOFs%NActvDOF,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF )
             ENDDO                ! I1 - All active (enabled) DOFs
 
             IF ( p%NumOuts /= 0 )  THEN  ! We have at least one output measurement
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'  , p%Delim//'|',  p%Delim, &
-                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 )
+                                      'C - Output', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '  , p%Delim//'|',  p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*NActvDOF-1 )
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,2*OtherState%DOFs%NActvDOF-1 )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop  (I     ,L),p%Delim//'|'//p%Delim, '          '  , p%Delim//'|', &
-                                       ( p%Delim,  CMat(I          ,I2,L), I2 = 1,2*NActvDOF )
+                                       ( p%Delim,  CMat(I          ,I2,L), I2 = 1,2*OtherState%DOFs%NActvDOF )
                ENDDO                ! I - All selected output channels
             ENDIF
 
@@ -2222,8 +2226,8 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
    ! Print the current azimuth step (according to the I/O azimuth convention):
 
       WRITE (UnLn,'(A,F6.2,A,F6.2,A)')  '--------- Azimuth = ',                                                    &
-                                        MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + AzimB1Up + 90.0, 360.0 ), &
-                                        ' deg (with respect to AzimB1Up = ', AzimB1Up, ' deg) ---------'
+                                        MOD( ( Qop(DOF_GeAz,L) + Qop(DOF_DrTr,L) )*R2D + p%AzimB1Up + 90.0, 360.0 ), &
+                                        ' deg (with respect to AzimB1Up = ', p%AzimB1Up, ' deg) ---------'
 
    ! Print the: QD2op | QDop | Qop | MassMat | DampMat | StffMat | FMat,
    !   then the: Yop | blank | blank | blank | VelC | DspC | DMat, as controlled by TabDelim
@@ -2234,40 +2238,40 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//                             &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'// &
+            Frmt  = '(3(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//                             &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'// &
                      TRIM(Int2LStr(NInputs))//'(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                      &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                      &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        ' , p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',  p%Delim//'|', p%Delim,                                               &
-                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1  ), p%Delim//'|', p%Delim, &
-                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1  ), p%Delim//'|', p%Delim, &
-                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,NActvDOF-1  ), p%Delim//'|', p%Delim, &
+                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1  ), p%Delim//'|', p%Delim, &
+                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1  ), p%Delim//'|', p%Delim, &
+                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1  ), p%Delim//'|', p%Delim, &
                                       'F - Input ', ( p%Delim, '          ', I2 = 1,NInputs-1   ), p%Delim//'|', p%Delim, &
                                       'Fd - Dstrb', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
             WRITE       (UnLn,Frmt )  'Accleratns'  , p%Delim//'|'//p%Delim, 'Velocities'  ,       p%Delim//'|'//p%Delim, &
                                       'Displcmnts',   p%Delim//'|', p%Delim,                                              &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1 ),  p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1 ),  p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1 ),  p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1 ),  p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1 ),  p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1 ),  p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1 ),   p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1 )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),p%Delim//'|'//p%Delim, QDop(PS(I1),L),       p%Delim//'|'//p%Delim, &
-                                        Qop(PS(I1),L),p%Delim//'|',                                                       &
-                                      ( p%Delim,  MassMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                      ( p%Delim,  DampMat(I1,I2         ,L), I2 = 1,NActvDOF )   , p%Delim//'|',          &
-                                      ( p%Delim,  StffMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L),p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L),       p%Delim//'|'//p%Delim, &
+                                        Qop(OtherState%DOFs%PS(I1),L),p%Delim//'|',                                                       &
+                                      ( p%Delim,  MassMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                      ( p%Delim,  DampMat(I1,I2         ,L), I2 = 1,OtherState%DOFs%NActvDOF )   , p%Delim//'|',          &
+                                      ( p%Delim,  StffMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
                                       ( p%Delim,  FMat(I1,I2,L), I2 = 1,NInputs )                , p%Delim//'|',          &
                                       ( p%Delim,  FdMat(I1,I2,L), I2 = 1,NDisturbs )
             ENDDO                ! I1 - All active (enabled) DOFs
@@ -2276,24 +2280,24 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'  ,        p%Delim//'|'//p%Delim, &
                                       'This colmn',   p%Delim//'|', p%Delim,                                               &
-                                      'This matrx', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'This matrx', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'D - Trnsmt', ( p%Delim, '          ', I2 = 1,NInputs-1    ), p%Delim//'|', p%Delim, &
                                       'Dd - DTsmt', ( p%Delim, '          ', I2 = 1,NDisturbs-1  )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '  ,        p%Delim//'|'//p%Delim, &
                                       'is blank  ',   p%Delim//'|', p%Delim,                                               &
-                                      'is blank  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'is blank  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1    ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1  )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop(I,      L), p%Delim//'|'//p%Delim, '          '  ,        p%Delim//'|'//p%Delim, &
                                       '          ',   p%Delim//'|',                                                        &
-                                      ( p%Delim, '          '           , I2 = 1,NActvDOF )       , p%Delim//'|',          &
-                                      ( p%Delim,  CMat( I,I2+NActvDOF,L), I2 = 1,NActvDOF )       , p%Delim//'|',          &
-                                      ( p%Delim,  CMat( I,I2,         L), I2 = 1,NActvDOF )       , p%Delim//'|',          &
+                                      ( p%Delim, '          '           , I2 = 1,OtherState%DOFs%NActvDOF )       , p%Delim//'|',          &
+                                      ( p%Delim,  CMat( I,I2+OtherState%DOFs%NActvDOF,L), I2 = 1,OtherState%DOFs%NActvDOF )       , p%Delim//'|',          &
+                                      ( p%Delim,  CMat( I,I2,         L), I2 = 1,OtherState%DOFs%NActvDOF )       , p%Delim//'|',          &
                                       ( p%Delim,  DMat( I,I2,         L), I2 = 1,NInputs )        , p%Delim//'|',          &
                                       ( p%Delim,  DdMat(I,I2,         L), I2 = 1,NDisturbs )
                ENDDO                ! I - All selected output channels
@@ -2301,35 +2305,35 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          ELSE                       ! No input wind disturbances selected
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))//'(A ,A))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+            Frmt  = '(3(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))//'(A ,A))'
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        '  , p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',   p%Delim//'|', p%Delim,                                               &
-                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'F - Input ', ( p%Delim, '          ', I2 = 1,NInputs-1    )
             WRITE       (UnLn,Frmt )  'Accleratns'  , p%Delim//'|'//p%Delim, 'Velocities'  ,        p%Delim//'|'//p%Delim, &
                                       'Displcmnts',  p%Delim//'|',  p%Delim,                                               &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1    )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1) QD2op(PS(I1),L), p%Delim//'|'//p%Delim, QDop(PS(I1),L),        p%Delim//'|'//p%Delim, &
-                                       Qop(PS(I1),L), p%Delim//'|',                                                        &
-                                       ( p%Delim,  MassMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  DampMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  StffMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1) QD2op(OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L),        p%Delim//'|'//p%Delim, &
+                                       Qop(OtherState%DOFs%PS(I1),L), p%Delim//'|',                                                        &
+                                       ( p%Delim,  MassMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  DampMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  StffMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
                                        ( p%Delim,  FMat(   I1,I2,L), I2 = 1,NInputs  )
             ENDDO                ! I1 - All active (enabled) DOFs
 
@@ -2337,22 +2341,22 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'         , p%Delim//'|'//p%Delim, &
                                       'This colmn',   p%Delim//'|', p%Delim,                                               &
-                                      'This matrx', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'This matrx', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'D - Trnsmt', ( p%Delim, '          ', I2 = 1,NInputs-1    )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '         , p%Delim//'|'//p%Delim, &
                                       'is blank  ',   p%Delim//'|', p%Delim,                                               &
-                                      'is blank  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'is blank  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NInputs-1    )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop(I,       L), p%Delim//'|'//p%Delim, '          '        , p%Delim//'|'//p%Delim, &
                                        '          ',  p%Delim//'|',                                                        &
-                                       ( p%Delim, '                '     , I2 = 1,NActvDOF )      , p%Delim//'|',          &
-                                       ( p%Delim,  CMat(I ,I2+NActvDOF,L), I2 = 1,NActvDOF )      , p%Delim//'|',          &
-                                       ( p%Delim,  CMat(I ,I2,         L), I2 = 1,NActvDOF )      , p%Delim//'|',          &
+                                       ( p%Delim, '                '     , I2 = 1,OtherState%DOFs%NActvDOF )      , p%Delim//'|',          &
+                                       ( p%Delim,  CMat(I ,I2+OtherState%DOFs%NActvDOF,L), I2 = 1,OtherState%DOFs%NActvDOF )      , p%Delim//'|',          &
+                                       ( p%Delim,  CMat(I ,I2,         L), I2 = 1,OtherState%DOFs%NActvDOF )      , p%Delim//'|',          &
                                        ( p%Delim,  DMat(I ,I2,         L), I2 = 1,NInputs  )
                ENDDO                ! I - All selected output channels
             ENDIF
@@ -2365,36 +2369,36 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//                             &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'// &
+            Frmt  = '(3(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//                             &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'// &
                      TRIM(Int2LStr(NDisturbs))//'(A ,A)))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
                      TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        '  , p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',   p%Delim//'|', p%Delim,                                               &
-                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Fd - Dstrb', ( p%Delim, '          ', I2 = 1,NDisturbs-1  )
             WRITE       (UnLn,Frmt )  'Accleratns'  , p%Delim//'|'//p%Delim, 'Velocities'  ,        p%Delim//'|'//p%Delim, &
                                       'Displcmnts',   p%Delim//'|', p%Delim,                                               &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1  )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L),p%Delim//'|'//p%Delim, QDop(PS(I1),L),        p%Delim//'|'//p%Delim, &
-                                        Qop(PS(I1),L), p%Delim//'|',                                                       &
-                                       ( p%Delim,  MassMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  DampMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  StffMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L),p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L),        p%Delim//'|'//p%Delim, &
+                                        Qop(OtherState%DOFs%PS(I1),L), p%Delim//'|',                                                       &
+                                       ( p%Delim,  MassMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  DampMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  StffMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
                                        ( p%Delim,  FdMat(  I1,I2,L), I2 = 1,NDisturbs )
             ENDDO                ! I1 - All active (enabled) DOFs
 
@@ -2402,73 +2406,73 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'  ,        p%Delim//'|'//p%Delim, &
                                       'This colmn',   p%Delim//'|', p%Delim,                                               &
-                                      'This matrx', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'This matrx', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Dd - DTsmt', ( p%Delim, '          ', I2 = 1,NDisturbs-1  )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '  ,        p%Delim//'|'//p%Delim, &
                                       'is blank  ' ,  p%Delim//'|', p%Delim,                                               &
-                                      'is blank  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'is blank  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
                                       'Matrix    ', ( p%Delim, '          ', I2 = 1,NDisturbs-1  )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop(I,       L),p%Delim//'|'//p%Delim, '          '  ,        p%Delim//'|'//p%Delim, &
                                        '          ',  p%Delim//'|',                                                        &
-                                       ( p%Delim, '          '     , I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  CMat   (I ,I2+NActvDOF,L), I2 = 1,NActvDOF )   , p%Delim//'|',          &
-                                       ( p%Delim,  CMat   (I ,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim, '          '     , I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  CMat   (I ,I2+OtherState%DOFs%NActvDOF,L), I2 = 1,OtherState%DOFs%NActvDOF )   , p%Delim//'|',          &
+                                       ( p%Delim,  CMat   (I ,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
                                        ( p%Delim,  DdMat(I ,I2,L), I2 = 1,NDisturbs )
                ENDDO                ! I - All selected output channels
             ENDIF
 
          ELSE                       ! No input wind disturbances selected
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NActvDOF))//'(A ,A),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,A))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(3(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A))'
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Int2LStr(OtherState%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        ' ,  p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',   p%Delim//'|', p%Delim,                                               &
-                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   )
+                                      'M - Mass  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'C - Damp  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'K - Stiff ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   )
             WRITE       (UnLn,Frmt )  'Accleratns'  , p%Delim//'|'//p%Delim, 'Velocities'  ,        p%Delim//'|'//p%Delim, &
                                       'Displcmnts',   p%Delim//'|',   p%Delim,                                             &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   )
-            DO I1 = 1,NActvDOF   ! Loop through all active (enabled) DOFs
-               WRITE    (UnLn,Frmt1)  QD2op(PS(I1),L), p%Delim//'|'//p%Delim, QDop(PS(I1),L),       p%Delim//'|'//p%Delim, &
-                                        Qop(PS(I1),L), p%Delim//'|',                                                       &
-                                       ( p%Delim,  MassMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  DampMat(I1,I2,L), I2 = 1,NActvDOF )            , p%Delim//'|',          &
-                                       ( p%Delim,  StffMat(I1,I2,L), I2 = 1,NActvDOF )
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   )
+            DO I1 = 1,OtherState%DOFs%NActvDOF   ! Loop through all active (enabled) DOFs
+               WRITE    (UnLn,Frmt1)  QD2op(OtherState%DOFs%PS(I1),L), p%Delim//'|'//p%Delim, QDop(OtherState%DOFs%PS(I1),L),       p%Delim//'|'//p%Delim, &
+                                        Qop(OtherState%DOFs%PS(I1),L), p%Delim//'|',                                                       &
+                                       ( p%Delim,  MassMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  DampMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )            , p%Delim//'|',          &
+                                       ( p%Delim,  StffMat(I1,I2,L), I2 = 1,OtherState%DOFs%NActvDOF )
             ENDDO                ! I1 - All active (enabled) DOFs
 
             IF ( p%NumOuts /= 0 )  THEN  ! We have at least one output measurement
                WRITE    (UnLn,'()' )   ! a blank line
                WRITE    (UnLn,Frmt )  'op Output '  , p%Delim//'|'//p%Delim, 'This colmn'  ,        p%Delim//'|'//p%Delim, &
                                       'This colmn',   p%Delim//'|', p%Delim,                                               &
-                                      'This matrx', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,NActvDOF-1   )
+                                      'This matrx', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'VelC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'DspC - Out', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   )
                WRITE    (UnLn,Frmt )  'Measurmnts'  , p%Delim//'|'//p%Delim, 'is blank  '  ,        p%Delim//'|'//p%Delim, &
                                       'is blank  ',   p%Delim//'|',   p%Delim,                                             &
-                                      'is blank  ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   ), p%Delim//'|', p%Delim, &
-                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,NActvDOF-1   )
+                                      'is blank  ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   ), p%Delim//'|', p%Delim, &
+                                      'Matrix    ', ( p%Delim, '          ', I2 = 1,OtherState%DOFs%NActvDOF-1   )
                DO I  = 1,p%NumOuts    ! Loop through all selected output channels
                   WRITE (UnLn,Frmt2)  Yop(I,      L), p%Delim//'|'//p%Delim, '          '  ,        p%Delim//'|'//p%Delim, &
                                        '          ',  p%Delim//'|',                                                        &
-                                       ( p%Delim, '           '          , I2 = 1,NActvDOF )      , p%Delim//'|',          &
-                                       ( p%Delim,  CMat(I ,I2+NActvDOF,L), I2 = 1,NActvDOF )      , p%Delim//'|',          &
-                                       ( p%Delim,  CMat(I ,I2,         L), I2 = 1,NActvDOF )
+                                       ( p%Delim, '           '          , I2 = 1,OtherState%DOFs%NActvDOF )      , p%Delim//'|',          &
+                                       ( p%Delim,  CMat(I ,I2+OtherState%DOFs%NActvDOF,L), I2 = 1,OtherState%DOFs%NActvDOF )      , p%Delim//'|',          &
+                                       ( p%Delim,  CMat(I ,I2,         L), I2 = 1,OtherState%DOFs%NActvDOF )
                ENDDO                ! I - All selected output channels
             ENDIF
 

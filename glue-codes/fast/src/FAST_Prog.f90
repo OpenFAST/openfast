@@ -6,7 +6,6 @@ PROGRAM FAST
 
 
 USE                             ADAMSInput
-USE                             DOFs
 USE                             General
 USE                             InitCond
 USE                             Linear
@@ -46,6 +45,8 @@ TYPE(StrD_ParameterType)         :: p_StrD                                      
 TYPE(StrD_InputType)             :: u_StrD                                       ! System inputs of the structural dynamics module
 TYPE(StrD_OutputType)            :: y_StrD                                       ! System outputs of the structural dynamics module
 
+TYPE(StrD_InputFile)             :: InputFileData_StrD                           ! all the data in the StructDyn input file
+
 
 INTEGER(IntKi)                   :: ErrStat                                      ! Error status
 CHARACTER(1024)                  :: ErrMsg                                       ! Error message
@@ -70,7 +71,7 @@ CALL DispNVD()
    ! Open and read input files, initialize global parameters.
 
 CALL FAST_Begin( PriFile, RootName, DirRoot )
-CALL FAST_Input( p_StrD, OtherSt_StrD, ErrStat, ErrMsg )
+CALL FAST_Input( p_StrD, OtherSt_StrD, InputFileData_StrD, ErrStat, ErrMsg )
 
 
    ! Set up initial values for all degrees of freedom.
@@ -81,7 +82,7 @@ CALL FAST_Initialize( p_StrD, x_StrD, y_StrD, OtherSt_StrD )
 
    ! Print summary information to "*.fsm"?
 
-IF ( SumPrint )  CALL PrintSum( p_StrD )
+IF ( SumPrint )  CALL PrintSum( p_StrD, OtherSt_StrD )
 
 
 
@@ -89,13 +90,13 @@ IF ( SumPrint )  CALL PrintSum( p_StrD )
 
 IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
 
-   CALL MakeADM( p_StrD, x_StrD, OtherSt_StrD )      ! Make the ADAMS dataset file (.adm).
+   CALL MakeADM( p_StrD, x_StrD, OtherSt_StrD, InputFileData_StrD  )      ! Make the ADAMS dataset file (.adm).
 
    CALL MakeACF( p_StrD )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
 
    IF ( MakeLINacf )  THEN
 
-      IF ( NActvDOF == 0 )  THEN ! The model has no DOFs
+      IF ( OtherSt_StrD%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
          CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//                   &
                       '_ADAMS_LIN.acf'' not created since the model has zero active DOFs.'   )
       ELSE                             ! The model has at least one DOF
@@ -123,7 +124,8 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
 
-      IF ( NActvDOF == 0 )  CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
+      IF ( OtherSt_StrD%DOFs%NActvDOF == 0 ) &
+         CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
 
 
       CALL CoordSys_Alloc( OtherSt_StrD%CoordSys, p_StrD, ErrStat, ErrMsg )
@@ -161,7 +163,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
       CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD )          ! Linearize the model about the steady-state solution.
 
-      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg )
+!      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg ) ! happens in StrD_End
       IF (ErrStat /= ErrID_none) THEN
          CALL WrScr( ErrMsg )
       END IF      

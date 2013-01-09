@@ -149,77 +149,22 @@ END MODULE Blades
 !USE                             Precision
 !
 !
-!!REAL(ReKi), PARAMETER        :: Inv2Pi   =  0.15915494                          ! 0.5/Pi.
-!REAL(ReKi)                   :: TwoPiNB                                         ! 2*Pi/NumBl.  This constant is calculated in fast_io.f90/Inputs()
+!REAL(ReKi), PARAMETER        :: Inv2Pi   =  0.15915494                          ! 0.5/Pi.
 !
 !END MODULE Constants
 !!=======================================================================
-MODULE DOFs
-
-
-   ! This MODULE stores variables related to degrees of freedom.
-
-
-USE                             Precision
-
-
-!REAL(ReKi), ALLOCATABLE      :: Q        (:,:)                                  ! Displacement matrix.
-!REAL(ReKi), ALLOCATABLE      :: QD       (:,:)                                  ! Velocity matrix.
-!REAL(ReKi), ALLOCATABLE      :: QD2      (:,:)                                  ! Acceleration matrix.
-
-INTEGER(4), ALLOCATABLE      :: Diag     (:)                                    ! Array containing the indices of SrtPS() associated with each enabled DOF; that is, SrtPS(Diag(I)) = I.
-INTEGER(4), ALLOCATABLE      :: IC       (:)                                    ! Array which stores pointers to predictor-corrector results.
-INTEGER(4)                   :: NActvDOF                                        ! The number of active (enabled) DOFs in the model.
-INTEGER(4)                   :: NAug                                            ! Dimension of augmented solution matrix.
-!INTEGER(4)                   :: NDOF                                            ! Number of total DOFs.
-INTEGER(4)                   :: NPA                                             ! Number of DOFs                  that contribute to the angular velocity of the tail                                                      (body A) in the inertia frame.
-INTEGER(4)                   :: NPB                                             ! Number of DOFs                  that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame.
-INTEGER(4)                   :: NPCE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPDE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPF                                             ! Number of DOFs                  that contribute to the angular velocity of the tower elements                                            (body F) in the inertia frame.
-INTEGER(4)                   :: NPG                                             ! Number of DOFs                  that contribute to the angular velocity of the generator                                                 (body G) in the inertia frame.
-INTEGER(4)                   :: NPH                                             ! Number of DOFs                  that contribute to the angular velocity of the hub                                                       (body H) in the inertia frame.
-INTEGER(4)                   :: NPIE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the tail boom center of mass                                                        (point I) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPL                                             ! Number of DOFs                  that contribute to the angular velocity of the low-speed shaft                                           (body L) in the inertia frame.
-INTEGER(4)                   :: NPM                                             ! Number of DOFs                  that contribute to the angular velocity of the blade elements                                            (body M) in the inertia frame.
-INTEGER(4)                   :: NPN                                             ! Number of DOFs                  that contribute to the angular velocity of the nacelle                                                   (body N) in the inertia frame.
-INTEGER(4)                   :: NPTE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPTTE                                           ! Number of tower DOFs            that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPR                                             ! Number of DOFs                  that contribute to the angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: NPSBE    (:)                                    ! Number of blade DOFs            that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: NPSE     (:)                                    ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPUE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the nacelle center of mass                                                          (point U) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4)                   :: NPX                                             ! Number of DOFs                  that contribute to the angular velocity of the platform                                                  (body X) in the inertia frame.
-INTEGER(4)                   :: NPYE                                            ! Number of DOFs                  that contribute to the QD2T-related linear accelerations of the platform center of mass                                                         (point Y) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PA       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the tail                                                      (body A) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PB       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PCE      (:)                                    ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PDE      (:)                                    ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PF       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the tower elements                                            (body F) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PG       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the generator                                                 (body G) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PH       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the hub                                                       (body H) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PIE      (:)                                    ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tail boom center of mass                                                        (point I) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PL       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the low-speed shaft                                           (body L) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PM       (:,:)                                  ! Array of DOF indices (pointers) that contribute to the angular velocity of the blade elements                                            (body M) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PN       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the nacelle                                                   (body N) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PTE      (:)                                    ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PTTE     (:)                                    ! Array of tower DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes                                                               (point T) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PR       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PS       (:)                                    ! Array of DOF indices (pointers) to the active (enabled) DOFs/states.
-INTEGER(4), ALLOCATABLE      :: PSBE     (:,:)                                  ! Array of blade DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes                                                               (point S) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PSE      (:,:)                                  ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PUE      (:)                                    ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the nacelle center of mass                                                          (point U) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: PX       (:)                                    ! Array of DOF indices (pointers) that contribute to the angular velocity of the platform                                                  (body X) in the inertia frame.
-INTEGER(4), ALLOCATABLE      :: PYE      (:)                                    ! Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the platform center of mass                                                         (point Y) in the inertia frame, based on which DOFs are presently enabled.
-INTEGER(4), ALLOCATABLE      :: SrtPS    (:)                                    ! Sorted (from smallest to largest DOF index) version of PS().
-INTEGER(4), ALLOCATABLE      :: SrtPSNAUG(:)                                    ! SrtPS() with the additional value of NAUG.
-
-LOGICAL,    ALLOCATABLE      :: DOF_Flag (:)                                    ! Array which stores values of the feature flags for each DOF.
-
-CHARACTER(99), ALLOCATABLE   :: DOF_Desc (:)                                    ! Array which stores descriptions of each DOF.
-
-
-END MODULE DOFs
+!MODULE DOFs
+!
+!
+!   ! This MODULE stores variables related to degrees of freedom.
+!
+!
+!USE                             Precision
+!
+!
+!INTEGER(4), ALLOCATABLE      :: IC       (:)                                    ! Array which stores pointers to predictor-corrector results.
+!
+!END MODULE DOFs
 !=======================================================================
 MODULE DriveTrain
 
@@ -2378,13 +2323,13 @@ MODULE TurbConf
 USE                             Precision
 
 
-REAL(ReKi)                   :: AvgNrmTpRd                                      ! Average tip radius normal to the saft.
-REAL(ReKi)                   :: AzimB1Up                                        ! Azimuth value to use for I/O when blade 1 points up.
-REAL(ReKi)                   :: BoomCMxn  = 0.0                                 ! Downwind distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: BoomCMyn  = 0.0                                 ! Lateral  distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: BoomCMzn  = 0.0                                 ! Vertical distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: CosDel3   = 1.0                                 ! Cosine of the Delta-3 angle for teetering rotors.
-REAL(ReKi), ALLOCATABLE      :: CosPreC   (:)                                   ! Cosines of the precone angles.
+!REAL(ReKi)                   :: AvgNrmTpRd                                      ! Average tip radius normal to the saft.
+!REAL(ReKi)                   :: AzimB1Up                                        ! Azimuth value to use for I/O when blade 1 points up.
+!REAL(ReKi)                   :: BoomCMxn  = 0.0                                 ! Downwind distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)
+!REAL(ReKi)                   :: BoomCMyn  = 0.0                                 ! Lateral  distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)
+!REAL(ReKi)                   :: BoomCMzn  = 0.0                                 ! Vertical distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)
+!REAL(ReKi)                   :: CosDel3   = 1.0                                 ! Cosine of the Delta-3 angle for teetering rotors.
+!REAL(ReKi), ALLOCATABLE      :: CosPreC   (:)                                   ! Cosines of the precone angles.
 REAL(ReKi)                   :: CRFrlSkew = 1.0                                 ! Cosine of the rotor-furl axis skew angle.
 REAL(ReKi)                   :: CRFrlSkw2 = 1.0                                 ! Cosine-squared of the rotor-furl axis skew angle.
 REAL(ReKi)                   :: CRFrlTilt = 1.0                                 ! Cosine of the rotor-furl axis tilt angle.
@@ -2402,8 +2347,8 @@ REAL(ReKi)                   :: CTFrlSkew = 1.0                                 
 REAL(ReKi)                   :: CTFrlSkw2 = 1.0                                 ! Cosine-squared of the tail-furl axis skew angle.
 REAL(ReKi)                   :: CTFrlTilt = 1.0                                 ! Cosine of the tail-furl axis tilt angle.
 REAL(ReKi)                   :: CTFrlTlt2 = 1.0                                 ! Cosine-squared of the tail-furl axis tilt angle.
-REAL(ReKi)                   :: Delta3    = 0.0                                 ! Delta-3 angle for teetering rotors.
-REAL(ReKi)                   :: FASTHH                                          ! Hub-height as computed using FAST inputs [= TowerHt + Twr2Shft + OverHang*SIN( ShftTilt ) ].
+!REAL(ReKi)                   :: Delta3    = 0.0                                 ! Delta-3 angle for teetering rotors.
+!REAL(ReKi)                   :: FASTHH                                          ! Hub-height as computed using FAST inputs [= TowerHt + Twr2Shft + OverHang*SIN( ShftTilt ) ].
 REAL(ReKi)                   :: HubCM                                           ! Distance from rotor apex to hub mass.
 REAL(ReKi)                   :: HubRad                                          ! Preconed hub radius.
 REAL(ReKi)                   :: NacCMxn                                         ! Downwind distance from tower-top to nacelle CM.
@@ -2445,8 +2390,8 @@ REAL(ReKi)                   :: rZT0zt                                          
 REAL(ReKi)                   :: rZYzt     = 0.0                                 ! zt-component of position vector rZY.
 REAL(ReKi)                   :: ShftSkew  = 0.0                                 ! Rotor shaft skew angle. (Initialized to zero b/c not all models read in FurlFile)
 REAL(ReKi)                   :: ShftTilt                                        ! Rotor shaft tilt angle.
-REAL(ReKi)                   :: SinDel3   = 0.0                                 ! Sine of the Delta-3 angle for teetering rotors.
-REAL(ReKi), ALLOCATABLE      :: SinPreC   (:)                                   ! Sines of the precone angles.
+!REAL(ReKi)                   :: SinDel3   = 0.0                                 ! Sine of the Delta-3 angle for teetering rotors.
+!REAL(ReKi), ALLOCATABLE      :: SinPreC   (:)                                   ! Sines of the precone angles.
 REAL(ReKi)                   :: SRFrlSkew = 0.0                                 ! Sine of the rotor-furl axis skew angle.
 REAL(ReKi)                   :: SRFrlSkw2 = 0.0                                 ! Sine-squared of the rotor-furl axis skew angle.
 REAL(ReKi)                   :: SRFrlTilt = 0.0                                 ! Sine of the rotor-furl axis tilt angle.
@@ -2482,7 +2427,7 @@ REAL(ReKi)                   :: TwrRBHt                                         
 REAL(ReKi)                   :: UndSling                                        ! Undersling length.
 REAL(ReKi)                   :: Yaw2Shft  = 0.0                                 ! Lateral distance from the yaw axis to the rotor shaft. (Initialized to zero b/c not all models read in FurlFile)
 
-INTEGER(4)                   :: PSpnElN   = 1                                   ! Number of the innermost blade element which is still part of the pitchable portion of the blade for partial-span pitch control.
+!INTEGER(4)                   :: PSpnElN   = 1                                   ! Number of the innermost blade element which is still part of the pitchable portion of the blade for partial-span pitch control.
 
 
 END MODULE TurbConf
