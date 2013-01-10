@@ -127,7 +127,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.00a-mlb', '08-Jan-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.00b-mlb', '10-Jan-2013')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -2365,7 +2365,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    RETURN
    END SUBROUTINE ReadCVar ! ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
 !=======================================================================
-   SUBROUTINE ReadFASTbin ( UnIn, FASTdata , ErrLev, ErrMsg )
+   SUBROUTINE ReadFASTbin ( UnIn, Init, FASTdata, ErrLev, ErrMsg )
 
       ! This routine reads the contents of a FAST binary output file (FASTbinFile) and stores it in FASTdata.
       ! It is assumed that the name of the binary file is preloaded into FASTdata%File by the calling procedure.
@@ -2375,6 +2375,8 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    INTEGER(IntKi), OPTIONAL, INTENT(OUT)  :: ErrLev                  ! An optional error level to be returned to the calling routine.
    INTEGER(IntKi), INTENT(INOUT)          :: UnIn                    ! The IO unit for the FAST binary file.
+
+   LOGICAL, INTENT(IN)                    :: Init                    ! A flag to tell the routine to read only the file header for initialization purposes.
 
    CHARACTER(*), OPTIONAL, INTENT(OUT)    :: ErrMsg                  ! An optional error message to be returned to the calling routine.
 
@@ -2446,6 +2448,9 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
                                           //TRIM( FASTdata%File )//'".' )
       RETURN
    ENDIF
+
+
+      ! Time is done differently for the two file types.
 
    IF ( FileType == 1 )  THEN
 
@@ -2608,6 +2613,15 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    END DO
 
 
+      ! Return if we only wanted to read the header.
+
+   IF ( Init )  THEN
+      CLOSE ( UnIn)
+      CALL ExitThisRoutine( ErrID_None, '' )
+      RETURN
+   ENDIF
+
+
       ! If the file contains a time channel (as opposed to just initial time and time step), read it.
       ! There are four bytes per time value.
 
@@ -2647,6 +2661,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
    END DO ! IRow=1,FASTdata%NumRecs
 
 
+   CLOSE ( UnIn)
    CALL ExitThisRoutine( ErrID_None, '' )
    RETURN
 
@@ -2695,7 +2710,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
       END SUBROUTINE ExitThisRoutine
 
-   END SUBROUTINE ReadFASTbin ! ( FASTbinData [, ErrLev] )
+   END SUBROUTINE ReadFASTbin ! ( UnIn, Init, FASTdata, ErrLev, ErrMsg )
 !=======================================================================
    SUBROUTINE ReadIAry ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr, ErrStat )
 
