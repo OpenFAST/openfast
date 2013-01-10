@@ -1,6 +1,6 @@
 all: gnb
 
-gnb: quadrature.o dlegen.o dlagint.o NodeLoc.o nodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o LineSearch.o Newton.o driver.o
+gnb: quadrature.o dlegen.o dlagint.o NodeLoc.o NodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o LineSearch.o Newton.o driver.o
 	gfortran -O3 -o gnb quadrature.o dlegen.o dlagint.o NodeLoc.o nodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o LineSearch.o Newton.o driver.o
 	
 quadrature.o: quadrature.f90
