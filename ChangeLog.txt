@@ -377,6 +377,10 @@ o  I added the subroutine NWTC_IO.f90\ChkRealFmtStr() to test the validity for
 o  I created a test program, Test_ChkRealFmtStr.f90, in Drivers to test ChkRealFmtStr().
    I tested it with both IVF and gfortran on Windows.
 
+v1.07.00b-mlb, 10-Jan-2013  M. Buhl
+o  I modified NWTC_IO.f90\ReadFASTbin() to that one could read just the header.
+
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
