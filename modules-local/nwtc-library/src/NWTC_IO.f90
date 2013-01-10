@@ -819,7 +819,6 @@ CONTAINS
 
    REAL, PARAMETER                  :: TestVal    = -1.0                     ! The value to test the format specifier with.
 
-   INTEGER                          :: IC                                    ! An implied DO index.
    INTEGER                          :: IOS                                   ! An integer to store the I/O status of the attempted internal write.
    INTEGER, PARAMETER               :: TestStrLen  = 20                      ! A parameter for specifying the length of RealStr.
 

@@ -397,3 +397,5 @@ o  I modified NWTC_IO.f90\ReadFASTbin() to that one could read just the header.
 
       Are we going to add optional arguments to these kinds of routines to return
       to the calling routine with an error flag?
+
+   o SysIVF.f90\OpenBinFile() has a RecLen argument that is not used.  Not sure how to deal with that.

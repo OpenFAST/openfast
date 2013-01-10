@@ -518,7 +518,7 @@ CONTAINS
 
 
 !   Is_NaN = IEEE_IS_NAN( DblNum )
-  Is_NaN = IsNaN( DblNum )
+   Is_NaN = IsNaN( DblNum )
 
 
    RETURN
@@ -533,7 +533,7 @@ CONTAINS
       ! Argument declarations.
 
    INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the output file.
-   INTEGER, INTENT(IN)          :: RecLen                                       ! Length of binary record.
+   INTEGER, INTENT(IN)          :: RecLen                                       ! Length of binary record.   (This argument is not used in this Sys file! - mlb)
 
    LOGICAL, INTENT(OUT)         :: Error                                        ! Flag to indicate the open failed.
 
