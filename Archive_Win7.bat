@@ -6,6 +6,8 @@
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
 
+@SET TARZIP="C:\Program Files (x86)\7-Zip\7z.exe"
+
 @IF NOT "%1"==""  GOTO DeleteOld
 
 @ECHO 
@@ -41,6 +43,17 @@
 @%WINZIPSE% %TEMP%\ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 @COPY %TEMP%\ARCHTMP.exe Archive\%ARCHROOT%_v%1_Maint.exe
 @DEL %TEMP%\ARCHTMP.zip, %TEMP%\ARCHTMP.exe
+
+@ECHO.
+@ECHO -------------------------------------------------------------------------
+@ECHO Archiving %PROGNAME% for general distribution (tar.gz).
+@ECHO -------------------------------------------------------------------------
+@ECHO.
+@rem first create a tar file, then compress it (gzip allows only one file)
+@%TARZIP% a -ttar ARCHTMP @ArcFiles.txt
+@%TARZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
+@COPY ARCHTMP.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
+@DEL ARCHTMP.tar, ARCHTMP.tar.gz
 
 
 :Done
