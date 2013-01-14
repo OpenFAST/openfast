@@ -3283,7 +3283,7 @@ v6.00c-jmj, 15-Apr-2005  J. Jonkman
    TurbSim imput files to equal 600.0 seconds and regenerated the wind files
    for all cases.  This change was recommended by Bonnie Jonkman in order to
    bring about more frequencies and more realistic winds in the wind files
-   without increasing the size of the .wnd files 
+   without increasing the size of the .wnd files
 
 v6.00, 10-Jun-2005  J. Jonkman
  I rolled up all the alpha changes into this new version.  I eliminated all
@@ -3587,7 +3587,7 @@ v6.10a-jmj, 21-Feb-2007  J. Jonkman
    as the maximum mooring line anchor radius.  This required changes to MODULE
    FAST_Mods.f90/Platform() and SUBROUTINEs FAST_IO.f90/GetPtfm() and
    FAST2ADAMS.f90/MakeADM(), but does not affect any of the simulation results.
-   
+
 v6.10b-eab, 24-Jul-2008  E. Bush
  In MODULE FAST_Mods.f90/Modes(), I introduced a new INTEGER(4), PARAMETER,
    PolyOrd, that represents the order of the polynomial used to describe a mode
@@ -3609,7 +3609,7 @@ v6.10b-eab, 24-Jul-2008  E. Bush
    mode shape coefficient arrays had to be changed to PolyOrd.
  To use this new feature, set PolyOrd to the desired polynomial order and
    recompile FAST. Then, modify the tower and blade input files to include
-   PolyOrd-1 number of mode shape coeffiecients. 
+   PolyOrd-1 number of mode shape coeffiecients.
 
 v6.10c-jmj
    Placeholder for unfinished version.
@@ -3621,8 +3621,8 @@ v6.10d-jmj, 13-Aug-2009  J. Jonkman
    BladedDLLInterface() instead of the dummy GenTorq variable local to
    UserHSSBr().  I'm not sure why the previous version didn't trigger an error
    because of the INTENT(IN) attribute of variable GenTrq (bjj: the INTENT(IN)
-   just checks that the variable isn't on the left side of an = sign.), but the 
-   bug caused the value of GenTrq in DrvTrTrq() to be incorrectly overwritten. 
+   just checks that the variable isn't on the left side of an = sign.), but the
+   bug caused the value of GenTrq in DrvTrTrq() to be incorrectly overwritten.
  I changed IterRtHS from 1 to 2 in FAST_Lin.f90/Linearize().  This eliminated a
    problem when linearizing with GBoxEff < 100.0 as SgnPrvLSTQ may switch signs
    between calls to RtHS().  Thanks Alan Wright for reporting this bug!
@@ -3654,17 +3654,17 @@ v6.02d-bjj, 10-Mar-2010 B. Jonkman
  I replaced the timing functions with intrinsic routines.
  I replaced the DotProd() subroutine with the intrinsic DOT_PRODUCT().
  I put almost all of the FAST source code in MODULES.
- I updated SUBROUTINE RtHS() to calculate the positions, orientations, and 
+ I updated SUBROUTINE RtHS() to calculate the positions, orientations, and
    velocities of the blade elements in separate loops to facilitate the new
    AeroDyn interface (AeroDyn is now called once per time step, not once per
-   element per time step).  
- I removed most of the subroutines from AeroCalc.f90 because they are not 
-   needed with the new AeroDyn interface.  
- I added a FAST_Terminate() function and Noise_Terminate() function to remove some 
+   element per time step).
+ I removed most of the subroutines from AeroCalc.f90 because they are not
+   needed with the new AeroDyn interface.
+ I added a FAST_Terminate() function and Noise_Terminate() function to remove some
    of the memory leaks present when compiling the S Function for Matlab.
- I added logic to test if ALLOCATABLE variables were allocated (which is necessary 
+ I added logic to test if ALLOCATABLE variables were allocated (which is necessary
    when /QSave is used!)
- I fixed a bug in BladedDLLInterface.f90 where the loads/power were multiplied 
+ I fixed a bug in BladedDLLInterface.f90 where the loads/power were multiplied
    by 0.001 instead of 1000.
  I replaced the "INVALID CHANNEL" column headings because Crunch doesn't like
    multiple channels with the same name.  The variable name is now used for the
@@ -3680,23 +3680,23 @@ v6.02d-bjj, 10-Mar-2010 B. Jonkman
    "Total Real Time" was actually the real time for the simulation portion of the
    run, and should have been compared with "Simulation CPU time" instead of
    "Total CPU time." I removed "Simulation CPU time" and now measure "Total
-   Real Time" from the start of the simulation to the end.  The time ratio now 
-   uses simulated time divided by total real time (previously it divided by 
+   Real Time" from the start of the simulation to the end.  The time ratio now
+   uses simulated time divided by total real time (previously it divided by
    simulation cpu time).
- I removed eigenanalysis.m from the archive. It is replaced by GetMats.m and mbc3 
+ I removed eigenanalysis.m from the archive. It is replaced by GetMats.m and mbc3
    found in the source folder of the MBC archive.
  I fixed a bug that was present in the gearbox friction influence on the
    equations of motion when the GenDOF is False and GBoxEff is less than 100%.
    However, if GenDOF is False, the gearbox friction shouldn't influence any
    results.
- In the CertTest, I 
-   - modified the text in AeroDyn input files, removing the comment 
-      "[currently ignored]" from KinVisc because it isn't true.  
-   - modified the B1PitchF(:) variables to be BlPitchF(:) instead. 
-   - changed the FAST integration time step, DT, from 0.0025 to 0.001 in tests 
+ In the CertTest, I
+   - modified the text in AeroDyn input files, removing the comment
+      "[currently ignored]" from KinVisc because it isn't true.
+   - modified the B1PitchF(:) variables to be BlPitchF(:) instead.
+   - changed the FAST integration time step, DT, from 0.0025 to 0.001 in tests
       15-17 (the SWRT models).
    - added .out and .plt files to Update.bat
-   - updated the TurbSim input files for TurbSim 1.50 and made the grid for the 
+   - updated the TurbSim input files for TurbSim 1.50 and made the grid for the
       WP model contain an odd number of points.
    - updated the Crunch files to work with v3.00.00
    - modified Test14.m to call mbc3.m in the MBC source folder. This required
@@ -3706,7 +3706,7 @@ v6.02d-bjj, 10-Mar-2010 B. Jonkman
        old .eig file while Matlab opened).
    - I replaced the plots in the .xls files with functionality in a Matlab file
        called PlotCertTestResults.m. Run the FAST, Adams, and/or Simulink CertTests
-       then, call PlotCertTestResults in Matlab using newPath = the FAST CertTest 
+       then, call PlotCertTestResults in Matlab using newPath = the FAST CertTest
        directory and oldPath = [newPath '\TstFiles']. See PlotCertTestResults.m
        for details.
  I rewrote the gateway functions for making the Matlab S-function.  It is now
@@ -3734,85 +3734,85 @@ v7.00.00a-bjj, 31-Mar-2010  B. and J. Jonkman
 v7.00.01a-bjj, 5-Nov-2010  B. Jonkman
  The Abort() called in FAST_IO.f90 is now ProgAbort().
  I shortened several lines that exceeded the 132 character limit.
- Kristian Sætertrø reported an error, and after some investigation, we 
+ Kristian Sætertrø reported an error, and after some investigation, we
    discovered the ADInterfaceComponent positions were sending AeroDyn the
    incorrect heights when PtfmRef was non-zero.  This problem has been fixed.
  I added quotation marks around %IVF_LOC%\IFORTVARS.bat in Compile_FAST.bat.
- I renamed the output executable file generated by Compile_FAST.bat to be 
+ I renamed the output executable file generated by Compile_FAST.bat to be
    "FAST.exe" instead of "FAST_test.exe"
 
 v7.00.01 20-Jan-2012 B. Jonkman
  I removed the change comments and updated the version number.
- Compilation info: 
+ Compilation info:
      Linked with NWTC Library v1.04.00d-bjj and AeroDyn v13.00.00.
      Compiled with IVF 10.1.024; Simulink compiled with Matlab R2011a.
      Using Microsoft Visual Studio .NET 2003.
- 
+
 v7.00.02a-bjj, 26-Jan-2012  B. Jonkman
  None of these changes effects the simulation results.
  Compiled with AeroDyn v13.00.01a-bjj.
  I fixed a format string that caused the program to crash with FAST input file
-   values Echo = .TRUE. and PtfmModel = 2 or 3.  
+   values Echo = .TRUE. and PtfmModel = 2 or 3.
  I fixed the definitions of BladedDLLInterface variables as defined in kernel32.f90.
    (This was requested by A. Elliott, compiling on 64-bit OS.)
- To avoid having to change FAST with every bug fix/minor change of Adams2AD, we have 
-   set the A2AD version number without the last 2 digits of the actual version number 
-   (i.e. "v13.00.00" becomes "v13.00."). Note that every time the A2AD files made 
-   by FAST are changed, the first 2-digit number after the decimal (i.e., the 
+ To avoid having to change FAST with every bug fix/minor change of Adams2AD, we have
+   set the A2AD version number without the last 2 digits of the actual version number
+   (i.e. "v13.00.00" becomes "v13.00."). Note that every time the A2AD files made
+   by FAST are changed, the first 2-digit number after the decimal (i.e., the
    middle 2 digits of the version number) must be changed in A2AD.
- In BladedDLLInterface.f90, I set avrSWAP(50) to the number of characters in InFile and 
-   avrSWAP(51) to the number of characters in OutName.  This change was requested by 
+ In BladedDLLInterface.f90, I set avrSWAP(50) to the number of characters in InFile and
+   avrSWAP(51) to the number of characters in OutName.  This change was requested by
    P. Flemming as without it one of GH's DLLs couldn't run.
- I moved the TiLstPrn variable in Simulink from a local saved variable to a value stored 
-   in the module so that it can be reset when the simulation ends (and thus reinitialized  
+ I moved the TiLstPrn variable in Simulink from a local saved variable to a value stored
+   in the module so that it can be reset when the simulation ends (and thus reinitialized
    for restart).
  I added some text to the wind op section of the linearization output file to indicate
-   that those values are invalid. (They are always listed as 0 because FAST doesn't know  
-   that data, which is internal to the InflowWind module.)   
-   
+   that those values are invalid. (They are always listed as 0 because FAST doesn't know
+   that data, which is internal to the InflowWind module.)
+
 v7.01.00a-bjj, 16-Feb-2012  B. Jonkman
  None of these changes effects the simulation results.
  Compiled with NWTC Library v1.04.00e-bjj.
- I added OutListParameters.xlsx to the archive to replace OutList.txt. 
+ I added OutListParameters.xlsx to the archive to replace OutList.txt.
  I modified the FAST_IO.f90/ChckOutLst() subroutine to avoid the optimization
    loss error that IVF 11 generates when it compiles.  The SELECT statement
-   has been replaced with arrays that are searched using a binary algorithm. (I 
-   added function IndexCharAry() in the NWTC Subroutine Library to perform the 
-   search.) It doesn't seem to change the performance on IVF 10.1, or some cases 
-   on IVF 11, but it does significantly improve the time on several other IVF 11 
-   cases. This algorithm requires the Fortran 2003 feature that allows 255 
+   has been replaced with arrays that are searched using a binary algorithm. (I
+   added function IndexCharAry() in the NWTC Subroutine Library to perform the
+   search.) It doesn't seem to change the performance on IVF 10.1, or some cases
+   on IVF 11, but it does significantly improve the time on several other IVF 11
+   cases. This algorithm requires the Fortran 2003 feature that allows 255
    continuation lines (as opposed to Fortran 95's continuation 39 lines)
- I created a Matlab script, "Write_ChckOutLst.m", and added it to the archive.  
-   This script reads the OutListParameters.xlsx file and creates Fortran code   
-   for the Output MODULE and ChckOutLst() SUBROUTINE.   
+ I created a Matlab script, "Write_ChckOutLst.m", and added it to the archive.
+   This script reads the OutListParameters.xlsx file and creates Fortran code
+   for the Output MODULE and ChckOutLst() SUBROUTINE.
  I modified all the units columns that contained seconds abbreviated by "sec"
    to "s" instead. The extra 2 characters allowed me to change "deg/sec2"
-   to "deg/s^2", which follows other similar units (e.g., "m/s^2"), and 
-   will look nicer in Matlab plots that use these units.    
+   to "deg/s^2", which follows other similar units (e.g., "m/s^2"), and
+   will look nicer in Matlab plots that use these units.
  I increased the MaxOutputs parameter from 200 to the total number of avaliable
-   outputs in the FAST_Mods.f90/Output module. No one could remember why the 
+   outputs in the FAST_Mods.f90/Output module. No one could remember why the
    limit of 200 was there in the first place.
- I replaced variables OutInd and OutSign with OutParam%Indx and OutParam%SignM, 
-   respectively.  This corresponds to enhancements to I/O in HydroDyn that use 
-   the same matlab script to generate portions of the output code. 
+ I replaced variables OutInd and OutSign with OutParam%Indx and OutParam%SignM,
+   respectively.  This corresponds to enhancements to I/O in HydroDyn that use
+   the same matlab script to generate portions of the output code.
  I fixed some nonstandard Fortran 2003 (I/O lists with parenthesis) in FAST_Lin.f90.
- I modified the FAST.f90\CalcOuts() subroutine to use DO loops instead of 
-   lots of IF statements.  There are now 2/3 fewer lines of code in that routine.    
- I added several new outputs, listed below. The changes to the Output module in 
-   FAST_Mods.f90 are done from the "Write_ChckOutLst.m" script.  
-   -I added Jose Ascona's changes to calculate forces at the local blade and 
-    tower stations as opposed to just the moments at those locations. These 
+ I modified the FAST.f90\CalcOuts() subroutine to use DO loops instead of
+   lots of IF statements.  There are now 2/3 fewer lines of code in that routine.
+ I added several new outputs, listed below. The changes to the Output module in
+   FAST_Mods.f90 are done from the "Write_ChckOutLst.m" script.
+   -I added Jose Ascona's changes to calculate forces at the local blade and
+    tower stations as opposed to just the moments at those locations. These
     new outputs are named:
       Spn<1,2,...9>FL<x,y,z>b<1,2,3>
-      TwHt<1,2,...9>FL<x,y,z>t. 
-   -I added new outputs to calculate translations and rotations at the local 
+      TwHt<1,2,...9>FL<x,y,z>t.
+   -I added new outputs to calculate translations and rotations at the local
     blade and tower stations.  These outputs are:
-       Spn<1,2,...9>TD<x,y,z>b<1,2,3>  - local translational deflection 
-       Spn<1,2,...9>RD<x,y,z>b<1,2,3>  - local rotational deflection 
-       TwHt<1,2,...9>TD<x,y,z>t        - local translational deflection 
-       TwHt<1,2,...9>RD<x,y,z>t        - local rotational deflection 
-       TwHt<1,2,...9>TP<x,y,z>i        - global translational position 
-       TwHt<1,2,...9>RP<x,y,z>i        - global rotational position 
+       Spn<1,2,...9>TD<x,y,z>b<1,2,3>  - local translational deflection
+       Spn<1,2,...9>RD<x,y,z>b<1,2,3>  - local rotational deflection
+       TwHt<1,2,...9>TD<x,y,z>t        - local translational deflection
+       TwHt<1,2,...9>RD<x,y,z>t        - local rotational deflection
+       TwHt<1,2,...9>TP<x,y,z>i        - global translational position
+       TwHt<1,2,...9>RP<x,y,z>i        - global rotational position
    -I added outputs for internal DOFs in FAST (they are invalid in Adams):
        Q[D,D2]_B<1,2,3>E1,  Q[D,D2]_B<1,2,3>F1,  Q[D,D2]_B<1,2,3>F2,
        Q[D,D2]_Teet,        Q[D,D2]_DrTr,        Q[D,D2]_GeAz,
@@ -3820,91 +3820,91 @@ v7.01.00a-bjj, 16-Feb-2012  B. Jonkman
        Q[D,D2]_TFA1,        Q[D,D2]_TSS1,        Q[D,D2]_TFA2,
        Q[D,D2]_TSS2,        Q[D,D2]_Sg,          Q[D,D2]_Sw,
        Q[D,D2]_Hv,          Q[D,D2]_R,           Q[D,D2]_P,
-       Q[D,D2]_Y    
- To translate these new FAST outputs to Adams, I made the following 
+       Q[D,D2]_Y
+ To translate these new FAST outputs to Adams, I made the following
    modifications in FAST2ADAMS.f90:
-    -  I renamed marker 4030 + K to marker 10000*K + 9100 and made it 
+    -  I renamed marker 4030 + K to marker 10000*K + 9100 and made it
        relative to marker 10000*K instead of 4000.
-    -  I renamed marker 10000*K + 5100 to 10000*K + 7100; 
+    -  I renamed marker 10000*K + 5100 to 10000*K + 7100;
     -  I also renamed VFORCE 10000*K + 5100 to 10000*K + 7100.
-    -  I added undeflected blade markers 10000*K + 9000 + J (UndeflBldKSecJ_M).    
-    -  I added blade markers oriented with zero twist 10000*K + 7000 + J 
+    -  I added undeflected blade markers 10000*K + 9000 + J (UndeflBldKSecJ_M).
+    -  I added blade markers oriented with zero twist 10000*K + 7000 + J
        (BldKSecJZeroTwist_M).
     -  I added undeflected tower markers 1900 + J (UndeflTowerSecJ_M)
-    -  I updated the ProgVerOfA2AD_SG string to use A2AD v13.01.XX    
- I also added a new ModelParameters array to the FAST2Adams datasets to aid in 
-   the new A2AD initialization scheme (and avoid having to send the number of blades 
+    -  I updated the ProgVerOfA2AD_SG string to use A2AD v13.01.XX
+ I also added a new ModelParameters array to the FAST2Adams datasets to aid in
+   the new A2AD initialization scheme (and avoid having to send the number of blades
    [etc] as a parameter to the USER functions).
- I updated the FAST2ADAMSStatements.xls file in the A2AD archive.  
+ I updated the FAST2ADAMSStatements.xls file in the A2AD archive.
  When file names in the input file are relative (not absolute), they are now relative
    to the directory containing the input file (not the current working directory).
    I updated UserVSCont_KP.f90 and PitchCntrl_ACH.f90 so that their input files are
    also relative to the main FAST input file (or whatever is passed to the user routines
    in the DirRoot parameter). This required a slight modification of the DirRoot variable.
-   However, FAST *should* be able to be run from different directories now (except for 
-   models using DISCON.dll).   
+   However, FAST *should* be able to be run from different directories now (except for
+   models using DISCON.dll).
  I modified the RANDOM_SEED() call in HydroCalc.f90 so that it can be compiled with gfortran
-   (it does not assume the intrinsic pRNG has exactly 2 seeds any more).   
+   (it does not assume the intrinsic pRNG has exactly 2 seeds any more).
  I fixed an error in Simulink/Samples/Test01_SIG.mdl, which used GenEff as a fraction even
    though it is given as a percentage. (Thus, the power was 100 times too high.)
  The summary file now prints the platform mass instead of the turbine mass (to avoid confusion
-   with offshore turbines).   
+   with offshore turbines).
  I modified the Nacelle graphics properties in the CertTest's AOC_Adams.dat file. The
    nacelle is now larger than the gearbox.
  I added ProgAbort statements if PreCrvRef(I) or PreSwpRef(I) are not zero when Adams
    models are built. Adams2AD does not work correctly when there is precurve or presweep.
-   Previously it aborted only when the precurve or presweep was nonzero at the root.  This 
-   will be fixed in a future version of FAST-to-ADAMS.      
- I added tests for (some of) the new outputs to the CertTest.  
- At the request of MLB, I changed SUBROUTINEs Initialize, Begin, and Input to FAST_Initialize, 
-   FAST_Begin, and FAST_Input.    
-   
- Compilation info: 
+   Previously it aborted only when the precurve or presweep was nonzero at the root.  This
+   will be fixed in a future version of FAST-to-ADAMS.
+ I added tests for (some of) the new outputs to the CertTest.
+ At the request of MLB, I changed SUBROUTINEs Initialize, Begin, and Input to FAST_Initialize,
+   FAST_Begin, and FAST_Input.
+
+ Compilation info:
      Linked with NWTC Library v1.04.00 and AeroDyn v13.00.01a-bjj
-     Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003     
+     Intel Visual Fortran 10.1.024 and Microsoft Development Environment 2003
      Simulink compiled with Matlab R2011a.
-   
+
 v7.01.01a-bjj 06-March-2012  B. Jonkman
- The IDCntrl array had indexes mixed up; the allocation statement was the reverse of what was 
-   used in the call to MakeADM_WrICArrays().   
+ The IDCntrl array had indexes mixed up; the allocation statement was the reverse of what was
+   used in the call to MakeADM_WrICArrays().
  I removed some extra space on lines in FAST2ADAMS.f90 that were too long. (reported by Andrew Ning)
  I added a parameter to use to easily make the changes required to model the OC3 Hywind.
  I removed the link to the FAST Verification Page from the FAST web page.
  I modified the OutListParameters.xlsx file: Per jmj, I removed the word "local" from the "Convention"
-   column of inputs Spn{1,2,..,9}TD{y,y,z}b{1,2,3}, which incorrectly said 
+   column of inputs Spn{1,2,..,9}TD{y,y,z}b{1,2,3}, which incorrectly said
    "Directed about the local {x,y,z}b1-axis".
-   
+
 v7.01.01b-bjj 16-May-2012  B. Jonkman
  I updated the call to read AzimB1Up so that the echo file (and message when an error occurred) no
    longer says it is the blade-tip radius. This was reported by user Felix Hess.
-   
-v7.01.01c-bjj 13-Aug-2012 B. Jonkman   
-  The WAMITFile and GHWvFile variables didn't include logic for PathIsRelative() so when people ran FAST 
+
+v7.01.01c-bjj 13-Aug-2012 B. Jonkman
+  The WAMITFile and GHWvFile variables didn't include logic for PathIsRelative() so when people ran FAST
     from different directories, it couldn't always find these file. I fixed the issue.
-  I added code to output binary output files, named .outb. These files store the output channels as 
-    packed 16-bit integers. They will require more memory to run, but they should run faster if the text 
+  I added code to output binary output files, named .outb. These files store the output channels as
+    packed 16-bit integers. They will require more memory to run, but they should run faster if the text
     files are not output. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
-    
+
 v7.02.00a-bjj 28-Aug-2012 B. Jonkman
   I modified the input file, adding a line for "OutFileFmt", which is a switch indicating if the tabular
     output should be (1) a text file, (2) a binary file, or (3) both text and binary files. There are two
-    types of binary output: (1) one that includes the time channel stored as packed 32-bit integers, and 
-    (2) one that does not contain the entire time channel; it contains only the first time and the time 
+    types of binary output: (1) one that includes the time channel stored as packed 32-bit integers, and
+    (2) one that does not contain the entire time channel; it contains only the first time and the time
     increment (rate), which implies that we cannot output variable time steps in the same file. FAST will
     generate files in format (2) when it is a standalone program, but format (1) when it is compiled as
-    an SFunc in Simulink (Simulink does not necessarily output data at a constant rate). This different 
-    format is indicated by an integer FileID in the binary file header (note that post-processors MUST 
-    have output at a constant rate to work properly.) I added this OutFileFmt to the FAST2ADAMS datasets 
+    an SFunc in Simulink (Simulink does not necessarily output data at a constant rate). This different
+    format is indicated by an integer FileID in the binary file header (note that post-processors MUST
+    have output at a constant rate to work properly.) I added this OutFileFmt to the FAST2ADAMS datasets
     for use in A2AD. See https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=150
-  The input parameter TMax does not have the upper limit limitation of 9999.999 seconds when only binary 
+  The input parameter TMax does not have the upper limit limitation of 9999.999 seconds when only binary
     tabular (time-marching) output is requested. The limit still exists for tabular text output. See
     https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=147
   I replaced the code to read the OutList input parameter with the ReadOutputList() subroutine from the
-    NWTC Subroutine Library. (HydroDyn uses the same code.)       
-  
+    NWTC Subroutine Library. (HydroDyn uses the same code.)
+
 v7.02.00b-bjj 29-Oct-2012 B. Jonkman
   I added ReadFASTbinary.m file to the archive.
-  I added Paul Fleming's changes for creating making FAST a DLL for LabVIEW. This involved creating a new 
+  I added Paul Fleming's changes for creating making FAST a DLL for LabVIEW. This involved creating a new
     FAST_RT_DLL.f90 file, adding a Cmpl4LV switch, and moving variable HSSBrFrac from a subroutine to a module.
   I modified the Archive.bat file to include tar.gz format. I reworked the ArcAll.txt and ArcFiles.txt files as follows:
     All archives contain files listed in ArcFiles.txt.
@@ -3912,16 +3912,21 @@ v7.02.00b-bjj 29-Oct-2012 B. Jonkman
     The maintenance/"all" archives contain files listed in ArcFiles.txt, ArcWin.txt, and ArcMaint.txt
 
 v7.02.00c-bjj 30-Nov-2012 B. Jonkman
-  I removed the (:) from LNodesX and LNodesZ so that the array bounds checking wouldn't complain in debug mode. 
+  I removed the (:) from LNodesX and LNodesZ so that the array bounds checking wouldn't complain in debug mode.
   I removed DFFORT.DLL from the archive (we no longer support CVF).
   I added two files to the Windows archive: a batch file to compile DISCON.DLL, and a sample mex opts file
     for Matlab with IVF 12 and Visual Studio 2010 Shell.
-  
- Compilation info: 
-     Linked with 
+
+ Compilation info:
+     Linked with
        NWTC Library v1.05.01a-bjj, 8-Nov-2012 B. Jonkman
-       AeroDyn v13.00.01b-bjj, 28-Aug-2012 B. Jonkman 
-       InflowWind v1.01.00b-bjj, 10-Aug-2012, B. Jonkman      
-     Intel(R) Visual Fortran Compiler XE 12.1.3.300 [IA-32] with Microsoft Visual Studio 2010 Shell (Integrated) 
+       AeroDyn v13.00.01b-bjj, 28-Aug-2012 B. Jonkman
+       InflowWind v1.01.00b-bjj, 10-Aug-2012, B. Jonkman
+     Intel(R) Visual Fortran Compiler XE 12.1.3.300 [IA-32] with Microsoft Visual Studio 2010 Shell (Integrated)
      Simulink compiled with Matlab R2012a (32-bit).
 
+
+v8.00.00a-bj 31-Mar-2012 B. Jonkman
+  I replaced many of the global variables with variables in types from the FAST Registry.
+    - removed MODULES Constants, DOFs, CoordSys, and TurbConf
+  I removed the CrossProd subroutine from FAST.f90 and replaced it with a CROSS_PRODUCT function in the NWTC Library.

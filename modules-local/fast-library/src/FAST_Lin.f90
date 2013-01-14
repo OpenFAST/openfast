@@ -28,7 +28,6 @@ USE                             Modes
 USE                             NacelleYaw
 USE                             SimCont
 USE                             Tower
-USE                             TurbConf
 USE                             TurbCont
 
    ! AeroDyn Modules:
@@ -747,7 +746,6 @@ USE                             NacelleYaw
 USE                             Output
 USE                             RtHndSid
 USE                             Tower
-USE                             TurbConf
 USE                             TurbCont
 
 USE                             FASTsubs  !RtHS(), CalcOuts()

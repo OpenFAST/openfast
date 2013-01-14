@@ -1,0 +1,356 @@
+###################################################################################################################################
+# Registry for StructDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE StructDyn_Types  which contains all of the user-defined types needed in StructDyn.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include	Registry_NWTC_Library.txt
+
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+typedef	StructDyn/StrD	StrD_InputFile	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
+typedef	^	^	CHARACTER(10)	OutList	{:}	-	-	"List of user-requested output channels"
+typedef	^	^	IntKi	NumBl	-	-	-	"Number of blades"
+typedef	^	^	ReKi	BoomCMxn	-	0.0	-	"Downwind distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)"	meters
+typedef	^	^	ReKi	BoomCMyn	-	0.0	-	"Lateral  distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	BoomCMzn	-	0.0	-	"Vertical distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	Delta3	-	0.0	-	"Delta-3 angle for teetering rotors"
+typedef	^	^	ReKi	Twr2Shft	-	-	-	"Vertical distance from the tower-top to the rotor shaft"
+typedef	^	^	ReKi	Yaw2Shft	-	0.0	-	"Lateral distance from the yaw axis to the rotor shaft. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	PtfmCM	-	0.0	-	"Downward distance from the ground [onshore] or MSL [offshore] to the platform CM. (Initialized to zero b/c not all models read in PtfmFile)"
+typedef	^	^	ReKi	RFrlCMxn	-	0.0	-	"Downwind distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlCMyn	-	0.0	-	"Lateral  distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlCMzn	-	0.0	-	"Vertical distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlSkew	-	0.0	-	"Rotor-furl axis skew angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlTilt	-	0.0	-	"Rotor-furl axis tilt angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	ShftSkew	-	0.0	-	"Rotor shaft skew angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	ShftTilt	-	-	-	"Rotor shaft tilt angle"
+typedef	^	^	ReKi	TFinSkew	-	0.0	-	"Tail fin chordline skew angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinTilt	-	0.0	-	"Tail fin chordline tilt angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinBank	-	0.0	-	"Tail fin planform  bank angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlSkew	-	0.0	-	"Rotor-furl axis skew angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlTilt	-	0.0	-	"Rotor-furl axis tilt angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinCMxn	-	0.0	-	"Downwind distance from tower-top to tail fin CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinCMyn	-	0.0	-	"Lateral  distance from tower-top to tail fin CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinCMzn	-	0.0	-	"Vertical distance from tower-top to tail fin CM. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinCPxn	-	0.0	-	"Downwind distance from tower-top to tail fin CP. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinCPyn	-	0.0	-	"Lateral  distance from tower-top to tail fin CP. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinCPzn	-	0.0	-	"Vertical distance from tower-top to tail fin CP. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+
+
+
+
+
+
+
+
+
+# ..... Internal data types .......................................................................................................
+
+# ..... Internal data types: Coordinate Systems ...................................................................................
+#  This type defines coordinate sytems used internally by FAST.  The 3 components of each vector correspond to the z1, z2, and z3 components of the individual vectors.
+#  NOTE: the orientations of most of these coordinate systems will change every time step.
+typedef	^	StrD_CoordSys	ReKi	a1	3	-	-	"Vector / direction a1 (=  xt from the IEC coord. system)"	-
+typedef	^	^	ReKi	a2	3	-	-	"Vector / direction a2 (=  zt from the IEC coord. system)"	-
+typedef	^	^	ReKi	a3	3	-	-	"Vector / direction a3 (= -yt from the IEC coord. system)"	-
+typedef	^	^	ReKi	b1	3	-	-	"Vector / direction b1 (=  xp from the IEC coord. system)"	-
+typedef	^	^	ReKi	b2	3	-	-	"Vector / direction b2 (=  zp from the IEC coord. system)"	-
+typedef	^	^	ReKi	b3	3	-	-	"Vector / direction b3 (= -yp from the IEC coord. system)"	-
+typedef	^	^	ReKi	c1	3	-	-	"Vector / direction c1 (=  xs from the IEC coord. system)"	-
+typedef	^	^	ReKi	c2	3	-	-	"Vector / direction c2 (=  zs from the IEC coord. system)"	-
+typedef	^	^	ReKi	c3	3	-	-	"Vector / direction c3 (= -ys from the IEC coord. system)"	-
+typedef	^	^	ReKi	d1	3	-	-	"Vector / direction d1 (=  xn from the IEC coord. system)"	-
+typedef	^	^	ReKi	d2	3	-	-	"Vector / direction d2 (=  zn from the IEC coord. system)"	-
+typedef	^	^	ReKi	d3	3	-	-	"Vector / direction d3 (= -yn from the IEC coord. system)"	-
+typedef	^	^	ReKi	e1	3	-	-	"Vector / direction e1 (=  xa from the IEC coord. system)"	-
+typedef	^	^	ReKi	e2	3	-	-	"Vector / direction e2 (=  ya from the IEC coord. system)"	-
+typedef	^	^	ReKi	e3	3	-	-	"Vector / direction e3 (=  za from the IEC coord. system)"	-
+typedef	^	^	ReKi	f1	3	-	-	"Vector / direction f1"	-
+typedef	^	^	ReKi	f2	3	-	-	"Vector / direction f2"	-
+typedef	^	^	ReKi	f3	3	-	-	"Vector / direction f3"	-
+typedef	^	^	ReKi	g1	3	-	-	"Vector / direction g1 (=  xh from the IEC coord. system)"	-
+typedef	^	^	ReKi	g2	3	-	-	"Vector / direction g2 (=  yh from the IEC coord. system)"	-
+typedef	^	^	ReKi	g3	3	-	-	"Vector / direction g3 (=  zh from the IEC coord. system)"	-
+typedef	^	^	ReKi	i1	{:}{:}	-	-	"i1(K,:) = vector / direction i1 for blade K (=  xcK from the IEC coord. system)"	-
+typedef	^	^	ReKi	i2	{:}{:}	-	-	"i2(K,:) = vector / direction i2 for blade K (=  ycK from the IEC coord. system)"	-
+typedef	^	^	ReKi	i3	{:}{:}	-	-	"i3(K,:) = vector / direction i3 for blade K (=  zcK from the IEC coord. system)"	-
+typedef	^	^	ReKi	j1	{:}{:}	-	-	"j1(K,:) = vector / direction j1 for blade K (=  xbK from the IEC coord. system)"	-
+typedef	^	^	ReKi	j2	{:}{:}	-	-	"j2(K,:) = vector / direction j2 for blade K (=  ybK from the IEC coord. system)"	-
+typedef	^	^	ReKi	j3	{:}{:}	-	-	"j3(K,:) = vector / direction j3 for blade K (=  zbK from the IEC coord. system)"	-
+typedef	^	^	ReKi	m1	{:}{:}{:}	-	-	"m1(K,J,:) = vector / direction m1 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn)"	-
+typedef	^	^	ReKi	m2	{:}{:}{:}	-	-	"m2(K,J,:) = vector / direction m2 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn)"	-
+typedef	^	^	ReKi	m3	{:}{:}{:}	-	-	"m3(K,J,:) = vector / direction m3 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn)"	-
+typedef	^	^	ReKi	n1	{:}{:}{:}	-	-	"n1(K,J,:) = vector / direction n1 for node J of blade K (= LxbK from the IEC coord. system)"	-
+typedef	^	^	ReKi	n2	{:}{:}{:}	-	-	"n2(K,J,:) = vector / direction n2 for node J of blade K (= LybK from the IEC coord. system)"	-
+typedef	^	^	ReKi	n3	{:}{:}{:}	-	-	"n3(K,J,:) = vector / direction n3 for node J of blade K (= LzbK from the IEC coord. system)"	-
+typedef	^	^	ReKi	p1	3	-	-	"Vector / direction p1 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
+typedef	^	^	ReKi	p2	3	-	-	"Vector / direction p2 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
+typedef	^	^	ReKi	p3	3	-	-	"Vector / direction p3 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
+typedef	^	^	ReKi	rf1	3	-	-	"Vector / direction rf1 (rotor-furl coordinate system = d1 when rotor-furl angle = 0)"	-
+typedef	^	^	ReKi	rf2	3	-	-	"Vector / direction rf2 (rotor-furl coordinate system = d2 when rotor-furl angle = 0)"	-
+typedef	^	^	ReKi	rf3	3	-	-	"Vector / direction rf3 (rotor-furl coordinate system = d3 when rotor-furl angle = 0)"	-
+typedef	^	^	ReKi	rfa	3	-	-	"Vector / direction of the rotor-furl axis"	-
+typedef	^	^	ReKi	t1	{:}{:}	-	-	"Vector / direction t1 for tower node J (=  Lxt from the IEC coord. system)"	-
+typedef	^	^	ReKi	t2	{:}{:}	-	-	"Vector / direction t2 for tower node J (=  Lzt from the IEC coord. system)"	-
+typedef	^	^	ReKi	t3	{:}{:}	-	-	"Vector / direction t3 for tower node J (= -Lyt from the IEC coord. system)"	-
+typedef	^	^	ReKi	te1	{:}{:}{:}	-	-	"te1(K,J,:) = vector / direction te1 for node J of blade K (used to calc. noise)"	-
+typedef	^	^	ReKi	te2	{:}{:}{:}	-	-	"te2(K,J,:) = vector / direction te2 for node J of blade K (used to calc. noise)"	-
+typedef	^	^	ReKi	te3	{:}{:}{:}	-	-	"te3(K,J,:) = vector / direction te3 for node J of blade K (used to calc. noise)"	-
+typedef	^	^	ReKi	tf1	3	-	-	"Vector / direction tf1 (tail-furl coordinate system = d1 when rotor-furl angle = 0)"	-
+typedef	^	^	ReKi	tf2	3	-	-	"Vector / direction tf2 (tail-furl coordinate system = d2 when rotor-furl angle = 0)"	-
+typedef	^	^	ReKi	tf3	3	-	-	"Vector / direction tf3 (tail-furl coordinate system = d3 when rotor-furl angle = 0)"	-
+typedef	^	^	ReKi	tfa	3	-	-	"Vector / direction of the tail-furl axis"	-
+typedef	^	^	ReKi	z1	3	-	-	"Vector / direction z1 (=  xi from the IEC coord. system)"	-
+typedef	^	^	ReKi	z2	3	-	-	"Vector / direction z2 (=  zi from the IEC coord. system)"	-
+typedef	^	^	ReKi	z3	3	-	-	"Vector / direction z3 (= -yi from the IEC coord. system)"	-
+
+# ..... Internal data types: Enabled DOFs ........................................................................................
+#  This type defines variables associated with the module's degrees of freedom (DOFs)
+#  NOTE: The number of active DOFs may change with time.
+typedef	^	ActiveDOFs	IntKi	NActvDOF	-	-	-	"The number of active (enabled) DOFs in the model"	-
+#typedef	^	^	IntKi	NPA	-	9	-	"Number of DOFs                  that contribute to the angular velocity of the tail (body A) in the inertia frame"
+#typedef	^	^	IntKi	NPB	-	7	-	"Number of DOFs                  that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame"
+typedef	^	^	IntKi	NPCE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	NPDE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	NPF	-	7	-	"Number of DOFs                  that contribute to the angular velocity of the tower elements                                            (body F) in the inertia frame"
+#typedef	^	^	IntKi	NPG	-	10	-	"Number of DOFs                  that contribute to the angular velocity of the generator                                                 (body G) in the inertia frame"
+
+typedef	^	^	IntKi	NPIE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the tail boom center of mass                                                        (point I) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	NPL	-	11	-	"Number of DOFs                  that contribute to the angular velocity of the low-speed shaft                                           (body L) in the inertia frame"
+
+#typedef	^	^	IntKi	NPN	-	8	-	"Number of DOFs                  that contribute to the angular velocity of the nacelle                                                   (body N) in the inertia frame"
+typedef	^	^	IntKi	NPTE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	NPTTE	-	-	-	"Number of tower DOFs            that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	NPR	-	9	-	"Number of DOFs                  that contribute to the angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame"
+typedef	^	^	IntKi	NPSBE	{:}	-	-	"Number of blade DOFs            that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	NPSE	{:}	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	NPUE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the nacelle center of mass                                                          (point U) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	NPX	-	3	-	"Number of DOFs                  that contribute to the angular velocity of the platform                                                  (body X) in the inertia frame"
+typedef	^	^	IntKi	NPYE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the platform center of mass                                                         (point Y) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	PA	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the tail                                                      (body A) in the inertia frame"
+#typedef	^	^	IntKi	PB	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame"
+typedef	^	^	IntKi	PCE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	PDE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	PF	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the tower elements                                            (body F) in the inertia frame"
+#typedef	^	^	IntKi	PG	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the generator                                                 (body G) in the inertia frame"
+
+typedef	^	^	IntKi	PIE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tail boom center of mass                                                        (point I) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	PL	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the low-speed shaft                                           (body L) in the inertia frame"
+
+#typedef	^	^	IntKi	PN	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the nacelle                                                   (body N) in the inertia frame"
+typedef	^	^	IntKi	PTE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	PTTE	{:}	-	-	"Array of tower DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes                                                               (point T) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	PR	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame"
+typedef	^	^	IntKi	PS	{:}	-	-	"Array of DOF indices (pointers) to the active (enabled) DOFs/states"
+typedef	^	^	IntKi	PSBE	{:}{:}	-	-	"Array of blade DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes                                                               (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	PSE	{:}{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	PUE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the nacelle center of mass                                                          (point U) in the inertia frame, based on which DOFs are presently enabled"
+#typedef	^	^	IntKi	PX	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the platform                                                  (body X) in the inertia frame"
+typedef	^	^	IntKi	PYE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the platform center of mass                                                         (point Y) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	^	IntKi	SrtPS	{:}	-	-	"Sorted (from smallest to largest DOF index) version of PS()"
+typedef	^	^	IntKi	SrtPSNAUG	{:}	-	-	"SrtPS() with the additional value of NAUG"
+typedef	^	^	IntKi	Diag	{:}	-	-	"Array containing the indices of SrtPS() associated with each enabled DOF; that is, SrtPS(Diag(I)) = I"
+
+
+
+
+
+
+
+
+
+
+
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+typedef	^	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
+
+# Define outputs from the initialization routine here:
+typedef	^	InitOutputType	CHARACTER(10)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
+typedef	^	^	CHARACTER(10)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
+typedef	^	^	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef	^	ContinuousStateType	ReKi	QT	{:}	-	-	"Current estimate of Q (displacement matrix) for each degree of freedom"	-
+typedef	^	^	^	QDT	{:}	-	-	"Current estimate of QD (velocity matrix) for each degree of freedom"
+
+# Define discrete (nondifferentiable) states here:
+typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"	-
+
+# Define constraint states here:
+typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
+
+# Define "other" states (any data that are not considered actual states) here:
+typedef	^	OtherStateType	StrD_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
+typedef	^	^	ActiveDOFs	DOFs	-	-	-	"Active degrees of freedom in the model"
+typedef	^	^	ReKi	Q	{:}{:}	-	-	"Displacement matrix (time history)"
+typedef	^	^	ReKi	QD	{:}{:}	-	-	"Velocity matrix (time history)"
+typedef	^	^	ReKi	QD2	{:}{:}	-	-	"Acceleration matrix (time history)"
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
+typedef	^	^	IntKi	NumBl	-	0	-	"Number of turbine blades"	-
+typedef	^	^	IntKi	BldNodes	-	0	-	"Number of blade nodes used in the analysis"	-
+typedef	^	^	IntKi	TipNode	-	0	-	"Index of the additional node located at the blade tip = BldNodes + 1"	-
+typedef	^	^	IntKi	TwrNodes	-	0	-	"Number of tower nodes used in the analysis"
+typedef	^	^	IntKi	NDOF	-	0	-	"Number of total degrees of freedom (DOFs)"	-
+typedef	^	^	ReKi	TwoPiNB	-	-	-	"Two pi divided by the number of blades"	radians
+# parameters from DOFs
+typedef	^	^	IntKi	NAug	-	-	-	"Dimension of augmented solution matrix"	-
+typedef	^	^	IntKi	NPH	-	-	-	"Number of DOFs                  that contribute to the angular velocity of the hub                                                       (body H) in the inertia frame"
+typedef	^	^	IntKi	PH	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the hub                                                       (body H) in the inertia frame"
+typedef	^	^	IntKi	NPM	-	-	-	"Number of DOFs                  that contribute to the angular velocity of the blade elements                                            (body M) in the inertia frame"
+typedef	^	^	IntKi	PM	{:}{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the blade elements                                            (body M) in the inertia frame"
+typedef	^	^	LOGICAL	DOF_Flag	{:}	-	-	"Array which stores values of the feature flags for each DOF"
+typedef	^	^	CHARACTER(99)	DOF_Desc	{:}	-	-	"Array which stores descriptions of each DOF"
+# parameters for output calculations/options:
+typedef	^	^	IntKi	NumOuts	-	0	-	"Number of parameters in the output list (number of outputs requested)"	-
+typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Output format for tabular data"	-
+typedef	^	^	LOGICAL	TabDelim	-	-	-	"Flag to cause tab-delimited output"	-
+typedef	^	^	IntKi	NBlGages	-	0	-	"Number of blade strain gages"	-
+typedef	^	^	IntKi	NTwGages	-	0	-	"Number of tower strain gages"	-
+typedef	^	^	OutParmType	OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
+typedef	^	^	CHARACTER(1)	Delim	-	-	-	"Column delimiter for output text files"	-
+# parameters describing turbine configuration (TurbConf):
+typedef	^	^	ReKi	AvgNrmTpRd	-	-	-	"Average tip radius normal to the shaft"	meters
+typedef	^	^	ReKi	AzimB1Up	-	-	-	"Azimuth value to use for I/O when blade 1 points up"	degrees
+typedef	^	^	ReKi	CosDel3	-	1.0	-	"Cosine of the Delta-3 angle for teetering rotors"
+typedef	^	^	ReKi	CosPreC	{:}	-	-	"Cosines of the precone angles"
+typedef	^	^	ReKi	CRFrlSkew	-	1.0	-	"Cosine of the rotor-furl axis skew angle"
+typedef	^	^	ReKi	CRFrlSkw2	-	1.0	-	"Cosine-squared of the rotor-furl axis skew angle"
+typedef	^	^	ReKi	CRFrlTilt	-	1.0	-	"Cosine of the rotor-furl axis tilt angle"
+typedef	^	^	ReKi	CRFrlTlt2	-	1.0	-	"Cosine-squared of the rotor-furl axis tilt angle"
+typedef	^	^	ReKi	CShftSkew	-	1.0	-	"Cosine of the shaft skew angle"
+typedef	^	^	ReKi	CShftTilt	-	-	-	"Cosine of the shaft tilt angle"
+typedef	^	^	ReKi	CSRFrlSkw	-	0.0	-	"Cosine*Sine of the rotor-furl axis skew angle"
+typedef	^	^	ReKi	CSRFrlTlt	-	0.0	-	"Cosine*Sine of the rotor-furl axis tilt angle"
+typedef	^	^	ReKi	CSTFrlSkw	-	0.0	-	"Cosine*Sine of the tail-furl axis skew angle"
+typedef	^	^	ReKi	CSTFrlTlt	-	0.0	-	"Cosine*Sine of the tail-furl axis tilt angle"
+typedef	^	^	ReKi	CTFinBank	-	1.0	-	"Cosine of the tail fin planform  bank angle"
+typedef	^	^	ReKi	CTFinSkew	-	1.0	-	"Cosine of the tail fin chordline skew angle"
+typedef	^	^	ReKi	CTFinTilt	-	1.0	-	"Cosine of the tail fin chordline tilt angle"
+typedef	^	^	ReKi	CTFrlSkew	-	1.0	-	"Cosine of the tail-furl axis skew angle"
+typedef	^	^	ReKi	CTFrlSkw2	-	1.0	-	"Cosine-squared of the tail-furl axis skew angle"
+typedef	^	^	ReKi	CTFrlTilt	-	1.0	-	"Cosine of the tail-furl axis tilt angle"
+typedef	^	^	ReKi	CTFrlTlt2	-	1.0	-	"Cosine-squared of the tail-furl axis tilt angle"
+typedef	^	^	ReKi	FASTHH	-	-	-	"Hub-height as computed using FAST inputs [= TowerHt + Twr2Shft + OverHang*SIN( ShftTilt ) ]"
+typedef	^	^	ReKi	HubCM	-	-	-	"Distance from rotor apex to hub mass"
+typedef	^	^	ReKi	HubRad	-	-	-	"Preconed hub radius"
+typedef	^	^	ReKi	NacCMxn	-	-	-	"Downwind distance from tower-top to nacelle CM"
+typedef	^	^	ReKi	NacCMyn	-	-	-	"Lateral  distance from tower-top to nacelle CM"
+typedef	^	^	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"
+typedef	^	^	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"
+typedef	^	^	ReKi	PreCone	{:}	-	-	"Rotor precone angle"
+typedef	^	^	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
+typedef	^	^	ReKi	PtfmRef	-	0.0	-	"Downward distance from the ground [onshore] or MSL [offshore] to the platform reference point. (Initialized to zero b/c not all models read in PtfmFile)"
+typedef	^	^	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower       height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt + PtfmRef"
+typedef	^	^	ReKi	RFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	rVDxn	-	0.0	-	"xn-component of position vector Rvd"
+typedef	^	^	ReKi	rVDyn	-	0.0	-	"yn-component of position vector rVD"
+typedef	^	^	ReKi	rVDzn	-	0.0	-	"zn-component of position vector rVD"
+typedef	^	^	ReKi	rVIMUxn	-	-	-	"xn-component of position vector rVIMU"
+typedef	^	^	ReKi	rVIMUyn	-	-	-	"yn-component of position vector rVIMU"
+typedef	^	^	ReKi	rVIMUzn	-	-	-	"zn-component of position vector rVIMU"
+typedef	^	^	ReKi	rVPxn	-	0.0	-	"xn-component of position vector rVP"
+typedef	^	^	ReKi	rVPyn	-	0.0	-	"yn-component of position vector rVP"
+typedef	^	^	ReKi	rVPzn	-	-	-	"zn-component of position vector rVP (need not be initialized to zero)"
+typedef	^	^	ReKi	rWIxn	-	0.0	-	"xn-component of position vector rWI"
+typedef	^	^	ReKi	rWIyn	-	0.0	-	"yn-component of position vector rWI"
+typedef	^	^	ReKi	rWIzn	-	0.0	-	"zn-component of position vector rWI"
+typedef	^	^	ReKi	rWJxn	-	0.0	-	"xn-component of position vector rWJ"
+typedef	^	^	ReKi	rWJyn	-	0.0	-	"yn-component of position vector rWJ"
+typedef	^	^	ReKi	rWJzn	-	0.0	-	"zn-component of position vector rWJ"
+typedef	^	^	ReKi	rWKxn	-	0.0	-	"xn-component of position vector rWK"
+typedef	^	^	ReKi	rWKyn	-	0.0	-	"yn-component of position vector rWK"
+typedef	^	^	ReKi	rWKzn	-	0.0	-	"zn-component of position vector rWK"
+typedef	^	^	ReKi	rZT0zt	-	-	-	"zt-component of position vector rZT0"
+typedef	^	^	ReKi	rZYzt	-	0.0	-	"zt-component of position vector rZY"
+typedef	^	^	ReKi	SinDel3	-	0.0	-	"Sine of the Delta-3 angle for teetering rotors"
+typedef	^	^	ReKi	SinPreC	{:}	-	-	"Sines of the precone angles"
+typedef	^	^	ReKi	SRFrlSkew	-	0.0	-	"Sine of the rotor-furl axis skew angle"
+typedef	^	^	ReKi	SRFrlSkw2	-	0.0	-	"Sine-squared of the rotor-furl axis skew angle"
+typedef	^	^	ReKi	SRFrlTilt	-	0.0	-	"Sine of the rotor-furl axis tilt angle"
+typedef	^	^	ReKi	SRFrlTlt2	-	0.0	-	"Sine-squared of the rotor-furl axis tilt angle"
+typedef	^	^	ReKi	SShftSkew	-	0.0	-	"Sine of the shaft skew angle"
+typedef	^	^	ReKi	SShftTilt	-	-	-	"Sine of the shaft tilt angle"
+typedef	^	^	ReKi	STFinBank	-	0.0	-	"Sine of the tail fin planform  bank angle"
+typedef	^	^	ReKi	STFinSkew	-	0.0	-	"Sine of the tail fin chordline skew angle"
+typedef	^	^	ReKi	STFinTilt	-	0.0	-	"Sine of the tail fin chordline tilt angle"
+typedef	^	^	ReKi	STFrlSkew	-	0.0	-	"Sine of the tail-furl axis skew angle"
+typedef	^	^	ReKi	STFrlSkw2	-	0.0	-	"Sine-squared of the tail-furl axis skew angle"
+typedef	^	^	ReKi	STFrlTilt	-	0.0	-	"Sine of the tail-furl axis tilt angle"
+typedef	^	^	ReKi	STFrlTlt2	-	0.0	-	"Sine-squared of the tail-furl axis tilt angle"
+typedef	^	^	ReKi	TFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+
+
+
+
+
+
+typedef	^	^	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
+typedef	^	^	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
+typedef	^	^	ReKi	TwrDraft	-	0.0	-	"Downward distance from the ground [onshore] or MSL [offshore] to the tower base platform connection. (Initialized to zero b/c not all models read in PtfmFile)"
+typedef	^	^	ReKi	TwrRBHt	-	-	-	"Tower rigid base height"
+typedef	^	^	ReKi	UndSling	-	-	-	"Undersling length"
+typedef	^	^	IntKi	PSpnElN	-	1	-	"Number of the innermost blade element which is still part of the pitchable portion of the blade for partial-span pitch control"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#typedef	^	InputType	MeshType	MeshedInput	-	-	-	"Meshed input data"	-
+# Define inputs that are not on this mesh here:
+typedef	^	InputType	IntKi	DummyInput	-	-	-	"Remove this variable if you have input data"	-
+
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+#typedef	^	OutputType	MeshType	MeshedOutput	-	-	-	"Meshed output data"	-
+# Define outputs that are not on this mesh here:
+typedef	^	OutputType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see spreadsheet"
+typedef	^	^	ReKi	WriteOutput	{1}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
+# noted: WriteOutput needs to be allocatable, but until this is implemented correctly in the code and registry, the program crashes on the End routine
