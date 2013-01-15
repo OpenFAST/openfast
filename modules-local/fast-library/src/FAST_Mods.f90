@@ -407,50 +407,6 @@ LOGICAL                      :: IgnoreMOD = .FALSE.                             
 
 END MODULE Linear
 !=======================================================================
-MODULE MassInert
-
-
-   ! This MODULE stores input variables for turbine mass and inertias.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: AtfaIner                                        ! Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass.
-REAL(ReKi), ALLOCATABLE      :: BldCG     (:)                                   ! Blade center of mass wrt the blade root.
-REAL(ReKi), ALLOCATABLE      :: BldMass   (:)                                   ! Blade masses
-REAL(ReKi)                   :: BoomMass  = 0.0                                 ! Tail boom mass. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi), ALLOCATABLE      :: FirstMom  (:)                                   ! First mass moment of inertia of blades wrt the root.
-REAL(ReKi)                   :: GenIner                                         ! Generator inertia about HSS.
-REAL(ReKi)                   :: Hubg1Iner                                       ! Inertia of hub about g1-axis (rotor centerline).
-REAL(ReKi)                   :: Hubg2Iner                                       ! Inertia of hub about g2-axis (transverse to the cyclinder and passing through its c.g.).
-REAL(ReKi)                   :: HubIner                                         ! Hub inertia about teeter axis (2-blader) or rotor axis (3-blader).
-REAL(ReKi)                   :: HubMass                                         ! Hub mass.
-REAL(ReKi)                   :: Nacd2Iner                                       ! Inertia of nacelle about the d2-axis whose origin is the nacelle center of mass.
-REAL(ReKi)                   :: NacMass                                         ! Nacelle mass.
-REAL(ReKi)                   :: NacYIner                                        ! Nacelle yaw inertia.
-REAL(ReKi)                   :: PtfmMass  = 0.0                                 ! Platform mass. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmPIner = 0.0                                 ! Platform inertia for pitch tilt rotation about the platform CM. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmRIner = 0.0                                 ! Platform inertia for roll tilt rotation about the platform CM. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmYIner = 0.0                                 ! Platform inertia for yaw rotation about the platform CM. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: RFrlIner  = 0.0                                 ! Rotor-furl inertia about rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlMass  = 0.0                                 ! Rotor-furl mass. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RotIner                                         ! Inertia of rotor about its centerline.
-REAL(ReKi)                   :: RotMass                                         ! Rotor mass (blades, tips, and hub)
-REAL(ReKi)                   :: RrfaIner                                        ! Inertia of structure that furls with the rotor (not including rotor) about the rotor-furl axis whose origin is the center of mass of the structure that furls with the rotor (not including rotor).
-REAL(ReKi), ALLOCATABLE      :: SecondMom (:)                                   ! Second mass moment of inertia of blades wrt the root.
-REAL(ReKi)                   :: TFinMass  = 0.0                                 ! Tail fin mass. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlIner  = 0.0                                 ! Tail boom inertia about tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi), ALLOCATABLE      :: TipMass   (:)                                   ! Tip-brake masses.
-REAL(ReKi)                   :: TotalMass                                       ! Mass of turbine + platform.
-REAL(ReKi)                   :: TurbMass                                        ! Mass of turbine (tower + rotor + nacelle).
-REAL(ReKi)                   :: TwrMass                                         ! Mass of tower.
-REAL(ReKi)                   :: TwrTpMass                                       ! Tower-top mass (rotor + nacelle).
-REAL(ReKi)                   :: YawBrMass                                       ! Yaw bearing mass.
-
-
-END MODULE MassInert
-!=======================================================================
 MODULE Modes
 
 

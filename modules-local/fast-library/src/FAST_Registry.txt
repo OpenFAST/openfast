@@ -68,9 +68,9 @@ typedef	^	^	ReKi	TwGJStif	{:}	-	-	"Tower torsional stiffness for a given input s
 typedef	^	^	ReKi	TwFAIner	{:}	-	-	"Tower fore-aft (about yt-axis) mass inertia per unit length for a given input station"
 typedef	^	^	ReKi	TwSSIner	{:}	-	-	"Tower side-to-side (about xt-axis) mass inertia per unit length for a given input station"
 typedef	^	^	IntKi	NTwInpSt	-	-	-	"Number of tower input stations"
-
-
-
+typedef	^	^	ReKi	HubIner	-	-	-	"Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)"
+typedef	^	^	ReKi	NacYIner	-	-	-	"Nacelle yaw inertia"
+typedef	^	^	ReKi	RFrlIner	-	0.0	-	"Rotor-furl inertia about rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 
 
 
@@ -314,13 +314,9 @@ typedef	^	^	ReKi	KTFA	{2}{2}	-	-	"Generalized stiffness of tower in fore-aft dir
 typedef	^	^	ReKi	KTSS	{2}{2}	-	-	"Generalized stiffness of tower in side-to-side direction"
 typedef	^	^	ReKi	MassT	{:}	-	-	"Interpolated lineal mass density of tower"
 typedef	^	^	ReKi	StiffTSS	{:}	-	-	"Interpolated side-side tower stiffness"
-
-
-
 typedef	^	^	ReKi	TwrFADmp	2	-	-	"Tower fore-aft structural damping ratios"
 typedef	^	^	ReKi	TwrFASF	{:}{:}{:}	-	-	"Tower fore-aft shape functions"
 typedef	^	^	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible portion of the tower"
-
 typedef	^	^	ReKi	TwrSSDmp	2	-	-	"Tower side-to-side structural damping ratios"
 typedef	^	^	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
 typedef	^	^	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
@@ -338,23 +334,34 @@ typedef	^	^	ReKi	cgOffTSS	{:}	-	-	"Interpolated tower side-to-side mass cg offse
 typedef	^	^	ReKi	CAT	{:}	-	-	"Interpolated, normalized hydrodynamic added mass   coefficient in Morison's equation"
 typedef	^	^	ReKi	CDT	{:}	-	-	"Interpolated, normalized hydrodynamic viscous drag coefficient in Morison's equation"
 typedef	^	^	ReKi	DiamT	{:}	-	-	"Interpolated tower diameter in Morison's equation"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# parameters describing turbine mass and inertias (MassInert)
+typedef	^	^	ReKi	AtfaIner	-	-	-	"Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass"
+typedef	^	^	ReKi	BldCG	{:}	-	-	"Blade center of mass wrt the blade root"
+typedef	^	^	ReKi	BldMass	{:}	-	-	"Blade masses"
+typedef	^	^	ReKi	BoomMass	-	0.0	-	"Tail boom mass. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	FirstMom	{:}	-	-	"First mass moment of inertia of blades wrt the root"
+typedef	^	^	ReKi	GenIner	-	-	-	"Generator inertia about HSS"
+typedef	^	^	ReKi	Hubg1Iner	-	-	-	"Inertia of hub about g1-axis (rotor centerline)"
+typedef	^	^	ReKi	Hubg2Iner	-	-	-	"Inertia of hub about g2-axis (transverse to the cyclinder and passing through its c.g.)"
+typedef	^	^	ReKi	HubMass	-	-	-	"Hub mass"
+typedef	^	^	ReKi	Nacd2Iner	-	-	-	"Inertia of nacelle about the d2-axis whose origin is the nacelle center of mass"
+typedef	^	^	ReKi	NacMass	-	-	-	"Nacelle mass"
+typedef	^	^	ReKi	PtfmMass	-	0.0	-	"Platform mass (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmPIner	-	0.0	-	"Platform inertia for pitch tilt rotation about the platform CM. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmRIner	-	0.0	-	"Platform inertia for roll tilt rotation about the platform CM. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmYIner	-	0.0	-	"Platform inertia for yaw rotation about the platform CM. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	RFrlMass	-	0.0	-	"Rotor-furl mass. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RotIner	-	-	-	"Inertia of rotor about its centerline"
+typedef	^	^	ReKi	RotMass	-	-	-	"Rotor mass (blades, tips, and hub)"
+typedef	^	^	ReKi	RrfaIner	-	-	-	"Inertia of structure that furls with the rotor (not including rotor) about the rotor-furl axis whose origin is the center of mass of the structure that furls with the rotor (not including rotor)"
+typedef	^	^	ReKi	SecondMom	{:}	-	-	"Second mass moment of inertia of blades wrt the root"
+typedef	^	^	ReKi	TFinMass	-	0.0	-	"Tail fin mass. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlIner	-	0.0	-	"Tail boom inertia about tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TipMass	{:}	-	-	"Tip-brake masses"
+typedef	^	^	ReKi	TurbMass	-	-	-	"Mass of turbine (tower + rotor + nacelle)"
+typedef	^	^	ReKi	TwrMass	-	-	-	"Mass of tower"
+typedef	^	^	ReKi	TwrTpMass	-	-	-	"Tower-top mass (rotor + nacelle)"
+typedef	^	^	ReKi	YawBrMass	-	-	-	"Yaw bearing mass"
 
 
 
