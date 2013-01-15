@@ -10,6 +10,8 @@
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
 
+#bjj NOTE: All variables initialized here should be double-checked that they are properly initialized in the new framework (i.e. can run twice)
+
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include	Registry_NWTC_Library.txt
@@ -50,10 +52,32 @@ typedef	^	^	ReKi	TFinCPzn	-	0.0	-	"Vertical distance from tower-top to tail fin 
 typedef	^	^	ReKi	TFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	AdjFASt	-	-	-	"Factor to adjust tower fore-aft stiffness"
+typedef	^	^	ReKi	AdjSSSt	-	-	-	"Factor to adjust tower side-to-side stiffness"
+typedef	^	^	ReKi	AdjTwMa	-	-	-	"Factor to adjust tower mass density"
+typedef	^	^	ReKi	FAStTunr	2	-	-	"Tower fore-aft modal stiffness tuners"
+typedef	^	^	ReKi	SSStTunr	2	-	-	"Tower side-to-side modal stiffness tuners"
+typedef	^	^	ReKi	HtFract	{:}	-	-	"Fractional height of the flexible portion of tower for a given input station"
+typedef	^	^	ReKi	TMassDen	{:}	-	-	"Tower mass density for a given input station"
+typedef	^	^	ReKi	TwEAStif	{:}	-	-	"Tower extensional stiffness for a given input station"
+typedef	^	^	ReKi	TwFAcgOf	{:}	-	-	"Tower fore-aft (along the xt-axis) mass cg offset for a given input station"
+typedef	^	^	ReKi	TwSScgOf	{:}	-	-	"Tower fore-aft (along the yt-axis) mass cg offset for a given input station"
+typedef	^	^	ReKi	TwFAStif	{:}	-	-	"Tower fore-aft stiffness for a given input station"
+typedef	^	^	ReKi	TwSSStif	{:}	-	-	"Tower side-to-side stiffness for a given input station"
+typedef	^	^	ReKi	TwGJStif	{:}	-	-	"Tower torsional stiffness for a given input station"
+typedef	^	^	ReKi	TwFAIner	{:}	-	-	"Tower fore-aft (about yt-axis) mass inertia per unit length for a given input station"
+typedef	^	^	ReKi	TwSSIner	{:}	-	-	"Tower side-to-side (about xt-axis) mass inertia per unit length for a given input station"
+typedef	^	^	IntKi	NTwInpSt	-	-	-	"Number of tower input stations"
 
 
 
 
+
+
+# This is data defined in the Input File for HydroDyn?
+typedef	^	^	ReKi	TwrCA	-	0.0	-	"Normalized hydrodynamic added mass   coefficient in Morison's equation"
+typedef	^	^	ReKi	TwrCD	-	0.0	-	"Normalized hydrodynamic viscous drag coefficient in Morison's equation"
+typedef	^	^	ReKi	TwrDiam	-	0.0	-	"Tower diameter in Morison's equation"
 
 
 
@@ -122,58 +146,28 @@ typedef	^	^	ReKi	z3	3	-	-	"Vector / direction z3 (= -yi from the IEC coord. syst
 #  This type defines variables associated with the module's degrees of freedom (DOFs)
 #  NOTE: The number of active DOFs may change with time.
 typedef	^	ActiveDOFs	IntKi	NActvDOF	-	-	-	"The number of active (enabled) DOFs in the model"	-
-#typedef	^	^	IntKi	NPA	-	9	-	"Number of DOFs                  that contribute to the angular velocity of the tail (body A) in the inertia frame"
-#typedef	^	^	IntKi	NPB	-	7	-	"Number of DOFs                  that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame"
 typedef	^	^	IntKi	NPCE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	NPDE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	NPF	-	7	-	"Number of DOFs                  that contribute to the angular velocity of the tower elements                                            (body F) in the inertia frame"
-#typedef	^	^	IntKi	NPG	-	10	-	"Number of DOFs                  that contribute to the angular velocity of the generator                                                 (body G) in the inertia frame"
-
 typedef	^	^	IntKi	NPIE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the tail boom center of mass                                                        (point I) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	NPL	-	11	-	"Number of DOFs                  that contribute to the angular velocity of the low-speed shaft                                           (body L) in the inertia frame"
-
-#typedef	^	^	IntKi	NPN	-	8	-	"Number of DOFs                  that contribute to the angular velocity of the nacelle                                                   (body N) in the inertia frame"
 typedef	^	^	IntKi	NPTE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	NPTTE	-	-	-	"Number of tower DOFs            that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	NPR	-	9	-	"Number of DOFs                  that contribute to the angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame"
 typedef	^	^	IntKi	NPSBE	{:}	-	-	"Number of blade DOFs            that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	NPSE	{:}	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	NPUE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the nacelle center of mass                                                          (point U) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	NPX	-	3	-	"Number of DOFs                  that contribute to the angular velocity of the platform                                                  (body X) in the inertia frame"
 typedef	^	^	IntKi	NPYE	-	-	-	"Number of DOFs                  that contribute to the QD2T-related linear accelerations of the platform center of mass                                                         (point Y) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	PA	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the tail                                                      (body A) in the inertia frame"
-#typedef	^	^	IntKi	PB	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the tower top / baseplate                                     (body B) in the inertia frame"
 typedef	^	^	IntKi	PCE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the hub center of mass                                                              (point C) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	PDE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	PF	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the tower elements                                            (body F) in the inertia frame"
-#typedef	^	^	IntKi	PG	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the generator                                                 (body G) in the inertia frame"
-
 typedef	^	^	IntKi	PIE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tail boom center of mass                                                        (point I) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	PL	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the low-speed shaft                                           (body L) in the inertia frame"
-
-#typedef	^	^	IntKi	PN	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the nacelle                                                   (body N) in the inertia frame"
 typedef	^	^	IntKi	PTE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes                                                                     (point T) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	PTTE	{:}	-	-	"Array of tower DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes                                                               (point T) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	PR	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame"
 typedef	^	^	IntKi	PS	{:}	-	-	"Array of DOF indices (pointers) to the active (enabled) DOFs/states"
 typedef	^	^	IntKi	PSBE	{:}{:}	-	-	"Array of blade DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes                                                               (point S) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	PSE	{:}{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes                                                                     (point S) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	PUE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the nacelle center of mass                                                          (point U) in the inertia frame, based on which DOFs are presently enabled"
-#typedef	^	^	IntKi	PX	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the platform                                                  (body X) in the inertia frame"
 typedef	^	^	IntKi	PYE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the platform center of mass                                                         (point Y) in the inertia frame, based on which DOFs are presently enabled"
 typedef	^	^	IntKi	SrtPS	{:}	-	-	"Sorted (from smallest to largest DOF index) version of PS()"
 typedef	^	^	IntKi	SrtPSNAUG	{:}	-	-	"SrtPS() with the additional value of NAUG"
 typedef	^	^	IntKi	Diag	{:}	-	-	"Array containing the indices of SrtPS() associated with each enabled DOF; that is, SrtPS(Diag(I)) = I"
-
-
-
-
-
-
-
-
-
-
 
 
 # ..... Initialization data .......................................................................................................
@@ -207,10 +201,8 @@ typedef	^	^	ReKi	QD2	{:}{:}	-	-	"Acceleration matrix (time history)"
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
-typedef	^	^	IntKi	NumBl	-	0	-	"Number of turbine blades"	-
 typedef	^	^	IntKi	BldNodes	-	0	-	"Number of blade nodes used in the analysis"	-
 typedef	^	^	IntKi	TipNode	-	0	-	"Index of the additional node located at the blade tip = BldNodes + 1"	-
-typedef	^	^	IntKi	TwrNodes	-	0	-	"Number of tower nodes used in the analysis"
 typedef	^	^	IntKi	NDOF	-	0	-	"Number of total degrees of freedom (DOFs)"	-
 typedef	^	^	ReKi	TwoPiNB	-	-	-	"Two pi divided by the number of blades"	radians
 # parameters from DOFs
@@ -303,18 +295,53 @@ typedef	^	^	ReKi	STFrlTlt2	-	0.0	-	"Sine-squared of the tail-furl axis tilt angl
 typedef	^	^	ReKi	TFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
-
-
-
-
-
-
 typedef	^	^	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
 typedef	^	^	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
 typedef	^	^	ReKi	TwrDraft	-	0.0	-	"Downward distance from the ground [onshore] or MSL [offshore] to the tower base platform connection. (Initialized to zero b/c not all models read in PtfmFile)"
 typedef	^	^	ReKi	TwrRBHt	-	-	-	"Tower rigid base height"
 typedef	^	^	ReKi	UndSling	-	-	-	"Undersling length"
+typedef	^	^	IntKi	NumBl	-	0	-	"Number of turbine blades"	-
 typedef	^	^	IntKi	PSpnElN	-	1	-	"Number of the innermost blade element which is still part of the pitchable portion of the blade for partial-span pitch control"
+# parameters describing the tower (Tower):
+typedef	^	^	ReKi	AxRedTFA	{:}{:}{:}	-	-	"The axial-reduction terms for the fore-aft tower mode shapes"
+typedef	^	^	ReKi	AxRedTSS	{:}{:}{:}	-	-	"The axial-reduction terms for the side-to-side tower mode shapes"
+typedef	^	^	ReKi	CTFA	{2}{2}	-	-	"Generalized damping of tower in fore-aft direction"
+typedef	^	^	ReKi	CTSS	{2}{2}	-	-	"Generalized damping of tower in side-to-side direction"
+typedef	^	^	ReKi	DHNodes	{:}	-	-	"Length of variable-length tower elements"
+typedef	^	^	ReKi	HNodes	{:}	-	-	"Location of variable-spaced tower nodes (relative to the tower rigid base height"
+typedef	^	^	ReKi	HNodesNorm	{:}	-	-	"Normalized location of variable-spaced tower nodes (relative to the tower rigid base height) (0 < HNodesNorm(:) < 1)"
+typedef	^	^	ReKi	KTFA	{2}{2}	-	-	"Generalized stiffness of tower in fore-aft direction"
+typedef	^	^	ReKi	KTSS	{2}{2}	-	-	"Generalized stiffness of tower in side-to-side direction"
+typedef	^	^	ReKi	MassT	{:}	-	-	"Interpolated lineal mass density of tower"
+typedef	^	^	ReKi	StiffTSS	{:}	-	-	"Interpolated side-side tower stiffness"
+
+
+
+typedef	^	^	ReKi	TwrFADmp	2	-	-	"Tower fore-aft structural damping ratios"
+typedef	^	^	ReKi	TwrFASF	{:}{:}{:}	-	-	"Tower fore-aft shape functions"
+typedef	^	^	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible portion of the tower"
+
+typedef	^	^	ReKi	TwrSSDmp	2	-	-	"Tower side-to-side structural damping ratios"
+typedef	^	^	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
+typedef	^	^	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
+typedef	^	^	IntKi	TwrLdMod	-	0	-	"Tower loading model switch"
+typedef	^	^	IntKi	TwrNodes	-	0	-	"Number of tower nodes used in the analysis"
+# parameters describing the tower (Tower), which are really just for Adams:
+typedef	^	^	ReKi	InerTFA	{:}	-	-	"Interpolated tower fore-aft (about yt-axis) mass inertia per unit length"
+typedef	^	^	ReKi	InerTSS	{:}	-	-	"Interpolated tower side-to-side (about xt-axis) mass inertia per unit length"
+typedef	^	^	ReKi	StiffTGJ	{:}	-	-	"Interpolated tower torsional stiffness"
+typedef	^	^	ReKi	StiffTEA	{:}	-	-	"Interpolated tower extensional stiffness"
+typedef	^	^	ReKi	StiffTFA	{:}	-	-	"Interpolated fore-aft tower stiffness"
+typedef	^	^	ReKi	cgOffTFA	{:}	-	-	"Interpolated tower fore-aft mass cg offset"
+typedef	^	^	ReKi	cgOffTSS	{:}	-	-	"Interpolated tower side-to-side mass cg offset"
+# parameters describing the tower (Tower), which are really just for HydroDyn:
+typedef	^	^	ReKi	CAT	{:}	-	-	"Interpolated, normalized hydrodynamic added mass   coefficient in Morison's equation"
+typedef	^	^	ReKi	CDT	{:}	-	-	"Interpolated, normalized hydrodynamic viscous drag coefficient in Morison's equation"
+typedef	^	^	ReKi	DiamT	{:}	-	-	"Interpolated tower diameter in Morison's equation"
+
+
+
+
 
 
 
@@ -344,7 +371,9 @@ typedef	^	^	IntKi	PSpnElN	-	1	-	"Number of the innermost blade element which is 
 # Define inputs that are contained on the mesh here:
 #typedef	^	InputType	MeshType	MeshedInput	-	-	-	"Meshed input data"	-
 # Define inputs that are not on this mesh here:
-typedef	^	InputType	IntKi	DummyInput	-	-	-	"Remove this variable if you have input data"	-
+typedef	^	InputType	ReKi	TwrAM	{6}{6}	0.0	-	"Added mass matrix of the current tower element per unit length-bjj: place on a mesh" 	-
+typedef	^	^	ReKi	TwrFt	6	0.0	-	The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower element (point T) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the tower moment acting at the current tower element (body F) / (point T) per "Unit length associated with everything but the QD2T()s"
+
 
 
 # ..... Outputs ...................................................................................................................

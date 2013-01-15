@@ -458,9 +458,10 @@ MODULE Modes
 
 
 USE                             Precision
+USE StructDyn_Parameters
 
 
-INTEGER(4), PARAMETER        :: PolyOrd = 6                                     ! Order of the polynomial describing the mode shape.
+!INTEGER(4), PARAMETER        :: PolyOrd = 6                                     ! Order of the polynomial describing the mode shape.
 
 REAL(ReKi), ALLOCATABLE      :: BldEdgSh (:,:)                                  ! Blade-edge-mode shape coefficients.
 REAL(ReKi), ALLOCATABLE      :: BldFl1Sh (:,:)                                  ! Blade-flap-mode-1 shape coefficients.
@@ -479,54 +480,6 @@ LOGICAL,    ALLOCATABLE      :: CalcBModes(:)                                   
 LOGICAL                      :: CalcTMode                                       ! T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file.
 
 
-CONTAINS
-!=======================================================================
-
-   FUNCTION SHP(Fract, FlexL, ModShpAry, Deriv)
-
-   ! SHP calculates the Derive-derivative of the shape function ModShpAry at Fract.
-   ! NOTE: This function only works for Deriv = 0, 1, or 2.
-
-      USE                           Precision
-
-
-      IMPLICIT                      NONE
-
-
-   ! Passed variables:
-
-      REAL(ReKi), INTENT(IN )    :: FlexL          ! Length of flexible beam, (m)
-      REAL(ReKi), INTENT(IN )    :: Fract          ! Fractional distance along flexible beam, 0<=Frac<=1
-      REAL(ReKi), INTENT(IN )    :: ModShpAry(2:PolyOrd)                        ! Array holding mode shape coefficients
-      REAL(ReKi)                 :: SHP            ! The shape function returned by this function.
-
-      INTEGER(4), INTENT(IN )    :: Deriv          ! Which derivative to compute Deriv = 0 (regular function SHP), 1 (D(SHP)/DZ), 2 (D2(SHP)/DZ2)
-
-
-   ! Lccal variables:
-
-      INTEGER(4)                 :: CoefTmp        !Temporary coefficient
-      INTEGER(4)                 :: I              !Counts through polynomial array.
-      INTEGER(4)                 :: Swtch(0:2)     !Corresponds to which derivative to compute.  Sets all portions of the coefficient = 0 except those that are relevant.
-
-
-      Swtch        = 0 !Initialize Swtch(:) to 0
-      Swtch(Deriv) = 1
-      SHP          = 0.0
-
-      DO I = 2,PolyOrd
-         CoefTmp = Swtch(0) + ( Swtch(1)*I ) + ( Swtch(2)*I*( I - 1 ) )
-
-         IF ( (I == 2) .AND. (Deriv == 2) ) THEN
-            SHP = ModShpAry(I)*CoefTmp/( FlexL**Deriv )
-         ELSE
-            SHP = SHP + ModShpAry(I)*CoefTmp*( Fract**( I - Deriv ) )/( FlexL**Deriv )
-         ENDIF
-      ENDDO !I
-
-      RETURN
-   END FUNCTION SHP
-!=======================================================================
 END MODULE Modes
 !=======================================================================
 MODULE NacelleYaw
@@ -2248,71 +2201,6 @@ REAL(ReKi)                   :: TpBrDT                                          
 
 
 END MODULE TipBrakes
-!=======================================================================
-MODULE Tower
-
-
-   ! This MODULE stores variables for the tower.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: AdjFASt                                          ! Factor to adjust tower fore-aft stiffness.
-REAL(ReKi)                   :: AdjSSSt                                          ! Factor to adjust tower side-to-side stiffness.
-REAL(ReKi)                   :: AdjTwMa                                          ! Factor to adjust tower mass density.
-REAL(ReKi), ALLOCATABLE      :: AxRedTFA  (:,:,:)                                ! The axial-reduction terms for the fore-aft tower mode shapes.
-REAL(ReKi), ALLOCATABLE      :: AxRedTSS  (:,:,:)                                ! The axial-reduction terms for the side-to-side tower mode shapes.
-REAL(ReKi), ALLOCATABLE      :: CAT       (:)                                   ! Interpolated, normalized hydrodynamic added mass   coefficient in Morison's equation.
-REAL(ReKi), ALLOCATABLE      :: CDT       (:)                                   ! Interpolated, normalized hydrodynamic viscous drag coefficient in Morison's equation.
-REAL(ReKi), ALLOCATABLE      :: cgOffTFA  (:)                                    ! Interpolated tower fore-aft mass cg offset.
-REAL(ReKi), ALLOCATABLE      :: cgOffTSS  (:)                                    ! Interpolated tower side-to-side mass cg offset.
-REAL(ReKi)                   :: CTFA      (2,2)                                  ! Generalized damping of tower in fore-aft direction.
-REAL(ReKi)                   :: CTSS      (2,2)                                  ! Generalized damping of tower in side-to-side direction.
-REAL(ReKi), ALLOCATABLE      :: DHNodes   (:)                                    ! Length of variable-length tower elements
-REAL(ReKi), ALLOCATABLE      :: DiamT     (:)                                   ! Interpolated tower diameter in Morison's equation.
-REAL(ReKi)                   :: FAStTunr  (2)                                    ! Tower fore-aft modal stiffness tuners.
-REAL(ReKi), ALLOCATABLE      :: HNodes    (:)                                    ! Location of variable-spaced tower nodes (relative to the tower rigid base height)
-REAL(ReKi), ALLOCATABLE      :: HNodesNorm(:)                                    ! Normalized location of variable-spaced tower nodes (relative to the tower rigid base height) (0 < HNodesNorm(:) < 1)
-REAL(ReKi), ALLOCATABLE      :: HtFract   (:)                                    ! Fractional height of the flexible portion of tower for a given input station.
-REAL(ReKi), ALLOCATABLE      :: InerTFA   (:)                                    ! Interpolated tower fore-aft (about yt-axis) mass inertia per unit length.
-REAL(ReKi), ALLOCATABLE      :: InerTSS   (:)                                    ! Interpolated tower side-to-side (about xt-axis) mass inertia per unit length.
-REAL(ReKi)                   :: KTFA      (2,2)                                  ! Generalized stiffness of tower in fore-aft direction.
-REAL(ReKi)                   :: KTSS      (2,2)                                  ! Generalized stiffness of tower in side-to-side direction.
-REAL(ReKi), ALLOCATABLE      :: MassT     (:)                                    ! Interpolated lineal mass density of tower.
-REAL(ReKi)                   :: SSStTunr  (2)                                    ! Tower side-to-side modal stiffness tuners.
-REAL(ReKi), ALLOCATABLE      :: StiffTEA  (:)                                    ! Interpolated tower extensional stiffness.
-REAL(ReKi), ALLOCATABLE      :: StiffTFA  (:)                                    ! Interpolated fore-aft tower stiffness.
-REAL(ReKi), ALLOCATABLE      :: StiffTGJ  (:)                                    ! Interpolated tower torsional stiffness.
-REAL(ReKi), ALLOCATABLE      :: StiffTSS  (:)                                    ! Interpolated side-side tower stiffness.
-REAL(ReKi), ALLOCATABLE      :: TMassDen  (:)                                    ! Tower mass density for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwEAStif  (:)                                    ! Tower extensional stiffness for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwFAcgOf  (:)                                    ! Tower fore-aft (along the xt-axis) mass cg offset for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwFAIner  (:)                                    ! Tower fore-aft (about yt-axis) mass inertia per unit length for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwFAStif  (:)                                    ! Tower fore-aft stiffness for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwGJStif  (:)                                    ! Tower torsional stiffness for a given input station.
-REAL(ReKi)                   :: TwrAM     (6,6) = 0.0                           ! Added mass matrix of the current tower element per unit length.
-REAL(ReKi)                   :: TwrCA    = 0.0                                  ! Normalized hydrodynamic added mass   coefficient in Morison's equation.
-REAL(ReKi)                   :: TwrCD    = 0.0                                  ! Normalized hydrodynamic viscous drag coefficient in Morison's equation.
-REAL(ReKi)                   :: TwrDiam  = 0.0                                  ! Tower diameter in Morison's equation.
-REAL(ReKi)                   :: TwrFADmp  (2)                                    ! Tower fore-aft structural damping ratios.
-REAL(ReKi), ALLOCATABLE      :: TwrFASF   (:,:,:)                                ! Tower fore-aft shape functions.
-REAL(ReKi)                   :: TwrFlexL                                         ! Height / length of the flexible portion of the tower.
-REAL(ReKi)                   :: TwrFt     (6)   = 0.0                            ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower element (point T) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the tower moment acting at the current tower element (body F) / (point T) per unit length associated with everything but the QD2T()'s.
-
-REAL(ReKi)                   :: TwrSSDmp  (2)                                    ! Tower side-to-side structural damping ratios.
-REAL(ReKi), ALLOCATABLE      :: TwrSSSF   (:,:,:)                                ! Tower side-to-side shape functions.
-REAL(ReKi), ALLOCATABLE      :: TwSScgOf  (:)                                    ! Tower fore-aft (along the yt-axis) mass cg offset for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwSSIner  (:)                                    ! Tower side-to-side (about xt-axis) mass inertia per unit length for a given input station.
-REAL(ReKi), ALLOCATABLE      :: TwSSStif  (:)                                    ! Tower side-to-side stiffness for a given input station.
-
-INTEGER(4)                   :: NTwInpSt                                        ! Number of tower input stations.
-INTEGER(4)                   :: TTopNode                                        ! Index of the additional node located at the tower-top = TwrNodes + 1
-INTEGER(4)                   :: TwrLdMod = 0                                    ! Tower loading model switch.
-!INTEGER(4)                   :: TwrNodes                                        ! Number of tower nodes used in the analysis.
-
-
-END MODULE Tower
 !=======================================================================
 MODULE TurbCont
 

@@ -76,7 +76,7 @@ CALL FAST_Input( p_StrD, OtherSt_StrD, InputFileData_StrD, ErrStat, ErrMsg )
 
    ! Set up initial values for all degrees of freedom.
 
-CALL FAST_Initialize( p_StrD, x_StrD, y_StrD, OtherSt_StrD )
+CALL FAST_Initialize( p_StrD, x_StrD, y_StrD, OtherSt_StrD, InputFileData_StrD )
 
 
 

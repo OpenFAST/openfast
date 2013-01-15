@@ -2,8 +2,8 @@ MODULE FAST_Lin_Subs
 
    USE   NWTC_Library
    USE   StructDyn_Types
-   USE   StructDyn_Parameters
-
+   USE   StructDyn
+   
 CONTAINS
 !=======================================================================
 SUBROUTINE CalcSteady( p, x, y, OtherState )
@@ -27,7 +27,6 @@ USE                             Linear
 USE                             Modes
 USE                             NacelleYaw
 USE                             SimCont
-USE                             Tower
 USE                             TurbCont
 
    ! AeroDyn Modules:
@@ -40,7 +39,7 @@ IMPLICIT                        NONE
 
    ! Passed variables
    
-TYPE(StrD_ParameterType),        INTENT(IN)    :: p                             ! Parameters of the structural dynamics module
+TYPE(StrD_ParameterType),        INTENT(INOUT) :: p                             ! Parameters of the structural dynamics module  !bjj: note that CTFA and CTSS get overwritten here, thus violating the definition of PARAMATER
 TYPE(StrD_ContinuousStateType),  INTENT(INOUT) :: x                             ! Continuous states of the structural dynamics module
 TYPE(StrD_OutputType),           INTENT(INOUT) :: y                             ! System outputs of the structural dynamics module
 TYPE(StrD_OtherStateType),       INTENT(INOUT) :: OtherState                    ! Other State data type for Structural dynamics module
@@ -85,6 +84,8 @@ CHARACTER(10)                :: PitchStr                                        
 CHARACTER(10)                :: YawPosStr                                       ! String containing the current value of the command (demand) yaw angle.
 CHARACTER( 7)                :: ZTimeStr                                        ! String containing the current value of ZTime.
 
+INTEGER(IntKi)               :: ErrStat                                         ! Error status
+CHARACTER(1024)              :: ErrMsg                                          ! Error message when ErrStat =/ ErrID_None
 
 
    ! Specify the gains used during the trim analysis:
@@ -177,14 +178,14 @@ QWeight     = 1.0
    !   translational displacements of the flexible members.  This ensures that
    !   each DOF in the 2-norm calculation has the same units (radians).
 
-QWeight(DOF_TFA1)       = SHP( 1.0, TwrFlexL, TwFAM1Sh(:),   1 )  ! The slope of the 1st tower fore-aft     mode shape at the tower-top.
-QWeight(DOF_TSS1)       = SHP( 1.0, TwrFlexL, TwSSM1Sh(:),   1 )  ! The slope of the 1st tower side-to-side mode shape at the tower-top.
-QWeight(DOF_TFA2)       = SHP( 1.0, TwrFlexL, TwFAM2Sh(:),   1 )  ! The slope of the 2nd tower fore-aft     mode shape at the tower-top.
-QWeight(DOF_TSS2)       = SHP( 1.0, TwrFlexL, TwSSM2Sh(:),   1 )  ! The slope of the 2nd tower side-to-side mode shape at the tower-top.
+QWeight(DOF_TFA1)       = SHP( 1.0, p%TwrFlexL, TwFAM1Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 1st tower fore-aft     mode shape at the tower-top.
+QWeight(DOF_TSS1)       = SHP( 1.0, p%TwrFlexL, TwSSM1Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 1st tower side-to-side mode shape at the tower-top.
+QWeight(DOF_TFA2)       = SHP( 1.0, p%TwrFlexL, TwFAM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower fore-aft     mode shape at the tower-top.
+QWeight(DOF_TSS2)       = SHP( 1.0, p%TwrFlexL, TwSSM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower side-to-side mode shape at the tower-top.
 DO K = 1,p%NumBl       ! Loop through all blades
-   QWeight(DOF_BF(K,1)) = SHP( 1.0, BldFlexL, BldFl1Sh(:,K), 1 )  ! The slope of the 1st blade flapwise     mode shape at the blade tip.
-   QWeight(DOF_BF(K,2)) = SHP( 1.0, BldFlexL, BldFl2Sh(:,K), 1 )  ! The slope of the 2nd blade flapwise     mode shape at the blade tip.
-   QWeight(DOF_BE(K,1)) = SHP( 1.0, BldFlexL, BldEdgSh(:,K), 1 )  ! The slope of the 1st blade edgewise     mode shape at the blade tip.
+   QWeight(DOF_BF(K,1)) = SHP( 1.0, BldFlexL, BldFl1Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade flapwise     mode shape at the blade tip.
+   QWeight(DOF_BF(K,2)) = SHP( 1.0, BldFlexL, BldFl2Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 2nd blade flapwise     mode shape at the blade tip.
+   QWeight(DOF_BE(K,1)) = SHP( 1.0, BldFlexL, BldEdgSh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade edgewise     mode shape at the blade tip.
 ENDDO                ! K - Blades
 
 
@@ -214,8 +215,8 @@ QDWeight = QWeight
 DTTorDmpStart            = DTTorDmp
 DO I = 1,2        ! Loop through all tower DOFs in one direction
    DO L = 1,2     ! Loop through all tower DOFs in one direction
-      CTFAStart(    I,L) = CTFA( I,L)
-      CTSSStart(    I,L) = CTSS( I,L)
+      CTFAStart(    I,L) = p%CTFA( I,L)
+      CTSSStart(    I,L) = p%CTSS( I,L)
    ENDDO          ! L - All tower DOFs in one direction
 ENDDO             ! I - All tower DOFs in one direction
 DO K = 1,p%NumBl    ! Loop through all blades
@@ -394,8 +395,8 @@ DO
    DTTorDmp            = DTTorDmpStart   + DampFact*DTTorSpr
    DO I = 1,2        ! Loop through all tower DOFs in one direction
       DO L = 1,2     ! Loop through all tower DOFs in one direction
-         CTFA(    I,L) = CTFAStart( I,L) + DampFact*KTFA( I,L)
-         CTSS(    I,L) = CTSSStart( I,L) + DampFact*KTSS( I,L)
+         p%CTFA(    I,L) = CTFAStart( I,L) + DampFact*p%KTFA( I,L)
+         p%CTSS(    I,L) = CTSSStart( I,L) + DampFact*p%KTSS( I,L)
       ENDDO          ! L - All tower DOFs in one direction
    ENDDO             ! I - All tower DOFs in one direction
    DO K = 1,p%NumBl    ! Loop through all blades
@@ -482,8 +483,8 @@ CALL WrScr1( ' Steady state solution found in '//TRIM(Int2LStr(Iteration))//' it
 DTTorDmp            = DTTorDmpStart
 DO I = 1,2        ! Loop through all tower DOFs in one direction
    DO L = 1,2     ! Loop through all tower DOFs in one direction
-      CTFA(    I,L) = CTFAStart( I,L)
-      CTSS(    I,L) = CTSSStart( I,L)
+      p%CTFA(    I,L) = CTFAStart( I,L)
+      p%CTSS(    I,L) = CTSSStart( I,L)
    ENDDO          ! L - All tower DOFs in one direction
 ENDDO             ! I - All tower DOFs in one direction
 DO K = 1,p%NumBl    ! Loop through all blades
@@ -745,7 +746,6 @@ USE                             Modes
 USE                             NacelleYaw
 USE                             Output
 USE                             RtHndSid
-USE                             Tower
 USE                             TurbCont
 
 USE                             FASTsubs  !RtHS(), CalcOuts()
@@ -801,7 +801,6 @@ REAL(ReKi)                   :: YawPosop                                        
 REAL(ReKi)                   :: YawRateop                                       ! Steady operating point command yaw rate.
 REAL(ReKi), ALLOCATABLE      :: Yop      (:,:)                                  ! Periodic steady state operating output measurements.
 
-INTEGER                      :: ErrStat                                         ! Determines if an error was encountered in the Inflow Wind Module
 INTEGER(4)                   :: I                                               ! Generic index.
 INTEGER(4)                   :: I1                                              ! Loops through all active (enabled) DOFs (rows).
 INTEGER(4)                   :: I2                                              ! Loops through all active (enabled) DOFs (cols).
@@ -830,6 +829,9 @@ CHARACTER(  3)               :: FmtText   = '(A)'                               
 CHARACTER(200)               :: Frmt                                            ! A string to hold a format specifier.
 CHARACTER(200)               :: Frmt1                                           ! A string to hold a format specifier.
 CHARACTER(200)               :: Frmt2                                           ! A string to hold a format specifier.
+
+INTEGER(IntKi)               :: ErrStat                                         ! Error status
+CHARACTER(1024)              :: ErrMsg                                          ! Error message
 
 
 
@@ -928,14 +930,14 @@ DelQ = 2.0*D2R
    !   change the 2 degrees to 0.2 degrees, to make the magnitudes of the
    !   pertubations more reasonable.
 
-DelQ(DOF_TFA1)       = 0.2*D2R/SHP( 1.0, TwrFlexL, TwFAM1Sh(:),   1 )
-DelQ(DOF_TSS1)       = 0.2*D2R/SHP( 1.0, TwrFlexL, TwSSM1Sh(:),   1 )
-DelQ(DOF_TFA2)       = 0.2*D2R/SHP( 1.0, TwrFlexL, TwFAM2Sh(:),   1 )
-DelQ(DOF_TSS2)       = 0.2*D2R/SHP( 1.0, TwrFlexL, TwSSM2Sh(:),   1 )
+DelQ(DOF_TFA1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwFAM1Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TSS1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwSSM1Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TFA2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwFAM2Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TSS2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwSSM2Sh(:),   1, ErrStat, ErrMsg )
 DO K = 1,p%NumBl       ! Loop through all blades
-   DelQ(DOF_BF(K,1)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldFl1Sh(:,K), 1 )
-   DelQ(DOF_BF(K,2)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldFl2Sh(:,K), 1 )
-   DelQ(DOF_BE(K,1)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldEdgSh(:,K), 1 )
+   DelQ(DOF_BF(K,1)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldFl1Sh(:,K), 1, ErrStat, ErrMsg )
+   DelQ(DOF_BF(K,2)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldFl2Sh(:,K), 1, ErrStat, ErrMsg )
+   DelQ(DOF_BE(K,1)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldEdgSh(:,K), 1, ErrStat, ErrMsg )
 ENDDO                ! K - Blades
 
 
