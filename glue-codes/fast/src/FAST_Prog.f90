@@ -4,6 +4,8 @@ PROGRAM FAST
 
    ! This program models 2- or 3-bladed turbines of a standard configuration.
 
+USE GlueCodeVars
+
 
 USE                             ADAMSInput
 USE                             General

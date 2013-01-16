@@ -3,6 +3,9 @@ MODULE FAST_Lin_Subs
    USE   NWTC_Library
    USE   StructDyn_Types
    USE   StructDyn
+
+   USE GlueCodeVars
+   
    
 CONTAINS
 !=======================================================================
@@ -21,7 +24,6 @@ SUBROUTINE CalcSteady( p, x, y, OtherState )
 
 USE                             Blades
 USE                             DriveTrain
-USE                             Features
 USE                             InitCond
 USE                             Linear
 USE                             Modes
@@ -105,7 +107,7 @@ KBlPitch = 0.1                         ! Gain (in rad) for adjusting the rotor c
    !   value is determined with VSContrl = 9999.
    ! Also, let's specify a starting "guess" value for the generator torque:
 
-IF ( ( GenDOF ) .AND. ( TrimCase == 2 ) )  THEN ! We will be trimming generator torque
+IF ( ( p%DOF_Flag(DOF_GeAz) ) .AND. ( TrimCase == 2 ) )  THEN ! We will be trimming generator torque
 
    VSContrl = 9999   ! Override the selected VSContrl and GenModel input options
    GenTrq   = 0.0    ! Use a defult generator torque of zero--I found that if I guessed high on the initial generator torque, the results were very unstable; but if I started at zero, the solution always converged.
@@ -240,7 +242,7 @@ HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), 
    ! Inform the users of what we are about to do:
 
 CALL WrScr1( ' Beginning iteration to find a steady state solution of type:' )
-IF ( .NOT. GenDOF      )  THEN ! Constant speed case
+IF ( .NOT. p%DOF_Flag(DOF_GeAz)      )  THEN ! Constant speed case
    IF ( RotSpeed == 0.0 )  THEN
       CALL WrScr ( '  Static equilibrium (RotSpeed = 0.0)'           )
    ELSE
@@ -363,7 +365,7 @@ DO
    WRITE(IterStr     ,'(I4)'   )  Iteration
    WRITE(ZTimeStr    ,'(F7.2)' )  ZTime
    WRITE(AvgSpdStr   ,'(F9.5)' )  AvgSpeed        *RPS2RPM
-   IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - echo out the current command yaw angle, YawNeut.
+   IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - echo out the current command yaw angle, YawNeut.
       WRITE(YawPosStr,'(F10.5)')  YawNeut         *R2D
    ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - echo out the current yaw angle, Q(DOF_Yaw,IC(1)).
       WRITE(YawPosStr,'(F10.5)')  OtherState%Q(DOF_Yaw,IC(1))*R2D
@@ -412,7 +414,7 @@ DO
    ! Trim the selected control input only if necessary (i.e., only when GenDOF
    !   is True):
 
-   IF ( GenDOF )  THEN
+   IF ( p%DOF_Flag(DOF_GeAz) )  THEN
 
 
    ! Compute the relative rotor speed error:
@@ -437,7 +439,7 @@ DO
    !   the rotor torque versus yaw angle curve is virtually symmetric about yaw
    !   equals zero:
 
-         IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (use FAST's built-in actuator).
+         IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (use FAST's built-in actuator).
 
             YawNeut          = YawNeut          + SIGN( KYawPos, YawNeut          )*SpeedErr
             ! Leave the neutral yaw rate, YawRateNeut, zero here.
@@ -738,7 +740,6 @@ SUBROUTINE Linearize( p,x,y,OtherState )
 
 USE                             Blades
 USE                             DriveTrain
-USE                             Features
 USE                             General
 USE                             InitCond
 USE                             Linear
@@ -975,7 +976,7 @@ DelVGUST   = 0.1                             ! Pertubation in horizontal hub hei
    ! Let's save the current (operating point) values of the inputs and
    !   disturbances:
 
-IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - use the current command yaw angle, YawNeut, and command yaw rate, YawRateNeut.
+IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - use the current command yaw angle, YawNeut, and command yaw rate, YawRateNeut.
    YawPosop  = YawNeut                       ! Yaw angle (position)
    YawRateop = YawRateNeut                   ! Yaw rate
 ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - use the current (operating point) yaw angle, Qop(DOF_Yaw,1), and yaw rate, QD(DOF_Yaw,1)--this is constant for all azimuth steps; therefore, use the first one which is always available and not dependent on input NAzimStep.
@@ -1003,7 +1004,7 @@ WRITE (UnLn,FmtHead)  'Some Useful Information:'
 
 IF ( .NOT. CalcStdy    )  THEN      ! No steady state solution found (linearized about initial conditions)
    WRITE(UnLn,FmtText        )  '   Type of steady state solution found                None (linearized about initial conditions)'
-ELSEIF ( .NOT. GenDOF  )  THEN      ! Constant speed case
+ELSEIF ( .NOT. p%DOF_Flag(DOF_GeAz)  )  THEN      ! Constant speed case
    IF ( RotSpeed == 0.0 )  THEN
       WRITE(UnLn,FmtText     )  '   Type of steady state solution found                Static equilibrium (RotSpeed = 0.0)'
    ELSE
@@ -1374,7 +1375,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxYawPos   > 0 )  THEN ! Yes, nacelle yaw angle has been selected as a control input
 
-      IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
+      IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
          YawNeut     = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw angle, QT(DOF_Yaw).
          x%QT(DOF_Yaw) = YawPosop + DelYawPos        ! (+) pertubation of nacelle yaw angle
@@ -1392,7 +1393,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-      IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
+      IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
          YawNeut     = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw angle, QT(DOF_Yaw).
          x%QT(DOF_Yaw) = YawPosop - DelYawPos        ! (-) pertubation of nacelle yaw angle
@@ -1410,7 +1411,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-      IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
+      IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw angle, YawNeut.
          YawNeut     = YawPosop                    ! Eliminate the nacelle yaw angle pertubation throughout the rest of this analysis
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw angle, QT(DOF_Yaw).
          x%QT(DOF_Yaw) = YawPosop                    ! Eliminate the nacelle yaw angle pertubation throughout the rest of this analysis
@@ -1435,7 +1436,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
    IF ( IndxYawRate  > 0 )  THEN ! Yes, nacelle yaw rate has been selected as a control input
 
-      IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
+      IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
          YawRateNeut  = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw rate, QDT(DOF_Yaw).
          x%QDT(DOF_Yaw) = YawRateop + DelYawRate     ! (+) pertubation of nacelle yaw rate
@@ -1453,7 +1454,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-      IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
+      IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
          YawRateNeut  = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw rate, QDT(DOF_Yaw).
          x%QDT(DOF_Yaw) = YawRateop - DelYawRate     ! (-) pertubation of nacelle yaw rate
@@ -1471,7 +1472,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I - All selected output channels
 
 
-      IF ( YawDOF )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
+      IF ( p%DOF_Flag(DOF_Yaw ) )  THEN  ! Yaw DOF is currently enabled (using FAST's built-in actuator) - perturb the command yaw rate, YawRateNeut.
          YawRateNeut  = YawRateop                  ! Eliminate the nacelle yaw rate pertubation throughout the rest of this analysis
       ELSE                 ! Yaw DOF is currently disabled (no built-in actuator) - perturb the actual yaw rate, QDT(DOF_Yaw).
          x%QDT(DOF_Yaw) = YawRateop                  ! Eliminate the nacelle yaw rate pertubation throughout the rest of this analysis

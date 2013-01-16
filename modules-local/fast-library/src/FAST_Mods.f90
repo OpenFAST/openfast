@@ -1,4 +1,13 @@
   
+MODULE GlueCodeVars
+
+   USE NWTC_Library
+   
+   LOGICAL                   :: CompAero                                        ! Compute aerodynamic forces switch.
+   LOGICAL                   :: CompHydro = .FALSE.                             ! Compute hydrodynamic forces switch.
+   LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.  
+
+END MODULE GlueCodeVars
    
 !=======================================================================
 MODULE ADAMSInput
@@ -140,32 +149,6 @@ INTEGER(4)                   :: NBlInpSt                                        
 
 END MODULE Blades
 !=======================================================================
-!MODULE Constants
-!
-!
-!  ! This MODULE stores various constants.
-!
-!
-!USE                             Precision
-!
-!
-!REAL(ReKi), PARAMETER        :: Inv2Pi   =  0.15915494                          ! 0.5/Pi.
-!
-!END MODULE Constants
-!!=======================================================================
-!MODULE DOFs
-!
-!
-!   ! This MODULE stores variables related to degrees of freedom.
-!
-!
-!USE                             Precision
-!
-!
-!INTEGER(4), ALLOCATABLE      :: IC       (:)                                    ! Array which stores pointers to predictor-corrector results.
-!
-!END MODULE DOFs
-!=======================================================================
 MODULE DriveTrain
 
 
@@ -262,38 +245,6 @@ CHARACTER(1024)              :: GHWvFile  = ''                                  
 
 
 END MODULE EnvCond
-!=======================================================================
-MODULE Features
-
-
-   ! This MODULE stores input variables for feature switches.
-
-LOGICAL                   :: CompAero                                        ! Compute aerodynamic forces switch.
-LOGICAL                   :: CompHydro = .FALSE.                             ! Compute hydrodynamic forces switch.
-
-LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.
-LOGICAL                   :: DrTrDOF                                         ! Drivetrain rotational-flexibility DOF.
-LOGICAL                   :: EdgeDOF                                         ! Edgewise blade mode DOF.
-LOGICAL                   :: FlapDOF1                                        ! First flapwise blade mode DOF.
-LOGICAL                   :: FlapDOF2                                        ! Second flapwise blade mode DOF.
-LOGICAL                   :: GenDOF                                          ! Generator DOF.
-LOGICAL                   :: PtfmHvDOF = .FALSE.                             ! Platform vertical heave translation DOF. (Initialized to .FALSE. b/c not all models will read in PtfmFile)
-LOGICAL                   :: PtfmPDOF  = .FALSE.                             ! Platform pitch tilt rotation DOF. (Initialized to .FALSE. b/c not all models will read in PtfmFile)
-LOGICAL                   :: PtfmRDOF  = .FALSE.                             ! Platform roll tilt rotation DOF. (Initialized to .FALSE. b/c not all models will read in PtfmFile)
-LOGICAL                   :: PtfmSgDOF = .FALSE.                             ! Platform horizontal surge translation DOF. (Initialized to .FALSE. b/c not all models will read in PtfmFile)
-LOGICAL                   :: PtfmSwDOF = .FALSE.                             ! Platform horizontal sway translation DOF. (Initialized to .FALSE. b/c not all models will read in PtfmFile)
-LOGICAL                   :: PtfmYDOF  = .FALSE.                             ! Platform yaw rotation DOF. (Initialized to .FALSE. b/c not all models will read in PtfmFile)
-LOGICAL                   :: RFrlDOF   = .FALSE.                             ! Rotor-furl DOF. (Initialized to .FALSE. b/c not all models read in FurlFile)
-LOGICAL                   :: TeetDOF   = .FALSE.                             ! Rotor-teeter DOF. (Initialized to .FALSE. b/c the 3-blader requires it to be .FALSE.)
-LOGICAL                   :: TFrlDOF   = .FALSE.                             ! Tail-furl DOF. (Initialized to .FALSE. b/c not all models read in FurlFile)
-LOGICAL                   :: TwFADOF1                                        ! First tower fore-aft bending-mode DOF.
-LOGICAL                   :: TwFADOF2                                        ! Second tower fore-aft bending-mode DOF.
-LOGICAL                   :: TwSSDOF1                                        ! First tower side-to-side bending-mode DOF.
-LOGICAL                   :: TwSSDOF2                                        ! Second tower side-to-side bending-mode DOF.
-LOGICAL                   :: YawDOF                                          ! Nacelle-yaw DOF.
-
-
-END MODULE Features
 !=======================================================================
 MODULE General
 
