@@ -7,6 +7,11 @@ MODULE GlueCodeVars
    LOGICAL                   :: CompHydro = .FALSE.                             ! Compute hydrodynamic forces switch.
    LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.  
 
+   INTEGER(4)                :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
+   INTEGER(4)                :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
+   LOGICAL                   :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
+   LOGICAL                   :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
+
 END MODULE GlueCodeVars
    
 !=======================================================================
@@ -151,6 +156,7 @@ END MODULE Blades
 !=======================================================================
 MODULE DriveTrain
 
+!bjj: controls except where noted by structural (strd) -- verify though with Jason
 
    ! This MODULE stores variables for the drivetrain.
 
@@ -158,11 +164,11 @@ MODULE DriveTrain
 USE                             Precision
 
 
-REAL(ReKi)                   :: DTTorDmp                                        ! Drivetrain torsional damper
-REAL(ReKi)                   :: DTTorSpr                                        ! Drivetrain torsional spring
+REAL(ReKi)                   :: DTTorDmp                                        ! Drivetrain torsional damper - structural
+REAL(ReKi)                   :: DTTorSpr                                        ! Drivetrain torsional spring - strd
 REAL(ReKi)                   :: ElecPwr                                         ! Electrical power, W.
-REAL(ReKi)                   :: GBRatio                                         ! Gearbox ratio
-REAL(ReKi)                   :: GBoxEff                                         ! Gearbox efficiency.
+REAL(ReKi)                   :: GBRatio                                         ! Gearbox ratio -strd
+REAL(ReKi)                   :: GBoxEff                                         ! Gearbox efficiency. -strd
 REAL(ReKi)                   :: GenCTrq                                         ! Constant generator torque.
 REAL(ReKi)                   :: GenEff                                          ! Generator efficiency
 REAL(ReKi)                   :: GenSpRZT                                        ! Difference between rated and zero-torque generator speeds for SIG.
@@ -200,10 +206,10 @@ REAL(ReKi)                   :: TEC_V1a                                         
 REAL(ReKi)                   :: TEC_VLL                                         ! Line-to-line RMS voltage for Thevenin-equivalent circuit.
 REAL(ReKi)                   :: TEC_Xe1                                         ! Thevenin's equivalent stator leakage reactance (ohms)
 
-INTEGER(4)                   :: GenDir                                          ! Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS).
+INTEGER(4)                   :: GenDir                                          ! Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS). - structural
 INTEGER(4)                   :: TEC_NPol                                        ! Number of poles for Thevenin-equivalent circuit.
 
-LOGICAL                      :: GBRevers                                        ! Gearbox reversal flag.
+LOGICAL                      :: GBRevers                                        ! Gearbox reversal flag. - structural
 
 
 END MODULE DriveTrain
@@ -217,7 +223,8 @@ MODULE EnvCond
 USE                             Precision
 
 
-REAL(ReKi)                   :: AirDens                                         ! Air density = RHO.
+   ! hydrodyn inputs:
+
 REAL(ReKi)                   :: CurrDIDir = 0.0                                 ! Depth-independent current heading direction.
 REAL(ReKi)                   :: CurrDIV   = 0.0                                 ! Depth-independent current velocity.
 REAL(ReKi)                   :: CurrNSDir = 0.0                                 ! Near-surface current heading direction.
@@ -225,7 +232,7 @@ REAL(ReKi)                   :: CurrNSRef = 0.0                                 
 REAL(ReKi)                   :: CurrNSV0  = 0.0                                 ! Near-surface current velocity at still water level.
 REAL(ReKi)                   :: CurrSSDir = 0.0                                 ! Sub-surface current heading direction.
 REAL(ReKi)                   :: CurrSSV0  = 0.0                                 ! Sub-surface current velocity at still water level.
-REAL(ReKi)                   :: Gravity                                         ! Gravitational acceleration.
+
 
 REAL(ReKi)                   :: WaveDir   = 0.0                                 ! Wave heading direction.
 REAL(ReKi)                   :: WaveDT    = 0.0                                 ! Time step for incident wave calculations.
@@ -252,8 +259,6 @@ MODULE General
    ! This MODULE stores input variables for general program control.
 
 
-INTEGER(4)                   :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
-INTEGER(4)                   :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
 INTEGER(4)                   :: PtfmModel                                       ! Platform model {0: none, 1: onshore, 2: fixed bottom offshore, 3: floating offshore} (switch).
 INTEGER(4)                   :: StrtTime (8)                                    ! Start time of simulation.
 INTEGER(4)                   :: UnAC      = 24                                  ! I/O unit number for the ADAMS control output file (.acf) useful for an ADAMS SIMULATE analysis.
@@ -267,8 +272,6 @@ INTEGER(4)                   :: UnOu      = 21                                  
 INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
-LOGICAL                      :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
-LOGICAL                      :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
 LOGICAL                      :: Furling                                         ! Read in additional model properties for furling turbine?
 LOGICAL                      :: SumDisp                                         ! Display summary data on screen?
 LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
@@ -367,6 +370,7 @@ MODULE Modes
 USE                             Precision
 USE StructDyn_Parameters
 
+!per jmj, these don't need to be in the parameters data type
 
 !INTEGER(4), PARAMETER        :: PolyOrd = 6                                     ! Order of the polynomial describing the mode shape.
 
@@ -1880,70 +1884,42 @@ MODULE RtHndSid
 
 USE                             Precision
 
-
-REAL(ReKi)                   :: AngAccEBt(3)                                    ! Portion of the angular acceleration of the base plate                                                (body B) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: AngAccERt(3)                                    ! Portion of the angular acceleration of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: AngAccEXt(3)                                    ! Portion of the angular acceleration of the platform                                                  (body X) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: AngAccEFt(:,:)                                  ! Portion of the angular acceleration of tower element J                                               (body F) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-
-REAL(ReKi), ALLOCATABLE      :: AngPosEF (:,:)                                  ! Angular position of the current point on the tower                                (body F) in the inertial frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: AngPosXF (:,:)                                  ! Angular position of the current point on the tower                                (body F) in the platform      (body X          ).
-REAL(ReKi), ALLOCATABLE      :: AngPosHM (:,:,:)                                ! Angular position of eleMent J of blade K                                          (body M) in the hub           (body H          ).
-REAL(ReKi)                   :: AngPosXB (3)                                    ! Angular position of the base plate                                                (body B) in the platform      (body X          ).
-REAL(ReKi)                   :: AngVelEB (3)                                    ! Angular velocity of the base plate                                                (body B) in the inertia frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: AngVelEF  (:,:)                                 ! Angular velocity of the current point on the tower                                (body F) in the inertia frame (body E for earth).
-REAL(ReKi)                   :: AngVelER (3)                                    ! Angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth).
-REAL(ReKi)                   :: AngVelEX (3)                                    ! Angular velocity of the platform                                                  (body X) in the inertia frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: AugMat   (:,:)                                  ! The augmented matrix used for the solution of the QD2T()s.
+   ! tail fin aero: should be an input from AeroDyn?
 REAL(ReKi)                   :: FKAero   (3)                                    ! The tail fin aerodynamic force acting at point K, the center-of-pressure of the tail fin.
-REAL(ReKi)                   :: FrcONcRtt(3)                                    ! Portion of the force at yaw bearing         (point O   ) due to the nacelle, generator, and rotor associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: FrcPRott (3)                                    ! Portion of the force at the teeter pin      (point P   ) due to the rotor associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: FrcS0Bt  (:,:)                                  ! Portion of the force at the blade root      (point S(0)) due to the blade associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: FrcT0Trbt(3)                                    ! Portion of the force at tower base          (point T(0)) due to the turbine associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: FrcVGnRtt(3)                                    ! Portion of the force at the rotor-furl axis (point V   ) due to the structure that furls with the rotor, generator, and rotor associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: FrcWTailt(3)                                    ! Portion of the force at the  tail-furl axis (point W   ) due to the tail associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: FrcZAllt (3)                                    ! Portion of the force at platform reference  (point Z   ) due to everything associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: FSAero   (:,:,:)                                ! The aerodynamic force per unit span acting on a blade at point S.
-REAL(ReKi), ALLOCATABLE      :: FSTipDrag(:,:)                                  ! The aerodynamic force at a blade tip resulting from tip drag.
-REAL(ReKi), ALLOCATABLE      :: FTAero   (:,:)                                  ! The aerodynamic force per unit length acting on the tower at point T.
-REAL(ReKi), ALLOCATABLE      :: FTHydrot (:,:)                                  ! Portion of the hydrodynamic force per unit length acting on the tower at point T associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: FZHydrot (3)                                    ! Portion of the platform hydrodynamic force at the platform reference (point Z) associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: GBoxEffFac                                      ! The factor used to apply the gearbox efficiency effects to the equation associated with the generator DOF.
-REAL(ReKi)                   :: LinAccEIMUt(3)                                  ! Portion of the linear acceleration of the nacelle IMU      (point IMU) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: LinAccEOt(3)                                    ! Portion of the linear acceleration of the base plate         (point O) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: LinAccESt(:,:,:)                                ! Portion of the linear acceleration of a point on a blade     (point S) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: LinAccETt(:,:)                                  ! Portion of the linear acceleration of a point on the tower   (point T) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: LinAccEZt (3)                                   ! Portion of the linear acceleration of the platform reference (point Z) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: LinVelEIMU(3)                                   ! Linear velocity of the nacelle IMU  (point IMU) in the inertia frame.
-REAL(ReKi)                   :: LinVelEZ  (3)                                   ! Linear velocity of platform reference (point Z) in the inertia frame.
+REAL(ReKi)                   :: MAAero   (3)                                    ! The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin.
+
+   !should be local variable, but this is used in the non-standard control
+REAL(ReKi), ALLOCATABLE      :: AugMat   (:,:)                                  ! The augmented matrix used for the solution of the QD2T()s.
+
+
+! allocatable arrays only used in RtHS:
+REAL(ReKi), ALLOCATABLE      :: AngAccEFt(:,:)                                  ! Portion of the angular acceleration of tower element J                                               (body F) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
+REAL(ReKi), ALLOCATABLE      :: AngVelEF  (:,:)                                 ! Angular velocity of the current point on the tower                                (body F) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: LinVelET  (:,:)                                 ! Linear velocity of current point on the tower         (point T) in the inertia frame.
 REAL(ReKi), ALLOCATABLE      :: LinVelESm2 (:)                                  ! The m2-component (closest to tip) of LinVelES.
-REAL(ReKi)                   :: MAAero   (3)                                    ! The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin.
-REAL(ReKi), ALLOCATABLE      :: MFAero   (:,:)                                  ! The aerodynamic moment per unit length acting on the tower at point T.
-REAL(ReKi), ALLOCATABLE      :: MFHydrot (:,:)                                  ! Portion of the hydrodynamic moment per unit length acting on a tower element (body F) at point T associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: MomBNcRtt(3)                                    ! Portion of the moment at the base plate (body B) / yaw bearing                       (point O   ) due to the nacelle, generator, and rotor associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: MomH0Bt  (:,:)                                  ! Portion of the moment at the hub        (body H) / blade root                        (point S(0)) due to the blade associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: MomLPRott(3)                                    ! Portion of the moment at the teeter pin (point P) on the low-speed shaft             (body L    ) due to the rotor associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: MomNGnRtt(3)                                    ! Portion of the moment at the nacelle    (body N) / selected point on rotor-furl axis (point V   ) due the structure that furls with the rotor, generator, and rotor associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: MomNTailt(3)                                    ! Portion of the moment at the nacelle    (body N) / selected point on  tail-furl axis (point W   ) due the tail associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: MomX0Trbt(3)                                    ! Portion of the moment at the platform   (body X) / tower base                        (point T(0)) due to the turbine associated with everything but the QD2T()'s.
-REAL(ReKi)                   :: MomXAllt (3)                                    ! Portion of the moment at the platform   (body X) / platform reference                (point Z   ) due to everything associated with everything but the QD2T()'s.
-REAL(ReKi), ALLOCATABLE      :: MMAero   (:,:,:)                                ! The aerodynamic moment per unit span acting on a blade at point S.
-REAL(ReKi)                   :: MXHydrot (3)                                    ! Portion of the platform hydrodynamic moment acting at the platform (body X) / platform reference (point Z) associated with everything but the  QD2T()'s.
 REAL(ReKi), ALLOCATABLE      :: PAngVelEA(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the tail                                                      (body A) in the inertia frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: PAngVelEB(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the base plate                                                (body B) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEF(:,:,:,:)                              ! Partial angular velocity (and its 1st time derivative) of tower element J                                               (body F) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEG(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the generator                                                 (body G) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEH(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the hub                                                       (body H) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEL(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the low-speed shaft                                           (body L) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEM(:,:,:,:,:)                            ! Partial angular velocity (and its 1st time derivative) of eleMent J of blade K                                          (body M) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEN(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the nacelle                                                   (body N) in the inertia frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: PAngVelER(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth).
 REAL(ReKi), ALLOCATABLE      :: PAngVelEX(:,:,:)                                ! Partial angular velocity (and its 1st time derivative) of the platform                                                (body B) in the inertia frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: PFrcONcRt(:,:)                                  ! Partial force at the yaw bearing     (point O   ) due to the nacelle, generator, and rotor.
-REAL(ReKi), ALLOCATABLE      :: PFrcPRot (:,:)                                  ! Partial force at the teeter pin      (point P   ) due to the rotor.
-REAL(ReKi), ALLOCATABLE      :: PFrcS0B  (:,:,:)                                ! Partial force at the blade root      (point S(0)) due to the blade.
-REAL(ReKi), ALLOCATABLE      :: PFrcT0Trb(:,:)                                  ! Partial force at the tower base      (point T(0)) due to the turbine.
+
+
+!------------
+
+REAL(ReKi), ALLOCATABLE      :: FSAero   (:,:,:)                                ! The aerodynamic force per unit span acting on a blade at point S.
+
+REAL(ReKi), ALLOCATABLE      :: FSTipDrag(:,:)                                  ! The aerodynamic force at a blade tip resulting from tip drag.
+REAL(ReKi), ALLOCATABLE      :: FTAero   (:,:)                                  ! The aerodynamic force per unit length acting on the tower at point T.
+REAL(ReKi), ALLOCATABLE      :: FTHydrot (:,:)                                  ! Portion of the hydrodynamic force per unit length acting on the tower at point T associated with everything but the QD2T()'s.
+REAL(ReKi)                   :: FZHydrot (3)                                    ! Portion of the platform hydrodynamic force at the platform reference (point Z) associated with everything but the QD2T()'s.
+REAL(ReKi), ALLOCATABLE      :: MFHydrot (:,:)                                  ! Portion of the hydrodynamic moment per unit length acting on a tower element (body F) at point T associated with everything but the QD2T()'s.
+REAL(ReKi), ALLOCATABLE      :: MFAero   (:,:)                                  ! The aerodynamic moment per unit length acting on the tower at point T.
+REAL(ReKi), ALLOCATABLE      :: MMAero   (:,:,:)                                ! The aerodynamic moment per unit span acting on a blade at point S.
+REAL(ReKi)                   :: MXHydrot (3)                                    ! Portion of the platform hydrodynamic moment acting at the platform (body X) / platform reference (point Z) associated with everything but the  QD2T()'s.
+
 REAL(ReKi), ALLOCATABLE      :: PFrcVGnRt(:,:)                                  ! Partial force at the rotor-furl axis (point V   ) due to the structure that furls with the rotor, generator, and rotor.
 REAL(ReKi), ALLOCATABLE      :: PFrcWTail(:,:)                                  ! Partial force at the  tail-furl axis (point W   ) due to the tail.
 REAL(ReKi), ALLOCATABLE      :: PFrcZAll (:,:)                                  ! Partial force at the platform reference (point Z) due to everything.
@@ -1977,19 +1953,13 @@ REAL(ReKi)                   :: PMXHydro (6,3)                                  
 REAL(ReKi), ALLOCATABLE      :: QD2T     (:)                                    ! Solution (acceleration) vector.
 REAL(ReKi), ALLOCATABLE      :: QD2TC    (:)                                    ! A copy of the value of QD2T used in SUBROUTINE FixHSSBrTq().
 REAL(ReKi), ALLOCATABLE      :: OgnlGeAzRo(:)                                   ! The original elements of AugMat that formed the DOF_GeAz equation before application of known initial conditions.
-REAL(ReKi)                   :: rO       (3)                                    ! Position vector from inertial frame origin             to tower-top / base plate (point O).
 REAL(ReKi), ALLOCATABLE      :: rQS      (:,:,:)                                ! Position vector from the apex of rotation (point Q   ) to a point on a blade (point S).
 REAL(ReKi), ALLOCATABLE      :: rS       (:,:,:)                                ! Position vector from inertial frame origin             to a point on a blade (point S).
 REAL(ReKi), ALLOCATABLE      :: rS0S     (:,:,:)                                ! Position vector from the blade root       (point S(0)) to a point on a blade (point S).
 REAL(ReKi), ALLOCATABLE      :: rT       (:,:)                                  ! Position vector from inertial frame origin to the current node (point T(HNodes(J)).
-REAL(ReKi)                   :: rT0O     (3)                                    ! Position vector from the tower base       (point T(0)) to tower-top / base plate (point O).
 REAL(ReKi), ALLOCATABLE      :: rT0T     (:,:)                                  ! Position vector from a height of TwrRBHt (base of flexible portion of tower) (point T(0)) to a point on the tower (point T).
-REAL(ReKi)                   :: rZ       (3)                                    ! Position vector from inertia frame origin to platform reference (point Z).
-REAL(ReKi)                   :: rZO      (3)                                    ! Position vector from platform reference   (point Z   ) to tower-top / base plate (point O).
 REAL(ReKi), ALLOCATABLE      :: rZT      (:,:)                                  ! Position vector from platform reference   (point Z   ) to a point on a tower     (point T).
 REAL(ReKi), ALLOCATABLE      :: SolnVec  (:)                                    ! Solution vector found by solving the equations of motion.
-REAL(ReKi)                   :: TeetAng                                         ! Current teeter angle = QT(DOF_Teet) for 2-blader or 0 for 3-blader (this is used in place of QT(DOF_Teet) throughout RtHS().
-REAL(ReKi)                   :: TeetAngVel                                      ! Angular velocity of the teeter motion.
 
 
 END MODULE RtHndSid

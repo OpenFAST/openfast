@@ -121,7 +121,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  p_StrD, x_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )     
+      CALL TimeMarch(  p_StrD, x_StrD, OtherSt_StrD, u_StrD, y_StrD, ErrStat, ErrMsg )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
@@ -142,15 +142,15 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady( p_StrD, x_StrD, y_StrD, OtherSt_StrD )
+         CALL CalcSteady( p_StrD, x_StrD, y_StrD, OtherSt_StrD, u_StrD )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
          DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
-            Qop  (:,L) = OtherSt_StrD%Q  (:,IC(1))  ! Initialize the operating
-            QDop (:,L) = OtherSt_StrD%QD (:,IC(1))  ! point values to the
-            QD2op(:,L) = OtherSt_StrD%QD2(:,IC(1))  ! initial conditions
+            Qop  (:,L) = OtherSt_StrD%Q  (:,OtherState%IC(1))  ! Initialize the operating
+            QDop (:,L) = OtherSt_StrD%QD (:,OtherState%IC(1))  ! point values to the
+            QD2op(:,L) = OtherSt_StrD%QD2(:,OtherState%IC(1))  ! initial conditions
 
             Qop (DOF_GeAz,L) = QAzimInit + ( TwoPi/NAzimStep )*( L - 1 )               ! Make the op generator
             IF ( Qop(DOF_GeAz,L) >= TwoPi )  Qop(DOF_GeAz,L) = Qop(DOF_GeAz,L) - TwoPi ! azimuth DOF periodic
@@ -163,7 +163,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       ENDIF
 
 
-      CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD )          ! Linearize the model about the steady-state solution.
+      CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD, u_StrD )          ! Linearize the model about the steady-state solution.
 
 !      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg ) ! happens in StrD_End
       IF (ErrStat /= ErrID_none) THEN
