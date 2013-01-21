@@ -12,22 +12,22 @@ MODULE InflowWind_Subs
 !  1 Aug 2012    v1.01.00a-bjj                              B. Jonkman
 ! 10 Aug 2012    v1.01.00b-bjj                              B. Jonkman
 !----------------------------------------------------------------------------------------------------
-!  
+!
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 !    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!    
-!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
 !    If not, see <http://www.gnu.org/licenses/>.
-!    
+!
 !**********************************************************************************************************************************
 
    USE                              NWTC_Library
@@ -169,7 +169,7 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 RETURN
 END SUBROUTINE GetWindType
 !====================================================================================================
-SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat )
+SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat, ErrMsg )
 ! This function is used in FAST's linearization scheme.  It should be fixed at some point.
 !----------------------------------------------------------------------------------------------------
 
@@ -178,6 +178,7 @@ SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrSta
    TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
 
    INTEGER,                         INTENT(OUT)       :: ErrStat
+   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
 
    REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
 
@@ -191,7 +192,7 @@ SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrSta
    SELECT CASE ( ParamData%WindFileType )
       CASE (HH_Wind)
 
-         CALL HH_SetLinearizeDels( LinPerturbations, ErrStat )
+         CALL HH_SetLinearizeDels( LinPerturbations, ErrStat, ErrMsg )
 
       CASE ( FF_Wind, UD_Wind, FD_Wind, HAWC_Wind )
 
@@ -214,57 +215,57 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !! ! when a consensus on the definition of "average velocity" is determined, this function will be
 !! ! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
 !! !----------------------------------------------------------------------------------------------------
-!! 
+!!
 !!       ! Passed variables
-!! 
+!!
 !!    REAL(ReKi), INTENT(IN)     :: Time
 !!    REAL(ReKi), INTENT(IN)     :: InpPosition(3)
 !!    INTEGER, INTENT(OUT)       :: ErrStat
-!! 
+!!
 !!       ! Function definition
 !!    REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
-!! 
+!!
 !!       ! Local variables
 !!    TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
 !!    REAL(ReKi)                 :: Position(3)
 !!    INTEGER                    :: IY
 !!    INTEGER                    :: IZ
-!! 
-!! 
+!!
+!!
 !!    ErrStat = 0
-!! 
+!!
 !!    SELECT CASE ( ParamData%WindFileType )
 !!       CASE (HH_Wind)
-!! 
+!!
 !! !      VXGBAR =  V * COS( DELTA )
 !! !      VYGBAR = -V * SIN( DELTA )
 !! !      VZGBAR =  VZ
-!! 
+!!
 !!          Position    = (/ REAL(0.0, ReKi), REAL(0.0, ReKi), InpPosition(3) /)
 !!          NewVelocity = HH_Get_ADHack_WindSpeed(Time, Position, ErrStat)
-!! 
+!!
 !!          InflowWind_ADhack_diskVel(:) = NewVelocity%Velocity(:)
-!! 
-!! 
+!!
+!!
 !!       CASE (FF_Wind)
 !! !      VXGBAR = MeanFFWS
 !! !      VYGBAR = 0.0
 !! !      VZGBAR = 0.0
-!! 
+!!
 !!          InflowWind_ADhack_diskVel(1)   = FF_GetValue('MEANFFWS', ErrStat)
 !!          InflowWind_ADhack_diskVel(2:3) = 0.0
-!! 
+!!
 !!       CASE (UD_Wind)
 !! !      VXGBAR = UWmeanU
 !! !      VYGBAR = UWmeanV
 !! !      VZGBAR = UWmeanW
-!! 
+!!
 !!          InflowWind_ADhack_diskVel(1)   = UsrWnd_GetValue('MEANU', ErrStat)
 !!          IF (ErrStat /= 0) RETURN
 !!          InflowWind_ADhack_diskVel(2)   = UsrWnd_GetValue('MEANV', ErrStat)
 !!          IF (ErrStat /= 0) RETURN
 !!          InflowWind_ADhack_diskVel(3)   = UsrWnd_GetValue('MEANW', ErrStat)
-!! 
+!!
 !!       CASE (FD_Wind)
 !! !      XGrnd = 0.0
 !! !      YGrnd = 0.5*RotDiam
@@ -297,39 +298,39 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !! !      VXGBAR = 0.25*( VXGBAR + FDWind( 1 ) )
 !! !      VYGBAR = 0.25*( VYGBAR + FDWind( 2 ) )
 !! !      VZGBAR = 0.25*( VZGBAR + FDWind( 3 ) )
-!! 
-!! 
+!!
+!!
 !!          Position(1) = 0.0
 !!          InflowWind_ADhack_diskVel(:) = 0.0
-!! 
+!!
 !!          DO IY = -1,1,2
 !!             Position(2)  =  IY*FD_GetValue('RotDiam',ErrStat)
-!! 
+!!
 !!             DO IZ = -1,1,2
 !!                Position(3)  = IZ*InpPosition(2) + InpPosition(3)
-!! 
+!!
 !!                NewVelocity = InflowWind_GetVelocity(Time, Position, ErrStat)
 !!                InflowWind_ADhack_diskVel(:) = InflowWind_ADhack_diskVel(:) + NewVelocity%Velocity(:)
 !!             END DO
 !!          END DO
 !!          InflowWind_ADhack_diskVel(:) = 0.25*InflowWind_ADhack_diskVel(:)
-!! 
+!!
 !!       CASE (HAWC_Wind)
 !!          InflowWind_ADhack_diskVel(1)   = HW_GetValue('UREF', ErrStat)
 !!          InflowWind_ADhack_diskVel(2:3) = 0.0
-!! 
+!!
 !!       CASE DEFAULT
 !!          CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_diskVel(). '// &
 !!                     'Call WindInflow_Init() before calling this function.' )
 !!          ErrStat = 1
-!! 
+!!
 !!    END SELECT
-!! 
+!!
 !!    RETURN
-!! 
+!!
 !! END FUNCTION InflowWind_ADhack_diskVel
 !====================================================================================================
-FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
+FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat, ErrMsg )
 ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
 ! it performs a wind speed check for the dynamic inflow initialization
 ! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
@@ -340,6 +341,7 @@ FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
    TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
 
    INTEGER,                         INTENT(OUT)       :: ErrStat
+   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
 
       ! Function definition
    REAL(ReKi)                 :: InflowWind_ADhack_DIcheck
@@ -354,7 +356,7 @@ FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
 
       CASE (FF_Wind)
 
-         InflowWind_ADhack_DIcheck = FF_GetValue('MEANFFWS', ErrStat)
+         InflowWind_ADhack_DIcheck = FF_GetValue('MEANFFWS', ErrStat, ErrMsg)
 
       CASE (HAWC_Wind)
 
