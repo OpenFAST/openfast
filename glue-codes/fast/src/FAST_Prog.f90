@@ -148,9 +148,9 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
          DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
-            Qop  (:,L) = OtherSt_StrD%Q  (:,OtherState%IC(1))  ! Initialize the operating
-            QDop (:,L) = OtherSt_StrD%QD (:,OtherState%IC(1))  ! point values to the
-            QD2op(:,L) = OtherSt_StrD%QD2(:,OtherState%IC(1))  ! initial conditions
+            Qop  (:,L) = OtherSt_StrD%Q  (:,OtherSt_StrD%IC(1))  ! Initialize the operating
+            QDop (:,L) = OtherSt_StrD%QD (:,OtherSt_StrD%IC(1))  ! point values to the
+            QD2op(:,L) = OtherSt_StrD%QD2(:,OtherSt_StrD%IC(1))  ! initial conditions
 
             Qop (DOF_GeAz,L) = QAzimInit + ( TwoPi/NAzimStep )*( L - 1 )               ! Make the op generator
             IF ( Qop(DOF_GeAz,L) >= TwoPi )  Qop(DOF_GeAz,L) = Qop(DOF_GeAz,L) - TwoPi ! azimuth DOF periodic
