@@ -12,6 +12,9 @@
 
 #bjj NOTE: All variables initialized here should be double-checked that they are properly initialized in the new framework (i.e. can run twice)
 
+#typedef	^	InputDataType???	ReKi	YawNeut	-	-	-	"Neutral yaw position"
+#typedef	^	^	ReKi	YawRateNeut	-	0.0	-	"Neutral yaw rate"
+
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include	Registry_NWTC_Library.txt
@@ -281,7 +284,6 @@ typedef	^	^	ReKi	PMomNTail	{:}{:}	-	-	"Partial moment at the nacelle    (body N)
 typedef	^	^	ReKi	PMomX0Trb	{:}{:}	-	-	"Partial moment at the platform   (body X) / tower base                        (point T(0)) due to the turbine"
 #typedef	^	^	ReKi	PMomXAll	{:}{:}	-	-	"Partial moment at the platform   (body X) / platform reference                (point Z   ) due to the everything"
 typedef	^	^	ReKi	PMXHydro	{6}{3}	-	-	"Partial platform hydrodynamic moment at the platform (body X) / platform reference (point Z)"
-
 #typedef	^	^	ReKi	OgnlGeAzRo	{:}	-	-	"The original elements of AugMat that formed the DOF_GeAz equation before application of known initial conditions"
 typedef	^	^	ReKi	rO	3	-	-	"Position vector from inertial frame origin             to tower-top / base plate (point O)"
 #typedef	^	^	ReKi	rQS	{:}{:}{:}	-	-	"Position vector from the apex of rotation (point Q   ) to a point on a blade (point S)"
@@ -499,11 +501,9 @@ typedef	^	^	ReKi	YawBrMass	-	-	-	"Yaw bearing mass"
 # parameters describing environmental conditions (EnvCond)
 typedef	^	^	ReKi	AirDens	-	-	-	"Air density = RHO"
 typedef	^	^	ReKi	Gravity	-	-	-	"Gravitational acceleration"
-# parameters from RtHS
-
-
-
-
+# parameters from NacelleYaw
+typedef	^	^	ReKi	YawSpr	-	-	-	"Nacelle-yaw spring constant"
+typedef	^	^	ReKi	YawDamp	-	-	-	"Nacelle-yaw constant"
 
 
 

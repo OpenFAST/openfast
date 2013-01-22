@@ -222,6 +222,7 @@ MODULE EnvCond
 
 USE                             Precision
 
+!bjj: mostly HydroDyn variables...
 
    ! hydrodyn inputs:
 
@@ -402,8 +403,6 @@ MODULE NacelleYaw
 USE                             Precision
 
 
-REAL(ReKi)                   :: YawSpr                                          ! Nacelle-yaw spring constant.
-REAL(ReKi)                   :: YawDamp                                         ! Nacelle-yaw constant.
 REAL(ReKi)                   :: YawNeut                                         ! Neutral yaw position.
 REAL(ReKi)                   :: YawRateNeut = 0.0                               ! Neutral yaw rate.
 
