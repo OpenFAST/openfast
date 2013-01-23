@@ -185,9 +185,9 @@ QWeight(DOF_TSS1)       = SHP( 1.0, p%TwrFlexL, TwSSM1Sh(:),   1, ErrStat, ErrMs
 QWeight(DOF_TFA2)       = SHP( 1.0, p%TwrFlexL, TwFAM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower fore-aft     mode shape at the tower-top.
 QWeight(DOF_TSS2)       = SHP( 1.0, p%TwrFlexL, TwSSM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower side-to-side mode shape at the tower-top.
 DO K = 1,p%NumBl       ! Loop through all blades
-   QWeight(DOF_BF(K,1)) = SHP( 1.0, BldFlexL, BldFl1Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade flapwise     mode shape at the blade tip.
-   QWeight(DOF_BF(K,2)) = SHP( 1.0, BldFlexL, BldFl2Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 2nd blade flapwise     mode shape at the blade tip.
-   QWeight(DOF_BE(K,1)) = SHP( 1.0, BldFlexL, BldEdgSh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade edgewise     mode shape at the blade tip.
+   QWeight(DOF_BF(K,1)) = SHP( 1.0, p%BldFlexL, p%BldFl1Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade flapwise     mode shape at the blade tip.
+   QWeight(DOF_BF(K,2)) = SHP( 1.0, p%BldFlexL, p%BldFl2Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 2nd blade flapwise     mode shape at the blade tip.
+   QWeight(DOF_BE(K,1)) = SHP( 1.0, p%BldFlexL, p%BldEdgSh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade edgewise     mode shape at the blade tip.
 ENDDO                ! K - Blades
 
 
@@ -224,10 +224,10 @@ ENDDO             ! I - All tower DOFs in one direction
 DO K = 1,p%NumBl    ! Loop through all blades
    DO I = 1,2     ! Loop through all flap DOFs
       DO L = 1,2  ! Loop through all flap DOFs
-         CBFStart(K,I,L) = CBF(K,I,L)
+         CBFStart(K,I,L) = p%CBF(K,I,L)
       ENDDO       ! L - All flap DOFs
    ENDDO          ! I - All flap DOFs
-   CBEStart      (K,1,1) = CBE(K,1,1)
+   CBEStart      (K,1,1) = p%CBE(K,1,1)
 ENDDO             ! K - All blades
 
 
@@ -404,10 +404,10 @@ DO
    DO K = 1,p%NumBl    ! Loop through all blades
       DO I = 1,2     ! Loop through all flap DOFs
          DO L = 1,2  ! Loop through all flap DOFs
-            CBF(K,I,L) = CBFStart(K,I,L) + DampFact*KBF(K,I,L)
+            p%CBF(K,I,L) = CBFStart(K,I,L) + DampFact*KBF(K,I,L)
          ENDDO       ! L - All flap DOFs
       ENDDO          ! I - All flap DOFs
-      CBE      (K,1,1) = CBEStart(K,1,1) + DampFact*KBE(K,1,1)
+      p%CBE      (K,1,1) = CBEStart(K,1,1) + DampFact*KBE(K,1,1)
    ENDDO             ! K - All blades
 
 
@@ -493,10 +493,10 @@ ENDDO             ! I - All tower DOFs in one direction
 DO K = 1,p%NumBl    ! Loop through all blades
    DO I = 1,2     ! Loop through all flap DOFs
       DO L = 1,2  ! Loop through all flap DOFs
-         CBF(K,I,L) = CBFStart(K,I,L)
+         p%CBF(K,I,L) = CBFStart(K,I,L)
       ENDDO       ! L - All flap DOFs
    ENDDO          ! I - All flap DOFs
-   CBE      (K,1,1) = CBEStart(K,1,1)
+   p%CBE      (K,1,1) = CBEStart(K,1,1)
 ENDDO             ! K - All blades
 
 
@@ -938,9 +938,9 @@ DelQ(DOF_TSS1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwSSM1Sh(:),   1, ErrStat, 
 DelQ(DOF_TFA2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwFAM2Sh(:),   1, ErrStat, ErrMsg )
 DelQ(DOF_TSS2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwSSM2Sh(:),   1, ErrStat, ErrMsg )
 DO K = 1,p%NumBl       ! Loop through all blades
-   DelQ(DOF_BF(K,1)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldFl1Sh(:,K), 1, ErrStat, ErrMsg )
-   DelQ(DOF_BF(K,2)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldFl2Sh(:,K), 1, ErrStat, ErrMsg )
-   DelQ(DOF_BE(K,1)) = 0.2*D2R/SHP( 1.0, BldFlexL, BldEdgSh(:,K), 1, ErrStat, ErrMsg )
+   DelQ(DOF_BF(K,1)) = 0.2*D2R/SHP( 1.0, p%BldFlexL, p%BldFl1Sh(:,K), 1, ErrStat, ErrMsg )
+   DelQ(DOF_BF(K,2)) = 0.2*D2R/SHP( 1.0, p%BldFlexL, p%BldFl2Sh(:,K), 1, ErrStat, ErrMsg )
+   DelQ(DOF_BE(K,1)) = 0.2*D2R/SHP( 1.0, p%BldFlexL, p%BldEdgSh(:,K), 1, ErrStat, ErrMsg )
 ENDDO                ! K - Blades
 
 

@@ -99,8 +99,8 @@ IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADA
    IF ( MakeLINacf )  THEN
 
       IF ( OtherSt_StrD%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
-         CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//                   &
-                      '_ADAMS_LIN.acf'' not created since the model has zero active DOFs.'   )
+         CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//&
+                      '_ADAMS_LIN.acf'' not created because the model has zero active DOFs.'   )
       ELSE                             ! The model has at least one DOF
          CALL MakeACF_LIN( p_StrD )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
       ENDIF
