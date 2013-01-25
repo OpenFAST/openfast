@@ -58,6 +58,7 @@ main( int argc, char *argv[], char *env[] )
 
   fprintf(stderr,"FAST Registry. SVN Revision $Rev$, Date $LastChangedDate$ \n" ) ;
 
+
   sym_forget() ;
   thisprog = *argv ;
   while (*argv) {
