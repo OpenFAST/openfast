@@ -56,7 +56,11 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-  fprintf(stderr,"FAST Registry. SVN Revision $Rev$, Date $LastChangedDate$ \n" ) ;
+  fprintf(stderr,"----- FAST Registry  --------------\n") ;
+  fprintf(stderr,"Revision $Rev$\n") ;
+  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
+  fprintf(stderr,"URL  $URL$\n" ) ;
+  fprintf(stderr,"-----------------------------------\n") ;
 
 
   sym_forget() ;
