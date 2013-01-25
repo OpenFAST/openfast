@@ -56,6 +56,8 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
+  fprintf(stderr,"FAST Registry. SVN Revision $Rev$, Date $LastChangedDate$ \n" ) ;
+
   sym_forget() ;
   thisprog = *argv ;
   while (*argv) {
