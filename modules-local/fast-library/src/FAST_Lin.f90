@@ -22,7 +22,6 @@ SUBROUTINE CalcSteady( p, x, y, OtherState, u )
 
    ! FAST Modules:
 
-USE                             Blades
 USE                             DriveTrain
 USE                             InitCond
 USE                             Linear
@@ -404,10 +403,10 @@ DO
    DO K = 1,p%NumBl    ! Loop through all blades
       DO I = 1,2     ! Loop through all flap DOFs
          DO L = 1,2  ! Loop through all flap DOFs
-            p%CBF(K,I,L) = CBFStart(K,I,L) + DampFact*KBF(K,I,L)
+            p%CBF(K,I,L) = CBFStart(K,I,L) + DampFact*p%KBF(K,I,L)
          ENDDO       ! L - All flap DOFs
       ENDDO          ! I - All flap DOFs
-      p%CBE      (K,1,1) = CBEStart(K,1,1) + DampFact*KBE(K,1,1)
+      p%CBE      (K,1,1) = CBEStart(K,1,1) + DampFact*p%KBE(K,1,1)
    ENDDO             ! K - All blades
 
 
@@ -739,7 +738,6 @@ SUBROUTINE Linearize( p,x,y,OtherState, u )
 
    ! FAST Modules:
 
-USE                             Blades
 USE                             DriveTrain
 USE                             General
 USE                             InitCond

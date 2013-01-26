@@ -574,6 +574,17 @@ typedef	^	^	ReKi	TwistedSF	{:}{:}{:}{:}{:}	-	-	"Interpolated lineal blade mass d
 typedef	^	^	ReKi	BldFl1Sh	{:}{:}	-	-	"Blade-flap-mode-1 shape coefficients"
 typedef	^	^	ReKi	BldFl2Sh	{:}{:}	-	-	"Blade-flap-mode-2 shape coefficients"
 typedef	^	^	ReKi	BldEdgSh	{:}{:}	-	-	"Blade-edge-mode shape coefficients"
+# parameters from modes (Blade & Tower frequencies) -- these could probably be replaced by local variables (initialization only)
+typedef	^	^	ReKi	FreqBE	{:}{:}{:}	-	-	"Blade edgewise natural frequencies (both w/ and w/o centrifugal stiffening)"
+typedef	^	^	ReKi	FreqBF	{:}{:}{:}	-	-	"Blade flapwise natural frequencies (both w/ and w/o centrifugal stiffening)"
+typedef	^	^	ReKi	FreqTFA	{2}{2}	-	-	"Computed fore-aft tower natural frequencies"
+typedef	^	^	ReKi	FreqTSS	{2}{2}	-	-	"Computed side-to-side tower natural frequencies"
+# parameters from modes (Tower)
+#typedef	^	^	ReKi	TwFAM1Sh	{:}	-	-	"Tower fore-aft mode-1 shape coefficients"
+#typedef	^	^	ReKi	TwFAM2Sh	{:}	-	-	"Tower fore-aft mode-2 shape coefficients"
+#typedef	^	^	ReKi	TwSSM1Sh	{:}	-	-	"Tower side-to-side mode-1 shape coefficients"
+#typedef	^	^	ReKi	TwSSM2Sh	{:}	-	-	"Tower side-to-side mode-2 shape coefficients"
+#typedef	^	^	LOGICAL	CalcTMode	-	-	-	"T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file"
 
 
 
