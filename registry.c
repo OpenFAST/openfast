@@ -33,21 +33,7 @@ main( int argc, char *argv[], char *env[] )
   strcpy( thiscom, argv[0] ) ;
   argv++ ;
 
-  sw_deref_kludge           = 0 ;
-  sw_io_deref_kludge        = 0 ;
-  sw_3dvar_iry_kludge           = 0 ;
-  sw_distrib_io_layer       = 1 ;
-  sw_limit_args             = 0 ; /* usually set -- except for GRAPS */
-  sw_dm_parallel            = 0 ;
-  sw_all_x_staggered       = 0 ;
-  sw_move                  = 0 ;
-  sw_all_y_staggered       = 0 ;
-  sw_fort_kludge          = 1 ;   /* unconditionally true for v3 */
-  sw_dm_serial_in_only      = 0 ; /* input and bdy data set is distributed by node 0, 
-                                     other data streams are written to file per process */
-  sw_new_bdys              = 0 ;
-  sw_unidir_shift_halo     = 0 ;
-
+  sw_output_template_force = 0 ;
   strcpy( fname_in , "" ) ;
 
 #ifndef _WIN32
@@ -62,9 +48,10 @@ main( int argc, char *argv[], char *env[] )
   fprintf(stderr,"URL  $URL$\n" ) ;
   fprintf(stderr,"-----------------------------------\n") ;
 
-
   sym_forget() ;
   thisprog = *argv ;
+  strcpy(fname_in,"") ;
+
   while (*argv) {
     if (*argv[0] == '-') {  /* an option */
       if (!strncmp(*argv,"-D",2)) {
@@ -72,59 +59,17 @@ main( int argc, char *argv[], char *env[] )
         p = *argv ;
         sym_add(p+2) ;
       }
-   
-      if (!strcmp(*argv,"-DDEREF_KLUDGE")) {
-        sw_deref_kludge = 1 ;
+      if (!strcmp(*argv,"-f")) {
+        sw_output_template_force = 1 ;
       }
-      if (!strcmp(*argv,"-DIO_DEREF_KLUDGE")) {
-        sw_io_deref_kludge = 1 ;
-      }
-      if (!strcmp(*argv,"-DLIMIT_ARGS")) {
-        sw_limit_args = 1 ;
-      }
-      if (!strcmp(*argv,"-DMOVE_NESTS")) {
-        sw_move = 1 ;
-      }
-      if (!strcmp(*argv,"-DMOVE_NL_OUTSIDE_MODULE_CONFIGURE")) {
-        sw_fort_kludge = 1 ;
-      }
-      if (!strcmp(*argv,"-DD3VAR_IRY_KLUDGE")) {
-#if 0
-        sw_3dvar_iry_kludge = 1 ;
-#else
-        fprintf(stderr,"WARNING: -DD3VAR_IRY_KLUDGE option obsolete (it is now disabled by default). Ignored.\n") ;
-#endif
-      }
-      if (!strcmp(*argv,"-DALL_X_STAGGERED")) {
-        sw_all_x_staggered = 1 ;
-      }
-      if (!strcmp(*argv,"-DALL_Y_STAGGERED")) {
-        sw_all_y_staggered = 1 ;
-      }
-      if (!strcmp(*argv,"-DDM_PARALLEL")) {
-        sw_dm_parallel = 1 ;
-      }
-      if (!strcmp(*argv,"-DNEW_BDYS")) {
-        sw_new_bdys = 1 ;
-      }
-      if (!strcmp(*argv,"-DEM_CORE=1")) {
-        sw_unidir_shift_halo = 1 ;
-      }
-      if (!strcmp(*argv,"-DNEW_WITH_OLD_BDYS")) {
-        sw_new_with_old_bdys = 1 ;
-      }
-      if (!strcmp(*argv,"-DDISTRIB_IO_LAYER")) {
-#if 0
-        sw_distrib_io_layer = 1 ;
-#else
-        fprintf(stderr,"WARNING: -DDISTRIB_IO_LAYER option obsolete (it is now default). Ignored.\n") ;
-#endif
-      }
-      if (!strcmp(*argv,"-DDM_SERIAL_IN_ONLY")) {
-        sw_dm_serial_in_only = 1 ;
+      if (!strncmp(*argv,"-template",2)) {
+        argv++ ; if ( *argv ) { strcpy( sw_modname_subst,     *argv ) ; } else { goto usage ; }
+        argv++ ; if ( *argv ) { strcpy( sw_modnickname_subst, *argv ) ; } else { goto usage ; }
+        output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force) ;
       }
       if (!strncmp(*argv,"-h",2)) {
-        fprintf(stderr,"Usage: %s [-DDEREF_KLUDGE] [-DDM_PARALLEL] [-DDISTRIB_IO_LAYER] [-DDM_SERIAL_IN_ONLY] [-DD3VAR_IRY_KLUDGE] registryfile\n",thisprog) ;
+usage:
+        fprintf(stderr,"Usage: %s [-D<MACRO>]  registryfile | [-f] -template ModuleName ModName \n",thisprog) ;
         exit(1) ;
       }
     }
@@ -134,6 +79,8 @@ main( int argc, char *argv[], char *env[] )
     }
     argv++ ;
   }
+
+  if ( !strcmp(fname_in,"") ) goto usage ;
 
 #ifdef FUTURE
   gen_io_boilerplate() ;  /* 20091213 jm.  Generate the io_boilerplate_temporary.inc file */
@@ -198,4 +145,73 @@ cleanup:
    exit( 0 ) ;
 
 }
+#include "Template_data.c"
 
+output_template( char * sw_modname_subst, char * sw_modnickname_subst, int * force  )
+{
+    char ** p ;
+    FILE *fp ;
+    char fname[NAMELEN] ;
+    char tmp1[2096], tmp2[2096], tmp3[2096] ;
+    sprintf(fname,"%s.f90",sw_modname_subst) ;
+    if ( ! force ) {
+      if ( (fp = fopen( fname,"r" )) != NULL ) {
+        fprintf(stderr,"Registry exiting. Attempt to overwrite file (%s) . Move out of the way or specify -f before -template option. \n", fname) ;
+        exit(1) ;
+      }
+      fclose(fp) ;
+    }
+    if ( (fp = fopen( fname,"w" )) == NULL ) {
+      fprintf(stderr,"Registry exiting. Failure opening %s.\n", fname ) ;
+      exit(1) ;
+    }
+    for ( p = template_data ; *p ; p++ ) {
+      strcpy(tmp1,*p) ;
+      substitute(tmp1,"ModuleName",sw_modname_subst,tmp2) ;
+      substitute(tmp2,"ModName",sw_modnickname_subst,tmp3) ;
+      fprintf(fp,"%s\n",tmp3) ;
+    }
+    fclose(fp) ;
+    exit(0) ;
+}
+
+// would use regex for this but it does not seem to be uniformly or universally supported
+
+int
+substitute( char * str , char * match , char * replace, char * result )
+{
+   char * p, *q ;
+   size_t n, m ;
+
+   n = strlen( replace ) ;
+   m = strlen( match ) ;
+   for ( p = str , q = result ; *p ; )
+   {
+      if ( matches( p, match ) )
+      {
+        strncpy( q, replace, n ) ;
+        q += n ; 
+        p += m ;
+      } else {
+        *q = *p ;
+        p++ ;
+        q++ ;
+      }
+   }
+   *q = '\0' ;
+   strcpy( str, result ) ;
+}
+
+int 
+matches( char * str , char * match )   // both must be null terminated
+{
+   char * p, * q ;
+   int n, retval ;
+   
+   for ( n = 0, p = str, q = match ;  (*p && *q) ; p++, q++, n++ ) 
+   {
+     if ( *p != *q ) return(0) ;
+   }
+   if ( n != strlen(match) ) return(0) ;
+   return(1) ;
+}

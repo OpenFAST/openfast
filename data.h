@@ -97,18 +97,10 @@ typedef struct node_struct {
 #  define EXTERN
 #endif
 
-EXTERN int sw_deref_kludge ;
-EXTERN int sw_io_deref_kludge ;
-EXTERN int sw_3dvar_iry_kludge ;
-EXTERN int sw_distrib_io_layer ;
-EXTERN int sw_limit_args ;
-EXTERN int sw_dm_parallel  ;
-EXTERN int sw_move  ;
-EXTERN int sw_all_x_staggered ;
-EXTERN int sw_all_y_staggered ;
-EXTERN int sw_dm_serial_in_only ;
-EXTERN int sw_fort_kludge ;
+EXTERN int sw_output_template_force ;
 EXTERN char sw_commpath[NAMELEN] ;
+EXTERN char sw_modname_subst[NAMELEN] ;
+EXTERN char sw_modnickname_subst[NAMELEN] ;
 EXTERN int sw_new_bdys ;  /* 20070207 JM support decomposed boundary arrays */
 EXTERN int sw_unidir_shift_halo ;  /* 20100210 JM assume that halo to shift is same in both directions and only gen one of them */
 EXTERN int sw_new_with_old_bdys ;  /* 20070207 JM for debugging interim phase, new comms w/ old data structs */
