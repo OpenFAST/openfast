@@ -585,13 +585,13 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         } else if ( r->ndims > 0 ) {
           if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
           {
-            if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",nonick,r->name  ) ;
-            }
-            fprintf(fp,"  DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
-            if ( r->ndims == 1 ) {
-  fprintf(fp,"ENDDO\n") ;
-            }
+//            if ( r->ndims == 1 ) {
+//  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",nonick,r->name  ) ;
+//            }
+            fprintf(fp,"  IF ( ALLOCATED(%sData%%%s) ) DEALLOCATE(%sData%%%s)\n",nonick,r->name,nonick,r->name) ;
+//            if ( r->ndims == 1 ) {
+//  fprintf(fp,"ENDDO\n") ;
+//            }
           }
         }
       }
