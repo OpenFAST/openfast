@@ -46,6 +46,9 @@ typedef	^	^	ReKi	BldFl1Sh	{:}	-	-	"Blade-flap-mode-1 shape coefficients"
 typedef	^	^	ReKi	BldFl2Sh	{:}	-	-	"Blade-flap-mode-2 shape coefficients"
 typedef	^	^	ReKi	BldEdgSh	{:}	-	-	"Blade-edge-mode shape coefficients"
 typedef	^	^	LOGICAL	CalcBMode	-	-	-	"T: calculate blade mode shapes internally, F: use blade mode shapes from the blade file"
+#typedef	^	^	ReKi	AdjBlMs	-	-	-	"Factor to adjust blade mass density"
+#typedef	^	^	ReKi	AdjEdSt	-	-	-	"Factor to adjust edge stiffness"
+#typedef	^	^	ReKi	AdjFlSt	-	-	-	"Factor to adjust flap stiffness"
 
 
 
@@ -85,9 +88,9 @@ typedef	^	^	ReKi	TFinCPzn	-	0.0	-	"Vertical distance from tower-top to tail fin 
 typedef	^	^	ReKi	TFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	AdjFASt	-	-	-	"Factor to adjust tower fore-aft stiffness"
-typedef	^	^	ReKi	AdjSSSt	-	-	-	"Factor to adjust tower side-to-side stiffness"
-typedef	^	^	ReKi	AdjTwMa	-	-	-	"Factor to adjust tower mass density"
+#typedef	^	^	ReKi	AdjFASt	-	-	-	"Factor to adjust tower fore-aft stiffness"
+#typedef	^	^	ReKi	AdjSSSt	-	-	-	"Factor to adjust tower side-to-side stiffness"
+#typedef	^	^	ReKi	AdjTwMa	-	-	-	"Factor to adjust tower mass density"
 typedef	^	^	ReKi	FAStTunr	2	-	-	"Tower fore-aft modal stiffness tuners"
 typedef	^	^	ReKi	SSStTunr	2	-	-	"Tower side-to-side modal stiffness tuners"
 typedef	^	^	ReKi	HtFract	{:}	-	-	"Fractional height of the flexible portion of tower for a given input station"
@@ -124,9 +127,15 @@ typedef	^	^	LOGICAL	TwSSDOF1	-	-	-	"First tower side-to-side bending-mode DOF"
 typedef	^	^	LOGICAL	TwSSDOF2	-	-	-	"Second tower side-to-side bending-mode DOF"
 typedef	^	^	LOGICAL	YawDOF	-	-	-	"Nacelle-yaw DOF"
 typedef	^	^	LOGICAL	Furling	-	-	-	"Read in additional model properties for furling turbine?"
-#typedef	^	^	ReKi	AdjBlMs	-	-	-	"Factor to adjust blade mass density"
-#typedef	^	^	ReKi	AdjEdSt	-	-	-	"Factor to adjust edge stiffness"
-#typedef	^	^	ReKi	AdjFlSt	-	-	-	"Factor to adjust flap stiffness"
+#typedef	^	^	LOGICAL	CalcTMode	-	-	-	"T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file"
+typedef	^	^	ReKi	TwrFADmp	2	-	-	"Tower fore-aft structural damping ratios"
+typedef	^	^	ReKi	TwrSSDmp	2	-	-	"Tower side-to-side structural damping ratios"
+typedef	^	^	ReKi	TwFAM1Sh	{:}	-	-	"Tower fore-aft mode-1 shape coefficients"
+typedef	^	^	ReKi	TwFAM2Sh	{:}	-	-	"Tower fore-aft mode-2 shape coefficients"
+typedef	^	^	ReKi	TwSSM1Sh	{:}	-	-	"Tower side-to-side mode-1 shape coefficients"
+typedef	^	^	ReKi	TwSSM2Sh	{:}	-	-	"Tower side-to-side mode-2 shape coefficients"
+
+
 
 
 # This is data defined in the Input File for HydroDyn?
@@ -478,10 +487,10 @@ typedef	^	^	ReKi	KTFA	{2}{2}	-	-	"Generalized stiffness of tower in fore-aft dir
 typedef	^	^	ReKi	KTSS	{2}{2}	-	-	"Generalized stiffness of tower in side-to-side direction"
 typedef	^	^	ReKi	MassT	{:}	-	-	"Interpolated lineal mass density of tower"
 typedef	^	^	ReKi	StiffTSS	{:}	-	-	"Interpolated side-side tower stiffness"
-typedef	^	^	ReKi	TwrFADmp	2	-	-	"Tower fore-aft structural damping ratios"
+
 typedef	^	^	ReKi	TwrFASF	{:}{:}{:}	-	-	"Tower fore-aft shape functions"
 typedef	^	^	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible portion of the tower"
-typedef	^	^	ReKi	TwrSSDmp	2	-	-	"Tower side-to-side structural damping ratios"
+
 typedef	^	^	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
 typedef	^	^	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
 typedef	^	^	IntKi	TwrLdMod	-	0	-	"Tower loading model switch"
@@ -579,14 +588,15 @@ typedef	^	^	ReKi	FreqBE	{:}{:}{:}	-	-	"Blade edgewise natural frequencies (both 
 typedef	^	^	ReKi	FreqBF	{:}{:}{:}	-	-	"Blade flapwise natural frequencies (both w/ and w/o centrifugal stiffening)"
 typedef	^	^	ReKi	FreqTFA	{2}{2}	-	-	"Computed fore-aft tower natural frequencies"
 typedef	^	^	ReKi	FreqTSS	{2}{2}	-	-	"Computed side-to-side tower natural frequencies"
-# parameters from modes (Tower)
-#typedef	^	^	ReKi	TwFAM1Sh	{:}	-	-	"Tower fore-aft mode-1 shape coefficients"
-#typedef	^	^	ReKi	TwFAM2Sh	{:}	-	-	"Tower fore-aft mode-2 shape coefficients"
-#typedef	^	^	ReKi	TwSSM1Sh	{:}	-	-	"Tower side-to-side mode-1 shape coefficients"
-#typedef	^	^	ReKi	TwSSM2Sh	{:}	-	-	"Tower side-to-side mode-2 shape coefficients"
-#typedef	^	^	LOGICAL	CalcTMode	-	-	-	"T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file"
-
-
+# parameters from Teeter
+typedef	^	^	ReKi	TeetCDmp	-	0.0	-	"Rotor-teeter rate-independent Coulomb-damping (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	ReKi	TeetDmp	-	0.0	-	"Rotor-teeter damping constant (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	ReKi	TeetDmpP	-	0.0	-	"Rotor-teeter damper position (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	ReKi	TeetHSSp	-	0.0	-	"Rotor-teeter hard-stop linear-spring constant (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	ReKi	TeetHStP	-	0.0	-	"Rotor-teeter hard-stop position (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	ReKi	TeetSSSp	-	0.0	-	"Rotor-teeter soft-stop linear-spring constant (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	ReKi	TeetSStP	-	0.0	-	"Rotor-teeter soft-stop position (initiated to zero b/c the 3-blader requires it to be zero)"
+typedef	^	^	IntKi	TeetMod	-	0	-	"Rotor-teeter spring/damper model switch (initiated to zero b/c the 3-blader requires it to be zero)"
 
 
 # ..... Inputs ....................................................................................................................

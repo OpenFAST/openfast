@@ -286,29 +286,6 @@ LOGICAL                      :: IgnoreMOD = .FALSE.                             
 
 END MODULE Linear
 !=======================================================================
-MODULE Modes
-
-
-   ! This MODULE stores variables for mode shapes and CONTAINs FUNCTION SHP.
-
-
-USE                             Precision
-USE StructDyn_Parameters
-
-!per jmj, these don't need to be in the parameters data type
-
-!INTEGER(4), PARAMETER        :: PolyOrd = 6                                     ! Order of the polynomial describing the mode shape.
-
-REAL(ReKi)                   :: TwFAM1Sh (2:PolyOrd)                            ! Tower fore-aft mode-1 shape coefficients.
-REAL(ReKi)                   :: TwFAM2Sh (2:PolyOrd)                            ! Tower fore-aft mode-2 shape coefficients.    
-REAL(ReKi)                   :: TwSSM1Sh (2:PolyOrd)                            ! Tower side-to-side mode-1 shape coefficients.
-REAL(ReKi)                   :: TwSSM2Sh (2:PolyOrd)                            ! Tower side-to-side mode-2 shape coefficients.
-
-LOGICAL                      :: CalcTMode                                       ! T: calculate tower mode shapes internally, F: use tower mode shapes from the tower file.
-
-
-END MODULE Modes
-!=======================================================================
 MODULE NacelleYaw
 
 
@@ -534,28 +511,6 @@ INTEGER(4)                   :: TFrlMod   = 0                                   
 
 
 END MODULE TailFurling
-!=======================================================================
-MODULE TeeterVars
-
-
-   ! This MODULE stores input variables for rotor teeter.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: TeetCDmp = 0.0                                  ! Rotor-teeter rate-independent Coulomb-damping. (initiated to zero b/c the 3-blader requires it to be zero)
-REAL(ReKi)                   :: TeetDmp  = 0.0                                  ! Rotor-teeter damping constant. (initiated to zero b/c the 3-blader requires it to be zero)
-REAL(ReKi)                   :: TeetDmpP = 0.0                                  ! Rotor-teeter damper position. (initiated to zero b/c the 3-blader requires it to be zero)
-REAL(ReKi)                   :: TeetHSSp = 0.0                                  ! Rotor-teeter hard-stop linear-spring constant. (initiated to zero b/c the 3-blader requires it to be zero)
-REAL(ReKi)                   :: TeetHStP = 0.0                                  ! Rotor-teeter hard-stop position. (initiated to zero b/c the 3-blader requires it to be zero)
-REAL(ReKi)                   :: TeetSSSp = 0.0                                  ! Rotor-teeter soft-stop linear-spring constant. (initiated to zero b/c the 3-blader requires it to be zero)
-REAL(ReKi)                   :: TeetSStP = 0.0                                  ! Rotor-teeter soft-stop position. (initiated to zero b/c the 3-blader requires it to be zero)
-
-INTEGER(4)                   :: TeetMod  = 0                                    ! Rotor-teeter spring/damper model switch. (initiated to zero b/c the 3-blader requires it to be zero)
-
-
-END MODULE TeeterVars
 !=======================================================================
 MODULE TipBrakes
 

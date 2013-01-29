@@ -9,7 +9,7 @@ MODULE FAST_Lin_Subs
    
 CONTAINS
 !=======================================================================
-SUBROUTINE CalcSteady( p, x, y, OtherState, u )
+SUBROUTINE CalcSteady( p, x, y, OtherState, u, InputFileData )
 
 
    ! CalcSteady is used to march in time until a periodic steady state
@@ -25,7 +25,6 @@ SUBROUTINE CalcSteady( p, x, y, OtherState, u )
 USE                             DriveTrain
 USE                             InitCond
 USE                             Linear
-USE                             Modes
 USE                             NacelleYaw
 USE                             SimCont
 USE                             TurbCont
@@ -45,6 +44,7 @@ TYPE(StrD_ContinuousStateType),  INTENT(INOUT) :: x                             
 TYPE(StrD_OutputType),           INTENT(INOUT) :: y                             ! System outputs of the structural dynamics module
 TYPE(StrD_OtherStateType),       INTENT(INOUT) :: OtherState                    ! Other State data type for Structural dynamics module
 TYPE(StrD_InputType),            INTENT(INOUT) :: u                             ! System inputs of the structural dynamics module
+TYPE(StrD_InputFile),            INTENT(IN)    :: InputFileData                 ! Structural dynamics input file data
 
    ! Local variables.
 
@@ -179,10 +179,10 @@ QWeight     = 1.0
    !   translational displacements of the flexible members.  This ensures that
    !   each DOF in the 2-norm calculation has the same units (radians).
 
-QWeight(DOF_TFA1)       = SHP( 1.0, p%TwrFlexL, TwFAM1Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 1st tower fore-aft     mode shape at the tower-top.
-QWeight(DOF_TSS1)       = SHP( 1.0, p%TwrFlexL, TwSSM1Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 1st tower side-to-side mode shape at the tower-top.
-QWeight(DOF_TFA2)       = SHP( 1.0, p%TwrFlexL, TwFAM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower fore-aft     mode shape at the tower-top.
-QWeight(DOF_TSS2)       = SHP( 1.0, p%TwrFlexL, TwSSM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower side-to-side mode shape at the tower-top.
+QWeight(DOF_TFA1)       = SHP( 1.0, p%TwrFlexL, InputFileData%TwFAM1Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 1st tower fore-aft     mode shape at the tower-top.
+QWeight(DOF_TSS1)       = SHP( 1.0, p%TwrFlexL, InputFileData%TwSSM1Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 1st tower side-to-side mode shape at the tower-top.
+QWeight(DOF_TFA2)       = SHP( 1.0, p%TwrFlexL, InputFileData%TwFAM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower fore-aft     mode shape at the tower-top.
+QWeight(DOF_TSS2)       = SHP( 1.0, p%TwrFlexL, InputFileData%TwSSM2Sh(:),   1, ErrStat, ErrMsg )  ! The slope of the 2nd tower side-to-side mode shape at the tower-top.
 DO K = 1,p%NumBl       ! Loop through all blades
    QWeight(DOF_BF(K,1)) = SHP( 1.0, p%BldFlexL, p%BldFl1Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 1st blade flapwise     mode shape at the blade tip.
    QWeight(DOF_BF(K,2)) = SHP( 1.0, p%BldFlexL, p%BldFl2Sh(:,K), 1, ErrStat, ErrMsg )  ! The slope of the 2nd blade flapwise     mode shape at the blade tip.
@@ -728,7 +728,7 @@ IF ( ALLOCATED( RotAzimOp ) ) DEALLOCATE( RotAzimOp )
 RETURN
 END SUBROUTINE CalcSteady
 !=======================================================================
-SUBROUTINE Linearize( p,x,y,OtherState, u )
+SUBROUTINE Linearize( p,x,y,OtherState, u, InputFileData )
 
 
    ! Linearize is used to perturb each displacement and velocity DOF
@@ -742,7 +742,6 @@ USE                             DriveTrain
 USE                             General
 USE                             InitCond
 USE                             Linear
-USE                             Modes
 USE                             NacelleYaw
 USE                             Output
 USE                             TurbCont
@@ -766,7 +765,7 @@ TYPE(StrD_ContinuousStateType),INTENT(INOUT)    :: x                          ! 
 TYPE(StrD_OtherStateType),     INTENT(INOUT)    :: OtherState                 ! The structural dynamics "other" states (including CoordSys coordinate systems) 
 TYPE(StrD_OutputType),         INTENT(INOUT)    :: y                          ! System outputs of the structural dynamics module
 TYPE(StrD_InputType),          INTENT(INOUT)    :: u                          ! System inputs of the structural dynamics module
-
+TYPE(StrD_InputFile),          INTENT(IN)       :: InputFileData              ! Data from the structural dynamics input file
 
    ! Local variables:
 
@@ -931,10 +930,10 @@ DelQ = 2.0*D2R
    !   change the 2 degrees to 0.2 degrees, to make the magnitudes of the
    !   pertubations more reasonable.
 
-DelQ(DOF_TFA1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwFAM1Sh(:),   1, ErrStat, ErrMsg )
-DelQ(DOF_TSS1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwSSM1Sh(:),   1, ErrStat, ErrMsg )
-DelQ(DOF_TFA2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwFAM2Sh(:),   1, ErrStat, ErrMsg )
-DelQ(DOF_TSS2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, TwSSM2Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TFA1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, InputFileData%TwFAM1Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TSS1)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, InputFileData%TwSSM1Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TFA2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, InputFileData%TwFAM2Sh(:),   1, ErrStat, ErrMsg )
+DelQ(DOF_TSS2)       = 0.2*D2R/SHP( 1.0, p%TwrFlexL, InputFileData%TwSSM2Sh(:),   1, ErrStat, ErrMsg )
 DO K = 1,p%NumBl       ! Loop through all blades
    DelQ(DOF_BF(K,1)) = 0.2*D2R/SHP( 1.0, p%BldFlexL, p%BldFl1Sh(:,K), 1, ErrStat, ErrMsg )
    DelQ(DOF_BF(K,2)) = 0.2*D2R/SHP( 1.0, p%BldFlexL, p%BldFl2Sh(:,K), 1, ErrStat, ErrMsg )

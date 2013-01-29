@@ -142,7 +142,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady( p_StrD, x_StrD, y_StrD, OtherSt_StrD, u_StrD )
+         CALL CalcSteady( p_StrD, x_StrD, y_StrD, OtherSt_StrD, u_StrD, InputFileData_StrD )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
@@ -163,7 +163,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       ENDIF
 
 
-      CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD, u_StrD )          ! Linearize the model about the steady-state solution.
+      CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD, u_StrD, InputFileData_StrD )          ! Linearize the model about the steady-state solution.
 
 !      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg ) ! happens in StrD_End
       IF (ErrStat /= ErrID_none) THEN
