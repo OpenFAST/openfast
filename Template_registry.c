@@ -43,8 +43,6 @@ char *template_registry[] = {
 "typedef ModuleName/ModName InputType ReKi DummyInput - - - \"A variable, replace if you have input data\" -",
 "",
 "# ..... Outputs ...................................................................................................................",
-"# Define outputs that are contained on the mesh here:",
-"#typedef ModuleName/ModName ModName_OutputType MeshType MeshedOutput - - - \"Meshed data\" -",
 "",
 "# Define outputs that are not on this mesh here:",
 "typedef ModuleName/ModName OutputType ReKi DummyOutput - - - \"A variable, replace if you have output data\" -",
