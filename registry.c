@@ -25,6 +25,7 @@ main( int argc, char *argv[], char *env[] )
   FILE * fp_in, *fp_tmp ;
   char * thisprog  ;
   int mypid ;
+  int wrote_template ;
 #ifndef _WIN32
   struct rlimit rlim ;
 #endif
@@ -51,6 +52,7 @@ main( int argc, char *argv[], char *env[] )
   sym_forget() ;
   thisprog = *argv ;
   strcpy(fname_in,"") ;
+  wrote_template = 0 ;
 
   while (*argv) {
     if (*argv[0] == '-') {  /* an option */
@@ -62,14 +64,18 @@ main( int argc, char *argv[], char *env[] )
       if (!strcmp(*argv,"-f")) {
         sw_output_template_force = 1 ;
       }
-      if (!strncmp(*argv,"-template",2)) {
+      if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry")) {
+        char * arg ;
+        arg = *argv ;
         argv++ ; if ( *argv ) { strcpy( sw_modname_subst,     *argv ) ; } else { goto usage ; }
         argv++ ; if ( *argv ) { strcpy( sw_modnickname_subst, *argv ) ; } else { goto usage ; }
-        output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force) ;
+        if (!strcmp(arg,"-template")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,0) ;
+        if (!strcmp(arg,"-registry")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,1) ;
+        wrote_template = 1 ;
       }
       if (!strncmp(*argv,"-h",2)) {
 usage:
-        fprintf(stderr,"Usage: %s [-D<MACRO>]  registryfile | [-f] -template ModuleName ModName \n",thisprog) ;
+        fprintf(stderr,"Usage: %s [-D<MACRO>]  registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
         exit(1) ;
       }
     }
@@ -79,6 +85,7 @@ usage:
     }
     argv++ ;
   }
+  if ( wrote_template ) exit(0) ;
 
   if ( !strcmp(fname_in,"") ) goto usage ;
 
@@ -146,14 +153,16 @@ cleanup:
 
 }
 #include "Template_data.c"
+#include "Template_registry.c"
 
-output_template( char * sw_modname_subst, char * sw_modnickname_subst, int * force  )
+output_template( char * sw_modname_subst, char * sw_modnickname_subst, int * force, int sw  ) // sw = 0, template; 1 = registry
 {
     char ** p ;
     FILE *fp ;
     char fname[NAMELEN] ;
     char tmp1[2096], tmp2[2096], tmp3[2096] ;
-    sprintf(fname,"%s.f90",sw_modname_subst) ;
+    if ( sw == 0 ) { sprintf(fname,"%s.f90",sw_modname_subst) ; }
+    else           { sprintf(fname,"Registry_%s.txt",sw_modname_subst) ; }
     if ( ! force ) {
       if ( (fp = fopen( fname,"r" )) != NULL ) {
         fprintf(stderr,"Registry exiting. Attempt to overwrite file (%s) . Move out of the way or specify -f before -template option. \n", fname) ;
@@ -165,15 +174,25 @@ output_template( char * sw_modname_subst, char * sw_modnickname_subst, int * for
       fprintf(stderr,"Registry exiting. Failure opening %s.\n", fname ) ;
       exit(1) ;
     }
-    for ( p = template_data ; *p ; p++ ) {
-      strcpy(tmp1,*p) ;
-      substitute(tmp1,"ModuleName",sw_modname_subst,tmp2) ;
-      substitute(tmp2,"ModName",sw_modnickname_subst,tmp3) ;
-      fprintf(fp,"%s\n",tmp3) ;
+    if ( sw == 0 ) {
+      for ( p = template_data ; *p ; p++ ) {
+        strcpy(tmp1,*p) ;
+        substitute(tmp1,"ModuleName",sw_modname_subst,tmp2) ;
+        substitute(tmp2,"ModName",sw_modnickname_subst,tmp3) ;
+        fprintf(fp,"%s\n",tmp3) ;
+      }
+    } else {
+      for ( p = template_registry ; *p ; p++ ) {
+        strcpy(tmp1,*p) ;
+        substitute(tmp1,"ModuleName",sw_modname_subst,tmp2) ;
+        substitute(tmp2,"ModName",sw_modnickname_subst,tmp3) ;
+        fprintf(fp,"%s\n",tmp3) ;
+      }
     }
     fclose(fp) ;
-    exit(0) ;
 }
+
+
 
 // would use regex for this but it does not seem to be uniformly or universally supported
 
