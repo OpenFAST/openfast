@@ -50,7 +50,8 @@ main( int argc, char *argv[], char *env[] )
   fprintf(stderr,"-----------------------------------\n") ;
 
   sym_forget() ;
-  thisprog = *argv ;
+//  thisprog = *argv ;
+  thisprog = "registry.exe" ;
   strcpy(fname_in,"") ;
   wrote_template = 0 ;
 
