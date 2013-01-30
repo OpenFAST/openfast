@@ -37,7 +37,7 @@ gen_wrf_io.o: protos.h registry.h data.h
 misc.o: protos.h registry.h data.h
 my_strtok.o: registry.h protos.h data.h
 reg_parse.o: registry.h protos.h data.h
-registry.o: protos.h registry.h data.h
+registry.o: protos.h registry.h data.h Template_data.c Template_registry.c
 sym.o: sym.h
 type.o: registry.h protos.h data.h
 gen_interp.o: registry.h protos.h data.h
