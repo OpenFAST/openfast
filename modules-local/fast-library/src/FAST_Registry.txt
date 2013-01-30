@@ -134,6 +134,12 @@ typedef	^	^	ReKi	TwFAM1Sh	{:}	-	-	"Tower fore-aft mode-1 shape coefficients"
 typedef	^	^	ReKi	TwFAM2Sh	{:}	-	-	"Tower fore-aft mode-2 shape coefficients"
 typedef	^	^	ReKi	TwSSM1Sh	{:}	-	-	"Tower side-to-side mode-1 shape coefficients"
 typedef	^	^	ReKi	TwSSM2Sh	{:}	-	-	"Tower side-to-side mode-2 shape coefficients"
+typedef	^	^	ReKi	NcIMUxn	-	-	-	"Downwind distance from the tower-top to the nacelle IMU"
+typedef	^	^	ReKi	NcIMUyn	-	-	-	"Lateral  distance from the tower-top to the nacelle IMU"
+typedef	^	^	ReKi	NcIMUzn	-	-	-	"Vertical distance from the tower-top to the nacelle IMU"
+typedef	^	^	LOGICAL	TabDelim	-	-	-	"Flag to cause tab-delimited output"	-
+typedef	^	^	LOGICAL	GBRevers	-	-	-	"Gearbox reversal flag"
+
 
 
 
@@ -389,7 +395,6 @@ typedef	^	^	CHARACTER(99)	DOF_Desc	{:}	-	-	"Array which stores descriptions of e
 # parameters for output calculations/options:
 typedef	^	^	IntKi	NumOuts	-	0	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Output format for tabular data"	-
-typedef	^	^	LOGICAL	TabDelim	-	-	-	"Flag to cause tab-delimited output"	-
 typedef	^	^	IntKi	NBlGages	-	0	-	"Number of blade strain gages"	-
 typedef	^	^	IntKi	NTwGages	-	0	-	"Number of tower strain gages"	-
 typedef	^	^	OutParmType	OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
@@ -597,6 +602,47 @@ typedef	^	^	ReKi	TeetHStP	-	0.0	-	"Rotor-teeter hard-stop position (initiated to
 typedef	^	^	ReKi	TeetSSSp	-	0.0	-	"Rotor-teeter soft-stop linear-spring constant (initiated to zero b/c the 3-blader requires it to be zero)"
 typedef	^	^	ReKi	TeetSStP	-	0.0	-	"Rotor-teeter soft-stop position (initiated to zero b/c the 3-blader requires it to be zero)"
 typedef	^	^	IntKi	TeetMod	-	0	-	"Rotor-teeter spring/damper model switch (initiated to zero b/c the 3-blader requires it to be zero)"
+# parameters from TailFurling
+typedef	^	^	ReKi	TFrlCDmp	-	0.0	-	"Tail-furl rate-independent Coulomb-damping moment (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlDmp	-	0.0	-	"Tail-furl damping constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlDSDmp	-	0.0	-	"Tail-furl down-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlDSDP	-	0.0	-	"Tail-furl down-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlDSSP	-	0.0	-	"Tail-furl down-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlDSSpr	-	0.0	-	"Tail-furl down-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlSpr	-	0.0	-	"Tail-furl spring constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlUSDmp	-	0.0	-	"Tail-furl up-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlUSDP	-	0.0	-	"Tail-furl up-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlUSSP	-	0.0	-	"Tail-furl up-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlUSSpr	-	0.0	-	"Tail-furl up-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	IntKi	TFrlMod	-	0	-	"Tail-furl spring/damper model switch (Initialized to zero b/c not all models read in FurlFile)"
+# parameters from RotorFurling
+typedef	^	^	ReKi	RFrlCDmp	-	0.0	-	"Rotor-furl rate-independent Coulomb-damping moment (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlDmp	-	0.0	-	"Rotor-furl damping constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlDSDmp	-	0.0	-	"Rotor-furl down-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlDSDP	-	0.0	-	"Rotor-furl down-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlDSSP	-	0.0	-	"Rotor-furl down-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlDSSpr	-	0.0	-	"Rotor-furl down-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlSpr	-	0.0	-	"Rotor-furl spring constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlUSDmp	-	0.0	-	"Rotor-furl up-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlUSDP	-	0.0	-	"Rotor-furl up-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlUSSP	-	0.0	-	"Rotor-furl up-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlUSSpr	-	0.0	-	"Rotor-furl up-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	IntKi	RFrlMod	-	0	-	"Rotor-furl spring/damper model switch (Initialized to zero b/c not all models read in FurlFile)"
+# parameters from Output
+typedef	^	^	ReKi	ShftGagL	-	-	-	"Distance from hub or teeter pin to shaft strain gages"
+typedef	^	^	IntKi	BldGagNd	9	-	-	"Nodes closest to the blade strain gages"
+typedef	^	^	IntKi	TwrGagNd	9	-	-	"Nodes closest to the tower strain gages"
+typedef	^	^	DbKi	TStart	-	-	-	"Time to begin tabular output"
+# parameters from DriveTrain
+typedef	^	^	ReKi	DTTorDmp	-	-	-	"Drivetrain torsional damper"
+typedef	^	^	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"
+typedef	^	^	ReKi	GBRatio	-	-	-	"Gearbox ratio"
+typedef	^	^	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"
+typedef	^	^	ReKi	GenEff	-	-	-	"Generator efficiency"
+typedef	^	^	IntKi	GenDir	-	-	-	"Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS)"
+
+
+
 
 
 # ..... Inputs ....................................................................................................................
@@ -613,5 +659,4 @@ typedef	^	^	ReKi	TwrFt	6	0.0	-	The surge/xi (1), sway/yi (2), and heave/zi (3)-c
 #typedef	^	OutputType	MeshType	MeshedOutput	-	-	-	"Meshed output data"	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see spreadsheet"
-typedef	^	^	ReKi	WriteOutput	{1}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
-# noted: WriteOutput needs to be allocatable, but until this is implemented correctly in the code and registry, the program crashes on the End routine
+typedef	^	^	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

@@ -3,15 +3,20 @@ MODULE GlueCodeVars
 
    USE NWTC_Library
    
+
+   REAL(ReKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec).
+   REAL(ReKi)                :: TStart                                          ! Time to begin tabular output.
+   
+   INTEGER(4)                :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
+   INTEGER(4)                :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
+
    LOGICAL                   :: CompAero                                        ! Compute aerodynamic forces switch.
    LOGICAL                   :: CompHydro = .FALSE.                             ! Compute hydrodynamic forces switch.
    LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.  
-
-   INTEGER(4)                :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
-   INTEGER(4)                :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
    LOGICAL                   :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
    LOGICAL                   :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
 
+   
 END MODULE GlueCodeVars
    
 !=======================================================================
@@ -88,13 +93,8 @@ MODULE DriveTrain
 USE                             Precision
 
 
-REAL(ReKi)                   :: DTTorDmp                                        ! Drivetrain torsional damper - structural
-REAL(ReKi)                   :: DTTorSpr                                        ! Drivetrain torsional spring - strd
 REAL(ReKi)                   :: ElecPwr                                         ! Electrical power, W.
-REAL(ReKi)                   :: GBRatio                                         ! Gearbox ratio -strd
-REAL(ReKi)                   :: GBoxEff                                         ! Gearbox efficiency. -strd
 REAL(ReKi)                   :: GenCTrq                                         ! Constant generator torque.
-REAL(ReKi)                   :: GenEff                                          ! Generator efficiency
 REAL(ReKi)                   :: GenSpRZT                                        ! Difference between rated and zero-torque generator speeds for SIG.
 REAL(ReKi)                   :: GenSpRat                                        ! Rated generator speed.
 REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
@@ -130,10 +130,8 @@ REAL(ReKi)                   :: TEC_V1a                                         
 REAL(ReKi)                   :: TEC_VLL                                         ! Line-to-line RMS voltage for Thevenin-equivalent circuit.
 REAL(ReKi)                   :: TEC_Xe1                                         ! Thevenin's equivalent stator leakage reactance (ohms)
 
-INTEGER(4)                   :: GenDir                                          ! Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS). - structural
 INTEGER(4)                   :: TEC_NPol                                        ! Number of poles for Thevenin-equivalent circuit.
 
-LOGICAL                      :: GBRevers                                        ! Gearbox reversal flag. - structural
 
 
 END MODULE DriveTrain
@@ -308,57 +306,39 @@ MODULE Output
 
 
 USE                             NWTC_Library
-
+USE StructDyn_Parameters
 
    ! Regular variables:
 
-! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE VARIABLE BELOW:
-!REAL(ReKi)                   :: AllOuts  (0:MaxOutPts)                          ! An array holding the value of all of the calculated (not only selected) output channels.
-! SEE NOTE ABOVE FOR SIZE (DIMENSION) OF THE PREVIOUS VARIABLE:
 REAL(DbKi), ALLOCATABLE      :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
 REAL(ReKi), ALLOCATABLE      :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
-REAL(ReKi), ALLOCATABLE      :: LinAccES (:,:,:)                                ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
-REAL(ReKi), ALLOCATABLE      :: LinAccET (:,:)                                  ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
+INTEGER(B2Ki)                :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
+CHARACTER(1024)              :: FileDesc                                        ! Description of run to include in binary output file
+
+
+
+
+
+INTEGER                      :: CurrOutStep                                     ! Time index into the AllOutData array
+INTEGER(4)                   :: DecFact                                         ! Decimation factor for tabular output.
+INTEGER(IntKi)               :: NOutSteps                                       ! Maximum number of output steps
+
+
+!JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
 REAL(ReKi), ALLOCATABLE      :: LSNodes  (:,:)                                  ! Unstretched arc distance along mooring line from anchor to each node where the line position and tension can be output (meters).
-REAL(ReKi), ALLOCATABLE      :: FrcS0B   (:,:)                                  ! Total force at the blade root (point S(0)) due to the blade.
-REAL(ReKi), ALLOCATABLE      :: FTHydro  (:,:)                                  ! Total hydrodynamic force per unit length acting on the tower at point T.
-REAL(ReKi), ALLOCATABLE      :: MFHydro  (:,:)                                  ! Total hydrodynamic moment per unit length acting on a tower element (body F) at point T.
-REAL(ReKi), ALLOCATABLE      :: MomH0B   (:,:)                                  ! Total moment at the hub (body H) / blade root (point S(0)) due to the blade.
-REAL(ReKi)                   :: NcIMUxn                                         ! Downwind distance from the tower-top to the nacelle IMU.
-REAL(ReKi)                   :: NcIMUyn                                         ! Lateral  distance from the tower-top to the nacelle IMU.
-REAL(ReKi)                   :: NcIMUzn                                         ! Vertical distance from the tower-top to the nacelle IMU.
-REAL(ReKi), ALLOCATABLE      :: OutData  (:)                                    ! Array to contain the output data.
-REAL(ReKi)                   :: ShftGagL                                        ! Distance from hub or teeter pin to shaft strain gages.
-REAL(ReKi)                   :: SttsTime                                        ! Amount of time between screen status messages (sec).
-REAL(ReKi)                   :: TStart                                          ! Time to begin tabular output.
 REAL(ReKi)                   :: WaveElevxi(1) = (/ 0.0 /)                       ! xi-coordinates for points where the incident wave elevation can be output (meters).
 REAL(ReKi)                   :: WaveElevyi(1) = (/ 0.0 /)                       ! yi-coordinates for points where the incident wave elevation can be output (meters).
-
-INTEGER(4)                   :: BldGagNd (9)                                    ! Nodes closest to the blade strain gages.
-INTEGER                      :: CurrOutStep                                     ! Time index into the AllOutData arrat
-INTEGER(4)                   :: DecFact                                         ! Decimation factor for tabular output.
-!JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
 INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
-INTEGER(IntKi)               :: NOutSteps                                       ! Maximum number of output steps
 INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
 INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
-INTEGER(4)                   :: TwrGagNd (9)                                    ! Nodes closest to the tower strain gages.
 INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
 
-INTEGER(B2Ki), PARAMETER     :: FileFmtID_WithTime    = 1                       ! ID for OutputFileFmtID to specify that the time channel should be included in the output file (use if the output can occur at variable times)
-INTEGER(B2Ki), PARAMETER     :: FileFmtID_WithoutTime = 2                       ! ID for OutputFileFmtID to specify that the time channel does not need to be included in the output file (used only with constant time-step output)
-INTEGER(B2Ki)                :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
 LOGICAL                      :: WrEcho
 LOGICAL                      :: WrBinOutFile  = .true.                          ! Write a binary output file? (.outb)
 LOGICAL                      :: WrTxtOutFile  = .true.                          ! Write a text (formatted) output file? (.out)
-LOGICAL                      :: TabDelim                                        ! Flag to cause tab-delimited output.
 
-!CHARACTER(20)                :: OutFmt                                          ! Output format for tabular data.
-!CHARACTER(10)                :: OutList  (MaxOutPts)                           ! List of output parameters.
-CHARACTER(1024)              :: FileDesc                                        ! Description of run to include in binary output file
 
-!TYPE(OutParmType),ALLOCATABLE:: OutParam (:)                                    ! Names and units of all output parameters.
 
    ! Let's make these parameters into arrays so we can loop through them
    
@@ -410,32 +390,6 @@ CHARACTER(1024)              :: WAMITFile                                       
 
 END MODULE Platform
 !=======================================================================
-MODULE RotorFurling
-
-
-   ! This MODULE stores input variables for rotor-furling.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: RFrlCDmp  = 0.0                                 ! Rotor-furl rate-independent Coulomb-damping moment. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlDmp   = 0.0                                 ! Rotor-furl damping constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlDSDmp = 0.0                                 ! Rotor-furl down-stop damping constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlDSDP  = 0.0                                 ! Rotor-furl down-stop damper position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlDSSP  = 0.0                                 ! Rotor-furl down-stop spring position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlDSSpr = 0.0                                 ! Rotor-furl down-stop spring constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlSpr   = 0.0                                 ! Rotor-furl spring constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlUSDmp = 0.0                                 ! Rotor-furl up-stop damping constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlUSDP  = 0.0                                 ! Rotor-furl up-stop damper position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlUSSP  = 0.0                                 ! Rotor-furl up-stop spring position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RFrlUSSpr = 0.0                                 ! Rotor-furl up-stop spring constant. (Initialized to zero b/c not all models read in FurlFile)
-
-INTEGER(4)                   :: RFrlMod   = 0                                   ! Rotor-furl spring/damper model switch. (Initialized to zero b/c not all models read in FurlFile)
-
-
-END MODULE RotorFurling
-!=======================================================================
 MODULE SimCont
 
 
@@ -485,32 +439,6 @@ LOGICAL                      :: SubAxInd  = .FALSE.                             
 
 
 END MODULE TailAero
-!=======================================================================
-MODULE TailFurling
-
-
-   ! This MODULE stores input variables for tail-furling.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: TFrlCDmp  = 0.0                                 ! Tail-furl rate-independent Coulomb-damping moment. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlDmp   = 0.0                                 ! Tail-furl damping constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlDSDmp = 0.0                                 ! Tail-furl down-stop damping constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlDSDP  = 0.0                                 ! Tail-furl down-stop damper position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlDSSP  = 0.0                                 ! Tail-furl down-stop spring position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlDSSpr = 0.0                                 ! Tail-furl down-stop spring constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlSpr   = 0.0                                 ! Tail-furl spring constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlUSDmp = 0.0                                 ! Tail-furl up-stop damping constant. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlUSDP  = 0.0                                 ! Tail-furl up-stop damper position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlUSSP  = 0.0                                 ! Tail-furl up-stop spring position. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TFrlUSSpr = 0.0                                 ! Tail-furl up-stop spring constant. (Initialized to zero b/c not all models read in FurlFile)
-
-INTEGER(4)                   :: TFrlMod   = 0                                   ! Tail-furl spring/damper model switch. (Initialized to zero b/c not all models read in FurlFile)
-
-
-END MODULE TailFurling
 !=======================================================================
 MODULE TipBrakes
 

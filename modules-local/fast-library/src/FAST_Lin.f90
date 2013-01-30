@@ -98,7 +98,7 @@ CHARACTER(1024)              :: ErrMsg                                          
 
 KDamp    = 0.0                         ! Gain for artificially increasing the damping for the blades, tower, and drivetrain to aid in convergence (used during all steady state solution calculations).  !JASON: This didn't improve the convergence times much and, in fact, made the solution more unstable.  Thus, I disabled this by setting the gain to zero.
 KYawPos  = 0.1                         ! Gain (in rad) for adjusting the nacelle yaw command          from the relative rotor speed error (used with TrimCase = 3).
-KGenTrq  = 1.5*p%AvgNrmTpRd**3/GBRatio ! Gain (in N-m) for adjusting the electrical generator torque  from the relative rotor speed error (used with TrimCase = 2).  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 1.5 is 1/10th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
+KGenTrq  = 1.5*p%AvgNrmTpRd**3/p%GBRatio ! Gain (in N-m) for adjusting the electrical generator torque  from the relative rotor speed error (used with TrimCase = 2).  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 1.5 is 1/10th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
 KBlPitch = 0.1                         ! Gain (in rad) for adjusting the rotor collective blade pitch from the relative rotor speed error (used with TrimCase = 3).
 
 
@@ -123,7 +123,7 @@ IF ( ( p%DOF_Flag(DOF_GeAz) ) .AND. ( TrimCase == 2 ) )  THEN ! We will be trimm
 !   x%QT  = OtherState%Q (:,OtherState%IC(1))          ! Use initial conditions
 !   x%QDT = OtherState%QD(:,OtherState%IC(1))          ! for the DOFs
 !   CALL RtHS( p, x, OtherState, u ) ! Call the dynamics routine once
-!   GenTrq = DotProd( OtherState%RtHS%MomLPRott, e1 )*OtherState%RtHS%GBoxEffFac/GBRatio ! Convert the aerodynamic torque to the HSS-side
+!   GenTrq = DotProd( OtherState%RtHS%MomLPRott, e1 )*OtherState%RtHS%GBoxEffFac/p%GBRatio ! Convert the aerodynamic torque to the HSS-side
 ENDIF
 
 
@@ -213,7 +213,7 @@ QDWeight = QWeight
    ! Let's store the original damping values of the blades, tower, and
    !   drivetrain:
 
-DTTorDmpStart            = DTTorDmp
+DTTorDmpStart            = p%DTTorDmp
 DO I = 1,2        ! Loop through all tower DOFs in one direction
    DO L = 1,2     ! Loop through all tower DOFs in one direction
       CTFAStart(    I,L) = p%CTFA( I,L)
@@ -393,7 +393,7 @@ DO
 
    DampFact = KDamp*AbsQDNorm ! Damping factor that scales with the velocity 2-norm, which is used in the following equations
 
-   DTTorDmp            = DTTorDmpStart   + DampFact*DTTorSpr
+   p%DTTorDmp            = DTTorDmpStart   + DampFact*p%DTTorSpr
    DO I = 1,2        ! Loop through all tower DOFs in one direction
       DO L = 1,2     ! Loop through all tower DOFs in one direction
          p%CTFA(    I,L) = CTFAStart( I,L) + DampFact*p%KTFA( I,L)
@@ -482,7 +482,7 @@ CALL WrScr1( ' Steady state solution found in '//TRIM(Int2LStr(Iteration))//' it
    ! Let's remove the artificial damping in the blade, tower, and drivetrain by
    !   restoring the original values:
 
-DTTorDmp            = DTTorDmpStart
+p%DTTorDmp            = DTTorDmpStart
 DO I = 1,2        ! Loop through all tower DOFs in one direction
    DO L = 1,2     ! Loop through all tower DOFs in one direction
       p%CTFA(    I,L) = CTFAStart( I,L)
@@ -961,7 +961,7 @@ DelQD = DelQ
 
 DelYawPos  = 2.0 *D2R                        ! Pertubation in nacelle yaw angle (same as for DOFs) (rad)
 DelYawRate = 2.0 *D2R                        ! Pertubation in nacelle yaw rate  (same as for DOF velocities) (rad/s)
-DelGenTq   = ( 0.15*p%AvgNrmTpRd**3 )/GBRatio  ! Pertubation in generator torque.  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 0.15 is 1/100th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
+DelGenTq   = ( 0.15*p%AvgNrmTpRd**3 )/p%GBRatio  ! Pertubation in generator torque.  The rated rotor torque of a typical wind turbine in N-m is roughly 15*Radius^3 where the radius is in meters.  The 0.15 is 1/100th of the factor of 15.  The 1/GBRatio is used to cast the torque onto the HSS (i.e., generator) side of the gearbox.  (Nm)
 DelBlPtch  = 0.2 *D2R                        ! Pertubation in blade pitch (same as SymDyn) (rad)
 DelV       = 0.1                             ! Pertubation in horizontal hub height wind speed (same as SymDyn) (m/s)
 DelDELTA   = 2.0 *D2R                        ! Pertubation in horizontal wind direction (rad)
@@ -1248,7 +1248,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
    ENDIF
 
    DO I  = 1,p%NumOuts          ! Loop through all selected output channels
-      Yop(I,L) = OutData(I)
+      Yop(I,L) = y%WriteOutput(I)
    ENDDO                      ! I - All selected output channels
 
 
@@ -1275,7 +1275,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          AMat(I1+OtherState%DOFs%NActvDOF,I2+OtherState%DOFs%NActvDOF,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         CMat(I          ,I2+OtherState%DOFs%NActvDOF,L) = OutData(I)
+         CMat(I          ,I2+OtherState%DOFs%NActvDOF,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1291,7 +1291,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
                                              OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelQD(OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         CMat(I          ,I2+OtherState%DOFs%NActvDOF,L) = ( CMat(I ,I2+OtherState%DOFs%NActvDOF,L) - OutData(I)   )&
+         CMat(I          ,I2+OtherState%DOFs%NActvDOF,L) = ( CMat(I ,I2+OtherState%DOFs%NActvDOF,L) - y%WriteOutput(I)   )&
                                                           /( 2.0*DelQD(OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
@@ -1323,7 +1323,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          AMat(I1+OtherState%DOFs%NActvDOF,I2         ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         CMat(I          ,I2         ,L) = OutData(I)
+         CMat(I          ,I2         ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1339,7 +1339,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
          CMat(I          ,I2         ,L) = ( CMat(I          ,I2         ,L) &
-                                     - OutData(I)   )/( 2.0*DelQ (OtherState%DOFs%PS(I2)) )  ! Central difference linearization
+                                     - y%WriteOutput(I)   )/( 2.0*DelQ (OtherState%DOFs%PS(I2)) )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1388,7 +1388,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxYawPos ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxYawPos ,L) = OutData(I)
+         DMat(I          ,IndxYawPos ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1406,7 +1406,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxYawPos ,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxYawPos ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelYawPos     )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxYawPos ,L) = ( DMat(I          ,IndxYawPos ,L) - OutData(I)   )/( 2.0*DelYawPos     )  ! Central difference linearization
+         DMat(I          ,IndxYawPos ,L) = ( DMat(I          ,IndxYawPos ,L) - y%WriteOutput(I)   )/( 2.0*DelYawPos     )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1449,7 +1449,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxYawRate,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxYawRate,L) = OutData(I)
+         DMat(I          ,IndxYawRate,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1467,7 +1467,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxYawRate,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxYawRate,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelYawRate    )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxYawRate,L) = ( DMat(I          ,IndxYawRate,L) - OutData(I)   )/( 2.0*DelYawRate    )  ! Central difference linearization
+         DMat(I          ,IndxYawRate,L) = ( DMat(I          ,IndxYawRate,L) - y%WriteOutput(I)   )/( 2.0*DelYawRate    )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1501,7 +1501,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxGenTq  ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxGenTq  ,L) = OutData(I)
+         DMat(I          ,IndxGenTq  ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1516,7 +1516,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxGenTq  ,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxGenTq  ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelGenTq      )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxGenTq  ,L) = ( DMat(I          ,IndxGenTq  ,L) - OutData(I)   )/( 2.0*DelGenTq      )  ! Central difference linearization
+         DMat(I          ,IndxGenTq  ,L) = ( DMat(I          ,IndxGenTq  ,L) - y%WriteOutput(I)   )/( 2.0*DelGenTq      )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1546,7 +1546,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxCPtch  ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxCPtch  ,L) = OutData(I)
+         DMat(I          ,IndxCPtch  ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1560,7 +1560,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BMat(I1+OtherState%DOFs%NActvDOF,IndxCPtch  ,L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxCPtch  ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelBlPtch     )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DMat(I          ,IndxCPtch  ,L) = ( DMat(I          ,IndxCPtch  ,L) - OutData(I)   )/( 2.0*DelBlPtch     )  ! Central difference linearization
+         DMat(I          ,IndxCPtch  ,L) = ( DMat(I          ,IndxCPtch  ,L) - y%WriteOutput(I)   )/( 2.0*DelBlPtch     )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1591,7 +1591,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
             BMat(I1+OtherState%DOFs%NActvDOF,IndxIPtch(K),L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
          DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-            DMat(I          ,IndxIPtch(K),L) = OutData(I)
+            DMat(I          ,IndxIPtch(K),L) = y%WriteOutput(I)
          ENDDO                   ! I - All selected output channels
 
 
@@ -1605,7 +1605,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
             BMat(I1+OtherState%DOFs%NActvDOF,IndxIPtch(K),L) = ( BMat(I1+OtherState%DOFs%NActvDOF,IndxIPtch(K),L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelBlPtch     )   ! Central difference linearization
          ENDDO                   ! I1 - All active (enabled) DOFs (rows)
          DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-            DMat(I          ,IndxIPtch(K),L) = ( DMat(I          ,IndxIPtch(K),L) - OutData(I)   )/( 2.0*DelBlPtch     )   ! Central difference linearization
+            DMat(I          ,IndxIPtch(K),L) = ( DMat(I          ,IndxIPtch(K),L) - y%WriteOutput(I)   )/( 2.0*DelBlPtch     )   ! Central difference linearization
          ENDDO                   ! I - All selected output channels
 
 
@@ -1642,7 +1642,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxV     ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxV     ,L) = OutData(I)
+         DdMat(I          ,IndxV     ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1659,7 +1659,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxV     ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxV     ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelV          )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxV     ,L) = ( DdMat(I          ,IndxV     ,L) - OutData(I)   )/( 2.0*DelV          )  ! Central difference linearization
+         DdMat(I          ,IndxV     ,L) = ( DdMat(I          ,IndxV     ,L) - y%WriteOutput(I)   )/( 2.0*DelV          )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1692,7 +1692,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxDELTA ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxDELTA ,L) = OutData(I)
+         DdMat(I          ,IndxDELTA ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1709,7 +1709,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxDELTA ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxDELTA ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelDELTA      )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxDELTA ,L) = ( DdMat(I          ,IndxDELTA ,L) - OutData(I)   )/( 2.0*DelDELTA      )  ! Central difference linearization
+         DdMat(I          ,IndxDELTA ,L) = ( DdMat(I          ,IndxDELTA ,L) - y%WriteOutput(I)   )/( 2.0*DelDELTA      )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1742,7 +1742,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVZ    ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVZ    ,L) = OutData(I)
+         DdMat(I          ,IndxVZ    ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1759,7 +1759,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVZ    ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVZ    ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVZ         )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVZ    ,L) = ( DdMat(I          ,IndxVZ    ,L) - OutData(I)   )/( 2.0*DelVZ         )  ! Central difference linearization
+         DdMat(I          ,IndxVZ    ,L) = ( DdMat(I          ,IndxVZ    ,L) - y%WriteOutput(I)   )/( 2.0*DelVZ         )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1792,7 +1792,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxHSHR  ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxHSHR  ,L) = OutData(I)
+         DdMat(I          ,IndxHSHR  ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1809,7 +1809,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxHSHR  ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxHSHR  ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelHSHR       )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxHSHR  ,L) = ( DdMat(I          ,IndxHSHR  ,L) - OutData(I)   )/( 2.0*DelHSHR       )  ! Central difference linearization
+         DdMat(I          ,IndxHSHR  ,L) = ( DdMat(I          ,IndxHSHR  ,L) - y%WriteOutput(I)   )/( 2.0*DelHSHR       )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1842,7 +1842,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVSHR  ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVSHR  ,L) = OutData(I)
+         DdMat(I          ,IndxVSHR  ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1859,7 +1859,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVSHR  ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVSHR  ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVSHR       )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVSHR  ,L) = ( DdMat(I          ,IndxVSHR  ,L) - OutData(I)   )/( 2.0*DelVSHR       )  ! Central difference linearization
+         DdMat(I          ,IndxVSHR  ,L) = ( DdMat(I          ,IndxVSHR  ,L) - y%WriteOutput(I)   )/( 2.0*DelVSHR       )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1892,7 +1892,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVLSHR ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVLSHR ,L) = OutData(I)
+         DdMat(I          ,IndxVLSHR ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1909,7 +1909,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVLSHR ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVLSHR ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVLINSHR    )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVLSHR ,L) = ( DdMat(I          ,IndxVLSHR ,L) - OutData(I)   )/( 2.0*DelVLINSHR    )  ! Central difference linearization
+         DdMat(I          ,IndxVLSHR ,L) = ( DdMat(I          ,IndxVLSHR ,L) - y%WriteOutput(I)   )/( 2.0*DelVLINSHR    )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -1942,7 +1942,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVGUST ,L) = OtherState%QD2T(OtherState%DOFs%PS(I1))
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVGUST ,L) = OutData(I)
+         DdMat(I          ,IndxVGUST ,L) = y%WriteOutput(I)
       ENDDO                   ! I - All selected output channels
 
 
@@ -1959,7 +1959,7 @@ DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
          BdMat(I1+OtherState%DOFs%NActvDOF,IndxVGUST ,L) = ( BdMat(I1+OtherState%DOFs%NActvDOF,IndxVGUST ,L) - OtherState%QD2T(OtherState%DOFs%PS(I1)) )/( 2.0*DelVGUST      )  ! Central difference linearization
       ENDDO                   ! I1 - All active (enabled) DOFs (rows)
       DO I  = 1,p%NumOuts       ! Loop through all selected output channels
-         DdMat(I          ,IndxVGUST ,L) = ( DdMat(I          ,IndxVGUST ,L) - OutData(I)   )/( 2.0*DelVGUST      )  ! Central difference linearization
+         DdMat(I          ,IndxVGUST ,L) = ( DdMat(I          ,IndxVGUST ,L) - y%WriteOutput(I)   )/( 2.0*DelVGUST      )  ! Central difference linearization
       ENDDO                   ! I - All selected output channels
 
 
@@ -2230,7 +2230,7 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
                                         ' deg (with respect to AzimB1Up = ', p%AzimB1Up, ' deg) ---------'
 
    ! Print the: QD2op | QDop | Qop | MassMat | DampMat | StffMat | FMat,
-   !   then the: Yop | blank | blank | blank | VelC | DspC | DMat, as controlled by TabDelim
+   !   then the: Yop | blank | blank | blank | VelC | DspC | DMat, as controlled by file delimiter
 
 
       IF ( NInputs > 0 )  THEN      ! We have at least one control input
