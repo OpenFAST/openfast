@@ -43,6 +43,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
+
   fprintf(stderr,"----- FAST Registry  --------------\n") ;
   fprintf(stderr,"Revision $Rev$\n") ;
   fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
