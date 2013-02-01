@@ -92,7 +92,7 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 
    IF ( WndFilNam == 'USERWIND' )  THEN
 
-      CALL WrScr1( ' Detected user-defined wind file.' )
+      CALL WrScr( NewLine//'  Detected user-defined wind file.' )
       ParamData%WindFileType = UD_Wind
 
       RETURN
@@ -118,7 +118,7 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
    ! If there was no '.' in the file name, assume FF, and add a .wnd extension
    !-------------------------------------------------------------------------------------------------
    IF ( IND == 0 ) THEN
-      CALL WrScr1(' No file extension found. Assuming '//TRIM(FileName)// &
+      CALL WrScr( NewLine//'  No file extension found. Assuming '//TRIM(FileName)// &
                   ' is a binary FF wind file with a ".wnd" extension.')
       ParamData%WindFileType = FF_Wind
       FileName = TRIM(FileName)//'.wnd'
@@ -136,31 +136,31 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 
          INQUIRE ( FILE=FileName(1:IND)//'sum' , EXIST=Exists )
          IF (Exists) THEN
-            CALL WrScr1(' Assuming '//TRIM(FileName)//' is a binary FF wind file.')
+            CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' is a binary FF wind file.')
             ParamData%WindFileType = FF_Wind
          ELSE
-            CALL WrScr1(' Assuming '//TRIM(FileName)//' is a formatted HH wind file.')
+            CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' is a formatted HH wind file.')
             ParamData%WindFileType = HH_Wind
          END IF
 
       CASE ('BTS')
-         CALL WrScr1(' Assuming '//TRIM(FileName)//' is a binary FF wind file.')
+         CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' is a binary FF wind file.')
          ParamData%WindFileType = FF_Wind
 
       CASE ('CTP')
-         CALL WrScr1(' Assuming '//TRIM(FileName)//' is a coherent turbulence wind file.')
+         CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' is a coherent turbulence wind file.')
          ParamData%WindFileType = CTP_Wind
 
       CASE ('FDP')
-         CALL WrScr1(' Assuming '//TRIM(FileName)//' is a binary 4-dimensional wind file.')
+         CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' is a binary 4-dimensional wind file.')
          ParamData%WindFileType = FD_Wind
 
       CASE ('HWC')
-         CALL WrScr1(' Assuming '//TRIM(FileName)//' contains full-field wind parameters in HAWC format.')
+         CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' contains full-field wind parameters in HAWC format.')
          ParamData%WindFileType = HAWC_Wind
 
       CASE DEFAULT
-         CALL WrScr1(' Assuming '//TRIM(FileName)//' is a formatted HH wind file.')
+         CALL WrScr(NewLine//'  Assuming '//TRIM(FileName)//' is a formatted HH wind file.')
          ParamData%WindFileType = HH_Wind
 
    END SELECT
