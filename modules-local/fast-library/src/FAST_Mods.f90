@@ -7,6 +7,13 @@ MODULE GlueCodeVars
    REAL(ReKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec).
    REAL(ReKi)                :: TStart                                          ! Time to begin tabular output.
    
+   REAL(DbKi), ALLOCATABLE   :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
+   REAL(ReKi), ALLOCATABLE   :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
+   INTEGER(B2Ki)             :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
+   INTEGER(IntKi)            :: CurrOutStep                                     ! Time index into the AllOutData array
+   INTEGER(IntKi)            :: DecFact                                         ! Decimation factor for tabular output.
+   INTEGER(IntKi)            :: NOutSteps                                       ! Maximum number of output steps
+
    INTEGER(4)                :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
    INTEGER(4)                :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
 
@@ -15,6 +22,11 @@ MODULE GlueCodeVars
    LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.  
    LOGICAL                   :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
    LOGICAL                   :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
+   
+   LOGICAL                   :: WrBinOutFile  = .true.                          ! Write a binary output file? (.outb)
+   LOGICAL                   :: WrTxtOutFile  = .true.                          ! Write a text (formatted) output file? (.out)
+
+   CHARACTER(1024)           :: FileDesc                                        ! Description of run to include in binary output file
 
    
 END MODULE GlueCodeVars
@@ -98,7 +110,7 @@ REAL(ReKi)                   :: GenCTrq                                         
 REAL(ReKi)                   :: GenSpRZT                                        ! Difference between rated and zero-torque generator speeds for SIG.
 REAL(ReKi)                   :: GenSpRat                                        ! Rated generator speed.
 REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
-REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque.
+REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque. !both str (input) & control (output)
 REAL(ReKi)                   :: HSSBrDT                                         ! Time it takes for HSS brake to reach full deployment once deployed.
 REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
 REAL(ReKi)                   :: HSSBrTqF                                        ! Fully deployed HSS brake torque
@@ -192,7 +204,7 @@ INTEGER(4)                   :: UnLn      = 26                                  
 INTEGER(4)                   :: UnNoSpec  = 27                                  ! I/O unit number for the noise spectr output file.
 INTEGER(4)                   :: UnNoSPL   = 28                                  ! I/O unit number for the noise SPL output file.
 INTEGER(4)                   :: UnOu      = 21                                  ! I/O unit number for the tabular output file.
-INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
+!INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
 LOGICAL                      :: Furling                                         ! Read in additional model properties for furling turbine?
@@ -225,26 +237,13 @@ MODULE InitCond
 USE                             Precision
 
 
-REAL(ReKi)                   :: Azimuth                                         ! Initial azimuth angle for blade 1.
 REAL(ReKi), ALLOCATABLE      :: BlPitchInit(:)                                  ! Initial blade pitch angles at the start of the simulation.
-REAL(ReKi)                   :: IPDefl                                          ! Initial in-plane blade-tip deflection.
 REAL(ReKi)                   :: NacYaw                                          ! Initial or fixed nacelle-yaw angle.
-REAL(ReKi)                   :: OoPDefl                                         ! Initial out-of-plane blade-tip displacement.
-REAL(ReKi)                   :: PtfmHeave = 0.0                                 ! Initial or fixed vertical heave translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmPitch = 0.0                                 ! Initial or fixed pitch tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmRoll  = 0.0                                 ! Initial or fixed roll tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmSurge = 0.0                                 ! Initial or fixed horizontal surge translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmSway  = 0.0                                 ! Initial or fixed horizontal sway translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: PtfmYaw   = 0.0                                 ! Initial or fixed yaw rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)
-REAL(ReKi)                   :: QAzimInit                                       ! Initial value of the internal generator azimuth DOF (Q(DOF_GeAz)).
-REAL(ReKi)                   :: RotFurl   = 0.0                                 ! Initial or fixed rotor-furl angle. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: RotSpeed                                        ! Initial or fixed rotor speed.
-REAL(ReKi)                   :: TailFurl  = 0.0                                 ! Initial or fixed tail-furl angle. (Initialized to zero b/c not all models read in FurlFile)
-REAL(ReKi)                   :: TTDspFA                                         ! Initial fore-aft tower-top displacement.
-REAL(ReKi)                   :: TTDspSS                                         ! Initial side-to-side tower-top displacement.
-REAL(ReKi)                   :: TeetDefl  = 0.0                                 ! Initial or fixed teeter angle. (Initialized to zero b/c the 3-blader requires it to be zero)
 
-LOGICAL,    ALLOCATABLE      :: DOF_FlagInit(:)                                 ! Array which stores initial values of the feature flags for each DOF (at the start of the simulation).
+!structural
+
+REAL(ReKi)                   :: QAzimInit                                       ! Initial value of the internal generator azimuth DOF (Q(DOF_GeAz)).
+
 
 
 END MODULE InitCond
@@ -306,22 +305,6 @@ MODULE Output
 
 
 USE                             NWTC_Library
-USE StructDyn_Parameters
-
-   ! Regular variables:
-
-REAL(DbKi), ALLOCATABLE      :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
-REAL(ReKi), ALLOCATABLE      :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
-INTEGER(B2Ki)                :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
-CHARACTER(1024)              :: FileDesc                                        ! Description of run to include in binary output file
-
-
-
-
-
-INTEGER                      :: CurrOutStep                                     ! Time index into the AllOutData array
-INTEGER(4)                   :: DecFact                                         ! Decimation factor for tabular output.
-INTEGER(IntKi)               :: NOutSteps                                       ! Maximum number of output steps
 
 
 !JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
@@ -334,14 +317,6 @@ INTEGER(4)                   :: NWaveKin     = 0                                
 INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
 
 
-LOGICAL                      :: WrEcho
-LOGICAL                      :: WrBinOutFile  = .true.                          ! Write a binary output file? (.outb)
-LOGICAL                      :: WrTxtOutFile  = .true.                          ! Write a text (formatted) output file? (.out)
-
-
-
-   ! Let's make these parameters into arrays so we can loop through them
-   
 
    
 END MODULE Output
@@ -368,12 +343,14 @@ REAL(ReKi), ALLOCATABLE      :: LTenTol  (:)                                    
 REAL(ReKi), ALLOCATABLE      :: LUnstrLen(:)                                    ! Unstretched length of each mooring line.
 REAL(ReKi)                   :: MaxLRadAnch  = 0.0                              ! Maximum value of input array LRadAnch.
 
+!inputs to structural?
 REAL(ReKi)                   :: PtfmAM (6,6) = 0.0                              ! Platform added mass matrix.
+REAL(ReKi)                   :: PtfmFt   (6) = 0.0                              ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the platform force at the platform reference (point Z) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the platform moment acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()'s.
+
+!hd:
 REAL(ReKi)                   :: PtfmCD                                          ! Effective platform normalized hydrodynamic viscous drag coefficient in calculation of viscous drag term from Morison's equation.
 REAL(ReKi)                   :: PtfmDiam                                        ! Effective platform diameter in calculation of viscous drag term from Morison's equation.
 REAL(ReKi)                   :: PtfmDraft                                       ! Effective platform draft    in calculation of viscous drag term from Morison's equation.
-
-REAL(ReKi)                   :: PtfmFt   (6) = 0.0                              ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the platform force at the platform reference (point Z) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the platform moment acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()'s.
 
 REAL(ReKi)                   :: PtfmVol0                                        ! Displaced volume of water when the platform is in its undisplaced position.
 REAL(ReKi)                   :: RdtnDT                                          ! Time step for wave radiation kernel calculations.
@@ -382,9 +359,9 @@ REAL(ReKi)                   :: RdtnTMax     = 0.0                              
 INTEGER(4)                   :: LineMod                                         ! Mooring line model switch.
 INTEGER(4)                   :: NumLines     = 0                                ! Number of mooring lines.
 
-INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile)
+INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile) !structural
 INTEGER(4)                   :: PtfmNodes                                       ! Number of platform nodes used in calculation of viscous drag term from Morison's equation.
-
+!hd
 CHARACTER(1024)              :: WAMITFile                                       ! Root name of WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst extension), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1 extension), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 extension).
 
 
@@ -466,7 +443,7 @@ MODULE TurbCont
 USE                             Precision
 
 
-REAL(ReKi), ALLOCATABLE      :: BlPitch  (:)                                    ! Initial and current blade pitch angles.
+REAL(ReKi), ALLOCATABLE      :: BlPitch  (:)                                    ! Initial and current blade pitch angles. !structural
 REAL(ReKi), ALLOCATABLE      :: BlPitchCom(:)                                   ! Commanded blade pitch angles.
 REAL(ReKi), ALLOCATABLE      :: BlPitchF (:)                                    ! Final blade pitch.
 REAL(ReKi), ALLOCATABLE      :: BlPitchFrct(:)                                  ! Blade pitch angle fractions used for the override pitch maneuver calculation.

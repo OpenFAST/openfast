@@ -140,6 +140,32 @@ typedef	^	^	ReKi	NcIMUzn	-	-	-	"Vertical distance from the tower-top to the nace
 typedef	^	^	LOGICAL	TabDelim	-	-	-	"Flag to cause tab-delimited output"	-
 typedef	^	^	LOGICAL	GBRevers	-	-	-	"Gearbox reversal flag"
 
+typedef	^	^	ReKi	Azimuth	-	-	-	"Initial azimuth angle for blade 1"
+#typedef	^	^	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch angles at the start of the simulation"
+typedef	^	^	ReKi	IPDefl	-	-	-	"Initial in-plane blade-tip deflection"
+#typedef	^	^	ReKi	NacYaw	-	-	-	"Initial or fixed nacelle-yaw angle"
+typedef	^	^	ReKi	OoPDefl	-	-	-	"Initial out-of-plane blade-tip displacement"
+typedef	^	^	ReKi	PtfmHeave	-	0.0	-	"Initial or fixed vertical heave translational displacement of platform (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmPitch	-	0.0	-	"Initial or fixed pitch tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmRoll	-	0.0	-	"Initial or fixed roll tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmSurge	-	0.0	-	"Initial or fixed horizontal surge translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmSway	-	0.0	-	"Initial or fixed horizontal sway translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmYaw	-	0.0	-	"Initial or fixed yaw rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
+#typedef	^	^	ReKi	QAzimInit	-	-	-	"Initial value of the internal generator azimuth DOF (Q(DOF_GeAz))"
+typedef	^	^	ReKi	RotFurl	-	0.0	-	"Initial or fixed rotor-furl angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	RPM
+typedef	^	^	ReKi	TailFurl	-	0.0	-	"Initial or fixed tail-furl angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TTDspFA	-	-	-	"Initial fore-aft tower-top displacement"
+typedef	^	^	ReKi	TTDspSS	-	-	-	"Initial side-to-side tower-top displacement"
+typedef	^	^	ReKi	TeetDefl	-	0.0	-	"Initial or fixed teeter angle. (Initialized to zero b/c the 3-blader requires it to be zero)"
+
+
+
+
+
+
+
+
 
 
 
@@ -368,7 +394,7 @@ typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable 
 
 # Define "other" states (any data that are not considered actual states) here:
 typedef	^	OtherStateType	StrD_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
-typedef	^	^	ActiveDOFs	DOFs	-	-	-	"Active degrees of freedom in the model"
+#typedef	^	^	ActiveDOFs	DOFs	-	-	-	"Active degrees of freedom in the model"
 typedef	^	^	RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
 typedef	^	^	ReKi	Q	{:}{:}	-	-	"Displacement matrix (time history)"
 typedef	^	^	ReKi	QD	{:}{:}	-	-	"Velocity matrix (time history)"
@@ -392,6 +418,7 @@ typedef	^	^	IntKi	NPM	-	-	-	"Number of DOFs                  that contribute to 
 typedef	^	^	IntKi	PM	{:}{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the blade elements                                            (body M) in the inertia frame"
 typedef	^	^	LOGICAL	DOF_Flag	{:}	-	-	"Array which stores values of the feature flags for each DOF"
 typedef	^	^	CHARACTER(99)	DOF_Desc	{:}	-	-	"Array which stores descriptions of each DOF"
+typedef	^	^	ActiveDOFs	DOFs	-	-	-	"Active degrees of freedom in the model"
 # parameters for output calculations/options:
 typedef	^	^	IntKi	NumOuts	-	0	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Output format for tabular data"	-
@@ -640,7 +667,8 @@ typedef	^	^	ReKi	GBRatio	-	-	-	"Gearbox ratio"
 typedef	^	^	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"
 typedef	^	^	ReKi	GenEff	-	-	-	"Generator efficiency"
 typedef	^	^	IntKi	GenDir	-	-	-	"Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS)"
-
+# parameters from Initial Conditions
+typedef	^	^	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/sec
 
 
 

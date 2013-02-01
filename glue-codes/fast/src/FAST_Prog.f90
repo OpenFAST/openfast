@@ -98,11 +98,11 @@ IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADA
 
    IF ( MakeLINacf )  THEN
 
-      IF ( OtherSt_StrD%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
+      IF ( p_StrD%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
          CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//&
                       '_ADAMS_LIN.acf'' not created because the model has zero active DOFs.'   )
       ELSE                             ! The model has at least one DOF
-         CALL MakeACF_LIN( p_StrD )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
+         CALL MakeACF_LIN( p_StrD, InputFileData_StrD )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
       ENDIF
 
    ENDIF
@@ -126,9 +126,10 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
 
-      IF ( OtherSt_StrD%DOFs%NActvDOF == 0 ) &
+      IF ( p_StrD%DOFs%NActvDOF == 0 ) &
          CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
 
+!      QAzimInit = OtherState%Q (DOF_GeAz,1)
 
       CALL CoordSys_Alloc( OtherSt_StrD%CoordSys, p_StrD, ErrStat, ErrMsg )
             
@@ -158,7 +159,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
          ENDDO                ! L - Equally-spaced azimuth steps
 
 
-         CALL DrvTrTrq ( p_StrD, RotSpeed, GBoxTrq )
+         CALL DrvTrTrq ( p_StrD, p_StrD%RotSpeed, GBoxTrq )
 
       ENDIF
 
