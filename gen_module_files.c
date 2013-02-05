@@ -16,6 +16,8 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
+  int d ;
+
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
   fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick,nonick ) ;
@@ -25,7 +27,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ; 
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ; 
   fprintf(fp,"! Local \n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: i,j,k\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
   fprintf(fp,"! \n") ;
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
@@ -41,25 +43,23 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
     { 
       if ( r->type != NULL ) {
         if ( !strcmp( r->type->name, "meshtype" ) ) {
-          if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(Src%sData%%%s)\n",nonick,r->name  ) ;
-          } else if ( r->ndims > 0 ) {
-            fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
-          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"",nonick,r->name,(r->ndims==1)?"(i)":"") ;
-          if ( r->ndims == 1 ) {
+          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
           }
 
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
           remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-          if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(Src%sData%%%s)\n",nonick,r->name  ) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
   fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
-                                ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,(r->ndims==1)?"(i)":"",nonick,r->name,(r->ndims==1)?"(i)":"") ;
-          if ( r->ndims == 1 ) {
+                                ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
           }
         } else {
@@ -78,7 +78,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
-  int frst ;
+  int frst, d ;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -109,7 +109,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_BufSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_CurrSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: i     \n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     \n") ;
   fprintf(fp,"  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers\n") ;
   fprintf(fp," ! buffers to store meshes, if any\n") ;
 
@@ -147,40 +147,38 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   {
     if ( !strcmp( r->type->name, "meshtype" ) ) {
 
-      if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(InData%%%s)\n",r->name  ) ;
-      } else if ( r->ndims > 0 ) {
-        fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
-    }
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
+      }
   if ( frst == 1 ) { fprintf(fp," ! Allocate mesh buffers, if any (we'll also get sizes from these) \n") ; frst = 0 ;}
   fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, .TRUE. ) ! %s \n", 
-                                 r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                              r->name ) ;
+                                 r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                              r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf))Int_BufSz = Int_BufSz + SIZE( Int_%s_Buf ) ! %s\n",r->name,r->name,r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf))  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf))  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf)) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
-      if ( r->ndims == 1 ) {
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
       }
 
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-      if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(InData%%%s)\n",r->name  ) ;
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
-                        (r->ndims==1)?"(i)":"", r->name ) ;
+                        dimstr(r->ndims), r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf))Int_BufSz = Int_BufSz + SIZE( Int_%s_Buf ) ! %s\n",r->name,r->name,r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf))  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf))  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf)) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
-      if ( r->ndims == 1 ) {
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
       }
 
@@ -216,14 +214,12 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( !strcmp( r->type->name, "meshtype" ) ) {
-      if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(InData%%%s)\n",r->name  ) ;
-      } else if ( r->ndims > 0 ) {
-        fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   if ( frst == 1 ) { fprintf(fp," ! Allocate mesh buffers, if any (we'll also get sizes from these) \n") ; frst = 0 ;}
   fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, OnlySize ) ! %s \n",
-                                 r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                              r->name ) ;
+                                 r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                              r->name ) ;
 
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
@@ -241,19 +237,19 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
 
-      if ( r->ndims == 1 ) {
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
       }
 
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-      if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(InData%%%s)\n",r->name  ) ;
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s%s, ErrStat, ErrMsg, OnlySize ) ! %s \n",
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, 
-                        (r->ndims==1)?"(i)":"",
+                        dimstr(r->ndims),
                         r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
@@ -270,7 +266,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"  IF( ALLOCATED(Re_%s_Buf) )  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
-      if ( r->ndims == 1 ) {
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
       }
 
@@ -331,7 +327,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
-  int idim, frst ;
+  int d, idim, frst ;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -361,7 +357,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_BufSz\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_CurrSz\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: i\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5\n") ;
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask1(:)\n") ;
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask2(:,:)\n") ;
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)\n") ;
@@ -397,14 +393,12 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( !strcmp( r->type->name, "meshtype" ) ) {
-      if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(OutData%%%s)\n",r->name  ) ;
-      } else if ( r->ndims > 0 ) {
-        fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(OutData%%%s,%d)\n",d,r->name,d  ) ;
       }
   if (frst == 1) {fprintf(fp," ! first call MeshPack to get correctly sized buffers for unpacking\n") ;frst=0;}
   fprintf(fp,"  CALL MeshPack( OutData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg , .TRUE. ) ! %s \n",
-                               r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                     r->name ) ;
+                               r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                     r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -418,25 +412,25 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  CALL MeshUnPack( OutData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg ) ! %s \n",
-                                 r->name,(r->ndims==1)?"(i)":"",r->name,  r->name,    r->name,                     r->name ) ;
+                                 r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                     r->name ) ;
 
   fprintf(fp,"  IF( ALLOCATED(Re_%s_Buf) )  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
   fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
-      if ( r->ndims > 0 ) {
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
       }
 
     } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-      if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(OutData%%%s)\n",r->name  ) ;
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(OutData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",
                         ModName->nickname,fast_interface_type_shortname(nonick2)) ;
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, (r->ndims==1)?"(i)":"",r->name ) ;
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, dimstr(r->ndims),r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -451,9 +445,9 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  CALL %s_Unpack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg ) ! %s \n",
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, 
-                        (r->ndims==1)?"(i)":"",
+                        dimstr(r->ndims),
                         r->name ) ;
-      if ( r->ndims == 1 ) {
+      for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
       }
 
@@ -537,6 +531,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
+  int d ;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -544,7 +539,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: %sData\n",addnick,nonick) ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: i\n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 \n") ;
   fprintf(fp,"! \n") ;
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
@@ -562,24 +557,22 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         fprintf(stderr,"Registry warning generating %_Destroy%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       } else {
         if ( !strcmp( r->type->name, "meshtype" ) ) {
-          if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",nonick,r->name  ) ;
-          } else if ( r->ndims > 0 ) {
-            fprintf(stderr,"Registry warning: %s, %s: Mesh elements of a structure can be only 0 or 1D\n",ModName->name,r->name) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
-          fprintf(fp,"  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n",nonick,r->name,(r->ndims==1)?"(i)":"") ;
+          fprintf(fp,"  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n",nonick,r->name,dimstr(r->ndims)) ;
           if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
           }
         } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
           remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-          if ( r->ndims == 1 ) {
-  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",nonick,r->name  ) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
           fprintf(fp,"  CALL %s_Destroy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
-                          ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,(r->ndims==1)?"(i)":"") ;
-          if ( r->ndims == 1 ) {
+                          ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims)) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
           }
         } else if ( r->ndims > 0 ) {
@@ -940,3 +933,25 @@ append_nickname( char *nickname, char *src, char *dst )
     strcpy(dst,src) ;
   }
 }
+
+char * dimstr( int d )
+{
+  char * retval ;
+  if        ( d == 0 ) {
+    retval = "" ;
+  } else if ( d == 1 ) {
+    retval = "(i1)" ;
+  } else if ( d == 2 ) {
+    retval = "(i1,i2)" ;
+  } else if ( d == 3 ) {
+    retval = "(i1,i2,i3)" ;
+  } else if ( d == 4 ) {
+    retval = "(i1,i2,i3,i4)" ;
+  } else if ( d == 5 ) {
+    retval = "(i1,i2,i3,i4,i5)" ;
+  } else {
+    retval = " REGISTRY ERROR TOO MANY DIMS " ;
+  }
+  return(retval) ;
+}
+

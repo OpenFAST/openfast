@@ -155,6 +155,8 @@ int get_mask ( unsigned int * mask , int e ) ;
 
 char * fast_interface_type_shortname (  char * ) ;
 
+char * dimstr( int ) ;
+
 #define PROTOS_H
 #endif
 
