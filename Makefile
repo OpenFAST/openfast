@@ -1,3 +1,8 @@
+ifeq ($(OS),Windows_NT)
+  RM = del
+else
+  RM = /bin/rm -f
+endif
 .SUFFIXES: .c .o
 
 CC_TOOLS = gcc
@@ -13,10 +18,10 @@ registry.exe : $(OBJ)
 	$(CC_TOOLS) $(CFLAGS) -c $(DEBUG) $<
 
 clean clena:
-	/bin/rm -f $(OBJ) gen_comms.c standard.o
+	$(RM) $(OBJ) gen_comms.c standard.o
 
 superclean : clean
-	/bin/rm -f registry.exe
+	$(RM) registry.exe
 
 # regenerate this list with "makedepend -Y *.c"
 
