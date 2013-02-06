@@ -63,7 +63,17 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"ENDDO\n") ;
           }
         } else {
-          fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
+          if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
+            char tmp2[10] ;
+            strcpy(tmp,"") ;
+            for ( d = 1 ; d <= r->ndims ; d++ ) {
+  fprintf(fp,"  i%d = SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
+              sprintf(tmp2,",i%d",d) ;
+              strcat(tmp,tmp2) ;
+            }
+  fprintf(fp,"  IF (.NOT.ALLOCATED(Dst%sData%%%s)) ALLOCATE(Dst%sData%%%s(%s))\n",nonick,r->name,nonick,r->name,(char*)&(tmp[1])) ;
+          }
+  fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
         }
       } 
     }

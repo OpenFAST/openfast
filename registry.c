@@ -35,6 +35,7 @@ main( int argc, char *argv[], char *env[] )
   argv++ ;
 
   sw_output_template_force = 0 ;
+  sw_norealloc_lsh = 1 ;
   strcpy( fname_in , "" ) ;
 
 #ifndef _WIN32
@@ -66,6 +67,12 @@ main( int argc, char *argv[], char *env[] )
       if (!strcmp(*argv,"-f")) {
         sw_output_template_force = 1 ;
       }
+      if (!strcmp(*argv,"-norealloc_lhs")) {
+        sw_norealloc_lsh = 1 ;
+      }
+      if (!strcmp(*argv,"-realloc_lhs")) {
+        sw_norealloc_lsh = 0 ;
+      }
       if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry")) {
         char * arg ;
         arg = *argv ;
@@ -77,7 +84,7 @@ main( int argc, char *argv[], char *env[] )
       }
       if (!strncmp(*argv,"-h",2)) {
 usage:
-        fprintf(stderr,"Usage: %s [-D<MACRO>]  registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
+        fprintf(stderr,"Usage: %s [-D<MACRO>][-[no]realloc_lhs] registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
         exit(1) ;
       }
     }

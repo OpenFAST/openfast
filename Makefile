@@ -1,7 +1,11 @@
 ifeq ($(OS),Windows_NT)
-  RM = del
+  ifeq ($(OSTYPE),cygwin)
+    RM=rm -f
+  else
+    RM=del
+  endif
 else
-  RM = /bin/rm -f
+  RM = rm -f
 endif
 .SUFFIXES: .c .o
 
