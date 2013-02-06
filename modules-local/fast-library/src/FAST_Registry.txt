@@ -147,9 +147,9 @@ typedef	^	^	ReKi	IPDefl	-	-	-	"Initial in-plane blade-tip deflection"
 typedef	^	^	ReKi	OoPDefl	-	-	-	"Initial out-of-plane blade-tip displacement"
 typedef	^	^	ReKi	PtfmHeave	-	0.0	-	"Initial or fixed vertical heave translational displacement of platform (Initialized to zero b/c not all models will read in PtfmFile)"
 typedef	^	^	ReKi	PtfmPitch	-	0.0	-	"Initial or fixed pitch tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
-typedef	^	^	ReKi	PtfmRoll	-	0.0	-	"Initial or fixed roll tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
-typedef	^	^	ReKi	PtfmSurge	-	0.0	-	"Initial or fixed horizontal surge translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
-typedef	^	^	ReKi	PtfmSway	-	0.0	-	"Initial or fixed horizontal sway translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
+typedef	^	^	ReKi	PtfmRoll	-	0.0	-	"Initial or fixed roll tilt rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"	radians
+typedef	^	^	ReKi	PtfmSurge	-	0.0	-	"Initial or fixed horizontal surge translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"	radians
+typedef	^	^	ReKi	PtfmSway	-	0.0	-	"Initial or fixed horizontal sway translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"	radians
 typedef	^	^	ReKi	PtfmYaw	-	0.0	-	"Initial or fixed yaw rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
 #typedef	^	^	ReKi	QAzimInit	-	-	-	"Initial value of the internal generator azimuth DOF (Q(DOF_GeAz))"
 typedef	^	^	ReKi	RotFurl	-	0.0	-	"Initial or fixed rotor-furl angle. (Initialized to zero b/c not all models read in FurlFile)"
@@ -679,6 +679,8 @@ typedef	^	^	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/sec
 # Define inputs that are not on this mesh here:
 typedef	^	InputType	ReKi	TwrAM	{6}{6}	0.0	-	"Added mass matrix of the current tower element per unit length-bjj: place on a mesh" 	-
 typedef	^	^	ReKi	TwrFt	6	0.0	-	The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower element (point T) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the tower moment acting at the current tower element (body F) / (point T) per "Unit length associated with everything but the QD2T()s"
+typedef	^	^	ReKi	PtfmAM	{6}{6}	0.0	-	"Platform added mass matrix"
+typedef	^	^	ReKi	PtfmFt	6	0.0	-	"The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the platform force at the platform reference (point Z) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the platform moment acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()s"
 
 
 

@@ -29,8 +29,80 @@ MODULE GlueCodeVars
    CHARACTER(1024)           :: FileDesc                                        ! Description of run to include in binary output file
 
    
-END MODULE GlueCodeVars
+! not sure where this should go:
+INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile) !structural
+
    
+END MODULE GlueCodeVars
+!=======================================================================
+MODULE HydroVals
+!these are variables for HydroDyn
+
+   USE NWTC_Library
+   
+   ! EnvCond:
+
+REAL(ReKi)                   :: CurrDIDir = 0.0                                 ! Depth-independent current heading direction.
+REAL(ReKi)                   :: CurrDIV   = 0.0                                 ! Depth-independent current velocity.
+REAL(ReKi)                   :: CurrNSDir = 0.0                                 ! Near-surface current heading direction.
+REAL(ReKi)                   :: CurrNSRef = 0.0                                 ! Near-surface current reference depth.
+REAL(ReKi)                   :: CurrNSV0  = 0.0                                 ! Near-surface current velocity at still water level.
+REAL(ReKi)                   :: CurrSSDir = 0.0                                 ! Sub-surface current heading direction.
+REAL(ReKi)                   :: CurrSSV0  = 0.0                                 ! Sub-surface current velocity at still water level.
+
+
+REAL(ReKi)                   :: WaveDir   = 0.0                                 ! Wave heading direction.
+REAL(ReKi)                   :: WaveDT    = 0.0                                 ! Time step for incident wave calculations.
+REAL(ReKi)                   :: WaveHs    = 0.0                                 ! Significant wave height.
+REAL(ReKi)                   :: WavePkShp = 1.0                                 ! Peak shape parameter of incident wave spectrum.
+REAL(ReKi)                   :: WaveTMax  = 0.0                                 ! Analysis time for incident wave calculations.
+REAL(ReKi)                   :: WaveTp    = 0.0                                 ! Peak spectral period.
+REAL(ReKi)                   :: WtrDens                                         ! Water density.
+REAL(ReKi)                   :: WtrDpth                                         ! Water depth.
+
+INTEGER(4)                   :: CurrMod                                         ! Current profile model switch.
+INTEGER(4)                   :: WaveStMod = 0                                   ! Model switch for stretching incident wave kinematics to instantaneous free surface.
+INTEGER(4)                   :: WaveMod   = 0                                   ! Incident wave kinematics model switch.
+INTEGER(4)                   :: WaveSeed (2) = 0                                ! Random seeds of incident waves.
+
+CHARACTER(1024)              :: GHWvFile  = ''                                  ! The root name of GH Bladed files containing wave data.
+
+   ! from Output   
+REAL(ReKi), ALLOCATABLE      :: LSNodes  (:,:)                                  ! Unstretched arc distance along mooring line from anchor to each node where the line position and tension can be output (meters).
+REAL(ReKi)                   :: WaveElevxi(1) = (/ 0.0 /)                       ! xi-coordinates for points where the incident wave elevation can be output (meters).
+REAL(ReKi)                   :: WaveElevyi(1) = (/ 0.0 /)                       ! yi-coordinates for points where the incident wave elevation can be output (meters).
+INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
+INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
+INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
+INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
+
+   !from Platform
+REAL(ReKi), ALLOCATABLE      :: LAnchxi  (:)                                    ! xi-coordinate of each anchor   in the inertial frame        coordinate system.
+REAL(ReKi), ALLOCATABLE      :: LAnchyi  (:)                                    ! yi-coordinate of each anchor   in the inertial frame        coordinate system.
+REAL(ReKi), ALLOCATABLE      :: LAnchzi  (:)                                    ! zi-coordinate of each anchor   in the inertial frame        coordinate system.
+REAL(ReKi), ALLOCATABLE      :: LDiam    (:)                                    ! Effective diameter of each mooring line for calculation of the line buoyancy.
+REAL(ReKi), ALLOCATABLE      :: LEAStff  (:)                                    ! Extensional stiffness of each mooring line.
+REAL(ReKi), ALLOCATABLE      :: LFairxt  (:)                                    ! xt-coordinate of each fairlead in the tower base / platform coordinate system.
+REAL(ReKi), ALLOCATABLE      :: LFairyt  (:)                                    ! yt-coordinate of each fairlead in the tower base / platform coordinate system.
+REAL(ReKi), ALLOCATABLE      :: LFairzt  (:)                                    ! zt-coordinate of each fairlead in the tower base / platform coordinate system.
+REAL(ReKi), ALLOCATABLE      :: LMassDen (:)                                    ! Mass density of each mooring line.
+REAL(ReKi), ALLOCATABLE      :: LSeabedCD(:)                                    ! Coefficient of seabed static friction drag of each mooring line (a negative value indicates no seabed).
+REAL(ReKi), ALLOCATABLE      :: LTenTol  (:)                                    ! Convergence tolerance within Newton-Raphson iteration of each mooring line specified as a fraction of tension.
+REAL(ReKi), ALLOCATABLE      :: LUnstrLen(:)                                    ! Unstretched length of each mooring line.
+REAL(ReKi)                   :: MaxLRadAnch  = 0.0                              ! Maximum value of input array LRadAnch.
+REAL(ReKi)                   :: PtfmVol0                                        ! Displaced volume of water when the platform is in its undisplaced position.
+REAL(ReKi)                   :: PtfmCD                                          ! Effective platform normalized hydrodynamic viscous drag coefficient in calculation of viscous drag term from Morison's equation.
+REAL(ReKi)                   :: PtfmDiam                                        ! Effective platform diameter in calculation of viscous drag term from Morison's equation.
+REAL(ReKi)                   :: PtfmDraft                                       ! Effective platform draft    in calculation of viscous drag term from Morison's equation.
+REAL(ReKi)                   :: RdtnDT                                          ! Time step for wave radiation kernel calculations.
+REAL(ReKi)                   :: RdtnTMax     = 0.0                              ! Analysis time for wave radiation kernel calculations.
+INTEGER(4)                   :: LineMod                                         ! Mooring line model switch.
+INTEGER(4)                   :: NumLines     = 0                                ! Number of mooring lines.
+INTEGER(4)                   :: PtfmNodes                                       ! Number of platform nodes used in calculation of viscous drag term from Morison's equation.
+CHARACTER(1024)              :: WAMITFile                                       ! Root name of WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst extension), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1 extension), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 extension).
+
+
+END MODULE HydroVals  
 !=======================================================================
 MODULE ADAMSInput
 
@@ -90,7 +162,6 @@ TYPE(AeroLoadsOptions)        :: ADIntrfaceOptions
 TYPE(AllAeroLoads)            :: ADAeroLoads
 TYPE(AeroConfig)              :: ADInterfaceComponents                        ! The configuration markers that make up the bodies where aerodynamic calculations will be needed
 
-INTEGER                       :: NumADBldNodes = 0                               ! Number of blade nodes in AeroDyn
 
 
 END MODULE AeroElem
@@ -108,8 +179,8 @@ USE                             Precision
 REAL(ReKi)                   :: ElecPwr                                         ! Electrical power, W.
 REAL(ReKi)                   :: GenCTrq                                         ! Constant generator torque.
 REAL(ReKi)                   :: GenSpRZT                                        ! Difference between rated and zero-torque generator speeds for SIG.
-REAL(ReKi)                   :: GenSpRat                                        ! Rated generator speed.
-REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
+!REAL(ReKi)                   :: GenSpRat                                        ! Rated generator speed.
+!REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
 REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque. !both str (input) & control (output)
 REAL(ReKi)                   :: HSSBrDT                                         ! Time it takes for HSS brake to reach full deployment once deployed.
 REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
@@ -147,46 +218,6 @@ INTEGER(4)                   :: TEC_NPol                                        
 
 
 END MODULE DriveTrain
-!=======================================================================
-MODULE EnvCond
-
-
-   ! This MODULE stores input variables for environmental conditions.
-
-
-USE                             Precision
-
-!bjj: mostly HydroDyn variables...
-
-   ! hydrodyn inputs:
-
-REAL(ReKi)                   :: CurrDIDir = 0.0                                 ! Depth-independent current heading direction.
-REAL(ReKi)                   :: CurrDIV   = 0.0                                 ! Depth-independent current velocity.
-REAL(ReKi)                   :: CurrNSDir = 0.0                                 ! Near-surface current heading direction.
-REAL(ReKi)                   :: CurrNSRef = 0.0                                 ! Near-surface current reference depth.
-REAL(ReKi)                   :: CurrNSV0  = 0.0                                 ! Near-surface current velocity at still water level.
-REAL(ReKi)                   :: CurrSSDir = 0.0                                 ! Sub-surface current heading direction.
-REAL(ReKi)                   :: CurrSSV0  = 0.0                                 ! Sub-surface current velocity at still water level.
-
-
-REAL(ReKi)                   :: WaveDir   = 0.0                                 ! Wave heading direction.
-REAL(ReKi)                   :: WaveDT    = 0.0                                 ! Time step for incident wave calculations.
-REAL(ReKi)                   :: WaveHs    = 0.0                                 ! Significant wave height.
-REAL(ReKi)                   :: WavePkShp = 1.0                                 ! Peak shape parameter of incident wave spectrum.
-REAL(ReKi)                   :: WaveTMax  = 0.0                                 ! Analysis time for incident wave calculations.
-REAL(ReKi)                   :: WaveTp    = 0.0                                 ! Peak spectral period.
-REAL(ReKi)                   :: WtrDens                                         ! Water density.
-REAL(ReKi)                   :: WtrDpth                                         ! Water depth.
-
-INTEGER(4)                   :: CurrMod                                         ! Current profile model switch.
-INTEGER(4)                   :: WaveStMod = 0                                   ! Model switch for stretching incident wave kinematics to instantaneous free surface.
-INTEGER(4)                   :: WaveMod   = 0                                   ! Incident wave kinematics model switch.
-INTEGER(4)                   :: WaveSeed (2) = 0                                ! Random seeds of incident waves.
-
-CHARACTER(1024)              :: GHWvFile  = ''                                  ! The root name of GH Bladed files containing wave data.
-
-
-END MODULE EnvCond
 !=======================================================================
 MODULE General
 
@@ -298,75 +329,6 @@ REAL(ReKi)                   :: YawRateNeut = 0.0                               
 
 END MODULE NacelleYaw
 !=======================================================================
-MODULE Output
-
-
-   ! This MODULE stores variables used for output.
-
-
-USE                             NWTC_Library
-
-
-!JASON: ADD OUTPUTS FOR THE MOORING LINE POSITION AND EFFECTIVE TENSION AT EACH NODE.  USE NAMES SUCH AS: Ln#Nd#Pxi, Ln#Nd#Pyi, Ln#Nd#Pzi, Ln#Nd#Ten WHERE # REPRESENTS THE LINE NUMBER OR NODE NUMBER!!!
-REAL(ReKi), ALLOCATABLE      :: LSNodes  (:,:)                                  ! Unstretched arc distance along mooring line from anchor to each node where the line position and tension can be output (meters).
-REAL(ReKi)                   :: WaveElevxi(1) = (/ 0.0 /)                       ! xi-coordinates for points where the incident wave elevation can be output (meters).
-REAL(ReKi)                   :: WaveElevyi(1) = (/ 0.0 /)                       ! yi-coordinates for points where the incident wave elevation can be output (meters).
-INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
-INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
-INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
-INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
-
-
-
-   
-END MODULE Output
-!=======================================================================
-MODULE Platform
-
-
-   ! This MODULE stores input variables for platform loading.
-
-
-USE                             Precision
-
-REAL(ReKi), ALLOCATABLE      :: LAnchxi  (:)                                    ! xi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LAnchyi  (:)                                    ! yi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LAnchzi  (:)                                    ! zi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LDiam    (:)                                    ! Effective diameter of each mooring line for calculation of the line buoyancy.
-REAL(ReKi), ALLOCATABLE      :: LEAStff  (:)                                    ! Extensional stiffness of each mooring line.
-REAL(ReKi), ALLOCATABLE      :: LFairxt  (:)                                    ! xt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LFairyt  (:)                                    ! yt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LFairzt  (:)                                    ! zt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LMassDen (:)                                    ! Mass density of each mooring line.
-REAL(ReKi), ALLOCATABLE      :: LSeabedCD(:)                                    ! Coefficient of seabed static friction drag of each mooring line (a negative value indicates no seabed).
-REAL(ReKi), ALLOCATABLE      :: LTenTol  (:)                                    ! Convergence tolerance within Newton-Raphson iteration of each mooring line specified as a fraction of tension.
-REAL(ReKi), ALLOCATABLE      :: LUnstrLen(:)                                    ! Unstretched length of each mooring line.
-REAL(ReKi)                   :: MaxLRadAnch  = 0.0                              ! Maximum value of input array LRadAnch.
-
-!inputs to structural?
-REAL(ReKi)                   :: PtfmAM (6,6) = 0.0                              ! Platform added mass matrix.
-REAL(ReKi)                   :: PtfmFt   (6) = 0.0                              ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the platform force at the platform reference (point Z) and the roll/xi (4), pitch/yi (5), and yaw/zi (6)-components of the portion of the platform moment acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()'s.
-
-!hd:
-REAL(ReKi)                   :: PtfmCD                                          ! Effective platform normalized hydrodynamic viscous drag coefficient in calculation of viscous drag term from Morison's equation.
-REAL(ReKi)                   :: PtfmDiam                                        ! Effective platform diameter in calculation of viscous drag term from Morison's equation.
-REAL(ReKi)                   :: PtfmDraft                                       ! Effective platform draft    in calculation of viscous drag term from Morison's equation.
-
-REAL(ReKi)                   :: PtfmVol0                                        ! Displaced volume of water when the platform is in its undisplaced position.
-REAL(ReKi)                   :: RdtnDT                                          ! Time step for wave radiation kernel calculations.
-REAL(ReKi)                   :: RdtnTMax     = 0.0                              ! Analysis time for wave radiation kernel calculations.
-
-INTEGER(4)                   :: LineMod                                         ! Mooring line model switch.
-INTEGER(4)                   :: NumLines     = 0                                ! Number of mooring lines.
-
-INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile) !structural
-INTEGER(4)                   :: PtfmNodes                                       ! Number of platform nodes used in calculation of viscous drag term from Morison's equation.
-!hd
-CHARACTER(1024)              :: WAMITFile                                       ! Root name of WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst extension), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1 extension), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 extension).
-
-
-END MODULE Platform
-!=======================================================================
 MODULE SimCont
 
 
@@ -444,6 +406,7 @@ USE                             Precision
 
 
 REAL(ReKi), ALLOCATABLE      :: BlPitch  (:)                                    ! Initial and current blade pitch angles. !structural
+
 REAL(ReKi), ALLOCATABLE      :: BlPitchCom(:)                                   ! Commanded blade pitch angles.
 REAL(ReKi), ALLOCATABLE      :: BlPitchF (:)                                    ! Final blade pitch.
 REAL(ReKi), ALLOCATABLE      :: BlPitchFrct(:)                                  ! Blade pitch angle fractions used for the override pitch maneuver calculation.

@@ -283,7 +283,7 @@ DO
 
    IF ( ( Step + 2*NStep )*DT > TMax )  THEN
 
-      CALL WrScr1( ' The solution does not appear to converge after '//TRIM( Flt2LStr( TMax ) )//' seconds!' )
+      CALL WrScr1( ' The solution does not appear to converge after '//TRIM( Num2LStr( TMax ) )//' seconds!' )
       CALL WrScr1( ' Try increasing the total run time, TMax, increasing system damping values,'// &
                    ' or increasing the convergence tolerances, DispTol and/or VelTol.'               )
       CALL ProgAbort ( ' The linearized system matrices were not formed.' )
@@ -475,7 +475,7 @@ ENDDO
 
    ! Inform the users of this great news!
 
-CALL WrScr1( ' Steady state solution found in '//TRIM(Int2LStr(Iteration))//' iterations!' )
+CALL WrScr1( ' Steady state solution found in '//TRIM(Num2LStr(Iteration))//' iterations!' )
 
 
 
@@ -743,7 +743,6 @@ USE                             General
 USE                             InitCond
 USE                             Linear
 USE                             NacelleYaw
-USE                             Output
 USE                             TurbCont
 
 USE                             FASTsubs  !RtHS(), CalcOuts()
@@ -2037,14 +2036,14 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))// &
-                     '(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(2(A,A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(NInputs))// &
+                     '(A ,A),A,'//TRIM(Num2LStr(NDisturbs))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  ',   p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|', p%Delim, &
                                       'A - State ', ( p%Delim, '          ', I2 = 1,2*p%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
@@ -2087,11 +2086,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          ELSE                       ! No input wind disturbances selected (same as above, except don't print the last NDisturbs columns)
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(2(A,A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(NInputs))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  ' ,  p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|', p%Delim, &
                                       'A - State ', ( p%Delim, '          ', I2 = 1,2*p%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
@@ -2133,11 +2132,11 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(2(A,A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(NDisturbs))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  '  , p%Delim//'|'//p%Delim, 'op        '         , p%Delim//'|', p%Delim, &
                                       'A - State ', ( p%Delim, '          ', I2 = 1,2*p%DOFs%NActvDOF-1 ), p%Delim//'|', p%Delim, &
@@ -2173,9 +2172,9 @@ IF ( MdlOrder == 1 )  THEN ! 1st order model
 
          ELSE                       ! No input wind disturbances selected
 
-            Frmt  = '(2(A,A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,A))'
-            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Int2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(2(A,A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,A))'
+            Frmt1 = '(2('//TRIM( p%OutFmt )//',  A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',3(A),'//TRIM(Num2LStr(2*p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op State  '  , p%Delim//'|'//p%Delim, 'op        '  , p%Delim//'|', p%Delim, &
                                       'A - State ', ( p%Delim, '          ', I2 = 1,2*p%DOFs%NActvDOF-1 )
@@ -2238,19 +2237,19 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//                             &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
-                     TRIM(Int2LStr(NInputs))//'(A ,A),A,'//TRIM(Int2LStr(NDisturbs))//'(A ,A))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                      &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                      &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(3(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//                             &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
+                     TRIM(Num2LStr(NInputs))//'(A ,A),A,'//TRIM(Num2LStr(NDisturbs))//'(A ,A))'
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                      &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                      &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        ' , p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',  p%Delim//'|', p%Delim,                                               &
@@ -2305,16 +2304,16 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          ELSE                       ! No input wind disturbances selected
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(NInputs))//'(A ,A))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(3(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(NInputs))//'(A ,A))'
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NInputs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        '  , p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',   p%Delim//'|', p%Delim,                                               &
@@ -2369,17 +2368,17 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          IF ( NDisturbs > 0 )  THEN ! We have at least one input wind disturbance
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//                             &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,A)))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(3(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//                             &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,A)))'
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(NDisturbs))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        '  , p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',   p%Delim//'|', p%Delim,                                               &
@@ -2428,14 +2427,14 @@ ELSE                       ! 2nd order model (MdlOrder = 2)
 
          ELSE                       ! No input wind disturbances selected
 
-            Frmt  = '(3(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A))'
-            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
-            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
-                     TRIM(Int2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt  = '(3(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A))'
+            Frmt1 = '(3('//TRIM( p%OutFmt )//',A),'      //TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
+            Frmt2 = '('  //TRIM( p%OutFmt )//',A,2(A,A),'//TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,A                   ),A,'// &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'),A,'//                                     &
+                     TRIM(Num2LStr(p%DOFs%NActvDOF))//'(A ,'//TRIM( p%OutFmt )//'))'
 
             WRITE       (UnLn,Frmt )  'op        ' ,  p%Delim//'|'//p%Delim, 'op        '  ,        p%Delim//'|'//p%Delim, &
                                       'op        ',   p%Delim//'|', p%Delim,                                               &

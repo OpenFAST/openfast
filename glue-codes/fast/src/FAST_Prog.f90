@@ -25,6 +25,8 @@ USE                             StructDyn
 USE                             StructDyn_Types
 USE                             StructDyn_Parameters
 
+USE Controls
+USE Controls_Types
 
 IMPLICIT                        NONE
 
@@ -48,6 +50,10 @@ TYPE(StrD_InputType)             :: u_StrD                                      
 TYPE(StrD_OutputType)            :: y_StrD                                       ! System outputs of the structural dynamics module
 
 TYPE(StrD_InputFile)             :: InputFileData_StrD                           ! all the data in the StructDyn input file
+
+
+TYPE(Ctrl_ParameterType)         :: p_Ctrl                                       ! Parameters of the controls module
+
 
 
 INTEGER(IntKi)                   :: ErrStat                                      ! Error status
