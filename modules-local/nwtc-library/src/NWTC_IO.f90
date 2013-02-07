@@ -83,7 +83,7 @@ MODULE NWTC_IO
    !     SUBROUTINE WrFileNR      ( Unit, Str )
    !     SUBROUTINE WrML          ( Str )
    !     SUBROUTINE WrPr          ( Str )
-   !     SUBROUTINE WrScr1        ( Str )
+   !     SUBROUTINE WrScr1        ( Str ) 
 
 
    USE                             SysSubs
@@ -127,7 +127,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.00b-mlb', '10-Jan-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.00c-bjj', '7-Feb-2013')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -3629,7 +3629,7 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    CALL WrScr ( ' ' )
    CALL WrScr ( TRIM( Str ) )
-
+   
 
    RETURN
    END SUBROUTINE WrScr1 ! ( Str )
