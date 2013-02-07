@@ -380,6 +380,8 @@ o  I created a test program, Test_ChkRealFmtStr.f90, in Drivers to test ChkRealF
 v1.07.00b-mlb, 10-Jan-2013  M. Buhl
 o  I modified NWTC_IO.f90\ReadFASTbin() to that one could read just the header.
 
+v1.07.00c-bjj, 7-Feb-2013  B. Jonkman
+o  I changed UnfForm from UNFORMATTED back to BINARY in the SysIVF.f90 file. TurbSim's .bin files weren't being properly written
 
 ==========================================================
  To do:
