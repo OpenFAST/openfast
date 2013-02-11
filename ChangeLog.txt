@@ -3930,3 +3930,4 @@ v8.00.00a-bj 31-Mar-2012 B. Jonkman
   I replaced many of the global variables with variables in types from the FAST Registry.
     - removed MODULES Constants, DOFs, CoordSys, and TurbConf
   I removed the CrossProd subroutine from FAST.f90 and replaced it with a CROSS_PRODUCT function in the NWTC Library.
+  I removed the feature that enabled users to turn on/off DOFs during simulation (it didn't work properly before)
