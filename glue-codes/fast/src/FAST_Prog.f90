@@ -79,7 +79,7 @@ CALL DispNVD()
    ! Open and read input files, initialize global parameters.
 
 CALL FAST_Begin( PriFile, RootName, DirRoot )
-CALL FAST_Input( p_StrD, OtherSt_StrD, InputFileData_StrD, ErrStat, ErrMsg )
+CALL FAST_Input( p_StrD, p_Ctrl, OtherSt_StrD, InputFileData_StrD, ErrStat, ErrMsg )
 
 
    ! Set up initial values for all degrees of freedom.
@@ -98,7 +98,7 @@ IF ( SumPrint )  CALL PrintSum( p_StrD, OtherSt_StrD )
 
 IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
 
-   CALL MakeADM( p_StrD, x_StrD, OtherSt_StrD, InputFileData_StrD  )      ! Make the ADAMS dataset file (.adm).
+   CALL MakeADM( p_StrD, p_Ctrl, x_StrD, OtherSt_StrD, InputFileData_StrD  )      ! Make the ADAMS dataset file (.adm).
 
    CALL MakeACF( p_StrD )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
 
@@ -127,7 +127,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  p_StrD, x_StrD, OtherSt_StrD, u_StrD, y_StrD, ErrStat, ErrMsg )     
+      CALL TimeMarch(  p_StrD, p_Ctrl, x_StrD, OtherSt_StrD, u_StrD, y_StrD, ErrStat, ErrMsg )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
@@ -149,7 +149,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady( p_StrD, x_StrD, y_StrD, OtherSt_StrD, u_StrD, InputFileData_StrD )
+         CALL CalcSteady( p_StrD, p_Ctrl, x_StrD, y_StrD, OtherSt_StrD, u_StrD, InputFileData_StrD )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
@@ -165,12 +165,12 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
          ENDDO                ! L - Equally-spaced azimuth steps
 
 
-         CALL DrvTrTrq ( p_StrD, p_StrD%RotSpeed, GBoxTrq )
+         CALL DrvTrTrq ( p_Ctrl, p_StrD%RotSpeed, GBoxTrq )
 
       ENDIF
 
 
-      CALL Linearize( p_StrD,x_StrD,y_StrD,OtherSt_StrD, u_StrD, InputFileData_StrD )          ! Linearize the model about the steady-state solution.
+      CALL Linearize( p_StrD,p_Ctrl,x_StrD,y_StrD,OtherSt_StrD, u_StrD, InputFileData_StrD )          ! Linearize the model about the steady-state solution.
 
 !      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg ) ! happens in StrD_End
       IF (ErrStat /= ErrID_none) THEN

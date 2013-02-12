@@ -67,18 +67,18 @@ typedef	^	^	ReKi	PtfmCM	-	0.0	-	"Downward distance from the ground [onshore] or 
 typedef	^	^	ReKi	RFrlCMxn	-	0.0	-	"Downwind distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlCMyn	-	0.0	-	"Lateral  distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlCMzn	-	0.0	-	"Vertical distance from tower-top to rotor-furl CM. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	RFrlSkew	-	0.0	-	"Rotor-furl axis skew angle. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	RFrlTilt	-	0.0	-	"Rotor-furl axis tilt angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlSkew	-	0.0	-	"Rotor-furl axis skew angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	RFrlTilt	-	0.0	-	"Rotor-furl axis tilt angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	RFrlPntxn	-	0.0	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlPntyn	-	0.0	-	"Lateral  distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlPntzn	-	0.0	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	ShftSkew	-	0.0	-	"Rotor shaft skew angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	ShftSkew	-	0.0	-	"Rotor shaft skew angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	ShftTilt	-	-	-	"Rotor shaft tilt angle"
-typedef	^	^	ReKi	TFinSkew	-	0.0	-	"Tail fin chordline skew angle. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFinTilt	-	0.0	-	"Tail fin chordline tilt angle. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFinBank	-	0.0	-	"Tail fin planform  bank angle. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFrlSkew	-	0.0	-	"Rotor-furl axis skew angle. (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFrlTilt	-	0.0	-	"Rotor-furl axis tilt angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFinSkew	-	0.0	-	"Tail fin chordline skew angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	TFinTilt	-	0.0	-	"Tail fin chordline tilt angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	TFinBank	-	0.0	-	"Tail fin planform  bank angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	TFrlSkew	-	0.0	-	"Rotor-furl axis skew angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	TFrlTilt	-	0.0	-	"Rotor-furl axis tilt angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	TFinCMxn	-	0.0	-	"Downwind distance from tower-top to tail fin CM. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFinCMyn	-	0.0	-	"Lateral  distance from tower-top to tail fin CM. (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFinCMzn	-	0.0	-	"Vertical distance from tower-top to tail fin CM. (Initialized to zero b/c not all models read in FurlFile)"
@@ -152,34 +152,34 @@ typedef	^	^	ReKi	PtfmSurge	-	0.0	-	"Initial or fixed horizontal surge translatio
 typedef	^	^	ReKi	PtfmSway	-	0.0	-	"Initial or fixed horizontal sway translational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"	radians
 typedef	^	^	ReKi	PtfmYaw	-	0.0	-	"Initial or fixed yaw rotational displacement of platform. (Initialized to zero b/c not all models will read in PtfmFile)"
 #typedef	^	^	ReKi	QAzimInit	-	-	-	"Initial value of the internal generator azimuth DOF (Q(DOF_GeAz))"
-typedef	^	^	ReKi	RotFurl	-	0.0	-	"Initial or fixed rotor-furl angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RotFurl	-	0.0	-	"Initial or fixed rotor-furl angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	RPM
-typedef	^	^	ReKi	TailFurl	-	0.0	-	"Initial or fixed tail-furl angle. (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TailFurl	-	0.0	-	"Initial or fixed tail-furl angle. (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	TTDspFA	-	-	-	"Initial fore-aft tower-top displacement"
 typedef	^	^	ReKi	TTDspSS	-	-	-	"Initial side-to-side tower-top displacement"
 typedef	^	^	ReKi	TeetDefl	-	0.0	-	"Initial or fixed teeter angle. (Initialized to zero b/c the 3-blader requires it to be zero)"
 typedef	^	^	ReKi	TFrlCDmp	-	0.0	-	"Tail-furl rate-independent Coulomb-damping moment (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlDmp	-	0.0	-	"Tail-furl damping constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlDSDmp	-	0.0	-	"Tail-furl down-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFrlDSDP	-	0.0	-	"Tail-furl down-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFrlDSSP	-	0.0	-	"Tail-furl down-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlDSDP	-	0.0	-	"Tail-furl down-stop damper position (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	TFrlDSSP	-	0.0	-	"Tail-furl down-stop spring position (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	TFrlDSSpr	-	0.0	-	"Tail-furl down-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlSpr	-	0.0	-	"Tail-furl spring constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFrlUSDmp	-	0.0	-	"Tail-furl up-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFrlUSDP	-	0.0	-	"Tail-furl up-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	TFrlUSSP	-	0.0	-	"Tail-furl up-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	TFrlUSDP	-	0.0	-	"Tail-furl up-stop damper position (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	TFrlUSSP	-	0.0	-	"Tail-furl up-stop spring position (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	TFrlUSSpr	-	0.0	-	"Tail-furl up-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	IntKi	TFrlMod	-	0	-	"Tail-furl spring/damper model switch (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlCDmp	-	0.0	-	"Rotor-furl rate-independent Coulomb-damping moment (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlDmp	-	0.0	-	"Rotor-furl damping constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlDSDmp	-	0.0	-	"Rotor-furl down-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	RFrlDSDP	-	0.0	-	"Rotor-furl down-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	RFrlDSSP	-	0.0	-	"Rotor-furl down-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlDSDP	-	0.0	-	"Rotor-furl down-stop damper position (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	RFrlDSSP	-	0.0	-	"Rotor-furl down-stop spring position (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	RFrlDSSpr	-	0.0	-	"Rotor-furl down-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlSpr	-	0.0	-	"Rotor-furl spring constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	RFrlUSDmp	-	0.0	-	"Rotor-furl up-stop damping constant (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	RFrlUSDP	-	0.0	-	"Rotor-furl up-stop damper position (Initialized to zero b/c not all models read in FurlFile)"
-typedef	^	^	ReKi	RFrlUSSP	-	0.0	-	"Rotor-furl up-stop spring position (Initialized to zero b/c not all models read in FurlFile)"
+typedef	^	^	ReKi	RFrlUSDP	-	0.0	-	"Rotor-furl up-stop damper position (Initialized to zero b/c not all models read in FurlFile)"	radians
+typedef	^	^	ReKi	RFrlUSSP	-	0.0	-	"Rotor-furl up-stop spring position (Initialized to zero b/c not all models read in FurlFile)"	radians
 typedef	^	^	ReKi	RFrlUSSpr	-	0.0	-	"Rotor-furl up-stop spring constant (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	IntKi	RFrlMod	-	0	-	"Rotor-furl spring/damper model switch (Initialized to zero b/c not all models read in FurlFile)"
 typedef	^	^	ReKi	TFinMass	-	0.0	-	"Tail fin mass. (Initialized to zero b/c not all models read in FurlFile)"
@@ -633,7 +633,7 @@ typedef	^	^	ReKi	StiffBEA	{:}{:}	-	-	"Interpolated blade extensional stiffness"
 typedef	^	^	ReKi	StiffBF	{:}{:}	-	-	"Interpolated flapwise blade stiffness"
 typedef	^	^	ReKi	StiffBGJ	{:}{:}	-	-	"Interpolated blade torsional stiffness"
 typedef	^	^	ReKi	SThetaS	{:}{:}	-	-	"SIN( ThetaS )"
-typedef	^	^	ReKi	ThetaS	{:}{:}	-	-	"Structural twist for analysis nodes"
+typedef	^	^	ReKi	ThetaS	{:}{:}	-	-	"Structural twist for analysis nodes"	radians
 typedef	^	^	ReKi	TwistedSF	{:}{:}{:}{:}{:}	-	-	"Interpolated lineal blade mass density"
 # parameters from modes (Blade)
 typedef	^	^	ReKi	BldFl1Sh	{:}{:}	-	-	"Blade-flap-mode-1 shape coefficients"
