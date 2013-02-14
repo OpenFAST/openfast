@@ -13,22 +13,22 @@ MODULE SharedInflowDefs
 ! This module is used to define shared types and parameters that are used in the module InflowWind.
 ! 7 Oct 2009    B. Jonkman, NREL/NWTC
 !----------------------------------------------------------------------------------------------------
-!  
+!
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 !    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!    
-!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
 !    If not, see <http://www.gnu.org/licenses/>.
-!    
+!
 !**********************************************************************************************************************************
 
    USE NWTC_Library                                               ! Precision module
@@ -100,6 +100,7 @@ MODULE SharedInflowDefs
       LOGICAL                       :: CT_Flag        = .FALSE.   ! determines if coherent turbulence is used
       LOGICAL                       :: Initialized    = .FALSE.   ! did we run the initialization?
 
+
    END TYPE IfW_ParameterType
 
 
@@ -109,7 +110,7 @@ MODULE SharedInflowDefs
          ! Define inputs that are contained on the mesh here:
 !     TYPE(MeshType)                            ::
          ! Define inputs that are not on this mesh here:
-      REAL(ReKi) :: DummyInput                                                ! If you have input data, remove this variable
+      Real(ReKi),ALLOCATABLE        :: Position(:,:)
    END TYPE IfW_InputType
 
 
@@ -119,7 +120,7 @@ MODULE SharedInflowDefs
          ! Define outputs that are contained on the mesh here:
 !     TYPE(MeshType)                            ::
          ! Define outputs that are not on this mesh here:
-      REAL(ReKi) :: DummyOutput                                               ! If you have output data, remove this variable
+      REAL(ReKi),ALLOCATABLE        :: Velocity(:,:)
    END TYPE IfW_OutputType
 
 !-=-=-=-=-=-=-=-=-=-=-
@@ -136,9 +137,10 @@ MODULE SharedInflowDefs
 !   END TYPE InflLoc
 
 
-   TYPE, PUBLIC :: InflIntrpOut
-      REAL(ReKi)                    :: Velocity(3)                ! U, V, W
-   END TYPE InflIntrpOut
+!This was moved to the submodules types
+!   TYPE, PUBLIC :: InflIntrpOut
+!      REAL(ReKi)                    :: Velocity(3)                ! U, V, W
+!   END TYPE InflIntrpOut
 
    !-------------------------------------------------------------------------------------------------
    ! Shared parameters, defining the wind types
@@ -298,31 +300,26 @@ END MODULE SharedInflowDefs
 !
 !   END TYPE IfW_PartialConstrStatePConstrStateType
 !
-MODULE   WindFile_Types
-!FIXME: I'm not sure what to do with these. This might be the wrong place to be keeping this information.
-!        -->   Can't make them parameters.
-!        -->   I think these are used locally only, not by any external code. Can't really tell though since they used
-!        -->   to be PUBLIC,PARAMETER.
-!
-!        --> Make these parameters within the module, but not shared to the outside world. Put in the subroutines?
-!  
+MODULE   InflowWind_Module_Types
+!FIXME: check on the name of this module. Can I call It this, or will it interfere with the one from SharedDefs?
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 !    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!    
-!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
 !    If not, see <http://www.gnu.org/licenses/>.
-!    
+!
 !**********************************************************************************************************************************
 
+   USE NWTC_Library
 
    ! The parameters here are not considered private, but are not accessable unless the module is called.
    IMPLICIT NONE
@@ -337,7 +334,8 @@ MODULE   WindFile_Types
    INTEGER,PARAMETER          :: CTP_Wind     =  5    ! Coherent turbulence wind field (superimpose KH billow on background wind)
    INTEGER,PARAMETER          :: HAWC_Wind    =  6    ! Binary full-field wind file in HAWC format
 
-END MODULE   WindFile_Types
+
+END MODULE   InflowWind_Module_Types
 MODULE CTWind
 ! This module uses reads coherent turbulence parameter (CTP) files and processes the data in them
 ! to get coherent turbulence which is later superimposed on a background wind field (the super-
@@ -351,18 +349,21 @@ MODULE CTWind
 !  Created 25-Sept-2009 by B. Jonkman, National Renewable Energy Laboratory
 !     using subroutines and modules from AeroDyn v12.58
 !
+!  Modified Jan-2013 by A. Platt, National Renewable Energy Laboratory
+!     to fit the modularization framework used by FAST
+!
 !----------------------------------------------------------------------------------------------------
 
    USE                     NWTC_Library
    USE                     SharedInflowDefs
-   USE                     WindFile_Types
+   USE                     InflowWind_Module_Types
 
    IMPLICIT                NONE
    PRIVATE
-   
-      
+
+
    INTEGER, PARAMETER           :: NumComps  = 3                              ! number of components
-   
+
             ! CT_Wind
    REAL(ReKi)                   :: DelYCTgrid                                 ! The nondimensional distance between grid points in the y direction.
    REAL(ReKi)                   :: DelZCTgrid                                 ! The nondimensional distance between grid points in the z direction.
@@ -370,15 +371,15 @@ MODULE CTWind
    REAL(ReKi)                   :: CTOffset (NumComps)                        ! Offsets to convert integer data to actual wind speeds.
    REAL(ReKi)                   :: CTScale  (NumComps)                        ! Scaling factors to convert integer data to actual wind speeds.
 
-   
-   REAL(ReKi), ALLOCATABLE      :: CTvelU   (:,:,:)                         ! The y-z grid velocity data (U components) for the lower- and upper-bound time slices
-   REAL(ReKi), ALLOCATABLE      :: CTvelV   (:,:,:)                         ! The y-z grid velocity data (V components) for the lower- and upper-bound time slices
-   REAL(ReKi), ALLOCATABLE      :: CTvelW   (:,:,:)                         ! The y-z grid velocity data (W components) for the lower- and upper-bound time slices
+
+   REAL(ReKi), ALLOCATABLE      :: CTvelU   (:,:,:)                           ! The y-z grid velocity data (U components) for the lower- and upper-bound time slices
+   REAL(ReKi), ALLOCATABLE      :: CTvelV   (:,:,:)                           ! The y-z grid velocity data (V components) for the lower- and upper-bound time slices
+   REAL(ReKi), ALLOCATABLE      :: CTvelW   (:,:,:)                           ! The y-z grid velocity data (W components) for the lower- and upper-bound time slices
    REAL(ReKi)                   :: CTLy                                       ! Fractional location of tower centerline from right (looking downwind) to left side of the dataset.
    REAL(ReKi)                   :: CTLz                                       ! Fractional location of hub height from bottom to top of dataset.
    REAL(ReKi)                   :: CTScaleVel                                 ! Scaling velocity, U0.  2*U0 is the difference in wind speed between the top and bottom of the wave.
-   REAL(ReKi), ALLOCATABLE      :: Tdata    (:)                               ! The list of times for the CT-wind input files.  
-   
+   REAL(ReKi), ALLOCATABLE      :: Tdata    (:)                               ! The list of times for the CT-wind input files.
+
    REAL(ReKi)                   :: CT_Zref                                    ! The reference height for the CT file (the bottom of the billow)
    REAL(ReKi)                   :: CTYHWid                                    ! The half the width of the background dataset, used to compute the CTwind time offset
    REAL(ReKi)                   :: CTYmax                                     ! The dimensional lateral width of the dataset.
@@ -392,7 +393,7 @@ MODULE CTWind
 
    INTEGER                      :: IndCT_hi                                   ! An index into the 3rd dimension of the CTvel arrays, indicating the upper time slice (allows us to avoid copying array)
    INTEGER                      :: IndCT_lo                                   ! An index into the 3rd dimension of the CTvel arrays, indicating the lower time slice (allows us to avoid copying array)
-   
+
    INTEGER                      :: NumCTt                                     ! The number of CT wind grids, no more than one grid per time step.
    INTEGER                      :: NumCTy                                     ! The number of CT wind grid points in the y direction.
    INTEGER                      :: NumCTyD                                    ! The decimated number of CT wind grid points in the y direction.
@@ -404,25 +405,27 @@ MODULE CTWind
    INTEGER, ALLOCATABLE         :: TimeStpCT (:)                              ! The list of time steps from the original LE simulation, associated with the CT-wind times.
 
    INTEGER                      :: CTWindUnit                                 ! unit number used to read the wind files at each call to CT_GetWindSpeed()
-   
+
    LOGICAL                      :: CTVertShft                                 ! Flag to indicate whether or not to shift the z values for the w component.
 
    CHARACTER(3)                 :: CText                                      ! The extension used for coherent turbulence data files. (usually "les" or "dns")
    CHARACTER(1024)              :: CTSpath                                    ! The path to the CT wind files.
 
+!FIXME: move this to types -- parameters!
    TYPE :: CTWindFiles
       CHARACTER(1024)           :: CTTSfile                                   ! The name of the file containing the time-step history of the wind files.
       CHARACTER(1024)           :: CTbackgr                                   ! The name of the background wind data
    END TYPE CTWindFiles
 
-
+!FIXME: this should be moved to parameters.
    TYPE, PUBLIC :: CT_Backgr
+!   TYPE :: CT_Backgr
       CHARACTER(1024)           :: WindFile                                   ! The name of the background wind file
       INTEGER                   :: WindFileType                               ! The type of background wind file (currently only FF)
       LOGICAL                   :: CoherentStr                                ! If the coherent time step file is blank or doesn't exist, this is FALSE (use the background only)
    END TYPE CT_Backgr
-            
-   
+
+
    PUBLIC                       :: CT_Init
    PUBLIC                       :: CT_GetWindSpeed
    PUBLIC                       :: CT_SetRefVal
@@ -430,94 +433,128 @@ MODULE CTWind
 
 CONTAINS
 !====================================================================================================
-SUBROUTINE CT_Init(UnWind, WindFile, BackGrndValues, ErrStat)
+SUBROUTINE CT_Init(UnWind, WindFile, BackGrndValues, ErrStat, ErrMsg)
 !  This subroutine is called at the beginning of a simulation.  It reads the CTP file to obtain
 !  the name of the CTS file, the path locating the binary KH files, and decimation factors.
 !  It returns the background wind file and type; it also returns a flag that determines if CT wind
 !  files are ACTUALLY to be used (e.g., if the CTS file is blank or there is one line of zero in the
-!  CTS time array).  
+!  CTS time array).
 !----------------------------------------------------------------------------------------------------
 
       ! Passed Variables:
-      
-   INTEGER,         INTENT(IN)    :: UnWind                       ! unit number for reading wind files
-   CHARACTER(*),    INTENT(IN)    :: WindFile                     ! Name of the CTP (.ctp) wind file
-   TYPE(CT_Backgr), INTENT(OUT)   :: BackGrndValues               ! output background values
-   INTEGER,         INTENT(OUT)   :: ErrStat                      ! return 0 if no errors encountered; non-zero otherwise
 
+   INTEGER,          INTENT(IN)  :: UnWind                        ! unit number for reading wind files
+   CHARACTER(*),     INTENT(IN)  :: WindFile                      ! Name of the CTP (.ctp) wind file
+   TYPE(CT_Backgr),  INTENT(OUT) :: BackGrndValues                ! output background values
+   INTEGER,          INTENT(OUT) :: ErrStat                       ! return ErrID_None if no errors
+   CHARACTER(*),     INTENT(OUT) :: ErrMsg                        ! message if there was an error
 
       ! Local Variables:
-      
-   TYPE(CTWindFiles)              :: CTP_files
-   CHARACTER(3)                   :: CT_SC_ext                    ! extension of the scaling file
-   
-   
+
+   TYPE(CTWindFiles)             :: CTP_files
+   CHARACTER(3)                  :: CT_SC_ext                     ! extension of the scaling file
+   LOGICAL                       :: EmptyFileStat                 ! temporary variable indicating the CTTS file was empty / non-existent
+
+      ! Temporary error handling Variables
+
+   INTEGER                          :: TmpErrStat                             ! Temporary Error Status
+   CHARACTER(1024)                  :: TmpErrMsg                              ! Temporary error message returned
+
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! Initialize temporary variables
+   !-------------------------------------------------------------------------------------------------
+
+   TmpErrStat  = ErrID_None
+   TmpErrMsg   = ''
+
    !-------------------------------------------------------------------------------------------------
    ! Check that the module hasn't already been initialized.
    !-------------------------------------------------------------------------------------------------
-      
-   IF ( TimeIndx /= 0 ) THEN  
-      CALL WrScr( ' CTWind has already been initialized.' )
-      ErrStat = 1
+
+   IF ( TimeIndx /= 0 ) THEN
+      ErrMsg   = ' CTWind has already been initialized.'
+      ErrStat  = ErrID_Fatal
       RETURN
    ELSE
-      ErrStat = 0
-!      CALL NWTC_Init()    ! Initialized in IfW_Init
+      ErrMsg   = ''
+      ErrStat  = ErrID_None
    END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Read the CTP file and set the background data info to be returned later
    !-------------------------------------------------------------------------------------------------
-   
-   CALL ReadCTP( UnWind, WindFile, CTP_files, ErrStat )
-   IF (ErrStat /= 0) RETURN           
-   
-  
+
+   CALL ReadCTP( UnWind, WindFile, CTP_files, TmpErrStat, TmpErrMsg )
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
+
+
    BackGrndValues%WindFile     = CTP_files%CTbackgr
    BackGrndValues%WindFileType = FF_Wind             !bjj: perhaps we should check the wind type here
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Read the CTTS file to get the time step and file number arrays
-   !-------------------------------------------------------------------------------------------------   
-   CALL ReadCTTS( UnWind, CTP_files%CTTSfile, CT_SC_ext, ErrStat )
+   !-------------------------------------------------------------------------------------------------
 
-   IF (ErrStat == 0 .AND. NumCTt > 1) THEN    
+   CALL ReadCTTS( UnWind, CTP_files%CTTSfile, CT_SC_ext, EmptyFileStat, TmpErrStat, TmpErrMsg )
+
+      ! Errors check
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+         ! If the CTP_files%CTTSfile was empty or non-existent, we continue on without it.
+
+   IF ( EmptyFileStat ) THEN
+
+         ! The file is missing, blank (or possibly incomplete), or has only 1 time step line (which
+         ! is zero); Go on without the CT file, using just the background
+
+      ErrMsg = TRIM(ErrMsg)//' '//'Coherent turbulence wind file will be turned off.'
+
+      BackGrndValues%CoherentStr  = .FALSE.
+      CALL CT_Terminate( TmpErrStat, TmpErrMsg )
+
+         ! Error check
+      ErrStat  = MAX( ErrStat, TmpErrStat )
+      ErrMsg = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      RETURN
+
+   ELSEIF ( (ErrStat < AbortErrLev) .AND. NumCTt > 1) THEN
       BackGrndValues%CoherentStr  = .TRUE.
-      
+
       !-------------------------------------------------------------------------------------------------
       ! Read file containing scaling for the binary large-eddy files
       !-------------------------------------------------------------------------------------------------
-      CALL ReadCTScales( UnWind, TRIM( CTSpath )//'\Scales.'//TRIM( CT_SC_ext ), ErrStat )
-      IF (ErrStat /= 0) RETURN
+      CALL ReadCTScales( UnWind, TRIM( CTSpath )//'\Scales.'//TRIM( CT_SC_ext ), TmpErrStat, TmpErrMsg )
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
 
       CTScale(:)  = CTScaleVel*CTScale(:)
       CTOffset(:) = CTScaleVel*CTOffset(:)
 
-   ELSE              
-      
-      IF (ErrStat <= 0) THEN
-         
-            ! The file is missing, blank (or possibly incomplete), or has only 1 time step line (which  
-            ! is zero); Go on without the CT file, using just the background
-
-         CALL ProgWarn( ' Coherent turbulence wind file will be turned off.' )
-         
-         BackGrndValues%CoherentStr  = .FALSE.
-         CALL CT_Terminate( ErrStat )          
-         
-      END IF
-
-      RETURN
-      
    END IF
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Set some values that don't change during the run
    !-------------------------------------------------------------------------------------------------
-      
+
    CTYHWid        = 0.0                                                    ! This value is used to perform a time shift (the equivalent distance of FFYHWid [approx. rotor radius])
    CT_Zref        = -1.0                                                   ! This value needs to be set after the corresponding background turbulence has been read (or the CTS file should be changed)
 
@@ -530,131 +567,136 @@ SUBROUTINE CT_Init(UnWind, WindFile, BackGrndValues, ErrStat)
 !   CTZt           = CTZmax*CTLz                                            ! Distance of the hub from the bottom of the dataset.
    DelYCTgrid     = 1.0/NumCTyD1                                           ! The nondimensional distance between grid points in the y direction.
    DelZCTgrid     = 1.0/NumCTzD1                                           ! The nondimensional distance between grid points in the z direction.
-    
 
-     
+
+
    !-------------------------------------------------------------------------------------------------
    ! Allocate the wind array and initialize it
    !-------------------------------------------------------------------------------------------------
-   
-   IF (.NOT. ALLOCATED(CTvelU) ) THEN
-      ALLOCATE ( CTvelU(NumCTyD,NumCTzD,2), STAT=ErrStat )
 
-      IF ( ErrStat /= 0 )  THEN
-         CALL WrScr ( ' Error allocating memory for the CTvelU array.' )
+   IF (.NOT. ALLOCATED(CTvelU) ) THEN
+      ALLOCATE ( CTvelU(NumCTyD,NumCTzD,2), STAT=TmpErrStat )
+
+      IF ( TmpErrStat /= 0 )  THEN
+         ErrMsg   = TRIM(ErrMsg)//' Error allocating memory for the CTvelU array.'
+         ErrStat  = ErrID_Fatal
          RETURN
       END IF
-   END IF   
-   
+   END IF
+
    IF (.NOT. ALLOCATED(CTvelV) ) THEN
 !      CALL AllocAry( CTvelV, NumCTyD, NumCTzD, 2, 'CTvelV', ErrStat ) !AllRAry3 AllocAry
-      ALLOCATE ( CTvelV(NumCTyD,NumCTzD,2), STAT=ErrStat )
+      ALLOCATE ( CTvelV(NumCTyD,NumCTzD,2), STAT=TmpErrStat )
 
-      IF ( ErrStat /= 0 )  THEN
-         CALL WrScr ( ' Error allocating memory for the CTvelV array.' )
+      IF ( TmpErrStat /= 0 )  THEN
+         ErrMsg   = TRIM(ErrMsg)//' Error allocating memory for the CTvelV array.'
+         ErrStat  = ErrID_Fatal
          RETURN
       END IF
-   END IF   
-   
+   END IF
+
    IF (.NOT. ALLOCATED(CTvelW) ) THEN
 !      CALL AllocAry( CTvelW, NumCTyD, NumCTzD, 2, 'CTvelW', ErrStat ) !AllRAry3 AllocAry
-      ALLOCATE ( CTvelW(NumCTyD,NumCTzD,2), STAT=ErrStat )
+      ALLOCATE ( CTvelW(NumCTyD,NumCTzD,2), STAT=TmpErrStat )
 
-      IF ( ErrStat /= 0 )  THEN
-         CALL WrScr ( ' Error allocating memory for the CTvelW array.' )
+      IF ( TmpErrStat /= 0 )  THEN
+         ErrMsg   = TRIM(ErrMsg)//' Error allocating memory for the CTvelW array.'
+         ErrStat  = ErrID_Fatal
          RETURN
       END IF
-   END IF   
+   END IF
 
-   CTvelU(:,:,:) = 0.0                                                    ! the original velocity data      
-   CTvelV(:,:,:) = 0.0                                                    ! the original velocity data      
-   CTvelW(:,:,:) = 0.0                                                    ! the original velocity data      
-      
+   CTvelU(:,:,:) = 0.0                                                    ! the original velocity data
+   CTvelV(:,:,:) = 0.0                                                    ! the original velocity data
+   CTvelW(:,:,:) = 0.0                                                    ! the original velocity data
+
    !-------------------------------------------------------------------------------------------------
    ! Initialize the arrays and set the initialization flag
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
    CTvel_files(:) = 0                                                      ! the name of the files currently in the CTvel array
    CTWindUnit     = UnWind                                                 ! This unit is needed to open the binary files at each step
    TimeIndx       = 1
-    
+
    RETURN
 
 END SUBROUTINE CT_Init
 !====================================================================================================
-SUBROUTINE CT_SetRefVal(Height, HWidth, ErrStat)
+SUBROUTINE CT_SetRefVal(Height, HWidth, ErrStat, ErrMsg)
 
-   REAL(ReKi), INTENT(IN)           :: Height                                 ! a reference height (should be hub height)
-   REAL(ReKi), INTENT(IN), OPTIONAL :: HWidth                                 ! a reference offset (should be half grid width [~rotor radius])
-   INTEGER,    INTENT(OUT)          :: ErrStat                                ! returns 0 if no error; non-zero otherwise
+   REAL(ReKi),    INTENT(IN)           :: Height                           ! a reference height (should be hub height)
+   REAL(ReKi),    INTENT(IN), OPTIONAL :: HWidth                           ! a reference offset (should be half grid width [~rotor radius])
+   INTEGER,       INTENT(OUT)          :: ErrStat                          ! returns ErrID_None if no errors, nonzero otherwise
+   CHARACTER(*),  INTENT(OUT)          :: ErrMsg                           ! Message to return about the error
 
 
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
    ! Check that we've initialized everything first
-   !-------------------------------------------------------------------------------------------------     
-     
+   !-------------------------------------------------------------------------------------------------
+
    IF ( TimeIndx == 0 ) THEN
-      CALL WrScr( ' Initialialize the CTWind module before calling its subroutines.' )
-      ErrStat = 1
+      ErrMsg   = ' Initialialize the CTWind module before calling its subroutines.'
+      ErrStat  = ErrID_Fatal
       RETURN
    ELSE IF ( CT_Zref >= 0 ) THEN
-      CALL WrScr( ' Cannot reset the CTWind reference height in the middle of a simulation.' )
-      ErrStat = 1
+      ErrMsg   = ' Cannot reset the CTWind reference height in the middle of a simulation.'
+      ErrStat  = ErrID_Fatal
       RETURN
    ELSE
-      ErrStat = 0         
-   END IF      
+      ErrStat = ErrID_None
+   END IF
 
 
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
    ! Set the grid shift using the half-width
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
    IF ( PRESENT( HWidth ) ) THEN
       CTYHWid = HWidth
-        
+
       IF ( CTYHWid < 0 ) THEN
-         CALL WrScr( ' Reference width in CTWind cannot be negative.')
-         CTYHWid = 0
-         ErrStat = 1
+         ErrMsg   = TRIM(ErrMsg)//' Reference width in CTWind cannot be negative.'
+         CTYHWid  = 0
+         ErrStat  = ErrID_Fatal
       END IF
    END IF
- 
- 
-   !-------------------------------------------------------------------------------------------------     
+
+
+   !-------------------------------------------------------------------------------------------------
    ! Set the reference height (bottom of the KH billow) using the input hub-height
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
       ! CTZt = CTZmax*CTLz             ! the distance between the hub and the bottom of the dataset
 
    CT_Zref = Height - CTZmax*CTLz      ! the height of the bottom of the KH billow
 
    IF ( CT_Zref < 0 ) THEN
-      CALL WrScr( ' Reference height in CTWind cannot be negative.')
-      CT_Zref = 0
-      ErrStat = 1
-   END IF      
+      ErrMsg   = TRIM(ErrMsg)//' Reference height in CTWind cannot be negative.'
+      CT_Zref  = 0
+      ErrStat  = ErrID_Fatal
+   END IF
 
-   
+
 END SUBROUTINE CT_SetRefVal
 !====================================================================================================
-FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
-! This function receives time and position (in InputInfo) where (undisturbed) velocities are are 
+FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat, ErrMsg)
+! This function receives time and position (in InputInfo) where (undisturbed) velocities are are
 ! requested.  It returns the velocities at the specified time and space that are superimposed on
 ! a background wind flow.  This function interpolates into the full-field CT wind arrays, performing
-! a time shift based on the average windspeed. The modified time is used to decide which pair of time 
-! slices to interpolate within and between. After finding the two time slices, it decides which four 
-! grid points bound the (Y,Z) pair. It does a bilinear interpolation for (Y,Z) on each bounding time 
-! slice, then linearly interpolates between the 2 time slices. This routine assumes that X is downwind, 
-! Y is to the left when looking downwind and Z is up.  In the time (X) and Z directions, steady winds 
+! a time shift based on the average windspeed. The modified time is used to decide which pair of time
+! slices to interpolate within and between. After finding the two time slices, it decides which four
+! grid points bound the (Y,Z) pair. It does a bilinear interpolation for (Y,Z) on each bounding time
+! slice, then linearly interpolates between the 2 time slices. This routine assumes that X is downwind,
+! Y is to the left when looking downwind and Z is up.  In the time (X) and Z directions, steady winds
 ! are used when extrapolation is required.  The dataset is assumed to be periodic in the Y direction.
 !----------------------------------------------------------------------------------------------------
- 
+
       ! Passed variables:
-      
-   REAL(ReKi),        INTENT(IN) :: Time                                   ! the time
-   REAL(ReKi),        INTENT(IN) :: InputPosition(3)                       ! the position (X,Y,Z)
-   INTEGER,           INTENT(OUT):: ErrStat                                ! returns 0 if no error; non-zero otherwise
-   TYPE(InflIntrpOut)            :: CT_GetWindSpeed                        ! the resultant wind speed
-   
-   
+
+   REAL(DbKi),          INTENT(IN) :: Time                                 ! the time
+   REAL(ReKi),          INTENT(IN) :: InputPosition(3)                     ! the position (X,Y,Z)
+   INTEGER,             INTENT(OUT):: ErrStat                              ! returns ErrID_None if no error; non-zero otherwise
+   CHARACTER(*),        INTENT(OUT) :: ErrMsg                              ! Message about the error
+   REAL(ReKi)                    :: CT_GetWindSpeed                        ! the resultant wind speed
+
+
       ! Local Variables:
 
    REAL(ReKi)                    :: Iyz_th                                 ! Temporary interpolated value. (time hi, all y, all z)
@@ -674,65 +716,69 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
    INTEGER                       :: IZHi(3)
    INTEGER                       :: IZLo(3)
 
+      ! Temporary error handling
+   INTEGER                       :: TmpErrStat
+   CHARACTER(1024)               :: TmpErrMsg
 
-   !-------------------------------------------------------------------------------------------------     
+
+   !-------------------------------------------------------------------------------------------------
    ! Check that we've initialized everything first
-   !-------------------------------------------------------------------------------------------------     
-     
+   !-------------------------------------------------------------------------------------------------
+
    IF ( TimeIndx == 0 ) THEN
-      CALL WrScr( ' Initialialize the CTWind module before calling its subroutines.' )
-      ErrStat = 1
+      ErrMsg   = ' Initialialize the CTWind module before calling its subroutines.'
+      ErrStat  = ErrID_Fatal
       RETURN
    ELSE IF ( CT_Zref < 0 ) THEN
-      CALL WrScr( ' Set the reference height in the CTWind module before calling CT_GetWindSpeed.' )
-      ErrStat = 1
+      ErrMsg   = ' Set the reference height in the CTWind module before calling CT_GetWindSpeed.'
+      ErrStat  = ErrID_Fatal
       RETURN
    ELSE
-      ErrStat = 0   
-   END IF      
+      ErrStat = ErrID_None
+   END IF
 
 
-   !-------------------------------------------------------------------------------------------------     
-   ! Perform the time shift. At time=0, a point half the grid width downstream will index into the zero 
+   !-------------------------------------------------------------------------------------------------
+   ! Perform the time shift. At time=0, a point half the grid width downstream will index into the zero
    ! time slice.  CTYHWid is used to shift the CT wind the same as FF wind is shifted.
    ! This assumes that the coherent turbulence events are moving at MCTWS
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
 
    TimeShifted = TIME + ( CTYHWid - InputPosition(1) )*InvMCTWS
 
 
    !-------------------------------------------------------------------------------------------------
    ! Find the bounding time slices:
-   ! Linearly interpolate in time (or set to 0 before and/or after) 
-   ! (compare with NWTC_Num.f90\InterpStpReal) 
+   ! Linearly interpolate in time (or set to 0 before and/or after)
+   ! (compare with NWTC_Num.f90\InterpStpReal)
    !-------------------------------------------------------------------------------------------------
 
       ! Let's check the limits first.
 
    IF ( TimeShifted <= Tdata(1) )  THEN
-   
+
       TimeIndx = 1
       Tgrid    = 0.0
-                     
+
 !      CT_GetWindSpeed%Velocity(:) = 0.0
 !      RETURN
-                           
+
    ELSE IF ( TimeShifted >= Tdata(NumCTt) )  THEN
-   
+
       TimeIndx = NumCTt - 1
       Tgrid    = 1.0
 
 !      CT_GetWindSpeed%Velocity(:) = 0.0
 !      RETURN
-      
+
    ELSE
-   
+
          ! Let's interpolate!
 
       TimeIndx = MAX( MIN( TimeIndx, NumCTt-1 ), 1 )
 
 
-      DO 
+      DO
 
          IF ( TimeShifted < Tdata(TimeIndx) )  THEN
 
@@ -743,50 +789,59 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
             TimeIndx = TimeIndx + 1
 
          ELSE
-         
+
             Tgrid = MIN( MAX( ( TimeShifted - Tdata(TimeIndx) )/( Tdata(TimeIndx+1) - Tdata(TimeIndx) ), 0.0 ), 1.0 )
             EXIT
 
          END IF
 
       END DO
-      
+
    END IF
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Read the data at the two time steps, if necessary
    !-------------------------------------------------------------------------------------------------
-     
+
    IF ( TimeStpCT(TimeIndx) == CTvel_files(2) ) THEN
-      IndCT_lo = 2      
+      IndCT_lo = 2
       IndCT_hi = 1
-            
+
    ELSE
       IndCT_lo = 1
-      IndCT_hi = 2 
-        
-      IF ( TimeStpCT(TimeIndx) /= CTvel_files(IndCT_lo) ) THEN         
+      IndCT_hi = 2
+
+      IF ( TimeStpCT(TimeIndx) /= CTvel_files(IndCT_lo) ) THEN
          CTvel_files(IndCT_lo) = TimeStpCT(TimeIndx)
-         CALL ReadCTData ( CTWindUnit, CTvel_files(IndCT_lo), IndCT_lo, ErrStat  )
+         CALL ReadCTData ( CTWindUnit, CTvel_files(IndCT_lo), IndCT_lo, TmpErrStat, TmpErrMsg )
+
+            ! Errors occured?
+         ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+         ErrStat  = MAX(ErrStat, TmpErrStat)
+         IF ( ErrStat >= AbortErrLev ) RETURN
       END IF
-      
+
    END IF
-   
+
 
    IF ( CTvel_files(IndCT_hi) /= TimeStpCT(TimeIndx+1) ) THEN
-      
-      CTvel_files(IndCT_hi) = TimeStpCT(TimeIndx+1)
-      CALL ReadCTData ( CTWindUnit, CTvel_files(IndCT_hi), IndCT_hi, ErrStat  )
 
+      CTvel_files(IndCT_hi) = TimeStpCT(TimeIndx+1)
+      CALL ReadCTData ( CTWindUnit, CTvel_files(IndCT_hi), IndCT_hi, TmpErrStat, TmpErrMsg  )
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
-         
+
 
    !-------------------------------------------------------------------------------------------------
    ! Calculate the y values;                   The lower-right corner is (1,1) when looking downwind.
    ! note that the KH data is periodic in this direction
    !-------------------------------------------------------------------------------------------------
-   
+
    Ynorm = ( CTYt + InputPosition(2) )/CTYmax
 
       ! Ensure Ynorm is not negative.  The wave is periodic in y.
@@ -803,7 +858,7 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
    !-------------------------------------------------------------------------------------------------
    ! Calculate the z values                   The lower-right corner is (1,1) when looking downwind.
    ! Note: the equivalent Znorm for the w-component may be shifted vertically by half the original
-   ! grid spacing. (the K-H data staggers w differently than u & v).  We store IZLo, IZHi, and 
+   ! grid spacing. (the K-H data staggers w differently than u & v).  We store IZLo, IZHi, and
    ! Zgrid in an array to account for this difference.
    !-------------------------------------------------------------------------------------------------
 
@@ -824,14 +879,14 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
 
 
    !-------------------------------------------------------------------------------------------------
-   ! Find the equivalent Znorm for the w-component, which may be shifted vertically by half 
-   ! the original grid spacing. (This is necessary due to the fact that the K-H data staggers w 
+   ! Find the equivalent Znorm for the w-component, which may be shifted vertically by half
+   ! the original grid spacing. (This is necessary due to the fact that the K-H data staggers w
    ! differently than u & v).  LES and DNS scale differently.
    !-------------------------------------------------------------------------------------------------
 
    IF ( CTVertShft )  THEN
       Znorm = MAX( Znorm - 0.5*DelZCTgrid/CT_DF_Z, 0.0 )
-      
+
       Zgrid(3) = MIN( MAX( MOD( Znorm, DelZCTgrid ), 0.0 ), 1.0 )
       IZLo(3)  = MAX( INT( Znorm*NumCTzD1 ) + 1, 1 )       ! Make sure the lowest possible value is 1.
 
@@ -842,14 +897,14 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
          IZLo(3)  = NumCTzD1
          Zgrid(3) = 1.0
       ENDIF
-                 
+
    ELSE
       IZLo(3) = IZLo(1)
-      Zgrid(3)= Zgrid(1)          
+      Zgrid(3)= Zgrid(1)
    ENDIF
 
    IZHi(:) = IZLo(:) + 1
-   
+
 !bjj: old versions used Zgrid(3) = Zgrid(1) without regard to CTVertShft. It seemed wrong to me so I changed it.
 
    !-------------------------------------------------------------------------------------------------
@@ -859,15 +914,15 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
       I = 1
          ! linearaly interpolate in the lower time slice
       Iylz   = ( CTvelU(IYLo,IZHi(I),IndCT_lo) - CTvelU(IYLo,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelU(IYLo,IZLo(I),IndCT_lo)
-      Iyhz   = ( CTvelU(IYHi,IZHi(I),IndCT_lo) - CTvelU(IYHi,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelU(IYHi,IZLo(I),IndCT_lo)     
+      Iyhz   = ( CTvelU(IYHi,IZHi(I),IndCT_lo) - CTvelU(IYHi,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelU(IYHi,IZLo(I),IndCT_lo)
       Iyz_tl = ( Iyhz - Iylz )*Ygrid + Iylz
 
          ! linearaly interpolate in the upper time slice
       Iylz   = ( CTvelU(IYLo,IZHi(I),IndCT_hi) - CTvelU(IYLo,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelU(IYLo,IZLo(I),IndCT_hi)
-      Iyhz   = ( CTvelU(IYHi,IZHi(I),IndCT_hi) - CTvelU(IYHi,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelU(IYHi,IZLo(I),IndCT_hi)     
+      Iyhz   = ( CTvelU(IYHi,IZHi(I),IndCT_hi) - CTvelU(IYHi,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelU(IYHi,IZLo(I),IndCT_hi)
       Iyz_th = ( Iyhz - Iylz )*Ygrid + Iylz
 
-      CT_GetWindSpeed%Velocity(I) = ( Iyz_th - Iyz_tl )*Tgrid + Iyz_tl
+      CT_GetWindSpeed = ( Iyz_th - Iyz_tl )*Tgrid + Iyz_tl
 
 
    !-------------------------------------------------------------------------------------------------
@@ -878,15 +933,15 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
 
          ! linearaly interpolate in the lower time slice
       Iylz   = ( CTvelV(IYLo,IZHi(I),IndCT_lo) - CTvelV(IYLo,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelV(IYLo,IZLo(I),IndCT_lo)
-      Iyhz   = ( CTvelV(IYHi,IZHi(I),IndCT_lo) - CTvelV(IYHi,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelV(IYHi,IZLo(I),IndCT_lo)     
+      Iyhz   = ( CTvelV(IYHi,IZHi(I),IndCT_lo) - CTvelV(IYHi,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelV(IYHi,IZLo(I),IndCT_lo)
       Iyz_tl = ( Iyhz - Iylz )*Ygrid + Iylz
 
          ! linearaly interpolate in the upper time slice
       Iylz   = ( CTvelV(IYLo,IZHi(I),IndCT_hi) - CTvelV(IYLo,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelV(IYLo,IZLo(I),IndCT_hi)
-      Iyhz   = ( CTvelV(IYHi,IZHi(I),IndCT_hi) - CTvelV(IYHi,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelV(IYHi,IZLo(I),IndCT_hi)     
+      Iyhz   = ( CTvelV(IYHi,IZHi(I),IndCT_hi) - CTvelV(IYHi,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelV(IYHi,IZLo(I),IndCT_hi)
       Iyz_th = ( Iyhz - Iylz )*Ygrid + Iylz
 
-      CT_GetWindSpeed%Velocity(I) = ( Iyz_th - Iyz_tl )*Tgrid + Iyz_tl
+      CT_GetWindSpeed = ( Iyz_th - Iyz_tl )*Tgrid + Iyz_tl
 
 
    !-------------------------------------------------------------------------------------------------
@@ -897,22 +952,22 @@ FUNCTION CT_GetWindSpeed(Time, InputPosition, ErrStat)
 
          ! linearaly interpolate in the lower time slice
       Iylz   = ( CTvelW(IYLo,IZHi(I),IndCT_lo) - CTvelW(IYLo,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelW(IYLo,IZLo(I),IndCT_lo)
-      Iyhz   = ( CTvelW(IYHi,IZHi(I),IndCT_lo) - CTvelW(IYHi,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelW(IYHi,IZLo(I),IndCT_lo)     
+      Iyhz   = ( CTvelW(IYHi,IZHi(I),IndCT_lo) - CTvelW(IYHi,IZLo(I),IndCT_lo) )*Zgrid(I) + CTvelW(IYHi,IZLo(I),IndCT_lo)
       Iyz_tl = ( Iyhz - Iylz )*Ygrid + Iylz
 
          ! linearaly interpolate in the upper time slice
       Iylz   = ( CTvelW(IYLo,IZHi(I),IndCT_hi) - CTvelW(IYLo,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelW(IYLo,IZLo(I),IndCT_hi)
-      Iyhz   = ( CTvelW(IYHi,IZHi(I),IndCT_hi) - CTvelW(IYHi,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelW(IYHi,IZLo(I),IndCT_hi)     
+      Iyhz   = ( CTvelW(IYHi,IZHi(I),IndCT_hi) - CTvelW(IYHi,IZLo(I),IndCT_hi) )*Zgrid(I) + CTvelW(IYHi,IZLo(I),IndCT_hi)
       Iyz_th = ( Iyhz - Iylz )*Ygrid + Iylz
 
-      CT_GetWindSpeed%Velocity(I) = ( Iyz_th - Iyz_tl )*Tgrid + Iyz_tl
+      CT_GetWindSpeed = ( Iyz_th - Iyz_tl )*Tgrid + Iyz_tl
 
 
    RETURN
 
 END FUNCTION CT_GetWindSpeed
 !====================================================================================================
-SUBROUTINE ReadCTData ( UnWind, CTFileNo, Itime, ErrStat )
+SUBROUTINE ReadCTData ( UnWind, CTFileNo, Itime, ErrStat, ErrMsg )
 !    This subroutine is used to read one time-step's worth of large-eddy
 !    zero-mean wind data for each wind component from a file.
 !----------------------------------------------------------------------------------------------------
@@ -923,21 +978,34 @@ SUBROUTINE ReadCTData ( UnWind, CTFileNo, Itime, ErrStat )
    INTEGER,       INTENT(IN)     :: UnWind                                    ! The I/O unit of the input file
    INTEGER,       INTENT(IN)     :: CTFileNo                                  ! The number of the file to read
    INTEGER,       INTENT(IN)     :: Itime                                     ! The index of the time slice
-   INTEGER,       INTENT(OUT)    :: ErrStat                                   ! returns 0 if no error; non-zero otherwise
+   INTEGER,       INTENT(OUT)    :: ErrStat                                   ! returns ErrID_None if no error; non-zero otherwise
+   CHARACTER(*),  INTENT(OUT)    :: ErrMsg                                    ! Message to return about the error
 
       ! Local variables.
 
 !   CHARACTER(1),PARAMETER        :: Comp(NumComps) = (/'u', 'v', 'w' /)       ! the wind components
    CHARACTER(5)                  :: CTnum                                     ! string equivalent of input variable CTFileNo
    CHARACTER(1024)               :: FileName                                  ! The name of the input data file
-   
-   
+
+      ! Temporary error handling Variables
+
+   INTEGER                          :: TmpErrStat                             ! Temporary Error Status
+   CHARACTER(1024)                  :: TmpErrMsg                              ! Temporary error message returned
+
+
+      !------------------------------------------------------------------------
+      ! Initialize the error handling
+      !------------------------------------------------------------------------
+   ErrStat  = ErrID_None
+   ErrMsg   = ''
+
+
    IF ( CTFileNo == 0 ) THEN
-   
+
       CTvelU(:,:,Itime) = 0.0
       CTvelV(:,:,Itime) = 0.0
       CTvelW(:,:,Itime) = 0.0
-      
+
    ELSE
          ! Loop through the components
 
@@ -945,28 +1013,40 @@ SUBROUTINE ReadCTData ( UnWind, CTFileNo, Itime, ErrStat )
 
 
       FileName = TRIM( CTSpath )//'\u\u_16i_'//CTnum//'.'//TRIM( CText )
-      CALL LoadCTData( UnWind, TRIM(FileName), Itime, 1, CTvelU, ErrStat )
-      IF ( ErrStat /= 0 ) RETURN
-      
+      CALL LoadCTData( UnWind, TRIM(FileName), Itime, 1, CTvelU, TmpErrStat, TmpErrMsg )
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
 
       FileName = TRIM( CTSpath )//'\v\v_16i_'//CTnum//'.'//TRIM( CText )
-      CALL LoadCTData( UnWind, TRIM(FileName), Itime, 2, CTvelV, ErrStat )
-      IF ( ErrStat /= 0 ) RETURN
-      
-      
+      CALL LoadCTData( UnWind, TRIM(FileName), Itime, 2, CTvelV, TmpErrStat, TmpErrMsg )
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
       FileName = TRIM( CTSpath )//'\w\w_16i_'//CTnum//'.'//TRIM( CText )
-      CALL LoadCTData( UnWind, TRIM(FileName), Itime, 3, CTvelW, ErrStat )
-      IF ( ErrStat /= 0 ) RETURN
-      
-   
+      CALL LoadCTData( UnWind, TRIM(FileName), Itime, 3, CTvelW, TmpErrStat, TmpErrMsg )
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
    END IF
 
    RETURN
-   
+
 END SUBROUTINE ReadCTData
 !====================================================================================================
-SUBROUTINE LoadCTData( UnWind, FileName, ITime, IComp, Vel, ErrStat )
-!  This function is used to read the input parameters for the coherent turbulence events, 
+SUBROUTINE LoadCTData( UnWind, FileName, ITime, IComp, Vel, ErrStat, ErrMsg )
+!  This function is used to read the input parameters for the coherent turbulence events,
 !  based on the large-eddy simulation.
 !----------------------------------------------------------------------------------------------------
 
@@ -976,8 +1056,12 @@ SUBROUTINE LoadCTData( UnWind, FileName, ITime, IComp, Vel, ErrStat )
    CHARACTER(*),  INTENT(IN)     :: FileName                                  ! The name of the file to open
    INTEGER,       INTENT(IN)     :: Itime                                     ! The index of the time slice
    INTEGER,       INTENT(IN)     :: IComp                                     ! The index of the component
-   REAL(ReKi),    INTENT(INOUT)  :: Vel    (NumCTyD,NumCTzD,2)                ! returns the velocity array (don't use INTENT OUT!)  
-   INTEGER,       INTENT(OUT)    :: ErrStat                                   ! returns 0 if no error; non-zero otherwise
+   REAL(ReKi),    INTENT(INOUT)  :: Vel    (NumCTyD,NumCTzD,2)                ! returns the velocity array (don't use INTENT OUT!)
+   INTEGER,       INTENT(OUT)    :: ErrStat                                   ! returns ErrID_None if no error; non-zero otherwise
+   CHARACTER(*),  INTENT(OUT)    :: ErrMsg                                    ! A message abouth the error
+
+
+      ! Local Variables
 
    INTEGER(B2Ki)                 :: Com    (NumCTy)                           ! Temporary array to hold component's integer values for a given Z.
    INTEGER                       :: IY                                        ! A DO index for indexing the arrays in the y direction.
@@ -985,36 +1069,55 @@ SUBROUTINE LoadCTData( UnWind, FileName, ITime, IComp, Vel, ErrStat )
    INTEGER                       :: IZ                                        ! A DO index for indexing the arrays in the z direction.
    INTEGER                       :: IZK                                       ! An index for the decimated arrays in the z direction.
 
+      ! Temporary error handling
+   INTEGER                       :: TmpErrStat
+   CHARACTER(1024)               :: TmpErrMsg
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! Set temporary Error info
+   !-------------------------------------------------------------------------------------------------
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ''
+!FIXME: remove with add ErrMsg
+   TmpErrMsg   = ''
 
 
    !-------------------------------------------------------------------------------------------------
    ! Open the input file
    !-------------------------------------------------------------------------------------------------
 
-   CALL OpenUInBEFile( UnWind, TRIM(FileName), 2*NumCTy, ErrStat )
-   IF (ErrStat /= 0) RETURN
+   CALL OpenUInBEFile( UnWind, TRIM(FileName), 2*NumCTy, TmpErrStat )   ! add ErrMsg
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      RETURN
+   ELSE
+      ErrMsg = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ENDIF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Read the data and fill the arrays
    !-------------------------------------------------------------------------------------------------
-      
+
    IZK = 0                          ! the Z index into the array (necessary b/c of decimation factor)
    DO IZ=1,NumCTz,CT_DF_Z
 
-      READ (UnWind,REC=IZ,IOSTAT=ErrStat)  Com
+      READ (UnWind,REC=IZ,IOSTAT=TmpErrStat)  Com
 
-      IF ( ErrStat /= 0 )  THEN
+      IF ( TmpErrStat /= 0 )  THEN
 
-         CALL WrScr( ' Error reading record '//TRIM( Num2LStr( IZ ) )//' of the binary CT wind file, "' &
-                           //TRIM( FileName )//'."')
-         RETURN                           
+         ErrMsg = TRIM(ErrMsg)//' Error reading record '//TRIM( Num2LStr( IZ ) )//' of the binary CT wind file, "' &
+                           //TRIM( FileName )//'."'
+         ErrStat=ErrID_Fatal
+         RETURN
 
       ENDIF
 
       IZK = IZK + 1
       IYK = 0                       ! the Y index into the array (necessary b/c of decimation factor)
-      
+
       DO IY=1,NumCTy,CT_DF_Y
          IYK = IYK + 1
          Vel(IYK,IZK,ITime) = CTScale(IComp)*Com(IY) + CTOffset(IComp)
@@ -1033,174 +1136,310 @@ SUBROUTINE LoadCTData( UnWind, FileName, ITime, IComp, Vel, ErrStat )
 
 END SUBROUTINE LoadCTData
 !====================================================================================================
-SUBROUTINE ReadCTP( UnWind, FileName, CTPscaling, ErrStat )
-!  This function is used to read the input parameters for the coherent turbulence events, 
+SUBROUTINE ReadCTP( UnWind, FileName, CTPscaling, ErrStat, ErrMsg )
+!  This function is used to read the input parameters for the coherent turbulence events,
 !  based on the large-eddy simulation.
 !----------------------------------------------------------------------------------------------------
 
 
       ! Passed variables.
 
-   INTEGER,            INTENT(IN)  :: UnWind                                   ! The I/O unit of the input file
-   CHARACTER(*),       INTENT(IN)  :: FileName                                 ! The name of the input data file
-   TYPE(CTWindFiles),  INTENT(OUT) :: CTPscaling                               ! The file names contained in the CTP file
-   INTEGER,            INTENT(OUT) :: ErrStat                                  ! returns 0 if no error; non-zero otherwise
+   INTEGER,             INTENT(IN)  :: UnWind                                 ! The I/O unit of the input file
+   CHARACTER(*),        INTENT(IN)  :: FileName                               ! The name of the input data file
+   TYPE(CTWindFiles),   INTENT(OUT) :: CTPscaling                             ! The file names contained in the CTP file
+   INTEGER,             INTENT(OUT) :: ErrStat                                ! returns 0 if no error; non-zero otherwise'
+   CHARACTER(*),        INTENT(OUT) :: ErrMsg                                 ! Error message to return
 
 
       ! Local variables.
-      
-   CHARACTER(1024)                 :: HeaderLine                               ! The header text in the file
-   CHARACTER(1024)                 :: TmpPath
+
+   CHARACTER(1024)                  :: HeaderLine                             ! The header text in the file
+   CHARACTER(1024)                  :: TmpPath
+
+      ! Temporary error handling Variables
+
+   INTEGER                          :: TmpErrStat                             ! Temporary Error Status
+   CHARACTER(1024)                  :: TmpErrMsg                              ! Temporary error message returned
+
+   !-------------------------------------------------------------------------------------------------
+   ! Set temporary Error info
+   !-------------------------------------------------------------------------------------------------
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ''
+
 
    !-------------------------------------------------------------------------------------------------
    ! Open the CTP input file
    !-------------------------------------------------------------------------------------------------
-   
-   CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat)
-   IF (ErrStat /= 0) RETURN
+
+   CALL OpenFInpFile ( UnWind, TRIM( FileName ), TmpErrStat )  ! add ErrMsg
+
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat >= AbortErrLev ) RETURN
 
 
    !-------------------------------------------------------------------------------------------------
    ! Read the CTP input file
    !-------------------------------------------------------------------------------------------------
-   CALL ReadStr( UnWind, TRIM( FileName ), HeaderLine, 'Header line', 'The header line in the CTP file', ErrStat )
-   IF (ErrStat /= 0) RETURN   
+   CALL ReadStr( UnWind, TRIM( FileName ), HeaderLine, 'Header line', 'The header line in the CTP file', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat > AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading header line of '//TRIM(FileName)//'.'
+      RETURN
+   ENDIF
    CALL WrScr ( ' Heading of the CT-wind-parameter file: "'//TRIM(HeaderLine)//'"' )
 
 
-   CALL ReadCom( UnWind, TRIM( FileName ), 'parameter header line', ErrStat )
-   IF (ErrStat /= 0) RETURN
-   
+   CALL ReadCom( UnWind, TRIM( FileName ), 'parameter header line', TmpErrStat )  ! add ErrMsg
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CTSpath,  'CTSpath',  & 
-                  'Location (path) of the binary coherent turbulence dataset', ErrStat )
-   IF (ErrStat /= 0) RETURN
-                  
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading parameter header line of '//TRIM(FileName)//'.'
+      RETURN
+   ENDIF
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), CTSpath,  'CTSpath',  &
+                  'Location (path) of the binary coherent turbulence dataset', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading location (path) of the binary coherent turbulence dataset '//TRIM(FileName)//'.'
+      RETURN
+   ENDIF
+
 
    CALL ReadVar( UnWind, TRIM( FileName ), CTPscaling%CTTSfile, 'CTTSfile', &
-                  'File containing the time steps for the coherent turbulence events (.cts)', ErrStat )
-   IF (ErrStat /= 0) RETURN
-   
-   
-   IF ( PathIsRelative( CTPscaling%CTTSfile ) ) THEN
-      CALL GetPath( FileName, TmpPath ) 
-      CTPscaling%CTTSfile = TRIM(TmpPath)//TRIM(CTPscaling%CTTSfile)
-   END IF      
+                  'File containing the time steps for the coherent turbulence events (.cts)', TmpErrStat )  ! add ErrMsg
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CTPscaling%CTbackgr, 'CTbackgr', 'File containing the background wind', ErrStat )
-   IF (ErrStat /= 0) RETURN
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading name of file containing time steps for the coherent turbulent events from ' &
+               //TRIM(FileName)//'.'
+      RETURN
+   ENDIF
+
+
+   IF ( PathIsRelative( CTPscaling%CTTSfile ) ) THEN
+      CALL GetPath( FileName, TmpPath )
+      CTPscaling%CTTSfile = TRIM(TmpPath)//TRIM(CTPscaling%CTTSfile)
+   END IF
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), CTPscaling%CTbackgr, 'CTbackgr', 'File containing the background wind', TmpErrStat )  ! add ErrMsig
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading name of file containing the background wind from '//TRIM(FileName)//'.'
+      RETURN
+   ENDIF
 
    IF ( PathIsRelative( CTPscaling%CTbackgr ) ) THEN
-      CALL GetPath( FileName, TmpPath ) 
+      CALL GetPath( FileName, TmpPath )
       CTPscaling%CTbackgr = TRIM(TmpPath)//TRIM(CTPscaling%CTbackgr)
-   END IF      
+   END IF
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CT_DF_Y, 'CT_DF_Y', 'Decimation factor for wind data in the Y direction', ErrStat )
-   IF (ErrStat /= 0) RETURN
+   CALL ReadVar( UnWind, TRIM( FileName ), CT_DF_Y, 'CT_DF_Y', 'Decimation factor for wind data in the Y direction', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading the decimation factor for wind data in the Y direction from ' &
+               //TRIM(FileName)//'.'
+      RETURN
+   ENDIF
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CT_DF_Z, 'CT_DF_Z', 'Decimation factor for wind data in the Z direction', ErrStat )
-   IF (ErrStat /= 0) RETURN
+   CALL ReadVar( UnWind, TRIM( FileName ), CT_DF_Z, 'CT_DF_Z', 'Decimation factor for wind data in the Z direction', TmpErrStat )  ! add ErrMsg
 
-   
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg   = TRIM(ErrMsg)//' Error reading the decimation factor for wind data in the Z direction from ' &
+               //TRIM(FileName)//'.'
+      RETURN
+   ENDIF
+
+
    !-------------------------------------------------------------------------------------------------
    ! Close the CTP input file
    !-------------------------------------------------------------------------------------------------
-   
+
    CLOSE( UnWind )
 
 
 END SUBROUTINE ReadCTP
 !====================================================================================================
-SUBROUTINE ReadCTTS ( UnWind, FileName, CT_SC_ext, ErrStat )
-!  This subroutine is used to read the input parameters calculated in TurbSim for the scaling of 
+SUBROUTINE ReadCTTS ( UnWind, FileName, CT_SC_ext, EmptyFileStat, ErrStat, ErrMsg )
+!  This subroutine is used to read the input parameters calculated in TurbSim for the scaling of
 !  coherent turbulence events.  It reads the .cts file and saves the time step and file number arrays.
 !----------------------------------------------------------------------------------------------------
+
+! EmptyFileStat:   The CTTS file may not be exist or may be empty. TurbSim will do this in certain conditions.
+!                 This is not a problem for program execution and used to be handled by Errstat<0. Set a
+!                 warning in this case.
 
 
       ! Passed variables.
 
-   INTEGER,            INTENT(IN)  :: UnWind                                   ! The I/O unit of the input file
-   CHARACTER(*),       INTENT(IN)  :: FileName                                 ! The name of the input data file
-   INTEGER,            INTENT(OUT) :: ErrStat                                  ! returns 0 if no error; -1 if the file is blank or can't be opened;                                                                               ! non-zero otherwise
-   CHARACTER(3),       INTENT(OUT) :: CT_SC_ext                                ! The extension used for coherent turbulence scale files.(usually "les", "dns", or "dat")
+   INTEGER,             INTENT(IN)  :: UnWind                                 ! The I/O unit of the input file
+   CHARACTER(*),        INTENT(IN)  :: FileName                               ! The name of the input data file
+   CHARACTER(3),        INTENT(OUT) :: CT_SC_ext                              ! The extension used for coherent turbulence scale files.(usually "les", "dns", or "dat")
+   LOGICAL,             INTENT(OUT) :: EmptyFileStat                           ! Special case for this file type. see note above
+   INTEGER,             INTENT(OUT) :: ErrStat                                ! returns ErrID_Warn if can't open the file
+   CHARACTER(*),        INTENT(OUT) :: ErrMsg                                 ! Message about what happened
 
       ! Local variables
-   INTEGER                         :: IT                                       ! Loop counter
+
+   INTEGER                          :: IT                                     ! Loop counter
+
+      ! Temporary error handling variables
+
+   INTEGER                          :: TmpErrStat                             ! temporary ErrStat
+   CHARACTER(1024)                  :: TmpErrMsg                              ! temporary returned error message
 
    !-------------------------------------------------------------------------------------------------
    ! Initialize variables
    !-------------------------------------------------------------------------------------------------
 
    NumCTt = 0
+   ErrMsg = ''
 
    !-------------------------------------------------------------------------------------------------
-   ! Open the CTS input file
+   ! Open the CTS input file -- can proceed if we can't open this file.
    !-------------------------------------------------------------------------------------------------
-   
-   CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat)
-   IF (ErrStat /= 0) THEN
-      ErrStat = -1
+
+   CALL OpenFInpFile ( UnWind, TRIM( FileName ), TmpErrStat )  ! add ErrMsg when available
+   IF (TmpErrStat /= 0) THEN
+      EmptyFileStat = .TRUE.
+      ErrMsg   = ' Error opening '//TRIM(FileName)//', ignoring it.'
+      ErrStat  = ErrID_Warn
       RETURN
-   END IF
-   
+   ELSE
+      EmptyFileStat = .FALSE.
+   ENDIF
+
    !-------------------------------------------------------------------------------------------------
    ! Read the header of the CTS input file
    !-------------------------------------------------------------------------------------------------
-   
+
       ! Check to see if the first value is numeric (old) or the file type (new) and start again
-      
-   READ ( UnWind, *, IOSTAT=ErrStat ) CTScaleVel       
-   REWIND( UnWind )  
 
+   READ  ( UnWind, *, IOSTAT=TmpErrStat ) CTScaleVel
+   REWIND( UnWind )
 
-   IF ( ErrStat /= 0 )  THEN   ! try again
-            
-      CALL ReadVar( UnWind, TRIM( FileName ), CText, 'CText', 'FileType ', ErrStat ) 
-      IF ( ErrStat /= 0 ) THEN
-         ErrStat = SIGN( 1, ErrStat)
+   IF ( TmpErrStat /= 0 )  THEN   ! try again
+
+      CALL ReadVar( UnWind, TRIM( FileName ), CText, 'CText', 'FileType ', TmpErrStat ) ! add ErrMsg
+
+         ! Errors occured? Can proceeed if the file is empty.
+      IF ( TmpErrStat < 0 ) THEN    ! end of record / end of file condition
+         ErrMsg   = TRIM(ErrMsg)//' File '//TRIM(FileName)//' is empty; ignoring it'
+         ErrStat  = ErrID_Warn
+         EmptyFileStat = .TRUE.
          RETURN
-      END IF
-      CT_SC_ext = CText      
-      
-      CALL ReadVar( UnWind, TRIM( FileName ), CTScaleVel, 'CTScaleVel', ' ', ErrStat ) 
-      IF ( ErrStat /= 0 ) RETURN
+      ELSE  ! positive, so something bad happened.
+         ErrMsg   = TRIM(ErrMsg)//' Error reading from file '//TRIM(TmpErrMsg)
+         ErrStat  = ErrID_Fatal
+      ENDIF
+      IF ( ErrStat >= AbortErrLev )    RETURN
+
+      CT_SC_ext = CText
+
+      CALL ReadVar( UnWind, TRIM( FileName ), CTScaleVel, 'CTScaleVel', ' ', TmpErrStat ) ! add ErrMsg
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX( ErrStat, TmpErrStat )
+      IF ( ErrStat >= AbortErrLev )    RETURN
+
    ELSE  ! assume LES files
-   
-      CALL ReadVar( UnWind, TRIM( FileName ), CTScaleVel, 'CTScaleVel', ' ', ErrStat ) 
+
+      CALL ReadVar( UnWind, TRIM( FileName ), CTScaleVel, 'CTScaleVel', ' ', TmpErrStat ) ! add ErrMsg
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX( ErrStat, TmpErrStat )
+      IF ( ErrStat >= AbortErrLev )    RETURN
 
       CText     = 'les'
       CT_SC_ext = 'dat'
    END IF
-   
-   CALL ReadVar( UnWind, TRIM( FileName ), InvMCTWS, 'MeanCTWS', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
+
+   CALL ReadVar( UnWind, TRIM( FileName ), InvMCTWS, 'MeanCTWS', ' ', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
+
    InvMCTWS = 1.0 / InvMCTWS
-      
-
-   CALL ReadVar( UnWind, TRIM( FileName ), CTYmax, 'CTYmax', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
-   
-
-   CALL ReadVar( UnWind, TRIM( FileName ), CTZmax, 'CTZmax', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CTDistSc, 'CTDistSc', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
+   CALL ReadVar( UnWind, TRIM( FileName ), CTYmax, 'CTYmax', ' ', TmpErrStat )   ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CTLy, 'CTLy', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
-   
-   
-   CALL ReadVar( UnWind, TRIM( FileName ), CTLz, 'CTLz', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
-   
-   
-   CALL ReadVar( UnWind, TRIM( FileName ), NumCTt, 'NumCTt', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
+   CALL ReadVar( UnWind, TRIM( FileName ), CTZmax, 'CTZmax', ' ', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), CTDistSc, 'CTDistSc', ' ', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), CTLy, 'CTLy', ' ', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), CTLz, 'CTLz', ' ', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), NumCTt, 'NumCTt', ' ', TmpErrStat )  ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX( ErrStat, TmpErrStat )
+   IF ( ErrStat >= AbortErrLev )    RETURN
 
 
    !-------------------------------------------------------------------------------------------------
@@ -1208,35 +1447,43 @@ SUBROUTINE ReadCTTS ( UnWind, FileName, CT_SC_ext, ErrStat )
    !-------------------------------------------------------------------------------------------------
 
    IF (.NOT. ALLOCATED(Tdata) ) THEN
-      ALLOCATE ( Tdata(NumCTt) , STAT=ErrStat )
+      ALLOCATE ( Tdata(NumCTt) , STAT=TmpErrStat )
 
-      IF ( ErrStat /= 0 )  THEN
-         CALL WrScr ( ' Error allocating memory for the Tdata array.' )
+         ! Errors occured?
+      IF (TmpErrStat /= 0) THEN
+         ErrMsg   = TRIM(ErrMsg)//' Error allocating memory for the Tdata array.'
+         ErrStat  = ErrID_Fatal
          RETURN
-      END IF
+      ENDIF
+
    END IF
 
    IF (.NOT. ALLOCATED(TimeStpCT) ) THEN
-      ALLOCATE ( TimeStpCT(NumCTt) , STAT=ErrStat )
+      ALLOCATE ( TimeStpCT(NumCTt) , STAT=TmpErrStat )
 
-      IF ( ErrStat /= 0 )  THEN
-         CALL WrScr ( ' Error allocating memory for the TimeStpCT array.' )
+         ! Errors occured?
+      IF (TmpErrStat /= 0) THEN
+         ErrMsg   = TRIM(ErrMsg)//' Error allocating memory for the TimeStpCT array.'
+         ErrStat  = ErrID_Fatal
          RETURN
-      END IF
+      ENDIF
+
    END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Read the arrays from the CTS input file
    !-------------------------------------------------------------------------------------------------
-   
+
    DO IT=1,NumCTt
 
-      READ (UnWind,*,IOSTAT=ErrStat)  Tdata(IT), TimeStpCT(IT)
+      READ (UnWind,*,IOSTAT=TmpErrStat)  Tdata(IT), TimeStpCT(IT)
 
-      IF ( ErrStat /= 0 )  THEN
-         CALL WrScr ( ' Error reading record '//TRIM( Num2LStr( IT ) )//' of the CT-wind time-steps file, "' &
-                         //TRIM( FileName )//'."')
+         ! Errors occured?
+      IF ( TmpErrStat /=0 ) THEN
+         ErrStat=ErrID_Fatal
+         ErrMsg   = TRIM(ErrMsg)//' Error reading record '//TRIM( Num2LStr( IT ) )//' of the CT-wind time-steps file, "' &
+                         //TRIM( FileName )//'."'
 
          NumCTt = IT - 1
          RETURN
@@ -1252,85 +1499,158 @@ SUBROUTINE ReadCTTS ( UnWind, FileName, CT_SC_ext, ErrStat )
 
 
    RETURN
-   
+
 END SUBROUTINE ReadCTTS
 !====================================================================================================
-SUBROUTINE ReadCTScales ( UnWind, FileName, ErrStat )
+SUBROUTINE ReadCTScales ( UnWind, FileName, ErrStat, ErrMsg )
 !  This subroutine is used to read the input parameters for the coherent turbulence events, based
 !  on the large-eddy simulation.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables
 
-   INTEGER,            INTENT(IN)  :: UnWind                                   ! The I/O unit of the input file
-   CHARACTER(*),       INTENT(IN)  :: FileName                                 ! The name of the input data file
-   INTEGER,            INTENT(OUT) :: ErrStat                                  ! returns 0 if no error; non-zero otherwise
+   INTEGER,             INTENT(IN)  :: UnWind                                 ! The I/O unit of the input file
+   CHARACTER(*),        INTENT(IN)  :: FileName                               ! The name of the input data file
+   INTEGER,             INTENT(OUT) :: ErrStat                                ! returns ErrID_None if no error; non-zero otherwise
+   CHARACTER(*),        INTENT(OUT) :: ErrMsg                                 ! Message about the error
 
 
       ! Local variables
-      
-   INTEGER                         :: I                                        ! Array counter
+
+   INTEGER                          :: I                                      ! Array counter
+
+
+      ! Temporary error handling Variables
+
+   INTEGER                          :: TmpErrStat                             ! Temporary Error Status
+   CHARACTER(1024)                  :: TmpErrMsg                              ! Temporary error message returned
 
    !-------------------------------------------------------------------------------------------------
    ! Open the file with the scales (les or dns)
    !-------------------------------------------------------------------------------------------------
 
-   CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat)
+   CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat)   ! add ErrMsg
    IF (ErrStat /= 0) RETURN
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Read the file with the scales (les or dns)
    !-------------------------------------------------------------------------------------------------
 
-   CALL ReadCom( UnWind, TRIM( FileName ), 'First line', ErrStat )
-   IF (ErrStat /= 0) RETURN
+   CALL ReadCom( UnWind, TRIM( FileName ), 'First line', TmpErrStat )   ! add ErrMsg
 
-   CALL ReadVar( UnWind, TRIM( FileName ), CTVertShft, 'CTVertShft', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), CTVertShft, 'CTVertShft', ' ', TmpErrStat ) ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
 
    DO I = 1,3
-      CALL ReadVar( UnWind, TRIM( FileName ), CTScale(I), 'CTScale('//TRIM(Num2LStr(I))//')', ' ', ErrStat ) 
-      IF ( ErrStat /= 0 )  RETURN
-   
-      CALL ReadVar( UnWind, TRIM( FileName ), CTOffset(I), 'CTOffset('//TRIM(Num2LStr(I))//')', ' ', ErrStat ) 
-      IF ( ErrStat /= 0 )  RETURN
+      CALL ReadVar( UnWind, TRIM( FileName ), CTScale(I), 'CTScale('//TRIM(Num2LStr(I))//')', ' ', TmpErrStat ) ! add ErrMsg
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      CALL ReadVar( UnWind, TRIM( FileName ), CTOffset(I), 'CTOffset('//TRIM(Num2LStr(I))//')', ' ', TmpErrStat ) ! add ErrMsg
+
+         ! Errors occured?
+      ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+      ErrStat  = MAX(ErrStat, TmpErrStat)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
    END DO !I
 
-   CALL ReadVar( UnWind, TRIM( FileName ), NumCTy, 'NumCTy', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
 
-   CALL ReadVar( UnWind, TRIM( FileName ), NumCTz, 'NumCTz', ' ', ErrStat ) 
-   IF ( ErrStat /= 0 )  RETURN
+   CALL ReadVar( UnWind, TRIM( FileName ), NumCTy, 'NumCTy', ' ', TmpErrStat ) ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+   CALL ReadVar( UnWind, TRIM( FileName ), NumCTz, 'NumCTz', ' ', TmpErrStat ) ! add ErrMsg
+
+      ! Errors occured?
+   ErrMsg   = TRIM(ErrMsg)//' '//TRIM(TmpErrMsg)
+   ErrStat  = MAX(ErrStat, TmpErrStat)
+   IF ( ErrStat >= AbortErrLev ) RETURN
 
 
    !-------------------------------------------------------------------------------------------------
    ! Close the file with the scales (les or dns)
    !-------------------------------------------------------------------------------------------------
-   
+
    CLOSE( UnWind )
-   
+
 
    RETURN
-   
+
 END SUBROUTINE ReadCTScales
 !====================================================================================================
-SUBROUTINE CT_Terminate( ErrStat )
+SUBROUTINE CT_Terminate( ErrStat, ErrMsg )
 ! This subroutine closes files, deallocates memory, and un-sets the initialization flag
 !----------------------------------------------------------------------------------------------------
 
-   INTEGER,    INTENT(OUT)    :: ErrStat           ! return 0 if no errors; non-zero otherwise
+   INTEGER,       INTENT(OUT) :: ErrStat           ! return ErrID_None if no errors, ErrID level otherwise.
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg            ! Message about the error that occurred.
+
+
+      ! Temporary error handling Variables
+
+   INTEGER                          :: TmpErrStat                             ! Temporary Error Status
+   CHARACTER(1024)                  :: TmpErrMsg                              ! Temporary Error Message
+
+
+      ! Initialize variables
+   ErrStat  = ErrID_None
+   ErrMsg   = ''
+   TmpErrMsg   = ''
+   TmpErrStat  = 0
 
 
    CLOSE( CTWindUnit )
-   
-   ErrStat = 0
 
-   IF ( ALLOCATED( CTvelU    ) )  DEALLOCATE( CTvelU,    STAT=ErrStat )
-   IF ( ALLOCATED( CTvelV    ) )  DEALLOCATE( CTvelV,    STAT=ErrStat )
-   IF ( ALLOCATED( CTvelW    ) )  DEALLOCATE( CTvelW,    STAT=ErrStat )
-   IF ( ALLOCATED( Tdata     ) )  DEALLOCATE( Tdata,     STAT=ErrStat )
-   IF ( ALLOCATED( TimeStpCT ) )  DEALLOCATE( TimeStpCT, STAT=ErrStat )
+   IF ( ALLOCATED( CTvelU    ) )  DEALLOCATE( CTvelU,    STAT=TmpErrStat,  ERRMSG=TmpErrMsg )
+   IF (TmpErrStat /= 0) THEN
+      ErrMsg   = TRIM(ErrMsg)//' InflowWind:CTWind: Error occured during de-allocation of CTvelU.'//TmpErrMsg
+      ErrStat  = ErrID_Fatal
+   ENDIF
+
+   IF ( ALLOCATED( CTvelV    ) )  DEALLOCATE( CTvelV,    STAT=TmpErrStat,  ERRMSG=TmpErrMsg )
+   IF (TmpErrStat /= 0) THEN
+      ErrMsg   = TRIM(ErrMsg)//' InflowWind:CTWind: Error occured during de-allocation of CTvelV.'//TmpErrMsg
+      ErrStat  = ErrID_Fatal
+   ENDIF
+
+   IF ( ALLOCATED( CTvelW    ) )  DEALLOCATE( CTvelW,    STAT=TmpErrStat,  ERRMSG=TmpErrMsg )
+   IF (TmpErrStat /= 0) THEN
+      ErrMsg   = TRIM(ErrMsg)//' InflowWind:CTWind: Error occured during de-allocation of CTvelW.'//TmpErrMsg
+      ErrStat  = ErrID_Fatal
+   ENDIF
+
+   IF ( ALLOCATED( Tdata     ) )  DEALLOCATE( Tdata,     STAT=TmpErrStat,  ERRMSG=TmpErrMsg )
+   IF (TmpErrStat /= 0) THEN
+      ErrMsg   = TRIM(ErrMsg)//' InflowWind:CTWind: Error occured during de-allocation of Tdata.'//TmpErrMsg
+      ErrStat  = ErrID_Fatal
+   ENDIF
+
+   IF ( ALLOCATED( TimeStpCT ) )  DEALLOCATE( TimeStpCT, STAT=TmpErrStat,  ERRMSG=TmpErrMsg )
+   IF (TmpErrStat /= 0) THEN
+      ErrMsg   = TRIM(ErrMsg)//' InflowWind:CTWind: Error occured during de-allocation of TimeStpCT.'//TmpErrMsg
+      ErrStat  = ErrID_Fatal
+   ENDIF
 
    TimeIndx = 0
 
@@ -1345,17 +1665,17 @@ MODULE FDWind
 ! Data are assumed to be in units of meters and seconds.
 !
 !  7 Oct 2009    B. Jonkman, NREL/NWTC using subroutines from AeroDyn 12.57
-!----------------------------------------------------------------------------------------------------  
+!----------------------------------------------------------------------------------------------------
 
    USE                     NWTC_Library
    USE                     SharedInflowDefs
-   USE                     WindFile_Types
+   USE                     InflowWind_Module_Types
 
    IMPLICIT                NONE
    PRIVATE
-  
+
       ! FD_Wind
-      
+
    REAL(ReKi)                   :: DelXgrid                                   ! The nondimensional distance between grid points in the x direction.
    REAL(ReKi)                   :: DelYgrid                                   ! The nondimensional distance between grid points in the y direction.
    REAL(ReKi)                   :: DelZgrid                                   ! The nondimensional distance between grid points in the z direction.
@@ -1413,7 +1733,7 @@ MODULE FDWind
 
    INTEGER                      :: FDUnit                                     ! Unit number for reading wind files
 
-   LOGICAL                      :: Advect                                     ! Flag to indicate whether or not to advect a given data set or to just use the time step files 
+   LOGICAL                      :: Advect                                     ! Flag to indicate whether or not to advect a given data set or to just use the time step files
    LOGICAL                      :: VertShft                                   ! Flag to indicate whether or not to shift the z values for the w component.
 
    LOGICAL, SAVE                :: Initialized = .FALSE.
@@ -1431,11 +1751,11 @@ MODULE FDWind
 CONTAINS
 !====================================================================================================
 SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
-!  This subroutine is called at the beginning of a simulation to initialize the module.  
+!  This subroutine is called at the beginning of a simulation to initialize the module.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables
-      
+
    INTEGER,         INTENT(IN)    :: UnWind                       ! unit number for reading wind files
    CHARACTER(*),    INTENT(IN)    :: WindFile                     ! Name of the 4D wind parameter file (.fdp)
    REAL(ReKi),      INTENT(IN)    :: RefHt                        ! The reference height for the billow (should be hub height)
@@ -1446,12 +1766,12 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
    CHARACTER(1024)                :: FDTSfile                     ! name of the 4D time step file
    REAL(ReKi)                     :: FDTimStp                     ! Average time step for 4D wind data.
    INTEGER                        :: IT
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Check that the module hasn't already been initialized.
    !-------------------------------------------------------------------------------------------------
-      
-   IF ( Initialized ) THEN  
+
+   IF ( Initialized ) THEN
       CALL WrScr( ' FDWind has already been initialized.' )
       ErrStat = 1
       RETURN
@@ -1465,23 +1785,23 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
    ! Set the reference height for the wind file (this takes the place of HH that was used earlier)
    !-------------------------------------------------------------------------------------------------
 
-   ZRef = RefHt         
-   
+   ZRef = RefHt
+
    !-------------------------------------------------------------------------------------------------
    ! Read the main 4D input file
    !-------------------------------------------------------------------------------------------------
-   
+
    CALL ReadFDP( UnWind, WindFile, FDTSfile, ErrStat )
    IF ( ErrStat /= 0 ) RETURN
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Get the times array, which must be scaled and shifted later using TSclFact and T_4D_St
    !-------------------------------------------------------------------------------------------------
 
    CALL Read4Dtimes ( UnWind, FDTSfile, ErrStat )
    IF ( ErrStat /= 0 ) RETURN
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Calculate some values that don't change during the run.
    !-------------------------------------------------------------------------------------------------
@@ -1518,7 +1838,7 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
    !-------------------------------------------------------------------------------------------------
 
    DO IT=1,Num4Dt
-      
+
       Times4D(IT) = TSclFact*Times4D(IT) + T_4D_St
 
    ENDDO ! IT
@@ -1537,7 +1857,7 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
          RETURN
       END IF
    END IF
-   
+
    IF (.NOT. ALLOCATED(FDv) ) THEN
 !      CALL AllocAry ( FDv, Num4DxD, Num4DyD, Num4DzD, 2, 'V-component velocity array (FDv)', ErrStat)
       ALLOCATE ( FDv(Num4DxD,Num4DyD,Num4DzD,2), STAT=ErrStat )
@@ -1595,7 +1915,7 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
 
    ENDIF
 
-     
+
    !-------------------------------------------------------------------------------------------------
    ! Determine the first file needed for this simulation.
    !-------------------------------------------------------------------------------------------------
@@ -1654,7 +1974,7 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
 
       CALL Load4DData( Ind4Dnew )    ! shift the data
 
-   ELSE   
+   ELSE
       FDTime(Ind4Dnew) = Times4D(FDFileNo)                                           ! Set the time for this file.
 
       CALL LoadLESData( UnWind, FDFileNo, Ind4Dnew, ErrStat )
@@ -1666,9 +1986,9 @@ SUBROUTINE FD_Init(UnWind, WindFile, RefHt, ErrStat)
    !-------------------------------------------------------------------------------------------------
    FDUnit      = UnWind
    PrevTime    = 0.0
-   
+
    Initialized = .TRUE.
-   
+
    RETURN
 
 END SUBROUTINE FD_Init
@@ -1708,7 +2028,7 @@ SUBROUTINE ReadFDP ( UnWind, FileName, FDTSfile, ErrStat )
    ! Open the 4D parameter file for reading
    !-------------------------------------------------------------------------------------------------
    CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat)
-   IF (ErrStat /= 0) RETURN   
+   IF (ErrStat /= 0) RETURN
 
 
    !-------------------------------------------------------------------------------------------------
@@ -1716,23 +2036,23 @@ SUBROUTINE ReadFDP ( UnWind, FileName, FDTSfile, ErrStat )
    !-------------------------------------------------------------------------------------------------
 
       !..............................................................................................
-      ! Read the 4D wind parameters specific to this turbine simulation.  
+      ! Read the 4D wind parameters specific to this turbine simulation.
       !..............................................................................................
 
    CALL ReadStr( UnWind, TRIM( FileName ), HeaderLine, 'Header line', 'The header line in the FTP file', ErrStat )
-   IF (ErrStat /= 0) RETURN   
+   IF (ErrStat /= 0) RETURN
    CALL WrScr ( ' Heading of the 4D-wind-parameter file: "'//TRIM(HeaderLine)//'"' )
 
 
    CALL ReadCom( UnWind, TRIM( FileName ), 'Header line', ErrStat )
    IF (ErrStat /= 0) RETURN
-      
+
 
    CALL ReadVar( UnWind, TRIM( FileName ), FDSpath,  'FDSpath', 'Location (path) of the binary dataset', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), FDTSfile,  'FDTSfile', & 
+   CALL ReadVar( UnWind, TRIM( FileName ), FDTSfile,  'FDTSfile', &
                                   'Name of the file containing the time-step history of the wind files', ErrStat )
    IF (ErrStat /= 0) RETURN
 
@@ -1789,52 +2109,52 @@ SUBROUTINE ReadFDP ( UnWind, FileName, FDTSfile, ErrStat )
    IF (ErrStat /= 0) RETURN
 
       !..............................................................................................
-      ! Read the 4D wind parameters specific to the K-H billow simulation being used.  
+      ! Read the 4D wind parameters specific to the K-H billow simulation being used.
       !..............................................................................................
 
    CALL ReadCom( UnWind, TRIM( FileName ), 'LES parameters specific to the K-H billow simulation being used', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), VertShft,  'VertShft', & 
+   CALL ReadVar( UnWind, TRIM( FileName ), VertShft,  'VertShft', &
                            'Flag to indicate whether or not to shift the z values for the w component', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), Xm_max,  'Xm_max', & 
+   CALL ReadVar( UnWind, TRIM( FileName ), Xm_max,  'Xm_max', &
                            'Maximum nondimensional downwind distance from center of dataset', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), Ym_max,  'Ym_max', & 
+   CALL ReadVar( UnWind, TRIM( FileName ), Ym_max,  'Ym_max', &
                            'Maximum nondimensional lateral distance from center of dataset', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), Zm_max,  'Zm_max', & 
+   CALL ReadVar( UnWind, TRIM( FileName ), Zm_max,  'Zm_max', &
                            'Maximum nondimensional vertical distance from center of dataset', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, TRIM( FileName ), Zm_maxo,  'Zm_maxo', & 
+   CALL ReadVar( UnWind, TRIM( FileName ), Zm_maxo,  'Zm_maxo', &
                  'Maximum nondimensional vertical distance from center of untrimmed dataset', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
    DO I = 1,3
 
-      CALL ReadVar( UnWind, TRIM( FileName ), ScalFact(I),  Comp(I)//'Scl', & 
+      CALL ReadVar( UnWind, TRIM( FileName ), ScalFact(I),  Comp(I)//'Scl', &
                     Comp(I)//'-component scale factor for converting from integers to reals', ErrStat )
       IF (ErrStat /= 0) RETURN
       ScalFact(I) = ScalFact(I) * ScaleVel
 
 
-      CALL ReadVar( UnWind, TRIM( FileName ), Offsets(I), Comp(I)//'Off', & 
+      CALL ReadVar( UnWind, TRIM( FileName ), Offsets(I), Comp(I)//'Off', &
                     Comp(I)//'-component offset for converting from integers to reals', ErrStat )
       IF (ErrStat /= 0) RETURN
       Offsets(I) = Offsets(I) * ScaleVel
-      
-   END DO   
+
+   END DO
    Offsets (1) = Offsets (1) + ScaleVel + Ubot                           ! u-component offset to convert integer data to actual wind speeds.
 
 
@@ -1867,25 +2187,25 @@ SUBROUTINE ReadFDP ( UnWind, FileName, FDTSfile, ErrStat )
 
 
    CALL ReadVar( UnWind, TRIM( FileName ), Advect, 'Advect', 'Advection flag', ErrStat )
-   
+
    IF (ErrStat /= 0) THEN
-   
+
       Advect   = .FALSE.
       Ind4DAdv = 0
       ErrStat  = 0
       CALL WrScr( ' Advection will not be used.')
-      
+
    ELSE
-   
+
       IF (Advect) THEN
          IF ( FD_DF_X /= 1 ) THEN
             CALL WrScr( ' FD_DF_X must be 1 when using advection. ' )
-            FD_DF_X = 1            
+            FD_DF_X = 1
          ENDIF
 
          CALL ReadVar( UnWind, TRIM( FileName ), NumAdvect, 'NumAdvect', 'Number of 4D files for advection', ErrStat )
          IF (ErrStat /= 0) RETURN
-         
+
 
          IF ( NumAdvect < 1 ) THEN
             CALL WrScr( ' NumAdvect in 4D-wind-parameter file, "'//TRIM( FileName )//'," must be at least 1.' )
@@ -1906,18 +2226,18 @@ SUBROUTINE ReadFDP ( UnWind, FileName, FDTSfile, ErrStat )
          CALL ReadAryLines( UnWind, TRIM( FileName ), AdvFiles, NumAdvect, 'AdvFiles', 'Advection file names', ErrStat )
          IF (ErrStat /= 0) RETURN
          Ind4DAdv = 1
-         
+
       ELSE
          Ind4DAdv = 0
       ENDIF !Advect == .TRUE.
-   
+
    END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Close the 4D parameter input file
    !-------------------------------------------------------------------------------------------------
    CLOSE ( UnWind )
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Close the 4D parameter input file
    !-------------------------------------------------------------------------------------------------
@@ -1928,14 +2248,14 @@ SUBROUTINE ReadFDP ( UnWind, FileName, FDTSfile, ErrStat )
    Zmax        = Zm_max*LenScale                                     ! The dimensional vertical height of the dataset.
    TSclFact    = LenScale/ScaleVel                                   ! Scale factor for time (h/U0).
 
-   
+
 
    RETURN
 
 END SUBROUTINE ReadFDP
 !====================================================================================================
 SUBROUTINE Read4Dtimes ( UnWind, FileName, ErrStat )
-!  This subroutine is used to read the time array for the 4D data.  The times in the file are 
+!  This subroutine is used to read the time array for the 4D data.  The times in the file are
 !  non-dimensional and non-uniformly spaced. They are scaled using TSclFact to obtain units of seconds
 !  and T_4D_St is added to allow the billow to start at non-zero time.
 !----------------------------------------------------------------------------------------------------
@@ -1954,7 +2274,7 @@ SUBROUTINE Read4Dtimes ( UnWind, FileName, ErrStat )
    !-------------------------------------------------------------------------------------------------
    ! Allocate arrays to store the data in
    !-------------------------------------------------------------------------------------------------
-   
+
    IF (.NOT. ALLOCATED( Times4D) ) THEN
 !      CALL AllocAry( Times4D, Num4Dt, '4D time array', ErrStat)
       ALLOCATE ( Times4D(Num4Dt), STAT=ErrStat )
@@ -1964,7 +2284,7 @@ SUBROUTINE Read4Dtimes ( UnWind, FileName, ErrStat )
          RETURN
       END IF
    END IF
-      
+
    IF (.NOT. ALLOCATED( Times4DIx) ) THEN
 !      CALL AllocAry( Times4DIx, Num4Dt, '4D time array', ErrStat)
       ALLOCATE ( Times4DIx(Num4Dt), STAT=ErrStat )
@@ -1996,30 +2316,30 @@ SUBROUTINE Read4Dtimes ( UnWind, FileName, ErrStat )
 
          CALL WrScr( ' Error reading line '//TRIM( Num2LStr( I+1 ) )// &
                         ' of the 4D-wind time-steps file, "'//TRIM( FileName )//'."')
-         RETURN                        
+         RETURN
 
       ENDIF
-      
+
    ENDDO ! I
 
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Close the 4D times file
    !-------------------------------------------------------------------------------------------------
-   
-   CLOSE ( UnWind )  
-   
-   RETURN     
-   
+
+   CLOSE ( UnWind )
+
+   RETURN
+
 END SUBROUTINE Read4Dtimes
 !====================================================================================================
 SUBROUTINE ReadAll4DData(UnWind, ErrStat)
-! This subroutine reads the data into one array to be accessed later when ADVECT=.TRUE. Since there 
+! This subroutine reads the data into one array to be accessed later when ADVECT=.TRUE. Since there
 ! are just a few time steps, we'll load them into memory to (hopefully) save I/O time.
 !----------------------------------------------------------------------------------------------------
 
    INTEGER, INTENT(IN)        :: UnWind
-   INTEGER, INTENT(OUT)       :: ErrStat                            ! 
+   INTEGER, INTENT(OUT)       :: ErrStat                            !
    INTEGER                    :: IT
 
    CHARACTER(1)               :: FDNum
@@ -2058,40 +2378,40 @@ SUBROUTINE LoadLESData( UnWind, FileNo, Indx, ErrStat )
    INTEGER,         INTENT(IN)    :: FileNo                       ! current file number to read
    INTEGER,         INTENT(IN)    :: Indx                         ! index into the data arrays
    INTEGER,         INTENT(OUT)   :: ErrStat                      ! return 0 if no errors encountered; non-zero otherwise
-   
+
       ! local variables
    CHARACTER(5)                   :: FDNum
-   CHARACTER(20)                  :: LESFileName                  ! String containing part of the current file name.      
-   
-      
+   CHARACTER(20)                  :: LESFileName                  ! String containing part of the current file name.
+
+
       ! get the file name for the file number
-      
+
    WRITE(FDNum,'(I5.5)', IOStat=ErrStat) FileNo
    IF ( ErrStat /= 0 ) RETURN
-   
+
    LESFileName = TRIM(FDNum)//'.les'
 
 
       ! set the paths and read the data for each component
-      
+
    CALL Read4DData ( UnWind, TRIM( FDSpath )//'\u\u_16i_'//TRIM(LESFileName), FDu, Indx, ScalFact(1), Offsets(1), ErrStat )
    IF ( ErrStat /= 0 ) RETURN
-   
+
    CALL Read4DData ( UnWind, TRIM( FDSpath )//'\v\v_16i_'//TRIM(LESFileName), FDv, Indx, ScalFact(2), Offsets(2), ErrStat )
    IF ( ErrStat /= 0 ) RETURN
-   
+
    CALL Read4DData ( UnWind, TRIM( FDSpath )//'\w\w_16i_'//TRIM(LESFileName), FDw, Indx, ScalFact(3), Offsets(3), ErrStat )
 
 
 END SUBROUTINE LoadLESData
 !====================================================================================================
 SUBROUTINE Read4DData ( UnWind, FileName, Comp, Indx4, Scale, Offset,  ErrStat)
-! This subroutine is used to read one time-step's worth of large-eddy wind data for one component 
+! This subroutine is used to read one time-step's worth of large-eddy wind data for one component
 ! from a file.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables
-      
+
    INTEGER,     INTENT(IN)    :: UnWind               ! The I/O unit of the LE file.
    CHARACTER(*),INTENT(IN)    :: FileName             ! Then name of the LE data file.
 
@@ -2101,7 +2421,7 @@ SUBROUTINE Read4DData ( UnWind, FileName, Comp, Indx4, Scale, Offset,  ErrStat)
    REAL(ReKi),  INTENT(IN)    :: Offset               ! The offset for converting from intergers to non-normalized reals.
 
    INTEGER,     INTENT(OUT)   :: ErrStat              ! The returned status of a READ.
-      
+
       ! Local variables
 
    INTEGER                    :: IX                   ! A DO index for indexing the arrays in the x direction.
@@ -2132,7 +2452,7 @@ SUBROUTINE Read4DData ( UnWind, FileName, Comp, Indx4, Scale, Offset,  ErrStat)
 
       IF ( ErrStat /= 0 )  THEN
 
-         CALL WrScr( ' Error reading record '//TRIM( Num2LStr( IZ ) )// & 
+         CALL WrScr( ' Error reading record '//TRIM( Num2LStr( IZ ) )// &
                                             ' of the binary 4D wind file, "'//TRIM( FileName )//'".')
          RETURN
 
@@ -2140,22 +2460,22 @@ SUBROUTINE Read4DData ( UnWind, FileName, Comp, Indx4, Scale, Offset,  ErrStat)
 
       IZK = IZK + 1                                ! IZK = ( IZ - 1 + FD_DF_Z )/FD_DF_Z
       IYK = 0
-      
+
       DO IY=1,Num4Dy,FD_DF_Y
-         
+
          IYK = IYK + 1                             ! IYK = ( IY - 1 + FD_DF_Y )/FD_DF_Y
-         
+
          DO IX=1,Num4Dx,FD_DF_X
-         
+
                ! shift the x-index, if necessary, to perform Advection
-               
+
             !IXK = ( IX + FD_DF_X - 1 )/FD_DF_X
             IXK = ( MOD(IX+Shft4Dnew-1,Num4Dx) + FD_DF_X )/FD_DF_X
-         
+
             Comp(IXK,IYK,IZK,Indx4) = Scale*Com(IX,IY) + Offset
-         
+
          ENDDO ! IX
-         
+
       ENDDO ! IY
 
    ENDDO ! IZ
@@ -2171,7 +2491,7 @@ SUBROUTINE Read4DData ( UnWind, FileName, Comp, Indx4, Scale, Offset,  ErrStat)
 END SUBROUTINE Read4DData
 !====================================================================================================
 SUBROUTINE Load4DData( InpIndx )
-! This subroutine takes the data from the storage array (used when ADVECT=.TRUE., shifts it if necessary, 
+! This subroutine takes the data from the storage array (used when ADVECT=.TRUE., shifts it if necessary,
 ! and loads it into the array for the time slice indexed by InpIndx.
 !----------------------------------------------------------------------------------------------------
 
@@ -2206,60 +2526,62 @@ FUNCTION FD_GetValue(RVarName, ErrStat)
    INTEGER,        INTENT(OUT)   :: ErrStat
    REAL(ReKi)                    :: FD_GetValue
 
-   
+
    CHARACTER(20)                 :: VarNameUC
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    IF ( .NOT. Initialized ) THEN
       CALL WrScr( ' Initialialize the FDWind module before calling its subroutines.' )
       ErrStat = 1
       RETURN
    ELSE
-      ErrStat = 0   
-   END IF      
+      ErrStat = 0
+   END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Return the requested values.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    VarNameUC = RVarName
    CALL Conv2UC( VarNameUC )
 
    SELECT CASE ( TRIM(VarNameUC) )
-            
+
       CASE ('ROTDIAM' )
-         FD_GetValue = RotDiam         
-         
+         FD_GetValue = RotDiam
+
       CASE DEFAULT
          CALL WrScr( ' Invalid variable name in FD_GetRValue().' )
          ErrStat = 1
-         
+
    END SELECT
 
 END FUNCTION FD_GetValue
 !====================================================================================================
 FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
-! This function is used to interpolate into the 4D wind arrays.  It receives X, Y, Z and TIME from the 
-! calling routine.  The time since the start of the 4D data is used to decide which pair of time slices 
-! to interpolate within and between.  After finding the two time slices, it decides which eight grid 
-! points bound the (X,Y,Z) pair. It does a trilinear interpolation for each time slice. Linear 
-! interpolation is then used to interpolate between time slices.  This routine assumes that X is 
-! downwind, Y is to the left when looking downwind and Z is up.  It also assumes that no 
+! This function is used to interpolate into the 4D wind arrays.  It receives X, Y, Z and TIME from the
+! calling routine.  The time since the start of the 4D data is used to decide which pair of time slices
+! to interpolate within and between.  After finding the two time slices, it decides which eight grid
+! points bound the (X,Y,Z) pair. It does a trilinear interpolation for each time slice. Linear
+! interpolation is then used to interpolate between time slices.  This routine assumes that X is
+! downwind, Y is to the left when looking downwind and Z is up.  It also assumes that no
 ! extrapolation will be needed except in time and the Z direction.  In those cases, the appropriate
 ! steady winds are used.
 !----------------------------------------------------------------------------------------------------
 
       ! Passed variables:
-      
-   REAL(ReKi),        INTENT(IN) :: Time                                   ! the time
+
+   REAL(DbKi),        INTENT(IN) :: Time                                   ! the time
    REAL(ReKi),        INTENT(IN) :: InputPosition(3)                       ! structure that contains the position
    INTEGER,           INTENT(OUT):: ErrStat                                ! returns 0 if no error; non-zero otherwise
-   TYPE(InflIntrpOut)            :: FD_GetWindSpeed                        ! the resultant wind speed
+!FIXME:delete
+!   TYPE(InflIntrpOut)            :: FD_GetWindSpeed                        ! the resultant wind speed
+   REAL(ReKi)                 :: FD_GetWindSpeed(3)                        ! the resultant wind speed
 
 
       ! Local Variables:
@@ -2290,32 +2612,34 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
    INTEGER                    :: IZLO                                      ! Index for the more-negative z value.
    INTEGER                    :: IZLO_w                                    ! Index for the more-negative z value for the w component.
 
-   !-------------------------------------------------------------------------------------------------     
+   REAL(ReKi)                    :: TempWindSpeed(3)                       ! Temporary variable to hold the windspeed before returning
+
+   !-------------------------------------------------------------------------------------------------
    ! Check that we've initialized everything first
-   !-------------------------------------------------------------------------------------------------     
-     
+   !-------------------------------------------------------------------------------------------------
+
    IF ( .NOT. Initialized ) THEN
       CALL WrScr( ' Initialialize the FDWind module before calling its subroutines.' )
       ErrStat = 1
       RETURN
-   ELSE 
-      ErrStat = 0   
-   END IF      
+   ELSE
+      ErrStat = 0
+   END IF
 
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
    ! If the TIME is greater than the time for the last file read, read another set of files until we straddle the current time.
    ! Stick with the last file if we've exhausted the data.
    ! We're assuming here that the simulation time step is smaller than the wind-file time step.
-   !-------------------------------------------------------------------------------------------------     
+   !-------------------------------------------------------------------------------------------------
 
    IF ( Time < PrevTime .AND. Time < FDTime(Ind4Dold) ) THEN  ! bjj: GET THE CORRECT TIME if we're going backward!
-     
+
       !----------------------------------------------------------------------------------------------
       ! Determine the first file needed for this simulation.
       !----------------------------------------------------------------------------------------------
       Ind4Dold  = 1                                                           ! Put the old stuff in the first part of the array.
       Ind4Dnew  = 2                                                           ! Put the new stuff in the second part of the array.
-      
+
       FDFileNo  = Num4Dt
       DO IT=1,Num4Dt
          IF ( Times4D(IT) > Time )  THEN
@@ -2323,7 +2647,7 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
             EXIT
          END IF
       END DO ! IT
-         
+
       !----------------------------------------------------------------------------------------------
       ! Open, read, and close the first set of files.
       !----------------------------------------------------------------------------------------------
@@ -2334,13 +2658,13 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
       ELSE
          CALL LoadLESData( FDUnit, FDFileNo, Ind4Dold, ErrStat )
       END IF
-            
+
       !----------------------------------------------------------------------------------------------
       ! Open, read, and close the second set of files.
       !----------------------------------------------------------------------------------------------
       FDFileNo  = MIN(FDFileNo + 1, Num4Dt)
       Shft4Dnew = 0
-      
+
       IF ( ADVECT ) THEN
          FDFileNo = MOD(FDFileNo-1,Num4Dt) + 1
 
@@ -2360,12 +2684,12 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
 
          CALL Load4DData( Ind4Dnew )    ! shift the data
 
-      ELSE   
+      ELSE
          FDTime(Ind4Dnew) = Times4D(FDFileNo)                                           ! Set the time for this file.
 !
          CALL LoadLESData( FDUnit, FDFileNo, Ind4Dnew, ErrStat )
       ENDIF
-                     
+
    END IF
 
    !-------------------------------------------------------------------------------------------------
@@ -2389,7 +2713,7 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
                   IF ( MOD( Shft4Dnew, Num4Dx ) == 0 ) THEN
                      CALL ReadAll4DData(FDUnit, ErrStat)
                      IF ( ErrStat /= 0 ) RETURN
-                  END IF                  
+                  END IF
                ENDIF
 
          ENDIF
@@ -2407,7 +2731,7 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
 
 
    !.................................................................................................
-   ! Find the bounding rows, columns, and planes for the X,Y,Z position.  The near, lower-right  
+   ! Find the bounding rows, columns, and planes for the X,Y,Z position.  The near, lower-right
    ! corner is (1,1,1) when looking downwind. Make sure the lowest possible value is 1.
    !.................................................................................................
 
@@ -2449,7 +2773,7 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
    IYHi  = MOD( IYLo, Num4DyD ) + 1
 
    !-------------------------------------------------------------------------------------------------
-   ! get values of Z for interpolation.  Linear interpolation; Nearest-neighbor extrapolation.  
+   ! get values of Z for interpolation.  Linear interpolation; Nearest-neighbor extrapolation.
    !-------------------------------------------------------------------------------------------------
    Znorm = MIN( MAX( ( Zt + InputPosition(3) - ZRef )/Zmax, 0.0 ), 1.0 ) !bjj: define ZRef
 
@@ -2510,7 +2834,8 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
 
    Ixyzn = ( Ixhyz - Ixlyz )*Xgrid + Ixlyz
 
-   FD_GetWindSpeed%Velocity(1) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
+!   FD_GetWindSpeed%Velocity(1) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
+   TempWindSpeed(1) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
 
    !-------------------------------------------------------------------------------------------------
    ! Interpolate for v component of wind within the grid.
@@ -2536,13 +2861,15 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
 
    Ixyzn = ( Ixhyz - Ixlyz )*Xgrid + Ixlyz
 
-   FD_GetWindSpeed%Velocity(2) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
+!FIXME:delete
+!   FD_GetWindSpeed%Velocity(2) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
+   TempWindSpeed(2) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
 
    !-------------------------------------------------------------------------------------------------
    ! Interpolate for w component of wind within the grid.
    !-------------------------------------------------------------------------------------------------
    !bjj: should Zgrid actually be Zgrid_w here?  I changed it so that it's consistent
-   
+
    Iylz  = ( FDw(IXLo,IYLo,IZHi_w,Ind4Dold) - FDw(IXLo,IYLo,IZLo_w,Ind4Dold) )*Zgrid_w + FDw(IXLo,IYLo,IZLo_w,Ind4Dold)
    Iyhz  = ( FDw(IXLo,IYHi,IZHi_w,Ind4Dold) - FDw(IXLo,IYHi,IZLo_w,Ind4Dold) )*Zgrid_w + FDw(IXLo,IYHi,IZLo_w,Ind4Dold)
    Ixlyz = ( Iyhz - Iylz )*Ygrid + Iylz
@@ -2563,8 +2890,12 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
 
    Ixyzn = ( Ixhyz - Ixlyz )*Xgrid + Ixlyz
 
-   FD_GetWindSpeed%Velocity(3) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
+!FIXME:delete
+!   FD_GetWindSpeed%Velocity(3) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
+   TempWindSpeed(3) = ( Ixyzn - Ixyzo )*Tgrid + Ixyzo
 
+   ! Copy the windspeed info to the output
+   FD_GetWindSpeed = TempWindSpeed
 
    !-------------------------------------------------------------------------------------------------
    ! Set the previous time here to compare with later...
@@ -2572,7 +2903,7 @@ FUNCTION FD_GetWindSpeed(Time, InputPosition, ErrStat)
    PrevTime = Time
 
    RETURN
-   
+
 END FUNCTION FD_GetWindSpeed
 !====================================================================================================
 SUBROUTINE FD_Terminate( ErrStat )
@@ -2589,7 +2920,7 @@ SUBROUTINE FD_Terminate( ErrStat )
    IF ( ALLOCATED( FDu       ) )   DEALLOCATE( FDu,       STAT=ErrStat )
    IF ( ALLOCATED( FDv       ) )   DEALLOCATE( FDv,       STAT=ErrStat )
    IF ( ALLOCATED( FDw       ) )   DEALLOCATE( FDw,       STAT=ErrStat )
-   IF ( ALLOCATED( FDuData   ) )   DEALLOCATE( FDuData,   STAT=ErrStat )  
+   IF ( ALLOCATED( FDuData   ) )   DEALLOCATE( FDuData,   STAT=ErrStat )
    IF ( ALLOCATED( FDvData   ) )   DEALLOCATE( FDvData,   STAT=ErrStat )
    IF ( ALLOCATED( FDwData   ) )   DEALLOCATE( FDwData,   STAT=ErrStat )
    IF ( ALLOCATED( Times4D   ) )   DEALLOCATE( Times4D,   STAT=ErrStat )
@@ -2606,7 +2937,7 @@ MODULE FFWind
 !  This module uses full-field binary wind files to determine the wind inflow.
 !  This module assumes that the origin, (0,0,0), is located at the tower centerline at ground level,
 !  and that all units are specified in the metric system (using meters and seconds).
-!  Data is shifted by half the grid width to account for turbine yaw (so that data in the X 
+!  Data is shifted by half the grid width to account for turbine yaw (so that data in the X
 !  direction actually starts at -1*FFYHWid meters).
 !
 !  Created 25-Sept-2009 by B. Jonkman, National Renewable Energy Laboratory
@@ -2616,14 +2947,14 @@ MODULE FFWind
 
    USE      NWTC_Library
    USE      SharedInflowDefs
-   USE                     WindFile_Types
+   USE                     InflowWind_Module_Types
 
    IMPLICIT NONE
 
    PRIVATE                                                        ! By default, everything in FFWind is private (methods, data, types, etc.)
-   
+
       ! former FF_Wind module
-      
+
    REAL(ReKi), ALLOCATABLE          :: FFData  (:,:,:,:)          ! Array of FF data
    REAL(ReKi), ALLOCATABLE          :: FFtower (:,:,:)            ! Array of data along the tower, below the FF array
 
@@ -2631,7 +2962,7 @@ MODULE FFWind
    REAL(ReKi)                       :: FFRate                     ! data rate in Hz (1/FFDTime)
    REAL(ReKi)                       :: FFYHWid                    ! half the grid width
    REAL(ReKi)                       :: FFZHWid                    ! half the grid height
-   REAL(ReKi)                       :: RefHt                      ! the reference (hub) height of the grid in meters 
+   REAL(ReKi)                       :: RefHt                      ! the reference (hub) height of the grid in meters
    REAL(ReKi)                       :: GridBase                   ! the height of the bottom of the grid in meters
    REAL(ReKi)                       :: InitXPosition              ! the initial x location of the wind file (distance the FF file will be offset)
    REAL(ReKi)                       :: InvFFYD                    ! reciprocal of delta y
@@ -2645,13 +2976,14 @@ MODULE FFWind
    INTEGER                          :: NYGrids                    ! number of points in the lateral (y) direction of the grids
    INTEGER                          :: NZGrids                    ! number of points in the vertical (z) direction of the grids
    INTEGER                          :: NTGrids                    ! number of points in the vertical (z) direction on the tower (below the grids)
-         
+
+!FIXME: should not be save -- move to the parameters?
    LOGICAL, SAVE                    :: Initialized = .FALSE.      ! flag that determines if the module has been initialized
    LOGICAL                          :: Periodic    = .FALSE.      ! flag that determines if the wind is periodic
 
 
    INTERFACE FF_GetValue
-      MODULE PROCEDURE FF_GetRValue                               ! routine to return scalar real values 
+      MODULE PROCEDURE FF_GetRValue                               ! routine to return scalar real values
    END INTERFACE
 
 
@@ -2662,7 +2994,7 @@ MODULE FFWind
 
 CONTAINS
 !====================================================================================================
-SUBROUTINE FF_Init ( UnWind, BinFile, ErrStat )
+SUBROUTINE FF_Init ( UnWind, BinFile, ErrStat, ErrMsg )
 !  This routine is used read the full-field turbulence data.
 !  09/25/97 - Created by M. Buhl from GETFILES in ViewWind.
 !  09/23/09 - modified by B. Jonkman: this subroutine was split into several subroutines (was ReadFF)
@@ -2672,40 +3004,42 @@ SUBROUTINE FF_Init ( UnWind, BinFile, ErrStat )
 
 
       ! Passed Variables:
-      
-   INTEGER,      INTENT(IN)    :: UnWind                       ! unit number for reading wind files
-   INTEGER,      INTENT(OUT)   :: ErrStat                      ! determines if an error has been encountered
-   
-   CHARACTER(*), INTENT(IN)    :: BinFile                      ! Name of the binary FF wind file
+
+   INTEGER,       INTENT(IN)  :: UnWind                        ! unit number for reading wind files
+   INTEGER,       INTENT(OUT) :: ErrStat                       ! determines if an error has been encountered
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg                        ! Error message about what caused the errstat
+
+   CHARACTER(*),  INTENT(IN)  :: BinFile                       ! Name of the binary FF wind file
 
       ! Local Variables:
 
-   REAL(ReKi)                  :: TI      (3)                  ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
-   REAL(ReKi)                  :: BinTI   (3)                  ! turbulence intensities of the wind components as defined in the FF binary file, not necessarially the actual TI
-   REAL(ReKi)                  :: UBar
-   REAL(ReKi)                  :: ZCenter
-   
-   INTEGER(B2Ki)               :: Dum_Int2
-   INTEGER                     :: DumInt
-   INTEGER                     :: I
-   LOGICAL                     :: CWise
-   LOGICAL                     :: Exists
-   CHARACTER( 1028 )           :: SumFile                      ! length is LEN(BinFile) + the 4-character extension.
-   CHARACTER( 1028 )           :: TwrFile                      ! length is LEN(BinFile) + the 4-character extension.
+   REAL(ReKi)                 :: TI      (3)                   ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   REAL(ReKi)                 :: BinTI   (3)                   ! turbulence intensities of the wind components as defined in the FF binary file, not necessarially the actual TI
+   REAL(ReKi)                 :: UBar
+   REAL(ReKi)                 :: ZCenter
+
+   INTEGER(B2Ki)              :: Dum_Int2
+   INTEGER                    :: DumInt
+   INTEGER                    :: I
+   LOGICAL                    :: CWise
+   LOGICAL                    :: Exists
+   CHARACTER( 1028 )          :: SumFile                       ! length is LEN(BinFile) + the 4-character extension.
+   CHARACTER( 1028 )          :: TwrFile                       ! length is LEN(BinFile) + the 4-character extension.
+
+   INTEGER( IntKi )           :: ReadStat                      ! for checking the status on the file reading
 
 
       !----------------------------------------------------------------------------------------------
       ! Check that the module hasn't already been initialized.
-      !----------------------------------------------------------------------------------------------   
-      
-   IF ( Initialized ) THEN  
-      CALL WrScr( ' FFWind has already been initialized.' )
-      ErrStat = 1
+      !----------------------------------------------------------------------------------------------
+
+   IF ( Initialized ) THEN
+      ErrMsg   = ' FFWind has already been initialized.'
+      ErrStat  = ErrID_Warn      ! no reason to stop the program over this.
       RETURN
    ELSE
-      ErrStat = 0
-!      CALL NWTC_Init()    ! Initialized in IfW_Init
-   END IF   
+      ErrStat = ErrID_None
+   END IF
 
 
       !----------------------------------------------------------------------------------------------
@@ -2713,81 +3047,88 @@ SUBROUTINE FF_Init ( UnWind, BinFile, ErrStat )
       ! binary file it is, and close it.
       !----------------------------------------------------------------------------------------------
 
-   CALL OpenBInpFile (UnWind, TRIM(BinFile), ErrStat)
-   IF (ErrStat /= 0) RETURN
-      
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2
+   CALL OpenBInpFile (UnWind, TRIM(BinFile), ReadStat)   !FIXME: Add ErrMsg when it is available.
+   IF (ReadStat /= 0) THEN
+      ErrMsg   = 'Error opening file"'//TRIM(BinFile)//'."'
+      ErrSTat  = ErrID_Fatal
+      RETURN
+   ENDIF
+
+   READ ( UnWind, IOSTAT=ReadStat )  Dum_Int2
    CLOSE( UnWind )
-   
-   IF (ErrStat /= 0) THEN
-      CALL WrScr( ' Error reading first binary integer from file "'//TRIM(BinFile)//'."' )
+
+   IF (ReadStat /= 0) THEN
+      ErrMsg   = ' Error reading first binary integer from file "'//TRIM(BinFile)//'."'
+      ErrStat  = ErrID_Fatal
       RETURN
    END IF
-   
+
       !----------------------------------------------------------------------------------------------
       ! Read the files to get the required FF data.
-      !----------------------------------------------------------------------------------------------   
+      !----------------------------------------------------------------------------------------------
    DumInt = Dum_Int2  ! change to default INTEGER, instead of INT(2) to compare in SELECT below
-    
-   SELECT CASE (DumInt)  
-   
+
+   SELECT CASE (DumInt)
+
       CASE ( 7, 8 )                                                    ! TurbSim binary format
-         
-         CALL Read_TurbSim_FF(UnWind, TRIM(BinFile), ErrStat)
-         
+
+         CALL Read_TurbSim_FF(UnWind, TRIM(BinFile), ErrStat, ErrMsg)
+
+         IF ( ErrStat >= ErrID_Fatal ) RETURN
+
       CASE ( -1, -2, -3, -99 )                                         ! Bladed-style binary format
-      
+
          !...........................................................................................
          ! Create full-field summary file name from binary file root name.  Also get tower file
          ! name.
          !...........................................................................................
 
             CALL GetRoot(BinFile, SumFile)
-            
+
             TwrFile = TRIM(SumFile)//'.twr'
             SumFile = TRIM(SumFile)//'.sum'
-      
+
          !...........................................................................................
          ! Read the summary file to get necessary scaling information
          !...........................................................................................
-   
-            CALL Read_Summary_FF (UnWind, TRIM(SumFile), CWise, ZCenter, TI, ErrStat ) 
-            IF (ErrStat /= 0) RETURN
-            
+
+            CALL Read_Summary_FF (UnWind, TRIM(SumFile), CWise, ZCenter, TI, ErrStat, ErrMsg )
+            IF (ErrStat >= ErrID_Fatal) RETURN
+
             UBar = MeanFFWS      ! temporary storage .... this is our only check to see if the summary and binary files "match"
 
          !...........................................................................................
          ! Open the binary file and read its header
          !...........................................................................................
-         
-            CALL OpenBInpFile (UnWind, TRIM(BinFile), ErrStat)
 
-            IF (ErrStat /= 0) RETURN
+            CALL OpenBInpFile (UnWind, TRIM(BinFile), ErrStat) !FIXME: Add ErrMsg when it is available
+
+            IF (ErrStat >= ErrID_Fatal) RETURN
 
             IF ( Dum_Int2 == -99 ) THEN                                       ! Newer-style BLADED format
-               CALL Read_Bladed_FF_Header1 (UnWind, BinTI, ErrStat)    
-               
-                  ! If the TIs are also in the binary file (BinTI > 0), 
+               CALL Read_Bladed_FF_Header1 (UnWind, BinTI, ErrStat, ErrMsg)
+
+                  ! If the TIs are also in the binary file (BinTI > 0),
                   ! use those numbers instead of ones from the summary file
-                  
-               DO I =1,NFFComp                  
+
+               DO I =1,NFFComp
                   IF ( BinTI(I) > 0 ) TI(I) = BinTI(I)
                END DO
-               
+
             ELSE
-               CALL Read_Bladed_FF_Header0 (UnWind, ErrStat)                  ! Older-style BLADED format
+               CALL Read_Bladed_FF_Header0 (UnWind, ErrStat, ErrMsg)          ! Older-style BLADED format
             END IF
 
-            IF (ErrStat /= 0) RETURN
+            IF (ErrStat >= ErrID_Fatal) RETURN
 
          !...........................................................................................
          ! Let's see if the summary and binary FF wind files go together before continuing.
          !...........................................................................................
-               
+
             IF ( ABS( UBar - MeanFFWS ) > 0.1 )  THEN
-               CALL WrScr( ' Error: Incompatible mean hub-height wind speeds in FF wind files. '//&
-                           '(Check that the .sum and .wnd files were generated together.)' )
-               ErrStat = 1
+               ErrMsg   = ' Error: Incompatible mean hub-height wind speeds in FF wind files. '//&
+                           '(Check that the .sum and .wnd files were generated together.)'
+               ErrStat  = ErrID_Fatal      ! was '= 1'
                RETURN
             ENDIF
 
@@ -2801,30 +3142,30 @@ SUBROUTINE FF_Init ( UnWind, BinFile, ErrStat )
          ! Read the binary grids (converted to m/s) and close the file
          !...........................................................................................
 
-            CALL Read_Bladed_Grids( UnWind, CWise, TI, ErrStat) 
+            CALL Read_Bladed_Grids( UnWind, CWise, TI, ErrStat, ErrMsg)
             CLOSE ( UnWind )
-                           
+
             IF ( ErrStat /= 0 ) RETURN
-   
+
          !...........................................................................................
          ! Read the tower points file
          !...........................................................................................
-   
+
             INQUIRE ( FILE=TRIM(TwrFile) , EXIST=Exists )
 
-            IF (  Exists )  THEN  
-               CALL Read_FF_Tower( UnWind, TRIM(TwrFile), ErrStat  )
+            IF (  Exists )  THEN
+               CALL Read_FF_Tower( UnWind, TRIM(TwrFile), ErrStat, ErrMsg )
             ELSE
-               NTgrids = 0            
-            END IF                        
+               NTgrids = 0
+            END IF
 
-                               
+
       CASE DEFAULT
-         
-         CALL WrScr( ' Error: Unrecognized binary wind file type.' )
-         ErrStat = 1
+
+         ErrMsg   = ' Error: Unrecognized binary wind file type.'
+         ErrStat  = ErrID_Fatal
          RETURN
-                  
+
    END SELECT
 
 
@@ -2833,16 +3174,16 @@ SUBROUTINE FF_Init ( UnWind, BinFile, ErrStat )
       TotalTime     = NFFSteps*FFDTime
    ELSE
       InitXPosition = FFYHWid          ! start half the grid with ahead of the turbine
-      TotalTime     = (NFFSteps-1)*FFDTime      
+      TotalTime     = (NFFSteps-1)*FFDTime
    END IF
-      
+
    Initialized = .TRUE.
-   
+
    RETURN
-   
+
 END SUBROUTINE FF_Init
 !====================================================================================================
-SUBROUTINE Read_Bladed_FF_Header0 (UnWind, ErrStat)
+SUBROUTINE Read_Bladed_FF_Header0 (UnWind, ErrStat, ErrMsg)
 !   Reads the binary headers from the turbulence files of the old Bladed variety.  Note that
 !   because of the normalization, neither NZGrids or NYGrids are larger than 32 points.
 !   21-Sep-2009 - B. Jonkman, NREL/NWTC.
@@ -2853,9 +3194,10 @@ SUBROUTINE Read_Bladed_FF_Header0 (UnWind, ErrStat)
 
 
       ! Passed Variables:
-      
-   INTEGER,   INTENT(IN)      :: UnWind
-   INTEGER,   INTENT(OUT)     :: ErrStat
+
+   INTEGER,       INTENT(IN)  :: UnWind
+   INTEGER,       INTENT(OUT) :: ErrStat
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg
 
       ! Local Variables:
 
@@ -2866,62 +3208,69 @@ SUBROUTINE Read_Bladed_FF_Header0 (UnWind, ErrStat)
    INTEGER(B2Ki)              :: Dum_Int2
 
    INTEGER                    :: I
+   INTEGER                    :: ReadStat                ! for checking the IOSTAT from a READ or Open statement
 
    !-------------------------------------------------------------------------------------------------
    ! Read the header (file has just been opened)
    !-------------------------------------------------------------------------------------------------
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! -NFFC (file ID)
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! -NFFC (file ID)
 
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading number of wind components from binary FF file.' )
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading number of wind components from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       NFFComp = -1*Dum_Int2
-         
 
-   READ (UnWind, IOSTAT=ErrStat) Dum_Int2                                                    ! delta z (mm)
-    
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading dz from binary FF file.' )
+
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! delta z (mm)
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading dz from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       FFZDelt = 0.001*Dum_Int2
       InvFFZD = 1.0/FFZDelt
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! delta y (mm)
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading dy from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! delta y (mm)
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading dy from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       FFYDelt = 0.001*Dum_Int2
       InvFFYD = 1.0/FFYDelt
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! delta x (mm)
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading dx from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! delta x (mm)
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading dx from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       FFXDelt = 0.001*Dum_Int2
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! half the number of time steps
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading number of time steps from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! half the number of time steps
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading number of time steps from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       NFFSteps = 2*Dum_Int2
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! 10 times the mean full-field wind speed
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading mean full-field wind speed from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! 10 times the mean full-field wind speed
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading mean full-field wind speed from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       MeanFFWS = 0.1*Dum_Int2
@@ -2929,60 +3278,64 @@ SUBROUTINE Read_Bladed_FF_Header0 (UnWind, ErrStat)
       FFDTime  = FFXDelt/MeanFFWS
       FFRate   = 1.0/FFDTime
 
-      
-   DO I = 1,5   
-   
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                ! unused variables: zLu, yLu, xLu, dummy, random seed
 
-         IF (ErrStat /= 0) THEN
-            CALL WrScr( ' Error reading 2-byte integers from binary FF file.' )
+   DO I = 1,5
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                              ! unused variables: zLu, yLu, xLu, dummy, random seed
+
+         IF (ReadStat /= 0) THEN
+            ErrMsg   = ' Error reading 2-byte integers from binary FF file.'
+            ErrStat  = ErrID_Fatal     ! no data returned
             RETURN
          END IF
-         
+
    END DO
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! 1000*nz
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! 1000*nz
 
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading nz from binary FF file.' )
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading nz from binary FF file.'
+         ErrStat  = ErrID_Fatal        ! no data returned
          RETURN
       END IF
       NZGrids  = Dum_Int2/1000
       FFZHWid  = 0.5*FFZDelt*( NZGrids - 1 )    ! half the vertical size of the grid
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! 1000*ny
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading ny from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! 1000*ny
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   =  ' Error reading ny from binary FF file.'
+         ErrStat  =  ErrID_Fatal       ! no data returned
          RETURN
-      END IF   
+      END IF
       NYGrids  = Dum_Int2/1000
       FFYHWid  = 0.5*FFYDelt*( NYGrids - 1 )
 
 
    IF (NFFComp == 3) THEN
-   
+
       DO I=1,6
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                             ! unused variables: zLv, yLv, xLv, zLw, yLw, xLw
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 2-byte length scales from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                           ! unused variables: zLv, yLv, xLv, zLw, yLw, xLw
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 2-byte length scales from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
-      
+
    END IF !NFFComp
 
 
    RETURN
-   
+
 END SUBROUTINE Read_Bladed_FF_Header0
 !====================================================================================================
-SUBROUTINE Read_Bladed_FF_Header1 (UnWind, TI, ErrStat)
+SUBROUTINE Read_Bladed_FF_Header1 (UnWind, TI, ErrStat, ErrMsg)
 !   Reads the binary headers from the turbulence files of the new Bladed variety.
 !   16-May-2002 - Windward Engineering.
 !   21-Sep-2009 - B. Jonkman, NREL.  updated to trap errors and add extra parameters for MANN model
@@ -2993,10 +3346,11 @@ SUBROUTINE Read_Bladed_FF_Header1 (UnWind, TI, ErrStat)
 
 
       ! Passed Variables:
-      
-   INTEGER,   INTENT(IN)      :: UnWind
-   REAL(ReKi), INTENT(OUT)    :: TI(3)
-   INTEGER,   INTENT(OUT)     :: ErrStat
+
+   INTEGER,       INTENT(IN)  :: UnWind
+   REAL(ReKi),    INTENT(OUT) :: TI(3)
+   INTEGER,       INTENT(OUT) :: ErrStat
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg
 
       ! Local Variables:
 
@@ -3010,157 +3364,172 @@ SUBROUTINE Read_Bladed_FF_Header1 (UnWind, TI, ErrStat)
 
    INTEGER                    :: I
    INTEGER                    :: TurbType
+   INTEGER                    :: ReadStat
 
 
    TI(:) = -1                                                                                !Initialize to -1 (not all models contain TI)
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! -99 (file ID)
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! -99 (file ID)
 
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading integer from binary FF file.' )
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading integer from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
 
-   
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int2                                                   ! turbulence type
 
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading turbulence type from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int2                                                 ! turbulence type
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading turbulence type from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       TurbType = Dum_Int2
 
 
    SELECT CASE (TurbType)
-      CASE(1, 2) 
+      CASE(1, 2)
          !----------------------------------------
          !1-component Von Karman (1) or Kaimal (2)
          !----------------------------------------
             NFFComp = 1
-                  
-      CASE(3, 5) 
+
+      CASE(3, 5)
          !----------------------------------------
-         !3-component Von Karman (3) or IEC-2 
+         !3-component Von Karman (3) or IEC-2
          ! Kaimal (5)
          !----------------------------------------
             NFFComp = 3
-         
-      CASE(4) 
+
+      CASE(4)
          !----------------------------------------
          !improved Von Karman
          !----------------------------------------
-      
-            READ (UnWind, IOSTAT=ErrStat) Dum_Int4                                           ! number of components (should be 3)
-            
-               IF (ErrStat /= 0) THEN           
-                  CALL WrScr( ' Error reading number of components from binary FF file.' )
+
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                        ! number of components (should be 3)
+
+               IF (ReadStat /= 0) THEN
+                  ErrMsg   = ' Error reading number of components from binary FF file.'
+                  ErrStat  = ErrID_Fatal     ! no data returned
                   RETURN
                END IF
                NFFComp = Dum_Int4
-            
-            READ (UnWind, IOSTAT=ErrStat) Dum_Real4                                          ! Latitude (deg)
-            
-               IF (ErrStat /= 0) THEN
-                  CALL WrScr( ' Error reading latitude from binary FF file.' )  
+
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                       ! Latitude (deg)
+
+               IF (ReadStat /= 0) THEN
+                  ErrMsg   = ' Error reading latitude from binary FF file.'
+                  ErrStat  = ErrID_Fatal     ! no data returned
                   RETURN
                END IF
 
-            READ (UnWind, IOSTAT=ErrStat) Dum_Real4                                          ! Roughness length (m)
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                       ! Roughness length (m)
 
-               IF (ErrStat /= 0) THEN
-                  CALL WrScr( ' Error reading roughness length from binary FF file.' )
+               IF (ReadStat /= 0) THEN
+                  ErrMsg   = ' Error reading roughness length from binary FF file.'
+                  ErrStat  = ErrID_Fatal     ! no data returned
                   RETURN
                END IF
-            
-            READ (UnWind, IOSTAT=ErrStat) Dum_Real4                                          ! Reference height (m) = Z(1) + GridHeight / 2.0
 
-               IF (ErrStat /= 0) THEN
-                  CALL WrScr( ' Error reading reference height from binary FF file.' )
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                       ! Reference height (m) = Z(1) + GridHeight / 2.0
+
+               IF (ReadStat /= 0) THEN
+                  ErrMsg   = ' Error reading reference height from binary FF file.'
+                  ErrStat  = ErrID_Fatal     ! no data returned
                   RETURN
                END IF
-            
-            
+
+
             DO I = 1,3
-               READ (UnWind, IOSTAT=ErrStat) Dum_Real4                                       ! TI(u, v, w) (%)
-               
-                  IF (ErrStat /= 0) THEN
-                     CALL WrScr( ' Error reading TI('//'TRIM(Num2LStr(I))'//') from binary FF file.' )
+               READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                    ! TI(u, v, w) (%)
+
+                  IF (ReadStat /= 0) THEN
+                     ErrMsg   = ' Error reading TI('//'TRIM(Num2LStr(I))'//') from binary FF file.'
+                     ErrStat  = ErrID_Fatal     ! no data returned
                      RETURN
                   END IF
                   TI(I) = Dum_Real4                                                          ! This overwrites the TI read in the summary file
-                  
-            END DO !I            
-                             
-                  
+
+            END DO !I
+
+
       CASE (7, 8)
          !----------------------------------------
          ! General Kaimal (7) or  Mann model (8)
          !----------------------------------------
-      
-            READ (UnWind, IOSTAT=ErrStat) Dum_Int4                                           ! number of bytes in header
-            
-               IF (ErrStat /= 0) THEN           
-                  CALL WrScr( ' Error reading number of header records from binary FF file.' )
+
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                        ! number of bytes in header
+
+               IF (ReadStat /= 0) THEN
+                  ErrMsg   = ' Error reading number of header records from binary FF file.'
+                  ErrStat  = ErrID_Fatal     ! no data returned
                   RETURN
                END IF
 
-            READ (UnWind, IOSTAT=ErrStat) Dum_Int4                                           ! number of components
-            
-               IF (ErrStat /= 0) THEN           
-                  CALL WrScr( ' Error reading number of data from binary FF file.' )
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                        ! number of components
+
+               IF (ReadStat /= 0) THEN
+                  ErrMsg   = ' Error reading number of data from binary FF file.'
+                  ErrStat  = ErrID_Fatal     ! no data returned
                   RETURN
                END IF
                NFFComp = Dum_Int4
 
-                                  
+
       CASE DEFAULT
-      
+
          CALL ProgWarn( ' AeroDyn does not recognize the full-field turbulence file type ='//TRIM(Num2LStr(TurbType))//'.' )
-                  
+
    END SELECT !TurbType
 
 
-   READ (UnWind, IOSTAT=ErrStat) Dum_Real4                                                   ! delta z (m)
-    
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading dz from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                                ! delta z (m)
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading dz from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       FFZDelt = Dum_Real4
       InvFFZD = 1.0/FFZDelt
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                                  ! delta y (m)
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading dy from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                               ! delta y (m)
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading dy from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       FFYDelt = Dum_Real4
       InvFFYD = 1.0/FFYDelt
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                                  ! delta x (m)
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading dx from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                               ! delta x (m)
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading dx from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       FFXDelt = Dum_Real4
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                                                   ! half the number of time steps
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading number of time steps from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                                ! half the number of time steps
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading number of time steps from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       NFFSteps = 2*Dum_Int4
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                                  ! mean full-field wind speed
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading mean full-field wind speed from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                               ! mean full-field wind speed
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading mean full-field wind speed from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       MeanFFWS = Dum_Real4
@@ -3168,150 +3537,163 @@ SUBROUTINE Read_Bladed_FF_Header1 (UnWind, TI, ErrStat)
       FFDTime  = FFXDelt/MeanFFWS
       FFRate   = 1.0/FFDTime
 
-      
-   DO I = 1,3   
-   
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                               ! unused variables: zLu, yLu, xLu
 
-         IF (ErrStat /= 0) THEN
-            CALL WrScr( ' Error reading 4-byte length scales from binary FF file.' )
+   DO I = 1,3
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                            ! unused variables: zLu, yLu, xLu
+
+         IF (ReadStat /= 0) THEN
+            ErrMsg   = ' Error reading 4-byte length scales from binary FF file.'
+            ErrStat  = ErrID_Fatal     ! no data returned
             RETURN
          END IF
-         
+
    END DO
-   
-   
+
+
    DO I = 1,2
-   
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                                                ! unused variables: dummy, random seed
-      
-         IF (ErrStat /= 0) THEN
-            CALL WrScr( ' Error reading 4-byte integers from binary FF file.' )
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                             ! unused variables: dummy, random seed
+
+         IF (ReadStat /= 0) THEN
+            ErrMsg   = ' Error reading 4-byte integers from binary FF file.'
+            ErrStat  = ErrID_Fatal     ! no data returned
             RETURN
          END IF
-         
+
    END DO
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                                                   ! nz
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                                ! nz
 
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading nz from binary FF file.' )
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading nz from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
       END IF
       NZGrids  = Dum_Int4
       FFZHWid  = 0.5*FFZDelt*( NZGrids - 1 )    ! half the vertical size of the grid
 
 
-   READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                                                   ! ny
-   
-      IF (ErrStat /= 0) THEN
-         CALL WrScr( ' Error reading ny from binary FF file.' )
+   READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                                ! ny
+
+      IF (ReadStat /= 0) THEN
+         ErrMsg   = ' Error reading ny from binary FF file.'
+         ErrStat  = ErrID_Fatal     ! no data returned
          RETURN
-      END IF   
+      END IF
       NYGrids  = Dum_Int4
       FFYHWid  = 0.5*FFYDelt*( NYGrids - 1 )
 
 
    IF (NFFComp == 3) THEN
-   
+
       DO I=1,6
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variables: zLv, yLv, xLv, zLw, yLw, xLw
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte length scales from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variables: zLv, yLv, xLv, zLw, yLw, xLw
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte length scales from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
-      
+
    END IF !NFFComp
 
 
 
    IF ( TurbType == 7 ) THEN     ! General Kaimal model
-   
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variable: coherence decay constant
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading coherence decay constant from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variable: coherence decay constant
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading coherence decay constant from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
 
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variables: coherence scale parameter in m
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading coherence scale parameter from binary FF file.' )
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variables: coherence scale parameter in m
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading coherence scale parameter from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
    ELSE IF ( TurbType == 8 ) THEN     ! Mann model
-      
+
       DO I=1,2
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variables: shear parameter (gamma), scale length
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte parameters from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variables: shear parameter (gamma), scale length
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte parameters from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
 
       DO I=1,4
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variables
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte parameters from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variables
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte parameters from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
 
       DO I=1,3
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                                            ! unused variables
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte parameters from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                          ! unused variables
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte parameters from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
 
       DO I=1,2
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variables
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte parameters from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variables
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte parameters from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
 
       DO I=1,3
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                                            ! unused variables
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte parameters from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                                          ! unused variables
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte parameters from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
 
       DO I=1,2
-      
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                                            ! unused variables
-         
-            IF (ErrStat /= 0) THEN
-               CALL WrScr( ' Error reading 4-byte parameters from binary FF file.' )
+
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Real4                                         ! unused variables
+
+            IF (ReadStat /= 0) THEN
+               ErrMsg   = ' Error reading 4-byte parameters from binary FF file.'
+               ErrStat  = ErrID_Fatal     ! no data returned
                RETURN
             END IF
-         
+
       ENDDO !I
 
 
@@ -3319,18 +3701,19 @@ SUBROUTINE Read_Bladed_FF_Header1 (UnWind, TI, ErrStat)
 
 
    RETURN
-   
+
 END SUBROUTINE Read_Bladed_FF_Header1
 !====================================================================================================
-SUBROUTINE Read_Bladed_Grids ( UnWind, CWise, TI, ErrStat )
+SUBROUTINE Read_Bladed_Grids ( UnWind, CWise, TI, ErrStat, ErrMsg )
 ! This subroutine continues reading UnWind, starting after the headers have been read.
 ! It reads the grids and converts the data to un-normalized wind speeds in m/s.
 !----------------------------------------------------------------------------------------------------
 
-   INTEGER,     INTENT(IN)    :: UnWind
-   LOGICAL,     INTENT(IN)    :: CWise
-   REAL(ReKi),  INTENT(IN)    :: TI      (3)                  ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
-   INTEGER,     INTENT(OUT)   :: ErrStat
+   INTEGER,       INTENT(IN)  :: UnWind
+   LOGICAL,       INTENT(IN)  :: CWise
+   REAL(ReKi),    INTENT(IN)  :: TI      (3)                  ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   INTEGER,       INTENT(OUT) :: ErrStat
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg
 
    REAL(ReKi), PARAMETER      :: FF_Offset(3) = (/ 1.0, 0.0, 0.0 /)  ! used for "un-normalizing" the data
 
@@ -3342,63 +3725,66 @@ SUBROUTINE Read_Bladed_Grids ( UnWind, CWise, TI, ErrStat )
    INTEGER                    :: IC
    INTEGER                    :: IR
    INTEGER                    :: IT
-   
+
    INTEGER                    :: TmpNumSteps
+   INTEGER                    :: ReadStat                      ! for checking the result of IOSTAT on READ or Open statements
 
 
    !-------------------------------------------------------------------------------------------------
    ! Generate an informative message.
    !-------------------------------------------------------------------------------------------------
-      
+
    CALL WrScr1( ' Reading a '//TRIM( Num2LStr(NYGrids) )//'x'//TRIM( Num2LStr(NZGrids) )//  &
             ' grid ('//TRIM( Num2LStr(FFYHWid*2) )//' m wide, '// &
             TRIM( Num2LStr(GridBase) )//' m to '//TRIM( Num2LStr(GridBase+FFZHWid*2) )//&
             ' m above ground) with a characterstic wind speed of '//TRIM( Num2LStr(MeanFFWS) )//' m/s. ' )
 
    !-------------------------------------------------------------------------------------------------
-   ! Allocate space for the FF array 
+   ! Allocate space for the FF array
    !-------------------------------------------------------------------------------------------------
 
    TmpNumSteps = NFFSteps + 1       ! add another step, just in case there is an odd number of steps.
 
 !bjj: should we reorganize this FFData array so we access the data faster?
-   
+
    IF ( .NOT. ALLOCATED( FFData ) ) THEN
-      ALLOCATE ( FFData(NZGrids,NYGrids,NFFComp,TmpNumSteps),STAT=ErrStat )
+      ALLOCATE ( FFData(NZGrids,NYGrids,NFFComp,TmpNumSteps),STAT=ReadStat )
 
-      IF ( ErrStat /= 0 )  THEN
+      IF ( ReadStat /= 0 )  THEN
 
-         CALL WrScr( ' Cannot allocate the full-field wind data array.' )
+         ErrMsg   = ' Cannot allocate the full-field wind data array.'
+         ErrStat  = ErrID_Fatal     ! Since won't be able to return data
          RETURN
 
       ENDIF
-      
+
    ELSE
       IF (SIZE(FFDATA,1) /= NZGrids .OR. SIZE(FFDATA,2) /= NYGrids .OR. &
           SIZE(FFDATA,3) /= NFFComp .OR. SIZE(FFDATA,3) /= TmpNumSteps ) THEN
-          
+
             ! Let's make the array the correct size (we should never get here, but you never know)
-            
+
          DEALLOCATE( FFData )
-          
-         ALLOCATE ( FFData(NZGrids,NYGrids,NFFComp,TmpNumSteps),STAT=ErrStat )
 
-         IF ( ErrStat /= 0 )  THEN
+         ALLOCATE ( FFData(NZGrids,NYGrids,NFFComp,TmpNumSteps),STAT=ReadStat )
 
-            CALL WrScr( ' Cannot allocate the full-field wind data array.' )
+         IF ( ReadStat /= 0 )  THEN
+
+            ErrMsg   = ' Cannot allocate the full-field wind data array.'
+            ErrStat  =  ErrID_Fatal       ! Since won't be able to return data
             RETURN
 
          END IF ! Error
-          
+
       END IF !Incorrect size
    END IF ! allocated
 
    !-------------------------------------------------------------------------------------------------
    ! Initialize the data and set column indexing to account for direction of turbine rotation (CWise)
    !-------------------------------------------------------------------------------------------------
-   
+
    FFData(:,:,:,:) = 0.0                        ! we may have only one component
-   
+
    IF ( CWise )  THEN
       CFirst    = NYGrids
       CLast     = 1
@@ -3414,34 +3800,35 @@ SUBROUTINE Read_Bladed_Grids ( UnWind, CWise, TI, ErrStat )
    ! Loop through all the time steps, reading the data and converting to m/s
    !-------------------------------------------------------------------------------------------------
 !bjj: should we reorganize this FFData array so we access the data faster?
-  
+
    NFFSteps = TmpNumSteps
-  
+
 TIME_LOOP:  DO IT=1,TmpNumSteps     ! time (add 1 to see if there is an odd number of grids)
-   
+
       DO IR=1,NZGrids               ! the rows (vertical)
-      
+
          DO IC=CFirst,CLast,CStep   ! the columns (lateral)
-         
+
             DO I=1,NFFComp          ! wind components (U, V, W)
-            
-               READ (UnWind,IOStat=ErrStat)  Dum_Int2
-               IF (ErrStat /= 0) THEN
+
+               READ (UnWind,IOStat=ReadStat)  Dum_Int2
+               IF (ReadStat /= 0) THEN
                   IF ( IT == TmpNumSteps ) THEN ! There really were an even number of steps
                      NFFSteps = TmpNumSteps - 1
                      ErrStat  = 0
-                     EXIT TIME_LOOP       
-                  ELSE               
-                     CALL WrScr( ' Error reading binary data file. ic = '//TRIM(Num2LStr(ic))// &
+                     EXIT TIME_LOOP
+                  ELSE
+
+                     ErrMsg   = ' Error reading binary data file. ic = '//TRIM(Num2LStr(ic))// &
                                     ', ir = '//TRIM(Num2LStr(ir))//', it = '//TRIM(Num2LStr(it))// &
-                                    ', nffsteps = '//TRIM(Num2LStr(nffsteps)) )
-                     ErrStat = 1
+                                    ', nffsteps = '//TRIM(Num2LStr(nffsteps))
+                     ErrStat  = ErrID_Fatal        ! since can't return data
                      RETURN
                   END IF
-               ELSE               
-                  FFData(IR,IC,I,IT) = MeanFFWS*(FF_Offset(I)+0.00001*TI(I)*Dum_Int2) 
+               ELSE
+                  FFData(IR,IC,I,IT) = MeanFFWS*(FF_Offset(I)+0.00001*TI(I)*Dum_Int2)
                END IF
-               
+
             END DO !I
 
          END DO !IC
@@ -3449,98 +3836,101 @@ TIME_LOOP:  DO IT=1,TmpNumSteps     ! time (add 1 to see if there is an odd numb
       END DO !IR
 
    END DO TIME_LOOP !IT
-   
+
    IF ( Periodic ) THEN
-      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// & 
+      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// &
                      '-Hz full-field data (period of '//TRIM( Num2LStr( FFDTime*NFFSteps ) )//' seconds).' )
-   ELSE                     
-      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// & 
+   ELSE
+      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// &
                      '-Hz full-field data ('//TRIM( Num2LStr( FFDTime*( NFFSteps - 1 ) ) )//' seconds).' )
    END IF
 
 END SUBROUTINE Read_Bladed_Grids
 !====================================================================================================
-SUBROUTINE Read_Summary_FF ( UnWind, FileName, CWise, ZCenter, TI, ErrStat )
+SUBROUTINE Read_Summary_FF ( UnWind, FileName, CWise, ZCenter, TI, ErrStat, ErrMsg )
 ! This subroutine reads the text summary file to get normalizing parameters, the location of the
 ! grid, and the direction the grid was written to the binary file
 !----------------------------------------------------------------------------------------------------
 
-   INTEGER,     INTENT(IN)    :: UnWind         ! unit number for the file to open
-   CHARACTER(*),INTENT(IN)    :: FileName       ! name of the summary file
-   LOGICAL,     INTENT(OUT)   :: CWise          ! rotation (for reading the order of the binary data)
-   REAL(ReKi),  INTENT(OUT)   :: ZCenter        ! the height at the center of the grid
-   REAL(ReKi),  INTENT(OUT)   :: TI      (3)    ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
-   INTEGER,     INTENT(OUT)   :: ErrStat        ! returns 0 if no error encountered in the subroutine
-   
+      ! Passed variables
+   INTEGER,       INTENT(IN)  :: UnWind         ! unit number for the file to open
+   CHARACTER(*),  INTENT(IN)  :: FileName       ! name of the summary file
+   LOGICAL,       INTENT(OUT) :: CWise          ! rotation (for reading the order of the binary data)
+   REAL(ReKi),    INTENT(OUT) :: ZCenter        ! the height at the center of the grid
+   REAL(ReKi),    INTENT(OUT) :: TI      (3)    ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   INTEGER,       INTENT(OUT) :: ErrStat        ! returns 0 if no error encountered in the subroutine
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg         ! holds the error messages
+
+      ! Local variables
    REAL(ReKi)                 :: ZGOffset       ! The vertical offset of the turbine on rectangular grid (allows turbulence not centered on turbine hub)
 
-   
    INTEGER, PARAMETER         :: NumStrings = 6 ! number of strings to be looking for in the file
 
    INTEGER                    :: FirstIndx      ! The first character of a line where data is located
    INTEGER                    :: I              ! A loop counter
    INTEGER                    :: LastIndx       ! The last  character of a line where data is located
    INTEGER                    :: LineCount      ! Number of lines that have been read in the file
-   INTEGER                    :: Status         ! Status from I/O calls
-   
+   INTEGER                    :: ReadStat       ! Status from I/O calls
+
    LOGICAL                    :: StrNeeded(NumStrings)   ! if the string has been found
-   
+
    CHARACTER(1024)            :: LINE           ! temporary storage for reading a line from the file
-   
+
       !----------------------------------------------------------------------------------------------
       ! Initialize some variables
       !----------------------------------------------------------------------------------------------
 
-   ErrStat      = 0
+   ErrStat      = ErrID_None
    LineCount    = 0
    StrNeeded(:) = .TRUE.
    ZGOffset     = 0.0
    RefHt        = 0.0
    Periodic     = .FALSE.
-   
+
       !----------------------------------------------------------------------------------------------
       ! Open summary file.
       !----------------------------------------------------------------------------------------------
-      
-   CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat) 
+
+   CALL OpenFInpFile ( UnWind, TRIM( FileName ), ErrStat)   !FIXME: Add in ErrMsg when it is available.
 
 
       !----------------------------------------------------------------------------------------------
       ! Read the summary file.
       !----------------------------------------------------------------------------------------------
 
-   DO WHILE ( ( ErrStat == 0 ) .AND. StrNeeded(NumStrings) )
+   DO WHILE ( ( ErrStat == ErrID_None ) .AND. StrNeeded(NumStrings) )
 
       LineCount = LineCount + 1
 
-      READ ( UnWind, '(A)', IOSTAT=ErrStat ) LINE
-      IF ( ErrStat /= 0 ) THEN
-      
+      READ ( UnWind, '(A)', IOSTAT=ReadStat ) LINE
+      IF ( ReadStat /= 0 ) THEN
+
          IF ( StrNeeded(NumStrings-1) ) THEN  ! the "HEIGHT OFFSET" StrNeeded(NumStrings) parameter is not necessary.  We'll assume it's zero if we didn't find it.
-            CALL WrScr( ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'//TRIM(FileName)//'"' )
-            CALL WrScr( 'Could not find all of the required parameters.' )
-            ErrStat = NumStrings+1
+               !FIXME: should modify how the ErrMsg is handled. See bug report 438.
+            ErrMsg   = ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'//TRIM(FileName)//'".'
+            ErrMsg   = TRIM(ErrMsg)//' Could not find all of the required parameters.'
+            ErrStat  = ErrID_Fatal   ! was 'NumStrings+1'
             RETURN
-         ELSE           
+         ELSE
             EXIT
          ENDIF
-         
+
       END IF
-      
+
       CALL Conv2UC ( LINE )
-            
+
 
       IF ( StrNeeded(1) ) THEN
-      
-         !-------------------------------------------------------------------------------------------
-         ! #1: Get the rotation direction, using the string "CLOCKWISE" 
-         !-------------------------------------------------------------------------------------------
-            
-         IF ( INDEX( LINE, 'CLOCKWISE' ) > 0 ) THEN
-            
-            READ (LINE, *, IOSTAT = Status)  CWise          ! Look for True/False values
 
-            IF ( Status /= 0 ) THEN                         ! Look for Yes/No values instead
+         !-------------------------------------------------------------------------------------------
+         ! #1: Get the rotation direction, using the string "CLOCKWISE"
+         !-------------------------------------------------------------------------------------------
+
+         IF ( INDEX( LINE, 'CLOCKWISE' ) > 0 ) THEN
+
+            READ (LINE, *, IOSTAT = ReadStat)  CWise          ! Look for True/False values
+
+            IF ( ReadStat /= 0 ) THEN                         ! Look for Yes/No values instead
 
                LINE = ADJUSTL ( LINE )                      ! Remove leading spaces from input line
 
@@ -3549,72 +3939,72 @@ SUBROUTINE Read_Summary_FF ( UnWind, FileName, CWise, ZCenter, TI, ErrStat )
                      CWise = .TRUE.
                   CASE ('N')
                      CWise = .FALSE.
-                  CASE DEFAULT                  
-                     CALL WrScr( ' Error reading rotation direction (CLOCKWISE) from FF summary file.' )
-                     ErrStat = 1
+                  CASE DEFAULT
+                     ErrMsg   = ' Error reading rotation direction (CLOCKWISE) from FF summary file.'
+                     ErrStat  = ErrID_Fatal        ! This is necessary information??
                      RETURN
                END SELECT
-               
-            END IF ! Status /= 0
+
+            END IF ! ReadStat /= 0
             StrNeeded(1) = .FALSE.
-            
+
          END IF   ! INDEX for "CLOCKWISE"
-         
+
       ELSEIF ( StrNeeded(2) ) THEN
-      
+
          !-------------------------------------------------------------------------------------------
          ! #2: Get the hub height, using the strings "HUB HEIGHT" or "ZHUB"
          !-------------------------------------------------------------------------------------------
 
          IF ( INDEX( LINE, 'HUB HEIGHT' ) > 0 .OR. INDEX( LINE, 'ZHUB' ) > 0 ) THEN
-         
-            READ (LINE, *, IOSTAT = Status) RefHt
-         
-            IF ( Status /= 0 ) THEN
-               CALL WrScr( ' Error reading hub height from FF summary file.' )
-               ErrStat = 2
+
+            READ (LINE, *, IOSTAT = ReadStat) RefHt
+
+            IF ( ReadStat /= 0 ) THEN
+               ErrMsg   = ' Error reading hub height from FF summary file.'
+               ErrStat  = ErrID_Fatal     ! necessary information. Used to be '= 2'
                RETURN
-            END IF ! Status /= 0
+            END IF ! ReadStat /= 0
             StrNeeded(2) = .FALSE.
-                  
+
          END IF !INDEX for "HUB HEIGHT" or "ZHUB"
-         
-         
+
+
 !      ELSEIF ( StrNeeded(3) ) THEN
 !
 !         !-------------------------------------------------------------------------------------------
 !         ! #3: Get the grid width (& height, if available), using the strings "GRID WIDTH" or "RDIAM"
 !         !    If GRID HEIGHT is specified, use it, too. -- THIS IS UNNECESSARY AS IT'S STORED IN THE BINARY FILE
-!         !-------------------------------------------------------------------------------------------         
+!         !-------------------------------------------------------------------------------------------
 
       ELSEIF ( StrNeeded(4) ) THEN
-      
+
          !-------------------------------------------------------------------------------------------
-         ! #4: Get the mean wind speed "UBAR" and turbulence intensities from following lines for 
+         ! #4: Get the mean wind speed "UBAR" and turbulence intensities from following lines for
          !     scaling Bladed-style FF binary files
-         !-------------------------------------------------------------------------------------------         
+         !-------------------------------------------------------------------------------------------
 
          IF ( INDEX( LINE, 'UBAR') > 0 ) THEN
 
             FirstIndx = INDEX( LINE, '=' ) + 1        ! Look for the equal siqn to find the number we're looking for
 
-            READ ( LINE( FirstIndx:LEN(LINE) ), *, IOSTAT=Status ) MeanFFWS
+            READ ( LINE( FirstIndx:LEN(LINE) ), *, IOSTAT=ReadStat ) MeanFFWS
 
-            IF ( Status /= 0 ) THEN
-               CALL WrScr( ' Error reading UBar binary data normalizing parameter from FF summary file.' )
-               ErrStat = 4
+            IF ( ReadStat /= 0 ) THEN
+               ErrMsg   = ' Error reading UBar binary data normalizing parameter from FF summary file.'
+               ErrStat = ErrID_Fatal   ! used to be '= 4'
                RETURN
-            END IF ! Status /= 0      
+            END IF ! ReadStat /= 0
 
             DO I = 1,3
 
                LineCount = LineCount + 1
 
-               READ ( UnWind, '(A)', IOSTAT=Status ) LINE
-               IF ( Status /= 0 ) THEN
-                  CALL WrScr( ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'//TRIM(FileName)//'"' )
-                  CALL WrScr( 'Could not find all of the required parameters.' )
-                  ErrStat = Status
+               READ ( UnWind, '(A)', IOSTAT=ReadStat ) LINE
+               IF ( ReadStat /= 0 ) THEN
+                  ErrMsg   = ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'//TRIM(FileName)//'".'
+                  ErrMsg   = TRIM(ErrMsg)//' Could not find all of the required parameters.'
+                  ErrStat = ErrID_Fatal
                   RETURN
                END IF
 
@@ -3623,88 +4013,89 @@ SUBROUTINE Read_Summary_FF ( UnWind, FileName, CWise, ZCenter, TI, ErrStat )
 
                IF ( LastIndx <= FirstIndx ) LastIndx = LEN( LINE )   ! If there's no % sign, read to the end of the line
 
-               READ ( LINE( FirstIndx:LastIndx ), *, IOSTAT=Status ) TI(I)
-               IF ( Status /= 0 ) THEN
-                  CALL WrScr( ' Error reading TI('//TRIM(Num2LStr(I))//') binary data normalizing parameter from FF summary file.' )
-                  ErrStat = 4
+               READ ( LINE( FirstIndx:LastIndx ), *, IOSTAT=ReadStat ) TI(I)
+               IF ( ReadStat /= 0 ) THEN
+                  ErrMsg   = ' Error reading TI('//TRIM(Num2LStr(I))//') binary data normalizing parameter from FF summary file.'
+                  ErrStat  = ErrID_Fatal     ! was '= 4'
                   RETURN
-               END IF ! Status /= 0      
+               END IF ! ReadStat /= 0
 
             END DO !I
 
-            StrNeeded(4) = .FALSE.            
+            StrNeeded(4) = .FALSE.
 
           END IF
-      
+
       ELSEIF ( StrNeeded(5) ) THEN
-         
+
          !-------------------------------------------------------------------------------------------
-         ! #5: Get the grid "HEIGHT OFFSET", if it exists (in TurbSim). Otherwise, assume it's zero 
+         ! #5: Get the grid "HEIGHT OFFSET", if it exists (in TurbSim). Otherwise, assume it's zero
          !           ZGOffset = HH - GridBase - FFZHWid
-         !-------------------------------------------------------------------------------------------         
+         !-------------------------------------------------------------------------------------------
          IF ( INDEX( LINE, 'HEIGHT OFFSET' ) > 0  ) THEN
-         
+
             FirstIndx = INDEX ( LINE, '=' ) + 1
 
-            READ ( LINE( FirstIndx:LEN(LINE) ), *, IOSTAT=Status ) ZGOffset            
-                  
-            IF ( Status /= 0 ) THEN
-               CALL WrScr( ' Error reading height offset from FF summary file.' )
-               ErrStat = 5
+            READ ( LINE( FirstIndx:LEN(LINE) ), *, IOSTAT=ReadStat ) ZGOffset
+
+            IF ( ReadStat /= 0 ) THEN
+               ErrMsg   = ' Error reading height offset from FF summary file.'
+               ErrStat  = ErrID_Fatal     ! was '= 5'
                RETURN
-            END IF ! Status /= 0
-                  
+            END IF ! ReadStat /= 0
+
             StrNeeded(5) = .FALSE.
-            
+
          END IF !INDEX for "HEIGHT OFFSET"
 
       ELSEIF ( StrNeeded(6) ) THEN
-         
+
          !-------------------------------------------------------------------------------------------
-         ! #5: Get the grid "PERIODIC", if it exists (in TurbSim). Otherwise, assume it's  
+         ! #5: Get the grid "PERIODIC", if it exists (in TurbSim). Otherwise, assume it's
          !        not a periodic file
-         !-------------------------------------------------------------------------------------------         
+         !-------------------------------------------------------------------------------------------
          IF ( INDEX( LINE, 'PERIODIC' ) > 0  ) THEN
-         
-            Periodic     = .TRUE.                  
+
+            Periodic     = .TRUE.
             StrNeeded(6) = .FALSE.
-            
+
          END IF !INDEX for "PERIODIC"
-         
+
       END IF ! StrNeeded
-      
-      
+
+
    END DO !WHILE
 
    ErrStat = 0    ! We made it to the end of the file
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Close the summary file
-   !-------------------------------------------------------------------------------------------------         
-   
+   !-------------------------------------------------------------------------------------------------
+
    CLOSE ( UnWind )
 
 
    !-------------------------------------------------------------------------------------------------
    ! Calculate the height of the grid center
-   !-------------------------------------------------------------------------------------------------         
+   !-------------------------------------------------------------------------------------------------
 
     ZCenter  = RefHt - ZGOffset
 
 
 END SUBROUTINE Read_Summary_FF
 !====================================================================================================
-SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
+SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat, ErrMsg)
 ! This subroutine reads the binary TurbSim-format FF file (.bts).  It fills the FFData array with
-! velocity data for the grids and fills the FFtower array with velocities at points on the tower 
+! velocity data for the grids and fills the FFtower array with velocities at points on the tower
 ! (if data exists).
 !----------------------------------------------------------------------------------------------------
 
       ! Passed Variables:
-      
-   INTEGER,      INTENT(IN)   :: UnWind            ! unit number for the wind file
-   CHARACTER(*), INTENT(IN)   :: WindFile          ! name of the binary TurbSim file
-   INTEGER,      INTENT(OUT)  :: ErrStat           ! error status return value (0=no error; non-zero is error)
+
+   INTEGER,       INTENT(IN)  :: UnWind            ! unit number for the wind file
+   CHARACTER(*),  INTENT(IN)  :: WindFile          ! name of the binary TurbSim file
+   INTEGER,       INTENT(OUT) :: ErrStat           ! error status return value (0=no error; non-zero is error)
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg            ! message about the error encountered
 
       ! Local Variables:
 
@@ -3718,137 +4109,151 @@ SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
    INTEGER                    :: IY                ! loop counter for y
    INTEGER                    :: IZ                ! loop counter for z
    INTEGER                    :: NChar             ! number of characters in the description string
-   
+   INTEGER                    :: ReadStat          ! Status from file reading
+
    REAL(SiKi)                 :: Vslope(3)         ! slope  for "un-normalizing" data
    REAL(SiKi)                 :: Voffset(3)        ! offset for "un-normalizing" data
-            
+
    CHARACTER(1024)            :: DescStr           ! description string contained in the file
 
 
    NFFComp = 3                                              ! this file contains 3 wind components
-         
+
    !-------------------------------------------------------------------------------------------------
    ! Open the file
    !-------------------------------------------------------------------------------------------------
 
-   CALL OpenBInpFile (UnWind, TRIM(WindFile), ErrStat)
+   CALL OpenBInpFile (UnWind, TRIM(WindFile), ErrStat)   !FIXME: Add in ErrMsg when it is available.
    IF (ErrStat /= 0) RETURN
-      
+
    !-------------------------------------------------------------------------------------------------
    ! Read the header information
    !-------------------------------------------------------------------------------------------------
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int2               ! the file identifier, INT(2)
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading the file identifier in the FF binary file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int2             ! the file identifier, INT(2)
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading the file identifier in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
-         ENDIF         
+         ENDIF
          Periodic = Dum_Int2 == INT( 8, B2Ki) ! the number 7 is used for non-periodic wind files; 8 is periodic wind
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int4               ! the number of grid points vertically, INT(4)
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading the number of z grid points in the FF binary file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4             ! the number of grid points vertically, INT(4)
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading the number of z grid points in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
-         NZgrids = Dum_Int4       
+         NZgrids = Dum_Int4
 
-     
-      READ (UnWind, IOSTAT=ErrStat) Dum_Int4                ! the number of grid points laterally, INT(4)
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading the number of y grid points in the FF binary file "'//TRIM( WindFile )//'."' )
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4             ! the number of grid points laterally, INT(4)
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading the number of y grid points in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          NYgrids = Dum_Int4
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int4               ! the number of tower points, INT(4)
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading the number of tower points in the FF binary file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4             ! the number of tower points, INT(4)
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading the number of tower points in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          NTgrids = Dum_Int4
-         
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int4               ! the number of time steps, INT(4)
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading the number of time steps in the FF binary file "'//TRIM( WindFile )//'."' )
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4             ! the number of time steps, INT(4)
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading the number of time steps in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          NFFSteps = Dum_Int4
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4              ! grid spacing in vertical direction (dz), REAL(4), in m
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading dz in the FF binary file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4            ! grid spacing in vertical direction (dz), REAL(4), in m
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading dz in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          InvFFZD = 1.0/Dum_Real4                            ! 1/dz
          FFZHWid = 0.5*(NZgrids-1)*Dum_Real4                ! half the grid height
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4              ! grid spacing in lateral direction (dy), REAL(4), in m
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading dy in the FF binary file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4            ! grid spacing in lateral direction (dy), REAL(4), in m
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading dy in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          InvFFYD = 1.0 / Dum_Real4                          ! 1/dy
          FFYHWid = 0.5*(NYgrids-1)*Dum_Real4                ! half grid grid width
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4              ! grid spacing in time (dt), REAL(4), in m/s
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading dt in the FF binary file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4            ! grid spacing in time (dt), REAL(4), in m/s
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading dt in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          FFDTime = Dum_Real4
          FFRate  = 1.0/FFDTime
-                  
-                  
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4              ! the mean wind speed at hub height, REAL(4), in m/s
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading mean wind speed in the FF binary file "'//TRIM( WindFile )//'."' )
+
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4            ! the mean wind speed at hub height, REAL(4), in m/s
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading mean wind speed in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          MeanFFWS = Dum_Real4
          InvMFFWS = 1.0 / MeanFFWS
-         
-         
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4              ! height of the hub, REAL(4), in m
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading zHub in the FF binary file "'//TRIM( WindFile )//'."' )
+
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4            ! height of the hub, REAL(4), in m
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading zHub in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          RefHt = Dum_Real4
-         
-         
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4              ! height of the bottom of the grid, REAL(4), in m
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading GridBase in the FF binary file "'//TRIM( WindFile )//'."' )
+
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4            ! height of the bottom of the grid, REAL(4), in m
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading GridBase in the FF binary file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
          ENDIF
          GridBase = Dum_Real4
 
  !        ZGOffset = RefHt - GridBase  - FFZHWid
-         
-         
+
+
       !----------------------------------------------------------------------------------------------
       ! Read the binary scaling factors
-      !----------------------------------------------------------------------------------------------         
-         
-         DO IC = 1,NFFComp         
-            READ (UnWind, IOSTAT=ErrStat)  Vslope(IC)       ! the IC-component slope for scaling, REAL(4)
-               IF ( ErrStat /= 0 )  THEN
-                  CALL WrScr ( ' Error reading Vslope('//Num2LStr(IC)//') in the FF binary file "'//TRIM( WindFile )//'."' )
+      !----------------------------------------------------------------------------------------------
+
+         DO IC = 1,NFFComp
+            READ (UnWind, IOSTAT=ReadStat)   Vslope(IC)     ! the IC-component slope for scaling, REAL(4)
+               IF ( ReadStat /= 0 )  THEN
+                  ErrMsg   = ' Error reading Vslope('//Num2LStr(IC)//') in the FF binary file "'//TRIM( WindFile )//'."'
+                  ErrStat  = ErrID_Fatal        ! fatal since not returning data
                   RETURN
                ENDIF
 
 
-            READ (UnWind, IOSTAT=ErrStat)  Voffset(IC)      ! the IC-component offset for scaling, REAL(4)
-               IF ( ErrStat /= 0 )  THEN
-                  CALL WrScr ( ' Error reading Voffset('//Num2LStr(IC)//') in the FF binary file "'//TRIM( WindFile )//'."' )
+            READ (UnWind, IOSTAT=ReadStat)   Voffset(IC)    ! the IC-component offset for scaling, REAL(4)
+               IF ( ReadStat /= 0 )  THEN
+                  ErrMsg   = ' Error reading Voffset('//Num2LStr(IC)//') in the FF binary file "'//TRIM( WindFile )//'."'
+                  ErrStat  = ErrID_Fatal        ! fatal since not returning data
                   RETURN
                ENDIF
-               
+
          END DO !IC
 
 
@@ -3856,27 +4261,30 @@ SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
       ! Read the description string: "Generated by TurbSim (vx.xx, dd-mmm-yyyy) on dd-mmm-yyyy at hh:mm:ss."
       !----------------------------------------------------------------------------------------------
 
-         READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                ! the number of characters in the description string, max 200, INT(4)
-            IF ( ErrStat /= 0 )  THEN
-               CALL WrScr ( ' Error reading NCHAR in the FF binary file "'//TRIM( WindFile )//'."' )
+         READ (UnWind, IOSTAT=ReadStat)   Dum_Int4          ! the number of characters in the description string, max 200, INT(4)
+            IF ( ReadStat /= 0 )  THEN
+               ErrMsg   = ' Error reading NCHAR in the FF binary file "'//TRIM( WindFile )//'."'
+               ErrStat  = ErrID_Fatal        ! fatal since not returning data
                RETURN
             ENDIF
             nchar = Dum_Int4
-            
+
          DescStr = ''                                       ! Initialize the description string
-         
+
          DO IC=1,nchar
 
-            READ (UnWind, IOSTAT=ErrStat) Dum_Int1          ! the ASCII integer representation of the character, INT(1)
-            IF ( ErrStat /= 0 )  THEN
-               CALL WrScr ( ' Error reading description line in the FF binary file "'//TRIM( WindFile )//'."' )
+            READ (UnWind, IOSTAT=ReadStat)   Dum_Int1       ! the ASCII integer representation of the character, INT(1)
+            IF ( ReadStat /= 0 )  THEN
+               ErrMsg   = ' Error reading description line in the FF binary file "'//TRIM( WindFile )//'."'
+               ErrStat  = ErrID_Fatal        ! fatal since not returning data
                RETURN
             ENDIF
-            
+
             IF ( LEN(DescStr) >= IC ) THEN
                DescStr(IC:IC) = ACHAR( Dum_Int1 )              ! converted ASCII characters
             ELSE
-               CALL WrScr ( ' Description string too long.' )
+               ErrMsg   =  ' Description string too long.'   ! should this be handled by an ErrMsg?
+               ErrStat  = ErrID_Warn
                EXIT
             END IF
 
@@ -3887,47 +4295,49 @@ SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
    ! Get the grid and tower velocities
    !-------------------------------------------------------------------------------------------------
 
-   CALL WrScr1( ' Reading a '//TRIM( Num2LStr(NYGrids) )//'x'//TRIM( Num2LStr(NZGrids) )//  &
-            ' grid ('//TRIM( Num2LStr(FFYHWid*2) )//' m wide, '// &
-            TRIM( Num2LStr(GridBase) )//' m to '//TRIM( Num2LStr(GridBase+FFZHWid*2) )//&
-            ' m above ground) with a characterstic wind speed of '//TRIM( Num2LStr(MeanFFWS) )//' m/s. '//TRIM(DescStr) )
-               
-               
+      CALL WrScr1( ' Reading a '//TRIM( Num2LStr(NYGrids) )//'x'//TRIM( Num2LStr(NZGrids) )//  &
+               ' grid ('//TRIM( Num2LStr(FFYHWid*2) )//' m wide, '// &
+               TRIM( Num2LStr(GridBase) )//' m to '//TRIM( Num2LStr(GridBase+FFZHWid*2) )//&
+               ' m above ground) with a characterstic wind speed of '//TRIM( Num2LStr(MeanFFWS) )//' m/s. '//TRIM(DescStr) )
+
+
    !----------------------------------------------------------------------------------------------
    ! Allocate arrays for the FF grid as well as the tower points, if they exist
    !----------------------------------------------------------------------------------------------
-            
+
       IF ( .NOT. ALLOCATED( FFData ) ) THEN
-         ALLOCATE ( FFData(NZGrids,NYGrids,NFFComp,NFFSteps), STAT=ErrStat )
-               
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr( ' Cannot allocate the full-field wind data array.' )
+         ALLOCATE ( FFData(NZGrids,NYGrids,NFFComp,NFFSteps), STAT=ReadStat )
+
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Cannot allocate the full-field wind data array.'
+            ErrStat  = ErrID_Fatal        ! fatal since not returning data
             RETURN
-         ENDIF         
-      ENDIF
-         
-     
-      IF ( NTgrids > 0 ) THEN
-      
-         IF ( .NOT. ALLOCATED( FFtower ) ) THEN
-            ALLOCATE( FFtower( NFFComp, NTgrids, NFFSteps ), STAT=ErrStat )
-            
-            IF ( ErrStat /= 0 )  THEN
-               CALL WrScr ( ' Cannot allocate the tower wind data array.' )
-               RETURN
-            ENDIF            
          ENDIF
-         
-      ENDIF         
-      
+      ENDIF
+
+
+      IF ( NTgrids > 0 ) THEN
+
+         IF ( .NOT. ALLOCATED( FFtower ) ) THEN
+            ALLOCATE( FFtower( NFFComp, NTgrids, NFFSteps ), STAT=ReadStat )
+
+            IF ( ReadStat /= 0 )  THEN
+               ErrMsg   = ' Cannot allocate the tower wind data array.'
+               ErrStat  = ErrID_Fatal        ! fatal since not returning data
+               RETURN
+            ENDIF
+         ENDIF
+
+      ENDIF
+
    !-------------------------------------------------------------------------------------------------
    ! Read the 16-bit data and scale it to 32-bit reals
    !-------------------------------------------------------------------------------------------------
-               
+
       ! Loop through time.
 
       DO IT=1,NFFSteps
-      
+
          !...........................................................................................
          ! Read grid data at this time step.
          !...........................................................................................
@@ -3937,28 +4347,29 @@ SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
 
             DO IY=1,NYgrids
                ! Ygrid(IY) = -0.5*(ny-1)*dy + (IY-1)*dy  ! Horizontal location of grid data point, in m relative to tower centerline
-            
+
                DO IC=1,NFFComp                           ! number of wind components (U, V, W)
 
-                  READ (UnWind, IOSTAT=ErrStat)  Dum_Int2      ! normalized wind-component, INT(2)
-                  IF ( ErrStat /= 0 )  THEN
-                     CALL WrScr ( ' Error reading grid wind components in the FF binary file "'//TRIM( WindFile )//'."' )
+                  READ (UnWind, IOSTAT=ReadStat)   Dum_Int2       ! normalized wind-component, INT(2)
+                  IF ( ReadStat /= 0 )  THEN
+                     ErrMsg   = ' Error reading grid wind components in the FF binary file "'//TRIM( WindFile )//'."'
+                     ErrStat  = ErrID_Fatal        ! fatal since not returning data
                      RETURN
                   ENDIF
-                  
+
                   FFData(IZ,IY,IC,IT) = ( Dum_Int2 - Voffset(IC) ) / VSlope(IC)
 
                ENDDO !IC
 
             ENDDO !IY
-            
+
          ENDDO ! IZ
 
 
          !...........................................................................................
          ! Read the tower data at this time step.
          !...........................................................................................
-            
+
          DO IZ=1,NTgrids         ! If NTgrids<1, there are no tower points & FFtower is not allocated
 
             ! Ytower     = 0               ! Lateral location of the tower data point, in m relative to tower centerline
@@ -3966,12 +4377,13 @@ SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
 
             DO IC=1,NFFComp   ! number of wind components
 
-               READ (UnWind, IOSTAT=ErrStat)  Dum_Int2      ! normalized wind-component, INT(2)
-               IF ( ErrStat /= 0 )  THEN
-                  CALL WrScr ( ' Error reading tower wind components in the FF binary file "'//TRIM( WindFile )//'."' )
+               READ (UnWind, IOSTAT=ReadStat)   Dum_Int2       ! normalized wind-component, INT(2)
+               IF ( ReadStat /= 0 )  THEN
+                  ErrMsg   = ' Error reading tower wind components in the FF binary file "'//TRIM( WindFile )//'."'
+                  ErrStat  = ErrID_Fatal        ! fatal since not returning data
                   RETURN
                ENDIF
-               
+
                FFtower(IC,IZ,IT) = ( Dum_Int2 - Voffset(IC) ) / VSlope(IC)  ! wind-component scaled to m/s
 
             ENDDO !IC
@@ -3984,33 +4396,34 @@ SUBROUTINE Read_TurbSim_FF(UnWind,WindFile, ErrStat)
    !-------------------------------------------------------------------------------------------------
    ! close the file and return
    !-------------------------------------------------------------------------------------------------
-   
+
    CLOSE ( UnWind )
 
 
    IF ( Periodic ) THEN
-      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// & 
+      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// &
                      '-Hz full-field data (period of '//TRIM( Num2LStr( FFDTime*( NFFSteps ) ) )//' seconds).' )
    ELSE
-      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// & 
+      CALL WrScr ( ' Processed '//TRIM( Num2LStr( NFFSteps ) )//' time steps of '//TRIM( Num2LStr ( FFRate ) )// &
                      '-Hz full-field data ('//TRIM( Num2LStr( FFDTime*( NFFSteps - 1 ) ) )//' seconds).' )
-   END IF                  
+   END IF
 
    RETURN
 
 END SUBROUTINE READ_TurbSim_FF
 !====================================================================================================
-SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
+SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat, ErrMsg )
 ! This subroutine reads the binary tower file that corresponds with the Bladed-style FF binary file.
 ! The FF grid must be read before this subroutine is called! (many checks are made to ensure the
 ! files belong together)
 !----------------------------------------------------------------------------------------------------
 
       ! Passed Variables:
-      
-   INTEGER,      INTENT(IN)   :: UnWind            ! unit number for the wind file
-   CHARACTER(*), INTENT(IN)   :: WindFile          ! name of the binary TurbSim file
-   INTEGER,      INTENT(OUT)  :: ErrStat           ! error status return value (0=no error; non-zero is error)
+
+   INTEGER,       INTENT(IN)  :: UnWind            ! unit number for the wind file
+   CHARACTER(*),  INTENT(IN)  :: WindFile          ! name of the binary TurbSim file
+   INTEGER,       INTENT(OUT) :: ErrStat           ! error status return value (0=no error; non-zero is error)
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg            ! a message for errors that occur
 
       ! Local Variables:
 
@@ -4021,21 +4434,22 @@ SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
    INTEGER                    :: IC                ! loop counter for wind components
    INTEGER                    :: IT                ! loop counter for time
    INTEGER                    :: IZ                ! loop counter for z
-   
+   INTEGER                    :: ReadStat          ! IOSTAT value.
+
    REAL(ReKi), PARAMETER      :: TOL = 1E-4        ! tolerence for wind file comparisons
 
    REAL(ReKi), PARAMETER      :: FF_Offset(3) = (/ 1.0, 0.0, 0.0 /)  ! used for "un-normalizing" the data
    REAL(SiKi)                 :: TI       (3)      ! scaling values for "un-normalizing the data" [approx. turbulence intensities of the wind components]
 
    !-------------------------------------------------------------------------------------------------
-   ! 
+   !
    !-------------------------------------------------------------------------------------------------
 
    NTgrids = 0
 
    IF ( NFFComp /= 3 ) THEN
-      CALL WrScr( ' Error: Tower binary files require 3 wind components.' )
-      ErrStat = 1
+      ErrMsg   = ' Error: Tower binary files require 3 wind components.'
+      ErrStat  = ErrID_Fatal     ! was '= 1'
       RETURN
    END IF
 
@@ -4043,112 +4457,121 @@ SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
    ! Open the file
    !-------------------------------------------------------------------------------------------------
 
-   CALL OpenBInpFile (UnWind, TRIM(WindFile), ErrStat)
-   IF (ErrStat /= 0) THEN
-      ErrStat = -1
+   CALL OpenBInpFile (UnWind, TRIM(WindFile), ReadStat)   !FIXME: Add ErrMsg when it is available.
+   IF (ReadStat /= 0) THEN
+      ErrMsg   = 'Error opening file '//TRIM(WindFile)
+      ReadStat = ErrID_Fatal        ! was '= -1'
       RETURN
    END IF
-      
+
    !-------------------------------------------------------------------------------------------------
    ! Read the header information and check that it's compatible with the FF Bladed-style binary
    ! parameters already read.
    !-------------------------------------------------------------------------------------------------
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                 ! dz, in meters [4-byte REAL]
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading dz in the binary tower file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4               ! dz, in meters [4-byte REAL]
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading dz in the binary tower file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal     ! wasn't a value before
             RETURN
          ENDIF
 
          IF ( ABS(Dum_Real4*InvFFZD-1) > TOL ) THEN
-            CALL WrScr ( ' Resolution in the FF binary file does not match the tower file.' )
-            ErrStat = 1
+            ErrMsg   = ' Resolution in the FF binary file does not match the tower file.'
+            ErrStat  = ErrID_Fatal     ! was '= 1' -- should this be fatal, or just a warning?
             RETURN
          END IF
-         
-         
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                 ! dx, in meters [4-byte REAL]
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading dx in the binary tower file "'//TRIM( WindFile )//'."' )
+
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4               ! dx, in meters [4-byte REAL]
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading dx in the binary tower file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal     ! fatal since returning without data
             RETURN
          ENDIF
-         
+
          IF ( ABS(Dum_Real4*InvMFFWS/FFDTime-1) > TOL ) THEN
-            CALL WrScr ( ' Time resolution in the FF binary file does not match the tower file.' )
-            ErrStat = 1
+            ErrMsg   = ' Time resolution in the FF binary file does not match the tower file.'
+            ErrStat  = ErrID_Fatal
             RETURN
          END IF
-         
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                 ! Zmax, in meters [4-byte REAL]
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading GridBase in the binary tower file "'//TRIM( WindFile )//'."' )
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4               ! Zmax, in meters [4-byte REAL]
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading GridBase in the binary tower file "'//TRIM( WindFile )//'."'
+            ErrStat  = ErrID_Fatal
             RETURN
          ENDIF
 
          IF ( ABS(Dum_Real4/GridBase-1) > TOL ) THEN
-            CALL WrScr ( ' Height in the FF binary file does not match the tower file.' )
-            ErrStat = 1
+            ErrMsg   = ' Height in the FF binary file does not match the tower file.'
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                  ! NumOutSteps [4-byte INTEGER]
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading NumOutSteps in the binary tower file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                ! NumOutSteps [4-byte INTEGER]
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading NumOutSteps in the binary tower file "'//TRIM( WindFile )//'."'
+            ErrStat = ErrID_Fatal
             RETURN
          ENDIF
 
          IF ( Dum_Int4 /= NFFSteps ) THEN
-            CALL WrScr ( ' Number of time steps in the FF binary file does not match the tower file.' )
-            ErrStat = 1
+            ErrMsg   = ' Number of time steps in the FF binary file does not match the tower file.'
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
 
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Int4                  ! NumZ      [4-byte INTEGER]
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading NumZ in the binary tower file "'//TRIM( WindFile )//'."' )
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Int4                ! NumZ      [4-byte INTEGER]
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading NumZ in the binary tower file "'//TRIM( WindFile )//'."'
+            ErrStat = ErrID_Fatal
             RETURN
          ENDIF
          NTgrids = Dum_Int4
-         
 
-      READ (UnWind, IOSTAT=ErrStat)  Dum_Real4                 ! UHub      [4-byte REAL]
-         IF ( ErrStat /= 0 )  THEN
-            CALL WrScr ( ' Error reading UHub in the binary tower file "'//TRIM( WindFile )//'."' )
+
+      READ (UnWind, IOSTAT=ReadStat)   Dum_Real4               ! UHub      [4-byte REAL]
+         IF ( ReadStat /= 0 )  THEN
+            ErrMsg   = ' Error reading UHub in the binary tower file "'//TRIM( WindFile )//'."'
+            ErrStat = ErrID_Fatal
             RETURN
          ENDIF
 
          IF ( ABS(Dum_Real4*InvMFFWS - 1) > TOL ) THEN
-            CALL WrScr ( ' Mean wind speed in the FF binary file does not match the tower file.' )
-            ErrStat = 1
+            ErrMsg   = ' Mean wind speed in the FF binary file does not match the tower file.'
+            ErrStat = ErrID_Fatal
             NTgrids = 0
             RETURN
          END IF
 
 
       DO IC=1,3
-         READ (UnWind, IOSTAT=ErrStat)  TI(IC)               ! TI(u), TI(v), TI(w)  [4-byte REAL]
-            IF ( ErrStat /= 0 )  THEN
-               CALL WrScr ( ' Error reading TI('//TRIM(Num2LStr(IC))//') in the binary tower file "' &
-                               //TRIM( WindFile )//'."' )
-               NTgrids = 0                               
+         READ (UnWind, IOSTAT=ReadStat)   TI(IC)               ! TI(u), TI(v), TI(w)  [4-byte REAL]
+            IF ( ReadStat /= 0 )  THEN
+               ErrMsg   = ' Error reading TI('//TRIM(Num2LStr(IC))//') in the binary tower file "' &
+                               //TRIM( WindFile )//'."'
+               ErrStat  = ErrID_Fatal
+               NTgrids  = 0
                RETURN
             ENDIF
-      END DO      
+      END DO
 
    !----------------------------------------------------------------------------------------------
    ! Allocate arrays for the tower points
-   !----------------------------------------------------------------------------------------------        
-     
-      IF ( NTgrids > 0 ) THEN
-      
-         IF ( .NOT. ALLOCATED( FFtower ) ) THEN
-!            CALL AllocAry( FFtower, NFFComp, NTgrids, NFFSteps, 'tower wind data', ErrStat )            
-            ALLOCATE ( FFtower(NFFComp,NTgrids,NFFSteps), STAT=ErrStat )
+   !----------------------------------------------------------------------------------------------
 
-            IF ( ErrStat /= 0 )  THEN
-               CALL WrScr ( ' Error allocating memory for the tower wind data array.' )
+      IF ( NTgrids > 0 ) THEN
+
+         IF ( .NOT. ALLOCATED( FFtower ) ) THEN
+!            CALL AllocAry( FFtower, NFFComp, NTgrids, NFFSteps, 'tower wind data', ErrStat )
+            ALLOCATE ( FFtower(NFFComp,NTgrids,NFFSteps), STAT=ReadStat )
+
+            IF ( ReadStat /= 0 )  THEN
+               ErrMsg   = ' Error allocating memory for the tower wind data array.'
+               ErrStat = ErrID_Fatal
                NTgrids = 0
                RETURN
             END IF
@@ -4156,13 +4579,13 @@ SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
          ELSE
             ! Check sizes here!
          ENDIF
-         
-      ENDIF         
-      
+
+      ENDIF
+
    !-------------------------------------------------------------------------------------------------
    ! Read the 16-bit time-series data and scale it to 32-bit reals
    !-------------------------------------------------------------------------------------------------
-               
+
       ! Loop through time.
 
       DO IT=1,NFFSteps
@@ -4174,15 +4597,15 @@ SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
 
             DO IC=1,NFFComp   ! number of wind components
 
-               READ (UnWind, IOSTAT=ErrStat)  Dum_Int2      ! normalized wind-component, INT(2)
-               IF ( ErrStat /= 0 )  THEN
-                  CALL WrScr( ' Error reading binary tower data file. it = '//TRIM(Num2LStr(it))// &
-                                 ', nffsteps = '//TRIM(Num2LStr(nffsteps)) )
-                  ErrStat = 1  
-                  NTgrids = 0            
+               READ (UnWind, IOSTAT=ReadStat)   Dum_Int2       ! normalized wind-component, INT(2)
+               IF ( ReadStat /= 0 )  THEN
+                  ErrMsg   = ' Error reading binary tower data file. it = '//TRIM(Num2LStr(it))// &
+                                 ', nffsteps = '//TRIM(Num2LStr(nffsteps))
+                  ErrStat  = ErrID_Fatal
+                  NTgrids  = 0
                   RETURN
                ENDIF
-               
+
                FFtower(IC,IZ,IT) = MeanFFWS*(FF_Offset(IC)+0.00001*TI(IC)*Dum_Int2)   ! wind-component scaled to m/s
 
             ENDDO !IC
@@ -4190,7 +4613,7 @@ SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
          ENDDO ! IZ
 
 
-      ENDDO ! IT   
+      ENDDO ! IT
 
    !-------------------------------------------------------------------------------------------------
    ! Close the file
@@ -4205,181 +4628,185 @@ SUBROUTINE Read_FF_Tower( UnWind, WindFile, ErrStat )
 
 END SUBROUTINE Read_FF_Tower
 !====================================================================================================
-FUNCTION FF_GetRValue(RVarName, ErrStat)
+FUNCTION FF_GetRValue(RVarName, ErrStat, ErrMsg)
 !  This function returns a real scalar value whose name is listed in the RVarName input argument.
 !  If the name is not recognized, an error is returned in ErrStat.
 !----------------------------------------------------------------------------------------------------
 
-   CHARACTER(*),   INTENT(IN)    :: RVarName
-   INTEGER,        INTENT(OUT)   :: ErrStat
+   CHARACTER(*),     INTENT(IN)  :: RVarName
+   INTEGER,          INTENT(OUT) :: ErrStat
+   CHARACTER(*),     INTENT(OUT) :: ErrMsg
    REAL(ReKi)                    :: FF_GetRValue
 
-   
+
    CHARACTER(20)                 :: VarNameUC
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    IF ( .NOT. Initialized ) THEN
-      CALL WrScr( ' Initialialize the FFWind module before calling its subroutines.' )
-      ErrStat = 1
+      ErrMsg   = ' Initialialize the FFWind module before calling its subroutines.'
+      ErrStat  = ErrID_Fatal      ! was '= 1'
       RETURN
    ELSE
-      ErrStat = 0   
-   END IF      
+      ErrStat = 0
+   END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Return the requested values.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    VarNameUC = RVarName
    CALL Conv2UC( VarNameUC )
 
    SELECT CASE ( TRIM(VarNameUC) )
-   
+
       CASE ('HUBHEIGHT', 'REFHEIGHT' )
          FF_GetRValue = RefHt
-         
+
       CASE ('GRIDWIDTH', 'FFYWID' )
          FF_GetRValue = FFYHWid*2
 
       CASE ('GRIDHEIGHT', 'FFZWID' )
          FF_GetRValue = FFZHWid*2
-         
+
       CASE ('MEANFFWS' )
-         FF_GetRValue = MeanFFWS         
-         
+         FF_GetRValue = MeanFFWS
+
       CASE DEFAULT
-         CALL WrScr( ' Invalid variable name in FF_GetRValue().' )
-         ErrStat = 1
-         
+         ErrMsg   = ' Invalid variable name in FF_GetRValue().'
+         ErrStat  = ErrID_Fatal     ! was '= 1'
+
    END SELECT
 
 END FUNCTION FF_GetRValue
 !====================================================================================================
-FUNCTION FF_GetWindSpeed(Time, InputPosition, ErrStat)
-! This function receives time and position (in InputInfo) where (undisturbed) velocities are are 
+FUNCTION FF_GetWindSpeed(Time, InputPosition, ErrStat, ErrMsg)
+! This function receives time and position (in InputInfo) where (undisturbed) velocities are are
 ! requested.  It determines if the point is on the FF grid or tower points and calls the
 ! corresponding interpolation routine, which returns the velocities at the specified time and space.
 !----------------------------------------------------------------------------------------------------
-   
-   REAL(ReKi),        INTENT(IN) :: Time
-   REAL(ReKi),        INTENT(IN) :: InputPosition(3)
-   INTEGER,           INTENT(OUT):: ErrStat
-   TYPE(InflIntrpOut)            :: FF_GetWindSpeed
-   
+
+   REAL(DbKi),       INTENT(IN)  :: Time
+   REAL(ReKi),       INTENT(IN)  :: InputPosition(3)
+   INTEGER,          INTENT(OUT) :: ErrStat
+   CHARACTER(*),     INTENT(OUT) :: ErrMsg
+
+   REAL(ReKi)                    :: FF_GetWindSpeed(3)
+
    REAL(ReKi), PARAMETER         :: TOL = 1E-3
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
-   
+   !-------------------------------------------------------------------------------------------------
+
    IF ( .NOT. Initialized ) THEN
-      CALL WrScr( ' Initialialize the FFWind module before calling its subroutines.' )
-      ErrStat = 1
+      ErrMsg   = ' Initialialize the FFWind module before calling its subroutines.'
+      ErrStat  = ErrID_Fatal     ! was '= 1'
       RETURN
    ELSE
-      ErrStat = 0   
-   END IF      
+      ErrStat = 0
+   END IF
 
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Find out if the location is on the grid on on tower points; interpolate and return the value.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
-    FF_GetWindSpeed%Velocity = FF_Interp(Time,InputPosition, ErrStat)
+    FF_GetWindSpeed = FF_Interp(Time,InputPosition, ErrStat, ErrMsg)
 
 
-!   IF ( InputPosition(3) >= GridBase - TOL ) THEN  
-!   
+!   IF ( InputPosition(3) >= GridBase - TOL ) THEN
+!
 !         ! Get the velocities interpolated on the FF grid
-!      
+!
 !      FF_GetWindSpeed%Velocity = FF_Interp(Time,InputPosition, ErrStat)
-!      
+!
 !   ELSE
-!   
+!
 !         ! Get the velocities interpolated below the FF grid, on the tower points
 !
 !      IF ( NTgrids < 1 ) THEN
-!      
-!         CALL WrScr( ' Error: FF interpolation height is below the grid and no tower points have been defined.' )
-!         ErrStat = 1
+!
+!         ErrMsg   = ' Error: FF interpolation height is below the grid and no tower points have been defined.'
+!         ErrStat = ErrID_Fatal        ! was '= 1'
 !         RETURN
-!         
+!
 !      ELSE
-!      
+!
 !         FF_GetWindSpeed%Velocity = FF_TowerInterp(Time,InputInfo%Position, ErrStat)
-!         
+!
 !      END IF   ! NTgrids < 1
-!      
-!   
+!
+!
 !   END IF      ! InputInfo%Position(3)>= GridBase
 
 
 END FUNCTION FF_GetWindSpeed
 !====================================================================================================
-FUNCTION FF_Interp(Time, Position, ErrStat)
-!    This function is used to interpolate into the full-field wind array or tower array if it has   
+FUNCTION FF_Interp(Time, Position, ErrStat, ErrMsg)
+!    This function is used to interpolate into the full-field wind array or tower array if it has
 !    been defined and is necessary for the given inputs.  It receives X, Y, Z and
-!    TIME from the calling routine.  It then computes a time shift due to a nonzero X based upon 
+!    TIME from the calling routine.  It then computes a time shift due to a nonzero X based upon
 !    the average windspeed.  The modified time is used to decide which pair of time slices to interpolate
-!    within and between.  After finding the two time slices, it decides which four grid points bound the 
-!    (Y,Z) pair.  It does a bilinear interpolation for each time slice. Linear interpolation is then used 
-!    to interpolate between time slices.  This routine assumes that X is downwind, Y is to the left when  
+!    within and between.  After finding the two time slices, it decides which four grid points bound the
+!    (Y,Z) pair.  It does a bilinear interpolation for each time slice. Linear interpolation is then used
+!    to interpolate between time slices.  This routine assumes that X is downwind, Y is to the left when
 !    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
-!    
+!
 !    If tower points are used, it assumes the velocity at the ground is 0.  It interpolates between
 !    heights and between time slices, but ignores the Y input.
 !
 !    11/07/94 - Created by M. Buhl from the original TURBINT.
 !    09/25/97 - Modified by M. Buhl to use f90 constructs and new variable names.  Renamed to FF_Interp.
-!    09/23/09 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.  
+!    09/23/09 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
 !               Height is now relative to the ground
 !
 !----------------------------------------------------------------------------------------------------
 
    IMPLICIT                      NONE
 
-   REAL(ReKi),      INTENT(IN) :: Position(3)       ! takes the place of XGrnd, YGrnd, ZGrnd
-   REAL(ReKi),      INTENT(IN) :: Time
-   REAL(ReKi)                  :: FF_Interp(3)      ! The U, V, W velocities
+   REAL(ReKi),       INTENT(IN)  :: Position(3)       ! takes the place of XGrnd, YGrnd, ZGrnd
+   REAL(DbKi),       INTENT(IN)  :: Time
+   REAL(ReKi)                    :: FF_Interp(3)      ! The U, V, W velocities
 
-   INTEGER,         INTENT(OUT):: ErrStat
+   INTEGER,          INTENT(OUT) :: ErrStat
+   CHARACTER(*),     INTENT(OUT) :: ErrMsg
 
       ! Local Variables:
 
-   REAL(ReKi)                  :: TimeShifted
-   REAL(ReKi),PARAMETER        :: Tol = 1.0E-3      ! a tolerance for determining if two reals are the same (for extrapolation)
-   REAL(ReKi)                  :: W_YH_Z
-   REAL(ReKi)                  :: W_YH_ZH
-   REAL(ReKi)                  :: W_YH_ZL
-   REAL(ReKi)                  :: W_YL_Z
-   REAL(ReKi)                  :: W_YL_ZH
-   REAL(ReKi)                  :: W_YL_ZL
-   REAL(ReKi)                  :: Wnd      (2)
-   REAL(ReKi)                  :: T
-   REAL(ReKi)                  :: TGRID
-   REAL(ReKi)                  :: Y
-   REAL(ReKi)                  :: YGRID
-   REAL(ReKi)                  :: Z
-   REAL(ReKi)                  :: ZGRID
+   REAL(ReKi)                    :: TimeShifted
+   REAL(ReKi),PARAMETER          :: Tol = 1.0E-3      ! a tolerance for determining if two reals are the same (for extrapolation)
+   REAL(ReKi)                    :: W_YH_Z
+   REAL(ReKi)                    :: W_YH_ZH
+   REAL(ReKi)                    :: W_YH_ZL
+   REAL(ReKi)                    :: W_YL_Z
+   REAL(ReKi)                    :: W_YL_ZH
+   REAL(ReKi)                    :: W_YL_ZL
+   REAL(ReKi)                    :: Wnd      (2)
+   REAL(ReKi)                    :: T
+   REAL(ReKi)                    :: TGRID
+   REAL(ReKi)                    :: Y
+   REAL(ReKi)                    :: YGRID
+   REAL(ReKi)                    :: Z
+   REAL(ReKi)                    :: ZGRID
 
-   INTEGER                    :: IDIM
-   INTEGER                    :: IG
-   INTEGER                    :: IT
-   INTEGER                    :: ITHI
-   INTEGER                    :: ITLO
-   INTEGER                    :: IYHI
-   INTEGER                    :: IYLO
-   INTEGER                    :: IZHI
-   INTEGER                    :: IZLO
-   
-   LOGICAL                    :: OnGrid
-   
+   INTEGER                       :: IDIM
+   INTEGER                       :: IG
+   INTEGER                       :: IT
+   INTEGER                       :: ITHI
+   INTEGER                       :: ITLO
+   INTEGER                       :: IYHI
+   INTEGER                       :: IYLO
+   INTEGER                       :: IZHI
+   INTEGER                       :: IZLO
+
+   LOGICAL                       :: OnGrid
+
    !-------------------------------------------------------------------------------------------------
    ! Initialize variables
    !-------------------------------------------------------------------------------------------------
@@ -4391,51 +4818,51 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
    ! Find the bounding time slices.
    !-------------------------------------------------------------------------------------------------
 
-   ! Perform the time shift.  At time=0, a point half the grid width downstream (FFYHWid) will index into the zero time slice.  
-   ! If we did not do this, any point downstream of the tower at the beginning of the run would index outside of the array.   
+   ! Perform the time shift.  At time=0, a point half the grid width downstream (FFYHWid) will index into the zero time slice.
+   ! If we did not do this, any point downstream of the tower at the beginning of the run would index outside of the array.
    ! This all assumes the grid width is at least as large as the rotor.  If it isn't, then the interpolation will not work.
 
 
    TimeShifted = TIME + ( InitXPosition - Position(1) )*InvMFFWS    ! in distance, X: InputInfo%Position(1) - InitXPosition - TIME*MeanFFWS
-      
+
 
    IF ( Periodic ) THEN ! translate TimeShifted to ( 0 <= TimeShifted < TotalTime )
 
       TimeShifted = MODULO( TimeShifted, TotalTime )
-   
+
       TGRID = TimeShifted*FFRate
-      ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0) 
-      T     = TGRID - ITLO             ! a value between 0 and 1 that indicates a relative location between ITLO and ITHI   
-      
+      ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
+      T     = TGRID - ITLO             ! a value between 0 and 1 that indicates a relative location between ITLO and ITHI
+
       ITLO = ITLO + 1
       IF ( ITLO == NFFSteps ) THEN
          ITHI = 1
       ELSE
          ITHI = ITLO + 1
       END IF
-      
-      
+
+
    ELSE
-   
+
       TGRID = TimeShifted*FFRate
-      ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0) 
-      T     = TGRID - ITLO             ! a value between 0 and 1 that indicates a relative location between ITLO and ITHI   
-   
-      ITLO = ITLO + 1                  ! add one since our grids start at 1, not 0 
-      ITHI = ITLO + 1   
+      ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
+      T     = TGRID - ITLO             ! a value between 0 and 1 that indicates a relative location between ITLO and ITHI
+
+      ITLO = ITLO + 1                  ! add one since our grids start at 1, not 0
+      ITHI = ITLO + 1
 
       IF ( ITLO >= NFFSteps .OR. ITLO < 1 ) THEN
          IF ( ITLO == NFFSteps  ) THEN
-            ITHI = ITLO   
+            ITHI = ITLO
             IF ( T <= TOL ) THEN ! we're on the last point
                T = 0.0
             ELSE  ! We'll extrapolate one dt past the last value in the file
                ITLO = ITHI - 1
-            END IF         
-         ELSE                 
-            CALL WrScr( ' Error: FF wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )// & 
-                           ' seconds (trying to access data at '//TRIM( Num2LStr( REAL( TimeShifted, ReKi ) ) )//' seconds).'  )
-            ErrStat = 1   
+            END IF
+         ELSE
+            ErrMsg   = ' Error: FF wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )// &
+                       ' seconds (trying to access data at '//TRIM( Num2LStr( REAL( TimeShifted, ReKi ) ) )//' seconds).'
+            ErrStat  = ErrID_Fatal
             RETURN
          END IF
       ENDIF
@@ -4451,7 +4878,7 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
 
    IF (ZGRID > -1*TOL) THEN
       OnGrid = .TRUE.
-      
+
       IZLO = INT( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
       IZHI = IZLO + 1
 
@@ -4459,49 +4886,49 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
 
       IF ( IZLO < 1 ) THEN
          IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
-            Z    = 0.0 
+            Z    = 0.0
             IZLO = 1
          ELSE
-            CALL WrScr( ' Error: FF wind array boundaries violated. Grid too small in Z direction (Z='//&
-                        TRIM(Num2LStr(Position(3)))//' m is below the grid).' )
-            ErrStat = 1   
+            ErrMsg   = ' Error: FF wind array boundaries violated. Grid too small in Z direction (Z='//&
+                       TRIM(Num2LStr(Position(3)))//' m is below the grid).'
+            ErrStat  = ErrID_Fatal
             RETURN
          END IF
       ELSEIF ( IZLO >= NZGrids ) THEN
          IF ( IZLO == NZGrids .AND. Z <= TOL ) THEN
             Z    = 0.0
             IZHI = IZLO                   ! We're right on the last point, which is still okay
-         ELSE      
-            CALL WrScr( ' Error: FF wind array boundaries violated. Grid too small in Z direction (Z='//&
-                        TRIM(Num2LStr(Position(3)))//' m is above the grid).' )
-            ErrStat = 3   
+         ELSE
+            ErrMsg   = ' Error: FF wind array boundaries violated. Grid too small in Z direction (Z='//&
+                       TRIM(Num2LStr(Position(3)))//' m is above the grid).'
+            ErrStat  = ErrID_Fatal
             RETURN
-         END IF         
+         END IF
       ENDIF
 
    ELSE
-   
+
       OnGrid = .FALSE.  ! this is on the tower
-      
+
       IF ( NTGrids < 1 ) THEN
-         CALL WrScr ( ' Error: FF wind array boundaries violated. Grid too small in Z direction '// &
-                       '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).' )
-         ErrStat = 1
+         ErrMsg   = ' Error: FF wind array boundaries violated. Grid too small in Z direction '// &
+                    '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
+         ErrStat  = ErrID_Fatal
          RETURN
       END IF
 
-      IZLO = INT( -1.0*ZGRID ) + 1            ! convert REAL to INTEGER, then add one since our grids start at 1, not 0      
-      
+      IZLO = INT( -1.0*ZGRID ) + 1            ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+
 
       IF ( IZLO >= NTGrids ) THEN  !our dz is the difference between the bottom tower point and the ground
          IZLO = NTGrids
-         
-         Z    = 1.0 - Position(3) / (GridBase - (IZLO-1)/InvFFZD) !check that this isn't 0         
+
+         Z    = 1.0 - Position(3) / (GridBase - (IZLO-1)/InvFFZD) !check that this isn't 0
       ELSE
          Z    = ABS(ZGRID) - (IZLO - 1)
       END IF
       IZHI = IZLO + 1
-            
+
    END IF
 
 
@@ -4517,31 +4944,31 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
          IYHI = IYLO + 1
 
          Y    = YGRID - ( IYLO - 1 )         ! a value between 0 and 1 that indicates a relative location between IYLO and IYHI
-         
+
          IF ( IYLO >= NYGrids .OR. IYLO < 1 ) THEN
             IF ( IYLO == 0 .AND. Y >= 1.0-TOL ) THEN
-               Y    = 0.0 
+               Y    = 0.0
                IYLO = 1
             ELSE IF ( IYLO == NYGrids .AND. Y <= TOL ) THEN
                Y    = 0.0
-               IYHI = IYLO                   ! We're right on the last point, which is still okay      
+               IYHI = IYLO                   ! We're right on the last point, which is still okay
             ELSE
-               CALL WrScr( ' Error FF wind array boundaries violated: Grid too small in Y direction. Y=' &
-                             //TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*FFYHWid)) &
-                             //', '//TRIM(Num2LStr(FFYHWid))//']' )
-               ErrStat = 2   
+               ErrMsg   = ' Error FF wind array boundaries violated: Grid too small in Y direction. Y='// &
+                          TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*FFYHWid))// &
+                          ', '//TRIM(Num2LStr(FFYHWid))//']'
+               ErrStat = 2
                RETURN
             END IF
          ENDIF
 
       !-------------------------------------------------------------------------------------------------
-      ! Interpolate on the grid 
+      ! Interpolate on the grid
       !-------------------------------------------------------------------------------------------------
 
       DO IDIM=1,NFFComp       ! all the components
 
          IT = ITLO            ! Start using the ITLO slice
-   
+
          DO IG=1,2            ! repeat for 2 time slices (by changing the value of IT. note that we can't loop from IXLO to IXHI because they could be NFFSteps and 1 respectively)
 
             !-------------------------------------------------------------------------------------------
@@ -4569,17 +4996,17 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
          !----------------------------------------------------------------------------------------------
          ! Interpolate between the two times.
          !----------------------------------------------------------------------------------------------
-         
+
          FF_Interp(IDIM) = ( Wnd(2) - Wnd(1) ) * T + Wnd(1)    ! interpolated velocity
-         
+
       END DO !IDIM
 
    ELSE
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Interpolate on the tower array
    !-------------------------------------------------------------------------------------------------
-      
+
       DO IDIM=1,NFFComp    ! all the components
 
          IT = ITLO            ! Start using the ITLO slice
@@ -4591,7 +5018,7 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
             !-------------------------------------------------------------------------------------------
 
             W_YH_ZL = FFTower( IDIM, IZLO, IT )
-            
+
             IF ( IZHI > NTGrids ) THEN
                W_YH_ZH = 0.0
             ELSE
@@ -4612,29 +5039,30 @@ FUNCTION FF_Interp(Time, Position, ErrStat)
          !----------------------------------------------------------------------------------------------
          ! Interpolate between the two times.
          !----------------------------------------------------------------------------------------------
-         
+
          FF_Interp(IDIM) = ( Wnd(2) - Wnd(1) ) * T + Wnd(1)    ! interpolated velocity
-         
+
       END DO !IDIM
-   
+
    END IF ! OnGrid
 
    RETURN
-   
+
 END FUNCTION FF_Interp
 !====================================================================================================
-SUBROUTINE FF_Terminate( ErrStat )
-!  This subroutine cleans up any data that is still allocated.  The (possibly) open files are 
+SUBROUTINE FF_Terminate( ErrStat, ErrMsg )
+!  This subroutine cleans up any data that is still allocated.  The (possibly) open files are
 !  closed in InflowWindMod.
 !----------------------------------------------------------------------------------------------------
 
-   INTEGER,    INTENT(OUT)    :: ErrStat           ! return 0 if no errors; non-zero otherwise
+   INTEGER,       INTENT(OUT) :: ErrStat           ! return 0 if no errors; non-zero otherwise
+   CHARACTER(*),  INTENT(OUT) :: ErrMsg
 
    ErrStat = 0
 
-   IF ( ALLOCATED( FFData  ) )   DEALLOCATE( FFData,  STAT=ErrStat )   
-   IF ( ALLOCATED( FFTower ) )   DEALLOCATE( FFTower, STAT=ErrStat )   
-   
+   IF ( ALLOCATED( FFData  ) )   DEALLOCATE( FFData,  STAT=ErrStat )
+   IF ( ALLOCATED( FFTower ) )   DEALLOCATE( FFTower, STAT=ErrStat )
+
    Initialized = .FALSE.
 
 
@@ -4656,13 +5084,13 @@ MODULE HAWCWind
 
    USE      NWTC_Library
    USE      SharedInflowDefs
-   USE                     WindFile_Types
+   USE      InflowWind_Module_Types
 
    IMPLICIT NONE
 
    PRIVATE                                                        ! By default, everything in HAWCWind is private (methods, data, types, etc.)
-   
-      
+
+
    REAL(ReKi), ALLOCATABLE          :: WindData  (:,:,:,:)        ! Array of FF data for all 3 wind components
 
    REAL(ReKi)                       :: deltaXInv                  ! multiplicative inverse of delta X
@@ -4677,10 +5105,10 @@ MODULE HAWCWind
    REAL(ReKi)                       :: GridBase                   ! the height of the bottom of the grid (Z direction) in meters
    REAL(ReKi)                       :: LengthX                    ! the grid length in the X direction (distance between point 1 and the next point 1 [because it is periodic])
    REAL(ReKi)                       :: LengthYHalf                ! half the grid width
-   REAL(ReKi)                       :: RefHt                      ! the reference (hub) height of the grid in meters 
+   REAL(ReKi)                       :: RefHt                      ! the reference (hub) height of the grid in meters
    REAL(ReKi)                       :: URef                       ! the mean wind speed in m/s at height RefHt meters (as defined in the input file)
 
-         
+
    LOGICAL, SAVE                    :: Initialized = .FALSE.      ! flag that determines if the module has been initialized
 
 
@@ -4699,10 +5127,10 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
 
 
       ! Passed Variables:
-      
+
    INTEGER,      INTENT(IN)    :: UnWind                       ! unit number for reading wind files
    INTEGER,      INTENT(OUT)   :: ErrStat                      ! determines if an error has been encountered
-   
+
    CHARACTER(*), INTENT(IN)    :: InpFileName                  ! Name of the input text file
 
       ! Local Variables:
@@ -4716,60 +5144,60 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
    REAL(ReKi)                  :: U                            ! The mean wind speed
    REAL(ReKi)                  :: Z                            ! The height above ground/sea level
    REAL(ReKi)                  :: Z0                           ! Surface layer roughness length in meters, used for LOG profile type
-    
-  
+
+
    INTEGER                     :: IC                           ! Loop counter for the number of wind components
    INTEGER                     :: IX                           ! Loop counter for the number of grid points in the X direction
    INTEGER                     :: IY                           ! Loop counter for the number of grid points in the Y direction
    INTEGER                     :: IZ                           ! Loop counter for the number of grid points in the Z direction
 
-   CHARACTER( 1024 )           :: DataFiles ( 3 )              ! Names of the files containing the 3 wind components   
+   CHARACTER( 1024 )           :: DataFiles ( 3 )              ! Names of the files containing the 3 wind components
    CHARACTER(3)                :: WindProfileType              ! character code of mean wind profile type
 
 
    !-------------------------------------------------------------------------------------------------
    ! Check that the module hasn't already been initialized.
    !-------------------------------------------------------------------------------------------------
-      
-   IF ( Initialized ) THEN  
+
+   IF ( Initialized ) THEN
       CALL WrScr( ' HAWCWind has already been initialized.' )
       ErrStat = 1
       RETURN
    ELSE
       ErrStat = 0
 !      CALL NWTC_Init()    ! Initialized in IfW_Init
-   END IF   
+   END IF
 
 ! bjj: this (reading the file) should perhaps be in a subroutine...
 
    !-------------------------------------------------------------------------------------------------
-   ! Open the text file 
+   ! Open the text file
    !-------------------------------------------------------------------------------------------------
 
    CALL OpenFInpFile ( UnWind, TRIM(InpFileName), ErrStat )
    IF (ErrStat /= 0) RETURN
 
-   
+
    !-------------------------------------------------------------------------------------------------
-   ! Read some header information in the text file 
+   ! Read some header information in the text file
    !-------------------------------------------------------------------------------------------------
-   
+
    CALL ReadCom( UnWind, InpFileName, 'Header 1', ErrStat )
    IF (ErrStat /= 0) RETURN
-   
+
    CALL ReadCom( UnWind, InpFileName, 'Header 2', ErrStat )
    IF (ErrStat /= 0) RETURN
-   
+
    CALL ReadCom( UnWind, InpFileName, 'Header 3', ErrStat )
    IF (ErrStat /= 0) RETURN
-   
+
    CALL ReadCom( UnWind, InpFileName, 'Header 4', ErrStat )
    IF (ErrStat /= 0) RETURN
-   
+
    CALL ReadCom( UnWind, InpFileName, 'Parameters for HAWC-format binary files', ErrStat )
    IF (ErrStat /= 0) RETURN
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Read file names and scaling info from the file
    !-------------------------------------------------------------------------------------------------
@@ -4809,7 +5237,7 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
       ErrStat = 1
       RETURN
    END IF
-   
+
 
    CALL ReadVar( UnWind, InpFileName, dx, 'dx', 'Distance between two points in the X direction', ErrStat )
    IF (ErrStat /= 0) RETURN
@@ -4846,11 +5274,11 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
       RETURN
    END IF
 
- 
+
    !-------------------------------------------------------------------------------------------------
    ! Read the section to determine the mean wind profile
    !-------------------------------------------------------------------------------------------------
- 
+
    CALL ReadCom( UnWind, InpFileName, 'mean wind profile parameters (added to HAWC-format files)', ErrStat )
    IF (ErrStat /= 0) RETURN
 
@@ -4858,29 +5286,29 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
    CALL ReadVar( UnWind, InpFileName, WindProfileType, 'WindProfileType', 'Wind profile type', ErrStat )
    IF (ErrStat /= 0) RETURN
 
-    
+
    CALL ReadVar( UnWind, InpFileName, URef, 'URef', 'Reference wind speed', ErrStat )
    IF (ErrStat /= 0) RETURN
    IF ( URef < 0.0_ReKi ) THEN
       CALL WrScr ( ' HAWCWind error: the reference wind speed, URef, must not be negative.' )
       ErrStat = 1
-      RETURN   
+      RETURN
    END IF
 
-    
+
    CALL ReadVar( UnWind, InpFileName, PLExp, 'PLExp', 'Power law exponent', ErrStat )
    IF (ErrStat /= 0) RETURN
 
 
-   CALL ReadVar( UnWind, InpFileName, Z0, 'Z0', 'Surface roughness length', ErrStat )   
-   IF (ErrStat /= 0) RETURN  
-   
+   CALL ReadVar( UnWind, InpFileName, Z0, 'Z0', 'Surface roughness length', ErrStat )
+   IF (ErrStat /= 0) RETURN
+
    IF ( Z0 <= EPSILON(Z0) ) THEN
       CALL WrScr ( ' HAWCWind error: the surface roughness length, Z0, must be greater than zero.' )
       ErrStat = 1
-      RETURN   
+      RETURN
    END IF
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Close the file.
    !-------------------------------------------------------------------------------------------------
@@ -4901,14 +5329,14 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
                       TRIM( Num2LStr(GridBase) )//' meters, which is below the ground.' )
       ErrStat = 1
       RETURN
-   END IF 
+   END IF
 
 
    deltaXInv   = 1.0 / dx
    deltaYInv   = 1.0 / dy
    deltaZInv   = 1.0 / dz
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Allocate space for the wind arrays.
    !-------------------------------------------------------------------------------------------------
@@ -4920,30 +5348,30 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
          RETURN
       END IF
    END IF
-      
+
 
    !-------------------------------------------------------------------------------------------------
    ! Read the 3 files containg the turbulent wind speeds.
    !-------------------------------------------------------------------------------------------------
 !bjj: check these indices... they do not seem to be very consistant between the WAsP IEC Turbulence
-!     simulator and documentation of OC3 file formats... the current implementation is from the 
+!     simulator and documentation of OC3 file formats... the current implementation is from the
 !     OC3/Kenneth Thompson documentation.
 
       ! The array must be filled so that x(i) < x(i+1), y(i) < y(i+1), and z(i) < z(i+1)
       ! Also, note that the time axis is the negative x axis.
 
    DO IC = 1,NC
-   
+
       CALL OpenBInpFile ( UnWind, DataFiles(IC), ErrStat )
-   
+
       DO IX = NX,1,-1                  ! Time is the opposite of X ....
          DO IY = NY,1,-1
-            DO IZ = 1,NZ 
-            
+            DO IZ = 1,NZ
+
                READ( UnWind, IOSTAT=ErrStat ) DumReal
-               
+
                WindData( IZ, IY, IX, IC ) = DumReal    ! possible type conversion here
-               
+
                IF (ErrStat /= 0) THEN
                   CALL WrScr( ' Error reading binary data from "'//TRIM(DataFiles(IC))//'".' )
                   CALL WrScr( ' I/O error '//TRIM(Num2LStr(ErrStat))//' occurred at IZ='//TRIM(Num2LStr(IZ))//&
@@ -4951,65 +5379,65 @@ SUBROUTINE HW_Init ( UnWind, InpFileName, ErrStat )
                   CLOSE ( UnWind )
                   RETURN
                END IF
-                              
+
             END DO
          END DO
       END DO
-      
+
       CLOSE ( UnWind )
-      
+
    END DO
 
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Add the mean wind speed to the u component.
    !-------------------------------------------------------------------------------------------------
 
    CALL Conv2UC( WindProfileType )
-                 
-   
+
+
    IF ( RefHt > 0.0 ) THEN
-   
+
       DO IZ = 1,NZ
 
          Z = GridBase  + ( IZ - 1 )*dz
-         
+
          SELECT CASE ( TRIM(WindProfileType) )
-   
-            CASE ( 'PL' )         
+
+            CASE ( 'PL' )
                U = URef*( Z / RefHt )**PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
-      
+
             CASE ( 'LOG' )
-            
+
                IF ( Z /= Z0 ) THEN
                   U = URef*( LOG( Z / Z0 ) )/( LOG( RefHt / Z0 ) )
                ELSE
                   U = 0.0
                ENDIF
-            
+
             CASE DEFAULT
-            
+
                CALL WrScr( ' Invalid wind profile type in HAWCWind.' )
                ErrStat = 1
                RETURN
-      
+
          END SELECT
-   
+
          WindData( IZ, :, :, 1 ) = WindData( IZ, :, :, 1 ) + U
-            
+
 
       END DO ! IZ
    END IF ! RefHt
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Set initialized flag and return
    !-------------------------------------------------------------------------------------------------
-   
+
    Initialized = .TRUE.
 
    RETURN
-   
+
 END SUBROUTINE HW_Init
 !====================================================================================================
 FUNCTION HW_GetValue(RVarName, ErrStat)
@@ -5021,99 +5449,101 @@ FUNCTION HW_GetValue(RVarName, ErrStat)
    INTEGER,        INTENT(OUT)   :: ErrStat
    REAL(ReKi)                    :: HW_GetValue
 
-   
+
    CHARACTER(20)                 :: VarNameUC
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    IF ( .NOT. Initialized ) THEN
       CALL WrScr( ' Initialialize the HAWCWind module before calling its subroutines.' )
       ErrStat = 1
       RETURN
    ELSE
-      ErrStat = 0   
-   END IF      
+      ErrStat = 0
+   END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Return the requested values.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    VarNameUC = RVarName
    CALL Conv2UC( VarNameUC )
 
    SELECT CASE ( TRIM(VarNameUC) )
-   
+
       CASE ( 'REFHEIGHT' )
          HW_GetValue = RefHt
-         
+
       CASE ('GRIDWIDTH' )
          HW_GetValue = LengthYHalf*2
 
       CASE ('GRIDHEIGHT' )
          HW_GetValue = NZ/deltaZInv
-         
+
       CASE ('UREF' )
-         HW_GetValue = URef        
-         
+         HW_GetValue = URef
+
       CASE DEFAULT
          CALL WrScr( ' HAWCWind error: invalid variable name in HW_GetRValue().' )
          ErrStat = 1
-         
+
    END SELECT
 
 END FUNCTION HW_GetValue
 !!====================================================================================================
 FUNCTION HW_GetWindSpeed(Time, InputPosition, ErrStat)
-! This function receives time and position (in InputInfo) where (undisturbed) velocities are are 
+! This function receives time and position (in InputInfo) where (undisturbed) velocities are are
 ! requested.  It determines if the point is on the FF grid or tower points and calls the
 ! corresponding interpolation routine, which returns the velocities at the specified time and space.
 !----------------------------------------------------------------------------------------------------
-   
-   REAL(ReKi),        INTENT(IN) :: Time
+
+   REAL(DbKi),        INTENT(IN) :: Time
    REAL(ReKi),        INTENT(IN) :: InputPosition(3)
    INTEGER,           INTENT(OUT):: ErrStat
-   TYPE(InflIntrpOut)            :: HW_GetWindSpeed
-     
-   
+!FIXME:delete
+!   TYPE(InflIntrpOut)            :: HW_GetWindSpeed
+   REAL(ReKi)                    :: HW_GetWindSpeed(3)
+
+
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
-   
+   !-------------------------------------------------------------------------------------------------
+
    IF ( .NOT. Initialized ) THEN
       CALL WrScr( ' Initialialize the FFWind module before calling its subroutines.' )
       ErrStat = 1
       RETURN
    ELSE
-      ErrStat = 0   
-   END IF      
+      ErrStat = 0
+   END IF
 
-   
+
    !-------------------------------------------------------------------------------------------------
    ! interpolate and return the value.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
-    HW_GetWindSpeed%Velocity = HW_LinearInterp(Time,InputPosition, ErrStat)
+    HW_GetWindSpeed = HW_LinearInterp(Time,InputPosition, ErrStat)
 
 
 END FUNCTION HW_GetWindSpeed
 !====================================================================================================
 FUNCTION HW_LinearInterp(Time, Position, ErrStat)
-!    This function is used to interpolate into the full-field wind array for the given inputs. It receives 
-!    X, Y, Z and TIME from the calling routine.  It then computes a time shift in the X axis based upon 
+!    This function is used to interpolate into the full-field wind array for the given inputs. It receives
+!    X, Y, Z and TIME from the calling routine.  It then computes a time shift in the X axis based upon
 !    the average windspeed.  The modified position is used to decide which pair of X grids to interpolate
-!    within and between.  After finding the two X slices, it decides which four grid points bound the 
-!    (Y,Z) pair.  It does a bilinear interpolation for each X slice. Linear interpolation is then used 
-!    to interpolate between the X slices.  This routine assumes that X is downwind, Y is to the left when  
+!    within and between.  After finding the two X slices, it decides which four grid points bound the
+!    (Y,Z) pair.  It does a bilinear interpolation for each X slice. Linear interpolation is then used
+!    to interpolate between the X slices.  This routine assumes that X is downwind, Y is to the left when
 !    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
-!    
+!
 !    If tower points are used, it assumes the velocity at the ground is 0.  It interpolates between
 !    heights and between time slices, but ignores the Y input.
 !
-!    09/23/09 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.  
+!    09/23/09 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
 !               Height is now relative to the ground
 !
 !----------------------------------------------------------------------------------------------------
@@ -5121,7 +5551,7 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
    IMPLICIT                      NONE
 
    REAL(ReKi),      INTENT(IN) :: Position(3)       ! takes the place of XGrnd, YGrnd, ZGrnd
-   REAL(ReKi),      INTENT(IN) :: Time
+   REAL(DbKi),      INTENT(IN) :: Time
    REAL(ReKi)                  :: HW_LinearInterp(3)      ! The U, V, W velocities
 
    INTEGER,         INTENT(OUT):: ErrStat
@@ -5142,7 +5572,7 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
    REAL(ReKi)                  :: Y                 ! a value between 0 and 1 that indicates a relative location between IYLO and IYHI
    REAL(ReKi)                  :: YGRID             ! the position in the Y direction relative to the first grid point
    REAL(ReKi)                  :: Z                 ! a value between 0 and 1 that indicates a relative location between IZLO and IZHI
-   REAL(ReKi)                  :: ZGRID             ! the position in the Z direction relative to the first grid point             
+   REAL(ReKi)                  :: ZGRID             ! the position in the Z direction relative to the first grid point
 
    INTEGER                     :: IC                ! loop counter for number of grid points
    INTEGER                     :: IG                ! loop counter for X grids
@@ -5153,8 +5583,8 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
    INTEGER                     :: IYLO              ! low  index into the array in the Y dimension
    INTEGER                     :: IZHI              ! high index into the array in the Z dimension
    INTEGER                     :: IZLO              ! low  index into the array in the Z dimension
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Initialize variables
    !-------------------------------------------------------------------------------------------------
@@ -5167,35 +5597,35 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
    !-------------------------------------------------------------------------------------------------
 
 ! bjj: should we shift by MIN(YHalfWid,FFZHWid)?
-         
+
          ! Assume Taylor's Frozen Turbulence Hypothesis applies: u(X,Y,Z,t) = u( X-U*t, Y, Z, 0)
 
    ShiftedXPosition = Position(1) - TIME*URef      !this puts the first X grid point at the undeflected tower centerline
 
-   
+
       ! The wind file is periodic so we'll translate this position to ( 0 <= ShiftedXPosition < LengthX )
-   
+
    ShiftedXPosition = MODULO( ShiftedXPosition, LengthX )
-    
+
    XGrid            = ShiftedXPosition*deltaXInv
-   
+
    IXLO = INT( XGrid ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
-   
+
    IF ( IXLO == NX ) THEN
       IXHI = 1
    ELSE
       IXHI = IXLO + 1
-      
-! BJJ: assuming LengthX and NX have been correctly defined, this cannot happen:      
+
+! BJJ: assuming LengthX and NX have been correctly defined, this cannot happen:
 !      IF ( IXLO > NX .OR. IXLO < 1 ) THEN
-!            CALL WrScr( ' HAWCWind error: wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )//' seconds '//& 
+!            CALL WrScr( ' HAWCWind error: wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )//' seconds '//&
 !                        '(trying to access X data at '//TRIM( Num2LStr( REAL( ShiftedXPosition, ReKi ) ) )//' m).'  )
-!            ErrStat = 1   
+!            ErrStat = 1
 !            RETURN
 !      ENDIF
-      
+
    END IF
-   
+
    X = XGrid - ( IXLO - 1 )         ! a value between 0 and 1 that indicates a relative location between IXLO and IXHI
 
    !-------------------------------------------------------------------------------------------------
@@ -5204,7 +5634,7 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
 
    ZGRID = ( Position(3) - GridBase )*deltaZInv
 
-     
+
    IZLO = INT( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
    IZHI = IZLO + 1
 
@@ -5212,26 +5642,26 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
 
    IF ( IZLO < 1 ) THEN
       IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
-         Z    = 0.0 
+         Z    = 0.0
          IZLO = 1
       ELSE
          CALL WrScr( ' HAWCWind error: wind array boundaries violated. Grid too small in Z direction (Z='//&
                      TRIM(Num2LStr(Position(3)))//' m is below the grid).' )
-         ErrStat = 1   
+         ErrStat = 1
          RETURN
       END IF
    ELSEIF ( IZLO >= NZ ) THEN
       IF ( IZLO == NZ .AND. Z <= TOL ) THEN
          Z    = 0.0
          IZHI = IZLO                   ! We're right on the last point, which is still okay
-      ELSE      
+      ELSE
          CALL WrScr( ' HAWCWind error: wind array boundaries violated. Grid too small in Z direction (Z='//&
                      TRIM(Num2LStr(Position(3)))//' m is above the grid).' )
-         ErrStat = 3   
+         ErrStat = 3
          RETURN
-      END IF         
+      END IF
    ENDIF
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Find the bounding columns for the Y position. [The lower-left corner is (1,1) when looking upwind.]
@@ -5243,19 +5673,19 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
    IYHI = IYLO + 1
 
    Y    = YGRID - ( IYLO - 1 )         ! a value between 0 and 1 that indicates a relative location between IYLO and IYHI
-   
+
    IF ( IYLO >= NY .OR. IYLO < 1 ) THEN
       IF ( IYLO == 0 .AND. Y >= 1.0-TOL ) THEN
-         Y    = 0.0 
+         Y    = 0.0
          IYLO = 1
       ELSE IF ( IYLO == NY .AND. Y <= TOL ) THEN
          Y    = 0.0
-         IYHI = IYLO                   ! We're right on the last point, which is still okay      
+         IYHI = IYLO                   ! We're right on the last point, which is still okay
       ELSE
          CALL WrScr( ' HAWCWind error: wind array boundaries violated: Grid too small in Y direction. Y=' &
                         //TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*LengthYHalf)) &
                         //', '//TRIM(Num2LStr(LengthYHalf))//']' )
-         ErrStat = 2   
+         ErrStat = 2
          RETURN
       END IF
    ENDIF
@@ -5296,18 +5726,18 @@ FUNCTION HW_LinearInterp(Time, Position, ErrStat)
       !----------------------------------------------------------------------------------------------
       ! Interpolate between the two times.
       !----------------------------------------------------------------------------------------------
-      
+
       HW_LinearInterp( IC ) = ( Wnd(2) - Wnd(1) ) * X + Wnd(1)    ! interpolated velocity
-      
+
    END DO !IDIM
 
 
    RETURN
-   
+
 END FUNCTION HW_LinearInterp
 !====================================================================================================
 SUBROUTINE HW_Terminate( ErrStat )
-!  This subroutine cleans up any data that is still allocated.  The (possibly) open files are 
+!  This subroutine cleans up any data that is still allocated.  The (possibly) open files are
 !  closed in InflowWindMod.
 !----------------------------------------------------------------------------------------------------
 
@@ -5315,8 +5745,8 @@ SUBROUTINE HW_Terminate( ErrStat )
 
    ErrStat = 0
 
-   IF ( ALLOCATED( WindData  ) )   DEALLOCATE( WindData,  STAT=ErrStat )   
-   
+   IF ( ALLOCATED( WindData  ) )   DEALLOCATE( WindData,  STAT=ErrStat )
+
    Initialized = .FALSE.
 
 
@@ -5324,8 +5754,8 @@ END SUBROUTINE HW_Terminate
 !====================================================================================================
 END MODULE HAWCWind
 MODULE HHWind
-! This module contains all the data and procedures that define hub-height wind files. This could 
-! more accurately be called a point wind file since the wind speed at any point is calculated by 
+! This module contains all the data and procedures that define hub-height wind files. This could
+! more accurately be called a point wind file since the wind speed at any point is calculated by
 ! shear applied to the point where wind is defined.  It is basically uniform wind over the rotor disk.
 ! The entire file is read on initialization, then the columns that make up the wind file are
 ! interpolated to the time requested, and wind is calculated based on the location in space.
@@ -5349,12 +5779,12 @@ MODULE HHWind
 
    USE                     NWTC_Library
    USE                     SharedInflowDefs
-   USE                     WindFile_Types
-   
+   USE                     InflowWind_Module_Types
+
    IMPLICIT                NONE
    PRIVATE
 
-      
+
    REAL(ReKi), ALLOCATABLE      :: Tdata  (:)                              ! Time array from the HH wind file
    REAL(ReKi), ALLOCATABLE      :: DELTA  (:)                              ! HH Wind direction (angle)
    REAL(ReKi), ALLOCATABLE      :: V      (:)                              ! HH horizontal wind speed
@@ -5367,22 +5797,22 @@ MODULE HHWind
    REAL(ReKi)                   :: LinearizeDels(7)                        ! The delta values for linearization -- perhaps at some point, this could be T/F and we determine the deltas by sqrt(eps) or something similar
    REAL(ReKi)                   :: RefHt                                   ! reference height; was HH (hub height); used to center the wind
    REAL(ReKi)                   :: RefWid                                  ! reference width; was 2*R (=rotor diameter); used to scale the linear shear
-   
+
    INTEGER                      :: NumDataLines
    INTEGER, SAVE                :: TimeIndx = 0                            ! An index into the Tdata array (to allow us faster searching, starting search from previous one)
 
    LOGICAL, SAVE                :: Linearize = .FALSE.                     ! If this is TRUE, we are linearizing
-   
+
    TYPE, PUBLIC                 :: HH_Info
       REAL(ReKi)                :: ReferenceHeight
       REAL(ReKi)                :: Width
    END TYPE HH_Info
-      
+
    PUBLIC                       :: HH_Init
    PUBLIC                       :: HH_GetWindSpeed
    PUBLIC                       :: HH_Terminate
    PUBLIC                       :: HH_SetLinearizeDels
-   PUBLIC                       :: HH_Get_ADhack_WindSpeed                  ! REMOVE THIS!!!!
+!   PUBLIC                       :: HH_Get_ADhack_WindSpeed                  ! REMOVE THIS!!!!
 
 CONTAINS
 !====================================================================================================
@@ -5394,17 +5824,17 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
 !----------------------------------------------------------------------------------------------------
 
       ! Passed Variables:
-      
+
    INTEGER,      INTENT(IN)    :: UnWind                       ! unit number for reading wind files
    INTEGER,      INTENT(OUT)   :: ErrStat                      ! determines if an error has been encountered
    TYPE(HH_Info),INTENT(IN)    :: WindInfo                     ! Additional information needed to initialize this wind type
-   
+
    CHARACTER(*), INTENT(IN)    :: WindFile                     ! Name of the text HH wind file
 
       ! local variables
-            
+
    INTEGER, PARAMETER          :: NumCols = 8                  ! Number of columns in the HH file
-   REAL(ReKi)                  :: TmpData(NumCols)             ! Temp variable for reading all columns from a line 
+   REAL(ReKi)                  :: TmpData(NumCols)             ! Temp variable for reading all columns from a line
    REAL(ReKi)                  :: DelDiff                      ! Temp variable for storing the direction difference
 
    INTEGER                     :: I
@@ -5413,29 +5843,29 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    INTEGER, PARAMETER          :: MaxTries = 100
    CHARACTER(1024)             :: Line                         ! Temp variable for reading whole line from file
 
-    
+
    !-------------------------------------------------------------------------------------------------
    ! Check that it's not already initialized
    !-------------------------------------------------------------------------------------------------
-      
-   IF ( TimeIndx /= 0 ) THEN  
+
+   IF ( TimeIndx /= 0 ) THEN
       CALL WrScr( ' HHWind has already been initialized.' )
       ErrStat = 1
       RETURN
    ELSE
       ErrStat = 0
 !      CALL NWTC_Init()    ! Initialized in IfW_Init
-      
+
       LinearizeDels(:) = 0.0
       Linearize        = .FALSE.
-   END IF   
+   END IF
 
-  
+
    !-------------------------------------------------------------------------------------------------
    ! Open the file for reading
    !-------------------------------------------------------------------------------------------------
    CALL OpenFInpFile (UnWind, TRIM(WindFile), ErrStat)
-   
+
    IF ( ErrStat /= 0 ) RETURN
 
    !-------------------------------------------------------------------------------------------------
@@ -5443,29 +5873,29 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    !-------------------------------------------------------------------------------------------------
    LINE = '!'                          ! Initialize the line for the DO WHILE LOOP
    NumComments = -1
-   
+
    DO WHILE (INDEX( LINE, '!' ) > 0 ) ! Lines containing "!" are treated as comment lines
       NumComments = NumComments + 1
-      
+
       READ(UnWind,'( A )',IOSTAT=ErrStat) LINE
-            
+
       IF ( ErrStat /=0 ) THEN
          CALL WrScr ( ' Error reading from HH wind file on line '//TRIM(Num2LStr(NumComments))//'.' )
          RETURN
       END IF
-      
+
    END DO !WHILE
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Find the number of data lines
    !-------------------------------------------------------------------------------------------------
    NumDataLines = 0
-   
+
    READ(LINE,*,IOSTAT=ErrStat) ( TmpData(I), I=1,NumCols )
 
    DO WHILE (ErrStat == 0)  ! read the rest of the file (until an error occurs)
-      NumDataLines = NumDataLines + 1               
-      
+      NumDataLines = NumDataLines + 1
+
       READ(UnWind,*,IOSTAT=ErrStat) ( TmpData(I), I=1,NumCols )
 
    END DO !WHILE
@@ -5485,13 +5915,13 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    ! BJJ note: If the subroutine AllocAry() is called, the CVF compiler with A2AD does not work
    !   properly.  The arrays are not properly read even though they've been allocated.
    !-------------------------------------------------------------------------------------------------
-   
+
    IF (.NOT. ALLOCATED(Tdata) ) THEN
       ALLOCATE ( Tdata(NumDataLines) , STAT=ErrStat )
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH time array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(V) ) THEN
@@ -5499,7 +5929,7 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH horizontal wind speed array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(Delta) ) THEN
@@ -5507,7 +5937,7 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH wind direction array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(VZ) ) THEN
@@ -5515,7 +5945,7 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH vertical wind speed array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(HShr) ) THEN
@@ -5523,7 +5953,7 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH horizontal linear shear array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(VShr) ) THEN
@@ -5531,7 +5961,7 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH vertical power-law shear exponent array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(VLinShr) ) THEN
@@ -5539,7 +5969,7 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH vertical linear shear array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
    IF (.NOT. ALLOCATED(VGust) ) THEN
@@ -5547,15 +5977,15 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
       IF ( ErrStat /=0 ) THEN
          CALL WrScr( 'Error allocating memory for the HH gust velocity array.' )
          RETURN
-      END IF   
+      END IF
    END IF
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Rewind the file (to the beginning) and skip the comment lines
    !-------------------------------------------------------------------------------------------------
    REWIND( UnWind )
-   
+
    DO I=1,NumComments
       CALL ReadCom( UnWind, TRIM(WindFile), 'Header line #'//TRIM(Num2LStr(I)), ErrStat )
       IF ( ErrStat /= 0 ) RETURN
@@ -5567,20 +5997,20 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    !-------------------------------------------------------------------------------------------------
 
    DO I=1,NumDataLines
-         
-      CALL ReadAry( UnWind, TRIM(WindFile), TmpData(1:NumCols), NumCols, 'TmpData', & 
+
+      CALL ReadAry( UnWind, TRIM(WindFile), TmpData(1:NumCols), NumCols, 'TmpData', &
                 'Data from HH line '//TRIM(Num2LStr(NumComments+I)), ErrStat )
       IF (ErrStat /= 0) RETURN
-                 
+
       Tdata(  I) = TmpData(1)
       V(      I) = TmpData(2)
-      Delta(  I) = TmpData(3)*D2R 
+      Delta(  I) = TmpData(3)*D2R
       VZ(     I) = TmpData(4)
       HShr(   I) = TmpData(5)
       VShr(   I) = TmpData(6)
       VLinSHR(I) = TmpData(7)
-      VGust(  I) = TmpData(8)           
-      
+      VGust(  I) = TmpData(8)
+
    END DO !I
 
 
@@ -5590,28 +6020,28 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    !-------------------------------------------------------------------------------------------------
 
    DO I=2,NumDataLines
-   
+
       ILine = 1
-      
+
       DO WHILE ( ILine < MaxTries )
-     
+
          DelDiff = ( Delta(I) - Delta(I-1) )
 
          IF ( ABS( DelDiff ) < Pi ) EXIT  ! exit inner loop
 
          Delta(I) = Delta(I) - SIGN( TwoPi, DelDiff )
-         
+
          ILine = ILine + 1
 
       END DO
-      
+
       IF ( ILine >= MaxTries ) THEN
          CALL WrScr( ' Error calculating wind direction from HH file. Delta(' &
-               // TRIM(Num2LStr(I  )) // ') = ' // TRIM(Num2LStr(Delta(I))) // '; Delta(' & 
+               // TRIM(Num2LStr(I  )) // ') = ' // TRIM(Num2LStr(Delta(I))) // '; Delta(' &
                // TRIM(Num2LStr(I+1)) // ') = ' // TRIM(Num2LStr(Delta(I+1))) )
          ErrStat = 1
       END IF
-           
+
 
    END DO !I
 
@@ -5619,21 +6049,21 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    !-------------------------------------------------------------------------------------------------
    ! Close the file
    !-------------------------------------------------------------------------------------------------
-   
+
    CLOSE( UnWind )
-   
+
 
    !-------------------------------------------------------------------------------------------------
    ! Print warnings and messages
    !-------------------------------------------------------------------------------------------------
 !   CALL WrScr ( ' Processed '//TRIM( Num2LStr( NumDataLines ) )//' records of HH data' )
-   
-   
+
+
    IF ( Tdata(1) > 0.0 ) THEN
-      CALL ProgWarn( 'The hub-height wind file : "'//TRIM(ADJUSTL(WindFile))//'" starts at a time '// & 
+      CALL ProgWarn( 'The hub-height wind file : "'//TRIM(ADJUSTL(WindFile))//'" starts at a time '// &
                      'greater than zero. Interpolation errors may result.')
    ENDIF
-   
+
    IF ( NumDataLines == 1 ) THEN
       CALL WrScr( ' Only 1 line in HH wind file. Steady, hub-height horizontal wind speed = '//TRIM(Num2LStr(V(1)))//' m/s.' )
    END IF
@@ -5643,55 +6073,57 @@ SUBROUTINE HH_Init(UnWind, WindFile, WindInfo, ErrStat)
    ! Set the initial index into the time array (it indicates that we've initialized the module, too)
    ! and initialize the spatial scaling for the wind calculations
    !-------------------------------------------------------------------------------------------------
-   TimeIndx = 1            
+   TimeIndx = 1
 
    RefHt  = WindInfo%ReferenceHeight
-   RefWid = WindInfo%Width   
+   RefWid = WindInfo%Width
 
 
    RETURN
-     
+
 END SUBROUTINE HH_Init
 !====================================================================================================
-FUNCTION HH_GetWindSpeed(Time, InputPosition, ErrStat)
-! This subroutine linearly interpolates the columns in the HH input file to get the values for 
+FUNCTION HH_GetWindSpeed(Time, InputPosition, ErrStat, ErrMsg)
+! This subroutine linearly interpolates the columns in the HH input file to get the values for
 ! the requested time, then uses the interpolated values to calclate the wind speed at a point
 ! in space represented by InputPosition.
 !----------------------------------------------------------------------------------------------------
 
-   REAL(ReKi),        INTENT(IN) :: Time                 ! time from the start of the simulation
-   REAL(ReKi),        INTENT(IN) :: InputPosition(3)     ! input information: positions X,Y,Z
-   INTEGER,           INTENT(OUT):: ErrStat              ! error status
-   TYPE(InflIntrpOut)            :: HH_GetWindSpeed      ! return velocities (U,V,W)
-   
-   REAL(ReKi)                    :: CosDelta             ! cosine of Delta_tmp
-   REAL(ReKi)                    :: Delta_tmp            ! interpolated Delta   at input TIME
-   REAL(ReKi)                    :: HShr_tmp             ! interpolated HShr    at input TIME
-   REAL(ReKi)                    :: P                    ! temporary storage for slope (in time) used in linear interpolation
-   REAL(ReKi)                    :: SinDelta             ! sine of Delta_tmp
-   REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
-   REAL(ReKi)                    :: VGust_tmp            ! interpolated VGust   at input TIME
-   REAL(ReKi)                    :: VLinShr_tmp          ! interpolated VLinShr at input TIME
-   REAL(ReKi)                    :: VShr_tmp             ! interpolated VShr    at input TIME
-   REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
-   REAL(ReKi)                    :: V1                   ! temporary storage for horizontal velocity
-   
+   REAL(DbKi),          INTENT(IN)  :: Time                 ! time from the start of the simulation
+   REAL(ReKi),          INTENT(IN)  :: InputPosition(3)     ! input information: positions X,Y,Z
+   INTEGER,             INTENT(OUT) :: ErrStat              ! error status
+   CHARACTER(*),        INTENT(OUT) :: ErrMsg               ! The error message
+   REAL(ReKi)                       :: HH_GetWindSpeed(3)   ! return velocities (U,V,W)
+
+   REAL(ReKi)                       :: CosDelta             ! cosine of Delta_tmp
+   REAL(ReKi)                       :: Delta_tmp            ! interpolated Delta   at input TIME
+   REAL(ReKi)                       :: HShr_tmp             ! interpolated HShr    at input TIME
+   REAL(ReKi)                       :: P                    ! temporary storage for slope (in time) used in linear interpolation
+   REAL(ReKi)                       :: SinDelta             ! sine of Delta_tmp
+   REAL(ReKi)                       :: V_tmp                ! interpolated V       at input TIME
+   REAL(ReKi)                       :: VGust_tmp            ! interpolated VGust   at input TIME
+   REAL(ReKi)                       :: VLinShr_tmp          ! interpolated VLinShr at input TIME
+   REAL(ReKi)                       :: VShr_tmp             ! interpolated VShr    at input TIME
+   REAL(ReKi)                       :: VZ_tmp               ! interpolated VZ      at input TIME
+   REAL(ReKi)                       :: V1                   ! temporary storage for horizontal velocity
+
+
 
    !-------------------------------------------------------------------------------------------------
    ! verify the module was initialized first
    !-------------------------------------------------------------------------------------------------
 
    IF ( TimeIndx == 0 ) THEN
-      CALL WrScr( ' Error: Call HH_Init() before getting wind speed.')
-      ErrStat = 1
+      ErrMsg   = ' Error: Call HH_Init() before getting wind speed.'
+      ErrStat  = ErrID_Fatal         ! Fatal since no data returned
       RETURN
    ELSE
       ErrStat = 0
    END IF
-   
-      
+
+
    !-------------------------------------------------------------------------------------------------
-   ! Linearly interpolate in time (or used nearest-neighbor to extrapolate) 
+   ! Linearly interpolate in time (or used nearest-neighbor to extrapolate)
    ! (compare with NWTC_Num.f90\InterpStpReal)
    !-------------------------------------------------------------------------------------------------
 
@@ -5708,7 +6140,7 @@ FUNCTION HH_GetWindSpeed(Time, InputPosition, ErrStat)
 
       ! Let's check the limits.
    ELSE IF ( Time <= Tdata(1) .OR. NumDataLines == 1 )  THEN
-   
+
       TimeIndx      = 1
       V_tmp         = V      (1)
       Delta_tmp     = Delta  (1)
@@ -5716,10 +6148,10 @@ FUNCTION HH_GetWindSpeed(Time, InputPosition, ErrStat)
       HShr_tmp      = HShr   (1)
       VShr_tmp      = VShr   (1)
       VLinShr_tmp   = VLinShr(1)
-      VGust_tmp     = VGust  (1)   
-         
+      VGust_tmp     = VGust  (1)
+
    ELSE IF ( Time >= Tdata(NumDataLines) )  THEN
-   
+
       TimeIndx      = NumDataLines - 1
       V_tmp         = V      (NumDataLines)
       Delta_tmp     = Delta  (NumDataLines)
@@ -5728,9 +6160,9 @@ FUNCTION HH_GetWindSpeed(Time, InputPosition, ErrStat)
       VShr_tmp      = VShr   (NumDataLines)
       VLinShr_tmp   = VLinShr(NumDataLines)
       VGust_tmp     = VGust  (NumDataLines)
-      
+
    ELSE
-   
+
          ! Let's interpolate!
 
       TimeIndx = MAX( MIN( TimeIndx, NumDataLines-1 ), 1 )
@@ -5759,138 +6191,138 @@ FUNCTION HH_GetWindSpeed(Time, InputPosition, ErrStat)
          END IF
 
       END DO
-      
+
    END IF
 
-   
+
    !-------------------------------------------------------------------------------------------------
    ! calculate the wind speed at this time
    !-------------------------------------------------------------------------------------------------
-   
+
    CosDelta = COS( Delta_tmp )
    SinDelta = SIN( Delta_tmp )
-   
+
    V1 = V_tmp * ( ( InputPosition(3)/RefHt ) ** VShr_tmp &                                  ! power-law wind shear
         + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
         +  VLinShr_tmp * ( InputPosition(3)-RefHt ) )/RefWid  ) &                           ! vertical linear shear
         + VGUST_tmp                                                                         ! gust speed
-   
-   HH_GetWindSpeed%Velocity(1) =  V1 * CosDelta
-   HH_GetWindSpeed%Velocity(2) = -V1 * SinDelta
-   HH_GetWindSpeed%Velocity(3) =  VZ_tmp      
+   HH_GetWindSpeed(1) =  V1 * CosDelta
+   HH_GetWindSpeed(2) = -V1 * SinDelta
+   HH_GetWindSpeed(3) =  VZ_tmp
 
 
    RETURN
 
 END FUNCTION HH_GetWindSpeed
+!!====================================================================================================
+!FUNCTION HH_Get_ADHack_WindSpeed(Time, InputPosition, ErrStat, ErrMsg)
+!! This subroutine linearly interpolates the columns in the HH input file to get the values for
+!! the requested time, then uses the interpolated values to calclate the wind speed at a point
+!! in space represented by InputPosition. THIS FUNCTION SHOULD BE REMOVED!!!!! (used for DISK VEL ONLY)
+!!----------------------------------------------------------------------------------------------------
+!
+!   REAL(ReKi),          INTENT(IN)  :: Time                 ! time from the start of the simulation
+!   REAL(ReKi),          INTENT(IN)  :: InputPosition(3)     ! input information: positions X,Y,Z   -   NOT USED HERE!!!
+!   INTEGER,             INTENT(OUT) :: ErrStat              ! error status
+!   CHARACTER(*),        INTENT(OUT) :: ErrMsg               ! The error message
+!   REAL(ReKi)                       :: HH_Get_ADHack_WindSpeed(3)      ! return velocities (U,V,W)
+!
+!   REAL(ReKi)                       :: Delta_tmp            ! interpolated Delta   at input TIME
+!   REAL(ReKi)                       :: P                    ! temporary storage for slope (in time) used in linear interpolation
+!   REAL(ReKi)                       :: V_tmp                ! interpolated V       at input TIME
+!   REAL(ReKi)                       :: VZ_tmp               ! interpolated VZ      at input TIME
+!
+!
+!   !-------------------------------------------------------------------------------------------------
+!   ! verify the module was initialized first
+!   !-------------------------------------------------------------------------------------------------
+!
+!   IF ( TimeIndx == 0 ) THEN
+!      ErrMsg   = ' Error: Call HH_Init() before getting wind speed.'
+!      ErrStat  = ErrID_Fatal      ! Fatal since no data returned
+!      RETURN
+!   ELSE
+!      ErrStat = 0
+!   END IF
+!
+!
+!   !-------------------------------------------------------------------------------------------------
+!   ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
+!   ! (compare with NWTC_Num.f90\InterpStpReal)
+!   !-------------------------------------------------------------------------------------------------
+!
+!     ! Let's check the limits.
+!
+!   IF ( Time <= Tdata(1) .OR. NumDataLines == 1)  THEN
+!
+!      TimeIndx      = 1
+!      V_tmp         = V      (1)
+!      Delta_tmp     = Delta  (1)
+!      VZ_tmp        = VZ     (1)
+!
+!   ELSE IF ( Time >= Tdata(NumDataLines) )  THEN
+!
+!      TimeIndx      = NumDataLines - 1
+!      V_tmp         = V      (NumDataLines)
+!      Delta_tmp     = Delta  (NumDataLines)
+!      VZ_tmp        = VZ     (NumDataLines)
+!
+!   ELSE
+!
+!         ! Let's interpolate!
+!
+!      TimeIndx = MAX( MIN( TimeIndx, NumDataLines-1 ), 1 )
+!
+!      DO
+!
+!         IF ( Time < Tdata(TimeIndx) )  THEN
+!
+!            TimeIndx = TimeIndx - 1
+!
+!         ELSE IF ( Time >= Tdata(TimeIndx+1) )  THEN
+!
+!            TimeIndx = TimeIndx + 1
+!
+!         ELSE
+!            P           = ( Time - Tdata(TimeIndx) )/( Tdata(TimeIndx+1) - Tdata(TimeIndx) )
+!            V_tmp       = ( V(      TimeIndx+1) - V(      TimeIndx) )*P + V(      TimeIndx)
+!            Delta_tmp   = ( Delta(  TimeIndx+1) - Delta(  TimeIndx) )*P + Delta(  TimeIndx)
+!            VZ_tmp      = ( VZ(     TimeIndx+1) - VZ(     TimeIndx) )*P + VZ(     TimeIndx)
+!            EXIT
+!
+!         END IF
+!
+!      END DO
+!
+!   END IF
+!
+!   !-------------------------------------------------------------------------------------------------
+!   ! calculate the wind speed at this time
+!   !-------------------------------------------------------------------------------------------------
+!   HH_Get_ADHack_WindSpeed(1) =  V_tmp * COS( Delta_tmp )
+!   HH_Get_ADHack_WindSpeed(2) = -V_tmp * SIN( Delta_tmp )
+!   HH_Get_ADHack_WindSpeed(3) =  VZ_tmp
+!
+!
+!   RETURN
+!
+!END FUNCTION HH_Get_ADHack_WindSpeed
 !====================================================================================================
-FUNCTION HH_Get_ADHack_WindSpeed(Time, InputPosition, ErrStat)
-! This subroutine linearly interpolates the columns in the HH input file to get the values for 
-! the requested time, then uses the interpolated values to calclate the wind speed at a point
-! in space represented by InputPosition. THIS FUNCTION SHOULD BE REMOVED!!!!! (used for DISK VEL ONLY)
-!----------------------------------------------------------------------------------------------------
-
-   REAL(ReKi),        INTENT(IN) :: Time                 ! time from the start of the simulation
-   REAL(ReKi),        INTENT(IN) :: InputPosition(3)     ! input information: positions X,Y,Z   -   NOT USED HERE!!!
-   INTEGER,           INTENT(OUT):: ErrStat              ! error status
-   TYPE(InflIntrpOut)            :: HH_Get_ADHack_WindSpeed      ! return velocities (U,V,W)
-   
-   REAL(ReKi)                    :: Delta_tmp            ! interpolated Delta   at input TIME
-   REAL(ReKi)                    :: P                    ! temporary storage for slope (in time) used in linear interpolation
-   REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
-   REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
-   
-
-   !-------------------------------------------------------------------------------------------------
-   ! verify the module was initialized first
-   !-------------------------------------------------------------------------------------------------
-
-   IF ( TimeIndx == 0 ) THEN
-      CALL WrScr( ' Error: Call HH_Init() before getting wind speed.')
-      ErrStat = 1
-      RETURN
-   ELSE
-      ErrStat = 0
-   END IF
-   
-      
-   !-------------------------------------------------------------------------------------------------
-   ! Linearly interpolate in time (or use nearest-neighbor to extrapolate) 
-   ! (compare with NWTC_Num.f90\InterpStpReal)
-   !-------------------------------------------------------------------------------------------------
-
-     ! Let's check the limits.
-
-   IF ( Time <= Tdata(1) .OR. NumDataLines == 1)  THEN
-   
-      TimeIndx      = 1
-      V_tmp         = V      (1)
-      Delta_tmp     = Delta  (1)
-      VZ_tmp        = VZ     (1)
-         
-   ELSE IF ( Time >= Tdata(NumDataLines) )  THEN
-   
-      TimeIndx      = NumDataLines - 1
-      V_tmp         = V      (NumDataLines)
-      Delta_tmp     = Delta  (NumDataLines)
-      VZ_tmp        = VZ     (NumDataLines)
-      
-   ELSE
-   
-         ! Let's interpolate!
-
-      TimeIndx = MAX( MIN( TimeIndx, NumDataLines-1 ), 1 )
-
-      DO
-
-         IF ( Time < Tdata(TimeIndx) )  THEN
-
-            TimeIndx = TimeIndx - 1
-
-         ELSE IF ( Time >= Tdata(TimeIndx+1) )  THEN
-
-            TimeIndx = TimeIndx + 1
-
-         ELSE
-            P           = ( Time - Tdata(TimeIndx) )/( Tdata(TimeIndx+1) - Tdata(TimeIndx) )
-            V_tmp       = ( V(      TimeIndx+1) - V(      TimeIndx) )*P + V(      TimeIndx)
-            Delta_tmp   = ( Delta(  TimeIndx+1) - Delta(  TimeIndx) )*P + Delta(  TimeIndx)
-            VZ_tmp      = ( VZ(     TimeIndx+1) - VZ(     TimeIndx) )*P + VZ(     TimeIndx)
-            EXIT
-
-         END IF
-
-      END DO
-      
-   END IF
-   
-   !-------------------------------------------------------------------------------------------------
-   ! calculate the wind speed at this time
-   !-------------------------------------------------------------------------------------------------
-      
-   HH_Get_ADHack_WindSpeed%Velocity(1) =  V_tmp * COS( Delta_tmp )
-   HH_Get_ADHack_WindSpeed%Velocity(2) = -V_tmp * SIN( Delta_tmp )
-   HH_Get_ADHack_WindSpeed%Velocity(3) =  VZ_tmp      
-
-
-   RETURN
-
-END FUNCTION HH_Get_ADHack_WindSpeed
-!====================================================================================================
-SUBROUTINE HH_SetLinearizeDels( Perturbations, ErrStat )
+SUBROUTINE HH_SetLinearizeDels( Perturbations, ErrStat, ErrMsg )
 ! This subroutine sets the perturbation values for the linearization scheme.
 !----------------------------------------------------------------------------------------------------
 
-   REAL(ReKi),       INTENT(IN)  :: Perturbations(7)     ! purturbations for each of the 7 input parameters
-   INTEGER,          INTENT(OUT) :: ErrStat              ! time from the start of the simulation
+   REAL(ReKi),          INTENT(IN)  :: Perturbations(7)     ! purturbations for each of the 7 input parameters
+   INTEGER,             INTENT(OUT) :: ErrStat              ! time from the start of the simulation
+   CHARACTER(*),        INTENT(OUT) :: ErrMsg               ! Error Message
 
    !-------------------------------------------------------------------------------------------------
    ! verify the module was initialized first
    !-------------------------------------------------------------------------------------------------
 
    IF ( TimeIndx == 0 ) THEN
-      CALL WrScr( ' Error: Call HH_Init() before getting wind speed.')
-      ErrStat = 1
+      ErrMsg   = ' Error: Call HH_Init() before getting wind speed.'
+      ErrStat  = ErrID_Fatal        ! Fatal since no data returned
       RETURN
    ELSE
       ErrStat = 0
@@ -5908,59 +6340,59 @@ SUBROUTINE HH_Terminate(ErrStat)
    INTEGER,      INTENT(OUT)   :: ErrStat                      ! determines if an error has been encountered
 
    INTEGER                     :: SumErrs
-   
+
    SumErrs = 0
 
    IF ( ALLOCATED(Tdata  ) ) DEALLOCATE( Tdata,   STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(DELTA  ) ) DEALLOCATE( DELTA,   STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(V      ) ) DEALLOCATE( V,       STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(VZ     ) ) DEALLOCATE( VZ,      STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(HSHR   ) ) DEALLOCATE( HSHR,    STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(VSHR   ) ) DEALLOCATE( VSHR,    STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(VGUST  ) ) DEALLOCATE( VGUST,   STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
-   
+
    IF ( ALLOCATED(VLINSHR) ) DEALLOCATE( VLINSHR, STAT=ErrStat )
    SumErrs = SumErrs + ABS(ErrStat)
 
    ErrStat  = SumErrs
-   TimeIndx = 0            
-   
-END SUBROUTINE HH_Terminate   
+   TimeIndx = 0
+
+END SUBROUTINE HH_Terminate
 !====================================================================================================
 END MODULE HHWind
 MODULE UserWind
-!  The purpose of this module is to allow user-defined wind.  
+!  The purpose of this module is to allow user-defined wind.
 !----------------------------------------------------------------------------------------------------
 
    USE                           NWTC_Library
    USE                           SharedInflowDefs
-   USE                     WindFile_Types
+   USE                     InflowWind_Module_Types
 
    IMPLICIT                      NONE
    PRIVATE
-    
-    
+
+
       ! define variables for UserWind here
-      
+
    LOGICAL, SAVE              :: Initialized = .FALSE.         ! This variable indicates if the initialization routine has been run
-   
+
    REAL(ReKi)                 :: UWmeanU                       ! Possibly instantaneous, disk-averaged wind speeds.
    REAL(ReKi)                 :: UWmeanV                       !
-   REAL(ReKi)                 :: UWmeanW                       !   
-   
+   REAL(ReKi)                 :: UWmeanW                       !
+
 
       ! allow the initialization and termination routines to be public (called from outside)
 
@@ -5980,37 +6412,36 @@ SUBROUTINE UsrWnd_Init(ErrStat)
    !-------------------------------------------------------------------------------------------------
    ! Check that the module hasn't already been initialized.
    !-------------------------------------------------------------------------------------------------
-      
-   IF ( Initialized ) THEN  
+
+   IF ( Initialized ) THEN
       CALL WrScr( ' UserWind has already been initialized.' )
       ErrStat = 1
       RETURN
    ELSE
       ErrStat = 0
-!      CALL NWTC_Init()    ! Initialized in IfW_Init
    END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Perform any initialization steps here (read input files, etc.)
    !-------------------------------------------------------------------------------------------------
-   
+
    CALL WrScr( '***** NOTE: User-defined wind employed *****' )
 
 
       ! Set the disk-average wind vector.
-   
+
    UWmeanU = 10.0
    UWmeanV =  0.0
    UWmeanW =  0.0
 
-   
+
    !-------------------------------------------------------------------------------------------------
    ! Set the initialization flag
    !-------------------------------------------------------------------------------------------------
-   
+
    Initialized = .TRUE.
-   
+
    RETURN
 
 END SUBROUTINE UsrWnd_Init
@@ -6019,82 +6450,84 @@ FUNCTION UsrWnd_GetValue(VarName, ErrStat)
 !  This function returns a real scalar value whose name is listed in the VarName input argument.
 !  If the name is not recognized, an error is returned in ErrStat.
 !----------------------------------------------------------------------------------------------------
-   
+
    CHARACTER(*),   INTENT(IN)    :: VarName
    INTEGER,        INTENT(OUT)   :: ErrStat           ! return 0 if no errors; non-zero otherwise
    REAL(ReKi)                    :: UsrWnd_GetValue
 
-   
+
    CHARACTER(20)                 :: VarNameUC         ! upper-case VarName
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
-   IF ( .NOT. Initialized ) THEN   
+   IF ( .NOT. Initialized ) THEN
       CALL WrScr( 'Initialize UserWind before calling its subroutines.' )
       ErrStat = 1
       RETURN
    ELSE
       ErrStat = 0
    END IF
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Return the requested values.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
 
    VarNameUC = VarName
    CALL Conv2UC( VarNameUC )
 
    SELECT CASE ( TRIM(VarNameUC) )
-   
+
       CASE ('MEANU' )
          UsrWnd_GetValue = UWmeanU
-         
+
       CASE ('MEANV' )
          UsrWnd_GetValue = UWmeanV
 
       CASE ('MEANW' )
          UsrWnd_GetValue = UWmeanW
-         
+
       CASE DEFAULT
          CALL WrScr( ' Invalid variable name in UsrWnd_GetValue().' )
          ErrStat = 1
-         
+
    END SELECT
-      
-   
+
+
 
 END FUNCTION UsrWnd_GetValue
 !====================================================================================================
 FUNCTION UsrWnd_GetWindSpeed(Time, InputPosition, ErrStat)
-! This function receives time and position (in InputInfo) where (undisturbed) velocities are 
+! This function receives time and position (in InputInfo) where (undisturbed) velocities are
 ! requested. It returns the velocities at the specified time and space.
 !----------------------------------------------------------------------------------------------------
-   
-   REAL(ReKi),        INTENT(IN) :: Time
+
+   REAL(DbKi),        INTENT(IN) :: Time
    REAL(ReKi),        INTENT(IN) :: InputPosition(3)        ! X,Y,Z (z is 0 at ground level)
    INTEGER,           INTENT(OUT):: ErrStat                 ! return 0 if no errors; non-zero otherwise
-   TYPE(InflIntrpOut)            :: UsrWnd_GetWindSpeed
-   
-   
+!FIXME:delete
+!   TYPE(InflIntrpOut)            :: UsrWnd_GetWindSpeed
+   REAL(ReKi)                    :: UsrWnd_GetWindSpeed(3)
+
+
    !-------------------------------------------------------------------------------------------------
    ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------   
-   IF ( .NOT. Initialized ) THEN   
+   !-------------------------------------------------------------------------------------------------
+   IF ( .NOT. Initialized ) THEN
       CALL WrScr( 'Initialize UserWind before calling its subroutines.' )
       ErrStat = 1
       RETURN
    ELSE
       ErrStat = 0
    END IF
-   
-   
+
+
    !-------------------------------------------------------------------------------------------------
    ! Calculate the wind speed at this time and position.
-   !-------------------------------------------------------------------------------------------------   
+   !-------------------------------------------------------------------------------------------------
    !     Time
    !     X = InputPosition(1)           ! relative to the undeflected tower centerline (positive downwind)
    !     Y = InputPosition(2)           ! relative to the undeflected tower centerline (positive left when looking downwind)
@@ -6102,19 +6535,18 @@ FUNCTION UsrWnd_GetWindSpeed(Time, InputPosition, ErrStat)
    !-------------------------------------------------------------------------------------------------
 
       ! We'll test this with steady winds for now.
+   UsrWnd_GetWindSpeed(1) = 10.0    ! U velocity (along positive X)
+   UsrWnd_GetWindSpeed(2) =  0.0    ! V velocity (along positive Y)
+   UsrWnd_GetWindSpeed(3) =  0.0    ! V velocity (along positive Z)
 
-   UsrWnd_GetWindSpeed%Velocity(1) = 10.0    ! U velocity (along positive X)
-   UsrWnd_GetWindSpeed%Velocity(2) =  0.0    ! V velocity (along positive Y)
-   UsrWnd_GetWindSpeed%Velocity(3) =  0.0    ! V velocity (along positive Z)
-   
 
 END FUNCTION UsrWnd_GetWindSpeed
 !====================================================================================================
 SUBROUTINE UsrWnd_Terminate(ErrStat)
-!  This subroutine is called at the end of program execution (including after fatal errors occur).  
+!  This subroutine is called at the end of program execution (including after fatal errors occur).
 !  It should close any files that could be open and deallocate any arrays that have been allocated.
 !----------------------------------------------------------------------------------------------------
-      
+
    INTEGER,    INTENT(OUT)    :: ErrStat           ! return 0 if no errors; non-zero otherwise
 
    ErrStat = 0
@@ -6122,17 +6554,17 @@ SUBROUTINE UsrWnd_Terminate(ErrStat)
    !-------------------------------------------------------------------------------------------------
    ! Close files
    !-------------------------------------------------------------------------------------------------
-      
-      
+
+
    !-------------------------------------------------------------------------------------------------
    ! Deallocate arrays
    !-------------------------------------------------------------------------------------------------
 
-      
+
    !-------------------------------------------------------------------------------------------------
    ! Set the initialization flag
    !-------------------------------------------------------------------------------------------------
-   
+
    Initialized = .FALSE.
 
 END SUBROUTINE UsrWnd_Terminate
@@ -6152,27 +6584,27 @@ MODULE InflowWind_Subs
 !  1 Aug 2012    v1.01.00a-bjj                              B. Jonkman
 ! 10 Aug 2012    v1.01.00b-bjj                              B. Jonkman
 !----------------------------------------------------------------------------------------------------
-!  
+!
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
+!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 !    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!    
-!    You should have received a copy of the GNU General Public License along with InflowWind.  
+!
+!    You should have received a copy of the GNU General Public License along with InflowWind.
 !    If not, see <http://www.gnu.org/licenses/>.
-!    
+!
 !**********************************************************************************************************************************
 
    USE                              NWTC_Library
    USE                              SharedInflowDefs
-   USE                              WindFile_Types
+   USE                              InflowWind_Module_Types
 
    !-------------------------------------------------------------------------------------------------
    ! The included wind modules
@@ -6309,7 +6741,7 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 RETURN
 END SUBROUTINE GetWindType
 !====================================================================================================
-SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat )
+SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat, ErrMsg )
 ! This function is used in FAST's linearization scheme.  It should be fixed at some point.
 !----------------------------------------------------------------------------------------------------
 
@@ -6318,6 +6750,7 @@ SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrSta
    TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
 
    INTEGER,                         INTENT(OUT)       :: ErrStat
+   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
 
    REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
 
@@ -6331,7 +6764,7 @@ SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrSta
    SELECT CASE ( ParamData%WindFileType )
       CASE (HH_Wind)
 
-         CALL HH_SetLinearizeDels( LinPerturbations, ErrStat )
+         CALL HH_SetLinearizeDels( LinPerturbations, ErrStat, ErrMsg )
 
       CASE ( FF_Wind, UD_Wind, FD_Wind, HAWC_Wind )
 
@@ -6354,57 +6787,57 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !! ! when a consensus on the definition of "average velocity" is determined, this function will be
 !! ! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
 !! !----------------------------------------------------------------------------------------------------
-!! 
+!!
 !!       ! Passed variables
-!! 
+!!
 !!    REAL(ReKi), INTENT(IN)     :: Time
 !!    REAL(ReKi), INTENT(IN)     :: InpPosition(3)
 !!    INTEGER, INTENT(OUT)       :: ErrStat
-!! 
+!!
 !!       ! Function definition
 !!    REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
-!! 
+!!
 !!       ! Local variables
 !!    TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
 !!    REAL(ReKi)                 :: Position(3)
 !!    INTEGER                    :: IY
 !!    INTEGER                    :: IZ
-!! 
-!! 
+!!
+!!
 !!    ErrStat = 0
-!! 
+!!
 !!    SELECT CASE ( ParamData%WindFileType )
 !!       CASE (HH_Wind)
-!! 
+!!
 !! !      VXGBAR =  V * COS( DELTA )
 !! !      VYGBAR = -V * SIN( DELTA )
 !! !      VZGBAR =  VZ
-!! 
+!!
 !!          Position    = (/ REAL(0.0, ReKi), REAL(0.0, ReKi), InpPosition(3) /)
 !!          NewVelocity = HH_Get_ADHack_WindSpeed(Time, Position, ErrStat)
-!! 
+!!
 !!          InflowWind_ADhack_diskVel(:) = NewVelocity%Velocity(:)
-!! 
-!! 
+!!
+!!
 !!       CASE (FF_Wind)
 !! !      VXGBAR = MeanFFWS
 !! !      VYGBAR = 0.0
 !! !      VZGBAR = 0.0
-!! 
+!!
 !!          InflowWind_ADhack_diskVel(1)   = FF_GetValue('MEANFFWS', ErrStat)
 !!          InflowWind_ADhack_diskVel(2:3) = 0.0
-!! 
+!!
 !!       CASE (UD_Wind)
 !! !      VXGBAR = UWmeanU
 !! !      VYGBAR = UWmeanV
 !! !      VZGBAR = UWmeanW
-!! 
+!!
 !!          InflowWind_ADhack_diskVel(1)   = UsrWnd_GetValue('MEANU', ErrStat)
 !!          IF (ErrStat /= 0) RETURN
 !!          InflowWind_ADhack_diskVel(2)   = UsrWnd_GetValue('MEANV', ErrStat)
 !!          IF (ErrStat /= 0) RETURN
 !!          InflowWind_ADhack_diskVel(3)   = UsrWnd_GetValue('MEANW', ErrStat)
-!! 
+!!
 !!       CASE (FD_Wind)
 !! !      XGrnd = 0.0
 !! !      YGrnd = 0.5*RotDiam
@@ -6437,39 +6870,39 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !! !      VXGBAR = 0.25*( VXGBAR + FDWind( 1 ) )
 !! !      VYGBAR = 0.25*( VYGBAR + FDWind( 2 ) )
 !! !      VZGBAR = 0.25*( VZGBAR + FDWind( 3 ) )
-!! 
-!! 
+!!
+!!
 !!          Position(1) = 0.0
 !!          InflowWind_ADhack_diskVel(:) = 0.0
-!! 
+!!
 !!          DO IY = -1,1,2
 !!             Position(2)  =  IY*FD_GetValue('RotDiam',ErrStat)
-!! 
+!!
 !!             DO IZ = -1,1,2
 !!                Position(3)  = IZ*InpPosition(2) + InpPosition(3)
-!! 
+!!
 !!                NewVelocity = InflowWind_GetVelocity(Time, Position, ErrStat)
 !!                InflowWind_ADhack_diskVel(:) = InflowWind_ADhack_diskVel(:) + NewVelocity%Velocity(:)
 !!             END DO
 !!          END DO
 !!          InflowWind_ADhack_diskVel(:) = 0.25*InflowWind_ADhack_diskVel(:)
-!! 
+!!
 !!       CASE (HAWC_Wind)
 !!          InflowWind_ADhack_diskVel(1)   = HW_GetValue('UREF', ErrStat)
 !!          InflowWind_ADhack_diskVel(2:3) = 0.0
-!! 
+!!
 !!       CASE DEFAULT
 !!          CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_diskVel(). '// &
 !!                     'Call WindInflow_Init() before calling this function.' )
 !!          ErrStat = 1
-!! 
+!!
 !!    END SELECT
-!! 
+!!
 !!    RETURN
-!! 
+!!
 !! END FUNCTION InflowWind_ADhack_diskVel
 !====================================================================================================
-FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
+FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat, ErrMsg )
 ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
 ! it performs a wind speed check for the dynamic inflow initialization
 ! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
@@ -6480,6 +6913,7 @@ FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
    TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
 
    INTEGER,                         INTENT(OUT)       :: ErrStat
+   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
 
       ! Function definition
    REAL(ReKi)                 :: InflowWind_ADhack_DIcheck
@@ -6494,7 +6928,7 @@ FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat )
 
       CASE (FF_Wind)
 
-         InflowWind_ADhack_DIcheck = FF_GetValue('MEANFFWS', ErrStat)
+         InflowWind_ADhack_DIcheck = FF_GetValue('MEANFFWS', ErrStat, ErrMsg)
 
       CASE (HAWC_Wind)
 
@@ -6748,6 +7182,8 @@ END MODULE InflowWind_Subs
 !!
 !!    END FUNCTION InflowWind_GetTI
 !**********************************************************************************************************************************
+! $Id: InflowWind_Module.f90 33 2013-01-25 18:05:26Z aplatt $
+!
 ! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
 ! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
 ! width (depending on the type of wind file being used).  This module calls appropriate routines
@@ -6789,7 +7225,7 @@ MODULE InflowWind_Module
    USE                              SharedInflowDefs
 !   USE                              InflowWind_Types   !FIXME: this file will replace SharedInflowDefs when I can get it to work with the framework registry generator.
    USE                              NWTC_Library
-   USE                              WindFile_Types
+   USE                              InflowWind_Module_Types
 
       !-------------------------------------------------------------------------------------------------
       ! The included wind modules
@@ -6825,6 +7261,7 @@ MODULE InflowWind_Module
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: IfW_Init                                 ! Initialization routine
+   PUBLIC :: IfW_CalcOutput                           ! Calculate the wind velocities
    PUBLIC :: IfW_End                                  ! Ending routine (includes clean up)
 
 !   PUBLIC :: InflowWind_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
@@ -6851,7 +7288,7 @@ MODULE InflowWind_Module
 
 !FIXME: handle this differently -- should be allocated by the library function to get an open unit number
       ! store as parameter in parametertype
-   INTEGER                        :: UnWind   = 91          ! The unit number used for wind inflow files
+   INTEGER                                   :: UnWind          ! The unit number used for wind inflow files
 
 
    !-------------------------------------------------------------------------------------------------
@@ -6859,7 +7296,7 @@ MODULE InflowWind_Module
    !-------------------------------------------------------------------------------------------------
 
 !FIXME: should not be public anymore
-   PUBLIC                         :: InflowWind_GetVelocity    ! function to get wind speed at point in space and time
+!   PUBLIC                         :: InflowWind_GetVelocity    ! function to get wind speed at point in space and time
 
 !FIXME: not public anymore. may not even exist when done.
 !   PUBLIC                         :: InflowWind_ADhack_diskVel ! used to keep old AeroDyn functionality--remove soon!
@@ -6876,15 +7313,15 @@ MODULE InflowWind_Module
 
 CONTAINS
 !====================================================================================================
-  SUBROUTINE IfW_Init( InitData, InputGuess, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                            OutData, Interval, ErrStat, ErrMsg )
-!   SUBROUTINE IfW_Init( InitData, ParamData, Interval, ErrStat, ErrMsg )
+SUBROUTINE IfW_Init( InitData, InputGuess, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                     OutData, Interval, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
 !----------------------------------------------------------------------------------------------------
 !  Open and read the wind files, allocating space for necessary variables
 
+      USE CTWind
 
          ! Initialization data and guesses
 
@@ -6901,8 +7338,8 @@ CONTAINS
 
          ! Error Handling
 
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
 
 
          ! Local variables
@@ -6924,8 +7361,6 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-
-print*, "Wind Type: ",InitData%WindFileType
 
 !
 !FIXME:
@@ -6956,213 +7391,336 @@ print*, "Wind Type: ",InitData%WindFileType
 !      !OutData%        =
 
 
-      ! check to see if we are already initialized
+         ! check to see if we are already initialized
 
-   IF ( ParamData%Initialized ) THEN
-      CALL WrScr( ' Wind inflow has already been initialized.' )
-      ErrStat = 1
-      RETURN
-   ELSE
-         ! Copy things into the ParamaterType -- InitData may not exist later and isn't accessable in some routines.
-      ParamData%WindFileType = InitData%WindFileType
-      ParamData%WindFileName = InitData%WindFileName
-!FIXME: this is temporary and should be removed once the Wind modules are done.
-      FileName = InitData%WindFileName
-      CALL NWTC_Init()
-      CALL DispNVD( IfW_ProgDesc )
-
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Get default wind type, based on file name, if requested. Otherwise store what we are given for the type
-   !-------------------------------------------------------------------------------------------------
-   IF ( InitData%WindFileType == DEFAULT_Wind ) THEN
-      CALL GetWindType( ParamData, ErrStat, ErrMsg )
-   ELSE
-      ParamData%WindFileType = InitData%WindFileType
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Check for coherent turbulence file (KH superimposed on a background wind file)
-   ! Initialize the CTWind module and initialize the module of the other wind type.
-   !-------------------------------------------------------------------------------------------------
-
-   IF ( ParamData%WindFileType == CTP_Wind ) THEN
-
-      CALL CT_Init(UnWind, ParamData%WindFileName, BackGrndValues, ErrStat)
-      IF (ErrStat /= 0) THEN
-!         CALL IfW_End( ParamData, ErrStat )
-!FIXME: cannot call IfW_End here -- requires InitData to be INOUT. Not allowed by framework.
-!         CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-!                       OutData, ErrStat, ErrMsg )
-         ParamData%WindFileType = Undef_Wind
-         ErrStat  = 1
+      IF ( ParamData%Initialized ) THEN
+         CALL WrScr( ' Wind inflow has already been initialized.' )
+         ErrStat = 1
          RETURN
+      ELSE
+            ! Copy things into the ParamaterType -- InitData may not exist later and isn't accessable in some routines.
+         ParamData%WindFileType = InitData%WindFileType
+         ParamData%WindFileName = InitData%WindFileName
+   !FIXME: this is temporary and should be removed once the Wind modules are done.
+         FileName = InitData%WindFileName
+         CALL NWTC_Init()
+         CALL DispNVD( IfW_ProgDesc )
+
       END IF
 
-!FIXME: check this
-      ParamData%WindFileName = BackGrndValues%WindFile
-      ParamData%WindFileType = BackGrndValues%WindFileType
-!      CT_Flag  = BackGrndValues%CoherentStr
-      ParamData%CT_Flag  = BackGrndValues%CoherentStr    ! This might be wrong
-
-   ELSE
-
-!      CT_Flag  = .FALSE.
-      ParamData%CT_Flag  = .FALSE.
-
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize based on the wind type
-   !-------------------------------------------------------------------------------------------------
-
-   SELECT CASE ( ParamData%WindFileType )
-
-      CASE (HH_Wind)
-
-         HHInitInfo%ReferenceHeight = InitData%ReferenceHeight
-         HHInitInfo%Width           = InitData%Width
-
-         CALL HH_Init( UnWind, ParamData%WindFileName, HHInitInfo, ErrStat )
-
-!        IF (CT_Flag) CALL CT_SetRefVal(FileInfo%ReferenceHeight, 0.5*FileInfo%Width, ErrStat)
-         IF (ErrStat == 0 .AND. ParamData%CT_Flag) CALL CT_SetRefVal(InitData%ReferenceHeight, REAL(0.0, ReKi), ErrStat)
+      !-------------------------------------------------------------------------------------------------
+      ! Get default wind type, based on file name, if requested. Otherwise store what we are given for the type
+      !-------------------------------------------------------------------------------------------------
+      IF ( InitData%WindFileType == DEFAULT_Wind ) THEN
+         CALL GetWindType( ParamData, ErrStat, ErrMsg )
+      ELSE
+         ParamData%WindFileType = InitData%WindFileType
+      END IF
 
 
-      CASE (FF_Wind)
+      !-------------------------------------------------------------------------------------------------
+      ! Check for coherent turbulence file (KH superimposed on a background wind file)
+      ! Initialize the CTWind module and initialize the module of the other wind type.
+      !-------------------------------------------------------------------------------------------------
 
-         CALL FF_Init( UnWind, ParamData%WindFileName, ErrStat )
+      IF ( ParamData%WindFileType == CTP_Wind ) THEN
 
-
-            ! Set CT parameters
-         IF ( ErrStat == 0 .AND. ParamData%CT_Flag ) THEN
-            Height     = FF_GetValue('HubHeight', ErrStat)
-            IF ( ErrStat /= 0 ) Height = InitData%ReferenceHeight
-
-            HalfWidth  = 0.5*FF_GetValue('GridWidth', ErrStat)
-            IF ( ErrStat /= 0 ) HalfWidth = 0
-
-            CALL CT_SetRefVal(Height, HalfWidth, ErrStat)
+         CALL CT_Init(UnWind, ParamData%WindFileName, BackGrndValues, ErrStat, ErrMsg)
+         IF (ErrStat /= 0) THEN
+   !         CALL IfW_End( ParamData, ErrStat )
+   !FIXME: cannot call IfW_End here -- requires InitData to be INOUT. Not allowed by framework.
+   !         CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+   !                       OutData, ErrStat, ErrMsg )
+            ParamData%WindFileType = Undef_Wind
+            ErrStat  = 1
+            RETURN
          END IF
 
+   !FIXME: check this
+         ParamData%WindFileName = BackGrndValues%WindFile
+         ParamData%WindFileType = BackGrndValues%WindFileType
+   !      CT_Flag  = BackGrndValues%CoherentStr
+         ParamData%CT_Flag  = BackGrndValues%CoherentStr    ! This might be wrong
 
-      CASE (UD_Wind)
+      ELSE
 
-         CALL UsrWnd_Init(ErrStat)
+   !      CT_Flag  = .FALSE.
+         ParamData%CT_Flag  = .FALSE.
+
+      END IF
+
+      !-------------------------------------------------------------------------------------------------
+      ! Initialize based on the wind type
+      !-------------------------------------------------------------------------------------------------
+
+      SELECT CASE ( ParamData%WindFileType )
+
+         CASE (HH_Wind)
+
+            HHInitInfo%ReferenceHeight = InitData%ReferenceHeight
+            HHInitInfo%Width           = InitData%Width
+
+            CALL HH_Init( UnWind, ParamData%WindFileName, HHInitInfo, ErrStat )
+
+   !        IF (CT_Flag) CALL CT_SetRefVal(FileInfo%ReferenceHeight, 0.5*FileInfo%Width, ErrStat)
+            IF (ErrStat == ErrID_None .AND. ParamData%CT_Flag) &
+               CALL CT_SetRefVal(InitData%ReferenceHeight, REAL(0.0, ReKi), ErrStat, ErrMsg)
 
 
-      CASE (FD_Wind)
+         CASE (FF_Wind)
 
-         CALL FD_Init(UnWind, ParamData%WindFileName, InitData%ReferenceHeight, ErrStat)
+            CALL FF_Init( UnWind, ParamData%WindFileName, ErrStat, ErrMsg )
 
-      CASE (HAWC_Wind)
 
-         CALL HW_Init( UnWind, ParamData%WindFileName, ErrStat )
+               ! Set CT parameters
+            IF ( ErrStat == ErrID_None .AND. ParamData%CT_Flag ) THEN
+               Height     = FF_GetValue('HubHeight', ErrStat, ErrMsg)
+               IF ( ErrStat /= 0 ) Height = InitData%ReferenceHeight
 
-      CASE DEFAULT
+               HalfWidth  = 0.5*FF_GetValue('GridWidth', ErrStat, ErrMsg)
+               IF ( ErrStat /= 0 ) HalfWidth = 0
 
-         CALL WrScr(' Error: Undefined wind type in WindInflow_Init()' )
-         ErrStat = 1
+               CALL CT_SetRefVal(Height, HalfWidth, ErrStat, ErrMsg)
+            END IF
+
+
+         CASE (UD_Wind)
+
+            CALL UsrWnd_Init(ErrStat)
+
+
+         CASE (FD_Wind)
+
+            CALL FD_Init(UnWind, ParamData%WindFileName, InitData%ReferenceHeight, ErrStat)
+
+         CASE (HAWC_Wind)
+
+            CALL HW_Init( UnWind, ParamData%WindFileName, ErrStat )
+
+         CASE DEFAULT
+
+            CALL WrScr(' Error: Undefined wind type in WindInflow_Init()' )
+            ErrStat = 1
+            RETURN
+
+      END SELECT
+
+
+         ! check error status. If the error is recoverable (ErrID_Warn or less), set flag to indicate we are initialized.
+
+      IF ( ErrStat >= ErrID_Severe ) THEN
+         ParamData%Initialized = .FALSE.
+         ParamData%WindFileType    = Undef_Wind
+
+            ! Just in case something was allocated
+         CALL IfW_End( InputGuess, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                       OutData, ErrStat, ErrMsg )
+      ELSE
+         ParamData%Initialized = .TRUE.
+      END IF
+
+      RETURN
+
+ END SUBROUTINE IfW_Init
+ !====================================================================================================
+ SUBROUTINE IfW_CalcOutput( Time, InputData, ParamData, &
+                              ContStates, DiscStates, ConstrStates, OtherStates, &   ! States -- none in this case
+                              OutputData, ErrStat, ErrMsg )
+   ! This routine takes an input dataset of type InputType which contains a position array of dimensions 3*n. It then calculates
+   ! and returns the output dataset of type OutputType which contains a corresponding velocity array of dimensions 3*n. The input
+
+   ! array contains XYZ triplets for each position of interest (first index is X/Y/Z for values 1/2/3, second index is the point
+   ! number to evaluate). The returned values in the OutputData are similar with U/V/W for the first index of 1/2/3.
+   !----------------------------------------------------------------------------------------------------
+
+         ! Inputs / Outputs
+
+      REAL( DbKi ),                       INTENT(IN   )  :: Time              ! Current simulation time in seconds
+      TYPE( IfW_InputType ),              INTENT(IN   )  :: InputData         ! Inputs at Time
+      TYPE( Ifw_ParameterType ),          INTENT(IN   )  :: ParamData         ! Parameters
+      TYPE( IfW_ContinuousStateType ),    INTENT(IN   )  :: ContStates        ! Continuous states at Time
+      TYPE( IfW_DiscreteStateType ),      INTENT(IN   )  :: DiscStates        ! Discrete states at Time
+      TYPE( IfW_ConstraintStateType ),    INTENT(IN   )  :: ConstrStates      ! Constraint states at Time
+      TYPE( IfW_OtherStateType ),         INTENT(INOUT)  :: OtherStates       ! Other/optimization states at Time
+      TYPE( IfW_OutputType ),             INTENT(INOUT)  :: OutputData        ! Outputs computed at Time (IN for mesh reasons -- not used here)
+
+      INTEGER( IntKi ),                   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+
+
+         ! Local variables
+      REAL( ReKi )                                       :: Position(3)       ! Current position XYZ coords
+      INTEGER( IntKi )                                   :: PointCounter      ! loop counter
+
+
+         ! Sub modules use the InflIntrpOut derived type to store the wind information
+!      TYPE(InflIntrpOut)                                 :: CTWindSpeed       ! U, V, W velocities to superimpose on background wind
+!      TYPE(InflIntrpOut)                                 :: TempWindSpeed     ! U, V, W velocities returned
+      REAL(ReKi)                                         :: CTWindSpeed(3)     ! U, V, W velocities to superimpose on background wind
+      REAL(ReKi)                                         :: TempWindSpeed(3)   ! Temporary U, V, W velocities
+
+
+
+
+         ! Initialize ErrStat
+      ErrStat  = ErrID_None
+      ErrMsg   = ""
+
+         ! Check and see if the output Velocity array has been allocated. If it has, make sure it is the same size as the input position array.
+      IF (.not. ALLOCATED(InputData%Position)) THEN
+         ErrMsg   = 'Ifw_CalcOutput: The InputData%Position array has not been allocated.'
+         ErrStat  = ErrID_Fatal
+         RETURN
+      ENDIF
+      IF (ALLOCATED(OutputData%Velocity)) THEN
+         IF ( SIZE(InputData%Position, 2) /= SIZE(OutputData%Velocity, 2) ) THEN
+            ErrMsg   = 'IfW_CalcOutput: The InputData%Position and OutputData%Velocity arrays are different sizes'
+            ErrStat  = ErrID_Fatal
+            RETURN
+         ENDIF
+      ELSE
+         ErrMsg   = 'IfW_CalcOutput: The OutputData%Velocity array has not been allocated.'
+         ErrStat  = ErrID_Fatal
+         RETURN
+      ENDIF
+
+
+
+         ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
+      SELECT CASE ( ParamData%WindFileType )
+         CASE (HH_Wind)
+
+            DO PointCounter = 1, SIZE(InputData%Position, 2)
+
+               OutputData%Velocity(:,PointCounter) = HH_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
+
+                  ! Error Handling -- move ErrMsg inside HH_GetWindSPeed and simplify
+               IF (ErrStat >= ErrID_Severe) THEN
+                  ErrMsg   = 'IfW_CalcOutput: Error in HH_GetWindSpeed for point number '//TRIM(Num2LStr(PointCounter))
+                  EXIT        ! Exit the loop
+               ENDIF
+            ENDDO
+
+
+         CASE (FF_Wind)
+
+            DO PointCounter = 1, SIZE(InputData%Position, 2)
+
+               OutputData%Velocity(:,PointCounter) = FF_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
+
+                  ! Error Handling -- move ErrMsg inside FF_GetWindSPeed and simplify
+               IF (ErrStat >= ErrID_Severe) THEN
+                  ErrMsg   = 'IfW_CalcOutput: Error in FF_GetWindSpeed for point number '//TRIM(Num2LStr(PointCounter))
+                  EXIT        ! Exit the loop
+               ENDIF
+            ENDDO
+
+
+         CASE (UD_Wind)
+
+            DO PointCounter = 1, SIZE(InputData%Position, 2)
+
+               OutputData%Velocity(:,PointCounter) = UsrWnd_GetWindSpeed( Time, InputData%Position(:,PointCounter), ErrStat )!, ErrMsg)
+
+                  ! Error Handling -- move ErrMsg inside UsrWind_GetWindSPeed and simplify
+               IF (ErrStat >= ErrID_Severe) THEN
+                  ErrMsg   = 'IfW_CalcOutput: Error in UsrWnd_GetWindSpeed for point number '//TRIM(Num2LStr(PointCounter))
+                  EXIT        ! Exit the loop
+               ENDIF
+            ENDDO
+
+
+         CASE (FD_Wind)
+
+            DO PointCounter = 1, SIZE(InputData%Position, 2)
+
+               OutputData%Velocity(:,PointCounter) = FD_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat )
+
+                  ! Error Handling -- move ErrMsg inside FD_GetWindSPeed and simplify
+               IF (ErrStat >= ErrID_Severe) THEN
+                  ErrMsg   = 'IfW_CalcOutput: Error in FD_GetWindSpeed for point number '//TRIM(Num2LStr(PointCounter))
+                  EXIT        ! Exit the loop
+               ENDIF
+            ENDDO
+
+
+         CASE (HAWC_Wind)
+
+            DO PointCounter = 1, SIZE(InputData%Position, 2)
+
+               OutputData%Velocity(:,PointCounter) = HW_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat )
+
+                  ! Error Handling -- move ErrMsg inside HW_GetWindSPeed and simplify
+               IF (ErrStat >= ErrID_Severe) THEN
+                  ErrMsg   = 'IfW_CalcOutput: Error in HW_GetWindSpeed for point number '//TRIM(Num2LStr(PointCounter))
+                  EXIT        ! Exit the loop
+               ENDIF
+            ENDDO
+
+
+
+            ! If it isn't one of the above cases, we have a problem and won't be able to continue
+
+         CASE DEFAULT
+
+            ErrMsg = ' Error: Undefined wind type in IfW_CalcOutput. ' &
+                      //'Call WindInflow_Init() before calling this function.'
+            ErrStat = ErrID_Fatal               ! No data returned
+            OutputData%Velocity(:,:) = 0.0
+            RETURN
+
+      END SELECT
+
+
+         ! If we had a severe or fatal error, we need to make sure we zero out the result and return.
+
+      IF (ErrStat >= ErrID_Severe) THEN
+
+         OutputData%Velocity(:,:) = 0.0
          RETURN
 
-   END SELECT
+      ELSE
 
+            ! Add coherent turbulence to background wind
 
-      ! check error status. If no error, set flag to indicate we are initialized.
+         IF (ParamData%CT_Flag) THEN
 
-   IF ( ErrStat /= 0 ) THEN
-      ParamData%Initialized = .FALSE.
-      ParamData%WindFileType    = Undef_Wind
-      ErrStat               = 1         !FIXME: change the error status to the framework convention
-!      CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-!                    OutData, ErrStat, ErrMsg )  ! Just in case something did get allocated
-!FIXME: cannot call IfW_End here. The problem is that InitData might must be INOUT, but that isn't allowed here by the framework
-   ELSE
-      ParamData%Initialized = .TRUE.
-   END IF
+            DO PointCounter = 1, SIZE(InputData%Position, 2)
 
-   RETURN
+               TempWindSpeed = CT_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg )
 
-END SUBROUTINE IfW_Init
-!====================================================================================================
-!FIXME: this becomes part of InflowWind_CalcOutput
-FUNCTION InflowWind_GetVelocity(ParamData, Time, InputPosition, ErrStat)
-! Get the wind speed at a point in space and time
-!----------------------------------------------------------------------------------------------------
+                  ! Error Handling -- move ErrMsg inside CT_GetWindSPeed and simplify
+               IF (ErrStat >= ErrID_Severe) THEN
+                  ErrMsg   = 'IfW_CalcOutput: Error in CT_GetWindSpeed for point number '//TRIM(Num2LStr(PointCounter))
+                  EXIT        ! Exit the loop
+               ENDIF
 
-      ! passed variables
-   TYPE(IfW_ParameterType),               INTENT(IN   )  :: ParamData
-   REAL(ReKi),       INTENT(IN)  :: Time
-   REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
-   INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
+               OutputData%Velocity(:,PointCounter) = OutputData%Velocity(:,PointCounter) + TempWindSpeed
 
-      ! local variables
-   TYPE(InflIntrpOut)            :: InflowWind_GetVelocity     ! U, V, W velocities
-   TYPE(InflIntrpOut)            :: CTWindSpeed             ! U, V, W velocities to superimpose on background wind
+            ENDDO
 
+               ! If something went badly wrong, Return
+            IF (ErrStat >= ErrID_Severe ) RETURN
 
-   ErrStat = 0
-
-   SELECT CASE ( ParamData%WindFileType )
-      CASE (HH_Wind)
-         InflowWind_GetVelocity = HH_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (FF_Wind)
-         InflowWind_GetVelocity = FF_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (UD_Wind)
-         InflowWind_GetVelocity = UsrWnd_GetWindSpeed( Time, InputPosition, ErrStat )
-
-      CASE (FD_Wind)
-         InflowWind_GetVelocity = FD_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE (HAWC_Wind)
-         InflowWind_GetVelocity = HW_GetWindSpeed(     Time, InputPosition, ErrStat )
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_GetVelocity(). ' &
-                   //'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-         InflowWind_GetVelocity%Velocity(:) = 0.0
-
-   END SELECT
-
-
-   IF (ErrStat /= 0) THEN
-
-      InflowWind_GetVelocity%Velocity(:) = 0.0
-
-   ELSE
-
-         ! Add coherent turbulence to background wind
-
-      IF (ParamData%CT_Flag) THEN
-
-         CTWindSpeed = CT_GetWindSpeed(Time, InputPosition, ErrStat)
-         IF (ErrStat /=0 ) RETURN
-
-         InflowWind_GetVelocity%Velocity(:) = InflowWind_GetVelocity%Velocity(:) + CTWindSpeed%Velocity(:)
+         ENDIF
 
       ENDIF
 
-   ENDIF
 
-END FUNCTION InflowWind_GetVelocity
+
+END SUBROUTINE IfW_CalcOutput
+
 !====================================================================================================
-!FIXME: rename as per framework.
-!SUBROUTINE IfW_End( ParamData, ErrStat )
 SUBROUTINE IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                    OutData, ErrStat, ErrMsg )
-! Clean up the allocated variables and close all open files.  Reset the initialization flag so
-! that we have to reinitialize before calling the routines again.
-!----------------------------------------------------------------------------------------------------
-   USE WindFile_Types
+                       OutData, ErrStat, ErrMsg )
+   ! Clean up the allocated variables and close all open files.  Reset the initialization flag so
+   ! that we have to reinitialize before calling the routines again.
+   !----------------------------------------------------------------------------------------------------
+      USE InflowWind_Module_Types
 
          ! Initialization data and guesses
 
-      TYPE( IfW_InitInputType ),          INTENT(INOUT)  :: InitData          ! Input data for initialization
+      TYPE( IfW_InputType ),              INTENT(INOUT)  :: InitData          ! Input data for initialization
       TYPE( Ifw_ParameterType ),          INTENT(INOUT)  :: ParamData         ! Parameters
       TYPE( IfW_ContinuousStateType ),    INTENT(INOUT)  :: ContStates        ! Continuous states
       TYPE( IfW_DiscreteStateType ),      INTENT(INOUT)  :: DiscStates        ! Discrete states
@@ -7177,47 +7735,48 @@ SUBROUTINE IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGues
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
 
 
-      ! Close the wind file, if it happens to be open
+         ! Close the wind file, if it happens to be open
 
-   CLOSE( UnWind )
-
-
-      ! End the sub-modules (deallocates their arrays and closes their files):
-
-   SELECT CASE ( ParamData%WindFileType )
-
-      CASE (HH_Wind)
-         CALL HH_Terminate(     ErrStat )
-
-      CASE (FF_Wind)
-         CALL FF_Terminate(     ErrStat )
-
-      CASE (UD_Wind)
-         CALL UsrWnd_Terminate( ErrStat )
-
-      CASE (FD_Wind)
-         CALL FD_Terminate(     ErrStat )
-
-      CASE (HAWC_Wind)
-         CALL HW_Terminate(     ErrStat )
-
-      CASE ( Undef_Wind )
-         ! Do nothing
-
-      CASE DEFAULT  ! keep this check to make sure that all new wind types have a terminate function
-         CALL WrScr(' InflowWind: Undefined wind type in IfW_End().' )
-         ErrStat = 1
-
-   END SELECT
-
-!   IF (CT_Flag) CALL CT_Terminate( ErrStat )
-   CALL CT_Terminate( ErrStat )
+      CLOSE( UnWind )
 
 
-      ! Reset the wind type so that the initialization routine must be called
-   ParamData%WindFileType = Undef_Wind
+         ! End the sub-modules (deallocates their arrays and closes their files):
+
+      SELECT CASE ( ParamData%WindFileType )
+
+         CASE (HH_Wind)
+            CALL HH_Terminate(     ErrStat )
+
+         CASE (FF_Wind)
+            CALL FF_Terminate(     ErrStat, ErrMsg )
+
+         CASE (UD_Wind)
+            CALL UsrWnd_Terminate( ErrStat )
+
+         CASE (FD_Wind)
+            CALL FD_Terminate(     ErrStat )
+
+         CASE (HAWC_Wind)
+            CALL HW_Terminate(     ErrStat )
+
+         CASE ( Undef_Wind )
+            ! Do nothing
+
+         CASE DEFAULT  ! keep this check to make sure that all new wind types have a terminate function
+            CALL WrScr(' InflowWind: Undefined wind type in IfW_End().' )
+            ErrStat = 1
+
+      END SELECT
+
+  !   IF (CT_Flag) CALL CT_Terminate( ErrStat ) !FIXME: should it be this line or the next?
+         CALL CT_Terminate( ErrStat, ErrMsg )
+
+
+         ! Reset the wind type so that the initialization routine must be called
+      ParamData%WindFileType = Undef_Wind
+      ParamData%Initialized = .FALSE.
 !FIXME: reset the initialization flag.
-   ParamData%CT_Flag  = .FALSE.
+      ParamData%CT_Flag  = .FALSE.
 
 
 END SUBROUTINE IfW_End
@@ -7255,7 +7814,7 @@ END MODULE InflowWind_Module
 MODULE Ifw_Driver_Types
 
    USE NWTC_Library
-   USE WindFile_Types
+   USE InflowWind_Module_Types
 
    IMPLICIT NONE
 
@@ -7264,14 +7823,14 @@ MODULE Ifw_Driver_Types
       LOGICAL                 :: WindFileType   = .FALSE.      ! specified a windfiletype
       LOGICAL                 :: Height         = .FALSE.      ! specified a height
       LOGICAL                 :: Width          = .FALSE.      ! specified a width
-      LOGICAL                 :: Xrange         = .FALSE.      ! specified a range of x
-      LOGICAL                 :: Yrange         = .FALSE.      ! specified a range of y
-      LOGICAL                 :: Zrange         = .FALSE.      ! specified a range of z
-      LOGICAL                 :: Trange         = .FALSE.      ! specified a range of time
-      LOGICAL                 :: Xres           = .FALSE.      ! specified a resolution in x
-      LOGICAL                 :: Yres           = .FALSE.      ! speficied a resolution in y
-      LOGICAL                 :: Zres           = .FALSE.      ! specified a resolution in z
-      LOGICAL                 :: Tres           = .FALSE.      ! specified a resolution in time
+      LOGICAL                 :: XRange         = .FALSE.      ! specified a range of x
+      LOGICAL                 :: YRange         = .FALSE.      ! specified a range of y
+      LOGICAL                 :: ZRange         = .FALSE.      ! specified a range of z
+      LOGICAL                 :: TRange         = .FALSE.      ! specified a range of time
+      LOGICAL                 :: XRes           = .FALSE.      ! specified a resolution in x
+      LOGICAL                 :: YRes           = .FALSE.      ! speficied a resolution in y
+      LOGICAL                 :: ZRes           = .FALSE.      ! specified a resolution in z
+      LOGICAL                 :: TRes           = .FALSE.      ! specified a resolution in time
       LOGICAL                 :: ParaPrint      = .FALSE.      ! create a ParaView file?
       LOGICAL                 :: Summary        = .FALSE.      ! create a summary file?
       LOGICAL                 :: fft            = .FALSE.      ! do an FFT
@@ -7284,14 +7843,14 @@ MODULE Ifw_Driver_Types
       INTEGER                 :: WindFileType   = DEFAULT_WIND ! the kind of windfile     -- set default to simplify things later
       REAL( ReKi )            :: Height                        ! Reference height
       REAL( ReKi )            :: Width                         ! Reference width
-      REAL( ReKi )            :: Xrange(1:2)                   ! range of x
-      REAL( ReKi )            :: Yrange(1:2)                   ! range of y
-      REAL( ReKi )            :: Zrange(1:2)                   ! range of z
-      REAL( ReKi )            :: Trange(1:2)                   ! range of time
-      REAL( ReKi )            :: Xres                          ! resolution of x
-      REAL( ReKi )            :: Yres                          ! resolution of y
-      REAL( ReKi )            :: Zres                          ! resolution of z
-      REAL( ReKi )            :: Tres                          ! resolution of time
+      REAL( ReKi )            :: XRange(1:2)                   ! range of x
+      REAL( ReKi )            :: YRange(1:2)                   ! range of y
+      REAL( ReKi )            :: ZRange(1:2)                   ! range of z
+      REAL( DbKi )            :: TRange(1:2)                   ! range of time
+      REAL( ReKi )            :: XRes                          ! resolution of x
+      REAL( ReKi )            :: YRes                          ! resolution of y
+      REAL( ReKi )            :: ZRes                          ! resolution of z
+      REAL( DbKi )            :: TRes                          ! resolution of time
       REAL( ReKi )            :: fft(1:3)                      ! Coords to do an FFT
       CHARACTER(1024)         :: PointsFile                    ! Filename of points file
       CHARACTER(1024)         :: InputFile                     ! Filename of file to process
@@ -7512,7 +8071,7 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
 
       USE NWTC_Library
       USE IfW_Driver_Types
-      USE WindFile_Types
+      USE InflowWind_Module_Types
 
       IMPLICIT NONE
 
@@ -7643,39 +8202,39 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Xrange = .FALSE.
+            SettingsFlags%XRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Xrange = .TRUE.
-            Settings%Xrange(1)   = TempReal
+            SettingsFlags%XRange = .TRUE.
+            Settings%XRange(1)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Xrange = .FALSE.
+            SettingsFlags%XRange = .FALSE.
          ENDIF
 
             ! Second Value
          TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Xrange = .FALSE.
+            SettingsFlags%XRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Xrange = .TRUE.
-            Settings%Xrange(2)   = TempReal
+            SettingsFlags%XRange = .TRUE.
+            Settings%XRange(2)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Xrange = .FALSE.
+            SettingsFlags%XRange = .FALSE.
          ENDIF
 
             ! Check the order of values
-         IF ( Settings%Xrange(1) > Settings%Xrange(2) ) THEN
+         IF ( Settings%XRange(1) > Settings%Xrange(2) ) THEN
             ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
             ErrStat  = ErrID_Warn
-            Settings%Xrange(1)   = 0.0
-            Settings%Xrange(2)   = 0.0
-            SettingsFlags%Xrange = .FALSE.
+            Settings%XRange(1)   = 0.0
+            Settings%XRange(2)   = 0.0
+            SettingsFlags%XRange = .FALSE.
          ENDIF
 
 
@@ -7686,39 +8245,39 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Yrange = .FALSE.
+            SettingsFlags%YRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Yrange = .TRUE.
-            Settings%Yrange(1)   = TempReal
+            SettingsFlags%YRange = .TRUE.
+            Settings%YRange(1)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Yrange = .FALSE.
+            SettingsFlags%YRange = .FALSE.
          ENDIF
 
             ! Second Value
          TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Yrange = .FALSE.
+            SettingsFlags%YRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Yrange = .TRUE.
-            Settings%Yrange(2)   = TempReal
+            SettingsFlags%YRange = .TRUE.
+            Settings%YRange(2)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Yrange = .FALSE.
+            SettingsFlags%YRange = .FALSE.
          ENDIF
 
             ! Check the order of values
-         IF ( Settings%Yrange(1) > Settings%Yrange(2) ) THEN
+         IF ( Settings%YRange(1) > Settings%Yrange(2) ) THEN
             ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
             ErrStat  = 1
-            Settings%Yrange(1)   = 0.0
-            Settings%Yrange(2)   = 0.0
-            SettingsFlags%Yrange = .FALSE.
+            Settings%YRange(1)   = 0.0
+            Settings%YRange(2)   = 0.0
+            SettingsFlags%YRange = .FALSE.
          ENDIF
 
 
@@ -7729,39 +8288,39 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Zrange = .FALSE.
+            SettingsFlags%ZRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Zrange = .TRUE.
-            Settings%Zrange(1)   = TempReal
+            SettingsFlags%ZRange = .TRUE.
+            Settings%ZRange(1)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Zrange = .FALSE.
+            SettingsFlags%ZRange = .FALSE.
          ENDIF
 
             ! Second Value
          TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Zrange = .FALSE.
+            SettingsFlags%ZRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Zrange = .TRUE.
-            Settings%Zrange(2)   = TempReal
+            SettingsFlags%ZRange = .TRUE.
+            Settings%ZRange(2)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Zrange = .FALSE.
+            SettingsFlags%ZRange = .FALSE.
          ENDIF
 
             ! Check the order of values
-         IF ( Settings%Zrange(1) > Settings%Zrange(2) ) THEN
+         IF ( Settings%ZRange(1) > Settings%Zrange(2) ) THEN
             ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
             ErrStat  = 1
-            Settings%Zrange(1)   = 0.0
-            Settings%Zrange(2)   = 0.0
-            SettingsFlags%Zrange = .FALSE.
+            Settings%ZRange(1)   = 0.0
+            Settings%ZRange(2)   = 0.0
+            SettingsFlags%ZRange = .FALSE.
          ENDIF
 
 
@@ -7772,39 +8331,39 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:DelimSep-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Trange = .FALSE.
+            SettingsFlags%TRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Trange = .TRUE.
-            Settings%Trange(1)   = TempReal
+            SettingsFlags%TRange = .TRUE.
+            Settings%TRange(1)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Trange = .FALSE.
+            SettingsFlags%TRange = .FALSE.
          ENDIF
 
             ! Second Value
          TempReal = StringToReal( ThisArg(DelimSep+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Trange = .FALSE.
+            SettingsFlags%TRange = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Trange = .TRUE.
-            Settings%Trange(2)   = TempReal
+            SettingsFlags%TRange = .TRUE.
+            Settings%TRange(2)   = TempReal
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Trange = .FALSE.
+            SettingsFlags%TRange = .FALSE.
          ENDIF
 
             ! Check the order of values
-         IF ( Settings%Trange(1) > Settings%Trange(2) ) THEN
+         IF ( Settings%TRange(1) > Settings%Trange(2) ) THEN
             ErrMsg   = "Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring."
-            Settings%Trange(1)   = 0.0
-            Settings%Trange(2)   = 0.0
+            Settings%TRange(1)   = 0.0
+            Settings%TRange(2)   = 0.0
             ErrStat  = 1
-            SettingsFlags%Trange = .FALSE.
+            SettingsFlags%TRange = .FALSE.
          ENDIF
 
 
@@ -7813,15 +8372,15 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Xres   = .FALSE.
+            SettingsFlags%XRes   = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Xres   = .TRUE.
-            Settings%Xres        = abs(TempReal)
+            SettingsFlags%XRes   = .TRUE.
+            Settings%XRes        = abs(TempReal)
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Xres   = .FALSE.
+            SettingsFlags%XRes   = .FALSE.
          ENDIF
 
          ! "yres[#]"
@@ -7829,15 +8388,15 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Yres   = .FALSE.
+            SettingsFlags%YRes   = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Yres   = .TRUE.
-            Settings%Yres        = abs(TempReal)
+            SettingsFlags%YRes   = .TRUE.
+            Settings%YRes        = abs(TempReal)
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Yres   = .FALSE.
+            SettingsFlags%YRes   = .FALSE.
          ENDIF
 
          ! "zres[#]"
@@ -7845,15 +8404,15 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Zres   = .FALSE.
+            SettingsFlags%ZRes   = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Zres   = .TRUE.
-            Settings%Zres        = abs(TempReal)
+            SettingsFlags%ZRes   = .TRUE.
+            Settings%ZRes        = abs(TempReal)
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Zres   = .FALSE.
+            SettingsFlags%ZRes   = .FALSE.
          ENDIF
 
          ! "tres[#]"
@@ -7861,15 +8420,15 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          TempReal = StringToReal( ThisArg(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_Warn ) THEN
             ErrMsg   = "Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
-            SettingsFlags%Tres   = .FALSE.
+            SettingsFlags%TRes   = .FALSE.
             RETURN
          ELSEIF ( ErrStat == ErrID_None ) THEN
-            SettingsFlags%Tres   = .TRUE.
-            Settings%Tres        = abs(TempReal)
+            SettingsFlags%TRes   = .TRUE.
+            Settings%TRes        = abs(TempReal)
          ELSE
             ErrMsg   = "Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
             ErrStat  = ErrID_Fatal
-            SettingsFlags%Tres   = .FALSE.
+            SettingsFlags%TRes   = .FALSE.
          ENDIF
 
          ! "paraprint"
@@ -7951,6 +8510,65 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
 END SUBROUTINE RetrieveArgs
 
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+   SUBROUTINE AllRAry5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 4-D REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(ReKi),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim4                                    ! The size of the fourth dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim5                                    ! The size of the fourth dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+      ! Local declarations.
+
+   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
+   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=Sttus )
+
+   IF ( Sttus /= 0 ) THEN
+      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = ErrID_Fatal
+         IF ( PRESENT(ErrMsg) ) THEN
+            ErrMsg  = Msg
+         END IF
+      ELSE
+         CALL ProgAbort ( Msg )
+      END IF
+
+   ELSE
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = Sttus
+         IF ( PRESENT(ErrMsg) ) THEN
+            ErrMsg  = ''
+         END IF
+      END IF
+
+   END IF
+
+
+
+   RETURN
+  END SUBROUTINE AllRAry5 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr )
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 END MODULE Ifw_Driver_Subs
 !****************************************************************************
@@ -7980,7 +8598,7 @@ PROGRAM InflowWind_Driver
 
 !   USE NWTC_Library       !NOTE: Not sure why this doesn't need to be specified
    USE InflowWind_Module
-   USE WindFile_Types      !NOTE: would we prefer not to need this????
+   USE InflowWind_Module_Types      !NOTE: would we prefer not to need this????
    USE SharedInflowDefs
    USE IfW_Driver_Types    ! Contains types and routines for handling the input arguments
    USE IfW_Driver_Subs     ! Contains subroutines for the driver program
@@ -8001,20 +8619,49 @@ PROGRAM InflowWind_Driver
    TYPE( IfW_OtherStateType )                         :: IfW_OtherStateData      ! Other State Data      (might use at some point)
    TYPE( IfW_OutputType )                             :: IfW_OutputData          ! Output Data -- contains the velocities at xyz
 
-      ! Error Handling
-   INTEGER(IntKi)                                     :: ErrStat
-   CHARACTER(1024)                                    :: ErrMsg
-
-
 
       ! Local variables for this code
-   TYPE( IfW_Driver_ArgFlags )                        :: SettingsFlags        ! Flags indicating which arguments were specified
-   TYPE( IfW_Driver_Args )                            :: Settings             ! Arguments passed in
-   REAL( DbKi )                                       :: TimeStep             ! Initial timestep (the glue code ditcates this)
-   REAL( DbKi )                                       :: Timer(1:2)           ! Keep track of how long this takes to run
-   INTEGER( IntKi )                                   :: InputArgs            ! Number of arguments passed in
-   LOGICAL                                            :: TempFileExist        ! Flag for inquiring file existence
+   TYPE( IfW_Driver_ArgFlags )                        :: SettingsFlags           ! Flags indicating which arguments were specified
+   TYPE( IfW_Driver_Args )                            :: Settings                ! Arguments passed in
+   REAL( DbKi )                                       :: TimeStepSize            ! Initial timestep (the glue code dictates this)
+   REAL( DbKi )                                       :: Timer(1:2)              ! Keep track of how long this takes to run
+   REAL( DbKi )                                       :: TimeNow                 ! The current time
+   INTEGER( IntKi )                                   :: InputArgs               ! Number of arguments passed in
+   INTEGER( IntKi )                                   :: NumTotalPoints          ! Number of points for this iteration
+   LOGICAL                                            :: TempFileExist           ! Flag for inquiring file existence
 
+
+      ! Local steps required
+   INTEGER( IntKi )                                   :: NumXSteps               ! Number of dimension-X steps
+   INTEGER( IntKi )                                   :: NumYSteps               ! Number of dimension-Y steps
+   INTEGER( IntKi )                                   :: NumZSteps               ! Number of dimension-Z steps
+   INTEGER( IntKi )                                   :: NumTSteps               ! Number of time steps
+
+
+      ! Local loop Counters
+   INTEGER( IntKi )                                   :: XStep                   ! Current dimension-X step
+   INTEGER( IntKi )                                   :: YStep                   ! Current dimension-Y step
+   INTEGER( IntKi )                                   :: ZStep                   ! Current dimension-Z step
+   INTEGER( IntKi )                                   :: TStep                   ! Current Time step
+
+
+      ! Local file unit numbers
+   INTEGER( IntKi )                                   :: FiUnitPoints            ! File unit for points file
+   INTEGER( IntKi )                                   :: FiUnitParaview          ! FIle unit for output Paraview output
+
+
+      ! Local variables for storing the arrays
+   REAL(ReKi),ALLOCATABLE                             :: Position(:,:)           ! Array used to move position info to the module
+   REAL(ReKi),ALLOCATABLE                             :: Velocity(:,:)           ! Array used to move velocity info from the module
+   REAL(ReKi),ALLOCATABLE                             :: PositionTimeStep(:,:,:,:)     ! 4D array for position info in a timestep  (xyz
+   REAL(ReKi),ALLOCATABLE                             :: VelocityTimeStep(:,:,:,:)     ! 4D array for velocity info in a timestep
+   REAL(ReKi),ALLOCATABLE                             :: PositionFullset(:,:,:,:,:)    ! 5D array for position info in all timesteps
+   REAL(ReKi),ALLOCATABLE                             :: VelocityFullset(:,:,:,:,:)    ! 5D array for velocity info in all timesteps
+
+
+      ! Local Error Handling
+   INTEGER(IntKi)                                     :: ErrStat
+   CHARACTER(1024)                                    :: ErrMsg
 
 
    !--------------------------------------------------------------------------
@@ -8029,19 +8676,25 @@ PROGRAM InflowWind_Driver
       ! Set the beep to false. This is a temporary workaround since the beepcode on linux may be incorrectly set. This may also be an artifact of my current development environment.
    Beep = .FALSE.
 
+      ! Just in case we end up reading a wind file that has no ranges (steady wind for example)
+   NumXSteps = 0
+   NumYSteps = 0
+   NumZSteps = 0
+   NumTSteps = 0
 
-   !--------------------------------------------------------------------------
+
+   !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Setup the program -=-=-
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
 
       ! Start the timer
    CALL CPU_TIME( Timer(1) )
 
 
 
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Parse the command line inputs -=-=-
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
 
    CALL RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
 
@@ -8061,7 +8714,7 @@ PROGRAM InflowWind_Driver
    IfW_InitInputData%ReferenceHeight   = 80.                      ! meters  -- default
    IfW_InitInputData%Width             = 100.                     ! meters
    IfW_InitInputData%WindFileType      = DEFAULT_Wind             ! This must be preset before calling the initialization.
-   TimeStep                            = 10                       !seconds
+   TimeStepSize                        = 10                       !seconds
 
 
       ! If they are specified by input arguments, use the following
@@ -8069,90 +8722,224 @@ PROGRAM InflowWind_Driver
    IF ( SettingsFlags%Height )         IfW_InitInputData%ReferenceHeight = Settings%Height
    IF ( SettingsFlags%Width )          IfW_InitInputData%Width           = Settings%Width
    IF ( SettingsFlags%WindFileType )   IfW_InitInputData%WindFileType    = Settings%WindFileType
-   IF ( SettingsFlags%Tres )           TimeStep                          = Settings%Tres
+   IF ( SettingsFlags%TRes )           TimeStepSize                      = Settings%Tres
 
 
 
-      ! Sanity check: if an input points file is specified, make sure it actually exists.
+      ! Sanity check: if an input points file is specified, make sure it actually exists. Open it if specified
 
    IF ( SettingsFlags%PointsFile ) THEN
       INQUIRE( file=Settings%PointsFile, exist=TempFileExist )
       IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%InputFile))
+
+         ! Now open file
+      CALL GetNewUnit(     FiUnitPoints )
+      CALL OpenUInfile(   FiUnitPoints,  Settings%PointsFile, ErrStat )   ! Unformatted input file
    ENDIF
-
-
-
-   !--------------------------------------------------------------------------
-   !-=-=- Initialize the Module -=-=-
-   !--------------------------------------------------------------------------
-   !  Initialize the IfW module --> it will initialize all its pieces
-
-   CALL IfW_Init( IfW_InitInputData, IfW_InputData, IfW_ParamData, &
-                  IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
-                  IfW_OutputData, TimeStep, ErrStat, ErrMsg )
-
-
-      ! Make sure no errors occured that give us reason to terminate now.
-
-   IF ( ErrStat == ErrID_Severe ) CALL ProgAbort( ErrMsg )
-   IF ( ErrStat == ErrID_Fatal )  CALL ProgAbort( ErrMsg )
-
-
-
-   !--------------------------------------------------------------------------
-   !-=-=- Other Setup -=-=-
-   !--------------------------------------------------------------------------
-   !  Setup any additional things
-   !  -- reset bounds to reasonable level (can't do more than what actually exists in the file)
-   !  -- setup the matrices for handling the data?
-
-
-
 
 
    !FIXME: check that the FFT file can be made
 
 
-   !--------------------------------------------------------------------------
+
+   !--------------------------------------------------------------------------------------------------------------------------------
+   !-=-=- Initialize the Module -=-=-
+   !--------------------------------------------------------------------------------------------------------------------------------
+   !  Initialize the IfW module --> it will initialize all its pieces
+
+   CALL IfW_Init( IfW_InitInputData, IfW_InputData, IfW_ParamData, &
+                  IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
+                  IfW_OutputData, TimeStepSize, ErrStat, ErrMsg )
+
+
+      ! Make sure no errors occured that give us reason to terminate now.
+   IF ( ErrStat == ErrID_Severe ) CALL ProgAbort( ErrMsg )
+   IF ( ErrStat == ErrID_Fatal )  CALL ProgAbort( ErrMsg )
+
+
+      !FIXME: if not specified, should pick this info up from the initialization of the module -- I don't think the module provides this right now
+      ! Calculate the number of steps for each of the dimensions (including time) -- remains at 0 if not calculated or supplied
+      !     NOTE: subtract a micron or microsecond just in case the stepsize is exactly divisible.
+   IF ( SettingsFlags%XRange ) THEN
+      NumXSteps = floor( (Settings%XRange(2)-Settings%XRange(1) - 0.0000001) / Settings%XRes ) + 1
+   ENDIF
+   IF ( SettingsFlags%YRange ) THEN
+      NumYSteps = floor( (Settings%YRange(2)-Settings%YRange(1) - 0.0000001) / Settings%YRes ) + 1
+   ENDIF
+   IF ( SettingsFlags%ZRange ) THEN
+      NumZSteps = floor( (Settings%ZRange(2)-Settings%ZRange(1) - 0.0000001) / Settings%ZRes ) + 1
+   ENDIF
+   IF ( SettingsFlags%TRange ) THEN
+      NumTSteps = floor( (Settings%TRange(2)-Settings%TRange(1) - 0.0000001) / Settings%TRes ) + 1
+   ENDIF
+
+
+   !--------------------------------------------------------------------------------------------------------------------------------
+   !-=-=- Other Setup -=-=-
+   !--------------------------------------------------------------------------------------------------------------------------------
+   !  Setup any additional things
+   !  -- reset bounds to reasonable level (can't do more than what actually exists in the file)
+   !  -- setup the matrices for handling the data?
+
+      ! FIXME: add some checks on the bounds
+!check the bounds that were read in against those from the file. Reset as appropriate
+
+
+!FIXME: flip the array dimensions if that makes it faster to iterate
+      ! Allocate the arrays that hold the entire dataset
+   CALL AllocAry( PositionTimeStep, NumXSteps+1, NumYSteps+1, NumZSteps+1, 3, 'Position matrix at timestep', ErrStat, ErrMsg )
+   CALL AllocAry( VelocityTimeStep, NumXSteps+1, NumYSteps+1, NumZSteps+1, 3, 'Velocity matrix at timestep', ErrStat, ErrMsg )
+
+
+!FIXME: remove this and not store the entire thing. Only do each timestep at a time.
+      ! Allocate the arrays that hold the current timesteps data
+      ! Xindex, Yindex
+   CALL AllRAry5( PositionFullset, NumXSteps+1, NumYSteps+1, NumZSteps+1, NumTSteps+1, 3, 'Position matrix (fullset)', &
+                  ErrStat, ErrMsg )
+   CALL AllRAry5( VelocityFullset, NumXSteps+1, NumYSteps+1, NumZSteps+1, NumTSteps+1, 3, 'Velocity matrix (fullset)', &
+                  ErrStat, ErrMsg )
+
+
+      ! Total number of points per timestep (for allocating the passed arrays)
+   NumTotalPoints = (NumXSteps + 1) * (NumYSteps + 1) * (NumZSteps + 1)       ! Note that this has an upper limit of value before rolling over (IntKi)
+
+
+      ! Allocate the arrays that we use locally
+   CALL AllocAry( Position, 3, NumTotalPoints, 'Local Position martrix', ErrStat, ErrMsg)
+   CALL AllocAry( Velocity, 3, NumTotalPoints, 'Local Velocity martrix', ErrStat, ErrMsg)
+
+
+
+      ! Populate the large array with coordinates (Xindex, Yindex, Zindex, Tindex, (x,y,z) coordset)
+   DO TStep = 0, NumTSteps
+      DO ZStep = 0, NumZSteps
+         DO YStep = 0, NumYSteps
+            DO XStep=0, NumXSteps
+               PositionFullSet( XStep+1, YStep+1, ZStep+1, TStep+1, 1) = XStep*Settings%XRes+Settings%XRange(1)
+               PositionFullSet( XStep+1, YStep+1, ZStep+1, TStep+1, 2) = YStep*Settings%YRes+Settings%YRange(1)
+               PositionFullSet( XStep+1, YStep+1, ZStep+1, TStep+1, 3) = ZStep*Settings%ZRes+Settings%ZRange(1)
+            ENDDO    ! XStep
+         ENDDO    ! YStep
+      ENDDO     ! ZStep
+   ENDDO    ! TStep
+
+
+
+   !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Time stepping loop -=-=-
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
    !  Loop through the time
    !     -- send matrix of coordinates at each timestep --> ask for certain points at time T
    !     -- should get back a matrix of wind velocities at each coordinate
    !     -- Assemble the large matrix with all the small pieces
 
-!FIXME: write this routine
-!   CALL IfW_Calculate( )
+      ! Loop over the whole time of interest
+
+   DO TStep = 0, NumTSteps
+
+      TimeNow = TStep * TimeStepSize + Settings%TRange(1)
+print*, " Time: ",TimeNow
+         ! Flatten out the current step of the array  -- loop through to create array of elements
+               ! (X1, Y1, Z1), 1
+               ! (X2, Y1, Z1), 2
+               ! (X3, Y1, Z1), 3
+               !   ...
+               ! (Xn, Y1, Z1), n
+               ! (X1, Y2, Z1), n+1
+               !   ...
+               ! (X1, Ym, Z1), n*m+1
+               !   ...
+      DO ZStep = 0, NumZSteps
+         DO YStep = 0, NumYSteps
+            DO XStep = 0, NumXSteps
+               Position(1, (XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ) ) = &
+                  PositionFullset( XStep+1, YStep+1, ZStep+1, TStep+1, 1)
+               Position(2, (XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ) ) = &
+                  PositionFullset( XStep+1, YStep+1, ZStep+1, TStep+1, 2)
+               Position(3, (XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ) ) = &
+                  PositionFullset( XStep+1, YStep+1, ZStep+1, TStep+1, 3)
+            ENDDO    ! XStep
+         ENDDO    ! YStep
+      ENDDO    ! ZStep
 
 
-   !--------------------------------------------------------------------------
+         ! Copy the data into the array to pass in (this allocates the array)
+      IfW_InputData%Position = Position
+
+
+         ! Allocate the IfW_OutputData%Velocity array to match the Input one
+      CALL AllocAry( IfW_OutputData%Velocity, SIZE(IfW_InputData%Position, 1), SIZE(IfW_InputData%Position, 2), &
+                     'Velocity array to return from IfW_CalcOutput', ErrStat, ErrMsg )
+
+
+         ! Call the Calculate routine and pass in the Position information
+      CALL IfW_CalcOutput( TimeNow, IfW_InputData, IfW_ParamData, &
+                           IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, & ! States -- not used
+                           IfW_OutputData, ErrStat, ErrMsg)
+
+         ! Check that things ran correctly
+      IF (ErrStat >= ErrID_Severe) CALL ProgAbort( ErrMsg )
+
+
+         ! Unflatten the Velocity information
+      DO ZStep = 0, NumZSteps
+         DO YStep = 0, NumYSteps
+            DO XStep = 0, NumXSteps
+               VelocityFullSet( XStep+1, YStep+1, ZStep+1, TStep+1, 1) = &
+                  Velocity(1, ( XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ))
+               VelocityFullSet( XStep+1, YStep+1, ZStep+1, TStep+1, 1) = &
+                  Velocity(2, ( XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ))
+               VelocityFullSet( XStep+1, YStep+1, ZStep+1, TStep+1, 1) = &
+                  Velocity(3, ( XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ))
+            ENDDO    ! XStep
+         ENDDO    ! YStep
+      ENDDO    ! ZStep
+
+
+
+   ENDDO    ! TStep
+
+
+   !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Calculate OtherStates -=-=-
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
    !  Iff we add in some averaging / TI / mean etc, it would be in OtherStates
    !     -- Test that here.
 
 
 
 
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Output results -=-=-
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
    !  ParaPrint         -- will create a ParaView file that can be looked at
    !  Write to screen   -- if ParaPrint isn't used
 
 
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- We are done, so close everything down -=-=-
-   !--------------------------------------------------------------------------
+   !--------------------------------------------------------------------------------------------------------------------------------
 
-   CALL IfW_End(  IfW_InitInputData, IfW_ParamData, &
+   CALL IfW_End(  IfW_InputData, IfW_ParamData, &
                   IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
                   IfW_OutputData, ErrStat, ErrMsg )
 
 
+      ! Close the points file
+   IF ( SettingsFlags%PointsFile ) THEN
+      CLOSE( FiUnitPoints )
+   ENDIF
+
+      ! Close the paraview file
+   IF ( SettingsFlags%ParaPrint ) THEN
+      CLOSE( FiUnitParaview )
+   ENDIF
 
 
 
+      ! Find out how long this actually took
+   CALL CPU_TIME( Timer(2) )
+   CALL WrScr('Elapsed time: '//TRIM(Num2LStr(Timer(2)-Timer(1)))//' seconds')
 
 
 
