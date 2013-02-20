@@ -1,4 +1,5 @@
 AeroDyn.pdf
+AeroDyn_addendum.pdf
 ArcFiles.txt
 Archive.bat
 ChangeLog.txt

@@ -776,6 +776,9 @@ v13.00.01b-bjj, 28-Aug-2012 B. Jonkman
 v13.00.01c-bjj, 7-Dec-2012 B. Jonkman   
  Modifications for NWTC Library v1.06.00
 
+v13.00.02a-bjj, 20-Feb-2013, B. Jonkman
+  Cleaned up for release; added user's guide addendum to the archive.
+
 -------------------------------------------------------------------------------
 To do:
 
