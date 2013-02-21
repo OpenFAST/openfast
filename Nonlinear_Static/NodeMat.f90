@@ -11,6 +11,8 @@
    
       integer i
       double precision htemp, btemp
+      
+      dmat = 0.0d0
     
       do i = 1, node_total
 
@@ -27,4 +29,4 @@
       enddo
     
       return
-      end
+      end subroutine

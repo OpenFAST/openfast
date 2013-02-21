@@ -22,8 +22,7 @@
 
               npos = npos + 1
 
-              dloc(npos) = (nelem - 1) * elem_length + elem_length*(xj(j+1)+1.d0)/2.d0           
-              
+              dloc(npos) = (nelem - 1) * elem_length + elem_length*(xj(j+1)+1.d0)/2.d0               
 
           enddo
     
@@ -39,4 +38,4 @@
       enddo
     
       return
-      end
+      end subroutine

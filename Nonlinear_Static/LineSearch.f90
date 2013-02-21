@@ -3,7 +3,7 @@
 	
 	integer dof_total,dof_node,norder,node_total,elem_total
 	double precision uf(dof_total),hhp(norder+1,norder+1),wj(norder+1),dmat(node_total,3)
-	double precision xold,fold,fmin,stpmax
+	double precision xold(dof_total),fold,fmin,stpmax
 	double precision gradient(dof_total),rhs(dof_total),dx(dof_total)
 	logical check
 
@@ -13,8 +13,8 @@
 
 	check=.FALSE.
 
-	tmp=Norm(dx)
-
+	call Norm(dof_total,dx,tmp)
+	
 	IF(tmp>stpmax) dx=dx*stpmax/tmp  ! Scale if attempted step is too big
 
 	slope=0.0d0
@@ -31,16 +31,19 @@
 
 	DO 
 
+  		write(*,*) xold
+  		
   		uf=xold+alam*dx
-  
+  		
   		CALL AssembleRHS(RHS,dof_node,dof_total,uf,&
 							&norder,hhp,wj,node_total,dmat,&
 							&elem_total)
+							
 
   		fmin=0.5D0*DOT_PRODUCT(rhs,rhs)
  
   		IF(alam<alamin) THEN  ! CONVERGENCE ON deltaX, the calling program should verify the convergence
-    		x=xold
+    		uf=xold
 			check=.TRUE.
 			RETURN
   		ELSE IF(fmin<=fold+ALF*alam*slope) THEN

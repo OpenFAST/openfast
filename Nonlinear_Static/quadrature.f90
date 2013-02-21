@@ -1,7 +1,7 @@
       subroutine quadrature(n, xj, wj)
 
       integer n
-      double precision xj(30),wj(30)
+      double precision xj(n+1),wj(n+1)
 
 
       integer i
@@ -499,4 +499,4 @@
        stop 'too great' 
       end if
       return
-      end 
+      end subroutine
