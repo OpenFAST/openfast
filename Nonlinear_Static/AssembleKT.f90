@@ -10,8 +10,7 @@
 	integer nelem,m,temp_id,temp_id2
 	double precision KT_elem(dof_node*(norder+1),dof_node*(norder+1))
 	
-	KT = 0.0d0
-	
+	KT = 0.0d0	
 		
 	do nelem=1,elem_total
 		KT_elem = 0.0d0
@@ -19,8 +18,7 @@
 		call KT_element(KT_elem,dof_node,dof_total,norder,hhp,uf,nelem,&
 							&node_total,dmat,wj,Jacobian)
 							
-		write(*,*) "test"
-		stop
+		
 		do i=1,(norder+1)*dof_node
 			temp_id = (nelem-1)*norder*dof_node+i
 			do j=1,(norder+1)*dof_node
@@ -30,6 +28,11 @@
 		enddo
 	enddo
 	
+!	write(*,*) "dof_total",dof_total
+!	do i=1,dof_total
+!		write(*,*) KT(9,i)
+!	enddo
+!	stop
 	
 	
 	

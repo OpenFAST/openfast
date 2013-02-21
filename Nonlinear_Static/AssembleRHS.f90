@@ -8,7 +8,7 @@
 	double precision uf(dof_total)
 	double precision RHS(dof_total)
 	
-	integer nelem,m,temp_id
+	integer nelem,m,temp_id,i
 	double precision rhs_elem(dof_node*(norder+1))
 	double precision FmL
 	
@@ -24,6 +24,11 @@
 			RHS(temp_id) = RHS(temp_id) + rhs_elem(m)
 		enddo		
 	enddo
+	
+!	do i=1,dof_total
+!		write(*,*) RHS(i)
+!	enddo
+!	stop
 	
 	RHS = -RHS
 	

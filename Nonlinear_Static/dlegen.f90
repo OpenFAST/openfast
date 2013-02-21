@@ -94,4 +94,4 @@
        &311570.0443267822d0*x**17 + 67415.74058532715d0*x**19
       end if
       return
-      end
+      end function

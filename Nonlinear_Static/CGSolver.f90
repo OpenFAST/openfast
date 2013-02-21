@@ -16,27 +16,48 @@
      
     alphatop = 0.d0  ! mas: this was missing
     KTu = 0.0d0
-    do i=1,dof_total
-    	do j=1,dof_total
-    		KTu(i) = KTu(i) + KT(i,j)*ui(j)
-    	enddo
-    enddo
+!    do i=1,dof_total
+!    	write(*,*) "Line=",i
+!    	do j=1,dof_total
+    		
+!    		write(*,*) KT(i,j)
+!    		KTu(i) = KTu(i) + KT(i,j)*ui(j)
+!    	enddo
+!    enddo
+    
+!    do i=1,dof_total
+!    	write(*,*) "RHS Line=",i
+!    	write(*,*) RHS(i)
+!    enddo
     
     do i = 1,dof_total
     	r(i) = bc(i) * (RHS(i) - KTu(i))
         p(i) = r(i)
         alphatop = alphatop + r(i) * r(i)
     enddo
+    
+    
 
     
     do l = 2,lmax
     
+        KTu=0.0d0
+        do i=1,dof_total
+    		do j=1,dof_total
+    			KTu(i) = KTu(i) + KT(i,j)*p(j)
+    		enddo
+    	enddo
+        
         alphabot = 0.0d0
         do i = 1,dof_total
             alphabot = alphabot + p(i) * KTu(i)
         enddo
         
+        
+        
         alpha_cg = alphatop / alphabot
+        
+        
         
         do i=1, dof_total
             ui(i) = bc(i) * (ui(i) + alpha_cg * p(i) )
