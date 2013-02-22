@@ -26,7 +26,7 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
     
    fmin=0.5d0*DOT_PRODUCT(RHS,RHS)  ! calculate fnew=1/2*F.F
     
-    temp1 = float(size(uf))
+   temp1 = float(size(uf))
    
    temp2 = 0.0d0
    
@@ -40,6 +40,7 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
     
    do i=1,niter
       write(*,*) "ITERATION=",i
+
       ! Assemble the nonlinear system
       !---------------------------------------------------
       call AssembleKT(KT,dof_node,dof_total,norder,node_total,elem_total,&
@@ -124,7 +125,8 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
          EXIT
       ENDIF   
 
-      IF(i==niter) write(*,*) "The solution does not converge after the maximum number of iterations" !The maximum number of iterations reached, the solution is still not converged. 
+      IF(i==niter) write(*,*) "The solution does not converge after the maximum number of iterations" 
+      !The maximum number of iterations reached, the solution is still not converged. 
    enddo
 
    if(check) write(*,*) "The solution converges to a local minimum. Please restart &

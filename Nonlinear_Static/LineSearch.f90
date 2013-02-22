@@ -1,14 +1,19 @@
 subroutine LineSearch(dof_total,xold,fold,gradient,rhs,dx,fmin,stpmax,check,&
                      &dof_node,uf,norder,hhp,wj,node_total,dmat,elem_total)
-   
+  
+   implicit none
+ 
    integer dof_total,dof_node,norder,node_total,elem_total
-   double precision uf(dof_total),hhp(norder+1,norder+1),wj(norder+1),dmat(node_total,3)
+   double precision uf(dof_total),hhp(norder+1,norder+1)
+   double precision wj(norder+1),dmat(node_total,3)
    double precision xold(dof_total),fold,fmin,stpmax
    double precision gradient(dof_total),rhs(dof_total),dx(dof_total)
    logical check
 
-   parameter(ALF=1.0D-4) ! A small number to indicate sufficient decrease of the function
-   parameter(TOLY=1.0D-9) ! a small number to calculate the minimum step size
+   double precision alf, toly, tolerance
+   parameter(alf=1.0D-4) ! A small number to indicate sufficient decrease of the function
+   parameter(toly=1.0D-9) ! a small number to calculate the minimum step size
+
    double precision tmp, slope,alamin, alam,tmplam,rhs1,rhs2,f2,alam2,a,b,disc
 
    check=.FALSE.
@@ -25,13 +30,13 @@ subroutine LineSearch(dof_total,xold,fold,gradient,rhs,dx,fmin,stpmax,check,&
       RETURN
    ENDIF
 
-   alamin=TOLY/MAXVAL(ABS(dx)/MAX(ABS(xold),1.0D0))  ! Compute lambda_min
+   alamin=toly/MAXVAL(ABS(dx)/MAX(ABS(xold),1.0D0))  ! Compute lambda_min
 
    alam=1.0D0
 
    DO 
 
-      write(*,*) xold
+      !write(*,*) xold
       
       uf=xold+alam*dx
       
@@ -46,7 +51,7 @@ subroutine LineSearch(dof_total,xold,fold,gradient,rhs,dx,fmin,stpmax,check,&
          uf=xold
          check=.TRUE.
          RETURN
-      ELSE IF(fmin<=fold+ALF*alam*slope) THEN
+      ELSE IF(fmin<=fold+alf*alam*slope) THEN
             RETURN  ! SUFFICIENT function decrease
       ELSE 
          IF(ABS(alam-1.0D0)<TOLERANCE) THEN
