@@ -1,28 +1,28 @@
-      function dlagint(i, j, order,xj)
+function dlagint(i, j, order,xj)
 
 
-      integer i, j, order
-      double precision xj(order+1)
-      double precision dlagint
+   integer i, j, order
+   double precision xj(order+1)
+   double precision dlagint
 
-      double precision dlegen
-      external dlegen
+   double precision dlegen
+   external dlegen
 
 
-      dlagint = 0.d0
+   dlagint = 0.d0
  
 
-      if (i.eq.j) then
-       if (i.eq.1) then
-        dlagint = -dble((order+1)*order)/4.d0
-       else if (i.eq.(order+1)) then
-        dlagint = +dble((order+1)*order)/4.d0
-       else
-        dlagint = 0.d0 
-       end if
+   if (i.eq.j) then
+      if (i.eq.1) then
+         dlagint = -dble((order+1)*order)/4.d0
+      else if (i.eq.(order+1)) then
+         dlagint = +dble((order+1)*order)/4.d0
       else
-       dlagint = dlegen(order,xj(j))/(dlegen(order,xj(i))*(xj(j)-xj(i)))
+         dlagint = 0.d0 
       end if
+   else
+      dlagint = dlegen(order,xj(j))/(dlegen(order,xj(i))*(xj(j)-xj(i)))
+   end if
 
-      return
-      end function
+   return
+end function
