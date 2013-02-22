@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="BeamFEM">
+</Property><Property Name="Solution File" Value="C:\Users\hsong\Documents\Visual Studio 2008\Projects\BeamFEM\BeamFEM.sln">
+</Property><Property Name="Date" Value="Tuesday, February 19, 2013">
+</Property><Property Name="Time" Value="11:28 AM">
+</Property></Properties><Event ErrorLevel="0" Project="" Source="BeamFEM.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="BeamFEM.sln" Description="Converted">
+</Event></UpgradeLog>

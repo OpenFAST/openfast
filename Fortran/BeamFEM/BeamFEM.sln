@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "BeamFEM", "BeamFEM\BeamFEM.vfproj", "{E84A94FF-252E-49BA-B874-78A1AF45CB47}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E84A94FF-252E-49BA-B874-78A1AF45CB47}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E84A94FF-252E-49BA-B874-78A1AF45CB47}.Debug|Win32.Build.0 = Debug|Win32
+		{E84A94FF-252E-49BA-B874-78A1AF45CB47}.Release|Win32.ActiveCfg = Release|Win32
+		{E84A94FF-252E-49BA-B874-78A1AF45CB47}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
