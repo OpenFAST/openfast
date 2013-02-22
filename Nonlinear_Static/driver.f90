@@ -1,5 +1,5 @@
 program driver
-    
+   
    implicit double precision (a-h,o-z)
    integer norder, elem_total, node_total    
    integer dof_node,dof_total,nquar
@@ -28,7 +28,7 @@ program driver
    call gen_gll(norder, xj, wj)
     
 !  Define material constants
-   Young = 1.95d1  !1.95d11       !30.0d+06          !      !Young Modulus
+   Young = 1.95d11  !1.95d11       !30.0d+06          !      !Young Modulus
    shear = 0.842105  !5.d0/6.d0    !Shear Correction Factor
    poisson = 0.3     !0.0d0      !Poisson's Ratio
    G1 = 0.5d0 * shear * Young /(1.+poisson)    !Shear Modulus with Correction Factor
@@ -80,9 +80,17 @@ program driver
       write(25,*) i, dmat(i,1),dmat (i,2),dmat(i,3)
    enddo
       
-   uf=0.0d0
-   call NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
-                     &hhp,uf,dmat,wj,niter,Jacobian)
+   uf = 0.0d0
+
+   write(*,*) "entering NewtonRaphson"
+   write(*,*) "dof_node = ", dof_node
+   write(*,*) "dof_total = ", dof_total
+   write(*,*) "node_total = ", node_total
+   write(*,*) "elem_total = ", elem_total
+
+
+   call NewtonRaphson(dof_node, dof_total, norder, node_total, elem_total,&
+                    & hhp, uf, dmat, wj, niter, Jacobian)
                      
          
    write(*,*) "Finished NR"

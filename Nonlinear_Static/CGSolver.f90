@@ -84,10 +84,16 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
           
       alphatop = alphatop_new
           
-      if(l==lmax) write(*,*) 'eps=',sqrt(alphatop_new)
+      if(l==lmax) then
+         write(*,*) 'CG failed to converge in lmax = ', lmax
+         write(*,*) 'eps=',sqrt(alphatop_new)
+         write(*,*) 'stopping'
+         stop
+      endif
+
    enddo
          
-20 write(*,*) '# iterations', l
+20 write(*,*) 'CG iterations', l
  
    return
 end subroutine
