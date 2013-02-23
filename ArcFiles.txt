@@ -1,5 +1,5 @@
 AeroDyn.pdf
-AeroDyn_addendum.pdf
+UserGuideAddendum_AeroDyn13Interface.pdf
 ArcFiles.txt
 Archive.bat
 ChangeLog.txt
