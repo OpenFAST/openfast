@@ -6,10 +6,13 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
    double precision uf(dof_total),Jacobian
    
    logical check
-   double precision RHS(dof_total),KT(dof_total,dof_total),gradient(dof_total)
-   double precision ui(dof_total),bc(dof_total)
+   double precision RHS(dof_total), KT(dof_total,dof_total), gradient(dof_total)
+   double precision ui(dof_total), bc(dof_total)
+
+   double precision ui_old(dof_total), ui_change(dof_total) !mas ????
+
    double precision fmin,fold,stpmax,sum,uold(dof_total)
-   parameter(TOLF  = 1.0d-12)
+   parameter(TOLF  = 1.0d-6)  ! Xiao & Zhong use 1d-5
    parameter(STPMX = 1000.0d0)
    integer i,j,m
    double precision temp1,temp2
@@ -61,14 +64,29 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
 
    ! Solve the linear system
    !====================================
-      bc=1.0d0
+      bc = 1.0d0
 
       bc(1) = 0.0d0
       bc(2) = 0.0d0
       bc(3) = 0.0d0
-   
+
+! save ui in ui_old for comparison 
+ 
+      ui_old = ui 
+ 
       call CGSolver(RHS, KT, ui, bc, dof_total)
+
+! calculate relative change in increment 
      
+      ui_change = ABS(ui - ui_old)
+
+      rel_change = NORM(ui_change) / NORM(uf)
+  
+! check against tolf -- return if met 
+ 
+! add update: uf  = uf + ui
+
+   
 !     indx = 0
 !     d=0.0d0
       
@@ -101,10 +119,13 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
 !           write(*,*) ui(j)
 !        enddo
 !        stop
-         
-                  
-      call LineSearch(dof_total, uold, fold, gradient, rhs, ui, fmin, stpmax, check,&
-                    & dof_node, uf, norder, hhp, wj, node_total, dmat, elem_total)
+        
+! -----------------------------------------------------------------------------------                  
+!  Delay use of LineSearch; not needed here in simple first example, which should
+!  use standard Newton Raphson, perhaps with a constant increment loading vector
+! -----------------------------------------------------------------------------------                  
+!     call LineSearch(dof_total, uold, fold, gradient, rhs, ui, fmin, stpmax, check,&
+!                   & dof_node, uf, norder, hhp, wj, node_total, dmat, elem_total)
                      
 !     write(*,*) "test1",check
 !     write(*,*) "TOLF",MAXVAL(ABS(RHS))<TOLF

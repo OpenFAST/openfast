@@ -1,13 +1,13 @@
 subroutine CGSolver(RHS,KT,ui,bc,dof_total)
    
    integer dof_total
-   double precision RHS(dof_total),KT(dof_total,dof_total)
-   double precision ui(dof_total),bc(dof_total)
+   double precision RHS(dof_total), KT(dof_total,dof_total)
+   double precision ui(dof_total), bc(dof_total)
    
-   integer lmax,i,j,l   
+   integer lmax, i, j, l   
    double precision KTu(dof_total)
-   double precision eps,alphatop,alphabot,alpha_cg,alphatop_new
-   double precision beta_cg,p(dof_total),r(dof_total)
+   double precision eps, alphatop, alphabot, alpha_cg, alphatop_new
+   double precision beta_cg, p(dof_total), r(dof_total)
     
     
    eps = 1.0d-20
@@ -16,7 +16,9 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
    ui = 0.0d0  ! use zero as initial condition
      
    alphatop = 0.d0  ! mas: this was missing
+
    KTu = 0.0d0
+
 !  do i=1,dof_total
 !     write(*,*) "Line=",i
 !     do j=1,dof_total
