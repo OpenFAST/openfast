@@ -14,7 +14,7 @@
 int
 gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong ) 
 {
-  char tmp[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int d ;
 
@@ -35,6 +35,9 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 //  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
 //  sprintf(tmp,"%s",inoutlong) ;
   sprintf(tmp,"%s",addnick) ;
+
+  sprintf(tmp2,"%s",make_lower_temp(tmp)) ;
+
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL ) 
   {
     fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;

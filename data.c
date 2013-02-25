@@ -51,7 +51,6 @@ add_node_to_beg ( node_t * node , node_t ** list )
   node_t * p ;
   if ( *list == NULL )
   { 
-fprintf(stderr,"   add_node_to_beg: node %s to new list\n", node->name) ;
     *list = node ;
     (*list)->next = NULL ;
   }

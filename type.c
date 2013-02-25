@@ -198,8 +198,11 @@ node_t *
 get_entry ( char * name , node_t * node )
 {
   node_t *p ;
+  char tmp[NAMELEN] ; 
   if ( name == NULL ) return (NULL)  ;
   if ( node == NULL ) return (NULL)  ;
+  strcpy( tmp, name ) ;
+  make_lower(tmp) ;
   for ( p = node ; p != NULL ; p = p->next )
   {
     if ( !strncmp( name , "character", 9 ) )
@@ -209,7 +212,7 @@ get_entry ( char * name , node_t * node )
         return(p) ;
       }
     } else {
-      if ( !strcmp( make_lower_temp(p->name) , make_lower_temp(name) ) )
+      if ( !strcmp( make_lower_temp(p->name) , tmp ) )
       {
         return(p) ;
       }
