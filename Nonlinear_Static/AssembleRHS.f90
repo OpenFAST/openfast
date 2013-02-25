@@ -1,6 +1,6 @@
-subroutine AssembleRHS(RHS,dof_node,dof_total,uf,&
-                     &norder,hhp,wj,node_total,dmat,&
-                     &elem_total)
+subroutine AssembleRHS(RHS, dof_node, dof_total, uf, &
+                     & norder, hhp, wj, node_total, dmat, &
+                     & elem_total)
    
    integer dof_node,dof_total,norder,node_total,elem_total
    double precision dmat(node_total,3)
@@ -8,7 +8,7 @@ subroutine AssembleRHS(RHS,dof_node,dof_total,uf,&
    double precision uf(dof_total)
    double precision RHS(dof_total)
    
-   integer nelem,m,temp_id,i
+   integer nelem, m, temp_id, i
    double precision rhs_elem(dof_node*(norder+1))
    double precision FmL
    
@@ -16,13 +16,16 @@ subroutine AssembleRHS(RHS,dof_node,dof_total,uf,&
    
    RHS = 0.0d0
    do nelem = 1, elem_total
-      call RHS_element(rhs_elem,dof_node,dof_total,&
-                        &uf,norder,hhp,wj,nelem,nmax,&
-                        &dmat)
-      do m=1,(norder+1)*dof_node
-         temp_id = (nelem-1)*norder*dof_node+m
+
+      call RHS_element(rhs_elem, dof_node, dof_total,&
+                     & uf, norder, hhp, wj, nelem, nmax,&
+                     & dmat)
+
+      do m=1, (norder+1)*dof_node
+         temp_id      = (nelem-1)*norder*dof_node + m
          RHS(temp_id) = RHS(temp_id) + rhs_elem(m)
       enddo    
+
    enddo
    
 !  do i=1,dof_total
@@ -30,7 +33,7 @@ subroutine AssembleRHS(RHS,dof_node,dof_total,uf,&
 !  enddo
 !  stop
    
-   RHS = -RHS
+   RHS = - RHS
    
 !  do nelem = 1, elem_max
 !     call Extvector_elem

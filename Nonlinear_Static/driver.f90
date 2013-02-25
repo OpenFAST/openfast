@@ -56,7 +56,7 @@ program driver
    call gen_deriv(xj, hhp, norder+1)
       
    call NodeLoc(dloc, nquar, xmin, elem_length,& 
-                &xj, norder, elem_total, node_total, blength)
+                & xj, norder, elem_total, node_total, blength)
     
    write(*,*) "nquar",nquar
    write(*,*) "nquar location",dloc(nquar)
@@ -73,7 +73,7 @@ program driver
    b0=1.0d0
    b1=1.0d0
     
-   call NodeMat(dmat, dloc,h0, h1, b0, b1, node_total, blength,&
+   call NodeMat(dmat, dloc, h0, h1, b0, b1, node_total, blength,&
                      &Young,G1) 
     
    do i=1, node_total
