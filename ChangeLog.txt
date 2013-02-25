@@ -381,7 +381,10 @@ v1.07.00b-mlb, 10-Jan-2013  M. Buhl
 o  I modified NWTC_IO.f90\ReadFASTbin() to that one could read just the header.
 
 v1.07.00c-bjj, 7-Feb-2013  B. Jonkman
-o  I changed UnfForm from UNFORMATTED back to BINARY in the SysIVF.f90 file. TurbSim's .bin files weren't being properly written
+o  I changed UnfForm from UNFORMATTED back to BINARY in the SysIVF.f90 file. TurbSim's .bin files weren't being properly written.
+
+v1.07.01a-bjj, 25-Feb-2013  B. Jonkman
+o  I modified WrOver() in SysGnuWin.f90. It previously produced a run-time error if the string being written was 98 characters or longer.
 
 ==========================================================
  To do:
