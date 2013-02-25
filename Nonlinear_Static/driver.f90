@@ -74,7 +74,7 @@ program driver
    b1=1.0d0
     
    call NodeMat(dmat, dloc, h0, h1, b0, b1, node_total, blength,&
-                     &Young,G1) 
+              & Young, G1) 
     
    do i=1, node_total
       write(25,*) i, dmat(i,1),dmat (i,2),dmat(i,3)
