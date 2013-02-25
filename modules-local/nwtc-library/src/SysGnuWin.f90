@@ -712,7 +712,8 @@ CONTAINS
 
 
 !   WRITE (Fmt(5:6),'(I2)')  ConRecL - LEN( Str )
-   WRITE (Fmt(5:7),'(I3)')  98 - LEN( Str )
+!bjj: Fmt must not contain positive numbers!
+   WRITE (Fmt(5:7),'(I3)')  MAX( 1, 98 - LEN( Str ) )  
 
    WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
 
