@@ -25,13 +25,15 @@ subroutine Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
 
    Am(1,1) = COS(temp_theta)
    Am(1,2) = SIN(temp_theta)
-   Am(1,4) = -SIN(temp_theta) * uprime + COS(temp_theta) * vprime
+   Am(1,4) = -SIN(temp_theta) * uprime + COS(temp_theta) * vprime - SIN(temp_theta)
 
    Am(2,1) = -SIN(temp_theta)
    Am(2,2) = COS(temp_theta)
-   Am(2,4) = -COS(temp_theta) * uprime - SIN(temp_theta) * vprime
+   Am(2,4) = -COS(temp_theta) * uprime - SIN(temp_theta) * vprime - COS(temp_theta)
 
    Am(3,3) = 1.0d0
+   
+!   write(*,*) "A(1,1)=",Am(1,1)
 
    return
 

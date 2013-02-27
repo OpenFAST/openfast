@@ -73,14 +73,20 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
 ! save ui in ui_old for comparison 
  
       ui_old = ui 
+      
+!      write(*,*) RHS
+!      stop
  
       call CGSolver(RHS, KT, ui, bc, dof_total)
+      
+      write(*,*) ui
+      stop
 
 ! calculate relative change in increment 
      
       ui_change = ABS(ui - ui_old)
 
-      rel_change = NORM(ui_change) / NORM(uf)
+!      rel_change = NORM(ui_change) / NORM(uf)
   
 ! check against tolf -- return if met 
  

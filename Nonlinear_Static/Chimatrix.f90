@@ -26,8 +26,8 @@ subroutine Chimatrix(Chim,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
    temp_id = (((nelem-1)*norder+nnode)-1)*dof_node
    temp_theta = uf(temp_id+dof_node)
    
-   Chim(1,1) = COS(temp_theta)*uprime+SIN(temp_theta)*vprime-1.0d0
-   Chim(2,1) = -SIN(temp_theta)*uprime + COS(temp_theta)*vprime
+   Chim(1,1) = COS(temp_theta)*uprime+SIN(temp_theta)*vprime-1.0d0 + COS(temp_theta)
+   Chim(2,1) = -SIN(temp_theta)*uprime + COS(temp_theta)*vprime - SIN(temp_theta)
    Chim(3,1) = theta_prime
    
    return

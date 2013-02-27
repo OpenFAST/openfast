@@ -5,11 +5,11 @@ program driver
    integer dof_node,dof_total,nquar
    integer niter
  
-   parameter (norder = 10)
+   parameter (norder = 2)
    parameter (elem_total = 1 )
    parameter (node_total = elem_total*norder + 1)
    parameter (dof_node = 3)
-   parameter (dof_total = 3*node_total)
+   parameter (dof_total = dof_node*node_total)
      
    double precision  xj(norder+1), wj(norder+1)
    double precision  dloc(node_total),dmat(node_total,3)
@@ -26,6 +26,7 @@ program driver
    open( unit = 40, file = 'rot.dat', status = 'unknown')      
    
    call gen_gll(norder, xj, wj)
+   
     
 !  Define material constants
    Young = 1.95d11  !1.95d11       !30.0d+06          !      !Young Modulus
@@ -54,7 +55,21 @@ program driver
 !  enddo
 
    call gen_deriv(xj, hhp, norder+1)
-      
+   
+!   write(*,*) "hhp"
+!   do i=1, norder+1
+!       do j=1, norder+1
+!           write(*,*) hhp(i,j)
+!        enddo
+!   enddo
+   
+!   write(*,*) "wj"
+!   do i=1,norder+1
+!       write(*,*) wj(i)
+!   enddo
+
+!   stop      
+
    call NodeLoc(dloc, nquar, xmin, elem_length,& 
                 & xj, norder, elem_total, node_total, blength)
     
@@ -76,6 +91,14 @@ program driver
    call NodeMat(dmat, dloc, h0, h1, b0, b1, node_total, blength,&
               & Young, G1) 
     
+!   write(*,*) "dmat"
+!   do i=1,node_total
+!       write(*,*) dmat(i,1)
+!       write(*,*) dmat(i,2)
+!       write(*,*) dmat(i,3)
+!   enddo
+!   stop
+    
    do i=1, node_total
       write(25,*) i, dmat(i,1),dmat (i,2),dmat(i,3)
    enddo
@@ -89,7 +112,10 @@ program driver
    write(*,*) "elem_total = ", elem_total
 
 
-   call NewtonRaphson(dof_node, dof_total, norder, node_total, elem_total,&
+!   call NewtonRaphson(dof_node, dof_total, norder, node_total, elem_total,&
+!                    & hhp, uf, dmat, wj, niter, Jacobian)
+
+   call Newton_New(dof_node, dof_total, norder, node_total, elem_total,&
                     & hhp, uf, dmat, wj, niter, Jacobian)
                      
          

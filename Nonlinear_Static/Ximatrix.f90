@@ -34,8 +34,8 @@ subroutine Ximatrix(Xim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,&
    Xim(2,4) = -SIN(temp_theta)*tempN(2,1) + COS(temp_theta)*tempN(1,1)
    Xim(4,1) = Xim(1,4)
    Xim(4,2) = Xim(2,4)
-   Xim(4,4) = -(COS(temp_theta)*uprime+SIN(temp_theta)*vprime)*tempN(1,1) -&
-            &(-SIN(temp_theta)*uprime+COS(temp_theta)*vprime)*tempN(2,1)
+   Xim(4,4) = -(COS(temp_theta)*uprime+SIN(temp_theta)*vprime+COS(temp_theta))*tempN(1,1) -&
+            &(-SIN(temp_theta)*uprime+COS(temp_theta)*vprime + SIN(temp_theta))*tempN(2,1)
             
    return
 end subroutine

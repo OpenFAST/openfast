@@ -12,7 +12,7 @@ subroutine AssembleRHS(RHS, dof_node, dof_total, uf, &
    double precision rhs_elem(dof_node*(norder+1))
    double precision FmL
    
-   FmL=10.0d0
+   FmL=0d0
    
    RHS = 0.0d0
    do nelem = 1, elem_total
