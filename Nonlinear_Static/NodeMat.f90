@@ -23,9 +23,12 @@ subroutine NodeMat(dmat, dloc,h0, h1, b0, b1, node_total, blength,&
       !Area of cross-section at dolc(i): btemp*htemp
       !Second moment of inertia: btemp * htemp**3 / 12
 
-      dmat(i,1) = Young*btemp*htemp 
-      dmat(i,2) = G1*btemp*htemp
-      dmat(i,3) = Young* btemp * htemp**3 / 12.   !Second moment of inertia                             
+!      dmat(i,1) = Young*btemp*htemp 
+!      dmat(i,2) = G1*btemp*htemp
+!      dmat(i,3) = Young* btemp * htemp**3 / 12.   !Second moment of inertia 
+       dmat(i,1) = 1.0d4
+       dmat(i,2) = 1.0d4
+       dmat(i,3) = 1.0d2                            
    enddo
     
    return
