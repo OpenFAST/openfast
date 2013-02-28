@@ -35,7 +35,7 @@ program driver
    G1 = 0.5d0 * shear * Young /(1.+poisson)    !Shear Modulus with Correction Factor
    rho = 7700.d0        !Density
     
-   write(*,*) 'G1 = ', G1
+!   write(*,*) 'G1 = ', G1
             
 !  Define geometric parameters
    xmin = 0.0d0

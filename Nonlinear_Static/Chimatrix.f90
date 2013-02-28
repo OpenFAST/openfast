@@ -30,6 +30,8 @@ subroutine Chimatrix(Chim,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
    Chim(2,1) = -SIN(temp_theta)*uprime + COS(temp_theta)*vprime - SIN(temp_theta)
    Chim(3,1) = theta_prime
    
+!   write(*,*) "Chi(3,1)=",Chim(3,1)
+   
    return
    
 end subroutine
