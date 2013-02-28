@@ -4,8 +4,8 @@ MODULE GlueCodeVars
    USE NWTC_Library
    
 
-   REAL(ReKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec).
-   REAL(ReKi)                :: TStart                                          ! Time to begin tabular output.
+   REAL(DbKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec).
+   REAL(DbKi)                :: TStart                                          ! Time to begin tabular output.
    
    REAL(DbKi), ALLOCATABLE   :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
    REAL(ReKi), ALLOCATABLE   :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
@@ -40,66 +40,18 @@ MODULE HydroVals
 
    USE NWTC_Library
    
-   ! EnvCond:
-
-REAL(ReKi)                   :: CurrDIDir = 0.0                                 ! Depth-independent current heading direction.
-REAL(ReKi)                   :: CurrDIV   = 0.0                                 ! Depth-independent current velocity.
-REAL(ReKi)                   :: CurrNSDir = 0.0                                 ! Near-surface current heading direction.
-REAL(ReKi)                   :: CurrNSRef = 0.0                                 ! Near-surface current reference depth.
-REAL(ReKi)                   :: CurrNSV0  = 0.0                                 ! Near-surface current velocity at still water level.
-REAL(ReKi)                   :: CurrSSDir = 0.0                                 ! Sub-surface current heading direction.
-REAL(ReKi)                   :: CurrSSV0  = 0.0                                 ! Sub-surface current velocity at still water level.
-
-
-REAL(ReKi)                   :: WaveDir   = 0.0                                 ! Wave heading direction.
-REAL(ReKi)                   :: WaveDT    = 0.0                                 ! Time step for incident wave calculations.
-REAL(ReKi)                   :: WaveHs    = 0.0                                 ! Significant wave height.
-REAL(ReKi)                   :: WavePkShp = 1.0                                 ! Peak shape parameter of incident wave spectrum.
-REAL(ReKi)                   :: WaveTMax  = 0.0                                 ! Analysis time for incident wave calculations.
-REAL(ReKi)                   :: WaveTp    = 0.0                                 ! Peak spectral period.
-REAL(ReKi)                   :: WtrDens                                         ! Water density.
-REAL(ReKi)                   :: WtrDpth                                         ! Water depth.
-
-INTEGER(4)                   :: CurrMod                                         ! Current profile model switch.
-INTEGER(4)                   :: WaveStMod = 0                                   ! Model switch for stretching incident wave kinematics to instantaneous free surface.
-INTEGER(4)                   :: WaveMod   = 0                                   ! Incident wave kinematics model switch.
-INTEGER(4)                   :: WaveSeed (2) = 0                                ! Random seeds of incident waves.
-
-CHARACTER(1024)              :: GHWvFile  = ''                                  ! The root name of GH Bladed files containing wave data.
-
-   ! from Output   
-REAL(ReKi), ALLOCATABLE      :: LSNodes  (:,:)                                  ! Unstretched arc distance along mooring line from anchor to each node where the line position and tension can be output (meters).
-REAL(ReKi)                   :: WaveElevxi(1) = (/ 0.0 /)                       ! xi-coordinates for points where the incident wave elevation can be output (meters).
-REAL(ReKi)                   :: WaveElevyi(1) = (/ 0.0 /)                       ! yi-coordinates for points where the incident wave elevation can be output (meters).
-INTEGER(4)                   :: LineNodes    = 0                                ! Number of nodes per line where the mooring line position and tension can be output (-).
-INTEGER(4)                   :: NWaveElev    = 1                                ! Number of points where the incident wave elevation  can be output (-).
-INTEGER(4)                   :: NWaveKin     = 0                                ! Number of points where the incident wave kinematics can be output (-).
-INTEGER(4)                   :: WaveKinNd(9)                                    ! List of tower [not floating] or platform [floating] nodes that have wave kinematics sensors.
 
    !from Platform
 REAL(ReKi), ALLOCATABLE      :: LAnchxi  (:)                                    ! xi-coordinate of each anchor   in the inertial frame        coordinate system.
 REAL(ReKi), ALLOCATABLE      :: LAnchyi  (:)                                    ! yi-coordinate of each anchor   in the inertial frame        coordinate system.
 REAL(ReKi), ALLOCATABLE      :: LAnchzi  (:)                                    ! zi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LDiam    (:)                                    ! Effective diameter of each mooring line for calculation of the line buoyancy.
-REAL(ReKi), ALLOCATABLE      :: LEAStff  (:)                                    ! Extensional stiffness of each mooring line.
 REAL(ReKi), ALLOCATABLE      :: LFairxt  (:)                                    ! xt-coordinate of each fairlead in the tower base / platform coordinate system.
 REAL(ReKi), ALLOCATABLE      :: LFairyt  (:)                                    ! yt-coordinate of each fairlead in the tower base / platform coordinate system.
 REAL(ReKi), ALLOCATABLE      :: LFairzt  (:)                                    ! zt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LMassDen (:)                                    ! Mass density of each mooring line.
-REAL(ReKi), ALLOCATABLE      :: LSeabedCD(:)                                    ! Coefficient of seabed static friction drag of each mooring line (a negative value indicates no seabed).
-REAL(ReKi), ALLOCATABLE      :: LTenTol  (:)                                    ! Convergence tolerance within Newton-Raphson iteration of each mooring line specified as a fraction of tension.
-REAL(ReKi), ALLOCATABLE      :: LUnstrLen(:)                                    ! Unstretched length of each mooring line.
-REAL(ReKi)                   :: MaxLRadAnch  = 0.0                              ! Maximum value of input array LRadAnch.
-REAL(ReKi)                   :: PtfmVol0                                        ! Displaced volume of water when the platform is in its undisplaced position.
-REAL(ReKi)                   :: PtfmCD                                          ! Effective platform normalized hydrodynamic viscous drag coefficient in calculation of viscous drag term from Morison's equation.
-REAL(ReKi)                   :: PtfmDiam                                        ! Effective platform diameter in calculation of viscous drag term from Morison's equation.
 REAL(ReKi)                   :: PtfmDraft                                       ! Effective platform draft    in calculation of viscous drag term from Morison's equation.
-REAL(ReKi)                   :: RdtnDT                                          ! Time step for wave radiation kernel calculations.
-REAL(ReKi)                   :: RdtnTMax     = 0.0                              ! Analysis time for wave radiation kernel calculations.
 INTEGER(4)                   :: LineMod                                         ! Mooring line model switch.
 INTEGER(4)                   :: NumLines     = 0                                ! Number of mooring lines.
 INTEGER(4)                   :: PtfmNodes                                       ! Number of platform nodes used in calculation of viscous drag term from Morison's equation.
-CHARACTER(1024)              :: WAMITFile                                       ! Root name of WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst extension), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1 extension), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3 extension).
 
 
 END MODULE HydroVals  
@@ -182,7 +134,7 @@ REAL(ReKi)                   :: GenSpRZT                                        
 !REAL(ReKi)                   :: GenSpRat                                        ! Rated generator speed.
 !REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
 REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque. !both str (input) & control (output)
-REAL(ReKi)                   :: HSSBrDT                                         ! Time it takes for HSS brake to reach full deployment once deployed.
+REAL(DbKi)                   :: HSSBrDT                                         ! Time it takes for HSS brake to reach full deployment once deployed.
 REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
 REAL(ReKi)                   :: HSSBrTqF                                        ! Fully deployed HSS brake torque
 REAL(ReKi)                   :: HSSBrTrq                                        ! Instantaneous HSS brake torque
@@ -225,7 +177,6 @@ MODULE General
    ! This MODULE stores input variables for general program control.
 
 
-INTEGER(4)                   :: PtfmModel                                       ! Platform model {0: none, 1: onshore, 2: fixed bottom offshore, 3: floating offshore} (switch).
 INTEGER(4)                   :: StrtTime (8)                                    ! Start time of simulation.
 INTEGER(4)                   :: UnAC      = 24                                  ! I/O unit number for the ADAMS control output file (.acf) useful for an ADAMS SIMULATE analysis.
 INTEGER(4)                   :: UnAD      = 23                                  ! I/O unit number for the ADAMS dataset output file (.adm).
@@ -239,6 +190,7 @@ INTEGER(4)                   :: UnOu      = 21                                  
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
 LOGICAL                      :: Furling                                         ! Read in additional model properties for furling turbine?
+LOGICAL                      :: Platform                                        ! Read in additional model properties for platform configurations?
 LOGICAL                      :: SumDisp                                         ! Display summary data on screen?
 LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
@@ -258,6 +210,28 @@ CHARACTER(1024)              :: TwrFile                                         
 
 
 END MODULE General
+!=======================================================================
+MODULE FAST_Hydro
+   ! This module stores data for the FAST-HydroDyn interface
+   
+   USE                          HydroDyn
+   USE                          NWTC_Library
+!   USE                          SharedTypes                                      ! Defines the data types shared among modules (e.g., Marker and Load)
+   USE                          SharedDataTypes                                  ! Defines the data types shared among modules (e.g., Marker and Load)
+
+   SAVE
+
+   
+   CHARACTER(1024)           :: HDFile                                           ! The name of the HydroDyn input file
+   TYPE(HD_DataType)         :: HydroDyn_data                                    ! The HydroDyn internal data
+   
+   TYPE(HydroConfig)         :: HD_ConfigMarkers                                 ! Configuration markers required for HydroDyn
+   TYPE(AllHydroMarkers)     :: HD_AllMarkers                                    ! The markers        (is this necessary here?)
+   TYPE(AllHydroLoads)       :: HD_AllLoads                                      ! the returned loads (is this necessary here?)
+   
+   LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
+
+END MODULE FAST_Hydro
 !=======================================================================
 MODULE InitCond
 
@@ -339,10 +313,10 @@ USE                             Precision
 !bjj: these variables should be initialized in an intialization subroutine (for Simulink)
 
 
-REAL(ReKi)                   :: DT                                              ! Integration time step.
-REAL(ReKi)                   :: DT24                                            ! DT/24.
-REAL(ReKi)                   :: TMax                                            ! Total run time.
-REAL(ReKi)                   :: ZTime    = 0.0                                  ! Current simulation time.
+REAL(DbKi)                   :: DT                                              ! Integration time step.
+REAL(DbKi)                   :: DT24                                            ! DT/24.
+REAL(DbKi)                   :: TMax                                            ! Total run time.
+REAL(DbKi)                   :: ZTime    = 0.0                                  ! Current simulation time.
 
 REAL(4)                      :: UsrTime1                                        ! User CPU time for simulation initialization.
 
@@ -391,7 +365,7 @@ USE                             Precision
 REAL(ReKi)                   :: TBDrCon                                         ! Instantaneous tip-brake drag constant, Cd*Area.
 REAL(ReKi)                   :: TBDrConD                                        ! Tip-brake drag constant during fully-deployed operation, Cd*Area.
 REAL(ReKi)                   :: TBDrConN                                        ! Tip-brake drag constant during normal operation, Cd*Area.
-REAL(ReKi)                   :: TpBrDT                                          ! Time for tip-brake to reach full deployment once released (sec).
+REAL(DbKi)                   :: TpBrDT                                          ! Time for tip-brake to reach full deployment once released (sec).
 
 
 END MODULE TipBrakes
@@ -414,19 +388,19 @@ REAL(ReKi), ALLOCATABLE      :: BlPitchI (:)                                    
 REAL(ReKi)                   :: NacYawF                                         ! Final yaw angle after override yaw maneuver.
 REAL(ReKi)                   :: SpdGenOn                                        ! Generator speed to turn on the generator for a startup.
 REAL(ReKi), ALLOCATABLE      :: TBDepISp (:)                                    ! Deployment-initiation speed for the tip brakes.
-REAL(ReKi)                   :: THSSBrDp                                        ! Time to initiate deployment of the shaft brake.
-REAL(ReKi)                   :: THSSBrFl                                        ! Time at which shaft brake is fully deployed.
-REAL(ReKi)                   :: TiDynBrk                                        ! Time to initiate deployment of the dynamic generator brake.
-REAL(ReKi)                   :: TimGenOf                                        ! Time to turn off generator for braking or modeling a run-away.
-REAL(ReKi)                   :: TimGenOn                                        ! Time to turn on generator for startup.
-REAL(ReKi)                   :: TPCOn                                           ! Time to enable active pitch control.
-REAL(ReKi), ALLOCATABLE      :: TPitManE (:)                                    ! Time to end pitch maneuvers for each blade.
-REAL(ReKi), ALLOCATABLE      :: TPitManS (:)                                    ! Time to start pitch maneuvers for each blade.
-REAL(ReKi), ALLOCATABLE      :: TTpBrDp  (:)                                    ! Times to initiate deployment of tip brakes.
-REAL(ReKi), ALLOCATABLE      :: TTpBrFl  (:)                                    ! Times at which tip brakes are fully deployed.
-REAL(ReKi)                   :: TYawManE                                        ! Time to end override yaw maneuver.
-REAL(ReKi)                   :: TYawManS                                        ! Time to start override yaw maneuver.
-REAL(ReKi)                   :: TYCOn                                           ! Time to enable active yaw control.
+REAL(DbKi)                   :: THSSBrDp                                        ! Time to initiate deployment of the shaft brake.
+REAL(DbKi)                   :: THSSBrFl                                        ! Time at which shaft brake is fully deployed.
+REAL(DbKi)                   :: TiDynBrk                                        ! Time to initiate deployment of the dynamic generator brake.
+REAL(DbKi)                   :: TimGenOf                                        ! Time to turn off generator for braking or modeling a run-away.
+REAL(DbKi)                   :: TimGenOn                                        ! Time to turn on generator for startup.
+REAL(DbKi)                   :: TPCOn                                           ! Time to enable active pitch control.
+REAL(DbKi), ALLOCATABLE      :: TPitManE (:)                                    ! Time to end pitch maneuvers for each blade.
+REAL(DbKi), ALLOCATABLE      :: TPitManS (:)                                    ! Time to start pitch maneuvers for each blade.
+REAL(DbKi), ALLOCATABLE      :: TTpBrDp  (:)                                    ! Times to initiate deployment of tip brakes.
+REAL(DbKi), ALLOCATABLE      :: TTpBrFl  (:)                                    ! Times at which tip brakes are fully deployed.
+REAL(DbKi)                   :: TYawManE                                        ! Time to end override yaw maneuver.
+REAL(DbKi)                   :: TYawManS                                        ! Time to start override yaw maneuver.
+REAL(DbKi)                   :: TYCOn                                           ! Time to enable active yaw control.
 REAL(ReKi)                   :: VS_Rgn2K                                        ! Generator torque constant in Region 2 (HSS side), N-m/rpm^2.
 REAL(ReKi)                   :: VS_RtGnSp                                       ! Rated generator speed (HSS side), rpm.
 REAL(ReKi)                   :: VS_RtTq                                         ! Rated generator torque/constant generator torque in Region 3 (HSS side), N-m.

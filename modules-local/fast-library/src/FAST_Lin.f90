@@ -32,12 +32,12 @@ USE                             Linear
 USE                             NacelleYaw
 USE                             SimCont
 USE                             TurbCont
+USE                             FASTsubs  !Solver
 
    ! AeroDyn Modules:
 
 USE                             AeroDyn
 
-USE                             FASTsubs  !Solver
 
 IMPLICIT                        NONE
 
@@ -237,7 +237,7 @@ ENDDO             ! K - All blades
 
    ! Get the current hub-height wind speed:
 
-HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
+HHWndVec(:) = AD_GetUndisturbedWind( REAL(ZTime,ReKi), (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
 
 
    ! Begin the search for a steady state solution:
@@ -247,6 +247,7 @@ HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), 
 
 CALL WrScr1( ' Beginning iteration to find a steady state solution of type:' )
 IF ( .NOT. p%DOF_Flag(DOF_GeAz)      )  THEN ! Constant speed case
+!bjj: should this be compared with epsilon instead of 0.0 to avoid numerical instability?
    IF ( p%RotSpeed == 0.0 )  THEN
       CALL WrScr ( '  Static equilibrium (RotSpeed = 0.0)'           )
    ELSE
@@ -331,7 +332,7 @@ DO
    ! Make sure the wind hasn't changed.  If so, Abort since we can't find a
    !   periodic steady state solution with time varying winds.
 
-      HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
+      HHWndVec(:) = AD_GetUndisturbedWind( REAL(ZTime,ReKi), (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
 
       IF ( ( HHWndVecS(1) /= HHWndVec(1) ) .OR. &
            ( HHWndVecS(2) /= HHWndVec(2) ) .OR. &
@@ -654,7 +655,7 @@ ELSE                                ! Rotor is spinning, therefore save the stat
    ! Make sure the wind hasn't changed.  If so, ProgAbort since we can't find a
    !   periodic steady state solution with time varying winds.
 
-         HHWndVec(:) = AD_GetUndisturbedWind( ZTime, (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
+         HHWndVec(:) = AD_GetUndisturbedWind( REAL(ZTime,ReKi), (/REAL(0.0, ReKi), REAL(0.0, ReKi), p%FASTHH /), Sttus )
 
          IF ( ( HHWndVecS(1) /= HHWndVec(1) ) .OR. &
               ( HHWndVecS(2) /= HHWndVec(2) ) .OR. &
@@ -754,11 +755,10 @@ USE                             FASTsubs  !RtHS(), CalcOuts()
 
 USE                             AeroElem, ONLY: ADIntrfaceOptions
 
-
-
    ! AeroDyn Modules:
 
 USE                            AeroDyn
+
 
 IMPLICIT                        NONE
 

@@ -17,6 +17,7 @@ USE                             AeroDyn
 USE                             FAST_IO_Subs       ! FAST_Begin(), FAST_Input(), PrintSum(), RunTimes()
 USE                             FASTsubs           ! FAST_Initialize(), TimeMarch()
 USE                             FAST2ADAMSSubs     ! MakeAdm(), MakeACF(), MakeACF_Lin
+USE                             FAST_Hydro
 USE                             FAST_Lin_Subs      ! CalcSteady(), Linearize()
 USE                             HydroDyn
 USE                             Noise
@@ -72,6 +73,7 @@ CALL CPU_TIME ( UsrTime1 )                                                      
 CALL SetVersion
 CALL NWTC_Init()                                                                 ! sets the pi constants
 
+
    ! Tell our nice users what they're running.
 
 CALL DispNVD()
@@ -120,6 +122,7 @@ ENDIF
    ! Run FAST as normal if selected:
 
 IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
+
 
 
    ! Run a time-marching simulation or create a periodic linearized model as
@@ -195,7 +198,7 @@ CALL FAST_Terminate( ErrStat )
 CALL StrD_End( u_StrD, p_StrD, x_StrD, xd_StrD, z_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )
 
 CALL AD_Terminate(   ErrStat )
-CALL Hydro_Terminate( )
+CALL HD_Terminate( HydroDyn_data, ErrStat )
 CALL Noise_Terminate( )
 IF ( BEEP ) CALL UsrAlarm
 
