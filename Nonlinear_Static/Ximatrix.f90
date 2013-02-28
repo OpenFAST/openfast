@@ -36,6 +36,8 @@ subroutine Ximatrix(Xim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,&
    Xim(4,2) = Xim(2,4)
    Xim(4,4) = -(COS(temp_theta)*uprime+SIN(temp_theta)*vprime+COS(temp_theta))*tempN(1,1) -&
             &(-SIN(temp_theta)*uprime+COS(temp_theta)*vprime + SIN(temp_theta))*tempN(2,1)
+        
+!   write(*,*) "Xim(1,4)",Xim(4,4)
             
    return
 end subroutine

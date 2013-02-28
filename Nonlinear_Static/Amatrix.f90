@@ -33,7 +33,7 @@ subroutine Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
 
    Am(3,3) = 1.0d0
    
-!   write(*,*) "A(1,1)=",Am(1,1)
+!   write(*,*) "A(1,1)=",Am(1,4)
 
    return
 
