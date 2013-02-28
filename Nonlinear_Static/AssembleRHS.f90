@@ -15,10 +15,11 @@ subroutine AssembleRHS(RHS, dof_node, dof_total, uf, &
 !   FmL=3.14d0
    
    RHS = 0.0d0
+   
    do nelem = 1, elem_total
-
+   
       call RHS_element(rhs_elem, dof_node, dof_total,&
-                     & uf, norder, hhp, wj, nelem, nmax,&
+                     & uf, norder, hhp, wj, nelem, node_total,&
                      & dmat)
 
       do m=1, (norder+1)*dof_node

@@ -13,7 +13,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
 
    parameter(TOLF  = 1.0d-6)  ! Xiao & Zhong use 1d-5
    integer i,j,m
-   double precision temp1,temp2,FmL
+   double precision temp1,temp2,FmL,errf,errx
    
    ui=0.0d0
    FmL=3.14d0 
@@ -22,6 +22,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
    
        write(*,*) "niter=",i
        
+              
        call AssembleRHS(RHS, dof_node, dof_total, uf, &
                   & norder, hhp, wj, node_total, dmat, &
                   & elem_total)
@@ -29,11 +30,17 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        call AssembleKT(KT, dof_node, dof_total, norder, node_total, elem_total,&
                     & hhp, uf, dmat, wj, Jacobian)
                     
-       do j=1,dof_total
-           write(*,*) KT(2,j)
-       enddo
+       errf = 0.0d0
        
-       if(i.gt.1) stop
+       call Norm(dof_total, RHS, errf) 
+       
+       if(errf .le. TOLF) return
+                    
+!       do j=1,dof_total
+!           write(*,*) "RHS",RHS(j)
+!       enddo
+       
+!       if(i.gt.1) stop
                     
        ui_old = ui
        
@@ -51,11 +58,11 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        uf = uf + ui
        
        
-!       write(*,*) "RHS"
+!       write(*,*) "uf"
 !       do j=1,dof_total
-!           write(*,*) RHS(j)
+!           write(*,*) uf(j)
 !       enddo
-!       stop
+!       if(i.gt.1) stop
        
        rel_change = ABS(ui-ui_old)
        
@@ -64,11 +71,12 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
        errx = temp2 - tolx*temp1
        
-!       write(*,*) "niter=",i
 !       write(*,*) "Norm"
 !       write(*,*) temp1
 !       write(*,*) temp2
 !       write(*,*) errx
+       
+!       if(i.gt.1) stop
        
        if(errx .le. 0) return
        if(i==niter) then

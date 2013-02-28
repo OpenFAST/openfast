@@ -87,6 +87,8 @@ program driver
    h1=1.0d0
    b0=1.0d0
    b1=1.0d0
+   
+   dmat = 0.0d0
     
    call NodeMat(dmat, dloc, h0, h1, b0, b1, node_total, blength,&
               & Young, G1) 

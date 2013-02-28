@@ -17,8 +17,12 @@ subroutine RHS_element(rhs_elem, dof_node, dof_total, &
    
    do nnode=1, norder+1
    
+!   write(*,*) "dmat",dmat
+   
       call Amatrix(Am, dof_total, dof_node, norder, hhp, uf, nelem, nnode)
       call Dmatrix(Dm, node_total, dmat, nelem, nnode)
+      
+      
       call Chimatrix(Chim, dof_total, dof_node, norder, hhp, uf, nelem, nnode)
       
          
