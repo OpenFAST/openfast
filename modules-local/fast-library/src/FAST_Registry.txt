@@ -50,11 +50,17 @@ typedef	^	^	LOGICAL	CalcBMode	-	-	-	"T: calculate blade mode shapes internally, 
 #typedef	^	^	ReKi	AdjEdSt	-	-	-	"Factor to adjust edge stiffness"
 #typedef	^	^	ReKi	AdjFlSt	-	-	-	"Factor to adjust flap stiffness"
 
+# ..... Blade Mesh Input file data ...........................................................................................................
+typedef	StructDyn/StrD	StrD_BladeMeshInputData	IntKi	BldNodes	-	-	-	"Number of blade nodes used for analysis"	-
+typedef	^	^	ReKi	RNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
+typedef	^	^	ReKi	AeroTwst	{:}	-	-	"Aerodynamic twist of the blade at the analysis nodes"	radians
+typedef	^	^	ReKi	Chord	{:}	-	-	"Chord of the blade at the analysis nodes"
 
 
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 typedef	StructDyn/StrD	StrD_InputFile	BladeInputData	InpBl	{:}	-	-	"Input data for individual blades"	-
+typedef	^	^	StrD_BladeMeshInputData	InpBlMesh	{:}	-	-	"Input data for blade discretizations (could be on each blade)"
 typedef	StructDyn/StrD	StrD_InputFile	CHARACTER(10)	OutList	{:}	-	-	"List of user-requested output channels"
 typedef	^	^	IntKi	NumBl	-	-	-	"Number of blades"
 typedef	^	^	ReKi	BoomCMxn	-	0.0	-	"Downwind distance from tower-top to tail boom CM. (Initialized to zero b/c not all models read in FurlFile)"	meters
@@ -195,9 +201,9 @@ typedef	^	^	ReKi	BoomMass	-	0.0	-	"Tail boom mass. (Initialized to zero b/c not 
 
 
 # This is data defined in the Input File for HydroDyn?
-typedef	^	^	ReKi	TwrCA	-	0.0	-	"Normalized hydrodynamic added mass   coefficient in Morison's equation"
-typedef	^	^	ReKi	TwrCD	-	0.0	-	"Normalized hydrodynamic viscous drag coefficient in Morison's equation"
-typedef	^	^	ReKi	TwrDiam	-	0.0	-	"Tower diameter in Morison's equation"
+#typedef	^	^	ReKi	TwrCA	-	0.0	-	"Normalized hydrodynamic added mass   coefficient in Morison's equation"
+#typedef	^	^	ReKi	TwrCD	-	0.0	-	"Normalized hydrodynamic viscous drag coefficient in Morison's equation"
+#typedef	^	^	ReKi	TwrDiam	-	0.0	-	"Tower diameter in Morison's equation"
 
 
 
@@ -560,9 +566,9 @@ typedef	^	^	ReKi	StiffTFA	{:}	-	-	"Interpolated fore-aft tower stiffness"
 typedef	^	^	ReKi	cgOffTFA	{:}	-	-	"Interpolated tower fore-aft mass cg offset"
 typedef	^	^	ReKi	cgOffTSS	{:}	-	-	"Interpolated tower side-to-side mass cg offset"
 # parameters describing the tower (Tower), which are really just for HydroDyn:
-typedef	^	^	ReKi	CAT	{:}	-	-	"Interpolated, normalized hydrodynamic added mass   coefficient in Morison's equation"
-typedef	^	^	ReKi	CDT	{:}	-	-	"Interpolated, normalized hydrodynamic viscous drag coefficient in Morison's equation"
-typedef	^	^	ReKi	DiamT	{:}	-	-	"Interpolated tower diameter in Morison's equation"
+#typedef	^	^	ReKi	CAT	{:}	-	-	"Interpolated, normalized hydrodynamic added mass   coefficient in Morison's equation"
+#typedef	^	^	ReKi	CDT	{:}	-	-	"Interpolated, normalized hydrodynamic viscous drag coefficient in Morison's equation"
+#typedef	^	^	ReKi	DiamT	{:}	-	-	"Interpolated tower diameter in Morison's equation"
 # parameters describing turbine mass and inertias (MassInert)
 typedef	^	^	ReKi	AtfaIner	-	-	-	"Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass"
 typedef	^	^	ReKi	BldCG	{:}	-	-	"Blade center of mass wrt the blade root"
@@ -689,7 +695,7 @@ typedef	^	^	ReKi	DTTorDmp	-	-	-	"Drivetrain torsional damper"
 typedef	^	^	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"
 typedef	^	^	ReKi	GBRatio	-	-	-	"Gearbox ratio"
 typedef	^	^	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"
-typedef	^	^	ReKi	GenEff	-	-	-	"Generator efficiency"
+typedef	^	^	ReKi	GenEff	-	-	-	"Generator efficiency"	"shouldn't need to be here (only in controls)"
 typedef	^	^	IntKi	GenDir	-	-	-	"Direction of the generator = +/- 1 (+ 1 = same direction as LSS; -1 = opposite direction of LSS)"
 # parameters from Initial Conditions
 typedef	^	^	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/sec

@@ -29,6 +29,10 @@ MODULE GlueCodeVars
    CHARACTER(1024)           :: FileDesc                                        ! Description of run to include in binary output file
 
    
+CHARACTER(1024)              :: ADFile                                          ! The name of the AeroDyn input file.
+CHARACTER(1024)              :: PriFile   = 'primary.fst'                       ! The name of the primary input file.  Can be overwritten on command line.
+   
+   
 ! not sure where this should go:
 INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile) !structural
 
@@ -195,7 +199,6 @@ LOGICAL                      :: SumDisp                                         
 LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
 CHARACTER(1024)              :: ADAMSFile                                       ! The name of the file containing ADAMS-specific data inputs.
-CHARACTER(1024)              :: ADFile                                          ! The name of the AeroDyn input file.
 CHARACTER(1024), ALLOCATABLE :: BldFile  (:)                                    ! The names of the blade-data input files.
 CHARACTER(1024)              :: DirRoot                                         ! The name of the root file including the full path to the current working directory.
 CHARACTER(1024)              :: DynBrkFi                                        ! The name of the dynamic generator brake input file.
@@ -203,7 +206,6 @@ CHARACTER(1024)              :: FTitle                                          
 CHARACTER(1024)              :: FurlFile                                        ! The name of the furling-data input file.
 CHARACTER(1024)              :: LinFile                                         ! The name of the file containing FAST linearization control input parameters.
 CHARACTER(1024)              :: NoiseFile                                       ! The name of the file containing aerodynamic noise input parameters.
-CHARACTER(1024)              :: PriFile   = 'primary.fst'                       ! The name of the primary input file.  Can be overwritten on command line.
 CHARACTER(1024)              :: PtfmFile                                        ! The name of the platform-data input file.
 CHARACTER(1024)              :: RootName                                        ! The root name of the input and output files.
 CHARACTER(1024)              :: TwrFile                                         ! The name of the tower-data input file.
