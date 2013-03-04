@@ -16,7 +16,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
    double precision temp1,temp2,FmL,errf,errx
    
    ui=0.0d0
-   FmL=3.14d0 
+!   FmL=3.14d-5 
      
    do i=1, niter
    
@@ -26,13 +26,15 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        call AssembleRHS(RHS, dof_node, dof_total, uf, &
                   & norder, hhp, wj, node_total, dmat, &
                   & elem_total)
-       if(i==1) RHS(dof_total) = RHS(dof_total) + FmL
+!       if(i==1) RHS(dof_total) = RHS(dof_total) + FmL
        call AssembleKT(KT, dof_node, dof_total, norder, node_total, elem_total,&
                     & hhp, uf, dmat, wj, Jacobian)
                     
        errf = 0.0d0
        
        call Norm(dof_total, RHS, errf) 
+       
+       write(*,*) "errf", errf
        
        if(errf .le. TOLF) return
                     
@@ -55,22 +57,28 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
        call CGSolver(RHS, KT, ui, bc, dof_total)
               
-       uf = uf + ui
+       
        
        
 !       write(*,*) "uf"
 !       do j=1,dof_total
 !           write(*,*) uf(j)
 !       enddo
-!       if(i.gt.1) stop
+!       if(i.gt.2) stop
        
-       rel_change = ABS(ui-ui_old)
+!       rel_change = ABS(ui-ui_old)
        
-       call Norm(dof_total, uf, temp1)
-       call Norm(dof_total, rel_change, temp2) 
+!       call Norm(dof_total, uf, temp1)
+!       call Norm(dof_total, rel_change, temp2) 
        
-       errx = temp2 - tolx*temp1
-       
+!       errx = temp2 - tolx*temp1
+
+        call Norm(dof_total, RHS, errx)
+        if(errx .le. TOLF) return
+        
+        uf = uf + ui
+        
+               
 !       write(*,*) "Norm"
 !       write(*,*) temp1
 !       write(*,*) temp2
@@ -78,7 +86,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
 !       if(i.gt.1) stop
        
-       if(errx .le. 0) return
+!       if(errx .le. 0) return
        if(i==niter) then
            write(*,*) "The solution does not converge after the maximum number of iterations" 
            stop

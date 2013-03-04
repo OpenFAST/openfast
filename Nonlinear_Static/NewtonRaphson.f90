@@ -12,7 +12,7 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
    double precision ui_old(dof_total), ui_change(dof_total) !mas ????
 
    double precision fmin,fold,stpmax,sum,uold(dof_total)
-   parameter(TOLF  = 1.0d-6)  ! Xiao & Zhong use 1d-5
+   parameter(TOLF  = 1.0d-20)  ! Xiao & Zhong use 1d-5
    parameter(STPMX = 1000.0d0)
    integer i,j,m
    double precision temp1,temp2
@@ -72,19 +72,19 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
 
 ! save ui in ui_old for comparison 
  
-      ui_old = ui 
+!      ui_old = ui 
       
 !      write(*,*) RHS
 !      stop
  
       call CGSolver(RHS, KT, ui, bc, dof_total)
       
-      write(*,*) ui
-      stop
+!      write(*,*) ui
+!      stop
 
 ! calculate relative change in increment 
      
-      ui_change = ABS(ui - ui_old)
+!      ui_change = ABS(ui - ui_old)
 
 !      rel_change = NORM(ui_change) / NORM(uf)
   
@@ -130,11 +130,11 @@ subroutine NewtonRaphson(dof_node,dof_total,norder,node_total,elem_total,&
 !  Delay use of LineSearch; not needed here in simple first example, which should
 !  use standard Newton Raphson, perhaps with a constant increment loading vector
 ! -----------------------------------------------------------------------------------                  
-!     call LineSearch(dof_total, uold, fold, gradient, rhs, ui, fmin, stpmax, check,&
-!                   & dof_node, uf, norder, hhp, wj, node_total, dmat, elem_total)
+     call LineSearch(dof_total, uold, fold, gradient, rhs, ui, fmin, stpmax, check,&
+                   & dof_node, uf, norder, hhp, wj, node_total, dmat, elem_total)
                      
-!     write(*,*) "test1",check
-!     write(*,*) "TOLF",MAXVAL(ABS(RHS))<TOLF
+     write(*,*) "test1",check
+     write(*,*) "TOLF",MAXVAL(ABS(RHS))<TOLF
                      
       IF(MAXVAL(ABS(RHS))<TOLF) THEN
          check=.FALSE.  ! the function values converge to zero
