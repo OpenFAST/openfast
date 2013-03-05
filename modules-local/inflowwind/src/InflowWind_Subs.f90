@@ -38,12 +38,13 @@ MODULE InflowWind_Subs
    ! The included wind modules
    !-------------------------------------------------------------------------------------------------
 
-   USE                              FFWind               ! full-field binary wind files
-   USE                              HHWind               ! hub-height text wind files
-   USE                              FDWind               ! 4-D binary wind files
-   USE                              CTWind               ! coherent turbulence from KH billow - binary file superimposed on another wind type
-   USE                              UserWind             ! user-defined wind module
-   USE                              HAWCWind             ! full-field binary wind files in HAWC format
+   USE                              IfW_HHWind           ! Types used in IfW_HHWind
+!   USE                              HHWind               ! hub-height text wind files
+!   USE                              FFWind               ! full-field binary wind files
+!   USE                              HAWCWind             ! full-field binary wind files in HAWC format
+!   USE                              FDWind               ! 4-D binary wind files
+!   USE                              CTWind               ! coherent turbulence from KH billow - binary file superimposed on another wind type
+!   USE                              UserWind             ! user-defined wind module
 
 
    IMPLICIT                         NONE
@@ -168,46 +169,48 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 
 RETURN
 END SUBROUTINE GetWindType
-!====================================================================================================
-SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat, ErrMsg )
-! This function is used in FAST's linearization scheme.  It should be fixed at some point.
-!----------------------------------------------------------------------------------------------------
-
-      ! Passed variables
-
-   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
-
-   INTEGER,                         INTENT(OUT)       :: ErrStat
-   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
-
-   REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
-
-
-
-      ! Local variables
-
-
-   ErrStat = 0
-
-   SELECT CASE ( ParamData%WindFileType )
-      CASE (HH_Wind)
-
-         CALL HH_SetLinearizeDels( LinPerturbations, ErrStat, ErrMsg )
-
-      CASE ( FF_Wind, UD_Wind, FD_Wind, HAWC_Wind )
-
-         CALL WrScr( ' Error: Linearization is valid only with HH wind files.' )
-         ErrStat = 1
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_LinearizePerturbation(). '// &
-                     'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-
-   END SELECT
-
-
-END SUBROUTINE InflowWind_LinearizePerturbation
+!! FIXME: This has been removed for now. I don't know what will happen to this after the conversion to the framework. Might still be needed at that point.
+!! !====================================================================================================
+!! SUBROUTINE InflowWind_LinearizePerturbation( ParamData, LinPerturbations, ErrStat, ErrMsg )
+!! ! This function is used in FAST's linearization scheme.  It should be fixed at some point.
+!! !----------------------------------------------------------------------------------------------------
+!!
+!!       ! Passed variables
+!!
+!!    TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
+!!
+!!    INTEGER,                         INTENT(OUT)       :: ErrStat
+!!    CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
+!!
+!!    REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
+!!
+!!
+!!
+!!       ! Local variables
+!!
+!!
+!!    ErrStat = 0
+!!
+!!    SELECT CASE ( ParamData%WindFileType )
+!!       CASE (HH_Wind)
+!!
+!!          CALL HH_SetLinearizeDels( LinPerturbations, ErrStat, ErrMsg )
+!!
+!!       CASE ( FF_Wind, UD_Wind, FD_Wind, HAWC_Wind )
+!!
+!!          CALL WrScr( ' Error: Linearization is valid only with HH wind files.' )
+!!          ErrStat = 1
+!!
+!!       CASE DEFAULT
+!!          CALL WrScr(' Error: Undefined wind type in InflowWind_LinearizePerturbation(). '// &
+!!                      'Call WindInflow_Init() before calling this function.' )
+!!          ErrStat = 1
+!!
+!!    END SELECT
+!!
+!!
+!! END SUBROUTINE InflowWind_LinearizePerturbation
+!!
 !! FIXME: This has been removed for now. I don't know what will happen to this after the conversion to the framework. Might still be needed at that point.
 !! !====================================================================================================
 !! FUNCTION InflowWind_ADhack_diskVel( Time, InpPosition, ErrStat )
@@ -330,48 +333,48 @@ END SUBROUTINE InflowWind_LinearizePerturbation
 !!
 !! END FUNCTION InflowWind_ADhack_diskVel
 !====================================================================================================
-FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat, ErrMsg )
-! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
-! it performs a wind speed check for the dynamic inflow initialization
-! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
-!----------------------------------------------------------------------------------------------------
-
-      ! Passed variables
-
-   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
-
-   INTEGER,                         INTENT(OUT)       :: ErrStat
-   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
-
-      ! Function definition
-   REAL(ReKi)                 :: InflowWind_ADhack_DIcheck
-
-
-   ErrStat = 0
-
-   SELECT CASE ( ParamData%WindFileType )
-      CASE (HH_Wind, UD_Wind, FD_Wind )
-
-         InflowWind_ADhack_DIcheck = 50  ! just return something greater than 8 m/s
-
-      CASE (FF_Wind)
-
-         InflowWind_ADhack_DIcheck = FF_GetValue('MEANFFWS', ErrStat, ErrMsg)
-
-      CASE (HAWC_Wind)
-
-         InflowWind_ADhack_DIcheck = HW_GetValue('UREF', ErrStat)
-
-      CASE DEFAULT
-         CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_DIcheck(). '// &
-                    'Call WindInflow_Init() before calling this function.' )
-         ErrStat = 1
-
-   END SELECT
-
-   RETURN
-
-END FUNCTION InflowWind_ADhack_DIcheck
+!FUNCTION InflowWind_ADhack_DIcheck( ParamData, ErrStat, ErrMsg )
+!! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
+!! it performs a wind speed check for the dynamic inflow initialization
+!! it returns MFFWS for the FF wind files; for all others, a sufficiently large number is used ( > 8 m/s)
+!!----------------------------------------------------------------------------------------------------
+!
+!      ! Passed variables
+!
+!   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
+!
+!   INTEGER,                         INTENT(OUT)       :: ErrStat
+!   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
+!
+!      ! Function definition
+!   REAL(ReKi)                 :: InflowWind_ADhack_DIcheck
+!
+!
+!   ErrStat = 0
+!
+!   SELECT CASE ( ParamData%WindFileType )
+!      CASE (HH_Wind, UD_Wind, FD_Wind )
+!
+!         InflowWind_ADhack_DIcheck = 50  ! just return something greater than 8 m/s
+!
+!      CASE (FF_Wind)
+!
+!         InflowWind_ADhack_DIcheck = FF_GetValue('MEANFFWS', ErrStat, ErrMsg)
+!
+!      CASE (HAWC_Wind)
+!
+!         InflowWind_ADhack_DIcheck = HW_GetValue('UREF', ErrStat)
+!
+!      CASE DEFAULT
+!         CALL WrScr(' Error: Undefined wind type in InflowWind_ADhack_DIcheck(). '// &
+!                    'Call WindInflow_Init() before calling this function.' )
+!         ErrStat = 1
+!
+!   END SELECT
+!
+!   RETURN
+!
+!END FUNCTION InflowWind_ADhack_DIcheck
 !====================================================================================================
 END MODULE InflowWind_Subs
 
