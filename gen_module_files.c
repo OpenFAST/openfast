@@ -608,6 +608,134 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   return(0) ;
 }
 
+int
+gen_rk4( FILE *fp , const node_t * ModName )
+{
+  char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
+  char *ddtname ;
+  node_t *q, * r ;
+  int founddt, k ;
+
+// make sure the user has dt in their parameter types
+  founddt = 0 ;
+  for ( q = ModName->module_ddt_list ; q ; q = q->next )
+  {
+    if ( q->usefrom == 0 ) {
+      ddtname = q->name ;
+      remove_nickname(ModName->nickname,ddtname,nonick) ;
+      if ( !strcmp( nonick, "parametertype")) {
+        for ( r = q->fields ; r ; r = r->next )
+        {
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          {
+            if ( !strcmp(make_lower_temp(r->name),"dt") ) {
+              founddt = 1 ;
+            }
+          }
+        }
+      }
+    }
+  }
+  if ( !founddt ) {
+    fprintf(stderr,"Registry warning: cannot generate %s_RK4. Add dt to ParameterType for this module\n") ;
+    return ;
+  }
+
+
+  fprintf(fp," SUBROUTINE %s_RK4(t, u, u_next, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )\n",
+                                                                                              ModName->nickname) ;
+  fprintf(fp,"  REAL(DbKi),                   INTENT(IN   ) :: t           ! Current simulation time in seconds\n") ;
+  fprintf(fp,"  TYPE(%s_InputType),           INTENT(IN   ) :: u           ! Inputs at t\n",  ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_InputType),           INTENT(IN   ) :: u_next      ! Inputs at t\n",  ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ParameterType),       INTENT(IN   ) :: p           ! Parameters\n",  ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType), INTENT(INOUT) :: x           ! Continuous states at t on input at t + dt on output\n",
+                                                                                              ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_DiscreteStateType),   INTENT(INOUT) :: xd          ! Discrete states at t\n",   ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(IN   ) :: z           ! Constraint states at t (possibly a guess)\n", 
+                                                                                              ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(INOUT) :: OtherState  ! Other/optimization states\n",  ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType), INTENT(IN   ) :: xdot        ! Continuous states at t on input at t + dt on output\n",
+                                                                                              ModName->nickname) ;
+  fprintf(fp,"  INTEGER(IntKi),               INTENT(  OUT) :: ErrStat\n") ;
+  fprintf(fp,"  CHARACTER(*),                 INTENT(  OUT) :: ErrMsg\n") ;
+  fprintf(fp,"    ! Local variables\n" ) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType)                :: xdot_local     ! t derivatives of continuous states\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType)                :: k1\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType)                :: k2\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType)                :: k3\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType)                :: k4\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_ContinuousStateType)                :: x_tmp       ! Holds temporary modification to x\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  TYPE(%s_InputType)                          :: u_interp\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  REAL(ReKi)                                  :: alpha\n") ;
+
+  fprintf(fp,"    ! Initialize ErrStat\n") ;
+
+  fprintf(fp,"  ErrStat = ErrID_None\n") ;
+  fprintf(fp,"  ErrMsg  = \"\"\n") ;
+  fprintf(fp," !CALL %s_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot_local, ErrStat, ErrMsg )\n",
+                                                                                             ModName->nickname) ;
+  fprintf(fp,"  alpha = 0.5\n") ;
+  for ( k = 1 ; k <= 4 ; k++ )
+  {
+// generate statements for k1
+  for ( q = ModName->module_ddt_list ; q ; q = q->next )
+  {
+    if ( q->usefrom == 0 ) {
+      ddtname = q->name ;
+      remove_nickname(ModName->nickname,ddtname,nonick) ;
+      if ( !strcmp( nonick, "continuousstatetype")) {
+        for ( r = q->fields ; r ; r = r->next )
+        { 
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          {
+  fprintf(fp,"  k%d%%%s = p%%dt * xdot%s%%%s\n",k,r->name,(k<2)?"":"_local",r->name) ;
+          }
+        }
+      }
+    }
+  }
+// generate statements for x_tmp
+  for ( q = ModName->module_ddt_list ; q ; q = q->next )
+  {
+    if ( q->usefrom == 0 ) {
+      ddtname = q->name ;
+      remove_nickname(ModName->nickname,ddtname,nonick) ;
+      if ( !strcmp( nonick, "continuousstatetype")) {
+        for ( r = q->fields ; r ; r = r->next )
+        {
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          {
+            if ( k < 4 ) {
+  fprintf(fp,"  x_tmp%%%s = x%%%s + %s k%d%%%s\n",r->name,r->name,(k<3)?"0.5*":"",k,r->name) ;
+            } else {
+  fprintf(fp,"  x%%%s = x%%%s + ( k1%%%s + 2. * k2%%%s + 2. * k3%%%s  + k4%%%s ) / 6.\n",r->name,r->name,r->name,r->name,r->name,r->name) ;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (k == 1)  fprintf(fp,"  CALL %s_LinearInterpInput(u, u_next, u_interp, alpha, ErrStat, ErrMsg)\n",
+                                                                                             ModName->nickname) ;
+  if (k < 4 )fprintf(fp,"  CALL %s_CalcContStateDeriv( t+%sp%%dt, u_%s, p, x_tmp, xd, z, OtherState, xdot_local, ErrStat, ErrMsg )\n",
+                                                                                             ModName->nickname,
+                                                                                             (k<3)?"0.5*":"", 
+                                                                                             (k<3)?"interp":"next") ;
+  fprintf(fp,"\n") ;
+  }
+  fprintf(fp," END SUBROUTINE %s_RK4\n",ModName->nickname) ;
+
+
+}
+
 static char *typenames[] = { "Input", "Param", "ContState", "DiscState", "ConstrState",
                              "OtherState", "Output", 0L } ;
 static char **typename ;
@@ -888,6 +1016,7 @@ gen_module( FILE * fp , node_t * ModName )
 
     gen_modname_pack( fp, ModName ) ;
     gen_modname_unpack( fp, ModName ) ;
+    gen_rk4( fp, ModName ) ;
 
     fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
   }
