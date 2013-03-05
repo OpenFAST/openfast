@@ -56,6 +56,11 @@ program driver
 
    call gen_deriv(xj, hhp, norder+1)
    
+!   do i=1,norder+1
+!       write(*,*) "hhp"
+!       write(*,*) hhp(3,i)
+!   enddo
+   
 !   write(*,*) "hhp"
 !   do i=1, norder+1
 !       do j=1, norder+1
@@ -78,6 +83,11 @@ program driver
     
    do i=1, node_total
       write(20,*) i, dloc(i)
+   enddo
+   
+   do i=1, node_total
+      write(*,*) "xj"
+      write(*,*) i, xj(i)
    enddo
       
             
