@@ -60,11 +60,11 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
        
        
-!       write(*,*) "uf"
-!       do j=1,dof_total
-!           write(*,*) uf(j)
-!       enddo
-!       if(i.gt.2) stop
+       write(*,*) "ui"
+       do j=1,dof_total
+           write(*,*) ui(j)
+       enddo
+       if(i.gt.1) stop
        
 !       rel_change = ABS(ui-ui_old)
        
