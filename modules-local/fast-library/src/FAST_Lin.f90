@@ -1,8 +1,8 @@
 MODULE FAST_Lin_Subs
 
    USE   NWTC_Library
-   USE   StructDyn_Types
-   USE   StructDyn
+   USE   ElastoDyn_Types
+   USE   ElastoDyn
 
    USE   Controls_Types
    USE   Controls
@@ -43,13 +43,13 @@ IMPLICIT                        NONE
 
    ! Passed variables
    
-TYPE(StrD_ParameterType),        INTENT(INOUT) :: p                             ! Parameters of the structural dynamics module  !bjj: note that CTFA and CTSS get overwritten here, thus violating the definition of PARAMATER
+TYPE(ED_ParameterType),        INTENT(INOUT) :: p                             ! Parameters of the structural dynamics module  !bjj: note that CTFA and CTSS get overwritten here, thus violating the definition of PARAMATER
 TYPE(Ctrl_ParameterType),        INTENT(IN)    :: p_Ctrl                        ! The parameters of the controls module
-TYPE(StrD_ContinuousStateType),  INTENT(INOUT) :: x                             ! Continuous states of the structural dynamics module
-TYPE(StrD_OutputType),           INTENT(INOUT) :: y                             ! System outputs of the structural dynamics module
-TYPE(StrD_OtherStateType),       INTENT(INOUT) :: OtherState                    ! Other State data type for Structural dynamics module
-TYPE(StrD_InputType),            INTENT(INOUT) :: u                             ! System inputs of the structural dynamics module
-TYPE(StrD_InputFile),            INTENT(IN)    :: InputFileData                 ! Structural dynamics input file data
+TYPE(ED_ContinuousStateType),  INTENT(INOUT) :: x                             ! Continuous states of the structural dynamics module
+TYPE(ED_OutputType),           INTENT(INOUT) :: y                             ! System outputs of the structural dynamics module
+TYPE(ED_OtherStateType),       INTENT(INOUT) :: OtherState                    ! Other State data type for Structural dynamics module
+TYPE(ED_InputType),            INTENT(INOUT) :: u                             ! System inputs of the structural dynamics module
+TYPE(ED_InputFile),            INTENT(IN)    :: InputFileData                 ! Structural dynamics input file data
 
    ! Local variables.
 
@@ -764,13 +764,13 @@ IMPLICIT                        NONE
 
    ! passed variables:
    
-TYPE(StrD_ParameterType),      INTENT(IN)       :: p                          ! The parameters of the structural dynamics module
+TYPE(ED_ParameterType),      INTENT(IN)       :: p                          ! The parameters of the structural dynamics module
 TYPE(Ctrl_ParameterType),      INTENT(IN)       :: p_Ctrl                     ! The parameters of the controls module
-TYPE(StrD_ContinuousStateType),INTENT(INOUT)    :: x                          ! The structural dynamics module's continuous states
-TYPE(StrD_OtherStateType),     INTENT(INOUT)    :: OtherState                 ! The structural dynamics "other" states (including CoordSys coordinate systems) 
-TYPE(StrD_OutputType),         INTENT(INOUT)    :: y                          ! System outputs of the structural dynamics module
-TYPE(StrD_InputType),          INTENT(INOUT)    :: u                          ! System inputs of the structural dynamics module
-TYPE(StrD_InputFile),          INTENT(IN)       :: InputFileData              ! Data from the structural dynamics input file
+TYPE(ED_ContinuousStateType),INTENT(INOUT)    :: x                          ! The structural dynamics module's continuous states
+TYPE(ED_OtherStateType),     INTENT(INOUT)    :: OtherState                 ! The structural dynamics "other" states (including CoordSys coordinate systems) 
+TYPE(ED_OutputType),         INTENT(INOUT)    :: y                          ! System outputs of the structural dynamics module
+TYPE(ED_InputType),          INTENT(INOUT)    :: u                          ! System inputs of the structural dynamics module
+TYPE(ED_InputFile),          INTENT(IN)       :: InputFileData              ! Data from the structural dynamics input file
 
    ! Local variables:
 

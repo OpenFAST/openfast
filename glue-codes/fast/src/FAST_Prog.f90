@@ -22,9 +22,9 @@ USE                             FAST_Lin_Subs      ! CalcSteady(), Linearize()
 USE                             HydroDyn
 USE                             Noise
 
-USE                             StructDyn
-USE                             StructDyn_Types
-USE                             StructDyn_Parameters
+USE                             ElastoDyn
+USE                             ElastoDyn_Types
+USE                             ElastoDyn_Parameters
 
 USE Controls
 USE Controls_Types
@@ -39,18 +39,18 @@ REAL(ReKi)                       :: GBoxTrq                                     
 INTEGER                          :: L                                            ! Generic index
 
 
-TYPE(StrD_InitInputType)         :: InitInData_StrD                              ! Input data for initialization of the structural dynamics module
-TYPE(StrD_InitOutputType)        :: InitOutData_StrD                             ! Output data from initialization of the structural dynamics module
-TYPE(StrD_ContinuousStateType)   :: x_StrD                                       ! Continuous states of the structural dynamics module
-TYPE(StrD_DiscreteStateType)     :: xd_StrD                                      ! Discrete states of the structural dynamics module
-TYPE(StrD_ConstraintStateType)   :: z_StrD                                       ! Constraint states of the structural dynamics module
-TYPE(StrD_OtherStateType)        :: OtherSt_StrD                                 ! Other/optimization states of the structural dynamics module (including CoordSys) 
+TYPE(ED_InitInputType)         :: InitInData_ED                              ! Input data for initialization of the structural dynamics module
+TYPE(ED_InitOutputType)        :: InitOutData_ED                             ! Output data from initialization of the structural dynamics module
+TYPE(ED_ContinuousStateType)   :: x_ED                                       ! Continuous states of the structural dynamics module
+TYPE(ED_DiscreteStateType)     :: xd_ED                                      ! Discrete states of the structural dynamics module
+TYPE(ED_ConstraintStateType)   :: z_ED                                       ! Constraint states of the structural dynamics module
+TYPE(ED_OtherStateType)        :: OtherSt_ED                                 ! Other/optimization states of the structural dynamics module (including CoordSys) 
 
-TYPE(StrD_ParameterType)         :: p_StrD                                       ! Parameters of the structural dynamics module
-TYPE(StrD_InputType)             :: u_StrD                                       ! System inputs of the structural dynamics module
-TYPE(StrD_OutputType)            :: y_StrD                                       ! System outputs of the structural dynamics module
+TYPE(ED_ParameterType)         :: p_ED                                       ! Parameters of the structural dynamics module
+TYPE(ED_InputType)             :: u_ED                                       ! System inputs of the structural dynamics module
+TYPE(ED_OutputType)            :: y_ED                                       ! System outputs of the structural dynamics module
 
-TYPE(StrD_InputFile)             :: InputFileData_StrD                           ! all the data in the StructDyn input file
+TYPE(ED_InputFile)             :: InputFileData_ED                           ! all the data in the ElastoDyn input file
 
 
 TYPE(Ctrl_ParameterType)         :: p_Ctrl                                       ! Parameters of the controls module
@@ -68,6 +68,10 @@ CALL CPU_TIME ( UsrTime1 )                                                      
 
 
 
+   !...............................................................................................................................
+   ! initialization
+   !...............................................................................................................................
+
    ! Set version & initialize NWTC Library (open console, set pi constants)
 
 CALL SetVersion
@@ -81,18 +85,23 @@ CALL DispNVD()
    ! Open and read input files, initialize global parameters.
 
 CALL FAST_Begin( PriFile, RootName, DirRoot )
-CALL FAST_Input( p_StrD, p_Ctrl, OtherSt_StrD, InputFileData_StrD, ErrStat, ErrMsg )
+
+
+!CALL ED_Init( InitInp, u, p, x, xd, z, OtherState, y, DT, InitOut, ErrStat, ErrMsg )
+!
+
+CALL FAST_Input( p_ED, p_Ctrl, OtherSt_ED, InputFileData_ED, ErrStat, ErrMsg )
 
 
    ! Set up initial values for all degrees of freedom.
 
-CALL FAST_Initialize( p_StrD, x_StrD, y_StrD, OtherSt_StrD, InputFileData_StrD )
+CALL FAST_Initialize( p_ED, x_ED, y_ED, OtherSt_ED, InputFileData_ED )
 
 
 
    ! Print summary information to "*.fsm"?
 
-IF ( SumPrint )  CALL PrintSum( p_StrD, OtherSt_StrD )
+IF ( SumPrint )  CALL PrintSum( p_ED, OtherSt_ED )
 
 
 
@@ -100,23 +109,26 @@ IF ( SumPrint )  CALL PrintSum( p_StrD, OtherSt_StrD )
 
 IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
 
-   CALL MakeADM( p_StrD, p_Ctrl, x_StrD, OtherSt_StrD, InputFileData_StrD  )      ! Make the ADAMS dataset file (.adm).
+   CALL MakeADM( p_ED, p_Ctrl, x_ED, OtherSt_ED, InputFileData_ED  )      ! Make the ADAMS dataset file (.adm).
 
-   CALL MakeACF( p_StrD )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
+   CALL MakeACF( p_ED )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
 
    IF ( MakeLINacf )  THEN
 
-      IF ( p_StrD%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
+      IF ( p_ED%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
          CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//&
                       '_ADAMS_LIN.acf'' not created because the model has zero active DOFs.'   )
       ELSE                             ! The model has at least one DOF
-         CALL MakeACF_LIN( p_StrD, InputFileData_StrD )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
+         CALL MakeACF_LIN( p_ED, InputFileData_ED )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
       ENDIF
 
    ENDIF
 
 ENDIF
 
+   !...............................................................................................................................
+   ! loose coupling
+   !...............................................................................................................................
 
 
    ! Run FAST as normal if selected:
@@ -130,17 +142,17 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  p_StrD, p_Ctrl, x_StrD, OtherSt_StrD, u_StrD, y_StrD, ErrStat, ErrMsg )     
+      CALL TimeMarch(  p_ED, p_Ctrl, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )     
 
    ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
 
 
-      IF ( p_StrD%DOFs%NActvDOF == 0 ) &
+      IF ( p_ED%DOFs%NActvDOF == 0 ) &
          CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
 
 !      QAzimInit = OtherState%Q (DOF_GeAz,1)
 
-      CALL CoordSys_Alloc( OtherSt_StrD%CoordSys, p_StrD, ErrStat, ErrMsg )
+      CALL CoordSys_Alloc( OtherSt_ED%CoordSys, p_ED, ErrStat, ErrMsg )
             
       IF (ErrStat /= ErrID_none) THEN
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -152,15 +164,15 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
       
       IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 
-         CALL CalcSteady( p_StrD, p_Ctrl, x_StrD, y_StrD, OtherSt_StrD, u_StrD, InputFileData_StrD )
+         CALL CalcSteady( p_ED, p_Ctrl, x_ED, y_ED, OtherSt_ED, u_ED, InputFileData_ED )
 
       ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 
          DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
 
-            Qop  (:,L) = OtherSt_StrD%Q  (:,OtherSt_StrD%IC(1))  ! Initialize the operating
-            QDop (:,L) = OtherSt_StrD%QD (:,OtherSt_StrD%IC(1))  ! point values to the
-            QD2op(:,L) = OtherSt_StrD%QD2(:,OtherSt_StrD%IC(1))  ! initial conditions
+            Qop  (:,L) = OtherSt_ED%Q  (:,OtherSt_ED%IC(1))  ! Initialize the operating
+            QDop (:,L) = OtherSt_ED%QD (:,OtherSt_ED%IC(1))  ! point values to the
+            QD2op(:,L) = OtherSt_ED%QD2(:,OtherSt_ED%IC(1))  ! initial conditions
 
             Qop (DOF_GeAz,L) = QAzimInit + ( TwoPi/NAzimStep )*( L - 1 )               ! Make the op generator
             IF ( Qop(DOF_GeAz,L) >= TwoPi )  Qop(DOF_GeAz,L) = Qop(DOF_GeAz,L) - TwoPi ! azimuth DOF periodic
@@ -168,14 +180,14 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
          ENDDO                ! L - Equally-spaced azimuth steps
 
 
-         CALL DrvTrTrq ( p_Ctrl, p_StrD%RotSpeed, GBoxTrq )
+         CALL DrvTrTrq ( p_Ctrl, p_ED%RotSpeed, GBoxTrq )
 
       ENDIF
 
 
-      CALL Linearize( p_StrD,p_Ctrl,x_StrD,y_StrD,OtherSt_StrD, u_StrD, InputFileData_StrD )          ! Linearize the model about the steady-state solution.
+      CALL Linearize( p_ED,p_Ctrl,x_ED,y_ED,OtherSt_ED, u_ED, InputFileData_ED )          ! Linearize the model about the steady-state solution.
 
-!      CALL CoordSys_Dealloc( OtherSt_StrD%CoordSys, ErrStat, ErrMsg ) ! happens in StrD_End
+!      CALL CoordSys_Dealloc( OtherSt_ED%CoordSys, ErrStat, ErrMsg ) ! happens in ED_End
       IF (ErrStat /= ErrID_none) THEN
          CALL WrScr( ErrMsg )
       END IF      
@@ -191,11 +203,13 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
 ENDIF
 
-
+   !...............................................................................................................................
+   ! clean up and end
+   !...............................................................................................................................
 
 CALL FAST_Terminate( ErrStat )
 
-CALL StrD_End( u_StrD, p_StrD, x_StrD, xd_StrD, z_StrD, OtherSt_StrD, y_StrD, ErrStat, ErrMsg )
+CALL ED_End( u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
 
 CALL AD_Terminate(   ErrStat )
 CALL HD_Terminate( HydroDyn_data, ErrStat )
