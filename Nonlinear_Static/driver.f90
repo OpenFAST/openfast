@@ -5,7 +5,7 @@ program driver
    integer dof_node,dof_total,nquar
    integer niter
  
-   parameter (norder = 2)
+   parameter (norder = 20)
    parameter (elem_total = 1 )
    parameter (node_total = elem_total*norder + 1)
    parameter (dof_node = 3)
