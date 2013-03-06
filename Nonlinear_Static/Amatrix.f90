@@ -1,9 +1,9 @@
-subroutine Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
+subroutine Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode,Jacobian)
 
    integer dof_total, dof_node
    integer norder,nelem,nnode      
    double precision uf(dof_total)
-   double precision hhp(norder+1,norder+1)      
+   double precision hhp(norder+1,norder+1), Jacobian     
    double precision Am(3,4)
    
    double precision uprime,vprime,temp_theta
@@ -17,6 +17,9 @@ subroutine Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
       uprime = uprime + hhp(m,nnode)*uf(temp_id+1)
       vprime = vprime + hhp(m,nnode)*uf(temp_id+2)
    enddo
+   
+   uprime = uprime/Jacobian
+   vprime = vprime/Jacobian
 
    Am=0.0d0
 

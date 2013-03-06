@@ -18,7 +18,6 @@ subroutine AssembleKT(KT,dof_node,dof_total,norder,node_total,elem_total,&
       call KT_element(KT_elem,dof_node,dof_total,norder,hhp,uf,nelem,&
                      &node_total,dmat,wj,Jacobian)
                      
-      
       do i=1,(norder+1)*dof_node
          temp_id = (nelem-1)*norder*dof_node+i
          do j=1,(norder+1)*dof_node

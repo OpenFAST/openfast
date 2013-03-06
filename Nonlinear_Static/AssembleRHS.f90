@@ -1,6 +1,6 @@
 subroutine AssembleRHS(RHS, dof_node, dof_total, uf, &
                      & norder, hhp, wj, node_total, dmat, &
-                     & elem_total)
+                     & elem_total, Jacobian)
    
    integer dof_node,dof_total,norder,node_total,elem_total
    double precision dmat(node_total,3)
@@ -12,15 +12,19 @@ subroutine AssembleRHS(RHS, dof_node, dof_total, uf, &
    double precision rhs_elem(dof_node*(norder+1))
    double precision FmL
    
-   FmL=3.14d-05
+   FmL=3.14d-02
    
    RHS = 0.0d0
+   
+   
    
    do nelem = 1, elem_total
    
       call RHS_element(rhs_elem, dof_node, dof_total,&
                      & uf, norder, hhp, wj, nelem, node_total,&
-                     & dmat)
+                     & dmat, Jacobian)
+                     
+      
 
       do m=1, (norder+1)*dof_node
          temp_id      = (nelem-1)*norder*dof_node + m

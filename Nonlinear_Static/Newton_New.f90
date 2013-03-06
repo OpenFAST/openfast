@@ -17,15 +17,18 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
    
    ui=0.0d0
 !   FmL=3.14d-5 
+
+   
      
    do i=1, niter
    
        write(*,*) "niter=",i
-       
               
        call AssembleRHS(RHS, dof_node, dof_total, uf, &
                   & norder, hhp, wj, node_total, dmat, &
-                  & elem_total)
+                  & elem_total, Jacobian)
+                  
+       
 !       if(i==1) RHS(dof_total) = RHS(dof_total) + FmL
        call AssembleKT(KT, dof_node, dof_total, norder, node_total, elem_total,&
                     & hhp, uf, dmat, wj, Jacobian)
@@ -34,12 +37,12 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
        call Norm(dof_total, RHS, errf) 
        
-       write(*,*) "errf", errf
+!       write(*,*) "errf", errf
        
        if(errf .le. TOLF) return
                     
 !       do j=1,dof_total
-!           write(*,*) "RHS",RHS(j)
+!           write(*,*) "KT",KT(3,j)
 !       enddo
        
 !       if(i.gt.1) stop
@@ -60,11 +63,11 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
        
        
-       write(*,*) "ui"
-       do j=1,dof_total
-           write(*,*) ui(j)
-       enddo
-       if(i.gt.1) stop
+!       write(*,*) "ui"
+!       do j=1,dof_total
+!           write(*,*) ui(j)
+!       enddo
+!       if(i.gt.1) stop
        
 !       rel_change = ABS(ui-ui_old)
        
@@ -75,6 +78,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
 
         call Norm(dof_total, RHS, errx)
         if(errx .le. TOLF) return
+        write(*,*) "errx",errx
         
         uf = uf + ui
         

@@ -11,15 +11,20 @@ subroutine KT_element(KT_elem,dof_node,dof_total,norder,hhp,uf,nelem,&
    double precision tempKT(4,4),KT_temp(dof_node*(norder+1),dof_node*(norder+1))
    integer nnode,m,j,i
    integer temp_id,temp_id2
+   double precision hhp_temp(norder+1,norder+1)
    
    KT_elem = 0.0d0
    
+   hhp_temp = 0.0d0
+   hhp_temp=TRANSPOSE(hhp)
+     
    do nnode=1,norder+1
    
-      call Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
+      call Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode, Jacobian)
       call Dmatrix(Dm,node_total,dmat,nelem,nnode)
       call Ximatrix(Xim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,&
-                  &node_total,dmat)
+                  &node_total,dmat, Jacobian)
+                  
 
       tempKT = MATMUL(MATMUL(TRANSPOSE(Am),Dm),Am)
 
@@ -31,30 +36,32 @@ subroutine KT_element(KT_elem,dof_node,dof_total,norder,hhp,uf,nelem,&
          temp_id = (m-1)*dof_node
          do j=1,norder+1
             temp_id2 = (j-1)*dof_node
-            KT_temp(temp_id+1,temp_id2+1) = hhp(nnode,m)*hhp(nnode,j)*tempKT(1,1)
-            KT_temp(temp_id+1,temp_id2+2) = hhp(nnode,m)*hhp(nnode,j)*tempKT(1,2)
-            KT_temp(temp_id+1,temp_id2+3) = hhp(nnode,m)*hhp(nnode,j)*tempKT(1,3)
-            KT_temp(temp_id+2,temp_id2+1) = hhp(nnode,m)*hhp(nnode,j)*tempKT(2,1)
-            KT_temp(temp_id+2,temp_id2+2) = hhp(nnode,m)*hhp(nnode,j)*tempKT(2,2)
-            KT_temp(temp_id+2,temp_id2+3) = hhp(nnode,m)*hhp(nnode,j)*tempKT(2,3)
-            KT_temp(temp_id+3,temp_id2+1) = hhp(nnode,m)*hhp(nnode,j)*tempKT(3,1)
-            KT_temp(temp_id+3,temp_id2+2) = hhp(nnode,m)*hhp(nnode,j)*tempKT(3,2)
-            KT_temp(temp_id+3,temp_id2+3) = hhp(nnode,m)*hhp(nnode,j)*tempKT(3,3)
+            KT_temp(temp_id+1,temp_id2+1) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(1,1)
+            KT_temp(temp_id+1,temp_id2+2) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(1,2)
+            KT_temp(temp_id+1,temp_id2+3) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(1,3)
+            KT_temp(temp_id+2,temp_id2+1) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(2,1)
+            KT_temp(temp_id+2,temp_id2+2) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(2,2)
+            KT_temp(temp_id+2,temp_id2+3) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(2,3)
+            KT_temp(temp_id+3,temp_id2+1) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(3,1)
+            KT_temp(temp_id+3,temp_id2+2) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(3,2)
+            KT_temp(temp_id+3,temp_id2+3) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(3,3)
             if(nnode==j) then 
-               KT_temp(temp_id+1,temp_id2+3) =KT_temp(temp_id+1,temp_id2+3) + hhp(nnode,m)*tempKT(1,4)
-               KT_temp(temp_id+2,temp_id2+3) =KT_temp(temp_id+2,temp_id2+3) + hhp(nnode,m)*tempKT(2,4)
-               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp(nnode,m)*tempKT(3,4)
+               KT_temp(temp_id+1,temp_id2+3) =KT_temp(temp_id+1,temp_id2+3) + hhp_temp(nnode,m)*tempKT(1,4)
+               KT_temp(temp_id+2,temp_id2+3) =KT_temp(temp_id+2,temp_id2+3) + hhp_temp(nnode,m)*tempKT(2,4)
+               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp_temp(nnode,m)*tempKT(3,4)
                if(nnode==m) KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + tempKT(4,4)
             endif
             if(nnode==m) then
-               KT_temp(temp_id+3,temp_id2+1) =KT_temp(temp_id+3,temp_id2+1) + hhp(nnode,j)*tempKT(4,1)
-               KT_temp(temp_id+3,temp_id2+2) =KT_temp(temp_id+3,temp_id2+2) + hhp(nnode,j)*tempKT(4,2)
-               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp(nnode,j)*tempKT(4,3)
+               KT_temp(temp_id+3,temp_id2+1) =KT_temp(temp_id+3,temp_id2+1) + hhp_temp(nnode,j)*tempKT(4,1)
+               KT_temp(temp_id+3,temp_id2+2) =KT_temp(temp_id+3,temp_id2+2) + hhp_temp(nnode,j)*tempKT(4,2)
+               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp_temp(nnode,j)*tempKT(4,3)
             endif                      
          enddo 
       enddo
       
       KT_elem = KT_elem + wj(nnode)*KT_temp/Jacobian
+      
+      
             
    enddo
    
