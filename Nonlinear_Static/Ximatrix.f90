@@ -1,10 +1,10 @@
 subroutine Ximatrix(Xim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,&
-                  &node_total,dmat)
+                  &node_total,dmat,Jacobian)
    
    integer dof_total, dof_node,node_total
    integer norder,nelem,nnode 
    double precision uf(dof_total)
-   double precision hhp(norder+1,norder+1),dmat(node_total,3)  
+   double precision hhp(norder+1,norder+1),dmat(node_total,3), Jacobian  
    double precision Xim(4,4)
    
    double precision uprime,vprime,temp_theta,tempN(3,1)
@@ -13,7 +13,7 @@ subroutine Ximatrix(Xim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,&
    
    
    call Dmatrix(Dm,node_total,dmat,nelem,nnode)
-   call Chimatrix(Chim,dof_total,dof_node,norder,hhp,uf,nelem,nnode)
+   call Chimatrix(Chim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,Jacobian)
    
    tempN = MATMUL(Dm,Chim) 
    
@@ -24,6 +24,9 @@ subroutine Ximatrix(Xim,dof_total,dof_node,norder,hhp,uf,nelem,nnode,&
       uprime = uprime + hhp(m,nnode)*uf(temp_id+1)
       vprime = vprime + hhp(m,nnode)*uf(temp_id+2)
    enddo
+   
+   uprime = uprime/Jacobian
+   vprime = vprime/Jacobian
    
    Xim = 0.0d0
    

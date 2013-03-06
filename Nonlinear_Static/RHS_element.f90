@@ -1,11 +1,11 @@
 subroutine RHS_element(rhs_elem, dof_node, dof_total, &
                      & uf, norder, hhp, wj, nelem, node_total, &
-                     & dmat)
+                     & dmat,Jacobian)
    
    integer dof_node, norder, dof_total, nelem, node_total
    double precision rhs_elem(dof_node*(norder+1))
    double precision hhp(norder+1,norder+1), wj(norder+1), uf(dof_total)
-   double precision dmat(node_total,3)
+   double precision dmat(node_total,3), Jacobian
    
    integer nnode, m, temp_id, i, j
    double precision tempATN(4,1), tempDChi(3,1)
@@ -19,11 +19,11 @@ subroutine RHS_element(rhs_elem, dof_node, dof_total, &
    
 !   write(*,*) "dmat",dmat
    
-      call Amatrix(Am, dof_total, dof_node, norder, hhp, uf, nelem, nnode)
+      call Amatrix(Am, dof_total, dof_node, norder, hhp, uf, nelem, nnode, Jacobian)
       call Dmatrix(Dm, node_total, dmat, nelem, nnode)
       
       
-      call Chimatrix(Chim, dof_total, dof_node, norder, hhp, uf, nelem, nnode)
+      call Chimatrix(Chim, dof_total, dof_node, norder, hhp, uf, nelem, nnode, Jacobian)
       
          
       tempDChi = MATMUL(Dm, Chim)
