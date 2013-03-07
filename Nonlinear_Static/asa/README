@@ -1,0 +1,12 @@
+A POSIX.2 compliant asa(1), for converting Fortran carraige control
+characters to line printer control characters.
+
+This version uses nroff - type overstriking to get the '+'
+functionality (i.e. first character, then a backspace, then the next
+character.  Less understands this; I'm not too sure about printers or
+printer filters.
+
+Do a 'make install' to install it, 'make demo' to see what it does.
+
+Bug reports to ig25@rz.uni-karlsruhe.de (Thomas Koenig).
+
