@@ -608,6 +608,184 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   return(0) ;
 }
 
+#if 0
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Mod1_Input_ExtrapInterp( u, t, u_out, t_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+!  
+!  expressions below based on either
+!
+!  f(t) = a 
+!  f(t) = a + b * t, or
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+!
+!..................................................................................................................................
+
+      TYPE(Mod1_InputType),      INTENT(IN   )  :: u(:)      ! Inputs at t1 > t2 > t3
+      REAL(DbKi),                INTENT(IN   )  :: t(:)      ! Times associated with the inputs 
+      TYPE(Mod1_InputType),      INTENT(  OUT)  :: u_out     ! Inputs at t1 > t2 > t3
+      REAL(DbKi),                INTENT(IN   )  :: t_out     ! time to be extrap/interpd to                                   
+      INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+      CHARACTER(*),              INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None                          
+
+      ! local variables
+
+      INTEGER(IntKi)        :: order     ! order of polynomial fit (max 2)
+
+      REAL(ReKi)            :: a        ! constant for extrapolaton/interpolation
+      REAL(ReKi)            :: b        ! constant for extrabpolation/interpolation
+      REAL(ReKi)            :: c        ! constant for extrabpolation/interpolation
+
+      ! Initialize ErrStat
+
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
+
+      order = SIZE(u) - 1
+
+      if (order .eq. 0) then
+
+         u_out%fc = u(1)%fc
+
+      elseif (order .eq. 1) then
+
+         a = -((t(2)*u(1)%fc - t(1)*u(2)%fc)/(t(1) - t(2)))
+         b = -((-u(1)%fc + u(2)%fc)/(t(1) - t(2)))
+
+         u_out%fc = a + b * t_out
+ 
+      elseif (order .eq. 2) then
+ 
+         a =  (t(1)*t(3)*(-t(1) + t(3))*u(2)%fc + t(2)**2*(t(3)*u(1)%fc - t(1)*u(3)%fc) &
+              + t(2)*(-(t(3)**2*u(1)%fc) + t(1)**2*u(3)%fc))/ & 
+              ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))
+         b =  (t(3)**2*(u(1)%fc - u(2)%fc) + t(1)**2*(u(2)%fc - u(3)%fc) + t(2)**2*(-u(1)%fc &
+              + u(3)%fc))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))
+         c =  (t(3)*(-u(1)%fc + u(2)%fc) + t(2)*(u(1)%fc - u(3)%fc) + t(1)*(-u(2)%fc + u(3)%fc)) &
+              /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))
+
+         u_out%fc = a + b * t_out + c * t_out**2
+
+      else
+
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' order must be less than 3 in Mod1_Input_ExtrapInterp '
+         RETURN
+
+      endif
+
+
+END SUBROUTINE Mod1_Input_ExtrapInterp
+#endif
+
+int
+gen_Input_ExtraInterp( FILE *fp , const node_t * ModName )
+{
+  char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
+  char *ddtname ;
+  node_t *q, * r ;
+  int founddt, k ;
+
+  fprintf(fp,"\n") ;
+  fprintf(fp," SUBROUTINE %s_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )\n",ModName->nickname) ;
+
+  fprintf(fp," TYPE(%s_InputType), INTENT(IN   )  :: u(:)      ! Inputs at t1 > t2 > t3\n",ModName->nickname) ;
+  fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t(:)      ! Times associated with the inputs\n") ;
+  fprintf(fp," TYPE(%s_InputType), INTENT(  OUT)  :: u_out     ! Inputs at t1 > t2 > t3\n",ModName->nickname) ;
+  fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t_out     ! time to be extrap/interp'd to\n") ;
+  fprintf(fp," INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n") ;
+  fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
+  fprintf(fp,"   ! local variables\n") ;
+  fprintf(fp," INTEGER(IntKi)        :: order     ! order of polynomial fit (max 2)\n") ;
+  fprintf(fp," REAL(ReKi)            :: a        ! constant for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi)            :: b        ! constant for extrabpolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi)            :: c        ! constant for extrabpolation/interpolation\n") ;
+  fprintf(fp,"    ! Initialize ErrStat\n") ;
+  fprintf(fp," ErrStat = ErrID_None\n") ;
+  fprintf(fp," ErrMsg  = \"\"\n") ;
+  fprintf(fp," order = SIZE(u) - 1\n") ;
+  fprintf(fp," IF ( order .eq. 0 ) THEN\n") ;
+  for ( q = ModName->module_ddt_list ; q ; q = q->next )
+  {
+    if ( q->usefrom == 0 ) {
+      ddtname = q->name ;
+      remove_nickname(ModName->nickname,ddtname,nonick) ;
+      if ( !strcmp( nonick, "inputtype")) {
+        for ( r = q->fields ; r ; r = r->next )
+        {
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          {
+  fprintf(fp,"  u_out%%%s = u(1)%%%s\n",r->name,r->name) ;
+          }
+        }
+      }
+    }
+  }
+  fprintf(fp," ELSE IF ( order .eq. 1 ) THEN\n") ;
+  for ( q = ModName->module_ddt_list ; q ; q = q->next )
+  {
+    if ( q->usefrom == 0 ) {
+      ddtname = q->name ;
+      remove_nickname(ModName->nickname,ddtname,nonick) ;
+      if ( !strcmp( nonick, "inputtype")) {
+        for ( r = q->fields ; r ; r = r->next )
+        {
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          {
+  fprintf(fp,"  a = -((t(2)*u(1)%%%s - t(1)*u(2)%%%s)/(t(1) - t(2)))\n",r->name,r->name) ;
+  fprintf(fp,"  b = -((-u(1)%%%s + u(2)%%%s)/(t(1) - t(2)))\n",r->name,r->name) ;
+  fprintf(fp,"  u_out%%%s = a + b * t_out\n",r->name) ;
+          }
+        }
+      }
+    }
+  }
+  fprintf(fp," ELSE IF ( order .eq. 2 ) THEN\n") ;
+  for ( q = ModName->module_ddt_list ; q ; q = q->next )
+  {
+    if ( q->usefrom == 0 ) {
+      ddtname = q->name ;
+      remove_nickname(ModName->nickname,ddtname,nonick) ;
+      if ( !strcmp( nonick, "inputtype")) {
+        for ( r = q->fields ; r ; r = r->next )
+        {
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          {
+  fprintf(fp,"  a = (t(1)*t(3)*(-t(1) + t(3))*u(2)%%%s + t(2)**2*(t(3)*u(1)%%%s - t(1)*u(3)%%%s)        &\n",
+                                                                              r->name,r->name,r->name) ;
+  fprintf(fp,"      + t(2)*(-(t(3)**2*u(1)%%%s) + t(1)**2*u(3)%%%s))                                    &\n",
+                                                                              r->name,r->name) ;
+  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  b = (t(3)**2*(u(1)%%%s - u(2)%%%s) + t(1)**2*(u(2)%%%s - u(3)%%%s) + t(2)**2*(-u(1)%%%s &\n",
+                                                                              r->name,r->name,r->name,r->name,r->name) ;
+  fprintf(fp,"      + u(3)%%%s))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                             \n",
+                                                                              r->name) ;
+  fprintf(fp,"  c = (t(3)*(-u(1)%%%s + u(2)%%%s) + t(2)*(u(1)%%%s - u(3)%%%s) + t(1)*(-u(2)%%%s + u(3)%%%s))  &\n",
+                                                                              r->name,r->name,r->name,r->name,r->name,r->name) ;
+  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                                         \n") ;
+  fprintf(fp,"  u_out%%%s = a + b * t_out + c * t_out**2                                                  \n",
+                                                                              r->name) ;
+          }
+        }
+      }
+    }
+  }
+  fprintf(fp," ELSE \n") ;
+  fprintf(fp,"   ErrStat = ErrID_Fatal\n") ;
+  fprintf(fp,"   ErrMsg = ' order must be less than 3 in Mod1_Input_ExtrapInterp '\n") ;
+  fprintf(fp,"   RETURN\n") ;
+  fprintf(fp," ENDIF \n") ;
+
+
+  fprintf(fp," END SUBROUTINE %s_Input_ExtrapInterp\n",ModName->nickname) ;
+  fprintf(fp,"\n") ;
+}
+
 int
 gen_rk4( FILE *fp , const node_t * ModName )
 {
@@ -1017,6 +1195,7 @@ gen_module( FILE * fp , node_t * ModName )
     gen_modname_pack( fp, ModName ) ;
     gen_modname_unpack( fp, ModName ) ;
     gen_rk4( fp, ModName ) ;
+    gen_Input_ExtraInterp( fp, ModName ) ;
 
     fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
   }
