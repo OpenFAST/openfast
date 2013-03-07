@@ -206,7 +206,6 @@ REAL(ReKi)                   :: NacYaw                                          
 
 !structural
 
-REAL(ReKi)                   :: QAzimInit                                       ! Initial value of the internal generator azimuth DOF (Q(DOF_GeAz)).
 
 
 
