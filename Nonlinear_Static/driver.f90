@@ -5,7 +5,7 @@ program driver
    integer dof_node,dof_total,nquar
    integer niter
  
-   parameter (norder = 20)
+   parameter (norder = 6)
    parameter (elem_total = 1 )
    parameter (node_total = elem_total*norder + 1)
    parameter (dof_node = 3)
@@ -128,7 +128,7 @@ program driver
 !                    & hhp, uf, dmat, wj, niter, Jacobian)
 
    call Newton_New(dof_node, dof_total, norder, node_total, elem_total,&
-                    & hhp, uf, dmat, wj, niter, Jacobian)
+                    & hhp, uf, dmat, wj, niter, Jacobian, dloc)
                      
          
    write(*,*) "Finished NR"

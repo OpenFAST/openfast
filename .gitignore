@@ -3,3 +3,6 @@
 *.dat
 *.zip
 fort.*
+*.vtk
+tmp.*
+gnb

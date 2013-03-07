@@ -3,8 +3,8 @@ all: gnb
 #gnb: gen_gll.o gen_deriv.o dlegen.o dlagint.o NodeLoc.o NodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o LineSearch.o NewtonRaphson.o driver.o
 #	gfortran -O3 -o gnb gen_gll.o gen_deriv.o dlegen.o dlagint.o NodeLoc.o nodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o LineSearch.o NewtonRaphson.o driver.o
 
-gnb: gen_gll.o gen_deriv.o dlegen.o dlagint.o NodeLoc.o NodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o Newton_New.o driver.o
-	gfortran -O3 -o gnb gen_gll.o gen_deriv.o dlegen.o dlagint.o NodeLoc.o nodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o Newton_New.o driver.o
+gnb: gen_gll.o gen_deriv.o dlegen.o dlagint.o NodeLoc.o NodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o Newton_New.o filename.o outputvtk.o driver.o
+	gfortran -O3 -o gnb gen_gll.o gen_deriv.o dlegen.o dlagint.o NodeLoc.o nodeMat.o Amatrix.o Dmatrix.o Chimatrix.o RHS_element.o AssembleRHS.o Norm.o Ximatrix.o KT_element.o AssembleKT.o CGSolver.o Newton_New.o filename.o outputvtk.o driver.o
 	
 gen_gll.o: gen_gll.f90
 	gfortran -O3 -c gen_gll.f90
@@ -56,6 +56,12 @@ CGSolver.o: CGSolver.f90
 	
 #NewtonRaphson.o: NewtonRaphson.f90
 #	gfortran -O3 -c NewtonRaphson.f90
+
+filename.o: filename.f
+	gfortran -O3 -c filename.f
+
+outputvtk.o: outputvtk.f
+	gfortran -O3 -c outputvtk.f
 
 Newton_New.o: Newton_New.f90
 	gfortran -O3 -c Newton_New.f90
