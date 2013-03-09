@@ -7,27 +7,22 @@ PROGRAM FAST
 USE GlueCodeVars
 
 
-!USE                             ADAMSInput
 USE                             General
 USE                             InitCond
-!USE                             Linear
 USE                             SimCont
 USE                             NWTC_Library
 USE                             AeroDyn
 USE                             FAST_IO_Subs       ! FAST_Begin(), FAST_Input(), PrintSum(), RunTimes()
 USE                             FASTsubs           ! FAST_Initialize(), TimeMarch()
-!USE                             FAST2ADAMSSubs     ! MakeAdm(), MakeACF(), MakeACF_Lin
 USE                             FAST_Hydro
-!USE                             FAST_Lin_Subs      ! CalcSteady(), Linearize()
 USE                             HydroDyn
-!USE                             Noise
 
 USE                             ElastoDyn
 USE                             ElastoDyn_Types
 USE                             ElastoDyn_Parameters
 
-USE Controls
-USE Controls_Types
+USE ServoDyn
+USE ServoDyn_Types
 
 IMPLICIT                        NONE
 
@@ -53,7 +48,7 @@ TYPE(ED_OutputType)            :: y_ED                                       ! S
 TYPE(ED_InputFile)             :: InputFileData_ED                           ! all the data in the ElastoDyn input file
 
 
-TYPE(Ctrl_ParameterType)         :: p_Ctrl                                       ! Parameters of the controls module
+TYPE(SrvD_ParameterType)         :: p_SrvD                                       ! Parameters of the ServoDyn (controls) module
 
 
 
@@ -90,7 +85,7 @@ CALL FAST_Begin( PriFile, RootName, DirRoot )
 !CALL ED_Init( InitInp, u, p, x, xd, z, OtherState, y, DT, InitOut, ErrStat, ErrMsg )
 !
 
-CALL FAST_Input( p_ED, p_Ctrl, OtherSt_ED, InputFileData_ED, ErrStat, ErrMsg )
+CALL FAST_Input( p_ED, p_SrvD, OtherSt_ED, InputFileData_ED, ErrStat, ErrMsg )
 
 
    ! Set up initial values for all degrees of freedom.
@@ -109,7 +104,7 @@ IF ( SumPrint )  CALL PrintSum( p_ED, OtherSt_ED )
 !
 !IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
 !
-!   CALL MakeADM( p_ED, p_Ctrl, x_ED, OtherSt_ED, InputFileData_ED  )      ! Make the ADAMS dataset file (.adm).
+!   CALL MakeADM( p_ED, p_SrvD, x_ED, OtherSt_ED, InputFileData_ED  )      ! Make the ADAMS dataset file (.adm).
 !
 !   CALL MakeACF( p_ED )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
 !
@@ -142,7 +137,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
-      CALL TimeMarch(  p_ED, p_Ctrl, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )     
+      CALL TimeMarch(  p_ED, p_SrvD, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )     
 
    !ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
    !
@@ -164,7 +159,7 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 !      
 !      IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
 !
-!         CALL CalcSteady( p_ED, p_Ctrl, x_ED, y_ED, OtherSt_ED, u_ED, InputFileData_ED )
+!         CALL CalcSteady( p_ED, p_SrvD, x_ED, y_ED, OtherSt_ED, u_ED, InputFileData_ED )
 !
 !      ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
 !
@@ -180,12 +175,12 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
 !         ENDDO                ! L - Equally-spaced azimuth steps
 !
 !
-!         CALL DrvTrTrq ( p_Ctrl, p_ED%RotSpeed, GBoxTrq )
+!         CALL DrvTrTrq ( p_SrvD, p_ED%RotSpeed, GBoxTrq )
 !
 !      ENDIF
 !
 !
-!      CALL Linearize( p_ED,p_Ctrl,x_ED,y_ED,OtherSt_ED, u_ED, InputFileData_ED )          ! Linearize the model about the steady-state solution.
+!      CALL Linearize( p_ED,p_SrvD,x_ED,y_ED,OtherSt_ED, u_ED, InputFileData_ED )          ! Linearize the model about the steady-state solution.
 !
 !!      CALL CoordSys_Dealloc( OtherSt_ED%CoordSys, ErrStat, ErrMsg ) ! happens in ED_End
 !      IF (ErrStat /= ErrID_none) THEN
