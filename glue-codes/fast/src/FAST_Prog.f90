@@ -93,33 +93,10 @@ CALL FAST_Input( p_ED, p_SrvD, OtherSt_ED, InputFileData_ED, ErrStat, ErrMsg )
 CALL FAST_Initialize( p_ED, x_ED, y_ED, OtherSt_ED, InputFileData_ED )
 
 
-
    ! Print summary information to "*.fsm"?
 
 IF ( SumPrint )  CALL PrintSum( p_ED, OtherSt_ED )
 
-
-
-!   ! Make the equivalent ADAMS model if selected:
-!
-!IF ( ( ADAMSPrep == 2 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Create equivalent ADAMS model.
-!
-!   CALL MakeADM( p_ED, p_SrvD, x_ED, OtherSt_ED, InputFileData_ED  )      ! Make the ADAMS dataset file (.adm).
-!
-!   CALL MakeACF( p_ED )              ! Make the ADAMS control file (.acf) for an ADAMS SIMULATion.
-!
-!   IF ( MakeLINacf )  THEN
-!
-!      IF ( p_ED%DOFs%NActvDOF == 0 )  THEN ! The model has no DOFs
-!         CALL WrScr ( ' NOTE: ADAMS command file '''//TRIM( RootName )//&
-!                      '_ADAMS_LIN.acf'' not created because the model has zero active DOFs.'   )
-!      ELSE                             ! The model has at least one DOF
-!         CALL MakeACF_LIN( p_ED, InputFileData_ED )    ! Make the ADAMS control file (.acf) for an ADAMS/Linear analysis.
-!      ENDIF
-!
-!   ENDIF
-!
-!ENDIF
 
    !...............................................................................................................................
    ! loose coupling
@@ -138,54 +115,6 @@ IF ( ( ADAMSPrep == 1 ) .OR. ( ADAMSPrep == 3 ) )  THEN  ! Run FAST as normal.
    IF ( AnalMode == 1 )  THEN ! Run a time-marching simulation.
       
       CALL TimeMarch(  p_ED, p_SrvD, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )     
-
-   !ELSE                       ! Find a periodic solution, then linearize the model ( AnalMode == 2 ).
-   !
-   !
-!      IF ( p_ED%DOFs%NActvDOF == 0 ) &
-!         CALL ProgAbort ( ' FAST can''t linearize a model with no DOFs.  Enable at least one DOF.' )  ! This is the test that I wish was included with the other tests in routine FAST_IO.f90/Input().
-!
-!!      QAzimInit = OtherState%Q (DOF_GeAz,1)
-!
-!      CALL CoordSys_Alloc( OtherSt_ED%CoordSys, p_ED, ErrStat, ErrMsg )
-!            
-!      IF (ErrStat /= ErrID_none) THEN
-!         IF ( ErrStat >= AbortErrLev ) THEN
-!            CALL ProgAbort( ErrMsg )
-!         ELSE
-!            CALL WrScr( ErrMsg )            
-!         END IF
-!      END IF
-!      
-!      IF ( CalcStdy )  THEN   ! Find the periodic / steady-state solution and interpolate to find the operating point values of the DOFs:
-!
-!         CALL CalcSteady( p_ED, p_SrvD, x_ED, y_ED, OtherSt_ED, u_ED, InputFileData_ED )
-!
-!      ELSE                    ! Set the operating point values of the DOFs to initial conditions (except for the generator azimuth DOF, which increment at a constant rate):
-!
-!         DO L = 1,NAzimStep   ! Loop through all equally-spaced azimuth steps
-!
-!            Qop  (:,L) = OtherSt_ED%Q  (:,OtherSt_ED%IC(1))  ! Initialize the operating
-!            QDop (:,L) = OtherSt_ED%QD (:,OtherSt_ED%IC(1))  ! point values to the
-!            QD2op(:,L) = OtherSt_ED%QD2(:,OtherSt_ED%IC(1))  ! initial conditions
-!
-!            Qop (DOF_GeAz,L) = QAzimInit + ( TwoPi/NAzimStep )*( L - 1 )               ! Make the op generator
-!            IF ( Qop(DOF_GeAz,L) >= TwoPi )  Qop(DOF_GeAz,L) = Qop(DOF_GeAz,L) - TwoPi ! azimuth DOF periodic
-!
-!         ENDDO                ! L - Equally-spaced azimuth steps
-!
-!
-!         CALL DrvTrTrq ( p_SrvD, p_ED%RotSpeed, GBoxTrq )
-!
-!      ENDIF
-!
-!
-!      CALL Linearize( p_ED,p_SrvD,x_ED,y_ED,OtherSt_ED, u_ED, InputFileData_ED )          ! Linearize the model about the steady-state solution.
-!
-!!      CALL CoordSys_Dealloc( OtherSt_ED%CoordSys, ErrStat, ErrMsg ) ! happens in ED_End
-!      IF (ErrStat /= ErrID_none) THEN
-!         CALL WrScr( ErrMsg )
-!      END IF      
 
    ENDIF
    
@@ -208,7 +137,7 @@ CALL ED_End( u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
 
 CALL AD_Terminate(   ErrStat )
 CALL HD_Terminate( HydroDyn_data, ErrStat )
-!CALL Noise_Terminate( )
+
 IF ( BEEP ) CALL UsrAlarm
 
 
