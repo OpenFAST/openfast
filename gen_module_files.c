@@ -711,8 +711,7 @@ END SUBROUTINE Mod1_Input_ExtrapInterp
 #endif
 
 // HERE
-void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t *r, char * deref )
-{
+void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t *r, char * deref ) {
    node_t *q, *r1 ;
    char derefrecurse[NAMELEN] ;
 #if 1
@@ -727,27 +726,69 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
        } else {
        }
      } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   ) {
+       if        ( r->ndims==0 ) {
+       } else if ( r->ndims==1 && order > 0 ) {
+  fprintf(fp,"  ALLOCATE(a1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
+  fprintf(fp,"  ALLOCATE(b1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
+  fprintf(fp,"  ALLOCATE(c1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
+       } else if ( r->ndims==2 && order > 0 ) {
+  fprintf(fp,"  ALLOCATE(a2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"  ALLOCATE(b2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"  ALLOCATE(c2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
+       } else if ( r->ndims==3 && order > 0 ) {
+  fprintf(fp,"  ALLOCATE(a3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3)                   ) ))\n",deref,r->name              ) ;
+  fprintf(fp,"  ALLOCATE(b3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3)                   ) ))\n",deref,r->name              ) ;
+  fprintf(fp,"  ALLOCATE(c3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3)                   ) ))\n",deref,r->name              ) ;
+       } else if ( r->ndims==4 && order > 0 ) {
+  fprintf(fp,"  ALLOCATE(a4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"  ALLOCATE(b4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"  ALLOCATE(c4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
+       } else if ( r->ndims==5 && order > 0 ) {
+  fprintf(fp,"  ALLOCATE(a5(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,5)                         ))\n", deref,r->name         ) ;
+  fprintf(fp,"  ALLOCATE(b5(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,5)                         ))\n", deref,r->name         ) ;
+  fprintf(fp,"  ALLOCATE(c5(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4), &\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,5)                     ))\n",deref,r->name              ) ;
+       } else                    {
+         if ( order > 0 ) fprintf(stderr,"Registry WARNING: too many dimensions for %s%%%s\n",deref,r->name) ;
+       }
+
        if        ( order == 0 ) {
   fprintf(fp,"  u_out%s%%%s = u(1)%s%%%s\n",deref,r->name,deref,r->name) ;
        } else if ( order == 1 ) {
-  fprintf(fp,"  a = -((t(2)*u(1)%s%%%s - t(1)*u(2)%s%%%s)/(t(1) - t(2)))\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"  b = -((-u(1)%s%%%s + u(2)%s%%%s)/(t(1) - t(2)))\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"  u_out%s%%%s = a + b * t_out\n",deref,r->name) ;
+  fprintf(fp,"  a%d = -((t(2)*u(1)%s%%%s - t(1)*u(2)%s%%%s)/(t(1) - t(2)))\n",r->ndims,deref,r->name,deref,r->name) ;
+  fprintf(fp,"  b%d = -((-u(1)%s%%%s + u(2)%s%%%s)/(t(1) - t(2)))\n",r->ndims,deref,r->name,deref,r->name) ;
+  fprintf(fp,"  u_out%s%%%s = a%d + b%d * t_out\n",deref,r->name,r->ndims,r->ndims) ;
        } else if ( order == 2 ) {
-  fprintf(fp,"  a = (t(1)*t(3)*(-t(1) + t(3))*u(2)%s%%%s &\n      + t(2)**2*(t(3)*u(1)%s%%%s - t(1)*u(3)%s%%%s)        &\n",
-                                                     deref,r->name,deref,r->name,deref,r->name) ;
+  fprintf(fp,"  a%d = (t(1)*t(3)*(-t(1) + t(3))*u(2)%s%%%s &\n      + t(2)**2*(t(3)*u(1)%s%%%s - t(1)*u(3)%s%%%s)        &\n",
+                                          r->ndims,  deref,r->name,deref,r->name,deref,r->name) ;
   fprintf(fp,"      + t(2)*(-(t(3)**2*u(1)%s%%%s) + t(1)**2*u(3)%s%%%s))                        &\n",
                                                      deref,r->name,deref,r->name) ;
   fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  b = (t(3)**2*(u(1)%s%%%s - u(2)%s%%%s) &\n      + t(1)**2*(u(2)%s%%%s - u(3)%s%%%s) + t(2)**2*(-u(1)%s%%%s &\n",
-                                                     deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
+  fprintf(fp,"  b%d = (t(3)**2*(u(1)%s%%%s - u(2)%s%%%s) &\n      + t(1)**2*(u(2)%s%%%s - u(3)%s%%%s) + t(2)**2*(-u(1)%s%%%s &\n",
+                                          r->ndims,  deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
   fprintf(fp,"      + u(3)%s%%%s))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                  \n",
                                                      deref,r->name) ;
-  fprintf(fp,"  c = (t(3)*(-u(1)%s%%%s + u(2)%s%%%s) &\n      + t(2)*(u(1)%s%%%s - u(3)%s%%%s) &\n      + t(1)*(-u(2)%s%%%s + u(3)%s%%%s))  &\n",
-                                                     deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
+  fprintf(fp,"  c%d = (t(3)*(-u(1)%s%%%s + u(2)%s%%%s) &\n      + t(2)*(u(1)%s%%%s - u(3)%s%%%s) &\n      + t(1)*(-u(2)%s%%%s + u(3)%s%%%s))  &\n",
+                                          r->ndims,  deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
   fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  u_out%s%%%s = a + b * t_out + c * t_out**2\n",
-                                                     deref,r->name) ;
+  fprintf(fp,"  u_out%s%%%s = a%d + b%d * t_out + c%d * t_out**2\n",
+                                                     deref,r->name,r->ndims,r->ndims,r->ndims) ;
+       }
+       if        ( r->ndims>=1 && order > 0 ) {
+  fprintf(fp,"  DEALLOCATE(a%d)\n",r->ndims) ;
+  fprintf(fp,"  DEALLOCATE(b%d)\n",r->ndims) ;
+  fprintf(fp,"  DEALLOCATE(c%d)\n",r->ndims) ;
        }
      }
    }
@@ -788,10 +829,26 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n") ;
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
   fprintf(fp,"   ! local variables\n") ;
-  fprintf(fp," INTEGER(IntKi)        :: order     ! order of polynomial fit (max 2)\n") ;
-  fprintf(fp," REAL(ReKi)            :: a        ! constant for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi)            :: b        ! constant for extrabpolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi)            :: c        ! constant for extrabpolation/interpolation\n") ;
+  fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
+  fprintf(fp," REAL(ReKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: a1       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:)      :: a2       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:)    :: a3       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: a4       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: a5       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp," ErrStat = ErrID_None\n") ;
   fprintf(fp," ErrMsg  = \"\"\n") ;
@@ -843,11 +900,6 @@ fprintf(fp,"  END IF\n") ;
         {
           // recursive
           gen_extint_order( fp, ModName, 1, r, "" ) ;
-#if 0
-  fprintf(fp,"  a = -((t(2)*u(1)%%%s - t(1)*u(2)%%%s)/(t(1) - t(2)))\n",r->name,r->name) ;
-  fprintf(fp,"  b = -((-u(1)%%%s + u(2)%%%s)/(t(1) - t(2)))\n",r->name,r->name) ;
-  fprintf(fp,"  u_out%%%s = a + b * t_out\n",r->name) ;
-#endif
         }
       }
     }
@@ -879,25 +931,6 @@ fprintf(fp,"  END IF\n") ;
         {
           // recursive
           gen_extint_order( fp, ModName, 2, r, "" ) ;
-#if 0
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
-          {
-  fprintf(fp,"  a = (t(1)*t(3)*(-t(1) + t(3))*u(2)%%%s + t(2)**2*(t(3)*u(1)%%%s - t(1)*u(3)%%%s)        &\n",
-                                                                              r->name,r->name,r->name) ;
-  fprintf(fp,"      + t(2)*(-(t(3)**2*u(1)%%%s) + t(1)**2*u(3)%%%s))                                    &\n",
-                                                                              r->name,r->name) ;
-  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  b = (t(3)**2*(u(1)%%%s - u(2)%%%s) + t(1)**2*(u(2)%%%s - u(3)%%%s) + t(2)**2*(-u(1)%%%s &\n",
-                                                                              r->name,r->name,r->name,r->name,r->name) ;
-  fprintf(fp,"      + u(3)%%%s))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                             \n",
-                                                                              r->name) ;
-  fprintf(fp,"  c = (t(3)*(-u(1)%%%s + u(2)%%%s) + t(2)*(u(1)%%%s - u(3)%%%s) + t(1)*(-u(2)%%%s + u(3)%%%s))  &\n",
-                                                                              r->name,r->name,r->name,r->name,r->name,r->name) ;
-  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                                         \n") ;
-  fprintf(fp,"  u_out%%%s = a + b * t_out + c * t_out**2                                                  \n",
-                                                                              r->name) ;
-          }
-#endif
         }
       }
     }
