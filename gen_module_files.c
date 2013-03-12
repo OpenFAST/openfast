@@ -710,6 +710,36 @@ END SUBROUTINE Mod1_Input_ExtrapInterp
 
 #endif
 
+// HERE
+void gen_extint_order1( FILE *fp, const node_t *ModName, node_t *r, char * deref )
+{
+   node_t *q, *r1 ;
+   char derefrecurse[NAMELEN] ;
+fprintf(stderr,"CALLED gen_extint_order1, r->name %s\n", r->name) ;
+#if 1
+fprintf(stderr,"gen_extint_order1 %s %d\n",r->name,r->type) ;
+   if ( r->type != NULL ) {
+     if ( r->type->type_type == DERIVED ) {
+       if (( q = get_entry( make_lower_temp(r->type->name),ModName->module_ddt_list ) ) != NULL ) {
+         for ( r1 = q->fields ; r1 ; r1 = r1->next )
+         {
+fprintf(stderr,"r1->name %s\n",r1->name) ;
+fprintf(stderr,"r->name %s\n",r->name) ;
+fprintf(stderr,"q->name %s\n",q->name) ;
+           sprintf(derefrecurse,"%s%%%s",deref,r->name) ;
+           gen_extint_order1( fp, ModName, r1, derefrecurse ) ;
+         }
+       } else {
+fprintf(stderr,"didn't find %s\n", r->type->name) ;
+       }
+     } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   ) {
+  fprintf(fp,"  u_out%s%%%s = u(1)%s%%%s\n",deref,r->name,deref,r->name) ;
+     }
+   }
+#endif
+}
+
+
 int
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
 {
@@ -774,14 +804,21 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
       if ( !strcmp( nonick, typnmlong )) {
         for ( r = q->fields ; r ; r = r->next )
         {
+#if 0
           if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
           {
   fprintf(fp,"  u_out%%%s = u(1)%%%s\n",r->name,r->name) ;
           }
+#else
+          // recursive
+          gen_extint_order1( fp, ModName, r, "" ) ;
+
+#endif
         }
       }
     }
   }
+
   fprintf(fp," ELSE IF ( order .eq. 1 ) THEN\n") ;
 fprintf(fp,"  IF ( EqualRealNos( t(1), t(2) ) ) THEN\n") ;
 fprintf(fp,"    ErrStat = ErrID_Fatal\n") ;
