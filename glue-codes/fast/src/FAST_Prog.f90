@@ -82,8 +82,8 @@ CALL DispNVD()
 CALL FAST_Begin( PriFile, RootName, DirRoot )
 
 
-!CALL ED_Init( InitInp, u, p, x, xd, z, OtherState, y, DT, InitOut, ErrStat, ErrMsg )
-!
+CALL ED_Init( InitInData_ED, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, DT, InitOutData_ED, ErrStat, ErrMsg )
+
 
 CALL FAST_Input( p_ED, p_SrvD, OtherSt_ED, InputFileData_ED, ErrStat, ErrMsg )
 

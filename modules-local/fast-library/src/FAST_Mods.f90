@@ -139,31 +139,18 @@ MODULE General
 
 
 INTEGER(4)                   :: StrtTime (8)                                    ! Start time of simulation.
-INTEGER(4)                   :: UnAC      = 24                                  ! I/O unit number for the ADAMS control output file (.acf) useful for an ADAMS SIMULATE analysis.
-INTEGER(4)                   :: UnAD      = 23                                  ! I/O unit number for the ADAMS dataset output file (.adm).
-INTEGER(4)                   :: UnAL      = 25                                  ! I/O unit number for the ADAMS control output file (.acf) useful for an ADAMS LINEAR analysis.
 INTEGER(4)                   :: UnIn      = 20                                  ! I/O unit number for the input files.
-INTEGER(4)                   :: UnLn      = 26                                  ! I/O unit number for the FAST linear output file (.lin).
-INTEGER(4)                   :: UnNoSpec  = 27                                  ! I/O unit number for the noise spectr output file.
-INTEGER(4)                   :: UnNoSPL   = 28                                  ! I/O unit number for the noise SPL output file.
 INTEGER(4)                   :: UnOu      = 21                                  ! I/O unit number for the tabular output file.
 !INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
 INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
 
-LOGICAL                      :: Furling                                         ! Read in additional model properties for furling turbine?
-LOGICAL                      :: Platform                                        ! Read in additional model properties for platform configurations?
 LOGICAL                      :: SumDisp                                         ! Display summary data on screen?
 LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
-CHARACTER(1024)              :: ADAMSFile                                       ! The name of the file containing ADAMS-specific data inputs.
 CHARACTER(1024), ALLOCATABLE :: BldFile  (:)                                    ! The names of the blade-data input files.
 CHARACTER(1024)              :: DirRoot                                         ! The name of the root file including the full path to the current working directory.
-CHARACTER(1024)              :: DynBrkFi                                        ! The name of the dynamic generator brake input file.
 CHARACTER(1024)              :: FTitle                                          ! The title line from the primary input file.
 CHARACTER(1024)              :: FurlFile                                        ! The name of the furling-data input file.
-CHARACTER(1024)              :: LinFile                                         ! The name of the file containing FAST linearization control input parameters.
-CHARACTER(1024)              :: NoiseFile                                       ! The name of the file containing aerodynamic noise input parameters.
-CHARACTER(1024)              :: PtfmFile                                        ! The name of the platform-data input file.
 CHARACTER(1024)              :: RootName                                        ! The root name of the input and output files.
 CHARACTER(1024)              :: TwrFile                                         ! The name of the tower-data input file.
 
