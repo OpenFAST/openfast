@@ -45,15 +45,15 @@ typedef      ^              ^      IntKi  method - - -  "integration method: 1-R
 
 
 # bogus subtype
-#typedef Module1/Mod1    Mongo      ReKi       hallo
-#typedef Module1/Mod1    Bliffy     ReKi       ark
-#typedef Module1/Mod1    Bliffy     ReKi       nyark
-#typedef Module1/Mod1    Bliffy     Mongo      tron
+typedef Module1/Mod1    Mongo      ReKi       hallo
+typedef Module1/Mod1    Bliffy     ReKi       ark
+typedef Module1/Mod1    Bliffy     ReKi       nyark
+typedef Module1/Mod1    Bliffy     Mongo      tron
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
 typedef Module1/Mod1    InputType  ReKi       fc   - - - "coupling force" N
-#typedef Module1/Mod1    InputType  Bliffy     Whoop   - - - "coupling force" N
+typedef Module1/Mod1    InputType  Bliffy     Whoop   - - - "coupling force" N
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

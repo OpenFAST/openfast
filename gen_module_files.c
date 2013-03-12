@@ -711,29 +711,44 @@ END SUBROUTINE Mod1_Input_ExtrapInterp
 #endif
 
 // HERE
-void gen_extint_order1( FILE *fp, const node_t *ModName, node_t *r, char * deref )
+void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t *r, char * deref )
 {
    node_t *q, *r1 ;
    char derefrecurse[NAMELEN] ;
-fprintf(stderr,"CALLED gen_extint_order1, r->name %s\n", r->name) ;
 #if 1
-fprintf(stderr,"gen_extint_order1 %s %d\n",r->name,r->type) ;
    if ( r->type != NULL ) {
      if ( r->type->type_type == DERIVED ) {
        if (( q = get_entry( make_lower_temp(r->type->name),ModName->module_ddt_list ) ) != NULL ) {
          for ( r1 = q->fields ; r1 ; r1 = r1->next )
          {
-fprintf(stderr,"r1->name %s\n",r1->name) ;
-fprintf(stderr,"r->name %s\n",r->name) ;
-fprintf(stderr,"q->name %s\n",q->name) ;
            sprintf(derefrecurse,"%s%%%s",deref,r->name) ;
-           gen_extint_order1( fp, ModName, r1, derefrecurse ) ;
+           gen_extint_order( fp, ModName, order, r1, derefrecurse ) ;
          }
        } else {
-fprintf(stderr,"didn't find %s\n", r->type->name) ;
        }
      } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   ) {
+       if        ( order == 0 ) {
   fprintf(fp,"  u_out%s%%%s = u(1)%s%%%s\n",deref,r->name,deref,r->name) ;
+       } else if ( order == 1 ) {
+  fprintf(fp,"  a = -((t(2)*u(1)%s%%%s - t(1)*u(2)%s%%%s)/(t(1) - t(2)))\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"  b = -((-u(1)%s%%%s + u(2)%s%%%s)/(t(1) - t(2)))\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"  u_out%s%%%s = a + b * t_out\n",deref,r->name) ;
+       } else if ( order == 2 ) {
+  fprintf(fp,"  a = (t(1)*t(3)*(-t(1) + t(3))*u(2)%s%%%s &\n      + t(2)**2*(t(3)*u(1)%s%%%s - t(1)*u(3)%s%%%s)        &\n",
+                                                     deref,r->name,deref,r->name,deref,r->name) ;
+  fprintf(fp,"      + t(2)*(-(t(3)**2*u(1)%s%%%s) + t(1)**2*u(3)%s%%%s))                        &\n",
+                                                     deref,r->name,deref,r->name) ;
+  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  b = (t(3)**2*(u(1)%s%%%s - u(2)%s%%%s) &\n      + t(1)**2*(u(2)%s%%%s - u(3)%s%%%s) + t(2)**2*(-u(1)%s%%%s &\n",
+                                                     deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
+  fprintf(fp,"      + u(3)%s%%%s))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                  \n",
+                                                     deref,r->name) ;
+  fprintf(fp,"  c = (t(3)*(-u(1)%s%%%s + u(2)%s%%%s) &\n      + t(2)*(u(1)%s%%%s - u(3)%s%%%s) &\n      + t(1)*(-u(2)%s%%%s + u(3)%s%%%s))  &\n",
+                                                     deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
+  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  u_out%s%%%s = a + b * t_out + c * t_out**2\n",
+                                                     deref,r->name) ;
+       }
      }
    }
 #endif
@@ -804,16 +819,8 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
       if ( !strcmp( nonick, typnmlong )) {
         for ( r = q->fields ; r ; r = r->next )
         {
-#if 0
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
-          {
-  fprintf(fp,"  u_out%%%s = u(1)%%%s\n",r->name,r->name) ;
-          }
-#else
           // recursive
-          gen_extint_order1( fp, ModName, r, "" ) ;
-
-#endif
+          gen_extint_order( fp, ModName, 0, r, "" ) ;
         }
       }
     }
@@ -834,12 +841,13 @@ fprintf(fp,"  END IF\n") ;
       if ( !strcmp( nonick, typnmlong )) {
         for ( r = q->fields ; r ; r = r->next )
         {
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
-          {
+          // recursive
+          gen_extint_order( fp, ModName, 1, r, "" ) ;
+#if 0
   fprintf(fp,"  a = -((t(2)*u(1)%%%s - t(1)*u(2)%%%s)/(t(1) - t(2)))\n",r->name,r->name) ;
   fprintf(fp,"  b = -((-u(1)%%%s + u(2)%%%s)/(t(1) - t(2)))\n",r->name,r->name) ;
   fprintf(fp,"  u_out%%%s = a + b * t_out\n",r->name) ;
-          }
+#endif
         }
       }
     }
@@ -869,6 +877,9 @@ fprintf(fp,"  END IF\n") ;
       if ( !strcmp( nonick, typnmlong )) {
         for ( r = q->fields ; r ; r = r->next )
         {
+          // recursive
+          gen_extint_order( fp, ModName, 2, r, "" ) ;
+#if 0
           if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
           {
   fprintf(fp,"  a = (t(1)*t(3)*(-t(1) + t(3))*u(2)%%%s + t(2)**2*(t(3)*u(1)%%%s - t(1)*u(3)%%%s)        &\n",
@@ -886,6 +897,7 @@ fprintf(fp,"  END IF\n") ;
   fprintf(fp,"  u_out%%%s = a + b * t_out + c * t_out**2                                                  \n",
                                                                               r->name) ;
           }
+#endif
         }
       }
     }
