@@ -5,7 +5,7 @@ program driver
    integer dof_node,dof_total,nquar
    integer niter
  
-   parameter (norder = 8)
+   parameter (norder = 11)
    parameter (elem_total = 1 )
    parameter (node_total = elem_total*norder + 1)
    parameter (dof_node = 3)
@@ -45,7 +45,7 @@ program driver
    Jacobian = elem_length / 2.d0                   !Determinant of jacobian
    pi = acos(-1.d0)
    
-   niter = 20
+   niter =  10
    
 !  do i=1, norder+1
 !     do j=1, norder+1
