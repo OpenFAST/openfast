@@ -16,9 +16,7 @@ subroutine AssembleRHS(RHS, dof_node, dof_total, uf, &
  
    pi = acos(-1.d0) 
  
-   FmL=6.28d+00
-
-   FmL=10. * 2. * pi
+   FmL = 10. * 2. * pi
   
    RHS = 0.0d0
    
