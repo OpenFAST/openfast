@@ -22,7 +22,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
 
    external filename
    
-   ui=0.0d0
+   ui = 0.0d0
 
    yloc = 0.
 
@@ -35,20 +35,35 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
    
    call outputvtk(position, node_total, dof_total, 'initial' )         
    call outputvtk(position, node_total, dof_total, 'output'//filename(0) )         
+
+   bc = 1.0d0
+
+   bc(1) = 0.0d0
+   bc(2) = 0.0d0
+   bc(3) = 0.0d0  
+
+   call Norm(dof_total, uf, errf) 
+   write(*,*) "Norm of uf at beginning: ", errf
      
    do i=1, niter
    
        write(*,*) "starting Newton iteration ",i
-              
+             
+       write(*,*) "uf(1),uf(2),uf(3)",uf(1),uf(2),uf(3)
+ 
        call AssembleRHS(RHS, dof_node, dof_total, uf, &
                   & norder, hhp, wj, node_total, dmat, &
                   & elem_total, Jacobian)
-                  
-       
-!       if(i==1) RHS(dof_total) = RHS(dof_total) + FmL
+
        call AssembleKT(KT, dof_node, dof_total, norder, node_total, elem_total,&
                     & hhp, uf, dmat, wj, Jacobian)
-                    
+
+       do j = 1, dof_total
+         do k = 1, dof_total
+            KT(j,k) = bc(j)*bc(k)*KT(j,k)
+         enddo
+       enddo
+
 !       write(*,*) "RHS"
 !       do j=1,dof_total
 !           write(*,*) RHS(j)
@@ -56,10 +71,18 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
 !       if(i.gt.1) stop
                     
        errf = 0.0d0
-       
+     
+       rhs = rhs * bc
+ 
        call Norm(dof_total, RHS, errf) 
        
-!       write(*,*) "errf", errf
+       write(*,*) "Norm of Residual", errf
+       write(*,*) "End-point displacement", uf(dof_total - 2), uf(dof_total-1), uf(dof_total)
+
+       if (i.eq.niter) then
+           write(*,*) "here is the residual at niter"
+           write(*,*) RHS
+       endif
        
        if(errf .le. TOLF) return
                     
@@ -67,12 +90,6 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
       ! Solve the linear system
       !====================================
-       bc = 1.0d0
-
-       bc(1) = 0.0d0
-       bc(2) = 0.0d0
-       bc(3) = 0.0d0  
-                    
        
        call CGSolver(RHS, KT, ui, bc, dof_total)
               
