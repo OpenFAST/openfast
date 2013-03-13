@@ -4,63 +4,74 @@ MODULE GlueCodeVars
    USE NWTC_Library
    
 
-   REAL(DbKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec).
-   REAL(DbKi)                :: TStart                                          ! Time to begin tabular output.
-   
    REAL(DbKi), ALLOCATABLE   :: TimeData (:)                                    ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
    REAL(ReKi), ALLOCATABLE   :: AllOutData (:,:)                                ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
+   
    INTEGER(B2Ki)             :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
    INTEGER(IntKi)            :: CurrOutStep                                     ! Time index into the AllOutData array
    INTEGER(IntKi)            :: DecFact                                         ! Decimation factor for tabular output.
    INTEGER(IntKi)            :: NOutSteps                                       ! Maximum number of output steps
 
-   INTEGER(4)                :: ADAMSPrep                                       ! ADAMS preprocessor mode {1: Run FAST, 2: use FAST as a preprocessor to create equivalent ADAMS model, 3: do both} (switch).
-   INTEGER(4)                :: AnalMode                                        ! FAST analysis mode {1: Run a time-marching simulation, 2: create a periodic linearized model} (switch).
+   !LOGICAL                   :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
+   !LOGICAL                   :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
+  
+   
+   CHARACTER(1024)           :: PriFile    = 'primary.fst'                      ! The name of the primary input file.  Can be overwritten on command line.
+   
+REAL(DbKi)                   :: DT                                              ! Integration time step.
+REAL(DbKi)                   :: DT24                                            ! DT/24.
+REAL(DbKi)                   :: TMax                                            ! Total run time.
+REAL(DbKi)                   :: ZTime    = 0.0                                  ! Current simulation time.
+INTEGER(4)                   :: Step     = 0                                    ! Current simulation time step.
+   
+   
+   FAST_Ver = ProgDesc( 'FAST', 'v8.00.00a-bjj', '31-March-2013' )                  ! The version number of this module
+   
+   TYPE, PUBLIC :: FAST_ParameterType
 
-   LOGICAL                   :: CompAero                                        ! Compute aerodynamic forces switch.
-   LOGICAL                   :: CompHydro = .FALSE.                             ! Compute hydrodynamic forces switch.
-   LOGICAL                   :: CompNoise                                       ! Compute aerodynamic noise  switch.  
-   LOGICAL                   :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
-   LOGICAL                   :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
-   
-   LOGICAL                   :: WrBinOutFile  = .true.                          ! Write a binary output file? (.outb)
-   LOGICAL                   :: WrTxtOutFile  = .true.                          ! Write a text (formatted) output file? (.out)
+         ! Feature switches:
+      
+      LOGICAL                   :: CompAero                                         ! Compute aerodynamic forces (flag)
+      LOGICAL                   :: CompServo                                        ! Compute servodynamics (flag)
+      LOGICAL                   :: CompHydro                                        ! Compute hydrodynamics forces (flag)  
+      LOGICAL                   :: CompSub                                          ! Compute sub-structural dynamics (flag)
+      LOGICAL                   :: CompUserPtfmLd                                   ! Compute additional platform loading {false: none, true: user-defined from routine UserPtfmLd} (flag)
+      LOGICAL                   :: CompUserTwrLd                                    ! Compute additional tower loading {false: none, true: user-defined from routine UserTwrLd} (flag)   
 
-   CHARACTER(1024)           :: FileDesc                                        ! Description of run to include in binary output file
+         ! Input file names:
 
-   
-CHARACTER(1024)              :: ADFile                                          ! The name of the AeroDyn input file.
-CHARACTER(1024)              :: PriFile   = 'primary.fst'                       ! The name of the primary input file.  Can be overwritten on command line.
-   
-   
-! not sure where this should go:
-INTEGER(4)                   :: PtfmLdMod    = 0                                ! Platform loading model switch. (Initialized to zero b/c not all models read in PtfmFile) !structural
+      CHARACTER(1024)           :: EDFile                                           ! The name of the ElastoDyn input file
+      CHARACTER(1024)           :: ADFile                                           ! The name of the AeroDyn input file
+      CHARACTER(1024)           :: SrvDFile                                         ! The name of the ServoDyn input file
+      CHARACTER(1024)           :: HDFile                                           ! The name of the HydroDyn input file
+      CHARACTER(1024)           :: SDFile                                           ! The name of the SubDyn input file
 
-   
+
+         ! Parameters for file/screen output:
+         
+      REAL(DbKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec)
+      REAL(DbKi)                :: TStart                                          ! Time to begin tabular output
+      REAL(DbKi)                :: DT_Out                                          ! Time step for tabular output (sec)     
+      INTEGER(IntKi)            :: UnOu                                            ! I/O unit number for the tabular output file
+      LOGICAL                   :: WrBinOutFile                                    ! Write a binary output file? (.outb)
+      LOGICAL                   :: WrTxtOutFile                                    ! Write a text (formatted) output file? (.out)
+      CHARACTER(1)              :: Delim                                           ! Delimiter between columns of text output file (.out): space or tab
+      CHARACTER(20)             :: OutFmt                                          ! Format used for text tabular output (except time); resulting field should be 10 characters   
+      CHARACTER(1024)           :: FileDesc                                        ! Description of run to include in output files (header plus module names/versions)
+      CHARACTER(1024)           :: OutFileRoot                                     ! The rootname of the output files
+
+      
+         ! other parameters we may/may not need
+   CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
+   LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
+
+         
+      
+   END TYPE FAST_ParameterType
+  
 END MODULE GlueCodeVars
 !=======================================================================
-MODULE HydroVals
-!these are variables for HydroDyn
-
-   USE NWTC_Library
-   
-
-   !from Platform
-REAL(ReKi), ALLOCATABLE      :: LAnchxi  (:)                                    ! xi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LAnchyi  (:)                                    ! yi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LAnchzi  (:)                                    ! zi-coordinate of each anchor   in the inertial frame        coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LFairxt  (:)                                    ! xt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LFairyt  (:)                                    ! yt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi), ALLOCATABLE      :: LFairzt  (:)                                    ! zt-coordinate of each fairlead in the tower base / platform coordinate system.
-REAL(ReKi)                   :: PtfmDraft                                       ! Effective platform draft    in calculation of viscous drag term from Morison's equation.
-INTEGER(4)                   :: LineMod                                         ! Mooring line model switch.
-INTEGER(4)                   :: NumLines     = 0                                ! Number of mooring lines.
-INTEGER(4)                   :: PtfmNodes                                       ! Number of platform nodes used in calculation of viscous drag term from Morison's equation.
-
-
-END MODULE HydroVals  
-!=======================================================================
-MODULE AeroElem
+MODULE AeroDyn_Types
 
 
    ! This MODULE stores FAST/AeroDyn interface variables.
@@ -77,92 +88,13 @@ TYPE(AeroConfig)              :: ADInterfaceComponents                        ! 
 
 
 
-END MODULE AeroElem
+END MODULE AeroDyn_Types
 !=======================================================================
-MODULE DriveTrain
-
-!bjj: controls except where noted by structural (strd) -- verify though with Jason
-
-   ! This MODULE stores variables for the drivetrain.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: ElecPwr                                         ! Electrical power, W.
-REAL(ReKi)                   :: GenCTrq                                         ! Constant generator torque.
-REAL(ReKi)                   :: GenSpRZT                                        ! Difference between rated and zero-torque generator speeds for SIG.
-!REAL(ReKi)                   :: GenSpRat                                        ! Rated generator speed.
-!REAL(ReKi)                   :: GenSpZT                                         ! Zero-torque generator speed.
-REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque. !both str (input) & control (output)
-REAL(DbKi)                   :: HSSBrDT                                         ! Time it takes for HSS brake to reach full deployment once deployed.
-REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
-REAL(ReKi)                   :: HSSBrTqF                                        ! Fully deployed HSS brake torque
-REAL(ReKi)                   :: HSSBrTrq                                        ! Instantaneous HSS brake torque
-REAL(ReKi)                   :: HSSBrTrqC                                       ! A copy of the value of HSSBrTrq calculated in SUBROUTINE DrvTrTrq().
-REAL(ReKi)                   :: SIG_PORt                                        ! Pull-out ratio (Tpullout/Trated).
-REAL(ReKi)                   :: SIG_POSl                                        ! Pullout slip.
-REAL(ReKi)                   :: SIG_POTq                                        ! Pullout torque.
-REAL(ReKi)                   :: SIG_RtSp                                        ! Rated speed.
-REAL(ReKi)                   :: SIG_RtTq                                        ! Rated torque.
-REAL(ReKi)                   :: SIG_SlPc                                        ! Rated generator slip percentage.
-REAL(ReKi)                   :: SIG_Slop                                        ! Torque/Speed slope for simple induction generator.
-REAL(ReKi)                   :: SIG_SySp                                        ! Synchronous (zero-torque) generator speed.
-REAL(ReKi)                   :: TEC_A0                                          ! A0 term for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_C0                                          ! C0 term for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_C1                                          ! C1 term for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_C2                                          ! C2 term for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_Freq                                        ! Line frequency for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_K1                                          ! K1 term for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_K2                                          ! K2 term for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_MR                                          ! Magnetizing reactance for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_Re1                                         ! Thevenin's equivalent stator resistance (ohms)
-REAL(ReKi)                   :: TEC_RLR                                         ! Rotor leakage reactance for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_RRes                                        ! Rotor resistance for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_SLR                                         ! Stator leakage reactance for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_SRes                                        ! Stator resistance for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_SySp                                        ! Synchronous speed for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_V1a                                         ! Source voltage for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_VLL                                         ! Line-to-line RMS voltage for Thevenin-equivalent circuit.
-REAL(ReKi)                   :: TEC_Xe1                                         ! Thevenin's equivalent stator leakage reactance (ohms)
-
-INTEGER(4)                   :: TEC_NPol                                        ! Number of poles for Thevenin-equivalent circuit.
-
-
-
-END MODULE DriveTrain
-!=======================================================================
-MODULE General
-
-
-   ! This MODULE stores input variables for general program control.
-
-
-INTEGER(4)                   :: StrtTime (8)                                    ! Start time of simulation.
-INTEGER(4)                   :: UnIn      = 20                                  ! I/O unit number for the input files.
-INTEGER(4)                   :: UnOu      = 21                                  ! I/O unit number for the tabular output file.
-!INTEGER(4)                   :: UnOuBin   = 29                                  ! I/O unit number for the binary output file.
-INTEGER(4)                   :: UnSu      = 22                                  ! I/O unit number for the summary output file.
-
-LOGICAL                      :: SumDisp                                         ! Display summary data on screen?
-LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
-
-CHARACTER(1024), ALLOCATABLE :: BldFile  (:)                                    ! The names of the blade-data input files.
-CHARACTER(1024)              :: DirRoot                                         ! The name of the root file including the full path to the current working directory.
-CHARACTER(1024)              :: FTitle                                          ! The title line from the primary input file.
-CHARACTER(1024)              :: FurlFile                                        ! The name of the furling-data input file.
-CHARACTER(1024)              :: RootName                                        ! The root name of the input and output files.
-CHARACTER(1024)              :: TwrFile                                         ! The name of the tower-data input file.
-
-
-END MODULE General
-!=======================================================================
-MODULE FAST_Hydro
+MODULE HydroDyn_Types
    ! This module stores data for the FAST-HydroDyn interface
    
    USE                          HydroDyn
    USE                          NWTC_Library
-!   USE                          SharedTypes                                      ! Defines the data types shared among modules (e.g., Marker and Load)
    USE                          SharedDataTypes                                  ! Defines the data types shared among modules (e.g., Marker and Load)
 
    SAVE
@@ -177,7 +109,28 @@ MODULE FAST_Hydro
    
    LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
 
-END MODULE FAST_Hydro
+END MODULE HydroDyn_Types
+!=======================================================================
+
+MODULE DriveTrain
+
+!bjj: controls except where noted by structural (strd) -- verify though with Jason
+
+   ! This MODULE stores variables for the drivetrain.
+
+
+USE                             Precision
+
+
+REAL(ReKi)                   :: ElecPwr                                         ! Electrical power, W.
+REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque. !both str (input) & control (output)
+REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
+REAL(ReKi)                   :: HSSBrTqF                                        ! Fully deployed HSS brake torque
+REAL(ReKi)                   :: HSSBrTrq                                        ! Instantaneous HSS brake torque
+REAL(ReKi)                   :: HSSBrTrqC                                       ! A copy of the value of HSSBrTrq calculated in SUBROUTINE DrvTrTrq().
+
+
+END MODULE DriveTrain
 !=======================================================================
 MODULE InitCond
 
@@ -192,9 +145,6 @@ REAL(ReKi), ALLOCATABLE      :: BlPitchInit(:)                                  
 REAL(ReKi)                   :: NacYaw                                          ! Initial or fixed nacelle-yaw angle.
 
 !structural
-
-
-
 
 END MODULE InitCond
 !=======================================================================
@@ -213,28 +163,6 @@ REAL(ReKi)                   :: YawRateNeut = 0.0                               
 
 END MODULE NacelleYaw
 !=======================================================================
-MODULE SimCont
-
-
-   ! This MODULE stores variables for simulation control.
-
-
-USE                             Precision
-!bjj: these variables should be initialized in an intialization subroutine (for Simulink)
-
-
-REAL(DbKi)                   :: DT                                              ! Integration time step.
-REAL(DbKi)                   :: DT24                                            ! DT/24.
-REAL(DbKi)                   :: TMax                                            ! Total run time.
-REAL(DbKi)                   :: ZTime    = 0.0                                  ! Current simulation time.
-
-REAL(4)                      :: UsrTime1                                        ! User CPU time for simulation initialization.
-
-INTEGER(4)                   :: Step     = 0                                    ! Current simulation time step.
-
-
-END MODULE SimCont
-!=======================================================================
 MODULE TipBrakes
 
 
@@ -248,6 +176,11 @@ REAL(ReKi)                   :: TBDrCon                                         
 REAL(ReKi)                   :: TBDrConD                                        ! Tip-brake drag constant during fully-deployed operation, Cd*Area.
 REAL(ReKi)                   :: TBDrConN                                        ! Tip-brake drag constant during normal operation, Cd*Area.
 REAL(DbKi)                   :: TpBrDT                                          ! Time for tip-brake to reach full deployment once released (sec).
+!
+!IF ( TBDrConN < 0.0 )  CALL ProgAbort ( ' TBDrConN must not be negative.' )
+!IF ( TBDrConD < TBDrConN )  CALL ProgAbort( ' TBDrConD must not be less than TBDrConN.' )
+!IF ( TpBrDT < 0.0 )  CALL ProgAbort ( ' TpBrDT must not be negative.' )
+
 
 
 END MODULE TipBrakes
