@@ -44,12 +44,20 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
 
    call Norm(dof_total, uf, errf) 
    write(*,*) "Norm of uf at beginning: ", errf
+   write(*,*) 'Jacobian ',Jacobian
+
+   ! does sum of wj = 2?
+   wj_sum = 0.
+   do i = 1, norder + 1
+      wj_sum = wj_sum + wj(i)
+   enddo
+   if ((abs(wj_sum) - 2.) .gt. 1d-12) stop 'problem with wj'
      
    do i=1, niter
    
        write(*,*) "starting Newton iteration ",i
              
-       write(*,*) "uf(1),uf(2),uf(3)",uf(1),uf(2),uf(3)
+       !write(*,*) "uf(1),uf(2),uf(3)",uf(1),uf(2),uf(3)
  
        call AssembleRHS(RHS, dof_node, dof_total, uf, &
                   & norder, hhp, wj, node_total, dmat, &
@@ -62,6 +70,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
          do k = 1, dof_total
             KT(j,k) = bc(j)*bc(k)*KT(j,k)
          enddo
+         RHS(j) = bc(j) * RHS(j)
        enddo
 
 !       write(*,*) "RHS"
@@ -72,8 +81,6 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
                     
        errf = 0.0d0
      
-       rhs = rhs * bc
- 
        call Norm(dof_total, RHS, errf) 
        
        write(*,*) "Norm of Residual", errf
@@ -92,24 +99,14 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
       !====================================
        
        call CGSolver(RHS, KT, ui, bc, dof_total)
-              
-       
-       
-       
-!       write(*,*) "ui"
-!       do j=1,dof_total
-!           write(*,*) ui(j)
-!       enddo
-!       if(i.gt.4) stop
+
+       ui = bc*ui  ! redundant me thinks
        
        rel_change = ABS(ui-ui_old)
        
-       call Norm(dof_total, uf, temp1)
        call Norm(dof_total, rel_change, temp2) 
        
-       errx = temp2 !- tolx*temp1
-
-!        call Norm(dof_total, RHS, errx)
+       errx = temp2 
 
         write(*,*) "errx",errx
  

@@ -1,6 +1,8 @@
 subroutine RHS_element(rhs_elem, dof_node, dof_total, &
                      & uf, norder, hhp, wj, nelem, node_total, &
                      & dmat,Jacobian)
+
+   implicit double precision (a-h,o-z)
    
    integer dof_node, norder, dof_total, nelem, node_total
    double precision rhs_elem(dof_node*(norder+1))
@@ -19,11 +21,10 @@ subroutine RHS_element(rhs_elem, dof_node, dof_total, &
    
    do nnode=1, norder+1
    
-!   write(*,*) "dmat",dmat
    
       call Amatrix(Am, dof_total, dof_node, norder, hhp, uf, nelem, nnode, Jacobian)
+
       call Dmatrix(Dm, node_total, dmat, nelem, nnode)
-      
       
       call Chimatrix(Chim, dof_total, dof_node, norder, hhp, uf, nelem, nnode, Jacobian)
          
@@ -34,22 +35,25 @@ subroutine RHS_element(rhs_elem, dof_node, dof_total, &
 
       do m=1, norder+1
          temp_id = (m-1)*dof_node
+
          rhs_temp(temp_id+1) = wj(nnode)*hhp_temp(nnode,m)*tempATN(1,1)
+
          rhs_temp(temp_id+2) = wj(nnode)*hhp_temp(nnode,m)*tempATN(2,1)
+
          rhs_temp(temp_id+3) = hhp_temp(nnode,m)*tempATN(3,1)
+
          if(nnode==m) rhs_temp(temp_id+3) = rhs_temp(temp_id+3) + tempATN(4,1)
+
          rhs_temp(temp_id+3) = wj(nnode)*rhs_temp(temp_id+3)   
+
       enddo
       
       rhs_elem = rhs_elem + rhs_temp
    
    enddo
-   
+
    return
    
 end subroutine
-   
-   
-   
    
    
