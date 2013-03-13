@@ -31,28 +31,30 @@
 !
 !***********************************************************************
 
-      subroutine outputvtk(u, nmax, filename)
+      subroutine outputvtk(u, nmax, dofmax, filename)
 
       implicit double precision (a-h,o-z)
+ 
+      integer dofmax
 
-      double precision u(nmax)
+      double precision u(dofmax)
 
-      integer nelem(2,nmax/3-1 )
+      integer nelem(2,nmax-1)
  
       integer ihat_array(4)
 
-      double precision xyz(2,nmax/3)
-      double precision u_vtk(nmax/3)
+      double precision xyz(2,nmax)
+      double precision u_vtk(nmax)
 
       character filename*(*)
 
       character command*80
 
-      numel = nmax / 3 - 1
+      numel = nmax - 1
 
       ihat = 0
 
-      do i = 1, nmax / 3
+      do i = 1, nmax 
 
         ilocal = (i-1)*3 + 1
 
@@ -69,14 +71,14 @@
 
       ielem = 0
       ihat = 0
-      do i = 1, nmax / 3
+      do i = 1, numel
         ihat = ihat + 1
         ielem = ielem + 1 
         nelem(1,ielem) = ihat
         nelem(2,ielem) = ihat + 1
       enddo
 
-      numnodes = nmax / 3
+      numnodes = nmax 
 
       open (unit=20, file=filename//'.vtk', status='unknown')
 
