@@ -34,7 +34,7 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
 !  enddo
     
    do i = 1,dof_total
-      r(i) = bc(i) * (RHS(i) - KTu(i))
+      r(i) = (RHS(i) - KTu(i))
       p(i) = r(i)
       alphatop = alphatop + r(i) * r(i)
    enddo
@@ -57,8 +57,8 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
         
         
       do i=1, dof_total
-         ui(i) = bc(i) * (ui(i) + alpha_cg * p(i) )
-         r(i) = bc(i) * (r(i) - alpha_cg * KTu(i))
+         ui(i) = (ui(i) + alpha_cg * p(i) )
+         r(i) =  (r(i) - alpha_cg * KTu(i))
       enddo
          
       alphatop_new = 0.d0
@@ -81,7 +81,7 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
       beta_cg = alphatop_new / alphatop
          
       do i=1, dof_total
-         p(i) = bc(i) * (r(i) + beta_cg * p(i))
+         p(i) = (r(i) + beta_cg * p(i))
       enddo
           
       alphatop = alphatop_new
