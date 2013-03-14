@@ -86,10 +86,6 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        write(*,*) "Norm of Residual", errf
        write(*,*) "End-point displacement", uf(dof_total - 2), uf(dof_total-1), uf(dof_total)
 
-       if (i.eq.niter) then
-           write(*,*) "here is the residual at niter"
-           write(*,*) RHS
-       endif
        
        if(errf .le. TOLF) return
                     
@@ -113,6 +109,13 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
         if(errx .lt. TOLF*temp1) return
         
         uf = uf + ui
+
+       if (i.eq.niter) then
+           write(*,*) "here is the residual at niter"
+           write(*,*) RHS
+           write(*,*) "here is uf at niter"
+           write(*,*) uf
+       endif
         
         !position = position + uf
  

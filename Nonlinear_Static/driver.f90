@@ -5,7 +5,7 @@ program driver
    integer dof_node,dof_total,nquar
    integer niter
  
-   parameter (norder = 10)
+   parameter (norder = 4)
    parameter (elem_total = 1 )
    parameter (node_total = elem_total*norder + 1)
    parameter (dof_node = 3)
@@ -45,7 +45,7 @@ program driver
    Jacobian = elem_length / 2.d0                   !Determinant of jacobian
    pi = acos(-1.d0)
    
-   niter =  10
+   niter =  2
    
 !  do i=1, norder+1
 !     do j=1, norder+1
@@ -55,12 +55,17 @@ program driver
 !  enddo
 
    call gen_deriv(xj, hhp, norder+1)
-   
 !   do i=1,norder+1
-!       write(*,*) "hhp"
-!       write(*,*) hhp(3,i)
+!     write(*,*) wj(i)
 !   enddo
-   
+!   write(*,*) '-----'
+!   
+!   do i=1,norder+1
+!     do j=1,norder+1
+!       write(*,*) i,j, hhp(i,j)
+!     enddo
+!   enddo
+ 
 !   write(*,*) "hhp"
 !   do i=1, norder+1
 !       do j=1, norder+1
