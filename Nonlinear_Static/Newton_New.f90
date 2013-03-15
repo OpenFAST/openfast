@@ -111,7 +111,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
         
         !position = position + uf
  
-!        call outputvtk(position + uf, dof_total, 'output'//filename(i) )         
+       call outputvtk(position + uf, node_total, dof_total, 'output'//filename(i) )         
                
 !       write(*,*) "Norm"
 !       write(*,*) temp1
