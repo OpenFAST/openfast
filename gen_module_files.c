@@ -710,18 +710,30 @@ END SUBROUTINE Mod1_Input_ExtrapInterp
 
 #endif
 
+#define MAXRECURSE 9
 // HERE
-void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t *r, char * deref ) {
+void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t *r, char * deref, int recurselevel ) {
    node_t *q, *r1 ;
+   int i, j ;
    char derefrecurse[NAMELEN] ;
-#if 1
+   if ( recurselevel > MAXRECURSE ) {
+     fprintf(stderr,"REGISTRY ERROR: too many levels of array subtypes\n") ;
+     exit(9) ;
+   }
    if ( r->type != NULL ) {
      if ( r->type->type_type == DERIVED ) {
        if (( q = get_entry( make_lower_temp(r->type->name),ModName->module_ddt_list ) ) != NULL ) {
          for ( r1 = q->fields ; r1 ; r1 = r1->next )
          {
            sprintf(derefrecurse,"%s%%%s",deref,r->name) ;
-           gen_extint_order( fp, ModName, order, r1, derefrecurse ) ;
+           for ( j = r->ndims ; j > 0 ; j-- ) {
+  fprintf(fp,"  DO i%d%d = 1,SIZE(u_out%s)\n",j,recurselevel,derefrecurse) ;
+             sprintf(derefrecurse,"%s%%%s(i%d%d)",deref,r->name,j,recurselevel) ;
+           }
+           gen_extint_order( fp, ModName, order, r1, derefrecurse, recurselevel+1 ) ;
+           for ( j = r->ndims ; j > 0 ; j-- ) {
+  fprintf(fp,"  ENDDO\n") ;
+           }
          }
        } else {
        }
@@ -792,9 +804,7 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
        }
      }
    }
-#endif
 }
-
 
 int
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
@@ -802,7 +812,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
   char *ddtname ;
   node_t *q, * r ;
-  int founddt, k ;
+  int founddt, k, i, j ;
 
   fprintf(fp,"\n") ;
   fprintf(fp," SUBROUTINE %s_%s_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )\n",ModName->nickname,typnm) ;
@@ -848,6 +858,11 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: a5       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n") ;
+  for ( j = 1 ; j <= 5 ; j++ ) {
+    for ( i = 0 ; i <= MAXRECURSE ; i++ ) {
+  fprintf(fp," INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n",i,j,j,i) ; 
+    }
+  }
   fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp," ErrStat = ErrID_None\n") ;
@@ -877,7 +892,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
         for ( r = q->fields ; r ; r = r->next )
         {
           // recursive
-          gen_extint_order( fp, ModName, 0, r, "" ) ;
+          gen_extint_order( fp, ModName, 0, r, "", 0 ) ;
         }
       }
     }
@@ -899,7 +914,7 @@ fprintf(fp,"  END IF\n") ;
         for ( r = q->fields ; r ; r = r->next )
         {
           // recursive
-          gen_extint_order( fp, ModName, 1, r, "" ) ;
+          gen_extint_order( fp, ModName, 1, r, "", 0 ) ;
         }
       }
     }
@@ -930,7 +945,7 @@ fprintf(fp,"  END IF\n") ;
         for ( r = q->fields ; r ; r = r->next )
         {
           // recursive
-          gen_extint_order( fp, ModName, 2, r, "" ) ;
+          gen_extint_order( fp, ModName, 2, r, "", 0 ) ;
         }
       }
     }
