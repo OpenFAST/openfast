@@ -30,6 +30,8 @@ subroutine KT_element(KT_elem,dof_node,dof_total,norder,hhp,uf,nelem,&
 
       tempKT = tempKT+Xim
       
+!      write(*,*) "ATDA", tempKT
+      
       KT_temp = 0.0d0
       
       do m=1, norder+1
@@ -46,15 +48,15 @@ subroutine KT_element(KT_elem,dof_node,dof_total,norder,hhp,uf,nelem,&
             KT_temp(temp_id+3,temp_id2+2) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(3,2)
             KT_temp(temp_id+3,temp_id2+3) = hhp_temp(nnode,m)*hhp_temp(nnode,j)*tempKT(3,3)
             if(nnode==j) then 
-               KT_temp(temp_id+1,temp_id2+3) =KT_temp(temp_id+1,temp_id2+3) + hhp_temp(nnode,m)*tempKT(1,4)
-               KT_temp(temp_id+2,temp_id2+3) =KT_temp(temp_id+2,temp_id2+3) + hhp_temp(nnode,m)*tempKT(2,4)
-               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp_temp(nnode,m)*tempKT(3,4)
-               if(nnode==m) KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + tempKT(4,4)
+               KT_temp(temp_id+1,temp_id2+3) =KT_temp(temp_id+1,temp_id2+3) + hhp_temp(nnode,m)*tempKT(1,4)*Jacobian
+               KT_temp(temp_id+2,temp_id2+3) =KT_temp(temp_id+2,temp_id2+3) + hhp_temp(nnode,m)*tempKT(2,4)*Jacobian
+               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp_temp(nnode,m)*tempKT(3,4)*Jacobian
+               if(nnode==m) KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + tempKT(4,4)*Jacobian*Jacobian
             endif
             if(nnode==m) then
-               KT_temp(temp_id+3,temp_id2+1) =KT_temp(temp_id+3,temp_id2+1) + hhp_temp(nnode,j)*tempKT(4,1)
-               KT_temp(temp_id+3,temp_id2+2) =KT_temp(temp_id+3,temp_id2+2) + hhp_temp(nnode,j)*tempKT(4,2)
-               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp_temp(nnode,j)*tempKT(4,3)
+               KT_temp(temp_id+3,temp_id2+1) =KT_temp(temp_id+3,temp_id2+1) + hhp_temp(nnode,j)*tempKT(4,1)*Jacobian
+               KT_temp(temp_id+3,temp_id2+2) =KT_temp(temp_id+3,temp_id2+2) + hhp_temp(nnode,j)*tempKT(4,2)*Jacobian
+               KT_temp(temp_id+3,temp_id2+3) =KT_temp(temp_id+3,temp_id2+3) + hhp_temp(nnode,j)*tempKT(4,3)*Jacobian
             endif                      
          enddo 
       enddo

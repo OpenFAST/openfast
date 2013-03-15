@@ -1,5 +1,5 @@
 subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
-                     &hhp,uf,dmat,wj,niter,Jacobian, xloc)
+                     &hhp,uf,dmat,wj,niter,Jacobian, xloc, F_ext)
    
    integer dof_node,dof_total,norder,node_total,elem_total,niter
    double precision hhp(norder+1,norder+1),wj(norder+1),dmat(node_total,3)
@@ -12,6 +12,8 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
    double precision rel_change(dof_total)
 
    double precision xloc(node_total)
+   double precision F_ext
+   
    double precision position(dof_total)
 
    parameter(TOLF  = 1.0d-5)  ! Xiao & Zhong use 1d-5
@@ -22,7 +24,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
 
    external filename
    
-   ui = 0.0d0
+   ui=0.0d0
 
    yloc = 0.
 
@@ -33,59 +35,32 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
       position(3*(i-1)+1) = xloc(i)
    enddo
    
-   call outputvtk(position, node_total, dof_total, 'initial' )         
-   call outputvtk(position, node_total, dof_total, 'output'//filename(0) )         
-
-   bc = 1.0d0
-
-   bc(1) = 0.0d0
-   bc(2) = 0.0d0
-   bc(3) = 0.0d0  
-
-   call Norm(dof_total, uf, errf) 
-   write(*,*) "Norm of uf at beginning: ", errf
-   write(*,*) 'Jacobian ',Jacobian
-
-   ! does sum of wj = 2?
-   wj_sum = 0.
-   do i = 1, norder + 1
-      wj_sum = wj_sum + wj(i)
-   enddo
-   if ((abs(wj_sum) - 2.) .gt. 1d-12) stop 'problem with wj'
+!   call outputvtk(position, dof_total, 'output'//filename(0) )         
      
    do i=1, niter
    
        write(*,*) "starting Newton iteration ",i
-             
-       !write(*,*) "uf(1),uf(2),uf(3)",uf(1),uf(2),uf(3)
- 
+              
        call AssembleRHS(RHS, dof_node, dof_total, uf, &
                   & norder, hhp, wj, node_total, dmat, &
-                  & elem_total, Jacobian)
-
+                  & elem_total, Jacobian, F_ext)
+                  
+       
+!       if(i==1) RHS(dof_total) = RHS(dof_total) + FmL
        call AssembleKT(KT, dof_node, dof_total, norder, node_total, elem_total,&
                     & hhp, uf, dmat, wj, Jacobian)
-
-       do j = 1, dof_total
-         do k = 1, dof_total
-            KT(j,k) = bc(j)*bc(k)*KT(j,k)
-         enddo
-         RHS(j) = bc(j) * RHS(j)
-       enddo
-
-!       write(*,*) "RHS"
+                    
+!       write(*,*) "KT"
 !       do j=1,dof_total
-!           write(*,*) RHS(j)
+!           write(*,*) KT(1,j)
 !       enddo
 !       if(i.gt.1) stop
                     
        errf = 0.0d0
-     
+       
        call Norm(dof_total, RHS, errf) 
        
-       write(*,*) "Norm of Residual", errf
-       write(*,*) "End-point displacement", uf(dof_total - 2), uf(dof_total-1), uf(dof_total)
-
+!       write(*,*) "errf", errf
        
        if(errf .le. TOLF) return
                     
@@ -93,35 +68,53 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
        
       ! Solve the linear system
       !====================================
+       bc = 1.0d0
+
+       bc(1) = 0.0d0
+       bc(2) = 0.0d0
+       bc(3) = 0.0d0  
+                    
        
        call CGSolver(RHS, KT, ui, bc, dof_total)
-
-       ui = bc*ui  ! redundant me thinks
+              
+       
+       
+       
+!       write(*,*) "ui"
+!       do j=1,dof_total
+!           write(*,*) ui(j)
+!       enddo
+!       if(i.gt.4) stop
        
        rel_change = ABS(ui-ui_old)
+
+!       do j=1,3
+!           RHS(i)=0.0d0
+!       enddo
        
+       call Norm(dof_total, uf, temp1)
        call Norm(dof_total, rel_change, temp2) 
        
-       errx = temp2 
+       errx = temp2 !- tolx*temp1
+
+!        call Norm(dof_total, RHS, errx)
 
         write(*,*) "errx",errx
  
+!        if (i .eq. 10) stop
+   
         if(errx .lt. TOLF*temp1) return
+
+!        if(errx .le. TOLF) return
         
         uf = uf + ui
-
-       if (i.eq.niter) then
-           write(*,*) "here is the residual at niter"
-           write(*,*) RHS
-           write(*,*) "here is uf at niter"
-           write(*,*) uf
-       endif
         
         !position = position + uf
  
-        call outputvtk(position + uf, node_total, dof_total, 'output'//filename(i) )         
+!        call outputvtk(position + uf, dof_total, 'output'//filename(i) )         
                
-!       write(*,*) "Norm" !       write(*,*) temp1
+!       write(*,*) "Norm"
+!       write(*,*) temp1
 !       write(*,*) temp2
 !       write(*,*) errx
        
