@@ -18,8 +18,8 @@ subroutine Amatrix(Am,dof_total,dof_node,norder,hhp,uf,nelem,nnode,Jacobian)
       vprime = vprime + hhp(m,nnode)*uf(temp_id+2)
    enddo
    
-   uprime = uprime / Jacobian
-   vprime = vprime / Jacobian
+   uprime = uprime/Jacobian
+   vprime = vprime/Jacobian
 
    Am=0.0d0
 

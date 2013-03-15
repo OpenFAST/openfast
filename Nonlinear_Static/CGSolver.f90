@@ -8,10 +8,10 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
    double precision KTu(dof_total)
    double precision eps, alphatop, alphabot, alpha_cg, alphatop_new
    double precision beta_cg, p(dof_total), r(dof_total)
-   double precision test(dof_total)
+    
     
    eps = 1.0d-20
-   lmax = 100000
+   lmax = 1000000
     
    ui = 0.0d0  ! use zero as initial condition
      
@@ -19,14 +19,14 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
 
    KTu = 0.0d0
 
-!   do i=1,dof_total
-!!     write(*,*) "Line=",i
-!      do j=1,dof_total
-!         
-!         write(*,*) KT(i,j)
-!         KTu(i) = KTu(i) + KT(i,j)*ui(j)
-!      enddo
-!   enddo
+!  do i=1,dof_total
+!     write(*,*) "Line=",i
+!     do j=1,dof_total
+         
+!        write(*,*) KT(i,j)
+!        KTu(i) = KTu(i) + KT(i,j)*ui(j)
+!     enddo
+!  enddo
     
 !  do i=1,dof_total
 !     write(*,*) "RHS Line=",i
@@ -34,7 +34,7 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
 !  enddo
     
    do i = 1,dof_total
-      r(i) = (RHS(i) - KTu(i))
+      r(i) = bc(i) * (RHS(i) - KTu(i))
       p(i) = r(i)
       alphatop = alphatop + r(i) * r(i)
    enddo
@@ -57,8 +57,8 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
         
         
       do i=1, dof_total
-         ui(i) = (ui(i) + alpha_cg * p(i) )
-         r(i) =  (r(i) - alpha_cg * KTu(i))
+         ui(i) = bc(i) * (ui(i) + alpha_cg * p(i) )
+         r(i) = bc(i) * (r(i) - alpha_cg * KTu(i))
       enddo
          
       alphatop_new = 0.d0
@@ -81,7 +81,7 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
       beta_cg = alphatop_new / alphatop
          
       do i=1, dof_total
-         p(i) = (r(i) + beta_cg * p(i))
+         p(i) = bc(i) * (r(i) + beta_cg * p(i))
       enddo
           
       alphatop = alphatop_new
@@ -95,27 +95,7 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
 
    enddo
          
-20 continue
-
-! test solution
-   test = 0.d0
-   test_max = 0.d0
-   ui_max = 0.d0
-   do i = 1, dof_total
-      do j = 1, dof_total
-
-        test(i) = test(i) + KT(i,j)*ui(j)
-         
-      enddo
-
-      if (abs(test(i) - rhs(i)) .gt. test_max) test_max = abs(test(i)-rhs(i))
-      if (abs(ui(i)) .gt. ui_max) ui_max = abs(ui(i))
-
-   enddo
-
-   write(*,*) 'CG-solve residual ', test_max
-   write(*,*) 'ui max ', ui_max
-   write(*,*) 'CG iterations', l
+20 write(*,*) 'CG iterations', l
  
    return
 end subroutine
