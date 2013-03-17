@@ -1287,7 +1287,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
 int
 gen_module( FILE * fp , node_t * ModName )
 {
-  node_t * q, * r ;
+  node_t * p, * q, * r ;
   int i ;
 
   if ( strlen(ModName->nickname) > 0 ) {
@@ -1296,6 +1296,17 @@ gen_module( FILE * fp , node_t * ModName )
       char ** p ;
       for ( p = FAST_preamble ; *p ; p++ ) { fprintf( fp, *p, ModName->name ) ; }
     }
+    for ( p = ModNames ; p ; p = p->next )
+    {
+      // Add use declarations for Modules that are included as "usefrom"
+      if ( p->usefrom ) {
+        if ( strcmp(make_lower_temp(p->name),"nwtc_library") ) {
+          fprintf(fp,"USE %s\n",p->name) ;
+        }
+      }
+    }
+
+    fprintf(fp,"IMPLICIT NONE\n") ;
 
 // generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
