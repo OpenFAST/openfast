@@ -31,14 +31,15 @@ MODULE InflowWind_Subs
 !**********************************************************************************************************************************
 
    USE                              NWTC_Library
-   USE                              SharedInflowDefs
+   USE                              InflowWind_Types
    USE                              InflowWind_Module_Types
 
    !-------------------------------------------------------------------------------------------------
    ! The included wind modules
    !-------------------------------------------------------------------------------------------------
 
-   USE                              IfW_HHWind           ! Types used in IfW_HHWind
+!   USE                              IfW_HHWind           ! Types used in IfW_HHWind
+!   USE                              IfW_FFWind           ! Types used in IfW_FFWind
 !   USE                              HHWind               ! hub-height text wind files
 !   USE                              FFWind               ! full-field binary wind files
 !   USE                              HAWCWind             ! full-field binary wind files in HAWC format
