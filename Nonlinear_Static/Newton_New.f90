@@ -35,7 +35,7 @@ subroutine Newton_New(dof_node,dof_total,norder,node_total,elem_total,&
       position(3*(i-1)+1) = xloc(i)
    enddo
    
-!   call outputvtk(position, dof_total, 'output'//filename(0) )         
+   call outputvtk(position + uf, node_total, dof_total, 'initial' )         
      
    do i=1, niter
    
