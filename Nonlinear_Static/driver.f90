@@ -6,7 +6,7 @@ program driver
    integer niter
    integer nstep
  
-   parameter (norder = 4)
+   parameter (norder = 20)
    parameter (elem_total = 1 )
    parameter (node_total = elem_total*norder + 1)
    parameter (dof_node = 3)
@@ -33,55 +33,38 @@ program driver
    
     
 !  Define material constants
-   Young = 70.0d+09  !1.95d11       !30.0d+06          !      !Young Modulus
+   Young = 180.0d+9  !1.95d11       !30.0d+06          !      !Young Modulus
    shear = 5.0/6.0  !5.d0/6.d0    !Shear Correction Factor
-   poisson = 0.3     !0.0d0      !Poisson's Ratio
-   G1 = 0.5d0 * shear * Young /(1.+poisson)    !Shear Modulus with Correction Factor
+   poisson = 0.3d0     !0.0d0      !Poisson's Ratio
+   G1 = 0.5d0 * shear * Young / ( 1. + poisson )    !Shear Modulus with Correction Factor
    rho = 7700.d0        !Density
     
 !   write(*,*) 'G1 = ', G1
             
 !  Define geometric parameters
    xmin = 0.0d0
-   xmax = 5.0d+00
+   xmax = 10.0d+00
+
    blength = xmax - xmin              !Beam length
+
+   base = 1.
+   h_over_l = 1.d-1
+
    elem_length = blength / float(elem_total)    !Element size
+
    Jacobian = elem_length / 2.d0                   !Determinant of jacobian
    pi = acos(-1.d0)
    
-   FmL = (5.833d+06)*3  !0.3   !2*pi*10 !(5.833d+08)*2*pi   !  !1.75d+07
-   
-   niter = 300   !100000
-   nstep = 1
-   
+   FmL = (5.833d+06)  !0.3   !2*pi*10 !(5.833d+08)*2*pi   !  !1.75d+07
 
+   FmL = 1.  
+   
+   niter = 50   !100000
+   nstep = 1 
+   
 
    call gen_deriv(xj, hhp, norder+1)
    
-!     do i=1, norder+1
-!         do j=1, norder+1
-!             write(*,*) "hhp",hhp(i,j)
-!         enddo
-!      enddo
-   
-!   do i=1,norder+1
-!       write(*,*) "hhp"
-!       write(*,*) hhp(3,i)
-!   enddo
-   
-!   write(*,*) "hhp"
-!   do i=1, norder+1
-!       do j=1, norder+1
-!           write(*,*) hhp(i,j)
-!        enddo
-!   enddo
-   
-!   write(*,*) "wj"
-!   do i=1,norder+1
-!       write(*,*) wj(i)
-!   enddo
-
-!   stop      
 
    call NodeLoc(dloc, nquar, xmin, elem_length,& 
                 & xj, norder, elem_total, node_total, blength)
@@ -101,10 +84,10 @@ program driver
             
 ! Obtain EI and kGA at each node, which is also quadrature point for GLL
 
-   h0=1.0d0
-   h1=1.0d0
-   b0=1.0d0
-   b1=1.0d0
+   h0 = blength * h_over_l
+   h1 = blength * h_over_l
+   b0 = base
+   b1 = base
    
    dmat = 0.0d0
     
@@ -136,18 +119,26 @@ program driver
 !   call NewtonRaphson(dof_node, dof_total, norder, node_total, elem_total,&
 !                    & hhp, uf, dmat, wj, niter, Jacobian)
 
-   FmL_temp = FmL/nstep
-!   write(*,*) "FmL_temp",FmL_temp
-!   do i=1, nstep
-!       write(*,*) "Incremental Load",i
+    delta_FmL = FmL / float(nstep)
+
+    do i=1, nstep
+
+       FmL_temp = float(i) * delta_FmL
+
+       write(*,*) "Incremental Load",i
+
+       write(*,*) "FmL_temp",FmL_temp
+
        call Newton_New(dof_node, dof_total, norder, node_total, elem_total,&
                         & hhp, uf_temp, dmat, wj, niter, Jacobian, dloc, FmL_temp)
-!       uf = uf + uf_temp
-!       uf_temp = uf
+
+        uf = uf + uf_temp
+        uf_temp = uf
        
        write(*,*) "Finished NR"
        write(*,*) uf_temp
-!   enddo
+
+    enddo
                      
          
    

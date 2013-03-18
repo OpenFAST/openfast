@@ -10,7 +10,7 @@ subroutine CGSolver(RHS,KT,ui,bc,dof_total)
    double precision beta_cg, p(dof_total), r(dof_total)
     
     
-   eps = 1.0d-20
+   eps = 1.0d-14
    lmax = 1000000
     
    ui = 0.0d0  ! use zero as initial condition
