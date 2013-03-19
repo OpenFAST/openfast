@@ -40,8 +40,8 @@
 
 /* fields for dimension entries (TABLE="dimspec") */
 #define DIM_NAME       1
-#define DIM_ORDER      2
-#define DIM_SPEC       3
+//#define DIM_ORDER      2
+#define DIM_SPEC       2
 
 #define INLN_SIZE      8000
 #define PARSELINE_SIZE 8000
@@ -361,7 +361,7 @@ reg_parse( FILE * infile )
     {
       node_t * dim_struct ;
       dim_struct = new_node( DIM ) ;
-      if ( get_dim_entry ( tokens[DIM_NAME] ) != NULL )
+      if ( get_dim_entry ( tokens[DIM_NAME], 0 ) != NULL )
         { fprintf(stderr,"Registry warning: dimspec (%s) already defined\n",tokens[DIM_NAME] ) ; }
       strcpy(dim_struct->dim_name,tokens[DIM_NAME]) ;
       if ( set_dim_len( tokens[DIM_SPEC], dim_struct ) )
@@ -387,7 +387,7 @@ reg_parse( FILE * infile )
 }
 
 node_t *
-get_dim_entry( char *s )
+get_dim_entry( char *s, int sw ) // sw = 1 is used when checking an inline dimspec
 {
   node_t * p ;
   for ( p = Dim ; p != NULL ; p = p->next )
@@ -397,7 +397,7 @@ get_dim_entry( char *s )
     }
   }
   /* not found, check if dimension is specified in line */
-  if ( 1 ) {
+  if ( 1  && sw ) {
     node_t * dim_struct ;
     dim_struct = new_node( DIM ) ;
     strncpy(dim_struct->dim_name,s,1) ;
@@ -455,6 +455,9 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
       if (( paren = index(p,'(')) !=NULL )
       {
         dim_entry->coord_start = atoi(paren+1) ;
+      }
+      else if ( isNum(*p) ) {
+        dim_entry->coord_start = atoi(p) ;
       }
       else
       {

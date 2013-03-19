@@ -488,6 +488,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
           if ( r->ndims > 0 ) { sprintf(tmp4,"Re_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
           else                { sprintf(tmp4,"Re_Xferred") ; }
+
           if ( r->ndims > 0 ) {
             gen_mask_alloc(fp, r->ndims, arrayname ) ;
   fprintf(fp,"  %sOutData%%%s = UNPACK(ReKiBuf( %s ),mask%d,OutData%%%s)\n",indent,r->name,tmp4,r->ndims,r->name) ;
@@ -496,18 +497,44 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  %sOutData%%%s%s = ReKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
           }
   fprintf(fp,"  %sRe_Xferred   = Re_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+
         }
         else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
           if ( r->ndims > 0 ) { sprintf(tmp4,"Db_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
           else                { sprintf(tmp4,"Db_Xferred") ; }
+
+          if ( r->ndims > 0 ) {
+            gen_mask_alloc(fp, r->ndims, arrayname ) ;
+  fprintf(fp,"  %sOutData%%%s = UNPACK(DbKiBuf( %s ),mask%d,OutData%%%s)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+  fprintf(fp,"  DEALLOCATE(mask%d)\n",r->ndims) ;
+          } else {
+  fprintf(fp,"  %sOutData%%%s%s = DbKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
+          }
+  fprintf(fp,"  %sDb_Xferred   = Db_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+
+#if 0
   fprintf(fp,"  %sOutData%%%s%s = DbKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
   fprintf(fp,"  %sDb_Xferred   = Db_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+#endif
+
         }
         else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
           if ( r->ndims > 0 ) { sprintf(tmp4,"Int_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
           else                { sprintf(tmp4,"Int_Xferred") ; }
+
+          if ( r->ndims > 0 ) {
+            gen_mask_alloc(fp, r->ndims, arrayname ) ;
+  fprintf(fp,"  %sOutData%%%s = UNPACK(IntKiBuf( %s ),mask%d,OutData%%%s)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+  fprintf(fp,"  DEALLOCATE(mask%d)\n",r->ndims) ;
+          } else {
+  fprintf(fp,"  %sOutData%%%s%s = IntKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
+          }
+  fprintf(fp,"  %sInt_Xferred   = Int_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+
+#if 0
   fprintf(fp,"  %sOutData%%%s%s = IntKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
   fprintf(fp,"  %sInt_Xferred   = Int_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
+#endif
         }
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  ENDIF\n") ;
