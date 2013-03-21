@@ -26,6 +26,7 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "b4ki" )           ;
                                                 strcpy( p->mapsto, "INTEGER(IntKi)")  ;
                                                 add_node_to_end ( p , &Type )         ;
+
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "real" )            ;
                                                 strcpy( p->mapsto, "REAL(ReKi)")      ;
@@ -33,9 +34,14 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "reki" )            ;
                                                 strcpy( p->mapsto, "REAL(ReKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "siki" )            ;
+                                                strcpy( p->mapsto, "REAL(ReKi)")      ;
+                                                add_node_to_end ( p , &Type )         ;
+
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "logical" )         ;
                                                 strcpy( p->mapsto, "LOGICAL")         ;
                                                 add_node_to_end ( p , &Type )         ;
+
 #if 0
 // these have to be handled individually because people can and will put lengths after them
 // so can't make a generic type node here
@@ -43,6 +49,8 @@ init_type_table()
                                                 strcpy( p->mapsto, "CHARACTER") /**/  ;
                                                 add_node_to_end ( p , &Type )         ;
 #endif
+
+
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "doubleprecision" ) ;
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;

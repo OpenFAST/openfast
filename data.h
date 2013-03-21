@@ -124,6 +124,10 @@ EXTERN char thiscom[4*NAMELEN] ;
 
 EXTERN int max_time_level  ;  /* Maximum number of time levels of any state variable */
 
+#define MAXINCLDIRS 10 
+EXTERN int   nincldirs ;
+EXTERN char IncludeDirs[MAXINCLDIRS][NAMELEN] ;
+
 #define  P_XSB  1
 #define  P_XEB  2
 #define  P_YSB  3

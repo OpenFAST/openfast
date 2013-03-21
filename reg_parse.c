@@ -53,19 +53,20 @@ int isNum( char c )
 }
 
 int
-pre_parse( char * dir, FILE * infile, FILE * outfile )
+pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
 {
   /* Decreased size for SOA from 8192 to 8000--double check if necessary, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE], parseline_save[PARSELINE_SIZE] ;
   int found ; 
-  char *p, *q ;
+  char *p, *q, *p1  ;
   char *tokens[MAXTOKENS], *toktmp[MAXTOKENS], newdims[NAMELEN_LONG], newdims4d[NAMELEN_LONG],newname[NAMELEN_LONG] ;
-  int i, ii, len_of_tok ;
+  int i, ii, ifile, len_of_tok ;
   char x, xstr[NAMELEN_LONG] ;
   int is4d, wantstend, wantsbdy ;
   int ifdef_stack_ptr = 0 ;
   int ifdef_stack[100] ;
   int inquote, retval ;
+  int foundit ;
 
   ifdef_stack[0] = 1 ;
   retval = 0 ;
@@ -78,20 +79,66 @@ pre_parse( char * dir, FILE * infile, FILE * outfile )
     if (( p = index( inln , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
     if (( p = index( inln , '\r' )) != NULL  ) *p = '\0' ; /* discard carriage returns (happens on Windows)*/
     for ( p = inln ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
-    if ( !strncmp( make_lower_temp(p) , "include", 7 ) &&  ! ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) ) {
+    p1 = make_lower_temp(p) ;
+    if ( (!strncmp( p1 , "include", 7 ) || !strncmp( p1, "usefrom", 7 ))  &&  ! ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) ) 
+    {
       FILE *include_fp ;
       char include_file_name[128] ;
+      int checking_for_usefrom = !strncmp( p1, "usefrom", 7 ) ;
+
       p += 7 ; for ( ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
       if ( strlen( p ) > 127 ) { fprintf(stderr,"Registry warning: invalid include file name: %s\n", p ) ; }
       else {
-        sprintf( include_file_name , "%s/%s", dir , p ) ;
-        if ( (p=index(include_file_name,'\n')) != NULL ) *p = '\0' ;
-        fprintf(stderr,"opening %s\n",include_file_name) ;
-        if (( include_fp = fopen( include_file_name , "r" )) != NULL ) {
-          pre_parse( dir , include_fp , outfile ) ;
+/* look in a few places for valid include files */
+        foundit = 0 ;
+
+        sprintf( include_file_name , "%s", p ) ;                         // no dir
+        if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
+        if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
+
+        sprintf( include_file_name , "%s/%s", dir , p ) ;                      // dir/path
+        if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
+        if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
+
+        for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
+          sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir specified with -I
+fprintf(stderr,">> %s\n",include_file_name) ;
+          if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
+          if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
+        }
+
+        for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
+          int drive_specified = 0 ;
+          sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir munged for cigwin
+          if ( include_file_name[0] == '/' ) {
+            char tmp[NAMELEN], tmp2[NAMELEN], *dr ;
+            strcpy( tmp2, include_file_name ) ;
+            if ( !strncmp( tmp2, "/cygdrive/", 10 )) {
+               strcpy(tmp,tmp2+11) ; // skip past /cygdrive/c
+               strcpy(tmp2,tmp) ;
+               drive_specified = 1 ;
+            }
+            for ( dr = "abcdefmy" ; *dr ; dr++ ) {
+              sprintf(tmp,"%c:%s%s",*dr,(drive_specified)?"":"/cygwin",tmp2) ;
+              strcpy( include_file_name, tmp ) ;
+fprintf(stderr,">> %s\n",include_file_name) ;
+              if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
+              if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
+            }
+          }
+        }
+
+gotit:  
+        if ( foundit ) {
+          fprintf(stderr,"opening %s %s\n",include_file_name,
+                                           (checking_for_usefrom || usefrom_sw)?"in usefrom mode":"" ) ;
+          pre_parse( dir , include_fp , outfile, ( checking_for_usefrom || usefrom_sw ) ) ;
           fclose( include_fp ) ;
+          continue ;
         } else {
-          fprintf(stderr,"Registry warning: cannot open %s. Ignoring.\n", include_file_name ) ;
+          if ( ! checking_for_usefrom ) {
+            fprintf(stderr,"Registry warning: cannot open %s . Ignoring.\n", include_file_name ) ;
+          }
         } 
       }
     }
@@ -179,18 +226,13 @@ pre_parse( char * dir, FILE * infile, FILE * outfile )
       if ( tokens[i][0] == '"' ) tokens[i]++ ;
       if ((pp=rindex( tokens[i], '"' )) != NULL ) *pp = '\0' ;
     }
-    if      ( !strcmp( tokens[ TABLE ] , "state" ) )
+    if      ( !strncmp( parseline_save , "typedef", 7 ) )
     {
-        int inbrace = 0 ;
-        strcpy( newdims, "" ) ;
-        is4d = 0 ; wantstend = 0 ; wantsbdy = 0 ; 
-        for ( i = 0 ; i < (len_of_tok = strlen(tokens[F_DIMS])) ; i++ )
-        {
-          x = tolower(tokens[F_DIMS][i]) ;
-          if ( x == '{' ) { inbrace = 1 ; }
-          if ( x == '}' ) { inbrace = 0 ; }
-          sprintf(xstr,"%c",x) ;
-          if ( x != 'b' || inbrace ) strcat ( newdims , xstr ) ;
+        char tmp[NAMELEN], *x ;
+        strcpy( tmp, parseline_save ) ;
+        x = index(tmp,' ') ;
+        if (usefrom_sw && x ) {
+          sprintf( parseline_save, "usefrom %s", x ) ;
         }
     }
 normal:
@@ -296,7 +338,9 @@ reg_parse( FILE * infile )
       }
       if ( !strcmp( tokens[ TABLE ] , "usefrom" ) ) 
       {
+#if 0
         strcpy(modname_struct->nickname,"") ;  /* usefrom modules have blank nicknames */
+#endif
         modname_struct->usefrom = 1 ;
       }
 
@@ -553,6 +597,10 @@ is_a_fast_interface_type( char *str )
      !strcmp(make_lower_temp(str), "constraintstatetype") ||
      !strcmp(make_lower_temp(str), "otherstatetype")      ||
      !strcmp(make_lower_temp(str), "parametertype")       ||
+     !strcmp(make_lower_temp(str), "partialoutputpinputtype")            ||
+     !strcmp(make_lower_temp(str), "partialcontstatepinputtype")         ||
+     !strcmp(make_lower_temp(str), "partialdiscstatepinputtype")         ||
+     !strcmp(make_lower_temp(str), "partialconstrstatepinputtype")       ||
             0 ) ;
 
    return(retval) ;
@@ -583,6 +631,14 @@ fast_interface_type_shortname( char *str )
      retval = "OtherState" ;
    } else if (  !strcmp(make_lower_temp(str), "parametertype") ) {
      retval = "Param" ;
+   } else if (  !strcmp(make_lower_temp(str), "partialoutputpinputtype") ) {
+     retval = "dYdu" ;
+   } else if (  !strcmp(make_lower_temp(str), "partialcontstatepinputtype") ) {
+     retval = "dXdu" ;
+   } else if (  !strcmp(make_lower_temp(str), "partialdiscstatepinputtype") ) {
+     retval = "dXddu" ;
+   } else if (  !strcmp(make_lower_temp(str), "partialconstrstatepinputtype") ) {
+     retval = "dZdu" ;
    }
 
    return(retval) ;

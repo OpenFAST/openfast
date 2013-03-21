@@ -1428,7 +1428,7 @@ gen_module_files ( char * dirname )
   
   for ( p = ModNames ; p ; p = p->next )
   {
-    if ( strlen( p->nickname ) > 0 ) {
+    if ( strlen( p->nickname ) > 0  && ! p->usefrom ) {
       if ( strlen(dirname) > 0 ) 
         { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
       else                       

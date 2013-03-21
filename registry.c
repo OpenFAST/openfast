@@ -26,6 +26,7 @@ main( int argc, char *argv[], char *env[] )
   char * thisprog  ;
   int mypid ;
   int wrote_template ;
+  int sw_keep = 0 ;
 #ifndef _WIN32
   struct rlimit rlim ;
 #endif
@@ -58,41 +59,53 @@ main( int argc, char *argv[], char *env[] )
   wrote_template = 0 ;
 
   while (*argv) {
-    if (*argv[0] == '-') {  /* an option */
       if (!strncmp(*argv,"-D",2)) {
         char * p ;
         p = *argv ;
         sym_add(p+2) ;
-      }
-      if (!strcmp(*argv,"-f")) {
+      } else
+      if (!strncmp(*argv,"/D=",3)) {
+        char * p ;
+        p = *argv ;
+        sym_add(p+3) ;
+      } else
+      if (!strcmp(*argv,"-f") || !strcmp(*argv,"/f") ) {
         sw_output_template_force = 1 ;
-      }
+      } else
+      if (!strcmp(*argv,"-I") || !strcmp(*argv,"/I") ) {
+        argv++ ; if ( *argv ) { if( nincldirs < MAXINCLDIRS ) { strcpy( IncludeDirs[nincldirs++], *argv ) ; } }
+      } else
+#if 0
       if (!strcmp(*argv,"-norealloc_lhs")) {
         sw_norealloc_lsh = 1 ;
       }
       if (!strcmp(*argv,"-realloc_lhs")) {
         sw_norealloc_lsh = 0 ;
       }
-      if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry")) {
+#endif
+      if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry") ||
+          !strcmp(*argv,"/template") || !strcmp(*argv,"/registry")  ) {
         char * arg ;
         arg = *argv ;
         argv++ ; if ( *argv ) { strcpy( sw_modname_subst,     *argv ) ; } else { goto usage ; }
         argv++ ; if ( *argv ) { strcpy( sw_modnickname_subst, *argv ) ; } else { goto usage ; }
-        if (!strcmp(arg,"-template")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,0) ;
-        if (!strcmp(arg,"-registry")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,1) ;
+        if (!strcmp(arg+1,"template")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,0) ;
+        if (!strcmp(arg+1,"registry")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,1) ;
         wrote_template = 1 ;
-      }
-      if (!strncmp(*argv,"-h",2)) {
+      } else
+      if (!strcmp(*argv,"-h") || !strcmp(*argv,"/h")) {
 usage:
-        fprintf(stderr,"Usage: %s [-D<MACRO>][-[no]realloc_lhs] registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
+        fprintf(stderr,"Usage: %s [-D<MACRO>]  [-h] [-keep] registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
+        fprintf(stderr,"       %s [/D=<MACRO>] [/h] [/keep] registryfile | [/f] [/template|/registry] ModuleName ModName \n",thisprog) ;
         exit(1) ;
+      } else 
+      if (!strcmp(*argv,"-keep") || !strcmp(*argv,"/keep") ) {
+        sw_keep = 1 ;
       }
-    }
-    else  /* consider it an input file */
-    {
-      strcpy( fname_in , *argv ) ;
-    }
-    argv++ ;
+      else { /* consider it an input file */
+        strcpy( fname_in , *argv ) ;
+      }
+      argv++ ;
   }
   if ( wrote_template ) exit(0) ;
 
@@ -126,7 +139,7 @@ usage:
     strcpy( dir , fname_in ) ;
     if ( ( e = rindex ( dir , '/' ) ) != NULL ) { *e = '\0' ; } else { strcpy( dir, "." ) ; } 
   }
-  if ( pre_parse( dir, fp_in, fp_tmp ) ) {
+  if ( pre_parse( dir, fp_in, fp_tmp, 0 ) ) {
     fprintf(stderr,"Problem with Registry File %s\n", fname_in ) ;
     goto cleanup ;
   }
@@ -149,14 +162,15 @@ usage:
 
   gen_module_files( "." ) ;
 
-
 cleanup:
+   if ( ! sw_keep ) {
 #ifdef _WIN32
-   sprintf(command,"del /F /Q %s\n",fname_tmp );
+     sprintf(command,"del /F /Q %s\n",fname_tmp );
 #else
-   sprintf(command,"/bin/rm -f %s\n",fname_tmp );
+     sprintf(command,"/bin/rm -f %s\n",fname_tmp );
 #endif
-   system( command ) ;
+     system( command ) ;
+   }
 
    exit( 0 ) ;
 
