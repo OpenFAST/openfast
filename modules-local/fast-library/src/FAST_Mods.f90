@@ -18,6 +18,7 @@ MODULE FAST_Types
       REAL(DbKi), ALLOCATABLE           :: TimeData (:)                            ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
       REAL(ReKi), ALLOCATABLE           :: AllOutData (:,:)                        ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
       INTEGER(IntKi)                    :: n_Out                                   ! Time index into the AllOutData array
+      INTEGER(IntKi)                    :: NOutSteps                               ! Maximum number of output steps
 
       INTEGER(IntKi)                    :: numOuts_AD                              ! number of outputs to print from AeroDyn
       INTEGER(IntKi)                    :: numOuts_ED                              ! number of outputs to print from ElastoDyn
@@ -59,7 +60,6 @@ MODULE FAST_Types
       REAL(DbKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec)
       REAL(DbKi)                :: TStart                                          ! Time to begin tabular output
       REAL(DbKi)                :: DT_Out                                          ! Time step for tabular output (sec)
-      INTEGER(IntKi)            :: NOutSteps                                       ! Maximum number of output steps
       LOGICAL                   :: WrBinOutFile                                    ! Write a binary output file? (.outb)
       LOGICAL                   :: WrTxtOutFile                                    ! Write a text (formatted) output file? (.out)
       CHARACTER(1)              :: Delim                                           ! Delimiter between columns of text output file (.out): space or tab
@@ -158,21 +158,6 @@ USE                             Precision
 REAL(ReKi)                   :: TBDrCon                                         ! Instantaneous tip-brake drag constant, Cd*Area.
 REAL(ReKi)                   :: TBDrConD                                        ! Tip-brake drag constant during fully-deployed operation, Cd*Area.
 REAL(ReKi)                   :: TBDrConN                                        ! Tip-brake drag constant during normal operation, Cd*Area.
-REAL(DbKi)                   :: TpBrDT                                          ! Time for tip-brake to reach full deployment once released (sec).
-!
-!IF ( TBDrConN < 0.0 )  CALL ProgAbort ( ' TBDrConN must not be negative.' )
-!IF ( TBDrConD < TBDrConN )  CALL ProgAbort( ' TBDrConD must not be less than TBDrConN.' )
-!IF ( TpBrDT < 0.0 )  CALL ProgAbort ( ' TpBrDT must not be negative.' )
-
-   ! was in TurbCont
-REAL(ReKi), ALLOCATABLE      :: TBDepISp (:)                                    ! Deployment-initiation speed for the tip brakes.
-REAL(DbKi), ALLOCATABLE      :: TTpBrDp  (:)                                    ! Times to initiate deployment of tip brakes.
-REAL(DbKi), ALLOCATABLE      :: TTpBrFl  (:)                                    ! Times at which tip brakes are fully deployed.
-
-
-!TBDepISp  = TBDepISp*RPM2RPS
-!CALL AllocAry( TTpBrFl, p%NumBl, 'TTpBrFl', ErrStat ErrMsg )
-!TTpBrFl = TTpBrFl + TpBrDT
 
 
 END MODULE TipBrakes

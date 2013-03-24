@@ -9,20 +9,20 @@ PROGRAM FAST
 USE     FAST_IO_Subs       
 USE     FASTsubs           
 
+   USE ElastoDyn
+   USE ElastoDyn_Types
 
-USE      HydroDyn
-USE      HydroDyn_Types
+   USE ServoDyn
+   USE ServoDyn_Types
 
-USE      ElastoDyn
-USE      ElastoDyn_Types
+   USE AeroDyn
+   USE AeroDyn_Types
 
-USE      ServoDyn
-USE      ServoDyn_Types
-
-USE      AeroDyn
-USE      AeroDyn_Types
-
-IMPLICIT                        NONE
+   USE HydroDyn
+   USE HydroDyn_Types
+   
+   
+IMPLICIT  NONE
 
 
    ! Local variables:
@@ -53,6 +53,8 @@ TYPE(SrvD_ParameterType)       :: p_SrvD                                     ! P
 TYPE(SrvD_InputType)           :: u_SrvD                                     ! System inputs
 TYPE(SrvD_OutputType)          :: y_SrvD                                     ! System outputs
 
+   ! Data for the AeroDyn module:
+
    ! Data for the HydroDyn module:
 
    ! Other/Misc variables
@@ -69,8 +71,6 @@ INTEGER(IntKi)                 :: ErrStat                                    ! E
 CHARACTER(1024)                :: ErrMsg                                     ! Error message
 
 
-
-
    
    !...............................................................................................................................
    ! initialization
@@ -85,11 +85,12 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
 
    
       ! Initialize NWTC Library (open console, set pi constants)  
-   CALL NWTC_Init()                                                      ! sets the pi constants, open console for output, etc...
+   CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )                                 ! sets the pi constants, open console for output, etc...
    
 
       ! Open and read input files, initialize global parameters.
    CALL FAST_Init( p_FAST, ErrStat, ErrMsg )
+   CALL CheckError( ErrStat, ErrMsg )
 
 
       ! initialize ElastoDyn (must be done first)
@@ -97,13 +98,18 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
    CALL ED_Init( InitInData_ED, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, p_FAST%DT, InitOutData_ED, ErrStat, ErrMsg )
+   CALL CheckError( ErrStat, ErrMsg )
 
+   
+   
       ! initialize ServoDyn
    IF ( p_FAST%CompServo ) THEN
       InitInData_SrvD%InputFile     = p_FAST%SrvDFile
       InitInData_SrvD%RootName      = p_FAST%OutFileRoot
       InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
       CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat, ErrMsg)
+      CALL CheckError( ErrStat, ErrMsg )
+      
       InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
       CALL SrvD_Init( InitInData_SrvD, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, p_FAST%DT, InitOutData_SrvD, ErrStat, ErrMsg )
    END IF
@@ -134,6 +140,7 @@ p_ED%GenEff    = p_SrvD%GenEff
       HD_ConfigMarkers%Substructure%Position = (/0._ReKi, 0._ReKi, 0._ReKi/)   
 
       CALL HD_Init(HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HydroDyn_data, ErrStat)
+      CALL CheckError( ErrStat, 'Error initializing HydroDyn.' )
 
 
       ! get the mapping of the Hydro markers to the structural markers.  For now, we require that they
@@ -186,7 +193,8 @@ p_ED%GenEff    = p_SrvD%GenEff
    ! Set up output for glue code
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
-   
+   CALL CheckError( ErrStat, ErrMsg )
+
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................
@@ -238,6 +246,7 @@ p_ED%GenEff    = p_SrvD%GenEff
       ! Compute all of the output channels and fill in the WriteOutput() array:
 
       CALL ED_CalcOutput( ZTime, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, ErrMsg )
    
    
       ! Check to see if we should output data this time step:
@@ -251,6 +260,7 @@ p_ED%GenEff    = p_SrvD%GenEff
                ! Generate glue-code output file
             CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, ErrStat=ErrStat, ErrMsg=ErrMsg  )
 !            CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, SrvDOutput=y_SrvD%WriteOutput )
+            CALL CheckError( ErrStat, ErrMsg )
             
                ! Generate AeroDyn's element data if desired:
             CALL ElemOut()
@@ -277,25 +287,73 @@ p_ED%GenEff    = p_SrvD%GenEff
    ENDDO        
 
    !...............................................................................................................................
-   ! Clean up modules (and write binary FAST output file), destroy any other variables
-   !...............................................................................................................................
-   
-   CALL FAST_End( p_FAST, y_FAST, ErrStat, ErrMsg )
-
-   CALL ED_End(   u_ED,   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat, ErrMsg )
-   CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
-
-
-   CALL AD_Terminate(   ErrStat )
-   CALL HD_Terminate( HydroDyn_data, ErrStat )
-
-   !...............................................................................................................................
    !  Write simulation times and stop
    !...............................................................................................................................
 
-   CALL RunTimes( StrtTime, UsrTime1, ZTime )
+   CALL ExitThisProgram( Error=.FALSE. )
 
-   CALL NormStop( )
+
+CONTAINS
+   !...............................................................................................................................
+   SUBROUTINE ExitThisProgram( Error )
+   ! This subroutine cleans up if the error is >= AbortErrLev
+   !...............................................................................................................................
+
+         ! Passed arguments
+      LOGICAL, INTENT(IN) :: Error        ! flag to determine if this is an abort or normal stop
       
+      !...............................................................................................................................
+      ! Clean up modules (and write binary FAST output file), destroy any other variables
+      !...............................................................................................................................
+   
+      CALL FAST_End( p_FAST, y_FAST, ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+
+      CALL ED_End(   u_ED,   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+
+      CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+
+      CALL AD_Terminate(   ErrStat )
+      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+
+      CALL HD_Terminate( HydroDyn_data, ErrStat )
+      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+               
+      
+      !............................................................................................................................
+      ! Set exit error code if there was an error;
+      !............................................................................................................................
+
+      IF (Error) CALL ProgAbort( ' ' )
+      
+      !...............................................................................................................................
+      !  Write simulation times and stop
+      !...............................................................................................................................
+
+      CALL RunTimes( StrtTime, UsrTime1, ZTime )     
+      
+      CALL NormStop( )
+      
+
+   END SUBROUTINE ExitThisProgram    
+   !...............................................................................................................................
+   SUBROUTINE CheckError(ErrID,Msg)
+   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
+   !...............................................................................................................................
+
+         ! Passed arguments
+      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+      
+
+      IF ( ErrID /= ErrID_None ) THEN
+         CALL WrScr( NewLine//TRIM(Msg) )
+         IF ( ErrID >= AbortErrLev ) CALL ExitThisProgram( Error=.TRUE. )
+      END IF
+            
+
+   END SUBROUTINE CheckError       
 END PROGRAM FAST
 !=======================================================================
