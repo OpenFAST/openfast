@@ -6,7 +6,7 @@ MODULE FAST_Types
    TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.00.00a-bjj', '31-March-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
-   INTEGER(IntKi), PARAMETER,private      :: OutStrLen   = 10 !bjj -> decide if this has to go in the NWTC Library...
+   INTEGER(IntKi), PARAMETER, PRIVATE :: OutStrLen   = 10 !bjj -> decide if this has to go in the NWTC Library...
    
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE. 
 
@@ -79,7 +79,7 @@ MODULE FAST_Types
 
 
    
-   TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code
+TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code
 
 
 END MODULE FAST_Types
@@ -137,28 +137,7 @@ MODULE DriveTrain
 
 USE                             Precision
 
-
-REAL(ReKi)                   :: ElecPwr                                         ! Electrical power, W.
-REAL(ReKi)                   :: GenTrq                                          ! Electrical generator torque. !both str (input) & control (output)
-REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-). !bjj: used to be local variable in FAST.f90/Subroutine DrvTrTrq()
-REAL(ReKi)                   :: HSSBrTrq                                        ! Instantaneous HSS brake torque
 REAL(ReKi)                   :: HSSBrTrqC                                       ! A copy of the value of HSSBrTrq calculated in SUBROUTINE DrvTrTrq().
 
 END MODULE DriveTrain
-!=======================================================================
-MODULE TipBrakes
-
-
-   ! This MODULE stores input variables for tip brakes.
-
-
-USE                             Precision
-
-
-REAL(ReKi)                   :: TBDrCon                                         ! Instantaneous tip-brake drag constant, Cd*Area.
-REAL(ReKi)                   :: TBDrConD                                        ! Tip-brake drag constant during fully-deployed operation, Cd*Area.
-REAL(ReKi)                   :: TBDrConN                                        ! Tip-brake drag constant during normal operation, Cd*Area.
-
-
-END MODULE TipBrakes
 !=======================================================================
