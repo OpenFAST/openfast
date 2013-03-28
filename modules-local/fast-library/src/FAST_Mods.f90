@@ -23,6 +23,7 @@ MODULE FAST_Types
       INTEGER(IntKi)                    :: numOuts_AD                              ! number of outputs to print from AeroDyn
       INTEGER(IntKi)                    :: numOuts_ED                              ! number of outputs to print from ElastoDyn
       INTEGER(IntKi)                    :: numOuts_HD                              ! number of outputs to print from HydroDyn
+      INTEGER(IntKi)                    :: numOuts_IfW                             ! number of outputs to print from InflowWind
       INTEGER(IntKi)                    :: numOuts_SrvD                            ! number of outputs to print from ServoDyn
       INTEGER(IntKi)                    :: UnOu                                    ! I/O unit number for the tabular output file
 
@@ -73,8 +74,6 @@ MODULE FAST_Types
    CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
    LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
-
-
    END TYPE FAST_ParameterType
 
 
@@ -112,32 +111,15 @@ MODULE HydroDyn_Types
 
    SAVE
 
-
-   CHARACTER(1024)           :: HDFile                                           ! The name of the HydroDyn input file
    TYPE(HD_DataType)         :: HydroDyn_data                                    ! The HydroDyn internal data
 
    TYPE(HydroConfig)         :: HD_ConfigMarkers                                 ! Configuration markers required for HydroDyn
    TYPE(AllHydroMarkers)     :: HD_AllMarkers                                    ! The markers        (is this necessary here?)
    TYPE(AllHydroLoads)       :: HD_AllLoads                                      ! the returned loads (is this necessary here?)
 
-   TYPE(HD_InitDataType)          :: HydroDyn_InitData                          ! HydroDyn initialization data
-   
+   TYPE(HD_InitDataType)     :: HydroDyn_InitData                          ! HydroDyn initialization data   
    
    LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
 
 END MODULE HydroDyn_Types
-!=======================================================================
-
-MODULE DriveTrain
-
-!bjj: controls except where noted by structural (strd) -- verify though with Jason
-
-   ! This MODULE stores variables for the drivetrain.
-
-
-USE                             Precision
-
-REAL(ReKi)                   :: HSSBrTrqC                                       ! A copy of the value of HSSBrTrq calculated in SUBROUTINE DrvTrTrq().
-
-END MODULE DriveTrain
 !=======================================================================

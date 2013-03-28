@@ -55,6 +55,9 @@ TYPE(SrvD_OutputType)          :: y_SrvD                                     ! S
 
    ! Data for the AeroDyn module:
 
+   ! Data for InflowWind module:
+REAL(ReKi)                     :: IfW_WriteOutput(3)                         ! Temporary hack for getting wind speeds from InflowWind
+   
    ! Data for the HydroDyn module:
 
    ! Other/Misc variables
@@ -117,18 +120,13 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
    
    ! initialize AeroDyn
 !IF ( p_FAST%CompAero ) THEN
-! we need the air density yet.... some strangeness still going on.
+! we need the air density (and wind speed) yet.... some strangeness still going on.
    CALL AeroInput(p_ED, p_FAST)            ! Read in the ADFile
 !END IF
 
 
    ! some weirdness that we probably won't need anymore....
-   ! Write data read in from ADFile into MODULEs used by FAST:
-
 p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
-p_SrvD%GBRatio = p_ED%GBRatio
-p_SrvD%GBoxEff = p_ED%GBoxEff
-p_ED%GenEff    = p_SrvD%GenEff
 
 
    ! initialize HydroDyn
@@ -257,9 +255,10 @@ p_ED%GenEff    = p_SrvD%GenEff
          OutTime = NINT( ZTime / p_FAST%DT_out ) * p_FAST%dt_out      
          IF ( EqualRealNos( ZTime, OutTime ) )  THEN 
             
+            IfW_WriteOutput = AD_GetUndisturbedWind( REAL(ZTime, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )
+               
                ! Generate glue-code output file
-            CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, ErrStat=ErrStat, ErrMsg=ErrMsg  )
-!            CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, SrvDOutput=y_SrvD%WriteOutput )
+            CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, SrvDOutput=y_SrvD%WriteOutput, IfWOutput=IfW_WriteOutput, ErrStat=ErrStat, ErrMsg=ErrMsg )
             CALL CheckError( ErrStat, ErrMsg )
             
                ! Generate AeroDyn's element data if desired:

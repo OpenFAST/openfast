@@ -3931,3 +3931,11 @@ v8.00.00a-bj 31-Mar-2012 B. Jonkman
     - removed MODULES Constants, DOFs, CoordSys, and TurbConf
   I removed the CrossProd subroutine from FAST.f90 and replaced it with a CROSS_PRODUCT function in the NWTC Library.
   I removed the feature that enabled users to turn on/off DOFs during simulation (it didn't work properly before)
+
+
+Changes in functionality:
+The Nacelle Yaw Control override maneuver is now based on the commanded yaw position instead of the input (actual) yaw position.
+The override maneuvers for blade pitch and nacelle yaw now specify a rate in the input file instead of an end time. A Matlab script to help the conversion is included in the archive.
+I removed GBRatio from all the user control routines (LSS_Spd send instead of HSS_Spd and GBratio for pitch control)
+I fixed a bug in the SimStatus when SttsTime /= 1 second. 
+We replaced AeroCent with PitchAxis in the blade properties table: PitchAxis = 0.5 - AeroCent
