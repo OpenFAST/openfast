@@ -151,7 +151,7 @@ p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
 
          DO J=1,3
             IF ( .NOT. EqualRealNos( HD_AllMarkers%Substructure(1)%Position(J), HD_ConfigMarkers%Substructure%Position(J) ) ) THEN
-               CALL ProgAbort( ' FAST and HydroDyn must have the same substructure node.' )
+               CALL CheckError( ErrID_Fatal, ' ElastoDyn and HydroDyn must have the same substructure node.' )
             END IF
          END DO
 
@@ -160,18 +160,18 @@ p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
             ! We currently require that the tower nodes in FAST be the same as in HydroDyn
          DO J=1,p_ED%TwrNodes      
             IF ( .NOT. EqualRealNos( p_ED%HNodes(J) + p_ED%TwrRBHt - p_ED%TwrDraft, HD_AllMarkers%Substructure(J)%Position(3) ) ) THEN
-               CALL ProgAbort( ' FAST and HydroDyn must have the same tower nodes.' )
+               CALL CheckError( ErrID_Fatal, ' ElastoDyn and HydroDyn must have the same tower nodes.' )
             ELSEIF ( .NOT. EqualRealNos( 0.0_ReKi, HD_AllMarkers%Substructure(J)%Position(1) ) ) THEN
-               CALL ProgAbort( ' HydroDyn tower markers must have X = 0 m.' )
+               CALL CheckError( ErrID_Fatal, ' HydroDyn tower markers must have X = 0 m.' )
             ELSEIF ( .NOT. EqualRealNos( 0.0_ReKi, HD_AllMarkers%Substructure(J)%Position(2) ) ) THEN
-               CALL ProgAbort( ' HydroDyn tower markers must have Y = 0 m.' )
+               CALL CheckError( ErrID_Fatal, ' HydroDyn tower markers must have Y = 0 m.' )
             ENDIF
          END DO !J: TwrNodes
 
          HD_TwrNodes = .TRUE.
 
       ELSE
-         CALL ProgAbort ( " Unable to discern HydroDyn's discretization." )
+         CALL CheckError( ErrID_Fatal, " Unable to discern HydroDyn's discretization." )
       ENDIF
 
       ! <<<<
@@ -188,7 +188,7 @@ p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
    
 
 !<<<................   
-   ! Set up output for glue code
+   ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
    CALL CheckError( ErrStat, ErrMsg )
@@ -221,6 +221,7 @@ p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
       ! Call predictor-corrector routine:
       !.....................................................
 
+         ! ElastoDyn
       CALL Solver( ZTime, Step, p_ED, x_ED, y_ED, OtherSt_ED, u_ED, p_SrvD, y_SrvD, u_SrvD, OtherSt_SrvD  )
 
       ! Make sure the rotor azimuth is not greater or equal to 360 degrees: (can't we do a mod here?)
@@ -229,7 +230,19 @@ p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
              OtherSt_ED%Q(DOF_GeAz,OtherSt_ED%IC(1)) = OtherSt_ED%Q(DOF_GeAz,OtherSt_ED%IC(1)) - TwoPi
       ENDIF
 
+         ! ServoDyn
+         
+         ! AeroDyn
+      
+         ! HydroDyn
+      IF ( p_FAST%CompHydro ) THEN
+         CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
+         CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in HydroDyn.'  )
+      END IF         
 
+      
+      
+      
       !.....................................................
       ! Advance time:
       !.....................................................
@@ -240,14 +253,129 @@ p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
 
       !.....................................................
       ! Calculate outputs
-      !.....................................................
-      ! Compute all of the output channels and fill in the WriteOutput() array:
+      !.....................................................      
 
+         ! ElastoDyn
       CALL ED_CalcOutput( ZTime, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, ErrMsg )
-   
-   
+
+         ! User Tower Loading
+      IF ( p_FAST%CompUserTwrLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrTwr_CalcOutput()
+      !   CALL UserTwrLd ( JNode, X, XD, t, p_FAST%DirRoot, y_UsrTwr%AddedMass(1:6,1:6,J), (/ y_UsrTwr%Force(:,J),y_UsrTwr%Moment(:,J) /) )
+      END IF
+      
+         ! User Platform Loading
+      IF ( p_FAST%CompUserPtfmLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrPtfm_CalcOutput()
+      !   
+      !   CALL UserPtfmLd ( x_ED%QT(1:6), x_%QDT(1:6), t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, (/ y_UsrPtfm%Force,y_UsrPtfm%Moment /) )
+      !
+      !      ! Ensure that the platform added mass matrix returned by UserPtfmLd, PtfmAM, is symmetric; Abort if necessary:
+      !   IF ( .NOT. IsSymmetric( y_UsrPtfm%AddedMass ) ) THEN
+      !      CALL CheckError ( ErrID_Fatal, ' The user-defined platform added mass matrix is unsymmetric.'// &
+      !                        '  Make sure AddedMass returned by UserPtfmLd() is symmetric.'        )
+      !   END IF
+      !   
+      END IF
+      
+         ! ServoDyn
+      
+         ! AeroDyn
+         
+         ! HydroDyn
+      
+      !.....................................................
+      ! Map outputs to inputs
+      !.....................................................
+      
+      !u_UsrPtfm%X  = x_ED%QT(1:6)
+      !u_UsrPtfm%XD = x_ED%QDT(1:6)
+
+      !u_UsrTwr%X(:,J) = (/ OtherSt_ED%RtHS%rT(J,1),       -OtherSt_ED%RtHS%rT(J,3),       OtherSt_ED%RtHS%rT( J,2)- p%PtfmRef,&
+      !                     OtherSt_ED%RtHS%AngPosEF(J,1), -OtherSt_ED%RtHS%AngPosEF(J,3), OtherSt_ED%RtHS%AngPosEF(J,2)         /) 
+      !u_UsrTwr%XD(:,J) = (/ OtherSt_ED%RtHS%LinVelET(J,1), -OtherSt_ED%RtHS%LinVelET(J,3), OtherSt_ED%RtHS%LinVelET(J,2),&
+      !                      OtherSt_ED%RtHS%AngVelEF(J,1), -OtherSt_ED%RtHS%AngVelEF(J,3), OtherSt_ED%RtHS%AngVelEF(J,2) /)                     
+      
+      !IF ( p_FAST%CompUserTwrLd ) THEN
+      !   u_ED%TwrAddedMass(:,:,J) = y_UsrTwr%AddedMass(:,:,J)
+      !   u_ED%TwrFT(1:3,J)        = y_UsrTwr%Force(:,J) 
+      !   u_ED%TwrFT(4:6,J)        = y_UsrTwr%Moment(:,J)
+      !ELSE
+         u_ED%TwrAddedMass = 0.0_ReKi
+         u_ED%TwrFT        = 0.0_ReKi
+      !END IF
+
+      
+      !IF ( p_FAST%CompUserPtfmLd ) THEN
+      !   u_ED%PtfmAddedMass = y_UsrPtfm%AddedMass
+      !   u_ED%PtfmFt(1:3)   = y_UsrPtfm%Force 
+      !   u_ED%PtfmFt(4:6)   = y_UsrPtfm%Moment      
+      !ELSE
+         u_ED%PtfmAddedMass = 0.0_ReKi
+         u_ED%PtfmFt        = 0.0_ReKi
+      !END IF
+      
+
+      IF ( p_FAST%CompHydro ) THEN
+         IF ( HD_TwrNodes ) THEN
+            DO J=1,p_ED%TwrNodes
+               u_ED%TwrAddedMass(:,:,J) = u_ED%TwrAddedMass(:,:,J) + HD_AllLoads%Substructure(J)%AddedMass
+               u_ED%TwrFT(1:3,J)        = u_ED%TwrFT(1:3,J)        + HD_AllLoads%Substructure(J)%Force
+               u_ED%TwrFT(4:6,J)        = u_ED%TwrFT(4:6,J)        + HD_AllLoads%Substructure(J)%Moment
+            END DO
+         ELSE
+            u_ED%PtfmAddedMass = u_ED%PtfmAddedMass + HD_AllLoads%Substructure(1)%AddedMass
+            u_ED%PtfmFt(1:3)   = u_ED%PtfmFt(1:3)   + HD_AllLoads%Substructure(1)%Force
+            u_ED%PtfmFt(4:6)   = u_ED%PtfmFt(4:6)   + HD_AllLoads%Substructure(1)%Moment  
+         END IF         
+      END IF      
+      
+      
+      
+      !----------------------------------------------------------------------------------------------------
+      ! Map ED outputs to HydroDyn inputs
+      !----------------------------------------------------------------------------------------------------
+      IF ( p_FAST%CompHydro ) THEN
+
+            ! Set the markers required for HydroDyn
+
+         IF ( HD_TwrNodes ) THEN
+
+               ! Set the tower markers required for HydroDyn  (note this is for only the tower loading per unit length (not platform point source) !!!!!
+
+            DO J = 1,p_ED%TwrNodes  ! Loop through the tower nodes / elements
+               HD_AllMarkers%Substructure(J)%Position       = (/ OtherSt_ED%RtHS%rT( J,1), -1.*OtherSt_ED%RtHS%rT( J,3),&
+                                                                 OtherSt_ED%RtHS%rT( J,2) - p_ED%PtfmRef /)
+
+               CALL SmllRotTrans( 'Tower', OtherSt_ED%RtHS%AngPosEF(J,1), -1.*OtherSt_ED%RtHS%AngPosEF(J,3), OtherSt_ED%RtHS%AngPosEF(J,2), &
+                                           HD_AllMarkers%Substructure(J)%Orientation, errstat=ErrStat, errmsg=ErrMsg )
+               CALL CheckError( ErrStat, ErrMsg )
+
+               HD_AllMarkers%Substructure(J)%TranslationVel = (/ OtherSt_ED%RtHS%LinVelET(J,1), -1.*OtherSt_ED%RtHS%LinVelET(J,3), OtherSt_ED%RtHS%LinVelET(J,2) /)
+               HD_AllMarkers%Substructure(J)%RotationVel    = (/ OtherSt_ED%RtHS%AngVelEF(J,1), -1.*OtherSt_ED%RtHS%AngVelEF(J,3), OtherSt_ED%RtHS%AngVelEF(J,2) /)
+            END DO
+
+         ELSE
+
+               ! Set the platform markers required for HydroDyn (note this is for only the tower loading per unit length (not platform point source) !!!!!
+
+            J = SIZE( HD_AllMarkers%Substructure, 1)
+
+            HD_AllMarkers%Substructure(J)%Position      = (/ x_ED%QT(DOF_Sg),x_ED%QT(DOF_Sw),x_ED%QT(DOF_Hv) /)
+            CALL SmllRotTrans( 'Platform', x_ED%QT(DOF_R ),x_ED%QT(DOF_P ),x_ED%QT(DOF_Y ),&
+                               HD_AllMarkers%Substructure(J)%Orientation, errstat=ErrStat, errmsg=ErrMsg )
+            CALL CheckError( ErrStat, ErrMsg )
+
+            HD_AllMarkers%Substructure(J)%TranslationVel= (/ x_ED%QDT(DOF_Sg),x_ED%QDT(DOF_Sw),x_ED%QDT(DOF_Hv) /)
+            HD_AllMarkers%Substructure(J)%RotationVel   = (/ x_ED%QDT(DOF_R ),x_ED%QDT(DOF_P ),x_ED%QDT(DOF_Y ) /)
+
+         END IF
+
+      END IF
+
+      
+      !......................................................
       ! Check to see if we should output data this time step:
+      !......................................................
 
       IF ( ZTime >= p_FAST%TStart )  THEN
          
@@ -314,8 +442,8 @@ CONTAINS
       CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
 
-      CALL AD_Terminate(   ErrStat )
-      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+      CALL AeroDyn_End( ErrStat )
+      IF ( ErrStat /= ErrID_None ) CALL WrScr( 'Error ending AeroDyn' )
 
       CALL HD_Terminate( HydroDyn_data, ErrStat )
       IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )

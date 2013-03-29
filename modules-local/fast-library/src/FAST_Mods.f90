@@ -88,9 +88,7 @@ MODULE AeroDyn_Types
 
    ! This MODULE stores FAST/AeroDyn interface variables.
 
-
-USE                             Precision
-USE                             AeroDyn  ! for type;  Precision is also included so the previous line could be removed, too.
+USE AeroDyn  ! for type;  Precision is also included so the previous line could be removed, too.
 USE AeroGenSubs !FOR ElemOut subroutine...
 
 TYPE(AllAeroMarkers)          :: ADAeroMarkers
@@ -117,7 +115,7 @@ MODULE HydroDyn_Types
    TYPE(AllHydroMarkers)     :: HD_AllMarkers                                    ! The markers        (is this necessary here?)
    TYPE(AllHydroLoads)       :: HD_AllLoads                                      ! the returned loads (is this necessary here?)
 
-   TYPE(HD_InitDataType)     :: HydroDyn_InitData                          ! HydroDyn initialization data   
+   TYPE(HD_InitDataType)     :: HydroDyn_InitData                                ! HydroDyn initialization data   
    
    LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
 
