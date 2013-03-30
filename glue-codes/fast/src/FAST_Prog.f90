@@ -119,14 +119,18 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
 
    
    ! initialize AeroDyn
-!IF ( p_FAST%CompAero ) THEN
+IF ( p_FAST%CompAero ) THEN
 ! we need the air density (and wind speed) yet.... some strangeness still going on.
    CALL AeroInput(p_ED, p_FAST)            ! Read in the ADFile
-!END IF
+   
+      ! some weirdness that we probably won't need anymore....
+   p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
+      
+ELSE
+   p_ED%AirDens = 0
+END IF
 
 
-   ! some weirdness that we probably won't need anymore....
-p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
 
 
    ! initialize HydroDyn
