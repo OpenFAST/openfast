@@ -1,0 +1,35 @@
+---------------- HYDRODYN V2.00.* INPUT FILE -----------------------------------
+NREL 5.0 MW offshore baseline monopile platform with rigid foundation input properties.
+---------------------- TOWER ---------------------------------------------------
+   6.0      TwrDiam     - Tower diameter in Morison's equation (meters) [used only when TwrLdMod=1]
+   1.0      TwrCA       - Normalized hydrodynamic added mass   coefficient in Morison's equation (-) [used only when TwrLdMod=1] [determines TwrCM=1+TwrCA]
+   1.0      TwrCD       - Normalized hydrodynamic viscous drag coefficient in Morison's equation (-) [used only when TwrLdMod=1]
+---------------------- WAVES ---------------------------------------------------
+1027.0      WtrDens     - Water density (kg/m^3)
+  20.0      WtrDpth     - Water depth (meters)
+   2        WaveMod     - Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: user-defind spectrum from routine UserWaveSpctrm (irregular), 4: GH Bladed wave data} (switch)
+   3        WaveStMod   - Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} (switch) [unused when WaveMod=0]
+3630.0      WaveTMax    - Analysis time for incident wave calculations (sec) [unused when WaveMod=0] [determines WaveDOmega=2Pi/WaveTMax in the IFFT]
+   0.25     WaveDT      - Time step for incident wave calculations (sec) [unused when WaveMod=0] [0.1<=WaveDT<=1.0 recommended] [determines WaveOmegaMax=Pi/WaveDT in the IFFT]
+   5.0      WaveHs      - Significant wave height of incident waves (meters) [used only when WaveMod=1 or 2]
+  12.4      WaveTp      - Peak spectral period of incident waves (sec) [used only when WaveMod=1 or 2]
+DEFAULT     WavePkShp   - Peak shape parameter of incident wave spectrum (-) or DEFAULT (unquoted string) [used only when WaveMod=2] [use 1.0 for Pierson-Moskowitz]
+   0.0      WaveDir     - Incident wave propagation heading direction (degrees) [unused when WaveMod=0 or 4]
+123456789   WaveSeed(1) - First  random seed of incident waves [-2147483648 to 2147483647] (-) [unused when WaveMod=0 or 4]
+1011121314  WaveSeed(2) - Second random seed of incident waves [-2147483648 to 2147483647] (-) [unused when WaveMod=0 or 4]
+"unused"    GHWvFile    - Root name of GH Bladed files containing wave data (quoted string) [used only when WaveMod=4]
+---------------------- CURRENT -------------------------------------------------
+   0        CurrMod     - Current profile model {0: none=no current, 1: standard, 2: user-defined from routine UserCurrent} (switch)
+   0.0      CurrSSV0    - Sub-surface current velocity at still water level (m/s) [used only when CurrMod=1]
+DEFAULT     CurrSSDir   - Sub-surface current heading direction (degrees) or DEFAULT (unquoted string) [used only when CurrMod=1]
+  20.0      CurrNSRef   - Near-surface current reference depth (meters) [used only when CurrMod=1]
+   0.0      CurrNSV0    - Near-surface current velocity at still water level (m/s) [used only when CurrMod=1]
+   0.0      CurrNSDir   - Near-surface current heading direction (degrees) [used only when CurrMod=1]
+   0.0      CurrDIV     - Depth-independent current velocity (m/s) [used only when CurrMod=1]
+   0.0      CurrDIDir   - Depth-independent current heading direction (degrees) [used only when CurrMod=1]
+---------------------- OUTPUT (CONT) -------------------------------------------
+   0        NWaveKin    - Number of points where the wave kinematics can be output [0 to 9] (-)
+   0        WaveKinNd   - List of tower nodes that have wave kinematics sensors [1 to TwrNodes] (-) [unused if NWaveKin=0]
+
+
+
