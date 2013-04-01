@@ -116,7 +116,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
    CALL ED_Init( InitInData_ED, Input_ED(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Error in ED_Init:'//ErrMsg )
+   CALL CheckError( ErrStat, 'Error in ED_Init: '//ErrMsg )
 
    IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")
@@ -216,7 +216,7 @@ END IF
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Error in FAST_InitOutput'//ErrMsg )
+   CALL CheckError( ErrStat, 'Error in FAST_InitOutput: '//ErrMsg )
 
    
 
@@ -297,24 +297,29 @@ END IF
 
       
       CALL ED_CalcOutput( ZTime, Input_ED(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Error in ED_CalcOutput'//ErrMsg  )
-
-      IF ( p_FAST%CompServo ) THEN
-         CALL SrvD_InputSolve( p_FAST, u_SrvD, y_ED   )
-         CALL SrvD_CalcOutput( ZTime, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Error in SrvD_CalcOutput'//ErrMsg  )
-      END IF
+            CALL CheckError( ErrStat, 'Error in ED_CalcOutput: '//ErrMsg  )
 
       IF ( p_FAST%CompAero ) THEN
          CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, Input_ED(1), y_ED, ErrStat, ErrMsg )
          ADAeroLoads = AD_CalculateLoads( REAL(ZTime, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
             CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in AeroDyn.'  )
+         
+            !InflowWind outputs
+         IfW_WriteOutput = AD_GetUndisturbedWind( REAL(ZTime, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )            
+            CALL CheckError( ErrStat, 'Error in IfW_CalcOutput: '//ErrMsg  )
+            
       END IF
 
+      IF ( p_FAST%CompServo ) THEN
+         CALL SrvD_InputSolve( p_FAST, u_SrvD, y_ED, IfW_WriteOutput   )
+         CALL SrvD_CalcOutput( ZTime, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Error in SrvD_CalcOutput: '//ErrMsg  )
+      END IF
+            
       IF ( p_FAST%CompHydro ) THEN
          CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, Input_ED(1), y_ED, ErrStat, ErrMsg )
          CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
-            CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in HydroDyn.'  )
+            CALL CheckError( ErrStat, 'Error calculating hydrodynamic loads in HydroDyn.'  )
       END IF
       
          ! User Tower Loading
@@ -348,9 +353,7 @@ END IF
             !bjj FIX THIS algorithm!!! this assumes dt_out is an integer multiple of dt; we will probably have to do some interpolation to get these outputs at the times we want them....
          OutTime = NINT( ZTime / p_FAST%DT_out ) * p_FAST%DT_out      
          IF ( EqualRealNos( ZTime, OutTime ) )  THEN 
-            
-            IF ( p_FAST%CompAero ) IfW_WriteOutput = AD_GetUndisturbedWind( REAL(ZTime, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )
-               
+                           
                ! Generate glue-code output file
             CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, SrvDOutput=y_SrvD%WriteOutput, IfWOutput=IfW_WriteOutput, ErrStat=ErrStat, ErrMsg=ErrMsg )
             CALL CheckError( ErrStat, ErrMsg )
