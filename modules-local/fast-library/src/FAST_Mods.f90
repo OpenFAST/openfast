@@ -78,7 +78,7 @@ MODULE FAST_Types
 
 
    
-TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code
+!TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code
 
 
 END MODULE FAST_Types

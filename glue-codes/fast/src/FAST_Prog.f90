@@ -6,8 +6,7 @@ PROGRAM FAST
    USE NWTC_Library
    USE FAST_Types
 
-USE     FAST_IO_Subs       
-USE     FASTsubs           
+USE FAST_IO_Subs       
 
    USE ElastoDyn
    USE ElastoDyn_Types
@@ -28,7 +27,7 @@ IMPLICIT  NONE
    ! Local variables:
 
    ! Data for the glue code:
-!TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code (bjj: made global for now)
+TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code (bjj: made global for now)
 TYPE(FAST_OutputType)          :: y_FAST                                     ! Output variables for the glue code 
 
    ! Data for the ElastoDyn module:
@@ -67,14 +66,19 @@ REAL(DbKi)                     :: OutTime                                    ! U
 REAL(ReKi)                     :: PrevClockTime                              ! Clock time at start of simulation in seconds 
 REAL                           :: UsrTime1                                   ! User CPU time for simulation initialization
 
-INTEGER(IntKi)                 :: J                                          ! node counter for HydroDyn
+INTEGER(IntKi)                 :: J                                          ! generic loop counter
 INTEGER                        :: StrtTime (8)                               ! Start time of simulation
 INTEGER(IntKi)                 :: Step                                       ! Current simulation time step.
 INTEGER(IntKi)                 :: ErrStat                                    ! Error status
 CHARACTER(1024)                :: ErrMsg                                     ! Error message
+REAL(DbKi), PARAMETER          :: t_initial = 0.0                            ! Initial time
+REAL(DbKi)                     :: dt_global                                  ! we're limiting our simulation to lock-step time steps for now
 
+INTEGER, PARAMETER :: ED_interp_order = 0
+TYPE(ED_InputType)   :: Input_ED(ED_interp_order+1)
+REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
+  
 
-   
    !...............................................................................................................................
    ! initialization
    !...............................................................................................................................
@@ -88,22 +92,34 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
 
    
       ! Initialize NWTC Library (open console, set pi constants)  
-   CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )                                 ! sets the pi constants, open console for output, etc...
+   CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
    
 
       ! Open and read input files, initialize global parameters.
    CALL FAST_Init( p_FAST, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, ErrMsg )
+   CALL CheckError( ErrStat, 'Error in FAST_Init: '//ErrMsg )
 
+   dt_global = p_FAST%dt
 
+   
+   ! We fill ED_InputTimes with negative times, but the Input_ED values are identical for each of those times; this allows 
+   ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
+   ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
+   ! order = SIZE(Input_ED)
+   do j = 1, ED_interp_order + 1  
+      ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+      !Mod1_OutputTimes(i) = t_initial - (j - 1) * dt
+   enddo   
+   
       ! initialize ElastoDyn (must be done first)
    InitInData_ED%InputFile     = p_FAST%EDFile
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
-   CALL ED_Init( InitInData_ED, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, p_FAST%DT, InitOutData_ED, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, ErrMsg )
+   CALL ED_Init( InitInData_ED, Input_ED(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
+   CALL CheckError( ErrStat, 'Error in ED_Init:'//ErrMsg )
 
-   
+   IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
+        CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")
    
       ! initialize ServoDyn
    IF ( p_FAST%CompServo ) THEN
@@ -114,7 +130,11 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
       CALL CheckError( ErrStat, ErrMsg )
       
       InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
-      CALL SrvD_Init( InitInData_SrvD, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, p_FAST%DT, InitOutData_SrvD, ErrStat, ErrMsg )
+      CALL SrvD_Init( InitInData_SrvD, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, dt_global, InitOutData_SrvD, ErrStat, ErrMsg )
+      
+      IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
+        CALL CheckError(ErrID_Fatal, "The value of DT in ServoDyn must be the same as the value of DT in FAST.")
+      
    END IF
 
    
@@ -128,6 +148,7 @@ IF ( p_FAST%CompAero ) THEN
       
 ELSE
    p_ED%AirDens = 0
+   IfW_WriteOutput = 0.0
 END IF
 
 
@@ -195,8 +216,12 @@ END IF
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, ErrMsg )
+   CALL CheckError( ErrStat, 'Error in FAST_InitOutput'//ErrMsg )
 
+   
+
+   
+   
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................
@@ -219,20 +244,33 @@ END IF
 
    Step  = 0_IntKi
    ZTime = 0.0_DbKi
-   DO
+   DO 
+      
+      
+      !      ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
+      !
+      !CALL ED_Input_ExtrapInterp(Input_ED, ED_InputTimes, u_ED, ZTime + p_FAST%dt, ErrStat, ErrMsg)
+      !
+      !   ! Shift "window" of the Mod1_Input and Mod1_Output
+      !
+      !do j = ED_interp_order, 1, -1
+      !   Call ED_CopyInput (Input_ED(j),  Input_ED(j+1),  0, Errstat, ErrMsg)
+      !   !Call Mod1_CopyOutput (Mod1_Output(i),  Mod1_Output(j+1),  0, Errstat, ErrMsg)
+      !   ED_InputTimes(j+1) = ED_InputTimes(j)
+      !   !Mod1_OutputTimes(j+1) = Mod1_OutputTimes(j)
+      !enddo
+      !
+      !Call ED_CopyInput (u_ED,  Input_ED(1),  0, Errstat, ErrMsg)
+      !!Call Mod1_CopyOutput (y1,  Mod1_Output(1),  0, Errstat, ErrMsg)
+      !ED_InputTimes(1) = ZTime + p_FAST%dt
 
       !.....................................................
       ! Call predictor-corrector routine:
       !.....................................................
 
          ! ElastoDyn
-      CALL Solver( ZTime, Step, p_ED, x_ED, y_ED, OtherSt_ED, u_ED, p_SrvD, y_SrvD, u_SrvD, OtherSt_SrvD  )
-
-      ! Make sure the rotor azimuth is not greater or equal to 360 degrees: (can't we do a mod here?)
-
-      IF ( ( OtherSt_ED%Q(DOF_GeAz,OtherSt_ED%IC(1)) + OtherSt_ED%Q(DOF_DrTr,OtherSt_ED%IC(1)) ) >= TwoPi )  THEN
-             OtherSt_ED%Q(DOF_GeAz,OtherSt_ED%IC(1)) = OtherSt_ED%Q(DOF_GeAz,OtherSt_ED%IC(1)) - TwoPi
-      ENDIF
+      CALL ED_UpdateStates( ZTime, Step, Input_ED, ED_InputTimes, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, 'Error in ED_UpdateStates: '//ErrMsg )
 
          ! ServoDyn
          
@@ -240,8 +278,6 @@ END IF
       
          ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
-         CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
-         CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in HydroDyn.'  )
       END IF         
 
       
@@ -256,13 +292,31 @@ END IF
 
 
       !.....................................................
-      ! Calculate outputs
+      ! Input-Output solve:
       !.....................................................      
 
-         ! ElastoDyn
-      CALL ED_CalcOutput( ZTime, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, ErrMsg )
+      
+      CALL ED_CalcOutput( ZTime, Input_ED(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Error in ED_CalcOutput'//ErrMsg  )
 
+      IF ( p_FAST%CompServo ) THEN
+         CALL SrvD_InputSolve( p_FAST, u_SrvD, y_ED   )
+         CALL SrvD_CalcOutput( ZTime, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Error in SrvD_CalcOutput'//ErrMsg  )
+      END IF
+
+      IF ( p_FAST%CompAero ) THEN
+         CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, Input_ED(1), y_ED, ErrStat, ErrMsg )
+         ADAeroLoads = AD_CalculateLoads( REAL(ZTime, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
+            CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in AeroDyn.'  )
+      END IF
+
+      IF ( p_FAST%CompHydro ) THEN
+         CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, Input_ED(1), y_ED, ErrStat, ErrMsg )
+         CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
+            CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in HydroDyn.'  )
+      END IF
+      
          ! User Tower Loading
       IF ( p_FAST%CompUserTwrLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrTwr_CalcOutput()
       !   CALL UserTwrLd ( JNode, X, XD, t, p_FAST%DirRoot, y_UsrTwr%AddedMass(1:6,1:6,J), (/ y_UsrTwr%Force(:,J),y_UsrTwr%Moment(:,J) /) )
@@ -279,104 +333,12 @@ END IF
       !                        '  Make sure AddedMass returned by UserPtfmLd() is symmetric.'        )
       !   END IF
       !   
-      END IF
-      
-         ! ServoDyn
-      
-         ! AeroDyn
-         
-         ! HydroDyn
-      
-      !.....................................................
-      ! Map outputs to inputs
-      !.....................................................
-      
-      !u_UsrPtfm%X  = x_ED%QT(1:6)
-      !u_UsrPtfm%XD = x_ED%QDT(1:6)
-
-      !u_UsrTwr%X(:,J) = (/ OtherSt_ED%RtHS%rT(J,1),       -OtherSt_ED%RtHS%rT(J,3),       OtherSt_ED%RtHS%rT( J,2)- p%PtfmRef,&
-      !                     OtherSt_ED%RtHS%AngPosEF(J,1), -OtherSt_ED%RtHS%AngPosEF(J,3), OtherSt_ED%RtHS%AngPosEF(J,2)         /) 
-      !u_UsrTwr%XD(:,J) = (/ OtherSt_ED%RtHS%LinVelET(J,1), -OtherSt_ED%RtHS%LinVelET(J,3), OtherSt_ED%RtHS%LinVelET(J,2),&
-      !                      OtherSt_ED%RtHS%AngVelEF(J,1), -OtherSt_ED%RtHS%AngVelEF(J,3), OtherSt_ED%RtHS%AngVelEF(J,2) /)                     
-      
-      !IF ( p_FAST%CompUserTwrLd ) THEN
-      !   u_ED%TwrAddedMass(:,:,J) = y_UsrTwr%AddedMass(:,:,J)
-      !   u_ED%TwrFT(1:3,J)        = y_UsrTwr%Force(:,J) 
-      !   u_ED%TwrFT(4:6,J)        = y_UsrTwr%Moment(:,J)
-      !ELSE
-         u_ED%TwrAddedMass = 0.0_ReKi
-         u_ED%TwrFT        = 0.0_ReKi
-      !END IF
-
-      
-      !IF ( p_FAST%CompUserPtfmLd ) THEN
-      !   u_ED%PtfmAddedMass = y_UsrPtfm%AddedMass
-      !   u_ED%PtfmFt(1:3)   = y_UsrPtfm%Force 
-      !   u_ED%PtfmFt(4:6)   = y_UsrPtfm%Moment      
-      !ELSE
-         u_ED%PtfmAddedMass = 0.0_ReKi
-         u_ED%PtfmFt        = 0.0_ReKi
-      !END IF
-      
-
-      IF ( p_FAST%CompHydro ) THEN
-         IF ( HD_TwrNodes ) THEN
-            DO J=1,p_ED%TwrNodes
-               u_ED%TwrAddedMass(:,:,J) = u_ED%TwrAddedMass(:,:,J) + HD_AllLoads%Substructure(J)%AddedMass
-               u_ED%TwrFT(1:3,J)        = u_ED%TwrFT(1:3,J)        + HD_AllLoads%Substructure(J)%Force
-               u_ED%TwrFT(4:6,J)        = u_ED%TwrFT(4:6,J)        + HD_AllLoads%Substructure(J)%Moment
-            END DO
-         ELSE
-            u_ED%PtfmAddedMass = u_ED%PtfmAddedMass + HD_AllLoads%Substructure(1)%AddedMass
-            u_ED%PtfmFt(1:3)   = u_ED%PtfmFt(1:3)   + HD_AllLoads%Substructure(1)%Force
-            u_ED%PtfmFt(4:6)   = u_ED%PtfmFt(4:6)   + HD_AllLoads%Substructure(1)%Moment  
-         END IF         
       END IF      
       
       
-      
-      !----------------------------------------------------------------------------------------------------
-      ! Map ED outputs to HydroDyn inputs
-      !----------------------------------------------------------------------------------------------------
-      IF ( p_FAST%CompHydro ) THEN
-
-            ! Set the markers required for HydroDyn
-
-         IF ( HD_TwrNodes ) THEN
-
-               ! Set the tower markers required for HydroDyn  (note this is for only the tower loading per unit length (not platform point source) !!!!!
-
-            DO J = 1,p_ED%TwrNodes  ! Loop through the tower nodes / elements
-               HD_AllMarkers%Substructure(J)%Position       = (/ OtherSt_ED%RtHS%rT( J,1), -1.*OtherSt_ED%RtHS%rT( J,3),&
-                                                                 OtherSt_ED%RtHS%rT( J,2) - p_ED%PtfmRef /)
-
-               CALL SmllRotTrans( 'Tower', OtherSt_ED%RtHS%AngPosEF(J,1), -1.*OtherSt_ED%RtHS%AngPosEF(J,3), OtherSt_ED%RtHS%AngPosEF(J,2), &
-                                           HD_AllMarkers%Substructure(J)%Orientation, errstat=ErrStat, errmsg=ErrMsg )
-               CALL CheckError( ErrStat, ErrMsg )
-
-               HD_AllMarkers%Substructure(J)%TranslationVel = (/ OtherSt_ED%RtHS%LinVelET(J,1), -1.*OtherSt_ED%RtHS%LinVelET(J,3), OtherSt_ED%RtHS%LinVelET(J,2) /)
-               HD_AllMarkers%Substructure(J)%RotationVel    = (/ OtherSt_ED%RtHS%AngVelEF(J,1), -1.*OtherSt_ED%RtHS%AngVelEF(J,3), OtherSt_ED%RtHS%AngVelEF(J,2) /)
-            END DO
-
-         ELSE
-
-               ! Set the platform markers required for HydroDyn (note this is for only the tower loading per unit length (not platform point source) !!!!!
-
-            J = SIZE( HD_AllMarkers%Substructure, 1)
-
-            HD_AllMarkers%Substructure(J)%Position      = (/ x_ED%QT(DOF_Sg),x_ED%QT(DOF_Sw),x_ED%QT(DOF_Hv) /)
-            CALL SmllRotTrans( 'Platform', x_ED%QT(DOF_R ),x_ED%QT(DOF_P ),x_ED%QT(DOF_Y ),&
-                               HD_AllMarkers%Substructure(J)%Orientation, errstat=ErrStat, errmsg=ErrMsg )
-            CALL CheckError( ErrStat, ErrMsg )
-
-            HD_AllMarkers%Substructure(J)%TranslationVel= (/ x_ED%QDT(DOF_Sg),x_ED%QDT(DOF_Sw),x_ED%QDT(DOF_Hv) /)
-            HD_AllMarkers%Substructure(J)%RotationVel   = (/ x_ED%QDT(DOF_R ),x_ED%QDT(DOF_P ),x_ED%QDT(DOF_Y ) /)
-
-         END IF
-
-      END IF
-
-      
+      CALL ED_InputSolve( p_FAST, p_ED,  Input_ED(1),   y_SrvD )
+                   
+                  
       !......................................................
       ! Check to see if we should output data this time step:
       !......................................................
@@ -384,10 +346,10 @@ END IF
       IF ( ZTime >= p_FAST%TStart )  THEN
          
             !bjj FIX THIS algorithm!!! this assumes dt_out is an integer multiple of dt; we will probably have to do some interpolation to get these outputs at the times we want them....
-         OutTime = NINT( ZTime / p_FAST%DT_out ) * p_FAST%dt_out      
+         OutTime = NINT( ZTime / p_FAST%DT_out ) * p_FAST%DT_out      
          IF ( EqualRealNos( ZTime, OutTime ) )  THEN 
             
-            IfW_WriteOutput = AD_GetUndisturbedWind( REAL(ZTime, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )
+            IF ( p_FAST%CompAero ) IfW_WriteOutput = AD_GetUndisturbedWind( REAL(ZTime, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )
                
                ! Generate glue-code output file
             CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, SrvDOutput=y_SrvD%WriteOutput, IfWOutput=IfW_WriteOutput, ErrStat=ErrStat, ErrMsg=ErrMsg )
