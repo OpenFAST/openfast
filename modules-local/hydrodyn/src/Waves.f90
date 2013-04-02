@@ -12,7 +12,7 @@ MODULE Waves
       ! Parameter data
 
    COMPLEX(ReKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                         ! The imaginary number, SQRT(-1.0)
-   REAL(ReKi),    PARAMETER     :: Inv2Pi   =  0.15915494                       ! 0.5/Pi.
+!   REAL(ReKi),    PARAMETER     :: Inv2Pi   =  0.15915494                       ! 0.5/Pi.
    REAL(ReKi),    PARAMETER     :: PiOvr4   =  0.78539816                       ! Pi/4.
 
 

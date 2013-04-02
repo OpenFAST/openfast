@@ -16,8 +16,8 @@ MODULE HydroDyn
    !-------------------------------------------------------------------------------------------------
    ! Definitions of public data parameters
    !-------------------------------------------------------------------------------------------------
-   TYPE(ProgDesc), PARAMETER, PUBLIC :: HD_Prog = ProgDesc( 'HydroDyn', '(v1.00.01e-bjj, 06-Jul-2012)' )   ! the name/version/date of the hydrodynamics program
-
+   TYPE(ProgDesc), PARAMETER, PUBLIC :: HD_Prog = ProgDesc( 'HydroDyn', 'v1.00.02a-bjj', '02-Apr-2013' )   ! the name/version/date of the hydrodynamics program
+!v1.01.02a-bjj
    !-------------------------------------------------------------------------------------------------
    ! Definitions of private parameters
    !-------------------------------------------------------------------------------------------------    
@@ -130,6 +130,8 @@ SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, ErrSt
    REAL(ReKi)                                      :: Ft   (6)                   ! Temp variable holding the 3 forces and 3 moments ; positive forces are in the direction of motion.
    INTEGER                                         :: J                          ! The number of the current node / element (-) 
    INTEGER                                         :: NMarkers                   ! The number of markers sent to this subroutine
+   
+   CHARACTER(1024) :: ErrMsg
    
    !-------------------------------------------------------------------------------------------------
    ! initialize the error status
@@ -335,7 +337,8 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
    CHARACTER(80)                                :: Line                 ! String to temporarially hold value of read line   
    CHARACTER(1024)                              :: TmpPath              ! Temporary storage for relative path name
    CHARACTER(1024)                              :: TmpFmt             ! Temporary storage for format statement
-     
+   CHARACTER(1024)                              :: ErrMsg
+  
    !-------------------------------------------------------------------------------------------------
    ! Open the file
    !-------------------------------------------------------------------------------------------------   
@@ -948,7 +951,7 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
    IF ( Waves_InitData%NWaveElev > 0 ) THEN
             
       CALL ReadAry ( UnIn, FileName, Waves_InitData%WaveElevxi, Waves_InitData%NWaveElev, 'WaveElevxi', &
-                           'List of xi-coordinates for points where the incident wave elevations can be output', ErrStat )         
+                           'List of xi-coordinates for points where the incident wave elevations can be output', ErrStat, ErrMsg )         
       
    ELSE
          ! this adds a line to the echo file, even if NWaveElev < 1
@@ -968,7 +971,7 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
    IF ( Waves_InitData%NWaveElev > 0 ) THEN
 
       CALL ReadAry ( UnIn, FileName, Waves_InitData%WaveElevyi, Waves_InitData%NWaveElev, 'WaveElevyi', &
-                           'List of yi-coordinates for points where the incident wave elevations can be output', ErrStat )         
+                           'List of yi-coordinates for points where the incident wave elevations can be output', ErrStat, ErrMsg )         
 
    ELSE
    
@@ -1948,15 +1951,15 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
 
 !!bjj: why are we printing this twice? (once in the comments and now again here) probably because it looks nicer to have the headers printed exactly on top of the columns   
 !
-      IF ( Echo )  THEN
-
-         WRITE (UnEc, "( '   LRadAnch     LAngAnch     LDpthAnch    LRadFair     LAngFair     LDrftFair"// &
-                      "    LUnstrLen    LDiam        LMassDen     LEAStff      LSeabedCD    LTenTol     LineNodes   LSNodes:' )" )
-         WRITE (UnEc, "( '   --------     --------     ---------    --------     --------     ---------"// &
-                      "    ---------    -----        --------     -------      ---------    -------     ---------   --------' )" )
-!         Frmt = '( I5, 1X, 12( 2X, '//TRIM( OutFmt )//'), 4X, I5 )'
-
-      ENDIF
+!      IF ( Echo )  THEN
+!
+!         WRITE (UnEc, "( '   LRadAnch     LAngAnch     LDpthAnch    LRadFair     LAngFair     LDrftFair"// &
+!                      "    LUnstrLen    LDiam        LMassDen     LEAStff      LSeabedCD    LTenTol     LineNodes   LSNodes:' )" )
+!         WRITE (UnEc, "( '   --------     --------     ---------    --------     --------     ---------"// &
+!                      "    ---------    -----        --------     -------      ---------    -------     ---------   --------' )" )
+!!         Frmt = '( I5, 1X, 12( 2X, '//TRIM( OutFmt )//'), 4X, I5 )'
+!
+!      ENDIF
 
 
          ! Read in the mooring line data.
@@ -2026,29 +2029,29 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
 !            END IF                             
          END DO !J            
 
-         IF ( Echo )  THEN
-            WRITE( TmpFmt, '( 12( 2X, '//TRIM( HD_Data%HDOut_Data%OutFmt )// '), 2X, I5  ) ' )                  &
-                                    LRadAnch                            , LAngAnch                            , &
-                                    LDpthAnch                           , LRadFair                            , &
-                                    LAngFair                            , LDrftFair                           , &
-                                    FP_InitData%MooringLine(I)%LUnstrLen, FP_InitData%MooringLine(I)%LDiam    , &
-                                    FP_InitData%MooringLine(I)%LMassDen , FP_InitData%MooringLine(I)%LEAStff  , &
-                                    FP_InitData%MooringLine(I)%LSeabedCD, FP_InitData%MooringLine(I)%LTenTol  , &
-                                    FP_InitData%MooringLine(I)%LineNodes
-            
-            
-            IF ( FP_InitData%MooringLine(I)%LineNodes  > 0 ) THEN       ! break this up for gfortran
-            
-               WRITE (UnEc,'( A, 4X, ' //TRIM( Int2LStr(FP_InitData%MooringLine(I)%LineNodes) )//'( 2X, '   &
-                                       //TRIM( HD_Data%HDOut_Data%OutFmt )//' ) )'                        ) &
-                                         TRIM( TmpFmt ),  FP_InitData%MooringLine(I)%LSNodes
-                                      
-            ELSE
-               WRITE (UnEc, '( A )' ) TRIM( TmpFmt)
-            END IF                                      
-                              
-         ENDIF
-
+         !IF ( Echo )  THEN
+         !   WRITE( TmpFmt, '( 12( 2X, '//TRIM( HD_Data%HDOut_Data%OutFmt )// '), 2X, I5  ) ' )                  &
+         !                           LRadAnch                            , LAngAnch                            , &
+         !                           LDpthAnch                           , LRadFair                            , &
+         !                           LAngFair                            , LDrftFair                           , &
+         !                           FP_InitData%MooringLine(I)%LUnstrLen, FP_InitData%MooringLine(I)%LDiam    , &
+         !                           FP_InitData%MooringLine(I)%LMassDen , FP_InitData%MooringLine(I)%LEAStff  , &
+         !                           FP_InitData%MooringLine(I)%LSeabedCD, FP_InitData%MooringLine(I)%LTenTol  , &
+         !                           FP_InitData%MooringLine(I)%LineNodes
+         !   
+         !   
+         !   IF ( FP_InitData%MooringLine(I)%LineNodes  > 0 ) THEN       ! break this up for gfortran
+         !   
+         !      WRITE (UnEc,'( A, 4X, ' //TRIM( Int2LStr(FP_InitData%MooringLine(I)%LineNodes) )//'( 2X, '   &
+         !                              //TRIM( HD_Data%HDOut_Data%OutFmt )//' ) )'                        ) &
+         !                                TRIM( TmpFmt ),  FP_InitData%MooringLine(I)%LSNodes
+         !                             
+         !   ELSE
+         !      WRITE (UnEc, '( A )' ) TRIM( TmpFmt)
+         !   END IF                                      
+         !                     
+         !ENDIF
+         !
          IF ( LRadAnch                             <  0.0       ) THEN
             CALL ProgAbort ( ' LRadAnch('//TRIM( Int2LStr( I ) )//') must not be less than zero.', .TRUE. )
             ErrStat = 1
@@ -2226,10 +2229,11 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
       ! OutList - list of requested parameters to output to a file
 
    CALL ReadOutputList ( UnIn, FileName, HDOut_InitData%OutList, HD_Data%HDOut_Data%NumOuts, &
-                                              'OutList', 'List of outputs requested', ErrStat )
+                                              'OutList', 'List of outputs requested', ErrStat, ErrMsg, -1 )
    
    IF ( ErrStat /= 0 ) THEN
       CLOSE( UnIn )
+      CALL WrScr( ErrMsg )
       RETURN
    END IF
 
@@ -2300,7 +2304,7 @@ SUBROUTINE HD_GetDiscretization(UnIn, FileName, HD_Data, NumMemberNodes, ErrStat
    INTEGER                                      :: SetID
 
    LOGICAL                                      :: FoundIt              ! lets us know if we found a matching ID
-
+   CHARACTER(1024) :: ErrMsg
 
    !-------------------------------------------------------------------------------------------------
    ! initialize values
@@ -2370,10 +2374,10 @@ SUBROUTINE HD_GetDiscretization(UnIn, FileName, HD_Data, NumMemberNodes, ErrStat
          RETURN
       END IF
       
-      IF ( Echo )  THEN
-         WRITE (UnEc,'( I5, 3( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
-                                               Joint(I)%ID, ( Joint(I)%Position(J), J=1,3 )
-      ENDIF
+      !IF ( Echo )  THEN
+      !   WRITE (UnEc,'( I5, 3( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
+      !                                         Joint(I)%ID, ( Joint(I)%Position(J), J=1,3 )
+      !ENDIF
 
 
          ! check that the joint numbers are unique
@@ -2459,11 +2463,11 @@ SUBROUTINE HD_GetDiscretization(UnIn, FileName, HD_Data, NumMemberNodes, ErrStat
          RETURN
       END IF
       
-      IF ( Echo )  THEN
-         WRITE (UnEc,'( I5, 6( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
-                                   Set(I)%ID, Set(I)%D(1), Set(I)%D(2), Set(I)%CA(1), Set(I)%CA(2), Set(I)%CD(1), Set(I)%CD(2)
-      ENDIF
-
+      !IF ( Echo )  THEN
+      !   WRITE (UnEc,'( I5, 6( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
+      !                             Set(I)%ID, Set(I)%D(1), Set(I)%D(2), Set(I)%CA(1), Set(I)%CA(2), Set(I)%CD(1), Set(I)%CD(2)
+      !ENDIF
+      !
        
          ! check that the set id numbers are unique
          
@@ -2558,12 +2562,12 @@ SUBROUTINE HD_GetDiscretization(UnIn, FileName, HD_Data, NumMemberNodes, ErrStat
          CALL ExitThisRoutine()
          RETURN
       END IF
-      
-      IF ( Echo )  THEN
-!         WRITE (UnEc,'( I5, 3( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
-         WRITE (UnEc,'( I7, 3( 2X, I7) )' ) & 
-                                   JointID(1), JointID(2), SetID, Member(I)%NumElements
-      ENDIF
+!      
+!      IF ( Echo )  THEN
+!!         WRITE (UnEc,'( I5, 3( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
+!         WRITE (UnEc,'( I7, 3( 2X, I7) )' ) & 
+!                                   JointID(1), JointID(2), SetID, Member(I)%NumElements
+!      ENDIF
       
       
          ! check that NumElements is valid

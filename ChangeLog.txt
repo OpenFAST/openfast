@@ -89,7 +89,7 @@ v1.00.00c-bjj  30-Sep-2011 B. Jonkman
       neighbor wave elevation, given time and x and y position.  I also needed to add the WaveElevxi and 
       WaveElevyi arrays into the Waves_DataType.
       
-v1.00.01d-bjj  Nov-2011 B. Jonkman (not complete; on file server not SVN)
+v1.00.01d-bjj  Nov-2011 B. Jonkman
    I updated the wording in the input file for a modification to the WaveMod input.
    I added a HydroDyn summary file (do we want this optional?)
    I modified the SUBROUTINE ApplyFFT_cx() in FFTMod.f90 so that when it compares a real number with 0.0,
@@ -99,11 +99,9 @@ v1.00.01d-bjj  Nov-2011 B. Jonkman (not complete; on file server not SVN)
    I added the function HD_CheckLin() to provide error checks that a linearization analysis can be performed. 
    I modified the wording for an error check on inputs CA1 and CA2 for fixed bottom structures (it was wrong before).
    
-   I am in the process of changing all the time variables to double precision
-
 v1.00.01e-bjj 06-July-2012 B. Jonkman 
   I removed all of the change comments because this code is now in SVN (starting with v1.00.00c-bjj)
-  I finished changing all of the time variables to double precision.
+  I changed all of the time variables to double precision.
   
   
 ___________________________________    
