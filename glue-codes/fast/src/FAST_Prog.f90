@@ -1,4 +1,21 @@
-!=======================================================================
+!**********************************************************************************************************************************
+! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework. 
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2013  National Renewable Energy Laboratory
+!
+!    This file is part of FAST.
+!
+!    ElastoDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License along with ElastoDyn.
+!    If not, see <http://www.gnu.org/licenses/>.
+!
+!**********************************************************************************************************************************
 PROGRAM FAST
 ! This program models 2- or 3-bladed turbines of a standard configuration.
 !.................................................................................................
@@ -209,7 +226,7 @@ END IF
 
    ! Print summary information to "*.fsm"?
 
-   IF ( p_FAST%SumPrint )  CALL PrintSum( p_ED, p_FAST, OtherSt_ED )
+   !IF ( p_FAST%SumPrint )  CALL PrintSum( p_ED, p_FAST, OtherSt_ED )
    
 
 !<<<................   

@@ -1,4 +1,21 @@
-
+!**********************************************************************************************************************************
+! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework. 
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2013  National Renewable Energy Laboratory
+!
+!    This file is part of FAST.
+!
+!    ElastoDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License along with ElastoDyn.
+!    If not, see <http://www.gnu.org/licenses/>.
+!
+!**********************************************************************************************************************************
 MODULE FAST_Types
 
    USE NWTC_Library
@@ -6,7 +23,7 @@ MODULE FAST_Types
    TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.00.00a-bjj', '31-March-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
-   INTEGER(IntKi), PARAMETER, PRIVATE :: OutStrLen   = 10 !bjj -> decide if this has to go in the NWTC Library...
+   INTEGER(IntKi), PARAMETER :: OutStrLen   = 10 !bjj -> decide if this has to go in the NWTC Library...
    
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE. 
 
@@ -75,10 +92,6 @@ MODULE FAST_Types
    LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
    END TYPE FAST_ParameterType
-
-
-   
-!TYPE(FAST_ParameterType)       :: p_FAST                                     ! Parameters for the glue code
 
 
 END MODULE FAST_Types

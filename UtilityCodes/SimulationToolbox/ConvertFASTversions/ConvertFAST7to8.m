@@ -1,10 +1,23 @@
-function ConvertFAST7to8(oldFSTName, newFileDir, YawManRat, PitManRat)
+function ConvertFAST7to8(oldFSTName, newDir, YawManRat, PitManRat)
 %Conversion of FAST v 7.x files to FAST v8.0.0
 % by Bonnie Jonkman
 %  based on "Demonstration of fast file manipuation" by Paul Fleming
 % (c) 2011, 2013 National Renewable Energy Laboratory
 %--------------------------------------------------------------------------
-% File requirements: 
+% Required inputs:
+%  oldFSTName - the name of the old (v6 or 7) primary FAST input file,
+%               including full path name
+%  newDir     - the new directory that will contain converted input files 
+%               (FAST 8.0.0, ElastoDyn (primary, blade, and tower files), 
+%               ServoDyn; AeroDyn and HydroDyn input files will not be 
+%               copied or moved.
+% Optional inputs:
+%  YawManRat  - the new yaw maneuver rate, calculated from the old output
+%               values (see CalculateYawAndPitchRates.m)
+%  PitManRat  - an array of new pitch maneuver rates, calculated from the 
+%               old output values (see CalculateYawAndPitchRates.m)
+%
+% File requirements/assumptions for oldFSTName: 
 % 1) Comment lines are assumed to start with any of the following four 
 %      indicators (not including the quotes here):  "#", "!", "=", "--" 
 %    (Header lines do not need to meet this requirement.)
@@ -12,36 +25,37 @@ function ConvertFAST7to8(oldFSTName, newFileDir, YawManRat, PitManRat)
 %      value [,Array values] <old values> label descr
 %    (String values cannot contain old values between the value and label.)
 % 3) There MUST be space between quoted strings and the variable name
-
-
-%bjj: + check that oldDir and newDir aren't the same...
-%     + perhaps we need to put an indication of whether we can allow old
+% 
+% NOTE that Fortran allows input arrays to be separated by either spaces
+% or commas, but this toolbox currently requires them to be commas
+%.........................................................................
+%bjj: + perhaps we need to put an indication of whether we can allow old
 %       values or if array values are indicated by spaces instead of just
 %       commas
 
-%%
-%oldDir      = '.\V71_InputFiles';
-oldDir      = 'C:\Users\bjonkman\Documents\DATA\DesignCodes\simulators\FAST\SVNdirectory\trunk\CertTest';
-newDir      = '.';
-templateDir = 'TemplateFiles\V8.00.x\5MW_Monopile';
+%% let's get the directory that contains the template files  
 
-newHdrLines = 2;
+thisFile    = which('ConvertFAST7to8');
+thisDir     = fileparts(thisFile);
+templateDir = strcat(thisDir,filesep, 'TemplateFiles', filesep, 'V8.00.x');
+XLS_file    = strcat(templateDir, filesep,'OutListParameters.xlsx');
 
-XLS_file  = '..\OutListParameters.xlsx';
 
 [~, ~, ~, ServoDyn_Channels ] = GetOutListParameters( XLS_file, 'ServoDyn' );
 [~, ~, ~, ElastoDyn_Channels] = GetOutListParameters( XLS_file, 'ElastoDyn');
 
-%test 9:  YawManRat    = 3.729000
-%test 11: PitManRat(1) = 16.600000
-
-for i= 1:17 %1:(17+5) %17+(1:5) %1:17 %
-
         % Primary input file:
+
+[oldDir, baseName, ext ] = fileparts(oldFSTName);
+baseFileName  = strcat(baseName,ext);                 %base FAST file name
+newFSTname    = [newDir filesep baseFileName];
+EDFile        = [baseName '_ElastoDyn.dat'];
+SrvDFile      = [baseName '_ServoDyn.dat'];
+
+if strcmpi(oldDir,newDir)
+    error('ConvertFAST7to8:New FAST input file cannot be written in same directory as old file.')
+end
         
-    baseFileName  = ['Test' num2str(i,'%02.0f') '.fst' ];
-    EDFile        = ['Test' num2str(i,'%02.0f') '_ElastoDyn.dat'];
-    SrvDFile      = ['Test' num2str(i,'%02.0f') '_ServoDyn.dat'];
         
     %----------------------------------------------------------------------
     % Load in old model data from the primary FAST and platform input files:
@@ -49,7 +63,9 @@ for i= 1:17 %1:(17+5) %17+(1:5) %1:17 %
     % primary file:
     
     fprintf( '%s\n', '****************************************************');
-    fprintf( '%s\n', ['Converting ' baseFileName] );
+    fprintf( '%s\n', ['Converting ' baseFileName ':'] );
+    fprintf( '%s\n', [' old name: ' oldFSTName ] );
+    fprintf( '%s\n', [' new name: ' newFSTname ] );
     fprintf( '%s\n', '****************************************************');
     
     inputfile = [oldDir filesep baseFileName];      
@@ -181,14 +197,22 @@ for i= 1:17 %1:(17+5) %17+(1:5) %1:17 %
                        'PtfmYIner',        0;  } ];     
     end
         % set the rates based on values from CalculateYawAndPitchRates.m
-    if strcmpi( baseFileName, 'test09.fst' )
-        NewFieldVals = [ NewFieldVals;
-                      {'YawManRat',       3.729; } ];
-    elseif strcmpi( baseFileName, 'test11.fst' )
-        NewFieldVals = [ NewFieldVals;
-                      {'PitManRat(1)',   16.600000; } ];
+    if ( nargin > 2 )
+        if YawManRat ~= 0.0
+            NewFieldVals = [ NewFieldVals;
+                      {'YawManRat',      YawManRat; } ];
+        end
+        if nargin > 3
+            for n=1:length(PitManRat)
+                if PitManRat(n) ~= 0.0
+                    NewFieldVals = [ NewFieldVals;
+                                  {['PitManRat(' num2str(n) ')'],   PitManRat(n); } ];
+                end  
+            end
+        end
     end
-               
+    
+                                    
     n = length(FP.Label);
     for k = 1:size(NewFieldVals,1)
         n = n + 1;
@@ -274,7 +298,7 @@ for i= 1:17 %1:(17+5) %17+(1:5) %1:17 %
     %----------------------------------------------------------------------
         % FAST
     template   = [templateDir filesep 'FAST_Primary.dat'];  %template for primary file
-    outputFile = [newDir filesep baseFileName];
+    outputFile = newFSTname; 
     Matlab2FAST(FP,template,outputFile, 2); %contains 2 header lines
 
         % ServoDyn
@@ -303,7 +327,4 @@ for i= 1:17 %1:(17+5) %17+(1:5) %1:17 %
         Matlab2FAST(BP{k},template,outputFile, 2); %contains 2 header lines
     end
         
-end
-
-
 end

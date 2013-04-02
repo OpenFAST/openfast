@@ -3939,3 +3939,6 @@ The override maneuvers for blade pitch and nacelle yaw now specify a rate in the
 I removed GBRatio from all the user control routines (LSS_Spd send instead of HSS_Spd and GBratio for pitch control)
 I fixed a bug in the SimStatus when SttsTime /= 1 second. 
 We replaced AeroCent with PitchAxis in the blade properties table: PitchAxis = 0.5 - AeroCent
+Variable SgnPrvLSTQ has been removed--basically removing gearbox friction--until we figure out how to put it in the new framework.
+The fix of the HSSBrTrq has been removed.
+I changed PtfmCM to PtfmCMzt such that PtfmCMzt = -PtfmCM and added PtfmCMxt and PtfmCMyt to the input file to incorporate platform center-of-mass lateral offsets.

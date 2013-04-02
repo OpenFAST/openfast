@@ -109,7 +109,7 @@ False         Furling     - Read in additional model properties for furling turb
   99          TwrNodes    - Number of tower nodes used for analysis (-)
 "NRELOffshrBsline5MW_Tower_Monopile_RF.dat"      TwrFile     - Name of file containing tower properties (quoted string)
 ---------------------- OUTPUT --------------------------------------------------
-True          SumPrint    - Print summary data to "<RootName>.fsm" (flag) (currently unused)
+True          SumPrint    - Print summary data to "<RootName>.fsm" (flag)
    1          OutFile     - Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)
 True          TabDelim    - Use tab delimiters in text tabular output file? (flag) (currently unused)
 "ES10.3E2"    OutFmt      - Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string)  [not checked for validity!] (currently unused)
