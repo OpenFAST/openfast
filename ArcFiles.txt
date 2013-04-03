@@ -2,83 +2,102 @@
 ArcFiles.txt
 Archive.bat
 ChangeLog.txt
-Compile_FAST.bat
-DFORRT.DLL
 Disclaimer.txt
-DISCON.f90
-OutList.txt
+license.txt
+README_FAST8.pdf
+
 OutListParameters.xlsx
-ModeShapePolyFitting.xls
 
-Simulink\Read_FAST_Input.m
-Simulink\Simsetup.m
-Simulink\Samples\OpenLoop.mdl
-Simulink\Samples\Test01_SIG.mdl
-Simulink\Source\FASTGateway.f90
-Simulink\Source\FASTSimulink.f90
-Simulink\Source\intelf10msvs2003opts.bat
-Simulink\Source\make_FAST_SFunc.m
+Compiling\Compile_FAST.bat
+Compiling\makefile
 
-Source\AeroCalc.f90
-Source\BladedDLLInterface.f90
-Source\FAST.f90
-Source\FAST2ADAMS.f90
 Source\FAST_IO.f90
-Source\FAST_Lin.f90
 Source\FAST_Mods.f90
 Source\FAST_Prog.f90
-Source\FFTMod.f90
-Source\fftpack.f
-Source\HydroCalc.f90
-Source\Noise.f90
+
 Source\PitchCntrl_ACH.f90
-Source\SetVersion.f90
 Source\UserSubs.f90
 Source\UserVSCont_KP.f90
 
+Source\ElastoDyn.f90
+Source\ElastoDyn_Types.f90
+Source\ElastoDyn_Registry.txt
+Source\ServoDyn.f90
+Source\ServoDyn_Types.f90
+Source\ServoDyn_Registry.txt
+Source\Registry_NWTC_Library.txt
+Source\ModulesNotConverted\AeroDyn\*
+Source\ModulesNotConverted\HydroDyn\*
+Source\ModulesNotConverted\InflowWind\*
 
-CertTest\ADAMSCertTest.bat
+
+Utilities\ModeShapePolyFitting.xls
+Utilities\DISCON.f90
+
+Utilities\SimulationToolbox\FAST_Model_Conversion_MATLAB_Toolbox.pdf
+
+Utilities\SimulationToolbox\ConvertFASTVersions\CalculateYawAndPitchRates.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST7to8.m
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\AD_Primary.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\ED_Blade.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\ED_Furling.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\ED_Primary.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\ED_Tower.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\FAST_Primary.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\OutListParameters.xlsx
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\V8.00.x\SrvD_Primary.dat
+
+Utilities\SimulationToolbox\FAST2Matlab\AeroDyn2Matlab.m
+Utilities\SimulationToolbox\FAST2Matlab\Fast2Matlab.m
+Utilities\SimulationToolbox\FAST2Matlab\FastLin2Matlab.m
+Utilities\SimulationToolbox\FAST2Matlab\Fast_PC2Matlab.m
+Utilities\SimulationToolbox\FAST2Matlab\ImportFastOut.m
+Utilities\SimulationToolbox\FAST2Matlab\ParseFASTInputLine.m
+
+Utilities\SimulationToolbox\Matlab2FAST\GenConstWindFile.m
+Utilities\SimulationToolbox\Matlab2FAST\GenStepWindFile.m
+Utilities\SimulationToolbox\Matlab2FAST\Matlab2AD.m
+Utilities\SimulationToolbox\Matlab2FAST\Matlab2FAST.m
+Utilities\SimulationToolbox\Matlab2FAST\Matlab2FASTLin.m
+Utilities\SimulationToolbox\Matlab2FAST\writeUniformWindFile.m
+
+Utilities\SimulationToolbox\Utilities\GetFastPar.m
+Utilities\SimulationToolbox\Utilities\GetFullFileName.m
+Utilities\SimulationToolbox\Utilities\GetOutListParameters.m
+Utilities\SimulationToolbox\Utilities\GetOutListVars.m
+Utilities\SimulationToolbox\Utilities\ReadFASTbinary.m
+Utilities\SimulationToolbox\Utilities\ReadFASTtext.m
+Utilities\SimulationToolbox\Utilities\SetFastPar.m
+
+
+
+CertTest\ConvertFiles.m
 
 CertTest\Bell.txt
 CertTest\CertTest.bat
 CertTest\DateTime.exe
 CertTest\FASTCertTestCases.xls
-CertTest\Noise.ipt
 CertTest\Pitch.ipt
-CertTest\Platform.dat
 CertTest\PlotCertTestResults.m
-CertTest\ReadFASTbinary.m
-CertTest\Simulink_CertTest.m
 CertTest\Spd_Trq.dat
 CertTest\Update.bat
 
-CertTest\AWT_ADAMS.dat
 CertTest\AWT_Blades.dat
-CertTest\AWT_Linear.dat
 CertTest\AWT_Tower.dat
 
-CertTest\AOC_ADAMS.dat
 CertTest\AOC_Blade.dat
-CertTest\AOC_Linear.dat
 CertTest\AOC_Tower.dat
 
-CertTest\UAE_Ames_ADAMS.dat
 CertTest\UAE_Ames_Blades.dat
-CertTest\UAE_Ames_Linear.dat
 CertTest\UAE_Ames_Tower.dat
 
-CertTest\Baseline_ADAMS.dat
-CertTest\Baseline_ADAMS_LIN.dat
 CertTest\Baseline_Blade.dat
 CertTest\Baseline_Blade_NoDamp.dat
-CertTest\Baseline_Linear.dat
 CertTest\Baseline_Tower.dat
 CertTest\Baseline_Tower_NoDamp.dat
 
-CertTest\SWRT_ADAMS.dat
 CertTest\SWRT_Blade.dat
 CertTest\SWRT_Furl.dat
-CertTest\SWRT_Linear.dat
 CertTest\SWRT_Tower.dat
 
 CertTest\AeroData\AWT27\AWT27_05.dat
@@ -148,128 +167,155 @@ CertTest\Wind\SWRT\EOG_01_R.wnd
 CertTest\Wind\SWRT\IEC.ipt
 
 CertTest\Test01.fst
+CertTest\Test01_ElastoDyn.dat
+CertTest\Test01_ServoDyn.dat
 CertTest\Test01.cru
 CertTest\Test01_AD.ipt
 
 CertTest\Test02.fst
+CertTest\Test02_ElastoDyn.dat
+CertTest\Test02_ServoDyn.dat
 CertTest\Test02.cru
 CertTest\Test02_AD.ipt
 
 CertTest\Test03.fst
+CertTest\Test03_ElastoDyn.dat
+CertTest\Test03_ServoDyn.dat
 CertTest\Test03.cru
 CertTest\Test03_AD.ipt
 
 CertTest\Test04.fst
+CertTest\Test04_ElastoDyn.dat
+CertTest\Test04_ServoDyn.dat
 CertTest\Test04.cru
 CertTest\Test04_AD.ipt
 
 CertTest\Test05.fst
+CertTest\Test05_ElastoDyn.dat
+CertTest\Test05_ServoDyn.dat
 CertTest\Test05.cru
 CertTest\Test05_AD.ipt
 
 CertTest\Test06.fst
+CertTest\Test06_ElastoDyn.dat
+CertTest\Test06_ServoDyn.dat
 CertTest\Test06.cru
 CertTest\Test06_AD.ipt
 
 CertTest\Test07.fst
+CertTest\Test07_ElastoDyn.dat
+CertTest\Test07_ServoDyn.dat
 CertTest\Test07.cru
 CertTest\Test07_AD.ipt
 
 CertTest\Test08.fst
+CertTest\Test08_ElastoDyn.dat
+CertTest\Test08_ServoDyn.dat
 CertTest\Test08.cru
 CertTest\Test08_AD.ipt
 
 CertTest\Test09.fst
+CertTest\Test09_ElastoDyn.dat
+CertTest\Test09_ServoDyn.dat
 CertTest\Test09.cru
 CertTest\Test09_AD.ipt
 
 CertTest\Test10.fst
+CertTest\Test10_ElastoDyn.dat
+CertTest\Test10_ServoDyn.dat
 CertTest\Test10.cru
 CertTest\Test10_AD.ipt
 
 CertTest\Test11.fst
+CertTest\Test11_ElastoDyn.dat
+CertTest\Test11_ServoDyn.dat
 CertTest\Test11.cru
 CertTest\Test11_AD.ipt
 
 CertTest\Test12.fst
+CertTest\Test12_ElastoDyn.dat
+CertTest\Test12_ServoDyn.dat
 CertTest\Test12.cru
 CertTest\Test12_AD.ipt
 
 CertTest\Test13.fst
+CertTest\Test13_ElastoDyn.dat
+CertTest\Test13_ServoDyn.dat
 CertTest\Test13.cru
 CertTest\Test13_AD.ipt
 
-CertTest\Test14.fst
-CertTest\Test14.m
-CertTest\Test14_AD.ipt
 
 CertTest\Test15.fst
+CertTest\Test15_ElastoDyn.dat
+CertTest\Test15_ServoDyn.dat
 CertTest\Test15.cru
 CertTest\Test15_AD.ipt
 
 CertTest\Test16.fst
+CertTest\Test16_ElastoDyn.dat
+CertTest\Test16_ServoDyn.dat
 CertTest\Test16.cru
 CertTest\Test16_AD.ipt
 
 CertTest\Test17.fst
+CertTest\Test17_ElastoDyn.dat
+CertTest\Test17_ServoDyn.dat
 CertTest\Test17.cru
 CertTest\Test17_AD.ipt
 
-CertTest\TstFiles\Test01.fsm
+CertTest\TstFiles\Test01_ElastoDyn.sum
 CertTest\TstFiles\Test01.sts
 CertTest\TstFiles\Test01.azi
 
-CertTest\TstFiles\Test02.fsm
+CertTest\TstFiles\Test02_ElastoDyn.sum
 CertTest\TstFiles\Test02.sts
 
-CertTest\TstFiles\Test03.fsm
+CertTest\TstFiles\Test03_ElastoDyn.sum
 CertTest\TstFiles\Test03.sts
 CertTest\TstFiles\Test03.azi
 
-CertTest\TstFiles\Test04.fsm
+CertTest\TstFiles\Test04_ElastoDyn.sum
 CertTest\TstFiles\Test04.sts
 CertTest\TstFiles\Test04.pmf
 
-CertTest\TstFiles\Test05.fsm
+CertTest\TstFiles\Test05_ElastoDyn.sum
 CertTest\TstFiles\Test05.sts
 
-CertTest\TstFiles\Test06.fsm
+CertTest\TstFiles\Test06_ElastoDyn.sum
 CertTest\TstFiles\Test06.sts
 
-CertTest\TstFiles\Test07.fsm
+CertTest\TstFiles\Test07_ElastoDyn.sum
 CertTest\TstFiles\Test07.sts
 CertTest\TstFiles\Test07.pmf
 
-CertTest\TstFiles\Test08.fsm
+CertTest\TstFiles\Test08_ElastoDyn.sum
 CertTest\TstFiles\Test08.sts
 CertTest\TstFiles\Test08.azi
 
-CertTest\TstFiles\Test09.fsm
+CertTest\TstFiles\Test09_ElastoDyn.sum
 CertTest\TstFiles\Test09.sts
 
-CertTest\TstFiles\Test10.fsm
+CertTest\TstFiles\Test10_ElastoDyn.sum
 CertTest\TstFiles\Test10.sts
 
-CertTest\TstFiles\Test11.fsm
+CertTest\TstFiles\Test11_ElastoDyn.sum
 CertTest\TstFiles\Test11.sts
 
-CertTest\TstFiles\Test12.fsm
+CertTest\TstFiles\Test12_ElastoDyn.sum
 CertTest\TstFiles\Test12.sts
 
-CertTest\TstFiles\Test13.fsm
+CertTest\TstFiles\Test13_ElastoDyn.sum
 CertTest\TstFiles\Test13.sts
 CertTest\TstFiles\Test13.pmf
 
-CertTest\TstFiles\Test14.fsm
-CertTest\TstFiles\Test14.eig
 
-CertTest\TstFiles\Test15.fsm
+CertTest\TstFiles\Test15_ElastoDyn.sum
 CertTest\TstFiles\Test15.sts
 
-CertTest\TstFiles\Test16.fsm
+CertTest\TstFiles\Test16_ElastoDyn.sum
 CertTest\TstFiles\Test16.sts
 
-CertTest\TstFiles\Test17.fsm
+CertTest\TstFiles\Test17_ElastoDyn.sum
 CertTest\TstFiles\Test17.sts
 CertTest\TstFiles\Test17.pmf
 

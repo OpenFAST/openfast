@@ -1,5 +1,0 @@
-!Wind file for sheared 18 m/s wind with 30 degree direction. 
-!       Wind    Wind    Vert.   Horiz.  Vert.   LinV    Gust 
-!Time   Speed   Dir     Speed   Shear   Shear   Shear   Speed
- 0.00	18.00	 0.00	 0.00	 0.00	 0.00	 0.00	 0.00	
- 1.00	18.00	 0.00	 0.00	 0.00	 0.00	 0.00	 0.00	

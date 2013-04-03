@@ -1,3 +1,0 @@
-The information that used to be contained in this file is now
-in the file "OutListParameters.xlsx"
-

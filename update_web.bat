@@ -11,13 +11,14 @@
 
 :Copy
 
-set LOC=Y:\Wind\WindWeb\designcodes\simulators\fast
+set LOC=Y:\Wind\WindWeb\designcodes\simulators\fast\alpha
 
 copy CreatePage.pl             %LOC%\CreatePage.pl
 copy ChangeLog.txt             %LOC%\ChangeLog.txt
 copy Archive\FAST_v%1.exe      %LOC%\FAST_v%1.exe
+copy Archive\FAST_v%1.tar.gz   %LOC%\FAST_v%1.tar.gz
 copy Archive\FAST_v%1_all.exe  %LOC%\FAST_v%1_all.exe
-copy FAST.pdf                  %LOC%\FAST.pdf
+copy README_FAST8.pdf          %LOC%\README_FAST8.pdf
 
 perl %LOC%\CreatePage.pl
 

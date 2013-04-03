@@ -6,8 +6,7 @@
 
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
-
-@SET TARZIP="C:\Program Files\7-Zip\7z.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
 
 IF NOT "%1"==""  GOTO DeleteOld
 
@@ -20,10 +19,9 @@ IF NOT "%1"==""  GOTO DeleteOld
 
 :DeleteOld
 @IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
-@IF EXIST %ARCHNAME%.exe DEL %ARCHNAME%.exe
-@IF EXIST %ARCHNAME%_all.exe DEL %ARCHNAME%_all.exe
+@IF EXIST ARCHTMP.exe DEL ARCHTMP.exe
 @IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
-@IF EXIST %ARCHNAME%.tar.gz DEL %ARCHNAME%.tar.gz
+@IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
 
 
 :DoIt
@@ -45,7 +43,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @ArcMaint.txt 
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @ArcMaint.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%_all.exe
@@ -57,8 +55,8 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%TARZIP% a -ttar ARCHTMP @ArcFiles.txt
-@%TARZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
+@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt
+@%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
 @COPY ARCHTMP.tar.gz %ARCHPATH%\%ARCHNAME%.tar.gz
 @DEL ARCHTMP.tar, ARCHTMP.tar.gz
 
@@ -69,4 +67,4 @@ IF NOT "%1"==""  GOTO DeleteOld
 @SET PROGNAME=
 @SET WINZIP=
 @SET WINZIPSE=
-@SET TARZIP=
+@SET SEVENZIP=

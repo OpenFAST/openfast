@@ -92,7 +92,7 @@ REAL(DbKi), PARAMETER          :: t_initial = 0.0                            ! I
 REAL(DbKi)                     :: dt_global                                  ! we're limiting our simulation to lock-step time steps for now
 
 INTEGER, PARAMETER :: ED_interp_order = 0
-TYPE(ED_InputType)   :: Input_ED(ED_interp_order+1)
+TYPE(ED_InputType)   :: ED_Input(ED_interp_order+1)
 REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
   
 
@@ -119,10 +119,10 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    dt_global = p_FAST%dt
 
    
-   ! We fill ED_InputTimes with negative times, but the Input_ED values are identical for each of those times; this allows 
+   ! We fill ED_InputTimes with negative times, but the ED_Input values are identical for each of those times; this allows 
    ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
    ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
-   ! order = SIZE(Input_ED)
+   ! order = SIZE(ED_Input)
    do j = 1, ED_interp_order + 1  
       ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
       !Mod1_OutputTimes(i) = t_initial - (j - 1) * dt
@@ -132,7 +132,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    InitInData_ED%InputFile     = p_FAST%EDFile
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
-   CALL ED_Init( InitInData_ED, Input_ED(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
+   CALL ED_Init( InitInData_ED, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
    CALL CheckError( ErrStat, 'Error in ED_Init: '//ErrMsg )
 
    IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -155,19 +155,18 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    END IF
 
    
-   ! initialize AeroDyn
-IF ( p_FAST%CompAero ) THEN
-! we need the air density (and wind speed) yet.... some strangeness still going on.
-   CALL AeroInput(p_ED, p_FAST)            ! Read in the ADFile
+      ! initialize AeroDyn
+   IF ( p_FAST%CompAero ) THEN
+   ! we need the air density (and wind speed) yet.... some strangeness still going on.
+      CALL AeroInput(p_ED, p_FAST)            ! Read in the ADFile
    
-      ! some weirdness that we probably won't need anymore....
-   p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
+         ! some weirdness that we probably won't need anymore....
+      p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
       
-ELSE
-   p_ED%AirDens = 0
-   IfW_WriteOutput = 0.0
-END IF
-
+   ELSE
+      p_ED%AirDens = 0
+      IfW_WriteOutput = 0.0
+   END IF
 
 
 
@@ -221,29 +220,21 @@ END IF
    END IF   ! CompHydro
       
 
-
-!>>>----- this is some residual to deal with ......
-
-   ! Print summary information to "*.fsm"?
-
-   !IF ( p_FAST%SumPrint )  CALL PrintSum( p_ED, p_FAST, OtherSt_ED )
-   
-
-!<<<................   
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
    CALL CheckError( ErrStat, 'Error in FAST_InitOutput: '//ErrMsg )
-
-   
-
-   
+    
    
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................
 
-
+   CALL ED_DestroyInitInput(  InitInData_ED, ErrStat, ErrMsg )
+   CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat, ErrMsg )
+   
+   CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
+   CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
 
    !...............................................................................................................................
    ! loose coupling
@@ -254,9 +245,13 @@ END IF
    CALL WrScr1 ( '' )
 !   CALL SimStatus ()  
 
-   
-!Former TimeMarch routine......
+
 !.................................................................
+!BJJ: NOTE: there is currently a time shift in this algorithm that we need to fix, 
+!  but I will wait until we get AeroDyn and InflowWind merged in this mix, then
+!  use the glue code developed by M. Sprague in the Gasmi Paper Examples.
+!.................................................................
+
       ! Loop through time.
 
    Step  = 0_IntKi
@@ -264,29 +259,29 @@ END IF
    DO 
       
       
-      !      ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
-      !
-      !CALL ED_Input_ExtrapInterp(Input_ED, ED_InputTimes, u_ED, ZTime + p_FAST%dt, ErrStat, ErrMsg)
-      !
-      !   ! Shift "window" of the Mod1_Input and Mod1_Output
-      !
-      !do j = ED_interp_order, 1, -1
-      !   Call ED_CopyInput (Input_ED(j),  Input_ED(j+1),  0, Errstat, ErrMsg)
-      !   !Call Mod1_CopyOutput (Mod1_Output(i),  Mod1_Output(j+1),  0, Errstat, ErrMsg)
-      !   ED_InputTimes(j+1) = ED_InputTimes(j)
-      !   !Mod1_OutputTimes(j+1) = Mod1_OutputTimes(j)
-      !enddo
-      !
-      !Call ED_CopyInput (u_ED,  Input_ED(1),  0, Errstat, ErrMsg)
-      !!Call Mod1_CopyOutput (y1,  Mod1_Output(1),  0, Errstat, ErrMsg)
-      !ED_InputTimes(1) = ZTime + p_FAST%dt
+            ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
+      
+      CALL ED_Input_ExtrapInterp(ED_Input, ED_InputTimes, u_ED, ZTime + p_FAST%dt, ErrStat, ErrMsg)
+      
+         ! Shift "window" of the Mod1_Input and Mod1_Output
+      
+      do j = ED_interp_order, 1, -1
+         Call ED_CopyInput (ED_Input(j),  ED_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+         !Call Mod1_CopyOutput (Mod1_Output(i),  Mod1_Output(j+1),  0, Errstat, ErrMsg)
+         ED_InputTimes(j+1) = ED_InputTimes(j)
+         !Mod1_OutputTimes(j+1) = Mod1_OutputTimes(j)
+      enddo
+      
+      Call ED_CopyInput (u_ED,  ED_Input(1),  0, Errstat, ErrMsg)
+      !Call Mod1_CopyOutput (y1,  Mod1_Output(1),  0, Errstat, ErrMsg)
+      ED_InputTimes(1) = ZTime + p_FAST%dt
 
       !.....................................................
       ! Call predictor-corrector routine:
       !.....................................................
 
          ! ElastoDyn
-      CALL ED_UpdateStates( ZTime, Step, Input_ED, ED_InputTimes, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ErrStat, ErrMsg )
+      CALL ED_UpdateStates( ZTime, Step, ED_Input, ED_InputTimes, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, 'Error in ED_UpdateStates: '//ErrMsg )
 
          ! ServoDyn
@@ -313,11 +308,11 @@ END IF
       !.....................................................      
 
       
-      CALL ED_CalcOutput( ZTime, Input_ED(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
+      CALL ED_CalcOutput( ZTime, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Error in ED_CalcOutput: '//ErrMsg  )
 
       IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, Input_ED(1), y_ED, ErrStat, ErrMsg )
+         CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
          ADAeroLoads = AD_CalculateLoads( REAL(ZTime, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
             CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in AeroDyn.'  )
          
@@ -334,7 +329,7 @@ END IF
       END IF
             
       IF ( p_FAST%CompHydro ) THEN
-         CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, Input_ED(1), y_ED, ErrStat, ErrMsg )
+         CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
          CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
             CALL CheckError( ErrStat, 'Error calculating hydrodynamic loads in HydroDyn.'  )
       END IF
@@ -358,7 +353,7 @@ END IF
       END IF      
       
       
-      CALL ED_InputSolve( p_FAST, p_ED,  Input_ED(1),   y_SrvD )
+      CALL ED_InputSolve( p_FAST, p_ED,  ED_Input(1),   y_SrvD )
                    
                   
       !......................................................
@@ -433,7 +428,16 @@ CONTAINS
 
       CALL HD_Terminate( HydroDyn_data, ErrStat )
       IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
-               
+
+      
+      ! in case we didn't get these destroyed earlier....
+      
+      CALL ED_DestroyInitInput(  InitInData_ED, ErrStat, ErrMsg )
+      CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat, ErrMsg )
+   
+      CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
+      CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
+      
       
       !............................................................................................................................
       ! Set exit error code if there was an error;

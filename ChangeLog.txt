@@ -3927,18 +3927,18 @@ v7.02.00c-bjj 30-Nov-2012 B. Jonkman
 
 
 v8.00.00a-bj 31-Mar-2012 B. Jonkman
-  I replaced many of the global variables with variables in types from the FAST Registry.
-    - removed MODULES Constants, DOFs, CoordSys, and TurbConf
+  I replaced most of the global variables with variables in types from the FAST Registry.
   I removed the CrossProd subroutine from FAST.f90 and replaced it with a CROSS_PRODUCT function in the NWTC Library.
   I removed the feature that enabled users to turn on/off DOFs during simulation (it didn't work properly before)
+  I split the code into three distinct parts: FAST (glue-code), ElastoDyn, and ServoDyn. Please see other documentation
+    for complete description of the changes.
 
-
-Changes in functionality:
-The Nacelle Yaw Control override maneuver is now based on the commanded yaw position instead of the input (actual) yaw position.
-The override maneuvers for blade pitch and nacelle yaw now specify a rate in the input file instead of an end time. A Matlab script to help the conversion is included in the archive.
-I removed GBRatio from all the user control routines (LSS_Spd send instead of HSS_Spd and GBratio for pitch control)
-I fixed a bug in the SimStatus when SttsTime /= 1 second. 
-We replaced AeroCent with PitchAxis in the blade properties table: PitchAxis = 0.5 - AeroCent
-Variable SgnPrvLSTQ has been removed--basically removing gearbox friction--until we figure out how to put it in the new framework.
-The fix of the HSSBrTrq has been removed.
-I changed PtfmCM to PtfmCMzt such that PtfmCMzt = -PtfmCM and added PtfmCMxt and PtfmCMyt to the input file to incorporate platform center-of-mass lateral offsets.
+  Changes in functionality:
+   The Nacelle Yaw Control override maneuver is now based on the commanded yaw position instead of the input (actual) yaw position.
+   The override maneuvers for blade pitch and nacelle yaw now specify a rate in the input file instead of an end time. A Matlab script to help the conversion is included in the archive.
+   I removed GBRatio from all the user control routines (LSS_Spd send instead of HSS_Spd and GBratio for pitch control)
+   I fixed a bug in the SimStatus when SttsTime /= 1 second. 
+   We replaced AeroCent with PitchAxis in the blade properties table: PitchAxis = 0.5 - AeroCent
+   Variable SgnPrvLSTQ has been removed--basically removing gearbox friction--until we figure out how to put it in the new framework.
+   The fix of the HSSBrTrq has been removed.
+   I changed PtfmCM to PtfmCMzt such that PtfmCMzt = -PtfmCM and added PtfmCMxt and PtfmCMyt to the input file to incorporate platform center-of-mass lateral offsets.
