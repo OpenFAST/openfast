@@ -1346,6 +1346,15 @@ gen_module( FILE * fp , node_t * ModName )
             if ( r->type->type_type == DERIVED ) {
               fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
             } else {
+              char tmp[NAMELEN] ; tmp[0] = '\0' ;
+              if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+              if ( must_have_real_or_double(tmp) ) {
+                if ( strncmp(r->type->mapsto,"REAL",4) ) { 
+                  fprintf(stderr,"Registry warning: %s contains a field (%s) whose type is not real or double: %s\n",
+                   q->mapsto, r->name , r->type->mapsto ) ;
+                }
+
+              }
               fprintf(fp,"    %s ",r->type->mapsto ) ;
             }
             if ( r->ndims > 0 )

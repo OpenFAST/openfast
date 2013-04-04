@@ -606,6 +606,27 @@ is_a_fast_interface_type( char *str )
    return(retval) ;
 }
 
+int
+must_have_real_or_double( char *str )
+{
+   int retval ;
+
+   retval =  (
+     !strcmp(make_lower_temp(str), "inputtype")           ||
+     !strcmp(make_lower_temp(str), "outputtype")          ||
+     !strcmp(make_lower_temp(str), "continuousstatetype") ||
+     !strcmp(make_lower_temp(str), "discretestatetype")   ||
+     !strcmp(make_lower_temp(str), "constraintstatetype") ||
+     !strcmp(make_lower_temp(str), "partialoutputpinputtype")            ||
+     !strcmp(make_lower_temp(str), "partialcontstatepinputtype")         ||
+     !strcmp(make_lower_temp(str), "partialdiscstatepinputtype")         ||
+     !strcmp(make_lower_temp(str), "partialconstrstatepinputtype")       ||
+            0 ) ;
+
+   return(retval) ;
+}
+
+
 char *
 fast_interface_type_shortname( char *str )
 {
