@@ -776,11 +776,11 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
   fprintf(fp,"  ALLOCATE(c2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
        } else if ( r->ndims==3 && order > 0 ) {
   fprintf(fp,"  ALLOCATE(a3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,3)                   ) ))\n",deref,r->name              ) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3)                     ))\n",deref,r->name              ) ;
   fprintf(fp,"  ALLOCATE(b3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,3)                   ) ))\n",deref,r->name              ) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3)                     ))\n",deref,r->name              ) ;
   fprintf(fp,"  ALLOCATE(c3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,3)                   ) ))\n",deref,r->name              ) ;
+  fprintf(fp,"              SIZE(u_out%s%%%s,3)                     ))\n",deref,r->name              ) ;
        } else if ( r->ndims==4 && order > 0 ) {
   fprintf(fp,"  ALLOCATE(a4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
