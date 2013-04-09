@@ -3926,7 +3926,7 @@ v7.02.00c-bjj 30-Nov-2012 B. Jonkman
      Simulink compiled with Matlab R2012a (32-bit).
 
 
-v8.00.00a-bj 31-Mar-2012 B. Jonkman
+v8.00.00a-bjj 31-Mar-2013 B. Jonkman
   I replaced most of the global variables with variables in types from the FAST Registry.
   I removed the CrossProd subroutine from FAST.f90 and replaced it with a CROSS_PRODUCT function in the NWTC Library.
   I removed the feature that enabled users to turn on/off DOFs during simulation (it didn't work properly before)
@@ -3942,3 +3942,7 @@ v8.00.00a-bj 31-Mar-2012 B. Jonkman
    Variable SgnPrvLSTQ has been removed--basically removing gearbox friction--until we figure out how to put it in the new framework.
    The fix of the HSSBrTrq has been removed.
    I changed PtfmCM to PtfmCMzt such that PtfmCMzt = -PtfmCM and added PtfmCMxt and PtfmCMyt to the input file to incorporate platform center-of-mass lateral offsets.
+
+v8.00.00c-bjj 9-Apr-2013 B. Jonkman
+  I modified the source code so that the /assume:realloc_lhs switch isn't necessary. This required a manual change to the ED_Input_ExtrapInterp routine
+    (bug reported in bugzilla). 
