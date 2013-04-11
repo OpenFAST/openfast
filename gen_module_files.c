@@ -654,7 +654,7 @@ SUBROUTINE Mod1_Input_ExtrapInterp( u, t, u_out, t_out, ErrStat, ErrMsg )
 
       TYPE(Mod1_InputType),      INTENT(IN   )  :: u(:)      ! Inputs at t1 > t2 > t3
       REAL(DbKi),                INTENT(IN   )  :: t(:)      ! Times associated with the inputs
-      TYPE(Mod1_InputType),      INTENT(  OUT)  :: u_out     ! Inputs at t1 > t2 > t3
+      TYPE(Mod1_InputType),      INTENT(INOUT)  :: u_out     ! Inputs at t1 > t2 > t3
       REAL(DbKi),                INTENT(IN   )  :: t_out     ! time to be extrap/interpd to                       
       INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat   ! Error status of the operation
       CHARACTER(*),              INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None              
@@ -861,7 +861,9 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
 
   fprintf(fp," TYPE(%s_%s), INTENT(IN   )  :: u(:)      ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
   fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t(:)      ! Times associated with the inputs\n") ;
-  fprintf(fp," TYPE(%s_%s), INTENT(  OUT)  :: u_out     ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
+//jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
+//jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
+  fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u_out     ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
   fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t_out     ! time to be extrap/interp'd to\n") ;
   fprintf(fp," INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n") ;
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
