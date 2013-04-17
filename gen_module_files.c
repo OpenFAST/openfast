@@ -635,107 +635,6 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   return(0) ;
 }
 
-#if 0
-SUBROUTINE Mod1_Input_ExtrapInterp( u, t, u_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-!
-!..................................................................................................................................
-
-      TYPE(Mod1_InputType),      INTENT(IN   )  :: u(:)      ! Inputs at t1 > t2 > t3
-      REAL(DbKi),                INTENT(IN   )  :: t(:)      ! Times associated with the inputs
-      TYPE(Mod1_InputType),      INTENT(INOUT)  :: u_out     ! Inputs at t1 > t2 > t3
-      REAL(DbKi),                INTENT(IN   )  :: t_out     ! time to be extrap/interpd to                       
-      INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat   ! Error status of the operation
-      CHARACTER(*),              INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None              
-
-      ! local variables
-
-      INTEGER(IntKi)        :: order     ! order of polynomial fit (max 2)
-
-      REAL(ReKi)            :: a        ! constant for extrapolaton/interpolation
-      REAL(ReKi)            :: b        ! constant for extrabpolation/interpolation
-      REAL(ReKi)            :: c        ! constant for extrabpolation/interpolation
-
-      ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-      if ( size(t) .ne. size(u)) then
-         ErrStat = ErrID_Fatal
-         ErrMsg = ' Error in Mod1_Input_ExtrapInterp: size(t) must equal size(u) '
-         RETURN
-      endif
-
-      if (size(u) .gt. 3) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in Mod1_Input_ExtrapInterp: size(u) must be less than 4 '
-         RETURN
-      endif
-
-      order = SIZE(u) - 1
-
-      if (order .eq. 0) then
-
-         u_out%fc = u(1)%fc
-
-      elseif (order .eq. 1) then
-
-         IF ( EqualRealNos( t(1), t(2) ) ) THEN
-           ErrStat = ErrID_Fatal
-           ErrMsg  = ' Error in Mod1_Input_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-           RETURN
-         END IF
-
-         a = -((t(2)*u(1)%fc - t(1)*u(2)%fc)/(t(1) - t(2)))
-         b = -((-u(1)%fc + u(2)%fc)/(t(1) - t(2)))
-
-         u_out%fc = a + b * t_out
-
-      elseif (order .eq. 2) then
-
-         IF ( EqualRealNos( t(1), t(2) ) ) THEN
-           ErrStat = ErrID_Fatal
-           ErrMsg  = ' Error in Mod1_Input_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-           RETURN
-         END IF
-         IF ( EqualRealNos( t(2), t(3) ) ) THEN
-           ErrStat = ErrID_Fatal
-           ErrMsg  = ' Error in Mod1_Input_ExtrapInterp: t(2) must not equal t(3) to avoid a division-by-zero error.'
-           RETURN
-         END IF
-         IF ( EqualRealNos( t(1), t(3) ) ) THEN
-           ErrStat = ErrID_Fatal
-           ErrMsg  = ' Error in Mod1_Input_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
-           RETURN
-         END IF
-
-         a =  (t(1)*t(3)*(-t(1) + t(3))*u(2)%fc + t(2)**2*(t(3)*u(1)%fc - t(1)*u(3)%fc) &
-              + t(2)*(-(t(3)**2*u(1)%fc) + t(1)**2*u(3)%fc))/ &
-              ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))
-         b =  (t(3)**2*(u(1)%fc - u(2)%fc) + t(1)**2*(u(2)%fc - u(3)%fc) + t(2)**2*(-u(1)%fc &
-              + u(3)%fc))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))
-         c =  (t(3)*(-u(1)%fc + u(2)%fc) + t(2)*(u(1)%fc - u(3)%fc) + t(1)*(-u(2)%fc + u(3)%fc)) &
-              /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))
-
-         u_out%fc = a + b * t_out + c * t_out**2
-
-      endif
-
-END SUBROUTINE Mod1_Input_ExtrapInterp
-
-#endif
 
 #define MAXRECURSE 9
 // HERE
@@ -869,24 +768,24 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
   fprintf(fp,"   ! local variables\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
-  fprintf(fp," REAL(ReKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: a1       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:)      :: a2       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:)    :: a3       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: a4       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: a5       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: a1       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: a2       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: a3       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: a4       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: a5       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n") ;
   for ( j = 1 ; j <= 5 ; j++ ) {
     for ( i = 0 ; i <= MAXRECURSE ; i++ ) {
   fprintf(fp," INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n",i,j,j,i) ; 
