@@ -608,12 +608,18 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           char nonick2[NAMELEN] ;
           remove_nickname(ModName->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
+  if (r->dims[0]->deferred) {
+  fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
+  }
   fprintf(fp,"DO i%d = 1, SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
           fprintf(fp,"  CALL %s_Destroy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
                           ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims)) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
+  if (r->dims[0]->deferred) {
+  fprintf(fp,"ENDIF\n") ;
+  }
           }
         } else if ( r->ndims > 0 ) {
           if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
