@@ -647,6 +647,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t *r, char * deref, int recurselevel ) {
    node_t *q, *r1 ;
    int i, j ;
+   int mesh = 0 ;
    char derefrecurse[NAMELEN] ;
    if ( recurselevel > MAXRECURSE ) {
      fprintf(stderr,"REGISTRY ERROR: too many levels of array subtypes\n") ;
@@ -666,6 +667,63 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
            for ( j = r->ndims ; j > 0 ; j-- ) {
   fprintf(fp,"  ENDDO\n") ;
            }
+         }
+       } else if ( !strcmp( r->type->mapsto, "MeshType" ) ) {
+         if        ( order == 0 ) {
+  fprintf(fp,"  CALL MeshCopy(u(1)%s%%%s, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name,deref,r->name )  ;
+         } else if ( order == 1 ) {
+  fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshPack(u(2)%s%%%s, mr2, md2, mi2, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  ALLOCATE(a1(SIZE(mr1)))\n") ;
+  fprintf(fp,"  ALLOCATE(b1(SIZE(mr1)))\n") ;
+  fprintf(fp,"  a1 = -((t(2)*mr1 - t(1)*mr2)/(t(1) - t(2)))\n") ;
+  fprintf(fp,"  b1 = -((-mr1 + mr2)/(t(1) - t(2)))\n") ;
+  fprintf(fp,"  mr1 = a1 + b1 * t_out\n") ;
+  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  DEALLOCATE(b1)\n") ;
+  fprintf(fp,"  ALLOCATE(a1(SIZE(md1)))\n") ;
+  fprintf(fp,"  ALLOCATE(b1(SIZE(md1)))\n") ;
+  fprintf(fp,"  a1 = -((t(2)*md1 - t(1)*md2)/(t(1) - t(2)))\n") ;
+  fprintf(fp,"  b1 = -((-md1 + md2)/(t(1) - t(2)))\n") ;
+  fprintf(fp,"  md1 = a1 + b1 * t_out\n") ;
+  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  DEALLOCATE(b1)\n") ;
+  fprintf(fp,"  CALL MeshUnPack(u_out%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2)\n" ) ; 
+         } else if ( order == 2 ) {
+  fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshPack(u(2)%s%%%s, mr2, md2, mi2, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshPack(u(3)%s%%%s, mr3, md3, mi3, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  ALLOCATE(a1(SIZE(mr1)))\n") ;
+  fprintf(fp,"  ALLOCATE(b1(SIZE(mr1)))\n") ;
+  fprintf(fp,"  ALLOCATE(c1(SIZE(mr1)))\n") ;
+  fprintf(fp,"  a1 = (t(1)*t(3)*(-t(1) + t(3))*mr2 &\n      + t(2)**2*(t(3)*mr1 - t(1)*mr3)        &\n" ) ;
+  fprintf(fp,"      + t(2)*(-(t(3)**2*mr1) + t(1)**2*mr3 ))                        &\n" )  ;
+  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  b1 = (t(3)**2*(mr1  - mr2) &\n      + t(1)**2*(mr2 - mr3 ) + t(2)**2*(-mr1  &\n" ) ;
+  fprintf(fp,"      + mr3 ))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  c1 = (t(3)*(-mr1 + mr2 ) &\n      + t(2)*(mr1 - mr3 ) &\n      + t(1)*(-mr2 + mr3 ))  &\n") ;
+  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  mr1 = a1 + b1 * t_out + c1 * t_out**2\n" ) ;
+  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  DEALLOCATE(b1)\n") ;
+  fprintf(fp,"  DEALLOCATE(c1)\n") ;
+  fprintf(fp,"  ALLOCATE(a1(SIZE(md1)))\n") ;
+  fprintf(fp,"  ALLOCATE(b1(SIZE(md1)))\n") ;
+  fprintf(fp,"  ALLOCATE(c1(SIZE(md1)))\n") ;
+  fprintf(fp,"  a1 = (t(1)*t(3)*(-t(1) + t(3))*md2 &\n      + t(2)**2*(t(3)*md1 - t(1)*md3)        &\n" ) ;
+  fprintf(fp,"      + t(2)*(-(t(3)**2*md1) + t(1)**2*md3 ))                        &\n" )  ;
+  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  b1 = (t(3)**2*(md1  - md2) &\n      + t(1)**2*(md2 - md3 ) + t(2)**2*(-md1  &\n" ) ;
+  fprintf(fp,"      + md3 ))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                  \n") ;
+  fprintf(fp,"  c1 = (t(3)*(-md1 + md2 ) &\n      + t(2)*(md1 - md3 ) &\n      + t(1)*(-md2 + md3 ))  &\n") ;
+  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  md1 = a1 + b1 * t_out + c1 * t_out**2\n" ) ;
+  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  DEALLOCATE(b1)\n") ;
+  fprintf(fp,"  DEALLOCATE(c1)\n") ;
+  fprintf(fp,"  CALL MeshUnPack(u_out%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2,mr3,md3,mi3)\n" ) ; 
          }
        } else {
        }
@@ -764,7 +822,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp,"!..................................................................................................................................\n") ;
   fprintf(fp,"\n") ;
 
-  fprintf(fp," TYPE(%s_%s), INTENT(IN   )  :: u(:)      ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
+  fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u(:)      ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
   fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t(:)      ! Times associated with the inputs\n") ;
 //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
 //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
@@ -774,6 +832,17 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
   fprintf(fp,"   ! local variables\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
+
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr1       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr3       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: md1       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: md2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: md3       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi1       ! temporary for extrapolaton/interpolation\n") ;
+  fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi2       ! temporary for extrapolation/interpolation\n") ;
+  fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi3       ! temporary for extrapolation/interpolation\n") ;
+
   fprintf(fp," REAL(DbKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
