@@ -22,7 +22,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
   fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick,nonick ) ;
   fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: Src%sData\n",addnick,nonick) ;
-  fprintf(fp,"  TYPE(%s), INTENT(  OUT) :: Dst%sData\n",addnick,nonick) ;
+  fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: Dst%sData\n",addnick,nonick) ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ; 
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ; 
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ; 
