@@ -1,0 +1,163 @@
+%&LaTeX
+\documentclass[11pt]{article}
+
+
+% keep the following two lines; makes very nice pdf files when using ps2pdf
+\usepackage[T1]{fontenc}
+\usepackage{ae,aecompl}
+
+\usepackage[normalem]{ulem}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{type1cm} % computer modern fonts
+\usepackage{fancyhdr}
+\usepackage{natbib}
+%\usepackage[sort]{natbib}
+%\usepackage{epsfig,psfrag,amsmath,amssymb,subfigure,setspace,rotating}
+\usepackage{graphicx,psfrag,amsmath,amssymb,subfigure,setspace,rotating}
+
+\usepackage{enumitem}
+
+\usepackage[perpage,para,symbol]{footmisc}
+
+\usepackage[usenames]{color}  % allows colored text
+
+\usepackage[small,compact]{titlesec}
+
+%\usepackage[sort]{natbib}
+%\usepackage{epsfig,psfrag,amsmath,amssymb,subfigure}
+
+% Mike's new commands \comm and \kill: uncomment if you want to use
+\newcommand{\comm}[1]{\textcolor{blue}{\textit{#1}}}
+\newcommand{\del}[1]{\textcolor{red}{\sout{#1}}}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.1in}
+
+
+\setlength{\headsep}{0.2in}
+\setlength{\topmargin}{-0.7in}
+\setlength{\evensidemargin}{-0.18in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\textwidth}{6.7in}
+\setlength{\headheight}{0.2in}
+\setlength{\textheight}{9.5in}
+
+
+
+\newenvironment{itemize*}%
+{\begin{itemize}[label=\textbullet,leftmargin=1pc,labelsep=*,noitemsep,
+topsep=0.3pc,parsep=0.4pc]}
+ {\end{itemize}}
+
+
+\pagestyle{fancy}
+\lhead{Module Plan: BeamDyn}
+\chead{Working Draft}
+\rhead{15 May 2013}
+
+
+% \textheight=10.0in
+
+
+\newcommand{\ie}{\textit{i.e.},~}
+\newcommand{\eg}{\textit{e.g.},~}
+\newcommand{\bs}{\boldsymbol}
+\newcommand{\Ss}{\scriptscriptstyle}
+\newcommand{\D}{\mathrm{d}}
+
+
+\begin{document}
+
+\begin{center}
+{\large \textbf{Module Plan for BeamDyn}}
+\end{center}
+
+
+\section*{Description}
+
+This module represents blade in wind turbine systems.The module is given the module name {\it ModuleName=BeamDyn} and the abbreviated name {\it ModName=BDyn}.
+ 
+%----------------------------------------------------------------------------------------
+%	SECTION 2
+%----------------------------------------------------------------------------------------
+
+\section*{Inputs, Outputs, States, and Parameters}
+
+These are the nonlocal variables that must be defined in the module’s Registry.
+
+\subsection*{Initialization Input}
+
+\subsection*{Initialization Output}
+
+\subsection*{Inputs $(\mathbf{u})$}
+
+
+\comm{Should we also include the Angular position?}
+
+$\omega_r = $ Angular velocity at the root of blade (rad/s)\\
+$f = $ Distributed applied forces along beam axis (N/m) \\
+$m = $ Distributed applied torque and bending moments (N)
+
+\subsection*{Outputs $(\textbf{y})$}
+
+$F_r = $ Stress \comm{Force??} Resultants at the root of blade (N) \\
+$M_r = $ Moment resultants at the root of blade (N $\cdot$ m) \\
+$U_{dis} = $ Displacement vector (m) \\
+$U_{rot} = $ Rotation angle (rad) \\
+$V_{lin} = $ Linear velocity vector (m/s) \\
+$V_{ang} = $ Angular velocity vector (rad/s)
+
+\comm{How about this?}
+
+$\vec{F}_r = $ Resultant force at the root of blade (N) \\
+$\vec{M}_r = $ Resultant moment at the root of blade (N $\cdot$ m) \\
+$\vec{U} = $ Displacement along blade length (m) \\
+$\vec{U}_{rot} = $ Rotation angle (rad) along length of blade \\
+$\vec{V} = $ Velocity along blade length (m/s) \\
+$\vec{V}_{ang} = $ Angular velocity along blade length (rad/s)
+
+\subsection*{States}
+
+\subsubsection*{Continuous States $(\textbf{x})$}
+
+$u_{dis} = $ Displacement vector (m) \\
+$\dot{u}_{dis} = $ Linear velocity vector (m/s) \\
+$u_{rot} = $ Rotation vector\\
+$\dot{u}_{rot} = $ Angular velocity vector
+
+\subsubsection*{Discrete States $(\textbf{x}^d)$}
+
+None
+
+\subsubsection*{Constraint Staes $(\textbf{z})$}
+
+None
+
+\subsubsection*{Other States}
+
+\subsection*{ Parameters $(\textbf{p})$}
+
+\comm{Values in the Parameters category must remain constant throughout the
+integration.  Since these are resolved in the material basis, then I would
+think they will evolve with time.  As such, these should be moved to "Other
+States", where we're allowed to store just about anything.}
+
+$M_m = $ $6 \times 6$ Sectional mass matrix resolved in material basis \\
+$C_m = $ $6 \times 6$ Sectional stiffness matrix resolved in material basis
+
+
+
+\section*{Mathematical Formulation}
+
+\textbf{Work in progress}
+
+
+\bibliographystyle{unsrt}
+
+\bibliography{sample}
+
+%-------------------------------------------------------------------------------
+
+
+\end{document}
