@@ -692,7 +692,9 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
   fprintf(fp,"  md1 = a1 + b1 * t_out\n") ;
   fprintf(fp,"  DEALLOCATE(a1)\n") ;
   fprintf(fp,"  DEALLOCATE(b1)\n") ;
-  fprintf(fp,"  CALL MeshUnPack(u_out%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshUnPack(tmpmesh, mr1, md1, mi1, ErrStat, ErrMsg )\n") ;
+  fprintf(fp,"  CALL MeshCopy(tmpmesh, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshDestroy(tmpmesh, ErrStat, ErrMsg )\n") ;
   fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2)\n" ) ; 
          } else if ( order == 2 ) {
   fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
@@ -726,7 +728,9 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
   fprintf(fp,"  DEALLOCATE(a1)\n") ;
   fprintf(fp,"  DEALLOCATE(b1)\n") ;
   fprintf(fp,"  DEALLOCATE(c1)\n") ;
-  fprintf(fp,"  CALL MeshUnPack(u_out%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshUnPack(tmpmesh, mr1, md1, mi1, ErrStat, ErrMsg )\n") ;
+  fprintf(fp,"  CALL MeshCopy(tmpmesh, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name )  ;
+  fprintf(fp,"  CALL MeshDestroy(tmpmesh, ErrStat, ErrMsg )\n") ;
   fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2,mr3,md3,mi3)\n" ) ; 
          }
        } else {
@@ -835,6 +839,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n") ;
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
   fprintf(fp,"   ! local variables\n") ;
+  fprintf(fp," TYPE(MeshType) :: tmpmesh\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
 
   fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr1       ! temporary for extrapolaton/interpolation\n") ;
