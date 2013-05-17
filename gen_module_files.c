@@ -813,7 +813,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   int founddt, k, i, j ;
 
   fprintf(fp,"\n") ;
-  fprintf(fp," SUBROUTINE %s_%s_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )\n",ModName->nickname,typnm) ;
+  fprintf(fp," SUBROUTINE %s_%s_ExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )\n",ModName->nickname,typnm) ;
   fprintf(fp,"!\n") ;
   fprintf(fp,"! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time\n") ;
   fprintf(fp,"! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u\n") ;
@@ -831,14 +831,16 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp,"\n") ;
 
   fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u(:)      ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
-  fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t(:)      ! Times associated with the inputs\n") ;
+  fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: tin(:)      ! Times associated with the inputs\n") ;
 //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
 //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
   fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u_out     ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
-  fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: t_out     ! time to be extrap/interp'd to\n") ;
+  fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: tin_out     ! time to be extrap/interp'd to\n") ;
   fprintf(fp," INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n") ;
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
   fprintf(fp,"   ! local variables\n") ;
+  fprintf(fp," REAL(DbKi) :: t(SIZE(tin))    ! Times associated with the inputs\n") ;
+  fprintf(fp," REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd\n") ; 
   fprintf(fp," TYPE(MeshType) :: tmpmesh\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
 
@@ -879,13 +881,16 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp," ErrStat = ErrID_None\n") ;
   fprintf(fp," ErrMsg  = \"\"\n") ;
-
+  fprintf(fp,"    ! we're going to subtract a constant from the times\n") ;
+  fprintf(fp,"    ! to check if this resolves some numerical issues later (when t gets large)\n") ;
+  fprintf(fp," t = tin - tin(1)\n") ;
+  fprintf(fp," t_out = tin_out - tin(1)\n") ;
+  fprintf(fp,"\n") ;
   fprintf(fp," if ( size(t) .ne. size(u)) then\n") ;
   fprintf(fp,"    ErrStat = ErrID_Fatal\n") ;
   fprintf(fp,"    ErrMsg = ' Error in %s_%s_ExtrapInterp: size(t) must equal size(u) '\n",ModName->nickname,typnm) ;
   fprintf(fp,"    RETURN\n") ;
   fprintf(fp," endif\n") ;
-  fprintf(fp,"\n") ;
   fprintf(fp," if (size(u) .gt. 3) then\n") ;
   fprintf(fp,"    ErrStat = ErrID_Fatal\n") ;
   fprintf(fp,"    ErrMsg  = ' Error in %s_%s_ExtrapInterp: size(u) must be less than 4 '\n",ModName->nickname,typnm) ;
