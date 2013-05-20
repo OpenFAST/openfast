@@ -107,6 +107,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    TiLstPrn      = 0.0_DbKi                                             ! The first value of ZTime, used to write simulation stats to screen (s)
    Step          = 0                                                    ! The first step counter
 
+   AbortErrLev   = ErrID_Fatal                                          ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
    
       ! Initialize NWTC Library (open console, set pi constants)  
    CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
@@ -114,7 +115,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
       ! Open and read input files, initialize global parameters.
    CALL FAST_Init( p_FAST, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Error in FAST_Init: '//ErrMsg )
+   CALL CheckError( ErrStat, 'Message from FAST_Init: '//NewLine//ErrMsg )
 
    dt_global = p_FAST%dt
 
@@ -133,10 +134,13 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
    CALL ED_Init( InitInData_ED, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Error in ED_Init: '//ErrMsg )
+   CALL CheckError( ErrStat, 'Message from ED_Init: '//NewLine//ErrMsg )
 
    IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")
+   
+   
+   CALL ED_CopyInput (ED_Input(1),  u_ED, 0, Errstat, ErrMsg)   !Bjj copying input here only to allocate the arrays, until we get a better solution...
    
       ! initialize ServoDyn
    IF ( p_FAST%CompServo ) THEN
@@ -148,9 +152,18 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       
       InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
       CALL SrvD_Init( InitInData_SrvD, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, dt_global, InitOutData_SrvD, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, 'Message from SrvD_Init: '//NewLine//ErrMsg )
+      
+      !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
       
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in ServoDyn must be the same as the value of DT in FAST.")
+      
+      !CALL SrvD_CopyInput (SrvD_Input(1),  u_ED, 0, Errstat, ErrMsg)   !Bjj copying input here only to allocate the arrays, until we get a better solution...
+      
+      ! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
+      y_SrvD%ElecPwr = 0.0
+      y_SrvD%GenTrq   = 0.0
       
    END IF
 
@@ -223,7 +236,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Error in FAST_InitOutput: '//ErrMsg )
+   CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
     
    
    !...............................................................................................................................
@@ -258,7 +271,6 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    ZTime = 0.0_DbKi
    DO 
       
-      
             ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
       
       CALL ED_Input_ExtrapInterp(ED_Input, ED_InputTimes, u_ED, ZTime + p_FAST%dt, ErrStat, ErrMsg)
@@ -272,7 +284,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
          !Mod1_OutputTimes(j+1) = Mod1_OutputTimes(j)
       enddo
       
-      Call ED_CopyInput (u_ED,  ED_Input(1),  0, Errstat, ErrMsg)
+      CALL ED_CopyInput (u_ED,  ED_Input(1),  0, Errstat, ErrMsg)
       !Call Mod1_CopyOutput (y1,  Mod1_Output(1),  0, Errstat, ErrMsg)
       ED_InputTimes(1) = ZTime + p_FAST%dt
 
@@ -282,7 +294,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
          ! ElastoDyn
       CALL ED_UpdateStates( ZTime, Step, ED_Input, ED_InputTimes, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Error in ED_UpdateStates: '//ErrMsg )
+      CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
 
          ! ServoDyn
          
@@ -306,10 +318,9 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       !.....................................................
       ! Input-Output solve:
       !.....................................................      
-
       
       CALL ED_CalcOutput( ZTime, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Error in ED_CalcOutput: '//ErrMsg  )
+            CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
 
       IF ( p_FAST%CompAero ) THEN
          CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
@@ -318,14 +329,15 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
          
             !InflowWind outputs
          IfW_WriteOutput = AD_GetUndisturbedWind( REAL(ZTime, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )            
-            CALL CheckError( ErrStat, 'Error in IfW_CalcOutput: '//ErrMsg  )
+            CALL CheckError( ErrStat, 'Message from IfW_CalcOutput: '//NewLine//ErrMsg  )
             
       END IF
 
       IF ( p_FAST%CompServo ) THEN
-         CALL SrvD_InputSolve( p_FAST, u_SrvD, y_ED, IfW_WriteOutput   )
+         CALL SrvD_InputSolve( p_FAST, u_SrvD, y_ED, IfW_WriteOutput, y_SrvD   )  !use the ServoDyn outputs from Step = Step-1 (bjj: need to think about this for predictor-corrector (make sure it doesn't get changed...))
+
          CALL SrvD_CalcOutput( ZTime, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Error in SrvD_CalcOutput: '//ErrMsg  )
+            CALL CheckError( ErrStat, 'Message from SrvD_CalcOutput: '//NewLine//ErrMsg  )
       END IF
             
       IF ( p_FAST%CompHydro ) THEN
@@ -403,12 +415,13 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
 CONTAINS
    !...............................................................................................................................
-   SUBROUTINE ExitThisProgram( Error )
+   SUBROUTINE ExitThisProgram( Error, ErrLev )
    ! This subroutine cleans up if the error is >= AbortErrLev
    !...............................................................................................................................
 
          ! Passed arguments
-      LOGICAL, INTENT(IN) :: Error        ! flag to determine if this is an abort or normal stop
+      LOGICAL,        INTENT(IN)           :: Error        ! flag to determine if this is an abort or normal stop
+      INTEGER(IntKi), INTENT(IN), OPTIONAL :: ErrLev       ! Error level when Error == .TRUE. (required when Error is .TRUE.)
       
       !...............................................................................................................................
       ! Clean up modules (and write binary FAST output file), destroy any other variables
@@ -443,11 +456,11 @@ CONTAINS
       ! Set exit error code if there was an error;
       !............................................................................................................................
 
-      IF (Error) CALL ProgAbort( ' ' )
+      IF (Error) CALL ProgAbort( ' Abort error level: '//TRIM(GetErrStr(ErrLev) ) )  !This assumes PRESENT(ErrID) is .TRUE.
       
-      !...............................................................................................................................
+      !............................................................................................................................
       !  Write simulation times and stop
-      !...............................................................................................................................
+      !............................................................................................................................
 
       CALL RunTimes( StrtTime, UsrTime1, ZTime )     
       
@@ -466,8 +479,8 @@ CONTAINS
       
 
       IF ( ErrID /= ErrID_None ) THEN
-         CALL WrScr( NewLine//TRIM(Msg) )
-         IF ( ErrID >= AbortErrLev ) CALL ExitThisProgram( Error=.TRUE. )
+         CALL WrScr( NewLine//TRIM(Msg)//NewLine )
+         IF ( ErrID >= AbortErrLev ) CALL ExitThisProgram( Error=.TRUE., ErrLev=ErrID )
       END IF
             
 
