@@ -55,7 +55,7 @@ MODULE NWTC_IO
    !     SUBROUTINE OpenUOutfile  ( Un, OutFile [, ErrStat] )
    !     FUNCTION   PathIsRelative( GivenFil )
    !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] )
-   !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
+   !     SUBROUTINE ProgAbort     ( Message [, TrapErrors, TimeWait, ErrLevel] )                      ! Print a message and abort the program with an optiona wait time.
    !     SUBROUTINE ProgPause                                                                         ! Pause output so the user has to hit <Enter> to continue.
    !     SUBROUTINE ProgWarn      ( Message )
    !     FUNCTION   R2LStr4       ( FltNum )                                                          ! Convert  4-byte REALs to left-justified strings.
@@ -67,7 +67,7 @@ MODULE NWTC_IO
    !     SUBROUTINE ReadCAryLines ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadCom       ( UnIn, Fil, ComName [, ErrStat] )
    !     SUBROUTINE ReadCVar      ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] )
-   !     SUBROUTINE ReadFASTbin   ( UnIn, FASTdata [, ErrLev, ErrMsg] )                               ! Read a FAST binary output file.
+   !     SUBROUTINE ReadFASTbin   ( UnIn, Init, FASTdata [, ErrLev, ErrMsg] )                         ! Read a FAST binary output file.
    !     SUBROUTINE ReadIAry      ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr [, ErrStat] )
    !     SUBROUTINE ReadIVar      ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] )
    !     SUBROUTINE ReadLAry      ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] )
@@ -127,7 +127,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
    LOGICAL                       :: Echo     = .FALSE.                           ! Flag that specifies whether or not to produce an echo file.
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.01a-bjj', '25-Feb-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v1.07.02a-mlb', '21-May-2013')       ! The name, version, and date of the NWTC Subroutine Library.
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program.
    CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program.
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
@@ -2017,7 +2017,8 @@ END SUBROUTINE OpenUInBEFile !( Un, InFile, RecLen [, ErrStat] )
 
    IF ( Beep )  CALL UsrAlarm
 
-   CALL WrScr    ( Message )
+   CALL WrScr ( Message )
+
    IF ( PRESENT(TrapErrors) )  THEN
       IF ( TrapErrors ) RETURN
    END IF

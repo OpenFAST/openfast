@@ -461,11 +461,8 @@ CONTAINS
    SUBROUTINE UsrAlarm
 
 
-      ! This routine generates an alarm to warn the user that something went wrong.
+      ! This routine does nothing for the LabVIEW environment.
 
-
-
-!   CALL WrOver ( CHAR( 7 ) )
 
 
    RETURN

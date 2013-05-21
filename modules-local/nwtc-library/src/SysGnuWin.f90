@@ -669,7 +669,7 @@ CONTAINS
 
 
 
-   CALL WrOver ( CHAR( 7 ) )
+   CALL WrNR ( CHAR( 7 ) )
 
 
    RETURN
@@ -701,13 +701,13 @@ CONTAINS
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
+   CHARACTER(*), INTENT(IN)     :: Str                                        ! The string to write to the screen.
 
 
       ! Local declarations.
 
-   CHARACTER(1), PARAMETER      :: CR = ACHAR( 13 )                             ! The carriage return character.
-   CHARACTER(25)                :: Fmt = '(2A,   (" "))'                         ! The format specifier for the output.
+   CHARACTER(1), PARAMETER      :: CR = ACHAR( 13 )                           ! The carriage return character.
+   CHARACTER(25)                :: Fmt = '(2A,   (" "))'                      ! The format specifier for the output.
 
 
 

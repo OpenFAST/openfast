@@ -711,7 +711,7 @@ CONTAINS
 
 
 
-   CALL WrOver ( CHAR( 7 ) )
+   CALL WrNR ( CHAR( 7 ) )
 
 
    RETURN

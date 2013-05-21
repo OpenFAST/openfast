@@ -21,7 +21,7 @@ MODULE SysSubs
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
-   !     SUBROUTINE  ProgPause                                                               ! Do nothing because MatLab is stup
+
    !     SUBROUTINE  UsrAlarm
    !     FUNCTION    UserTime()                                                              ! Removed: Replace by F95 intrinsic, CPU_TIME().
    !     SUBROUTINE  WrNR ( Str )
@@ -479,7 +479,7 @@ CONTAINS
    SUBROUTINE UsrAlarm
 
 
-      ! This routine generates an alarm to warn the user that something went wrong.
+      ! This routine does nothing for the MATLAB environment.
 
 
    RETURN

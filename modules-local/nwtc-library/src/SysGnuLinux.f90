@@ -46,7 +46,7 @@ MODULE SysSubs
 
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-   INTEGER, PARAMETER            :: CU          = 7                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash, but 7 causes grief with gfortran 4.7.
    INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
@@ -668,7 +668,7 @@ CONTAINS
 
 
 
-   CALL WrOver ( CHAR( 7 ) )
+   CALL WrNR ( CHAR( 7 ) )
 
 
    RETURN
@@ -714,7 +714,8 @@ CONTAINS
 
 
 
-   WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
+!   WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
+   WRITE (CU,'(A)',ADVANCE='NO')  Str
 
 
    RETURN
@@ -728,11 +729,20 @@ CONTAINS
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
+   CHARACTER(*), INTENT(IN)     :: Str                                        ! The string to write to the screen.
+
+
+      ! Local declarations.
+
+   CHARACTER(1), PARAMETER      :: CR = ACHAR( 13 )                           ! The carriage return character.
+   CHARACTER(25)                :: Fmt = '(2A,   (" "))'                      ! The format specifier for the output.
 
 
 
-   WRITE (CU,'(''+'',A)')  Str
+!   WRITE (Fmt(5:6),'(I2)')  ConRecL - LEN( Str )
+   WRITE (Fmt(5:7),'(I3)')  98 - LEN( Str )
+
+   WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
 
 
    RETURN
