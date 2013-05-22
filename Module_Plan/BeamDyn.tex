@@ -76,7 +76,7 @@ topsep=0.3pc,parsep=0.4pc]}
 
 \section*{Description}
 
-This module represents blade in wind turbine systems.The module is given the module name {\it ModuleName=BeamDyn} and the abbreviated name {\it ModName=BDyn}.
+This module represents blade in wind turbine systems. The blade is modeled as beam structure and the Geometrically Exact Beam Theory is adopted as the theoretical foundation. All the quantities are resolved in inertial coordinate system and we use Wiener-Milenkovi\'{c} parameters to represent the three-dimensional rotations. Rescaling operation of the rotation parameters are involved in the calculation to avoid singularity point existing in the vectorial parameterization. We use Newmark-Beta scheme for time marching. Legendre Spectral Finite Element are chosen to discretize the structure in space. The module is given the module name {\it ModuleName=BeamDyn} and the abbreviated name {\it ModName=BDyn}.
  
 %----------------------------------------------------------------------------------------
 %	SECTION 2
@@ -93,29 +93,39 @@ These are the nonlocal variables that must be defined in the module’s Registry.
 \subsection*{Inputs $(\mathbf{u})$}
 
 
-\comm{Should we also include the Angular position?}
+%\comm{Should we also include the Angular position?}
 
-$\omega_r = $ Angular velocity at the root of blade (rad/s)\\
-$f = $ Distributed applied forces along beam axis (N/m) \\
-$m = $ Distributed applied torque and bending moments (N)
+$u_r = $ Position vector of blade root \\
+$\dot{u}_r = $ Linear velocity vector of blade root \\
+$\theta_r = $ Angular position vector of blade root \\
+$\dot{\theta}_r = $ Angular velocity vector of blade root\\
+%$\omega_r = $ Angular velocity at the root of blade (rad/s)\\
+$f_{dist} = $ Distributed applied forces (N/m) \\
+$m_{dist} = $ Distributed applied torque and bending moments (N) \\
+$F_p = $ Point force vector applied on the blade \\
+$M_p = $ Point bending vector applied on the blade
 
 \subsection*{Outputs $(\textbf{y})$}
 
-$F_r = $ Stress \comm{Force??} Resultants at the root of blade (N) \\
-$M_r = $ Moment resultants at the root of blade (N $\cdot$ m) \\
-$U_{dis} = $ Displacement vector (m) \\
-$U_{rot} = $ Rotation angle (rad) \\
-$V_{lin} = $ Linear velocity vector (m/s) \\
-$V_{ang} = $ Angular velocity vector (rad/s)
+$u = $ Displacement vector along blade axis \\
+$\dot{u} = $ Velocity vector along blade axis \\
+$\theta = $ Angular rotation vector along blade axis \\
+$\dot{\theta} = $ Angular velocity vector along blade axis \\
+$F_r = $ Stress Resultants (or Sectional Force) at the root of blade (N) \\
+$M_r = $ Moment resultants (or Sectional Moment at the root of blade (N $\cdot$ m) 
+%$U_{dis} = $ Displacement vector (m) \\
+%$U_{rot} = $ Rotation angle (rad) \\
+%$V_{lin} = $ Linear velocity vector (m/s) \\
+%$V_{ang} = $ Angular velocity vector (rad/s)
 
-\comm{How about this?}
+%\comm{How about this?}
 
-$\vec{F}_r = $ Resultant force at the root of blade (N) \\
-$\vec{M}_r = $ Resultant moment at the root of blade (N $\cdot$ m) \\
-$\vec{U} = $ Displacement along blade length (m) \\
-$\vec{U}_{rot} = $ Rotation angle (rad) along length of blade \\
-$\vec{V} = $ Velocity along blade length (m/s) \\
-$\vec{V}_{ang} = $ Angular velocity along blade length (rad/s)
+%$\vec{F}_r = $ Resultant force at the root of blade (N) \\
+%$\vec{M}_r = $ Resultant moment at the root of blade (N $\cdot$ m) \\
+%$\vec{U} = $ Displacement along blade length (m) \\
+%$\vec{U}_{rot} = $ Rotation angle (rad) along length of blade \\
+%$\vec{V} = $ Velocity along blade length (m/s) \\
+%$\vec{V}_{ang} = $ Angular velocity along blade length (rad/s)
 
 \subsection*{States}
 
@@ -138,10 +148,10 @@ None
 
 \subsection*{ Parameters $(\textbf{p})$}
 
-\comm{Values in the Parameters category must remain constant throughout the
-integration.  Since these are resolved in the material basis, then I would
-think they will evolve with time.  As such, these should be moved to "Other
-States", where we're allowed to store just about anything.}
+%\comm{Values in the Parameters category must remain constant throughout the
+%integration.  Since these are resolved in the material basis, then I would
+%think they will evolve with time.  As such, these should be moved to "Other
+%States", where we're allowed to store just about anything.}
 
 $M_m = $ $6 \times 6$ Sectional mass matrix resolved in material basis \\
 $C_m = $ $6 \times 6$ Sectional stiffness matrix resolved in material basis
@@ -152,6 +162,49 @@ $C_m = $ $6 \times 6$ Sectional stiffness matrix resolved in material basis
 
 \textbf{Work in progress}
 
+Equations of Motion
+\begin{align}
+    \label{EoM}
+    \underline{\dot{h}} - \underline{N}^\prime &= \underline{f} \\
+    \underline{\dot{g}}+\dot{\tilde{u}} \underline{h} - \underline{M}^\prime - (\tilde{x}_0^\prime + \tilde{u}^\prime ) \underline{N} &= \underline{m}
+\end{align}
+
+The above equations can be recast in the following compact form
+
+\begin{equation}
+    \label{CompactEoM}
+    \underline{\mathcal{F}}^I - \underline{\mathcal{F}}^{C^\prime} + \underline{F}^D =  \underline{\mathcal{F}}^{ext}
+\end{equation}
+
+where the newly introduced symbols are defined as follows:
+
+\begin{align}
+    \label{InertialForce}
+    \underline{\mathcal{F}}^I &= \begin{Bmatrix}
+    \underline{\dot{h}} \\
+     \underline{\dot{g}}
+     \end{Bmatrix}
+     + \begin{bmatrix}
+     \underline{\underline{0}} & \underline{\underline{0}} \\
+     \dot{\tilde{u}} & \underline{\underline{0}}
+     \end{bmatrix}
+     \begin{Bmatrix}
+     \underline{h} \\
+     \underline{g}
+     \end{Bmatrix} \\
+     \underline{\mathcal{F}}^C &= \begin{Bmatrix}
+     \underline{N} \\
+     \underline{M}
+     \end{Bmatrix} \\
+     \underline{\mathcal{F}}^D &= \begin{Bmatrix}
+     \underline{0} \\
+     (\tilde{x}^\prime_0 + \tilde{u}^\prime )^T \underline{N}
+     \end{Bmatrix}  \\
+     \underline{\mathcal{F}}^{ext} &= \begin{Bmatrix}
+     \underline{f} \\
+     \underline{m}
+     \end{Bmatrix}
+\end{align}
 
 \bibliographystyle{unsrt}
 
