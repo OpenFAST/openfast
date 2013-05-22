@@ -98,7 +98,7 @@ usage:
         fprintf(stderr,"Usage: %s [-D<MACRO>]  [-h] [-keep] registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
         fprintf(stderr,"       %s [/D=<MACRO>] [/h] [/keep] registryfile | [/f] [/template|/registry] ModuleName ModName \n",thisprog) ;
         exit(1) ;
-      } else 
+      } else
       if (!strcmp(*argv,"-keep") || !strcmp(*argv,"/keep") ) {
         sw_keep = 1 ;
       }
@@ -127,7 +127,7 @@ usage:
       fprintf(stderr,"Registry program cannot open %s for reading. Ending.\n", fname_in ) ;
       exit(2) ;
     }
-  
+
   sprintf( fname_tmp , "Registry_tmp.%d",mypid) ;
   if (( fp_tmp = fopen( fname_tmp  , "w" )) == NULL )
   {
@@ -137,7 +137,7 @@ usage:
 
   { char *e ;
     strcpy( dir , fname_in ) ;
-    if ( ( e = rindex ( dir , '/' ) ) != NULL ) { *e = '\0' ; } else { strcpy( dir, "." ) ; } 
+    if ( ( e = rindex ( dir , '/' ) ) != NULL ) { *e = '\0' ; } else { strcpy( dir, "." ) ; }
   }
   if ( pre_parse( dir, fp_in, fp_tmp, 0 ) ) {
     fprintf(stderr,"Problem with Registry File %s\n", fname_in ) ;
@@ -232,7 +232,7 @@ substitute( char * str , char * match , char * replace, char * result )
       if ( matches( p, match ) )
       {
         strncpy( q, replace, n ) ;
-        q += n ; 
+        q += n ;
         p += m ;
       } else {
         *q = *p ;
@@ -244,13 +244,13 @@ substitute( char * str , char * match , char * replace, char * result )
    strcpy( str, result ) ;
 }
 
-int 
+int
 matches( char * str , char * match )   // both must be null terminated
 {
    char * p, * q ;
    int n, retval ;
-   
-   for ( n = 0, p = str, q = match ;  (*p && *q) ; p++, q++, n++ ) 
+
+   for ( n = 0, p = str, q = match ;  (*p && *q) ; p++, q++, n++ )
    {
      if ( *p != *q ) return(0) ;
    }

@@ -12,7 +12,7 @@
 #include "FAST_preamble.h"
 
 int
-gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong ) 
+gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
@@ -23,9 +23,9 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick,nonick ) ;
   fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: Src%sData\n",addnick,nonick) ;
   fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: Dst%sData\n",addnick,nonick) ;
-  fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ; 
-  fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ; 
-  fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ; 
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ;
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
+  fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"! Local \n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
   fprintf(fp,"! \n") ;
@@ -38,12 +38,12 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
   sprintf(tmp2,"%s",make_lower_temp(tmp)) ;
 
-  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL ) 
+  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
     fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
   } else {
     for ( r = q->fields ; r ; r = r->next )
-    { 
+    {
       if ( r->type != NULL ) {
         if ( !strcmp( r->type->name, "meshtype" ) ) {
           for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -82,7 +82,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"ENDIF\n") ;
           }
         }
-      } 
+      }
     }
   }
 
@@ -168,7 +168,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   if ( frst == 1 ) { fprintf(fp," ! Allocate mesh buffers, if any (we'll also get sizes from these) \n") ; frst = 0 ;}
-  fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, .TRUE. ) ! %s \n", 
+  fprintf(fp,"  CALL MeshPack( InData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
                                  r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                              r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
@@ -265,7 +265,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s%s, ErrStat, ErrMsg, OnlySize ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, 
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                         dimstr(r->ndims),
                         r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
@@ -290,20 +290,20 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
     } else  {
       char * indent ;
       sprintf(tmp2,"SIZE(InData%%%s)",r->name) ;
-      if        ( r->ndims==0 ) { 
-        strcpy(tmp3,"") ; 
-      } else if ( r->ndims==1 ) { 
-        strcpy(tmp3,"") ; 
-      } else if ( r->ndims==2 ) { 
-        sprintf(tmp3,"(1:(%s),1)",tmp2) ; 
-      } else if ( r->ndims==3 ) { 
-        sprintf(tmp3,"(1:(%s),1,1)",tmp2) ; 
-      } else if ( r->ndims==4 ) { 
-        sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ; 
-      } else if ( r->ndims==5 ) { 
-        sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; 
-      } else                    { 
-        fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; 
+      if        ( r->ndims==0 ) {
+        strcpy(tmp3,"") ;
+      } else if ( r->ndims==1 ) {
+        strcpy(tmp3,"") ;
+      } else if ( r->ndims==2 ) {
+        sprintf(tmp3,"(1:(%s),1)",tmp2) ;
+      } else if ( r->ndims==3 ) {
+        sprintf(tmp3,"(1:(%s),1,1)",tmp2) ;
+      } else if ( r->ndims==4 ) {
+        sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ;
+      } else if ( r->ndims==5 ) {
+        sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ;
+      } else                    {
+        fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ;
       }
       indent = "" ;
       if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
@@ -382,7 +382,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)\n") ;
 
   fprintf(fp," ! buffers to store meshes, if any\n") ;
-  for ( r = q->fields ; r ; r = r->next ) 
+  for ( r = q->fields ; r ; r = r->next )
   {
     if ( r->type == NULL ) {
       fprintf(stderr,"Registry warning generating %_Unpack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
@@ -461,7 +461,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  CALL %s_Unpack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, 
+                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                         dimstr(r->ndims),
                         r->name ) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -471,7 +471,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
     } else  {
       char * indent ;
       char arrayname[NAMELEN] ;
- 
+
       sprintf(arrayname,"OutData%%%s",r->name) ;
       sprintf(tmp2,"SIZE(OutData%%%s)",r->name) ;
       if      ( r->ndims==0 ) { strcpy(tmp3,"") ; }
@@ -678,91 +678,62 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
          } else if ( order == 1 ) {
   fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
   fprintf(fp,"  CALL MeshPack(u(2)%s%%%s, mr2, md2, mi2, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  ALLOCATE(a1(SIZE(mr1)))\n") ;
   fprintf(fp,"  ALLOCATE(b1(SIZE(mr1)))\n") ;
-  fprintf(fp,"  a1 = -((t(2)*mr1 - t(1)*mr2)/(t(1) - t(2)))\n") ;
-  fprintf(fp,"  b1 = -((-mr1 + mr2)/(t(1) - t(2)))\n") ;
-  fprintf(fp,"  mr1 = a1 + b1 * t_out\n") ;
-  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  b1 = -(mr1 - mr2)/t(2)\n") ;
+  fprintf(fp,"  mr1 = mr1 + b1 * t_out\n") ;
   fprintf(fp,"  DEALLOCATE(b1)\n") ;
-  fprintf(fp,"  ALLOCATE(a1(SIZE(md1)))\n") ;
   fprintf(fp,"  ALLOCATE(b1(SIZE(md1)))\n") ;
-  fprintf(fp,"  a1 = -((t(2)*md1 - t(1)*md2)/(t(1) - t(2)))\n") ;
-  fprintf(fp,"  b1 = -((-md1 + md2)/(t(1) - t(2)))\n") ;
-  fprintf(fp,"  md1 = a1 + b1 * t_out\n") ;
-  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  b1 = -(md1 - md2)/t(2)\n") ;
+  fprintf(fp,"  md1 = md1 + b1 * t_out\n") ;
   fprintf(fp,"  DEALLOCATE(b1)\n") ;
   fprintf(fp,"  CALL MeshUnPack(tmpmesh, mr1, md1, mi1, ErrStat, ErrMsg )\n") ;
   fprintf(fp,"  CALL MeshCopy(tmpmesh, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name )  ;
   fprintf(fp,"  CALL MeshDestroy(tmpmesh, ErrStat, ErrMsg )\n") ;
-  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2)\n" ) ; 
+  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2)\n" ) ;
          } else if ( order == 2 ) {
   fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
   fprintf(fp,"  CALL MeshPack(u(2)%s%%%s, mr2, md2, mi2, ErrStat, ErrMsg )\n",deref,r->name )  ;
   fprintf(fp,"  CALL MeshPack(u(3)%s%%%s, mr3, md3, mi3, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  ALLOCATE(a1(SIZE(mr1)))\n") ;
   fprintf(fp,"  ALLOCATE(b1(SIZE(mr1)))\n") ;
   fprintf(fp,"  ALLOCATE(c1(SIZE(mr1)))\n") ;
-  fprintf(fp,"  a1 = (t(1)*t(3)*(-t(1) + t(3))*mr2 &\n      + t(2)**2*(t(3)*mr1 - t(1)*mr3)        &\n" ) ;
-  fprintf(fp,"      + t(2)*(-(t(3)**2*mr1) + t(1)**2*mr3 ))                        &\n" )  ;
-  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  b1 = (t(3)**2*(mr1  - mr2) &\n      + t(1)**2*(mr2 - mr3 ) + t(2)**2*(-mr1  &\n" ) ;
-  fprintf(fp,"      + mr3 ))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  c1 = (t(3)*(-mr1 + mr2 ) &\n      + t(2)*(mr1 - mr3 ) &\n      + t(1)*(-mr2 + mr3 ))  &\n") ;
-  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  mr1 = a1 + b1 * t_out + c1 * t_out**2\n" ) ;
-  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  b1 = (t(3)**2*(mr1 - mr2) + t(2)**2*(-mr1 + mr3))/(t(2)*t(3)*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  c1 = ( (t(2)-t(3))*mr1 + t(3)*mr2 - t(2)*mr3 ) / (t(2)*t(3)*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  mr1 = mr1 + b1 * t_out + c1 * t_out**2\n" ) ;
   fprintf(fp,"  DEALLOCATE(b1)\n") ;
   fprintf(fp,"  DEALLOCATE(c1)\n") ;
-  fprintf(fp,"  ALLOCATE(a1(SIZE(md1)))\n") ;
   fprintf(fp,"  ALLOCATE(b1(SIZE(md1)))\n") ;
   fprintf(fp,"  ALLOCATE(c1(SIZE(md1)))\n") ;
-  fprintf(fp,"  a1 = (t(1)*t(3)*(-t(1) + t(3))*md2 &\n      + t(2)**2*(t(3)*md1 - t(1)*md3)        &\n" ) ;
-  fprintf(fp,"      + t(2)*(-(t(3)**2*md1) + t(1)**2*md3 ))                        &\n" )  ;
-  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  b1 = (t(3)**2*(md1  - md2) &\n      + t(1)**2*(md2 - md3 ) + t(2)**2*(-md1  &\n" ) ;
-  fprintf(fp,"      + md3 ))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                  \n") ;
-  fprintf(fp,"  c1 = (t(3)*(-md1 + md2 ) &\n      + t(2)*(md1 - md3 ) &\n      + t(1)*(-md2 + md3 ))  &\n") ;
-  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  md1 = a1 + b1 * t_out + c1 * t_out**2\n" ) ;
-  fprintf(fp,"  DEALLOCATE(a1)\n") ;
+  fprintf(fp,"  b1 = (t(3)**2*(md1 - md2) + t(2)**2*(-md1 + md3))/(t(2)*t(3)*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  c1 = ( (t(2)-t(3))*md1 + t(3)*md2 - t(2)*md3 ) / (t(2)*t(3)*(t(2) - t(3)))\n") ;
+  fprintf(fp,"  md1 = md1 + b1 * t_out + c1 * t_out**2\n" ) ;
   fprintf(fp,"  DEALLOCATE(b1)\n") ;
   fprintf(fp,"  DEALLOCATE(c1)\n") ;
   fprintf(fp,"  CALL MeshUnPack(tmpmesh, mr1, md1, mi1, ErrStat, ErrMsg )\n") ;
   fprintf(fp,"  CALL MeshCopy(tmpmesh, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name )  ;
   fprintf(fp,"  CALL MeshDestroy(tmpmesh, ErrStat, ErrMsg )\n") ;
-  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2,mr3,md3,mi3)\n" ) ; 
+  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2,mr3,md3,mi3)\n" ) ;
          }
        } else {
        }
      } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   ) {
        if        ( r->ndims==0 ) {
        } else if ( r->ndims==1 && order > 0 ) {
-  fprintf(fp,"  ALLOCATE(a1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
   fprintf(fp,"  ALLOCATE(b1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
   fprintf(fp,"  ALLOCATE(c1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
        } else if ( r->ndims==2 && order > 0 ) {
-  fprintf(fp,"  ALLOCATE(a2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"  ALLOCATE(b2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"  ALLOCATE(c2(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2) ))\n",deref,r->name,deref,r->name) ;
        } else if ( r->ndims==3 && order > 0 ) {
-  fprintf(fp,"  ALLOCATE(a3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,3)                     ))\n",deref,r->name              ) ;
   fprintf(fp,"  ALLOCATE(b3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,3)                     ))\n",deref,r->name              ) ;
   fprintf(fp,"  ALLOCATE(c3(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,3)                     ))\n",deref,r->name              ) ;
        } else if ( r->ndims==4 && order > 0 ) {
-  fprintf(fp,"  ALLOCATE(a4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"  ALLOCATE(b4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"  ALLOCATE(c4(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4) ))\n",deref,r->name,deref,r->name) ;
        } else if ( r->ndims==5 && order > 0 ) {
-  fprintf(fp,"  ALLOCATE(a5(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4), &\n",deref,r->name,deref,r->name) ;
-  fprintf(fp,"              SIZE(u_out%s%%%s,5)                         ))\n", deref,r->name         ) ;
   fprintf(fp,"  ALLOCATE(b5(SIZE(u_out%s%%%s,1),SIZE(u_out%s%%%s,2), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,3),SIZE(u_out%s%%%s,4), &\n",deref,r->name,deref,r->name) ;
   fprintf(fp,"              SIZE(u_out%s%%%s,5)                         ))\n", deref,r->name         ) ;
@@ -776,27 +747,17 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
        if        ( order == 0 ) {
   fprintf(fp,"  u_out%s%%%s = u(1)%s%%%s\n",deref,r->name,deref,r->name) ;
        } else if ( order == 1 ) {
-  fprintf(fp,"  a%d = -((t(2)*u(1)%s%%%s - t(1)*u(2)%s%%%s)/(t(1) - t(2)))\n",r->ndims,deref,r->name,deref,r->name) ;
-  fprintf(fp,"  b%d = -((-u(1)%s%%%s + u(2)%s%%%s)/(t(1) - t(2)))\n",r->ndims,deref,r->name,deref,r->name) ;
-  fprintf(fp,"  u_out%s%%%s = a%d + b%d * t_out\n",deref,r->name,r->ndims,r->ndims) ;
+  fprintf(fp,"  b%d = -(u(1)%s%%%s - u(2)%s%%%s)/t(2)\n",r->ndims,deref,r->name,deref,r->name) ;
+  fprintf(fp,"  u_out%s%%%s = u(1)%s%%%s + b%d * t_out\n",deref,r->name,deref,r->name,r->ndims) ;
        } else if ( order == 2 ) {
-  fprintf(fp,"  a%d = (t(1)*t(3)*(-t(1) + t(3))*u(2)%s%%%s &\n      + t(2)**2*(t(3)*u(1)%s%%%s - t(1)*u(3)%s%%%s)        &\n",
-                                          r->ndims,  deref,r->name,deref,r->name,deref,r->name) ;
-  fprintf(fp,"      + t(2)*(-(t(3)**2*u(1)%s%%%s) + t(1)**2*u(3)%s%%%s))                        &\n",
-                                                     deref,r->name,deref,r->name) ;
-  fprintf(fp,"      / ((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  b%d = (t(3)**2*(u(1)%s%%%s - u(2)%s%%%s) &\n      + t(1)**2*(u(2)%s%%%s - u(3)%s%%%s) + t(2)**2*(-u(1)%s%%%s &\n",
-                                          r->ndims,  deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
-  fprintf(fp,"      + u(3)%s%%%s))/((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))                  \n",
-                                                     deref,r->name) ;
-  fprintf(fp,"  c%d = (t(3)*(-u(1)%s%%%s + u(2)%s%%%s) &\n      + t(2)*(u(1)%s%%%s - u(3)%s%%%s) &\n      + t(1)*(-u(2)%s%%%s + u(3)%s%%%s))  &\n",
-                                          r->ndims,  deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name,deref,r->name) ;
-  fprintf(fp,"      /((t(1) - t(2))*(t(1) - t(3))*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  u_out%s%%%s = a%d + b%d * t_out + c%d * t_out**2\n",
-                                                     deref,r->name,r->ndims,r->ndims,r->ndims) ;
+  fprintf(fp,"  b%d = (t(3)**2*(u(1)%s%%%s - u(2)%s%%%s) + t(2)**2*(-u(1)%s%%%s + u(3)%s%%%s))/(t(2)*t(3)*(t(2) - t(3)))\n",
+                       r->ndims, deref,r->name, deref,r->name, deref,r->name, deref,r->name ) ;
+  fprintf(fp,"  c%d = ( (t(2)-t(3))*u(1)%s%%%s + t(3)*u(2)%s%%%s - t(2)*u(3)%s%%%s ) / (t(2)*t(3)*(t(2) - t(3)))\n",
+                       r->ndims, deref,r->name, deref,r->name, deref,r->name) ;
+  fprintf(fp,"  u_out%s%%%s = u(1)%s%%%s + b%d * t_out + c%d * t_out**2\n",
+                                                     deref,r->name,deref,r->name,r->ndims,r->ndims) ;
        }
        if        ( r->ndims>=1 && order > 0 ) {
-  fprintf(fp,"  DEALLOCATE(a%d)\n",r->ndims) ;
   fprintf(fp,"  DEALLOCATE(b%d)\n",r->ndims) ;
   fprintf(fp,"  DEALLOCATE(c%d)\n",r->ndims) ;
        }
@@ -840,7 +801,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
   fprintf(fp,"   ! local variables\n") ;
   fprintf(fp," REAL(DbKi) :: t(SIZE(tin))    ! Times associated with the inputs\n") ;
-  fprintf(fp," REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd\n") ; 
+  fprintf(fp," REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd\n") ;
   fprintf(fp," TYPE(MeshType) :: tmpmesh\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
 
@@ -853,36 +814,30 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi1       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi2       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi3       ! temporary for extrapolation/interpolation\n") ;
-
-  fprintf(fp," REAL(DbKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
+//  fprintf(fp," REAL(DbKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: a1       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: a2       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: a3       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: a4       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: a5       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n") ;
   for ( j = 1 ; j <= 5 ; j++ ) {
     for ( i = 0 ; i <= MAXRECURSE ; i++ ) {
-  fprintf(fp," INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n",i,j,j,i) ; 
+  fprintf(fp," INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n",i,j,j,i) ;
     }
   }
   fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp," ErrStat = ErrID_None\n") ;
   fprintf(fp," ErrMsg  = \"\"\n") ;
-  fprintf(fp,"    ! we're going to subtract a constant from the times\n") ;
-  fprintf(fp,"    ! to check if this resolves some numerical issues later (when t gets large)\n") ;
+  fprintf(fp,"    ! we're subtract a constant from the times to resolve some \n") ;
+  fprintf(fp,"    ! numerical issues when t gets large (and to simplify the equations)\n") ;
   fprintf(fp," t = tin - tin(1)\n") ;
   fprintf(fp," t_out = tin_out - tin(1)\n") ;
   fprintf(fp,"\n") ;
@@ -1021,7 +976,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
   fprintf(fp,"  TYPE(%s_ContinuousStateType), INTENT(INOUT) :: x           ! Continuous states at t on input at t + dt on output\n",
                                                                                               ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_DiscreteStateType),   INTENT(INOUT) :: xd          ! Discrete states at t\n",   ModName->nickname) ;
-  fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(IN   ) :: z           ! Constraint states at t (possibly a guess)\n", 
+  fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(IN   ) :: z           ! Constraint states at t (possibly a guess)\n",
                                                                                               ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(INOUT) :: OtherState  ! Other/optimization states\n",  ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_ContinuousStateType), INTENT(IN   ) :: xdot        ! Continuous states at t on input at t + dt on output\n",
@@ -1062,7 +1017,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
       remove_nickname(ModName->nickname,ddtname,nonick) ;
       if ( !strcmp( nonick, "continuousstatetype")) {
         for ( r = q->fields ; r ; r = r->next )
-        { 
+        {
           if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
           {
   fprintf(fp,"  k%d%%%s = p%%dt * xdot%s%%%s\n",k,r->name,(k<2)?"":"_local",r->name) ;
@@ -1097,7 +1052,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
                                                                                              ModName->nickname) ;
   if (k < 4 )fprintf(fp,"  CALL %s_CalcContStateDeriv( t+%sp%%dt, u_%s, p, x_tmp, xd, z, OtherState, xdot_local, ErrStat, ErrMsg )\n",
                                                                                              ModName->nickname,
-                                                                                             (k<3)?"0.5*":"", 
+                                                                                             (k<3)?"0.5*":"",
                                                                                              (k<3)?"interp":"next") ;
   fprintf(fp,"\n") ;
   }
@@ -1331,7 +1286,7 @@ gen_module( FILE * fp , node_t * ModName )
       if ( q->usefrom == 0 ) {
         fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
         for ( r = q->fields ; r ; r = r->next )
-        { 
+        {
           if ( r->type != NULL ) {
             if ( r->type->type_type == DERIVED ) {
               fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
@@ -1339,7 +1294,7 @@ gen_module( FILE * fp , node_t * ModName )
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( must_have_real_or_double(tmp) ) {
-                if ( strncmp(r->type->mapsto,"REAL",4) ) { 
+                if ( strncmp(r->type->mapsto,"REAL",4) ) {
                   fprintf(stderr,"Registry warning: %s contains a field (%s) whose type is not real or double: %s\n",
                    q->mapsto, r->name , r->type->mapsto ) ;
                 }
@@ -1387,7 +1342,7 @@ gen_module( FILE * fp , node_t * ModName )
         ddtname = q->name ;
 
         remove_nickname(ModName->nickname,ddtname,nonick) ;
-        
+
 //fprintf(stderr,">> %s %s %s \n",ModName->name, ddtname, nonick) ;
 
         if ( is_a_fast_interface_type( nonick ) ) {
@@ -1424,13 +1379,13 @@ gen_module_files ( char * dirname )
   char * fn ;
 
   node_t * p ;
-  
+
   for ( p = ModNames ; p ; p = p->next )
   {
     if ( strlen( p->nickname ) > 0  && ! p->usefrom ) {
-      if ( strlen(dirname) > 0 ) 
+      if ( strlen(dirname) > 0 )
         { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
-      else                       
+      else
         { sprintf(fname,"%s_Types.f90",p->name) ; }
       if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
       print_warning(fp,fname) ;
