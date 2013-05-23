@@ -5,4 +5,6 @@ ArcMaint.txt
 CreatePage.pl
 UpdatePage.bat
 UpdateWeb.bat
+Documentation\cubic_spline_p2.pdf
+Documentation\NWTC_Library_Description.doc
 Source\Drivers\Test_NWTC_Library.f90

@@ -1,6 +1,6 @@
 ChangeLog.txt
 Disclaimer.txt
-NWTC_Library_Description.pdf
+Documentation\NWTC_Library_Description.pdf
 Source\DoubPrec.f90
 Source\ModMesh.f90
 Source\ModMesh_Types.f90

@@ -3,13 +3,23 @@
 @SET ARCHROOT=NWTC_Lib
 @SET PROGNAME=NWTC_Library
 
-rem @SET WINZIP="C:\Program Files\WinZip\WZZip"
-rem @SET WINZIPSE="C:\Program Files\WinZip Self-Extractor\wzipse32.exe"
+::=======================================================================================================
+:: PLEASE NOTE
+:: -----------
+:: If you need to change the file locations to work for your system, please copy an existing set and put
+:: your modified version at the end of this section.  You do not need to comment out other versions.
+:: Don't forget to name your set.
 
+:: Someone's setup:
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
-
 @SET TARZIP="C:\Program Files\7-Zip\7z.exe"
+
+:: Marshall's setup:
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET TARZIP="C:\Program Files\7-Zip\7z.exe"
+::=======================================================================================================
 
 
 @IF NOT "%1"==""  GOTO DeleteOld
