@@ -1,0 +1,27 @@
+# This file defines types that may be  used from the NWTC_Library
+# include this into a component registry file if you wish to use these types
+# the "usefrom" keyword defines the types for the registry without generating
+# a NWTC_Library_Types.f90 file
+#
+usefrom   NWTC_Library    ProgDesc       CHARACTER(24)    Name
+usefrom     ^               ^            CHARACTER(99)    Ver
+usefrom     ^               ^            CHARACTER(24)    Date
+
+usefrom     ^             FASTdataType   CHARACTER(1024)  File
+usefrom     ^               ^            CHARACTER(1024)  Descr
+usefrom     ^               ^            B4Ki             NumChans
+usefrom     ^               ^            B4Ki             NumRecs
+usefrom     ^               ^            DbKi             TimeStep
+usefrom     ^               ^            CHARACTER(20)    ChanNames {:}
+usefrom     ^               ^            CHARACTER(20)    ChanUnits {:}
+usefrom     ^               ^            ReKi             Data      {:}{:}
+
+usefrom   NWTC_Library    OutParmType    IntKi            Indx
+usefrom     ^               ^            CHARACTER(10)    Name
+usefrom     ^               ^            CHARACTER(10)    Units
+usefrom     ^               ^            IntKi            SignM
+
+usefrom   NWTC_Library    FileInfoType   IntKi            NumLines
+usefrom     ^               ^            IntKi            FileLine  {:}
+usefrom     ^               ^            CHARACTER(1024)  FileName
+usefrom     ^               ^            CHARACTER(512)   Lines     {:}

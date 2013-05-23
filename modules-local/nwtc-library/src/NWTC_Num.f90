@@ -11,6 +11,7 @@ MODULE NWTC_Num
    !     FUNCTION   CROSS_PRODUCT ( Vector1, Vector2 )
    !     FUNCTION   EqualRealNos  ( ReNum1, ReNum2 )
    !     SUBROUTINE GL_Pts        ( IPt, NPts, Loc, Wt [, ErrStat] )
+   !     SUBROUTINE GaussElim     ( AugMat, NumEq, x, ErrStat, ErrMsg )         ! Performs Gauss-Jordan elimination to solve Ax=b for x; AugMat = [A b]
    !     FUNCTION   IndexCharAry  ( CVal, CAry )
    !     FUNCTION   InterpBin     ( XVal, XAry, YAry, ILo, AryLen )             ! Generic interface for InterpBinComp and InterpBinReal.
    !     FUNCTION   InterpBinComp ( XVal, XAry, YAry, ILo, AryLen )
@@ -18,6 +19,8 @@ MODULE NWTC_Num
    !     FUNCTION   InterpStp     ( XVal, XAry, YAry, ILo, AryLen )             ! Generic interface for InterpStpComp and InterpStpReal.
    !     FUNCTION   InterpStpComp ( XVal, XAry, YAry, Ind, AryLen )
    !     FUNCTION   InterpStpReal ( XVal, XAry, YAry, Ind, AryLen )
+   !     FUNCTION   IsSymmetric   ( A )                                         ! Function to determine if A(:,:) is symmetric
+   !     SUBROUTINE LocateBin     ( XVal, XAry, Ind, AryLen )
    !     SUBROUTINE LocateStp     ( XVal, XAry, Ind, AryLen )
    !     FUNCTION   Mean          ( Ary, AryLen )                               ! Function to calculate the mean value of a vector array.
    !     SUBROUTINE MPi2Pi        ( Angle )
@@ -37,30 +40,32 @@ MODULE NWTC_Num
 
       ! Global numeric-related variables.
 
-   REAL(DbKi)                   :: D2R_D                                        ! Factor to convert degrees to radians in double precision.
-   REAL(DbKi)                   :: Inf_D                                        ! IEEE value for NaN (not-a-number) in double precision 
+   REAL(DbKi)                   :: D2R_D                                        ! Factor to convert degrees to radians in double precision
+   REAL(DbKi)                   :: Inf_D                                        ! IEEE value for NaN (not-a-number) in double precision
+   REAL(DbKi)                   :: Inv2Pi_D                                     ! 0.5/Pi (1/(2*Pi)) in double precision
    REAL(DbKi)                   :: NaN_D                                        ! IEEE value for Inf (infinity) in double precision
-   REAL(DbKi)                   :: Pi_D                                         ! Ratio of a circle's circumference to its diameter in double precision.
-   REAL(DbKi)                   :: PiBy2_D                                      ! Pi/2 in double precision.
-   REAL(DbKi)                   :: R2D_D                                        ! Factor to convert radians to degrees in double precision.
-   REAL(DbKi)                   :: RPM2RPS_D                                    ! Factor to convert revolutions per minute to radians per second in double precision.
-   REAL(DbKi)                   :: RPS2RPM_D                                    ! Factor to convert radians per second to revolutions per minute in double precision.
-   REAL(DbKi)                   :: TwoByPi_D                                    ! 2/Pi in double precision.
-   REAL(DbKi)                   :: TwoPi_D                                      ! 2*Pi in double precision.
-   
-   
-   REAL(ReKi)                   :: D2R                                          ! Factor to convert degrees to radians.
-   REAL(ReKi)                   :: Inf                                          ! IEEE value for NaN (not-a-number)
-   REAL(ReKi)                   :: NaN                                          ! IEEE value for Inf (infinity)
-   REAL(ReKi)                   :: Pi                                           ! Ratio of a circle's circumference to its diameter.
-   REAL(ReKi)                   :: PiBy2                                        ! Pi/2.
-   REAL(ReKi)                   :: R2D                                          ! Factor to convert radians to degrees.
-   REAL(ReKi)                   :: RPM2RPS                                      ! Factor to convert revolutions per minute to radians per second.
-   REAL(ReKi)                   :: RPS2RPM                                      ! Factor to convert radians per second to revolutions per minute.
-   REAL(ReKi)                   :: TwoByPi                                      ! 2/Pi.
-   REAL(ReKi)                   :: TwoPi                                        ! 2*Pi.
+   REAL(DbKi)                   :: Pi_D                                         ! Ratio of a circle's circumference to its diameter in double precision
+   REAL(DbKi)                   :: PiBy2_D                                      ! Pi/2 in double precision
+   REAL(DbKi)                   :: R2D_D                                        ! Factor to convert radians to degrees in double precision
+   REAL(DbKi)                   :: RPM2RPS_D                                    ! Factor to convert revolutions per minute to radians per second in double precision
+   REAL(DbKi)                   :: RPS2RPM_D                                    ! Factor to convert radians per second to revolutions per minute in double precision
+   REAL(DbKi)                   :: TwoByPi_D                                    ! 2/Pi in double precision
+   REAL(DbKi)                   :: TwoPi_D                                      ! 2*Pi in double precision
 
-   INTEGER, ALLOCATABLE         :: IntIndx  (:,:)                               ! The array of indices holding that last index used for interpolation in IntBlade().
+
+   REAL(ReKi)                   :: D2R                                          ! Factor to convert degrees to radians
+   REAL(ReKi)                   :: Inf                                          ! IEEE value for NaN (not-a-number)
+   REAL(ReKi)                   :: Inv2Pi                                       ! 0.5/Pi = 1 / (2*pi)
+   REAL(ReKi)                   :: NaN                                          ! IEEE value for Inf (infinity)
+   REAL(ReKi)                   :: Pi                                           ! Ratio of a circle's circumference to its diameter
+   REAL(ReKi)                   :: PiBy2                                        ! Pi/2
+   REAL(ReKi)                   :: R2D                                          ! Factor to convert radians to degrees
+   REAL(ReKi)                   :: RPM2RPS                                      ! Factor to convert revolutions per minute to radians per second
+   REAL(ReKi)                   :: RPS2RPM                                      ! Factor to convert radians per second to revolutions per minute
+   REAL(ReKi)                   :: TwoByPi                                      ! 2/Pi
+   REAL(ReKi)                   :: TwoPi                                        ! 2*Pi
+
+   INTEGER, ALLOCATABLE         :: IntIndx  (:,:)                               ! The array of indices holding that last index used for interpolation in IntBlade()
 
 
 !=======================================================================
@@ -72,7 +77,7 @@ MODULE NWTC_Num
       MODULE PROCEDURE EqualRealNos8
       MODULE PROCEDURE EqualRealNos16
    END INTERFACE
-   
+
 
       ! Create interface for a generic InterpBin that actually uses specific routines.
 
@@ -287,7 +292,7 @@ CONTAINS
 
       ! determine if ReNum1 and ReNum2 are approximately equal
 
-   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error 
+   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error
       EqualRealNos4 = .TRUE.
    ELSE
       EqualRealNos4 = .FALSE.
@@ -296,7 +301,7 @@ CONTAINS
 
    END FUNCTION EqualRealNos4
 !=======================================================================
-  FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
+   FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
 
       ! This function compares 2 real numbers and determines if they
       ! are "almost" equal, i.e. within some relative tolerance
@@ -331,9 +336,9 @@ CONTAINS
    ENDIF
 
 
-  END FUNCTION EqualRealNos8
+   END FUNCTION EqualRealNos8
 !=======================================================================
-  FUNCTION EqualRealNos16 ( ReNum1, ReNum2 )
+   FUNCTION EqualRealNos16 ( ReNum1, ReNum2 )
 
       ! This function compares 2 real numbers and determines if they
       ! are "almost" equal, i.e. within some relative tolerance
@@ -370,29 +375,110 @@ CONTAINS
 
   END FUNCTION EqualRealNos16
 !=======================================================================
-   FUNCTION GetSmllRotAngs ( DCMat, ErrStat )
+   SUBROUTINE GaussElim( AugMatIn, NumEq, x, ErrStat, ErrMsg )
 
-      ! This subroutine computes the angles that make up the input
-      ! direction cosine matrix, DCMat
+      ! This routine uses the Gauss-Jordan elimination method for the
+      !   solution of a given set of simultaneous linear equations.
+      ! NOTE: this routine works if no pivot points are zero and you
+      !   don't want the eschelon or reduced eschelon form of the
+      !   augmented matrix.  The form of the original augmented matrix
+      !   IS preserved in this call.
+      ! This routine was originally in FAST.f90.
+      ! When AugMatIn = [ A b ], this routine returns the solution
+      ! vector x to the equation Ax = b.
+
+   IMPLICIT                        NONE
+
+
+      ! Passed variables:
+
+   INTEGER(IntKi), INTENT(IN )  :: NumEq                                           ! Number of equations in augmented matrix
+
+   REAL(ReKi),     INTENT(IN )  :: AugMatIn (NumEq, NumEq+1 )                      ! Augmented matrix passed into this subroutine ( AugMatIn = [ A b ]
+   REAL(ReKi),     INTENT(OUT)  :: x (NumEq)                                       ! Solution vector
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                         ! Error level
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                          ! ErrMsg corresponding to ErrStat
+
+
+      ! Local variables:
+
+   REAL(ReKi)                   :: AugMat   (NumEq,( NumEq + 1 ))                  ! The augmented matrix [A b]
+
+   INTEGER(IntKi)               :: I                                               ! Steps through columns
+   INTEGER(IntKi)               :: J                                               ! Steps through rows
+   INTEGER(IntKi)               :: L                                               ! Steps through rows
+   INTEGER(IntKi)               :: NAug                                            ! Column dimension of augmented matrix
+
+
+      ! Initialize variables:
+
+   ErrStat = ErrID_None                ! No error has occurred
+   NAug    = NumEq + 1                 ! The column dimension of the augmented matrix
+
+
+      ! Create the augmented matrix, AugMat = [A b] (we make a copy so we don't overwrite the existing matrix):
+
+   AugMat = AugMatIn
+
+
+
+      ! Perform Gauss-Jordan elimination and store the solution vector
+      !   in the last column of the augmented matrix:
+
+   DO L = 1,NumEq             ! Loop through all rows
+
+      IF ( EqualRealNos( AugMat(L,L), 0.0_ReKi ) ) THEN
+         ErrStat = ErrID_Warn
+         ErrMsg  = 'Division by zero in NWTC Library subroutine GaussElim.'
+      END IF
+
+      DO I = ( L + 1 ), NAug  ! Loop through all columns above current row number
+
+         AugMat(L,I) = AugMat(L,I) / AugMat(L,L)
+
+         DO J = 1,NumEq       ! Loop through all rows except L
+            IF ( J /= L )  AugMat(J,I) = AugMat(J,I) - ( AugMat(J,L)*AugMat(L,I) )
+         ENDDO                ! J - All rows except L
+
+      ENDDO                   ! I - All columns above current row number
+
+   ENDDO                      ! L - All rows
+
+
+      ! Transfer the solution vector from AugMat() to x():
+
+   x = AugMat(:,NAug)
+
+
+
+   RETURN
+
+  END SUBROUTINE GaussElim
+!=======================================================================
+
+   FUNCTION GetSmllRotAngs ( DCMat, ErrStat, ErrMsg )
+
+      ! This subroutine computes the angles that make up the input direction cosine matrix, DCMat
 
       ! passed variables
 
-   REAL(ReKi), INTENT(IN )         :: DCMat          (3,3)
-   INTEGER,    INTENT(OUT )        :: ErrStat               ! a non-zero value indicates an error in the permutation matrix algorithm
+   REAL(ReKi), INTENT(IN )            :: DCMat          (3,3)
+   INTEGER,    INTENT(OUT )           :: ErrStat               ! a non-zero value indicates an error in the permutation matrix algorithm
+   CHARACTER(*),INTENT(OUT ),OPTIONAL :: ErrMsg                ! a non-zero value indicates an error in the permutation matrix algorithm
 
-   REAL(ReKi)                      :: GetSmllRotAngs ( 3 )
+   REAL(ReKi)                         :: GetSmllRotAngs ( 3 )
 
       ! local variables
-   REAL(ReKi)                      :: denom                 ! the denominator of the resulting matrix
-   REAL(ReKi), PARAMETER           :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(ReKi), PARAMETER           :: TOL = EPSILON(TOL)    ! tolerance for division by zero
+   REAL(ReKi)                         :: denom                 ! the denominator of the resulting matrix
+   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
 
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
    GetSmllRotAngs = 0.0
-   ErrStat        = 0
+   ErrStat        = ErrID_None
 
 
       ! calculate the small angles
@@ -402,24 +488,35 @@ CONTAINS
 
    denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1
 
-   IF ( ABS(denom) > TOL ) THEN
+   IF ( .NOT. EqualRealNos( denom, 0.0_ReKi ) ) THEN
       GetSmllRotAngs = GetSmllRotAngs / denom
 
-               ! check that the angles are, in fact, small
+         ! check that the angles are, in fact, small
       IF ( ANY( ABS(GetSmllRotAngs) > LrgAngle ) ) THEN
-         CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
-         ErrStat = 1
+         ErrStat = ErrID_Severe
+
+         IF (PRESENT(ErrMsg)) THEN
+            ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
+         ELSE
+            CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
+         END IF         
+         
       END IF
 
    ELSE
-            ! check that the angles are, in fact, small (denom should be close to 2 if angles are small)
-      CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
-      ErrStat = -1
+         ! check that the angles are, in fact, small (denom should be close to 2 if angles are small)
+      ErrStat = ErrID_Fatal
+
+      IF (PRESENT(ErrMsg)) THEN
+         ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
+      ELSE
+         CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
+      END IF                  
 
    END IF
 
 
-   END FUNCTION GetSmllRotAngs ! ( DCMat, PMat, ErrStat )
+   END FUNCTION GetSmllRotAngs ! ( DCMat, PMat, ErrStat [, ErrMsg] )
 !=======================================================================
    SUBROUTINE GL_Pts ( IPt, NPts, Loc, Wt, ErrStat )
 
@@ -790,7 +887,7 @@ CONTAINS
       RETURN
    ELSE IF ( XVal >= XAry(AryLen) )  THEN
       InterpStpComp = YAry(AryLen)
-      Ind           = AryLen - 1
+      Ind           = MAX(AryLen - 1, 1)
       RETURN
    END IF
 
@@ -858,7 +955,7 @@ CONTAINS
       RETURN
    ELSE IF ( XVal >= XAry(AryLen) )  THEN
       InterpStpReal = YAry(AryLen)
-      Ind           = AryLen - 1
+      Ind           = MAX(AryLen - 1, 1)
       RETURN
    END IF
 
@@ -889,6 +986,51 @@ CONTAINS
 
    RETURN
    END FUNCTION InterpStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
+!=======================================================================
+   FUNCTION IsSymmetric( A )
+   
+      ! This function returns a logical TRUE/FALSE value that indicates 
+      ! if the given (2-dimensional) matrix, A, is symmetric. If A is not 
+      ! square it returns FALSE.
+      
+      
+         ! passed variables
+      
+      REAL(ReKi), INTENT(IN) :: A(:,:)                   ! a real matrix A, whose symmetry is questioned
+      LOGICAL                :: IsSymmetric              ! true if A is symmetric, false if not
+      
+         ! local variables
+         
+      INTEGER(IntKi)         :: i                        ! counter for rows
+      INTEGER(IntKi)         :: j                        ! counter for columns
+      INTEGER(IntKi)         :: N                        ! size of A
+   
+   
+         ! If A is non-square, it is not symmetric:
+      
+      N = SIZE(A,1)
+   
+      IF ( N /= SIZE(A,2) ) THEN
+         IsSymmetric = .FALSE.
+         RETURN
+      END IF
+
+   
+         ! If A(i,j) /= A(j,i), it is not symmetric:
+      
+      IsSymmetric = .TRUE.
+   
+      DO i = 1,(N-1)          ! Loop through the 1st N-1 rows of A
+         DO j = (i+1),N       ! Loop through upper triangular part of A
+
+            IsSymmetric = EqualRealNos( A(i,j), A(j,i) )
+            IF ( .NOT. IsSymmetric ) RETURN
+            
+         END DO               ! j - All columns (rows) past I
+      END DO                  ! i - The 1st N-1 rows (columns) of A
+      
+
+   END FUNCTION IsSymmetric
 !=======================================================================
    SUBROUTINE LocateBin( XVal, XAry, Ind, AryLen )
 
@@ -1172,13 +1314,13 @@ END SUBROUTINE RombergInt
 
       ! This routine computes numeric constants stored in the NWTC Library
 
-!   USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented 
+!   USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented
 
       ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
    REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
-   REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number                                        
+   REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
 
-      
+
       ! Constants based upon Pi:
 
    Pi_D      = ACOS( -1.0_DbKi )
@@ -1187,8 +1329,9 @@ END SUBROUTINE RombergInt
    PiBy2_D   = Pi_D/2.0_DbKi
    RPM2RPS_D = Pi_D/30.0_DbKi
    RPS2RPM_D = 30.0_DbKi/Pi_D
-   TwoByPi_D = 2.0_DbKi/Pi_D
-   TwoPi_D   = 2.0_DbKi*Pi_D
+   TwoByPi_D =  2.0_DbKi/Pi_D
+   TwoPi_D   =  2.0_DbKi*Pi_D
+   Inv2Pi_D  =  0.5_DbKi/Pi_D    ! 1.0_DbKi/TwoPi_D
 
    Pi      = ACOS( -1.0_ReKi )
    D2R     = Pi/180.0_ReKi
@@ -1198,31 +1341,34 @@ END SUBROUTINE RombergInt
    RPS2RPM = 30.0_ReKi/Pi
    TwoByPi =  2.0_ReKi/Pi
    TwoPi   =  2.0_ReKi*Pi
-   
-   
+   Inv2Pi  =  0.5_ReKi/Pi        ! 1.0/TwoPi
+
+
       ! IEEE constants:
-      
+
 !   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
 !   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
 !
 !   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
 !   Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
-   
+
+#ifndef FPE_TRAP_ENABLED
       ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
    Neg   = -1.0_ReKi
    Neg_D = -1.0_DbKi
-   
+
    NaN_D = SQRT ( Neg_D )
    Inf_D = Pi_D / 0.0_DbKi
 
    NaN   = SQRT ( Neg )
    Inf   = Pi / 0.0_ReKi
-   
-   
+#endif
+
+
    RETURN
    END SUBROUTINE SetConstants
 !=======================================================================
-   SUBROUTINE SmllRotTrans( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
+   SUBROUTINE SmllRotTrans( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
 
 
       ! This routine computes the 3x3 transformation matrix, TransMat,
@@ -1268,9 +1414,11 @@ END SUBROUTINE RombergInt
    REAL(ReKi), INTENT(IN )             :: Theta3                                          ! The small rotation about X3, (rad).
    REAL(ReKi), INTENT(OUT)             :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
 
+   INTEGER(IntKi),INTENT(OUT)          :: ErrStat
+   CHARACTER(*), INTENT(OUT)           :: ErrMsg
+
    CHARACTER(*), INTENT(IN)            :: RotationType                                    ! The type of rotation; used to inform the user where a large rotation is occuring upon such an event.
    CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          ! an additional message to be displayed as a warning (typically the simulation time)
-
 
       ! Local Variables:
 
@@ -1288,24 +1436,26 @@ END SUBROUTINE RombergInt
    LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
 
 
-
-      ! Display a warning message if at least one angle gets too large in
-      !   magnitude:
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+      ! Display a warning message if at least one angle gets too large in magnitude:
 
    IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
 
-               
-      CALL ProgWarn(' Small angle assumption violated in SUBROUTINE SmllRotTrans() due to'// &
-                     ' a large '//TRIM(RotationType)//'. The solution may be inaccurate.'// &
-                     ' Simulation continuing, but future warnings will be suppressed.')
+      ErrStat = ErrID_Severe
+      ErrMsg  = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
+                'The solution may be inaccurate. Simulation continuing, but future warnings will be suppressed.'
+      
       IF ( PRESENT(ErrTxt) ) THEN
-         CALL WrScr(' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt) )
+         ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt) 
       END IF
-
+                     
+      CALL ProgWarn( TRIM(ErrMsg) )
+                     
       FrstWarn = .FALSE.   ! Don't enter here again!
 
    ENDIF
-
 
 
       ! Compute some intermediate results:

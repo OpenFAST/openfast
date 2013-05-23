@@ -7,7 +7,7 @@ MODULE Precision
 IMPLICIT                           NONE
 
    ! These values should not vary from DoubPrec.f90:
-   
+
 INTEGER, PARAMETER              :: B1Ki     = SELECTED_INT_KIND(  2 )           ! Kind for one-byte whole numbers
 INTEGER, PARAMETER              :: B2Ki     = SELECTED_INT_KIND(  4 )           ! Kind for two-byte whole numbers
 INTEGER, PARAMETER              :: B4Ki     = SELECTED_INT_KIND(  9 )           ! Kind for four-byte whole numbers
@@ -19,7 +19,7 @@ INTEGER, PARAMETER              :: SiKi     = SELECTED_REAL_KIND(  6,  30 )     
 
 
       ! The default kinds for reals and integers:
-      
+
 INTEGER, PARAMETER              :: IntKi    = B4Ki                              ! Default kind for integers
 INTEGER, PARAMETER              :: ReKi     = SiKi                              ! Default kind for floating-point numbers
 INTEGER, PARAMETER              :: DbKi     = R8Ki                              ! Default kind for double floating-point numbers
@@ -27,9 +27,9 @@ INTEGER, PARAMETER              :: DbKi     = R8Ki                              
 
       ! The number of bytes in the default variables
 
-INTEGER(IntKi), PARAMETER       :: BytesPerReKi  = 4                            ! Number of bytes per ReKi number     - use SIZEOF()           
-INTEGER(IntKi), PARAMETER       :: BytesPerDbKi  = 8                            ! Number of bytes per DbKi number     - use SIZEOF()          
-INTEGER(IntKi), PARAMETER       :: BytesPerIntKi = 4                            ! Number of bytes per IntKi number    - use SIZEOF()           
+INTEGER(IntKi), PARAMETER       :: BYTES_IN_INT   = 4                            ! Number of bytes per IntKi number    - use SIZEOF()
+INTEGER(IntKi), PARAMETER       :: BYTES_IN_REAL  = 4                            ! Number of bytes per ReKi number     - use SIZEOF()
+INTEGER(IntKi), PARAMETER       :: BYTES_IN_DBL   = 8                            ! Number of bytes per DbKi number     - use SIZEOF()
 
 
 END MODULE Precision

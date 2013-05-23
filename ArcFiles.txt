@@ -3,7 +3,7 @@ Disclaimer.txt
 NWTC_Library_Description.pdf
 Source\DoubPrec.f90
 Source\ModMesh.f90
-Source\NWTC_Aero.f90
+Source\ModMesh_Types.f90
 Source\NWTC_IO.f90
 Source\NWTC_Library.f90
 Source\NWTC_Num.f90
@@ -14,5 +14,4 @@ Source\SysIFL.f90
 Source\SysIVF.f90
 Source\SysIVF_Labview.f90
 Source\SysMatlab.f90
-Source\Makefile
 
