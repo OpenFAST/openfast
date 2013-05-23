@@ -386,6 +386,61 @@ o  I changed UnfForm from UNFORMATTED back to BINARY in the SysIVF.f90 file. Tur
 v1.07.01a-bjj, 25-Feb-2013  B. Jonkman
 o  I modified WrOver() in SysGnuWin.f90. It previously produced a run-time error if the string being written was 98 characters or longer.
 
+v1.08.00a-bjj, 16-Jan-2013  B. Jonkman
+  I updated GetNewUnit to start checking at unit 10 every time (previously used a SAVEd variable)
+  I added a ProgDesc optional argument to the OpenEcho routine (which will print the program info on the top of the echo file).
+  I added the optional ErrMsg output argument to the AllocAry routines, CheckIOS, and GetNewUnit, OpenEcho, OpenFInpFile, OpenFOutFile,
+    ReadR4Var, ReadR8Var, ReadR16Var, ReadNum, ReadLVar, ReadCVar, ReadIVar
+
+  I added Inv2Pi and Inv2Pi_D to the library
+
+v2.00.00a-bjj, 21-Jan-2013 B. Jonkman
+   I added Subroutine GaussElim to NWTC_Num.f90. This is the Gauss routine from FAST.f90
+   I moved FindLine() and WrScr() to NWTC_IO.f90. I created a WriteScr() routine in Sys*.f90 to deal with the CU portion of WrScr.
+   I added a NewLine parameter to the Sys* files... we may want to move this to NWTC_IO, too.
+   I modified the headings of the Sys* and NWTC_IO files to reflect these changes.
+
+v2.00.00b-adp, 24-Jan-2013 A. Platt
+   I changed the unit number in SysGnuLinux from 7 back to 6. This was an issue with gfortran compiler version 4.7.
+
+v2.00.00c-bjj, 5-Feb-2013 B. Jonkman
+   I modified InterpStpReal and InterpStpComp so that they will not return an index of 0 when the array contains only 1 element.
+   I replaced OpenBin (NWTC_IO.f90) and OpenBinFile (Sys*.f90) with a new OpenBOutFile routine in NWTC_IO.f90.
+     This routine is standard Fortran 2003 (needs IVF 10.1 and later; gfortran version?)
+   I merged the CSC's branch into this version. This includes the ModMesh and ModMesh_Types.f90 files, as well as new AllocAry()
+     routines for POINTERS to integer and real arrays.
+   I modified the BytesPer* variables to be called BYTES_IN_INT, BYTES_IN_REAL, BYTES_IN_DBL to correspond to variables John set in
+     compilation flags in his makefile (this removes the need for the compilation flags).
+   I added WrBinFAST to NWTC_IO.f90, along with parameters related to the file format
+   I added GetErrStr to return a string describing the error severity level
+   I removed the OPEN statement from SysGnuLinux's OpenCon (this should allow it to work on CygWin, also Mac?)
+   I moved the list of routines in NWTC_IO so that the version number can be at the top of the file.
+
+   I changed the format string for writing real arrays to the echo file
+   I removed the global Echo and UnEc variables.
+   I added an optional UnEc argument to each Read* routine. Now if UnEc is present and > 0, the routines will write to UnEc.
+   I removed the CloseEcho() routine.
+
+   I removed the following subroutines. Please use the replacement subroutines listed:
+         Removed routine                           Replacement routine
+         ---------------                           -------------------
+         SUBROUTINE OpenBinFile                    OpenBOutFile
+         SUBROUTINE OpenBin                        OpenBOutFile
+         SUBROUTINE OpenBinInpFile                 OpenBInpFile
+         FUNCTION   UserTime                       CPU_TIME(), F95 intrinsic
+         SUBROUTINE Get_Arg                        GET_COMMAND_ARGUMENT(), f2000 intrinsic
+         SUBROUTINE Get_Arg_Num                    COMMAND_ARGUMENT_COUNT(), f2000 intrinsic
+         FUNCTION   Get_Env                        GET_ENVIRONMENT_VARIABLE(), f2000 intrinsic
+
+   I replaced the ReadRAry, AllRAry1, and AllRAry2 routines with routines for 4-byte, 8-byte and 16-byte reals to facilitate
+     compiling in double precision.
+   I added the ErrMsg argument to the ReadIAry and ReadR*Ary routines.
+   I removed NWTC_Aero.f90 from the libaray. It is being replaced by a new Airfoils module (not in the library).
+
+v2.02.00b-bjj, 21-May-2013, B. Jonkman
+   I added new routines called IntAry2Str() and Str2IntAry() which convert string arrays to/from 1-byte integer arrays of ASCII
+     numbers. I ended up not using them in the routine I originally wrote them for, but I will keep them in the library for now.
+
 ==========================================================
  To do:
    *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
@@ -394,7 +449,6 @@ o  I modified WrOver() in SysGnuWin.f90. It previously produced a run-time error
    Fix ErrStat to use the new ErrID_* levels
 
    Create new read array routines that read an array from multiple lines.
-   Fix NWTC_Aero.f90\AeroInt() to interpolate between control settings.
 
    Suggestion from Marshall:
 
@@ -403,4 +457,3 @@ o  I modified WrOver() in SysGnuWin.f90. It previously produced a run-time error
       Are we going to add optional arguments to these kinds of routines to return
       to the calling routine with an error flag?
 
-   o SysIVF.f90\OpenBinFile() has a RecLen argument that is not used.  Not sure how to deal with that.

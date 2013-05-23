@@ -3,7 +3,7 @@
 @IF NOT "%1"==""  GOTO Copy
 
 @ECHO 
-@ECHO  The syntax for updating files on the WT_Perf page is "updateweb <version>"
+@ECHO  The syntax for updating files on the NWTC Subroutine Library page is "updateweb <version>"
 @ECHO.
 @ECHO  Example:  "updateweb 1.01.08"
 
