@@ -380,11 +380,6 @@ o  I created a test program, Test_ChkRealFmtStr.f90, in Drivers to test ChkRealF
 v1.07.00b-mlb, 10-Jan-2013  M. Buhl
 o  I modified NWTC_IO.f90\ReadFASTbin() to that one could read just the header.
 
-v1.07.00c-bjj, 7-Feb-2013  B. Jonkman
-o  I changed UnfForm from UNFORMATTED back to BINARY in the SysIVF.f90 file. TurbSim's .bin files weren't being properly written.
-
-v1.07.01a-bjj, 25-Feb-2013  B. Jonkman
-o  I modified WrOver() in SysGnuWin.f90. It previously produced a run-time error if the string being written was 98 characters or longer.
 
 v1.08.00a-bjj, 16-Jan-2013  B. Jonkman
   I updated GetNewUnit to start checking at unit 10 every time (previously used a SAVEd variable)
@@ -437,9 +432,95 @@ v2.00.00c-bjj, 5-Feb-2013 B. Jonkman
    I added the ErrMsg argument to the ReadIAry and ReadR*Ary routines.
    I removed NWTC_Aero.f90 from the libaray. It is being replaced by a new Airfoils module (not in the library).
 
+2013-03-11  M. Buhl
+o  I removed a redundant CLOSE statement in ReadFASTbin() because it was also being done in ExitThisRoutine().
+o  I added FileInfoType, ReadComFile(), and ReadLine() to NWTC_IO.
+o  I added a comment to beginning of ModMesh.f90 to warn users about compiler options required to get it to compile.
+o  I added the test program TestReadComFile.f90 to the Drivers area.  It works with all six ways to compile.
+
+2013-04-09  M. Buhl
+o  I modified the FileInfoType in NWTC_IO.
+o  I added the FNlist_Type to NWTC_IO.  It is used to store a linked list of file names, but
+   can be used for any list of 1024-character strings.
+o  I modified ReadComFile() in NWTC_IO to use the above-mentioned list and store the file names
+   in the FileInfoType so users can be told the file name in addition to the line number if there
+   is an error.
+o  I replaced all the WrScr1( string ) calls with WrScr( NewLine//string ) in NWTC_IO.  I also replaced
+   some calls to WrScr(' ') by addeding a NewLine to the end of the previous call to WrScr().  I found that
+   WrScr1() was only used in NWTC_IO.
+
+2013-04-19  M. Buhl
+o  I made major changes to ReadComFile() in NWTC_IO to make it recursive.
+o  I added ParseInclInfo() to NWTC_IO.  It is for parsing the information in "@" include statements and
+   is used by ReadComFile() and ScanComFile().
+
+2013-04-23  M. Buhl
+o  I finished debugging Test_ReadComFile, ScanComFile(), and ReadComFile().
+o  I moved ScanComFile() into NWTC_IO.
+o  I moved NWTC_IO_NewStuff.f90 into the project.
+o  I modified the makefile for Test_ReadComFile to include NWTC_IO_NewStuff.f90.
+
+2013-04-23  M. Buhl
+o  I took much of the guts for TestComFile and created ProcessComFile() in NWTC_IO.  This greatly simplified
+   TestComFile and what programmers will need to do to do this sort of thing.
+o  I removed all unused variables in NWTC_IO.
+o  I tested TestComFile with win32, win64, gwin32, gwin64, glin32, and glin64.
+
+2013-04-24  M. Buhl
+o  I modified the routines in NWTC_IO_NewStuff.f90 to do more error handling.
+
+2013-04-25  M. Buhl
+o  I added an InpErrsType type to store errors.  It is in NWTC_IO.
+o  I added InitInpErrs() to initial the InpErrsType in NWTC_IO_NewStuff.
+o  I made the error message in my routines in NWTC_IO more consistent and use the word "fatal"
+   in fatal error messages.
+
+2013-04-29  M. Buhl
+o  I fixed some of the error handling in NWTC_IO.  One must remember to do a RETURN
+   after calling ExitThisRoutine().
+
+2013-05-01  M. Buhl
+o  I moved the contents of NWTC_IO_NewStuff.f90 to NWTC_IO.f90 and removed
+   NWTC_IO_NewStuff.f90 from svn.
+
+- Committed 2013-05-01
+
+2013-05-01  M. Buhl
+o  I modified the makefile for Test_ReadComFile to eliminate NWTC_IO_NewStuff.f90.
+
+2013-05-01  M. Buhl
+o  I update the library version to 'v2.02.00a-mlb', '01-May-2013' in NWTC_IO.f90.  /sigh
+
+2013-05-20  M. Buhl
+o  I created NWTC_Num_NewRout.f90 to hold the new cublic-spline routines I am developing.
+   o  I created the RegGridType, RegCubSplineType, and CubSplineType derived types.
+   o  I created and tested RegCubicSplineInit() and RegCubicSplineInterp().
+   o  I created and tested Test_RegCubicSpline.f90 to test the above.
+   o  I started creating CubicSplineInit() and CubicSplineInterp(), but commented them out for now.
+
+2013-05-20  M. Buhl
+o  I eliminated the RETURN statements from all versions of ProgExit() in the Sys*.f90 files.
+o  I fixed a minor bug in CubicSplineInit() and CubicSplineInterp() in which I declared the Coef
+   array bigger than necessary.  It had no effect on results.
+o  I did some minor hacking of Test_RegCubicSpline.f90.
+
+2013-05-21  M. Buhl
+   o  I got CubicSplineInit() and CubicSplineInterp() working.
+   o  I updated Test_RegCubicSpline.f90 to test both types of splines.
+
 v2.02.00b-bjj, 21-May-2013, B. Jonkman
    I added new routines called IntAry2Str() and Str2IntAry() which convert string arrays to/from 1-byte integer arrays of ASCII
      numbers. I ended up not using them in the routine I originally wrote them for, but I will keep them in the library for now.
+
+v2.02.00b-bjj, 23-May-2013, M. Buhl
+o  I added a Documentation folder to the trunk.
+   o  I put cubic_spline_p2.pdf in it.  This is the algorithm I used for the cubic spline routines.
+   o  I moved both of the NWTC_Library_Description files from the trunk to it.
+   o  I modified ArcFiles.txt to look for the pdf there.
+   o  I added "Documentation\cubic_spline_p2.pdf" to ArcMaint.txt.
+   o  I added "Documentation\NWTC_Library_Description.doc" to ArcMaint.txt.
+o  I updated the makefile for trunk\source\Drivers\Test_RegCubicSpline to reflect the move of
+   Bonnie's branch to the trunk.
 
 ==========================================================
  To do:
@@ -449,6 +530,7 @@ v2.02.00b-bjj, 21-May-2013, B. Jonkman
    Fix ErrStat to use the new ErrID_* levels
 
    Create new read array routines that read an array from multiple lines.
+   Fix NWTC_Aero.f90\AeroInt() to interpolate between control settings.
 
    Suggestion from Marshall:
 
