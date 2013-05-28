@@ -14,13 +14,13 @@ IF "%COMPUTERNAME%"=="MBUHL-20665S" GOTO MBUHL-20665S
 @SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
 GOTO CheckSyntax
 
-:BJONKMAN-23080s
+:BJONKMAN-23080S
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
 @SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
 GOTO CheckSyntax
 
-:MBUHL-20665s
+:MBUHL-20665S
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
 @SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
