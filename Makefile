@@ -13,7 +13,7 @@ CC_TOOLS = gcc
 CFLAGS = #-ansi
 LDFLAGS =
 DEBUG = -g 
-OBJ = registry.o my_strtok.o reg_parse.o data.o type.o misc.o sym.o symtab_gen.o gen_module_files.o gen_c_types.o #Template_data.o
+OBJ = registry.o my_strtok.o reg_parse.o data.o type.o misc.o sym.o symtab_gen.o gen_module_files.o gen_c_types.o
 
 registry.exe : $(OBJ)
 	$(CC_TOOLS) -o registry.exe $(DEBUG) $(LDFLAGS) $(OBJ)
