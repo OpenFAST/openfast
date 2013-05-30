@@ -72,7 +72,7 @@ C_type( char * s )
 {
   fprintf(stderr," C_Type arg %s\n",s) ;
   if ( !strcmp( s, "INTEGER(IntKi)") ) return("int") ;
-  if ( !strcmp( s, "LOGICAL") )        return("int") ;
+  if ( !strcmp( s, "LOGICAL") )        return("bool") ;
   if ( !strcmp( s, "REAL(ReKi)") )     return("float") ;
   if ( !strcmp( s, "REAL(DbKi)") )     return("double") ;
   if ( !strncmp( s, "CHARACTER)",9) )     return("char *") ;
