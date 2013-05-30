@@ -1277,8 +1277,22 @@ gen_module( FILE * fp , node_t * ModName )
         }
       }
     }
+    if ( sw_ccode ) {
+// Generate a container object for the Fortran code to carry around a pointer to the CPP object(s)
+      fprintf(fp,"USE, INTRINSIC :: ISO_C_Binding\n") ;
+    }
 
     fprintf(fp,"IMPLICIT NONE\n") ;
+
+    if ( sw_ccode ) {
+      fprintf(fp,"  TYPE MAP_In_C \n") ;
+      fprintf(fp,"  ! This allows us to create an instance of a C++ \n") ;
+      fprintf(fp,"  ! object in Fortran. From the perspective of \n") ;
+      fprintf(fp,"  ! Fortran, this is seen as an address in memory\n") ;
+      fprintf(fp,"     PRIVATE\n") ;
+      fprintf(fp,"     TYPE(C_ptr) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
+      fprintf(fp,"  END TYPE MAP_In_C \n") ;
+    }
 
 // generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
@@ -1331,6 +1345,9 @@ gen_module( FILE * fp , node_t * ModName )
           }
         }
         fprintf(fp,"  END TYPE %s\n",q->mapsto) ;
+        if ( sw_ccode == 1 ) {
+          
+        }
       }
     }
     fprintf(fp,"CONTAINS\n") ;
@@ -1374,7 +1391,7 @@ gen_module( FILE * fp , node_t * ModName )
 int
 gen_module_files ( char * dirname )
 {
-  FILE * fp ;
+  FILE * fp, *fpc ;
   char  fname[NAMELEN] ;
   char * fn ;
 
@@ -1383,14 +1400,28 @@ gen_module_files ( char * dirname )
   for ( p = ModNames ; p ; p = p->next )
   {
     if ( strlen( p->nickname ) > 0  && ! p->usefrom ) {
+      fp = NULL ;
+      fpc = NULL ;
       if ( strlen(dirname) > 0 )
         { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
       else
         { sprintf(fname,"%s_Types.f90",p->name) ; }
       if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
-      print_warning(fp,fname) ;
+      print_warning(fp,fname, "") ;
+      if ( sw_ccode == 1 ) {
+        if ( strlen(dirname) > 0 )
+          { sprintf(fname,"%s/%s_Types.c",dirname,p->name) ; }
+        else
+          { sprintf(fname,"%s_Types.c",p->name) ; }
+        if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
+        print_warning(fpc,fname, "//") ;
+      }
       gen_module ( fp , p ) ;
-      close_the_file( fp ) ;
+      close_the_file( fp, "" ) ;
+      if ( sw_ccode ) {
+        gen_c_types ( fpc , p ) ;
+        close_the_file( fpc,"//") ;
+      }
     }
   }
   return(0) ;
