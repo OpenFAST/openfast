@@ -404,20 +404,20 @@ bdy_indicator( int bdy )
 }
 
 int
-print_warning( FILE * fp , char * fname )
+print_warning( FILE * fp , char * fname, char comment[] )
 {
-fprintf(fp,"!STARTOFREGISTRYGENERATEDFILE '%s'\n", fname) ;
-fprintf(fp,"!\n") ;
-fprintf(fp,"! WARNING This file is generated automatically by the FAST registry\n") ;
-fprintf(fp,"! Do not edit.  Your changes to this file will be lost.\n") ;
-fprintf(fp,"!\n") ;
+fprintf(fp,"%s!STARTOFREGISTRYGENERATEDFILE '%s'\n", comment, fname) ;
+fprintf(fp,"%s\n", comment) ;
+fprintf(fp,"%s! WARNING This file is generated automatically by the FAST registry\n", comment) ;
+fprintf(fp,"%s! Do not edit.  Your changes to this file will be lost.\n", comment) ;
+fprintf(fp,"%s!\n", comment) ;
 return(0) ;
 }
 
 int
-close_the_file( FILE * fp )
+close_the_file( FILE * fp, char comment[] )
 {
-fprintf(fp,"!ENDOFREGISTRYGENERATEDFILE\n") ;
+fprintf(fp,"%s!ENDOFREGISTRYGENERATEDFILE\n",comment) ;
 fclose(fp) ;
 }
 
@@ -445,8 +445,8 @@ add_warning ( char * fname )
   sprintf(tempfile,"regtmp1%d",getpid()) ;
   sprintf(tempfile1,"regtmp2%d",getpid()) ;
   if (( fp = fopen( tempfile, "w" )) == NULL ) return(1) ;
-  print_warning(fp,tempfile) ; 
-  close_the_file(fp) ;
+  print_warning(fp,tempfile, "") ; 
+  close_the_file(fp, "") ;
   sprintf(commline,"%s %s %s > %s ; %s %s %s ; %s %s ",
           CATCOMM,tempfile,fname,tempfile1,
           MVCOMM,tempfile1,fname,
