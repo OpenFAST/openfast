@@ -29,8 +29,8 @@ int gen_state_struct ( char * fname ) ;
 int gen_decls ( FILE * fp ,  node_t * node , int sw_ranges, int sw_point , int mask , int layer ) ;
 int gen_state_subtypes ( char * fname ) ;
 int gen_state_subtypes1 ( FILE * fp , node_t * node , int sw_ranges, int sw_point , int mask ) ;
-int print_warning( FILE * fp , char * fname ) ;
-int close_the_file( FILE * fp  ) ;
+int print_warning( FILE * fp , char * fname, char * comment ) ;
+int close_the_file( FILE * fp, char * comment  ) ;
 int make_entries_uniq ( char * fname ) ;
 int add_warning ( char * fname ) ;
 
@@ -156,6 +156,8 @@ int get_mask ( unsigned int * mask , int e ) ;
 char * fast_interface_type_shortname (  char * ) ;
 
 char * dimstr( int ) ;
+
+char * C_type ( char * ) ;
 
 #define PROTOS_H
 #endif
