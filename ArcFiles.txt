@@ -32,11 +32,12 @@ Test\DateTime.exe
 Test\GPLLJ.inp
 Test\Kaimal.inp
 Test\Kaimal_15.inp
-Test\KHtest.inp  
+Test\KHtest.inp
 Test\smooth.inp
 Test\Update.bat
 Test\vonKarm.inp
 Test\vonKarm_15.inp
+Test\Hydro_Tidal.inp
 
 Test\CompareBTSfiles.m
 Test\CompareCTSfiles.m
