@@ -1415,6 +1415,9 @@ gen_module_files ( char * dirname )
           { sprintf(fname,"%s_Types.c",p->name) ; }
         if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
         print_warning(fpc,fname, "//") ;
+        fprintf(fpc,"#include <stdio.h>\n") ;
+        fprintf(fpc,"#include <stdlib.h>\n") ;
+        fprintf(fpc,"#include <stdbool.h>\n") ;
       }
       gen_module ( fp , p ) ;
       close_the_file( fp, "" ) ;
