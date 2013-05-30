@@ -66,6 +66,19 @@ init_type_table()
   return(0) ;
 }
 
+/* return the C equivalent of the simple Fortran types, expects the "mapsto" strings, set above  */
+char *
+C_type( char * s )
+{
+  fprintf(stderr," C_Type arg %s\n",s) ;
+  if ( !strcmp( s, "INTEGER(IntKi)") ) return("int") ;
+  if ( !strcmp( s, "LOGICAL") )        return("int") ;
+  if ( !strcmp( s, "REAL(ReKi)") )     return("float") ;
+  if ( !strcmp( s, "REAL(DbKi)") )     return("double") ;
+  if ( !strncmp( s, "CHARACTER)",9) )     return("char *") ;
+  return("unknown") ;
+}
+
 int
 set_state_dims ( char * dims , node_t * node )
 {
