@@ -1,6 +1,4 @@
 ArcMaint.txt
-CreatePage.pl
-update_web.bat
 
 Source\RegistryEntries.xlsx
 

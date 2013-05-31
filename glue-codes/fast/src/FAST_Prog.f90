@@ -239,6 +239,10 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
     
    
+   CALL FAST_WrSum( p_FAST, y_FAST, ErrStat, ErrMsg )
+   CALL CheckError( ErrStat, 'Message from FAST_WrSum: '//NewLine//ErrMsg )
+   
+   
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................
@@ -257,7 +261,6 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
    CALL WrScr1 ( '' )
 !   CALL SimStatus ()  
-
 
 !.................................................................
 !BJJ: NOTE: there is currently a time shift in this algorithm that we need to fix, 
@@ -314,7 +317,6 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       Step  = Step + 1
       ZTime = Step*p_FAST%DT
 
-
       !.....................................................
       ! Input-Output solve:
       !.....................................................      
@@ -334,12 +336,14 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       END IF
 
       IF ( p_FAST%CompServo ) THEN
+         
          CALL SrvD_InputSolve( p_FAST, u_SrvD, y_ED, IfW_WriteOutput, y_SrvD   )  !use the ServoDyn outputs from Step = Step-1 (bjj: need to think about this for predictor-corrector (make sure it doesn't get changed...))
 
          CALL SrvD_CalcOutput( ZTime, u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SrvD_CalcOutput: '//NewLine//ErrMsg  )
+
       END IF
-            
+
       IF ( p_FAST%CompHydro ) THEN
          CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
          CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
@@ -363,8 +367,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       !   END IF
       !   
       END IF      
-      
-      
+            
       CALL ED_InputSolve( p_FAST, p_ED,  ED_Input(1),   y_SrvD )
                    
                   
@@ -422,41 +425,44 @@ CONTAINS
          ! Passed arguments
       LOGICAL,        INTENT(IN)           :: Error        ! flag to determine if this is an abort or normal stop
       INTEGER(IntKi), INTENT(IN), OPTIONAL :: ErrLev       ! Error level when Error == .TRUE. (required when Error is .TRUE.)
+
+         ! Local arguments:
+      INTEGER(IntKi)                       :: ErrStat2                                    ! Error status
+      CHARACTER(LEN(ErrMsg))               :: ErrMsg2                                     ! Error message
       
       !...............................................................................................................................
       ! Clean up modules (and write binary FAST output file), destroy any other variables
       !...............................................................................................................................
    
-      CALL FAST_End( p_FAST, y_FAST, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+      CALL FAST_End( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      CALL ED_End(   u_ED,   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+      CALL ED_End(   u_ED,   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+      CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      CALL AeroDyn_End( ErrStat )
-      IF ( ErrStat /= ErrID_None ) CALL WrScr( 'Error ending AeroDyn' )
+      CALL AeroDyn_End( ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( 'Error ending AeroDyn' )
 
-      CALL HD_Terminate( HydroDyn_data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(ErrMsg) )
+      CALL HD_Terminate( HydroDyn_data, ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
       
       ! in case we didn't get these destroyed earlier....
       
-      CALL ED_DestroyInitInput(  InitInData_ED, ErrStat, ErrMsg )
-      CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat, ErrMsg )
+      CALL ED_DestroyInitInput(  InitInData_ED, ErrStat2, ErrMsg2 )
+      CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat2, ErrMsg2 )
    
-      CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
-      CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
+      CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat2, ErrMsg2 )
+      CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat2, ErrMsg2 )
       
       
       !............................................................................................................................
       ! Set exit error code if there was an error;
       !............................................................................................................................
-
-      IF (Error) CALL ProgAbort( ' Abort error level: '//TRIM(GetErrStr(ErrLev) ) )  !This assumes PRESENT(ErrID) is .TRUE.
+      IF (Error) CALL ProgAbort( ' Simulation error level: '//TRIM(GetErrStr(ErrLev) ) )  !This assumes PRESENT(ErrID) is .TRUE.
       
       !............................................................................................................................
       !  Write simulation times and stop
@@ -479,7 +485,7 @@ CONTAINS
       
 
       IF ( ErrID /= ErrID_None ) THEN
-         CALL WrScr( NewLine//TRIM(Msg)//NewLine )
+         CALL WrScr( NewLine//TRIM(Msg)//NewLine )         
          IF ( ErrID >= AbortErrLev ) CALL ExitThisProgram( Error=.TRUE., ErrLev=ErrID )
       END IF
             

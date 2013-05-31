@@ -4,10 +4,31 @@
 @SET PROGNAME=FAST
 @SET ARCHNAME=FAST_v%1
 
+::=======================================================================================================
+IF "%COMPUTERNAME%"=="APLATT-21846S" GOTO APLATT-21846S
+IF "%COMPUTERNAME%"=="BJONKMAN-23080S" GOTO BJONKMAN-23080S
+IF "%COMPUTERNAME%"=="MBUHL-20665S" GOTO MBUHL-20665S
+
+:APLATT-21846S
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
+
+:BJONKMAN-23080S
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
 @SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
 
+:MBUHL-20665S
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
+::=======================================================================================================
+
+:CheckSyntax
 IF NOT "%1"==""  GOTO DeleteOld
 
 @ECHO 

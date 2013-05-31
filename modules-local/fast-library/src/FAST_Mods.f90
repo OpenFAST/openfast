@@ -20,7 +20,7 @@ MODULE FAST_Types
 
    USE NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.00.00a-bjj', '31-March-2013' )                  ! The version number of this module
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.01.00a-bjj', '30-June-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    INTEGER(IntKi), PARAMETER :: OutStrLen   = 10 !bjj -> decide if this has to go in the NWTC Library...
@@ -43,10 +43,19 @@ MODULE FAST_Types
       INTEGER(IntKi)                    :: numOuts_IfW                             ! number of outputs to print from InflowWind
       INTEGER(IntKi)                    :: numOuts_SrvD                            ! number of outputs to print from ServoDyn
       INTEGER(IntKi)                    :: UnOu                                    ! I/O unit number for the tabular output file
+      INTEGER(IntKi)                    :: UnSum                                   ! I/O unit number for the summary file
 
       CHARACTER(1024)                   :: FileDescLines(3)                        ! Description lines to include in output files (header, time run, plus module names/versions)
       CHARACTER(OutStrLen), ALLOCATABLE :: ChannelNames(:)                         ! Names of the output channels
       CHARACTER(OutStrLen), ALLOCATABLE :: ChannelUnits(:)                         ! Units for the output channels
+      
+         ! Version numbers of coupled modules
+      TYPE(ProgDesc)                    :: AD_Ver
+      TYPE(ProgDesc)                    :: ED_Ver
+      TYPE(ProgDesc)                    :: HD_Ver
+      TYPE(ProgDesc)                    :: IfW_Ver
+      TYPE(ProgDesc)                    :: SrvD_Ver
+      
    END TYPE  FAST_OutputType
 
 
@@ -80,6 +89,7 @@ MODULE FAST_Types
       REAL(DbKi)                :: DT_Out                                          ! Time step for tabular output (sec)
       LOGICAL                   :: WrBinOutFile                                    ! Write a binary output file? (.outb)
       LOGICAL                   :: WrTxtOutFile                                    ! Write a text (formatted) output file? (.out)
+      LOGICAL                   :: SumPrint                                        ! Print summary data to file? (.sum)
       CHARACTER(1)              :: Delim                                           ! Delimiter between columns of text output file (.out): space or tab
       CHARACTER(20)             :: OutFmt                                          ! Format used for text tabular output (except time); resulting field should be 10 characters
       CHARACTER(1024)           :: OutFileRoot                                     ! The rootname of the output files
@@ -89,7 +99,6 @@ MODULE FAST_Types
 
          ! other parameters we may/may not need
    CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
-   LOGICAL                      :: SumPrint                                        ! Print summary data to "*.fsm"?
 
    END TYPE FAST_ParameterType
 
