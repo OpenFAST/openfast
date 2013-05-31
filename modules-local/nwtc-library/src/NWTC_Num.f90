@@ -32,6 +32,7 @@ MODULE NWTC_Num
 
 
    USE                             NWTC_IO
+   USE, INTRINSIC               :: ISO_C_Binding, ONLY: C_INTPTR_T                   ! the size of a pointer (number of bytes)
 
    IMPLICIT NONE
 
@@ -65,7 +66,7 @@ MODULE NWTC_Num
    REAL(ReKi)                   :: TwoByPi                                      ! 2/Pi
    REAL(ReKi)                   :: TwoPi                                        ! 2*Pi
 
-   INTEGER, ALLOCATABLE         :: IntIndx  (:,:)                               ! The array of indices holding that last index used for interpolation in IntBlade()
+   INTEGER, PARAMETER           :: BITS_IN_ADDR  = C_INTPTR_T*8                 ! The number of bits in an address (32-bit or 64-bit).
 
 
 !=======================================================================
@@ -499,8 +500,8 @@ CONTAINS
             ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
          ELSE
             CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
-         END IF         
-         
+         END IF
+
       END IF
 
    ELSE
@@ -511,7 +512,7 @@ CONTAINS
          ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
       ELSE
          CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
-      END IF                  
+      END IF
 
    END IF
 
@@ -988,47 +989,47 @@ CONTAINS
    END FUNCTION InterpStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
 !=======================================================================
    FUNCTION IsSymmetric( A )
-   
-      ! This function returns a logical TRUE/FALSE value that indicates 
-      ! if the given (2-dimensional) matrix, A, is symmetric. If A is not 
+
+      ! This function returns a logical TRUE/FALSE value that indicates
+      ! if the given (2-dimensional) matrix, A, is symmetric. If A is not
       ! square it returns FALSE.
-      
-      
+
+
          ! passed variables
-      
+
       REAL(ReKi), INTENT(IN) :: A(:,:)                   ! a real matrix A, whose symmetry is questioned
       LOGICAL                :: IsSymmetric              ! true if A is symmetric, false if not
-      
+
          ! local variables
-         
+
       INTEGER(IntKi)         :: i                        ! counter for rows
       INTEGER(IntKi)         :: j                        ! counter for columns
       INTEGER(IntKi)         :: N                        ! size of A
-   
-   
+
+
          ! If A is non-square, it is not symmetric:
-      
+
       N = SIZE(A,1)
-   
+
       IF ( N /= SIZE(A,2) ) THEN
          IsSymmetric = .FALSE.
          RETURN
       END IF
 
-   
+
          ! If A(i,j) /= A(j,i), it is not symmetric:
-      
+
       IsSymmetric = .TRUE.
-   
+
       DO i = 1,(N-1)          ! Loop through the 1st N-1 rows of A
          DO j = (i+1),N       ! Loop through upper triangular part of A
 
             IsSymmetric = EqualRealNos( A(i,j), A(j,i) )
             IF ( .NOT. IsSymmetric ) RETURN
-            
+
          END DO               ! j - All columns (rows) past I
       END DO                  ! i - The 1st N-1 rows (columns) of A
-      
+
 
    END FUNCTION IsSymmetric
 !=======================================================================
@@ -1438,7 +1439,7 @@ END SUBROUTINE RombergInt
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   
+
       ! Display a warning message if at least one angle gets too large in magnitude:
 
    IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
@@ -1446,13 +1447,13 @@ END SUBROUTINE RombergInt
       ErrStat = ErrID_Severe
       ErrMsg  = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
                 'The solution may be inaccurate. Simulation continuing, but future warnings will be suppressed.'
-      
+
       IF ( PRESENT(ErrTxt) ) THEN
-         ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt) 
+         ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt)
       END IF
-                     
+
       CALL ProgWarn( TRIM(ErrMsg) )
-                     
+
       FrstWarn = .FALSE.   ! Don't enter here again!
 
    ENDIF

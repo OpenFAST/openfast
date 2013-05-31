@@ -11,12 +11,12 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE, PUBLIC :: ProgDesc
-      CHARACTER(24)              :: Name
+      CHARACTER(99)              :: Name
       CHARACTER(99)              :: Ver
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00b-bjj', '23-May-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00b-bjj', '31-May-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
 
 !bjj: I think TimeStep should be DbKi KIND, to match the framework, and I'd make NumChans and NumRecs IntKi
@@ -80,7 +80,7 @@ MODULE NWTC_IO
       ! Global coupling scheme variables.
 
    INTEGER(IntKi), PARAMETER     :: ExplicitLoose = 1
-   !bjj: will add more of these as we work our way 
+   !bjj: will add more of these as we work our way
 
 
       ! Global I/O-related variables.
