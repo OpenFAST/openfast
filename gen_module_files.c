@@ -1410,14 +1410,19 @@ gen_module_files ( char * dirname )
       print_warning(fp,fname, "") ;
       if ( sw_ccode == 1 ) {
         if ( strlen(dirname) > 0 )
-          { sprintf(fname,"%s/%s_Types.c",dirname,p->name) ; }
+          { sprintf(fname,"%s/%s_Types.cpp",dirname,p->name) ; }
         else
-          { sprintf(fname,"%s_Types.c",p->name) ; }
+          { sprintf(fname,"%s_Types.cpp",p->name) ; }
         if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
         print_warning(fpc,fname, "//") ;
+#if 0
         fprintf(fpc,"#include <stdio.h>\n") ;
         fprintf(fpc,"#include <stdlib.h>\n") ;
         fprintf(fpc,"#include <stdbool.h>\n") ;
+#else
+        fprintf(fpc,"#include <iostream>\n") ;
+        fprintf(fpc,"#include <vector>\n") ;
+#endif
       }
       gen_module ( fp , p ) ;
       close_the_file( fp, "" ) ;
