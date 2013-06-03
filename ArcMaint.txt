@@ -55,3 +55,6 @@ CertTest\TstFiles\Test16.opt
 
 CertTest\TstFiles\Test17.out
 CertTest\TstFiles\Test17.opt
+
+CertTest\TstFiles\Test18.outb
+CertTest\TstFiles\Test18.opt

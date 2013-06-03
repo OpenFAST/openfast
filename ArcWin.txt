@@ -4,3 +4,5 @@ FAST.exe
 
 CertTest\DateTime.exe
 CertTest\Update.bat
+
+CertTest\5MW_Baseline\ServoData\DISCON_win32.dll

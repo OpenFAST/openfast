@@ -24,6 +24,10 @@ Source\ElastoDyn_Types.f90
 Source\ElastoDyn_Registry.txt
 Source\ServoDyn.f90
 Source\ServoDyn_Types.f90
+Source\BladedInterface.f90
+Source\Windows_defs.f90
+Source\Windows_defs_IVF.f90
+Source\linux_defs.f90
 Source\ServoDyn_Registry.txt
 Source\Registry_NWTC_Library.txt
 Source\ModulesNotConverted\AeroDyn\*
@@ -32,7 +36,7 @@ Source\ModulesNotConverted\InflowWind\*
 
 
 Utilities\ModeShapePolyFitting.xls
-Utilities\DISCON.f90
+Utilities\DISCON_DLL_template.f90
 
 Utilities\SimulationToolbox\FAST_Model_Conversion_MATLAB_Toolbox.pdf
 
@@ -82,186 +86,220 @@ CertTest\PlotCertTestResults.m
 CertTest\Spd_Trq.dat
 CertTest\Update.bat
 
-CertTest\AWT_Blades.dat
-CertTest\AWT_Tower.dat
 
-CertTest\AOC_Blade.dat
-CertTest\AOC_Tower.dat
 
-CertTest\UAE_Ames_Blades.dat
-CertTest\UAE_Ames_Tower.dat
+CertTest\5MW_Baseline\AeroData\*
+CertTest\5MW_Baseline\ServoData\Source\DISCON.f90
+CertTest\5MW_Baseline\Wind\NoShr_12.wnd
+CertTest\5MW_Baseline\Wind\90m_12mps.inp
+CertTest\5MW_Baseline\Wind\90m_12mps.bts
 
-CertTest\Baseline_Blade.dat
-CertTest\Baseline_Blade_NoDamp.dat
-CertTest\Baseline_Tower.dat
-CertTest\Baseline_Tower_NoDamp.dat
+CertTest\5MW_Baseline\38060.pdf
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn.ipt
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_Blade.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ServoDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_Tower_Onshore.dat
 
-CertTest\SWRT_Blade.dat
-CertTest\SWRT_Furl.dat
-CertTest\SWRT_Tower.dat
 
-CertTest\AeroData\AWT27\AWT27_05.dat
-CertTest\AeroData\AWT27\AWT27_15.dat
-CertTest\AeroData\AWT27\AWT27_25.dat
-CertTest\AeroData\AWT27\AWT27_35.dat
-CertTest\AeroData\AWT27\AWT27_45.dat
-CertTest\AeroData\AWT27\AWT27_55.dat
-CertTest\AeroData\AWT27\AWT27_65.dat
-CertTest\AeroData\AWT27\AWT27_75.dat
-CertTest\AeroData\AWT27\AWT27_85.dat
-CertTest\AeroData\AWT27\AWT27_95.dat
 
-CertTest\AeroData\AOC\S814_1.dat
-CertTest\AeroData\AOC\S814_15.dat
-CertTest\AeroData\AOC\S812_15.dat
-CertTest\AeroData\AOC\S812_2.dat
-CertTest\AeroData\AOC\S813_15.dat
+CertTest\AOC\AeroData\S814_1.dat
+CertTest\AOC\AeroData\S814_15.dat
+CertTest\AOC\AeroData\S812_15.dat
+CertTest\AOC\AeroData\S812_2.dat
+CertTest\AOC\AeroData\S813_15.dat
 
-CertTest\AeroData\UAE_VI\cylinder.dat
-CertTest\AeroData\UAE_VI\Mod_S809_129.dat
-CertTest\AeroData\UAE_VI\Mod_S809_185.dat
-CertTest\AeroData\UAE_VI\Mod_S809_242.dat
-CertTest\AeroData\UAE_VI\Mod_S809_298.dat
-CertTest\AeroData\UAE_VI\Mod_S809_354.dat
-CertTest\AeroData\UAE_VI\Mod_S809_410.dat
-CertTest\AeroData\UAE_VI\Mod_S809_600.dat
-CertTest\AeroData\UAE_VI\Mod_S809_800.dat
-CertTest\AeroData\UAE_VI\Mod_S809_Outboard.dat
+CertTest\AOC\Wind\25m_12mps.inp
+CertTest\AOC\Wind\25m_12mps.sum
+CertTest\AOC\Wind\25m_12mps.wnd
+CertTest\AOC\Wind\NoShr_12.wnd
+CertTest\AOC\Wind\Shr11_30.wnd
 
-CertTest\AeroData\WP_Baseline\cylinder.dat
-CertTest\AeroData\WP_Baseline\S818_2703.dat
-CertTest\AeroData\WP_Baseline\S825_2103.dat
-CertTest\AeroData\WP_Baseline\S826_1603.dat
+CertTest\AOC\AOC_Blade.dat
+CertTest\AOC\AOC_Tower.dat
+CertTest\AOC\Test06_ElastoDyn.dat
+CertTest\AOC\Test06_ServoDyn.dat
+CertTest\AOC\Test06_AD.ipt
+CertTest\AOC\Test07_ElastoDyn.dat
+CertTest\AOC\Test07_ServoDyn.dat
+CertTest\AOC\Test07_AD.ipt
+CertTest\AOC\Test08_ElastoDyn.dat
+CertTest\AOC\Test08_ServoDyn.dat
+CertTest\AOC\Test08_AD.ipt
 
-CertTest\AeroData\SWRT\SH3052Mod_AllRe_Elem14_Hanley.dat
-CertTest\AeroData\SWRT\SH3052Mod_AllRe_Elem15_Hanley.dat
-CertTest\AeroData\SWRT\SH3052Mod_AllRe_Hanley.dat
-CertTest\AeroData\SWRT\TailPlate.dat
 
-CertTest\Wind\AWT27\42m_12mps.inp
-CertTest\Wind\AWT27\42m_12mps.sum
-CertTest\Wind\AWT27\42m_12mps.wnd
-CertTest\Wind\AWT27\NoShr_12.wnd
-CertTest\Wind\AWT27\Shr12_30.wnd
 
-CertTest\Wind\AOC\25m_12mps.inp
-CertTest\Wind\AOC\25m_12mps.sum
-CertTest\Wind\AOC\25m_12mps.wnd
-CertTest\Wind\AOC\NoShr_12.wnd
-CertTest\Wind\AOC\Shr11_30.wnd
+CertTest\AWT27\AeroData\AWT27_05.dat
+CertTest\AWT27\AeroData\AWT27_15.dat
+CertTest\AWT27\AeroData\AWT27_25.dat
+CertTest\AWT27\AeroData\AWT27_35.dat
+CertTest\AWT27\AeroData\AWT27_45.dat
+CertTest\AWT27\AeroData\AWT27_55.dat
+CertTest\AWT27\AeroData\AWT27_65.dat
+CertTest\AWT27\AeroData\AWT27_75.dat
+CertTest\AWT27\AeroData\AWT27_85.dat
+CertTest\AWT27\AeroData\AWT27_95.dat
 
-CertTest\Wind\UAE_VI\PwrCrv.wnd
-CertTest\Wind\UAE_VI\Shr11_30.wnd
+CertTest\AWT27\Wind\42m_12mps.inp
+CertTest\AWT27\Wind\42m_12mps.sum
+CertTest\AWT27\Wind\42m_12mps.wnd
+CertTest\AWT27\Wind\NoShr_12.wnd
+CertTest\AWT27\Wind\Shr12_30.wnd
 
-CertTest\Wind\WP_Baseline\84m_12mps.inp
-CertTest\Wind\WP_Baseline\84m_12mps.sum
-CertTest\Wind\WP_Baseline\84m_12mps.wnd
-CertTest\Wind\WP_Baseline\ECD_00PR.wnd
-CertTest\Wind\WP_Baseline\IEC.ipt
+CertTest\AWT27\AWT_Blades.dat
+CertTest\AWT27\AWT_Tower.dat
+CertTest\AWT27\Test01_ElastoDyn.dat
+CertTest\AWT27\Test01_ServoDyn.dat
+CertTest\AWT27\Test01_AD.ipt
+CertTest\AWT27\Test02_ElastoDyn.dat
+CertTest\AWT27\Test02_ServoDyn.dat
+CertTest\AWT27\Test02_AD.ipt
+CertTest\AWT27\Test03_ElastoDyn.dat
+CertTest\AWT27\Test03_ServoDyn.dat
+CertTest\AWT27\Test03_AD.ipt
+CertTest\AWT27\Test04_ElastoDyn.dat
+CertTest\AWT27\Test04_ServoDyn.dat
+CertTest\AWT27\Test04_AD.ipt
+CertTest\AWT27\Test05_ElastoDyn.dat
+CertTest\AWT27\Test05_ServoDyn.dat
+CertTest\AWT27\Test05_AD.ipt
 
-CertTest\Wind\SWRT\35m_16mps.inp
-CertTest\Wind\SWRT\35m_16mps.sum
-CertTest\Wind\SWRT\35m_16mps.wnd
-CertTest\Wind\SWRT\EDC_01NR.wnd
-CertTest\Wind\SWRT\EOG_01_R.wnd
-CertTest\Wind\SWRT\IEC.ipt
+
+
+CertTest\SWRT\AeroData\SH3052Mod_AllRe_Elem14_Hanley.dat
+CertTest\SWRT\AeroData\SH3052Mod_AllRe_Elem15_Hanley.dat
+CertTest\SWRT\AeroData\SH3052Mod_AllRe_Hanley.dat
+CertTest\SWRT\AeroData\TailPlate.dat
+
+CertTest\SWRT\Wind\35m_16mps.inp
+CertTest\SWRT\Wind\35m_16mps.sum
+CertTest\SWRT\Wind\35m_16mps.wnd
+CertTest\SWRT\Wind\EDC_01NR.wnd
+CertTest\SWRT\Wind\EOG_01_R.wnd
+CertTest\SWRT\Wind\IEC.ipt
+
+CertTest\SWRT\SWRT_Blade.dat
+CertTest\SWRT\SWRT_Furl.dat
+CertTest\SWRT\SWRT_Tower.dat
+CertTest\SWRT\Test15_ElastoDyn.dat
+CertTest\SWRT\Test15_ServoDyn.dat
+CertTest\SWRT\Test15_AD.ipt
+CertTest\SWRT\Test16_ElastoDyn.dat
+CertTest\SWRT\Test16_ServoDyn.dat
+CertTest\SWRT\Test16_AD.ipt
+CertTest\SWRT\Test17_ElastoDyn.dat
+CertTest\SWRT\Test17_ServoDyn.dat
+CertTest\SWRT\Test17_AD.ipt
+
+
+
+CertTest\UAE_VI\AeroData\cylinder.dat
+CertTest\UAE_VI\AeroData\Mod_S809_129.dat
+CertTest\UAE_VI\AeroData\Mod_S809_185.dat
+CertTest\UAE_VI\AeroData\Mod_S809_242.dat
+CertTest\UAE_VI\AeroData\Mod_S809_298.dat
+CertTest\UAE_VI\AeroData\Mod_S809_354.dat
+CertTest\UAE_VI\AeroData\Mod_S809_410.dat
+CertTest\UAE_VI\AeroData\Mod_S809_600.dat
+CertTest\UAE_VI\AeroData\Mod_S809_800.dat
+CertTest\UAE_VI\AeroData\Mod_S809_Outboard.dat
+
+CertTest\UAE_VI\Wind\PwrCrv.wnd
+CertTest\UAE_VI\Wind\Shr11_30.wnd
+
+CertTest\UAE_VI\UAE_Ames_Blades.dat
+CertTest\UAE_VI\UAE_Ames_Tower.dat
+CertTest\UAE_VI\Test09_ElastoDyn.dat
+CertTest\UAE_VI\Test09_ServoDyn.dat
+CertTest\UAE_VI\Test09_AD.ipt
+CertTest\UAE_VI\Test10_ElastoDyn.dat
+CertTest\UAE_VI\Test10_ServoDyn.dat
+CertTest\UAE_VI\Test10_AD.ipt
+
+
+
+CertTest\WP_Baseline\AeroData\cylinder.dat
+CertTest\WP_Baseline\AeroData\S818_2703.dat
+CertTest\WP_Baseline\AeroData\S825_2103.dat
+CertTest\WP_Baseline\AeroData\S826_1603.dat
+
+CertTest\WP_Baseline\Wind\84m_12mps.inp
+CertTest\WP_Baseline\Wind\84m_12mps.sum
+CertTest\WP_Baseline\Wind\84m_12mps.wnd
+CertTest\WP_Baseline\Wind\ECD_00PR.wnd
+CertTest\WP_Baseline\Wind\IEC.ipt
+
+CertTest\WP_Baseline\Baseline_Blade.dat
+CertTest\WP_Baseline\Baseline_Blade_NoDamp.dat
+CertTest\WP_Baseline\Baseline_Tower.dat
+CertTest\WP_Baseline\Baseline_Tower_NoDamp.dat
+
+CertTest\WP_Baseline\Test11_ElastoDyn.dat
+CertTest\WP_Baseline\Test11_ServoDyn.dat
+CertTest\WP_Baseline\Test11_AD.ipt
+
+CertTest\WP_Baseline\Test12_ElastoDyn.dat
+CertTest\WP_Baseline\Test12_ServoDyn.dat
+CertTest\WP_Baseline\Test12_AD.ipt
+
+CertTest\WP_Baseline\Test13_ElastoDyn.dat
+CertTest\WP_Baseline\Test13_ServoDyn.dat
+CertTest\WP_Baseline\Test13_AD.ipt
+
+
 
 CertTest\Test01.fst
-CertTest\Test01_ElastoDyn.dat
-CertTest\Test01_ServoDyn.dat
 CertTest\Test01.cru
-CertTest\Test01_AD.ipt
 
 CertTest\Test02.fst
-CertTest\Test02_ElastoDyn.dat
-CertTest\Test02_ServoDyn.dat
 CertTest\Test02.cru
-CertTest\Test02_AD.ipt
 
 CertTest\Test03.fst
-CertTest\Test03_ElastoDyn.dat
-CertTest\Test03_ServoDyn.dat
 CertTest\Test03.cru
-CertTest\Test03_AD.ipt
 
 CertTest\Test04.fst
-CertTest\Test04_ElastoDyn.dat
-CertTest\Test04_ServoDyn.dat
 CertTest\Test04.cru
-CertTest\Test04_AD.ipt
 
 CertTest\Test05.fst
-CertTest\Test05_ElastoDyn.dat
-CertTest\Test05_ServoDyn.dat
 CertTest\Test05.cru
-CertTest\Test05_AD.ipt
 
 CertTest\Test06.fst
-CertTest\Test06_ElastoDyn.dat
-CertTest\Test06_ServoDyn.dat
 CertTest\Test06.cru
-CertTest\Test06_AD.ipt
 
 CertTest\Test07.fst
-CertTest\Test07_ElastoDyn.dat
-CertTest\Test07_ServoDyn.dat
 CertTest\Test07.cru
-CertTest\Test07_AD.ipt
 
 CertTest\Test08.fst
-CertTest\Test08_ElastoDyn.dat
-CertTest\Test08_ServoDyn.dat
 CertTest\Test08.cru
-CertTest\Test08_AD.ipt
 
 CertTest\Test09.fst
-CertTest\Test09_ElastoDyn.dat
-CertTest\Test09_ServoDyn.dat
 CertTest\Test09.cru
-CertTest\Test09_AD.ipt
 
 CertTest\Test10.fst
-CertTest\Test10_ElastoDyn.dat
-CertTest\Test10_ServoDyn.dat
 CertTest\Test10.cru
-CertTest\Test10_AD.ipt
 
 CertTest\Test11.fst
-CertTest\Test11_ElastoDyn.dat
-CertTest\Test11_ServoDyn.dat
 CertTest\Test11.cru
-CertTest\Test11_AD.ipt
 
 CertTest\Test12.fst
-CertTest\Test12_ElastoDyn.dat
-CertTest\Test12_ServoDyn.dat
 CertTest\Test12.cru
-CertTest\Test12_AD.ipt
 
 CertTest\Test13.fst
-CertTest\Test13_ElastoDyn.dat
-CertTest\Test13_ServoDyn.dat
 CertTest\Test13.cru
-CertTest\Test13_AD.ipt
-
 
 CertTest\Test15.fst
-CertTest\Test15_ElastoDyn.dat
-CertTest\Test15_ServoDyn.dat
 CertTest\Test15.cru
-CertTest\Test15_AD.ipt
 
 CertTest\Test16.fst
-CertTest\Test16_ElastoDyn.dat
-CertTest\Test16_ServoDyn.dat
 CertTest\Test16.cru
-CertTest\Test16_AD.ipt
 
 CertTest\Test17.fst
-CertTest\Test17_ElastoDyn.dat
-CertTest\Test17_ServoDyn.dat
 CertTest\Test17.cru
-CertTest\Test17_AD.ipt
+
+CertTest\Test18.fst
+CertTest\Test18.cru
+
+
 
 CertTest\TstFiles\Test01_ElastoDyn.sum
 CertTest\TstFiles\Test01.sts
@@ -319,3 +357,5 @@ CertTest\TstFiles\Test17_ElastoDyn.sum
 CertTest\TstFiles\Test17.sts
 CertTest\TstFiles\Test17.pmf
 
+CertTest\TstFiles\Test18_ElastoDyn.sum
+CertTest\TstFiles\Test18.sts
