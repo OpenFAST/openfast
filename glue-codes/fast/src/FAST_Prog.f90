@@ -100,6 +100,12 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    ! initialization
    !...............................................................................................................................
 
+       
+   y_FAST%UnSum = -1                                                    ! set the summary file unit to -1 to indicate it's not open
+   y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
+   y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
+   
+   
       ! Get the current time 
    CALL DATE_AND_TIME ( Values=StrtTime )                               ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
