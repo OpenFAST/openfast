@@ -75,6 +75,8 @@ TYPE(SrvD_OutputType)          :: y_SrvD                                     ! S
 REAL(ReKi)                     :: IfW_WriteOutput(3)                         ! Temporary hack for getting wind speeds from InflowWind
    
    ! Data for the HydroDyn module:
+TYPE(HD_InitOutputType)         :: InitOutData_HD                            ! Initialization output for HydroDyn
+   
 
    ! Other/Misc variables
 REAL(DbKi)                     :: TiLstPrn                                   ! The time of the last print
@@ -197,7 +199,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       HydroDyn_InitData%OutRootName = p_FAST%OutFileRoot
       HD_ConfigMarkers%Substructure%Position = (/0._ReKi, 0._ReKi, 0._ReKi/)   
 
-      CALL HD_Init(HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HydroDyn_data, ErrStat)
+      CALL HD_Init(HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HydroDyn_data, InitOutData_HD, ErrStat)      
       CALL CheckError( ErrStat, 'Error initializing HydroDyn.' )
 
 
@@ -241,7 +243,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
-   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, ErrStat, ErrMsg )
+   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, InitOutData_HD, ErrStat, ErrMsg )
    CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
     
    
@@ -259,6 +261,9 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
    CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
 
+
+   !CALL HD_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg )
+   !
    !...............................................................................................................................
    ! loose coupling
    !...............................................................................................................................
@@ -352,9 +357,10 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
       IF ( p_FAST%CompHydro ) THEN
          CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
-         CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads,  ErrStat )
+         CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads, InitOutData_HD, ErrStat )
             CALL CheckError( ErrStat, 'Error calculating hydrodynamic loads in HydroDyn.'  )
       END IF
+           
       
          ! User Tower Loading
       IF ( p_FAST%CompUserTwrLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrTwr_CalcOutput()
@@ -388,7 +394,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
          IF ( EqualRealNos( ZTime, OutTime ) )  THEN 
                            
                ! Generate glue-code output file
-            CALL WrOutputLine( ZTime, p_FAST, y_FAST, EDOutput=y_ED%WriteOutput, SrvDOutput=y_SrvD%WriteOutput, IfWOutput=IfW_WriteOutput, ErrStat=ErrStat, ErrMsg=ErrMsg )
+            CALL WrOutputLine( ZTime, p_FAST, y_FAST, IfW_WriteOutput, y_ED%WriteOutput, y_SrvD%WriteOutput, InitOutData_HD%WriteOutput, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, ErrMsg )
             
                ! Generate AeroDyn's element data if desired:
@@ -454,7 +460,7 @@ CONTAINS
 
       CALL HD_Terminate( HydroDyn_data, ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-
+      
       
       ! in case we didn't get these destroyed earlier....
       
@@ -463,6 +469,8 @@ CONTAINS
    
       CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat2, ErrMsg2 )
       CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat2, ErrMsg2 )
+      
+      CALL HD_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 )
       
       
       !............................................................................................................................
