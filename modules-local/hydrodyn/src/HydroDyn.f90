@@ -16,7 +16,7 @@ MODULE HydroDyn
    !-------------------------------------------------------------------------------------------------
    ! Definitions of public data parameters
    !-------------------------------------------------------------------------------------------------
-   TYPE(ProgDesc), PARAMETER, PUBLIC :: HD_Prog = ProgDesc( 'HydroDyn', 'v1.00.02a-bjj', '02-Apr-2013' )   ! the name/version/date of the hydrodynamics program
+   TYPE(ProgDesc), PARAMETER, PUBLIC :: HD_Prog = ProgDesc( 'HydroDyn', 'v1.00.02c-bjj', '04-June-2013' )   ! the name/version/date of the hydrodynamics program
 !v1.01.02a-bjj
    !-------------------------------------------------------------------------------------------------
    ! Definitions of private parameters
@@ -46,6 +46,7 @@ MODULE HydroDyn
    PUBLIC                                       :: HD_Terminate               ! Subroutine to terminate module
    PUBLIC                                       :: HD_CheckLin                ! Function to determine if a linearization analysis can be performed with HydroDyn's settings
    
+   PUBLIC :: HD_DestroyInitOutput
    
    PUBLIC                                       :: HD_GetUndisturbedWaveElev  ! Returns undisturbed wave elevation
    
@@ -58,6 +59,14 @@ MODULE HydroDyn
    PUBLIC                                       :: HD_GetValue                ! Returns ancillary values that other codes may want to use
 !   PUBLIC                                       :: HD_GetValue_CHAR           ! Returns ancillary values that other codes may want to use
 !   PUBLIC                                       :: HD_GetValue_AllOuts        ! Returns ancillary values that other codes may want to use
+
+
+   TYPE, PUBLIC :: HD_InitOutputType
+     CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr 
+     CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt 
+     REAL(ReKi)    , DIMENSION(:), ALLOCATABLE  :: WriteOutput 
+     TYPE(ProgDesc)  :: Ver 
+   END TYPE HD_InitOutputType
 
 
    TYPE, PUBLIC :: HD_DataType                                                ! The type is public
@@ -106,7 +115,7 @@ MODULE HydroDyn
    
 CONTAINS
 !====================================================================================================
-SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, ErrStat )
+SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, HD_InitOutput, ErrStat )
 !     This public subroutine computes hydrodynamic loads.
 ! 
 !----------------------------------------------------------------------------------------------------
@@ -120,6 +129,7 @@ SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, ErrSt
    TYPE(AllHydroMarkers),      INTENT( IN    )     :: HD_Markers                 ! the markers of the loads calculated at this time 
    TYPE(HD_DataType),          INTENT( INOUT )     :: HD_Data                    ! the internal hydrodyn data
    TYPE(AllHydroLoads),        INTENT( INOUT )     :: HD_Loads                   ! the loads calculated at this time (it's INOUT so we don't have to reallocate space each call, but really is an OUTPUT)
+   TYPE(HD_InitOutputType),    intent(inout)       :: HD_InitOutput !for framework only (temporary)
    INTEGER,                    INTENT(   OUT )     :: ErrStat                    ! Returns zero if no errors were encountered
    
     
@@ -129,6 +139,7 @@ SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, ErrSt
    REAL(ReKi)                                      :: XD   (6)                   ! Temp array holding 3 components of the translational velocity and the 3 components of the rotational (angular) velocity
    REAL(ReKi)                                      :: Ft   (6)                   ! Temp variable holding the 3 forces and 3 moments ; positive forces are in the direction of motion.
    INTEGER                                         :: J                          ! The number of the current node / element (-) 
+   INTEGER                                         :: I                          ! The number of the current output 
    INTEGER                                         :: NMarkers                   ! The number of markers sent to this subroutine
    
    CHARACTER(1024) :: ErrMsg
@@ -154,7 +165,6 @@ SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, ErrSt
       ErrStat = 0
       
    END IF     
-      
       
    !-------------------------------------------------------------------------------------------------
    ! check that the HD_Loads and HD_Markers are allocated properly
@@ -257,9 +267,15 @@ SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, ErrSt
    ! calculate output as requested
    !-------------------------------------------------------------------------------------------------
       
-   CALL HDOut_CalcOutput ( CurrentTime, HD_Data%HDOut_Data, HD_Data%FltPtfm_data, HD_Data%Waves_data, ErrStat )   
+   CALL HDOut_CalcOutput ( CurrentTime, HD_Data%HDOut_Data, HD_Data%FltPtfm_data, HD_Data%Waves_data,  ErrStat )   
    HD_Data%LastCalcTime = CurrentTime
 
+   
+   !bjj:
+
+   DO I = 1,HD_Data%HDOut_Data%NumOuts
+      HD_InitOutput%WriteOutput(I) = HD_Data%HDOut_Data%OutParam(I)%SignM * HD_Data%HDOut_Data%AllOuts( HD_Data%HDOut_Data%OutParam(I)%Indx )      
+   END DO    
 
 END SUBROUTINE HD_CalculateLoads
 !====================================================================================================
@@ -514,7 +530,7 @@ SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_Init
    END IF
    
    Waves_InitData%WavePhase = 0.0
-   Waves_InitData%WaveNDAmp = .FALSE.
+   Waves_InitData%WaveNDAmp = .TRUE.
    
    IF ( LEN_TRIM(Line) > 1 ) THEN
    
@@ -2981,7 +2997,7 @@ FUNCTION HD_GetUndisturbedWaveElev(Position, Time, HD_Data, ErrStat)
 
 END FUNCTION
 !====================================================================================================
-SUBROUTINE HD_Init( HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HD_Data, ErrStat )
+SUBROUTINE HD_Init( HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HD_Data, HD_InitOutput, ErrStat )
 !     This public subroutine initializes the HydroDyn module.
 ! 
 !----------------------------------------------------------------------------------------------------
@@ -2994,6 +3010,7 @@ SUBROUTINE HD_Init( HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HD_Data,
    TYPE(HydroConfig),          INTENT( IN  )    :: HD_ConfigMarkers
    TYPE(AllHydroMarkers),      INTENT( OUT )    :: HD_AllMarkers
    TYPE(HD_DataType),          INTENT( OUT )    :: HD_Data              ! a return value (the data initialized here)
+   TYPE(HD_InitOutputType),    intent(out)      :: HD_InitOutput !for framework only    
    INTEGER,                    INTENT( OUT )    :: ErrStat              ! Returns zero if no errors were encountered
                 
                 
@@ -3011,6 +3028,9 @@ SUBROUTINE HD_Init( HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HD_Data,
    
    CHARACTER(1024)                              :: SummaryName          ! name of the HydroDyn summary file
                 
+   integer(intki) :: errstat2
+   character(1024) :: errmsg2
+   
       ! Initialize NWTC_Library
       
    CALL NWTC_Init( )
@@ -3216,6 +3236,15 @@ SUBROUTINE HD_Init( HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HD_Data,
    END DO
    
 
+!...........................
+   
+CALL AllocAry( HD_InitOutput%WriteOutputHdr, HD_Data%HDOut_Data%NumOuts, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
+CALL AllocAry( HD_InitOutput%WriteOutputUnt, HD_Data%HDOut_Data%NumOuts, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
+CALL AllocAry( HD_InitOutput%WriteOutput,    HD_Data%HDOut_Data%NumOuts, 'WriteOutput',    ErrStat2, ErrMsg2 )
+  
+HD_InitOutput%Ver = HD_Prog
+HD_InitOutput%WriteOutputHdr = HD_Data%HDOut_Data%OutParam(1:HD_Data%HDOut_Data%NumOuts)%Name
+HD_InitOutput%WriteOutputUnt = HD_Data%HDOut_Data%OutParam(1:HD_Data%HDOut_Data%NumOuts)%Units
    
 END SUBROUTINE HD_Init
 !====================================================================================================
@@ -3296,4 +3325,16 @@ SUBROUTINE HD_Terminate ( HD_Data, ErrStat )
    
 END SUBROUTINE HD_Terminate
 !====================================================================================================
+
+ SUBROUTINE HD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+  TYPE(HD_initoutputtype), INTENT(INOUT) :: InitOutputData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  IF ( ALLOCATED(InitOutputData%WriteOutputHdr) ) DEALLOCATE(InitOutputData%WriteOutputHdr)
+  IF ( ALLOCATED(InitOutputData%WriteOutputUnt) ) DEALLOCATE(InitOutputData%WriteOutputUnt)
+  IF ( ALLOCATED(InitOutputData%WriteOutput) )   DEALLOCATE(InitOutputData%WriteOutput)
+ END SUBROUTINE HD_DestroyInitOutput
+
 END MODULE HydroDyn
