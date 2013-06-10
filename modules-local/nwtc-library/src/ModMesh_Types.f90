@@ -1,6 +1,4 @@
 MODULE ModMesh_Types
-   USE Precision                                            ! This should be unnecessary if NWTC_IO is used.    - MLB
-!   USE NWTC_Library
    USE NWTC_IO
    IMPLICIT NONE
 
@@ -19,7 +17,7 @@ MODULE ModMesh_Types
    INTEGER, PUBLIC, PARAMETER :: MASKID_ROTATIONACC = 8
    INTEGER, PUBLIC, PARAMETER :: MASKID_ADDEDMASS = 9
    INTEGER, PUBLIC, PARAMETER :: MASKID_SCALAR = 10
-   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 11
+   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 11 !bjj should this be 10?
 
 ! Format of the Int buffer
    INTEGER, PUBLIC, PARAMETER :: HDR_INTBUFSIZE  = 1
@@ -72,7 +70,7 @@ MODULE ModMesh_Types
      TYPE(ElemRecType), POINTER  :: Neighbors(:) => NULL() ! neighbor list
    END TYPE ElemRecType
 
-   TYPE, PUBLIC :: ElemTabType
+   TYPE, PUBLIC :: ElemTabType   ! element table
      INTEGER                         :: nelem, maxelem
      INTEGER                         :: Xelement     ! which kind of element
      TYPE(ElemRecType), POINTER      :: Elements(:) => NULL()
@@ -121,7 +119,7 @@ MODULE ModMesh_Types
 
    END TYPE MeshType
 
-  CONTAINS
+CONTAINS
    INTEGER FUNCTION NumNodes( Xelement )
      INTEGER, INTENT(IN) :: Xelement
 
@@ -153,8 +151,7 @@ MODULE ModMesh_Types
        CASE ( ELEMENT_WEDGE15 )
          NumNodes = 15
        CASE DEFAULT
-         write(0,*)'NumNodes: internal error: invalid argument ', Xelement
-         call progabort('')
+         CALL ProgAbort('NumNodes: internal error: invalid argument '//TRIM(Num2LStr(Xelement)))
      END SELECT
    END FUNCTION NumNodes
 
