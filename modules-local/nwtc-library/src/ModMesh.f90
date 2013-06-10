@@ -205,8 +205,8 @@ CONTAINS
     ! Local
      INTEGER i
 
-     ErrStat = 0 ;
-     ErrMess = "" ;
+     ErrStat = ErrID_None
+     ErrMess = ""
 
      IF ( mesh_debug ) print*,'Called MeshCreate'
 #if 0
@@ -334,7 +334,7 @@ CONTAINS
      LOGICAL IgSib
      INTEGER i, j, k
 
-     ErrStat = 0 
+     ErrStat = ErrID_None 
 
      IF ( .NOT. Mesh%Initialized ) RETURN 
 
@@ -833,7 +833,7 @@ CONTAINS
      INTEGER(IntKi)                             :: nScalars_l          ! If present and true, alloc n Scalars
      INTEGER i, j
 
-     ErrStat = 0
+     ErrStat = ErrID_None
 
      IF      ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_SIBLING ) THEN
        IF ( CtrlCode .EQ. MESH_NEWCOPY ) THEN
@@ -1004,7 +1004,7 @@ CONTAINS
 #endif
      ELSE IF ( CtrlCode .EQ. MESH_UPDATECOPY ) THEN
        IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
-         ErrStat = -1
+         ErrStat = ErrID_Fatal
          ErrMess = "MeshCopy. MESH_UPDATECOPY of meshes with differen numbers of nodes."
        ELSE
          DestMesh%Position    = SrcMesh%Position
@@ -1050,30 +1050,30 @@ CONTAINS
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat   ! Error code
      CHARACTER(*),                INTENT(  OUT) :: ErrMess   ! Error message
 
-     ErrStat = 0
+     ErrStat = ErrID_None
      ErrMess = ""
     ! Safety first
      IF ( .NOT. Mesh%Initialized ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshPositionNode: attempt to use uncreated mesh.")')
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: attempt to use uncreated mesh."
      ENDIF
      IF ( Mesh%Nnodes < 0 ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshPositionNode: Invalid number of nodes: ",i10)')Mesh%Nnodes
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: Invalid number of nodes: "//TRIM(Num2LStr(Mesh%Nnodes))
      ENDIF
      IF ( .NOT. ( Inode .GE. 1 .AND. Inode .LE. Mesh%Nnodes ) ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshPositionNode: not 1 <= Inode(",i10,") <= ",i10)')Inode,Mesh%Nnodes
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: not 1 <= Inode("//TRIM(Num2LStr(Inode))//") <= "//TRIM(Num2LStr(Mesh%Nnodes))
      ENDIF
      IF ( .NOT. ASSOCIATED(Mesh%Position) ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshPositionNode: Position array not associated")') ;
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: Position array not associated"
      ENDIF
      IF ( .NOT. SIZE(Mesh%Position,2) .EQ. Mesh%Nnodes ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshPositionNode: Position array not big enough")') ;
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: Position array not big enough"
      ENDIF
-     IF ( ErrStat .NE. 0 ) RETURN   ! early return on error
+     IF ( ErrStat .NE. ErrID_None ) RETURN   ! early return on error
     ! Business
      Mesh%Position(:,Inode) = Pos
      RETURN
@@ -1098,7 +1098,7 @@ CONTAINS
            Mesh%ElemTable(ELEMENT_WEDGE6)%nelem+Mesh%ElemTable(ELEMENT_WEDGE15)%nelem
      nn = n0d + n1d + n2d + n3d
      IF ( max(n0d,n1d,n2d,n3d) .LT. nn ) THEN
-       ErrStat = -1
+       ErrStat = ErrID_Fatal
        ErrMess = "MeshCommit: mixing elements of different spatial dimensionality"
        RETURN  ! Early return
      ENDIF
@@ -1223,14 +1223,14 @@ CONTAINS
      ErrMess = ''
     ! Safety first
      IF ( .NOT. Mesh%Initialized ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshConstructElement_1PT: attempt to use uncreated mesh.")')
+       ErrStat = ErrID_Fatal
+       ErrMess="MeshConstructElement_1PT: attempt to use uncreated mesh."
+     ELSEIF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes ) THEN !BJJ moved to ELSE because 
+       ErrStat = ErrID_Fatal 
+       ErrMess="MeshConstructElement_1PT: invalid P1 ("//TRIM(Num2LStr(P1))//") for mesh with "//TRIM(Num2LStr(Mesh%Nnodes))//" nodes."
      ENDIF
-     IF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes ) THEN
-       WRITE(ErrMess,'("MeshConstructElement_1PT: invalid P1 ",i10," for mesh with ",i10," nodes.")')P1,Mesh%Nnodes
-     ENDIF
-     IF ( ErrStat .NE. 0 ) THEN
-        WRITE(0,*)TRIM(ErrMess)
+     IF ( ErrStat .NE. ErrID_None ) THEN
+        CALL WrScr(TRIM(ErrMess))
         RETURN  !  early return on error
      ENDIF
     ! Business
@@ -1252,8 +1252,8 @@ CONTAINS
        Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%ElemNodes(1) = P1
        Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%Xelement = ELEMENT_POINT
      ELSE
+       ErrStat = ErrID_Fatal
        ErrMess = 'MeshConstructElement_1PT called for invalid element type'
-       ErrStat = -1 !bjj: invalid ErrStat code. Use ErrID_Fatal or similar
      ENDIF
      RETURN
 
@@ -1273,17 +1273,18 @@ CONTAINS
      ErrMess = ""
     ! Safety first
      IF ( .NOT. Mesh%Initialized ) THEN
-       ErrStat = -1
-       WRITE(ErrMess,'("MeshConstructElement_1PT: attempt to use uncreated mesh.")')
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshConstructElement_1PT: attempt to use uncreated mesh."
      ENDIF
      IF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes .OR. &
           P2 .LT. 1 .OR. P2 .GT. Mesh%Nnodes ) THEN
-       WRITE(ErrMess,'("MeshConstructElement_2PT: invalid P1 or P2 ",2i10," for mesh with ",i10," nodes.")')P1,P2,Mesh%Nnodes
+       ErrMess ="MeshConstructElement_2PT: invalid P1 ("//TRIM(Num2LStr(P1))//") or P2 ("//TRIM(Num2LStr(P2))//&
+                     ") for mesh with "//TRIM(Num2LStr(Mesh%Nnodes))//" nodes."
      ENDIF
 ! TODO: hook the element into a list of elements stored in this mesh to
 ! allow traversal over elements
-     IF ( ErrStat .NE. 0 ) THEN
-        WRITE(0,*)TRIM(ErrMess)
+     IF ( ErrStat .NE. ErrID_None ) THEN
+        CALL WrScr( TRIM(ErrMess) )
         RETURN  !  early return on error
      ENDIF
     ! Business
@@ -1305,7 +1306,7 @@ CONTAINS
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%Xelement = ELEMENT_LINE2
      ELSE
        ErrMess = 'MeshConstructElement_2PT called for invalid element type'
-       ErrStat = -1 !bjj: invalid ErrStat code. Use ErrID_Fatal or similar
+       ErrStat = ErrID_Fatal !bjj: invalid ErrStat code. Use ErrID_Fatal or similar
      ENDIF
      RETURN
    END SUBROUTINE MeshConstructElement_2PT
@@ -1320,7 +1321,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_3PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_3PT not supported'
    END SUBROUTINE MeshConstructElement_3PT
 
@@ -1334,7 +1335,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_4PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_4PT not supported'
    END SUBROUTINE MeshConstructElement_4PT
 
@@ -1348,7 +1349,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_6PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_6PT not supported'
    END SUBROUTINE MeshConstructElement_6PT
 
@@ -1362,7 +1363,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_8PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_8PT not supported'
    END SUBROUTINE MeshConstructElement_8PT
 
@@ -1378,7 +1379,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_10PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_10PT not supported'
    END SUBROUTINE MeshConstructElement_10PT
 
@@ -1396,7 +1397,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_15PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_15PT not supported'
    END SUBROUTINE MeshConstructElement_15PT
 
@@ -1416,7 +1417,7 @@ CONTAINS
      IF ( mesh_debug ) print*,'Called MeshConstructElement_20PT'
      ErrStat = ErrID_None
      ErrMess = ''
-     ErrStat = 1
+     ErrStat = ErrID_Fatal
      ErrMess = 'MeshConstructElement_20PT not supported'
    END SUBROUTINE MeshConstructElement_20PT
 
@@ -1432,7 +1433,7 @@ CONTAINS
   ! TODO : check to make sure mesh is committed first
 
      IF ( .NOT. CtrlCode .EQ. MESH_NEXT .AND. (CtrlCode .LT. 0 .OR. CtrlCode .GT. Mesh%nelemlist) ) THEN
-       ErrStat = -1
+       ErrStat = ErrID_Fatal
        ErrMess = "MeshNextElement: Invalid CtrlCode"
        RETURN ! Early Return
      ENDIF
@@ -1459,6 +1460,5 @@ CONTAINS
 
 
 END MODULE ModMesh
-
 
 
