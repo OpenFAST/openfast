@@ -54,7 +54,7 @@ topsep=0.3pc,parsep=0.4pc]}
 \pagestyle{fancy}
 \lhead{Module Plan: BeamDyn}
 \chead{Working Draft}
-\rhead{15 May 2013}
+\rhead{22 May 2013}
 
 
 % \textheight=10.0in
@@ -76,15 +76,25 @@ topsep=0.3pc,parsep=0.4pc]}
 
 \section*{Description}
 
-This module represents blade in wind turbine systems. The blade is modeled as beam structure and the Geometrically Exact Beam Theory is adopted as the theoretical foundation. All the quantities are resolved in inertial coordinate system and we use Wiener-Milenkovi\'{c} parameters to represent the three-dimensional rotations. Rescaling operation of the rotation parameters are involved in the calculation to avoid singularity point existing in the vectorial parameterization. We use Newmark-Beta scheme for time marching. Legendre Spectral Finite Element are chosen to discretize the structure in space. The module is given the module name {\it ModuleName=BeamDyn} and the abbreviated name {\it ModName=BDyn}.
+This module represents a blade in a wind turbine system. The blade is
+modeled as a beam structure and the Geometrically Exact Beam Theory (GEBT)
+is adopted as the theoretical foundation. All the quantities are resolved in
+the inertial coordinate system and we use Wiener-Milenkovi\'{c} parameters
+to represent the three-dimensional rotations. Rescaling operations of the
+rotation parameters are involved in the calculation to avoid singularity
+point existing in the vectorial parameterization. We use Newmark-Beta scheme
+for time marching. Legendre Spectral Finite Element are chosen to discretize
+the structure in space. The module is given the module name {\it
+ModuleName=BeamDyn} and the abbreviated name {\it ModName=BDyn}.
  
 %----------------------------------------------------------------------------------------
-%	SECTION 2
+%SECTION 2
 %----------------------------------------------------------------------------------------
 
 \section*{Inputs, Outputs, States, and Parameters}
 
-These are the nonlocal variables that must be defined in the moduleÕs Registry.
+These are the nonlocal variables that must be defined in the module's
+Registry.
 
 \subsection*{Initialization Input}
 
@@ -97,7 +107,8 @@ These are the nonlocal variables that must be defined in the moduleÕs Registry.
 
 $u_r = $ Position vector of blade root \\
 $\dot{u}_r = $ Linear velocity vector of blade root \\
-$\theta_r = $ Angular position vector of blade root \\
+$\theta_r = $ Angular position vector of blade root 
+\comm{-> Direction Cosine Matrix}\\
 $\dot{\theta}_r = $ Angular velocity vector of blade root\\
 %$\omega_r = $ Angular velocity at the root of blade (rad/s)\\
 $f_{dist} = $ Distributed applied forces (N/m) \\
@@ -109,7 +120,8 @@ $M_p = $ Point bending vector applied on the blade
 
 $u = $ Displacement vector along blade axis \\
 $\dot{u} = $ Velocity vector along blade axis \\
-$\theta = $ Angular rotation vector along blade axis \\
+$\theta = $ Angular rotation vector along blade axis 
+\comm{-> Direction Cosine Matrix}\\
 $\dot{\theta} = $ Angular velocity vector along blade axis \\
 $F_r = $ Stress Resultants (or Sectional Force) at the root of blade (N) \\
 $M_r = $ Moment resultants (or Sectional Moment at the root of blade (N $\cdot$ m) 
@@ -156,7 +168,16 @@ None
 $M_m = $ $6 \times 6$ Sectional mass matrix resolved in material basis \\
 $C_m = $ $6 \times 6$ Sectional stiffness matrix resolved in material basis
 
+Mesh data (Points, connectivity, element transformation Jacobian)
 
+$N_{LSFE}$ = order of the underlying LSFEs
+
+GLL\_W = $N_{LSFE} + 1$  Gauss-Legendre-Lobatto (GLL) quadrature weights 
+
+GLL\_P = $N_{LSFE} + 1$  Gauss-Legendre-Lobatto quadrature points definied in
+$[-1,1]$
+
+Deriv = $(N_{LSFE} + 1) \times (N_{LSFE} + 1)$ Derivative matrix evaluated at GLL points
 
 \section*{Mathematical Formulation}
 
