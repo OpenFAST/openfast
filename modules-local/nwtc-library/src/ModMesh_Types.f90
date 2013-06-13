@@ -1,3 +1,19 @@
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2013  National Renewable Energy Laboratory
+!
+!    This file is part of the NWTC Subroutine Library.
+!
+!    ServoDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!
+!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License along with ServoDyn.
+!    If not, see <http://www.gnu.org/licenses/>.
+!
+!**********************************************************************************************************************************
 MODULE ModMesh_Types
    USE NWTC_IO
    IMPLICIT NONE
@@ -60,62 +76,66 @@ MODULE ModMesh_Types
    INTEGER, PUBLIC, PARAMETER :: MESH_NOMOREELEMENTS  = MESH_NOMOREELEMS  !synonym
    INTEGER, PUBLIC, PARAMETER :: MESH_NOMORE  = MESH_NOMOREELEMS          !synonym
 
-   LOGICAL :: mesh_debug = .FALSE.
+   LOGICAL, PARAMETER :: mesh_debug = .FALSE.
 
 
-   TYPE, PUBLIC :: ElemRecType
-     INTEGER                     :: Xelement     ! which kind of element
-     INTEGER                     :: Nneighbors   ! how many neighbors
+   TYPE, PUBLIC :: ElemRecType ! a particular element
+     INTEGER                     :: Xelement               ! which kind of element
+     INTEGER                     :: Nneighbors             ! how many neighbors
      INTEGER, POINTER            :: ElemNodes(:) => NULL() ! pointer to the list of nodes
      TYPE(ElemRecType), POINTER  :: Neighbors(:) => NULL() ! neighbor list
    END TYPE ElemRecType
 
-   TYPE, PUBLIC :: ElemTabType   ! element table
-     INTEGER                         :: nelem, maxelem
-     INTEGER                         :: Xelement     ! which kind of element
-     TYPE(ElemRecType), POINTER      :: Elements(:) => NULL()
+   TYPE, PUBLIC :: ElemTabType   ! table of all elements of a particular type
+     INTEGER                     :: nelem, maxelem
+     INTEGER                     :: Xelement               ! which kind of element
+     TYPE(ElemRecType), POINTER  :: Elements(:) => NULL()
    END TYPE ElemTabType
 
-   TYPE, PUBLIC :: ElemListType
-     TYPE(ElemRecType), POINTER :: Element
+   TYPE, PUBLIC :: ElemListType ! all elements (may be different types, but not spatial dimensions)
+     TYPE(ElemRecType), POINTER :: Element => NULL()                 ! bjj added initialization
    END TYPE ElemListType
 
    TYPE, PUBLIC :: MeshType
-      LOGICAL initialized              ! indicate whether this mesh is initialized
-      LOGICAL fieldmask(FIELDMASK_SIZE)! dimension as number of allocateable fields, below
-      LOGICAL RemapFlag                ! false=no action/ignore; true=remap required
-      INTEGER ios                      ! input (1), output(2), or state(3)
-      INTEGER Nnodes                   ! Number of nodes (vertices) in mesh
+      LOGICAL :: initialized = .FALSE.    ! Indicate whether this mesh is initialized     (bjj: added default initialization here)
+      LOGICAL :: fieldmask(FIELDMASK_SIZE)! Dimension as number of allocateable fields, below
+      LOGICAL :: RemapFlag                ! false=no action/ignore; true=remap required
+      INTEGER :: ios                      ! Mesh type: input (1), output(2), or state(3)
+      INTEGER :: Nnodes                   ! Number of nodes (vertices) in mesh
 
-      TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL()
+      TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL() ! Elements in the mesh, by type
 
      ! Mesh traversal
-      INTEGER nelemlist, maxelemlist, nextelem
-      INTEGER spatial
-      TYPE(ElemListType), pointer :: ElemList(:) => NULL()
+      INTEGER :: nelemlist                ! Number of elements in the list (ElemList)
+      INTEGER :: maxelemlist              ! Maximum number of elements in the list
+      INTEGER :: nextelem                 ! Next element in the list
+      INTEGER :: spatial !bjj: unused?
+      TYPE(ElemListType), POINTER :: ElemList(:) => NULL() ! All of the elements in the mesh
 
 ! Here are some built in derived data types that can represent values at the nodes
 ! the last dimension of each of these has range 1:nnodes for the mesh being represented
 ! and they are indexed by the element arrays above
 ! only some of these would be allocated, depending on what's being represented
 ! on the mesh.
-! Whether or not these are allocated is indicted in the fieldmask, which can
+! Whether or not these are allocated is indicated in the fieldmask, which can
 ! be interrogated by a routine using an instance of the type. If you add a field
 ! here, be sure to change the table of parameters used to size and index fieldmask above.
-      REAL(ReKi), pointer :: Position(:,:)  => NULL()     ! XYZ coordinate of node (always allocated) (3,:)
-      REAL(ReKi), pointer :: Force(:,:)     => NULL()     !  (3,:)
-      REAL(ReKi), pointer :: Moment(:,:)    => NULL()     !  (3,:)
-      REAL(ReKi), pointer :: Orientation(:,:,:) => NULL() ! Direction Cosine Matrix (DCM) (3,3,:)
-      REAL(ReKi), pointer :: TranslationDisp(:,:)   => NULL() ! Translational Displacements  (3,:)
-      REAL(ReKi), pointer :: RotationVel(:,:)      => NULL() ! Rotational Velocities  (3,:)
-      REAL(ReKi), pointer :: TranslationVel(:,:)   => NULL() ! Translational Velocities  (3,:)
-      REAL(ReKi), pointer :: RotationAcc(:,:)      => NULL() ! Rotational Accelerations  (3,:)
-      REAL(ReKi), pointer :: TranslationAcc(:,:)   => NULL() ! Translational Accelerations  (3,:)
-      REAL(ReKi), pointer :: AddedMass(:,:,:)   => NULL() ! AddedMass (6,6,:)
-      REAL(ReKi), pointer :: Scalars(:,:)       => NULL() ! Scalars (1st Dim is over Scalars)
-      INTEGER             :: nScalars                     ! store value of nScalars when created
+      REAL(ReKi), POINTER :: Position(:,:)       => NULL() ! XYZ coordinate of node (always allocated) (3,:)
+      REAL(ReKi), POINTER :: Force(:,:)          => NULL() ! Field: Force vectors (3,:)
+      REAL(ReKi), POINTER :: Moment(:,:)         => NULL() ! Field: Moment vectors (3,:)
+      REAL(ReKi), POINTER :: Orientation(:,:,:)  => NULL() ! Field: Direction Cosine Matrix (DCM) (3,3,:)
+      REAL(ReKi), POINTER :: TranslationDisp(:,:)=> NULL() ! Field: Translational displacements (3,:)
+      REAL(ReKi), POINTER :: RotationVel(:,:)    => NULL() ! Field: Rotational velocities (3,:)
+      REAL(ReKi), POINTER :: TranslationVel(:,:) => NULL() ! Field: Translational velocities (3,:)
+      REAL(ReKi), POINTER :: RotationAcc(:,:)    => NULL() ! Field: Rotational accelerations (3,:)
+      REAL(ReKi), POINTER :: TranslationAcc(:,:) => NULL() ! Field: Translational accelerations (3,:)
+      REAL(ReKi), POINTER :: AddedMass(:,:,:)    => NULL() ! Field: Added mass matrix (6,6,:)
+      REAL(ReKi), POINTER :: Scalars(:,:)        => NULL() ! Scalars (1st Dim is over Scalars; 2nd is nodes)
+      INTEGER             :: nScalars                      ! store value of nScalars when created
+!bjj: to be added later:       REAL(ReKi), POINTER :: ElementScalars(:,:) => NULL() ! Scalars associated with elements
+!bjj: to be added later:       INTEGER             :: nElementScalars               ! store value of nElementScalars when created
 
-      TYPE(MeshType),POINTER :: SiblingMesh  => NULL()
+      TYPE(MeshType),POINTER :: SiblingMesh      => NULL() ! Pointer to mesh's (next) sibling
 
    END TYPE MeshType
 
