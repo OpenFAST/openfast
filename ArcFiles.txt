@@ -1,5 +1,5 @@
 ChangeLog.txt
-Disclaimer.txt
+license.txt
 Documentation\NWTC_Library_Description.pdf
 Source\DoubPrec.f90
 Source\ModMesh.f90
