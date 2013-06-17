@@ -36,8 +36,9 @@ main( int argc, char *argv[], char *env[] )
   argv++ ;
 
   sw_output_template_force = 0 ;
-  sw_norealloc_lsh = 1 ;
-  sw_ccode         = 0 ;
+  sw_norealloc_lsh   = 1 ;
+  sw_ccode           = 0 ;
+  sw_embed_class_ptr = 0 ;
   strcpy( fname_in , "" ) ;
 
 #ifndef _WIN32
@@ -78,6 +79,9 @@ main( int argc, char *argv[], char *env[] )
       } else
       if (!strcmp(*argv,"-ccode")) {
         sw_ccode = 1 ;
+      } else
+      if (!strncmp(*argv,"-embed",6)) {
+        sw_embed_class_ptr = 1 ;
       } else
 #if 0
       if (!strcmp(*argv,"-norealloc_lhs")) {

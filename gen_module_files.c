@@ -1284,6 +1284,7 @@ gen_module( FILE * fp , node_t * ModName )
 
     fprintf(fp,"IMPLICIT NONE\n") ;
 
+#if 0
     if ( sw_ccode ) {
       fprintf(fp,"  TYPE MAP_In_C \n") ;
       fprintf(fp,"  ! This allows us to create an instance of a C++ \n") ;
@@ -1293,12 +1294,16 @@ gen_module( FILE * fp , node_t * ModName )
       fprintf(fp,"     TYPE(C_ptr) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
       fprintf(fp,"  END TYPE MAP_In_C \n") ;
     }
+#endif
 
 // generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->usefrom == 0 ) {
         fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
+        if ( sw_ccode ) {
+          fprintf(fp,"    TYPE(C_ptr) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
+        }
         for ( r = q->fields ; r ; r = r->next )
         {
           if ( r->type != NULL ) {
@@ -1415,19 +1420,17 @@ gen_module_files ( char * dirname )
           { sprintf(fname,"%s_Types.cpp",p->name) ; }
         if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
         print_warning(fpc,fname, "//") ;
-#if 0
+        // fprintf(fpc,"#include <iostream>\n") ;
+        // fprintf(fpc,"#include <vector>\n") ;
         fprintf(fpc,"#include <stdio.h>\n") ;
         fprintf(fpc,"#include <stdlib.h>\n") ;
-        fprintf(fpc,"#include <stdbool.h>\n") ;
-#else
-        fprintf(fpc,"#include <iostream>\n") ;
-        fprintf(fpc,"#include <vector>\n") ;
-#endif
+        fprintf(fpc,"#include <string.h>\n") ;
       }
       gen_module ( fp , p ) ;
       close_the_file( fp, "" ) ;
       if ( sw_ccode ) {
-        gen_c_types ( fpc , p ) ;
+        gen_c_module ( fpc , p ) ;
+
         close_the_file( fpc,"//") ;
       }
     }
