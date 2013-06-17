@@ -1129,8 +1129,6 @@ CONTAINS
                DestMesh%Scalars = SrcMesh%Scalars
             ENDIF
 
-
-            !bjj: should we also update the Remapflag and nextelem fields?
             DestMesh%RemapFlag = SrcMesh%RemapFlag
             DestMesh%nextelem  = SrcMesh%nextelem
 
