@@ -170,8 +170,8 @@ CONTAINS
      CtrlCode = 0
      CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
      IF (ErrStat >= AbortErrLev) THEN
-        WRITE(U,*), ' Error in MeshNextElement(): '
-        WRITE(U,*), TRIM(ErrMess)
+        WRITE(U,*) ' Error in MeshNextElement(): '
+        WRITE(U,*) TRIM(ErrMess)
         RETURN
       END IF
 
@@ -180,8 +180,8 @@ CONTAINS
        CtrlCode = MESH_NEXT
        CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
         IF (ErrStat >= AbortErrLev) THEN
-           WRITE(U,*), ' Error in MeshNextElement(): '
-           WRITE(U,*), TRIM(ErrMess)
+           WRITE(U,*) ' Error in MeshNextElement(): '
+           WRITE(U,*) TRIM(ErrMess)
            RETURN
          END IF
 

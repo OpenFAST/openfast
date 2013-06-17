@@ -34,16 +34,18 @@ MODULE NWTC_IO
 
    TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00b-bjj', '31-May-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
+   INTEGER(IntKi), PARAMETER      :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
 !bjj: I think TimeStep should be DbKi KIND, to match the framework, and I'd make NumChans and NumRecs IntKi
 !mlb: I changed the TimeStep, but will have to see if there were compiler reasons for choosing 4-byte integers.
+!bjj: should we make ChanNames and ChanUnits CAHRACTER(ChanLen) now?
    TYPE, PUBLIC               :: FASTdataType                                 ! The derived type for holding FAST binary output data.
       CHARACTER(1024)                        :: File                          ! The name of the binary input file containing FAST output.
       CHARACTER(1024)                        :: Descr                         ! The file descriptor stored in the FAST binary output file.
       INTEGER(B4Ki)                          :: NumChans                      ! The number of channels of FAST output data (including time).
       INTEGER(B4Ki)                          :: NumRecs                       ! The number of records of FAST output data.
       REAL(DbKi)                             :: TimeStep                      ! The time step.
-      CHARACTER(20), ALLOCATABLE             :: ChanNames(:)                  ! The channel names.
+      CHARACTER(20), ALLOCATABLE             :: ChanNames(:)                  ! The channel names.  
       CHARACTER(20), ALLOCATABLE             :: ChanUnits(:)                  ! The channel units.
       REAL(ReKi)   , ALLOCATABLE             :: Data(:,:)                     ! The channel data.  Time is stored in the first column.
    END TYPE FASTdataType
