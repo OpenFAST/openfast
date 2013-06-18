@@ -963,6 +963,8 @@ CONTAINS
 
          DO J = 1,NWaveKin0Prime ! Loop through all points along a vertical line passing through the platform reference point where the incident wave kinematics will be computed without stretching
 
+            WaveDynPC0 (I,J) = WaveDat%RhoXg*WaveDat%WaveElevC0   (I  )* &
+                                       COSHNumOvrCOSHDen ( WaveNmbr, WaveDat%WtrDpth, WaveKinzi0Prime(J) )            
             WaveVelC0H (I,J) =     Omega*WaveDat%WaveElevC0   (I  )* &
                                        COSHNumOvrSINHDen ( WaveNmbr, WaveDat%WtrDpth, WaveKinzi0Prime(J) )
             WaveVelC0V (I,J) = ImagOmega*WaveDat%WaveElevC0   (I  )* &
@@ -1710,7 +1712,7 @@ CONTAINS
          ! Compute the hyperbolic numerator over denominator:
 
 !bjj: should this be compared with epsilon instead of 0.0 to avoid numerical instability?
-      IF (     k   == 0.0  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
+      IF (     EqualRealNos(k,0.0_ReKi)  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
 
          COSHNumOvrSINHDen = HUGE( k )
 
@@ -1723,6 +1725,7 @@ CONTAINS
          COSHNumOvrSINHDen = COSH( k*( z + h ) )/SINH( k*h )
 
       ENDIF
+
 
 
 
