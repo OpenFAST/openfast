@@ -353,11 +353,11 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   sprintf(tmp,"%s",addnick) ;
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
-    fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
+    fprintf(stderr,"Registry warning: generating %s_UnPack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
     return(1) ;
   }
 
-  fprintf(fp," SUBROUTINE %s_Unpack%s( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )\n", ModName->nickname,nonick ) ;
+  fprintf(fp," SUBROUTINE %s_UnPack%s( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )\n", ModName->nickname,nonick ) ;
   fprintf(fp,"  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)\n") ;
   fprintf(fp,"  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)\n") ;
   fprintf(fp,"  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)\n") ;
@@ -385,7 +385,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( r->type == NULL ) {
-      fprintf(stderr,"Registry warning generating %_Unpack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      fprintf(stderr,"Registry warning generating %_UnPack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
       if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
@@ -460,7 +460,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"    Int_%s_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_%s_Buf)-1 )\n",r->name,r->name) ;
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
-  fprintf(fp,"  CALL %s_Unpack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg ) ! %s \n",
+  fprintf(fp,"  CALL %s_UnPack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg ) ! %s \n",
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                         dimstr(r->ndims),
                         r->name ) ;
@@ -549,7 +549,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
   fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
   fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
-  fprintf(fp," END SUBROUTINE %s_Unpack%s\n\n", ModName->nickname,nonick ) ;
+  fprintf(fp," END SUBROUTINE %s_UnPack%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
 }
 
@@ -1187,7 +1187,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   char tmp[NAMELEN] ;
 
   node_t *q, * r ;
-  fprintf(fp," SUBROUTINE %s_Unpack( Re_RetAry, Db_RetAry, Int_RetAry, &\n",ModName->nickname) ;
+  fprintf(fp," SUBROUTINE %s_UnPack( Re_RetAry, Db_RetAry, Int_RetAry, &\n",ModName->nickname) ;
   fprintf(fp,"                     InData, ParamData, ContStateData, DiscStateData, &\n") ;
   fprintf(fp,"                     ConstrStateData, OtherStateData, OutData, ErrStat, ErrMsg )\n" ) ;
   fprintf(fp,"  TYPE(%s_InputType),           INTENT(INOUT) :: InData\n",          ModName->nickname) ;
@@ -1226,7 +1226,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  Db_Xferred  = 1\n") ;
   fprintf(fp,"  Int_Xferred  = 1\n") ;
   for ( typename = typenames, argtypename = argtypenames ; *typename ; typename++ , argtypename++ ) {
-  fprintf(fp,"    ! Unpack %s\n",*typename) ;
+  fprintf(fp,"    ! UnPack %s\n",*typename) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
@@ -1243,7 +1243,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"    Int_Ary = Int_RetAry(Int_Xferred:Int_Xferred+SIZE(Int_Ary)-1)\n") ;
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE( Int_Ary )\n") ;
   fprintf(fp,"  ENDIF\n") ;
-  fprintf(fp,"  CALL %s_Unpack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename,*argtypename) ;
+  fprintf(fp,"  CALL %s_UnPack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename,*argtypename) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
@@ -1252,7 +1252,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
   fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
   fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
-  fprintf(fp," END SUBROUTINE %s_Unpack\n\n", ModName->nickname ) ;
+  fprintf(fp," END SUBROUTINE %s_UnPack\n\n", ModName->nickname ) ;
 }
 
 
@@ -1415,9 +1415,9 @@ gen_module_files ( char * dirname )
       print_warning(fp,fname, "") ;
       if ( sw_ccode == 1 ) {
         if ( strlen(dirname) > 0 )
-          { sprintf(fname,"%s/%s_Types.cpp",dirname,p->name) ; }
+          { sprintf(fname,"%s/%s_Types.c",dirname,p->name) ; }
         else
-          { sprintf(fname,"%s_Types.cpp",p->name) ; }
+          { sprintf(fname,"%s_Types.c",p->name) ; }
         if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
         print_warning(fpc,fname, "//") ;
         // fprintf(fpc,"#include <iostream>\n") ;
@@ -1486,3 +1486,23 @@ char * dimstr( int d )
   return(retval) ;
 }
 
+char * dimstr_c( int d )
+{
+  char * retval ;
+  if        ( d == 0 ) {
+    retval = "" ;
+  } else if ( d == 1 ) {
+    retval = "[i1]" ;
+  } else if ( d == 2 ) {
+    retval = "[i2][i1]" ;
+  } else if ( d == 3 ) {
+    retval = "[i3][i2][i1]" ;
+  } else if ( d == 4 ) {
+    retval = "[i4][i3][i2][i1]" ;
+  } else if ( d == 5 ) {
+    retval = "[i5][i4][i3][i2][i1]" ;
+  } else {
+    retval = " REGISTRY ERROR TOO MANY DIMS " ;
+  }
+  return(retval) ;
+}

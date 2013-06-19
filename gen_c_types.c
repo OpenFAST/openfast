@@ -10,6 +10,136 @@
 #include "data.h"
 
 int
+gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
+{
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  node_t *q, * r ;
+  int d, idim, frst ;
+
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+  sprintf(tmp,"%s",addnick) ;
+  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
+  {
+    fprintf(stderr,"Registry warning: generating %s_UnPack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
+    return(1) ;
+  }
+
+fprintf(fp,"C_%s_UnPack%s( float * ReKiBuf,  int * Re_BufSz ,\n",ModName->nickname,nonick) ;
+fprintf(fp,"                 double * DbKiBuf, int * Db_BufSz ,\n") ;
+fprintf(fp,"                 int * IntKiBuf,   int * Int_BufSz ,\n") ;
+fprintf(fp,"                 struct %s *OutData, char * ErrMsg )\n", addnick) ;
+fprintf(fp,"{\n") ;
+fprintf(fp,"  int Re_BufSz2 = 0 ;\n") ;
+fprintf(fp,"  int Db_BufSz2 = 0 ;\n") ;
+fprintf(fp,"  int Int_BufSz2 = 0 ;\n") ;
+fprintf(fp,"  int Re_Xferred = 0 ;\n") ;
+fprintf(fp,"  int Db_Xferred = 0 ;\n") ;
+fprintf(fp,"  int Int_Xferred = 0 ;\n") ;
+fprintf(fp,"  int Re_CurrSz = 0 ;\n") ;
+fprintf(fp,"  int Db_CurrSz = 0 ;\n") ;
+fprintf(fp,"  int Int_CurrSz = 0 ;\n") ;
+fprintf(fp,"  int i,i1,i2,i3,i4,i5 ;\n") ;
+
+  fprintf(fp," ! buffers to store meshes, if any\n") ;
+  for ( r = q->fields ; r ; r = r->next )
+  {
+    if ( r->type == NULL ) {
+      fprintf(stderr,"Registry warning generating %_UnPack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      return ; // EARLY RETURN
+    } else {
+      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
+  fprintf(fp,"  float   * Re_%s_Buf\n",r->name) ;
+  fprintf(fp,"  double  * Db_%s_Buf\n",r->name) ;
+  fprintf(fp,"  int     * Int_%s_Buf\n",r->name) ;
+      }
+    }
+  }
+  fprintf(fp,"    !\n") ;
+fprintf(fp,"  *Re_BufSz = 0 ;\n") ;
+fprintf(fp,"  *Db_BufSz = 0 ;\n") ;
+fprintf(fp,"  *Int_BufSz = 0 ;\n") ;
+fprintf(fp,"  *ReKiBuf = NULL ;\n") ;
+fprintf(fp,"  *DbKiBuf = NULL ;\n") ;
+fprintf(fp,"  *IntKiBuf = NULL ;\n") ;
+
+   // UnPack data
+  frst = 1 ;
+  for ( r = q->fields ; r ; r = r->next )
+  {
+    if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+      char nonick2[NAMELEN] ;
+      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+  fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",
+                        ModName->nickname,fast_interface_type_shortname(nonick2)) ;
+  fprintf(fp,"  CALL C_%s_Pack%s( Re_%s_Buf, &Re_BufSz, Db_%s_Buf, &Db_BufSz,Int_%s_Buf, &Int_BufSz, &(OutData->%s%s), ErrMsg, .TRUE. ) ! %s \n",
+                    ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, dimstr_c(r->ndims),r->name ) ;
+
+  fprintf(fp,"  if ( Re_%s_Buf != NULL ) {\n",r->name) ;
+  fprintf(fp,"    memcpy( Re_%s_Buf, &(ReKiBuf[ Re_Xferred] ), Re_bufSz )\n",r->name ) ;
+  fprintf(fp,"    Re_Xferred += Re_BufSz )\n",r->name) ;
+  fprintf(fp,"  }\n" ) ;
+  fprintf(fp,"  if ( Db_%s_Buf != NULL ) {\n",r->name) ;
+  fprintf(fp,"    memcpy( Db_%s_Buf, &(DbKiBuf[ Db_Xferred] ), Db_bufSz )\n",r->name ) ;
+  fprintf(fp,"    Db_Xferred += Db_BufSz )\n",r->name) ;
+  fprintf(fp,"  }\n" ) ;
+  fprintf(fp,"  if ( Int_%s_Buf != NULL ) {\n",r->name) ;
+  fprintf(fp,"    memcpy( Int_%s_Buf, &(IntKiBuf[ Int_Xferred] ), Int_bufSz )\n",r->name ) ;
+  fprintf(fp,"    Int_Xferred += Int_BufSz )\n",r->name) ;
+  fprintf(fp,"  }\n" ) ;
+  fprintf(fp,"  C_%s_UnPack%s( Re_%s_Buf, &Re_BufSz, Db_%s_Buf, &Db_BufSz, Int_%s_Buf, &Int_Bufsz, OutData%%%s%s, ErrStat, ErrMsg ) ! %s \n",
+                  ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
+                  dimstr(r->ndims),
+                  r->name ) ;
+  fprintf(fp,"  if ( Re_%s_Buf != NULL)  { free(Re_%s_Buf) ; Re_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
+  fprintf(fp,"  if ( Db_%s_Buf != NULL)  { free(Db_%s_Buf) ; Db_%s_Buf = NULL  ;}\n",r->name, r->name, r->name) ;
+  fprintf(fp,"  if ( Int_%s_Buf != NULL) { free(Int_%s_Buf) ; Int_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
+
+    } else  {
+      char * indent, * ty ;
+      char arrayname[NAMELEN] ;
+
+      sprintf(arrayname,"OutData%%%s",r->name) ;
+      sprintf(tmp2,"SIZE(OutData%%%s)",r->name) ;
+      if      ( r->ndims==0 ) { strcpy(tmp3,"") ; }
+      else if ( r->ndims==1 ) { strcpy(tmp3,"") ; }
+      else if ( r->ndims==2 ) { sprintf(tmp3,"(1:(%s),1)",tmp2) ; }
+      else if ( r->ndims==3 ) { sprintf(tmp3,"(1:(%s),1,1)",tmp2) ; }
+      else if ( r->ndims==4 ) { sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ; }
+      else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
+      else                    { fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; }
+      indent = "" ;
+      if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+           !strcmp( r->type->mapsto, "REAL(DbKi)") ||
+           !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
+        if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
+  fprintf(fp,"  if ( OutData->%s != NULL ) ) {\n", r->name ) ;
+          indent = "  " ;
+        }
+
+        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) ty = "Re" ;
+        if      ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) ty = "Db" ;
+        if      ( !strcmp( r->type->mapsto, "REAL(IntKi)")    ) ty = "Int" ;
+
+        if ( r->ndims > 0 ) {
+  fprintf(fp,"%s  memcpy( OutData->%s,&(%sKiBuf[ %s_Xferred ]),OutData->%sLen )\n",indent,r->name,ty,ty,r->name) ;
+        } else {
+  fprintf(fp,"%s  OutData->%s = %sKiBuf ( %s_Xferred )\n",indent,r->name,ty,ty) ;
+        }
+  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + %s\n",indent,ty,ty,(r->ndims>0)?"OutData->%sLen":"1"  ) ;
+
+      }
+    }
+  }
+  fprintf(fp,"  Re_Xferred   = Re_Xferred-1\n") ;
+  fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
+  fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
+  fprintf(fp,"  return(0)\n") ;
+  fprintf(fp,"}\n") ;
+  return(0) ;
+}
+
+int
 gen_c_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -27,7 +157,7 @@ gen_c_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 fprintf(fp,"C_%s_Pack%s( float * ReKiBuf,  int * Re_BufSz ,\n",ModName->nickname,nonick) ;
 fprintf(fp,"                 double * DbKiBuf, int * Db_BufSz ,\n") ;
 fprintf(fp,"                 int * IntKiBuf,   int * Int_BufSz ,\n") ;
-fprintf(fp,"                 struct MAP_InputType *InData, char * ErrMsg, int * SizeOnly )\n") ;
+fprintf(fp,"                 struct %s *InData, char * ErrMsg, int * SizeOnly )\n", addnick) ;
 fprintf(fp,"{\n") ;
 fprintf(fp,"  int OnlySize ;\n") ;
 fprintf(fp,"  int Re_BufSz2 ;\n") ;
@@ -59,6 +189,9 @@ fprintf(fp,"\n") ;
 fprintf(fp,"  *Re_BufSz = 0 ;\n") ;
 fprintf(fp,"  *Db_BufSz = 0 ;\n") ;
 fprintf(fp,"  *Int_BufSz = 0 ;\n") ;
+fprintf(fp,"  *ReKiBuf = NULL ;\n") ;
+fprintf(fp,"  *DbKiBuf = NULL ;\n") ;
+fprintf(fp,"  *IntKiBuf = NULL ;\n") ;
   frst = 1 ;
   for ( r = q->fields ; r ; r = r->next )
   {
@@ -89,24 +222,25 @@ fprintf(fp,"  *Int_BufSz = 0 ;\n") ;
     } else { // r->ndims > 0
       if ( r->dims[0]->deferred ) {
         if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"  *Re_BufSz   += InData->%s.size() )  ! %s \n", r->name , r->name ) ;
+//  fprintf(fp,"  *Re_BufSz   += InData->%s.size() )  ! %s \n", r->name , r->name ) ;
+  fprintf(fp,"  *Re_BufSz   += InData->%sLen )  ! %s \n", r->name , r->name ) ;
         }
         else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
-  fprintf(fp,"  *Db_BufSz   += InData->%s.size() )  ! %s \n", r->name , r->name ) ;
+  fprintf(fp,"  *Db_BufSz   += InData->%sLen )  ! %s \n", r->name , r->name ) ;
         }
         else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
-  fprintf(fp,"  *Int_BufSz  += InData->%s.size() )  ! %s \n", r->name , r->name ) ;
+  fprintf(fp,"  *Int_BufSz  += InData->%sLen )  ! %s \n", r->name , r->name ) ;
         }
       } else {
       }
     }
   }
 
+  fprintf(fp,"  if ( ! OnlySize ) {\n") ;
    // Allocate buffers
-  fprintf(fp,"  if ( *Re_BufSz > 0  ) ReKiBuf  = (float  *)malloc(*Re_BufSz*sizeof(float) ) ;\n") ;
-  fprintf(fp,"  if ( *Db_BufSz > 0  ) DbKiBuf  = (double *)malloc(*Db_BufSz*sizeof(double) ) ;\n") ;
-  fprintf(fp,"  if ( *Int_BufSz > 0 ) IntKiBuf = (int    *)malloc(*Int_BufSz*sizeof(int) ) ;\n") ;
-
+  fprintf(fp,"    if ( *Re_BufSz > 0  ) ReKiBuf  = (float  *)malloc(*Re_BufSz*sizeof(float) ) ;\n") ;
+  fprintf(fp,"    if ( *Db_BufSz > 0  ) DbKiBuf  = (double *)malloc(*Db_BufSz*sizeof(double) ) ;\n") ;
+  fprintf(fp,"    if ( *Int_BufSz > 0 ) IntKiBuf = (int    *)malloc(*Int_BufSz*sizeof(int) ) ;\n") ;
 
    // Pack data
   for ( r = q->fields ; r ; r = r->next )
@@ -114,42 +248,31 @@ fprintf(fp,"  *Int_BufSz = 0 ;\n") ;
     if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-  fprintf(fp,"  ErrStat = C_%s_Pack%s( Re_%s_Buf,  int &Re_BufSz2  ,\n",
+  fprintf(fp,"    ErrStat = C_%s_Pack%s( Re_%s_Buf,  int &Re_BufSz2  ,\n",
                         ModName->nickname,fast_interface_type_shortname(nonick2), r->name) ;
-  fprintf(fp,"                         Db_%s_Buf,  int &Db_BufSz2  ,\n",r->name ) ;
-  fprintf(fp,"                         Int_%s_Buf, int &Int_BufSz2 , InData%%%s%s, ErrMsg, 1 ) ! %s \n",
+  fprintf(fp,"                           Db_%s_Buf,  int &Db_BufSz2  ,\n",r->name ) ;
+  fprintf(fp,"                           Int_%s_Buf, int &Int_BufSz2 , InData%%%s%s, ErrMsg, 1 ) ! %s \n",
                             r->name, r->name, r->name, dimstr(r->ndims), r->name ) ;
 
-  fprintf(fp,"  if ( Re_%s_Buf != NULL ) {\n",r->name) ;
-  fprintf(fp,"    memcpy( &ReKiBuf[Re_Xferred], Re_%s_Buf, Re_BufSz2*sizeof(float) ) ;\n",r->name) ;
-  fprintf(fp,"    Re_Xferred += Re_BufSz2 )\n") ; 
-  fprintf(fp,"  }\n" ) ;
-  fprintf(fp,"  if ( Db_%s_Buf != NULL ) {\n",r->name) ;
-  fprintf(fp,"    memcpy( &DbKiBuf[Db_Xferred], Db_%s_Buf, Db_BufSz2*sizeof(double) ) ;\n",r->name) ;
-  fprintf(fp,"    Db_Xferred += Db_BufSz2 )\n") ; 
-  fprintf(fp,"  }\n" ) ;
-  fprintf(fp,"  if ( Int_%s_Buf != NULL ) {\n",r->name) ;
-  fprintf(fp,"    memcpy( &IntKiBuf[Int_Xferred], Int_%s_Buf, Int_BufSz2*sizeof(int) ) ;\n",r->name) ;
-  fprintf(fp,"    Int_Xferred += Int_BufSz2 )\n") ; 
-  fprintf(fp,"  }\n" ) ;
-
-
-  fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
-  fprintf(fp,"    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_%s_Buf)-1 ) = Db_%s_Buf\n",r->name,r->name) ;
-  fprintf(fp,"    Db_Xferred = Db_Xferred + SIZE(Db_%s_Buf)\n",r->name) ;
-  fprintf(fp,"  ENDIF\n" ) ;
-  fprintf(fp,"  IF(ALLOCATED(Int_%s_Buf)) THEN\n",r->name) ;
-  fprintf(fp,"    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_%s_Buf)-1 ) = Int_%s_Buf\n",r->name,r->name) ;
-  fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
-  fprintf(fp,"  ENDIF\n" ) ;
-  fprintf(fp,"  IF( ALLOCATED(Re_%s_Buf) )  DEALLOCATE(Re_%s_Buf)\n",r->name, r->name) ;
-  fprintf(fp,"  IF( ALLOCATED(Db_%s_Buf) )  DEALLOCATE(Db_%s_Buf)\n",r->name, r->name) ;
-  fprintf(fp,"  IF( ALLOCATED(Int_%s_Buf) ) DEALLOCATE(Int_%s_Buf)\n",r->name, r->name) ;
+  fprintf(fp,"    if ( Re_%s_Buf != NULL ) {\n",r->name) ;
+  fprintf(fp,"      memcpy( &ReKiBuf[Re_Xferred], Re_%s_Buf, Re_BufSz2*sizeof(float) ) ;\n",r->name) ;
+  fprintf(fp,"      Re_Xferred += Re_BufSz2 )\n") ; 
+  fprintf(fp,"    }\n" ) ;
+  fprintf(fp,"    if ( Db_%s_Buf != NULL ) {\n",r->name) ;
+  fprintf(fp,"      memcpy( &DbKiBuf[Db_Xferred], Db_%s_Buf, Db_BufSz2*sizeof(double) ) ;\n",r->name) ;
+  fprintf(fp,"      Db_Xferred += Db_BufSz2 )\n") ; 
+  fprintf(fp,"    }\n" ) ;
+  fprintf(fp,"    if ( Int_%s_Buf != NULL ) {\n",r->name) ;
+  fprintf(fp,"      memcpy( &IntKiBuf[Int_Xferred], Int_%s_Buf, Int_BufSz2*sizeof(int) ) ;\n",r->name) ;
+  fprintf(fp,"      Int_Xferred += Int_BufSz2 )\n") ; 
+  fprintf(fp,"    }\n" ) ;
+  fprintf(fp,"    if ( Re_%s_Buf != NULL)  { free(Re_%s_Buf) ; Re_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
+  fprintf(fp,"    if ( Db_%s_Buf != NULL)  { free(Db_%s_Buf) ; Db_%s_Buf = NULL  ;}\n",r->name, r->name, r->name) ;
+  fprintf(fp,"    if ( Int_%s_Buf != NULL) { free(Int_%s_Buf) ; Int_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
 
     } else  {
-      char * indent ;
-//      sprintf(tmp2,"SIZE(InData%%%s)",r->name) ;
-      sprintf(tmp2,"InData->%s.size())",r->name) ;
+      char * indent, *ty, *cty ;
+      sprintf(tmp2,"InData->%sLen)",r->name) ;
       if        ( r->ndims==0 ) {
         strcpy(tmp3,"") ;
       } else if ( r->ndims==1 ) {
@@ -165,28 +288,29 @@ fprintf(fp,"  *Int_BufSz = 0 ;\n") ;
       } else                    {
         fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ;
       }
-      indent = "" ;
+      indent = "  " ;
       if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
            !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-          indent = "  " ;
+          indent = "    " ;
         }
-        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"%sfor ( i = 0 ; i < InData->%s.size() ; i++ ) {\n",indent, r->name ) ;
-  fprintf(fp,"%s  if ( !OnlySize ) memcpy( &(ReKiBuf[Re_Xferred+i]), &(InData->%s[i]), sizeof(float)) ;\n",
-              indent,r->name  ) ;
-  fprintf(fp,"%s  Re_Xferred++ ;\n") ;
-  fprintf(fp,"%s}\n") ;
-        }
+        if ( !strcmp( r->type->mapsto, "REAL(ReKi)") )  {ty = "Re" ;  cty = "float"  ; }
+        if ( !strcmp( r->type->mapsto, "REAL(DbKi)") )  {ty = "Db" ;  cty = "double" ; }
+        if ( !strcmp( r->type->mapsto, "REAL(IntKi)") ) {ty = "Int" ; cty = "int"    ; }
+  fprintf(fp,"%sfor ( i = 0 ; i < InData->%sLen ; i++ ) {\n",indent, r->name ) ;
+  fprintf(fp,"%s  if ( !OnlySize ) memcpy( &(%sKiBuf[%s_Xferred+i]), &(InData->%s[i]), sizeof(%s)) ;\n",
+              indent,ty,ty,r->name,cty  ) ;
+  fprintf(fp,"%s  %s_Xferred++ ;\n",indent,ty) ;
+  fprintf(fp,"%s}\n",indent) ;
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-//  fprintf(fp,"  ENDIF\n") ;
         }
       }
     }
   }
 
-
+fprintf(fp,"  }\n") ;
+fprintf(fp,"  return(0)\n") ;
 fprintf(fp,"}\n") ;
 }
 
@@ -280,7 +404,7 @@ fprintf(stderr,"%s %d\n",nonick,is_a_fast_interface_type(nonick)) ;
   //      gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
   //      gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_c_pack( fp, ModName, ddtname, ddtnamelong ) ;
-  //      gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
+        gen_c_unpack( fp, ModName, ddtname, ddtnamelong ) ;
       }
     }
   }
