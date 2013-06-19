@@ -90,6 +90,8 @@ CertTest\Update.bat
 
 CertTest\5MW_Baseline\AeroData\*
 CertTest\5MW_Baseline\ServoData\Source\DISCON.f90
+CertTest\5MW_Baseline\ServoData\Source\DISCON_ITIBarge.f90
+CertTest\5MW_Baseline\ServoData\Source\DISCON_OC3Hywind.f90
 CertTest\5MW_Baseline\Wind\NoShr_12.wnd
 CertTest\5MW_Baseline\Wind\90m_12mps.inp
 CertTest\5MW_Baseline\Wind\90m_12mps.bts
@@ -299,6 +301,18 @@ CertTest\Test17.cru
 CertTest\Test18.fst
 CertTest\Test18.cru
 
+CertTest\Test19.fst
+CertTest\Test19.cru
+
+CertTest\Test20.fst
+CertTest\Test20.cru
+
+CertTest\Test21.fst
+CertTest\Test21.cru
+
+CertTest\Test22.fst
+CertTest\Test22.cru
+
 
 
 CertTest\TstFiles\Test01_ElastoDyn.sum
@@ -359,3 +373,15 @@ CertTest\TstFiles\Test17.pmf
 
 CertTest\TstFiles\Test18_ElastoDyn.sum
 CertTest\TstFiles\Test18.sts
+
+CertTest\TstFiles\Test19_ElastoDyn.sum
+CertTest\TstFiles\Test19.sts
+
+CertTest\TstFiles\Test20_ElastoDyn.sum
+CertTest\TstFiles\Test20.sts
+
+CertTest\TstFiles\Test21_ElastoDyn.sum
+CertTest\TstFiles\Test21.sts
+
+CertTest\TstFiles\Test22_ElastoDyn.sum
+CertTest\TstFiles\Test22.sts

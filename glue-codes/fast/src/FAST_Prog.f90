@@ -93,9 +93,9 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
 REAL(DbKi), PARAMETER          :: t_initial = 0.0                            ! Initial time
 REAL(DbKi)                     :: dt_global                                  ! we're limiting our simulation to lock-step time steps for now
 
-INTEGER, PARAMETER :: ED_interp_order = 0
-TYPE(ED_InputType)   :: ED_Input(ED_interp_order+1)
-REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
+INTEGER, PARAMETER   :: interp_order = 0
+TYPE(ED_InputType)   :: ED_Input(interp_order+1)
+REAL(DbKi)           :: ED_InputTimes(interp_order+1)
   
 
    !...............................................................................................................................
@@ -132,7 +132,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
    ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
    ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
    ! order = SIZE(ED_Input)
-   do j = 1, ED_interp_order + 1  
+   do j = 1, interp_order + 1  
       ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
       !Mod1_OutputTimes(i) = t_initial - (j - 1) * dt
    enddo   
@@ -148,8 +148,9 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
         CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")
    
    
-   CALL ED_CopyInput (ED_Input(1),  u_ED, 0, Errstat, ErrMsg)   !Bjj copying input here only to allocate the arrays, until we get a better solution...
-   
+   CALL ED_CopyInput (ED_Input(1),  u_ED, MESH_NEWCOPY, Errstat, ErrMsg)   !Bjj copying input here only to allocate the arrays and meshes.
+      CALL CheckError( ErrStat, 'Message from ED_CopyInput: '//NewLine//ErrMsg )
+
       ! initialize ServoDyn
    IF ( p_FAST%CompServo ) THEN
       InitInData_SrvD%InputFile     = p_FAST%SrvDFile
@@ -193,6 +194,12 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
    ! initialize HydroDyn
    IF ( p_FAST%CompHydro ) THEN
+            
+      !IF ( THIS IS A FLOATING PLATFORM ) THEN
+      !IF ( .NOT. EqualRealNos( u_ED%PlatformPtMesh%Position(3,1), 0.0_ReKi )  ) &
+      !   CALL CheckError( ErrID_Fatal, "ElastoDyn's Platform Reference Point Mesh must be located at (0,0,0) when CompHydro is enabled." )
+      !END IF
+      
       
       HydroDyn_InitData%Gravity     = InitOutData_ED%Gravity      ! m/s^2   
       HydroDyn_InitData%FileName    = p_FAST%HDFile    
@@ -291,7 +298,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       
          ! Shift "window" of the Mod1_Input and Mod1_Output
       
-      do j = ED_interp_order, 1, -1
+      do j = interp_order, 1, -1
          Call ED_CopyInput (ED_Input(j),  ED_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
          !Call Mod1_CopyOutput (Mod1_Output(i),  Mod1_Output(j+1),  0, Errstat, ErrMsg)
          ED_InputTimes(j+1) = ED_InputTimes(j)
@@ -308,7 +315,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 
          ! ElastoDyn
       CALL ED_UpdateStates( ZTime, Step, ED_Input, ED_InputTimes, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
+         CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
 
          ! ServoDyn
          
@@ -356,7 +363,7 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       END IF
 
       IF ( p_FAST%CompHydro ) THEN
-         CALL HD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
+         CALL HD_InputSolve( y_ED, ErrStat, ErrMsg, p_ED, x_ED, OtherSt_ED )
          CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads, InitOutData_HD, ErrStat )
             CALL CheckError( ErrStat, 'Error calculating hydrodynamic loads in HydroDyn.'  )
       END IF
@@ -370,7 +377,8 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
          ! User Platform Loading
       IF ( p_FAST%CompUserPtfmLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrPtfm_CalcOutput()
       !   
-      !   CALL UserPtfmLd ( x_ED%QT(1:6), x_%QDT(1:6), t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, (/ y_UsrPtfm%Force,y_UsrPtfm%Moment /) )
+      !   CALL UserPtfmLd ( x_ED%QT(1:6), x_ED%QDT(1:6), t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, (/ y_UsrPtfm%Force,y_UsrPtfm%Moment /) )
+      !   CALL UserPtfmLd ( y_ED%PlatformPtMesh, t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, u_ED%PlatformPtMesh )
       !
       !      ! Ensure that the platform added mass matrix returned by UserPtfmLd, PtfmAM, is symmetric; Abort if necessary:
       !   IF ( .NOT. IsSymmetric( y_UsrPtfm%AddedMass ) ) THEN
@@ -382,6 +390,13 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
             
       CALL ED_InputSolve( p_FAST, p_ED,  ED_Input(1),   y_SrvD )
                    
+      !.....................................................................
+      ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
+      !.....................................................................
+      
+      u_ED%PlatformPtMesh%RemapFlag = .FALSE.
+      y_ED%PlatformPtMesh%RemapFlag = .FALSE.
+      
                   
       !......................................................
       ! Check to see if we should output data this time step:
@@ -415,9 +430,11 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
       ENDIF
 
 
+      !.....................................................
       ! If we've reached TMax, exit the DO loop:
+      !.....................................................
 
-      IF ( ZTime > p_FAST%TMax )  EXIT
+      IF ( ZTime >= p_FAST%TMax )  EXIT
 
    ENDDO        
 
@@ -431,7 +448,8 @@ REAL(DbKi)           :: ED_InputTimes(ED_interp_order+1)
 CONTAINS
    !...............................................................................................................................
    SUBROUTINE ExitThisProgram( Error, ErrLev )
-   ! This subroutine cleans up if the error is >= AbortErrLev
+   ! This subroutine is called when FAST exits. It calls all the modules' end routines and cleans up variables declared in the 
+   ! main program. If there was an error, it also aborts. Otherwise, it prints the run times and performs a normal exit.
    !...............................................................................................................................
 
          ! Passed arguments
@@ -445,6 +463,7 @@ CONTAINS
       !...............................................................................................................................
       ! Clean up modules (and write binary FAST output file), destroy any other variables
       !...............................................................................................................................
+!bjj: if any of these operations produces an error > AbortErrLev, we should also set Error = TRUE and update ErrLev appropriately.
    
       CALL FAST_End( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
@@ -465,12 +484,19 @@ CONTAINS
       ! in case we didn't get these destroyed earlier....
       
       CALL ED_DestroyInitInput(  InitInData_ED, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+
       CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat2, ErrMsg2 )
-   
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+
       CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+
       CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       
       CALL HD_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       
       
       !............................................................................................................................

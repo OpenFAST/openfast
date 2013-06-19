@@ -22,8 +22,6 @@ MODULE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.01.00a-bjj', '30-June-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
-
-   INTEGER(IntKi), PARAMETER :: OutStrLen   = 10 !bjj -> decide if this has to go in the NWTC Library...
    
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE. 
 
@@ -46,8 +44,8 @@ MODULE FAST_Types
       INTEGER(IntKi)                    :: UnSum                                   ! I/O unit number for the summary file
 
       CHARACTER(1024)                   :: FileDescLines(3)                        ! Description lines to include in output files (header, time run, plus module names/versions)
-      CHARACTER(OutStrLen), ALLOCATABLE :: ChannelNames(:)                         ! Names of the output channels
-      CHARACTER(OutStrLen), ALLOCATABLE :: ChannelUnits(:)                         ! Units for the output channels
+      CHARACTER(ChanLen), ALLOCATABLE   :: ChannelNames(:)                         ! Names of the output channels
+      CHARACTER(ChanLen), ALLOCATABLE   :: ChannelUnits(:)                         ! Units for the output channels
       
          ! Version numbers of coupled modules
       TYPE(ProgDesc)                    :: AD_Ver
