@@ -26,6 +26,7 @@ MODULE NWTC_Num
    !     SUBROUTINE BSortReal     ( RealAry, NumPts )
    !     FUNCTION   CROSS_PRODUCT ( Vector1, Vector2 )
    !     FUNCTION   EqualRealNos  ( ReNum1, ReNum2 )
+   !     SUBROUTINE Eye           ( A, ErrStat, ErrMsg )                        ! sets A equal to the identity matrix (A can have 2 or 3 dimensions)
    !     SUBROUTINE GL_Pts        ( IPt, NPts, Loc, Wt [, ErrStat] )
    !     SUBROUTINE GaussElim     ( AugMat, NumEq, x, ErrStat, ErrMsg )         ! Performs Gauss-Jordan elimination to solve Ax=b for x; AugMat = [A b]
    !     FUNCTION   IndexCharAry  ( CVal, CAry )
@@ -93,6 +94,14 @@ MODULE NWTC_Num
       MODULE PROCEDURE EqualRealNos4
       MODULE PROCEDURE EqualRealNos8
       MODULE PROCEDURE EqualRealNos16
+   END INTERFACE
+
+
+      ! Create interface for a generic Eye that uses specific routines.
+
+   INTERFACE Eye
+      MODULE PROCEDURE Eye2   ! matrix of two dimensions
+      MODULE PROCEDURE Eye3   ! matrix of three dimensions
    END INTERFACE
 
 
@@ -390,7 +399,87 @@ CONTAINS
    ENDIF
 
 
-  END FUNCTION EqualRealNos16
+   END FUNCTION EqualRealNos16
+!=======================================================================
+   SUBROUTINE Eye2( A, ErrStat, ErrMsg )
+
+      ! This routine sets the matrix A(:,:) to the identity
+      ! matrix (all zeros, with ones on the diagonal)
+      ! Note that this also returns the "pseudo-identity" when A(:,:)
+      ! is not square (i.e., nr/=nc).
+
+   REAL(ReKi),     INTENT(INOUT) :: A (:,:)                        ! Array to matricies to set to the identity matrix (nr,nc,n)
+   INTEGER(IntKi), INTENT(OUT)   :: ErrStat                        ! Error level
+   CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         ! ErrMsg corresponding to ErrStat
+
+      ! local variables
+   INTEGER                       :: i, j                           ! loop counters
+   INTEGER                       :: nr                             ! number of rows
+   INTEGER                       :: nc                             ! number of columns
+
+
+   nr = SIZE(A,1)
+   nc = SIZE(A,2)
+
+   IF (nr /= nc) THEN
+      ErrStat = ErrID_Info
+      ErrMsg  = 'NWTC Library, Eye(): Matrix is not square.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+
+      ! initialize to zero:
+   A = 0._ReKi
+
+      ! set the diagonals to one:
+   DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
+      A(j,j) = 1._ReKi
+   END DO
+
+   END SUBROUTINE Eye2
+!=======================================================================
+   SUBROUTINE Eye3( A, ErrStat, ErrMsg )
+
+      ! This routine sets each of the n matries A(:,:,n) to the identity
+      ! matrix (all zeros, with ones on the diagonal).
+      ! Note that this also returns the "pseudo-identity" when A(:,:)
+      ! is not square (i.e., nr/=nc).
+
+   REAL(ReKi),     INTENT(INOUT) :: A (:,:,:)                      ! Array to matricies to set to the identity matrix (nr,nc,n)
+   INTEGER(IntKi), INTENT(OUT)   :: ErrStat                        ! Error level
+   CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         ! ErrMsg corresponding to ErrStat
+
+      ! local variables
+   INTEGER                       :: i, j                           ! loop counters
+   INTEGER                       :: nr                             ! number of rows
+   INTEGER                       :: nc                             ! number of columns
+   INTEGER                       :: n                              ! number of matricies
+
+
+   nr = SIZE(A,1)
+   nc = SIZE(A,2)
+   n  = SIZE(A,3)
+
+   IF (nr /= nc) THEN
+      ErrStat = ErrID_Info
+      ErrMsg  = 'NWTC Library, Eye(): Matrix is not square.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+
+      ! initialize to zero:
+   A = 0._ReKi
+
+      ! set the diagonals to one:
+   DO i = 1, n ! loop through the matrices
+      DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
+         A(j,j,i) = 1._ReKi
+      END DO
+   END DO
+
+   END SUBROUTINE Eye3
 !=======================================================================
    SUBROUTINE GaussElim( AugMatIn, NumEq, x, ErrStat, ErrMsg )
 
@@ -471,7 +560,7 @@ CONTAINS
 
    RETURN
 
-  END SUBROUTINE GaussElim
+   END SUBROUTINE GaussElim
 !=======================================================================
 
    FUNCTION GetSmllRotAngs ( DCMat, ErrStat, ErrMsg )

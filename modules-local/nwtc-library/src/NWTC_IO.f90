@@ -32,7 +32,7 @@ MODULE NWTC_IO
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00b-bjj', '31-May-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00b-bjj', '20-Jun-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
    INTEGER(IntKi), PARAMETER      :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
@@ -45,7 +45,7 @@ MODULE NWTC_IO
       INTEGER(B4Ki)                          :: NumChans                      ! The number of channels of FAST output data (including time).
       INTEGER(B4Ki)                          :: NumRecs                       ! The number of records of FAST output data.
       REAL(DbKi)                             :: TimeStep                      ! The time step.
-      CHARACTER(20), ALLOCATABLE             :: ChanNames(:)                  ! The channel names.  
+      CHARACTER(20), ALLOCATABLE             :: ChanNames(:)                  ! The channel names.
       CHARACTER(20), ALLOCATABLE             :: ChanUnits(:)                  ! The channel units.
       REAL(ReKi)   , ALLOCATABLE             :: Data(:,:)                     ! The channel data.  Time is stored in the first column.
    END TYPE FASTdataType

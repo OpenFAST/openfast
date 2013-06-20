@@ -56,6 +56,8 @@ CONTAINS
      IF (PRESENT(N)) nn = N
 
      write(U,*)  'Initialized: ', M%initialized
+     IF ( ASSOCIATED(M%RemapFlag) ) write(U,*)  'Remap Flag: ', M%RemapFlag
+
      write(U,*)  'Fieldmask:   ', M%FieldMask
      IF ( M%FieldMask( MASKID_FORCE           ) )  write(U,*)  '  Defined : Force'
      IF ( M%FieldMask( MASKID_MOMENT          ) )  write(U,*)  '  Defined : Moment'
@@ -69,6 +71,7 @@ CONTAINS
      IF ( M%FieldMask( MASKID_SCALAR          ) )  write(U,*)  '  Defined : Scalar'
      write(U,*)  'Ios:         ', M%Ios
      write(U,*)  'Nnodes:      ', M%Nnodes
+
 
      DO i = 1, NELEMKINDS
        IF ( M%ElemTable(i)%nelem .GT. 0 ) THEN
@@ -113,8 +116,10 @@ CONTAINS
      IF(M%initialized.AND.ASSOCIATED(M%Orientation))THEN
        isz=size(M%Orientation,3)
        write(U,*)'Orientation: ',isz
-       DO i=1,min(nn,isz)
-         write(U,*)' ',i,M%Orientation(:,:,i)
+       DO i=1,min(nn,isz) !bjj: printing this like a matrix:
+         write(U,'(1X,I3, 3(1X,F10.4))') i, M%Orientation(1,:,i)
+         write(U,'(4X,    3(1X,F10.4))')    M%Orientation(2,:,i)
+         write(U,'(4X,    3(1X,F10.4))')    M%Orientation(3,:,i)
        ENDDO
      ENDIF
      IF(M%initialized.AND.ASSOCIATED(M%TranslationDisp))THEN
@@ -232,6 +237,7 @@ CONTAINS
 
     ! Local
      INTEGER i
+     LOGICAL, TARGET  :: InitRemapFlag
 
      ErrStat = ErrID_None
      ErrMess = ""
@@ -276,6 +282,10 @@ CONTAINS
        BlankMesh%ElemTable(i)%nelem = 0  ; BlankMesh%ElemTable(i)%maxelem = 0
        NULLIFY(BlankMesh%ElemTable(i)%Elements )
      ENDDO
+
+     InitRemapFlag = .TRUE.
+     NULLIFY(BlankMesh%RemapFlag)
+     BlankMesh%RemapFlag => InitRemapFlag
 
    ! handle optionals
      BlankMesh%FieldMask = .FALSE.
@@ -371,37 +381,42 @@ CONTAINS
      LOGICAL, OPTIONAL :: IgnoreSibling
 
     ! Local
-     LOGICAL IgSib
-     INTEGER i, j, k
+      LOGICAL IgSib
+      INTEGER i, j, k
 
-     ErrStat = ErrID_None
+      ErrStat = ErrID_None
 
-     IF ( .NOT. Mesh%Initialized ) RETURN
+      IF ( .NOT. Mesh%Initialized ) RETURN
 
-     Mesh%initialized = .FALSE.
-     Mesh%fieldmask   = .FALSE.
-     Mesh%ios         = 0
-     Mesh%Nnodes      = 0
+      Mesh%initialized = .FALSE.
+      Mesh%fieldmask   = .FALSE.
+      Mesh%ios         = 0
+      Mesh%Nnodes      = 0
 
-     IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
-       DO i = 1, NELEMKINDS
-         Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
-         IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
-           DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
-             IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) THEN
-               DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
-               NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
-             ENDIF
-             IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) THEN
-               DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-               NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-             ENDIF
-           ENDDO
-         ENDIF
-       ENDDO
-       DEALLOCATE(Mesh%ElemTable)
-       NULLIFY(Mesh%ElemTable)
-     ENDIF
+      NULLIFY(Mesh%RemapFlag)
+
+      IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
+         DO i = 1, NELEMKINDS
+            Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
+            IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
+               DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
+                  IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) THEN
+                     DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
+                     NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
+                  ENDIF
+                  IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) THEN
+                     DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                     NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                  ENDIF
+               ENDDO
+            ENDIF
+          ENDDO
+         DEALLOCATE(Mesh%ElemTable)
+         NULLIFY(Mesh%ElemTable)
+      ENDIF
+
+!bjj: shouldn't all the other fields also be deallocated/nullified?
+
 
 #if 0
      !IF (ASSOCIATED(Mesh%element_point))     NULLIFY(Mesh%element_point)
@@ -421,7 +436,7 @@ CONTAINS
      IF (ASSOCIATED(Mesh%Force))             NULLIFY(Mesh%Force)
      IF (ASSOCIATED(Mesh%Moment))            NULLIFY(Mesh%Moment)
      IF (ASSOCIATED(Mesh%Orientation))       NULLIFY(Mesh%Orientation)
-     IF (ASSOCIATED(Mesh%TranslationDisp))    NULLIFY(Mesh%TranslationDisp)
+     IF (ASSOCIATED(Mesh%TranslationDisp))   NULLIFY(Mesh%TranslationDisp)
      IF (ASSOCIATED(Mesh%RotationVel))       NULLIFY(Mesh%RotationVel)
      IF (ASSOCIATED(Mesh%TranslationVel))    NULLIFY(Mesh%TranslationVel)
      IF (ASSOCIATED(Mesh%RotationAcc))       NULLIFY(Mesh%RotationAcc)
@@ -953,8 +968,6 @@ CONTAINS
                ENDDO
             ENDDO
 
-!bjj: aren't we also copying the other fields:
-
                ! Regenerate new list of elements (point to ElemTable)
 
             DestMesh%nelemlist   = SrcMesh%nelemlist
@@ -994,24 +1007,21 @@ CONTAINS
                             ,RotationAcc=RotationAcc_l                                                          &
                             ,AddedMass=AddedMass_l                                                              &
                             ,nScalars=nScalars_l                                                                )
+
+            !bjj: Doesn't this logic mean we can have only one sibling?
+            ! Then, we should probably check that SrcMesh%SiblingMesh isn't already associated so that we don't lose siblings
             DestMesh%SiblingMesh => SrcMesh
-            SrcMesh%SiblingMesh => DestMesh
+            SrcMesh%SiblingMesh  => DestMesh
 
-            DestMesh%Position => SrcMesh%Position
+            DestMesh%Position  => SrcMesh%Position
+            DestMesh%RemapFlag => SrcMesh%RemapFlag
             DestMesh%ElemTable => SrcMesh%ElemTable
+            DestMesh%ElemList  => SrcMesh%ElemList
 
-            !bjj: what about this one:
-            DestMesh%ElemList => SrcMesh%ElemList
-
-            !bjj: and these?
             DestMesh%nelemlist   = SrcMesh%nelemlist
             DestMesh%maxelemlist = SrcMesh%maxelemlist
             DestMesh%nextelem    = SrcMesh%nextelem
 
-
-            !bjj: this isn't a pointer, but possibly should be
-            DestMesh%RemapFlag   = SrcMesh%RemapFlag
-            !DestMesh%RemapFlag => SrcMesh%RemapFlag
 
          ENDIF
 
@@ -1095,7 +1105,7 @@ CONTAINS
       ELSE IF ( CtrlCode .EQ. MESH_UPDATECOPY ) THEN
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
-            ErrMess = "MeshCopy. MESH_UPDATECOPY of meshes with different numbers of nodes."
+            ErrMess = "MeshCopy: MESH_UPDATECOPY of meshes with different numbers of nodes."
          ELSE
             DestMesh%Position    = SrcMesh%Position
             IF ( ASSOCIATED(SrcMesh%Force ) ) THEN
@@ -1134,6 +1144,10 @@ CONTAINS
 
          ENDIF
 
+      ELSE
+         ErrStat = ErrID_Fatal
+         ErrMess  = 'MeshCopy: Invalid CtrlCode.'
+         RETURN
       ENDIF
 
       DestMesh%Initialized = SrcMesh%Initialized
@@ -1325,7 +1339,7 @@ CONTAINS
      IF ( .NOT. Mesh%Initialized ) THEN
        ErrStat = ErrID_Fatal
        ErrMess="MeshConstructElement_1PT: attempt to use uncreated mesh."
-     ELSEIF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes ) THEN !BJJ moved to ELSE because
+     ELSEIF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes ) THEN !BJJ moved to ELSE
        ErrStat = ErrID_Fatal
        ErrMess="MeshConstructElement_1PT: invalid P1 ("//TRIM(Num2LStr(P1))//") for mesh with "//TRIM(Num2LStr(Mesh%Nnodes))//" nodes."
      ENDIF
