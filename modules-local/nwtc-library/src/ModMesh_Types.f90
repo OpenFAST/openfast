@@ -97,11 +97,11 @@ MODULE ModMesh_Types
    END TYPE ElemListType
 
    TYPE, PUBLIC :: MeshType
-      LOGICAL :: initialized = .FALSE.    ! Indicate whether this mesh is initialized     (bjj: added default initialization here)
-      LOGICAL :: fieldmask(FIELDMASK_SIZE)! Dimension as number of allocateable fields, below
-      LOGICAL :: RemapFlag                ! false=no action/ignore; true=remap required
-      INTEGER :: ios                      ! Mesh type: input (1), output(2), or state(3)
-      INTEGER :: Nnodes                   ! Number of nodes (vertices) in mesh
+      LOGICAL :: initialized = .FALSE.        ! Indicate whether this mesh is initialized     (bjj: added default initialization here)
+      LOGICAL :: fieldmask(FIELDMASK_SIZE)    ! Dimension as number of allocateable fields, below
+      LOGICAL,POINTER :: RemapFlag  => NULL() ! false=no action/ignore; true=remap required
+      INTEGER :: ios                          ! Mesh type: input (1), output(2), or state(3)
+      INTEGER :: Nnodes                       ! Number of nodes (vertices) in mesh
 
       TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL() ! Elements in the mesh, by type
 
@@ -135,7 +135,7 @@ MODULE ModMesh_Types
 !bjj: to be added later:       REAL(ReKi), POINTER :: ElementScalars(:,:) => NULL() ! Scalars associated with elements
 !bjj: to be added later:       INTEGER             :: nElementScalars               ! store value of nElementScalars when created
 
-      TYPE(MeshType),POINTER :: SiblingMesh      => NULL() ! Pointer to mesh's (next) sibling
+      TYPE(MeshType),POINTER :: SiblingMesh      => NULL() ! Pointer to mesh's (only) sibling
 
    END TYPE MeshType
 
