@@ -4,7 +4,7 @@
 !
 !    This file is part of the NWTC Subroutine Library.
 !
-!    ServoDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+!    NWTC_Num is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
 !    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 !
 !    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
@@ -22,34 +22,43 @@ MODULE NWTC_Num
 
    ! It contains the following routines:
 
-   !     SUBROUTINE AddOrSub2Pi   ( OldAngle, NewAngle )
-   !     SUBROUTINE BSortReal     ( RealAry, NumPts )
-   !     FUNCTION   CROSS_PRODUCT ( Vector1, Vector2 )
-   !     FUNCTION   EqualRealNos  ( ReNum1, ReNum2 )
-   !     SUBROUTINE Eye           ( A, ErrStat, ErrMsg )                        ! sets A equal to the identity matrix (A can have 2 or 3 dimensions)
-   !     SUBROUTINE GL_Pts        ( IPt, NPts, Loc, Wt [, ErrStat] )
-   !     SUBROUTINE GaussElim     ( AugMat, NumEq, x, ErrStat, ErrMsg )         ! Performs Gauss-Jordan elimination to solve Ax=b for x; AugMat = [A b]
-   !     FUNCTION   IndexCharAry  ( CVal, CAry )
-   !     FUNCTION   InterpBin     ( XVal, XAry, YAry, ILo, AryLen )             ! Generic interface for InterpBinComp and InterpBinReal.
-   !     FUNCTION   InterpBinComp ( XVal, XAry, YAry, ILo, AryLen )
-   !     FUNCTION   InterpBinReal ( XVal, XAry, YAry, ILo, AryLen )
-   !     FUNCTION   InterpStp     ( XVal, XAry, YAry, ILo, AryLen )             ! Generic interface for InterpStpComp and InterpStpReal.
-   !     FUNCTION   InterpStpComp ( XVal, XAry, YAry, Ind, AryLen )
-   !     FUNCTION   InterpStpReal ( XVal, XAry, YAry, Ind, AryLen )
-   !     FUNCTION   IsSymmetric   ( A )                                         ! Function to determine if A(:,:) is symmetric
-   !     SUBROUTINE LocateBin     ( XVal, XAry, Ind, AryLen )
-   !     SUBROUTINE LocateStp     ( XVal, XAry, Ind, AryLen )
-   !     FUNCTION   Mean          ( Ary, AryLen )                               ! Function to calculate the mean value of a vector array.
-   !     SUBROUTINE MPi2Pi        ( Angle )
-   !     SUBROUTINE RombergInt    ( f, a, b, R, err, eps, ErrStat )
-   !     SUBROUTINE SetConstants
-   !     SUBROUTINE SmllRotTrans  ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
-   !     SUBROUTINE SortUnion     ( Ary1, N1, Ary2, N2, Ary, N )
-   !     FUNCTION   StdDevFn      ( Ary, AryLen, Mean )                         ! Function to calculate the standard deviation of a vector array.
+   !  SUBROUTINE AddOrSub2Pi           ( OldAngle, NewAngle )
+   !  SUBROUTINE BSortReal             ( RealAry, NumPts )
+   !  FUNCTION   CROSS_PRODUCT         ( Vector1, Vector2 )
+   !  SUBROUTINE CubicSplineInit       ( AryLen, XAry, YAry, Coef )                                   ! Calculate coefficients for irregularly spaced array to use cubic splines.
+   !  SUBROUTINE CubicSplineInitM      ( XAry, YAry, Coef, ErrStat, ErrMsg )                          ! Initialize cubic splines for multiple tables of irregularly space data.
+   !  FUNCTION   CubicSplineInterp     ( X, AryLen, XAry, YAry,       Coef )                          ! Interpolate a irregularly spaced array using cubic splines.
+   !  FUNCTION   CubicSplineInterpM    ( X, XAry, YAry, Coef, ErrStat, ErrMsg )                       ! Interpolate using cubic splines for multiple tables of irregularly space data.
+   !  FUNCTION   EqualRealNos          ( ReNum1, ReNum2 )
+   !  SUBROUTINE Eye                   ( A, ErrStat, ErrMsg )                                         ! sets A equal to the identity matrix (A can have 2 or 3 dimensions)
+   !  SUBROUTINE GaussElim             ( AugMat, NumEq, x, ErrStat, ErrMsg )                          ! Performs Gauss-Jordan elimination to solve Ax=b for x; AugMat = [A b]
+   !  SUBROUTINE GetOffsetReg          ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )              ! Determine index of the point in Ary just below Val and the fractional distance to the next point in the array.
+   !  SUBROUTINE GL_Pts                ( IPt, NPts, Loc, Wt [, ErrStat] )
+   !  FUNCTION   IndexCharAry          ( CVal, CAry )
+   !  FUNCTION   InterpBin             ( XVal, XAry, YAry, ILo, AryLen )                              ! Generic interface for InterpBinComp and InterpBinReal.
+   !  FUNCTION   InterpBinComp         ( XVal, XAry, YAry, ILo, AryLen )
+   !  FUNCTION   InterpBinReal         ( XVal, XAry, YAry, ILo, AryLen )
+   !  FUNCTION   InterpStp             ( XVal, XAry, YAry, ILo, AryLen )                              ! Generic interface for InterpStpComp and InterpStpReal.
+   !  FUNCTION   InterpStpComp         ( XVal, XAry, YAry, Ind, AryLen )
+   !  FUNCTION   InterpStpReal         ( XVal, XAry, YAry, Ind, AryLen )
+   !  FUNCTION   IsSymmetric           ( A )                                                          ! Function to determine if A(:,:) is symmetric
+   !  SUBROUTINE LocateBin             ( XVal, XAry, Ind, AryLen )
+   !  SUBROUTINE LocateStp             ( XVal, XAry, Ind, AryLen )
+   !  FUNCTION   Mean                  ( Ary, AryLen )                                                ! Function to calculate the mean value of a vector array.
+   !  SUBROUTINE MPi2Pi                ( Angle )
+   !  SUBROUTINE RegCubicSplineInit    ( AryLen, XAry, YAry, DelX, Coef )                             ! Calculate coefficients for regularly spaced array to use cubic splines.
+   !  SUBROUTINE RegCubicSplineInitM   ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )                    ! Interpolate using cubic splines for multiple tables of regularly space data.
+   !  FUNCTION   RegCubicSplineInterp  ( X, AryLen, XAry, YAry, DelX, Coef )                          ! Interpolate a regularly spaced array using cubic splines.
+   !  FUNCTION   RegCubicSplineInterpM ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )                 ! Initialize cubic splines for multiple tables of regularly space data.
+   !  SUBROUTINE RombergInt            ( f, a, b, R, err, eps, ErrStat )
+   !  SUBROUTINE SetConstants
+   !  SUBROUTINE SmllRotTrans          ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
+   !  SUBROUTINE SortUnion             ( Ary1, N1, Ary2, N2, Ary, N )
+   !  FUNCTION   StdDevFn              ( Ary, AryLen, Mean )                                          ! Function to calculate the standard deviation of a vector array.
 
 
-   USE                             NWTC_IO
-   USE, INTRINSIC               :: ISO_C_Binding, ONLY: C_INTPTR_T                   ! the size of a pointer (number of bytes)
+   USE                                          NWTC_IO
+   USE, INTRINSIC                            :: ISO_C_Binding, ONLY: C_INTPTR_T                       ! the size of a pointer (number of bytes)
 
    IMPLICIT NONE
 
@@ -58,32 +67,55 @@ MODULE NWTC_Num
 
       ! Global numeric-related variables.
 
-   REAL(DbKi)                   :: D2R_D                                        ! Factor to convert degrees to radians in double precision
-   REAL(DbKi)                   :: Inf_D                                        ! IEEE value for NaN (not-a-number) in double precision
-   REAL(DbKi)                   :: Inv2Pi_D                                     ! 0.5/Pi (1/(2*Pi)) in double precision
-   REAL(DbKi)                   :: NaN_D                                        ! IEEE value for Inf (infinity) in double precision
-   REAL(DbKi)                   :: Pi_D                                         ! Ratio of a circle's circumference to its diameter in double precision
-   REAL(DbKi)                   :: PiBy2_D                                      ! Pi/2 in double precision
-   REAL(DbKi)                   :: R2D_D                                        ! Factor to convert radians to degrees in double precision
-   REAL(DbKi)                   :: RPM2RPS_D                                    ! Factor to convert revolutions per minute to radians per second in double precision
-   REAL(DbKi)                   :: RPS2RPM_D                                    ! Factor to convert radians per second to revolutions per minute in double precision
-   REAL(DbKi)                   :: TwoByPi_D                                    ! 2/Pi in double precision
-   REAL(DbKi)                   :: TwoPi_D                                      ! 2*Pi in double precision
+   REAL(DbKi)                                :: D2R_D                         ! Factor to convert degrees to radians in double precision
+   REAL(DbKi)                                :: Inf_D                         ! IEEE value for NaN (not-a-number) in double precision
+   REAL(DbKi)                                :: Inv2Pi_D                      ! 0.5/Pi (1/(2*Pi)) in double precision
+   REAL(DbKi)                                :: NaN_D                         ! IEEE value for Inf (infinity) in double precision
+   REAL(DbKi)                                :: Pi_D                          ! Ratio of a circle's circumference to its diameter in double precision
+   REAL(DbKi)                                :: PiBy2_D                       ! Pi/2 in double precision
+   REAL(DbKi)                                :: R2D_D                         ! Factor to convert radians to degrees in double precision
+   REAL(DbKi)                                :: RPM2RPS_D                     ! Factor to convert revolutions per minute to radians per second in double precision
+   REAL(DbKi)                                :: RPS2RPM_D                     ! Factor to convert radians per second to revolutions per minute in double precision
+   REAL(DbKi)                                :: TwoByPi_D                     ! 2/Pi in double precision
+   REAL(DbKi)                                :: TwoPi_D                       ! 2*Pi in double precision
 
 
-   REAL(ReKi)                   :: D2R                                          ! Factor to convert degrees to radians
-   REAL(ReKi)                   :: Inf                                          ! IEEE value for NaN (not-a-number)
-   REAL(ReKi)                   :: Inv2Pi                                       ! 0.5/Pi = 1 / (2*pi)
-   REAL(ReKi)                   :: NaN                                          ! IEEE value for Inf (infinity)
-   REAL(ReKi)                   :: Pi                                           ! Ratio of a circle's circumference to its diameter
-   REAL(ReKi)                   :: PiBy2                                        ! Pi/2
-   REAL(ReKi)                   :: R2D                                          ! Factor to convert radians to degrees
-   REAL(ReKi)                   :: RPM2RPS                                      ! Factor to convert revolutions per minute to radians per second
-   REAL(ReKi)                   :: RPS2RPM                                      ! Factor to convert radians per second to revolutions per minute
-   REAL(ReKi)                   :: TwoByPi                                      ! 2/Pi
-   REAL(ReKi)                   :: TwoPi                                        ! 2*Pi
+   REAL(ReKi)                                :: D2R                           ! Factor to convert degrees to radians
+   REAL(ReKi)                                :: Inf                           ! IEEE value for NaN (not-a-number)
+   REAL(ReKi)                                :: Inv2Pi                        ! 0.5/Pi = 1 / (2*pi)
+   REAL(ReKi)                                :: NaN                           ! IEEE value for Inf (infinity)
+   REAL(ReKi)                                :: Pi                            ! Ratio of a circle's circumference to its diameter
+   REAL(ReKi)                                :: PiBy2                         ! Pi/2
+   REAL(ReKi)                                :: R2D                           ! Factor to convert radians to degrees
+   REAL(ReKi)                                :: RPM2RPS                       ! Factor to convert revolutions per minute to radians per second
+   REAL(ReKi)                                :: RPS2RPM                       ! Factor to convert radians per second to revolutions per minute
+   REAL(ReKi)                                :: TwoByPi                       ! 2/Pi
+   REAL(ReKi)                                :: TwoPi                         ! 2*Pi
 
-   INTEGER, PARAMETER           :: BITS_IN_ADDR  = C_INTPTR_T*8                 ! The number of bits in an address (32-bit or 64-bit).
+   INTEGER, ALLOCATABLE                      :: IntIndx  (:,:)                ! The array of indices holding that last index used for interpolation in IntBlade()
+   INTEGER, PARAMETER                        :: BITS_IN_ADDR  = C_INTPTR_T*8  ! The number of bits in an address (32-bit or 64-bit).
+
+   TYPE, PUBLIC               :: CubSplineType                                ! This derived type is used to hold data for performing cubic splines.
+      INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
+      REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
+      REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
+      REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
+   END TYPE CubSplineType
+
+   TYPE, PUBLIC               :: RegCubSplineType                             ! This derived type is used to hold data for performing cubic splines wuth regularly-spaced data.
+      INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
+      REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
+      REAL(ReKi)                             :: DelX                          ! The distance between the equally spaced points in XAry.
+      REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
+      REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
+   END TYPE RegCubSplineType
+
+   TYPE, PUBLIC               :: RegGridType                                  ! This derived type is used to hold the contents of a regular grid of data.
+      INTEGER                                :: NumDims                       ! The number of dimensions for this grid.
+      REAL(ReKi), ALLOCATABLE                :: Mins      (:)                 ! The set of minimums for the grid in each NumDims dimensions.
+      REAL(ReKi), ALLOCATABLE                :: Steps     (:)                 ! The set of step sizes for the grid in each NumDims dimensions.
+      REAL(ReKi), ALLOCATABLE                :: Grid      (:)                 ! The NumDims dimensional grid.
+   END TYPE RegGridType
 
 
 !=======================================================================
@@ -119,6 +151,8 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpStpComp
       MODULE PROCEDURE InterpStpReal
    END INTERFACE
+
+
 
 
 CONTAINS
@@ -243,52 +277,504 @@ CONTAINS
    RETURN
    END FUNCTION Cross_Product
 !=======================================================================
-!   SUBROUTINE GetPermMat ( InpMat, PMat, ErrStat )
-!
-!      ! This subroutine computes a permutation matrix, PMat, for a given
-!      ! input matrix, InpMat. It assumes that InpMat is of full rank
-!      ! and for now, the matrices are 3 x 3.
-!
-!      ! passed variables
-!
-!   REAL(ReKi), INTENT(IN )         :: InpMat       (3,3)
-!   REAL(ReKi), INTENT(OUT )        :: PMat         (3,3) !this could be integer, but we'll leave it real now
-!   INTEGER,    INTENT(OUT )        :: ErrStat            ! a non-zero value indicates an error in the permutation matrix algorithm
-!
-!      ! local variables
-!   INTEGER                         :: iCol               ! loop counter
-!   INTEGER                         :: iRow               ! loop counter
-!   INTEGER                         :: MaxCol             ! holds index of maximum value in a column
-!
-!   LOGICAL                         :: ChkCols     (3)    ! a check to make sure we have only one non-zero element per column
-!
-!      ! initialize some variables
-!   PMat    = 0.0
-!   ChkCols = .FALSE.
-!   ErrStat = 0
-!
-!      ! find the pivots
-!   DO iRow = 1,3
-!
-!      MaxCol = 1        ! initialize max index
-!      DO iCol = 2,3
-!         IF ( ABS(InpMat(iRow,iCol)) > ABS(InpMat(iRow,MaxCol)) ) &
-!            MaxCol = iCol
-!      END DO ! iCol
-!
-!      IF ( ChkCols(MaxCol) ) THEN   ! we can have only 1 non-zero entry per row and column, but we've just violated that!
-!         CALL ProgAbort( ' Error in GetPermMat(): InpMat is not full rank.', TrapErrors = .TRUE. )
-!         ErrStat = 1
-!      END IF
-!
-!      PMat(MaxCol, iRow) = SIGN( 1.0_ReKi, InpMat(iRow,MaxCol) )  ! technically a permutation matrix would only have +1.0 (not -1.0)
-!      ChkCols(MaxCol)    = .TRUE.
-!
-!   END DO ! iRow
-!
-!   RETURN
-!   END SUBROUTINE GetPermMat ! ( InpMat, PMat, ErrStat )
+   SUBROUTINE CubicSplineInit ( AryLen, XAry, YAry, Coef, ErrStat, ErrMsg )
 
+
+      ! This routine calculates the parameters needed to compute a irregularly-spaced natural cubic spline.
+      ! Natural cubic splines are used in that the curvature at the end points is zero.
+      ! This routine does not require that the XAry be regularly spaced.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: AryLen                                     ! Length of the array.
+
+   REAL(ReKi), INTENT(OUT)      :: Coef  (AryLen-1,0:3)                       ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: XAry  (AryLen)                             ! Input array of x values.
+   REAL(ReKi), INTENT(IN)       :: YAry  (AryLen)                             ! Input array of y values.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi), ALLOCATABLE      :: DelX  (:)                                  ! The distances between the randomly spaced points.
+   REAL(ReKi), ALLOCATABLE      :: Slope (:)                                  ! The AryLen-1 length array of slopes between points.
+   REAL(ReKi), ALLOCATABLE      :: U     (:)                                  ! An AryLen-1 length array used in the Gaussian elimination.
+   REAL(ReKi), ALLOCATABLE      :: V     (:)                                  ! An AryLen-1 length array used in the Gaussian elimination.
+   REAL(ReKi)                   :: ZHi                                        ! A parameter used to calculate the polynomial coefficients.
+   REAL(ReKi)                   :: ZLo                                        ! A parameter used to calculate the polynomial coefficients.
+
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+   INTEGER                      :: I                                          ! The index into the arrays.
+
+
+
+      ! Allocate the various intermediate arrays.
+
+   ALLOCATE ( DelX( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the DelX array in CubicSplineInit.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( Slope( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in CubicSplineInit.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( U( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in CubicSplineInit.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( V( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in CubicSplineInit.' )
+      RETURN
+   ENDIF
+
+
+      ! Compute the distance between XAry values and the slopes between points.
+
+   DO I=1,AryLen-1
+      DelX (I) =   XAry(I+1) - XAry(I)
+      Slope(I) = ( YAry(I+1) - YAry(I) )/DelX(I)
+   END DO ! I
+
+
+      ! Use Gaussian elimination to solve the tri-diagonal matrix.
+
+   U(1) = 2.0_ReKi*( DelX (2) + DelX (1) )
+   V(1) = 6.0_ReKi*( Slope(2) - Slope(1) )
+
+   DO I=2,AryLen-1
+      U(I) = 2.0_ReKi*( DelX(I-1) + DelX(I)    ) - DelX(I-1)*DelX(I-1)/U(I-1)
+      V(I) = 6.0_ReKi*( Slope(I)  - Slope(I-1) ) - DelX(I-1)*   V(I-1)/U(I-1)
+   END DO ! I
+
+
+      ! Determine the coefficients of the polynomials.
+
+   Coef(:,0) = YAry(:)
+
+   ZHi = 0.0_ReKi
+
+   DO I=AryLen-1,1,-1
+      ZLo       = ( V(I) - DelX(I)*ZHi )/U(I)
+      Coef(I,1) = Slope(I) - DelX(I)*( ZHi/6.0_ReKi + ZLo/3.0_ReKi )
+      Coef(I,2) = 0.5_ReKi*ZLo
+      Coef(I,3) = ( ZHi - ZLo )/( 6.0_ReKi*DelX(I) )
+      ZHi       = ZLo
+   END DO ! I
+
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+            ! Deallocate the Words array if it had been allocated.
+
+         IF ( ALLOCATED( DelX  ) )  DEALLOCATE( DelX  )
+         IF ( ALLOCATED( Slope ) )  DEALLOCATE( Slope )
+         IF ( ALLOCATED( U     ) )  DEALLOCATE( U     )
+         IF ( ALLOCATED( V     ) )  DEALLOCATE( V     )
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END SUBROUTINE CubicSplineInit ! ( AryLen, XAry, YAry, YAry, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   SUBROUTINE CubicSplineInitM ( XAry, YAry, Coef, ErrStat, ErrMsg )
+
+
+      ! This routine calculates the parameters needed to compute a irregularly-spaced natural cubic spline.
+      ! Natural cubic splines are used in that the curvature at the end points is zero.
+      ! This routine does not require that the XAry be regularly spaced.
+      ! This version of the routine works with multiple curves that share the same X values.
+
+
+      ! Argument declarations:
+
+   REAL(ReKi), INTENT(OUT)      :: Coef  (:,:,0:)                             ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: XAry  (:)                                  ! Input array of x values.
+   REAL(ReKi), INTENT(IN)       :: YAry  (:,:)                                ! Input array of y values with multiple curves.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi), ALLOCATABLE      :: DelX  (:)                                  ! The distances between the randomly spaced points.
+   REAL(ReKi), ALLOCATABLE      :: Slope (:,:)                                ! The NumPts-1 length array of slopes between points.
+   REAL(ReKi), ALLOCATABLE      :: U     (:)                                  ! An NumPts-1 length array used in the Gaussian elimination.
+   REAL(ReKi), ALLOCATABLE      :: V     (:,:)                                ! An NumPts-1 by NumCrvs length array used in the Gaussian elimination.
+   REAL(ReKi), ALLOCATABLE      :: ZHi   (:)                                  ! A parameter used to calculate the polynomial coefficients.
+   REAL(ReKi), ALLOCATABLE      :: ZLo   (:)                                  ! A parameter used to calculate the polynomial coefficients.
+
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+
+   INTEGER                      :: I                                          ! The index into the arrays.
+   INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
+   INTEGER                      :: NumPts                                     ! Number of points in each curve.
+
+
+
+      ! How big are the arrays?
+
+   NumPts  = SIZE( XAry )
+   NumCrvs = SIZE( YAry, 2 )
+
+
+      ! Allocate the various intermediate arrays.
+
+   ALLOCATE ( ZLo( NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZLo array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( ZHi( NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZHi array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( DelX( NumPts - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the DelX array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( Slope( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( U( NumPts - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( V( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+
+      ! Compute the distance between XAry values and the slopes between points.
+
+   DO I=1,NumPts-1
+      DelX (I  ) =   XAry(I+1  ) - XAry(I  )
+      Slope(I,:) = ( YAry(I+1,:) - YAry(I,:) )/DelX(I)
+   END DO ! I
+
+
+      ! Use Gaussian elimination to solve the tri-diagonal matrix.
+
+   U(1  ) = 2.0_ReKi*( DelX (2)   + DelX (1  ) )
+   V(1,:) = 6.0_ReKi*( Slope(2,:) - Slope(1,:) )
+
+   DO I=2,NumPts-1
+      U(I)   = 2.0_ReKi*( DelX (I-1) + DelX (I)     ) - DelX(I-1)*DelX(I-1  )/U(I-1)
+      V(I,:) = 6.0_ReKi*( Slope(I,:) - Slope(I-1,:) ) - DelX(I-1)*   V(I-1,:)/U(I-1)
+   END DO ! I
+
+
+      ! Determine the coefficients of the polynomials.
+
+   Coef(:,:,0) = YAry(1:NumPts-1,:)
+
+   ZHi(:) = 0.0_ReKi
+
+   DO I=NumPts-1,1,-1
+      ZLo(:)      = ( V(I,:) - DelX(I)*ZHi(:) )/U(I)
+      Coef(I,:,1) = Slope(I,:) - DelX(I)*( ZHi(:)/6.0_ReKi + ZLo(:)/3.0_ReKi )
+      Coef(I,:,2) = 0.5_ReKi*ZLo(:)
+      Coef(I,:,3) = ( ZHi(:) - ZLo(:) )/( 6.0_ReKi*DelX(I) )
+      ZHi(:)      = ZLo(:)
+   END DO ! I
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+            ! Deallocate the Words array if it had been allocated.
+
+         IF ( ALLOCATED( DelX  ) )  DEALLOCATE( DelX  )
+         IF ( ALLOCATED( Slope ) )  DEALLOCATE( Slope )
+         IF ( ALLOCATED( U     ) )  DEALLOCATE( U     )
+         IF ( ALLOCATED( V     ) )  DEALLOCATE( V     )
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END SUBROUTINE CubicSplineInitM ! ( XAry, YAry, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   FUNCTION CubicSplineInterp ( X, AryLen, XAry, YAry, Coef, ErrStat, ErrMsg )
+
+
+      ! This routine interpolates a pair of arrays using cubic splines to find the function value at X.
+      ! One must call CubicSplineInit() first to compute the coefficients of the cubics.
+      ! This routine does not require that the XAry be regularly spaced.
+
+
+      ! Function declaration.
+
+   REAL(ReKi)                   :: CubicSplineInterp                          ! This function.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: AryLen                                     ! Length of the array.
+
+   REAL(ReKi), INTENT(IN)       :: Coef  (AryLen-1,0:3)                       ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: X                                          ! The value we are trying to interpolate for.
+   REAL(ReKi), INTENT(IN)       :: XAry (AryLen)                              ! Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry (AryLen)                              ! Input array of y values.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: XOff                                       ! The distance from X to XAry(ILo).
+
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+   INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
+
+
+
+      ! See if X is within the range of XAry.  Return the end point if it is not.
+
+   IF ( X <= XAry(1) )  THEN
+      CubicSplineInterp = YAry(1)
+      RETURN
+   ELSEIF ( X >= XAry(AryLen) )  THEN
+      CubicSplineInterp = YAry(AryLen)
+      RETURN
+   ENDIF ! ( X <= XAry(1) )
+
+
+      ! We are somewhere inside XAry.  Find the segment that bounds X using binary search.
+
+   CALL LocateBin( X, XAry, ILo, AryLen )
+
+   XOff = X - XAry(ILo)
+
+   CubicSplineInterp = Coef(ILo,0) + XOff*( Coef(ILo,1) + XOff*( Coef(ILo,2) + XOff*Coef(ILo,3) ) )
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END FUNCTION CubicSplineInterp ! ( X, AryLen, XAry, YAry, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   FUNCTION CubicSplineInterpM ( X, XAry, YAry, Coef, ErrStat, ErrMsg ) RESULT( Res )
+
+
+      ! This routine interpolates a pair of arrays using cubic splines to find the function value at X.
+      ! One must call CubicSplineInit() first to compute the coefficients of the cubics.
+      ! This routine does not require that the XAry be regularly spaced.
+      ! This version of the routine works with multiple curves that share the same X values.
+
+
+      ! Function declaration.
+
+   REAL(ReKi), ALLOCATABLE      :: Res(:)                                     ! The result of this function.
+
+
+      ! Argument declarations:
+
+   REAL(ReKi), INTENT(IN)       :: Coef  (:,:,0:)                             ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: X                                          ! The value we are trying to interpolate for.
+   REAL(ReKi), INTENT(IN)       :: XAry (:)                                   ! Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry (:,:)                                 ! Input array of y values with multiple curves.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: XOff                                       ! The distance from X to XAry(ILo).
+
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+   INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
+   INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
+   INTEGER                      :: NumPts                                     ! Number of points in each curve.
+
+
+
+      ! How big are the arrays?
+
+   NumPts  = SIZE( XAry )
+   NumCrvs = SIZE( YAry, 2 )
+   NumCrvs = SIZE( YAry, 2 )
+
+   ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
+   IF ( ErrStatLcl /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the function result array in RegCubicSplineInterpM.' )
+      RETURN
+   ENDIF
+
+
+      ! See if X is within the range of XAry.  Return the end point if it is not.
+
+   IF ( X <= XAry(1) )  THEN
+      Res(:) = YAry(1,:)
+      RETURN
+   ELSEIF ( X >= XAry(NumPts) )  THEN
+      Res(:) = YAry(NumPts,:)
+      RETURN
+   ENDIF ! ( X <= XAry(1) )
+
+
+      ! We are somewhere inside XAry.  Find the segment that bounds X using binary search.
+
+   CALL LocateBin( X, XAry, ILo, NumPts )
+
+   XOff = X - XAry(ILo)
+
+   Res(:) = Coef(ILo,:,0) + XOff*( Coef(ILo,:,1) + XOff*( Coef(ILo,:,2) + XOff*Coef(ILo,:,3) ) )
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END FUNCTION CubicSplineInterpM ! ( X, XAry, YAry, Coef, ErrStat, ErrMsg )
 !=======================================================================
    FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
 
@@ -399,7 +885,7 @@ CONTAINS
    ENDIF
 
 
-   END FUNCTION EqualRealNos16
+  END FUNCTION EqualRealNos16
 !=======================================================================
    SUBROUTINE Eye2( A, ErrStat, ErrMsg )
 
@@ -560,9 +1046,153 @@ CONTAINS
 
    RETURN
 
-   END SUBROUTINE GaussElim
+  END SUBROUTINE GaussElim
 !=======================================================================
+   SUBROUTINE GetOffsetReg ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )
 
+
+      ! Determine index of the point in Ary just below Val and the fractional distance to the next point in the array.
+      ! The elements of the array are assumed to be regularly spaced.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: NumPts                                     ! Length of the array.
+
+   REAL(ReKi), INTENT(IN)       :: Ary  (NumPts)                              ! Input array of regularly spaced values.
+   REAL(ReKi), INTENT(OUT)      :: Fract                                      ! The fractional distance of Val between the surrounding array elements.
+   REAL(ReKi), INTENT(IN)       :: Val                                        ! The value we hope to bound in the array.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+   INTEGER(IntKi), INTENT(OUT)  :: Ind                                        ! The index of the point in Ary just below Val.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: Del                                        ! The distances between the regularly spaced points.
+
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+
+
+
+      ! Check the validity of the data.
+
+   IF ( NumPts == 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, ' >> The value of NumPts cannot be zero when calling GetOffsetReg.' )
+      RETURN
+   END IF
+
+   IF ( NumPts == 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, ' >> The value of NumPts cannot be zero when calling GetOffsetReg.' )
+      RETURN
+   END IF
+
+
+      ! Compute the distance between Ary values.
+
+   Del = ( Ary(NumPts) - Ary(1) )/REAL( NumPts-1, ReKi )                    ! QUESTION: Is this more accurate than computing the distance between two adjacent points?
+
+
+      ! Find the index of the array element just below Val.
+
+   IF ( Val <= Ary(1) )  THEN
+      Ind   = 1
+      Fract = 0.0_ReKi
+      RETURN
+   ELSEIF ( Val >= Ary(NumPts) )  THEN
+      Ind   = NumPts
+      Fract = 0.0_ReKi
+      RETURN
+   ENDIF ! ( X <= XAry(1) )
+
+   Ind   = INT( ( Val - Ary(1) )/Del ) + 1
+   Fract = ( Val - Ary(Ind) )/Del
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END SUBROUTINE GetOffsetReg ! ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )
+!=======================================================================
+!   SUBROUTINE GetPermMat ( InpMat, PMat, ErrStat )
+!
+!      ! This subroutine computes a permutation matrix, PMat, for a given
+!      ! input matrix, InpMat. It assumes that InpMat is of full rank
+!      ! and for now, the matrices are 3 x 3.
+!
+!      ! passed variables
+!
+!   REAL(ReKi), INTENT(IN )         :: InpMat       (3,3)
+!   REAL(ReKi), INTENT(OUT )        :: PMat         (3,3) !this could be integer, but we'll leave it real now
+!   INTEGER,    INTENT(OUT )        :: ErrStat            ! a non-zero value indicates an error in the permutation matrix algorithm
+!
+!      ! local variables
+!   INTEGER                         :: iCol               ! loop counter
+!   INTEGER                         :: iRow               ! loop counter
+!   INTEGER                         :: MaxCol             ! holds index of maximum value in a column
+!
+!   LOGICAL                         :: ChkCols     (3)    ! a check to make sure we have only one non-zero element per column
+!
+!      ! initialize some variables
+!   PMat    = 0.0
+!   ChkCols = .FALSE.
+!   ErrStat = 0
+!
+!      ! find the pivots
+!   DO iRow = 1,3
+!
+!      MaxCol = 1        ! initialize max index
+!      DO iCol = 2,3
+!         IF ( ABS(InpMat(iRow,iCol)) > ABS(InpMat(iRow,MaxCol)) ) &
+!            MaxCol = iCol
+!      END DO ! iCol
+!
+!      IF ( ChkCols(MaxCol) ) THEN   ! we can have only 1 non-zero entry per row and column, but we've just violated that!
+!         CALL ProgAbort( ' Error in GetPermMat(): InpMat is not full rank.', TrapErrors = .TRUE. )
+!         ErrStat = 1
+!      END IF
+!
+!      PMat(MaxCol, iRow) = SIGN( 1.0_ReKi, InpMat(iRow,MaxCol) )  ! technically a permutation matrix would only have +1.0 (not -1.0)
+!      ChkCols(MaxCol)    = .TRUE.
+!
+!   END DO ! iRow
+!
+!   RETURN
+!   END SUBROUTINE GetPermMat ! ( InpMat, PMat, ErrStat )
+!=======================================================================
    FUNCTION GetSmllRotAngs ( DCMat, ErrStat, ErrMsg )
 
       ! This subroutine computes the angles that make up the input direction cosine matrix, DCMat
@@ -1258,6 +1888,8 @@ CONTAINS
    FUNCTION Mean ( Ary, AryLen )
 
 
+   !NOTE: We should make AryLen an optional argument and use SIZE( Ary ) if it is not present.
+
       ! This routine calculates the mean value of an array.
 
 
@@ -1275,17 +1907,19 @@ CONTAINS
 
       ! Local declarations.
 
+   REAL(DbKi)                   :: Sum                                          ! A temporary sum.
+
    INTEGER                      :: I                                            ! The index into the array.
 
 
 
-   Mean = 0.0
+   Sum = 0.0_DbKi
 
    DO I=1,AryLen
-      Mean = Mean + Ary(I)
+      Sum = Sum + Ary(I)
    END DO ! I
 
-   Mean = Mean/AryLen
+   Mean = Sum/AryLen
 
 
    RETURN
@@ -1318,156 +1952,658 @@ CONTAINS
    RETURN
    END SUBROUTINE MPi2Pi
 !=======================================================================
-   SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
+   SUBROUTINE RegCubicSplineInit ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 
-      ! This routine is used to integrate funciton f over the interval [a, b]. This routine
-      ! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
-      ! intervals which contain no singularities, and where the endpoints are also nonsingular.
-      !
-      ! f is an external function. For example f(x) = 1 + x.
-      !
-      !   FUNCTION f(x)
-      !      USE PRECISION
-      !      IMPLICIT NONE
-      !
-      !      REAL(ReKi) f
-      !      REAL(ReKi) x
-      !
-      !      f = 1 + x
-      !
-      !      RETURN
-      !   END FUNCTION f
 
-   IMPLICIT NONE
+      ! This routine calculates the parameters needed to compute a regularly-spaced natural cubic spline.
+      ! Natural cubic splines are used in that the curvature at the end points is zero.
+      ! It assumes the XAry values are equally spaced for speed.
+
 
       ! Argument declarations:
 
-   REAL(ReKi), EXTERNAL              :: f               ! Integrand function name
-   REAL(ReKi), INTENT(IN)            :: a               ! Lower integration limit
-   REAL(ReKi), INTENT(IN)            :: b               ! Upper integration limit
-   REAL(ReKi), INTENT(IN)            :: eps             ! Absolute error bound
-   REAL(ReKi), INTENT(OUT)           :: R               ! The result of integration
-   REAL(ReKi), INTENT(OUT)           :: err             ! Actual absolute error
-   INTEGER, INTENT(OUT), OPTIONAL    :: ErrStat         ! Error status; if present, program does not abort on error
+   INTEGER, INTENT(IN)          :: AryLen                                     ! Length of the array.
 
-      ! Local declarations:
+   REAL(ReKi), INTENT(OUT)      :: Coef  (AryLen-1,0:3)                       ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(OUT)      :: DelX                                       ! The distance between the equally spaced points.
+   REAL(ReKi), INTENT(IN)       :: XAry  (AryLen)                             ! Input array of x values.
+   REAL(ReKi), INTENT(IN)       :: YAry  (AryLen)                             ! Input array of y values.
 
-   INTEGER                           :: m, i, j, k
-   INTEGER, PARAMETER                :: mmax = 50       ! Maximum iteration number for m
-   INTEGER, PARAMETER                :: imax = 50       ! Maximum iteration number for i
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   REAL(ReKi), ALLOCATABLE           :: T(:,:)
-   REAL(ReKi)                        :: h               ! Step length
-   REAL(ReKi)                        :: sumf
-
-      ! Initialize T
-   ALLOCATE( T( mmax, imax ) )
-   T = 0
-
-   T(1, 1) = 0.5*(b - a)*( f(a) + f(b) )
-
-   k = 2
-   DO m = 1, mmax-2
-      h = (b-a)*(0.5)**m
-
-      sumf = 0
-      DO i = 1, 2**(m-1)
-         sumf = sumf + f(a + (2*i-1)*h)
-         k = k + 1
-      END DO
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
 
 
-      T( m+1, 1) = 0.5*T( m, 1 )+ h * sumf
+      ! Local declarations.
 
-      DO j = 1, m
-         T(m-j+1, j+1) = ( 4.0**j * T(m-j+2, j) - T(m-j+1, j) )/(4.0**j - 1.0)
+   REAL(ReKi)                   :: DelX2                                      ! The square of the distance between points.
+   REAL(ReKi)                   :: DelX4                                      ! Four times the distance between points.
+   REAL(ReKi)                   :: DelX6                                      ! Six times the distance between points.
+   REAL(ReKi), ALLOCATABLE      :: Slope (:)                                  ! The AryLen-1 length array of slopes between points.
+   REAL(ReKi), ALLOCATABLE      :: U     (:)                                  ! An AryLen-1 length array used in the Gaussian elimination.
+   REAL(ReKi), ALLOCATABLE      :: V     (:)                                  ! An AryLen-1 length array used in the Gaussian elimination.
+   REAL(ReKi)                   :: ZHi                                        ! A parameter used to calculate the polynomial coefficients.
+   REAL(ReKi)                   :: ZLo                                        ! A parameter used to calculate the polynomial coefficients.
 
-            ! absolute error
-         err = ABS( T(m-j+1, j+1) - T( m-j+2, j ) )
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+   INTEGER                      :: I                                          ! The index into the arrays.
 
-            ! set k >=9 to prevent early terminations
-         IF( (err .LT. eps) .and. (k >= 9) ) THEN
 
-               ! return the intergration result if the conditions are met
-            R = T(m-j+1, j+1)
 
-            IF( ALLOCATED(T) ) DEALLOCATE(T)
+      ! Allocate the various intermediate arrays.
 
-            RETURN
-         END IF
-
-      END DO
-
-   END DO
-
-   err = ABS( T(m-j+1, j+1) - T( m-j+2, j ) )
-   R = T(m-j+1, j+1)
-
-   IF( ALLOCATED(T) ) DEALLOCATE(T)
-
-      ! Return error message if the maximum iteration number is reached.
-   CALL ProgAbort ( ' In subroutine RombergInt, the iteration reaches the maximum number. The integration did NOT converge! ', &
-                    PRESENT(ErrStat) )
-   IF ( PRESENT(ErrStat) ) THEN
-      ErrStat = 1
+   ALLOCATE ( Slope( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in RegCubicSplineInit.' )
       RETURN
-   END IF
+   ENDIF
+
+   ALLOCATE ( U( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in RegCubicSplineInit.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( V( AryLen - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in RegCubicSplineInit.' )
+      RETURN
+   ENDIF
+
+
+      ! Compute the distance between XAry values and the slopes between points.
+
+   DelX  = ( XAry(AryLen) - XAry(1) )/REAL( AryLen-1, ReKi )                   ! Is this more accurate than XAry(2) - XAry(1)?
+   DelX2 = DelX*DelX
+   DelX4 = 4_ReKI*DelX
+   DelX6 = 6_ReKI*DelX
+
+   DO I=1,AryLen-1
+      Slope(I) = ( YAry(I+1) - YAry(I) )/DelX
+   END DO ! I
+
+
+      ! Use Gaussian elimination to solve the tri-diagonal matrix.
+
+   U(1) = DelX4
+   V(1) = 6.0_ReKi*( Slope(2) - Slope(1) )
+
+   DO I=2,AryLen-1
+      U(I) = DelX4 - DelX2/U(I-1)
+      V(I) = 6.0_ReKi*( Slope(I) - Slope(I-1) ) - DelX*V(I-1)/U(I-1)
+   END DO ! I
+
+
+      ! Determine the coefficients of the polynomials.
+
+   Coef(:,0) = YAry(1:AryLen-1)
+
+   ZHi = 0.0_ReKi
+
+   DO I=AryLen-1,1,-1
+      ZLo       = ( V(I) - DelX*ZHi )/U(I)
+      Coef(I,1) = Slope(I) - DelX*( ZHi/6.0_ReKi + ZLo/3.0_ReKi )
+      Coef(I,2) = 0.5_ReKi*ZLo
+      Coef(I,3) = ( ZHi - ZLo )/DelX6
+      ZHi       = ZLo
+   END DO ! I
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
 
    RETURN
-END SUBROUTINE RombergInt
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+            ! Deallocate the Words array if it had been allocated.
+
+         IF ( ALLOCATED( Slope ) )  DEALLOCATE( Slope )
+         IF ( ALLOCATED( U     ) )  DEALLOCATE( U     )
+         IF ( ALLOCATED( V     ) )  DEALLOCATE( V     )
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END SUBROUTINE RegCubicSplineInit ! ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   SUBROUTINE RegCubicSplineInitM ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
+
+
+      ! This routine calculates the parameters needed to compute a regularly-spaced natural cubic spline.
+      ! Natural cubic splines are used in that the curvature at the end points is zero.
+      ! It assumes the XAry values are equally spaced for speed.
+      ! This version of the routine works with multiple curves that share the same X values.
+
+
+      ! Argument declarations:
+
+   REAL(ReKi), INTENT(OUT)      :: Coef  (:,:,0:)                             ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(OUT)      :: DelX                                       ! The distance between X values in XAry.
+   REAL(ReKi), INTENT(IN)       :: XAry  (:)                                  ! Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry  (:,:)                                ! Input array of y values.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: DelX2                                      ! The square of the distance between points.
+   REAL(ReKi)                   :: DelX4                                      ! Four times the distance between points.
+   REAL(ReKi)                   :: DelX6                                      ! Six times the distance between points.
+   REAL(ReKi), ALLOCATABLE      :: Slope (:,:)                                ! The NumPts-1 length array of slopes between points.
+   REAL(ReKi), ALLOCATABLE      :: U     (:)                                  ! An NumPts-1 length array used in the Gaussian elimination.
+   REAL(ReKi), ALLOCATABLE      :: V     (:,:)                                ! An NumPts-1 length array used in the Gaussian elimination.
+   REAL(ReKi), ALLOCATABLE      :: ZHi   (:)                                  ! A parameter used to calculate the polynomial coefficients.
+   REAL(ReKi), ALLOCATABLE      :: ZLo   (:)                                  ! A parameter used to calculate the polynomial coefficients.
+
+   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+   INTEGER                      :: I                                          ! The index into the arrays.
+   INTEGER                      :: IC                                         ! The curve index into the arrays.
+   INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
+   INTEGER                      :: NumPts                                     ! Number of points in each curve.
+
+
+
+      ! How big are the arrays?
+
+   NumPts  = SIZE( XAry )
+   NumCrvs = SIZE( YAry, 2 )
+
+
+      ! Allocate the various intermediate arrays.
+
+   ALLOCATE ( ZLo( NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZLo array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( ZHi( NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZHi array in CubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( Slope( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in RegCubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( U( NumPts - 1 ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in RegCubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+   ALLOCATE ( V( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
+   IF ( ErrStatLcL /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in RegCubicSplineInitM.' )
+      RETURN
+   ENDIF
+
+
+      ! Compute the distance between XAry values and the slopes between points.
+
+   DelX  = ( XAry(NumPts) - XAry(1) )/REAL( NumPts-1, ReKi )                  ! Is this more accurate than XAry(2) - XAry(1)?
+   DelX2 = DelX*DelX
+   DelX4 = 4_ReKI*DelX
+   DelX6 = 6_ReKI*DelX
+
+   DO I=1,NumPts-1
+      Slope(I,:) = ( YAry(I+1,:) - YAry(I,:) )/DelX
+   END DO ! I
+
+
+      ! Use Gaussian elimination to solve the tri-diagonal matrix.
+
+   U(1) = DelX4
+
+   DO I=2,NumPts-1
+      U(I) = DelX4 - DelX2/U(I-1)
+   END DO ! I
+
+   V(1,:) = 6.0_ReKi*( Slope(2,:) - Slope(1,:) )
+
+   DO I=2,NumPts-1
+      V(I,:) = 6.0_ReKi*( Slope(I,:) - Slope(I-1,:) ) - DelX*V(I-1,:)/U(I-1)
+   END DO ! I
+
+
+      ! Determine the coefficients of the polynomials.
+
+   Coef(:,:,0) = YAry(1:NumPts-1,:)
+
+   ZHi(:) = 0.0_ReKi
+
+   DO I=NumPts-1,1,-1
+      ZLo(:)      = ( V(I,:) - DelX*ZHi(:) )/U(I)
+      Coef(I,:,1) = Slope(I,:) - DelX*( ZHi(:)/6.0_ReKi + ZLo(:)/3.0_ReKi )
+      Coef(I,:,2) = 0.5_ReKi*ZLo(:)
+      Coef(I,:,3) = ( ZHi(:) - ZLo(:) )/DelX6
+      ZHi(:)      = ZLo(:)
+   END DO ! I
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+            ! Deallocate the Words array if it had been allocated.
+
+         IF ( ALLOCATED( Slope ) )  DEALLOCATE( Slope )
+         IF ( ALLOCATED( U     ) )  DEALLOCATE( U     )
+         IF ( ALLOCATED( V     ) )  DEALLOCATE( V     )
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END SUBROUTINE RegCubicSplineInitM ! ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   FUNCTION RegCubicSplineInterp ( X, AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
+
+
+      ! This routine interpolates a pair of arrays using cubic splines to find the function value at X.
+      ! One must call RegCubicSplineInit() first to compute the coefficients of the cubics.
+      ! This routine requires that the XAry be regularly spaced, which improves performance.
+
+
+      ! Function declaration.
+
+   REAL(ReKi)                   :: RegCubicSplineInterp                       ! This function.
+
+
+      ! Argument declarations:
+
+   INTEGER, INTENT(IN)          :: AryLen                                     ! Length of the array.
+
+   REAL(ReKi), INTENT(IN)       :: Coef  (AryLen-1,0:3)                       ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: DelX                                       ! The distance between X values in XAry.
+   REAL(ReKi), INTENT(IN)       :: X                                          ! The value we are trying to interpolate for.
+   REAL(ReKi), INTENT(IN)       :: XAry (AryLen)                              ! Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry (AryLen)                              ! Input array of y values.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: XOff                                       ! The distance from X to XAry(ILo).
+
+   INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
+
+
+
+      ! See if X is within the range of XAry.  Return the end point if it is not.
+
+   IF ( X <= XAry(1) )  THEN
+      RegCubicSplineInterp = YAry(1)
+      RETURN
+   ELSEIF ( X >= XAry(AryLen) )  THEN
+      RegCubicSplineInterp = YAry(AryLen)
+      RETURN
+   ENDIF ! ( X <= XAry(1) )
+
+
+      ! We are somewhere inside XAry.  Find the segment that bounds X.
+
+   ILo = INT( ( X - XAry(1) )/DelX ) + 1
+
+   XOff = X - XAry(ILo)
+
+   RegCubicSplineInterp = Coef(ILo,0) + XOff*( Coef(ILo,1) + XOff*( Coef(ILo,2) + XOff*Coef(ILo,3) ) )
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END FUNCTION RegCubicSplineInterp ! ( X, AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   FUNCTION RegCubicSplineInterpM ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg ) RESULT( Res )
+
+
+      ! This routine interpolates a pair of arrays using cubic splines to find the function value at X.
+      ! One must call RegCubicSplineInit() first to compute the coefficients of the cubics.
+      ! This routine requires that the XAry be regularly spaced, which improves performance.
+      ! This version of the routine works with multiple curves that share the same X values.
+
+
+      ! Function declaration.
+
+   REAL(ReKi), ALLOCATABLE      :: Res(:)                                     ! The result of this function.
+
+
+      ! Argument declarations:
+
+   REAL(ReKi), INTENT(IN)       :: Coef  (:,:,0:)                             ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: DelX                                       ! The distance between X values in XAry.
+   REAL(ReKi), INTENT(IN)       :: X                                          ! The value we are trying to interpolate for.
+   REAL(ReKi), INTENT(IN)       :: XAry (:)                                   ! Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry (:,:)                                 ! Input array of y values.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: XOff                                       ! The distance from X to XAry(ILo).
+
+   INTEGER                      :: ErrStatLcL                                 ! Local error status.
+   INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
+   INTEGER                      :: NumCrvs                                    ! Number of curves.
+   INTEGER                      :: NumPts                                     ! Number of points in each curve.
+
+
+
+      ! How big are the arrays?  Use the size to allocate the result.
+
+   NumPts  = SIZE( XAry )
+   NumCrvs = SIZE( YAry, 2 )
+
+   ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
+   IF ( ErrStatLcl /= 0 )  THEN
+      CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the function result array in RegCubicSplineInterpM.' )
+      RETURN
+   ENDIF
+
+
+      ! See if X is within the range of XAry.  Return the end point if it is not.
+
+   IF ( X <= XAry(1) )  THEN
+      Res(:) = YAry(1,:)
+      RETURN
+   ELSEIF ( X >= XAry(NumPts) )  THEN
+      Res(:) = YAry(NumPts,:)
+      RETURN
+   ENDIF ! ( X <= XAry(1) )
+
+
+      ! We are somewhere inside XAry.  Find the segment that bounds X.
+
+   ILo = INT( ( X - XAry(1) )/DelX ) + 1
+
+   XOff = X - XAry(ILo)
+
+   Res(:) = Coef(ILo,:,0) + XOff*( Coef(ILo,:,1) + XOff*( Coef(ILo,:,2) + XOff*Coef(ILo,:,3) ) )
+
+
+   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
+
+   RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = Msg
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
+
+         ! This routine is used to integrate funciton f over the interval [a, b]. This routine
+         ! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
+         ! intervals which contain no singularities, and where the endpoints are also nonsingular.
+         !
+         ! f is an external function. For example f(x) = 1 + x.
+         !
+         !   FUNCTION f(x)
+         !      USE PRECISION
+         !      IMPLICIT NONE
+         !
+         !      REAL(ReKi) f
+         !      REAL(ReKi) x
+         !
+         !      f = 1 + x
+         !
+         !      RETURN
+         !   END FUNCTION f
+
+      IMPLICIT NONE
+
+         ! Argument declarations:
+
+      REAL(ReKi), EXTERNAL              :: f               ! Integrand function name
+      REAL(ReKi), INTENT(IN)            :: a               ! Lower integration limit
+      REAL(ReKi), INTENT(IN)            :: b               ! Upper integration limit
+      REAL(ReKi), INTENT(IN)            :: eps             ! Absolute error bound
+      REAL(ReKi), INTENT(OUT)           :: R               ! The result of integration
+      REAL(ReKi), INTENT(OUT)           :: err             ! Actual absolute error
+      INTEGER, INTENT(OUT), OPTIONAL    :: ErrStat         ! Error status; if present, program does not abort on error
+
+         ! Local declarations:
+
+      INTEGER                           :: m, i, j, k
+      INTEGER, PARAMETER                :: mmax = 50       ! Maximum iteration number for m
+      INTEGER, PARAMETER                :: imax = 50       ! Maximum iteration number for i
+
+      REAL(ReKi), ALLOCATABLE           :: T(:,:)
+      REAL(ReKi)                        :: h               ! Step length
+      REAL(ReKi)                        :: sumf
+
+         ! Initialize T
+      ALLOCATE( T( mmax, imax ) )
+      T = 0
+
+      T(1, 1) = 0.5*(b - a)*( f(a) + f(b) )
+
+      k = 2
+      DO m = 1, mmax-2
+         h = (b-a)*(0.5)**m
+
+         sumf = 0
+         DO i = 1, 2**(m-1)
+            sumf = sumf + f(a + (2*i-1)*h)
+            k = k + 1
+         END DO
+
+
+         T( m+1, 1) = 0.5*T( m, 1 )+ h * sumf
+
+         DO j = 1, m
+            T(m-j+1, j+1) = ( 4.0**j * T(m-j+2, j) - T(m-j+1, j) )/(4.0**j - 1.0)
+
+               ! absolute error
+            err = ABS( T(m-j+1, j+1) - T( m-j+2, j ) )
+
+               ! set k >=9 to prevent early terminations
+            IF( (err .LT. eps) .and. (k >= 9) ) THEN
+
+                  ! return the intergration result if the conditions are met
+               R = T(m-j+1, j+1)
+
+               IF( ALLOCATED(T) ) DEALLOCATE(T)
+
+               RETURN
+            END IF
+
+         END DO
+
+      END DO
+
+      err = ABS( T(m-j+1, j+1) - T( m-j+2, j ) )
+      R = T(m-j+1, j+1)
+
+      IF( ALLOCATED(T) ) DEALLOCATE(T)
+
+         ! Return error message if the maximum iteration number is reached.
+      CALL ProgAbort ( ' In subroutine RombergInt, the iteration reaches the maximum number. The integration did NOT converge! ', &
+                       PRESENT(ErrStat) )
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = 1
+         RETURN
+      END IF
+
+      RETURN
+   END SUBROUTINE RombergInt
 !=======================================================================
    SUBROUTINE SetConstants( )
 
-      ! This routine computes numeric constants stored in the NWTC Library
+         ! This routine computes numeric constants stored in the NWTC Library
 
-!   USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented
+         !   USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented
 
-      ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
-   REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
-   REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
-
-
-      ! Constants based upon Pi:
-
-   Pi_D      = ACOS( -1.0_DbKi )
-   D2R_D     = Pi_D/180.0_DbKi
-   R2D_D     = 180.0_DbKi/Pi_D
-   PiBy2_D   = Pi_D/2.0_DbKi
-   RPM2RPS_D = Pi_D/30.0_DbKi
-   RPS2RPM_D = 30.0_DbKi/Pi_D
-   TwoByPi_D =  2.0_DbKi/Pi_D
-   TwoPi_D   =  2.0_DbKi*Pi_D
-   Inv2Pi_D  =  0.5_DbKi/Pi_D    ! 1.0_DbKi/TwoPi_D
-
-   Pi      = ACOS( -1.0_ReKi )
-   D2R     = Pi/180.0_ReKi
-   R2D     = 180.0_ReKi/Pi
-   PiBy2   = Pi/2.0_ReKi
-   RPM2RPS = Pi/30.0_ReKi
-   RPS2RPM = 30.0_ReKi/Pi
-   TwoByPi =  2.0_ReKi/Pi
-   TwoPi   =  2.0_ReKi*Pi
-   Inv2Pi  =  0.5_ReKi/Pi        ! 1.0/TwoPi
+         ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
+      REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
+      REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
 
 
-      ! IEEE constants:
+         ! Constants based upon Pi:
 
-!   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
-!   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
-!
-!   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
-!   Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
+      Pi_D      = ACOS( -1.0_DbKi )
+      D2R_D     = Pi_D/180.0_DbKi
+      R2D_D     = 180.0_DbKi/Pi_D
+      PiBy2_D   = Pi_D/2.0_DbKi
+      RPM2RPS_D = Pi_D/30.0_DbKi
+      RPS2RPM_D = 30.0_DbKi/Pi_D
+      TwoByPi_D =  2.0_DbKi/Pi_D
+      TwoPi_D   =  2.0_DbKi*Pi_D
+      Inv2Pi_D  =  0.5_DbKi/Pi_D    ! 1.0_DbKi/TwoPi_D
+
+      Pi      = ACOS( -1.0_ReKi )
+      D2R     = Pi/180.0_ReKi
+      R2D     = 180.0_ReKi/Pi
+      PiBy2   = Pi/2.0_ReKi
+      RPM2RPS = Pi/30.0_ReKi
+      RPS2RPM = 30.0_ReKi/Pi
+      TwoByPi =  2.0_ReKi/Pi
+      TwoPi   =  2.0_ReKi*Pi
+      Inv2Pi  =  0.5_ReKi/Pi        ! 1.0/TwoPi
+
+
+         ! IEEE constants:
+
+   !   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+   !   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+   !
+   !   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+   !   Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
 
 #ifndef FPE_TRAP_ENABLED
-      ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
-   Neg   = -1.0_ReKi
-   Neg_D = -1.0_DbKi
+         ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
+      Neg   = -1.0_ReKi
+      Neg_D = -1.0_DbKi
 
-   NaN_D = SQRT ( Neg_D )
-   Inf_D = Pi_D / 0.0_DbKi
+      NaN_D = SQRT ( Neg_D )
+      Inf_D = Pi_D / 0.0_DbKi
 
-   NaN   = SQRT ( Neg )
-   Inf   = Pi / 0.0_ReKi
+      NaN   = SQRT ( Neg )
+      Inf   = Pi / 0.0_ReKi
 #endif
 
 
@@ -1600,7 +2736,6 @@ END SUBROUTINE RombergInt
       TransMat(3,2) = ( -Theta1*SqrdSum + Theta23S )/ComDenom
 
    ENDIF
-
 
 
    RETURN
