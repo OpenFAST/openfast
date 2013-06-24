@@ -32,7 +32,7 @@ MODULE NWTC_IO
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00b-bjj', '20-Jun-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00c-adp', '24-Jun-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
    INTEGER(IntKi), PARAMETER      :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
@@ -162,6 +162,7 @@ MODULE NWTC_IO
 
       MODULE PROCEDURE AllRAry3
       MODULE PROCEDURE AllRAry4
+      MODULE PROCEDURE AllRAry5
    END INTERFACE
 
    INTERFACE AllocPAry
@@ -250,27 +251,28 @@ CONTAINS
 
    ! It contains the following routines:
 
-   !     SUBROUTINE AdjRealStr    ( NumStr )                                                                 ! Removes leading spaces and trailing zeros from strings created by real numbers.
-   !     SUBROUTINE AllocAry      ( )                                                                        ! Generic interface for the All*Ary* routines.
-   !     SUBROUTINE AllCAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                              ! Allocate a 1-D CHARACTER array.
-   !     SUBROUTINE AllCAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                    ! Allocate a 2-D CHARACTER array.
-   !     SUBROUTINE AllCAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )           ! Allocate a 3-D CHARACTER array.
-   !     SUBROUTINE AllI1BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 1-D 1-Byte INTEGER array.
-   !     SUBROUTINE AllI2BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 1-D 2-Byte INTEGER array.
-   !     SUBROUTINE AllI4BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 1-D 4-Byte INTEGER array.
-   !     SUBROUTINE AllIAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                    ! Allocate a 2-D INTEGER array.
-   !     SUBROUTINE AllIAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )           ! Allocate a 3-D INTEGER array.
-   !     SUBROUTINE AllLAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                              ! Allocate a 1-D LOGICAL array.
-   !     SUBROUTINE AllLAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                    ! Allocate a 2-D LOGICAL array.
-   !     SUBROUTINE AllLAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )           ! Allocate a 3-D LOGICAL array.
-   !     SUBROUTINE AllR4Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 1-D 4-Byte REAL array.
-   !     SUBROUTINE AllR8Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 1-D 8-Byte REAL array.
-   !     SUBROUTINE AllR16Ary1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 1-D 16-Byte REAL array.
-   !     SUBROUTINE AllR4Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 2-D 4-Byte REAL array.
-   !     SUBROUTINE AllR8Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 2-D 8-Byte REAL array.
-   !     SUBROUTINE AllR16Ary2    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                    ! Allocate a 2-D 16-Byte REAL array.
-   !     SUBROUTINE AllRAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )           ! Allocate a 3-D REAL array.
-   !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )  ! Allocate a 4-D REAL array.
+   !     SUBROUTINE AdjRealStr    ( NumStr )                                                                         ! Removes leading spaces and trailing zeros from strings created by real numbers.
+   !     SUBROUTINE AllocAry      ( )                                                                                ! Generic interface for the All*Ary* routines.
+   !     SUBROUTINE AllCAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D CHARACTER array.
+   !     SUBROUTINE AllCAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D CHARACTER array.
+   !     SUBROUTINE AllCAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D CHARACTER array.
+   !     SUBROUTINE AllI1BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 1-Byte INTEGER array.
+   !     SUBROUTINE AllI2BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 2-Byte INTEGER array.
+   !     SUBROUTINE AllI4BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte INTEGER array.
+   !     SUBROUTINE AllIAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D INTEGER array.
+   !     SUBROUTINE AllIAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D INTEGER array.
+   !     SUBROUTINE AllLAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D LOGICAL array.
+   !     SUBROUTINE AllLAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D LOGICAL array.
+   !     SUBROUTINE AllLAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D LOGICAL array.
+   !     SUBROUTINE AllR4Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 16-Byte REAL array.
+   !     SUBROUTINE AllR4Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary2    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 16-Byte REAL array.
+   !     SUBROUTINE AllRAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D REAL array.
+   !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )          ! Allocate a 4-D REAL array.
+   !     SUBROUTINE AllRAry5      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] ) ! Allocate a 5-D REAL array.
    !     SUBROUTINE CheckArgs     ( InputFile [, ErrStat] )
    !     SUBROUTINE CheckIOS      ( IOS, Fil, Variable, VarType [, TrapErrors, ErrMsg] )
    !     SUBROUTINE ChkParseData  ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )                  ! Checks data to be parsed to ensure it has the right variable name and a value to go with it.
@@ -1356,6 +1358,63 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllRAry4 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )
+!=======================================================================
+   SUBROUTINE AllRAry5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 5-D REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(ReKi),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim4                                    ! The size of the fourth dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim5                                    ! The size of the fourth dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+      ! Local declarations.
+
+   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
+   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=Sttus )
+
+   IF ( Sttus /= 0 ) THEN
+      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = ErrID_Fatal
+         IF ( PRESENT(ErrMsg) ) THEN
+            ErrMsg  = Msg
+         END IF
+      ELSE
+         CALL ProgAbort ( Msg )
+      END IF
+
+   ELSE
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = Sttus
+         IF ( PRESENT(ErrMsg) ) THEN
+            ErrMsg  = ''
+         END IF
+      END IF
+
+   END IF
+
+
+
+   RETURN
+   END SUBROUTINE AllRAry5 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] )
 !=======================================================================
    SUBROUTINE CheckArgs ( InputFile, ErrStat )
 
