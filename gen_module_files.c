@@ -1427,6 +1427,7 @@ gen_module_files ( char * dirname )
         sprintf(fname2,"%s_Types.h",p->name) ;
         if ((fph = fopen( fname , "w" )) == NULL ) return(1) ;
         print_warning(fph,fname, "//") ;
+        fprintf(fph,"#include <stdbool.h>\n") ;
         // fprintf(fpc,"#include <iostream>\n") ;
         // fprintf(fpc,"#include <vector>\n") ;
         fprintf(fpc,"#include <stdio.h>\n") ;

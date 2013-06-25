@@ -120,11 +120,16 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
         if      ( !strcmp( r->type->mapsto, "REAL(IntKi)")    ) ty = "Int" ;
 
         if ( r->ndims > 0 ) {
-  fprintf(fp,"%s  memcpy( OutData->%s,&(%sKiBuf[ %s_Xferred ]),OutData->%sLen )\n",indent,r->name,ty,ty,r->name) ;
+  fprintf(fp,"%s  memcpy( OutData->%s,&(%sKiBuf[ %s_Xferred ]),OutData->%sLen ) ;\n",indent,r->name,ty,ty,r->name) ;
+  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + OutData->%sLen ; \n",indent,ty,ty,r->name ) ;
         } else {
   fprintf(fp,"%s  OutData->%s = %sKiBuf [ %s_Xferred ] ; \n",indent,r->name,ty,ty) ;
+  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + 1 ; \n",indent,ty,ty ) ;
         }
-  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + %s ; \n",indent,ty,ty,(r->ndims>0)?"OutData->%sLen":"1"  ) ;
+
+        if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
+  fprintf(fp,"  }\n" ) ;
+        }
 
       }
     }
