@@ -111,7 +111,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
            !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-  fprintf(fp,"  if ( OutData->%s != NULL ) ) {\n", r->name ) ;
+  fprintf(fp,"  if ( OutData->%s != NULL ) {\n", r->name ) ;
           indent = "  " ;
         }
 
@@ -317,7 +317,7 @@ return(0) ;
 
 
 int
-gen_c_module( FILE * fp , node_t * ModName )
+gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
 {
   node_t * p, * q, * r ;
   int i ;
@@ -328,11 +328,11 @@ gen_c_module( FILE * fp , node_t * ModName )
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->usefrom == 0 ) {
-        fprintf(fp,  "  struct %s_C {\n",q->mapsto) ;
+        fprintf(fph,  "  struct %s_C {\n",q->mapsto) ;
         if ( sw_embed_class_ptr ) {
-          fprintf(fp,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
-          fprintf(fp,"    int *index ;\n") ;
-          fprintf(fp,"    int indexLen ;\n") ;
+          fprintf(fph,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
+          fprintf(fph,"    int *index ;\n") ;
+          fprintf(fph,"    int indexLen ;\n") ;
         }
         for ( r = q->fields ; r ; r = r->next )
         {
@@ -342,37 +342,37 @@ gen_c_module( FILE * fp , node_t * ModName )
               if ( r->dims[0]->deferred ) star = '*' ;
             }
             if ( r->type->type_type == DERIVED ) {
-              fprintf(fp,"    struct %s_C %c%s",r->type->mapsto,star,r->name ) ;
+              fprintf(fph,"    struct %s_C %c%s",r->type->mapsto,star,r->name ) ;
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( r->ndims > 0 && r->dims[0]->deferred ) {
-//                fprintf(fp,"    std::vector<%s> %s ",C_type( r->type->mapsto), r->name ) ;
-                fprintf(fp,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
-                fprintf(fp,"    int %sLen ",r->name ) ;
+//                fprintf(fph,"    std::vector<%s> %s ",C_type( r->type->mapsto), r->name ) ;
+                fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
+                fprintf(fph,"    int %sLen ",r->name ) ;
               } else {
-                fprintf(fp,"    %s %s",C_type( r->type->mapsto ),r->name ) ;
+                fprintf(fph,"    %s %s",C_type( r->type->mapsto ),r->name ) ;
               }
             }
             for ( i = 0 ; i < r->ndims ; i++ )
             {
               if ( ! r->dims[0]->deferred ) 
-                fprintf(fp,"[((%d)-(%d)+1)]",r->dims[i]->coord_end,r->dims[i]->coord_start) ;
+                fprintf(fph,"[((%d)-(%d)+1)]",r->dims[i]->coord_end,r->dims[i]->coord_start) ;
             }
             if ( r->ndims == 0 ) {
               if ( strlen(r->inival) > 0 ) {
-                fprintf(fp," = %s ",  r->inival ) ;
+                fprintf(fph," = %s ",  r->inival ) ;
               }
             }
-            fprintf(fp,"; \n") ;
+            fprintf(fph,"; \n") ;
           }
         }
-        fprintf(fp,"  } ;\n") ;
+        fprintf(fph,"  } ;\n") ;
       }
     }
 
 
-    fprintf(fp,"  struct %s_UserData {\n", ModName->nickname) ;
+    fprintf(fph,"  struct %s_UserData {\n", ModName->nickname) ;
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       remove_nickname(ModName->nickname,q->name,nonick) ;
@@ -380,10 +380,10 @@ fprintf(stderr,"%s %d\n",nonick,is_a_fast_interface_type(nonick)) ;
       if ( is_a_fast_interface_type(nonick) ) {
         char temp[NAMELEN] ;
         sprintf(temp, "%s_C", q->mapsto ) ;
-        fprintf(fp,"    struct %-30s %s_%s ;\n", temp, ModName->nickname, fast_interface_type_shortname(nonick) ) ;
+        fprintf(fph,"    struct %-30s %s_%s ;\n", temp, ModName->nickname, fast_interface_type_shortname(nonick) ) ;
       }
     }
-    fprintf(fp,"  } ;\n") ;
+    fprintf(fph,"  } ;\n") ;
 
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
@@ -403,10 +403,10 @@ fprintf(stderr,">> %s %s %s \n",ModName->name, ddtname, nonick) ;
           ddtnamelong = ddtname ;
         }
 
-  //      gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
-  //      gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
-        gen_c_pack( fp, ModName, ddtname, ddtnamelong ) ;
-        gen_c_unpack( fp, ModName, ddtname, ddtnamelong ) ;
+  //      gen_copy( fpc, ModName, ddtname, ddtnamelong ) ;
+  //      gen_destroy( fpc, ModName, ddtname, ddtnamelong ) ;
+        gen_c_pack( fpc, ModName, ddtname, ddtnamelong ) ;
+        gen_c_unpack( fpc, ModName, ddtname, ddtnamelong ) ;
       }
     }
   }

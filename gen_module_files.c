@@ -1396,8 +1396,8 @@ gen_module( FILE * fp , node_t * ModName )
 int
 gen_module_files ( char * dirname )
 {
-  FILE * fp, *fpc ;
-  char  fname[NAMELEN] ;
+  FILE * fp, *fpc, *fph ;
+  char  fname[NAMELEN], fname2[NAMELEN] ;
   char * fn ;
 
   node_t * p ;
@@ -1420,18 +1420,28 @@ gen_module_files ( char * dirname )
           { sprintf(fname,"%s_Types.c",p->name) ; }
         if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
         print_warning(fpc,fname, "//") ;
+        if ( strlen(dirname) > 0 )
+          { sprintf(fname,"%s/%s_Types.h",dirname,p->name) ; }
+        else
+          { sprintf(fname, "%s_Types.h",p->name) ;}
+        sprintf(fname2,"%s_Types.h",p->name) ;
+        if ((fph = fopen( fname , "w" )) == NULL ) return(1) ;
+        print_warning(fph,fname, "//") ;
         // fprintf(fpc,"#include <iostream>\n") ;
         // fprintf(fpc,"#include <vector>\n") ;
         fprintf(fpc,"#include <stdio.h>\n") ;
         fprintf(fpc,"#include <stdlib.h>\n") ;
+        fprintf(fpc,"#include <stdbool.h>\n") ;
         fprintf(fpc,"#include <string.h>\n") ;
+        fprintf(fpc,"#include \"%s\"\n\n",fname2) ;
       }
       gen_module ( fp , p ) ;
       close_the_file( fp, "" ) ;
       if ( sw_ccode ) {
-        gen_c_module ( fpc , p ) ;
+        gen_c_module ( fpc , fph , p ) ;
 
         close_the_file( fpc,"//") ;
+        close_the_file( fph,"//") ;
       }
     }
   }
