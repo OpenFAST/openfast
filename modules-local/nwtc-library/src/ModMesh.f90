@@ -237,7 +237,6 @@ CONTAINS
 
     ! Local
      INTEGER i
-     LOGICAL, TARGET  :: InitRemapFlag
 
      ErrStat = ErrID_None
      ErrMess = ""
@@ -283,9 +282,9 @@ CONTAINS
        NULLIFY(BlankMesh%ElemTable(i)%Elements )
      ENDDO
 
-     InitRemapFlag = .TRUE.
      NULLIFY(BlankMesh%RemapFlag)
-     BlankMesh%RemapFlag => InitRemapFlag
+     ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat ) ! assign some space for this pointer to point to
+     BlankMesh%RemapFlag = .true.
 
    ! handle optionals
      BlankMesh%FieldMask = .FALSE.
