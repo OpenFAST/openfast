@@ -213,35 +213,38 @@ CONTAINS
                           ,RotationAcc                                                     &
                           ,AddedMass                                                       &
                           ,nScalars                                                        &
+                          ,IsNewSibling                                                    &
                          )
 
-     TYPE(MeshType),TARGET,INTENT(INOUT)   :: BlankMesh ! Mesh to be created
-     INTEGER,INTENT(IN)         :: IOS                  ! input (1), output(2), or state(3)
-     INTEGER,INTENT(IN)         :: Nnodes               ! Number of nodes in mesh
-     INTEGER,INTENT(INOUT)      :: ErrStat              ! error status/level
-     CHARACTER(*),INTENT(INOUT) :: ErrMess              ! error message
+      TYPE(MeshType),TARGET,INTENT(INOUT)   :: BlankMesh ! Mesh to be created
+      INTEGER,INTENT(IN)         :: IOS                  ! input (1), output(2), or state(3)
+      INTEGER,INTENT(IN)         :: Nnodes               ! Number of nodes in mesh
+      INTEGER,INTENT(INOUT)      :: ErrStat              ! error status/level
+      CHARACTER(*),INTENT(INOUT) :: ErrMess              ! error message
                                    ! optional arguments from here down
                                    ! optional arguments that say whether to allocate fields
                                    ! in the mesh. These are always dimensioned npoints
-     LOGICAL,OPTIONAL,INTENT(IN):: Force                ! If present and true, allocate Force field
-     LOGICAL,OPTIONAL,INTENT(IN):: Moment               ! If present and true, allocate Moment field
-     LOGICAL,OPTIONAL,INTENT(IN):: Orientation          ! If present and true, allocate Orientation field
-     LOGICAL,OPTIONAL,INTENT(IN):: TranslationDisp      ! If present and true, allocate TranslationDisp field
-     LOGICAL,OPTIONAL,INTENT(IN):: TranslationVel       ! If present and true, allocate TranslationVel field
-     LOGICAL,OPTIONAL,INTENT(IN):: RotationVel          ! If present and true, allocate RotationVel field
-     LOGICAL,OPTIONAL,INTENT(IN):: TranslationAcc       ! If present and true, allocate TranslationAcc field
-     LOGICAL,OPTIONAL,INTENT(IN):: RotationAcc          ! If present and true, allocate RotationAcc field
-     LOGICAL,OPTIONAL,INTENT(IN):: AddedMass            ! If present and true, allocate AddedMass field
+      LOGICAL,OPTIONAL,INTENT(IN):: Force                ! If present and true, allocate Force field
+      LOGICAL,OPTIONAL,INTENT(IN):: Moment               ! If present and true, allocate Moment field
+      LOGICAL,OPTIONAL,INTENT(IN):: Orientation          ! If present and true, allocate Orientation field
+      LOGICAL,OPTIONAL,INTENT(IN):: TranslationDisp      ! If present and true, allocate TranslationDisp field
+      LOGICAL,OPTIONAL,INTENT(IN):: TranslationVel       ! If present and true, allocate TranslationVel field
+      LOGICAL,OPTIONAL,INTENT(IN):: RotationVel          ! If present and true, allocate RotationVel field
+      LOGICAL,OPTIONAL,INTENT(IN):: TranslationAcc       ! If present and true, allocate TranslationAcc field
+      LOGICAL,OPTIONAL,INTENT(IN):: RotationAcc          ! If present and true, allocate RotationAcc field
+      LOGICAL,OPTIONAL,INTENT(IN):: AddedMass            ! If present and true, allocate AddedMass field
 !
-     INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present > 0, allocate n Scalars
+      INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present > 0, allocate n Scalars
+      LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         ! If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, and ElemTable)
 
     ! Local
-     INTEGER i
+      INTEGER i
+      LOGICAL                    :: IsNewSib
 
-     ErrStat = ErrID_None
-     ErrMess = ""
+      ErrStat = ErrID_None
+      ErrMess = ""
 
-     IF ( mesh_debug ) print*,'Called MeshCreate'
+      IF ( mesh_debug ) print*,'Called MeshCreate'
 
 
 #if 0
@@ -255,7 +258,7 @@ CONTAINS
 ! and gfortran (albeit a small case and only on Windows). It works for me.
 
 
-     CALL MeshDestroy( BlankMesh, ErrStat, ErrMess, .TRUE. )
+      CALL MeshDestroy( BlankMesh, ErrStat, ErrMess, .TRUE. )
                                                         ! make sure we're not leaving any pointers dangling
                                                         ! and nullify them for good measure
                                                         ! See comment on optional IgnoreSibling argument
@@ -263,106 +266,114 @@ CONTAINS
       IF (ErrStat >= AbortErrLev) RETURN
 #endif
 
-     BlankMesh%initialized = .TRUE.
-     BlankMesh%IOS         = IOS
+      BlankMesh%initialized = .TRUE.
+      BlankMesh%IOS         = IOS
 
 !bjj: check that IOS is valid and Nnodes > 0?
 
-     BlankMesh%Nnodes = Nnodes
-     NULLIFY( BlankMesh%ElemTable )
-     NULLIFY( BlankMesh%SiblingMesh )
-     NULLIFY( BlankMesh%ElemList )
-     BlankMesh%nelemlist = 0 ; BlankMesh%maxelemlist = 0 ;
+      BlankMesh%Nnodes = Nnodes
+      NULLIFY( BlankMesh%ElemTable )
+      NULLIFY( BlankMesh%SiblingMesh )
+      NULLIFY( BlankMesh%ElemList )
+      BlankMesh%nelemlist = 0 ; BlankMesh%maxelemlist = 0 ;
 
-     CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'CreateMesh: Position' )
+      NULLIFY(BlankMesh%RemapFlag)
 
-     ALLOCATE(BlankMesh%ElemTable(NELEMKINDS))
-     DO i = 1, NELEMKINDS
-       BlankMesh%ElemTable(i)%nelem = 0  ; BlankMesh%ElemTable(i)%maxelem = 0
-       NULLIFY(BlankMesh%ElemTable(i)%Elements )
-     ENDDO
+      ! These fields are shared between siblings, so we don't want to recreate space for them here.
+      IsNewSib = .FALSE.
+      IF ( PRESENT(IsNewSibling) ) IsNewSib = IsNewSibling
 
-     NULLIFY(BlankMesh%RemapFlag)
-     ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat ) ! assign some space for this pointer to point to
-     BlankMesh%RemapFlag = .true.
+      IF (.NOT. IsNewSib) THEN
+         CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'CreateMesh: Position' )
+
+         ALLOCATE(BlankMesh%ElemTable(NELEMKINDS))
+         DO i = 1, NELEMKINDS
+            BlankMesh%ElemTable(i)%nelem = 0  ; BlankMesh%ElemTable(i)%maxelem = 0
+            NULLIFY(BlankMesh%ElemTable(i)%Elements )
+         ENDDO
+
+         ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat ) ! assign some space for this pointer to point to
+         BlankMesh%RemapFlag = .true.
+      END IF
+
 
    ! handle optionals
-     BlankMesh%FieldMask = .FALSE.
+      BlankMesh%FieldMask = .FALSE.
 
-     NULLIFY(BlankMesh%Force)
-     IF ( PRESENT(Force) ) THEN
-       IF ( Force ) THEN
-         CALL AllocPAry( BlankMesh%Force, 3, Nnodes, 'CreateMesh: Force' )
-         BlankMesh%FieldMask(MASKID_FORCE) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%Moment)
-     IF ( PRESENT(Moment) ) THEN
-       IF ( Moment ) THEN
-         CALL AllocPAry( BlankMesh%Moment, 3, Nnodes, 'CreateMesh: Moment' )
-         BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%Orientation)
-     IF ( PRESENT(Orientation) ) THEN
-       IF ( Orientation ) THEN
-         CALL AllocPAry( BlankMesh%Orientation, 3, 3, Nnodes, 'CreateMesh: Orientation' )
-         BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%TranslationDisp)
-     IF ( PRESENT(TranslationDisp) ) THEN
-       IF ( TranslationDisp ) THEN
-         CALL AllocPAry( BlankMesh%TranslationDisp, 3, Nnodes, 'CreateMesh: TranslationDisp' )
-         BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%TranslationVel)
-     IF ( PRESENT(TranslationVel) ) THEN
-       IF ( TranslationVel ) THEN
-         CALL AllocPAry( BlankMesh%TranslationVel, 3, Nnodes, 'CreateMesh: TranslationVel' )
-         BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%RotationVel)
-     IF ( PRESENT(RotationVel) ) THEN
-       IF ( RotationVel ) THEN
-         CALL AllocPAry( BlankMesh%RotationVel, 3, Nnodes, 'CreateMesh: RotationVel' )
-         BlankMesh%FieldMask(MASKID_ROTATIONVEL) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%TranslationAcc)
-     IF ( PRESENT(TranslationAcc) ) THEN
-       IF ( TranslationAcc ) THEN
-         CALL AllocPAry( BlankMesh%TranslationAcc, 3, Nnodes, 'CreateMesh: TranslationAcc' )
-         BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%RotationAcc)
-     IF ( PRESENT(RotationAcc) ) THEN
-       IF ( RotationAcc ) THEN
-         CALL AllocPAry( BlankMesh%RotationAcc, 3, Nnodes, 'CreateMesh: RotationAcc' )
-         BlankMesh%FieldMask(MASKID_ROTATIONACC) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%AddedMass)
-     IF ( PRESENT(AddedMass) ) THEN
-       IF ( AddedMass ) THEN
-         CALL AllocPAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'CreateMesh: AddedMass' )
-         BlankMesh%FieldMask(MASKID_AddedMass) = .TRUE.
-       ENDIF
-     ENDIF
-     NULLIFY(BlankMesh%Scalars)
-     BlankMesh%nScalars = 0
-     IF ( PRESENT(nScalars) ) THEN
-       IF ( nScalars .GT. 0 ) THEN
-         CALL AllocPAry( BlankMesh%Scalars, nScalars, Nnodes, 'CreateMesh: Scalars' )
-         BlankMesh%FieldMask(MASKID_Scalar) = .TRUE.
-         BlankMesh%nScalars = nScalars
-       ENDIF
-     ENDIF
+      NULLIFY(BlankMesh%Force)
+      IF ( PRESENT(Force) ) THEN
+         IF ( Force ) THEN
+            CALL AllocPAry( BlankMesh%Force, 3, Nnodes, 'CreateMesh: Force' )
+            BlankMesh%FieldMask(MASKID_FORCE) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%Moment)
+      IF ( PRESENT(Moment) ) THEN
+         IF ( Moment ) THEN
+            CALL AllocPAry( BlankMesh%Moment, 3, Nnodes, 'CreateMesh: Moment' )
+            BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%Orientation)
+      IF ( PRESENT(Orientation) ) THEN
+         IF ( Orientation ) THEN
+            CALL AllocPAry( BlankMesh%Orientation, 3, 3, Nnodes, 'CreateMesh: Orientation' )
+            BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%TranslationDisp)
+      IF ( PRESENT(TranslationDisp) ) THEN
+         IF ( TranslationDisp ) THEN
+            CALL AllocPAry( BlankMesh%TranslationDisp, 3, Nnodes, 'CreateMesh: TranslationDisp' )
+            BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%TranslationVel)
+      IF ( PRESENT(TranslationVel) ) THEN
+         IF ( TranslationVel ) THEN
+            CALL AllocPAry( BlankMesh%TranslationVel, 3, Nnodes, 'CreateMesh: TranslationVel' )
+            BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%RotationVel)
+      IF ( PRESENT(RotationVel) ) THEN
+         IF ( RotationVel ) THEN
+            CALL AllocPAry( BlankMesh%RotationVel, 3, Nnodes, 'CreateMesh: RotationVel' )
+            BlankMesh%FieldMask(MASKID_ROTATIONVEL) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%TranslationAcc)
+      IF ( PRESENT(TranslationAcc) ) THEN
+         IF ( TranslationAcc ) THEN
+            CALL AllocPAry( BlankMesh%TranslationAcc, 3, Nnodes, 'CreateMesh: TranslationAcc' )
+            BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%RotationAcc)
+      IF ( PRESENT(RotationAcc) ) THEN
+         IF ( RotationAcc ) THEN
+            CALL AllocPAry( BlankMesh%RotationAcc, 3, Nnodes, 'CreateMesh: RotationAcc' )
+            BlankMesh%FieldMask(MASKID_ROTATIONACC) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%AddedMass)
+      IF ( PRESENT(AddedMass) ) THEN
+         IF ( AddedMass ) THEN
+            CALL AllocPAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'CreateMesh: AddedMass' )
+            BlankMesh%FieldMask(MASKID_AddedMass) = .TRUE.
+         ENDIF
+      ENDIF
+      NULLIFY(BlankMesh%Scalars)
+      BlankMesh%nScalars = 0
+      IF ( PRESENT(nScalars) ) THEN
+         IF ( nScalars .GT. 0 ) THEN
+            CALL AllocPAry( BlankMesh%Scalars, nScalars, Nnodes, 'CreateMesh: Scalars' )
+            BlankMesh%FieldMask(MASKID_Scalar) = .TRUE.
+            BlankMesh%nScalars = nScalars
+         ENDIF
+      ENDIF
 
-     RETURN
+      RETURN
 
    END SUBROUTINE MeshCreate
 
@@ -387,37 +398,59 @@ CONTAINS
 
       IF ( .NOT. Mesh%Initialized ) RETURN
 
+         ! Deallocate/Nullify/Deinitialize values that are not shared between siblings:
+
       Mesh%initialized = .FALSE.
       Mesh%fieldmask   = .FALSE.
       Mesh%ios         = 0
       Mesh%Nnodes      = 0
 
-      NULLIFY(Mesh%RemapFlag)
+      IF ( ASSOCIATED(Mesh%Force) ) THEN
+         DEALLOCATE(Mesh%Force)
+         NULLIFY(Mesh%Force)
+      END IF
 
-      IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
-         DO i = 1, NELEMKINDS
-            Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
-            IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
-               DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
-                  IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) THEN
-                     DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
-                     NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
-                  ENDIF
-                  IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) THEN
-                     DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-                     NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-                  ENDIF
-               ENDDO
-            ENDIF
-          ENDDO
-         DEALLOCATE(Mesh%ElemTable)
-         NULLIFY(Mesh%ElemTable)
-      ENDIF
+      IF ( ASSOCIATED(Mesh%Moment) ) THEN
+         DEALLOCATE(Mesh%Moment)
+         NULLIFY(Mesh%Moment)
+      END IF
 
-!bjj: shouldn't all the other fields also be deallocated/nullified?
+      IF ( ASSOCIATED(Mesh%Orientation) ) THEN
+         DEALLOCATE(Mesh%Orientation)
+         NULLIFY(Mesh%Orientation)
+      END IF
 
+      IF ( ASSOCIATED(Mesh%TranslationDisp) ) THEN
+         DEALLOCATE(Mesh%TranslationDisp)
+         NULLIFY(Mesh%TranslationDisp)
+      END IF
 
-#if 0
+      IF ( ASSOCIATED(Mesh%RotationVel) ) THEN
+         DEALLOCATE(Mesh%RotationVel)
+         NULLIFY(Mesh%RotationVel)
+      END IF
+
+      IF ( ASSOCIATED(Mesh%TranslationVel) ) THEN
+         DEALLOCATE(Mesh%TranslationVel)
+         NULLIFY(Mesh%TranslationVel)
+      END IF
+
+      IF ( ASSOCIATED(Mesh%RotationAcc) ) THEN
+         DEALLOCATE(Mesh%RotationAcc)
+         NULLIFY(Mesh%RotationAcc)
+      END IF
+
+      IF ( ASSOCIATED(Mesh%TranslationAcc) ) THEN
+         DEALLOCATE(Mesh%TranslationAcc)
+         NULLIFY(Mesh%TranslationAcc)
+      END IF
+
+      IF ( ASSOCIATED(Mesh%Scalars) ) THEN
+         DEALLOCATE(Mesh%Scalars)
+         NULLIFY(Mesh%Scalars)
+      END IF
+
+!#if 0
      !IF (ASSOCIATED(Mesh%element_point))     NULLIFY(Mesh%element_point)
      !IF (ASSOCIATED(Mesh%element_line2))     NULLIFY(Mesh%element_line2)
      !IF (ASSOCIATED(Mesh%element_line3))     NULLIFY(Mesh%element_line3)
@@ -431,29 +464,86 @@ CONTAINS
      !IF (ASSOCIATED(Mesh%element_hex20))     NULLIFY(Mesh%element_hex20)
      !IF (ASSOCIATED(Mesh%element_wedge6))    NULLIFY(Mesh%element_wedge6)
      !IF (ASSOCIATED(Mesh%element_wedge15))   NULLIFY(Mesh%element_wedge15)
-     IF (ASSOCIATED(Mesh%Position))          NULLIFY(Mesh%Position)
-     IF (ASSOCIATED(Mesh%Force))             NULLIFY(Mesh%Force)
-     IF (ASSOCIATED(Mesh%Moment))            NULLIFY(Mesh%Moment)
-     IF (ASSOCIATED(Mesh%Orientation))       NULLIFY(Mesh%Orientation)
-     IF (ASSOCIATED(Mesh%TranslationDisp))   NULLIFY(Mesh%TranslationDisp)
-     IF (ASSOCIATED(Mesh%RotationVel))       NULLIFY(Mesh%RotationVel)
-     IF (ASSOCIATED(Mesh%TranslationVel))    NULLIFY(Mesh%TranslationVel)
-     IF (ASSOCIATED(Mesh%RotationAcc))       NULLIFY(Mesh%RotationAcc)
-     IF (ASSOCIATED(Mesh%TranslationAcc))    NULLIFY(Mesh%TranslationAcc)
-     IF (ASSOCIATED(Mesh%Scalars))           NULLIFY(Mesh%Scalars)
-#endif
+     !IF (ASSOCIATED(Mesh%Position))          NULLIFY(Mesh%Position)
+     !IF (ASSOCIATED(Mesh%Force))             NULLIFY(Mesh%Force)
+     !IF (ASSOCIATED(Mesh%Moment))            NULLIFY(Mesh%Moment)
+     !IF (ASSOCIATED(Mesh%Orientation))       NULLIFY(Mesh%Orientation)
+     !IF (ASSOCIATED(Mesh%TranslationDisp))   NULLIFY(Mesh%TranslationDisp)
+     !IF (ASSOCIATED(Mesh%RotationVel))       NULLIFY(Mesh%RotationVel)
+     !IF (ASSOCIATED(Mesh%TranslationVel))    NULLIFY(Mesh%TranslationVel)
+     !IF (ASSOCIATED(Mesh%RotationAcc))       NULLIFY(Mesh%RotationAcc)
+     !IF (ASSOCIATED(Mesh%TranslationAcc))    NULLIFY(Mesh%TranslationAcc)
+     !IF (ASSOCIATED(Mesh%Scalars))           NULLIFY(Mesh%Scalars)
+!#endif
 
-     IgSib = .FALSE.
-     IF ( PRESENT( IgnoreSibling ) ) THEN
-       IgSib = IgnoreSibling
-     ENDIF
-     IF ( .NOT. IgSib ) THEN
-       IF ( ASSOCIATED( Mesh%SiblingMesh ) ) THEN
-         ! Nullify the back pointer to avoid an endless recursion
-         IF ( ASSOCIATED( Mesh%SiblingMesh%SiblingMesh )) THEN
-           NULLIFY( Mesh%SiblingMesh%SiblingMesh )
+!bjj: if we keep the sibling, deleting this table is going to be a problem
+
+      IgSib = .FALSE.
+      IF ( PRESENT( IgnoreSibling ) ) THEN
+         IgSib = IgnoreSibling
+      ENDIF
+
+
+      IF ( .NOT. ASSOCIATED( Mesh%SiblingMesh ) ) THEN ! There is no sibling mesh so we don't want to keep the data.
+
+            ! Deallocate and Nullify all fields that can be shared between siblings
+
+         IF ( ASSOCIATED(Mesh%RemapFlag) ) THEN
+            DEALLOCATE(Mesh%RemapFlag)
+            NULLIFY(Mesh%RemapFlag)
+         END IF
+
+         IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
+            DO i = 1, NELEMKINDS
+               Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
+               IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
+                  DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
+                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) THEN
+                        DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
+                        NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
+                     ENDIF
+                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) THEN
+                        DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                        NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                     ENDIF
+                  ENDDO
+               ENDIF
+             ENDDO
+            DEALLOCATE(Mesh%ElemTable)
+            NULLIFY(Mesh%ElemTable)
+         ENDIF
+
+         NULLIFY( Mesh%ElemList  )     ! This pointed to the ElemTable data, which we've deallocated already
+
+         IF ( ASSOCIATED(Mesh%Position) ) THEN
+            DEALLOCATE(Mesh%Position)
+            NULLIFY(Mesh%Position)
+         END IF
+
+      ELSE ! Keep the data for an existing sibling mesh (nullify but don't deallocate):
+
+         NULLIFY( Mesh%RemapFlag )
+
+         IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
+            DO i = 1, NELEMKINDS
+               IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
+                  DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
+                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
+                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                  ENDDO
+               ENDIF
+            ENDDO !each kind of element
+         ENDIF
+
+         NULLIFY( Mesh%ElemTable )    !bjj: I would hope this would NULLIFY everything I commented out in the DO loops above
+         NULLIFY( Mesh%ElemList  )
+         NULLIFY( Mesh%Position  )
+
+            ! Tell the sibling that this sibling doesn't exist (avoid endless recursion):
+         IF ( ASSOCIATED( Mesh%SiblingMesh%SiblingMesh ) ) THEN ! the mesh should be associated with Mesh%SiblingMesh%SiblingMesh
+            NULLIFY( Mesh%SiblingMesh%SiblingMesh )
          ELSE
-           ! Throw a fault here. The mesh's twin should point back to this mesh.
+            ! Throw a fault here. The mesh's twin should point back to this mesh.
             ErrStat = ErrID_Fatal
             ErrMess  = 'ModMesh: MeshDestroy: estranged twin mesh.'
             CALL ProgAbort ( ErrMess ) !bjj: our handbook says we shouldn't call ProgAbort, except in the Glue code
@@ -462,12 +552,16 @@ CONTAINS
                                        !     If we abort using the FAST-for-Matlab code, Matlab will almost certainly have to restart because files are locked (or it runs out of memory). a pain.
             RETURN
          ENDIF
-         NULLIFY( Mesh%SiblingMesh%ElemTable )
-         CALL MeshDestroy( Mesh%SiblingMesh, ErrStat, ErrMess )
-         IF (ErrStat >= AbortErrLev) RETURN
-       ENDIF
-     ENDIF
-     NULLIFY( Mesh%SiblingMesh )
+
+         IF ( .not. IgSib ) THEN  ! don't Ignore the sibling (i.e., delete it, too)
+            CALL MeshDestroy( Mesh%SiblingMesh, ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
+         ENDIF !IgSib
+
+      END IF
+
+      NULLIFY( Mesh%SiblingMesh )
+
 
    END SUBROUTINE MeshDestroy
 
@@ -875,6 +969,7 @@ CONTAINS
 
    SUBROUTINE MeshCopy( SrcMesh, DestMesh, CtrlCode, ErrStat , ErrMess   &
                       , Force, Moment, Orientation, TranslationDisp, TranslationVel, RotationVel, TranslationAcc, RotationAcc, AddedMass, nScalars )
+!bjj: do we also want IOS as an argument? Or do we just set that manually?
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: SrcMesh  ! Mesh being copied
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: DestMesh ! Copy of mesh
      INTEGER(IntKi),              INTENT(IN)    :: CtrlCode ! MESH_NEWCOPY, MESH_SIBLING, or
@@ -985,6 +1080,14 @@ CONTAINS
             DestMesh%RemapFlag   = SrcMesh%RemapFlag
 
          ELSE IF ( CtrlCode .EQ. MESH_SIBLING ) THEN
+
+            IF ( ASSOCIATED(SrcMesh%SiblingMesh) ) THEN
+               ErrStat = ErrID_Fatal
+               ErrMess = ' MeshCopy: A mesh can have only one sibling.'
+               RETURN !early return
+            END IF
+
+
             Force_l            = .FALSE. ; IF ( PRESENT(Force) )                     Force_l = Force
             Moment_l           = .FALSE. ; IF ( PRESENT(Moment) )                   Moment_l = Moment
             Orientation_l      = .FALSE. ; IF ( PRESENT(Orientation) )         Orientation_l = Orientation
@@ -1005,10 +1108,11 @@ CONTAINS
                             ,TranslationAcc=TranslationAcc_l                                                    &
                             ,RotationAcc=RotationAcc_l                                                          &
                             ,AddedMass=AddedMass_l                                                              &
-                            ,nScalars=nScalars_l                                                                )
+                            ,nScalars=nScalars_l                                                                &
+                            ,IsNewSibling=.TRUE.)
 
             !bjj: Doesn't this logic mean we can have only one sibling?
-            ! Then, we should probably check that SrcMesh%SiblingMesh isn't already associated so that we don't lose siblings
+            ! I added a check that SrcMesh%SiblingMesh isn't already associated so that we don't lose siblings
             DestMesh%SiblingMesh => SrcMesh
             SrcMesh%SiblingMesh  => DestMesh
 

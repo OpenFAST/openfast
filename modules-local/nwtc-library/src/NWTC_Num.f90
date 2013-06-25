@@ -899,7 +899,7 @@ CONTAINS
    CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         ! ErrMsg corresponding to ErrStat
 
       ! local variables
-   INTEGER                       :: i, j                           ! loop counters
+   INTEGER                       :: j                              ! loop counter
    INTEGER                       :: nr                             ! number of rows
    INTEGER                       :: nc                             ! number of columns
 
