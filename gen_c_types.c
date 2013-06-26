@@ -134,6 +134,9 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
       }
     }
   }
+  fprintf(fp,"  if ( ReKiBuf != NULL )  free(ReKiBuf) ;\n") ;
+  fprintf(fp,"  if ( DbKiBuf != NULL )  free(DbKiBuf) ;\n") ;
+  fprintf(fp,"  if ( IntKiBuf != NULL ) free(IntKiBuf) ;\n") ;
   fprintf(fp,"  return(ErrStat) ;\n") ;
   fprintf(fp,"}\n") ;
   return(0) ;
@@ -298,7 +301,6 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
         else if ( !strcmp( r->type->mapsto, "REAL(DbKi)") )  {ty = "Db" ;  cty = "double" ; }
         else if ( !strcmp( r->type->mapsto, "REAL(IntKi)") ) {ty = "Int" ; cty = "int"    ; }
         indent = "    " ;
-fprintf(stderr,"ZAP: %s %d\n",r->name,r->ndims) ;
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"%sfor ( i = 0 ; i < InData->%sLen ; i++ ) {\n",indent, r->name ) ;
   fprintf(fp,"%s  if ( !OnlySize ) memcpy( &(%sKiBuf[%s_Xferred+i]), &(InData->%s[i]), sizeof(%s)) ;\n",
@@ -306,7 +308,6 @@ fprintf(stderr,"ZAP: %s %d\n",r->name,r->ndims) ;
   fprintf(fp,"%s  %s_Xferred++ ;\n",indent,ty) ;
   fprintf(fp,"%s}\n",indent) ;
         } else if ( r->ndims == 0 ) {
-fprintf(stderr,"  --- 0D ---\n") ;
   fprintf(fp,"    %sKiBuf[%s_Xferred++] = InData->%s ;\n",ty,ty,r->name) ;
         }
       }
@@ -381,7 +382,6 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       remove_nickname(ModName->nickname,q->name,nonick) ;
-fprintf(stderr,"%s %d\n",nonick,is_a_fast_interface_type(nonick)) ;
       if ( is_a_fast_interface_type(nonick) ) {
         char temp[NAMELEN] ;
         sprintf(temp, "%s_C", q->mapsto ) ;
@@ -398,8 +398,6 @@ fprintf(stderr,"%s %d\n",nonick,is_a_fast_interface_type(nonick)) ;
         ddtname = q->name ;
 
         remove_nickname(ModName->nickname,ddtname,nonick) ;
-
-fprintf(stderr,">> %s %s %s \n",ModName->name, ddtname, nonick) ;
 
         if ( is_a_fast_interface_type( nonick ) ) {
           ddtnamelong = std_case( nonick ) ;
