@@ -28,7 +28,7 @@ gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong 
 fprintf(fp,"C_%s_Unpack%s( float * ReKiBuf,  \n",ModName->nickname,nonick) ;
 fprintf(fp,"                 double * DbKiBuf, \n") ;
 fprintf(fp,"                 int * IntKiBuf,   \n") ;
-fprintf(fp,"                 struct %s_C *OutData, char * ErrMsg )\n", addnick) ;
+fprintf(fp,"                 %s_t *OutData, char * ErrMsg )\n", addnick) ;
 fprintf(fp,"{\n") ;
 fprintf(fp,"  int ErrStat ;\n") ;
 fprintf(fp,"  int Re_BufSz2 = 0 ;\n") ;
@@ -89,9 +89,9 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
                   ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                   dimstr(r->ndims),
                   r->name ) ;
-  fprintf(fp,"  if ( Re_%s_Buf != NULL)  { free(Re_%s_Buf) ; Re_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
-  fprintf(fp,"  if ( Db_%s_Buf != NULL)  { free(Db_%s_Buf) ; Db_%s_Buf = NULL  ;}\n",r->name, r->name, r->name) ;
-  fprintf(fp,"  if ( Int_%s_Buf != NULL) { free(Int_%s_Buf) ; Int_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
+//  fprintf(fp,"  if ( Re_%s_Buf != NULL)  { free(Re_%s_Buf) ; Re_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
+//  fprintf(fp,"  if ( Db_%s_Buf != NULL)  { free(Db_%s_Buf) ; Db_%s_Buf = NULL  ;}\n",r->name, r->name, r->name) ;
+//  fprintf(fp,"  if ( Int_%s_Buf != NULL) { free(Int_%s_Buf) ; Int_%s_Buf = NULL ;} \n",r->name, r->name, r->name) ;
 
     } else  {
       char * indent, * ty ;
@@ -160,7 +160,7 @@ gen_c_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 fprintf(fp,"C_%s_Pack%s( float * ReKiBuf,  int * Re_BufSz ,\n",ModName->nickname,nonick) ;
 fprintf(fp,"                 double * DbKiBuf, int * Db_BufSz ,\n") ;
 fprintf(fp,"                 int * IntKiBuf,   int * Int_BufSz ,\n") ;
-fprintf(fp,"                 struct %s_C *InData, char * ErrMsg, int *SizeOnly )\n", addnick) ;
+fprintf(fp,"                 %s_t *InData, char * ErrMsg, int *SizeOnly )\n", addnick) ;
 fprintf(fp,"{\n") ;
 fprintf(fp,"  int ErrStat ;\n") ;
 fprintf(fp,"  int OnlySize ;\n") ;
@@ -320,7 +320,7 @@ fprintf(fp,"}\n") ;
 return(0) ;
 }
 
-
+#include "Template_c_Types.c"
 
 int
 gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
@@ -334,7 +334,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->usefrom == 0 ) {
-        fprintf(fph,  "  struct %s_C {\n",q->mapsto) ;
+        fprintf(fph,  "  typedef struct %s {\n",q->mapsto) ;
         if ( sw_embed_class_ptr ) {
           fprintf(fph,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
           fprintf(fph,"    int *index ;\n") ;
@@ -348,12 +348,11 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
               if ( r->dims[0]->deferred ) star = '*' ;
             }
             if ( r->type->type_type == DERIVED ) {
-              fprintf(fph,"    struct %s_C %c%s",r->type->mapsto,star,r->name ) ;
+              fprintf(fph,"    struct %s %c%s",r->type->mapsto,star,r->name ) ;
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( r->ndims > 0 && r->dims[0]->deferred ) {
-//                fprintf(fph,"    std::vector<%s> %s ",C_type( r->type->mapsto), r->name ) ;
                 fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
                 fprintf(fph,"    int %sLen ",r->name ) ;
               } else {
@@ -373,22 +372,22 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
             fprintf(fph,"; \n") ;
           }
         }
-        fprintf(fph,"  } ;\n") ;
+        fprintf(fph,"  } %s_t ;\n", q->mapsto ) ;
       }
     }
 
 
-    fprintf(fph,"  struct %s_UserData {\n", ModName->nickname) ;
+    fprintf(fph,"  typedef struct %s_UserData {\n", ModName->nickname) ;
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       remove_nickname(ModName->nickname,q->name,nonick) ;
       if ( is_a_fast_interface_type(nonick) ) {
         char temp[NAMELEN] ;
-        sprintf(temp, "%s_C", q->mapsto ) ;
-        fprintf(fph,"    struct %-30s %s_%s ;\n", temp, ModName->nickname, fast_interface_type_shortname(nonick) ) ;
+        sprintf(temp, "%s_t", q->mapsto ) ;
+        fprintf(fph,"    %-30s %s_%s ;\n", temp, ModName->nickname, fast_interface_type_shortname(nonick) ) ;
       }
     }
-    fprintf(fph,"  } ;\n") ;
+    fprintf(fph,"  } %s_t ;\n", ModName->nickname ) ;
 
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
@@ -411,6 +410,23 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
         gen_c_pack( fpc, ModName, ddtname, ddtnamelong ) ;
         gen_c_unpack( fpc, ModName, ddtname, ddtnamelong ) ;
       }
+    }
+
+    if ( sw_ccode ) {
+      FILE *fpt ;
+      char fname[NAMELEN], tmp1[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
+      char ** p ;
+    
+      sprintf(fname,"%s_C_Types.f90",ModName->name) ;
+      if ((fpt = fopen( fname , "w" )) == NULL ) return(1) ;
+      print_warning(fpt,fname,"!") ;
+      for ( p = template_c_types ; *p ; p++ ) {
+        strcpy(tmp1,*p) ;
+        substitute(tmp1,"ModuleName",ModName->name,tmp2) ;
+        substitute(tmp2,"ModName",ModName->nickname,tmp3) ;
+        fprintf(fpt,"%s\n",tmp3) ;
+      }
+      fclose(fpt) ;
     }
   }
 }

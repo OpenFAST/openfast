@@ -51,3 +51,4 @@ sym.o: sym.h
 type.o: registry.h protos.h data.h
 gen_interp.o: registry.h protos.h data.h
 gen_streams.o: registry.h protos.h data.h
+gen_c_types.o: Template_c_Types.c

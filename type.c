@@ -74,7 +74,18 @@ C_type( char * s )
   if ( !strcmp( s, "LOGICAL") )        return("bool") ;
   if ( !strcmp( s, "REAL(ReKi)") )     return("float") ;
   if ( !strcmp( s, "REAL(DbKi)") )     return("double") ;
-  if ( !strncmp( s, "CHARACTER)",9) )     return("char *") ;
+  if ( !strncmp( s, "CHARACTER",9) )     return("char *") ;
+  return("unknown") ;
+}
+
+char *
+c_types_binding( char *s )
+{
+  if ( !strcmp( s, "INTEGER(IntKi)") ) return("INTEGER(KIND=C_INT)") ;
+  if ( !strcmp( s, "LOGICAL") )        return("LOGICAL(KIND=C_BOOL)") ;
+  if ( !strcmp( s, "REAL(ReKi)") )     return("REAL(KIND=C_FLOAT)") ;
+  if ( !strcmp( s, "REAL(DbKi)") )     return("REAL(KIND=C_DOUBLE)") ;
+  if ( !strncmp( s, "CHARACTER",9) )   return("CHARACTER(KIND=C_CHAR,LEN=1024)") ;
   return("unknown") ;
 }
 

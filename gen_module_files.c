@@ -1261,6 +1261,8 @@ gen_module( FILE * fp , node_t * ModName )
 {
   node_t * p, * q, * r ;
   int i ;
+  int ipass ;
+  char nonick[NAMELEN] ;
 
   if ( strlen(ModName->nickname) > 0 ) {
 // gen preamble
@@ -1279,6 +1281,7 @@ gen_module( FILE * fp , node_t * ModName )
     }
     if ( sw_ccode ) {
 // Generate a container object for the Fortran code to carry around a pointer to the CPP object(s)
+      fprintf(fp,"USE %s_C_Types\n",ModName->nickname) ;
       fprintf(fp,"USE, INTRINSIC :: ISO_C_Binding\n") ;
     }
 
@@ -1299,14 +1302,33 @@ gen_module( FILE * fp , node_t * ModName )
 // generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
+      if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , nonick ) ;
+      fprintf(fp,"! =========  %s%s  =======\n",q->mapsto,(ipass==0)?"_C":"") ;
+  for ( ipass = (sw_ccode)?0:1 ; ipass < 2 ; ipass++ ) {   // 2 passes for C code, 1st pass generates bound ddt
       if ( q->usefrom == 0 ) {
-        fprintf(fp,"  TYPE, PUBLIC :: %s\n",q->mapsto) ;
+        fprintf(fp,"  TYPE, %s :: %s%s\n",(ipass==0)?"BIND(C)":"PUBLIC",q->mapsto,(ipass==0)?"_C":"") ;
         if ( sw_ccode ) {
-          fprintf(fp,"    TYPE(C_ptr) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
+          if ( ipass == 0 ) {
+            fprintf(fp,"    TYPE( %s_%s_C ) :: object\n",ModName->nickname,fast_interface_type_shortname(nonick)) ;
+          } else {
+            fprintf(fp,"    TYPE( c_ptr ) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
+            fprintf(fp,"    TYPE( %s_C ) :: C_obj\n",q->mapsto) ;
+          }
         }
         for ( r = q->fields ; r ; r = r->next )
         {
           if ( r->type != NULL ) {
+           if ( ipass == 0 ) {
+              if        ( r->ndims == 0 && r->type->type_type != DERIVED ) {
+                fprintf(fp,"    %s :: %s \n",c_types_binding( r->type->mapsto), r->name) ;
+              } else if ( r->ndims >  0 && r->type->type_type != DERIVED ) {
+                if ( r->dims[0]->deferred ) {
+                  fprintf(fp,"    %s :: %s \n",c_types_binding( r->type->mapsto), r->name) ;
+                } else {
+                  fprintf(fp,"    TYPE(C_PTR) :: %s \n", r->name) ;
+                }
+              }
+           } else {
             if ( r->type->type_type == DERIVED ) {
               fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
             } else {
@@ -1323,38 +1345,42 @@ gen_module( FILE * fp , node_t * ModName )
             }
             if ( r->ndims > 0 )
             {
-              if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
-              {
-                fprintf(fp,", DIMENSION(") ;
-                for ( i = 0 ; i < r->ndims ; i++ )
+                if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
                 {
-                  fprintf(fp,":") ;
-                  if ( i < r->ndims-1 ) fprintf(fp,",") ;
+                  fprintf(fp,", DIMENSION(") ;
+                  for ( i = 0 ; i < r->ndims ; i++ )
+                  {
+                    fprintf(fp,":") ;
+                    if ( i < r->ndims-1 ) fprintf(fp,",") ;
+                  }
+                  fprintf(fp,"), ALLOCATABLE ") ;
+                } else {
+                  fprintf(fp,", DIMENSION(") ;
+                  for ( i = 0 ; i < r->ndims ; i++ )
+                  {
+                    fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
+                    if ( i < r->ndims-1 ) fprintf(fp,",") ;
+                  }
+                  fprintf(fp,") ") ;
                 }
-                fprintf(fp,"), ALLOCATABLE ") ;
-              } else {
-                fprintf(fp,", DIMENSION(") ;
-                for ( i = 0 ; i < r->ndims ; i++ )
-                {
-                  fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
-                  if ( i < r->ndims-1 ) fprintf(fp,",") ;
-                }
-                fprintf(fp,") ") ;
-              }
             }
             if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
               fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
             } else {
               fprintf(fp," :: %s \n",r->name) ;
             }
+           }
           }
         }
-        fprintf(fp,"  END TYPE %s\n",q->mapsto) ;
+        fprintf(fp,"  END TYPE %s%s\n",q->mapsto,(ipass==0)?"_C":"") ;
         if ( sw_ccode == 1 ) {
           
         }
       }
+  }
+      fprintf(fp,"! =======================\n") ;
     }
+
     fprintf(fp,"CONTAINS\n") ;
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
