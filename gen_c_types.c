@@ -9,6 +9,7 @@
 #include "registry.h"
 #include "data.h"
 
+
 int
 gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
@@ -25,6 +26,7 @@ gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong 
     return(1) ;
   }
 
+fprintf(fp,"\nint\n") ;
 fprintf(fp,"C_%s_Unpack%s( float * ReKiBuf,  \n",ModName->nickname,nonick) ;
 fprintf(fp,"                 double * DbKiBuf, \n") ;
 fprintf(fp,"                 int * IntKiBuf,   \n") ;
@@ -157,6 +159,7 @@ gen_c_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
     fprintf(stderr,"Registry warning: generating %s_Pack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
     return(1) ;
   }
+fprintf(fp,"\nint\n") ;
 fprintf(fp,"C_%s_Pack%s( float * ReKiBuf,  int * Re_BufSz ,\n",ModName->nickname,nonick) ;
 fprintf(fp,"                 double * DbKiBuf, int * Db_BufSz ,\n") ;
 fprintf(fp,"                 int * IntKiBuf,   int * Int_BufSz ,\n") ;
@@ -388,6 +391,41 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
       }
     }
     fprintf(fph,"  } %s_t ;\n", ModName->nickname ) ;
+
+    fprintf(fpc,"#define CALL __attribute__((dllexport) )\n") ;
+    for ( q = ModName->module_ddt_list ; q ; q = q->next )
+    {
+      if ( q->usefrom == 0 ) {
+
+        char * ddtname, * ddtnamelong, nonick[NAMELEN] ;
+        ddtname = q->name ;
+
+        remove_nickname(ModName->nickname,ddtname,nonick) ;
+
+        if ( is_a_fast_interface_type( nonick ) ) {
+          ddtnamelong = std_case( nonick ) ;
+          ddtname = fast_interface_type_shortname( nonick ) ;
+        } else {
+          ddtnamelong = ddtname ;
+        }
+//        fprintf(fpc,"extern \"C\" %s_%s_t* CALL %s_%s_Create() { return new %s_%s_t() ; } ;\n",
+        fprintf(fpc,"%s_%s_t* CALL %s_%s_Create() { return ((%s_%s_t*) malloc( sizeof(%s_%s_t()))) ; } ;\n",
+                        ModName->nickname,
+                        ddtnamelong,
+                        ModName->nickname,
+                        ddtname,
+                        ModName->nickname,
+                        ddtnamelong,
+                        ModName->nickname,
+                        ddtnamelong ) ;
+        fprintf(fpc,"void CALL %s_%s_Delete(%s_%s_t *This) { free(This) ; } ;\n",
+                        ModName->nickname,
+                        ddtname,
+                        ModName->nickname,
+                        ddtnamelong ) ;
+
+      }
+    }
 
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
