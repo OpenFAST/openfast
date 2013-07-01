@@ -9,7 +9,6 @@
 #include "registry.h"
 #include "data.h"
 
-
 int
 gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
@@ -324,6 +323,7 @@ return(0) ;
 }
 
 #include "Template_c_Types.c"
+#include "Template_c2f_helpers.c"
 
 int
 gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
@@ -447,6 +447,15 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
   //      gen_destroy( fpc, ModName, ddtname, ddtnamelong ) ;
         gen_c_pack( fpc, ModName, ddtname, ddtnamelong ) ;
         gen_c_unpack( fpc, ModName, ddtname, ddtnamelong ) ;
+      }
+    }
+    if ( sw_ccode ) {
+      char ** p ;
+      char tmp1[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
+      for ( p = template_c2f_helpers ; *p ; p++ ) {
+        strcpy(tmp1,*p) ;
+        substitute(tmp1,"ModName",ModName->nickname,tmp2) ;
+        fprintf(fpc,"%s\n",tmp2) ;
       }
     }
 

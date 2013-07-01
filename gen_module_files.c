@@ -11,6 +11,103 @@
 
 #include "FAST_preamble.h"
 
+int 
+gen_copy_f2c_c2f( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, int sw ) //sw=0 f2c, sw=1 c2f
+{
+  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  node_t *q, * r ;
+  int d ;
+
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+  fprintf(fp," SUBROUTINE %s_%s_Copy%s( %sData, CtrlCode, ErrStat, ErrMsg )\n",
+          ModName->nickname,(sw==0)?"F2C":"C2F", nonick,nonick ) ;
+  fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: %sData\n",addnick,nonick) ;
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ;
+  fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
+  fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
+  fprintf(fp,"! Local \n") ;
+  fprintf(fp,"  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
+  if ( sw != 0 ) {
+  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask1(:)\n") ;
+  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask2(:,:)\n") ;
+  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)\n") ;
+  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)\n") ;
+  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)\n") ;
+  }
+  fprintf(fp,"! \n") ;
+  fprintf(fp,"  ErrStat = ErrID_None\n") ;
+  fprintf(fp,"  ErrMsg  = \"\"\n") ;
+
+  sprintf(tmp,"%s",addnick) ;
+
+  sprintf(tmp2,"%s",make_lower_temp(tmp)) ;
+
+  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
+  {
+    fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
+  } else {
+    for ( r = q->fields ; r ; r = r->next )
+    {
+      if ( r->type != NULL ) {
+        if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+          char nonick2[NAMELEN] ;
+          remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
+          }
+  fprintf(fp,"  CALL %s_%s_Copy%s( %sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
+          ModName->nickname,(sw==0)?"F2C":"C2F",fast_interface_type_shortname(nonick2),
+          nonick,r->name,dimstr(r->ndims)) ;
+          for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"ENDDO\n") ;
+          }
+        } else {
+          if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
+            char tmp2[10] ;
+            strcpy(tmp,"") ;
+  fprintf(fp,"IF ( ALLOCATED( %sData%%%s ) ) THEN\n",nonick,r->name) ;
+            for ( d = 1 ; d <= r->ndims ; d++ ) {
+  fprintf(fp,"  i%d = SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d) ;
+              sprintf(tmp2,",i%d",d) ;
+              strcat(tmp,tmp2) ;
+            }
+            if ( sw == 0 ) {
+  fprintf(fp,"  CALL %s_copy_%s_%dDF_1DC(%sData%%%s,%sData%%C_obj%%%s %s)\n",
+              ModName->nickname,C_type(r->type->mapsto),r->ndims,nonick,r->name,nonick,r->name,tmp) ;
+//  fprintf(fp,"  %sData%s%%%s = PACK(%sData%s%%%s,.TRUE.)\n",
+//              nonick,(sw==0)?"%C_obj":"",r->name,nonick,(sw!=0)?"%C_obj":"",r->name) ;
+            } else {
+              char arrayname[NAMELEN], tmp2[NAMELEN],tmp3[NAMELEN] ;
+              sprintf(arrayname,"%sData%%%s",nonick,r->name) ;
+              sprintf(tmp2,"SIZE(%sData%s%%%s)",nonick,(sw!=0)?"%C_obj":"",r->name) ;
+              gen_mask_alloc(fp, r->ndims, arrayname ) ;
+#if 0
+  fprintf(fp,"  %sData%%%s = UNPACK(%sData%%C_obj%%%s,mask%d,%sData%%%s)\n",
+              nonick,r->name,nonick,r->name,r->ndims,nonick,r->name) ;
+#else
+  fprintf(fp,"  CALL %s_copy_%s_1DC_%dDF(%sData%%C_obj%%%s,%sData%%%s %s)\n",
+              ModName->nickname,C_type(r->type->mapsto),r->ndims,nonick,r->name,nonick,r->name,tmp) ;
+#endif
+  fprintf(fp,"  DEALLOCATE(mask%d)\n",r->ndims) ;
+            }
+             
+          } else {
+  fprintf(fp,"  %sData%s%%%s = %sData%s%%%s\n",
+            nonick,(sw==0)?"%C_obj":"",r->name,nonick,(sw!=0)?"%C_obj":"",r->name) ;
+          }
+          if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
+  fprintf(fp,"ENDIF\n") ;
+          }
+        }
+      }
+    }
+  }
+
+  fprintf(fp," END SUBROUTINE %s_%s_Copy%s\n\n", ModName->nickname,(sw==0)?"F2C":"C2F",nonick ) ;
+  return(0) ;
+}
+
 int
 gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
@@ -481,6 +578,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
       else if ( r->ndims==4 ) { sprintf(tmp3,"(1:(%s),1,1,1)",tmp2) ; }
       else if ( r->ndims==5 ) { sprintf(tmp3,"(1:(%s),1,1,1,1)",tmp2) ; }
       else                    { fprintf(stderr,"Registry WARNING: too many dimensions for %s\n",r->name) ; }
+
       indent = "" ;
       if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
@@ -1400,6 +1498,10 @@ gen_module( FILE * fp , node_t * ModName )
           ddtnamelong = ddtname ;
         }
 
+        if ( sw_ccode ) {
+          gen_copy_f2c_c2f( fp, ModName, ddtname, ddtnamelong, 0 ) ;
+          gen_copy_f2c_c2f( fp, ModName, ddtname, ddtnamelong, 1 ) ;
+        }
         gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_pack( fp, ModName, ddtname, ddtnamelong ) ;

@@ -231,15 +231,35 @@ int
 substitute( char * str , char * match , char * replace, char * result )
 {
    char * p, *q ;
+   char allup[NAMELEN], alllo[NAMELEN] ;
    size_t n, m ;
+   int nmatch = 0 ;
 
    n = strlen( replace ) ;
    m = strlen( match ) ;
+   strcpy(allup,replace) ; make_upper_case(allup) ;
+   strcpy(alllo,replace) ; make_lower_case(alllo) ;
+// watch for #defines, in which case first sub should be all upper, next all lower
+fprintf(stderr,"allup %s, alllo %s\n",allup,alllo) ;
+   if ( str[0] == '#' ) {
+     for ( p = str ; *p ; p++ ) {
+       if ( matches( p, "define" ) ) nmatch = 2 ;
+     }
+   }
+   
    for ( p = str , q = result ; *p ; )
    {
       if ( matches( p, match ) )
       {
-        strncpy( q, replace, n ) ;
+        if        ( nmatch == 2 ) {
+          strncpy( q, replace, n ) ;
+          nmatch-- ;
+        } else if ( nmatch == 1 ) {
+          strncpy( q, alllo, n ) ;
+          nmatch-- ;
+        } else {
+          strncpy( q, replace, n ) ;
+        }
         q += n ;
         p += m ;
       } else {
