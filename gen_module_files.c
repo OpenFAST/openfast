@@ -20,21 +20,13 @@ gen_copy_f2c_c2f( FILE * fp, const node_t * ModName, char * inout, char * inoutl
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  fprintf(fp," SUBROUTINE %s_%s_Copy%s( %sData, CtrlCode, ErrStat, ErrMsg )\n",
+  fprintf(fp," SUBROUTINE %s_%s_Copy%s( %sData, ErrStat, ErrMsg )\n",
           ModName->nickname,(sw==0)?"F2C":"C2F", nonick,nonick ) ;
   fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: %sData\n",addnick,nonick) ;
-  fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ;
   fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"! Local \n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
-  if ( sw != 0 ) {
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask1(:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask2(:,:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)\n") ;
-  }
   fprintf(fp,"! \n") ;
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
@@ -56,7 +48,7 @@ gen_copy_f2c_c2f( FILE * fp, const node_t * ModName, char * inout, char * inoutl
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
-  fprintf(fp,"  CALL %s_%s_Copy%s( %sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
+  fprintf(fp,"  CALL %s_%s_Copy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
           ModName->nickname,(sw==0)?"F2C":"C2F",fast_interface_type_shortname(nonick2),
           nonick,r->name,dimstr(r->ndims)) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -64,37 +56,58 @@ gen_copy_f2c_c2f( FILE * fp, const node_t * ModName, char * inout, char * inoutl
           }
         } else {
           if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
-            char tmp2[10] ;
+            char tmp2[NAMELEN], tmp4[NAMELEN] ;
             strcpy(tmp,"") ;
+            strcpy(tmp4,"") ;
   fprintf(fp,"IF ( ALLOCATED( %sData%%%s ) ) THEN\n",nonick,r->name) ;
+
             for ( d = 1 ; d <= r->ndims ; d++ ) {
   fprintf(fp,"  i%d = SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d) ;
-              sprintf(tmp2,",i%d",d) ;
+              sprintf(tmp2,"i%d",d) ;
+              strcat(tmp,",") ;
               strcat(tmp,tmp2) ;
+              strcat(tmp4,tmp2) ;
+              if ( d < r->ndims ) {
+                strcat(tmp4,"*") ;
+              }
             }
+
             if ( sw == 0 ) {
-  fprintf(fp,"  CALL %s_copy_%s_%dDF_1DC(%sData%%%s,%sData%%C_obj%%%s %s)\n",
-              ModName->nickname,C_type(r->type->mapsto),r->ndims,nonick,r->name,nonick,r->name,tmp) ;
+  fprintf(fp,"  CALL %s_F2C_%s_%s(%sData%%%s,%sData%%C_obj %s)\n",
+              ModName->nickname,nonick,r->name,nonick,r->name,nonick,tmp) ;
+
+  fprintf(fp,"  %sData%%C_obj%%%s_Len = %s\n",
+              nonick,r->name,tmp4) ;
+
 //  fprintf(fp,"  %sData%s%%%s = PACK(%sData%s%%%s,.TRUE.)\n",
 //              nonick,(sw==0)?"%C_obj":"",r->name,nonick,(sw!=0)?"%C_obj":"",r->name) ;
             } else {
               char arrayname[NAMELEN], tmp2[NAMELEN],tmp3[NAMELEN] ;
               sprintf(arrayname,"%sData%%%s",nonick,r->name) ;
               sprintf(tmp2,"SIZE(%sData%s%%%s)",nonick,(sw!=0)?"%C_obj":"",r->name) ;
-              gen_mask_alloc(fp, r->ndims, arrayname ) ;
-#if 0
-  fprintf(fp,"  %sData%%%s = UNPACK(%sData%%C_obj%%%s,mask%d,%sData%%%s)\n",
-              nonick,r->name,nonick,r->name,r->ndims,nonick,r->name) ;
-#else
-  fprintf(fp,"  CALL %s_copy_%s_1DC_%dDF(%sData%%C_obj%%%s,%sData%%%s %s)\n",
-              ModName->nickname,C_type(r->type->mapsto),r->ndims,nonick,r->name,nonick,r->name,tmp) ;
-#endif
-  fprintf(fp,"  DEALLOCATE(mask%d)\n",r->ndims) ;
+  fprintf(fp,"  CALL %s_C2F_%s_%s(%sData%%C_obj,%sData%%%s %s)\n",
+              ModName->nickname,nonick,r->name,nonick,nonick,r->name,tmp) ;
             }
              
           } else {
+            if ( r->ndims > 0 ) {
+              strcpy(tmp,"") ;
+              for ( d = 1 ; d <= r->ndims ; d++ ) {
+  fprintf(fp,"  i%d = SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d) ;
+                sprintf(tmp2,",i%d",d) ;
+                strcat(tmp,tmp2) ;
+              }
+              if ( sw==0 ) {
+  fprintf(fp,"  CALL %s_F2C_%s_%s(%sData%%%s,%sData%%C_obj %s)\n",
+              ModName->nickname,nonick,r->name,nonick,r->name,nonick,tmp) ;
+              } else {
+  fprintf(fp,"  CALL %s_C2F_%s_%s(%sData%%C_obj,%sData%%%s %s)\n",
+              ModName->nickname,nonick,r->name,nonick,nonick,r->name,tmp) ;
+              }
+            } else {
   fprintf(fp,"  %sData%s%%%s = %sData%s%%%s\n",
-            nonick,(sw==0)?"%C_obj":"",r->name,nonick,(sw!=0)?"%C_obj":"",r->name) ;
+              nonick,(sw==0)?"%C_obj":"",r->name,nonick,(sw!=0)?"%C_obj":"",r->name) ;
+            }
           }
           if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
   fprintf(fp,"ENDIF\n") ;
@@ -1421,9 +1434,16 @@ gen_module( FILE * fp , node_t * ModName )
                 fprintf(fp,"    %s :: %s \n",c_types_binding( r->type->mapsto), r->name) ;
               } else if ( r->ndims >  0 && r->type->type_type != DERIVED ) {
                 if ( r->dims[0]->deferred ) {
-                  fprintf(fp,"    %s :: %s \n",c_types_binding( r->type->mapsto), r->name) ;
+                  fprintf(fp,"    TYPE(C_ptr) :: %s = C_NULL_PTR \n", r->name) ;
+                  fprintf(fp,"    INTEGER(C_int) :: %s_Len = 0 \n", r->name) ;
                 } else {
-                  fprintf(fp,"    TYPE(C_PTR) :: %s \n", r->name) ;
+                  fprintf(fp,"    TYPE(C_PTR) :: %s(", r->name) ;
+                  for ( i = 0 ; i < r->ndims ; i++ )
+                  {
+                    fprintf(fp,"%d",r->dims[i]->coord_end) ;
+                    if ( i < r->ndims-1 ) fprintf(fp,",") ;
+                  }
+                  fprintf(fp,")\n") ;
                 }
               }
            } else {

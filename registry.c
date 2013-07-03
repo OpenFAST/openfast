@@ -40,6 +40,7 @@ main( int argc, char *argv[], char *env[] )
   sw_ccode           = 0 ;
   sw_embed_class_ptr = 0 ;
   strcpy( fname_in , "" ) ;
+  strcpy(sw_c2f_underscore,"_") ;
 
 #ifndef _WIN32
   rlim.rlim_cur = RLIM_INFINITY ;
@@ -82,6 +83,12 @@ main( int argc, char *argv[], char *env[] )
       } else
       if (!strncmp(*argv,"-embed",6)) {
         sw_embed_class_ptr = 1 ;
+      } else
+      if (!strncmp(*argv,"-f2c",3)) {
+        strcpy(sw_c2f_underscore,"__") ;
+      } else
+      if (!strncmp(*argv,"-nounderscore",5)) {
+        strcpy(sw_c2f_underscore,"") ;
       } else
 #if 0
       if (!strcmp(*argv,"-norealloc_lhs")) {
@@ -240,7 +247,6 @@ substitute( char * str , char * match , char * replace, char * result )
    strcpy(allup,replace) ; make_upper_case(allup) ;
    strcpy(alllo,replace) ; make_lower_case(alllo) ;
 // watch for #defines, in which case first sub should be all upper, next all lower
-fprintf(stderr,"allup %s, alllo %s\n",allup,alllo) ;
    if ( str[0] == '#' ) {
      for ( p = str ; *p ; p++ ) {
        if ( matches( p, "define" ) ) nmatch = 2 ;
@@ -285,3 +291,20 @@ matches( char * str , char * match )   // both must be null terminated
    if ( n != strlen(match) ) return(0) ;
    return(1) ;
 }
+
+int
+make_fortran_callable( char *str )     // make a generated C subroutine name callable by Fortran
+{
+   char *p, tmp[NAMELEN] ;
+   int found = 0 ;
+   make_lower(str) ;
+   strcpy(tmp,sw_c2f_underscore) ;
+   if ( !strcmp(sw_c2f_underscore,"__")) // f2cstyle, dbl underscore if an underscore in name, single otherwise
+   {
+      for ( p=str ; *p ; p++ ) { if (*p == '_') found = 1 ; }
+      if ( found ) strcpy(tmp,"__") ;
+      else         strcpy(tmp,"_") ;
+   }
+   strcat(str,tmp) ;
+}
+

@@ -10,6 +10,90 @@
 #include "data.h"
 
 int
+gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
+{
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  node_t *q, * r ;
+  int d, idim, frst ;
+
+  remove_nickname(ModName->nickname,inout,nonick) ;
+  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
+  sprintf(tmp,"%s",addnick) ;
+  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
+  {
+    fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
+    return(1) ;
+  }
+
+  for ( r = q->fields ; r ; r = r->next )
+  {
+    if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    } else {
+      if ( r->ndims > 0 ) {
+      //
+        sprintf(tmp4,"%s_F2C_%s_%s", ModName->nickname,nonick,r->name ) ;
+        make_fortran_callable(tmp4) ;
+        fprintf(fp,"void %s ( %s * src, %s_t * dst ", tmp4,C_type(r->type->mapsto),addnick ) ;
+        for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
+        fprintf(fp,") {\n") ;
+        fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
+        fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
+        if ( has_deferred_dim( r, 0 ) ) {
+          fprintf(fp,"  if ( dst->%s != NULL ) free( dst->%s ) ;\n",r->name,r->name) ;
+          strcpy(tmp,"") ;
+          for ( d=1 ; d <= r->ndims ; d++ ) {
+            sprintf(tmp2," *n%d",d) ;
+            strcat(tmp,tmp2) ;
+            if ( d < r->ndims ) strcat(tmp,"*") ;
+          }
+          fprintf(fp,"  dst->%s = (%s *)malloc((%s)*sizeof(%s)) ;\n",
+                  r->name,C_type(r->type->mapsto),tmp,C_type(r->type->mapsto)) ;
+        }
+        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
+        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
+        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
+        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
+        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
+        fprintf(fp,  "  p = (%s *)dst->%s ;\n",C_type(r->type->mapsto),r->name) ;
+        for ( d=r->ndims ; d >= 1 ; d-- ) {
+          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
+        }
+        fprintf(fp,  "  {\n") ;
+        fprintf(fp,  "    *p++ = src[%s] ;\n",tmp) ;
+        fprintf(fp,  "  }\n") ;
+        fprintf(fp,"}\n") ;
+      //
+        sprintf(tmp4,"%s_C2F_%s_%s", ModName->nickname,nonick,r->name ) ;
+        make_fortran_callable(tmp4) ;
+        fprintf(fp,"void %s ( %s_t * src, %s * dst ", tmp4,addnick,C_type(r->type->mapsto) ) ;
+        for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
+        fprintf(fp,") {\n") ;
+        fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
+        fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
+        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
+        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
+        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
+        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
+        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
+        fprintf(fp,  "  p = (%s *)src->%s ;\n",C_type(r->type->mapsto),r->name) ;
+        for ( d=r->ndims ; d >= 1 ; d-- ) {
+          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
+        }
+        fprintf(fp,  "  {\n") ;
+        fprintf(fp,  "    dst[%s] = *p++ ;\n",tmp) ;
+        fprintf(fp,  "  }\n") ;
+        fprintf(fp,"}\n") ;
+
+
+      } else {
+      }
+    }
+  }
+
+
+}
+
+int
 gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -96,7 +180,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
 
     } else  {
       char * indent, * ty ;
-      char arrayname[NAMELEN] ;
+      char arrayname[NAMELEN], tmp[NAMELEN], tmp2[NAMELEN] ;
 
       sprintf(arrayname,"OutData%%%s",r->name) ;
       sprintf(tmp2,"SIZE(OutData%%%s)",r->name) ;
@@ -121,8 +205,23 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
         if      ( !strcmp( r->type->mapsto, "REAL(IntKi)")    ) ty = "Int" ;
 
         if ( r->ndims > 0 ) {
-  fprintf(fp,"%s  memcpy( OutData->%s,&(%sKiBuf[ %s_Xferred ]),OutData->%sLen ) ;\n",indent,r->name,ty,ty,r->name) ;
-  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + OutData->%sLen ; \n",indent,ty,ty,r->name ) ;
+          if ( has_deferred_dim( r, 0 ) ) {
+  fprintf(fp,"%s  memcpy( OutData->%s,&(%sKiBuf[ %s_Xferred ]),OutData->%s_Len) ;\n",indent,r->name,ty,ty,r->name) ;
+  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + OutData->%s_Len ; \n",indent,ty,ty,r->name ) ;
+          } else {
+            int i ;
+            strcpy(tmp2,"") ;
+            for ( i = 0 ; i < r->ndims ; i++ )
+            {
+              sprintf(tmp,"((%d)-(%d)+1)",r->dims[i]->coord_end,r->dims[i]->coord_start) ;
+              strcat(tmp2,tmp) ;
+              if ( i < r->ndims-1 ) strcat(tmp2,"*") ;
+            }
+  fprintf(fp,"%s  memcpy( OutData->%s,&(%sKiBuf[ %s_Xferred ]),(%s)*sizeof(%s)) ;\n",
+            indent,r->name,ty,ty,tmp2,C_type(r->type->mapsto)) ;
+  fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + (%s)*sizeof(%s) ; \n",
+            indent,ty,ty,tmp2,C_type(r->type->mapsto) ) ;
+          }
         } else {
   fprintf(fp,"%s  OutData->%s = %sKiBuf [ %s_Xferred ] ; \n",indent,r->name,ty,ty) ;
   fprintf(fp,"%s  %s_Xferred   = %s_Xferred   + 1 ; \n",indent,ty,ty ) ;
@@ -229,13 +328,13 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
     } else { // r->ndims > 0
       if ( r->dims[0]->deferred ) {
         if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
-  fprintf(fp,"  *Re_BufSz   += InData->%sLen ; // %s \n", r->name , r->name ) ;
+  fprintf(fp,"  *Re_BufSz   += InData->%s_Len ; // %s \n", r->name , r->name ) ;
         }
         else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
-  fprintf(fp,"  *Db_BufSz   += InData->%sLen ; // %s \n", r->name , r->name ) ;
+  fprintf(fp,"  *Db_BufSz   += InData->%s_Len ; // %s \n", r->name , r->name ) ;
         }
         else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
-  fprintf(fp,"  *Int_BufSz  += InData->%sLen ; // %s \n", r->name , r->name ) ;
+  fprintf(fp,"  *Int_BufSz  += InData->%s_Len ; // %s \n", r->name , r->name ) ;
         }
       } else {
       }
@@ -278,7 +377,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
 
     } else  {
       char * indent, *ty, *cty ;
-      sprintf(tmp2,"InData->%sLen)",r->name) ;
+      sprintf(tmp2,"InData->%s_Len)",r->name) ;
       if        ( r->ndims==0 ) {
         strcpy(tmp3,"") ;
       } else if ( r->ndims==1 ) {
@@ -304,7 +403,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
         else if ( !strcmp( r->type->mapsto, "REAL(IntKi)") ) {ty = "Int" ; cty = "int"    ; }
         indent = "    " ;
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-  fprintf(fp,"%sfor ( i = 0 ; i < InData->%sLen ; i++ ) {\n",indent, r->name ) ;
+  fprintf(fp,"%sfor ( i = 0 ; i < InData->%s_Len ; i++ ) {\n",indent, r->name ) ;
   fprintf(fp,"%s  if ( !OnlySize ) memcpy( &(%sKiBuf[%s_Xferred+i]), &(InData->%s[i]), sizeof(%s)) ;\n",
               indent,ty,ty,r->name,cty  ) ;
   fprintf(fp,"%s  %s_Xferred++ ;\n",indent,ty) ;
@@ -338,6 +437,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
     {
       if ( q->usefrom == 0 ) {
         fprintf(fph,  "  typedef struct %s {\n",q->mapsto) ;
+        fprintf(fph,  "    void * object ;\n") ;
         if ( sw_embed_class_ptr ) {
           fprintf(fph,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
           fprintf(fph,"    int *index ;\n") ;
@@ -357,7 +457,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( r->ndims > 0 && r->dims[0]->deferred ) {
                 fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
-                fprintf(fph,"    int %sLen ",r->name ) ;
+                fprintf(fph,"    int %s_Len ",r->name ) ;
               } else {
                 fprintf(fph,"    %s %s",C_type( r->type->mapsto ),r->name ) ;
               }
@@ -447,8 +547,10 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
   //      gen_destroy( fpc, ModName, ddtname, ddtnamelong ) ;
         gen_c_pack( fpc, ModName, ddtname, ddtnamelong ) ;
         gen_c_unpack( fpc, ModName, ddtname, ddtnamelong ) ;
+        gen_c_helpers( fpc, ModName, ddtname, ddtnamelong ) ;
       }
     }
+#if 0
     if ( sw_ccode ) {
       char ** p ;
       char tmp1[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
@@ -458,6 +560,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
         fprintf(fpc,"%s\n",tmp2) ;
       }
     }
+#endif
 
     if ( sw_ccode ) {
       FILE *fpt ;
