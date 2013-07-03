@@ -72,7 +72,7 @@ main( int argc, char *argv[], char *env[] )
         p = *argv ;
         sym_add(p+3) ;
       } else
-      if (!strcmp(*argv,"-f") || !strcmp(*argv,"/f") ) {
+      if (!strcmp(*argv,"-force") || !strcmp(*argv,"/force") ) {
         sw_output_template_force = 1 ;
       } else
       if (!strcmp(*argv,"-I") || !strcmp(*argv,"/I") ) {
@@ -84,10 +84,10 @@ main( int argc, char *argv[], char *env[] )
       if (!strncmp(*argv,"-embed",6)) {
         sw_embed_class_ptr = 1 ;
       } else
-      if (!strncmp(*argv,"-f2c",3)) {
+      if (!strncmp(*argv,"-f2c",4)) {
         strcpy(sw_c2f_underscore,"__") ;
       } else
-      if (!strncmp(*argv,"-nounderscore",5)) {
+      if (!strncmp(*argv,"-nounderscore",6)) {
         strcpy(sw_c2f_underscore,"") ;
       } else
 #if 0
@@ -110,8 +110,21 @@ main( int argc, char *argv[], char *env[] )
       } else
       if (!strcmp(*argv,"-h") || !strcmp(*argv,"/h")) {
 usage:
-        fprintf(stderr,"Usage: %s [-D<MACRO>]  [-h] [-keep] registryfile | [-f] [-template|-registry] ModuleName ModName \n",thisprog) ;
-        fprintf(stderr,"       %s [/D=<MACRO>] [/h] [/keep] registryfile | [/f] [/template|/registry] ModuleName ModName \n",thisprog) ;
+        fprintf(stderr,"Usage: %s [options] registryfile -or- \n",thisprog) ;
+        fprintf(stderr,"          [-force] [-template|-registry] ModuleName ModName \n") ;
+        fprintf(stderr,"    -h        this summary\n") ;
+        fprintf(stderr,"    -D<SYM>   define symbol for conditional evaluation inside registry file\n") ;
+        fprintf(stderr,"    -ccode    generate additional code for interfacing with C/C++\n") ;
+        fprintf(stderr,"      -f2c    use f2c convention for Fortran-callable C routines (double underscore)\n") ;
+        fprintf(stderr,"      -nound[erscore] use IBM C/Fortran interface specification (no underscore)\n") ;
+        fprintf(stderr,"    -keep  do not delete temporary files from registry program\n") ;
+        fprintf(stderr,"  === alternate usage for generating templates ===\n") ;
+        fprintf(stderr,"    -template ModuleName ModName\n") ;
+        fprintf(stderr,"                 Generate a template Module file none exists\n") ;
+        fprintf(stderr,"    -registry ModuleName ModName\n") ;
+        fprintf(stderr,"                 Generate a template registry file if none exists\n") ;
+        fprintf(stderr,"    -force Force generating of template or registry file\n") ;
+        fprintf(stderr,"  (the / character can be used in place of - when specifying options)\n") ;
         exit(1) ;
       } else
       if (!strcmp(*argv,"-keep") || !strcmp(*argv,"/keep") ) {
