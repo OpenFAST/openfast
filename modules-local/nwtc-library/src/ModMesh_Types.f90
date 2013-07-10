@@ -15,7 +15,7 @@
 !
 !**********************************************************************************************************************************
 MODULE ModMesh_Types
-   USE NWTC_IO
+   USE NWTC_Num
    IMPLICIT NONE
 
    INTEGER, PUBLIC, PARAMETER :: COMPONENT_INPUT = 1
@@ -97,11 +97,11 @@ MODULE ModMesh_Types
    END TYPE ElemListType
 
    TYPE, PUBLIC :: MeshType
-      LOGICAL :: initialized = .FALSE.        ! Indicate whether this mesh is initialized     (bjj: added default initialization here)
-      LOGICAL :: fieldmask(FIELDMASK_SIZE)    ! Dimension as number of allocateable fields, below
-      LOGICAL,POINTER :: RemapFlag  => NULL() ! false=no action/ignore; true=remap required
-      INTEGER :: ios                          ! Mesh type: input (1), output(2), or state(3)
-      INTEGER :: Nnodes                       ! Number of nodes (vertices) in mesh
+      LOGICAL :: initialized = .FALSE.                ! Indicate whether this mesh is initialized     (bjj: added default initialization here)
+      LOGICAL :: fieldmask(FIELDMASK_SIZE) = .FALSE.  ! Dimension as number of allocateable fields, below
+      LOGICAL,POINTER :: RemapFlag  => NULL()         ! false=no action/ignore; true=remap required
+      INTEGER :: ios                                  ! Mesh type: input (1), output(2), or state(3)
+      INTEGER :: Nnodes                               ! Number of nodes (vertices) in mesh
 
       TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL() ! Elements in the mesh, by type
 
@@ -120,19 +120,19 @@ MODULE ModMesh_Types
 ! Whether or not these are allocated is indicated in the fieldmask, which can
 ! be interrogated by a routine using an instance of the type. If you add a field
 ! here, be sure to change the table of parameters used to size and index fieldmask above.
-      REAL(ReKi), POINTER :: Position(:,:)       => NULL() ! XYZ coordinate of node (always allocated) (3,:)
-      REAL(ReKi), POINTER :: Force(:,:)          => NULL() ! Field: Force vectors (3,:)
-      REAL(ReKi), POINTER :: Moment(:,:)         => NULL() ! Field: Moment vectors (3,:)
-      REAL(ReKi), POINTER :: Orientation(:,:,:)  => NULL() ! Field: Direction Cosine Matrix (DCM) (3,3,:)
-      REAL(ReKi), POINTER :: TranslationDisp(:,:)=> NULL() ! Field: Translational displacements (3,:)
-      REAL(ReKi), POINTER :: RotationVel(:,:)    => NULL() ! Field: Rotational velocities (3,:)
-      REAL(ReKi), POINTER :: TranslationVel(:,:) => NULL() ! Field: Translational velocities (3,:)
-      REAL(ReKi), POINTER :: RotationAcc(:,:)    => NULL() ! Field: Rotational accelerations (3,:)
-      REAL(ReKi), POINTER :: TranslationAcc(:,:) => NULL() ! Field: Translational accelerations (3,:)
-      REAL(ReKi), POINTER :: AddedMass(:,:,:)    => NULL() ! Field: Added mass matrix (6,6,:)
-      REAL(ReKi), POINTER :: Scalars(:,:)        => NULL() ! Scalars (1st Dim is over Scalars; 2nd is nodes)
-      INTEGER             :: nScalars                      ! store value of nScalars when created
-!bjj: to be added later:       REAL(ReKi), POINTER :: ElementScalars(:,:) => NULL() ! Scalars associated with elements
+      REAL(ReKi), POINTER     :: Position(:,:) => NULL() ! XYZ coordinate of node (always allocated) (3,:)
+      REAL(ReKi), ALLOCATABLE :: Force(:,:)              ! Field: Force vectors (3,:)
+      REAL(ReKi), ALLOCATABLE :: Moment(:,:)             ! Field: Moment vectors (3,:)
+      REAL(ReKi), ALLOCATABLE :: Orientation(:,:,:)      ! Field: Direction Cosine Matrix (DCM) (3,3,:)
+      REAL(ReKi), ALLOCATABLE :: TranslationDisp(:,:)    ! Field: Translational displacements (3,:)
+      REAL(ReKi), ALLOCATABLE :: RotationVel(:,:)        ! Field: Rotational velocities (3,:)
+      REAL(ReKi), ALLOCATABLE :: TranslationVel(:,:)     ! Field: Translational velocities (3,:)
+      REAL(ReKi), ALLOCATABLE :: RotationAcc(:,:)        ! Field: Rotational accelerations (3,:)
+      REAL(ReKi), ALLOCATABLE :: TranslationAcc(:,:)     ! Field: Translational accelerations (3,:)
+      REAL(ReKi), ALLOCATABLE :: AddedMass(:,:,:)        ! Field: Added mass matrix (6,6,:)
+      REAL(ReKi), ALLOCATABLE :: Scalars(:,:)            ! Scalars (1st Dim is over Scalars; 2nd is nodes)
+      INTEGER                 :: nScalars                ! store value of nScalars when created
+!bjj: to be added later:       REAL(ReKi), ALLOCATABLE :: ElementScalars(:,:)       ! Scalars associated with elements
 !bjj: to be added later:       INTEGER             :: nElementScalars               ! store value of nElementScalars when created
 
       TYPE(MeshType),POINTER :: SiblingMesh      => NULL() ! Pointer to mesh's (only) sibling
