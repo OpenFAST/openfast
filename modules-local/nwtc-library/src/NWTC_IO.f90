@@ -32,9 +32,9 @@ MODULE NWTC_IO
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00c-adp', '24-Jun-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00d-bjj', '10-Jul-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
-   INTEGER(IntKi), PARAMETER      :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
+   INTEGER(IntKi), PARAMETER     :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
 !bjj: I think TimeStep should be DbKi KIND, to match the framework, and I'd make NumChans and NumRecs IntKi
 !mlb: I changed the TimeStep, but will have to see if there were compiler reasons for choosing 4-byte integers.
@@ -1167,7 +1167,7 @@ CONTAINS
       ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
-      ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+      ErrMsg = ''
    END IF
 
 
@@ -1204,7 +1204,7 @@ CONTAINS
       ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
       ELSE
       ErrStat = ErrID_None
-      ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+      ErrMsg = ''
       END IF
 
 
@@ -1241,7 +1241,7 @@ CONTAINS
       ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
-      ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+      ErrMsg = ''
    END IF
 
 

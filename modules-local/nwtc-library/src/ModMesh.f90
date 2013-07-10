@@ -17,7 +17,7 @@
 MODULE ModMesh
 
 !======================================================================================================================
-! WARNING:  Because someone used preprocessor directives to comment out code instead of temporary comment characters,
+! WARNING:  Because this code uses some preprocessor directives to comment out code
 !           and because some lines go beyond column 132, you must specify the following compiler options:
 !
 !              Intel:   /fpp
@@ -45,7 +45,7 @@ CONTAINS
 
    SUBROUTINE MeshPrintInfo ( U, M, N)
      INTEGER, INTENT(IN   )                ::      U  ! fortran output unit
-     TYPE(MeshType),TARGET,INTENT(INOUT)   ::      M  ! mesh to be reported on
+     TYPE(MeshType),INTENT(INOUT)          ::      M  ! mesh to be reported on
      INTEGER, OPTIONAL,INTENT(IN   )       ::      N  ! Number to print, default 5
     ! Local
      INTEGER isz,i,j,nn,CtrlCode,Ielement,Xelement
@@ -99,21 +99,21 @@ CONTAINS
          write(U,*)' ',i,M%Position(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%Force))THEN
+     IF(ALLOCATED(M%Force))THEN
        isz=size(M%Force,2)
        write(U,*)'Force: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Force(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%Moment))THEN
+     IF(ALLOCATED(M%Moment))THEN
        isz=size(M%Moment,2)
        write(U,*)'Moment: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Moment(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%Orientation))THEN
+     IF(ALLOCATED(M%Orientation))THEN
        isz=size(M%Orientation,3)
        write(U,*)'Orientation: ',isz
        DO i=1,min(nn,isz) !bjj: printing this like a matrix:
@@ -122,49 +122,49 @@ CONTAINS
          write(U,'(4X,    3(1X,F10.4))')    M%Orientation(3,:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%TranslationDisp))THEN
+     IF(ALLOCATED(M%TranslationDisp))THEN
        isz=size(M%TranslationDisp,2)
        write(U,*)'TranslationDisp: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%TranslationDisp(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%RotationVel))THEN
+     IF(ALLOCATED(M%RotationVel))THEN
        isz=size(M%RotationVel,2)
        write(U,*)'RotationVel: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%RotationVel(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%TranslationVel))THEN
+     IF(ALLOCATED(M%TranslationVel))THEN
        isz=size(M%TranslationVel,2)
        write(U,*)'TranslationVel: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%TranslationVel(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%RotationAcc))THEN
+     IF(ALLOCATED(M%RotationAcc))THEN
        isz=size(M%RotationAcc,2)
        write(U,*)'RotationAcc: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%RotationAcc(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%TranslationAcc))THEN
+     IF(ALLOCATED(M%TranslationAcc))THEN
        isz=size(M%TranslationAcc,2)
        write(U,*)'TranslationAcc: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%TranslationAcc(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%AddedMass))THEN
+     IF(ALLOCATED(M%AddedMass))THEN
        isz=size(M%AddedMass,3)
        write(U,*)'AddedMass: ',isz
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%AddedMass(:,:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%Scalars))THEN
+     IF(ALLOCATED(M%Scalars))THEN
        isz=size(M%Scalars,1)
        write(U,*)'Scalars: ',isz
        DO i=1,min(nn,isz)
@@ -216,7 +216,7 @@ CONTAINS
                           ,IsNewSibling                                                    &
                          )
 
-      TYPE(MeshType),TARGET,INTENT(INOUT)   :: BlankMesh ! Mesh to be created
+      TYPE(MeshType), INTENT(INOUT)   :: BlankMesh ! Mesh to be created
       INTEGER,INTENT(IN)         :: IOS                  ! input (1), output(2), or state(3)
       INTEGER,INTENT(IN)         :: Nnodes               ! Number of nodes in mesh
       INTEGER,INTENT(INOUT)      :: ErrStat              ! error status/level
@@ -247,7 +247,7 @@ CONTAINS
       IF ( mesh_debug ) print*,'Called MeshCreate'
 
 
-#if 0
+!#if 0
 ! This is problematic called from MeshCreate for a new mesh because
 ! we can't assume that uninitialized pointers are uninitialized
 ! Just put it on the user not to recreate meshes that already exist (memory leak danger if they do)
@@ -264,7 +264,7 @@ CONTAINS
                                                         ! See comment on optional IgnoreSibling argument
                                                         ! in definition of MeshDestroy
       IF (ErrStat >= AbortErrLev) RETURN
-#endif
+!#endif
 
       BlankMesh%initialized = .TRUE.
       BlankMesh%IOS         = IOS
@@ -272,19 +272,15 @@ CONTAINS
 !bjj: check that IOS is valid and Nnodes > 0?
 
       BlankMesh%Nnodes = Nnodes
-      NULLIFY( BlankMesh%ElemTable )
-      NULLIFY( BlankMesh%SiblingMesh )
-      NULLIFY( BlankMesh%ElemList )
       BlankMesh%nelemlist = 0 ; BlankMesh%maxelemlist = 0 ;
 
-      NULLIFY(BlankMesh%RemapFlag)
 
       ! These fields are shared between siblings, so we don't want to recreate space for them here.
       IsNewSib = .FALSE.
       IF ( PRESENT(IsNewSibling) ) IsNewSib = IsNewSibling
 
-      IF (.NOT. IsNewSib) THEN
-         CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'CreateMesh: Position' )
+      IF ( .NOT. IsNewSib ) THEN
+         CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'MeshCreate: Position' )
 
          ALLOCATE(BlankMesh%ElemTable(NELEMKINDS))
          DO i = 1, NELEMKINDS
@@ -294,80 +290,99 @@ CONTAINS
 
          ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat ) ! assign some space for this pointer to point to
          BlankMesh%RemapFlag = .true.
-      END IF
 
+      ELSE
+         NULLIFY( BlankMesh%Position )
+         NULLIFY( BlankMesh%ElemTable )
+         NULLIFY( BlankMesh%ElemList )
+         NULLIFY( BlankMesh%RemapFlag )
+      END IF
+      NULLIFY( BlankMesh%SiblingMesh )
 
    ! handle optionals
       BlankMesh%FieldMask = .FALSE.
 
-      NULLIFY(BlankMesh%Force)
+      IF (ALLOCATED(BlankMesh%Force)) DEALLOCATE(BlankMesh%Force)
       IF ( PRESENT(Force) ) THEN
          IF ( Force ) THEN
-            CALL AllocPAry( BlankMesh%Force, 3, Nnodes, 'CreateMesh: Force' )
+            CALL AllocAry( BlankMesh%Force, 3, Nnodes, 'MeshCreate: Force', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_FORCE) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%Moment)
+
+      IF (ALLOCATED(BlankMesh%Moment)) DEALLOCATE(BlankMesh%Moment)
       IF ( PRESENT(Moment) ) THEN
          IF ( Moment ) THEN
-            CALL AllocPAry( BlankMesh%Moment, 3, Nnodes, 'CreateMesh: Moment' )
+            CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%Orientation)
+
+      IF (ALLOCATED(BlankMesh%Orientation)) DEALLOCATE(BlankMesh%Orientation)
       IF ( PRESENT(Orientation) ) THEN
          IF ( Orientation ) THEN
-            CALL AllocPAry( BlankMesh%Orientation, 3, 3, Nnodes, 'CreateMesh: Orientation' )
+            CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%TranslationDisp)
+      IF (ALLOCATED(BlankMesh%TranslationDisp)) DEALLOCATE(BlankMesh%TranslationDisp)
       IF ( PRESENT(TranslationDisp) ) THEN
          IF ( TranslationDisp ) THEN
-            CALL AllocPAry( BlankMesh%TranslationDisp, 3, Nnodes, 'CreateMesh: TranslationDisp' )
+            CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%TranslationVel)
+      IF (ALLOCATED(BlankMesh%TranslationVel)) DEALLOCATE(BlankMesh%TranslationVel)
       IF ( PRESENT(TranslationVel) ) THEN
          IF ( TranslationVel ) THEN
-            CALL AllocPAry( BlankMesh%TranslationVel, 3, Nnodes, 'CreateMesh: TranslationVel' )
+            CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%RotationVel)
+      IF (ALLOCATED(BlankMesh%RotationVel)) DEALLOCATE(BlankMesh%RotationVel)
       IF ( PRESENT(RotationVel) ) THEN
          IF ( RotationVel ) THEN
-            CALL AllocPAry( BlankMesh%RotationVel, 3, Nnodes, 'CreateMesh: RotationVel' )
+            CALL AllocAry( BlankMesh%RotationVel, 3, Nnodes, 'MeshCreate: RotationVel', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_ROTATIONVEL) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%TranslationAcc)
+      IF (ALLOCATED(BlankMesh%TranslationAcc)) DEALLOCATE(BlankMesh%TranslationAcc)
       IF ( PRESENT(TranslationAcc) ) THEN
          IF ( TranslationAcc ) THEN
-            CALL AllocPAry( BlankMesh%TranslationAcc, 3, Nnodes, 'CreateMesh: TranslationAcc' )
+            CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%RotationAcc)
+      IF (ALLOCATED(BlankMesh%RotationAcc)) DEALLOCATE(BlankMesh%RotationAcc)
       IF ( PRESENT(RotationAcc) ) THEN
          IF ( RotationAcc ) THEN
-            CALL AllocPAry( BlankMesh%RotationAcc, 3, Nnodes, 'CreateMesh: RotationAcc' )
+            CALL AllocAry( BlankMesh%RotationAcc, 3, Nnodes, 'MeshCreate: RotationAcc', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_ROTATIONACC) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%AddedMass)
+      IF (ALLOCATED(BlankMesh%AddedMass)) DEALLOCATE(BlankMesh%AddedMass)
       IF ( PRESENT(AddedMass) ) THEN
          IF ( AddedMass ) THEN
-            CALL AllocPAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'CreateMesh: AddedMass' )
+            CALL AllocAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'MeshCreate: AddedMass', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_AddedMass) = .TRUE.
          ENDIF
       ENDIF
-      NULLIFY(BlankMesh%Scalars)
+
+      IF (ALLOCATED(BlankMesh%Scalars)) DEALLOCATE(BlankMesh%Scalars)
       BlankMesh%nScalars = 0
       IF ( PRESENT(nScalars) ) THEN
          IF ( nScalars .GT. 0 ) THEN
-            CALL AllocPAry( BlankMesh%Scalars, nScalars, Nnodes, 'CreateMesh: Scalars' )
+            CALL AllocAry( BlankMesh%Scalars, nScalars, Nnodes, 'MeshCreate: Scalars', ErrStat,ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%FieldMask(MASKID_Scalar) = .TRUE.
             BlankMesh%nScalars = nScalars
          ENDIF
@@ -396,7 +411,7 @@ CONTAINS
 
       ErrStat = ErrID_None
 
-      IF ( .NOT. Mesh%Initialized ) RETURN
+      !IF ( .NOT. Mesh%Initialized ) RETURN
 
          ! Deallocate/Nullify/Deinitialize values that are not shared between siblings:
 
@@ -405,50 +420,17 @@ CONTAINS
       Mesh%ios         = 0
       Mesh%Nnodes      = 0
 
-      IF ( ASSOCIATED(Mesh%Force) ) THEN
-         DEALLOCATE(Mesh%Force)
-         NULLIFY(Mesh%Force)
-      END IF
+      IF ( ALLOCATED(Mesh%Force)          ) DEALLOCATE(Mesh%Force)
+      IF ( ALLOCATED(Mesh%Moment)         ) DEALLOCATE(Mesh%Moment)
+      IF ( ALLOCATED(Mesh%Orientation)    ) DEALLOCATE(Mesh%Orientation)
+      IF ( ALLOCATED(Mesh%TranslationDisp)) DEALLOCATE(Mesh%TranslationDisp)
+      IF ( ALLOCATED(Mesh%RotationVel)    ) DEALLOCATE(Mesh%RotationVel)
+      IF ( ALLOCATED(Mesh%TranslationVel) ) DEALLOCATE(Mesh%TranslationVel)
+      IF ( ALLOCATED(Mesh%RotationAcc)    ) DEALLOCATE(Mesh%RotationAcc)
+      IF ( ALLOCATED(Mesh%TranslationAcc) ) DEALLOCATE(Mesh%TranslationAcc)
+      IF ( ALLOCATED(Mesh%Scalars)        ) DEALLOCATE(Mesh%Scalars)
 
-      IF ( ASSOCIATED(Mesh%Moment) ) THEN
-         DEALLOCATE(Mesh%Moment)
-         NULLIFY(Mesh%Moment)
-      END IF
 
-      IF ( ASSOCIATED(Mesh%Orientation) ) THEN
-         DEALLOCATE(Mesh%Orientation)
-         NULLIFY(Mesh%Orientation)
-      END IF
-
-      IF ( ASSOCIATED(Mesh%TranslationDisp) ) THEN
-         DEALLOCATE(Mesh%TranslationDisp)
-         NULLIFY(Mesh%TranslationDisp)
-      END IF
-
-      IF ( ASSOCIATED(Mesh%RotationVel) ) THEN
-         DEALLOCATE(Mesh%RotationVel)
-         NULLIFY(Mesh%RotationVel)
-      END IF
-
-      IF ( ASSOCIATED(Mesh%TranslationVel) ) THEN
-         DEALLOCATE(Mesh%TranslationVel)
-         NULLIFY(Mesh%TranslationVel)
-      END IF
-
-      IF ( ASSOCIATED(Mesh%RotationAcc) ) THEN
-         DEALLOCATE(Mesh%RotationAcc)
-         NULLIFY(Mesh%RotationAcc)
-      END IF
-
-      IF ( ASSOCIATED(Mesh%TranslationAcc) ) THEN
-         DEALLOCATE(Mesh%TranslationAcc)
-         NULLIFY(Mesh%TranslationAcc)
-      END IF
-
-      IF ( ASSOCIATED(Mesh%Scalars) ) THEN
-         DEALLOCATE(Mesh%Scalars)
-         NULLIFY(Mesh%Scalars)
-      END IF
 
 !#if 0
      !IF (ASSOCIATED(Mesh%element_point))     NULLIFY(Mesh%element_point)
@@ -507,13 +489,18 @@ CONTAINS
                         NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
                      ENDIF
                   ENDDO
+                  DEALLOCATE(Mesh%ElemTable(i)%Elements)
+                  NULLIFY(Mesh%ElemTable(i)%Elements)
                ENDIF
              ENDDO
             DEALLOCATE(Mesh%ElemTable)
             NULLIFY(Mesh%ElemTable)
          ENDIF
 
-         NULLIFY( Mesh%ElemList  )     ! This pointed to the ElemTable data, which we've deallocated already
+         IF (ASSOCIATED(Mesh%ElemList) ) THEN
+            DEALLOCATE(Mesh%ElemList) ! This pointed to the ElemTable data, which we've deallocated already
+            NULLIFY( Mesh%ElemList )
+         END IF
 
          IF ( ASSOCIATED(Mesh%Position) ) THEN
             DEALLOCATE(Mesh%Position)
@@ -526,16 +513,18 @@ CONTAINS
 
          IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
             DO i = 1, NELEMKINDS
+               Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
                IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
                   DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
                      IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
                      IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
                   ENDDO
+                  NULLIFY(Mesh%ElemTable(i)%Elements)
                ENDIF
             ENDDO !each kind of element
          ENDIF
 
-         NULLIFY( Mesh%ElemTable )    !bjj: I would hope this would NULLIFY everything I commented out in the DO loops above
+         NULLIFY( Mesh%ElemTable )    !bjj: I would hope this would NULLIFY everything in the DO loops above
          NULLIFY( Mesh%ElemList  )
          NULLIFY( Mesh%Position  )
 
@@ -1017,56 +1006,51 @@ CONTAINS
                             ,AddedMass=SrcMesh%FieldMask(MASKID_ADDEDMASS)                                      &
                             ,nScalars=SrcMesh%nScalars                                                          )
 
-            IF ( ASSOCIATED(SrcMesh%Force ) ) THEN
-               DestMesh%Force = SrcMesh%Force
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%Moment ) ) THEN
-              DestMesh%Moment = SrcMesh%Moment
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%Orientation ) ) THEN
-              DestMesh%Orientation = SrcMesh%Orientation
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%TranslationDisp ) ) THEN
-              DestMesh%TranslationDisp = SrcMesh%TranslationDisp
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%TranslationVel ) ) THEN
-              DestMesh%TranslationVel = SrcMesh%TranslationVel
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%RotationVel ) ) THEN
-              DestMesh%RotationVel = SrcMesh%RotationVel
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%TranslationAcc ) ) THEN
-              DestMesh%TranslationAcc = SrcMesh%TranslationAcc
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%RotationAcc ) ) THEN
-              DestMesh%RotationAcc = SrcMesh%RotationAcc
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%AddedMass ) ) THEN
-              DestMesh%AddedMass = SrcMesh%AddedMass
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%Scalars ) ) THEN
-              DestMesh%Scalars = SrcMesh%Scalars
-            ENDIF
-
+            IF (ErrStat >= AbortErrLev) RETURN
             DestMesh%Position =  SrcMesh%Position
 
 
-            ALLOCATE(DestMesh%ElemTable(size(SrcMesh%ElemTable)))
+            ALLOCATE(DestMesh%ElemTable(size(SrcMesh%ElemTable)),STAT=ErrStat)
+            IF (ErrStat /=0) THEN
+               ErrStat = ErrID_Fatal
+               ErrMess=' MeshCopy: Error allocating ElemTable'
+               RETURN !Early return
+            END IF
             DO i = 1, NELEMKINDS
                DestMesh%ElemTable(i)%nelem = SrcMesh%ElemTable(i)%nelem
                DestMesh%ElemTable(i)%maxelem = SrcMesh%ElemTable(i)%maxelem
-               ALLOCATE(DestMesh%ElemTable(i)%Elements(DestMesh%ElemTable(i)%maxelem))
+               DestMesh%ElemTable(i)%XElement = SrcMesh%ElemTable(i)%XElement
+
+               ALLOCATE(DestMesh%ElemTable(i)%Elements(DestMesh%ElemTable(i)%maxelem),STAT=ErrStat)
+               IF (ErrStat /=0) THEN
+                  ErrStat = ErrID_Fatal
+                  ErrMess=' MeshCopy: Error allocating ElemTable%Elements.'
+                  RETURN !Early return
+               END IF
+
                DO j = 1,DestMesh%ElemTable(i)%nelem
-                  ALLOCATE(DestMesh%ElemTable(i)%Elements(j)%ElemNodes(size(SrcMesh%ElemTable(i)%Elements(j)%ElemNodes)))
+
+                  ALLOCATE(DestMesh%ElemTable(i)%Elements(j)%ElemNodes(size(SrcMesh%ElemTable(i)%Elements(j)%ElemNodes)),STAT=ErrStat)
+                  IF (ErrStat /=0) THEN
+                     ErrStat = ErrID_Fatal
+                     ErrMess=' MeshCopy: Error allocating ElemTable%ElemNodes.'
+                     RETURN !Early return
+                  END IF
                   DestMesh%ElemTable(i)%Elements(j)%ElemNodes = SrcMesh%ElemTable(i)%Elements(j)%ElemNodes
                ENDDO
             ENDDO
 
                ! Regenerate new list of elements (point to ElemTable)
-
+!bjj: call meshCommit?
             DestMesh%nelemlist   = SrcMesh%nelemlist
             DestMesh%maxelemlist = SrcMesh%maxelemlist
+            DestMesh%nextelem    = SrcMesh%nextelem
             ALLOCATE(DestMesh%ElemList(DestMesh%maxelemlist))
+            IF (ErrStat /=0) THEN
+               ErrStat = ErrID_Fatal
+               ErrMess=' MeshCopy: Error allocating ElemList.'
+               RETURN !Early return
+            END IF
 
             k = 0
             DO i = 1, NELEMKINDS
@@ -1110,6 +1094,7 @@ CONTAINS
                             ,AddedMass=AddedMass_l                                                              &
                             ,nScalars=nScalars_l                                                                &
                             ,IsNewSibling=.TRUE.)
+            IF (ErrStat >= AbortErrLev) RETURN
 
             !bjj: Doesn't this logic mean we can have only one sibling?
             ! I added a check that SrcMesh%SiblingMesh isn't already associated so that we don't lose siblings
@@ -1140,67 +1125,67 @@ CONTAINS
           IF ( CtrlCode .EQ. MESH_NEWCOPY ) THEN
              DestMesh%npoint   = SrcMesh%npoint ; DestMesh%maxpoint = SrcMesh%maxpoint
              IF ( SrcMesh%npoint .GT. 0 .AND. ASSOCIATED( SrcMesh%element_point ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_point, 1, SrcMesh%maxpoint, 'CreateMesh: element_point' )
+      !         CALL AllocPAry( DestMesh%element_point, 1, SrcMesh%maxpoint, 'MeshCreate: element_point' )
                DestMesh%element_point => SrcMesh%element_point
              ENDIF
              DestMesh%nline2   = SrcMesh%nline2 ; DestMesh%maxline2 = SrcMesh%maxline2
              IF ( SrcMesh%nline2 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_line2 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_line2, 2, SrcMesh%maxline2, 'CreateMesh: element_line2' )
+      !         CALL AllocPAry( DestMesh%element_line2, 2, SrcMesh%maxline2, 'MeshCreate: element_line2' )
                DestMesh%element_line2 => SrcMesh%element_line2
              ENDIF
              DestMesh%nline3   = SrcMesh%nline3 ; DestMesh%maxline3 = SrcMesh%maxline3
              IF ( SrcMesh%nline3 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_line3 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_line3, 3, SrcMesh%maxline3, 'CreateMesh: element_line3' )
+      !         CALL AllocPAry( DestMesh%element_line3, 3, SrcMesh%maxline3, 'MeshCreate: element_line3' )
                DestMesh%element_line3 => SrcMesh%element_line3
              ENDIF
              DestMesh%ntri3   = SrcMesh%ntri3 ; DestMesh%maxtri3 = SrcMesh%maxtri3
              IF ( SrcMesh%ntri3 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tri3 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tri3, 3, SrcMesh%maxtri3, 'CreateMesh: element_tri3' )
+      !         CALL AllocPAry( DestMesh%element_tri3, 3, SrcMesh%maxtri3, 'MeshCreate: element_tri3' )
                DestMesh%element_tri3 => SrcMesh%element_tri3
              ENDIF
              DestMesh%ntri6   = SrcMesh%ntri6 ; DestMesh%maxtri6 = SrcMesh%maxtri6
              IF ( SrcMesh%ntri6 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tri6 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tri6, 6, SrcMesh%maxtri6, 'CreateMesh: element_tri6' )
+      !         CALL AllocPAry( DestMesh%element_tri6, 6, SrcMesh%maxtri6, 'MeshCreate: element_tri6' )
                DestMesh%element_tri6 => SrcMesh%element_tri6
              ENDIF
              DestMesh%nquad4   = SrcMesh%nquad4 ; DestMesh%maxquad4 = SrcMesh%maxquad4
              IF ( SrcMesh%nquad4 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_quad4 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_quad4, 4, SrcMesh%maxquad4, 'CreateMesh: element_quad4' )
+      !         CALL AllocPAry( DestMesh%element_quad4, 4, SrcMesh%maxquad4, 'MeshCreate: element_quad4' )
                DestMesh%element_quad4 => SrcMesh%element_quad4
              ENDIF
              DestMesh%nquad8   = SrcMesh%nquad8 ; DestMesh%maxquad8 = SrcMesh%maxquad8
              IF ( SrcMesh%nquad8 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_quad8 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_quad8, 8, SrcMesh%maxquad8, 'CreateMesh: element_quad8' )
+      !         CALL AllocPAry( DestMesh%element_quad8, 8, SrcMesh%maxquad8, 'MeshCreate: element_quad8' )
                DestMesh%element_quad8 => SrcMesh%element_quad8
              ENDIF
              DestMesh%ntet4   = SrcMesh%ntet4 ; DestMesh%maxtet4 = SrcMesh%maxtet4
              IF ( SrcMesh%ntet4 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tet4 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tet4, 4, SrcMesh%maxtet4, 'CreateMesh: element_tet4' )
+      !         CALL AllocPAry( DestMesh%element_tet4, 4, SrcMesh%maxtet4, 'MeshCreate: element_tet4' )
                DestMesh%element_tet4 => SrcMesh%element_tet4
              ENDIF
              DestMesh%ntet10   = SrcMesh%ntet10 ; DestMesh%maxtet10 = SrcMesh%maxtet10
              IF ( SrcMesh%ntet10 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tet10 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tet10, 10, SrcMesh%maxtet10, 'CreateMesh: element_tet10' )
+      !         CALL AllocPAry( DestMesh%element_tet10, 10, SrcMesh%maxtet10, 'MeshCreate: element_tet10' )
                DestMesh%element_tet10 = SrcMesh%element_tet10
              ENDIF
              DestMesh%nhex8   = SrcMesh%nhex8 ; DestMesh%maxhex8 = SrcMesh%maxhex8
              IF ( SrcMesh%nhex8 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_hex8 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_hex8, 8, SrcMesh%maxhex8, 'CreateMesh: element_hex8' )
+      !         CALL AllocPAry( DestMesh%element_hex8, 8, SrcMesh%maxhex8, 'MeshCreate: element_hex8' )
                DestMesh%element_hex8 => SrcMesh%element_hex8
              ENDIF
              DestMesh%nhex20   = SrcMesh%nhex20 ; DestMesh%maxhex20 = SrcMesh%maxhex20
              IF ( SrcMesh%nhex20 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_hex20 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_hex20, 20, SrcMesh%maxhex20, 'CreateMesh: element_hex20' )
+      !         CALL AllocPAry( DestMesh%element_hex20, 20, SrcMesh%maxhex20, 'MeshCreate: element_hex20' )
                DestMesh%element_hex20 => SrcMesh%element_hex20
              ENDIF
              DestMesh%nwedge6   = SrcMesh%nwedge6 ; DestMesh%maxwedge6 = SrcMesh%maxwedge6
              IF ( SrcMesh%nwedge6 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_wedge6 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_wedge6, 6, SrcMesh%maxwedge6, 'CreateMesh: element_wedge6' )
+      !         CALL AllocPAry( DestMesh%element_wedge6, 6, SrcMesh%maxwedge6, 'MeshCreate: element_wedge6' )
                DestMesh%element_wedge6 => SrcMesh%element_wedge6
              ENDIF
              DestMesh%nwedge15   = SrcMesh%nwedge15 ; DestMesh%maxwedge15 = SrcMesh%maxwedge15
              IF ( SrcMesh%nwedge15 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_wedge15 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_wedge15, 15, SrcMesh%maxwedge15, 'CreateMesh: element_wedge15' )
+      !         CALL AllocPAry( DestMesh%element_wedge15, 15, SrcMesh%maxwedge15, 'MeshCreate: element_wedge15' )
                DestMesh%element_wedge15 => SrcMesh%element_wedge15
              ENDIF
           ENDIF
@@ -1210,37 +1195,6 @@ CONTAINS
             ErrStat = ErrID_Fatal
             ErrMess = "MeshCopy: MESH_UPDATECOPY of meshes with different numbers of nodes."
          ELSE
-            DestMesh%Position    = SrcMesh%Position
-            IF ( ASSOCIATED(SrcMesh%Force ) ) THEN
-               DestMesh%Force = SrcMesh%Force
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%Moment ) ) THEN
-               DestMesh%Moment = SrcMesh%Moment
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%Orientation ) ) THEN
-               DestMesh%Orientation = SrcMesh%Orientation
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%TranslationDisp ) ) THEN
-               DestMesh%TranslationDisp = SrcMesh%TranslationDisp
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%TranslationVel ) ) THEN
-               DestMesh%TranslationVel = SrcMesh%TranslationVel
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%RotationVel ) ) THEN
-               DestMesh%RotationVel = SrcMesh%RotationVel
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%TranslationAcc ) ) THEN
-               DestMesh%TranslationAcc = SrcMesh%TranslationAcc
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%RotationAcc ) ) THEN
-               DestMesh%RotationAcc = SrcMesh%RotationAcc
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%AddedMass ) ) THEN
-               DestMesh%AddedMass = SrcMesh%AddedMass
-            ENDIF
-            IF ( ASSOCIATED(SrcMesh%Scalars ) ) THEN
-               DestMesh%Scalars = SrcMesh%Scalars
-            ENDIF
 
             DestMesh%RemapFlag = SrcMesh%RemapFlag
             DestMesh%nextelem  = SrcMesh%nextelem
@@ -1253,7 +1207,21 @@ CONTAINS
          RETURN
       ENDIF
 
+         ! These aren't shared between siblings, so they get copied, no matter what the CtrlCode:
+
       DestMesh%Initialized = SrcMesh%Initialized
+      IF ( ALLOCATED(SrcMesh%Force          ) .AND. ALLOCATED(DestMesh%Force          ) ) DestMesh%Force = SrcMesh%Force
+      IF ( ALLOCATED(SrcMesh%Moment         ) .AND. ALLOCATED(DestMesh%Moment         ) ) DestMesh%Moment = SrcMesh%Moment
+      IF ( ALLOCATED(SrcMesh%Orientation    ) .AND. ALLOCATED(DestMesh%Orientation    ) ) DestMesh%Orientation = SrcMesh%Orientation
+      IF ( ALLOCATED(SrcMesh%TranslationDisp) .AND. ALLOCATED(DestMesh%TranslationDisp) ) DestMesh%TranslationDisp = SrcMesh%TranslationDisp
+      IF ( ALLOCATED(SrcMesh%TranslationVel ) .AND. ALLOCATED(DestMesh%TranslationVel ) ) DestMesh%TranslationVel = SrcMesh%TranslationVel
+      IF ( ALLOCATED(SrcMesh%RotationVel    ) .AND. ALLOCATED(DestMesh%RotationVel    ) ) DestMesh%RotationVel = SrcMesh%RotationVel
+      IF ( ALLOCATED(SrcMesh%TranslationAcc ) .AND. ALLOCATED(DestMesh%TranslationAcc ) ) DestMesh%TranslationAcc = SrcMesh%TranslationAcc
+      IF ( ALLOCATED(SrcMesh%RotationAcc    ) .AND. ALLOCATED(DestMesh%RotationAcc    ) ) DestMesh%RotationAcc = SrcMesh%RotationAcc
+      IF ( ALLOCATED(SrcMesh%AddedMass      ) .AND. ALLOCATED(DestMesh%AddedMass      ) ) DestMesh%AddedMass = SrcMesh%AddedMass
+      IF ( ALLOCATED(SrcMesh%Scalars        ) .AND. ALLOCATED(DestMesh%Scalars        ) ) DestMesh%Scalars = SrcMesh%Scalars
+
+
       !DestMesh%spatial = SrcMesh%spatial !bjj: unused?
 
    END SUBROUTINE MeshCopy
@@ -1301,8 +1269,8 @@ CONTAINS
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess ! Error message
     ! Local
-     INTEGER n0d, n1d, n2d, n3d, nn, i, j
-     TYPE(ElemListType), POINTER :: tmp(:)
+     INTEGER n0d, n1d, n2d, n3d, nn, i, j, NElem
+     !TYPE(ElemListType), POINTER :: tmp(:)
 
      ! Check for spatial constraints -- can't mix 1D with 2D with 3D
      n0d = Mesh%ElemTable(ELEMENT_POINT)%nelem
@@ -1322,24 +1290,33 @@ CONTAINS
 
      ! Construct list of elements
 
+
+      ! first determine how many elements there are
+     Mesh%Nelemlist = 0
      DO i = 1, NELEMKINDS
        DO j = 1, Mesh%ElemTable(i)%nelem
          Mesh%Nelemlist = Mesh%Nelemlist + 1
-         IF ( Mesh%Nelemlist .GE. Mesh%Maxelemlist ) THEN
-           ALLOCATE(tmp(Mesh%maxelemlist+BUMPUP))
-           ! if Mesh%Nelemlist .EQ. 1 then this is the first time through
-           IF ( Mesh%Nelemlist .GT. 1 ) tmp(1:Mesh%nelemlist) = Mesh%elemlist(1:Mesh%Nelemlist)
-           IF ( ASSOCIATED(Mesh%elemlist) ) THEN
-               DEALLOCATE( Mesh%elemlist )
-               NULLIFY( Mesh%elemlist )
-           ENDIF
-           Mesh%elemlist => tmp
-           Mesh%Maxelemlist = Mesh%Maxelemlist + BUMPUP
-         ENDIF
-         Mesh%elemlist(Mesh%Nelemlist)%Element => Mesh%ElemTable(i)%Elements(j)
-         Mesh%elemlist(Mesh%Nelemlist)%Element%Xelement = i
-       ENDDO
-     ENDDO
+       END DO
+     END DO
+
+     Mesh%maxelemlist = Mesh%Nelemlist
+     ALLOCATE( Mesh%elemlist(Mesh%maxelemlist), STAT=ErrStat ) !Allocates the pointer array
+
+     IF (ErrStat /= 0) THEN
+        ErrStat = ErrID_Fatal
+        ErrMess = " MeshCommit: Error allocating element list."
+        RETURN
+     END IF
+
+     NElem = 0
+     DO i = 1, NELEMKINDS
+       DO j = 1, Mesh%ElemTable(i)%nelem
+          NElem = NElem + 1
+          Mesh%elemlist(NElem)%Element => Mesh%ElemTable(i)%Elements(j)
+          Mesh%elemlist(NElem)%Element%Xelement = i
+       END DO
+     END DO
+
 
 !#if 0
 !     DO i = 1, Mesh%npoint
@@ -1675,6 +1652,476 @@ CONTAINS
    END SUBROUTINE MeshNextElement
 
 
+   
+   
+   !...............................................................................................................................
+    SUBROUTINE MeshExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is 1
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !...............................................................................................................................
+   
+    TYPE(MeshType),      INTENT(IN)     :: u1            ! Inputs at t1 > t2
+    TYPE(MeshType),      INTENT(IN)     :: u2            ! Inputs at t2
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out         ! Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out       ! time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat       ! Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+    REAL(DbKi)                          :: t(SIZE(tin))  ! Times associated with the inputs
+    REAL(DbKi)                          :: t_out         ! Time to which to be extrap/interpd
+    INTEGER(IntKi), parameter           :: order = 1     ! order of polynomial fit (max 2)
+
+    REAL(DbKi)                          :: scaleFactor   ! temporary for extrapolation/interpolation
+
+       ! Initialize ErrStat
+       ErrStat = ErrID_None
+       ErrMsg  = ""
+
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+          ! some error checking:
+       
+       if ( size(t) .ne. order+1) then
+          ErrStat = ErrID_Fatal
+          ErrMsg = ' Error in MeshExtrapInterp1: size(t) must equal 2.'
+          RETURN
+       end if
+
+      IF ( EqualRealNos( t(1), t(2) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+
+         ! now let's interpolate/extrapolate the fields:
+      scaleFactor = t_out / t(2)
+
+      IF ( ALLOCATED(u1%Force) ) THEN
+         u_out%Force = u1%Force + (u2%Force - u1%Force) * scaleFactor
+      END IF
+      
+      IF ( ALLOCATED(u1%Moment) ) THEN
+         u_out%Moment = u1%Moment + (u2%Moment - u1%Moment) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%TranslationDisp) ) THEN
+         u_out%TranslationDisp = u1%TranslationDisp + (u2%TranslationDisp - u1%TranslationDisp) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%RotationVel) ) THEN
+         u_out%RotationVel = u1%RotationVel + (u2%RotationVel - u1%RotationVel) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%TranslationVel) ) THEN
+         u_out%TranslationVel = u1%TranslationVel + (u2%TranslationVel - u1%TranslationVel) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%RotationAcc) ) THEN
+         u_out%RotationAcc = u1%RotationAcc + (u2%RotationAcc - u1%RotationAcc) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%TranslationAcc) ) THEN
+         u_out%TranslationAcc = u1%TranslationAcc + (u2%TranslationAcc - u1%TranslationAcc) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%Scalars) ) THEN
+         u_out%Scalars = u1%Scalars + (u2%Scalars - u1%Scalars) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%AddedMass) ) THEN
+         u_out%AddedMass = u1%AddedMass + (u2%AddedMass - u1%AddedMass) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u1%Orientation) ) THEN
+         ErrStat=ErrID_Info
+         ErrMsg='Orientations not implemented in MeshExtrapInterp1; using nearest neighbor approach instead.'
+
+         IF (scaleFactor < 0.5) THEN
+            u_out%Orientation = u1%Orientation
+         ELSE
+            u_out%Orientation = u2%Orientation
+         END IF
+      END IF   
+   
+   END SUBROUTINE MeshExtrapInterp1
+   
+   !...............................................................................................................................
+    SUBROUTINE MeshExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !...............................................................................................................................
+   
+    TYPE(MeshType),      INTENT(IN)     :: u1            ! Inputs at t1 > t2 > t3
+    TYPE(MeshType),      INTENT(IN)     :: u2            ! Inputs at t2 > t3
+    TYPE(MeshType),      INTENT(IN)     :: u3            ! Inputs at t3
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out         ! Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out       ! time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat       ! Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+    REAL(DbKi)                          :: t(SIZE(tin))  ! Times associated with the inputs
+    REAL(DbKi)                          :: t_out         ! Time to which to be extrap/interpd
+    INTEGER(IntKi), parameter           :: order = 2     ! order of polynomial fit (max 2)
+
+    REAL(DbKi)                          :: scaleFactor   ! temporary for extrapolation/interpolation
+
+         ! Initialize ErrStat
+       ErrStat = ErrID_None
+       ErrMsg  = ""
+
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+
+         ! Some error checking:
+         
+      if ( size(t) .ne. order+1) then
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' Error in MeshExtrapInterp2: size(t) must equal 2.'
+         RETURN
+      end if
+         
+      IF ( EqualRealNos( t(1), t(2) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+      IF ( EqualRealNos( t(2), t(3) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+      IF ( EqualRealNos( t(1), t(3) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+
+         ! Now let's interpolate/extrapolate:
+         
+      scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
+
+      IF ( ALLOCATED(u1%Force) ) THEN
+
+         u_out%Force =   u1%Force &
+                       + ( t(3)**2 * (u1%Force - u2%Force) + t(2)**2*(-u1%Force + u3%Force) ) * scaleFactor &
+                       + ( (t(2)-t(3))*u1%Force + t(3)*u2%Force - t(2)*u3%Force ) *scaleFactor * t_out 
+
+      END IF
+      IF ( ALLOCATED(u1%Moment) ) THEN
+         u_out%Moment =   u1%Moment &
+                       + ( t(3)**2 * (u1%Moment - u2%Moment) + t(2)**2*(-u1%Moment + u3%Moment) ) * scaleFactor &
+                       + ( (t(2)-t(3))*u1%Moment + t(3)*u2%Moment - t(2)*u3%Moment ) *scaleFactor * t_out
+      END IF
+
+      IF ( ALLOCATED(u1%TranslationDisp) ) THEN
+         u_out%TranslationDisp =   u1%TranslationDisp &
+                               + ( t(3)**2 * ( u1%TranslationDisp - u2%TranslationDisp) &
+                                 + t(2)**2 * (-u1%TranslationDisp + u3%TranslationDisp) ) * scaleFactor &
+                               + ( (t(2)-t(3))*u1%TranslationDisp + t(3)*u2%TranslationDisp &
+                                                                  - t(2)*u3%TranslationDisp )*scaleFactor*t_out
+      END IF
+
+      IF ( ALLOCATED(u1%RotationVel) ) THEN
+         u_out%RotationVel =   u1%RotationVel &
+                           + ( t(3)**2 * ( u1%RotationVel - u2%RotationVel) &
+                             + t(2)**2 * (-u1%RotationVel + u3%RotationVel) ) * scaleFactor &
+                           + ( (t(2)-t(3))*u1%RotationVel + t(3)*u2%RotationVel - t(2)*u3%RotationVel )*scaleFactor*t_out
+      END IF
+
+      IF ( ALLOCATED(u1%TranslationVel) ) THEN
+         u_out%TranslationVel =   u1%TranslationVel &
+                              +( t(3)**2 * ( u1%TranslationVel - u2%TranslationVel) &
+                               + t(2)**2 * (-u1%TranslationVel + u3%TranslationVel) ) * scaleFactor &
+                              +( (t(2)-t(3))*u1%TranslationVel + t(3)*u2%TranslationVel - t(2)*u3%TranslationVel)*scaleFactor*t_out
+      END IF
+
+      IF ( ALLOCATED(u1%RotationAcc) ) THEN
+         u_out%RotationVel =   u1%RotationVel &
+                             + ( t(3)**2 * ( u1%RotationVel - u2%RotationVel) &
+                               + t(2)**2 * (-u1%RotationVel + u3%RotationVel) ) * scaleFactor &
+                            + ( (t(2)-t(3))*u1%RotationVel  + t(3)*u2%RotationVel - t(2)*u3%RotationVel )*scaleFactor*t_out
+      END IF
+
+      IF ( ALLOCATED(u1%TranslationAcc) ) THEN
+         u_out%TranslationAcc =   u1%TranslationAcc &
+                              +( t(3)**2 * ( u1%TranslationAcc - u2%TranslationAcc) &
+                               + t(2)**2 * (-u1%TranslationAcc + u3%TranslationAcc) ) * scaleFactor &
+                              +( (t(2)-t(3))*u1%TranslationAcc + t(3)*u2%TranslationAcc - t(2)*u3%TranslationAcc)*scaleFactor*t_out
+      END IF
+
+      IF ( ALLOCATED(u1%Scalars) ) THEN
+         u_out%Scalars =   u1%Scalars &
+                       + ( t(3)**2 * (u1%Scalars - u2%Scalars) + t(2)**2*(-u1%Scalars + u3%Scalars) )*scaleFactor &
+                       + ( (t(2)-t(3))*u1%Scalars + t(3)*u2%Scalars - t(2)*u3%Scalars )*scaleFactor * t_out
+      END IF
+
+      IF ( ALLOCATED(u1%AddedMass) ) THEN
+         u_out%AddedMass =   u1%AddedMass &
+                          + ( t(3)**2 * ( u1%AddedMass - u2%AddedMass) &
+                            + t(2)**2 * (-u1%AddedMass + u3%AddedMass) ) * scaleFactor &
+                          + ( (t(2)-t(3))*u1%AddedMass + t(3)*u2%AddedMass - t(2)*u3%AddedMass )*scaleFactor*t_out
+      END IF
+
+      IF ( ALLOCATED(u1%Orientation) ) THEN
+         ErrStat=ErrID_Info
+         ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
+
+         IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
+            u_out%Orientation = u1%Orientation
+         ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
+            u_out%Orientation = u2%Orientation
+         ELSE
+            u_out%Orientation = u3%Orientation
+         END IF
+      END IF           
+   
+   END SUBROUTINE MeshExtrapInterp2
+   
+   !...............................................................................................................................
+    SUBROUTINE MeshExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !...............................................................................................................................
+
+    TYPE(MeshType),      INTENT(INOUT)  :: u(:)          ! Inputs at t1 > t2 > t3
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out         ! Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out       ! time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat       ! Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+    REAL(DbKi)                          :: t(SIZE(tin))  ! Times associated with the inputs
+    REAL(DbKi)                          :: t_out         ! Time to which to be extrap/interpd
+    INTEGER(IntKi)                      :: order         ! order of polynomial fit (max 2)
+
+    REAL(DbKi)                          :: scaleFactor   ! temporary for extrapolation/interpolation
+
+    ! Initialize ErrStat
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+       ! we'll subtract a constant from the times to resolve some
+       ! numerical issues when t gets large (and to simplify the equations)
+    t = tin - tin(1)
+    t_out = tin_out - tin(1)
+
+    if ( size(t) .ne. size(u)) then
+       ErrStat = ErrID_Fatal
+       ErrMsg = ' Error in MeshExtrapInterp: size(t) must equal size(u).'
+       RETURN
+    end if
+
+   order = SIZE(u) - 1
+
+   SELECT CASE ( order )
+   CASE ( 0 )
+      CALL MeshCopy(u(1), u_out, MESH_UPDATECOPY, ErrStat, ErrMsg )
+   CASE ( 1 )
+
+      IF ( EqualRealNos( t(1), t(2) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+
+      scaleFactor = t_out / t(2)
+
+      IF ( ALLOCATED(u(1)%Force) ) THEN
+         u_out%Force = u(1)%Force + (u(2)%Force - u(1)%Force) * scaleFactor
+      END IF
+      IF ( ALLOCATED(u(1)%Moment) ) THEN
+         u_out%Moment = u(1)%Moment + (u(2)%Moment - u(1)%Moment) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%TranslationDisp) ) THEN
+         u_out%TranslationDisp = u(1)%TranslationDisp + (u(2)%TranslationDisp - u(1)%TranslationDisp) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%RotationVel) ) THEN
+         u_out%RotationVel = u(1)%RotationVel + (u(2)%RotationVel - u(1)%RotationVel) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%TranslationVel) ) THEN
+         u_out%TranslationVel = u(1)%TranslationVel + (u(2)%TranslationVel - u(1)%TranslationVel) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%RotationAcc) ) THEN
+         u_out%RotationAcc = u(1)%RotationAcc + (u(2)%RotationAcc - u(1)%RotationAcc) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%TranslationAcc) ) THEN
+         u_out%TranslationAcc = u(1)%TranslationAcc + (u(2)%TranslationAcc - u(1)%TranslationAcc) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%Scalars) ) THEN
+         u_out%Scalars = u(1)%Scalars + (u(2)%Scalars - u(1)%Scalars) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%AddedMass) ) THEN
+         u_out%AddedMass = u(1)%AddedMass + (u(2)%AddedMass - u(1)%AddedMass) * scaleFactor
+      END IF
+
+      IF ( ALLOCATED(u(1)%Orientation) ) THEN
+         ErrStat=ErrID_Info
+         ErrMsg='Orientations not implemented in MeshExtrapInterp; using nearest neighbor approach instead.'
+
+         IF (scaleFactor < 0.5) THEN
+            u_out%Orientation = u(1)%Orientation
+         ELSE
+            u_out%Orientation = u(2)%Orientation
+         END IF
+      END IF
+   CASE ( 2 )
+
+      IF ( EqualRealNos( t(1), t(2) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+      IF ( EqualRealNos( t(2), t(3) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp: t(2) must not equal t(3) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+      IF ( EqualRealNos( t(1), t(3) ) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in MeshExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
+         RETURN
+      END IF
+
+      scaleFactor = 1.0_DbKi / ( t(2) * t(3) * (t(2) - t(3)) )
+
+      IF ( ALLOCATED(u(1)%Force) ) THEN
+
+         u_out%Force =   u(1)%Force &
+                       + ( t(3)**2 * (u(1)%Force - u(2)%Force) + t(2)**2*(-u(1)%Force + u(3)%Force) ) * scaleFactor * t_out &
+                       + ( (t(2)-t(3))*u(1)%Force + t(3)*u(2)%Force - t(2)*u(3)%Force ) *scaleFactor * t_out**2
+
+      END IF
+      IF ( ALLOCATED(u(1)%Moment) ) THEN
+         u_out%Moment =   u(1)%Moment &
+                       + ( t(3)**2 * (u(1)%Moment - u(2)%Moment) + t(2)**2*(-u(1)%Moment + u(3)%Moment) ) * scaleFactor * t_out &
+                       + ( (t(2)-t(3))*u(1)%Moment + t(3)*u(2)%Moment - t(2)*u(3)%Moment ) *scaleFactor * t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%TranslationDisp) ) THEN
+         u_out%TranslationDisp =   u(1)%TranslationDisp &
+                               + ( t(3)**2 * ( u(1)%TranslationDisp - u(2)%TranslationDisp) &
+                                 + t(2)**2 * (-u(1)%TranslationDisp + u(3)%TranslationDisp) ) * scaleFactor * t_out &
+                               + ( (t(2)-t(3))*u(1)%TranslationDisp + t(3)*u(2)%TranslationDisp &
+                                                                    - t(2)*u(3)%TranslationDisp )*scaleFactor*t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%RotationVel) ) THEN
+         u_out%RotationVel =   u(1)%RotationVel &
+                           + ( t(3)**2 * ( u(1)%RotationVel - u(2)%RotationVel) &
+                             + t(2)**2 * (-u(1)%RotationVel + u(3)%RotationVel) ) * scaleFactor * t_out &
+                           + ( (t(2)-t(3))*u(1)%RotationVel + t(3)*u(2)%RotationVel &
+                                                            - t(2)*u(3)%RotationVel )*scaleFactor*t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%TranslationVel) ) THEN
+         u_out%TranslationVel =   u(1)%TranslationVel &
+                              + ( t(3)**2 * ( u(1)%TranslationVel - u(2)%TranslationVel) &
+                                + t(2)**2 * (-u(1)%TranslationVel + u(3)%TranslationVel) ) * scaleFactor * t_out &
+                              + ( (t(2)-t(3))*u(1)%TranslationVel + t(3)*u(2)%TranslationVel &
+                                                                  - t(2)*u(3)%TranslationVel )*scaleFactor*t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%RotationAcc) ) THEN
+         u_out%RotationVel =   u(1)%RotationVel &
+                             + ( t(3)**2 * ( u(1)%RotationVel  - u(2)%RotationVel) &
+                                + t(2)**2 * (-u(1)%RotationVel + u(3)%RotationVel) ) * scaleFactor * t_out &
+                             + ( (t(2)-t(3))*u(1)%RotationVel  + t(3)*u(2)%RotationVel &
+                                                               - t(2)*u(3)%RotationVel )*scaleFactor*t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%TranslationAcc) ) THEN
+         u_out%TranslationAcc =   u(1)%TranslationAcc &
+                              + ( t(3)**2 * ( u(1)%TranslationAcc - u(2)%TranslationAcc) &
+                                + t(2)**2 * (-u(1)%TranslationAcc + u(3)%TranslationAcc) ) * scaleFactor * t_out &
+                              + ( (t(2)-t(3))*u(1)%TranslationAcc + t(3)*u(2)%TranslationAcc &
+                                                                  - t(2)*u(3)%TranslationAcc )*scaleFactor*t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%Scalars) ) THEN
+         u_out%Scalars =   u(1)%Scalars &
+                       + ( t(3)**2 * (u(1)%Scalars - u(2)%Scalars) + t(2)**2*(-u(1)%Scalars + u(3)%Scalars) )*scaleFactor * t_out &
+                       + ( (t(2)-t(3))*u(1)%Scalars + t(3)*u(2)%Scalars - t(2)*u(3)%Scalars )*scaleFactor * t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%AddedMass) ) THEN
+         u_out%AddedMass =   u(1)%AddedMass &
+                          + ( t(3)**2 * ( u(1)%AddedMass - u(2)%AddedMass) &
+                            + t(2)**2 * (-u(1)%AddedMass + u(3)%AddedMass) ) * scaleFactor * t_out &
+                          + ( (t(2)-t(3))*u(1)%AddedMass + t(3)*u(2)%AddedMass &
+                                                         - t(2)*u(3)%AddedMass )*scaleFactor*t_out**2
+      END IF
+
+      IF ( ALLOCATED(u(1)%Orientation) ) THEN
+         ErrStat=ErrID_Info
+         ErrMsg=' Orientations are not implemented in MeshExtrapInterp; using nearest neighbor approach instead.'
+
+         IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
+            u_out%Orientation = u(1)%Orientation
+         ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
+            u_out%Orientation = u(2)%Orientation
+         ELSE
+            u_out%Orientation = u(3)%Orientation
+         END IF
+
+      END IF
+   CASE DEFAULT
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in MeshExtrapInterp: size(u) must be less than 4 (order must be less than 3).'
+   END SELECT
+
+
+ END SUBROUTINE MeshExtrapInterp
 
 END MODULE ModMesh
 
