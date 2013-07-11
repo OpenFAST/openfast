@@ -59,9 +59,10 @@ MODULE FAST_Types
 
    TYPE, PUBLIC :: FAST_ParameterType
 
-      REAL(DbKi)                :: DT                                               ! Integration time step.
-      REAL(DbKi)                :: TMax                                             ! Total run time.
-
+      REAL(DbKi)                :: DT                                               ! Integration time step (s)
+      REAL(DbKi)                :: TMax                                             ! Total run time (s)
+      INTEGER(IntKi)            :: InterpOrder                                      ! Interpolation order {0,1,2} (-)
+      
          ! Feature switches:
 
       LOGICAL                   :: CompAero                                         ! Compute aerodynamic forces (flag)

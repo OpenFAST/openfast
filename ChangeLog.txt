@@ -3937,7 +3937,7 @@ v8.00.00a-bjj 31-Mar-2013 B. Jonkman
    The Nacelle Yaw Control override maneuver is now based on the commanded yaw position instead of the input (actual) yaw position.
    The override maneuvers for blade pitch and nacelle yaw now specify a rate in the input file instead of an end time. A Matlab script to help the conversion is included in the archive.
    I removed GBRatio from all the user control routines (LSS_Spd send instead of HSS_Spd and GBratio for pitch control)
-   I fixed a bug in the SimStatus when SttsTime /= 1 second. 
+   I fixed a bug in the SimStatus when SttsTime /= 1 second.
    We replaced AeroCent with PitchAxis in the blade properties table: PitchAxis = 0.5 - AeroCent
    Variable SgnPrvLSTQ has been removed--basically removing gearbox friction--until we figure out how to put it in the new framework.
    The fix of the HSSBrTrq has been removed.
@@ -3945,8 +3945,11 @@ v8.00.00a-bjj 31-Mar-2013 B. Jonkman
 
 v8.00.00c-bjj 9-Apr-2013 B. Jonkman
   I modified the source code so that the /assume:realloc_lhs switch isn't necessary. This required a manual change to the ED_Input_ExtrapInterp routine
-    (bug reported in bugzilla). 
+    (bug reported in bugzilla).
 
 ElastoDyn v1.01.00a-bjj 9-Jul-2013
   I created a new variable called PtfmRefzt to replace PtfmRef, with PtfmRefzt = - PtfmRef.
   I created a new variable called TowerBsHt to replace TwrRBHt and TwrDraft, with TowerBsHt = TwrRBHt - TwrDraft
+
+FAST v8.00.00c-bjj 11-Jul-2013 B. Jonkman
+  I added an input called InterpOrder to the main input file.

@@ -93,10 +93,9 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
 REAL(DbKi), PARAMETER          :: t_initial = 0.0                            ! Initial time
 REAL(DbKi)                     :: dt_global                                  ! we're limiting our simulation to lock-step time steps for now
 
-INTEGER, PARAMETER   :: interp_order = 0 !2
-TYPE(ED_InputType)   :: ED_Input(interp_order+1)
-REAL(DbKi)           :: ED_InputTimes(interp_order+1)
-  
+TYPE(ED_InputType), ALLOCATABLE   :: ED_Input(:)
+REAL(DbKi), ALLOCATABLE           :: ED_InputTimes(:)
+
 
    !...............................................................................................................................
    ! initialization
@@ -126,6 +125,10 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
    CALL CheckError( ErrStat, 'Message from FAST_Init: '//NewLine//ErrMsg )
 
    dt_global = p_FAST%dt
+   
+      ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder
+   ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input and ED_InputTimes.") !bjj this error will need to avoid calling the ModName_End routines...
 
       
       ! initialize ElastoDyn (must be done first)
@@ -248,12 +251,12 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
    ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
    ! order = SIZE(ED_Input)
    
-   DO j = 1, interp_order + 1  
+   DO j = 1, p_FAST%InterpOrder + 1  
       ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
       !ED_OutputTimes(i) = t_initial - (j - 1) * dt
    END DO   
    
-   DO j = 2, interp_order + 1
+   DO j = 2, p_FAST%InterpOrder + 1
       CALL ED_CopyInput (ED_Input(1),  ED_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from ED_CopyInput: '//NewLine//ErrMsg )
    END DO
@@ -311,7 +314,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
       
          ! Shift "window" of the Mod1_Input and Mod1_Output
       
-      do j = interp_order, 1, -1
+      do j = p_FAST%InterpOrder, 1, -1
          Call ED_CopyInput (ED_Input(j),  ED_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
          !Call Mod1_CopyOutput (Mod1_Output(i),  Mod1_Output(j+1),  0, Errstat, ErrMsg)
          ED_InputTimes(j+1) = ED_InputTimes(j)
@@ -519,10 +522,12 @@ CONTAINS
       CALL ED_DestroyInput( u_ED, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       
-      DO j = 2,interp_order+1
+      DO j = 2,p_FAST%InterpOrder+1
          CALL ED_DestroyInput( ED_Input(j), ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END DO
+      IF ( ALLOCATED(ED_Input)      ) DEALLOCATE( ED_Input )
+      IF ( ALLOCATED(ED_InputTimes) ) DEALLOCATE( ED_InputTimes )
       
       
       !............................................................................................................................
