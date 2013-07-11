@@ -93,7 +93,7 @@ CHARACTER(1024)                :: ErrMsg                                     ! E
 REAL(DbKi), PARAMETER          :: t_initial = 0.0                            ! Initial time
 REAL(DbKi)                     :: dt_global                                  ! we're limiting our simulation to lock-step time steps for now
 
-INTEGER, PARAMETER   :: interp_order = 0
+INTEGER, PARAMETER   :: interp_order = 0 !2
 TYPE(ED_InputType)   :: ED_Input(interp_order+1)
 REAL(DbKi)           :: ED_InputTimes(interp_order+1)
   
@@ -127,16 +127,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
 
    dt_global = p_FAST%dt
 
-   
-   ! We fill ED_InputTimes with negative times, but the ED_Input values are identical for each of those times; this allows 
-   ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
-   ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
-   ! order = SIZE(ED_Input)
-   do j = 1, interp_order + 1  
-      ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-      !Mod1_OutputTimes(i) = t_initial - (j - 1) * dt
-   enddo   
-   
+      
       ! initialize ElastoDyn (must be done first)
    InitInData_ED%InputFile     = p_FAST%EDFile
    InitInData_ED%ADInputFile   = p_FAST%ADFile
@@ -148,9 +139,6 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
         CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")
    
    
-   CALL ED_CopyInput (ED_Input(1),  u_ED, MESH_NEWCOPY, Errstat, ErrMsg)   !Bjj copying input here only to allocate the arrays and meshes.
-      CALL CheckError( ErrStat, 'Message from ED_CopyInput: '//NewLine//ErrMsg )
-
       ! initialize ServoDyn
    IF ( p_FAST%CompServo ) THEN
       InitInData_SrvD%InputFile     = p_FAST%SrvDFile
@@ -167,9 +155,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
       
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in ServoDyn must be the same as the value of DT in FAST.")
-      
-      !CALL SrvD_CopyInput (SrvD_Input(1),  u_ED, 0, Errstat, ErrMsg)   !Bjj copying input here only to allocate the arrays, until we get a better solution...
-      
+            
       ! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
       y_SrvD%ElecPwr = 0.0
       y_SrvD%GenTrq   = 0.0
@@ -194,13 +180,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
 
    ! initialize HydroDyn
    IF ( p_FAST%CompHydro ) THEN
-            
-      !IF ( THIS IS A FLOATING PLATFORM ) THEN
-      !IF ( .NOT. EqualRealNos( u_ED%PlatformPtMesh%Position(3,1), 0.0_ReKi )  ) &
-      !   CALL CheckError( ErrID_Fatal, "ElastoDyn's Platform Reference Point Mesh must be located at (0,0,0) when CompHydro is enabled." )
-      !END IF
-      
-      
+                        
       HydroDyn_InitData%Gravity     = InitOutData_ED%Gravity      ! m/s^2   
       HydroDyn_InitData%FileName    = p_FAST%HDFile    
       HydroDyn_InitData%OutRootName = p_FAST%OutFileRoot
@@ -228,7 +208,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
 
             ! We currently require that the tower nodes in FAST be the same as in HydroDyn
          DO J=1,p_ED%TwrNodes      
-            IF ( .NOT. EqualRealNos( p_ED%HNodes(J) + p_ED%TwrRBHt - p_ED%TwrDraft, HD_AllMarkers%Substructure(J)%Position(3) ) ) THEN
+            IF ( .NOT. EqualRealNos( p_ED%HNodes(J) + p_ED%TowerBsHt, HD_AllMarkers%Substructure(J)%Position(3) ) ) THEN
                CALL CheckError( ErrID_Fatal, ' ElastoDyn and HydroDyn must have the same tower nodes.' )
             ELSEIF ( .NOT. EqualRealNos( 0.0_ReKi, HD_AllMarkers%Substructure(J)%Position(1) ) ) THEN
                CALL CheckError( ErrID_Fatal, ' HydroDyn tower markers must have X = 0 m.' )
@@ -243,10 +223,44 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
          CALL CheckError( ErrID_Fatal, " Unable to discern HydroDyn's discretization." )
       ENDIF
 
+      IF ( .NOT. HD_TwrNodes ) THEN  !<---- bjj remove this line when SubDyn and HydroDyn v2 are implemented (needed for HydroDyn v1)    
+      IF ( .NOT. p_FAST%CompSub ) THEN !This is a floating platform (CompHydro .AND. .NOT. CompSub)
+         DO J = 1,3
+            IF ( .NOT. EqualRealNos( ED_Input(1)%PlatformPtMesh%Position(J,1), 0.0_ReKi )  ) THEN
+               CALL CheckError( ErrID_Fatal, "ElastoDyn's Platform Reference Point Mesh must be located at (0,0,0) "//&
+                                             "when CompHydro is enabled but CompSub is not (i.e., it is a floating platform)." )
+            END IF
+         END DO         
+      END IF
+      END IF !<---- bjj remove this line when SubDyn and HydroDyn v2 are implemented (needed for HydroDyn v1)    
+      
+      
       ! <<<<
       
    END IF   ! CompHydro
-      
+
+   
+   
+   ! Initialize Input-Output arrays for interpolation/extrapolation:
+
+   ! We fill ED_InputTimes with negative times, but the ED_Input values are identical for each of those times; this allows 
+   ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
+   ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
+   ! order = SIZE(ED_Input)
+   
+   DO j = 1, interp_order + 1  
+      ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+      !ED_OutputTimes(i) = t_initial - (j - 1) * dt
+   END DO   
+   
+   DO j = 2, interp_order + 1
+      CALL ED_CopyInput (ED_Input(1),  ED_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from ED_CopyInput: '//NewLine//ErrMsg )
+   END DO
+   CALL ED_CopyInput (ED_Input(1),  u_ED,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+      CALL CheckError( ErrStat, 'Message from ED_CopyInput: '//NewLine//ErrMsg )
+   
+   
 
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
@@ -268,9 +282,8 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
    CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
    CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
 
-
-   !CALL HD_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg )
-   !
+   !CALL HD_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg ) <--- Bjj: comment out for HydroDyn v1; 
+   
    !...............................................................................................................................
    ! loose coupling
    !...............................................................................................................................
@@ -305,9 +318,9 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
          !Mod1_OutputTimes(j+1) = Mod1_OutputTimes(j)
       enddo
       
-      CALL ED_CopyInput (u_ED,  ED_Input(1),  0, Errstat, ErrMsg)
-      !Call Mod1_CopyOutput (y1,  Mod1_Output(1),  0, Errstat, ErrMsg)
-      ED_InputTimes(1) = ZTime + p_FAST%dt
+      CALL ED_CopyInput (u_ED,  ED_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+      !CALL ED_CopyOutput (y1,  Mod1_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+      ED_InputTimes(1) = ZTime + p_FAST%dt !bjj: why not (step+1)*p_FAST%DT
 
       !.....................................................
       ! Call predictor-corrector routine:
@@ -325,9 +338,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
       IF ( p_FAST%CompHydro ) THEN
       END IF         
 
-      
-      
-      
+                  
       !.....................................................
       ! Advance time:
       !.....................................................
@@ -338,12 +349,13 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
       !.....................................................
       ! Input-Output solve:
       !.....................................................      
+      !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
       
-      CALL ED_CalcOutput( ZTime, u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
+      CALL ED_CalcOutput( ZTime, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
 
       IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, u_ED, y_ED, ErrStat, ErrMsg )
+         CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, ED_Input(1), y_ED, ErrStat, ErrMsg )
          ADAeroLoads = AD_CalculateLoads( REAL(ZTime, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
             CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in AeroDyn.'  )
          
@@ -363,7 +375,7 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
       END IF
 
       IF ( p_FAST%CompHydro ) THEN
-         CALL HD_InputSolve( y_ED, ErrStat, ErrMsg, p_ED, x_ED, OtherSt_ED )
+         CALL HD_InputSolve( y_ED, ErrStat, ErrMsg )
          CALL HD_CalculateLoads( ZTime,  HD_AllMarkers,  HydroDyn_data, HD_AllLoads, InitOutData_HD, ErrStat )
             CALL CheckError( ErrStat, 'Error calculating hydrodynamic loads in HydroDyn.'  )
       END IF
@@ -388,13 +400,15 @@ REAL(DbKi)           :: ED_InputTimes(interp_order+1)
       !   
       END IF      
             
-      CALL ED_InputSolve( p_FAST, p_ED,  ED_Input(1),   y_SrvD )
+      !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
+      CALL ED_InputSolve( p_FAST, p_ED,  ED_Input(1),  y_SrvD )
                    
+      
       !.....................................................................
       ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
       !.....................................................................
       
-      u_ED%PlatformPtMesh%RemapFlag = .FALSE.
+      ED_Input(1)%PlatformPtMesh%RemapFlag = .FALSE.
       y_ED%PlatformPtMesh%RemapFlag = .FALSE.
       
                   
@@ -468,7 +482,7 @@ CONTAINS
       CALL FAST_End( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      CALL ED_End(   u_ED,   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
+      CALL ED_End(   ED_Input(1),   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
       CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat2, ErrMsg2 )
@@ -480,8 +494,9 @@ CONTAINS
       CALL HD_Terminate( HydroDyn_data, ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       
+            
       
-      ! in case we didn't get these destroyed earlier....
+      ! in case we didn't get these initialization input/output variables destroyed earlier....
       
       CALL ED_DestroyInitInput(  InitInData_ED, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
@@ -497,6 +512,17 @@ CONTAINS
       
       CALL HD_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      
+      
+      ! variables for ExtrapInterp:
+      
+      CALL ED_DestroyInput( u_ED, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      
+      DO j = 2,interp_order+1
+         CALL ED_DestroyInput( ED_Input(j), ErrStat2, ErrMsg2 )
+         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      END DO
       
       
       !............................................................................................................................
