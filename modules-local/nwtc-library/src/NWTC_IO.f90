@@ -32,7 +32,7 @@ MODULE NWTC_IO
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00d-bjj', '10-Jul-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00d-bjj', '12-Jul-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 

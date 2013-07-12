@@ -99,6 +99,17 @@ CONTAINS
          write(U,*)' ',i,M%Position(:,i)
        ENDDO
      ENDIF
+     IF(M%initialized.AND.ASSOCIATED(M%RefOrientation))THEN
+       isz=size(M%RefOrientation,3)
+       write(U,*)'RefOrientation: ',isz
+       DO i=1,min(nn,isz) !bjj: printing this like a matrix:
+         write(U,'(1X,I3, 3(1X,F10.4))') i, M%RefOrientation(1,:,i)
+         write(U,'(4X,    3(1X,F10.4))')    M%RefOrientation(2,:,i)
+         write(U,'(4X,    3(1X,F10.4))')    M%RefOrientation(3,:,i)
+       ENDDO
+     ENDIF
+
+
      IF(ALLOCATED(M%Force))THEN
        isz=size(M%Force,2)
        write(U,*)'Force: ',isz
@@ -235,7 +246,7 @@ CONTAINS
       LOGICAL,OPTIONAL,INTENT(IN):: AddedMass            ! If present and true, allocate AddedMass field
 !
       INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present > 0, allocate n Scalars
-      LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         ! If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, and ElemTable)
+      LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         ! If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, RefOrientation, and ElemTable)
 
     ! Local
       INTEGER i
@@ -281,6 +292,7 @@ CONTAINS
 
       IF ( .NOT. IsNewSib ) THEN
          CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'MeshCreate: Position' )
+         CALL AllocPAry( BlankMesh%RefOrientation, 3, 3, Nnodes, 'MeshCreate: RefOrientation' )
 
          ALLOCATE(BlankMesh%ElemTable(NELEMKINDS))
          DO i = 1, NELEMKINDS
@@ -293,6 +305,7 @@ CONTAINS
 
       ELSE
          NULLIFY( BlankMesh%Position )
+         NULLIFY( BlankMesh%RefOrientation )
          NULLIFY( BlankMesh%ElemTable )
          NULLIFY( BlankMesh%ElemList )
          NULLIFY( BlankMesh%RemapFlag )
@@ -492,7 +505,7 @@ CONTAINS
                   DEALLOCATE(Mesh%ElemTable(i)%Elements)
                   NULLIFY(Mesh%ElemTable(i)%Elements)
                ENDIF
-             ENDDO
+            ENDDO
             DEALLOCATE(Mesh%ElemTable)
             NULLIFY(Mesh%ElemTable)
          ENDIF
@@ -507,26 +520,19 @@ CONTAINS
             NULLIFY(Mesh%Position)
          END IF
 
+         IF ( ASSOCIATED(Mesh%RefOrientation) ) THEN
+            DEALLOCATE(Mesh%RefOrientation)
+            NULLIFY(Mesh%RefOrientation)
+         END IF
+
+
       ELSE ! Keep the data for an existing sibling mesh (nullify but don't deallocate):
 
          NULLIFY( Mesh%RemapFlag )
-
-         IF ( ASSOCIATED(Mesh%ElemTable) ) THEN
-            DO i = 1, NELEMKINDS
-               Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
-               IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
-                  DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
-                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
-                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-                  ENDDO
-                  NULLIFY(Mesh%ElemTable(i)%Elements)
-               ENDIF
-            ENDDO !each kind of element
-         ENDIF
-
-         NULLIFY( Mesh%ElemTable )    !bjj: I would hope this would NULLIFY everything in the DO loops above
+         NULLIFY( Mesh%ElemTable )
          NULLIFY( Mesh%ElemList  )
          NULLIFY( Mesh%Position  )
+         NULLIFY( Mesh%RefOrientation  )
 
             ! Tell the sibling that this sibling doesn't exist (avoid endless recursion):
          IF ( ASSOCIATED( Mesh%SiblingMesh%SiblingMesh ) ) THEN ! the mesh should be associated with Mesh%SiblingMesh%SiblingMesh
@@ -613,8 +619,8 @@ CONTAINS
      ALLOCATE( IntBuf( n_int ) )
 
      n_re = 0
-    ! Position
-     n_re = n_re + Mesh%Nnodes * 3
+     n_re = n_re + Mesh%Nnodes * 3 ! Position
+     n_re = n_re + Mesh%Nnodes * 9 ! RefOrientation
      IF ( Mesh%FieldMask(MASKID_FORCE) ) n_re = n_re + Mesh%Nnodes * 3
      IF ( Mesh%FieldMask(MASKID_MOMENT) ) n_re = n_re + Mesh%Nnodes * 3
      IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) n_re = n_re + Mesh%Nnodes * 9
@@ -675,6 +681,16 @@ CONTAINS
          ReBuf(ic) = Mesh%Position(2,i) ; ic = ic + 1
          ReBuf(ic) = Mesh%Position(3,i) ; ic = ic + 1
        ENDDO
+
+
+       DO i = 1, Mesh%Nnodes
+         DO jj = 1,3
+            DO ii = 1,3
+               ReBuf(ic) = Mesh%RefOrientation(ii,jj,i) ; ic = ic + 1
+            ENDDO
+         ENDDO
+       ENDDO
+
        IF ( Mesh%FieldMask(MASKID_FORCE) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
          DO i = 1, Mesh%Nnodes
            ReBuf(ic) = Mesh%Force(1,i) ; ic = ic + 1
@@ -878,6 +894,15 @@ CONTAINS
        Mesh%Position(2,i) = Re_Buf(ic) ; ic = ic + 1
        Mesh%Position(3,i) = Re_Buf(ic) ; ic = ic + 1
      ENDDO
+
+     DO i = 1, Mesh%Nnodes
+        DO jj = 1,3
+           DO ii = 1,3
+             Mesh%RefOrientation(ii,jj,i) = Re_Buf(ic) ; ic = ic + 1
+           ENDDO
+        ENDDO
+     ENDDO
+
      IF ( Mesh%FieldMask(MASKID_FORCE) ) THEN
        DO i = 1, Mesh%Nnodes
          Mesh%Force(1,i) = Re_Buf(ic) ; ic = ic + 1
@@ -1007,15 +1032,9 @@ CONTAINS
                             ,nScalars=SrcMesh%nScalars                                                          )
 
             IF (ErrStat >= AbortErrLev) RETURN
-            DestMesh%Position =  SrcMesh%Position
+            DestMesh%Position       =  SrcMesh%Position
+            DestMesh%RefOrientation =  SrcMesh%RefOrientation
 
-
-            ALLOCATE(DestMesh%ElemTable(size(SrcMesh%ElemTable)),STAT=ErrStat)
-            IF (ErrStat /=0) THEN
-               ErrStat = ErrID_Fatal
-               ErrMess=' MeshCopy: Error allocating ElemTable'
-               RETURN !Early return
-            END IF
             DO i = 1, NELEMKINDS
                DestMesh%ElemTable(i)%nelem = SrcMesh%ElemTable(i)%nelem
                DestMesh%ElemTable(i)%maxelem = SrcMesh%ElemTable(i)%maxelem
@@ -1101,10 +1120,11 @@ CONTAINS
             DestMesh%SiblingMesh => SrcMesh
             SrcMesh%SiblingMesh  => DestMesh
 
-            DestMesh%Position  => SrcMesh%Position
-            DestMesh%RemapFlag => SrcMesh%RemapFlag
-            DestMesh%ElemTable => SrcMesh%ElemTable
-            DestMesh%ElemList  => SrcMesh%ElemList
+            DestMesh%Position       => SrcMesh%Position
+            DestMesh%RefOrientation => SrcMesh%RefOrientation
+            DestMesh%RemapFlag      => SrcMesh%RemapFlag
+            DestMesh%ElemTable      => SrcMesh%ElemTable
+            DestMesh%ElemList       => SrcMesh%ElemList
 
             DestMesh%nelemlist   = SrcMesh%nelemlist
             DestMesh%maxelemlist = SrcMesh%maxelemlist
@@ -1227,12 +1247,13 @@ CONTAINS
    END SUBROUTINE MeshCopy
 
 ! added 20130102 as stub for AeroDyn work
-   SUBROUTINE MeshPositionNode( Mesh, Inode, Pos, ErrStat, ErrMess )
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being spatio-located
-     INTEGER(IntKi),              INTENT(IN   ) :: Inode     ! Number of node being located
-     REAL(ReKi),                  INTENT(IN   ) :: Pos(3)    ! Xi,Yi,Zi, coordinates of node
-     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat   ! Error code
-     CHARACTER(*),                INTENT(  OUT) :: ErrMess   ! Error message
+   SUBROUTINE MeshPositionNode( Mesh, Inode, Pos, ErrStat, ErrMess, Orient )
+     TYPE(MeshType),              INTENT(INOUT) :: Mesh         ! Mesh being spatio-located
+     INTEGER(IntKi),              INTENT(IN   ) :: Inode        ! Number of node being located
+     REAL(ReKi),                  INTENT(IN   ) :: Pos(3)       ! Xi,Yi,Zi, coordinates of node
+     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      ! Error code
+     CHARACTER(*),                INTENT(  OUT) :: ErrMess      ! Error message
+     REAL(ReKi), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  ! Orientation (direction cosine matrix) of node; identity by default
 
      ErrStat = ErrID_None
      ErrMess = ""
@@ -1257,9 +1278,28 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: Position array not big enough"
      ENDIF
+     IF ( .NOT. ASSOCIATED(Mesh%RefOrientation) ) THEN
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: RefOrientation array not associated"
+     ENDIF
+     IF ( .NOT. SIZE(Mesh%RefOrientation,3) .EQ. Mesh%Nnodes ) THEN
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshPositionNode: RefOrientation array not big enough"
+     ENDIF
+
      IF ( ErrStat .NE. ErrID_None ) RETURN   ! early return on error
+
     ! Business
      Mesh%Position(:,Inode) = Pos
+
+     IF ( PRESENT(Orient) ) THEN
+        Mesh%RefOrientation(:,:,Inode) = Orient
+     ELSE
+        Mesh%RefOrientation(:,1,Inode) = (/ 1., 0., 0. /)
+        Mesh%RefOrientation(:,2,Inode) = (/ 0., 1., 0. /)
+        Mesh%RefOrientation(:,3,Inode) = (/ 0., 0., 1. /)
+     END IF
+
      RETURN
 
    END SUBROUTINE MeshPositionNode
@@ -1652,8 +1692,8 @@ CONTAINS
    END SUBROUTINE MeshNextElement
 
 
-   
-   
+
+
    !...............................................................................................................................
     SUBROUTINE MeshExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
    !
@@ -1670,7 +1710,7 @@ CONTAINS
    !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
    !
    !...............................................................................................................................
-   
+
     TYPE(MeshType),      INTENT(IN)     :: u1            ! Inputs at t1 > t2
     TYPE(MeshType),      INTENT(IN)     :: u2            ! Inputs at t2
     REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
@@ -1696,7 +1736,7 @@ CONTAINS
        t_out = tin_out - tin(1)
 
           ! some error checking:
-       
+
        if ( size(t) .ne. order+1) then
           ErrStat = ErrID_Fatal
           ErrMsg = ' Error in MeshExtrapInterp1: size(t) must equal 2.'
@@ -1715,7 +1755,7 @@ CONTAINS
       IF ( ALLOCATED(u1%Force) ) THEN
          u_out%Force = u1%Force + (u2%Force - u1%Force) * scaleFactor
       END IF
-      
+
       IF ( ALLOCATED(u1%Moment) ) THEN
          u_out%Moment = u1%Moment + (u2%Moment - u1%Moment) * scaleFactor
       END IF
@@ -1757,10 +1797,10 @@ CONTAINS
          ELSE
             u_out%Orientation = u2%Orientation
          END IF
-      END IF   
-   
+      END IF
+
    END SUBROUTINE MeshExtrapInterp1
-   
+
    !...............................................................................................................................
     SUBROUTINE MeshExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
    !
@@ -1777,7 +1817,7 @@ CONTAINS
    !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
    !
    !...............................................................................................................................
-   
+
     TYPE(MeshType),      INTENT(IN)     :: u1            ! Inputs at t1 > t2 > t3
     TYPE(MeshType),      INTENT(IN)     :: u2            ! Inputs at t2 > t3
     TYPE(MeshType),      INTENT(IN)     :: u3            ! Inputs at t3
@@ -1805,13 +1845,13 @@ CONTAINS
 
 
          ! Some error checking:
-         
+
       if ( size(t) .ne. order+1) then
          ErrStat = ErrID_Fatal
          ErrMsg = ' Error in MeshExtrapInterp2: size(t) must equal 2.'
          RETURN
       end if
-         
+
       IF ( EqualRealNos( t(1), t(2) ) ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error in MeshExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
@@ -1829,14 +1869,14 @@ CONTAINS
       END IF
 
          ! Now let's interpolate/extrapolate:
-         
+
       scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
 
       IF ( ALLOCATED(u1%Force) ) THEN
 
          u_out%Force =   u1%Force &
                        + ( t(3)**2 * (u1%Force - u2%Force) + t(2)**2*(-u1%Force + u3%Force) ) * scaleFactor &
-                       + ( (t(2)-t(3))*u1%Force + t(3)*u2%Force - t(2)*u3%Force ) *scaleFactor * t_out 
+                       + ( (t(2)-t(3))*u1%Force + t(3)*u2%Force - t(2)*u3%Force ) *scaleFactor * t_out
 
       END IF
       IF ( ALLOCATED(u1%Moment) ) THEN
@@ -1905,10 +1945,10 @@ CONTAINS
          ELSE
             u_out%Orientation = u3%Orientation
          END IF
-      END IF           
-   
+      END IF
+
    END SUBROUTINE MeshExtrapInterp2
-   
+
    !...............................................................................................................................
     SUBROUTINE MeshExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )
    !
