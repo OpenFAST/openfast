@@ -112,6 +112,9 @@ MODULE ModMesh_Types
       INTEGER :: spatial !bjj: unused?
       TYPE(ElemListType), POINTER :: ElemList(:) => NULL() ! All of the elements in the mesh
 
+      REAL(ReKi), POINTER     :: Position(:,:) => NULL() ! XYZ coordinate of node (always allocated) (3,:)
+      REAL(ReKi), POINTER     :: RefOrientation(:,:,:) => NULL() ! DCM Orientation of node (always allocated) (3,3,:)
+
 ! Here are some built in derived data types that can represent values at the nodes
 ! the last dimension of each of these has range 1:nnodes for the mesh being represented
 ! and they are indexed by the element arrays above
@@ -120,7 +123,7 @@ MODULE ModMesh_Types
 ! Whether or not these are allocated is indicated in the fieldmask, which can
 ! be interrogated by a routine using an instance of the type. If you add a field
 ! here, be sure to change the table of parameters used to size and index fieldmask above.
-      REAL(ReKi), POINTER     :: Position(:,:) => NULL() ! XYZ coordinate of node (always allocated) (3,:)
+
       REAL(ReKi), ALLOCATABLE :: Force(:,:)              ! Field: Force vectors (3,:)
       REAL(ReKi), ALLOCATABLE :: Moment(:,:)             ! Field: Moment vectors (3,:)
       REAL(ReKi), ALLOCATABLE :: Orientation(:,:,:)      ! Field: Direction Cosine Matrix (DCM) (3,3,:)

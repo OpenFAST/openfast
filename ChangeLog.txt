@@ -522,10 +522,11 @@ o  I added a Documentation folder to the trunk.
 o  I updated the makefile for trunk\source\Drivers\Test_RegCubicSpline to reflect the move of
    Bonnie's branch to the trunk.
 
-v2.02.00d-bjj, 10-Jul-2013, B. Jonkman
+v2.02.00d-bjj, 12-Jul-2013, B. Jonkman
 o I fixed some memory leaks in the ModMesh module and fixed some bugs in its copy and destroy routines.
 o I added ExtrapInterp routines for the ModMesh module, which requires ModMesh.f90 to depend on NWTC_Num (was NWTC_IO before)
-
+o I added RefOrientation to the ModMesh type (the reference orientation is needed for interpolation of Orientation field)
+  o The Orientation is now an optional input to the MeshPositionNode routine. If orientation is not included, we assume orientation is the identity matrix.
 
 ==========================================================
  To do:
