@@ -1,5 +1,5 @@
 !**********************************************************************************************************************************
-! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework. 
+! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2013  National Renewable Energy Laboratory
@@ -19,15 +19,13 @@
 MODULE FAST_Types
 
    USE NWTC_Library
+   USE Map_Stuff !bjj: add this to NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.01.00a-bjj', '15-July-2013' )                  ! The version number of this module
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.01.01a-bjj', '16-July-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
-   
-   LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE. 
 
+   LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE.
 
-   !LOGICAL                   :: Cmpl4SFun  = .FALSE.                            ! Is FAST being compiled as an S-Function for Simulink?
-   !LOGICAL                   :: Cmpl4LV    = .FALSE.                            ! Is FAST being compiled for Labview?
 
    TYPE, PUBLIC :: FAST_OutputType
       REAL(DbKi), ALLOCATABLE           :: TimeData (:)                            ! Array to contain the time output data for the binary file (first output time and a time [fixed] increment)
@@ -46,15 +44,31 @@ MODULE FAST_Types
       CHARACTER(1024)                   :: FileDescLines(3)                        ! Description lines to include in output files (header, time run, plus module names/versions)
       CHARACTER(ChanLen), ALLOCATABLE   :: ChannelNames(:)                         ! Names of the output channels
       CHARACTER(ChanLen), ALLOCATABLE   :: ChannelUnits(:)                         ! Units for the output channels
-      
+
          ! Version numbers of coupled modules
       TYPE(ProgDesc)                    :: AD_Ver
       TYPE(ProgDesc)                    :: ED_Ver
       TYPE(ProgDesc)                    :: HD_Ver
       TYPE(ProgDesc)                    :: IfW_Ver
       TYPE(ProgDesc)                    :: SrvD_Ver
-      
+
    END TYPE  FAST_OutputType
+
+
+   TYPE, PUBLIC :: FAST_ModuleMapType
+
+         ! Data structures for mapping the various modules together
+
+      TYPE(MapType), ALLOCATABLE     :: ED_P_2_HD_W_P(:)                          ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
+      TYPE(MapType), ALLOCATABLE     :: ED_P_2_HD_M_P(:)                          ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point
+      TYPE(MapType), ALLOCATABLE     :: ED_P_2_HD_M_L(:)                          ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2
+
+      TYPE(MapType), ALLOCATABLE     :: HD_W_P_2_ED_P(:)                          ! Map HydroDyn WAMIT Point to ElastoDyn PlatformPtMesh
+      TYPE(MapType), ALLOCATABLE     :: HD_M_P_2_ED_P(:)                          ! Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh
+      TYPE(MapType), ALLOCATABLE     :: HD_M_L_2_ED_P(:)                          ! Map HydroDyn Morison Line2 to ElastoDyn PlatformPtMesh
+
+   END TYPE FAST_ModuleMapType
+
 
 
    TYPE, PUBLIC :: FAST_ParameterType
@@ -62,7 +76,7 @@ MODULE FAST_Types
       REAL(DbKi)                :: DT                                               ! Integration time step (s)
       REAL(DbKi)                :: TMax                                             ! Total run time (s)
       INTEGER(IntKi)            :: InterpOrder                                      ! Interpolation order {0,1,2} (-)
-      
+
          ! Feature switches:
 
       LOGICAL                   :: CompAero                                         ! Compute aerodynamic forces (flag)
@@ -121,24 +135,24 @@ TYPE(AeroConfig)              :: ADInterfaceComponents                        ! 
 
 END MODULE AeroDyn_Types
 !=======================================================================
-MODULE HydroDyn_Types
-   ! This module stores data for the FAST-HydroDyn interface
-
-   USE                          HydroDyn
-   USE                          NWTC_Library
-   USE                          SharedDataTypes                                  ! Defines the data types shared among modules (e.g., Marker and Load)
-
-   SAVE
-
-   TYPE(HD_DataType)         :: HydroDyn_data                                    ! The HydroDyn internal data
-
-   TYPE(HydroConfig)         :: HD_ConfigMarkers                                 ! Configuration markers required for HydroDyn
-   TYPE(AllHydroMarkers)     :: HD_AllMarkers                                    ! The markers        (is this necessary here?)
-   TYPE(AllHydroLoads)       :: HD_AllLoads                                      ! the returned loads (is this necessary here?)
-
-   TYPE(HD_InitDataType)     :: HydroDyn_InitData                                ! HydroDyn initialization data   
-   
-   LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
-
-END MODULE HydroDyn_Types
+!MODULE HydroDyn_Types
+!   ! This module stores data for the FAST-HydroDyn interface
+!
+!   USE                          HydroDyn
+!   USE                          NWTC_Library
+!   USE                          SharedDataTypes                                  ! Defines the data types shared among modules (e.g., Marker and Load)
+!
+!   SAVE
+!
+!   TYPE(HD_DataType)         :: HydroDyn_data                                    ! The HydroDyn internal data
+!
+!   TYPE(HydroConfig)         :: HD_ConfigMarkers                                 ! Configuration markers required for HydroDyn
+!   TYPE(AllHydroMarkers)     :: HD_AllMarkers                                    ! The markers        (is this necessary here?)
+!   TYPE(AllHydroLoads)       :: HD_AllLoads                                      ! the returned loads (is this necessary here?)
+!
+!   TYPE(HD_InitDataType)     :: HydroDyn_InitData                                ! HydroDyn initialization data
+!
+!   LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
+!
+!END MODULE HydroDyn_Types
 !=======================================================================
