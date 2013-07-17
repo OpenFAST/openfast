@@ -1,0 +1,63 @@
+---------------------- LINE DICTIONARY ---------------------------------------
+LineType  Diam  RhoInAir     EA          CB
+(-)       (m)   (kg/m)       (N)         (-)
+steel     0.25   319.068     9.81748E9   1.0
+nylon     0.35   134.696     1.34696E9   1.0
+nylon2    0.55   332.616     3.32616E9   1.0
+---------------------- NODE PROPERTIES ---------------------------------------
+Node  Type       X       Y       Z      M     B     FX    FY    FZ
+(-)   (-)       (m)     (m)     (m)    (kg)  (mˆ3)  (N)   (N)   (N)
+1     fix        -400     0      -350    0     0      #     #     #
+2     Connect   #-300    #0     #-300    0     0      0     0     0
+3     Connect   #-90     #0     #-80     0     0      0     0     0
+4     vessel     -30      30     -10     0     0      #     #     #
+5     Vessel     -30     -30     -10     0     0      #     #     #
+---------------------- LINE PROPERTIES ---------------------------------------
+Element  LineType  UnstrLen  NodeAnch  NodeFair  Flags
+(-)      (-)       (m)       (-)       (-)       (-)
+1        steel     150       1         2         plot
+2        nylon2    310       2         3         plot
+3        nylon     90        3         4         plot
+4        nylon     90        3         5         plot
+---------------------- SOLVER OPTIONS-----------------------------------------
+Option 
+(-) 
+!-help
+!-nest_type 0
+!-finite_difference_jacobian
+-split_type 1
+-snes_type tr 
+-snes_max_it 1500 
+-ksp_type preonly 
+-pc_type lu
+-pc_factor_nonzeros_along_diagonal
+!-snes_type tr
+!-snes_max_it 100
+!-pc_type svd
+!-pc_type lu
+!-ksp_type gmres
+!-ksp_type tfqmr
+!-snes_atol 1e-9
+!-snes_rtol 1e-9
+!-snes_stol 1e-9
+!-ksp_atol 1e-12
+!-ksp_rtol 1e-12
+!-snes_converged_reason 
+!-snes_monitor_short
+!-snes_linesearch_monitor
+!-snes_monitor 
+!-ksp_monitor_true_residual 
+!-snes_converged_reason 
+!-ksp_view
+!-ksp_converged_reason
+!-pc_type fieldsplit 
+!-pc_fieldsplit_type schur
+!-fieldsplit_node_ksp_type gmres
+!-fieldsplit_elem_ksp_type gmres
+!-fieldsplit_node_pc_type svd
+!-fieldsplit_elem_pc_type svd
+!-fieldsplit_node_pc_svd_monitor 
+!-fieldsplit_elem_pc_svd_monitor
+!-mat_view_draw true
+!-draw_pause 1
+!-mat_view
