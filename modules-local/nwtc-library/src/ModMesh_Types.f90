@@ -97,23 +97,25 @@ MODULE ModMesh_Types
    END TYPE ElemListType
 
    TYPE, PUBLIC :: MeshType
-      LOGICAL :: initialized = .FALSE.                ! Indicate whether this mesh is initialized     (bjj: added default initialization here)
-      LOGICAL :: fieldmask(FIELDMASK_SIZE) = .FALSE.  ! Dimension as number of allocateable fields, below
-      LOGICAL,POINTER :: RemapFlag  => NULL()         ! false=no action/ignore; true=remap required
-      INTEGER :: ios                                  ! Mesh type: input (1), output(2), or state(3)
-      INTEGER :: Nnodes                               ! Number of nodes (vertices) in mesh
+      LOGICAL :: initialized = .FALSE.                       ! Indicate whether this mesh is initialized
+      LOGICAL :: fieldmask(FIELDMASK_SIZE) = .FALSE.         ! Dimension as number of allocatable fields, below
+      LOGICAL,POINTER :: RemapFlag  => NULL()                ! false=no action/ignore; true=remap required
+      INTEGER :: ios                                         ! Mesh type: input (1), output(2), or state(3)
+      INTEGER :: Nnodes                                      ! Number of nodes (vertices) in mesh
+                                                             
+     ! Mesh elements
+      TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL()   ! Elements in the mesh, by type
+                                                             
+     ! Mesh traversal                                        
+      INTEGER :: nelemlist                                   ! Number of elements in the list (ElemList)
+      INTEGER :: maxelemlist                                 ! Maximum number of elements in the list
+      INTEGER :: nextelem                                    ! Next element in the list
+      INTEGER :: spatial !bjj: unused?                       
+      TYPE(ElemListType), POINTER :: ElemList(:) => NULL()   ! All of the elements in the mesh
 
-      TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL() ! Elements in the mesh, by type
-
-     ! Mesh traversal
-      INTEGER :: nelemlist                ! Number of elements in the list (ElemList)
-      INTEGER :: maxelemlist              ! Maximum number of elements in the list
-      INTEGER :: nextelem                 ! Next element in the list
-      INTEGER :: spatial !bjj: unused?
-      TYPE(ElemListType), POINTER :: ElemList(:) => NULL() ! All of the elements in the mesh
-
-      REAL(ReKi), POINTER     :: Position(:,:) => NULL() ! XYZ coordinate of node (always allocated) (3,:)
-      REAL(ReKi), POINTER     :: RefOrientation(:,:,:) => NULL() ! DCM Orientation of node (always allocated) (3,3,:)
+     ! Node position and reference orientation, which are always allocated (and shared between siblings):
+      REAL(ReKi), POINTER :: Position(:,:) => NULL()         ! XYZ coordinate of node (3,:)
+      REAL(ReKi), POINTER :: RefOrientation(:,:,:) => NULL() ! Original/reference orientation [DCM] (3,3,:)
 
 ! Here are some built in derived data types that can represent values at the nodes
 ! the last dimension of each of these has range 1:nnodes for the mesh being represented
@@ -124,20 +126,21 @@ MODULE ModMesh_Types
 ! be interrogated by a routine using an instance of the type. If you add a field
 ! here, be sure to change the table of parameters used to size and index fieldmask above.
 
-      REAL(ReKi), ALLOCATABLE :: Force(:,:)              ! Field: Force vectors (3,:)
-      REAL(ReKi), ALLOCATABLE :: Moment(:,:)             ! Field: Moment vectors (3,:)
-      REAL(ReKi), ALLOCATABLE :: Orientation(:,:,:)      ! Field: Direction Cosine Matrix (DCM) (3,3,:)
-      REAL(ReKi), ALLOCATABLE :: TranslationDisp(:,:)    ! Field: Translational displacements (3,:)
-      REAL(ReKi), ALLOCATABLE :: RotationVel(:,:)        ! Field: Rotational velocities (3,:)
-      REAL(ReKi), ALLOCATABLE :: TranslationVel(:,:)     ! Field: Translational velocities (3,:)
-      REAL(ReKi), ALLOCATABLE :: RotationAcc(:,:)        ! Field: Rotational accelerations (3,:)
-      REAL(ReKi), ALLOCATABLE :: TranslationAcc(:,:)     ! Field: Translational accelerations (3,:)
-      REAL(ReKi), ALLOCATABLE :: AddedMass(:,:,:)        ! Field: Added mass matrix (6,6,:)
-      REAL(ReKi), ALLOCATABLE :: Scalars(:,:)            ! Scalars (1st Dim is over Scalars; 2nd is nodes)
-      INTEGER                 :: nScalars                ! store value of nScalars when created
-!bjj: to be added later:       REAL(ReKi), ALLOCATABLE :: ElementScalars(:,:)       ! Scalars associated with elements
-!bjj: to be added later:       INTEGER             :: nElementScalars               ! store value of nElementScalars when created
+      REAL(ReKi), ALLOCATABLE :: Force(:,:)              ! Field: Force vectors (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: Moment(:,:)             ! Field: Moment vectors (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: Orientation(:,:,:)      ! Field: Direction Cosine Matrix (DCM) (3,3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: TranslationDisp(:,:)    ! Field: Translational displacements (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: RotationVel(:,:)        ! Field: Rotational velocities (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: TranslationVel(:,:)     ! Field: Translational velocities (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: RotationAcc(:,:)        ! Field: Rotational accelerations (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: TranslationAcc(:,:)     ! Field: Translational accelerations (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: AddedMass(:,:,:)        ! Field: Added mass matrix (6,6,NNodes)
+      REAL(ReKi), ALLOCATABLE :: Scalars(:,:)            ! Scalars (nScalars,NNodes)
+      INTEGER                 :: nScalars                ! Stores value of nScalars when created
+!bjj: to be added later:       REAL(ReKi), ALLOCATABLE :: ElementScalars(nElementScalars,nelemlist)       ! Scalars associated with elements
+!bjj: to be added later:       INTEGER             :: nElementScalars               ! Stores value of nElementScalars when created
 
+     ! Keeping track of siblings:
       TYPE(MeshType),POINTER :: SiblingMesh      => NULL() ! Pointer to mesh's (only) sibling
 
    END TYPE MeshType
