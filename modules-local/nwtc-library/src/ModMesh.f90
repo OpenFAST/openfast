@@ -228,10 +228,10 @@ CONTAINS
                          )
 
       TYPE(MeshType), INTENT(INOUT)   :: BlankMesh ! Mesh to be created
-      INTEGER,INTENT(IN)         :: IOS                  ! input (1), output(2), or state(3)
+      INTEGER,INTENT(IN)         :: IOS                  ! input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
       INTEGER,INTENT(IN)         :: Nnodes               ! Number of nodes in mesh
-      INTEGER,INTENT(INOUT)      :: ErrStat              ! error status/level
-      CHARACTER(*),INTENT(INOUT) :: ErrMess              ! error message
+      INTEGER(IntKi),INTENT(OUT) :: ErrStat              ! error status/level
+      CHARACTER(*),INTENT(OUT)   :: ErrMess              ! error message
                                    ! optional arguments from here down
                                    ! optional arguments that say whether to allocate fields
                                    ! in the mesh. These are always dimensioned npoints
@@ -245,7 +245,7 @@ CONTAINS
       LOGICAL,OPTIONAL,INTENT(IN):: RotationAcc          ! If present and true, allocate RotationAcc field
       LOGICAL,OPTIONAL,INTENT(IN):: AddedMass            ! If present and true, allocate AddedMass field
 !
-      INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present > 0, allocate n Scalars
+      INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present and > 0, allocate nScalars Scalars
       LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         ! If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, RefOrientation, and ElemTable)
 
     ! Local
@@ -406,9 +406,9 @@ CONTAINS
    END SUBROUTINE MeshCreate
 
    RECURSIVE SUBROUTINE MeshDestroy ( Mesh, ErrStat, ErrMess, IgnoreSibling )
-     TYPE(MeshType),INTENT(INOUT)   :: Mesh            ! Mesh to be vaporized
-     INTEGER, INTENT(OUT)  :: ErrStat
-     CHARACTER(*), INTENT(OUT)  :: ErrMess
+     TYPE(MeshType),  INTENT(INOUT) :: Mesh            ! Mesh to be vaporized
+     INTEGER(IntKi),  INTENT(OUT)   :: ErrStat         ! Error status/code
+     CHARACTER(*),    INTENT(OUT)   :: ErrMess         ! Error message
     ! On a brand new mesh, the pointers to siblings may not be nullified and
     ! thus undefined (which may cause ASSOCIATED to report .true. erroneously)
     ! This despite use of => NULL in declaration of this fields for MeshType. Sigh.
@@ -416,7 +416,7 @@ CONTAINS
     ! Instead just unconditionally nullify these.
     ! Use this carefully, since it can leave dangling memory if used for a
     ! mesh that already exists and has existing siblings.
-     LOGICAL, OPTIONAL :: IgnoreSibling
+     LOGICAL, INTENT(IN), OPTIONAL :: IgnoreSibling
 
     ! Local
       LOGICAL IgSib
@@ -579,12 +579,12 @@ CONTAINS
 !
    SUBROUTINE MeshPack ( Mesh, ReBuf, DbBuf, IntBuf , ErrStat, ErrMess, SizeOnly )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being packed
-     REAL(ReKi), ALLOCATABLE, INTENT(OUT)  :: ReBuf(:)           ! Real buffer
-     REAL(DbKi), ALLOCATABLE, INTENT(OUT)  :: DbBuf(:)           ! Double buffer
-     INTEGER(IntKi), ALLOCATABLE, INTENT(OUT) :: IntBuf(:)       ! Int buffer
-     INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-     CHARACTER(*),     INTENT(  OUT) :: ErrMess
-     LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+     REAL(ReKi),     ALLOCATABLE, INTENT(  OUT) :: ReBuf(:)  ! Real buffer
+     REAL(DbKi),     ALLOCATABLE, INTENT(  OUT) :: DbBuf(:)  ! Double buffer
+     INTEGER(IntKi), ALLOCATABLE, INTENT(  OUT) :: IntBuf(:) ! Int buffer
+     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
+     CHARACTER(*),                INTENT(  OUT) :: ErrMess
+     LOGICAL,OPTIONAL,            INTENT(IN   ) :: SizeOnly
    ! Local
      INTEGER i,ic,nelem,n_int,n_re,n_db,l,ii,jj,CtrlCode,x
      INTEGER Ielement, Xelement
@@ -773,8 +773,8 @@ CONTAINS
 
    SUBROUTINE MeshUnpack( Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat, ErrMess )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh
-     REAL(ReKi), ALLOCATABLE,     INTENT(IN   ) :: Re_Buf(:)
-     REAL(DbKi), ALLOCATABLE,     INTENT(IN   ) :: Db_Buf(:)
+     REAL(ReKi),     ALLOCATABLE, INTENT(IN   ) :: Re_Buf(:)
+     REAL(DbKi),     ALLOCATABLE, INTENT(IN   ) :: Db_Buf(:)
      INTEGER(IntKi), ALLOCATABLE, INTENT(IN   ) :: Int_Buf(:)
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
      CHARACTER(*),                INTENT(  OUT) :: ErrMess
@@ -991,16 +991,16 @@ CONTAINS
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat  ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess  ! Error message
     ! Optional arguments (used only if CtrlCode is MESH_SIBLING):
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Force             & ! If present and true, allocate Force field
-                                                 , Moment            & ! If present and true, allocate Moment field
-                                                 , Orientation       & ! If present and true, allocate Orientation field
-                                                 , TranslationDisp   & ! If present and true, allocate TranslationDisp field
-                                                 , TranslationVel    & ! If present and true, allocate TranslationVel field
-                                                 , RotationVel       & ! If present and true, allocate RotationVel field
-                                                 , TranslationAcc    & ! If present and true, allocate TranslationAcc field
-                                                 , RotationAcc       & ! If present and true, allocate RotationAcc field
-                                                 , AddedMass           ! If present and true, allocate AddedMess field
-     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars            ! If present and > 0 , alloc n Scalars
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Force             ! If present and true, allocate Force field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Moment            ! If present and true, allocate Moment field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Orientation       ! If present and true, allocate Orientation field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationDisp   ! If present and true, allocate TranslationDisp field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationVel    ! If present and true, allocate TranslationVel field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationVel       ! If present and true, allocate RotationVel field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationAcc    ! If present and true, allocate TranslationAcc field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationAcc       ! If present and true, allocate RotationAcc field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: AddedMass         ! If present and true, allocate AddedMess field
+     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          ! If present and > 0 , alloc n Scalars
     ! Local
      LOGICAL                                    :: Force_l           & ! If present and true, allocate Force field
                                                  , Moment_l          & ! If present and true, allocate Moment field
@@ -1083,7 +1083,7 @@ CONTAINS
             DestMesh%RemapFlag   = SrcMesh%RemapFlag
 
          ELSE IF ( CtrlCode .EQ. MESH_SIBLING ) THEN
-
+!bjj: we should make sure the mesh has been committed, otherwise the element lists haven't been created, yet (and thus not shared) 
             IF ( ASSOCIATED(SrcMesh%SiblingMesh) ) THEN
                ErrStat = ErrID_Fatal
                ErrMess = ' MeshCopy: A mesh can have only one sibling.'
@@ -1215,9 +1215,10 @@ CONTAINS
             ErrStat = ErrID_Fatal
             ErrMess = "MeshCopy: MESH_UPDATECOPY of meshes with different numbers of nodes."
          ELSE
-
-            DestMesh%RemapFlag = SrcMesh%RemapFlag
-            DestMesh%nextelem  = SrcMesh%nextelem
+            
+            ! bjj: should we update positions?
+            !DestMesh%RemapFlag = SrcMesh%RemapFlag
+            !DestMesh%nextelem  = SrcMesh%nextelem
 
          ENDIF
 
@@ -1665,6 +1666,9 @@ CONTAINS
      TYPE(ElemRecType),POINTER,OPTIONAL,INTENT(INOUT)   :: ElemRec ! Return array of elements of kind Xelement
 
   ! TODO : check to make sure mesh is committed first
+  
+     ErrStat = ErrID_None
+     ErrMess = ""
 
      IF ( .NOT. CtrlCode .EQ. MESH_NEXT .AND. (CtrlCode .LT. 0 .OR. CtrlCode .GT. Mesh%nelemlist) ) THEN
        ErrStat = ErrID_Fatal
@@ -1678,15 +1682,13 @@ CONTAINS
      ENDIF
      CtrlCode = 0
      IF ( Mesh%nextelem .GT. Mesh%nelemlist ) THEN
-       CtrlCode = MESH_NOMOREELEMS
+       CtrlCode = MESH_NOMOREELEMS       
        RETURN ! Early Return
      ENDIF
      IF ( PRESENT(Ielement) ) Ielement = Mesh%nextelem
      IF ( PRESENT(ElemRec) )  ElemRec => Mesh%elemlist(Mesh%nextelem)%Element
      IF ( PRESENT(Xelement) ) Xelement = Mesh%elemlist(Mesh%nextelem)%Element%Xelement
-     Mesh%nextelem = Mesh%nextelem + 1
-     ErrStat = ErrID_None
-     ErrMess = ""
+     Mesh%nextelem = Mesh%nextelem + 1      !bjj should we put this in a modulo statement? (i.e, if we go past the end, nextelem = 1)
      RETURN
 
    END SUBROUTINE MeshNextElement
@@ -1838,6 +1840,8 @@ CONTAINS
        ErrStat = ErrID_None
        ErrMsg  = ""
 
+!bjj: TODO check that we've initialized the mesh
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -1947,6 +1951,20 @@ CONTAINS
          END IF
       END IF
 
+      
+      !IF ( ASSOCIATED(u_out%RemapFlag) ) THEN
+      !   ErrStat=ErrID_Info
+      !   ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
+      !
+      !   IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
+      !      u_out%RemapFlag = u1%RemapFlag
+      !   ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
+      !      u_out%RemapFlag = u2%RemapFlag
+      !   ELSE
+      !      u_out%RemapFlag = u3%RemapFlag
+      !   END IF
+      !END IF      
+      
    END SUBROUTINE MeshExtrapInterp2
 
    !...............................................................................................................................
