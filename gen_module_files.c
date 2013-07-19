@@ -787,42 +787,11 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
          if        ( order == 0 ) {
   fprintf(fp,"  CALL MeshCopy(u(1)%s%%%s, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name,deref,r->name )  ;
          } else if ( order == 1 ) {
-  fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  CALL MeshPack(u(2)%s%%%s, mr2, md2, mi2, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  ALLOCATE(b1(SIZE(mr1)))\n") ;
-  fprintf(fp,"  b1 = -(mr1 - mr2)/t(2)\n") ;
-  fprintf(fp,"  mr1 = mr1 + b1 * t_out\n") ;
-  fprintf(fp,"  DEALLOCATE(b1)\n") ;
-  fprintf(fp,"  ALLOCATE(b1(SIZE(md1)))\n") ;
-  fprintf(fp,"  b1 = -(md1 - md2)/t(2)\n") ;
-  fprintf(fp,"  md1 = md1 + b1 * t_out\n") ;
-  fprintf(fp,"  DEALLOCATE(b1)\n") ;
-  fprintf(fp,"  CALL MeshUnPack(tmpmesh, mr1, md1, mi1, ErrStat, ErrMsg )\n") ;
-  fprintf(fp,"  CALL MeshCopy(tmpmesh, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  CALL MeshDestroy(tmpmesh, ErrStat, ErrMsg )\n") ;
-  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2)\n" ) ;
+  fprintf(fp,"  CALL MeshExtrapInterp1(u(1)%s%%%s, u(2)%s%%%s, tin, u_out%s%%%s, tin_out, ErrStat, ErrMsg )\n",
+                                      deref,r->name,deref,r->name ,deref,r->name  )  ;
          } else if ( order == 2 ) {
-  fprintf(fp,"  CALL MeshPack(u(1)%s%%%s, mr1, md1, mi1, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  CALL MeshPack(u(2)%s%%%s, mr2, md2, mi2, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  CALL MeshPack(u(3)%s%%%s, mr3, md3, mi3, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  ALLOCATE(b1(SIZE(mr1)))\n") ;
-  fprintf(fp,"  ALLOCATE(c1(SIZE(mr1)))\n") ;
-  fprintf(fp,"  b1 = (t(3)**2*(mr1 - mr2) + t(2)**2*(-mr1 + mr3))/(t(2)*t(3)*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  c1 = ( (t(2)-t(3))*mr1 + t(3)*mr2 - t(2)*mr3 ) / (t(2)*t(3)*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  mr1 = mr1 + b1 * t_out + c1 * t_out**2\n" ) ;
-  fprintf(fp,"  DEALLOCATE(b1)\n") ;
-  fprintf(fp,"  DEALLOCATE(c1)\n") ;
-  fprintf(fp,"  ALLOCATE(b1(SIZE(md1)))\n") ;
-  fprintf(fp,"  ALLOCATE(c1(SIZE(md1)))\n") ;
-  fprintf(fp,"  b1 = (t(3)**2*(md1 - md2) + t(2)**2*(-md1 + md3))/(t(2)*t(3)*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  c1 = ( (t(2)-t(3))*md1 + t(3)*md2 - t(2)*md3 ) / (t(2)*t(3)*(t(2) - t(3)))\n") ;
-  fprintf(fp,"  md1 = md1 + b1 * t_out + c1 * t_out**2\n" ) ;
-  fprintf(fp,"  DEALLOCATE(b1)\n") ;
-  fprintf(fp,"  DEALLOCATE(c1)\n") ;
-  fprintf(fp,"  CALL MeshUnPack(tmpmesh, mr1, md1, mi1, ErrStat, ErrMsg )\n") ;
-  fprintf(fp,"  CALL MeshCopy(tmpmesh, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name )  ;
-  fprintf(fp,"  CALL MeshDestroy(tmpmesh, ErrStat, ErrMsg )\n") ;
-  fprintf(fp,"  DEALLOCATE(mr1,md1,mi1,mr2,md2,mi2,mr3,md3,mi3)\n" ) ;
+  fprintf(fp,"  CALL MeshExtrapInterp2(u(1)%s%%%s, u(2)%s%%%s, u(3)%s%%%s, tin, u_out%s%%%s, tin_out, ErrStat, ErrMsg )\n",
+                                       deref,r->name,deref,r->name,deref,r->name ,deref,r->name  )  ;
          }
        } else {
        }
@@ -906,7 +875,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: tin(:)      ! Times associated with the inputs\n") ;
 //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
 //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
-  fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u_out     ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
+  fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u_out     ! Inputs at tin_out\n",ModName->nickname,typnmlong) ;
   fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: tin_out     ! time to be extrap/interp'd to\n") ;
   fprintf(fp," INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n") ;
   fprintf(fp," CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n") ;
@@ -916,16 +885,6 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," TYPE(MeshType) :: tmpmesh\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
 
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr1       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr2       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(ReKi),ALLOCATABLE,DIMENSION(:)        :: mr3       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: md1       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: md2       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: md3       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi1       ! temporary for extrapolaton/interpolation\n") ;
-  fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi2       ! temporary for extrapolation/interpolation\n") ;
-  fprintf(fp," INTEGER(IntKi),ALLOCATABLE,DIMENSION(:)    :: mi3       ! temporary for extrapolation/interpolation\n") ;
-//  fprintf(fp," REAL(DbKi)                                 :: a0       ! temporary for extrapolaton/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n") ;
@@ -944,10 +903,9 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
     }
   }
   fprintf(fp,"    ! Initialize ErrStat\n") ;
-  fprintf(fp,"    ! Initialize ErrStat\n") ;
   fprintf(fp," ErrStat = ErrID_None\n") ;
   fprintf(fp," ErrMsg  = \"\"\n") ;
-  fprintf(fp,"    ! we're subtract a constant from the times to resolve some \n") ;
+  fprintf(fp,"    ! we'll subtract a constant from the times to resolve some \n") ;
   fprintf(fp,"    ! numerical issues when t gets large (and to simplify the equations)\n") ;
   fprintf(fp," t = tin - tin(1)\n") ;
   fprintf(fp," t_out = tin_out - tin(1)\n") ;
@@ -1492,7 +1450,7 @@ gen_module( FILE * fp , node_t * ModName )
         }
         fprintf(fp,"  END TYPE %s%s\n",q->mapsto,(ipass==0)?"_C":"") ;
         if ( sw_ccode == 1 ) {
-          
+
         }
       }
   }
