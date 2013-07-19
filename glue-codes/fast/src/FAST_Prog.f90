@@ -354,8 +354,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       CALL ED_Input_ExtrapInterp(ED_Input, ED_InputTimes, u_ED, ZTime + p_FAST%dt, ErrStat, ErrMsg)
 !bjj: maybe we need to find a more elegant solution here...
-      u_ED%PlatformPtMesh%RemapFlag = ED_Input(1)%PlatformPtMesh%RemapFlag
-      u_ED%TowerLn2Mesh%RemapFlag   = ED_Input(1)%TowerLn2Mesh%RemapFlag
+!      u_ED%PlatformPtMesh%RemapFlag = ED_Input(1)%PlatformPtMesh%RemapFlag
+!      u_ED%TowerLn2Mesh%RemapFlag   = ED_Input(1)%TowerLn2Mesh%RemapFlag
             
       
          ! Shift "window" of the Mod1_Input and Mod1_Output
