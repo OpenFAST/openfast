@@ -102,7 +102,6 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
 
         for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
           sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir specified with -I
-fprintf(stderr,">> %s\n",include_file_name) ;
           if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
           if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
         }
@@ -121,7 +120,6 @@ fprintf(stderr,">> %s\n",include_file_name) ;
             for ( dr = "abcdefmy" ; *dr ; dr++ ) {
               sprintf(tmp,"%c:%s%s",*dr,(drive_specified)?"":"/cygwin",tmp2) ;
               strcpy( include_file_name, tmp ) ;
-fprintf(stderr,">> %s\n",include_file_name) ;
               if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
               if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
             }
@@ -132,7 +130,9 @@ gotit:
         if ( foundit ) {
           fprintf(stderr,"opening %s %s\n",include_file_name,
                                            (checking_for_usefrom || usefrom_sw)?"in usefrom mode":"" ) ;
+          parseline[0] = '\0' ;
           pre_parse( dir , include_fp , outfile, ( checking_for_usefrom || usefrom_sw ) ) ;
+          parseline[0] = '\0' ;
           fclose( include_fp ) ;
           continue ;
         } else {

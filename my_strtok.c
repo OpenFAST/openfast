@@ -102,7 +102,7 @@ make_lower( char * s1 )
 }
 
 /* do not store the result of this routine */
-#define LENRING 50
+#define LENRING 500
 static char t[LENRING][NAMELEN] ;  
 static int tcurs = 0 ;
 char *
