@@ -1344,7 +1344,7 @@ gen_module( FILE * fp , node_t * ModName )
       // Add use declarations for Modules that are included as "usefrom"
       if ( p->usefrom ) {
         if ( strcmp(make_lower_temp(p->name),"nwtc_library") ) {
-          fprintf(fp,"USE %s\n",p->name) ;
+          fprintf(fp,"USE %s_Types\n",p->name) ;
         }
       }
     }
