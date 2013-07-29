@@ -451,7 +451,9 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
               if ( r->dims[0]->deferred ) star = '*' ;
             }
             if ( r->type->type_type == DERIVED ) {
-              fprintf(fph,"    struct %s %c%s",r->type->mapsto,star,r->name ) ;
+              if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // do not output mesh types for C code, 20130729
+                fprintf(fph,"    struct %s %c%s",r->type->mapsto,star,r->name ) ;
+              }
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
