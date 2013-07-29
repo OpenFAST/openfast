@@ -4,7 +4,31 @@ MODULE SD_FEM
   
   
   
-    CONTAINS
+CONTAINS
+
+LOGICAL FUNCTION SwapElementNodes(n1, n2)
+! The local element coordinate system requires that Z1 <= Z2, and if Z1=Z2 then X1 <= X2, and if Z1=Z2, X1=X2 then Y1<Y2
+USE NWTC_Library
+
+   REAL(ReKi),   INTENT(IN) :: n1(:)
+   REAL(ReKi),   INTENT(IN) :: n2(:)
+   
+   SwapElementNodes = .FALSE.
+   IF ( EqualRealNos( n1(4), n2(4) ) ) THEN       ! Z1 = Z2    
+      IF ( EqualRealNos(n1(2), n2(2) ) ) THEN     ! X1 = X2
+         IF   ( n1(3) > n2(3) ) THEN
+            SwapElementNodes = .TRUE.                                   ! Y1 > Y2
+         END IF         
+      ELSE IF ( n1(2) > n2(2) ) THEN
+         SwapElementNodes = .TRUE.                                      ! X1 > X2            
+      END IF
+   ELSE IF    ( n1(4) > n2(4) ) THEN
+      SwapElementNodes = .TRUE.                                         ! Z1 > Z2
+   END IF
+
+
+END FUNCTION SwapElementNodes
+
     
 SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
   
@@ -179,16 +203,31 @@ SUBROUTINE SubDyn_Discrt(Init,p, ErrStat, ErrMsg)
    
    ! Initialize TempMembers and Elems
    DO I = 1, p%NMembers
-      TempMembers(I, 1) = I
-      TempMembers(I, 4) = Init%Members(I, 4)
-      TempMembers(I, 5) = Init%Members(I, 5)
       
-      p%Elems(I,     1) = I
-      p%Elems(I, NPE+2) = Init%Members(I, 4)
-      p%Elems(I, NPE+3) = Init%Members(I, 5)
+      !IF ( SwapElementNodes( Init%Nodes(Init%Members(I, 2),:), Init%Nodes(Init%Members(I, 3),:) ) ) THEN
+      !   TempMembers(I, 1) = I
+      !   TempMembers(I, 4) = Init%Members(I, 5)
+      !   TempMembers(I, 5) = Init%Members(I, 4)
+      !
+      !   p%Elems(I,     1) = I
+      !   p%Elems(I, NPE+2) = Init%Members(I, 5)
+      !   p%Elems(I, NPE+3) = Init%Members(I, 4)
+      !
+      !   Node1 = Init%Members(I, 3)
+      !   Node2 = Init%Members(I, 2)
+      !ELSE
+         TempMembers(I, 1) = I
+         TempMembers(I, 4) = Init%Members(I, 4)
+         TempMembers(I, 5) = Init%Members(I, 5)
       
-      Node1 = Init%Members(I, 2)
-      Node2 = Init%Members(I, 3)
+         p%Elems(I,     1) = I
+         p%Elems(I, NPE+2) = Init%Members(I, 4)
+         p%Elems(I, NPE+3) = Init%Members(I, 5)
+      
+         Node1 = Init%Members(I, 2)
+         Node2 = Init%Members(I, 3)
+      
+      !END IF
       
       flg1 = 0
       flg2 = 0
@@ -365,11 +404,11 @@ IF (Init%NDiv .GT. 1) THEN
            CALL GetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3),&
                            TempProps(Prop1, 4), d1+dd, t1+dt, TempProps, TempNProp, Init%PropSetsCol)           
            kelem = kelem + 1
-           CALL GetNewElem(kelem, Node1, knode, Prop1, kprop, p)  
+           CALL GetNewElem(kelem, Node1, knode, Prop1, kprop, p, Init%Nodes)  
            nprop = kprop              
       ELSE
            kelem = kelem + 1
-           CALL GetNewElem(kelem, Node1, knode, Prop1, Prop1, p)                
+           CALL GetNewElem(kelem, Node1, knode, Prop1, Prop1, p, Init%Nodes)                
            nprop = Prop1 
       ENDIF
       
@@ -391,18 +430,18 @@ IF (Init%NDiv .GT. 1) THEN
                               Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt, &
                               TempProps, TempNProp, Init%PropSetsCol)           
               kelem = kelem + 1
-              CALL GetNewElem(kelem, knode-1, knode, nprop, kprop, p)
+              CALL GetNewElem(kelem, knode-1, knode, nprop, kprop, p, Init%Nodes)
               nprop = kprop                
          ELSE
               kelem = kelem + 1
-              CALL GetNewElem(kelem, knode-1, knode, nprop, nprop, p)                
+              CALL GetNewElem(kelem, knode-1, knode, nprop, nprop, p, Init%Nodes)                
                
          ENDIF
       ENDDO
       
       ! the element connect to Node2
       kelem = kelem + 1
-      CALL GetNewElem(kelem, knode, Node2, nprop, Prop2, p)                
+      CALL GetNewElem(kelem, knode, Node2, nprop, Prop2, p, Init%Nodes)                
 
    ENDDO ! loop over all members
 
@@ -481,21 +520,45 @@ SUBROUTINE GetNewNode(k, x, y, z, Init)
 END SUBROUTINE GetNewNode
 !------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------
-SUBROUTINE GetNewElem(k, n1, n2, p1, p2, p)
+SUBROUTINE GetNewElem(k, n1, n2, p1, p2, p, Nodes)
+
    USE NWTC_Library
    USE SubDyn_Types
    IMPLICIT NONE
 
-   TYPE(SD_ParameterType), INTENT(INOUT)   ::p
+   INTEGER,                INTENT(IN   )   :: k
+   INTEGER,                INTENT(IN   )   :: n1
+   INTEGER,                INTENT(IN   )   :: n2
+   INTEGER,                INTENT(IN   )   :: p1
+   INTEGER,                INTENT(IN   )   :: p2
+   TYPE(SD_ParameterType), INTENT(INOUT)   :: p
+   REAL(ReKi),             INTENT(IN   )   :: Nodes(:,:)
    
-   ! local variables
-   INTEGER          :: k, n1, n2, p1, p2
+   ! Local Variables
    
-   p%Elems(k, 1) = k
-   p%Elems(k, 2) = n1
-   p%Elems(k, 3) = n2
-   p%Elems(k, 4) = p1
-   p%Elems(k, 5) = p2
+   LOGICAL                                 :: doSwap
+   
+   
+   ! The local element coordinate system requires that Z1 <= Z2, and if Z1=Z2 then X1 <= X2, and if Z1=Z2, X1=X2 then Y1<Y2
+   
+  
+                  
+   
+         
+   !IF ( SwapElementNodes( Nodes(n1,:), Nodes(n2,:) ) ) THEN
+   !   p%Elems(k, 1) = k
+   !   p%Elems(k, 2) = n2
+   !   p%Elems(k, 3) = n1
+   !   p%Elems(k, 4) = p2
+   !   p%Elems(k, 5) = p1
+   !   ! TODO: Create swap flag in the 6th index for output reporting! GJH 7/29/13
+   !ELSE 
+      p%Elems(k, 1) = k
+      p%Elems(k, 2) = n1
+      p%Elems(k, 3) = n2
+      p%Elems(k, 4) = p1
+      p%Elems(k, 5) = p2
+   !END IF
 
 END SUBROUTINE GetNewElem
 !------------------------------------------------------------------------------------------------------

@@ -4211,7 +4211,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
    INTEGER(IntKi)                               ::I,J,K,K2,L,L2      ! Counters
    INTEGER(IntKi), DIMENSION(2)                 ::K3    ! It stores Node IDs for element under consideration (may not be consecutive numbers)
    
-   REAL(ReKi), DIMENSION (6)                 :: FM_elm, FK_elm  !output static and dynamic forces and moments
+   REAL(ReKi), DIMENSION (6)                 :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
    REAL(ReKi), DIMENSION (6)                 :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
    Real(ReKi), DIMENSION (3,3)              :: DIRCOS    !direction cosice matrix (global to local) (3x3)
    Real(ReKi), ALLOCATABLE                  :: ReactNs(:)    !6*Nreact reactions
@@ -4401,7 +4401,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
                 ENDDO           
                 
              ENDDO
-             ReactNs((I-1)*6+1:6*I)=  FK_elm2 + FM_elm2  !Accumulate reactions from all nodes in GLOBAL COORDINATES
+             junk= FK_elm2 + FM_elm2  !Not sure why I need an intermediate step here, but the sum would not work otherwise
+             ReactNs((I-1)*6+1:6*I)=  junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES
        ENDDO
        
           !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts

@@ -711,6 +711,10 @@ DO I = 1, Init%NJoints
    
 ENDDO
 
+!---------- GO AHEAD  and ROTATE STRUCTURE UF DESIRED TO SIMULATE WINDS FROM OTHER DIRECTIONS -------------
+
+CALL SubRotate(Init%Joints,Init%NJoints,Init%SubRotateZ)
+
 !------------------- BASE REACTION JOINTS: T/F for Locked/Free DOF @ each Reaction Node ---------------------
 
    ! Skip the comment line.
@@ -1422,6 +1426,28 @@ CLOSE( UnIn )
 IF (Echo) CLOSE( UnEc )
 
 END SUBROUTINE SubDyn_Input
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SubRotate(Joints,NJoints,SubRotZ)
+!This subroutine rotates the joint coordinates with respect to global z
+   REAL(ReKi), INTENT(IN)       ::SubRotZ    ! Rotational angle in degrees
+   INTEGER(IntKi), INTENT(IN)       ::NJOINTS    ! Row size of Joints 
+   REAL(ReKi), DIMENSION(NJOINTS,3), INTENT(INOUT)    ::JOINTS     ! Rotational angle in degrees (Njoints,4)
+   
+   !locals
+   REAL(ReKi)              :: rot  !angle in rad
+   REAL(ReKi), DIMENSION(2,2) :: ROTM !rotational matrix (cos matrix with -theta)
+   
+   
+   rot=pi*SubRotz/180.
+   ROTM=transpose(reshape([ COS(rot),    -SIN(rot) , &
+                SIN(rot) ,      COS(rot)], [2,2] ))
+   Joints(:,2:3)= transpose(matmul(ROTM,transpose(Joints(:,2:3))))
+
+END SUBROUTINE  SubRotate           
+   
+!----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SubDyn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
