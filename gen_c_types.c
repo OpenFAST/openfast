@@ -150,7 +150,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
   frst = 1 ;
   for ( r = q->fields ; r ; r = r->next )
   {
-    if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    if ( r->type->type_type == DERIVED && ! r->type->usefrom && strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
   fprintf(fp," // first call %s_Pack%s to get correctly sized buffers for unpacking\n",
@@ -301,7 +301,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
   frst = 1 ;
   for ( r = q->fields ; r ; r = r->next )
   {
-    if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    if ( r->type->type_type == DERIVED && ! r->type->usefrom && strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
   fprintf(fp,"  ErrStat = C_%s_Pack%s( Re_%s_Buf,  &Re_BufSz2  ,\n",
@@ -350,7 +350,7 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
    // Pack data
   for ( r = q->fields ; r ; r = r->next )
   {
-    if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    if ( r->type->type_type == DERIVED && ! r->type->usefrom && strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
   fprintf(fp,"    ErrStat = C_%s_Pack%s( Re_%s_Buf,  &Re_BufSz2  ,\n",
