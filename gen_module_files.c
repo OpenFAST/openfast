@@ -794,9 +794,9 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
        } else if ( !strcmp( r->type->mapsto, "MeshType" ) ) {
          strcpy(dex,"") ;
          for ( j = r->ndims ; j > 0 ; j-- ) {
-  fprintf(fp,"  DO i%d%d = 1,SIZE(u_out%s%%%s,%d)\n",j,0,deref,r->name,j) ;
+  fprintf(fp,"  DO i%d%d = 1,SIZE(u_out%s%%%s,%d)\n",0,1,deref,r->name,j) ;
              if ( j == r->ndims ) strcat(dex,"(") ;
-             sprintf(tmp,"i%d%d",j,0) ;
+             sprintf(tmp,"i%d%d",0,j) ;
              if ( j == 1 ) strcat(tmp,")") ; else strcat(tmp,",") ;
              strcat(dex,tmp) ;
          }
