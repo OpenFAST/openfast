@@ -61,6 +61,7 @@ main( int argc, char *argv[], char *env[] )
   strcpy(fname_in,"") ;
   wrote_template = 0 ;
 
+
   while (*argv) {
       if (!strncmp(*argv,"-D",2)) {
         char * p ;
