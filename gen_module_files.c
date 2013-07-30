@@ -42,18 +42,26 @@ gen_copy_f2c_c2f( FILE * fp, const node_t * ModName, char * inout, char * inoutl
     for ( r = q->fields ; r ; r = r->next )
     {
       if ( r->type != NULL ) {
-        if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
-          char nonick2[NAMELEN] ;
-          remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-          for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
-          }
-  fprintf(fp,"  CALL %s_%s_Copy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
-          ModName->nickname,(sw==0)?"F2C":"C2F",fast_interface_type_shortname(nonick2),
-          nonick,r->name,dimstr(r->ndims)) ;
-          for ( d = r->ndims ; d >= 1 ; d-- ) {
+        if ( r->type->type_type == DERIVED && ! r->type->usefrom  ) {
+#if 0
+// cannot pass derived data types through C interface
+          if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // if not meshtype
+            char nonick2[NAMELEN] ;
+            remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+            for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"DO i%d = 1, SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
+            }
+fprintf(stderr,"> %s\n",r->type->name,r->type->mapsto) ;
+  fprintf(fp,"  asdf CALL %s_%s_Copy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
+            ModName->nickname,(sw==0)?"F2C":"C2F",fast_interface_type_shortname(nonick2),
+            nonick,r->name,dimstr(r->ndims)) ;
+            for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
+            }
           }
+#else
+  fprintf(stderr,"Registry WARNING: derived data type %s of type %s is not passed through C interface\n",r->name,r->type->name) ;
+#endif
         } else {
           if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
             char tmp2[NAMELEN], tmp4[NAMELEN] ;
@@ -763,7 +771,7 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
    node_t *q, *r1 ;
    int i, j ;
    int mesh = 0 ;
-   char derefrecurse[NAMELEN] ;
+   char derefrecurse[NAMELEN],dex[NAMELEN],tmp[NAMELEN] ;
    if ( recurselevel > MAXRECURSE ) {
      fprintf(stderr,"REGISTRY ERROR: too many levels of array subtypes\n") ;
      exit(9) ;
@@ -784,14 +792,27 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
            }
          }
        } else if ( !strcmp( r->type->mapsto, "MeshType" ) ) {
+         strcpy(dex,"") ;
+         for ( j = r->ndims ; j > 0 ; j-- ) {
+  fprintf(fp,"  DO i%d%d = 1,SIZE(u_out%s%%%s,%d)\n",j,0,deref,r->name,j) ;
+             if ( j == r->ndims ) strcat(dex,"(") ;
+             sprintf(tmp,"i%d%d",j,0) ;
+             if ( j == 1 ) strcat(tmp,")") ; else strcat(tmp,",") ;
+             strcat(dex,tmp) ;
+         }
+        
          if        ( order == 0 ) {
-  fprintf(fp,"  CALL MeshCopy(u(1)%s%%%s, u_out%s%%%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name,deref,r->name )  ;
+  fprintf(fp,"  CALL MeshCopy(u(1)%s%%%s%s, u_out%s%%%s%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name,dex,deref,r->name,dex )  ;
          } else if ( order == 1 ) {
-  fprintf(fp,"  CALL MeshExtrapInterp1(u(1)%s%%%s, u(2)%s%%%s, tin, u_out%s%%%s, tin_out, ErrStat, ErrMsg )\n",
-                                      deref,r->name,deref,r->name ,deref,r->name  )  ;
+  fprintf(fp,"  CALL MeshExtrapInterp1(u(1)%s%%%s%s, u(2)%s%%%s%s, tin, u_out%s%%%s%s, tin_out, ErrStat, ErrMsg )\n",
+                                      deref,r->name,dex,deref,r->name,dex,deref,r->name,dex  )  ;
          } else if ( order == 2 ) {
-  fprintf(fp,"  CALL MeshExtrapInterp2(u(1)%s%%%s, u(2)%s%%%s, u(3)%s%%%s, tin, u_out%s%%%s, tin_out, ErrStat, ErrMsg )\n",
-                                       deref,r->name,deref,r->name,deref,r->name ,deref,r->name  )  ;
+  fprintf(fp,"  CALL MeshExtrapInterp2(u(1)%s%%%s%s, u(2)%s%%%s%s, u(3)%s%%%s%s, tin, u_out%s%%%s%s, tin_out, ErrStat, ErrMsg )\n",
+                                       deref,r->name,dex,deref,r->name,dex,deref,r->name,dex,deref,r->name,dex  )  ;
+         }
+
+         for ( j = r->ndims ; j > 0 ; j-- ) {
+  fprintf(fp,"  ENDDO\n") ;
          }
        } else {
        }
