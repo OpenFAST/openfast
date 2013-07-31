@@ -85,6 +85,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
       FILE *include_fp ;
       char include_file_name[128] ;
       int checking_for_usefrom = !strncmp( p1, "usefrom", 7 ) ;
+//fprintf(stderr,"checking_for_usefrom %d |%s|\n",checking_for_usefrom,p1) ;
 
       p += 7 ; for ( ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
       if ( strlen( p ) > 127 ) { fprintf(stderr,"Registry warning: invalid include file name: %s\n", p ) ; }
@@ -133,6 +134,8 @@ gotit:
           parseline[0] = '\0' ;
           pre_parse( dir , include_fp , outfile, ( checking_for_usefrom || usefrom_sw ) ) ;
           parseline[0] = '\0' ;
+//          fprintf(stderr,"closing %s %s\n",include_file_name,
+//                                           (checking_for_usefrom || usefrom_sw)?"in usefrom mode":"" ) ;
           fclose( include_fp ) ;
           continue ;
         } else {
@@ -180,6 +183,8 @@ gotit:
     }
     if ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) continue ;
 /*** end of preprocessing directives ****/
+//fprintf(stderr,"parseline |%s|\n",parseline) ;
+//fprintf(stderr,"inln |%s|\n",inln) ;
 
     strcat( parseline , inln ) ;
 
@@ -210,6 +215,7 @@ gotit:
     i = 0 ;
 
     strcpy( parseline_save, parseline ) ;
+//fprintf(stderr,"parseline_save |%s|\n",parseline_save) ;
 
     if ((tokens[i] = my_strtok(parseline)) != NULL ) i++ ;
     while (( tokens[i] = my_strtok(NULL) ) != NULL && i < MAXTOKENS ) i++ ;
@@ -226,6 +232,8 @@ gotit:
       if ( tokens[i][0] == '"' ) tokens[i]++ ;
       if ((pp=rindex( tokens[i], '"' )) != NULL ) *pp = '\0' ;
     }
+    for ( p = parseline_save ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+    strcpy(parseline_save,p) ;  // get rid of leading spaces
     if      ( !strncmp( parseline_save , "typedef", 7 ) )
     {
         char tmp[NAMELEN], *x ;
@@ -239,6 +247,7 @@ normal:
     /* otherwise output the line as is */
     fprintf(outfile,"%s\n",parseline_save) ;
     parseline[0] = '\0' ;  /* reset parseline */
+    parseline_save[0] = '\0' ;  /* reset parseline_save */
   }
   return(retval) ;
 }
