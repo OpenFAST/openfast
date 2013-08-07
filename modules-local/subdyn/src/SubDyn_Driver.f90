@@ -422,11 +422,11 @@ PROGRAM TestSubDyn
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
-   CALL SubDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      CALL WrScr( ErrMsg )
-   END IF
+   !CALL SubDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   !
+   !IF ( ErrStat /= ErrID_None ) THEN
+   !   CALL WrScr( ErrMsg )
+   !END IF
 
 
    !...............................................................................................................................
