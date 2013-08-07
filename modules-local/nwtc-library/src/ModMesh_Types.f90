@@ -102,15 +102,15 @@ MODULE ModMesh_Types
       LOGICAL,POINTER :: RemapFlag  => NULL()                ! false=no action/ignore; true=remap required
       INTEGER :: ios                                         ! Mesh type: input (1), output(2), or state(3)
       INTEGER :: Nnodes                                      ! Number of nodes (vertices) in mesh
-                                                             
+
      ! Mesh elements
       TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL()   ! Elements in the mesh, by type
-                                                             
-     ! Mesh traversal                                        
+
+     ! Mesh traversal
       INTEGER :: nelemlist                                   ! Number of elements in the list (ElemList)
       INTEGER :: maxelemlist                                 ! Maximum number of elements in the list
       INTEGER :: nextelem                                    ! Next element in the list
-      INTEGER :: spatial !bjj: unused?                       
+      INTEGER :: spatial !bjj: unused?
       TYPE(ElemListType), POINTER :: ElemList(:) => NULL()   ! All of the elements in the mesh
 
      ! Node position and reference orientation, which are always allocated (and shared between siblings):
