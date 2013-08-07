@@ -9,7 +9,7 @@ Module SubDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: SubDyn_ProgDesc = ProgDesc( 'SubDyn', 'v0.02.00', '19-Jul-2013' )
+   TYPE(ProgDesc), PARAMETER  :: SubDyn_ProgDesc = ProgDesc( 'SubDyn', 'v0.03.00', '06-Aug-2013' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -306,6 +306,9 @@ SUBROUTINE SubDyn_Init( Init, u, p, x, xd, z, OtherState, y, Interval, InitOut, 
    CALL EigenSolve( Init%K, Init%M, Init%TDOF, NOmega, .True., Init, p, Phi, Omega, Init%RootName, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
      
+      ! Clean up Omega and Phi arrays because they are not needed
+   DEALLOCATE(Omega)
+   DEALLOCATE(Phi)
    
          ! Craig-Bampton reduction
 
@@ -1142,7 +1145,7 @@ IF ( Sttus /= 0 )  THEN
    IF (Echo) CLOSE( UnEc )
    RETURN
 ENDIF
-
+Init%CMass = 0.0
 
 DO I = 1, Init%NCMass
 
@@ -2230,7 +2233,10 @@ SUBROUTINE CBMatrix(DOFI, DOFR, DOFL, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, TI
    REAL(ReKi)  ::  MBB2(DOFR, DOFR)
    REAL(ReKi)  ::  MBM2(DOFR, DOFM)   
    REAL(ReKi)                            :: KLL_inv(DOFL, DOFL)
-   REAL(ReKi)                            :: Mu(DOFL, DOFL)
+   REAL(ReKi)                            :: Mu(DOFL, DOFL),Mu2(DOFL, DOFL)  !matrices for normalization, Mu2 is diagonal
+   
+   REAL(DbKi)           :: PhiM2(DOFL, DOFM)  
+   
    Character(1024) :: rootname
    INTEGER                               :: I
    
@@ -2263,13 +2269,13 @@ SUBROUTINE CBMatrix(DOFI, DOFR, DOFL, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, TI
    
    ! normalize PhiM
    MU = MATMUL ( MATMUL( TRANSPOSE(PhiM), MLL ), PhiM )
-   
+   MU2=0 !Initialize
    DO I = 1, DOFM
-      MU(I, I) = 1./SQRT( MU(I, I) )  !RRD this is was wrong and I fixed it 6/10/2013
+      MU2(I, I) = 1./SQRT( MU(I, I) )  !RRD this is was wrong and I fixed it 6/10/2013
       OmegaM(I) = SQRT( OmegaM(I) )
    ENDDO
    
-   PhiM = MATMUL( PhiM, MU )
+   PhiM = MATMUL( PhiM, MU2 )  !this is the nondimensionalization 
 
    MBB = MRR + MATMUL(MRL, PhiR) + TRANSPOSE( MATMUL(MRL, PhiR) ) &
              + MATMUL( MATMUL(TRANSPOSE(PhiR), MLL), PhiR )
@@ -2485,29 +2491,30 @@ SUBROUTINE EigenSolve(K, M, TDOF, NOmega, Reduced, Init,p, Phi, Omega, RootName,
 
    IMPLICIT NONE
 
-   TYPE(ZD11_TYPE) MATRIXK
-   TYPE(ZD11_TYPE) MATRIXM
-
-   TYPE(SD_InitInputType), INTENT(  in)  :: Init  
-   TYPE(SD_ParameterType), INTENT(  in)  :: p  
- 
-   INTEGER,        INTENT(IN)      :: TDOF                               ! Total degrees of freedom of the incoming system
-   REAL(ReKi),     INTENT(IN)      :: K(TDOF, TDOF), M(TDOF, TDOF)       !mass and stiffness matrix 
-   LOGICAL,        INTENT(IN)      :: Reduced  ! Whether or not to reduce matrices, this will be removed altogether later, when reduction will be done apriori
-   CHARACTER(1024),INTENT(IN)      :: RootName 
+   INTEGER,                INTENT(IN   )    :: TDOF                               ! Total degrees of freedom of the incoming system
+   REAL(ReKi),             INTENT(IN   )    :: K(TDOF, TDOF)                      ! stiffness matrix 
+   REAL(ReKi),             INTENT(IN   )    :: M(TDOF, TDOF)                      ! mass matrix 
+   INTEGER,                INTENT(IN   )    :: NOmega                             ! RRD: no. of requested eigenvalues
+   LOGICAL,                INTENT(IN   )    :: Reduced                            ! Whether or not to reduce matrices, this will be removed altogether later, when reduction will be done apriori
+   TYPE(SD_InitInputType), INTENT(IN   )    :: Init  
+   TYPE(SD_ParameterType), INTENT(IN   )    :: p  
+   REAL(DbKi),             INTENT(INOUT)    :: Phi(TDOF, NOmega)                  ! RRD: Eigen -values and vectors
+   REAL(DbKi),             INTENT(INOUT)    :: Omega(NOmega)                      ! RRD: Eigen -values and vectors
+   CHARACTER(1024),        INTENT(IN   )    :: RootName    
+   INTEGER(IntKi),         INTENT(  OUT)    :: ErrStat                            ! Error status of the operation
+   CHARACTER(1024),        INTENT(  OUT)    :: ErrMsg                             ! Error message if ErrStat /= ErrID_None
    
-   INTEGER,        INTENT(IN)           :: NOmega                            !RRD: no. of requested eigenvalues
-   REAL(DbKi),     INTENT(OUT)          :: Omega(NOmega), Phi(TDOF, NOmega)  !RRD: Eigen -values and vectors
-      
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(1024),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    !LOCALS 
-   INTEGER                  ::  IIKK(TDOF+1), IIMM(TDOF+1)
-   INTEGER                  :: UnDbg
-   CHARACTER(1024)          :: TempStr, outfile
    
-   INTEGER               :: TNNz, NNzK, NNzM
-   INTEGER               :: i, j
+
+   !INTEGER                  :: IIKK(TDOF+1)
+   !INTEGER                  :: IIMM(TDOF+1)
+   INTEGER                  :: UnDbg
+   CHARACTER(1024)          :: TempStr
+   CHARACTER(1024)          :: outfile
+   
+   INTEGER                  :: TNNz, NNzK, NNzM
+   INTEGER                  :: i, j
      
    !MORE LOCALS RRD
    REAL(DbKi),ALLOCATABLE            :: Omega2(:)                         !RRD: Eigen-values new system
@@ -2519,64 +2526,67 @@ SUBROUTINE EigenSolve(K, M, TDOF, NOmega, Reduced, Init,p, Phi, Omega, RootName,
    REAL(Dbki), ALLOCATABLE          :: Kred2(:,:),Mred2(:,:),M_INV2(:,:), normcoeff(:,:), Phi2(:,:)
         
           !DUE to Huimin's choice of single precision, allt he types are screwed up, although I had several times requested to go to DPrec
+          
    ErrStat = ErrID_None
    ErrMsg  = ''
    
-   !===============================================================================
-	!=====             Construct Matrix Structure from regular format
-	!===============================================================================  
+  
 
-   CALL MatrixStructure(K, MatrixK, IIKK, TDOF, NNZK, ErrStat, ErrMsg)
-   IF ( ErrStat /= ErrID_None ) RETURN
-   
-   CALL MatrixStructure(M, MatrixM, IIMM, TDOF, NNZM, ErrStat, ErrMsg)  
-   IF ( ErrStat /= ErrID_None ) RETURN
-!! deallocate temp matrices
-!IF (ALLOCATED(Init%K)) DEALLOCATE(Init%K)
-!IF (ALLOCATED(Init%M)) DEALLOCATE(Init%M)
 
-    IF (Reduced .AND. (NOmega .LT. 10)) THEN  !RRD: this is to keep this solver alive for a bit, it will need to be removed altogether! 6/10/13
-    Call EA16_double(TDOF, NNZK, MatrixK, IIKK, &
-                                NNZM, MatrixM, IIMM, &
-                               2, 1, 18,                            &
-                               NOmega, Omega, phi)
-    ENDIF
+    
     !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
     !NEW EIGENSOLVER- RRD
     !First I need to remove constrained nodes DOFs
     IF (Reduced) THEN
+        ! This is actually done when we are printing out the 'full' set of eigenvalues
         CALL ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg ) 
         CALL ReduceKMdofs(Mred,M,TDOF, Init,p, ErrStat, ErrMsg ) 
         N=SIZE(Kred,1)    
     ELSE
+        ! This is actually done whe we are generating the CB-reduced set of eigenvalues, so the the variable 'Reduced' can be a bit confusing. GJH 8/1/13
         N=SIZE(K,1)
         ALLOCATE( Kred(N,N),Mred(N,N), STAT = ErrStat )
         Kred=K
         Mred=M
     ENDIF
     
-    
-    !ALLOCATE(M_inv(N,N), STAT = ErrStat )
-    !CALL InverseMatrix(Mred, M_inv, N, ErrStat, ErrMsg)  !not needed anymore, i was using it with the other eigensolver which had 
+      ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
+      
+    IF ( NOmega > N ) THEN
+       ErrStat = ErrID_Fatal
+       ErrMsg = " NOmega must be less than or equal to N in the subroutine EigenSolve!"
+       RETURN
+    END IF
     
     LDA=N
     LDB=LDA
     LWORK=8*N  !this is what the eigensolver wants
     ALLOCATE( WORK(LWORK), STAT = ErrStat )
+    WORK = 0.0
     ALLOCATE( Omega2(N), STAT = ErrStat )
+    Omega2 = 0.0
     LDVL=N
     LDVR=N
     ALLOCATE( ALPHAR(N),ALPHAI(N),BETA(N), STAT = ErrStat )
+    ALPHAR = 0.0
+    ALPHAI = 0.0
+    BETA   = 0.0
     ALLOCATE( VR(N,N),VL(N,N), STAT = ErrStat )  !VL is just a junk variable for us but it will be used later
+    VR = 0.0
+    VL = 0.0
     ALLOCATE( Kred2(N,N),Mred2(N,N), STAT = ErrStat )
     Kred2=Kred
     Mred2=Mred
+    
+    
     CALL  dggev('N','V',N ,Kred2 ,LDA, Mred2,LDB, ALPHAR, ALPHAI, BETA, VL, 1, VR,  LDVR, work, lwork, info)
+    
     Omega2=ALPHAR/BETA  !Note this may not be correct if ALPHAI<>0 and/or BETA=0 TO INCLUDE ERROR CHECK, also they need to be sorted
     ALLOCATE( KEY(N), STAT = ErrStat )
     DO I=1,N !Initialize the key
         KEY(I)=I 
     ENDDO  
+   
     CALL DLASRT2('I',N,Omega2,key,INFO)
     !we need to rearrange eigenvectors based on sorting of Omega2
     !Now rearrange VR based on the new key, also I might have to scale the eigenvectors following generalized mass =idnetity criterion, also if i reduced the matrix I will need to re-expand the eigenvector
@@ -2612,17 +2622,18 @@ END IF
 !write(UnDbg, '(24(1x, e15.6))') ((KT(i, j), j= 1, 24), i = 1, 24)
 !write(UnDbg, '(24(1x, e15.6))') ((MT(i, j), j= 1, 24), i = 1, 24)
 
-WRITE(UnDbg, '(A, I6)') ('Number of eigen values ', NOmega )
-WRITE(UnDbg, '(I6, e15.6)') ( (i, sqrt(Omega(i))/2.0/pi ), i = 1, NOmega )
 WRITE(UnDbg, '(A)') ('__________')
 WRITE(UnDbg, '(A, I6)') ('Number of new eigenvalues ', NOmega )
 WRITE(UnDbg, '(I6, e15.6)') ( (i, sqrt(Omega2(i))/2.0/pi ), i = 1, NOmega )
 
 CLOSE(UnDbg)
 
+   ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
+   
 Omega=Omega2(1:NOmega)  !Assign my new Omega and below my new Phi (eigenvectors)
 
-IF (.NOT.(Reduced)) THEN!For the time being Phi gets updated only when CB eigensolver is requested. I need to fix it for the other case (full fem) and tehn get rid of the other eigensolver, this implies "unreducing" the VR
+IF (.NOT.(Reduced)) THEN !For the time being Phi gets updated only when CB eigensolver is requested. I need to fix it for the other case (full fem) and tehn get rid of the other eigensolver, this implies "unreducing" the VR
+      ! This is done as part of the CB-reduced eigensolve
    Phi=VR(:,1:NOmega)   
 ELSE !Need to expand eigenvectors for removed DOFs
    CALL UnReduceVRdofs(VR(:,1:NOmega),Phi2,N,NOmega, Init,p, ErrStat, ErrMsg )
@@ -3012,50 +3023,50 @@ SUBROUTINE SetParameters(Init, p, TI, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaM,  &
    END IF   
    p%D2_42 = 0         
    
-      ! Allocate Abar_21
-   ALLOCATE( p%Abar_21(DOFL, DOFM), STAT = ErrStat )
+      ! Allocate Cbar_21
+   ALLOCATE( p%Cbar_21(DOFL, DOFM), STAT = ErrStat )
    IF ( ErrStat/= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating parameter matrix p%Abar_21 in SubDyn_Init/Set parameters'
+      ErrMsg  = 'Error allocating parameter matrix p%Cbar_21 in SubDyn_Init/Set parameters'
       RETURN
    END IF   
-   p%Abar_21 = 0            
+   p%Cbar_21 = 0            
    
-      ! Allocate Abar_22
-   ALLOCATE( p%Abar_22(DOFL, DOFM), STAT = ErrStat )
+      ! Allocate Cbar_22
+   ALLOCATE( p%Cbar_22(DOFL, DOFM), STAT = ErrStat )
    IF ( ErrStat/= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating parameter matrix p%Abar_22 in SubDyn_Init/Set parameters'
+      ErrMsg  = 'Error allocating parameter matrix p%Cbar_22 in SubDyn_Init/Set parameters'
       RETURN
    END IF   
-   p%Abar_22 = 0               
+   p%Cbar_22 = 0               
    
-      ! Allocate Bbar_13
-   ALLOCATE( p%Bbar_13(DOFI, p%TPdofL), STAT = ErrStat )
+      ! Allocate Dbar_13
+   ALLOCATE( p%Dbar_13(DOFI, p%TPdofL), STAT = ErrStat )
    IF ( ErrStat/= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating parameter matrix p%Bbar_13 in SubDyn_Init/Set parameters'
+      ErrMsg  = 'Error allocating parameter matrix p%Dbar_13 in SubDyn_Init/Set parameters'
       RETURN
    END IF   
-   p%Bbar_13 = 0               
+   p%Dbar_13 = 0               
    
-      ! Allocate Bbar_23
-   ALLOCATE( p%Bbar_23(DOFL, p%TPdofL), STAT = ErrStat )
+      ! Allocate Dbar_23
+   ALLOCATE( p%Dbar_23(DOFL, p%TPdofL), STAT = ErrStat )
    IF ( ErrStat/= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating parameter matrix p%Bbar_23 in SubDyn_Init/Set parameters'
+      ErrMsg  = 'Error allocating parameter matrix p%Dbar_23 in SubDyn_Init/Set parameters'
       RETURN
    END IF   
-   p%Bbar_23 = 0               
+   p%Dbar_23 = 0               
 
-      ! Allocate Bbar_24
-   ALLOCATE( p%Bbar_24(DOFL, DOFL), STAT = ErrStat )
+      ! Allocate Dbar_24
+   ALLOCATE( p%Dbar_24(DOFL, DOFL), STAT = ErrStat )
    IF ( ErrStat/= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating parameter matrix p%Bbar_24 in SubDyn_Init/Set parameters'
+      ErrMsg  = 'Error allocating parameter matrix p%Dbar_24 in SubDyn_Init/Set parameters'
       RETURN
    END IF   
-   p%Bbar_24 = 0
+   p%Dbar_24 = 0
    
       ! Allocate Fbar_21
    ALLOCATE( p%Fbar_21(DOFL), STAT = ErrStat )
@@ -3131,27 +3142,27 @@ SUBROUTINE SetParameters(Init, p, TI, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaM,  &
    p%D2_32 = TI
    p%D2_42 = MATMUL(PhiRb, TI)
    
-   ! Abar_21, Abar_22
+   ! Cbar_21, Cbar_22
    DO I = 1, DOFM
-         p%Abar_21(:, i) = -PhiM(:, i)*OmegaM(i)*OmegaM(i)
-         P%Abar_22(:, i) = -2.0*PhiM(:, i)*OmegaM(i)*Init%JDampings(i)
+         p%Cbar_21(:, i) = -PhiM(:, i)*OmegaM(i)*OmegaM(i)
+         P%Cbar_22(:, i) = -2.0*PhiM(:, i)*OmegaM(i)*Init%JDampings(i)
    ENDDO   
 !   TempOmega = 0
 !   DO I = 1, DOFM
 !      TempOmega(I, I) = OmegaM(i)*OmegaM(i)   
 !   ENDDO
-!   p%Abar_21 = -MATMUL(PhiM, TempOmega)
+!   p%Cbar_21 = -MATMUL(PhiM, TempOmega)
    
 !   TempOmega = 0
 !   DO I = 1, DOFM
 !      TempOmega(I, I) = OmegaM(i)*Init%JDampings(i)   
 !   ENDDO
-!   p%Abar_22 = -2.0*MATMUL(PhiM, TempOmega)
+!   p%Cbar_22 = -2.0*MATMUL(PhiM, TempOmega)
    
-   ! Bbar_13, Bbar_23, Bbar_24 
-   p%Bbar_13 = TI
-   p%Bbar_23 = MATMUL( PhiRb, TI ) - MATMUL( PhiM, TRANSPOSE(MBMt) )
-   p%Bbar_24 = MATMUL( PhiM, TRANSPOSE( PhiM ) )
+   ! Dbar_13, Dbar_23, Dbar_24 
+   p%Dbar_13 = TI
+   p%Dbar_23 = MATMUL( PhiRb, TI ) - MATMUL( PhiM, TRANSPOSE(MBMt) )
+   p%Dbar_24 = MATMUL( PhiM, TRANSPOSE( PhiM ) )
    
    ! Fbar_21
    p%Fbar_21 = MATMUL( PhiM, MATMUL( TRANSPOSE(PhiM), FGL) )
