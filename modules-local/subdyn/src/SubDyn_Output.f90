@@ -4014,7 +4014,14 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
     DO I=1,p%NReact  !For all constrained node
  
       p%MOutLst3(I)%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
-     
+      
+      ALLOCATE( p%MOutLst3(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !
+       IF ( ErrStat/= 0 ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error allocating p%MOutLst3(I)%NodeIDs arrays in SDOut_Init'
+         RETURN
+       END IF
+       
       p%MOutLst3(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
        !Now I need to find out which elements are attached to those nodes and still belong to the member I
       !ElmID2s could contain the same element twice if Ndiv=1
@@ -4361,10 +4368,13 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
        
        ALLOCATE ( ReactNs(6*p%NReact), STAT = ErrStat )
        IF ( ErrStat /= ErrID_None ) THEN
-	    ErrMsg  = ' Error allocating space for ReactNs array.'
-	    ErrStat = ErrID_Fatal
-	    RETURN
+	      ErrMsg  = ' Error allocating space for ReactNs array.'
+	      ErrStat = ErrID_Fatal
+	      RETURN
        END IF
+       
+       ReactNs = 0.0 !Initialize
+       
        DO I=1,p%NReact   !Do for each constrained node
           
           FK_elm2=0 !Initialize
