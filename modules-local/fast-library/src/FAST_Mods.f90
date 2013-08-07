@@ -19,10 +19,9 @@
 MODULE FAST_Types
 
    USE NWTC_Library
-   USE Map_Stuff !bjj: add this to NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.01.01a-bjj', '16-July-2013' )                  ! The version number of this module
-   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
+   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime          ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE.
 
@@ -59,13 +58,13 @@ MODULE FAST_Types
 
          ! Data structures for mapping the various modules together
 
-      TYPE(MapType), ALLOCATABLE     :: ED_P_2_HD_W_P(:)                          ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
-      TYPE(MapType), ALLOCATABLE     :: ED_P_2_HD_M_P(:)                          ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point
-      TYPE(MapType), ALLOCATABLE     :: ED_P_2_HD_M_L(:)                          ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2
-
-      TYPE(MapType), ALLOCATABLE     :: HD_W_P_2_ED_P(:)                          ! Map HydroDyn WAMIT Point to ElastoDyn PlatformPtMesh
-      TYPE(MapType), ALLOCATABLE     :: HD_M_P_2_ED_P(:)                          ! Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh
-      TYPE(MapType), ALLOCATABLE     :: HD_M_L_2_ED_P(:)                          ! Map HydroDyn Morison Line2 to ElastoDyn PlatformPtMesh
+      TYPE(MeshMapType)                 :: ED_P_2_HD_W_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
+      TYPE(MeshMapType)                 :: ED_P_2_HD_M_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point
+      TYPE(MeshMapType)                 :: ED_P_2_HD_M_L                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2
+                                     
+      TYPE(MeshMapType)                 :: HD_W_P_2_ED_P                            ! Map HydroDyn WAMIT Point to ElastoDyn PlatformPtMesh
+      TYPE(MeshMapType)                 :: HD_M_P_2_ED_P                            ! Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh
+      TYPE(MeshMapType)                 :: HD_M_L_2_ED_P                            ! Map HydroDyn Morison Line2 to ElastoDyn PlatformPtMesh
 
    END TYPE FAST_ModuleMapType
 

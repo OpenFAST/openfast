@@ -144,8 +144,9 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder
    ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input and ED_InputTimes.") !bjj this error will need to avoid calling the ModName_End routines...
-
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input and ED_InputTimes.") 
+   ALLOCATE( HD_Input( p_FAST%InterpOrder+1 ), HD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating HD_Input and HD_InputTimes.") 
 
       ! initialize ElastoDyn (must be done first)
    InitInData_ED%InputFile     = p_FAST%EDFile
@@ -201,9 +202,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
    IF ( p_FAST%CompHydro ) THEN
 
-         ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder
-      ALLOCATE( HD_Input( p_FAST%InterpOrder+1 ), HD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating HD_Input and HD_InputTimes.") !bjj this error will need to avoid calling the ModName_End routines...
+      !   ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder
+      ! BJJ: I'm doing this outside "IF CompHydro" because I don't want to check if HD_Input is allocated every time I call ED_InputSolve
+      !ALLOCATE( HD_Input( p_FAST%InterpOrder+1 ), HD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      !IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating HD_Input and HD_InputTimes.") !bjj this error will need to avoid calling the ModName_End routines...
 
       InitInData_HD%Gravity      = InitOutData_ED%Gravity
       InitInData_HD%UseInputFile = .TRUE.
@@ -212,7 +214,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       CALL HydroDyn_Init( InitInData_HD, HD_Input(1), p_HD,  x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, dt_global, InitOutData_HD, ErrStat, ErrMsg )
 
-      CALL CheckError( ErrStat, 'Error initializing HydroDyn.' )
+      CALL CheckError( ErrStat, 'Message from HydroDyn_Init: '//NewLine//ErrMsg )
 !print *, dt_global, p_FAST%DT
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in HydroDyn must be the same as the value of DT in FAST.")
@@ -407,6 +409,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       !.....................................................
       ! Input-Output solve:
+      !   note that motions must be solved first, then loads
       !.....................................................
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
 
@@ -481,7 +484,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       END IF
 
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
-      CALL ED_InputSolve( p_FAST, p_ED,  ED_Input(1), y_SrvD, y_HD, MeshMapData, ErrStat, ErrMsg )
+      ! note: HD_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
+      CALL ED_InputSolve( p_FAST, ED_Input(1), y_SrvD, y_HD, HD_Input(1), MeshMapData, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
 
 
@@ -582,8 +586,10 @@ CONTAINS
       CALL FAST_End( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      CALL ED_End(   ED_Input(1),   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      IF ( ALLOCATED(ED_Input) ) THEN
+         CALL ED_End(   ED_Input(1),   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
+         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      END IF
 
       IF ( p_FAST%CompServo ) THEN
          CALL SrvD_End( u_SrvD, p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat2, ErrMsg2 )
@@ -591,9 +597,9 @@ CONTAINS
       END IF
 
       CALL AeroDyn_End( ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( 'Error ending AeroDyn' )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( 'Error ending AeroDyn.' )
 
-      IF ( p_FAST%CompHydro ) THEN
+      IF ( p_FAST%CompHydro .AND. ALLOCATED(HD_Input) ) THEN
          CALL HydroDyn_End(    HD_Input(1),   p_HD,   x_HD,   xd_HD,   z_HD,   OtherSt_HD,   y_HD,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
@@ -604,35 +610,26 @@ CONTAINS
       !     in case we didn't get them destroyed earlier....
       ! -------------------------------------------------------------------------
 
-      CALL ED_DestroyInitInput(  InitInData_ED, ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL ED_DestroyInitInput(  InitInData_ED,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL ED_DestroyInitOutput( InitOutData_ED,       ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
-      CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL SrvD_DestroyInitInput(  InitInData_SrvD,    ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL SrvD_DestroyInitOutput( InitOutData_SrvD,   ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
-      CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-
-      CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-
-      CALL HydroDyn_DestroyInitInput(  InitInData_HD, ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-
-      CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
       ! -------------------------------------------------------------------------
-      ! Deallocate arrays associated with mesh mapping
+      ! Deallocate/Destroy structures associated with mesh mapping
       ! -------------------------------------------------------------------------
 
-      IF ( ALLOCATED(MeshMapData%HD_W_P_2_ED_P) ) DEALLOCATE( MeshMapData%HD_W_P_2_ED_P )
-      IF ( ALLOCATED(MeshMapData%HD_M_P_2_ED_P) ) DEALLOCATE( MeshMapData%HD_M_P_2_ED_P )
-      IF ( ALLOCATED(MeshMapData%HD_M_L_2_ED_P) ) DEALLOCATE( MeshMapData%HD_M_L_2_ED_P )
-      IF ( ALLOCATED(MeshMapData%ED_P_2_HD_W_P) ) DEALLOCATE( MeshMapData%ED_P_2_HD_W_P )
-      IF ( ALLOCATED(MeshMapData%ED_P_2_HD_M_P) ) DEALLOCATE( MeshMapData%ED_P_2_HD_M_P )
-      IF ( ALLOCATED(MeshMapData%ED_P_2_HD_M_L) ) DEALLOCATE( MeshMapData%ED_P_2_HD_M_L )
+      CALL MeshMapDestroy( MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL MeshMapDestroy( MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL MeshMapDestroy( MeshMapData%HD_M_L_2_ED_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
       ! -------------------------------------------------------------------------
       ! variables for ExtrapInterp:
@@ -642,9 +639,10 @@ CONTAINS
       CALL ED_DestroyInput( u_ED, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      DO j = 2,p_FAST%InterpOrder+1
+      DO j = 2,p_FAST%InterpOrder+1  !note that ED_Input(1) was destroyed in ED_End
          CALL ED_DestroyInput( ED_Input(j), ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+                  
       END DO
 
       IF ( ALLOCATED(ED_Input)      ) DEALLOCATE( ED_Input )
@@ -655,21 +653,22 @@ CONTAINS
          CALL HydroDyn_DestroyInput( u_HD, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-         DO j = 2,p_FAST%InterpOrder+1
+         DO j = 2,p_FAST%InterpOrder+1 !note that HD_Input(1) was destroyed in HydroDyn_End
             CALL HydroDyn_DestroyInput( HD_Input(j), ErrStat2, ErrMsg2 )
             IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
          END DO
-
-         IF ( ALLOCATED(HD_Input)      ) DEALLOCATE( HD_Input )
-         IF ( ALLOCATED(HD_InputTimes) ) DEALLOCATE( HD_InputTimes )
       END IF
+
+      IF ( ALLOCATED(HD_Input)      ) DEALLOCATE( HD_Input )
+      IF ( ALLOCATED(HD_InputTimes) ) DEALLOCATE( HD_InputTimes )
 
 
       !............................................................................................................................
       ! Set exit error code if there was an error;
       !............................................................................................................................
-      IF (Error) CALL ProgAbort( ' Simulation error level: '//TRIM(GetErrStr(ErrLev) ) )  !This assumes PRESENT(ErrID) is .TRUE.
-
+      IF (Error) CALL ProgAbort( ' Simulation error level: '//TRIM(GetErrStr(ErrLev)), &   !This assumes PRESENT(ErrID) is .TRUE.
+                                  TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+      
       !............................................................................................................................
       !  Write simulation times and stop
       !............................................................................................................................
@@ -697,6 +696,8 @@ CONTAINS
 
 
    END SUBROUTINE CheckError
+   
+   
 
 !====================================================================================================
 SUBROUTINE HydroDyn_Open_Debug_Outputs( OutRootName, Un, ErrStat, ErrMsg )
@@ -814,14 +815,14 @@ SUBROUTINE Write_HD_Debug(Un, ZTime, u_HD, y_HD, u_ED, OtherSt_HD, MeshMapData, 
     ! Commenting this out in order to compare with HD v1.  TODO: put this back
       ! This is viscous drag associate with the WAMIT body and/or filled/flooded forces of the WAMIT body
 
-   CALL Transfer_Point_to_Point( y_HD%Morison%LumpedMesh, u_mapped, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
+   CALL Transfer_Point_to_Point( y_HD%Morison%LumpedMesh, u_mapped, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg, u_HD%Morison%LumpedMesh )
    ! TODO: I Think the signs are wrong on the moments after the mapping. Switch for now
          u_mapped%Moment(1,1) = -u_mapped%Moment(1,1)
          u_mapped%Moment(2,1) = -u_mapped%Moment(2,1)
    F_Viscous(1:3)  = u_mapped%Force(:,1)
    F_Viscous(4:6)  = u_mapped%Moment(:,1)
 
-   CALL Transfer_Line2_to_Point( y_HD%Morison%DistribMesh, u_mapped, MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
+   CALL Transfer_Line2_to_Point( y_HD%Morison%DistribMesh, u_mapped, MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg,u_HD%Morison%DistribMesh )
    ! TODO: I Think the signs are wrong on the moments after the mapping. Switch for now
          u_mapped%Moment(1,1) = -u_mapped%Moment(1,1)
          u_mapped%Moment(2,1) = -u_mapped%Moment(2,1)
