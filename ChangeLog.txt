@@ -528,20 +528,24 @@ o I added ExtrapInterp routines for the ModMesh module, which requires ModMesh.f
 o I added RefOrientation to the ModMesh type (the reference orientation is needed for interpolation of Orientation field)
   o The Orientation is now an optional input to the MeshPositionNode routine. If orientation is not included, we assume orientation is the identity matrix.
 
+v2.03.00a-bjj, 7-Aug-2013, B. Jonkman
+o I added the ModMesh_Mapping.f90 file to the archive. This module maps mesh quantities between two meshes (currently limited to
+  point and line2 elements). Note that the urrent implementation of the Line2-to-Line2 transfer of loads is incorrect.
+o I added NWTC_Base.f90 to the compilation. This file contains basic information that is not system-specific, but may be used by
+  the system-specific routines. Currently it contains the ErrID levels and a type definition for dynamically loading DLLs.
+o I added LoadDynamicLib() and FreeDynamicLib() to the Sys* files. These routines are used to dynamically load the Bladed DLL for FAST v8.
+
+
+
 ==========================================================
  To do:
-   *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.)
-
-   Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously)
-   Fix ErrStat to use the new ErrID_* levels
+   *** Add routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.) (in progress, possibly finished???)
+   Fix global variables so that only truly global data is stored there (to allow multiple instances running simultaneously) (in progress, possibly finished???)
+   Fix ErrStat to use the new ErrID_* levels (in progress, possibly finished???)
 
    Create new read array routines that read an array from multiple lines.
-   Fix NWTC_Aero.f90\AeroInt() to interpolate between control settings.
 
    Suggestion from Marshall:
 
       Add the optional UsrAlarm to ProgExit. (Requires moving BEEP from NWTC_IO)
-
-      Are we going to add optional arguments to these kinds of routines to return
-      to the calling routine with an error flag?
 

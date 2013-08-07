@@ -32,7 +32,7 @@ MODULE NWTC_IO
       CHARACTER(24)              :: Date
    END TYPE ProgDesc
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.02.00d-bjj', '12-Jul-2013')       ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.03.00a-bjj', '7-Aug-2013')       ! The name, version, and date of the NWTC Subroutine Library.
 
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
@@ -84,15 +84,6 @@ MODULE NWTC_IO
    END TYPE OutParmType
 
 
-      ! Global Error-level variables.
-
-   INTEGER(IntKi), PARAMETER     :: ErrID_None   = 0
-   INTEGER(IntKi), PARAMETER     :: ErrID_Info   = 1
-   INTEGER(IntKi), PARAMETER     :: ErrID_Warn   = 2
-   INTEGER(IntKi), PARAMETER     :: ErrID_Severe = 3
-   INTEGER(IntKi), PARAMETER     :: ErrID_Fatal  = 4
-
-   INTEGER(IntKi)                :: AbortErrLev  = ErrID_Fatal
 
 
       ! Global coupling scheme variables.
@@ -711,6 +702,11 @@ CONTAINS
       ! Local declarations.
    INTEGER                      :: Sttus                                       ! Status of allocation attempt.
 
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllIPAry1: Ary already allocated."
+   END IF
 
    ALLOCATE ( Ary(AryDim) , STAT=Sttus )
    Ary = 0
@@ -744,6 +740,11 @@ CONTAINS
    INTEGER                      :: Sttus                                       ! Status of allocation attempt.
 
 
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllIPAry2: Ary already allocated."
+   END IF
 
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
    Ary = 0
@@ -772,6 +773,12 @@ CONTAINS
       ! Local declarations.
 
    INTEGER                      :: Sttus                                       ! Status of allocation attempt.
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry2: Ary already allocated."
+   END IF
 
    ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
    Ary = 0
@@ -806,6 +813,12 @@ CONTAINS
 
    INTEGER                      :: Sttus                                       ! Status of allocation attempt.
 
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry3: Ary already allocated."
+   END IF
 
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=Sttus )
    Ary = 0
@@ -1456,7 +1469,7 @@ CONTAINS
          IF ( Error /= 0 )  THEN
             CALL ProgAbort ( ' Error getting command-line argument #'//TRIM( Int2LStr( IArg ) )//'.', PRESENT(ErrStat) )
             IF ( PRESENT(ErrStat) ) THEN
-               ErrStat = 1
+               ErrStat = ErrID_Fatal
                RETURN
             END IF
          END IF
@@ -1480,7 +1493,7 @@ CONTAINS
 
             IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
                IF ( PRESENT(ErrStat) ) THEN
-                  ErrStat = -1
+                  ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
                   RETURN
                ELSE
                   CALL ProgExit ( 1 )
@@ -1488,7 +1501,7 @@ CONTAINS
             ELSE
                CALL ProgAbort ( ' Invalid command-line switch "'//SwChar//TRIM( Arg(2:) )//'".', PRESENT(ErrStat) )
                IF ( PRESENT(ErrStat) ) THEN
-                  ErrStat = 1
+                  ErrStat = ErrID_Fatal
                   RETURN
                END IF
             END IF ! ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )
@@ -1501,7 +1514,7 @@ CONTAINS
 
    END IF ! ( NumArg .GT. 0 )
 
-   IF ( PRESENT( ErrStat ) ) ErrStat = 0
+   IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
 
    RETURN
    END SUBROUTINE CheckArgs ! ( InputFile [, ErrStat] )
@@ -6304,8 +6317,8 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
 
    IMPLICIT                     NONE
 
-   INTEGER(IntKi), PARAMETER     :: LenName     = 10                 ! Number of characters allowed in a channel name
-   INTEGER(IntKi), PARAMETER     :: LenUnit     = 10                 ! Number of characters allowed in a channel unit
+   INTEGER(IntKi), PARAMETER     :: LenName     = ChanLen            ! Number of characters allowed in a channel name
+   INTEGER(IntKi), PARAMETER     :: LenUnit     = ChanLen            ! Number of characters allowed in a channel unit
 
       ! Passed data (sorted by element size, then alphabetical)
 

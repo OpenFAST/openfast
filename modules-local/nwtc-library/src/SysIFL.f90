@@ -40,7 +40,7 @@ MODULE SysSubs
 
 
 
-   USE                             Precision
+   USE                             NWTC_Base
 
    IMPLICIT                        NONE
 
@@ -347,5 +347,46 @@ CONTAINS
    END SUBROUTINE WriteScr ! ( Str )
 
 !=======================================================================
+
+
+!==================================================================================================================================
+SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to load the DLL.
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+
+
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' LoadDynamicLib: Not implemented for '//TRIM(OS_Desc)
+
+
+
+   RETURN
+END SUBROUTINE LoadDynamicLib
+!==================================================================================================================================
+SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to free the DLL.
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be freed.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' FreeDynamicLib: Not implemented for '//TRIM(OS_Desc)
+
+
+   RETURN
+END SUBROUTINE FreeDynamicLib
+!==================================================================================================================================
 
 END MODULE SysSubs

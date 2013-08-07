@@ -58,7 +58,6 @@ MODULE NWTC_Num
 
 
    USE                                          NWTC_IO
-   USE, INTRINSIC                            :: ISO_C_Binding, ONLY: C_INTPTR_T                       ! the size of a pointer (number of bytes)
 
    IMPLICIT NONE
 
@@ -93,7 +92,6 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoPi                         ! 2*Pi
 
    INTEGER, ALLOCATABLE                      :: IntIndx  (:,:)                ! The array of indices holding that last index used for interpolation in IntBlade()
-   INTEGER, PARAMETER                        :: BITS_IN_ADDR  = C_INTPTR_T*8  ! The number of bits in an address (32-bit or 64-bit).
 
    TYPE, PUBLIC               :: CubSplineType                                ! This derived type is used to hold data for performing cubic splines.
       INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
@@ -2685,15 +2683,15 @@ CONTAINS
 
    IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
 
-      ErrStat = ErrID_Severe
-      ErrMsg  = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
-                'The solution may be inaccurate. Simulation continuing, but future warnings will be suppressed.'
+      ErrStat= ErrID_Severe
+      ErrMsg = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
+               'The solution may be inaccurate. Simulation continuing, but future warnings from SmllRotTrans() will be suppressed.'
 
       IF ( PRESENT(ErrTxt) ) THEN
          ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt)
       END IF
 
-      CALL ProgWarn( TRIM(ErrMsg) )
+      !CALL ProgWarn( TRIM(ErrMsg) )
 
       FrstWarn = .FALSE.   ! Don't enter here again!
 

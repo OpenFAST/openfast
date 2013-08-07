@@ -40,7 +40,7 @@ MODULE SysSubs
 
 
 
-   USE                             Precision
+   USE                             NWTC_Base
 
    IMPLICIT                        NONE
 
@@ -355,5 +355,122 @@ CONTAINS
 
    END SUBROUTINE WriteScr ! ( Str )
 !=======================================================================
+
+
+
+!==================================================================================================================================
+SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to load the DLL.
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   INTERFACE  ! Definitions of Windows API routines
+
+      !...........................
+      !bjj: I have been unable to find a solution that works with both IVF and gfortran...
+      !bjj: note that "Intel Fortran does not support use of STDCALL with BIND(C) at this time"
+      !     See this link: http://software.intel.com/en-us/articles/replacing-intel-fortran-attributes-with-c-interoperability-features
+      !bjj: Until this is fixed, Intel uses kernel32.f90 definitions instead of the interface below:
+      !...........................
+
+      FUNCTION LoadLibrary(lpFileName) BIND(C,NAME='LoadLibraryA')
+         USE, INTRINSIC :: ISO_C_BINDING
+         IMPLICIT NONE
+         !GCC$ ATTRIBUTES STDCALL :: LoadLibrary
+         INTEGER(C_INTPTR_T)        :: LoadLibrary
+         CHARACTER(KIND=C_CHAR)     :: lpFileName(*)
+      END FUNCTION LoadLibrary
+
+      FUNCTION GetProcAddress(hModule, lpProcName) BIND(C, NAME='GetProcAddress')
+         USE, INTRINSIC :: ISO_C_BINDING
+         IMPLICIT NONE
+         !GCC$ ATTRIBUTES STDCALL :: GetProcAddress
+         TYPE(C_FUNPTR)             :: GetProcAddress
+         INTEGER(C_INTPTR_T),VALUE  :: hModule
+         CHARACTER(KIND=C_CHAR)     :: lpProcName(*)
+      END FUNCTION GetProcAddress
+
+   END INTERFACE
+
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+
+      ! Load the DLL and get the file address:
+
+   DLL%FileAddr = LoadLibrary( TRIM(DLL%FileName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+   IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) THEN
+      ErrStat = ErrID_Fatal
+      WRITE(ErrMsg,'(I2)') BITS_IN_ADDR
+      ErrMsg  = 'The dynamic library '//TRIM(DLL%FileName)//' could not be loaded. Check that the file '// &
+                'exists in the specified location and that it is compiled for '//TRIM(ErrMsg)//'-bit systems.'
+      RETURN
+   END IF
+
+
+      ! Get the procedure address:
+
+   DLL%ProcAddr = GetProcAddress( DLL%FileAddr, TRIM(DLL%ProcName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+
+   IF(.NOT. C_ASSOCIATED(DLL%ProcAddr)) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The procedure '//TRIM(DLL%ProcName)//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
+      RETURN
+   END IF
+
+
+   RETURN
+END SUBROUTINE LoadDynamicLib
+!==================================================================================================================================
+SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to free the DLL.
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be freed.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      ! Local variable:
+   INTEGER(C_INT)                            :: Success     ! Whether or not the call to FreeLibrary was successful
+   INTEGER(C_INT), PARAMETER                 :: FALSE  = 0
+
+   INTERFACE  ! Definitions of Windows API routines
+
+      FUNCTION FreeLibrary(hLibModule) BIND(C, NAME='FreeLibrary')
+         USE, INTRINSIC :: ISO_C_BINDING
+         IMPLICIT NONE
+         !GCC$ ATTRIBUTES STDCALL :: FreeLibrary
+         INTEGER(C_INT)             :: FreeLibrary ! BOOL
+         INTEGER(C_INTPTR_T),VALUE  :: hLibModule ! HMODULE hLibModule
+      END FUNCTION
+
+   END INTERFACE
+
+
+      ! Free the DLL:
+
+   Success = FreeLibrary( DLL%FileAddr ) !If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.
+
+   IF ( Success == FALSE ) THEN !BJJ: note that this isn't the same as the Fortran LOGICAL .FALSE.
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The dynamic library could not be freed.'
+      RETURN
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+
+   RETURN
+END SUBROUTINE FreeDynamicLib
+!==================================================================================================================================
 
 END MODULE SysSubs

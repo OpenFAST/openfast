@@ -3,11 +3,13 @@
 # the "usefrom" keyword defines the types for the registry without generating
 # a NWTC_Library_Types.f90 file
 #
-usefrom   NWTC_Library    ProgDesc       CHARACTER(24)    Name
+
+# ----------- NWTC_IO.f90 ---------------------------------
+usefrom   NWTC_Library    ProgDesc       CHARACTER(99)    Name
 usefrom     ^               ^            CHARACTER(99)    Ver
 usefrom     ^               ^            CHARACTER(24)    Date
 
-usefrom     ^             FASTdataType   CHARACTER(1024)  File
+usefrom   NWTC_Library    FASTdataType   CHARACTER(1024)  File
 usefrom     ^               ^            CHARACTER(1024)  Descr
 usefrom     ^               ^            B4Ki             NumChans
 usefrom     ^               ^            B4Ki             NumRecs
@@ -21,43 +23,21 @@ usefrom     ^               ^            CHARACTER(10)    Name
 usefrom     ^               ^            CHARACTER(10)    Units
 usefrom     ^               ^            IntKi            SignM
 
-usefrom     ^             AeroData       ReKi             AlfaStal
-usefrom     ^               ^            ReKi             AOD
-usefrom     ^               ^            ReKi             AOL
-usefrom     ^               ^            ReKi             Cd0
-usefrom     ^               ^            ReKi             CnA
-usefrom     ^               ^            ReKi             CnS
-usefrom     ^               ^            ReKi             CnSL
-usefrom     ^               ^            ReKi             Cl
-usefrom     ^               ^            ReKi             Cd
-usefrom     ^               ^            ReKi             Cm
-usefrom     ^               ^            ReKi             Cpmin
-usefrom     ^               ^            ReKi             FTB
-usefrom     ^               ^            ReKi             FTBC
+#bjj ???: add Marshall's FileInfoType, FNlist_Type, InpErrsType, too????
 
-usefrom     ^             AeroTable      ReKi             AlfaStal
-usefrom     ^               ^            ReKi             AOD
-usefrom     ^               ^            ReKi             AOL
-usefrom     ^               ^            ReKi             Cd0
-usefrom     ^               ^            ReKi             CnA
-usefrom     ^               ^            ReKi             CnS
-usefrom     ^               ^            ReKi             CnSL
-usefrom     ^               ^            ReKi             Re
-usefrom     ^               ^            ReKi             Ctrl
-usefrom     ^               ^            INTEGER          Ind    0
-usefrom     ^               ^            INTEGER          NumAlf
-usefrom     ^               ^            ReKi             Alpha    {:}
-usefrom     ^               ^            ReKi             Cl       {:}
-usefrom     ^               ^            ReKi             Cd       {:}
-usefrom     ^               ^            ReKi             Cm       {:}
-usefrom     ^               ^            ReKi             Cpmin    {:}
-usefrom     ^               ^            ReKi             FTB      {:}
-usefrom     ^               ^            ReKi             FTBC     {:}
 
-usefrom     ^             AlfIndx        INTEGER          NumBld
-usefrom     ^               ^            INTEGER          NumElm
-usefrom     ^               ^            INTEGER          Ind      {:}
 
-usefrom     ^             ElmTable       INTEGER          NumTabs
-usefrom     ^               ^            AeroTable        Tab      {:}
+# ----------- NWTC_Num.f90 ---------------------------------
+#bjj ???: use Marshall's CubSplineType, RegCubSplineType, RegGridType
+
+
+
+
+# ----------- NWTC_Base.f90 ---------------------------------
+usefrom   NWTC_Library    DLL_Type       C_INTPTR_T       FileAddr
+usefrom     ^               ^            C_PTR            FileAddrX
+usefrom     ^               ^            C_FUNPTR         ProcAddr
+usefrom     ^               ^            CHARACTER(1024)  FileName
+usefrom     ^               ^            CHARACTER(1024)  ProcName
+
 

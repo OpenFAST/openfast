@@ -38,7 +38,7 @@ MODULE SysSubs
 
 
 
-   USE                             Precision
+   USE                             NWTC_Base
 
    IMPLICIT                        NONE
 
@@ -342,5 +342,98 @@ CONTAINS
 
    END SUBROUTINE WriteScr ! ( Str )
 !=======================================================================
+
+!==================================================================================================================================
+SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to load the DLL.
+
+   USE               IFWINTY,  ONLY : HANDLE, LPVOID
+   USE               kernel32, ONLY : LoadLibrary, GetProcAddress
+
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+
+      ! local variables
+   INTEGER(HANDLE)                           :: FileAddr    ! The address of file FileName.         (RETURN value from LoadLibrary in kernel32.f90)
+   INTEGER(LPVOID)                           :: ProcAddr    ! The address of procedure ProcName.    (RETURN value from GetProcAddress in kernel32.f90)
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+
+      ! Load the DLL and get the file address:
+
+   FileAddr = LoadLibrary( TRIM(DLL%FileName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+   DLL%FileAddr = TRANSFER(FileAddr, DLL%FileAddr)             !convert INTEGER(HANDLE) to INTEGER(C_INTPTR_T) [used only for compatibility with gfortran]
+
+   IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) THEN
+      ErrStat = ErrID_Fatal
+      WRITE(ErrMsg,'(I2)') BITS_IN_ADDR
+      ErrMsg  = 'The dynamic library '//TRIM(DLL%FileName)//' could not be loaded. Check that the file '// &
+                'exists in the specified location and that it is compiled for '//TRIM(ErrMsg)//'-bit systems.'
+      RETURN
+   END IF
+
+
+      ! Get the procedure address:
+
+   ProcAddr = GetProcAddress( DLL%FileAddr, TRIM(DLL%ProcName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+   DLL%ProcAddr = TRANSFER(ProcAddr, DLL%ProcAddr)  !convert INTEGER(LPVOID) to INTEGER(C_FUNPTR) [used only for compatibility with gfortran]
+
+   IF(.NOT. C_ASSOCIATED(DLL%ProcAddr)) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The procedure '//TRIM(DLL%ProcName)//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
+      RETURN
+   END IF
+
+
+   RETURN
+END SUBROUTINE LoadDynamicLib
+!==================================================================================================================================
+SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to free the DLL.
+
+   USE               IFWINTY,  ONLY : BOOL, HANDLE, FALSE !, LPVOID
+   USE               kernel32, ONLY : FreeLibrary
+
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be freed.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      ! Local variable:
+   INTEGER(HANDLE)                           :: FileAddr    ! The address of file FileName.  (RETURN value from LoadLibrary in kernel32.f90)
+   INTEGER(BOOL)                             :: Success     ! Whether or not the call to FreeLibrary was successful
+
+
+
+   FileAddr = TRANSFER(DLL%FileAddr, FileAddr) !convert INTEGER(C_INTPTR_T) to INTEGER(HANDLE) [used only for compatibility with gfortran]
+
+      ! Free the DLL:
+
+   Success = FreeLibrary( FileAddr ) !If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.
+
+   IF ( Success == FALSE ) THEN !BJJ: note that this is the Windows BOOL type so FALSE isn't the same as the Fortran LOGICAL .FALSE.
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The dynamic library could not be freed.'
+      RETURN
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+
+   RETURN
+END SUBROUTINE FreeDynamicLib
+!==================================================================================================================================
 
 END MODULE SysSubs

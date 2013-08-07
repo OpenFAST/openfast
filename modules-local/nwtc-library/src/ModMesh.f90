@@ -43,6 +43,180 @@ MODULE ModMesh
 
 CONTAINS
 
+   !-------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
+   !...............................................................................................................................
+   ! This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
+   ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
+   !...............................................................................................................................
+      INTEGER, INTENT(INOUT)                ::  UnIn     ! fortran output unit
+      TYPE(MeshType),INTENT(INOUT)          ::      M    ! mesh to be reported on
+
+      INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   ! Indicates whether an error occurred (see NWTC_Library)
+      CHARACTER(*),    INTENT(OUT)          :: ErrMsg    ! Error message associated with the ErrStat
+      CHARACTER(*),    INTENT(IN), OPTIONAL :: FileName  ! Name of the file to write the output in
+
+      ! local variables
+      INTEGER(IntKi)                        :: ErrStat2  ! Temporary storage for local errors
+      INTEGER(IntKi)                        :: I         ! loop counter
+
+      IF (UnIn < 0) THEN
+         CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
+
+         CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat, ErrMsg )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      END IF
+
+
+      ! Write information about mesh structure:
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(ReKi,B4Ki)
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(FIELDMASK_SIZE,B4Ki)
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%fieldmask           ! BJJ: do we need to verify that this is size B4Ki?
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%Nnodes,B4Ki)
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nelemlist,B4Ki)
+
+
+      !...........
+      ! Write nodal information:
+      !...........
+
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%Position
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing Position to the mesh binary file.' )
+            RETURN
+         END IF
+
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%RefOrientation
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing RefOrientation to the mesh binary file.' )
+            RETURN
+         END IF
+
+
+      ! Write fields:
+
+      IF ( M%fieldmask(MASKID_FORCE) .AND. ALLOCATED(M%Force) ) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%Force
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_Moment) .AND. ALLOCATED(M%Moment)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%Moment
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_ORIENTATION) .AND. ALLOCATED(M%Orientation)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%Orientation
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing Orientation to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_TRANSLATIONDISP) .AND. ALLOCATED(M%TranslationDisp)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationDisp
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing TranslationDisp to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_TRANSLATIONVEL) .AND. ALLOCATED(M%TranslationVel)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationVel
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing TranslationVel to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_ROTATIONVEL) .AND. ALLOCATED(M%RotationVel)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationVel
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing RotationVel to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_TRANSLATIONACC) .AND. ALLOCATED(M%TranslationAcc)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationAcc
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing TranslationAcc to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_ROTATIONACC) .AND. ALLOCATED(M%RotationAcc)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationAcc
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing RotationAcc to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+      IF ( M%fieldmask(MASKID_ADDEDMASS) ) THEN
+      END IF
+
+      IF ( M%fieldmask(MASKID_SCALAR) .AND. ALLOCATED(M%Scalars)) THEN
+         WRITE (UnIn, IOSTAT=ErrStat2)   M%Scalars
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, 'Error writing Scalars to the mesh binary file.' )
+               RETURN
+            END IF
+      END IF
+
+
+      !...........
+      ! Write element information:
+      !...........
+
+      DO i=1,M%nelemlist
+         WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%Xelement       ,B4Ki) ! what kind of element
+         WRITE (UnIn, IOSTAT=ErrStat2)   INT(SIZE(M%ElemList(i)%Element%ElemNodes),B4Ki) ! how many nodes
+         WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%ElemNodes      ,B4Ki) ! which nodes
+      END DO
+
+   CONTAINS
+      !............................................................................................................................
+      SUBROUTINE CheckError(ErrID,Msg)
+      !............................................................................................................................
+      ! This subroutine sets the error message and level
+      !............................................................................................................................
+
+            ! Passed arguments
+         INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+
+         !.........................................................................................................................
+         ! Set error status/message;
+         !.........................................................................................................................
+
+         IF ( ErrID /= ErrID_None ) THEN
+
+            IF ( LEN_TRIM(ErrMsg) > 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg = TRIM(ErrMsg)//' '//TRIM(Msg)
+            ErrStat = MAX(ErrStat, ErrID)
+
+            !......................................................................................................................
+            ! Clean up if we're going to return on error: close file, deallocate local arrays
+            !......................................................................................................................
+            IF ( ErrStat >= AbortErrLev ) THEN
+            END IF
+
+         END IF
+
+      END SUBROUTINE CheckError
+      !............................................................................................................................
+   END SUBROUTINE MeshWrBin
+   !-------------------------------------------------------------------------------------------------------------------------------
+
+
    SUBROUTINE MeshPrintInfo ( U, M, N)
      INTEGER, INTENT(IN   )                ::      U  ! fortran output unit
      TYPE(MeshType),INTENT(INOUT)          ::      M  ! mesh to be reported on
@@ -1083,7 +1257,7 @@ CONTAINS
             DestMesh%RemapFlag   = SrcMesh%RemapFlag
 
          ELSE IF ( CtrlCode .EQ. MESH_SIBLING ) THEN
-!bjj: we should make sure the mesh has been committed, otherwise the element lists haven't been created, yet (and thus not shared) 
+!bjj: we should make sure the mesh has been committed, otherwise the element lists haven't been created, yet (and thus not shared)
             IF ( ASSOCIATED(SrcMesh%SiblingMesh) ) THEN
                ErrStat = ErrID_Fatal
                ErrMess = ' MeshCopy: A mesh can have only one sibling.'
@@ -1215,7 +1389,7 @@ CONTAINS
             ErrStat = ErrID_Fatal
             ErrMess = "MeshCopy: MESH_UPDATECOPY of meshes with different numbers of nodes."
          ELSE
-            
+
             ! bjj: should we update positions?
             !DestMesh%RemapFlag = SrcMesh%RemapFlag
             !DestMesh%nextelem  = SrcMesh%nextelem
@@ -1328,6 +1502,9 @@ CONTAINS
        RETURN  ! Early return
      ENDIF
 
+   !bjj: check that every node is part of an element.
+
+   !bjj: check that allocated fields make sense (i.e., Motions must include Orientation and TranslationDisp)
 
      ! Construct list of elements
 
@@ -1666,7 +1843,7 @@ CONTAINS
      TYPE(ElemRecType),POINTER,OPTIONAL,INTENT(INOUT)   :: ElemRec ! Return array of elements of kind Xelement
 
   ! TODO : check to make sure mesh is committed first
-  
+
      ErrStat = ErrID_None
      ErrMess = ""
 
@@ -1682,7 +1859,7 @@ CONTAINS
      ENDIF
      CtrlCode = 0
      IF ( Mesh%nextelem .GT. Mesh%nelemlist ) THEN
-       CtrlCode = MESH_NOMOREELEMS       
+       CtrlCode = MESH_NOMOREELEMS
        RETURN ! Early Return
      ENDIF
      IF ( PRESENT(Ielement) ) Ielement = Mesh%nextelem
@@ -1951,7 +2128,7 @@ CONTAINS
          END IF
       END IF
 
-      
+
       !IF ( ASSOCIATED(u_out%RemapFlag) ) THEN
       !   ErrStat=ErrID_Info
       !   ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
@@ -1963,8 +2140,8 @@ CONTAINS
       !   ELSE
       !      u_out%RemapFlag = u3%RemapFlag
       !   END IF
-      !END IF      
-      
+      !END IF
+
    END SUBROUTINE MeshExtrapInterp2
 
    !...............................................................................................................................
