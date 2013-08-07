@@ -4,31 +4,7 @@ MODULE SD_FEM
   
   
   
-CONTAINS
-
-LOGICAL FUNCTION SwapElementNodes(n1, n2)
-! The local element coordinate system requires that Z1 <= Z2, and if Z1=Z2 then X1 <= X2, and if Z1=Z2, X1=X2 then Y1<Y2
-USE NWTC_Library
-
-   REAL(ReKi),   INTENT(IN) :: n1(:)
-   REAL(ReKi),   INTENT(IN) :: n2(:)
-   
-   SwapElementNodes = .FALSE.
-   IF ( EqualRealNos( n1(4), n2(4) ) ) THEN       ! Z1 = Z2    
-      IF ( EqualRealNos(n1(2), n2(2) ) ) THEN     ! X1 = X2
-         IF   ( n1(3) > n2(3) ) THEN
-            SwapElementNodes = .TRUE.                                   ! Y1 > Y2
-         END IF         
-      ELSE IF ( n1(2) > n2(2) ) THEN
-         SwapElementNodes = .TRUE.                                      ! X1 > X2            
-      END IF
-   ELSE IF    ( n1(4) > n2(4) ) THEN
-      SwapElementNodes = .TRUE.                                         ! Z1 > Z2
-   END IF
-
-
-END FUNCTION SwapElementNodes
-
+    CONTAINS
     
 SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
   
@@ -203,31 +179,16 @@ SUBROUTINE SubDyn_Discrt(Init,p, ErrStat, ErrMsg)
    
    ! Initialize TempMembers and Elems
    DO I = 1, p%NMembers
+      TempMembers(I, 1) = I
+      TempMembers(I, 4) = Init%Members(I, 4)
+      TempMembers(I, 5) = Init%Members(I, 5)
       
-      !IF ( SwapElementNodes( Init%Nodes(Init%Members(I, 2),:), Init%Nodes(Init%Members(I, 3),:) ) ) THEN
-      !   TempMembers(I, 1) = I
-      !   TempMembers(I, 4) = Init%Members(I, 5)
-      !   TempMembers(I, 5) = Init%Members(I, 4)
-      !
-      !   p%Elems(I,     1) = I
-      !   p%Elems(I, NPE+2) = Init%Members(I, 5)
-      !   p%Elems(I, NPE+3) = Init%Members(I, 4)
-      !
-      !   Node1 = Init%Members(I, 3)
-      !   Node2 = Init%Members(I, 2)
-      !ELSE
-         TempMembers(I, 1) = I
-         TempMembers(I, 4) = Init%Members(I, 4)
-         TempMembers(I, 5) = Init%Members(I, 5)
+      p%Elems(I,     1) = I
+      p%Elems(I, NPE+2) = Init%Members(I, 4)
+      p%Elems(I, NPE+3) = Init%Members(I, 5)
       
-         p%Elems(I,     1) = I
-         p%Elems(I, NPE+2) = Init%Members(I, 4)
-         p%Elems(I, NPE+3) = Init%Members(I, 5)
-      
-         Node1 = Init%Members(I, 2)
-         Node2 = Init%Members(I, 3)
-      
-      !END IF
+      Node1 = Init%Members(I, 2)
+      Node2 = Init%Members(I, 3)
       
       flg1 = 0
       flg2 = 0
@@ -404,11 +365,11 @@ IF (Init%NDiv .GT. 1) THEN
            CALL GetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3),&
                            TempProps(Prop1, 4), d1+dd, t1+dt, TempProps, TempNProp, Init%PropSetsCol)           
            kelem = kelem + 1
-           CALL GetNewElem(kelem, Node1, knode, Prop1, kprop, p, Init%Nodes)  
+           CALL GetNewElem(kelem, Node1, knode, Prop1, kprop, p)  
            nprop = kprop              
       ELSE
            kelem = kelem + 1
-           CALL GetNewElem(kelem, Node1, knode, Prop1, Prop1, p, Init%Nodes)                
+           CALL GetNewElem(kelem, Node1, knode, Prop1, Prop1, p)                
            nprop = Prop1 
       ENDIF
       
@@ -430,18 +391,18 @@ IF (Init%NDiv .GT. 1) THEN
                               Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt, &
                               TempProps, TempNProp, Init%PropSetsCol)           
               kelem = kelem + 1
-              CALL GetNewElem(kelem, knode-1, knode, nprop, kprop, p, Init%Nodes)
+              CALL GetNewElem(kelem, knode-1, knode, nprop, kprop, p)
               nprop = kprop                
          ELSE
               kelem = kelem + 1
-              CALL GetNewElem(kelem, knode-1, knode, nprop, nprop, p, Init%Nodes)                
+              CALL GetNewElem(kelem, knode-1, knode, nprop, nprop, p)                
                
          ENDIF
       ENDDO
       
       ! the element connect to Node2
       kelem = kelem + 1
-      CALL GetNewElem(kelem, knode, Node2, nprop, Prop2, p, Init%Nodes)                
+      CALL GetNewElem(kelem, knode, Node2, nprop, Prop2, p)                
 
    ENDDO ! loop over all members
 
@@ -479,19 +440,31 @@ IF ( ErrStat /= ErrID_None ) THEN
    RETURN
 END IF
 
+WRITE(UnOut, '(A)')  'NNodes, Nelems, NProps, NCMass'
 WRITE(UnOut, '(4(1x, I5))' ) Init%NNode, Init%NElem, Init%NProp, Init%NCMass
+WRITE(UnOut, '(A)')  'Node No.    X       Y      Z'
 WRITE(UnOut, '(F6.0, E15.6, E15.6, E15.6)') ((Init%Nodes(i, j), j = 1, Init%JointsCol), i = 1, Init%NNode)
+WRITE(UnOut, '(A)')  'Elem No.,    Node_I,     Node_J,      Prop_I,      Prop_J'
 WRITE(UnOut, '(5(1x, I6))') ((p%Elems(i, j), j = 1, Init%MembersCol), i = 1, Init%NElem)
+WRITE(UnOut, '(A)')  'Prop No.     YoungE       ShearG       MatDens     XsecD      XsecT'
 WRITE(UnOut, '(F6.0, E15.6, E15.6, E15.6, E15.6, E15.6 ) ') ((Init%Props(i, j), j = 1, 6), i = 1, Init%NProp)
+WRITE(UnOut, '(A)')  'No. of Reaction DOFs'
 WRITE(UnOut, '(I6)')p%NReact*6
+WRITE(UnOut, '(A)')  'Reaction DOF ID      LOCK'
 WRITE(UnOut, '(I6, I6)') ((Init%BCs(i, j), j = 1, 2), i = 1, p%NReact*6)
+WRITE(UnOut, '(A)')  'No. of Interface DOFs'
 WRITE(UnOut, '(I6)')Init%NInterf*6
+WRITE(UnOut, '(A)')  'Interface DOF ID      LOCK'
 WRITE(UnOut, '(I6, I6)') ((Init%IntFc(i, j), j = 1, 2), i = 1, Init%NInterf*6)
+WRITE(UnOut, '(A)')  'Number of concentrated masses'
 WRITE(UnOut, '(I6)')Init%NCMass
+WRITE(UnOut, '(A)')  'JointCMass     Mass         JXX             JYY             JZZ'
 WRITE(UnOut, '(F6.0, E15.6, E15.6, E15.6, E15.6)') ((Init%Cmass(i, j), j = 1, 5), i = 1, Init%NCMass)
+WRITE(UnOut, '(A)')  'Number of members'
 WRITE(UnOut, '(I6)')p%NMembers
-
+WRITE(UnOut, '(A)')  'Number of nodes per member'
 WRITE(tempStr, '(I10)') Init%NDiv + 1 
+WRITE(UnOut, '(A)')  'Member Nodes'
 OutFmt = ('('//trim(tempStr)//'(I6))')
 WRITE(UnOut, trim(OutFmt)) ((Init%MemberNodes(i, j), j = 1, Init%NDiv+1), i = 1, p%NMembers)
 
@@ -520,8 +493,7 @@ SUBROUTINE GetNewNode(k, x, y, z, Init)
 END SUBROUTINE GetNewNode
 !------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------
-SUBROUTINE GetNewElem(k, n1, n2, p1, p2, p, Nodes)
-
+SUBROUTINE GetNewElem(k, n1, n2, p1, p2, p)
    USE NWTC_Library
    USE SubDyn_Types
    IMPLICIT NONE
@@ -532,33 +504,15 @@ SUBROUTINE GetNewElem(k, n1, n2, p1, p2, p, Nodes)
    INTEGER,                INTENT(IN   )   :: p1
    INTEGER,                INTENT(IN   )   :: p2
    TYPE(SD_ParameterType), INTENT(INOUT)   :: p
-   REAL(ReKi),             INTENT(IN   )   :: Nodes(:,:)
+  
    
    ! Local Variables
    
-   LOGICAL                                 :: doSwap
-   
-   
-   ! The local element coordinate system requires that Z1 <= Z2, and if Z1=Z2 then X1 <= X2, and if Z1=Z2, X1=X2 then Y1<Y2
-   
-  
-                  
-   
-         
-   !IF ( SwapElementNodes( Nodes(n1,:), Nodes(n2,:) ) ) THEN
-   !   p%Elems(k, 1) = k
-   !   p%Elems(k, 2) = n2
-   !   p%Elems(k, 3) = n1
-   !   p%Elems(k, 4) = p2
-   !   p%Elems(k, 5) = p1
-   !   ! TODO: Create swap flag in the 6th index for output reporting! GJH 7/29/13
-   !ELSE 
-      p%Elems(k, 1) = k
-      p%Elems(k, 2) = n1
-      p%Elems(k, 3) = n2
-      p%Elems(k, 4) = p1
-      p%Elems(k, 5) = p2
-   !END IF
+   p%Elems(k, 1) = k
+   p%Elems(k, 2) = n1
+   p%Elems(k, 3) = n2
+   p%Elems(k, 4) = p1
+   p%Elems(k, 5) = p2
 
 END SUBROUTINE GetNewElem
 !------------------------------------------------------------------------------------------------------
@@ -1161,19 +1115,21 @@ END SUBROUTINE AssembleKM
 !------------------------------------------------------------------------------------------------------
 
 SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
-   
+   !This should be from local to global -RRD
+   !Convention used: keep x (local) in global X-Z plane in the general x positive direction
    USE NWTC_Library
    IMPLICIT NONE
 
-   REAL(ReKi)         :: x1, y1, z1, x2, y2, z2
-   REAL(ReKi)         :: DirCos(3, 3)
+   REAL(ReKi) , INTENT(IN)         :: x1, y1, z1, x2, y2, z2
+   REAL(ReKi) , INTENT(OUT)        :: DirCos(3, 3)
    
-   REAL(ReKi)         :: xz, xyz
+   REAL(ReKi)         :: xz,  xyz, Dx,Dy,Dz, Delta,Dxy
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(1024),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    
    
    xz = sqrt( (x1-x2)**2 + (z1-z2)**2 )
+   Dxy = sqrt( (x2-x1)**2 + (y2-y1)**2 )
    xyz = sqrt( (x1-x2)**2 + (z1-z2)**2 + (y1-y2)**2 )
    
    IF ( EqualRealNos(xyz, 0.0) ) THEN
@@ -1185,7 +1141,7 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
    DirCos = 0
    
    IF ( EqualRealNos(xz, 0.0) ) THEN
-      IF( y2 < y1) THEN
+      IF( y2 < y1) THEN  !x is kept along global x
          DirCos(1, 1) = 1.0
          DirCos(2, 3) = -1.0
          DirCos(3, 2) = 1.0
@@ -1193,10 +1149,11 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
          DirCos(1, 1) = 1.0
          DirCos(2, 3) = 1.0
          DirCos(3, 2) = -1.0
-
       ENDIF
+ 
    ELSE
-      DirCos(1, 1) = -(z1-z2)/xz
+ 
+      DirCos(1, 1) =  (z2-z1)/xz
       DirCos(1, 2) = -(x1-x2)*(y1-y2)/(xz*xyz)
       DirCos(1, 3) = (x2-x1)/xyz
 
@@ -1207,6 +1164,36 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
       DirCos(3, 2) = -(y1-y2)*(z1-z2)/(xz*xyz)
       DirCos(3, 3) = (z2-z1)/xyz
    ENDIF
+      !RRD new DirCos
+      DirCos=0
+      Dy=y2-y1
+      Dx=x2-x1
+      Dz=z2-z1
+      Delta=xyz
+      IF ( EqualRealNos(Dxy, 0.0) ) THEN !RRD
+       IF( Dz < 0) THEN  !x is kept along global x
+         DirCos(1, 1) =  1.0
+         DirCos(2, 3) = -1.0
+         DirCos(3, 3) = -1.0
+      ELSE
+         DirCos(1, 1) = 1.0
+         DirCos(2, 2) = 1.0
+         DirCos(3, 3) = 1.0
+     
+      ENDIF 
+     ELSE
+      DirCos(1, 1) =  Dy/Dxy
+      DirCos(1, 2) = +Dx*Dz/(Delta*Dxy)
+      DirCos(1, 3) =  Dx/Delta
+      
+      DirCos(2, 1) = -Dx/Dxy
+      DirCos(2, 2) = +Dz*Dy/(Delta*Dxy)
+      DirCos(2, 3) =  Dy/Delta
+     
+      DirCos(3, 2) = -Dxy/Delta
+      DirCos(3, 3) = +Dz/Delta
+     ENDIF
+     !RRD end of new DirCos
 
 END SUBROUTINE GetDirCos
 !------------------------------------------------------------------------------------------------------
@@ -1223,7 +1210,7 @@ SUBROUTINE ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    REAL(ReKi), INTENT( IN)               :: DirCos(3,3)
    LOGICAL, INTENT( IN)                  :: Shear
    
-   REAL(ReKi)             :: K(12, 12)
+   REAL(ReKi), INTENT(OUT)             :: K(12, 12)  !RRD:  Ke and Me  need to be modified if convention of dircos is not followed?
          
    REAL(ReKi)                            :: Ax, Ay, Kx, Ky
    REAL(ReKi)                            :: DC(12, 12)
@@ -1400,7 +1387,7 @@ SUBROUTINE ApplyConstr(Init,p)
       
          Init%M(row_n, :) = 0
          Init%M(:, row_n) = 0
-         Init%M(row_n, row_n) = 0.00001          !TODO:  what is this???? 6/13/13
+         Init%M(row_n, row_n) = 0!0.00001          !what is this???? I changed this to 0.  RRD 7/31
       ENDIF
       
    ENDDO ! I
@@ -1427,12 +1414,18 @@ SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
 
    TempCoeff = 1.0/12.0*g*L*L*rho*A  !RRD : I am changing this to >0 sign 6/10/13
       
-   F(4) = TempCoeff*( DirCos(1, 3)*DirCos(2, 1) - DirCos(1, 1)*DirCos(2, 3) ) 
-   F(5) = TempCoeff*( DirCos(1, 3)*DirCos(2, 2) - DirCos(1, 2)*DirCos(2, 3) ) 
-
+   !F(4) = TempCoeff*( DirCos(1, 3)*DirCos(2, 1) - DirCos(1, 1)*DirCos(2, 3) ) !These do not work if convnetion on z2>z1, x2>x1, y2>y1 are not followed as I have discovered 7/23
+   !F(5) = TempCoeff*( DirCos(1, 3)*DirCos(2, 2) - DirCos(1, 2)*DirCos(2, 3) ) 
+   
+   !RRD attempt at new dircos which keeps x in the X-Y plane
+         F(4) = -TempCoeff * SQRT(1-DirCos(3,3)**2) * DirCos(1,1)
+         F(5) = -TempCoeff * SQRT(1-DirCos(3,3)**2) * DirCos(2,1)
+    !RRD ends
    F(10) = -F(4)
    F(11) = -F(5)
+   !F(12) is 0 for g along z alone
 
+   
 END SUBROUTINE ElemG
 
 END MODULE SD_FEM
