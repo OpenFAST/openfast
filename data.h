@@ -108,6 +108,7 @@ EXTERN int sw_norealloc_lsh;  /* 20070207 addresses compilers like gfortran that
 EXTERN int sw_ccode ;           /* 20130523 generate C code too */
 EXTERN int sw_embed_class_ptr ; /* 20130523 for C code generation too */
 EXTERN char sw_c2f_underscore[NAMELEN] ;
+EXTERN char sw_shownodes ;
 
 EXTERN node_t * Type ;
 EXTERN node_t * Dim ;

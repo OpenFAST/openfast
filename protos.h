@@ -18,7 +18,7 @@ int set_state_dims ( char * dims , node_t * node ) ;
 int set_ctrl       ( char * ctrl , node_t * node ) ;
 int gen_state_struct ( char * fname ) ;
 
-#if 0
+#if 1
 int show_node( node_t * p ) ;
 int show_node1( node_t * p, int indent ) ;
 int show_nodelist( node_t * p ) ;

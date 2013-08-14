@@ -80,6 +80,9 @@ add_node_to_end_4d ( node_t * node , node_t ** list )
   }
   return(0) ;
 }
+#endif
+
+#if 1
 
 int
 show_nodelist( node_t * p )
@@ -123,11 +126,16 @@ show_node1( node_t * p, int indent )
   else if ( p->node_kind & FOURD   ) nodekind = "FOURD" ;
   else if ( p->node_kind & MEMBER  ) nodekind = "MEMBER" ;
   else if ( p->node_kind & RCONFIG ) nodekind = "RCONFIG" ;
+  else if ( p->node_kind & MODNAME ) nodekind = "MODNAME" ;
 
   if ( !p->scalar_array_member ) 
   {
   switch ( p->node_kind )
   {
+  case MODNAME :
+    fprintf(stderr,"%s%s : %s nickname %s\n",tmp,nodekind,p->name,p->nickname) ;
+    show_nodelist1(p->module_ddt_list, indent+1) ;
+    break ;
   case RCONFIG :
   case I1      :
   case FIELD   :
@@ -137,27 +145,23 @@ show_node1( node_t * p, int indent )
     for ( i = 0 ; i < p->ndims ; i++ )
     {
       sg = "" ;
+      ca = "" ;
       switch ( p->dims[i]->coord_axis ) {
-	case COORD_X : ca = "X" ; if ( p->stag_x ) sg = "*" ; break ;
-        case COORD_Y : ca = "Y" ; if ( p->stag_y ) sg = "*" ; break ;
-	case COORD_Z : ca = "Z" ; if ( p->stag_z ) sg = "*" ; break ;
         case COORD_C : ca = "C" ; break ;
       }
       switch ( p->dims[i]->len_defined_how ) {
 	case DOMAIN_STANDARD : ld = "STANDARD" ;  ss = "" ; se = "" ; break ;
-	case NAMELIST        : ld = "NAMELIST" ;  ss = p->dims[i]->associated_namelist_variable ; se="" ; break ;
 	case CONSTANT        : ld = "CONSTANT" ;  sprintf(t1,"%d",p->dims[i]->coord_start) ; ss = t1 ;
 						  sprintf(t2,"%d",p->dims[i]->coord_end  ) ; se = t2 ;
 						  break ;
       }
-      fprintf(stderr,"      dim %1d: %c %2s%s %10s %10s %10s\n",i,p->dims[i]->dim_name,ca,sg,ld,ss,se) ;
+      fprintf(stderr,"      dim %0d: {%s} %2s%s %10s %10s %10s\n",i,p->dims[i]->dim_name,ca,sg,ld,ss,se) ;
     }
     nl = 0 ;
     if ( strlen( p->use     ) > 0 ) {
        nl = 1 ; fprintf(stderr,"      use: %s",p->use) ;
        if ( p->scalar_array_member ) fprintf(stderr,"(4D)") ;
     }
-    if ( strlen( p->dname   ) > 0 ) { nl = 1 ; fprintf(stderr,"    dname: %s",p->dname) ;    }
     if ( strlen( p->descrip ) > 0 ) { nl = 1 ; fprintf(stderr,"  descrip: %s",p->descrip) ;    }
     if ( nl == 1 ) fprintf(stderr,"\n") ;
     show_node1( p->type, indent+1 ) ;

@@ -453,7 +453,8 @@ get_dim_entry( char *s, int sw ) // sw = 1 is used when checking an inline dimsp
   if ( 1  && sw ) {
     node_t * dim_struct ;
     dim_struct = new_node( DIM ) ;
-    strncpy(dim_struct->dim_name,s,1) ;
+    strcpy(dim_struct->dim_name,s) ;
+//    strncpy(dim_struct->dim_name,s,1) ;
     if ( set_dim_len( s, dim_struct ) )
     { 
       fprintf(stderr,"Registry warning: get_dim_entry: problem with dimspec (%s)\n",s ) ;

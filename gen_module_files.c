@@ -172,7 +172,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"ENDDO\n") ;
           }
 
-        } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+        } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
           remove_nickname(ModName->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -254,7 +254,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       fprintf(stderr,"Registry warning generating %_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
-      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
+      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED ) ) { // && ! r->type->usefrom ) ) {
   fprintf(fp,"  REAL(ReKi),     ALLOCATABLE :: Re_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  REAL(DbKi),     ALLOCATABLE :: Db_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  INTEGER(IntKi), ALLOCATABLE :: Int_%s_Buf(:)\n",r->name) ;
@@ -298,7 +298,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"ENDDO\n") ;
       }
 
-    } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -376,7 +376,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"ENDDO\n") ;
       }
 
-    } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -506,7 +506,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
       fprintf(stderr,"Registry warning generating %_UnPack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
-      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
+      if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED ) ) { // && ! r->type->usefrom ) ) {
   fprintf(fp,"  REAL(ReKi),    ALLOCATABLE :: Re_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  REAL(DbKi),    ALLOCATABLE :: Db_%s_Buf(:)\n",r->name) ;
   fprintf(fp,"  INTEGER(IntKi),    ALLOCATABLE :: Int_%s_Buf(:)\n",r->name) ;
@@ -556,7 +556,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"ENDDO\n") ;
       }
 
-    } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+    } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
       remove_nickname(ModName->nickname,r->type->name,nonick2) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -727,7 +727,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           if ( r->ndims > 0 ) {
   fprintf(fp,"ENDDO\n") ;
           }
-        } else if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
+        } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
           remove_nickname(ModName->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {

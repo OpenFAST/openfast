@@ -39,6 +39,7 @@ main( int argc, char *argv[], char *env[] )
   sw_norealloc_lsh   = 1 ;
   sw_ccode           = 0 ;
   sw_embed_class_ptr = 0 ;
+  sw_shownodes       = 0 ;
   strcpy( fname_in , "" ) ;
   strcpy(sw_c2f_underscore,"_") ;
 
@@ -81,6 +82,9 @@ main( int argc, char *argv[], char *env[] )
       if (!strcmp(*argv,"-ccode")) {
         sw_ccode = 1 ;
       } else
+      if (!strncmp(*argv,"-shownodes",4)) {
+        sw_shownodes = 1 ;
+      } else
       if (!strncmp(*argv,"-embed",6)) {
         sw_embed_class_ptr = 1 ;
       } else
@@ -118,6 +122,7 @@ usage:
         fprintf(stderr,"      -f2c    use f2c convention for Fortran-callable C routines (double underscore)\n") ;
         fprintf(stderr,"      -nound[erscore] use IBM C/Fortran interface specification (no underscore)\n") ;
         fprintf(stderr,"    -keep  do not delete temporary files from registry program\n") ;
+        fprintf(stderr,"    -shownodes  output a listing of the nodes in registry's AST\n") ;
         fprintf(stderr,"  === alternate usage for generating templates ===\n") ;
         fprintf(stderr,"    -template ModuleName ModName\n") ;
         fprintf(stderr,"                 Generate a template Module file none exists\n") ;
@@ -188,6 +193,12 @@ usage:
 
   check_dimspecs() ;
 
+  if (sw_shownodes) {
+    fprintf(stderr,"--- ModNames ---\n") ;
+    show_nodelist(ModNames) ;
+    fprintf(stderr,"--- Done ---\n") ;
+  }
+ 
   gen_module_files( "." ) ;
 
 cleanup:
