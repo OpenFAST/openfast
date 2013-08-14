@@ -6,29 +6,29 @@
 
 
       PUBLIC ZERO,ONE,TWO,THREE,FOUR,FIVE,SIX,SEVEN,EIGHT,NINE,HALF
-      PUBLIC DBL,PI,DEG_2_RAD,RAD_2_DEG,I3
+      PUBLIC ReKi,PI,DEG_2_RAD,RAD_2_DEG,I3
       PUBLIC Tilde, CrossProduct,OuterProduct
  
 
-      INTEGER,PARAMETER:: DBL = SELECTED_REAL_KIND(15,307)
+      INTEGER,PARAMETER:: ReKi = SELECTED_REAL_KIND(15,307)
 
-      REAL(DBL),PARAMETER:: ONE = 1.d0
-      REAL(DBL),PARAMETER:: TWO = 2.d0
-      REAL(DBL),PARAMETER:: THREE = 3.d0
-      REAL(DBL),PARAMETER:: FOUR = 4.d0
-      REAL(DBL),PARAMETER:: FIVE = 5.d0
-      REAL(DBL),PARAMETER:: SIX = 6.d0
-      REAL(DBL),PARAMETER:: SEVEN = 7.d0
-      REAL(DBL),PARAMETER:: EIGHT = 8.d0
-      REAL(DBL),PARAMETER:: NINE = 9.d0
+      REAL(ReKi),PARAMETER:: ONE = 1.d0
+      REAL(ReKi),PARAMETER:: TWO = 2.d0
+      REAL(ReKi),PARAMETER:: THREE = 3.d0
+      REAL(ReKi),PARAMETER:: FOUR = 4.d0
+      REAL(ReKi),PARAMETER:: FIVE = 5.d0
+      REAL(ReKi),PARAMETER:: SIX = 6.d0
+      REAL(ReKi),PARAMETER:: SEVEN = 7.d0
+      REAL(ReKi),PARAMETER:: EIGHT = 8.d0
+      REAL(ReKi),PARAMETER:: NINE = 9.d0
 
-      REAL(DBL),PARAMETER:: PI = 3.1415926535897932d0
-      REAL(DBL),PARAMETER:: DEG_2_RAD = 1.7453292519943296d-02
-      REAL(DBL),PARAMETER:: RAD_2_DEG = 5.7295779513082321d01
-      REAL(DBL),PARAMETER:: ZERO = 0.0d0
-      REAL(DBL),PARAMETER:: HALF = 0.5d0
+      REAL(ReKi),PARAMETER:: PI = 3.1415926535897932d0
+      REAL(ReKi),PARAMETER:: DEG_2_RAD = 1.7453292519943296d-02
+      REAL(ReKi),PARAMETER:: RAD_2_DEG = 5.7295779513082321d01
+      REAL(ReKi),PARAMETER:: ZERO = 0.0d0
+      REAL(ReKi),PARAMETER:: HALF = 0.5d0
 
-      REAL(DBL),PARAMETER:: I3(3,3) = RESHAPE((/1.d0, 0.d0, 0.d0,&
+      REAL(ReKi),PARAMETER:: I3(3,3) = RESHAPE((/1.d0, 0.d0, 0.d0,&
                                               &0.d0, 1.d0, 0.d0,&
                                               &0.d0, 0.d0, 1.d0/),&
                                               &(/3,3/))
@@ -37,8 +37,8 @@
 
       FUNCTION Tilde(vect)
 
-      REAL(DBL),INTENT(IN):: vect(3)
-      REAL(DBL):: Tilde(3,3)
+      REAL(ReKi),INTENT(IN):: vect(3)
+      REAL(ReKi):: Tilde(3,3)
 
       Tilde = 0.d0
 
@@ -53,8 +53,8 @@
 
       FUNCTION CrossProduct(a,b)
 
-      REAL(DBL),INTENT(IN):: a(3),b(3)
-      REAL(DBL):: CrossProduct(3)
+      REAL(ReKi),INTENT(IN):: a(3),b(3)
+      REAL(ReKi):: CrossProduct(3)
       
       CrossProduct(1) = a(2) * b(3) - a(3) * b(2)
       CrossProduct(2) = a(3) * b(1) - a(1) * b(3)
@@ -64,8 +64,8 @@
 
       FUNCTION OuterProduct(vec1,vec2)
 
-      REAL(DBL),INTENT(IN):: vec1(:),vec2(:)
-      REAL(DBL)::OuterProduct(SIZE(vec1),SIZE(vec2))
+      REAL(ReKi),INTENT(IN):: vec1(:),vec2(:)
+      REAL(ReKi)::OuterProduct(SIZE(vec1),SIZE(vec2))
 
       INTEGER::i,j,n1,n2
 

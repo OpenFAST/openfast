@@ -11,11 +11,11 @@
 
       SUBROUTINE CrvMatrixR(cc,Rr) 
 
-      REAL(DBL),INTENT(IN)::cc(:)
-      REAL(DBL),INTENT(OUT)::Rr(:,:)
+      REAL(ReKi),INTENT(IN)::cc(:)
+      REAL(ReKi),INTENT(OUT)::Rr(:,:)
 
       INTEGER:: i, j
-      REAL(DBL):: c1,c2,c3,c0,tr0
+      REAL(ReKi):: c1,c2,c3,c0,tr0
 
       Rr = ZERO
       
@@ -41,11 +41,11 @@
 
       SUBROUTINE CrvCompose(rr,pp,qq,flag)
 
-      REAL(DBL),INTENT(IN):: pp(:), qq(:)
+      REAL(ReKi),INTENT(IN):: pp(:), qq(:)
       INTEGER,INTENT(IN):: flag
-      REAL(DBL),INTENT(OUT):: rr(:)
+      REAL(ReKi),INTENT(OUT):: rr(:)
 
-      REAL(DBL):: pp0,pp1,pp2,pp3,qq0,qq1,qq2,qq3,tr1,tr2,dd1,dd2
+      REAL(ReKi):: pp0,pp1,pp2,pp3,qq0,qq1,qq2,qq3,tr1,tr2,dd1,dd2
 
       IF(flag==1 .OR. flag==3) THEN
           pp1 = -pp(1)
