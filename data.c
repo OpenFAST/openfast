@@ -120,13 +120,10 @@ show_node1( node_t * p, int indent )
 
 // this doesn't make much sense any more, ever since node_kind was 
 // changed to a bit mask
-  if      ( p->node_kind & RCONFIG ) nodekind = "RCONFIG" ; 
-  else if ( p->node_kind & I1      ) nodekind = "I1" ;
-  else if ( p->node_kind & FIELD   ) nodekind = "FIELD" ;
-  else if ( p->node_kind & FOURD   ) nodekind = "FOURD" ;
-  else if ( p->node_kind & MEMBER  ) nodekind = "MEMBER" ;
-  else if ( p->node_kind & RCONFIG ) nodekind = "RCONFIG" ;
+  nodekind = "" ;
+  if      ( p->node_kind & FIELD   ) nodekind = "FIELD" ;
   else if ( p->node_kind & MODNAME ) nodekind = "MODNAME" ;
+  else if ( p->node_kind & TYPE    ) nodekind = "TYPE" ;
 
   if ( !p->scalar_array_member ) 
   {
@@ -136,11 +133,7 @@ show_node1( node_t * p, int indent )
     fprintf(stderr,"%s%s : %s nickname %s\n",tmp,nodekind,p->name,p->nickname) ;
     show_nodelist1(p->module_ddt_list, indent+1) ;
     break ;
-  case RCONFIG :
-  case I1      :
   case FIELD   :
-  case FOURD   :
-  case MEMBER  :
     fprintf(stderr,"%s%s : %10s ndims %1d\n",tmp,nodekind,p->name, p->ndims) ;
     for ( i = 0 ; i < p->ndims ; i++ )
     {

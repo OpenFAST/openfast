@@ -36,18 +36,6 @@ typedef struct node_struct {
 /* Fields for Modname */
   struct node_struct * module_ddt_list ;
 
-#ifdef FUTURE
-  unsigned int     nest_mask ;
-  struct node_struct * next4d ;
-  char force_aux_fields[2048] ;
-  char force_fcn_name[2048] ;
-  char interpd_aux_fields[2048] ;
-  char interpd_fcn_name[2048] ;
-  char interpu_aux_fields[2048] ;
-  char interpu_fcn_name[2048] ;
-  char smoothu_fcn_name[2048] ;
-  char smoothu_aux_fields[2048] ;
-#endif
 
 /* CTRL */
   int gen_wrapper ;
