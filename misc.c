@@ -353,16 +353,6 @@ char *
 field_name( char * tmp , node_t * p , int tag  )
 {
   if ( p == NULL ) return("") ;
-  if ( tag < 1 )
-  {
-    strcpy(tmp,p->name) ;
-    if ( p->scalar_array_member ) strcpy(tmp,p->use) ;
-  }
-  else
-  {
-    sprintf(tmp,"%s_%d",p->name,tag) ;
-    if ( p->scalar_array_member ) sprintf(tmp,"%s_%d",p->use,tag) ;
-  }
   return( tmp ) ;
 }
 
@@ -373,14 +363,10 @@ field_name_bdy( char * tmp , node_t * p , int tag, int bdy  )
   if ( tag < 1 )
   {
     strcpy(tmp,p->name) ;
-    if ( p->scalar_array_member ) strcpy(tmp,p->use) ;
-    if ( p->boundary_array ) strcat(tmp,bdy_indicator(bdy)) ;
   }
   else
   {
     sprintf(tmp,"%s_%d",p->name,tag) ;
-    if ( p->scalar_array_member ) sprintf(tmp,"%s_%d",p->use,tag) ;
-    if ( p->boundary_array ) strcat(tmp,bdy_indicator(bdy)) ;
   }
   return( tmp ) ;
 }

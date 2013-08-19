@@ -10,6 +10,7 @@ typedef struct node_struct {
   char          nickname[NAMELEN] ;
   struct node_struct  * fields ;
   struct node_struct  * type ;
+  struct node_struct  * module ;  /* type node pointer back to module node it is defined in */
   int           ndims ;
   struct node_struct  * dims[MAXDIMS] ;
   int     proc_orient ;    /* ALL_[ZXY]_ON_PROC which dimension is all on processor */
@@ -21,11 +22,6 @@ typedef struct node_struct {
   char    inival[NAMELEN] ;
   char    descrip[NAMELEN] ;
   char    units[NAMELEN] ;
-
-/* Fields for 4D scalar arrays */
-  int           scalar_array_member ;
-  int           has_scalar_array_tendencies ;
-  struct node_struct * members ;
 
 /* I/O flags */
   int     restart ;

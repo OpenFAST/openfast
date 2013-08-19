@@ -125,8 +125,6 @@ show_node1( node_t * p, int indent )
   else if ( p->node_kind & MODNAME ) nodekind = "MODNAME" ;
   else if ( p->node_kind & TYPE    ) nodekind = "TYPE" ;
 
-  if ( !p->scalar_array_member ) 
-  {
   switch ( p->node_kind )
   {
   case MODNAME :
@@ -153,7 +151,6 @@ show_node1( node_t * p, int indent )
     nl = 0 ;
     if ( strlen( p->use     ) > 0 ) {
        nl = 1 ; fprintf(stderr,"      use: %s",p->use) ;
-       if ( p->scalar_array_member ) fprintf(stderr,"(4D)") ;
     }
     if ( strlen( p->descrip ) > 0 ) { nl = 1 ; fprintf(stderr,"  descrip: %s",p->descrip) ;    }
     if ( nl == 1 ) fprintf(stderr,"\n") ;
@@ -170,8 +167,6 @@ show_node1( node_t * p, int indent )
   default :
     break ;
   }
-  }
-  show_nodelist1( p->members , indent+2 ) ;
   return(0) ;
 }
 #endif
@@ -185,7 +180,6 @@ set_mark ( int val , node_t * lst )
   {
     p->mark = val ;
     set_mark( val , p->fields ) ;
-    set_mark( val , p->members ) ;
   }
   return(0) ;
 }

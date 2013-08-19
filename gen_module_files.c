@@ -174,12 +174,20 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
         } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
-          remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+          remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
+
+
+fprintf(stderr,"r->type->module->nickname %s\n",r->type->module->nickname)  ;
+fprintf(stderr,"fast_interface_type_shortname(%s) %s\n",nonick2,fast_interface_type_shortname(nonick2)) ;
   fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
-                                ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
+                                r->type->module->nickname,fast_interface_type_shortname(nonick2),
+                                nonick,r->name,dimstr(r->ndims),
+                                nonick,r->name,dimstr(r->ndims)) ;
+
+
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
           }
@@ -300,12 +308,12 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
     } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
-      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+      remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
+                        r->type->module->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                         dimstr(r->ndims), r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_%s_Buf  ) ! %s\n",r->name,r->name,r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_%s_Buf  ) ! %s\n",r->name,r->name,r->name) ;
@@ -378,12 +386,12 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
     } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
-      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+      remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"DO i%d = 1, SIZE(InData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, InData%%%s%s, ErrStat, ErrMsg, OnlySize ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
+                        r->type->module->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                         dimstr(r->ndims),
                         r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
@@ -558,14 +566,14 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
     } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
       char nonick2[NAMELEN] ;
-      remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+      remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"DO i%d = 1, SIZE(OutData%%%s,%d)\n",d,r->name,d  ) ;
       }
   fprintf(fp," ! first call %s_Pack%s to get correctly sized buffers for unpacking\n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2)) ;
+                        r->type->module->nickname,fast_interface_type_shortname(nonick2)) ;
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, dimstr(r->ndims),r->name ) ;
+                        r->type->module->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, dimstr(r->ndims),r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
   fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
@@ -579,7 +587,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE(Int_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  CALL %s_UnPack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg ) ! %s \n",
-                        ModName->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
+                        r->type->module->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name,
                         dimstr(r->ndims),
                         r->name ) ;
       for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -729,7 +737,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           }
         } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
-          remove_nickname(ModName->nickname,r->type->name,nonick2) ;
+          remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   if (r->dims[0]->deferred) {
   fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
@@ -737,7 +745,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"DO i%d = 1, SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
           fprintf(fp,"  CALL %s_Destroy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
-                          ModName->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims)) ;
+                          r->type->module->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims)) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
   if (r->dims[0]->deferred) {
