@@ -44,7 +44,7 @@ MODULE ModMesh_Mapping
    PUBLIC :: Transfer_Line2_to_Point
    PUBLIC :: Transfer_Point_to_Line2
    PUBLIC :: Transfer_Line2_to_Line2
-   !PUBLIC :: Lump_Line2_to_Point
+  ! PUBLIC :: Lump_Line2_to_Point
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -69,11 +69,17 @@ SUBROUTINE AllocMapping( Src, Dest, MeshMap, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
+   IF ( .NOT. Dest%Committed .OR. .NOT. Src%Committed ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = " Both meshes must be committed before they can be mapped."
+      RETURN
+   END IF
+   
       !................................................
       ! Allocate the mapping for Motions and Scalars:
       ! bjj: we shouldn't have to allocate this if the Disp/Vel/Acc/Scalar fields aren't allocated
       !................................................
+   
    PointsInMap = Dest%Nnodes
 
    IF ( PointsInMap < 1 ) THEN

@@ -425,23 +425,19 @@ CONTAINS
     ! Local
       INTEGER i
       LOGICAL                    :: IsNewSib
+      
+      LOGICAL                    :: IsMotion
+      LOGICAL                    :: IsLoad
+      
 
+         ! Local initializations:
+      
       ErrStat = ErrID_None
       ErrMess = ""
+      IsMotion = .FALSE.
+      IsLoad   = .FALSE.
 
       IF ( mesh_debug ) print*,'Called MeshCreate'
-
-
-!#if 0
-! This is problematic called from MeshCreate for a new mesh because
-! we can't assume that uninitialized pointers are uninitialized
-! Just put it on the user not to recreate meshes that already exist (memory leak danger if they do)
-
-
-!bjj: I found one pointer wasn't initialized with => NULL
-! I fixed the default initializion and now tested this code on both IVF
-! and gfortran (albeit a small case and only on Windows). It works for me.
-
 
       CALL MeshDestroy( BlankMesh, ErrStat, ErrMess, .TRUE. )
                                                         ! make sure we're not leaving any pointers dangling
@@ -449,7 +445,6 @@ CONTAINS
                                                         ! See comment on optional IgnoreSibling argument
                                                         ! in definition of MeshDestroy
       IF (ErrStat >= AbortErrLev) RETURN
-!#endif
 
       BlankMesh%initialized = .TRUE.
       BlankMesh%IOS         = IOS
@@ -489,92 +484,136 @@ CONTAINS
    ! handle optionals
       BlankMesh%FieldMask = .FALSE.
 
-      IF (ALLOCATED(BlankMesh%Force)) DEALLOCATE(BlankMesh%Force)
       IF ( PRESENT(Force) ) THEN
          IF ( Force ) THEN
             CALL AllocAry( BlankMesh%Force, 3, Nnodes, 'MeshCreate: Force', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%Force = 0.
             BlankMesh%FieldMask(MASKID_FORCE) = .TRUE.
+            IsLoad = .TRUE.
          ENDIF
       ENDIF
 
-      IF (ALLOCATED(BlankMesh%Moment)) DEALLOCATE(BlankMesh%Moment)
       IF ( PRESENT(Moment) ) THEN
          IF ( Moment ) THEN
             CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%Moment = 0.
             BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
+            IsLoad = .TRUE.
          ENDIF
       ENDIF
 
-      IF (ALLOCATED(BlankMesh%Orientation)) DEALLOCATE(BlankMesh%Orientation)
       IF ( PRESENT(Orientation) ) THEN
          IF ( Orientation ) THEN
             CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            CALL Eye(BlankMesh%Orientation, ErrStat, ErrMess)  ! set this orientation to the identity matrix
             BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
+            IsMotion = .TRUE.
          ENDIF
       ENDIF
-      IF (ALLOCATED(BlankMesh%TranslationDisp)) DEALLOCATE(BlankMesh%TranslationDisp)
+
       IF ( PRESENT(TranslationDisp) ) THEN
          IF ( TranslationDisp ) THEN
             CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%TranslationDisp = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
+            IsMotion = .TRUE.
          ENDIF
       ENDIF
-      IF (ALLOCATED(BlankMesh%TranslationVel)) DEALLOCATE(BlankMesh%TranslationVel)
+
       IF ( PRESENT(TranslationVel) ) THEN
          IF ( TranslationVel ) THEN
             CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%TranslationVel = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
+            IsMotion = .TRUE.
          ENDIF
       ENDIF
-      IF (ALLOCATED(BlankMesh%RotationVel)) DEALLOCATE(BlankMesh%RotationVel)
+
       IF ( PRESENT(RotationVel) ) THEN
          IF ( RotationVel ) THEN
             CALL AllocAry( BlankMesh%RotationVel, 3, Nnodes, 'MeshCreate: RotationVel', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%RotationVel = 0.
             BlankMesh%FieldMask(MASKID_ROTATIONVEL) = .TRUE.
+            IsMotion = .TRUE.
          ENDIF
       ENDIF
-      IF (ALLOCATED(BlankMesh%TranslationAcc)) DEALLOCATE(BlankMesh%TranslationAcc)
+
       IF ( PRESENT(TranslationAcc) ) THEN
          IF ( TranslationAcc ) THEN
             CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%TranslationAcc = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
+            IsMotion = .TRUE.
          ENDIF
       ENDIF
-      IF (ALLOCATED(BlankMesh%RotationAcc)) DEALLOCATE(BlankMesh%RotationAcc)
+
       IF ( PRESENT(RotationAcc) ) THEN
          IF ( RotationAcc ) THEN
             CALL AllocAry( BlankMesh%RotationAcc, 3, Nnodes, 'MeshCreate: RotationAcc', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%RotationAcc = 0.
             BlankMesh%FieldMask(MASKID_ROTATIONACC) = .TRUE.
+            IsMotion = .TRUE.
          ENDIF
       ENDIF
-      IF (ALLOCATED(BlankMesh%AddedMass)) DEALLOCATE(BlankMesh%AddedMass)
+
+!bjj: we will remove this one:      
+      
       IF ( PRESENT(AddedMass) ) THEN
          IF ( AddedMass ) THEN
             CALL AllocAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'MeshCreate: AddedMass', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%AddedMass = 0.
             BlankMesh%FieldMask(MASKID_AddedMass) = .TRUE.
          ENDIF
       ENDIF
 
-      IF (ALLOCATED(BlankMesh%Scalars)) DEALLOCATE(BlankMesh%Scalars)
+
       BlankMesh%nScalars = 0
       IF ( PRESENT(nScalars) ) THEN
          IF ( nScalars .GT. 0 ) THEN
             CALL AllocAry( BlankMesh%Scalars, nScalars, Nnodes, 'MeshCreate: Scalars', ErrStat,ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%Scalars = 0.
             BlankMesh%FieldMask(MASKID_Scalar) = .TRUE.
             BlankMesh%nScalars = nScalars
+            !IsMotion = .TRUE. !bjj: do we care about this one?
          ENDIF
       ENDIF
 
+      
+         !........................
+         ! Let's make sure that we have all the necessary fields:
+         !........................
+      IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
+         
+         IF ( .NOT. BlankMesh%FieldMask(MASKID_Orientation) ) THEN
+            CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
+            CALL Eye(BlankMesh%Orientation, ErrStat, ErrMess)  ! set this orientation to the identity matrix
+            BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
+            ErrStat = ErrID_Info
+            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the Orientation field.'            
+         END IF
+         
+         IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONDISP)) THEN
+            CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%TranslationDisp = 0.
+            BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
+            ErrStat = ErrID_Info
+            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the TranslationDisp field.'            
+         ENDIF                  
+                  
+      END IF
+                  
       RETURN
 
    END SUBROUTINE MeshCreate
@@ -603,6 +642,7 @@ CONTAINS
          ! Deallocate/Nullify/Deinitialize values that are not shared between siblings:
 
       Mesh%initialized = .FALSE.
+      Mesh%committed   = .FALSE.
       Mesh%fieldmask   = .FALSE.
       Mesh%ios         = 0
       Mesh%Nnodes      = 0
@@ -685,7 +725,7 @@ CONTAINS
          ENDIF
 
          IF (ASSOCIATED(Mesh%ElemList) ) THEN
-            DEALLOCATE(Mesh%ElemList) ! This pointed to the ElemTable data, which we've deallocated already
+            DEALLOCATE(Mesh%ElemList) ! These elements pointed to the ElemTable data, which we've deallocated already
             NULLIFY( Mesh%ElemList )
          END IF
 
@@ -768,6 +808,14 @@ CONTAINS
      SzOnly = .FALSE.
      IF ( PRESENT(SizeOnly) ) SzOnly = SizeOnly
 
+     
+!bjj: if we modify the code below to check if things are allocated/etc we can remove this requirement
+     IF (.NOT. Mesh%Committed ) THEN  
+        ErrStat = ErrID_Fatal
+        ErrMess = " MeshPack: Uncommitted meshes cannot be packed."
+        RETURN
+     END IF
+     
     ! Traverse the element list and calculate size needed to store element records
      n_int = 0
      nelem = 0
@@ -1151,8 +1199,14 @@ CONTAINS
          ENDDO
        ENDDO
      ENDIF
+     
+     
+     Mesh%Committed = .TRUE.
+     
      RETURN
 
+     
+     
    END SUBROUTINE MeshUnpack
 
    SUBROUTINE MeshCopy( SrcMesh, DestMesh, CtrlCode, ErrStat , ErrMess   &
@@ -1264,6 +1318,12 @@ CONTAINS
                RETURN !early return
             END IF
 
+            IF (.NOT. SrcMesh%Committed ) THEN
+               ErrStat = ErrID_Fatal
+               ErrMess = ' MeshCopy: An uncommitted mesh cannot have a sibling.'
+               RETURN !early return
+            END IF
+               
 
             Force_l            = .FALSE. ; IF ( PRESENT(Force) )                     Force_l = Force
             Moment_l           = .FALSE. ; IF ( PRESENT(Moment) )                   Moment_l = Moment
@@ -1405,6 +1465,7 @@ CONTAINS
          ! These aren't shared between siblings, so they get copied, no matter what the CtrlCode:
 
       DestMesh%Initialized = SrcMesh%Initialized
+      DestMesh%Committed   = SrcMesh%Committed
       IF ( ALLOCATED(SrcMesh%Force          ) .AND. ALLOCATED(DestMesh%Force          ) ) DestMesh%Force = SrcMesh%Force
       IF ( ALLOCATED(SrcMesh%Moment         ) .AND. ALLOCATED(DestMesh%Moment         ) ) DestMesh%Moment = SrcMesh%Moment
       IF ( ALLOCATED(SrcMesh%Orientation    ) .AND. ALLOCATED(DestMesh%Orientation    ) ) DestMesh%Orientation = SrcMesh%Orientation
@@ -1506,6 +1567,9 @@ CONTAINS
 
    !bjj: check that allocated fields make sense (i.e., Motions must include Orientation and TranslationDisp)
 
+   !BJJ: initialize allocated orientation field
+   
+   
      ! Construct list of elements
 
 
@@ -1536,88 +1600,8 @@ CONTAINS
      END DO
 
 
-!#if 0
-!     DO i = 1, Mesh%npoint
-!       Mesh%Spatial = 0
-!       CALL AddElement(Mesh, ELEMENT_POINT, i, Mesh%element_point )
-!     ENDDO
-!     DO i = 1, Mesh%nline2
-!       Mesh%Spatial = 1
-!       CALL AddElement(Mesh, ELEMENT_LINE2, i, Mesh%element_line2 )
-!     ENDDO
-!     DO i = 1, Mesh%nline3
-!       Mesh%Spatial = 1
-!       CALL AddElement(Mesh, ELEMENT_LINE3, i, Mesh%element_line3 )
-!     ENDDO
-!     DO i = 1, Mesh%ntri3
-!       Mesh%Spatial = 2
-!       CALL AddElement(Mesh, ELEMENT_TRI3, i, Mesh%element_tri3 )
-!     ENDDO
-!     DO i = 1, Mesh%ntri6
-!       Mesh%Spatial = 2
-!       CALL AddElement(Mesh, ELEMENT_TRI6, i, Mesh%element_tri6 )
-!     ENDDO
-!     DO i = 1, Mesh%nquad4
-!       Mesh%Spatial = 2
-!       CALL AddElement(Mesh, ELEMENT_QUAD4, i, Mesh%element_quad4 )
-!     ENDDO
-!     DO i = 1, Mesh%nquad8
-!       Mesh%Spatial = 2
-!       CALL AddElement(Mesh, ELEMENT_QUAD8, i, Mesh%element_quad8 )
-!     ENDDO
-!     DO i = 1, Mesh%ntet4
-!       Mesh%Spatial = 3
-!       CALL AddElement(Mesh, ELEMENT_TET4, i, Mesh%element_tet4 )
-!     ENDDO
-!     DO i = 1, Mesh%ntet10
-!       Mesh%Spatial = 3
-!       CALL AddElement(Mesh, ELEMENT_TET10, i, Mesh%element_tet10 )
-!     ENDDO
-!     DO i = 1, Mesh%nhex8
-!       Mesh%Spatial = 3
-!       CALL AddElement(Mesh, ELEMENT_HEX8, i, Mesh%element_hex8 )
-!     ENDDO
-!     DO i = 1, Mesh%nhex20
-!       Mesh%Spatial = 3
-!       CALL AddElement(Mesh, ELEMENT_HEX20, i, Mesh%element_hex20 )
-!     ENDDO
-!     DO i = 1, Mesh%nwedge6
-!       Mesh%Spatial = 3
-!       CALL AddElement(Mesh, ELEMENT_WEDGE6, i, Mesh%element_wedge6 )
-!     ENDDO
-!     DO i = 1, Mesh%nwedge15
-!       Mesh%Spatial = 3
-!       CALL AddElement(Mesh, ELEMENT_WEDGE15, i, Mesh%element_wedge15 )
-!     ENDDO
-!
-!     CONTAINS
-!       SUBROUTINE AddElement( Mesh, Xelement, i_in_kind, element_array )
-!         IMPLICIT NONE
-!         TYPE(MeshType), INTENT(INOUT) :: Mesh  ! Mesh being committed
-!         INTEGER, INTENT(IN) :: Xelement        ! which kind of element
-!         INTEGER, INTENT(IN) ::  i_in_kind      ! index of element in Xelement kind array
-!         INTEGER, POINTER, INTENT(IN) :: element_array(:,:) ! element kind array
-!       ! Local
-!
-!         TYPE(ElemRec), POINTER :: tmp(:)
-!         Mesh%Nelemlist = Mesh%Nelemlist + 1
-!         IF ( Mesh%Nelemlist .GE. Mesh%Maxelemlist ) THEN
-!            ALLOCATE(tmp(Mesh%maxelemlist+BUMPUP))
-!            ! if Mesh%Nelemlist .EQ. 1 then this is the first time through
-!            IF ( Mesh%Nelemlist .GT. 1 ) tmp(1:Mesh%nelemlist) = Mesh%elemlist(1:Mesh%Nelemlist)
-!            IF ( ASSOCIATED(Mesh%elemlist) ) THEN
-!               DEALLOCATE( Mesh%elemlist )
-!               NULLIFY( Mesh%elemlist )
-!            ENDIF
-!            Mesh%elemlist => tmp
-!            Mesh%Maxelemlist = Mesh%Maxelemlist + BUMPUP
-!         ENDIF
-!         Mesh%elemlist(Mesh%Nelemlist)%ElemAry    => element_array
-!         Mesh%elemlist(Mesh%Nelemlist)%I_in_kind = i_in_kind
-!
-!       END SUBROUTINE AddElement
-!#endif
-!
+      Mesh%Committed = .TRUE.
+            
    END SUBROUTINE MeshCommit
 
 ! added 20130102 as stub for AeroDyn work
