@@ -180,8 +180,6 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           }
 
 
-fprintf(stderr,"r->type->module->nickname %s\n",r->type->module->nickname)  ;
-fprintf(stderr,"fast_interface_type_shortname(%s) %s\n",nonick2,fast_interface_type_shortname(nonick2)) ;
   fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
                                 r->type->module->nickname,fast_interface_type_shortname(nonick2),
                                 nonick,r->name,dimstr(r->ndims),

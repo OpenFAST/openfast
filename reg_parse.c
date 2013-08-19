@@ -343,7 +343,6 @@ reg_parse( FILE * infile )
         
         modname_struct->module_ddt_list = NULL ;
         modname_struct->next            = NULL ;
-fprintf(stderr,"new modname %s\n",modname_struct->name,modname_struct->nickname) ;
         add_node_to_end( modname_struct , &ModNames ) ;
       }
       if ( !strcmp( tokens[ TABLE ] , "usefrom" ) ) 
@@ -376,7 +375,6 @@ fprintf(stderr,"new modname %s\n",modname_struct->name,modname_struct->nickname)
         type_struct->next      = NULL ;
         type_struct->usefrom   = modname_struct->usefrom ;
         type_struct->module    = modname_struct ;
-fprintf(stderr,"type %s defined in %s %s\n",type_struct->name,modname_struct->name,modname_struct->nickname) ;
         add_node_to_end( type_struct,(type_struct->usefrom)? &Type : &(modname_struct->module_ddt_list ) ) ;
       }
 
