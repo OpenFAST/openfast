@@ -33,7 +33,7 @@ MODULE ModMesh_Types
    INTEGER, PUBLIC, PARAMETER :: MASKID_ROTATIONACC = 8
    INTEGER, PUBLIC, PARAMETER :: MASKID_ADDEDMASS = 9
    INTEGER, PUBLIC, PARAMETER :: MASKID_SCALAR = 10
-   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 11 !bjj should this be 10?
+   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 10 
 
 ! Format of the Int buffer
    INTEGER, PUBLIC, PARAMETER :: HDR_INTBUFSIZE  = 1
@@ -98,6 +98,7 @@ MODULE ModMesh_Types
 
    TYPE, PUBLIC :: MeshType
       LOGICAL :: initialized = .FALSE.                       ! Indicate whether this mesh is initialized
+      LOGICAL :: committed = .FALSE.                         ! Indicate whether this mesh is committed
       LOGICAL :: fieldmask(FIELDMASK_SIZE) = .FALSE.         ! Dimension as number of allocatable fields, below
       LOGICAL,POINTER :: RemapFlag  => NULL()                ! false=no action/ignore; true=remap required
       INTEGER :: ios                                         ! Mesh type: input (1), output(2), or state(3)
