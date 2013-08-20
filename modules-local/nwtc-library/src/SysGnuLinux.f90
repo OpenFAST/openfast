@@ -362,7 +362,6 @@ CONTAINS
 
 !==================================================================================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
-!bjj: note that this is not tested.
 
       ! This SUBROUTINE is used to load the DLL.
 
@@ -380,6 +379,12 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(C_INT), PARAMETER :: RTLD_LOCAL=0           ! "This is the converse of RTLD_GLOBAL, and the default if neither flag is specified. Symbols defined in this library are not made available to resolve references in subsequently loaded libraries."
 
 
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' LoadDynamicLib: Not implemented for '//TRIM(OS_Desc)
+   
+   
+#if 0           
+!bjj: note that this is not tested:
    INTERFACE !linux API routines
       !bjj see http://linux.die.net/man/3/dlopen
       ! also: https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlopen.3.html
@@ -432,12 +437,12 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
       RETURN
    END IF
 
-
+#endif
+   
    RETURN
 END SUBROUTINE LoadDynamicLib
 !==================================================================================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
-!bjj: note that this is not tested.
 
       ! This SUBROUTINE is used to free the DLL.
 
@@ -452,6 +457,12 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(C_INT), PARAMETER                 :: TRUE  = 0
 
 
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' FreeDynamicLib: Not implemented for '//TRIM(OS_Desc)
+   
+   
+#if 0   
+!bjj: note that this is not tested.
    INTERFACE !linux API routine
       !bjj see http://linux.die.net/man/3/dlopen
 
@@ -479,11 +490,11 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
       ErrStat = ErrID_None
       ErrMsg = ''
    END IF
-
+#endif
+   
    RETURN
 END SUBROUTINE FreeDynamicLib
 !==================================================================================================================================
-
 
 
 END MODULE SysSubs

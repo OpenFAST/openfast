@@ -21,67 +21,28 @@ MODULE NWTC_IO
    ! A list of routines follows the data and type definitions.
 
    USE                             SysSubs
+   USE                             NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
 
    IMPLICIT  NONE
 
 !=======================================================================
 
-   TYPE, PUBLIC :: ProgDesc
-      CHARACTER(99)              :: Name
-      CHARACTER(99)              :: Ver
-      CHARACTER(24)              :: Date
-   END TYPE ProgDesc
+   TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00b-bjj', '20-Aug-2013')
 
-   TYPE(ProgDesc), PARAMETER     :: NWTC_Ver = ProgDesc( 'NWTC Subroutine Library', 'v2.03.00a-bjj', '7-Aug-2013')       ! The name, version, and date of the NWTC Subroutine Library.
-
-   INTEGER(IntKi), PARAMETER     :: ChanLen   = 10                           ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
-
-!bjj: I think TimeStep should be DbKi KIND, to match the framework, and I'd make NumChans and NumRecs IntKi
-!mlb: I changed the TimeStep, but will have to see if there were compiler reasons for choosing 4-byte integers.
-!bjj: should we make ChanNames and ChanUnits CAHRACTER(ChanLen) now?
-   TYPE, PUBLIC               :: FASTdataType                                 ! The derived type for holding FAST binary output data.
-      CHARACTER(1024)                        :: File                          ! The name of the binary input file containing FAST output.
-      CHARACTER(1024)                        :: Descr                         ! The file descriptor stored in the FAST binary output file.
-      INTEGER(B4Ki)                          :: NumChans                      ! The number of channels of FAST output data (including time).
-      INTEGER(B4Ki)                          :: NumRecs                       ! The number of records of FAST output data.
-      REAL(DbKi)                             :: TimeStep                      ! The time step.
-      CHARACTER(20), ALLOCATABLE             :: ChanNames(:)                  ! The channel names.
-      CHARACTER(20), ALLOCATABLE             :: ChanUnits(:)                  ! The channel units.
-      REAL(ReKi)   , ALLOCATABLE             :: Data(:,:)                     ! The channel data.  Time is stored in the first column.
-   END TYPE FASTdataType
-
-
-   TYPE, PUBLIC               :: FileInfoType                                 ! This derived type is used to hold the contents of a file with comments removed.
-      INTEGER                                :: NumLines                      ! The total number of lines in the file with usable information.
-      INTEGER                                :: NumFiles                      ! The total number of files recursively read.
-      INTEGER, ALLOCATABLE                   :: FileLine  (:)                 ! The original line number of each line in the file with usable information.
-      INTEGER, ALLOCATABLE                   :: FileIndx  (:)                 ! The index into the FileList array for each line read in.
-      CHARACTER(1024), ALLOCATABLE           :: FileList  (:)                 ! The list of the unique files whose contents are stored in this structure.
-      CHARACTER(512), ALLOCATABLE            :: Lines     (:)                 ! The contents of lines in the file with usable information.
-   END TYPE FileInfoType
-
-
-   TYPE, PUBLIC               :: FNlist_Type                                  ! This type stores a linked list of file names.
+   TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
       TYPE(FNlist_Type), POINTER             :: Next => NULL()                ! The pointer to the next file name in the list.
    END TYPE FNlist_Type
 
 
-   TYPE, PUBLIC               :: InpErrsType                                  ! This derived type is used to hold error messages for invalid input data.
+   TYPE, PUBLIC                 :: InpErrsType                                ! This derived type is used to hold error messages for invalid input data.
       INTEGER                                :: MaxErrs                       ! The maximum number of errors allowed.  Used to allocate the arrays.
       INTEGER                                :: NumErrs                       ! The total number of errors found.
       INTEGER, ALLOCATABLE                   :: FileLine  (:)                 ! The original line number of each line in the file with usable information.
       CHARACTER(128), ALLOCATABLE            :: ErrMsgs   (:)                 ! The error messages.
       CHARACTER(512), ALLOCATABLE            :: FileList  (:)                 ! The file that a given error message occurred in.
    END TYPE InpErrsType
-
-
-   TYPE OutParmType                                                              ! User-defined type for output parameters
-      INTEGER(IntKi)             :: Indx                                         ! Index into AllOuts output array
-      CHARACTER(10)              :: Name                                         ! Name of the output parameter
-      CHARACTER(10)              :: Units                                        ! Units corresponding to the output parameter
-      INTEGER(IntKi)             :: SignM                                        ! Sign (output multiplier)
-   END TYPE OutParmType
 
 
 
@@ -4713,6 +4674,7 @@ CONTAINS
    INTEGER(IntKi), PARAMETER              :: MaxChrLen  = 10         ! The maximum length for channel names and units.
 
    INTEGER(B4Ki), ALLOCATABLE             :: TmpTimeArray(:)         ! This array holds the normalized time channel that was read from the binary file.
+   INTEGER(B4Ki)                          :: Tmp4BInt                ! This scalar temporarially holds a 4-byte integer that was stored in the binary file
 
    INTEGER(B2Ki)                          :: FileType                ! The type of FAST data file (1: Time channel included in file; 2: Time stored as start time and step).
    INTEGER(B2Ki), ALLOCATABLE             :: TmpInArray(:,:)         ! This array holds the normalized channels that were read from the binary file.
@@ -4741,19 +4703,21 @@ CONTAINS
       RETURN
    ENDIF
 
-   READ (UnIn, IOSTAT=ErrLev)  FASTdata%NumChans
+   READ (UnIn, IOSTAT=ErrLev)  Tmp4BInt
    IF ( ErrLev /= 0 )  THEN
       CALL ExitThisRoutine ( ErrID_Fatal, '>> Fatal error reading the number of channels in ReadFASTbin for file "' &
                                       //TRIM( FASTdata%File )//'".' )
       RETURN
    ENDIF
+   FASTdata%NumChans = Tmp4BInt  ! possible type conversion
 
-   READ (UnIn, IOSTAT=ErrLev)  FASTdata%NumRecs
+   READ (UnIn, IOSTAT=ErrLev)  Tmp4BInt
    IF ( ErrLev /= 0 )  THEN
       CALL ExitThisRoutine ( ErrID_Fatal, '>> Fatal error reading the number of records in ReadFASTbin for file "' &
                                           //TRIM( FASTdata%File )//'".' )
       RETURN
    ENDIF
+   FASTdata%NumRecs = Tmp4BInt ! possible type conversion
 
 
       ! Time is done differently for the two file types.

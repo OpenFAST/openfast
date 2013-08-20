@@ -23,6 +23,7 @@ MODULE NWTC_Library
          !     NWTC_Base.f90
          !     NWTC_IO.f90
          !     NWTC_Library.f90
+         !     NWTC_Library_Types.f90
          !     NWTC_Num.f90
          !     ModMesh.f90
          !     ModMesh_Types.f90
@@ -45,6 +46,7 @@ MODULE NWTC_Library
          !     SingPrec.f90 or DoubPrec.f90
          !     NWTC_Base.f90
          !     SysIVF.f90 (or other Sys*.f90 file)
+         !     NWTC_Library_Types.f90
          !     NWTC_IO.f90
          !     NWTC_Num.f90
          !     ModMesh_Types.f90
@@ -95,6 +97,7 @@ CONTAINS
    CALL SetConstants()
 
 !mlb Let's get rid of this once FLUSH works.
+!bjj: let's keep it so that we can open files or DLL to write somewhere besides the screen.... (we can get rid of FLUSH from OpenCon, though)
    CALL OpenCon( )
 
 
