@@ -11,7 +11,7 @@
 
 #include "FAST_preamble.h"
 
-int 
+int
 gen_copy_f2c_c2f( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, int sw ) //sw=0 f2c, sw=1 c2f
 {
   char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -96,7 +96,7 @@ fprintf(stderr,"> %s\n",r->type->name,r->type->mapsto) ;
   fprintf(fp,"  CALL %s_C2F_%s_%s(%sData%%C_obj,%sData%%%s %s)\n",
               ModName->nickname,nonick,r->name,nonick,nonick,r->name,tmp) ;
             }
-             
+
           } else {
             if ( r->ndims > 0 ) {
               strcpy(tmp,"") ;
@@ -139,16 +139,16 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
   fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick,nonick ) ;
-  fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: Src%sData\n",addnick,nonick) ;
-  fprintf(fp,"  TYPE(%s), INTENT(INOUT) :: Dst%sData\n",addnick,nonick) ;
-  fprintf(fp,"  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ;
-  fprintf(fp,"  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
-  fprintf(fp,"  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
+  fprintf(fp,"   TYPE(%s), INTENT(INOUT) :: Src%sData\n",addnick,nonick) ;
+  fprintf(fp,"   TYPE(%s), INTENT(INOUT) :: Dst%sData\n",addnick,nonick) ;
+  fprintf(fp,"   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ;
+  fprintf(fp,"   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
+  fprintf(fp,"   CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"! Local \n") ;
-  fprintf(fp,"  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
+  fprintf(fp,"   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
   fprintf(fp,"! \n") ;
-  fprintf(fp,"  ErrStat = ErrID_None\n") ;
-  fprintf(fp,"  ErrMsg  = \"\"\n") ;
+  fprintf(fp,"   ErrStat = ErrID_None\n") ;
+  fprintf(fp,"   ErrMsg  = \"\"\n") ;
 
 //  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
 //  sprintf(tmp,"%s",inoutlong) ;
@@ -163,49 +163,63 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
     for ( r = q->fields ; r ; r = r->next )
     {
       if ( r->type != NULL ) {
+
+// check if this is an allocatable array:
+        if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
+  fprintf(fp,"IF (ALLOCATED(Src%sData%%%s)) THEN\n",nonick,r->name) ;
+           if ( sw_norealloc_lsh ) {
+             char tmp2[10] ;
+             strcpy(tmp,"") ;
+             for ( d = 1 ; d <= r->ndims ; d++ ) {
+  fprintf(fp,"   i%d = SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
+                sprintf(tmp2,",i%d",d) ;
+                strcat(tmp,tmp2) ;
+             }
+  fprintf(fp,"   IF (.NOT.ALLOCATED(Dst%sData%%%s)) THEN \n",nonick,r->name) ;
+  fprintf(fp,"      ALLOCATE(Dst%sData%%%s(%s),STAT=ErrStat)\n",nonick,r->name,(char*)&(tmp[1])) ;
+  fprintf(fp,"      IF (ErrStat /= 0) THEN \n") ;
+  fprintf(fp,"         ErrStat = ErrID_Fatal \n") ;
+  fprintf(fp,"         ErrMsg = '%s_Copy%s: Error allocating Dst%sData%%%s.'\n",ModName->nickname,nonick,nonick,r->name) ;
+  fprintf(fp,"         RETURN\n") ;
+  fprintf(fp,"      END IF\n") ;
+  fprintf(fp,"   END IF\n") ;
+           }
+        }
+
         if ( !strcmp( r->type->name, "meshtype" ) ) {
           for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
+  fprintf(fp,"   DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
-          fprintf(fp,"  CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
+          fprintf(fp,"     CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"ENDDO\n") ;
+  fprintf(fp,"   ENDDO\n") ;
           }
 
         } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
           char nonick2[NAMELEN] ;
           remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
+  fprintf(fp,"   DO i%d = 1, SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d  ) ;
           }
 
 
-  fprintf(fp,"  CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
+  fprintf(fp,"      CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat, ErrMsg )\n",
                                 r->type->module->nickname,fast_interface_type_shortname(nonick2),
                                 nonick,r->name,dimstr(r->ndims),
                                 nonick,r->name,dimstr(r->ndims)) ;
 
 
           for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"ENDDO\n") ;
+  fprintf(fp,"   ENDDO\n") ;
           }
         } else {
-          if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
-            char tmp2[10] ;
-            strcpy(tmp,"") ;
-  fprintf(fp,"IF ( ALLOCATED( Src%sData%%%s ) ) THEN\n",nonick,r->name) ;
-            for ( d = 1 ; d <= r->ndims ; d++ ) {
-  fprintf(fp,"  i%d = SIZE(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
-              sprintf(tmp2,",i%d",d) ;
-              strcat(tmp,tmp2) ;
-            }
-  fprintf(fp,"  IF (.NOT.ALLOCATED(Dst%sData%%%s)) ALLOCATE(Dst%sData%%%s(%s))\n",nonick,r->name,nonick,r->name,(char*)&(tmp[1])) ;
-          }
-  fprintf(fp,"  Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
-          if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
-  fprintf(fp,"ENDIF\n") ;
-          }
+  fprintf(fp,"   Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
         }
+// close IF (check on allocatable array)
+        if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
+  fprintf(fp,"ENDIF\n") ;
+        }
+
       }
     }
   }
@@ -806,7 +820,7 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
              if ( j == 1 ) strcat(tmp,")") ; else strcat(tmp,",") ;
              strcat(dex,tmp) ;
          }
-        
+
          if        ( order == 0 ) {
   fprintf(fp,"  CALL MeshCopy(u(1)%s%%%s%s, u_out%s%%%s%s, MESH_UPDATECOPY, ErrStat, ErrMsg )\n",deref,r->name,dex,deref,r->name,dex )  ;
          } else if ( order == 1 ) {
@@ -1379,6 +1393,13 @@ gen_module( FILE * fp , node_t * ModName )
 // Generate a container object for the Fortran code to carry around a pointer to the CPP object(s)
       fprintf(fp,"USE %s_C_Types\n",ModName->nickname) ;
       fprintf(fp,"USE, INTRINSIC :: ISO_C_Binding\n") ;
+    }
+
+// if this is the NWTC Library, we're not going to print "USE NWTC_Library"
+    if ( strcmp(make_lower_temp(ModName->name),"nwtc_library") == 0 ) {
+      fprintf(fp,"USE SysSubs\n");
+    } else {
+      fprintf(fp,"USE NWTC_Library\n");
     }
 
     fprintf(fp,"IMPLICIT NONE\n") ;
