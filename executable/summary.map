@@ -1,0 +1,134 @@
+
+
+MAP Summary File.
+Outputs were generated using MAP version 0.83.12a-mdm on <2013-08-21.23:09:31>
+
+
+    Sea Density [kg/m^3]: 1025.000
+    Gravity     [m/s^2] : 9.810
+    Depth       [m]     : -350.000
+
+    Cable Type          : steel
+    Diam         [m]    : 0.300
+    MassDenInAir [kg/m] : 6500.000
+    EA           [N]    : 200000000000.000
+    CB                  : 1.000
+
+    Cable Type          : nylon
+    Diam         [m]    : 0.150
+    MassDenInAir [kg/m] : 1400.000
+    EA           [N]    : 14000000000.000
+    CB                  : 1.000
+
+    Cable Type          : nylon2
+    Diam         [m]    : 0.300
+    MassDenInAir [kg/m] : 1400.000
+    EA           [N]    : 14000000000.000
+    CB                  : 1.000
+
+            |  Node 1 Data:             Node 2 Data:             Node 3 Data:             Node 4 Data:             
+            |  ---------------------------------------------------------------------------------------
+Node Type:  |  Fix                      Fix                      Connect                  Connect                  
+X  [m]   :  |  -400.000                 -400.000                 (-295.575)               (-55.458)                
+Y  [m]   :  |  -50.000                  50.000                   (-0.000)                 (-0.000)                 
+Z  [m]   :  |  -350.000                 -350.000                 (-361.789)               (-116.927)               
+M  [kg]  :  |  0.000                    0.000                    0.000                    0.000                    
+B  [m^3] :  |  0.000                    0.000                    0.000                    0.000                    
+FX [N]   :  |  (-7608681.014)           (-7608681.014)           0.000                    0.000                    
+FY [N]   :  |  (-3643122.238)           (3643122.238)            0.000                    0.000                    
+FZ [N]   :  |  (4695173.289)            (4695173.289)            0.000                    0.000                    
+
+
+            |  Node 5 Data:             Node 6 Data:             
+            |  ---------------------------------------------------------------------------------------
+Node Type:  |  Vessel                   Vessel                   
+X  [m]   :  |  -10.000                  -10.000                  
+Y  [m]   :  |  20.000                   -20.000                  
+Z  [m]   :  |  -30.000                  -30.000                  
+M  [kg]  :  |  0.000                    0.000                    
+B  [m^3] :  |  0.000                    0.000                    
+FX [N]   :  |  (7608681.218)            (7608681.218)            
+FY [N]   :  |  (3347564.200)            (-3347564.200)           
+FZ [N]   :  |  (15208150.887)           (15208150.887)           
+
+
+Element 1 properties:
+-------------------------------------------------
+    Line type      : |  steel
+    X Position [m] : |  -400.0      -> (-295.6)   
+    Y Position [m] : |  -50.0       -> (-0.0)     
+    Z Position [m] : |  -350.0      -> (-361.8)   
+    Length     [m] : |  120.0
+    H          [N] : |  (8435897.5)
+    V          [N] : |  (2871335.4)
+
+
+Element 2 properties:
+-------------------------------------------------
+    Line type      : |  steel
+    X Position [m] : |  -400.0      -> (-295.6)   
+    Y Position [m] : |  50.0        -> (-0.0)     
+    Z Position [m] : |  -350.0      -> (-361.8)   
+    Length     [m] : |  120.0
+    H          [N] : |  (8435897.5)
+    V          [N] : |  (2871335.4)
+
+
+Element 3 properties:
+-------------------------------------------------
+    Line type      : |  steel
+    X Position [m] : |  (-295.6)    -> (-55.5)    
+    Y Position [m] : |  (-0.0)      -> (-0.0)     
+    Z Position [m] : |  (-361.8)    -> (-116.9)   
+    Length     [m] : |  350.0
+    H          [N] : |  (15217362.3)
+    V          [N] : |  (27811654.4)
+
+
+Element 4 properties:
+-------------------------------------------------
+    Line type      : |  nylon2
+    X Position [m] : |  (-55.5)     -> -10.0      
+    Y Position [m] : |  (-0.0)      -> 20.0       
+    Z Position [m] : |  (-116.9)    -> -30.0      
+    Length     [m] : |  100.0
+    H          [N] : |  (8312533.7)
+    V          [N] : |  (15208150.9)
+
+
+Element 5 properties:
+-------------------------------------------------
+    Line type      : |  nylon2
+    X Position [m] : |  (-55.5)     -> -10.0      
+    Y Position [m] : |  (-0.0)      -> -20.0      
+    Z Position [m] : |  (-116.9)    -> -30.0      
+    Length     [m] : |  100.0
+    H          [N] : |  (8312533.7)
+    V          [N] : |  (15208150.9)
+
+
+
+
+----------------------- MAP INPUT FILE CONTENTS AT INITIALIZATION ---------------------
+steel    0.3  #6500     200E9   1.0                                                                                                                                                                                                                            
+nylon    0.15 1400     14E9    1.0                                                                                                                                                                                                                             
+nylon2   0.3  1400     14E9    1.0                                                                                                                                                                                                                             
+1    fix     -400  -50  -350    0    0     #    #    #                                                                                                                                                                                                         
+2    fix     -400   50  -350    0    0     #    #    #                                                                                                                                                                                                         
+3    connect #-350  #0 #-300    0    0     0    0    0                                                                                                                                                                                                         
+4    connect #-90   #0 #-80     0    0     0    0    0                                                                                                                                                                                                         
+5    vessel   -10   20  -30     0    0     #    #    #800000                                                                                                                                                                                                   
+6    vessel   -10  -20  -30     0    0     #    #    #800000                                                                                                                                                                                                   
+1       steel    120       1        3       plot omit_contact                                                                                                                                                                                                  
+2       steel    120       2        3       plot omit_contact                                                                                                                                                                                                  
+3       steel    350       3        4       plot x_pos lay_length                                                                                                                                                                                              
+4       nylon2   100        4        5      plot x_pos x_force                                                                                                                                                                                                 
+5       nylon2   100        4        6      plot x_pos x_force                                                                                                                                                                                                 
+-snes_type newtontr                                                                                                                                                                                                                                            
+-snes_max_it 100                                                                                                                                                                                                                                               
+-ksp_type preonly                                                                                                                                                                                                                                              
+-pc_type lu                                                                                                                                                                                                                                                    
+-pc_factor_nonzeros_along_diagonal                                                                                                                                                                                                                             
+----------------------- END INPUT FILE CONTENTS ---------------------------------------
+
+
