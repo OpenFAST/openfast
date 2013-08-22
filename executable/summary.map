@@ -1,7 +1,7 @@
 
 
 MAP Summary File.
-Outputs were generated using MAP version 0.83.12a-mdm on <2013-08-21.23:09:31>
+Outputs were generated using MAP version 0.83.12a-mdm on <2013-08-21.23:21:22>
 
 
     Sea Density [kg/m^3]: 1025.000
@@ -124,11 +124,7 @@ nylon2   0.3  1400     14E9    1.0
 3       steel    350       3        4       plot x_pos lay_length                                                                                                                                                                                              
 4       nylon2   100        4        5      plot x_pos x_force                                                                                                                                                                                                 
 5       nylon2   100        4        6      plot x_pos x_force                                                                                                                                                                                                 
--snes_type newtontr                                                                                                                                                                                                                                            
--snes_max_it 100                                                                                                                                                                                                                                               
--ksp_type preonly                                                                                                                                                                                                                                              
--pc_type lu                                                                                                                                                                                                                                                    
--pc_factor_nonzeros_along_diagonal                                                                                                                                                                                                                             
+-msqs_default                                                                                                                                                                                                                                                  
 ----------------------- END INPUT FILE CONTENTS ---------------------------------------
 
 

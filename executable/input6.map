@@ -24,29 +24,4 @@ Element LineType UnstrLen NodeAnch NodeFair Flags
 ---------------------- SOLVER OPTIONS-----------------------------------------
 Option
 (-)
-!-help
-!-log_summary
-!-fd_jacobian 
-!-msqs_default
--snes_type newtontr
--snes_max_it 100 
--ksp_type preonly 
--pc_type lu
--pc_factor_nonzeros_along_diagonal
-!
-!-ksp_type tfqmr 
-!-pc_type svd 
-!-pc_svd_monitor 
-!-ksp_type gmres
-!-ksp_gmres_cgs_refinement_type refine_always 
-!-snes_monitor 
-!-ksp_monitor_true_residual
-!-snes_converged_reason
-!-ksp_converged_reason 
-!-mat_view_matlab true 
-!-mat_view_draw true 
-!-ksp_monitor_singular_value 
-!-mat_view_draw true
-!-draw_pause 1
-!-mat_view
-!-info
+-msqs_default
