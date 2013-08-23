@@ -1,4 +1,4 @@
-      MODULE BeamElement
+MODULE BeamElement
 
       USE GlobalDataFun
       IMPLICIT NONE
@@ -97,12 +97,27 @@
 
       SUBROUTINE InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
 
-      REAL(ReKi),INTENT(IN)::m00,mEta(:),rho(:,:)
-      REAL(ReKi),INTENT(IN)::vvv(:),aaa(:)
+!------------------------------------------------------------------------------
+!   INPUT VARIABLES
+!------------------------------------------------------------------------------
+
+      REAL(ReKi),INTENT(IN)::m00      ! this variable is 
+      REAL(ReKi),INTENT(IN)::mEta(:)  ! this variable is 
+      REAL(ReKi),INTENT(IN)::rho(:,:) ! this variable is 
+      REAL(ReKi),INTENT(IN)::vvv(:)   ! this variable is
+      REAL(ReKi),INTENT(IN)::aaa(:)   ! this variable is
       REAL(ReKi),INTENT(OUT)::Fi(6),Mi(6,6),Gi(6,6),Ki(6,6)
+
+!------------------------------------------------------------------------------ 
+!   LOCAL VARIABLES
+!------------------------------------------------------------------------------
 
       REAL(ReKi)::beta(3),gama(3),nu(3),epsi(3,3),mu(3,3)
       REAL(ReKi)::ome(3),omd(3),tempV(3),tempA(3)
+
+!------------------------------------------------------------------------------ 
+!   LOGIC
+!------------------------------------------------------------------------------
 
       ! Prepare
       ome(:) = vvv(4:6)
@@ -115,7 +130,7 @@
       nu = MATMUL(rho,omd)
 
       !Compute Fi
-      Fi(1:3)= m00*tempA+MATMUL(Tilde(omd),mEta)+MATMUL(Tilde(ome),beta)
+      Fi(1:3) = m00*tempA + MATMUL(Tilde(omd),mEta) + MATMUL(Tilde(ome),beta)
       Fi(4:6) = MATMUL(Tilde(mEta,tempA) + nu + MATMUL(Tilde(ome),gama) 
 
       !Mass Matrix
