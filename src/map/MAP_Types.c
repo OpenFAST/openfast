@@ -1060,6 +1060,7 @@ C_MAP_PackOutput( float * ReKiBuf,  int * Re_BufSz ,
   *Db_BufSz   += InData->FX_Len ; // FX 
   *Db_BufSz   += InData->FY_Len ; // FY 
   *Db_BufSz   += InData->FZ_Len ; // FZ 
+  *Re_BufSz   += InData->writeOutput_Len ; // writeOutput 
   if ( ! OnlySize ) {
     if ( *Re_BufSz > 0  ) ReKiBuf  = (float  *)malloc(*Re_BufSz*sizeof(float) ) ;
     if ( *Db_BufSz > 0  ) DbKiBuf  = (double *)malloc(*Db_BufSz*sizeof(double) ) ;
@@ -1075,6 +1076,10 @@ C_MAP_PackOutput( float * ReKiBuf,  int * Re_BufSz ,
     for ( i = 0 ; i < InData->FZ_Len ; i++ ) {
       if ( !OnlySize ) memcpy( &(DbKiBuf[Db_Xferred+i]), &(InData->FZ[i]), sizeof(double)) ;
       Db_Xferred++ ;
+    }
+    for ( i = 0 ; i < InData->writeOutput_Len ; i++ ) {
+      if ( !OnlySize ) memcpy( &(ReKiBuf[Re_Xferred+i]), &(InData->writeOutput[i]), sizeof(float)) ;
+      Re_Xferred++ ;
     }
   }
   return(ErrStat) ;
@@ -1117,6 +1122,10 @@ C_MAP_UnpackOutput( float * ReKiBuf,
     memcpy( OutData->FZ,&(DbKiBuf[ Db_Xferred ]),OutData->FZ_Len) ;
     Db_Xferred   = Db_Xferred   + OutData->FZ_Len ; 
   }
+  if ( OutData->writeOutput != NULL ) {
+    memcpy( OutData->writeOutput,&(ReKiBuf[ Re_Xferred ]),OutData->writeOutput_Len) ;
+    Re_Xferred   = Re_Xferred   + OutData->writeOutput_Len ; 
+  }
   if ( ReKiBuf != NULL )  free(ReKiBuf) ;
   if ( DbKiBuf != NULL )  free(DbKiBuf) ;
   if ( IntKiBuf != NULL ) free(IntKiBuf) ;
@@ -1139,5 +1148,11 @@ CALL void MAP_F2C_Output_FZ_C ( MAP_OutputType_t *type, double *arr, int len )
 {
   int i = 0;
   for( i=0 ; i<=len-1 ; i++ ) type->FZ[i] = arr[i];
+}
+
+CALL void MAP_F2C_Output_writeOutput_C ( MAP_OutputType_t *type, float *arr, int len )
+{
+  int i = 0;
+  for( i=0 ; i<=len-1 ; i++ ) type->writeOutput[i] = arr[i];
 }
 //!ENDOFREGISTRYGENERATEDFILE

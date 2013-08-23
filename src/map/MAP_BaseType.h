@@ -151,18 +151,13 @@ class
 MAP_OutputType_class : public MAP_BaseType 
 {
 private:
-    std::string output_values;
 
 public:
-MAP_OutputType_class() : output_values ( "" ) ,
-      this_type( TypeOutput ){}
+MAP_OutputType_class() :  this_type( TypeOutput ){}
   ~MAP_OutputType_class(){}
 
   // used for type checking
   const NWTC_Type this_type;
-
-  void SetOutputValues( std::string& str ) { output_values = str; }
-  std::string GetOutputValues( ) { return output_values; }
 };
 
 
@@ -179,7 +174,7 @@ private:
 public:
 MAP_ContinuousStateType_class() : this_type( TypeContinuous ) {}
   ~MAP_ContinuousStateType_class(){}
-
+  
   // used for type checking
   const NWTC_Type this_type;
 };

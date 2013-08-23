@@ -18,7 +18,7 @@ Element LineType UnstrLen NodeAnch NodeFair Flags
 (-)     (-)      (m)      (-)      (-)      (-)
 1       steel    120       1        3       plot omit_contact 
 2       steel    120       2        3       plot omit_contact
-3       steel    350       3        4       plot x_pos lay_length
+3       steel    350       3        4       plot lay_length
 4       nylon2   100        4        5      plot x_pos x_force
 5       nylon2   100        4        6      plot x_pos x_force
 ---------------------- SOLVER OPTIONS-----------------------------------------

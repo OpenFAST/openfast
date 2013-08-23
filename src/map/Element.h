@@ -250,10 +250,12 @@ public:
   std::string GetLayLengthStringHeader( const int i );  
 
   // returns the VarType::is_fixed parameter
-  bool GetLuFlag( ) const;
-  bool GetHFlag( ) const;
-  bool GetVFlag( ) const;
-     
+  bool  GetLuFlag( ) const;
+  bool  GetHFlag( ) const;
+  bool  GetVFlag( ) const;
+  float GetLayLengthValue() const;
+  void  GetLineTensionValues( float * passArr );
+
   // returns the Node::X.value, Node::Y.value, Node::Z.value for the 
   // fairlead/anchor
   double GetAnchorPosition  ( VarType Node::* ptr ) const;

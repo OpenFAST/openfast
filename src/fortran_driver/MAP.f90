@@ -365,8 +365,11 @@ CONTAINS
     InitOut%writeOutputHeader = InitOut%C_obj%writeOutputHeader
     InitOut%writeOutputUnits  = InitOut%C_obj%writeOutputUnits
     
-    CALL WrScr( InitOut%writeOutputHeader ) ! @rm for real impementation
-    CALL WrScr( InitOut%writeOutputUnits  ) ! @rm for real impementation
+    CALL WrScr( InitOut%writeOutputHeader ) 
+    CALL WrScr( InitOut%writeOutputUnits  )
+
+!    WRITE(*,*) InitOut%writeOutputHeader  ! @rm for real impementation
+!    WRITE(*,*) InitOut%writeOutputUnits   ! @rm for real impementation
 
 
     ! ==========   MAP_InputType data/memory allocation   ===================================================
@@ -588,8 +591,23 @@ CONTAINS
        RETURN
     END IF
 
+    ALLOCATE(y%WriteOutput ( y%C_obj%WriteOutput_Len ) , Stat=ErrStat )  ! FZ force (at fairlead) for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: output WriteOutput.",ErrMSg)
+       RETURN
+    END IF
 
+
+    ! ==========   MAP F2C (literally, Fortran to C) conversion   ===========================================
     ! Now call the C2FC_ routines for the INTENT(  OUT) C objects
+    !  MAP Inputs
+    !  MAP Parameter
+    !  MAP Continuous State
+    !  MAP Discrete State
+    !  MAP Other State
+    !  MAP Output State
+    !  MAP Init Output State
+    ! =======================================================================================================
     CALL MAP_C2F_CopyInput( u, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP C2F input state conversion error.",ErrMSg)
@@ -893,26 +911,24 @@ CONTAINS
           RETURN
        END IF
     END IF
-    
-    y%writeOutput = y%C_obj%writeOutput
-    
-    CALL WrScr( y%writeOutput ) ! @rm for real impementation
+ 
 
     ! Now call the C2FC_ routines for the INTENT(  OUT) C objects
-    CALL MAP_C2F_CopyOtherState  ( O, ErrStat, ErrMsg ) ! @todo: check ErrStat; abort subroutine if != None
+    CALL MAP_C2F_CopyOtherState  ( O, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP C2F other state conversion error.",ErrMSg)
        RETURN
     END IF
 
-    CALL MAP_C2F_CopyOutput      ( y, ErrStat, ErrMsg ) ! @todo: check ErrStat; abort subroutine if != None
+    CALL MAP_C2F_CopyOutput      ( y, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP C2F output state conversion error.",ErrMSg)
        RETURN
     END IF
 
+    WRITE(*,*) y%writeOutput
 
-    ! Copy the MAP C output types to the mesh output types
+    ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad(1)%NNodes
        y%PtFairleadLoad(1)%Force(1,i) = y%FX(i)
        y%PtFairleadLoad(1)%Force(2,i) = y%FY(i)

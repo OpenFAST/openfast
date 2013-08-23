@@ -92,7 +92,7 @@
     double * FX ;     int FX_Len ; 
     double * FY ;     int FY_Len ; 
     double * FZ ;     int FZ_Len ; 
-    char writeOutput[255]; 
+    float * writeOutput ;     int writeOutput_Len ; 
   } MAP_OutputType_t ;
   typedef struct MAP_UserData {
     MAP_InitInputType_t            MAP_InitInput ;

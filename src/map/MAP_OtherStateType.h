@@ -215,7 +215,8 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   double GetGravity   (                 ) const { return this->gravity; }
   double GetSeaDensity(                 ) const { return this->rho_sea; }
   bool   GetFastCouplingFlag( ) const;
-
+  int    GetNumberOfOutputs( ); // number of outputs written to text file by FAST
+  void   GetWriteOutput( float * arr , const int len ); // passes array of floats to FAST
   // MAP writting functions 
   //
   // These functions are used to create content (not related to the MAP error output) in the 

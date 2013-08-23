@@ -145,9 +145,10 @@ MAPUnpackParameter( MAP_ParameterType       *paramData ,
                     MAP_ParameterType_class *p         ,
                     MAP_OtherStateType      *otherState );
 void 
-MAPPackOutput( MAP_OutputType       *output ,
-               MAP_OutputType_class *y      ,
-               MAP_OtherStateType   *otherState );
+MAPPackOutput( MAP_OutputType           *output     ,
+               MAP_OutputType_class     *y          ,
+               MAP_OtherStateType       *otherState ,
+               MAP_OtherStateType_class *o          );
 
 void 
 MAPPackParameter( MAP_ParameterType       *paramData ,
@@ -226,7 +227,8 @@ MAPDeleteOutputArray( MAP_OutputType *OutData )
 {                                                             
   delete[] OutData->FX;                                       
   delete[] OutData->FY;                                       
-  delete[] OutData->FZ;                                       
+  delete[] OutData->FZ;     
+  delete[] OutData->writeOutput;
 };                                                            
                                                               
 
@@ -276,17 +278,6 @@ MAPDeleteOtherArray( MAP_OtherStateType *OtherData )
   delete[] OtherData->FY;                                    
   delete[] OtherData->FZ;                                    
   delete[] OtherData->o_index;                               
-//  delete[] OtherData->FLAGS_index;                         
-//  delete[] OtherData->PLOT_flag;                           
-//  delete[] OtherData->X_POS_flag;                          
-//  delete[] OtherData->Y_POS_flag;                          
-//  delete[] OtherData->Z_POS_flag;                          
-//  delete[] OtherData->X_FORCE_flag;                        
-//  delete[] OtherData->Y_FORCE_flag;                        
-//  delete[] OtherData->Z_FORCE_flag;                        
-//  delete[] OtherData->LINE_TENSION_flag;                   
-//  delete[] OtherData->OMIT_CONTACT_flag;                   
-//  delete[] OtherData->LAY_LENGTH_flag;   
 
   // Inputs                                                  
   delete[] OtherData->u_index;                               

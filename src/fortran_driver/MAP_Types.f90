@@ -239,7 +239,8 @@ IMPLICIT NONE
     INTEGER(C_int) :: FY_Len = 0 
     TYPE(C_ptr) :: FZ = C_NULL_PTR 
     INTEGER(C_int) :: FZ_Len = 0 
-    CHARACTER(KIND=C_CHAR,LEN=255) :: writeOutput 
+    TYPE(C_ptr) :: writeOutput = C_NULL_PTR 
+    INTEGER(C_int) :: writeOutput_Len = 0 
   END TYPE MAP_OutputType_C
   TYPE, PUBLIC :: MAP_OutputType
     TYPE( c_ptr ) :: MAP_UserData = C_NULL_ptr
@@ -247,8 +248,8 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FX 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FY 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FZ 
-    CHARACTER(255)  :: writeOutput 
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: PtFairleadLoad 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: writeOutput 
   END TYPE MAP_OutputType
 ! =======================
 
@@ -591,6 +592,16 @@ IMPLICIT NONE
        INTEGER(KIND=C_INT), VALUE :: len
      END SUBROUTINE MAP_F2C_Output_FZ
   END INTERFACE
+
+  INTERFACE
+     SUBROUTINE MAP_F2C_Output_writeOutput( Object, arr, len) BIND(C,name='MAP_F2C_Output_writeOutput_C') 
+       IMPORT
+       IMPLICIT NONE
+       TYPE( MAP_OutputType_C ) Object
+       REAL(KIND=C_FLOAT), DIMENSION(*) :: arr
+       INTEGER(KIND=C_INT), VALUE :: len
+     END SUBROUTINE MAP_F2C_Output_writeOutput
+  END INTERFACE
 CONTAINS
   SUBROUTINE MAP_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg )
     TYPE(MAP_initinputtype), INTENT(INOUT) :: InitInputData
@@ -600,6 +611,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -626,6 +639,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -775,6 +790,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -797,6 +814,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -923,6 +942,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -941,6 +962,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1064,6 +1087,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1082,6 +1107,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1205,6 +1232,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1322,6 +1351,8 @@ CONTAINS
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1688,6 +1719,8 @@ ENDIF
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1755,6 +1788,8 @@ ENDIF
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -1996,6 +2031,8 @@ ENDIF
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -2143,6 +2180,8 @@ ENDIF
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -2584,6 +2623,8 @@ ENDIF
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -2631,6 +2672,8 @@ ENDIF
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -2882,6 +2925,8 @@ ENDDO
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -2919,7 +2964,16 @@ ENDDO
        CALL MAP_F2C_Output_FZ( OutputData%C_obj, c_dbl_value, OutputData%C_obj%FZ_Len )
        DEALLOCATE( c_dbl_value )
     ENDIF
-    OutputData%C_obj%writeOutput = OutputData%writeOutput
+
+    ! -- writeOutput Output Data fields
+    IF ( ALLOCATED( OutputData%writeOutput ) ) THEN
+       ALLOCATE( c_float_value(OutputData%C_obj%writeOutput_Len) )
+       DO i = 1 , OutputData%C_obj%writeOutput_Len
+          c_float_value(i) = OutputData%writeOutput(i)
+       END DO
+       CALL MAP_F2C_Output_writeOutput( OutputData%C_obj, c_float_value, OutputData%C_obj%writeOutput_Len )
+       DEALLOCATE( c_float_value )
+    ENDIF
  END SUBROUTINE MAP_F2C_CopyOutput
 
   SUBROUTINE MAP_C2F_CopyOutput( OutputData, ErrStat, ErrMsg )
@@ -2930,6 +2984,8 @@ ENDDO
     INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k
     REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)
     REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)
+    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)
+    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)
     INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)
     INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)
     LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)
@@ -2961,7 +3017,14 @@ ENDDO
           OutputData%FZ(i) = dbl_arr(i)
        END DO
     ENDIF
-    OutputData%writeOutput = OutputData%C_obj%writeOutput
+
+    ! -- writeOutput Output Data fields
+    IF ( ALLOCATED( OutputData%writeOutput ) ) THEN
+       CALL C_F_POINTER( OutputData%C_obj%writeOutput, float_arr, (/OutputData%C_obj%writeOutput_Len/) )
+       DO i = 1, OutputData%C_obj%writeOutput_Len
+          OutputData%writeOutput(i) = float_arr(i)
+       END DO
+    ENDIF
  END SUBROUTINE MAP_C2F_CopyOutput
 
  SUBROUTINE MAP_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2989,10 +3052,14 @@ IF ( ALLOCATED( SrcOutputData%FZ ) ) THEN
   IF (.NOT.ALLOCATED(DstOutputData%FZ)) ALLOCATE(DstOutputData%FZ(i1))
   DstOutputData%FZ = SrcOutputData%FZ
 ENDIF
-  DstOutputData%writeOutput = SrcOutputData%writeOutput
 DO i1 = 1, SIZE(SrcOutputData%PtFairleadLoad,1)
   CALL MeshCopy( SrcOutputData%PtFairleadLoad(i1), DstOutputData%PtFairleadLoad(i1), CtrlCode, ErrStat, ErrMsg )
 ENDDO
+IF ( ALLOCATED( SrcOutputData%writeOutput ) ) THEN
+  i1 = SIZE(SrcOutputData%writeOutput,1)
+  IF (.NOT.ALLOCATED(DstOutputData%writeOutput)) ALLOCATE(DstOutputData%writeOutput(i1))
+  DstOutputData%writeOutput = SrcOutputData%writeOutput
+ENDIF
  END SUBROUTINE MAP_CopyOutput
 
  SUBROUTINE MAP_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -3009,6 +3076,7 @@ ENDDO
 DO i1 = 1, SIZE(OutputData%PtFairleadLoad,1)
   CALL MeshDestroy( OutputData%PtFairleadLoad(i1), ErrStat, ErrMsg )
 ENDDO
+  IF ( ALLOCATED(OutputData%writeOutput) ) DEALLOCATE(OutputData%writeOutput)
  END SUBROUTINE MAP_DestroyOutput
 
  SUBROUTINE MAP_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3061,6 +3129,7 @@ DO i1 = 1, SIZE(InData%PtFairleadLoad,1)
   IF(ALLOCATED(Db_PtFairleadLoad_Buf))  DEALLOCATE(Db_PtFairleadLoad_Buf)
   IF(ALLOCATED(Int_PtFairleadLoad_Buf)) DEALLOCATE(Int_PtFairleadLoad_Buf)
 ENDDO
+  Re_BufSz    = Re_BufSz    + SIZE( InData%writeOutput )  ! writeOutput 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -3094,6 +3163,10 @@ DO i1 = 1, SIZE(InData%PtFairleadLoad,1)
   IF( ALLOCATED(Db_PtFairleadLoad_Buf) )  DEALLOCATE(Db_PtFairleadLoad_Buf)
   IF( ALLOCATED(Int_PtFairleadLoad_Buf) ) DEALLOCATE(Int_PtFairleadLoad_Buf)
 ENDDO
+  IF ( ALLOCATED(InData%writeOutput) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%writeOutput))-1 ) =  PACK(InData%writeOutput ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%writeOutput)
+  ENDIF
  END SUBROUTINE MAP_PackOutput
 
  SUBROUTINE MAP_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3170,6 +3243,12 @@ DO i1 = 1, SIZE(OutData%PtFairleadLoad,1)
   IF( ALLOCATED(Db_PtFairleadLoad_Buf) )  DEALLOCATE(Db_PtFairleadLoad_Buf)
   IF( ALLOCATED(Int_PtFairleadLoad_Buf) ) DEALLOCATE(Int_PtFairleadLoad_Buf)
 ENDDO
+  IF ( ALLOCATED(OutData%writeOutput) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%writeOutput,1))); mask1 = .TRUE.
+    OutData%writeOutput = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%writeOutput))-1 ),mask1,OutData%writeOutput)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%writeOutput)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -3987,6 +4066,7 @@ ENDDO
   DO i01 = 1,SIZE(u_out%PtFairleadLoad,1)
   CALL MeshCopy(u(1)%PtFairleadLoad(i01), u_out%PtFairleadLoad(i01), MESH_UPDATECOPY, ErrStat, ErrMsg )
   ENDDO
+  u_out%writeOutput = u(1)%writeOutput
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -4014,6 +4094,12 @@ ENDDO
   DO i01 = 1,SIZE(u_out%PtFairleadLoad,1)
   CALL MeshExtrapInterp1(u(1)%PtFairleadLoad(i01), u(2)%PtFairleadLoad(i01), tin, u_out%PtFairleadLoad(i01), tin_out, ErrStat, ErrMsg )
   ENDDO
+  ALLOCATE(b1(SIZE(u_out%writeOutput,1)))
+  ALLOCATE(c1(SIZE(u_out%writeOutput,1)))
+  b1 = -(u(1)%writeOutput - u(2)%writeOutput)/t(2)
+  u_out%writeOutput = u(1)%writeOutput + b1 * t_out
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
  ELSE IF ( order .eq. 2 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -4054,6 +4140,13 @@ ENDDO
   DO i01 = 1,SIZE(u_out%PtFairleadLoad,1)
   CALL MeshExtrapInterp2(u(1)%PtFairleadLoad(i01), u(2)%PtFairleadLoad(i01), u(3)%PtFairleadLoad(i01), tin, u_out%PtFairleadLoad(i01), tin_out, ErrStat, ErrMsg )
   ENDDO
+  ALLOCATE(b1(SIZE(u_out%writeOutput,1)))
+  ALLOCATE(c1(SIZE(u_out%writeOutput,1)))
+  b1 = (t(3)**2*(u(1)%writeOutput - u(2)%writeOutput) + t(2)**2*(-u(1)%writeOutput + u(3)%writeOutput))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u(1)%writeOutput + t(3)*u(2)%writeOutput - t(2)*u(3)%writeOutput ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%writeOutput = u(1)%writeOutput + b1 * t_out + c1 * t_out**2
+  DEALLOCATE(b1)
+  DEALLOCATE(c1)
  ELSE 
    ErrStat = ErrID_Fatal
    ErrMsg = ' order must be less than 3 in MAP_Output_ExtrapInterp '
