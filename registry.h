@@ -30,7 +30,7 @@ enum proc_orient     { ALL_Z_ON_PROC , ALL_X_ON_PROC , ALL_Y_ON_PROC } ;
 
 /* node_kind  mask settings */
 #define FIELD      1
-#define I1         2
+#define PARAM      2
 #define RCONFIG    4
 #define FOURD      8
 #define MEMBER    16

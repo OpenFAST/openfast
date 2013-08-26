@@ -1416,6 +1416,37 @@ gen_module( FILE * fp , node_t * ModName )
     }
 #endif
 
+// generate parameters
+    for ( q = ModName->params ; q ; q = q->next )
+    {
+      fprintf(fp,"    %s, PUBLIC, PARAMETER ",q->type->mapsto ) ;
+      if ( q->ndims > 0 )
+      {
+        if ( q->dims[0]->deferred )
+        {
+          fprintf(stderr,"Registry warning: parameter %s can not have deferred type\n",q->name) ;
+          fprintf(fp,"), ALLOCATABLE ") ;
+        } else {
+          fprintf(fp,", DIMENSION(") ;
+          for ( i = 0 ; i < q->ndims ; i++ )
+          {
+            fprintf(fp,"%d:%d",q->dims[i]->coord_start,q->dims[i]->coord_end) ;
+            if ( i < q->ndims-1 ) fprintf(fp,",") ;
+          }
+          fprintf(fp,") ") ;
+        }
+      }
+      if ( strlen(q->inival) > 0 ) {
+        if ( q->ndims > 0 ) {
+          fprintf(fp," :: %s = (/%s/)\n", q->name, q->inival ) ;
+        } else {
+          fprintf(fp," :: %s = %s \n", q->name, q->inival ) ;
+        }
+      } else {
+        fprintf(fp," :: %s \n",q->name) ;
+      }
+    }
+
 // generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
@@ -1467,6 +1498,7 @@ gen_module( FILE * fp , node_t * ModName )
               }
               fprintf(fp,"    %s ",r->type->mapsto ) ;
             }
+
             if ( r->ndims > 0 )
             {
                 if ( r->dims[0]->deferred )     // if one dim is deferred they all have to be; see check in type.c
@@ -1493,6 +1525,7 @@ gen_module( FILE * fp , node_t * ModName )
             } else {
               fprintf(fp," :: %s \n",r->name) ;
             }
+
            }
           }
         }

@@ -316,9 +316,12 @@ reg_parse( FILE * infile )
     defining_rconfig_field = 0 ;
     defining_i1_field = 0 ;
 
-/* typedef entry */
-    if ( !strcmp( tokens[ TABLE ] , "typedef" ) || !strcmp( tokens[ TABLE ] , "usefrom" ) )
+/* typedef, usefrom, and param entries */
+    if (  !strcmp( tokens[ TABLE ] , "typedef" ) 
+       || !strcmp( tokens[ TABLE ] , "usefrom" )
+       || !strcmp( tokens[ TABLE ] , "param"   ) )
     {
+      node_t * param_struct ;
       node_t * field_struct ;
       node_t * type_struct ;
       node_t * modname_struct ;
@@ -347,66 +350,78 @@ reg_parse( FILE * infile )
       }
       if ( !strcmp( tokens[ TABLE ] , "usefrom" ) ) 
       {
-#if 0
-        strcpy(modname_struct->nickname,"") ;  /* usefrom modules have blank nicknames */
-#endif
         modname_struct->usefrom = 1 ;
       }
 
+      if ( !strcmp( tokens[ TABLE ] , "param" ) ) {
+// FAST registry, construct list of params specified for the Module 
+        param_struct = new_node( PARAM ) ;
+        sprintf(param_struct->name,"%s",tokens[ FIELD_SYM ]) ; // name of parameter
+        if ( set_state_type( tokens[FIELD_TYPE], param_struct, Type, NULL  ) ) // Only search type list, not ddts for module
+         { fprintf(stderr,"Registry warning: type %s used before defined for %s\n",tokens[FIELD_TYPE],tokens[FIELD_SYM] ) ; }
+        if ( set_state_dims( tokens[FIELD_DIMS], param_struct ) )
+         { fprintf(stderr,"Registry warning: some problem with dimstring %s for %s\n", tokens[FIELD_DIMS],tokens[FIELD_SYM] ) ; }
+        param_struct->inival[0] = '\0' ;
+        if ( strcmp( tokens[FIELD_INIVAL], "-" ) ) /* that is, if not equal "-" */
+          { strcpy( param_struct->inival , tokens[FIELD_INIVAL] ) ; }
+        add_node_to_end( param_struct , &(modname_struct->params) ) ;
+
+      } else {
 
 // FAST registry, construct list of derived data types specified for the Module 
 //  Only the FAST interface defined types should have the Module's nickname prepended
-      sprintf(ddtname,"%s",tokens[ FIELD_OF ]) ;
-      modname_struct->is_interface_type = 0 ;
-      if ( strcmp(modname_struct->nickname,"") ) {
-        if ( is_a_fast_interface_type(tokens[FIELD_OF] ) ) {
-          sprintf(ddtname,"%s_%s",modname_struct->nickname,tokens[ FIELD_OF ]) ;
-          modname_struct->is_interface_type = 1 ;
+        sprintf(ddtname,"%s",tokens[ FIELD_OF ]) ;
+        modname_struct->is_interface_type = 0 ;
+        if ( strcmp(modname_struct->nickname,"") ) {
+          if ( is_a_fast_interface_type(tokens[FIELD_OF] ) ) {
+            sprintf(ddtname,"%s_%s",modname_struct->nickname,tokens[ FIELD_OF ]) ;
+            modname_struct->is_interface_type = 1 ;
+          }
         }
-      }
-      sprintf(tmpstr,"%s",make_lower_temp(ddtname)) ;
-      type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
-      if ( type_struct == NULL ) 
-      {  
-        type_struct = new_node( TYPE ) ;
-        strcpy( type_struct->name, tmpstr ) ;
-        strcpy(type_struct->mapsto,ddtname) ;
-        type_struct->type_type = DERIVED ;
-        type_struct->next      = NULL ;
-        type_struct->usefrom   = modname_struct->usefrom ;
-        type_struct->module    = modname_struct ;
-        add_node_to_end( type_struct,(type_struct->usefrom)? &Type : &(modname_struct->module_ddt_list ) ) ;
-      }
+        sprintf(tmpstr,"%s",make_lower_temp(ddtname)) ;
+        type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
+        if ( type_struct == NULL ) 
+        {  
+          type_struct = new_node( TYPE ) ;
+          strcpy( type_struct->name, tmpstr ) ;
+          strcpy(type_struct->mapsto,ddtname) ;
+          type_struct->type_type = DERIVED ;
+          type_struct->next      = NULL ;
+          type_struct->usefrom   = modname_struct->usefrom ;
+          type_struct->module    = modname_struct ;
+          add_node_to_end( type_struct,(type_struct->usefrom)? &Type : &(modname_struct->module_ddt_list ) ) ;
+        }
 
 // FAST registry, construct the list of fields in the derived types in the Module
-      field_struct = new_node( FIELD ) ;
-      strcpy( field_struct->name, tokens[FIELD_SYM] ) ;
-      if ( set_state_type( tokens[FIELD_TYPE], field_struct, Type, modname_struct->module_ddt_list ) )
-       { fprintf(stderr,"Registry warning: type %s used before defined for %s\n",tokens[FIELD_TYPE],tokens[FIELD_SYM] ) ; }
-      if ( set_state_dims( tokens[FIELD_DIMS], field_struct ) )
-       { fprintf(stderr,"Registry warning: some problem with dimstring %s for %s\n", tokens[FIELD_DIMS],tokens[FIELD_SYM] ) ; }
-      if ( set_ctrl( tokens[FIELD_CTRL], field_struct ) )
-       { fprintf(stderr,"Registry warning: some problem with ctrl %s for %s\n", tokens[FIELD_CTRL],tokens[FIELD_SYM] ) ; }
-
-      field_struct->inival[0] = '\0' ;
-      if ( strcmp( tokens[FIELD_INIVAL], "-" ) ) /* that is, if not equal "-" */
-        { strcpy( field_struct->inival , tokens[FIELD_INIVAL] ) ; }
-      strcpy(field_struct->descrip,"-") ;
-      if ( strcmp( tokens[FIELD_DESCRIP], "-" ) ) /* that is, if not equal "-" */
-        { strcpy( field_struct->descrip , tokens[FIELD_DESCRIP] ) ; }
-      strcpy(field_struct->units,"-") ;
-      if ( strcmp( tokens[FIELD_UNITS], "-" ) ) /* that is, if not equal "-" */
-        { strcpy( field_struct->units , tokens[FIELD_UNITS] ) ; }
+        field_struct = new_node( FIELD ) ;
+        strcpy( field_struct->name, tokens[FIELD_SYM] ) ;
+        if ( set_state_type( tokens[FIELD_TYPE], field_struct, Type, modname_struct->module_ddt_list ) )
+         { fprintf(stderr,"Registry warning: type %s used before defined for %s\n",tokens[FIELD_TYPE],tokens[FIELD_SYM] ) ; }
+        if ( set_state_dims( tokens[FIELD_DIMS], field_struct ) )
+         { fprintf(stderr,"Registry warning: some problem with dimstring %s for %s\n", tokens[FIELD_DIMS],tokens[FIELD_SYM] ) ; }
+        if ( set_ctrl( tokens[FIELD_CTRL], field_struct ) )
+         { fprintf(stderr,"Registry warning: some problem with ctrl %s for %s\n", tokens[FIELD_CTRL],tokens[FIELD_SYM] ) ; }
+  
+        field_struct->inival[0] = '\0' ;
+        if ( strcmp( tokens[FIELD_INIVAL], "-" ) ) /* that is, if not equal "-" */
+          { strcpy( field_struct->inival , tokens[FIELD_INIVAL] ) ; }
+        strcpy(field_struct->descrip,"-") ;
+        if ( strcmp( tokens[FIELD_DESCRIP], "-" ) ) /* that is, if not equal "-" */
+          { strcpy( field_struct->descrip , tokens[FIELD_DESCRIP] ) ; }
+        strcpy(field_struct->units,"-") ;
+        if ( strcmp( tokens[FIELD_UNITS], "-" ) ) /* that is, if not equal "-" */
+          { strcpy( field_struct->units , tokens[FIELD_UNITS] ) ; }
 
 #ifdef OVERSTRICT
-      if ( field_struct->type != NULL )
-        if ( field_struct->type->type_type == DERIVED && field_struct->ndims > 0 )
-          { fprintf(stderr,"Registry warning: type item %s of type %s can not be multi-dimensional ",
-	  		   tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
+        if ( field_struct->type != NULL )
+          if ( field_struct->type->type_type == DERIVED && field_struct->ndims > 0 )
+            { fprintf(stderr,"Registry warning: type item %s of type %s can not be multi-dimensional ",
+	  		     tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
-      field_struct->usefrom   = type_struct->usefrom ;
+        field_struct->usefrom   = type_struct->usefrom ;
 
-      add_node_to_end( field_struct , &(type_struct->fields) ) ;
+        add_node_to_end( field_struct , &(type_struct->fields) ) ;
+      }
 
     }
 

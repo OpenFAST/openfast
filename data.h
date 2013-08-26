@@ -9,6 +9,7 @@ typedef struct node_struct {
   char          mapsto[NAMELEN] ;
   char          nickname[NAMELEN] ;
   struct node_struct  * fields ;
+  struct node_struct  * params ;
   struct node_struct  * type ;
   struct node_struct  * module ;  /* type node pointer back to module node it is defined in */
   int           ndims ;

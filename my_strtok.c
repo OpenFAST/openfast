@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "registry.h"
 #include "protos.h"
 #include "ctype.h"
@@ -17,6 +18,21 @@ my_strtok( char * s1 )
   if ( s1 != NULL ) tokpos = s1 ;
   for ( p = tokpos ; *p ; p++ )
   {
+/* check for non-printable characters in input.  this can happen cutting and pasting from a 
+   MS office document or PDF */
+    if ( ! (('a' <= *p && *p <= 'z')   ||
+            ('A' <= *p && *p <= 'Z')   ||
+            ('0' <= *p && *p <= '9')   ||
+            (*p == ' ' || *p == '\t')  ||
+            (*p == '"' || *p == '\'')  ||
+            (*p == '^' || *p == '=' )  ||
+            (*p == '{' || *p == '}' )  ||
+            (*p == ':' || *p == '}' )  ||
+            (*p == '.' || *p == ',' )  ||
+            (*p == '/' || *p == '-'))                ) {
+      fprintf(stderr,"Registry error: FATAL: Invalid character '%c' (maybe invisible: can happen if you cut-and-paste from a Office doc or PDF)\n",*p) ;
+      exit(2) ;
+    }
     if ( state == 0 && (*p == ' ' || *p == '\t') ) continue ;
     if ( state == 0 && !(*p == ' ' || *p == '\t') ) { state = 1 ; retval = p ; } ;
     if      ( state == 1 && (*p == '"') ) { state = 2 ; }
