@@ -1,5 +1,5 @@
 MODULE MAP
-
+  
   USE MAP_Types
   USE NWTC_Library
 
@@ -10,123 +10,181 @@ MODULE MAP
   PUBLIC :: MAP_CalcOutput
   PUBLIC :: MAP_End
 
-  ! ==========   SetGravity   ======     <------------------------------------------------------------------+
+!  ! ==========   MAP_GetVersionNumber   ======     <--------------------------------------------------------+
+!  INTERFACE                                                                                      !          | 
+!     FUNCTION MAP_GetVersionNumber( ) BIND(c, name='MAPCALL_GetVersionNumber')                   !          | 
+!       IMPORT                                                                                    !          | 
+!       IMPLICIT NONE                                                                             !          | 
+!       INTEGER(KIND=C_CHAR) :: MAP_GetVersionNumber                                              !          | 
+!     END FUNCTION MAP_GetVersionNumber                                                           !          | 
+!  END INTERFACE                                                                                  !   -------+
+!  !==========================================================================================================
+
+
+  ! ==========   MAP_NumberOfHeaders   ======     <---------------------------------------------------------+
+  !                                                                                              !          |
+  ! Get the number of outputs MAP is providing the FAST glue code. This is used to allocate      !          |
+  ! WriteOutputHdr and WriteOutputUnt arrays to the correct size.                                !          | 
+  INTERFACE                                                                                      !          | 
+     FUNCTION MAP_NumberOfHeaders( FC_O ) BIND(c, name='MAPCALL_NumberOfHeaders')                !          | 
+       IMPORT                                                                                    !          | 
+       IMPLICIT NONE                                                                             !          | 
+       TYPE( MAP_OtherStateType_C ) FC_O                                                         !          | 
+       INTEGER(KIND=C_INT) :: MAP_NumberOfHeaders                                                !          | 
+     END FUNCTION MAP_NumberOfHeaders                                                            !          | 
+  END INTERFACE                                                                                  !   -------+
+  !==========================================================================================================
+
+
+  ! ==========   MAP_ModifyHdrString   ======     <---------------------------------------------------------+
+  !                                                                                              !          |
+  ! Get the string information (label) of all the outputs MAP is providing the FAST glue code    !          | 
+  INTERFACE                                                                                      !          | 
+     SUBROUTINE MAP_ModifyHdrString( FC_int, FC_string, FC_O ) &                                 !          | 
+          BIND(C,name='MAPCALL_ModifyHeaderString')                                              !          | 
+       IMPORT                                                                                    !          | 
+       IMPLICIT NONE                                                                             !          | 
+       INTEGER(KIND=C_INT) :: FC_int                                                             !          | 
+       TYPE( MAP_OtherStateType_C ) FC_O                                                         !          | 
+       TYPE(C_PTR), DIMENSION(FC_int) :: FC_string                                               !          | 
+     END SUBROUTINE MAP_ModifyHdrString                                                          !          | 
+  END INTERFACE                                                                                  !   -------+
+  !==========================================================================================================
+
+
+  ! ==========   MAP_ModifyHdrUntString   ======     <------------------------------------------------------+
+  !                                                                                              !          |
+  ! Gets the units of all the outputs MAP is providing to the FAST glue code                     !          | 
+  INTERFACE                                                                                      !          | 
+     SUBROUTINE MAP_ModifyHdrUntString( FC_int, FC_string, FC_O ) &                              !          | 
+          BIND(C,name='MAPCALL_ModifyHeaderUnitString')                                          !          | 
+       IMPORT                                                                                    !          | 
+       IMPLICIT NONE                                                                             !          | 
+       INTEGER(KIND=C_INT) :: FC_int                                                             !          | 
+       TYPE( MAP_OtherStateType_C ) FC_O                                                         !          | 
+       TYPE(C_PTR), DIMENSION(FC_int) :: FC_string                                               !          | 
+     END SUBROUTINE MAP_ModifyHdrUntString                                                       !          | 
+  END INTERFACE                                                                                  !   -------+
+  !==========================================================================================================
+
+
+  ! ==========   MAP_SetGravity   ======     <--------------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetGravity(MAP_InitInputType)" in MAP_FortranBinding.cpp.          !          |
   ! The idea is to use the gravity constant as defined by FAST, rather than inputing             !          |
   !   something indenpendent of it. Numerical errors can generate is g (in units of [Nm/s^2]     !          |
   !   is not consistent among modules.                                                           !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetGravity( interf ) bind(C,name='MAPCALL_SetGravity')                           !          |
+     SUBROUTINE MAP_SetGravity( interf ) bind(C,name='MAPCALL_SetGravity')                       !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetGravity                                                                   !          |
+     END SUBROUTINE MAP_SetGravity                                                               !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetDepth   ======     <--------------------------------------------------------------------+
+  ! ==========   MAP_SetDepth   ======     <----------------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetDepth(MAP_InitInputType)" in MAP_FortranBinding.cpp.            !          |
   ! The idea is to use the gravity constant as defined by FAST, rather than inputing             !          |
   !   something indenpendent of it. Numerical errors can generate is g (in units of [Nm/s^2]     !          |
   !   is not consistent among modules.                                                           !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetDepth( interf ) bind(C,name='MAPCALL_SetDepth')                               !          |
+     SUBROUTINE MAP_SetDepth( interf ) bind(C,name='MAPCALL_SetDepth')                           !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetDepth                                                                     !          |
+     END SUBROUTINE MAP_SetDepth                                                                 !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetDensity   ======     <------------------------------------------------------------------+
+  ! ==========   MAP_SetDensity   ======     <--------------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetDensity(MAP_InitInputType)" in MAP_FortranBinding.cpp.          !          |
   ! Sets the density of seawater [kg/m^3] according to what is being used in HydroDyn/FAST       !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetDensity( interf ) bind(C,name='MAPCALL_SetDensity')                           !          |
+     SUBROUTINE MAP_SetDensity( interf ) bind(C,name='MAPCALL_SetDensity')                       !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetDensity                                                                   !          |
+     END SUBROUTINE MAP_SetDensity                                                               !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetFastCouplingFlag   ======     <---------------------------------------------------------+
+  ! ==========   MAP_SetFastCouplingFlag   ======     <-----------------------------------------------------+
   !                                                                                              !          |
   ! This is used to let MAP know that FAST is calling it. All this function does is it           !          |
   ! prevents the MAP.dll/.so from writting the map output file. The output contents are written  !          |
   ! to the FAST output file instead.                                                             !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetFastCouplingFlag( interf ) bind(C,name='MAPCALL_SetFastCouplingFlag')         !          |
+     SUBROUTINE MAP_SetFastCouplingFlag( interf ) bind(C,name='MAPCALL_SetFastCouplingFlag')     !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetFastCouplingFlag                                                          !          |
+     END SUBROUTINE MAP_SetFastCouplingFlag                                                      !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetCableLibraryData   ======     <---------------------------------------------------------+
+  ! ==========   MAP_SetCableLibraryData   ======     <-----------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetCableLibaryData(MAP_InitInputType)" in MAP_FortranBinding.cpp.  !          |
   ! Pases strings from the "LINE DICTIONARY" porition of the MPA input file to the C++           !          |
   !   data structure.                                                                            !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetCableLibraryData( interf ) bind(C,name='MAPCALL_SetCableLibraryData')         !          |
+     SUBROUTINE MAP_SetCableLibraryData( interf ) bind(C,name='MAPCALL_SetCableLibraryData')     !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetCableLibraryData                                                          !          |
+     END SUBROUTINE MAP_SetCableLibraryData                                                      !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetNodeData   ======     <-----------------------------------------------------------------+
+  ! ==========   MAP_SetNodeData   ======     <-------------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetNodeData(MAP_InitInputType)" in MAP_FortranBinding.cpp.         !          |
   ! Pases strings from the "NOE PROPERTIES" porition of the MPA input file to the C++            !          |
   !   data structure.                                                                            !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetNodeData( interf ) bind(C,name='MAPCALL_SetNodeData')                         !          |
+     SUBROUTINE MAP_SetNodeData( interf ) bind(C,name='MAPCALL_SetNodeData')                     !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetNodeData                                                                  !          |
+     END SUBROUTINE MAP_SetNodeData                                                              !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetElementData   ======     <--------------------------------------------------------------+
+  ! ==========   MAP_SetElementData   ======     <----------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetElemetData(MAP_InitInputType)" in MAP_FortranBinding.cpp.       !          |
   ! Pases strings from the "ELEMENT PROPERTIES" porition of the MPA input file to the C++        !          |
   !   data structure.                                                                            !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetElementData( interf ) bind(C,name='MAPCALL_SetElementData')                   !          |
+     SUBROUTINE MAP_SetElementData( interf ) bind(C,name='MAPCALL_SetElementData')               !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetElementData                                                               !          |
+     END SUBROUTINE MAP_SetElementData                                                           !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
 
-  ! ==========   SetSolverOption   ======     <-------------------------------------------------------------+
+  ! ==========   MAP_SetSolverOption   ======     <---------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetCableLibaryData(MAP_InitInputType)" in MAP_FortranBinding.cpp.  !          |
   ! Pases strings from the "SOLVER OPTIONS" porition of the MPA input file to the C++            !          |
   !   data structure.                                                                            !          |
   INTERFACE                                                                                      !          |
-     SUBROUTINE SetSolverOptions( interf ) bind(C,name='MAPCALL_SetSolverOptions')               !          |
+     SUBROUTINE MAP_SetSolverOptions( interf ) bind(C,name='MAPCALL_SetSolverOptions')           !          |
        IMPORT                                                                                    !          |
        IMPLICIT NONE                                                                             !          |
        TYPE( MAP_InitInputType_C ) interf                                                        !          |
-     END SUBROUTINE SetSolverOptions                                                             !          |
+     END SUBROUTINE MAP_SetSolverOptions                                                         !          |
   END INTERFACE                                                                                  !   -------+
   !==========================================================================================================
 
@@ -283,18 +341,22 @@ CONTAINS
     ! Local variables
     INTEGER( KIND=C_INT )                           :: status_from_MAP = 0
     CHARACTER( KIND=C_CHAR,LEN=1024 )               :: message_from_MAP = ""//CHAR(0)
-    TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( '', '', '' )
+    TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( 'MAP', 'date', 'huh' )
     INTEGER(IntKi)                                  :: i = 0
     REAL(ReKi)                                      :: Pos(3)
     INTEGER(IntKi)                                  :: NumNodes = 0
+    INTEGER(C_INT)                                  :: numHeaderStr=0
+    CHARACTER(15),DIMENSION(:), ALLOCATABLE, TARGET :: strHdrArray ! Hopefully none of the headers are more than 10 characters long
+    TYPE(C_PTR), DIMENSION(:), ALLOCATABLE          :: strHdrPtrs
+    CHARACTER(15),DIMENSION(:), ALLOCATABLE, TARGET :: strUntArray ! Hopefully none of the headers are more than 10 characters long
+    TYPE(C_PTR), DIMENSION(:), ALLOCATABLE          :: strUntPtrs
 
     ErrStat = ErrID_None
     ErrMsg  = "" 
 
     ! Initialize the NWTC Subroutine Library
-    CALL NWTC_Init( )    
-    !CALL DispNVD( MAP_Ver )
-
+    CALL NWTC_Init( )   
+    
     ! Call the constructor for each MAP class to create and instance of each C++ object
     CALL MAP_InitInput_Initialize ( InitInp%C_obj%object )
     CALL MAP_InitOutput_Initialize( InitOut%C_obj%object ) 
@@ -322,15 +384,16 @@ CONTAINS
     InitInp%C_Obj%gravity         = InitInp%gravity
     InitInp%C_Obj%sea_density     = InitInp%sea_density
     InitInp%C_Obj%depth           = InitInp%depth
-    InitInp%C_obj%coupled_to_FAST = .TRUE. ! maybe keep this run-time just in case? Writting outputs is limited to 255 character in FAST
-                                           ! (to simplify C/Fortran interoperability) whereas it is unlimited in MAP. 
+    InitInp%C_obj%coupled_to_FAST = .FALSE. ! @bonnie : Maybe keep this a run-time option in the FAST input file? This tells MAP that it is coupled  
+                                            ! coupeld to FAST. The only implication right now it tells MAP not to create the default output file, 
+                                            ! because FAST does this (ussually). 
 
     ! Set the gravity constant, water depth, and sea density in MAP.
     ! This calls functions in MAP_FortranBinding.cpp
-    CALL SetGravity         ( InitInp%C_obj )
-    CALL SetDepth           ( InitInp%C_obj )
-    CALL SetDensity         ( InitInp%C_obj )
-    CALL SetFastCouplingFlag( InitInp%C_obj )
+    CALL MAP_SetGravity         ( InitInp%C_obj )
+    CALL MAP_SetDepth           ( InitInp%C_obj )
+    CALL MAP_SetDensity         ( InitInp%C_obj )
+    CALL MAP_SetFastCouplingFlag( InitInp%C_obj )
 
     ! Read the MAP input file, and pass the arguments to the C++ sructures. 
     ! @note : this call the following C function in MAP_FortranBinding.cpp
@@ -348,7 +411,7 @@ CONTAINS
                     InitOut%C_obj   , &
                     status_from_MAP , &
                     message_from_MAP )
-
+    
     ! Give the MAP code/message status to the FAST 
     IF( status_from_MAP .NE. 0 ) THEN
        IF( status_from_MAP .EQ. 1 ) THEN
@@ -361,242 +424,56 @@ CONTAINS
           RETURN
        END IF
     END IF
-    
-    InitOut%writeOutputHeader = InitOut%C_obj%writeOutputHeader
-    InitOut%writeOutputUnits  = InitOut%C_obj%writeOutputUnits
-    
-    CALL WrScr( InitOut%writeOutputHeader ) 
-    CALL WrScr( InitOut%writeOutputUnits  )
-
-!    WRITE(*,*) InitOut%writeOutputHeader  ! @rm for real impementation
-!    WRITE(*,*) InitOut%writeOutputUnits   ! @rm for real impementation
 
 
-    ! ==========   MAP_InputType data/memory allocation   ===================================================
-    ! MAP_InputType (defined in MAP_Types.f90 and MAP_Types.h) :
-    !  X , Y , Z
-    !
-    ! @todo: eventually, these will need to be mapped to a mesh
-    !        type, preferably a point mesh. 
-    ! =======================================================================================================
-    ALLOCATE(O%u_index( O%C_obj%u_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures.    
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: u_index.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(u%X ( u%C_obj%X_Len ) , Stat=ErrStat )  ! X fairlead position for all cables  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: input X.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(u%Y ( u%C_obj%Y_Len ) , Stat=ErrStat )  ! Y fairlead position for all cables  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: input Y.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(u%Z ( u%C_obj%Z_Len ) , Stat=ErrStat )  ! Z fairlead position for all cables  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: input Z.",ErrMSg)
-       RETURN
-    END IF
-
-
-    ! ==========   MAP_ParameterType data/memory allocation   ===============================================
-    ! MAP_ParameterType (defined in MAP_Types.f90 and MAP_Types.h) :
-    !  Diam , MassDenInAir , EA , CB , Lu
-    ! =======================================================================================================
-    ALLOCATE(O%p_index ( O%C_obj%p_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures. 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parameter p_index.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%Diam ( p%C_obj%Diam_Len ) , Stat=ErrStat )  ! Element Diameter length vector
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Diam.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%MassDenInAir( p%C_obj%MassDenInAir_Len ) , Stat=ErrStat )  ! Mass density in air
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter MassDenInAir.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%EA ( p%C_obj%EA_Len ) , Stat=ErrStat )  ! Axial stiffness
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter EA.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%CB ( p%C_obj%CB_Len ) , Stat=ErrStat )  ! cable/seabed friction
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter CB.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%Lu ( p%C_obj%Lu_Len ) , Stat=ErrStat )  ! Unstretched element length
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Lu.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%X ( p%C_obj%X_Len ) , Stat=ErrStat )  ! X position for fix node
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter X.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%Y ( p%C_obj%Y_Len ) , Stat=ErrStat )  ! Y position for fix node
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Y.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%Z ( p%C_obj%Z_Len ) , Stat=ErrStat )  ! Z position for fix node
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Z.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%FX ( p%C_obj%FX_Len ) , Stat=ErrStat )  ! X direction sum force for connect node
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter FX.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%FY ( p%C_obj%FY_Len ) , Stat=ErrStat )  ! Y direction sum force for connect node
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter FY.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%FZ ( p%C_obj%FZ_Len ) , Stat=ErrStat )  ! Z direction sum force for connect node
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter FZ.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%M ( p%C_obj%M_Len ) , Stat=ErrStat )  ! Point mass value fixed to node 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter M.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(p%B ( p%C_obj%B_Len ) , Stat=ErrStat )  ! displaced volume attached to node 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: parmeter B.",ErrMSg)
-       RETURN
-    END IF
+    !==========   MAP_InitInpInputType   ======     <--------------------------+               
+    ! get header information for the FAST output file               !          | 
+    numHeaderStr = MAP_NumberOfHeaders( O%C_obj )                   !          | 
+                                                                    !          | 
+    ALLOCATE( strHdrArray(numHeaderStr) )                           !          | 
+    ALLOCATE( strHdrPtrs (numHeaderStr) )                           !          | 
+    ALLOCATE( strUntArray(numHeaderStr) )                           !          | 
+    ALLOCATE( strUntPtrs (numHeaderStr) )                           !          | 
+    ALLOCATE( InitOut%WriteOutputHdr(numHeaderStr) )                !          | 
+    ALLOCATE( InitOut%WriteOutputUnt(numHeaderStr) )                !          | 
+                                                                    !          | 
+    DO i = 1, numHeaderStr                                          !          | 
+       strHdrArray(i) = "Empty"//C_NULL_CHAR                        !          | 
+       strUntArray(i) = "Empty"//C_NULL_CHAR                        !          | 
+       strHdrPtrs(i)  = C_LOC( strHdrArray(i) )                     !          | 
+       strUntPtrs(i)  = C_LOC( strUntArray(i) )                     !          | 
+    END DO                                                          !          | 
+                                                                    !          | 
+    CALL MAP_ModifyHdrString   ( numHeaderStr, strHdrPtrs, O%C_obj )!          | 
+    CALL MAP_ModifyHdrUntString( numHeaderStr, strUntPtrs, O%C_obj )!          | 
+                                                                    !          | 
+    DO i = 1, numHeaderStr                                          !          | 
+       InitOut%WriteOutputHdr(i) = strHdrArray(i)                   !          | 
+       InitOut%WriteOutputUnt(i) = strUntArray(i)                   !          | 
+    END DO                                                          !          | 
+                                                                    !          | 
+    DEALLOCATE( strHdrArray )                                       !          | 
+    DEALLOCATE( strHdrPtrs  )                                       !          | 
+    DEALLOCATE( strUntArray )                                       !          | 
+    DEALLOCATE( strUntPtrs  )                                       !   -------+
+    !===========================================================================
 
 
-    ! ==========   MAP_OtherStateType data/memory allocation   ==============================================
-    ! MAP_OtherStateType (defined in MAP_Types.f90 and MAP_Types.h) :
-    !  Diam , MassDenInAir , EA , CB , Lu
-    ! =======================================================================================================
-    ALLOCATE(O%O_index ( O%C_obj%O_index_Len ) , Stat=ErrStat ) ! index set for translating arrays to the special C++ MAP structures. 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: other state o_index.",ErrMSg)
-       RETURN
-    END IF
+    ! Allocate memory for the Fortran types that mirror the C structs
+    CALL MAP_AllocateInputTypes( u, O, ErrStat, ErrMsg )
+    IF (ErrStat .NE. ErrID_None ) RETURN
 
-    ALLOCATE(O%FX ( O%C_obj%FX_Len ) , Stat=ErrStat ) ! FX fairlead force (X) for connect nodes 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: other state FX.",ErrMSg)
-       RETURN
-    END IF
+    CALL MAP_AllocateOutputTypes( y, O, ErrStat, ErrMsg ) 
+    IF (ErrStat .NE. ErrID_None ) RETURN
 
-    ALLOCATE(O%FY ( O%C_obj%FY_Len ) , Stat=ErrStat ) ! FY fairlead force (Y) for connect nodes 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: other state FY.",ErrMSg)
-       RETURN
-    END IF
+    CALL MAP_AllocateParameterTypes( p, O, ErrStat, ErrMsg )
+    IF (ErrStat .NE. ErrID_None ) RETURN
 
-    ALLOCATE(O%FZ ( O%C_obj%FZ_Len ) , Stat=ErrStat ) ! FZ fairlead force (Z) for connect nodes 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: other state FZ.",ErrMSg)
-       RETURN
-    END IF
+    CALL MAP_AllocateOtherStateTypes(    O, ErrStat, ErrMsg )
+    IF (ErrStat .NE. ErrID_None ) RETURN
 
-
-    ! ==========   MAP_ConstraintStateType data/memory allocation   =========================================
-    ! MAP_InputType (defined in MAP_Types.f90 and MAP_Types.h) :
-    !  X , Y , Z , H , V
-    ! =======================================================================================================
-    ALLOCATE(O%z_index( O%C_obj%z_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures. 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: constraint state z_index.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(z%X ( z%C_obj%X_Len ) , Stat=ErrStat )  ! X position for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: constraint state X.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(z%Y ( z%C_obj%Y_Len ) , Stat=ErrStat )  ! Y position for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: constraint state Y.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(z%Z ( z%C_obj%Z_Len ) , Stat=ErrStat )  ! Z position for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: constraint state Z.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(z%H ( z%C_obj%H_Len ) , Stat=ErrStat )  ! H (horizontal) force for element
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: constraint state H.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(z%V ( z%C_obj%V_Len ) , Stat=ErrStat )  ! V (vertical) force for element
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: constraint state V.",ErrMSg)
-       RETURN
-    END IF
-
-
-    ! ==========   MAP_OutputType data/memory allocation   ==================================================
-    ! MAP_OutputType (defined in MAP_Types.f90 and MAP_Types.h) :
-    !  FX , FY , FZ
-    ! =======================================================================================================
-    ALLOCATE(O%y_index( O%C_obj%y_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures. 
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: output y_index.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(y%FX ( y%C_obj%FX_Len ) , Stat=ErrStat )  ! FX force (at fairlead) for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: output FX.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(y%FY ( y%C_obj%FY_Len ) , Stat=ErrStat )  ! FY force (at fairlead) for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: output FY.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(y%FZ ( y%C_obj%FZ_Len ) , Stat=ErrStat )  ! FZ force (at fairlead) for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: output FZ.",ErrMSg)
-       RETURN
-    END IF
-
-    ALLOCATE(y%WriteOutput ( y%C_obj%WriteOutput_Len ) , Stat=ErrStat )  ! FZ force (at fairlead) for all nodes being iterated  
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP allocation error: output WriteOutput.",ErrMSg)
-       RETURN
-    END IF
-
+    CALL MAP_AllocateConstraintStateTypes( z, O, ErrStat, ErrMsg )
+    IF (ErrStat .NE. ErrID_None ) RETURN
 
     ! ==========   MAP F2C (literally, Fortran to C) conversion   ===========================================
     ! Now call the C2FC_ routines for the INTENT(  OUT) C objects
@@ -686,7 +563,7 @@ CONTAINS
 
     CALL MeshCommit ( u%PtFairleadDisplacement(1), ErrStat, ErrMsg ) 
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
-
+    
     ! now, copy the input PtFairleadDisplacement to output PtFairleadLoad to complete this
     CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement(1) , & 
                     DestMesh = y%PtFairleadLoad(1)         , & 
@@ -696,13 +573,39 @@ CONTAINS
                     ErrMess  = ErrMsg                      ) 
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
          
-    y%PtFairleadLoad(1)%IOS = COMPONENT_OUTPUT    
-   
+    y%PtFairleadLoad(1)%IOS = COMPONENT_OUTPUT 
+
+    ! @bonnie : everything below this line is just garbage. It will probably be removed from the source when final merging between 
+    !           FAST and MAP occurs. This is only being printed to see evidence of these 'features'. I guess this is what they are 
+    !           called...
+    ! @bonnie : give the program discription (name, version number, date)
+    InitOut%MAP_version = InitOut%C_obj%MAP_version
+    I = INDEX(InitOut%MAP_version,C_NULL_CHAR) - 1 
+    IF ( I > 0 ) InitOut%MAP_version = InitOut%MAP_version(1:I) 
+
+    InitOut%MAP_date = InitOut%C_obj%MAP_date
+    I = INDEX( InitOut%MAP_date, C_NULL_CHAR ) - 1 
+    IF ( I > 0 ) InitOut%MAP_date = InitOut%MAP_date(1:I) 
+
+    MAP_Ver = ProgDesc('MAP',InitOut%MAP_version,InitOut%MAP_date)
+    CALL DispNVD( MAP_Ver ) 
+    
+    WRITE(*,*) "Mesh positions : "
+    WRITE(*,*) u%PtFairleadDisplacement(1)%Position ! @bonnie : this is here just to see if the meshes are being created if the vessel nodes 
+                                                    !           arent explicitly declared in the MAP input file. For example, I have two addition 
+                                                    !           mooring created by using the comment "repeat 120" and "repeat 240" in the input6_2.map
+                                                    !           MAP input file. What this says tells MAP is "create an identical mooring, and rotate it 
+                                                    !           by this angle". I wanted to make sure the mesh mapping works for this. It does.
+    WRITE(*,*) " "
+    WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
+    WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
+    WRITE(*,*) y%writeOutput ! @bonnie : this is artificial. Remove.
+
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
 
 
-  !==========   MAP_UpdateStates   ======     <---------------------------------------------------------------+
+  !==========   MAP_UpdateStates   ======     <-------------------------------------------------------------+
   SUBROUTINE MAP_UpdateStates( t, n, u, utimes, p, x, xd, z, O, ErrStat, ErrMsg)    
     REAL(DbKi)                      , INTENT(IN   ) :: t
     INTEGER(IntKi)                  , INTENT(IN   ) :: n
@@ -730,7 +633,7 @@ CONTAINS
     interval = n
 
     ! This is artificial; the node position should be updated by the glue code
-    u%PtFairleadDisplacement(1)%Position(1,1) = -10+.001*n  ! @remove: 
+    u%PtFairleadDisplacement(1)%Position(1,1) = -10+.001*n  ! @bonnie : remove: 
 
     ! Copy the mesh input to the MAP C types
     DO i = 1,u%PtFairleadDisplacement(1)%NNodes
@@ -820,7 +723,6 @@ CONTAINS
        RETURN
     END IF
 
-    
   END SUBROUTINE MAP_UpdateStates                                                                !   -------+
   !==========================================================================================================
 
@@ -926,7 +828,7 @@ CONTAINS
        RETURN
     END IF
 
-    WRITE(*,*) y%writeOutput
+    WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad(1)%NNodes
@@ -1028,6 +930,10 @@ CONTAINS
        ! we are no longer reading the MAP input file if we          !          |                 !          |
        !   reached the end                                          !          |                 !          |
        IF ( success.NE.0 ) EXIT                                     !          |                 !          |
+       ! @bonnie : I figure the NWTC lib has something more cleaver !          |                 !          |
+       !           than what I would create to check if the MAP     !          |                 !          |
+       !           input file even exists in the directory it's     !          |                 !          |
+       !           looking in. 
                                                                     !          |                 !          |
        ! populate the cable library parameter                       !          |                 !          |
        IF ( index_begn.EQ.1 ) THEN                                  !          |                 !          |
@@ -1037,7 +943,7 @@ CONTAINS
                 index_begn=2                                        !          |                 !          |
              ELSE                                                   !          |                 !          |
                 InitInp%C_obj%cable_library_data = temp             !          |                 !          |
-                CALL SetCableLibraryData( InitInp%C_obj )           !          |                 !          |
+                CALL MAP_SetCableLibraryData( InitInp%C_obj )       !          |                 !          |
              END IF                                                 !          |                 !          |
           END IF                                                    !          |                 !          |
        END IF                                                       !          |                 !          |
@@ -1051,7 +957,7 @@ CONTAINS
                 index_begn=3                                        !          |                 !          |
              ELSE                                                   !          |                 !          |
                 InitInp%C_obj%node_data = temp                      !          |                 !          |
-                CALL SetNodeData( InitInp%C_obj )                   !          |                 !          |
+                CALL MAP_SetNodeData( InitInp%C_obj )               !          |                 !          |
              END IF                                                 !          |                 !          |
           END IF                                                    !          |                 !          |
        END IF                                                       !          |                 !          |
@@ -1065,7 +971,7 @@ CONTAINS
                 index_begn=4                                        !          |                 !          |
              ELSE                                                   !          |                 !          |
                 InitInp%C_obj%element_data = temp                   !          |                 !          |
-                CALL SetElementData( InitInp%C_obj )                !          |                 !          |
+                CALL MAP_SetElementData( InitInp%C_obj )            !          |                 !          |
              END IF                                                 !          |                 !          |
           END IF                                                    !          |                 !          |
        END IF                                                       !          |                 !          |
@@ -1077,7 +983,7 @@ CONTAINS
           IF ( index_optn.GE.4 ) THEN                               !          |                 !          |
              IF ( temp(1:1).NE."!" )  THEN                          !          |                 !          |
                 InitInp%C_obj%solver_data = temp                    !          |                 !          |
-                CALL SetSolverOptions( InitInp%C_obj )              !          |                 !          |
+                CALL MAP_SetSolverOptions( InitInp%C_obj )          !          |                 !          |
              END IF                                                 !          |                 !          |
           END IF                                                    !          |                 !          |
        END IF                                                       !          |                 !          |
@@ -1092,7 +998,6 @@ CONTAINS
   !==========================================================================================================
 
 
-
   !==========   MAP_CheckError   =======     <---------------------------------------------------------------+
   SUBROUTINE MAP_CheckError(InMsg,OutMsg)
     ! Passed arguments
@@ -1104,5 +1009,277 @@ CONTAINS
   END SUBROUTINE MAP_CheckError                                                                  !   -------+
   !==========================================================================================================
 
+
+  !==========   MAP_AllocateInputTypes   =======     <------------------------------------------------------+
+  !
+  !   MAP_InputType data/memory allocation   
+  ! MAP_InputType (defined in MAP_Types.f90 and MAP_Types.h) :
+  !  X , Y , Z
+  SUBROUTINE MAP_AllocateInputTypes( input, other, ErrStat, ErrMsg )
+    ! Passed arguments
+    TYPE( MAP_InputType ),           INTENT(INOUT)  :: input
+    TYPE( MAP_OtherStateType ),      INTENT(INOUT)  :: other
+    INTEGER(IntKi),                  INTENT(INOUT)  :: ErrStat     ! Error status of the operation
+    CHARACTER(*),                    INTENT(INOUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+    ALLOCATE(other%u_index( other%C_obj%u_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures.    
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: u_index.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(input%X ( input%C_obj%X_Len ) , Stat=ErrStat )  ! X fairlead position for all cables  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: input X.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(input%Y ( input%C_obj%Y_Len ) , Stat=ErrStat )  ! Y fairlead position for all cables  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: input Y.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(input%Z ( input%C_obj%Z_Len ) , Stat=ErrStat )  ! Z fairlead position for all cables  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: input Z.",ErrMSg)
+       RETURN
+    END IF
+
+  END SUBROUTINE MAP_AllocateInputTypes                                                          !   -------+
+  !==========================================================================================================
+
+
+  !==========   MAP_AllocateOutputTypes   =======     <-----------------------------------------------------+
+  !
+  ! MAP_OutputType (defined in MAP_Types.f90 and MAP_Types.h) :
+  !  FX , FY , FZ
+  SUBROUTINE MAP_AllocateOutputTypes( output, other, ErrStat, ErrMsg )
+    ! Passed arguments
+    TYPE( MAP_OutputType ),          INTENT(INOUT)  :: output
+    TYPE( MAP_OtherStateType ),      INTENT(INOUT)  :: other
+    INTEGER(IntKi),                  INTENT(INOUT)  :: ErrStat     ! Error status of the operation
+    CHARACTER(*),                    INTENT(INOUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+    ALLOCATE(other%y_index( other%C_obj%y_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures. 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: output y_index.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(output%FX ( output%C_obj%FX_Len ) , Stat=ErrStat )  ! FX force (at fairlead) for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: output FX.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(output%FY ( output%C_obj%FY_Len ) , Stat=ErrStat )  ! FY force (at fairlead) for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: output FY.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(output%FZ ( output%C_obj%FZ_Len ) , Stat=ErrStat )  ! FZ force (at fairlead) for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: output FZ.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(output%WriteOutput ( output%C_obj%WriteOutput_Len ) , Stat=ErrStat )  ! FZ force (at fairlead) for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: output WriteOutput.",ErrMSg)
+       RETURN
+    END IF
+
+  END SUBROUTINE MAP_AllocateOutputTypes                                                         !   -------+
+  !==========================================================================================================
+
+
+  !==========   MAP_AllocateParameterTypes   =======     <--------------------------------------------------+
+  !
+  ! MAP_ParameterType (defined in MAP_Types.f90 and MAP_Types.h) :
+  !  Diam , MassDenInAir , EA , CB , Lu
+  SUBROUTINE MAP_AllocateParameterTypes( param, other, ErrStat, ErrMsg )
+    ! Passed arguments
+    TYPE( MAP_ParameterType ),       INTENT(INOUT)  :: param
+    TYPE( MAP_OtherStateType ),      INTENT(INOUT)  :: other
+    INTEGER(IntKi),                  INTENT(INOUT)  :: ErrStat     ! Error status of the operation
+    CHARACTER(*),                    INTENT(INOUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+    ALLOCATE(other%p_index ( other%C_obj%p_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures. 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parameter p_index.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%Diam ( param%C_obj%Diam_Len ) , Stat=ErrStat )  ! Element Diameter length vector
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Diam.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%MassDenInAir( param%C_obj%MassDenInAir_Len ) , Stat=ErrStat )  ! Mass density in air
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter MassDenInAir.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%EA ( param%C_obj%EA_Len ) , Stat=ErrStat )  ! Axial stiffness
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter EA.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%CB ( param%C_obj%CB_Len ) , Stat=ErrStat )  ! cable/seabed friction
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter CB.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%Lu ( param%C_obj%Lu_Len ) , Stat=ErrStat )  ! Unstretched element length
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Lu.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%X ( param%C_obj%X_Len ) , Stat=ErrStat )  ! X position for fix node
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter X.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%Y ( param%C_obj%Y_Len ) , Stat=ErrStat )  ! Y position for fix node
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Y.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%Z ( param%C_obj%Z_Len ) , Stat=ErrStat )  ! Z position for fix node
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter Z.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%FX ( param%C_obj%FX_Len ) , Stat=ErrStat )  ! X direction sum force for connect node
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter FX.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%FY ( param%C_obj%FY_Len ) , Stat=ErrStat )  ! Y direction sum force for connect node
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter FY.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%FZ ( param%C_obj%FZ_Len ) , Stat=ErrStat )  ! Z direction sum force for connect node
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter FZ.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%M ( param%C_obj%M_Len ) , Stat=ErrStat )  ! Point mass value fixed to node 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter M.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(param%B ( param%C_obj%B_Len ) , Stat=ErrStat )  ! displaced volume attached to node 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: parmeter B.",ErrMSg)
+       RETURN
+    END IF
+
+  END SUBROUTINE MAP_AllocateParameterTypes                                                      !   -------+
+  !==========================================================================================================
+
+
+  !==========   MAP_AllocateOtherStateTypes   =======     <-------------------------------------------------+
+  !
+  ! MAP_OtherStateType (defined in MAP_Types.f90 and MAP_Types.h) :
+  !  Diam , MassDenInAir , EA , CB , Lu
+  SUBROUTINE MAP_AllocateOtherStateTypes( other, ErrStat, ErrMsg )
+    ! Passed arguments
+    TYPE( MAP_OtherStateType ),      INTENT(INOUT)  :: other
+    INTEGER(IntKi),                  INTENT(INOUT)  :: ErrStat     ! Error status of the operation
+    CHARACTER(*),                    INTENT(INOUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+    ALLOCATE(other%O_index ( other%C_obj%O_index_Len ) , Stat=ErrStat ) ! index set for translating arrays to the special C++ MAP structures. 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: other state o_index.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(other%FX ( other%C_obj%FX_Len ) , Stat=ErrStat ) ! FX fairlead force (X) for connect nodes 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: other state FX.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(other%FY ( other%C_obj%FY_Len ) , Stat=ErrStat ) ! FY fairlead force (Y) for connect nodes 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: other state FY.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(other%FZ ( other%C_obj%FZ_Len ) , Stat=ErrStat ) ! FZ fairlead force (Z) for connect nodes 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: other state FZ.",ErrMSg)
+       RETURN
+    END IF
+    
+  END SUBROUTINE MAP_AllocateOtherStateTypes                                                     !   -------+
+  !==========================================================================================================
+
+
+  !==========   MAP_AllocateConstraintStateTypes   =======     <--------------------------------------------+
+  !
+  ! MAP_InputType (defined in MAP_Types.f90 and MAP_Types.h) :
+  !  X , Y , Z , H , V
+  SUBROUTINE MAP_AllocateConstraintStateTypes( constraint, other, ErrStat, ErrMsg )
+    ! Passed arguments
+    TYPE( MAP_ConstraintStateType ), INTENT(INOUT)  :: constraint
+    TYPE( MAP_OtherStateType ),      INTENT(INOUT)  :: other
+    INTEGER(IntKi),                  INTENT(INOUT)  :: ErrStat     ! Error status of the operation
+    CHARACTER(*),                    INTENT(INOUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+    ALLOCATE(other%z_index( other%C_obj%z_index_Len ) , Stat=ErrStat )  ! index set for translating arrays to the special C++ MAP structures. 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: constraint state z_index.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(constraint%X ( constraint%C_obj%X_Len ) , Stat=ErrStat )  ! X position for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: constraint state X.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(constraint%Y ( constraint%C_obj%Y_Len ) , Stat=ErrStat )  ! Y position for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: constraint state Y.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(constraint%Z ( constraint%C_obj%Z_Len ) , Stat=ErrStat )  ! Z position for all nodes being iterated  
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: constraint state Z.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(constraint%H ( constraint%C_obj%H_Len ) , Stat=ErrStat )  ! H (horizontal) force for element
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: constraint state H.",ErrMSg)
+       RETURN
+    END IF
+
+    ALLOCATE(constraint%V ( constraint%C_obj%V_Len ) , Stat=ErrStat )  ! V (vertical) force for element
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP allocation error: constraint state V.",ErrMSg)
+       RETURN
+    END IF
+
+  END SUBROUTINE MAP_AllocateConstraintStateTypes                                                !   -------+
+  !==========================================================================================================
 
 END MODULE MAP

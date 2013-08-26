@@ -65,8 +65,10 @@ IMPLICIT NONE
     CHARACTER(KIND=C_CHAR,LEN=99) :: MAP_name 
     CHARACTER(KIND=C_CHAR,LEN=99) :: MAP_version 
     CHARACTER(KIND=C_CHAR,LEN=24) :: MAP_date 
-    CHARACTER(KIND=C_CHAR,LEN=255) :: writeOutputHeader 
-    CHARACTER(KIND=C_CHAR,LEN=255) :: writeOutputUnits 
+    TYPE(C_ptr) :: WriteOutputHdr = C_NULL_PTR 
+    INTEGER(C_int) :: WriteOutputHdr_Len = 0 
+    TYPE(C_ptr) :: WriteOutputUnt = C_NULL_PTR 
+    INTEGER(C_int) :: WriteOutputUnt_Len = 0 
   END TYPE MAP_InitOutputType_C
   TYPE, PUBLIC :: MAP_InitOutputType
     TYPE( c_ptr ) :: MAP_UserData = C_NULL_ptr
@@ -74,8 +76,8 @@ IMPLICIT NONE
     CHARACTER(99)  :: MAP_name 
     CHARACTER(99)  :: MAP_version 
     CHARACTER(24)  :: MAP_date 
-    CHARACTER(255)  :: writeOutputHeader 
-    CHARACTER(255)  :: writeOutputUnits 
+    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr 
+    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt 
   END TYPE MAP_InitOutputType
 ! =======================
 ! =========  MAP_ContinuousStateType  =======
@@ -624,11 +626,6 @@ CONTAINS
     InitInputData%C_obj%sea_density = InitInputData%sea_density
     InitInputData%C_obj%depth = InitInputData%depth
     InitInputData%C_obj%coupled_to_FAST = InitInputData%coupled_to_FAST
-    InitInputData%C_obj%filename = InitInputData%filename
-    InitInputData%C_obj%cable_library_data = InitInputData%cable_library_data
-    InitInputData%C_obj%node_data = InitInputData%node_data
-    InitInputData%C_obj%element_data = InitInputData%element_data
-    InitInputData%C_obj%solver_data = InitInputData%solver_data
  END SUBROUTINE MAP_F2C_CopyInitInput
 
   SUBROUTINE MAP_C2F_CopyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -652,11 +649,6 @@ CONTAINS
     InitInputData%sea_density = InitInputData%C_obj%sea_density
     InitInputData%depth = InitInputData%C_obj%depth
     InitInputData%coupled_to_FAST = InitInputData%C_obj%coupled_to_FAST
-    InitInputData%filename = InitInputData%C_obj%filename
-    InitInputData%cable_library_data = InitInputData%C_obj%cable_library_data
-    InitInputData%node_data = InitInputData%C_obj%node_data
-    InitInputData%element_data = InitInputData%C_obj%element_data
-    InitInputData%solver_data = InitInputData%C_obj%solver_data
  END SUBROUTINE MAP_C2F_CopyInitInput
 
  SUBROUTINE MAP_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -799,11 +791,6 @@ CONTAINS
     ! 
     ErrStat = ErrID_None
     ErrMsg  = ""
-    InitOutputData%C_obj%MAP_name = InitOutputData%MAP_name
-    InitOutputData%C_obj%MAP_version = InitOutputData%MAP_version
-    InitOutputData%C_obj%MAP_date = InitOutputData%MAP_date
-    InitOutputData%C_obj%writeOutputHeader = InitOutputData%writeOutputHeader
-    InitOutputData%C_obj%writeOutputUnits = InitOutputData%writeOutputUnits
  END SUBROUTINE MAP_F2C_CopyInitOutput
 
   SUBROUTINE MAP_C2F_CopyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -823,11 +810,6 @@ CONTAINS
     ! 
     ErrStat = ErrID_None
     ErrMsg  = ""
-    InitOutputData%MAP_name = InitOutputData%C_obj%MAP_name
-    InitOutputData%MAP_version = InitOutputData%C_obj%MAP_version
-    InitOutputData%MAP_date = InitOutputData%C_obj%MAP_date
-    InitOutputData%writeOutputHeader = InitOutputData%C_obj%writeOutputHeader
-    InitOutputData%writeOutputUnits = InitOutputData%C_obj%writeOutputUnits
  END SUBROUTINE MAP_C2F_CopyInitOutput
 
  SUBROUTINE MAP_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -843,8 +825,16 @@ CONTAINS
   DstInitOutputData%MAP_name = SrcInitOutputData%MAP_name
   DstInitOutputData%MAP_version = SrcInitOutputData%MAP_version
   DstInitOutputData%MAP_date = SrcInitOutputData%MAP_date
-  DstInitOutputData%writeOutputHeader = SrcInitOutputData%writeOutputHeader
-  DstInitOutputData%writeOutputUnits = SrcInitOutputData%writeOutputUnits
+IF ( ALLOCATED( SrcInitOutputData%WriteOutputHdr ) ) THEN
+  i1 = SIZE(SrcInitOutputData%WriteOutputHdr,1)
+  IF (.NOT.ALLOCATED(DstInitOutputData%WriteOutputHdr)) ALLOCATE(DstInitOutputData%WriteOutputHdr(i1))
+  DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
+ENDIF
+IF ( ALLOCATED( SrcInitOutputData%WriteOutputUnt ) ) THEN
+  i1 = SIZE(SrcInitOutputData%WriteOutputUnt,1)
+  IF (.NOT.ALLOCATED(DstInitOutputData%WriteOutputUnt)) ALLOCATE(DstInitOutputData%WriteOutputUnt(i1))
+  DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
+ENDIF
  END SUBROUTINE MAP_CopyInitOutput
 
  SUBROUTINE MAP_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -855,6 +845,8 @@ CONTAINS
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+  IF ( ALLOCATED(InitOutputData%WriteOutputHdr) ) DEALLOCATE(InitOutputData%WriteOutputHdr)
+  IF ( ALLOCATED(InitOutputData%WriteOutputUnt) ) DEALLOCATE(InitOutputData%WriteOutputUnt)
  END SUBROUTINE MAP_DestroyInitOutput
 
  SUBROUTINE MAP_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

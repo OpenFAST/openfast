@@ -51,22 +51,22 @@ PROGRAM Main
   n_t_final = ((t_final - t_initial) / dt_global ) - 1  
   t_global = t_initial  
   
-  ! define polynomial-order for MAP_Input_ExtrapInterp and MAP_Output_ExtrapInterp. Must be 0, 1, or 2
+  ! @bonnie : is this right? What's a good interp order?
   MAP_interp_order = 2 
 
   ! MAP: allocate Input and Output arrays; used for interpolation and extrapolation
   Allocate(MAP_OutputTimes(MAP_interp_order + 1)) 
   Allocate(MAP_InputTimes(MAP_interp_order + 1)) 
 
-  ! This is in the FAST developers glue code example, but it's probably not needed here. 
+  ! @bonnie : This is in the FAST developers glue code example, but it's probably not needed here. 
   !Allocate(MAP_Input(MAP_interp_order + 1))  
   !Allocate(MAP_Output(MAP_interp_order + 1)) 
     
   ! set the MAP input file name and other environment terms.
-  MAP_InitInput%filename    = "input6.map"  ! This needs to be set according to what is in the FAST input file. 
-  MAP_InitInput%gravity     = 9.81          ! This need to be according to g used in FAST
-  MAP_InitInput%sea_density = 1025          ! This needs to be set according to seawater density in FAST
-  MAP_InitInput%depth       = -350          ! This need to be set according to the water depth in FAST
+  MAP_InitInput%filename    = "input6_2.map"! @bonnie : This needs to be set according to what is in the FAST input file. 
+  MAP_InitInput%gravity     = 9.81          ! @bonnie : This need to be according to g used in FAST
+  MAP_InitInput%sea_density = 1025          ! @bonnie : This needs to be set according to seawater density in FAST
+  MAP_InitInput%depth       = -350          ! @bonnie : This need to be set according to the water depth in FAST
  
   ! call the initialization routine
   CALL MAP_Init( MAP_InitInput       , &

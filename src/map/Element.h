@@ -246,6 +246,7 @@ public:
   // print line tension to map output file
   std::string GetLineTensionString( );
   std::string GetLineTensionStringHeader( const int i );
+  std::string GetLineTensionStringHeaderForFast( const int i, const int j );
   std::string GetLayLengthString( );  
   std::string GetLayLengthStringHeader( const int i );  
 

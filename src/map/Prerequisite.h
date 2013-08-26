@@ -52,9 +52,10 @@
  * Previous versions:  0.83.00.mdm
  *                     0.83.08.mdm   Aug. 6  2013
  *                     0.83.12a-mdm  Aug. 19 2013
+ *                     0.87.06a-mdm  Aug. 25 2013
  */
 #define PROGNAME "MAP"
-#define PROGVERSION "0.83.12a-mdm"
+#define PROGVERSION "0.87.06a-mdm"
 
 
 // source file build_defs.h
@@ -407,7 +408,7 @@ const boost::unordered_map <MAP_ERROR_CODE , std::string> MAP_ERROR_CODE_to_stri
   ( MAP_ERROR_85 , "Double backing of the element is occuring (unstretched line length is too long). Element ") 
   ( MAP_ERROR_86 , "The numerical solver failed. This could be caused by a spelling error or incompatible solver options in the MAP input file. Refer to the summary.map file.")
   ( MAP_ERROR_87 , "Hyperbolic sin function is failing from numeric overflow. MAP cannot plot the current configuration. Element ")
-  ( MAP_ERROR_88 , "Convergence failure. Change either the initial guesses or the solver options and re-run MAP. ")
+  ( MAP_ERROR_88 , "Convergence failure. Change either the initial guesses [if failure occured in MSQS_Init(...)], the solver options, or -msqs_scaling. Try re-running MAP. ")
   ( MAP_ERROR_89 , "Boundaries of an array are exceeded in UnpackOther (MAP_OtherStateType). ")
   ( MAP_ERROR_90 , "Output string is too long to pass back to the calling program. Trying either 1) reducing the number of data being output or 2) let MAP create the map.out output file")
   ( MAP_WARNING_1 , "The OMIT_CONTACT flag is raised, but the cable is positively buoyant. The cable will not contact the seabed. Is the MAP input file correct? Element ")

@@ -114,11 +114,11 @@ MAPSetOtherArray( void*                    NULL_A,
                   MAP_OtherStateType       *other  ,
                   MAP_OtherStateType_class *o );
 
-void 
-MAPSetInitOutputString( MAP_InitOutputType       *initOut ,
-                        MAP_InitOutputType_class *io      ,
-                        MAP_OtherStateType       *other   ,
-                        MAP_OtherStateType_class *o       );
+//void 
+//MAPSetInitOutputString( MAP_InitOutputType       *initOut ,
+//                        MAP_InitOutputType_class *io      ,
+//                        MAP_OtherStateType       *other   ,
+//                        MAP_OtherStateType_class *o       );
 
 void 
 MAPSetOutputArray( MAP_OutputType           *output , 

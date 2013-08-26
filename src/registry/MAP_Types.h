@@ -86,12 +86,14 @@
     double * X ;     int X_Len ; 
     double * Y ;     int Y_Len ; 
     double * Z ;     int Z_Len ; 
+; 
   } MAP_InputType_t ;
   typedef struct MAP_OutputType {
     void * object ;
     double * FX ;     int FX_Len ; 
     double * FY ;     int FY_Len ; 
     double * FZ ;     int FZ_Len ; 
+; 
     float * writeOutput ;     int writeOutput_Len ; 
   } MAP_OutputType_t ;
   typedef struct MAP_UserData {
