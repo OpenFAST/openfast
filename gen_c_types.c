@@ -27,6 +27,10 @@ gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong
 
   for ( r = q->fields ; r ; r = r->next )
   {
+    if ( r->type == NULL ) {
+      fprintf(stderr,"Registry warning: no type defined for %s\n",r->name) ;
+      continue ;
+    }
     if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
     } else {
       if ( r->ndims > 0 ) {
