@@ -73,6 +73,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MAP_InitOutputType
     TYPE( c_ptr ) :: MAP_UserData = C_NULL_ptr
     TYPE( MAP_InitOutputType_C ) :: C_obj
+    TYPE(ProgDesc) :: Ver
     CHARACTER(99)  :: MAP_name 
     CHARACTER(99)  :: MAP_version 
     CHARACTER(24)  :: MAP_date 
@@ -229,7 +230,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: X 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Y 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Z 
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: PtFairleadDisplacement 
+    TYPE(MeshType)   :: PtFairleadDisplacement 
   END TYPE MAP_InputType
 ! =======================
 ! =========  MAP_OutputType  =======
@@ -250,7 +251,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FX 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FY 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FZ 
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: PtFairleadLoad 
+    TYPE(MeshType)   :: PtFairleadLoad 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: writeOutput 
   END TYPE MAP_OutputType
 ! =======================
@@ -2724,9 +2725,7 @@ IF ( ALLOCATED( SrcInputData%Z ) ) THEN
   IF (.NOT.ALLOCATED(DstInputData%Z)) ALLOCATE(DstInputData%Z(i1))
   DstInputData%Z = SrcInputData%Z
 ENDIF
-DO i1 = 1, SIZE(SrcInputData%PtFairleadDisplacement,1)
-  CALL MeshCopy( SrcInputData%PtFairleadDisplacement(i1), DstInputData%PtFairleadDisplacement(i1), CtrlCode, ErrStat, ErrMsg )
-ENDDO
+  CALL MeshCopy( SrcInputData%PtFairleadDisplacement, DstInputData%PtFairleadDisplacement, CtrlCode, ErrStat, ErrMsg )
  END SUBROUTINE MAP_CopyInput
 
  SUBROUTINE MAP_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -2740,9 +2739,7 @@ ENDDO
   IF ( ALLOCATED(InputData%X) ) DEALLOCATE(InputData%X)
   IF ( ALLOCATED(InputData%Y) ) DEALLOCATE(InputData%Y)
   IF ( ALLOCATED(InputData%Z) ) DEALLOCATE(InputData%Z)
-DO i1 = 1, SIZE(InputData%PtFairleadDisplacement,1)
-  CALL MeshDestroy( InputData%PtFairleadDisplacement(i1), ErrStat, ErrMsg )
-ENDDO
+  CALL MeshDestroy( InputData%PtFairleadDisplacement, ErrStat, ErrMsg )
  END SUBROUTINE MAP_DestroyInput
 
  SUBROUTINE MAP_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2785,16 +2782,14 @@ ENDDO
   Db_BufSz    = Db_BufSz    + SIZE( InData%X )  ! X 
   Db_BufSz    = Db_BufSz    + SIZE( InData%Y )  ! Y 
   Db_BufSz    = Db_BufSz    + SIZE( InData%Z )  ! Z 
-DO i1 = 1, SIZE(InData%PtFairleadDisplacement,1)
  ! Allocate mesh buffers, if any (we'll also get sizes from these) 
-  CALL MeshPack( InData%PtFairleadDisplacement(i1), Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg, .TRUE. ) ! PtFairleadDisplacement 
+  CALL MeshPack( InData%PtFairleadDisplacement, Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg, .TRUE. ) ! PtFairleadDisplacement 
   IF(ALLOCATED(Re_PtFairleadDisplacement_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_PtFairleadDisplacement_Buf  ) ! PtFairleadDisplacement
   IF(ALLOCATED(Db_PtFairleadDisplacement_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_PtFairleadDisplacement_Buf  ) ! PtFairleadDisplacement
   IF(ALLOCATED(Int_PtFairleadDisplacement_Buf))Int_BufSz = Int_BufSz + SIZE( Int_PtFairleadDisplacement_Buf ) ! PtFairleadDisplacement
   IF(ALLOCATED(Re_PtFairleadDisplacement_Buf))  DEALLOCATE(Re_PtFairleadDisplacement_Buf)
   IF(ALLOCATED(Db_PtFairleadDisplacement_Buf))  DEALLOCATE(Db_PtFairleadDisplacement_Buf)
   IF(ALLOCATED(Int_PtFairleadDisplacement_Buf)) DEALLOCATE(Int_PtFairleadDisplacement_Buf)
-ENDDO
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -2810,8 +2805,8 @@ ENDDO
     IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Z))-1 ) =  PACK(InData%Z ,.TRUE.)
     Db_Xferred   = Db_Xferred   + SIZE(InData%Z)
   ENDIF
-DO i1 = 1, SIZE(InData%PtFairleadDisplacement,1)
-  CALL MeshPack( InData%PtFairleadDisplacement(i1), Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg, OnlySize ) ! PtFairleadDisplacement 
+
+  CALL MeshPack( InData%PtFairleadDisplacement, Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg, OnlySize ) ! PtFairleadDisplacement 
   IF(ALLOCATED(Re_PtFairleadDisplacement_Buf)) THEN
     IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PtFairleadDisplacement_Buf)-1 ) = Re_PtFairleadDisplacement_Buf
     Re_Xferred = Re_Xferred + SIZE(Re_PtFairleadDisplacement_Buf)
@@ -2827,7 +2822,7 @@ DO i1 = 1, SIZE(InData%PtFairleadDisplacement,1)
   IF( ALLOCATED(Re_PtFairleadDisplacement_Buf) )  DEALLOCATE(Re_PtFairleadDisplacement_Buf)
   IF( ALLOCATED(Db_PtFairleadDisplacement_Buf) )  DEALLOCATE(Db_PtFairleadDisplacement_Buf)
   IF( ALLOCATED(Int_PtFairleadDisplacement_Buf) ) DEALLOCATE(Int_PtFairleadDisplacement_Buf)
-ENDDO
+
  END SUBROUTINE MAP_PackInput
 
  SUBROUTINE MAP_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2884,9 +2879,9 @@ ENDDO
   DEALLOCATE(mask1)
     Db_Xferred   = Db_Xferred   + SIZE(OutData%Z)
   ENDIF
-DO i1 = 1, SIZE(OutData%PtFairleadDisplacement,1)
- ! first call MeshPack to get correctly sized buffers for unpacking
-  CALL MeshPack( OutData%PtFairleadDisplacement(i1), Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg , .TRUE. ) ! PtFairleadDisplacement 
+
+  ! first call MeshPack to get correctly sized buffers for unpacking
+  CALL MeshPack( OutData%PtFairleadDisplacement, Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg , .TRUE. ) ! PtFairleadDisplacement 
   IF(ALLOCATED(Re_PtFairleadDisplacement_Buf)) THEN
     Re_PtFairleadDisplacement_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PtFairleadDisplacement_Buf)-1 )
     Re_Xferred = Re_Xferred + SIZE(Re_PtFairleadDisplacement_Buf)
@@ -2899,11 +2894,11 @@ DO i1 = 1, SIZE(OutData%PtFairleadDisplacement,1)
     Int_PtFairleadDisplacement_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_PtFairleadDisplacement_Buf)-1 )
     Int_Xferred = Int_Xferred + SIZE(Int_PtFairleadDisplacement_Buf)
   ENDIF
-  CALL MeshUnPack( OutData%PtFairleadDisplacement(i1), Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg ) ! PtFairleadDisplacement 
+  CALL MeshUnPack( OutData%PtFairleadDisplacement, Re_PtFairleadDisplacement_Buf, Db_PtFairleadDisplacement_Buf, Int_PtFairleadDisplacement_Buf, ErrStat, ErrMsg ) ! PtFairleadDisplacement 
   IF( ALLOCATED(Re_PtFairleadDisplacement_Buf) )  DEALLOCATE(Re_PtFairleadDisplacement_Buf)
   IF( ALLOCATED(Db_PtFairleadDisplacement_Buf) )  DEALLOCATE(Db_PtFairleadDisplacement_Buf)
   IF( ALLOCATED(Int_PtFairleadDisplacement_Buf) ) DEALLOCATE(Int_PtFairleadDisplacement_Buf)
-ENDDO
+
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -3044,9 +3039,9 @@ IF ( ALLOCATED( SrcOutputData%FZ ) ) THEN
   IF (.NOT.ALLOCATED(DstOutputData%FZ)) ALLOCATE(DstOutputData%FZ(i1))
   DstOutputData%FZ = SrcOutputData%FZ
 ENDIF
-DO i1 = 1, SIZE(SrcOutputData%PtFairleadLoad,1)
-  CALL MeshCopy( SrcOutputData%PtFairleadLoad(i1), DstOutputData%PtFairleadLoad(i1), CtrlCode, ErrStat, ErrMsg )
-ENDDO
+
+CALL MeshCopy( SrcOutputData%PtFairleadLoad, DstOutputData%PtFairleadLoad, CtrlCode, ErrStat, ErrMsg )
+
 IF ( ALLOCATED( SrcOutputData%writeOutput ) ) THEN
   i1 = SIZE(SrcOutputData%writeOutput,1)
   IF (.NOT.ALLOCATED(DstOutputData%writeOutput)) ALLOCATE(DstOutputData%writeOutput(i1))
@@ -3065,9 +3060,7 @@ ENDIF
   IF ( ALLOCATED(OutputData%FX) ) DEALLOCATE(OutputData%FX)
   IF ( ALLOCATED(OutputData%FY) ) DEALLOCATE(OutputData%FY)
   IF ( ALLOCATED(OutputData%FZ) ) DEALLOCATE(OutputData%FZ)
-DO i1 = 1, SIZE(OutputData%PtFairleadLoad,1)
-  CALL MeshDestroy( OutputData%PtFairleadLoad(i1), ErrStat, ErrMsg )
-ENDDO
+  CALL MeshDestroy( OutputData%PtFairleadLoad, ErrStat, ErrMsg )
   IF ( ALLOCATED(OutputData%writeOutput) ) DEALLOCATE(OutputData%writeOutput)
  END SUBROUTINE MAP_DestroyOutput
 
@@ -3111,16 +3104,14 @@ ENDDO
   Db_BufSz    = Db_BufSz    + SIZE( InData%FX )  ! FX 
   Db_BufSz    = Db_BufSz    + SIZE( InData%FY )  ! FY 
   Db_BufSz    = Db_BufSz    + SIZE( InData%FZ )  ! FZ 
-DO i1 = 1, SIZE(InData%PtFairleadLoad,1)
  ! Allocate mesh buffers, if any (we'll also get sizes from these) 
-  CALL MeshPack( InData%PtFairleadLoad(i1), Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg, .TRUE. ) ! PtFairleadLoad 
+  CALL MeshPack( InData%PtFairleadLoad, Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg, .TRUE. ) ! PtFairleadLoad 
   IF(ALLOCATED(Re_PtFairleadLoad_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_PtFairleadLoad_Buf  ) ! PtFairleadLoad
   IF(ALLOCATED(Db_PtFairleadLoad_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_PtFairleadLoad_Buf  ) ! PtFairleadLoad
   IF(ALLOCATED(Int_PtFairleadLoad_Buf))Int_BufSz = Int_BufSz + SIZE( Int_PtFairleadLoad_Buf ) ! PtFairleadLoad
   IF(ALLOCATED(Re_PtFairleadLoad_Buf))  DEALLOCATE(Re_PtFairleadLoad_Buf)
   IF(ALLOCATED(Db_PtFairleadLoad_Buf))  DEALLOCATE(Db_PtFairleadLoad_Buf)
   IF(ALLOCATED(Int_PtFairleadLoad_Buf)) DEALLOCATE(Int_PtFairleadLoad_Buf)
-ENDDO
   Re_BufSz    = Re_BufSz    + SIZE( InData%writeOutput )  ! writeOutput 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
@@ -3137,8 +3128,8 @@ ENDDO
     IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%FZ))-1 ) =  PACK(InData%FZ ,.TRUE.)
     Db_Xferred   = Db_Xferred   + SIZE(InData%FZ)
   ENDIF
-DO i1 = 1, SIZE(InData%PtFairleadLoad,1)
-  CALL MeshPack( InData%PtFairleadLoad(i1), Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg, OnlySize ) ! PtFairleadLoad 
+
+  CALL MeshPack( InData%PtFairleadLoad, Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg, OnlySize ) ! PtFairleadLoad 
   IF(ALLOCATED(Re_PtFairleadLoad_Buf)) THEN
     IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PtFairleadLoad_Buf)-1 ) = Re_PtFairleadLoad_Buf
     Re_Xferred = Re_Xferred + SIZE(Re_PtFairleadLoad_Buf)
@@ -3154,7 +3145,7 @@ DO i1 = 1, SIZE(InData%PtFairleadLoad,1)
   IF( ALLOCATED(Re_PtFairleadLoad_Buf) )  DEALLOCATE(Re_PtFairleadLoad_Buf)
   IF( ALLOCATED(Db_PtFairleadLoad_Buf) )  DEALLOCATE(Db_PtFairleadLoad_Buf)
   IF( ALLOCATED(Int_PtFairleadLoad_Buf) ) DEALLOCATE(Int_PtFairleadLoad_Buf)
-ENDDO
+
   IF ( ALLOCATED(InData%writeOutput) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%writeOutput))-1 ) =  PACK(InData%writeOutput ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%writeOutput)
@@ -3215,9 +3206,9 @@ ENDDO
   DEALLOCATE(mask1)
     Db_Xferred   = Db_Xferred   + SIZE(OutData%FZ)
   ENDIF
-DO i1 = 1, SIZE(OutData%PtFairleadLoad,1)
- ! first call MeshPack to get correctly sized buffers for unpacking
-  CALL MeshPack( OutData%PtFairleadLoad(i1), Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg , .TRUE. ) ! PtFairleadLoad 
+
+  ! first call MeshPack to get correctly sized buffers for unpacking
+  CALL MeshPack( OutData%PtFairleadLoad, Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg , .TRUE. ) ! PtFairleadLoad 
   IF(ALLOCATED(Re_PtFairleadLoad_Buf)) THEN
     Re_PtFairleadLoad_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PtFairleadLoad_Buf)-1 )
     Re_Xferred = Re_Xferred + SIZE(Re_PtFairleadLoad_Buf)
@@ -3230,11 +3221,11 @@ DO i1 = 1, SIZE(OutData%PtFairleadLoad,1)
     Int_PtFairleadLoad_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_PtFairleadLoad_Buf)-1 )
     Int_Xferred = Int_Xferred + SIZE(Int_PtFairleadLoad_Buf)
   ENDIF
-  CALL MeshUnPack( OutData%PtFairleadLoad(i1), Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg ) ! PtFairleadLoad 
+  CALL MeshUnPack( OutData%PtFairleadLoad, Re_PtFairleadLoad_Buf, Db_PtFairleadLoad_Buf, Int_PtFairleadLoad_Buf, ErrStat, ErrMsg ) ! PtFairleadLoad 
   IF( ALLOCATED(Re_PtFairleadLoad_Buf) )  DEALLOCATE(Re_PtFairleadLoad_Buf)
   IF( ALLOCATED(Db_PtFairleadLoad_Buf) )  DEALLOCATE(Db_PtFairleadLoad_Buf)
   IF( ALLOCATED(Int_PtFairleadLoad_Buf) ) DEALLOCATE(Int_PtFairleadLoad_Buf)
-ENDDO
+
   IF ( ALLOCATED(OutData%writeOutput) ) THEN
   ALLOCATE(mask1(SIZE(OutData%writeOutput,1))); mask1 = .TRUE.
     OutData%writeOutput = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%writeOutput))-1 ),mask1,OutData%writeOutput)
@@ -3865,9 +3856,7 @@ ENDDO
   u_out%X = u(1)%X
   u_out%Y = u(1)%Y
   u_out%Z = u(1)%Z
-  DO i01 = 1,SIZE(u_out%PtFairleadDisplacement,1)
-  CALL MeshCopy(u(1)%PtFairleadDisplacement(i01), u_out%PtFairleadDisplacement(i01), MESH_UPDATECOPY, ErrStat, ErrMsg )
-  ENDDO
+  CALL MeshCopy(u(1)%PtFairleadDisplacement, u_out%PtFairleadDisplacement, MESH_UPDATECOPY, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -3892,9 +3881,7 @@ ENDDO
   u_out%Z = u(1)%Z + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
-  DO i01 = 1,SIZE(u_out%PtFairleadDisplacement,1)
-  CALL MeshExtrapInterp1(u(1)%PtFairleadDisplacement(i01), u(2)%PtFairleadDisplacement(i01), tin, u_out%PtFairleadDisplacement(i01), tin_out, ErrStat, ErrMsg )
-  ENDDO
+  CALL MeshExtrapInterp1(u(1)%PtFairleadDisplacement, u(2)%PtFairleadDisplacement, tin, u_out%PtFairleadDisplacement, tin_out, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 2 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -3932,9 +3919,7 @@ ENDDO
   u_out%Z = u(1)%Z + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
-  DO i01 = 1,SIZE(u_out%PtFairleadDisplacement,1)
-  CALL MeshExtrapInterp2(u(1)%PtFairleadDisplacement(i01), u(2)%PtFairleadDisplacement(i01), u(3)%PtFairleadDisplacement(i01), tin, u_out%PtFairleadDisplacement(i01), tin_out, ErrStat, ErrMsg )
-  ENDDO
+  CALL MeshExtrapInterp2(u(1)%PtFairleadDisplacement, u(2)%PtFairleadDisplacement, u(3)%PtFairleadDisplacement, tin, u_out%PtFairleadDisplacement, tin_out, ErrStat, ErrMsg )
  ELSE 
    ErrStat = ErrID_Fatal
    ErrMsg = ' order must be less than 3 in MAP_Input_ExtrapInterp '
@@ -4055,9 +4040,7 @@ ENDDO
   u_out%FX = u(1)%FX
   u_out%FY = u(1)%FY
   u_out%FZ = u(1)%FZ
-  DO i01 = 1,SIZE(u_out%PtFairleadLoad,1)
-  CALL MeshCopy(u(1)%PtFairleadLoad(i01), u_out%PtFairleadLoad(i01), MESH_UPDATECOPY, ErrStat, ErrMsg )
-  ENDDO
+  CALL MeshCopy(u(1)%PtFairleadLoad, u_out%PtFairleadLoad, MESH_UPDATECOPY, ErrStat, ErrMsg )
   u_out%writeOutput = u(1)%writeOutput
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
@@ -4083,9 +4066,7 @@ ENDDO
   u_out%FZ = u(1)%FZ + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
-  DO i01 = 1,SIZE(u_out%PtFairleadLoad,1)
-  CALL MeshExtrapInterp1(u(1)%PtFairleadLoad(i01), u(2)%PtFairleadLoad(i01), tin, u_out%PtFairleadLoad(i01), tin_out, ErrStat, ErrMsg )
-  ENDDO
+  CALL MeshExtrapInterp1(u(1)%PtFairleadLoad, u(2)%PtFairleadLoad, tin, u_out%PtFairleadLoad, tin_out, ErrStat, ErrMsg )
   ALLOCATE(b1(SIZE(u_out%writeOutput,1)))
   ALLOCATE(c1(SIZE(u_out%writeOutput,1)))
   b1 = -(u(1)%writeOutput - u(2)%writeOutput)/t(2)
@@ -4129,9 +4110,7 @@ ENDDO
   u_out%FZ = u(1)%FZ + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
-  DO i01 = 1,SIZE(u_out%PtFairleadLoad,1)
-  CALL MeshExtrapInterp2(u(1)%PtFairleadLoad(i01), u(2)%PtFairleadLoad(i01), u(3)%PtFairleadLoad(i01), tin, u_out%PtFairleadLoad(i01), tin_out, ErrStat, ErrMsg )
-  ENDDO
+  CALL MeshExtrapInterp2(u(1)%PtFairleadLoad, u(2)%PtFairleadLoad, u(3)%PtFairleadLoad, tin, u_out%PtFairleadLoad, tin_out, ErrStat, ErrMsg )
   ALLOCATE(b1(SIZE(u_out%writeOutput,1)))
   ALLOCATE(c1(SIZE(u_out%writeOutput,1)))
   b1 = (t(3)**2*(u(1)%writeOutput - u(2)%writeOutput) + t(2)**2*(-u(1)%writeOutput + u(3)%writeOutput))/(t(2)*t(3)*(t(2) - t(3)))

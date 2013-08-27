@@ -535,12 +535,9 @@ CONTAINS
 
     NumNodes = u%C_obj%X_Len
 
-    ! Allocate input/output meshes
-    ALLOCATE(u%PtFairleadDisplacement(1) , Stat=ErrStat ) ! Allocate input Position meshes for each fairlead
-    ALLOCATE(y%PtFairleadLoad(1)         , Stat=ErrStat ) ! Allocate input Position meshes for each fairlead
 
     ! Create the input mesh
-    CALL MeshCreate( BlankMesh       = u%PtFairleadDisplacement(1) , &
+    CALL MeshCreate( BlankMesh       = u%PtFairleadDisplacement    , &
                      IOS             = COMPONENT_INPUT             , &
                      NNodes          = NumNodes                    , & !@todo : instead of 1, it shoudl reflect the number of points (NumPoints)
                      TranslationDisp = .TRUE.                      , &
@@ -553,27 +550,27 @@ CONTAINS
        Pos(2) = u%Y(i)
        Pos(3) = u%Z(i)
        
-       CALL MeshPositionNode ( u%PtFairleadDisplacement(1), i, Pos, ErrStat, ErrMsg )
+       CALL MeshPositionNode ( u%PtFairleadDisplacement, i, Pos, ErrStat, ErrMsg )
        IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
        
-       CALL MeshConstructElement ( u%PtFairleadDisplacement(1), ELEMENT_POINT, ErrStat, ErrMsg, i )
+       CALL MeshConstructElement ( u%PtFairleadDisplacement, ELEMENT_POINT, ErrStat, ErrMsg, i )
        IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))    
 
     END DO
 
-    CALL MeshCommit ( u%PtFairleadDisplacement(1), ErrStat, ErrMsg ) 
+    CALL MeshCommit ( u%PtFairleadDisplacement, ErrStat, ErrMsg ) 
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
     
     ! now, copy the input PtFairleadDisplacement to output PtFairleadLoad to complete this
-    CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement(1) , & 
-                    DestMesh = y%PtFairleadLoad(1)         , & 
+    CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement    , & 
+                    DestMesh = y%PtFairleadLoad            , & 
                     CtrlCode = MESH_SIBLING                , & 
                     Force    = .TRUE.                      , &
                     ErrStat  = ErrStat                     , &
                     ErrMess  = ErrMsg                      ) 
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
          
-    y%PtFairleadLoad(1)%IOS = COMPONENT_OUTPUT 
+    y%PtFairleadLoad%IOS = COMPONENT_OUTPUT 
 
     ! @bonnie : everything below this line is just garbage. It will probably be removed from the source when final merging between 
     !           FAST and MAP occurs. This is only being printed to see evidence of these 'features'. I guess this is what they are 
@@ -590,12 +587,15 @@ CONTAINS
     MAP_Ver = ProgDesc('MAP',InitOut%MAP_version,InitOut%MAP_date)
     CALL DispNVD( MAP_Ver ) 
     
+! @marco: I added  InitOut%ver to your types file; I don't need the MAP_version and MAP_date variables in the glue code.
+    InitOut%ver = MAP_Ver
+    
     WRITE(*,*) "Mesh positions : "
-    WRITE(*,*) u%PtFairleadDisplacement(1)%Position ! @bonnie : this is here just to see if the meshes are being created if the vessel nodes 
-                                                    !           arent explicitly declared in the MAP input file. For example, I have two addition 
-                                                    !           mooring created by using the comment "repeat 120" and "repeat 240" in the input6_2.map
-                                                    !           MAP input file. What this says tells MAP is "create an identical mooring, and rotate it 
-                                                    !           by this angle". I wanted to make sure the mesh mapping works for this. It does.
+    WRITE(*,*) u%PtFairleadDisplacement%Position ! @bonnie : this is here just to see if the meshes are being created if the vessel nodes 
+                                                 !           arent explicitly declared in the MAP input file. For example, I have two addition 
+                                                 !           mooring created by using the comment "repeat 120" and "repeat 240" in the input6_2.map
+                                                 !           MAP input file. What this says tells MAP is "create an identical mooring, and rotate it 
+                                                 !           by this angle". I wanted to make sure the mesh mapping works for this. It does.
     WRITE(*,*) " "
     WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
     WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
@@ -610,7 +610,7 @@ CONTAINS
     REAL(DbKi)                      , INTENT(IN   ) :: t
     INTEGER(IntKi)                  , INTENT(IN   ) :: n
     REAL(DbKi)                      , INTENT(IN   ) :: utimes(:)
-    TYPE( MAP_InputType )           , INTENT(INOUT) :: u          ! INTENT(IN   )
+    TYPE( MAP_InputType )           , INTENT(INOUT) :: u(:)       ! INTENT(IN   )
     TYPE( MAP_ParameterType )       , INTENT(INOUT) :: p          ! INTENT(IN   )
     TYPE( MAP_ContinuousStateType ) , INTENT(INOUT) :: x          ! INTENT(INOUT)
     TYPE( MAP_DiscreteStateType )   , INTENT(INOUT) :: xd         ! INTENT(INOUT)
@@ -626,24 +626,38 @@ CONTAINS
     INTEGER(KIND=C_INT)                             :: interval = 0
     INTEGER(IntKi)                                  :: i=0
 
+    
+    TYPE(MAP_InputType)                             :: u_interp    ! Inputs at t
+    
+    ! create space for arrays/meshes in u_interp
+    CALL MAP_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg )      
+       !CALL CheckError(ErrStat2,ErrMsg2)
+       !IF ( ErrStat >= AbortErrLev ) RETURN
+            
+    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
+       !CALL CheckError(ErrStat2,ErrMsg2)
+       !IF ( ErrStat >= AbortErrLev ) RETURN
+    
+        
+    
     ! set the time and coupling interval to something 
     ! readable by MAP (using KIND=C_INT/C_FLOAT instead
     ! of the native IntKi/DbKi format in FAST)
     time = t
     interval = n
 
-    ! This is artificial; the node position should be updated by the glue code
-    u%PtFairleadDisplacement(1)%Position(1,1) = -10+.001*n  ! @bonnie : remove: 
-
+    
     ! Copy the mesh input to the MAP C types
-    DO i = 1,u%PtFairleadDisplacement(1)%NNodes
-       u%X(i) = u%PtFairleadDisplacement(1)%Position(1,i)
-       u%Y(i) = u%PtFairleadDisplacement(1)%Position(2,i)
-       u%Z(i) = u%PtFairleadDisplacement(1)%Position(3,i)
+! @marco: the Position field is fixed in the initialization routine. TranslationDisp is the displacement from the original position.
+!         if you need the absolute position, add them: u_interp%PtFairleadDisplacement(1)%TranslationDisp(1,i) + u_interp%PtFairleadDisplacement(1)%Position(1,i) 
+    DO i = 1,u_interp%PtFairleadDisplacement%NNodes
+       u_interp%X(i) = u_interp%PtFairleadDisplacement%TranslationDisp(1,i)  +  u_interp%PtFairleadDisplacement%Position(1,i)  
+       u_interp%Y(i) = u_interp%PtFairleadDisplacement%TranslationDisp(2,i)  +  u_interp%PtFairleadDisplacement%Position(2,i)  
+       u_interp%Z(i) = u_interp%PtFairleadDisplacement%TranslationDisp(3,i)  +  u_interp%PtFairleadDisplacement%Position(3,i)  
     END DO
 
     ! Now call the _F2C_ routines for the INTENT(IN   ) C objects
-    CALL MAP_F2C_CopyInput       ( u, ErrStat, ErrMsg ) 
+    CALL MAP_F2C_CopyInput       ( u_interp, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C input state conversion error.",ErrMSg)
        RETURN
@@ -676,7 +690,7 @@ CONTAINS
    
     CALL MSQS_UpdateStates( time            , &
                             interval        , & 
-                            u%C_obj         , &
+                            u_interp%C_obj  , &
                             p%C_obj         , &
                             x%C_obj         , &
                             xd%C_obj        , &
@@ -723,6 +737,11 @@ CONTAINS
        RETURN
     END IF
 
+    
+    ! delete the temporary input arrays/meshes 
+    CALL MAP_DestroyInput( u_interp, ErrStat, ErrMsg )      
+    !@Marco: make sure that this is destroyed on early return, above.
+    
   END SUBROUTINE MAP_UpdateStates                                                                !   -------+
   !==========================================================================================================
 
@@ -831,10 +850,10 @@ CONTAINS
     WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
-    DO i = 1,y%PtFairleadLoad(1)%NNodes
-       y%PtFairleadLoad(1)%Force(1,i) = y%FX(i)
-       y%PtFairleadLoad(1)%Force(2,i) = y%FY(i)
-       y%PtFairleadLoad(1)%Force(3,i) = y%FZ(i)
+    DO i = 1,y%PtFairleadLoad%NNodes
+       y%PtFairleadLoad%Force(1,i) = y%FX(i)
+       y%PtFairleadLoad%Force(2,i) = y%FY(i)
+       y%PtFairleadLoad%Force(3,i) = y%FZ(i)
     END DO
 
   END SUBROUTINE MAP_CalcOutput                                                                  !   -------+

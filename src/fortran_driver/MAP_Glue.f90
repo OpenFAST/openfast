@@ -27,7 +27,7 @@ PROGRAM Main
   TYPE (MAP_ConstraintStateType)         :: MAP_ConstraintState
   TYPE (MAP_OtherStateType)              :: MAP_OtherState
 
-  TYPE (MAP_InputType)                   :: MAP_Input
+  TYPE (MAP_InputType),      ALLOCATABLE :: MAP_Input (:)
   REAL(DbKi) , DIMENSION(:), ALLOCATABLE :: MAP_InputTimes
 
   TYPE (MAP_OutputType)                  :: MAP_Output
@@ -52,6 +52,7 @@ PROGRAM Main
   t_global = t_initial  
   
   ! @bonnie : is this right? What's a good interp order?
+  ! @marco: the interp order is specified in the FAST input file. It can be 0, 1, or 2
   MAP_interp_order = 2 
 
   ! MAP: allocate Input and Output arrays; used for interpolation and extrapolation
@@ -59,7 +60,7 @@ PROGRAM Main
   Allocate(MAP_InputTimes(MAP_interp_order + 1)) 
 
   ! @bonnie : This is in the FAST developers glue code example, but it's probably not needed here. 
-  !Allocate(MAP_Input(MAP_interp_order + 1))  
+  Allocate(MAP_Input(MAP_interp_order + 1))  
   !Allocate(MAP_Output(MAP_interp_order + 1)) 
     
   ! set the MAP input file name and other environment terms.
@@ -88,11 +89,19 @@ PROGRAM Main
   DO i = 1, MAP_interp_order + 1  
       MAP_InputTimes(i) = t_initial - (i - 1) * dt_global
       MAP_OutputTimes(i) = t_initial - (i - 1) * dt_global
+      CALL MAP_CopyInput( MAP_Input(1), MAP_Input(i), ErrStat, ErrMsg )
   ENDDO
 
   ! should probably delete this at the end bc save/retrieve will need it
+  !................
+  !@marco, some questions:
+  ! 1) why will save/retrieve need this? Unless you're using the data type later, I don't know why we'd pack the InitInput/Output data.
+  ! 2) I don't want to have to call MAP_InitInput_Destroy in my glue code; I don't want the glue code to act any differently for C or Fortran code.
+  !    Can we call MAP_InitInput_Destroy from MAP_DestroyInitInput?
+  ! 3) Same as (2) for MAP_InitOutput_Destroy.
+  !................
   CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
-  CALL MAP_DestroyInitInput  ( MAP_InitInput , ErrStat, ErrMsg )
+  CALL MAP_DestroyInitInput  ( MAP_InitInput , ErrStat, ErrMsg ) 
 
   CALL MAP_InitOutput_Destroy( MAP_InitOutput%C_obj%object )  
   CALL MAP_DestroyInitOutput ( MAP_InitOutput , ErrStat, ErrMsg )
@@ -104,6 +113,11 @@ PROGRAM Main
   
      MAP_InputTimes(1) = t_global + dt_global
   
+    ! This is artificial; the node position should be updated by the glue code
+    MAP_Input(:)%PtFairleadDisplacement%TranslationDisp(1,1) = -10+.001*n  ! @bonnie : remove: 
+     
+     
+! @marco: how are we setting MAP_Input?
      CALL  MAP_UpdateStates( t_global            , &
                              n_t_global          , &
                              MAP_Input           , &
@@ -120,7 +134,7 @@ PROGRAM Main
     END IF
   
      CALL MAP_CalcOutput( t_global            , &
-                          MAP_Input           , &
+                          MAP_Input(1)        , &
                           MAP_Parameter       , &
                           MAP_ContinuousState , &
                           MAP_DiscreteState   , &
