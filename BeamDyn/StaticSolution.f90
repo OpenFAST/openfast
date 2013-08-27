@@ -16,7 +16,7 @@
        CALL BeamGenerateStaticMatrix(uuN0,uuNf,hhp,w,Jacobian,Stif0,&
                                      &node_elem,dof_node,norder,elem_total,dof_total,node_total,&
                                      &StifK,RHS)
-       CALL AppliedLoad(F_ext,hhp,w,Jacobian,elem_total,dof_total,RHS)
+!       CALL AppliedLoad(F_ext,hhp,w,Jacobian,elem_total,dof_total,RHS)
        CALL Norm(dof_total,RHS,errf)
        IF(errf .LE. TOLF) RETURN
        ui_old = ui
@@ -33,7 +33,7 @@
        errx = temp2
        IF(errx .LT. TOLF*temp1) RETURN
            
-       uf = uf + ui
+       uuNf = uuNf + ui
            
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
