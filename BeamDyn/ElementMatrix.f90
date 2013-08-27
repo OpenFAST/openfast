@@ -1,7 +1,7 @@
-   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,hhp,Stif0,Jac,&
+   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Next,hhp,Stif0,Jac,&
                             &w,node_elem,nelem,norder,dof_node,elk,elf)
 
-   REAL(ReKi),INTENT(IN)::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
+   REAL(ReKi),INTENT(IN)::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
    REAL(ReKi),INTENT(IN)::hhp(:,:),Stif0(:,:,:),Jac
    REAL(ReKi),INTENT(IN)::w(:)
    INTEGER,INTENT(IN)::node_elem,nelem,norder,dof_node
@@ -70,7 +70,7 @@
            temp_id1 = (i-1)*dof_node+j
            DO k=1,6
                temp_id2 = (i-1)*dof_node+k
-               elk(temp_id1,temp_id2) = w(i)*Qe_elem(i,j,k)*Jac
+               elk(temp_id1,temp_id2) = w(i)*Qe_elem(j,k,i)*Jac
            ENDDO
        ENDDO
    ENDDO
@@ -81,8 +81,8 @@
                temp_id1=(i-1)*dof_node+k
                DO m=1,6
                    temp_id2=(i-1)*dof_node+m
-                   elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(i)*Pe_elem(i,k,m)*hhp(j,i)
-                   elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(j)*Oe_elem(j,k,m)*hhp(i,j)
+                   elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(i)*Pe_elem(k,m,i)*hhp(j,i)
+                   elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(j)*Oe_elem(k,m,j)*hhp(i,j)
                ENDDO
            ENDDO
        ENDDO
@@ -95,7 +95,7 @@
                DO m=1,6
                    temp_id2=(j-1)*dof_node+m
                    DO n=1,node_elem
-                       elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(n)*hhp(i,n)*Se_elem(n,k,m)*hhp(j,n)/Jac
+                       elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(n)*hhp(i,n)*Se_elem(k,m,n)*hhp(j,n)/Jac
                    ENDDO
                ENDDO
            ENDDO
@@ -105,12 +105,20 @@
    DO i=1,node_elem
        DO j=1,6
            temp_id1 = (i-1)*dof_node+j
-           elf(temp_id1) = -w(i)*Fd_elem(i,j)*Jac
+           elf(temp_id1) = -w(i)*Fd_elem(j,i)*Jac
+           elf(temp_id1) = elf(temp_id1) + w(i) * Next((i-1)*dof_node+j) * Jac
            DO m=1,node_elem
               elf(temp_id1) = elf(temp_id1)-w(m)*hhp(i,m)*Fc_elem(m,j)
            ENDDO
        ENDDO
    ENDDO
+
+   DEALLOCATE(Fc_elem)
+   DEALLOCATE(Fd_elem)
+   DEALLOCATE(Oe_elem)
+   DEALLOCATE(Pe_elem)
+   DEALLOCATE(Qe_elem)
+   DEALLOCATE(Se_elem)
    
    9999 IF(allo_stat/=0) THEN
             IF(ALLOCATED(Fc_elem)) DEALLOCATE(Fc_elem)
