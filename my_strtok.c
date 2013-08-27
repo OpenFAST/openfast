@@ -27,7 +27,11 @@ my_strtok( char * s1 )
             (*p == '"' || *p == '\'')  ||
             (*p == '^' || *p == '=' )  ||
             (*p == '{' || *p == '}' )  ||
-            (*p == ':' || *p == '}' )  ||
+            (*p == '(' || *p == ')' )  ||
+            (*p == '[' || *p == ']' )  ||
+            (*p == '*' || *p == ' ' )  ||
+            (*p == '\t' || *p == ' ' )  ||
+            (*p == ':' || *p == '_' )  ||
             (*p == '.' || *p == ',' )  ||
             (*p == '/' || *p == '-'))                ) {
       fprintf(stderr,"Registry error: FATAL: Invalid character '%c' (maybe invisible: can happen if you cut-and-paste from a Office doc or PDF)\n",*p) ;
