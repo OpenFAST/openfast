@@ -20,20 +20,8 @@ my_strtok( char * s1 )
   {
 /* check for non-printable characters in input.  this can happen cutting and pasting from a 
    MS office document or PDF */
-    if ( ! (('a' <= *p && *p <= 'z')   ||
-            ('A' <= *p && *p <= 'Z')   ||
-            ('0' <= *p && *p <= '9')   ||
-            (*p == ' ' || *p == '\t')  ||
-            (*p == '"' || *p == '\'')  ||
-            (*p == '^' || *p == '=' )  ||
-            (*p == '{' || *p == '}' )  ||
-            (*p == '(' || *p == ')' )  ||
-            (*p == '[' || *p == ']' )  ||
-            (*p == '*' || *p == ' ' )  ||
-            (*p == '\t' || *p == ' ' )  ||
-            (*p == ':' || *p == '_' )  ||
-            (*p == '.' || *p == ',' )  ||
-            (*p == '/' || *p == '-'))                ) {
+
+   if ( !( (' ' <= *p && *p <= '~') || *p == '\t' ) ) {
       fprintf(stderr,"Registry error: FATAL: Invalid character '%c' (maybe invisible: can happen if you cut-and-paste from a Office doc or PDF)\n",*p) ;
       exit(2) ;
     }
