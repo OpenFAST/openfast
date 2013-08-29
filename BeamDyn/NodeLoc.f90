@@ -2,7 +2,7 @@
                        &xj, norder, elem_total, node_total, blength)
 
    INTEGER(IntKi), INTENT(IN):: norder, node_total,elem_total
-   REAL(ReKi), INTENT(OUT):: dloc(node_total), xj(norder+1)   
+   REAL(ReKi), INTENT(OUT):: dloc(:), xj(:)   
  
    REAL(ReKi), INTENT(IN):: xmin, elem_length, blength
    
