@@ -38,18 +38,21 @@ typedef      ^             ^        IntKi n   - - - "tracks time step for which 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef BeamDyn ParameterType Reki S {:}{:}{:} "beam stiffness constants" -
+typedef BeamDyn ParameterType Reki Stif0 {:}{:}{:} "beam stiffness constants" -
 typedef   ^          ^          ^  M {:}{:}{:} "beam mass constants" -
-typedef   ^          ^        IntKi num_elem - - - "number of elements" -
+typedef   ^          ^        IntKi elem_total - - - "number of elements" -
 typedef   ^          ^          ^   order    - - - "polynomial order of spectral elements"
 typedef   ^          ^          ^   dof_node - - - "dof per node (6)" -
-typedef   ^          ^          ^   num_node - - - "number of nodes" -
-typedef   ^          ^          ^   num_dof  - - - "total dof" -
+typedef   ^          ^          ^   node_total - - - "number of nodes" -
+typedef   ^          ^          ^   dof_total  - - - "total dof" -
+typedef   ^          ^          ^   node_elem  - - - "total dof" -
+typedef   ^          ^          ^   dof_elem  - - - "total dof" -
 typedef   ^          ^        Reki gll_w {:} - - "gauss-legendre-lobatto weights" -
 typedef   ^          ^          ^  gll_p {:} - - "gauss-legendre-lobatto points" -
 typedef   ^          ^          ^  gll_deriv {:}{:} - "gll derivative matrix" -
-typedef   ^          ^          ^  pos {:} - - "reference position vector" -
+typedef   ^          ^          ^  uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^  det_jac {:} - - "determinant of transformation jacobian for element" -
+typedef   ^          ^          ^  bc {:} - - "Boundary condition vector" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
