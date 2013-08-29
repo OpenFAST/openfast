@@ -1,13 +1,13 @@
 ! --------------------------------------------------------------------
-subroutine gen_gll(N,x,w) 
+   SUBROUTINE gen_gll(N,x,w) 
    ! determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
-   implicit none
 
-   double precision tol, x_it, xold, pi
-   integer i, j, k, maxit, N, N1
+   INTEGER,INTENT(IN)::N
+   DOUBLE PRECISION,INTENT(INOUT)::x(:),w(:)
+   
+   DOUBLE PRECISION:: tol, x_it, xold, pi,dleg(N+1)
+   INTEGER:: i, j, k, maxit, N1
       
-   double precision x(N+1),w(N+1),dleg(N+1)
-
    tol = 1d-15
 
    N1 = N+1
@@ -17,38 +17,35 @@ subroutine gen_gll(N,x,w)
    x(1) = -1.d0
    x(N1) = 1.d0
 
-   pi = acos(-1.)
+   DO i = 1, N1
 
-   do i = 1, N+1
+      x_it = -cos(PI * float(i-1) / N) ! initial guess - chebyshev points
 
-      x_it = -cos(pi * float(i-1) / N) ! initial guess - chebyshev points
-
-      do j = 1, maxit 
+      DO j = 1, maxit 
          xold = x_it
          dleg(1) = 1.d0
          dleg(2) = x_it
-         do k = 2,N  
-            dleg(k+1) = (  (2.d0*dfloat(k) - 1.d0) * dleg(k) * x_it &
+         DO k = 2,N  
+             dleg(k+1) = (  (2.d0*dfloat(k) - 1.d0) * dleg(k) * x_it &
                             - (dfloat(k)-1.d0)*dleg(k-1) ) / dfloat(k)
-         enddo
+         ENDDO
 
          x_it = x_it - ( x_it * dleg(N1) - dleg(N) ) / &
                        (dfloat(N1) * dleg(N1) ) 
 
-         if (abs(x_it - xold) .lt. tol) then 
-            exit
-         end if
-      enddo
+         IF(ABS(x_it - xold) .LT. tol) THEN 
+            EXIT
+         ENDIF
+      ENDDO
          
-      if (i==maxit) then
-         print*, 'max itertions reached (gen_gll)'
-      end if
+      IF(i==maxit) THEN
+         PRINT*, 'max itertions reached (gen_gll)'
+      ENDIF
          
       x(i) = x_it
       w(i) = 2.d0 / (dfloat(N * N1) * dleg(N1)**2 )
 
-   enddo
+   ENDDO
 
-   return
-end subroutine gen_gll
+   END SUBROUTINE gen_gll
     
