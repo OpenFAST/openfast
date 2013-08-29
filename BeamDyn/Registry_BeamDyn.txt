@@ -20,7 +20,7 @@ typedef BeamDyn/BDyn InitOutputType Reki DummyInitVar - - - "A variable" -
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef BeamDyn ContinuousStateType ReKi Nu        {:} - -  "nodal displacements and rotations" - 
+typedef BeamDyn ContinuousStateType ReKi uuNf      {:} - -  "nodal displacements and rotations" - 
 typedef      ^         ^             ^   Nv        {:} - -  "nodal linear and angular velocities" -
 
 # Define discrete (nondifferentiable) states here:
@@ -43,15 +43,18 @@ typedef   ^          ^          ^  M {:}{:}{:} "beam mass constants" -
 typedef   ^          ^        IntKi num_elem - - - "number of elements" -
 typedef   ^          ^          ^   order    - - - "polynomial order of spectral elements"
 typedef   ^          ^          ^   dof_node - - - "dof per node (6)" -
+typedef   ^          ^          ^   num_node - - - "number of nodes" -
 typedef   ^          ^          ^   num_dof  - - - "total dof" -
 typedef   ^          ^        Reki gll_w {:} - - "gauss-legendre-lobatto weights" -
 typedef   ^          ^          ^  gll_p {:} - - "gauss-legendre-lobatto points" -
 typedef   ^          ^          ^  gll_deriv {:}{:} - "gll derivative matrix" -
+typedef   ^          ^          ^  pos {:} - - "reference position vector" -
+typedef   ^          ^          ^  det_jac {:} - - "determinant of transformation jacobian for element" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
-BeamDyn/BDyn    OutputType  MeshType  PointMesh - - - "" -
+typedef BeamDyn/BDyn    InputType  MeshType  PointMesh - - - "" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-BeamDyn/BDyn    OutputType  MeshType  PointMesh - - - "" -
+typedef BeamDyn/BDyn    OutputType  MeshType  PointMesh - - - "" -

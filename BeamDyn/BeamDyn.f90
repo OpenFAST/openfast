@@ -68,31 +68,16 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+      !-------------------------------------
       ! local variables
+      !-------------------------------------
 
       INTEGER(IntKi)          :: i                ! do-loop counter
-      INTEGER(IntKi)          :: j                ! do-loop counter
-      INTEGER(IntKi)          :: k                ! do-loop counter
-      INTEGER(IntKi)          :: l                ! do-loop counter
-      INTEGER(IntKi)          :: ilocal           ! counter derived from do-loop counter
-      INTEGER(IntKi)          :: jlocal           ! counter derived from do-loop counter
-
-      REAL(ReKi)              :: dx               ! Constant element size (length)
-      REAL(ReKi)              :: shear_factor     ! shear correction factor
-      REAL(ReKi)              :: moi              ! moment of inertia  (square section)
-
-      REAL(ReKi)              ::  k_w 
-      REAL(ReKi)              ::  k_theta_w 
-      REAL(ReKi)              ::  k_w_theta 
-      REAL(ReKi)              ::  k_theta 
-
-      REAL(ReKi)              ::  TmpPos(3)       ! local variable to hold nodal positions in 3D space; beam lies on x-axis
+      Real(ReKi)              :: xl               ! left most point
+      Real(ReKi)              :: xr               ! right most point
 
       INTEGER(IntKi)          :: ErrStat2     ! Error status of the operation
       CHARACTER(LEN(ErrMsg))   :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
-
-      ! debug variables
-      REAL(ReKi)              ::  total_mass
 
       ! Initialize ErrStat
 
@@ -109,56 +94,26 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%dens     = 7.7e3       ! beam mass per unit length
-      p%A        = 1.0       ! beam cross-section area
-      p%poisson  = 0.3         ! beam Poisson ratio
-      p%E        = 1.95e11     ! beam Young's modulus
+      p%num_elem = 1
+      p%order    = 4
+      p%dof_node = 6
+      p%num_node = p%num_elem * p%order  + 1
+      p%num_dof  = p%num_node * p%dof_node
 
-      p%G        =  p%E / ( 2. * (1. + p%poisson))
+      xl = 0.   ! left most point (on x axis)
+      xr = 10.  ! right most point (on x axis)
 
-      p%dt       = Interval   ! module time step (increment) (s)
-      p%method   = 1          ! integration method:  1 (RK4), 2 (AB4), or 3 (ABM4)
+      ! allocate all allocatable paramete arrays
 
-      p%dof_per_node = 2      ! number of dof per node (2: w and theta)
-
-      ! define mesh; could be moved to input file
-
-      p%num_elem = InitInp%num_elem       ! number of elements spanning length
-      p%order    = InitInp%order          ! polynomial order of the spectral elements
-
-      
-      p%xl       = 0.d0         ! spatial location of left end of beam 
-      p%xr       = 10.d0     ! spatial location of right end of beam 
-
-      p%num_nodes = p%num_elem * p%order + 1
-
-      p%num_dof = p%num_nodes * p%dof_per_node
-
-      shear_factor = (5.d0/6.d0) !* p%E / ( 2. * (1. + p%poisson) )
-
-      moi = p%A**2 / 12.d0   ! assuming square cross section
-
-      Allocate( p%pos(p%num_dof),      STAT=ErrStat )
-
-      Allocate( p%m_diag(p%num_dof),   STAT=ErrStat )
-
-      Allocate( p%stiff(p%dof_per_node*(p%order+1),p%dof_per_node*(p%order+1),p%num_elem),   STAT=ErrStat )
-
-      Allocate( p%det_jac(p%num_elem),     STAT=ErrStat )
-
-      Allocate( p%gll_w(p%order+1),  STAT=ErrStat )
-
-      Allocate( p%gll_p(p%order+1),  STAT=ErrStat )
-
-      Allocate( p%gll_deriv(p%order+1,p%order+1),  STAT=ErrStat )
-
-      Allocate( p%bc(p%num_dof),   STAT=ErrStat )
-
-      Allocate( x%q(p%num_dof),    STAT=ErrStat )
-
-      Allocate( x%dqdt(p%num_dof), STAT=ErrStat )
-
+      Allocate( p%S(6,6,p%num_node),      STAT=ErrStat )
+      !Allocate( p%M(6,6,p%num_node),      STAT=ErrStat )
        
+      Allocate( p%gll_w(p%order+1),      STAT=ErrStat )
+      Allocate( p%gll_p(p%order+1),      STAT=ErrStat )
+      Allocate( p%gll_deriv(p%order+1,p%order+1),      STAT=ErrStat )
+
+      Allocate( p%pos(p%num_node*6),      STAT=ErrStat )
+
       ! Check parameters for validity (general case) 
                
 !     IF ( EqualRealNos( p%mu, 0.0_ReKi ) ) THEN
@@ -167,37 +122,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !        RETURN
 !     END IF
 
-      IF ( p%method .ne. 1) then
-        IF ( p%method .ne. 2) then
-          IF ( p%method .ne. 3) then
-             ErrStat = ErrID_Fatal
-             ErrMsg  = ' Error in BeamDyn: integration method must be 1 (RK4), 2 (AB4), or 3 (ABM4)'
-             RETURN
-          END IF
-        END IF
-      END IF
-
       ! Allocate OtherState if using multi-step method; initialize n
-
-      if ( p%method .eq. 2) then       
-
-         Allocate( OtherState%xdot(4), STAT=ErrStat )
-         IF (ErrStat /= 0) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' Error in BeamDyn: could not allocate OtherStat%xdot.'
-            RETURN
-         END IF
-
-      elseif ( p%method .eq. 3) then       
-
-         Allocate( OtherState%xdot(4), STAT=ErrStat )
-         IF (ErrStat /= 0) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' Error in BeamDyn: could not allocate OtherStat%xdot.'
-            RETURN
-         END IF
-
-      endif
 
       ! Calculate general spectral element stuff specific to "order"
 
@@ -236,94 +161,10 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       enddo
 
-
-      ! initialize diagonal global mass matrix
- 
-      do i = 1, p%num_dof
-         p%m_diag(i) = 0.
-      enddo
-
-      ! calculate diagonal global mass matrix
-
-      do i = 1, p%num_elem
-
-         ilocal = p%dof_per_node * p%order * (i-1) + 1
-
-         do j = 1, (p%order+1)
-
-            jlocal = ilocal + p%dof_per_node * (j-1) 
-
-            p%m_diag(jlocal)   = p%m_diag(jlocal)   + p%det_jac(i) * p%gll_w(j) * p%dens * p%A
-
-            p%m_diag(jlocal+1) = p%m_diag(jlocal+1) + p%det_jac(i) * p%gll_w(j) * p%dens * moi
-
-            if ( (jlocal+1) .gt. p%num_dof) stop 'problem in Init'
-
-         enddo
-
-      enddo
-
-      ! check total mass
-
-      total_mass = 0.
-      do i = 1, p%num_dof, 2
-         total_mass = total_mass + p%m_diag(i)
-      enddo
-
-      write(*,*) 'total mass error'
-      write(*,*) total_mass - p%A * p%dens * (p%xr - p%xl)
-
-      ! calculate element-level stiffness matrices
-
-      do k = 1, p%num_elem
-         do j = 1, (p%order+1)
-            do i = 1, (p%order+1)
-
-               k_theta   = 0.
-               k_theta_w = 0.
-               k_w_theta = 0.
-               k_w       = 0.
-
-               do l = 1, (p%order+1)
-
-                  k_theta = k_theta + p%E * moi * p%gll_deriv(i,l) * p%gll_deriv(j,l) * p%gll_w(l) / p%det_jac(k) 
-
-                  if (i .eq. j .and. i .eq. l) then
-                      k_theta = k_theta + shear_factor * p%A * p%G * p%gll_w(l) * p%det_jac(k)
-                  endif
-
-                  if (i .eq. l) then
-                     k_theta_w = k_theta_w + shear_factor * p%A * p%G * p%gll_deriv(j,l) * p%gll_w(l)
-                  endif
-
-                  if (j .eq. l) then
-                     k_w_theta = k_w_theta + shear_factor * p%A * p%G * p%gll_deriv(i,l) * p%gll_w(l)
-                  endif
-
-                  k_w = k_w + shear_factor * p%A * p%G * p%gll_deriv(i,l) * p%gll_deriv(j,l) * p%gll_w(l)/ p%det_jac(k)
-
-               enddo
-
-               ilocal = 1 + p%dof_per_node * ( i - 1)
-               jlocal = 1 + p%dof_per_node * ( j - 1)
-
-               p%stiff(ilocal,jlocal,k)     = k_w
-
-               p%stiff(ilocal+1,jlocal,k)   = k_theta_w
-
-               p%stiff(ilocal,jlocal+1,k)   = k_w_theta
-
-               p%stiff(ilocal+1,jlocal+1,k) = k_theta
-
-            enddo
-         enddo
-      enddo
-
       ! Define initial system states here:
 
       do i = 1, p%num_dof
          x%q(i)     = 0.   ! displacement w, rotation theta
-         x%dqdt(i)  = 0.   ! dwdt, d theta / dt
       enddo
 
       p%verif = InitInp%verif
@@ -346,144 +187,72 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define system output initializations (set up mesh) here:
 
-      CALL MeshCreate( BlankMesh      = u%PointMesh        &
-                      ,IOS            = COMPONENT_INPUT        &
-                      ,NNodes         = p%num_nodes            &
-                      ,Force          = .TRUE.                 &
-                      ,Moment         = .TRUE.                 &
-                      ,nScalars       = 0                      &
-                      ,ErrStat        = ErrStat2               &
-                      ,ErrMess        = ErrMsg2                 )
+!     CALL MeshCreate( BlankMesh      = u%PointMesh        &
+!                     ,IOS            = COMPONENT_INPUT        &
+!                     ,NNodes         = p%num_nodes            &
+!                     ,Force          = .TRUE.                 &
+!                     ,Moment         = .TRUE.                 &
+!                     ,nScalars       = 0                      &
+!                     ,ErrStat        = ErrStat2               &
+!                     ,ErrMess        = ErrMsg2                 )
 
-      CALL MeshCreate( BlankMesh      = u%Line2Mesh                &
-                      ,IOS            = COMPONENT_INPUT           &
-                      ,NNodes         = p%num_nodes                 &
-                      ,Force          = .TRUE.              &
-                      ,Moment         = .TRUE.              &
-                      ,nScalars       = 0                        &
-                      ,ErrStat        = ErrStat2                 &
-                      ,ErrMess        = ErrMsg2                 )
+!     CALL MeshCreate( BlankMesh      = u%Line2Mesh                &
+!                     ,IOS            = COMPONENT_INPUT           &
+!                     ,NNodes         = p%num_nodes                 &
+!                     ,Force          = .TRUE.              &
+!                     ,Moment         = .TRUE.              &
+!                     ,nScalars       = 0                        &
+!                     ,ErrStat        = ErrStat2                 &
+!                     ,ErrMess        = ErrMsg2                 )
 
-      do i = 1, p%num_nodes
+!     do i = 1, p%num_nodes
 
-         CALL MeshConstructElement ( Mesh = u%PointMesh            &
-                                    ,Xelement = ELEMENT_POINT      &
-                                    ,P1       = I                  &
-                                    ,ErrStat  = ErrStat2           &
-                                    ,ErrMess  = ErrMsg2             )
+!        CALL MeshConstructElement ( Mesh = u%PointMesh            &
+!                                   ,Xelement = ELEMENT_POINT      &
+!                                   ,P1       = I                  &
+!                                   ,ErrStat  = ErrStat2           &
+!                                   ,ErrMess  = ErrMsg2             )
 
-      enddo
+!     enddo
 
-      do i = 1, p%num_nodes - 1
+!     do i = 1,p%num_nodes 
 
-         CALL MeshConstructElement ( Mesh = u%Line2Mesh            &
-                                    ,Xelement = ELEMENT_LINE2     &
-                                    ,P1       = I                  &
-                                    ,P2       = I+1                &
-                                    ,ErrStat  = ErrStat2           &
-                                    ,ErrMess  = ErrMsg2             )
+!        TmpPos(1) = p%pos(i)
+!        TmpPos(2) = 0.
+!        TmpPos(3) = 0.
 
-      enddo
+!        CALL MeshPositionNode ( Mesh = u%PointMesh             &
+!                               ,INode = i                          &
+!                               ,Pos = TmpPos                       &
+!                               ,ErrStat   = ErrStat2               &
+!                               ,ErrMess   = ErrMsg2                )
 
-      do i = 1,p%num_nodes 
-
-         TmpPos(1) = p%pos(i)
-         TmpPos(2) = 0.
-         TmpPos(3) = 0.
-
-         CALL MeshPositionNode ( Mesh = u%PointMesh             &
-                                ,INode = i                          &
-                                ,Pos = TmpPos                       &
-                                ,ErrStat   = ErrStat2               &
-                                ,ErrMess   = ErrMsg2                )
-
-         CALL MeshPositionNode ( Mesh = u%Line2Mesh              &
-                                ,INode = i                          &
-                                ,Pos = TmpPos                     &
-                                ,ErrStat   = ErrStat2               &
-                                ,ErrMess   = ErrMsg2                )
-
-      enddo
+!     enddo
 
        
-      CALL MeshCommit ( Mesh    = u%PointMesh        &
-                       ,ErrStat = ErrStat2           &
-                       ,ErrMess = ErrMsg2            )
+!     CALL MeshCommit ( Mesh    = u%PointMesh        &
+!                      ,ErrStat = ErrStat2           &
+!                      ,ErrMess = ErrMsg2            )
 
-      CALL MeshCommit ( Mesh = u%Line2Mesh            &
-                       ,ErrStat  = ErrStat2          &
-                       ,ErrMess   = ErrMsg2          )
+!     CALL MeshCommit ( Mesh = u%Line2Mesh            &
+!                      ,ErrStat  = ErrStat2          &
+!                      ,ErrMess   = ErrMsg2          )
 
-      CALL MeshCopy ( SrcMesh  = u%Line2Mesh          &
-                    , DestMesh = y%Line2Mesh          &
-                    , CtrlCode = MESH_SIBLING        &
-                    , TranslationDisp = .TRUE.       &
-                    , Orientation     = .TRUE.       &
-                    , TranslationVel  = .TRUE.       &
-                    , RotationVel     = .TRUE.       &
-                    , ErrStat  = ErrStat2            &
-                    , ErrMess  = ErrMsg2             )
+!     CALL MeshCopy ( SrcMesh  = u%Line2Mesh          &
+!                   , DestMesh = y%Line2Mesh          &
+!                   , CtrlCode = MESH_SIBLING        &
+!                   , TranslationDisp = .TRUE.       &
+!                   , Orientation     = .TRUE.       &
+!                   , TranslationVel  = .TRUE.       &
+!                   , RotationVel     = .TRUE.       &
+!                   , ErrStat  = ErrStat2            &
+!                   , ErrMess  = ErrMsg2             )
 
-
-       write(*,*) 'position info'
-       write(*,*) u%Line2Mesh%Position(:,1)
-       write(*,*) u%Line2Mesh%Position(:,2)
-       write(*,*) u%Line2Mesh%Position(:,3)
-
-       write(*,*) u%Line2Mesh%ElemTable(ELEMENT_LINE2)%nelem
-
-       write(*,*) u%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(2)%ElemNodes(:)
-
-       ! Iniitalize
-
-       do i = 1, u%PointMesh%ElemTable(ELEMENT_POINT)%nelem
-          j = u%PointMesh%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
-          !x1 = u%PointMesh%Position(1,j)
-          u%PointMesh%Force(:,j) = 0.
-          u%PointMesh%Moment(:,j) = 0.
-       enddo
-       do i = 1, u%Line2Mesh%ElemTable(ELEMENT_LINE2)%nelem
-          j = u%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
-          k = u%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
-          !x1 = u%Line2Mesh%Position(1,j)
-          !x2 = u%Line2Mesh%Position(1,k)
-          u%Line2Mesh%Force(:,j) = 0.
-          u%Line2Mesh%Force(:,k) = 0.
-          u%Line2Mesh%Moment(:,j) = 0.
-          u%Line2Mesh%Moment(:,k) = 0.
-       enddo
-       do i = 1, y%Line2Mesh%ElemTable(ELEMENT_LINE2)%nelem
-          j = y%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
-          k = y%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
-          !x1 = u%Line2Mesh%Position(1,j)
-          !x2 = u%Line2Mesh%Position(1,k)
-          y%Line2Mesh%TranslationDisp(:,j) = 0.
-          y%Line2Mesh%TranslationDisp(:,k) = 0.
-          y%Line2Mesh%TranslationVel(:,j) = 0.
-          y%Line2Mesh%TranslationVel(:,k) = 0.
-          y%Line2Mesh%Orientation(:,:,k) = 0.
-          y%Line2Mesh%Orientation(:,:,j) = 0.
-          y%Line2Mesh%RotationVel(:,k) = 0.
-          y%Line2Mesh%RotationVel(:,j) = 0.
-       enddo
-
-       do i = 1, u%Line2Mesh%ElemTable(ELEMENT_LINE2)%nelem
-
-          j = u%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
-
-          k = u%Line2Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
-
-          write(*,*) i, u%Line2Mesh%Position(1,j), u%Line2Mesh%Position(1,k)
-
-       enddo
-
-      !write(*,*) u%Line2Mesh%Element_Line2(:,1) 
 
       ! set remap flags to true
-      y%Line2Mesh%RemapFlag = .True.
-      u%PointMesh%RemapFlag = .True.
-      u%Line2Mesh%RemapFlag = .True.
-
+      !y%Line2Mesh%RemapFlag = .True.
+      !u%PointMesh%RemapFlag = .True.
+      !u%Line2Mesh%RemapFlag = .True.
 
 END SUBROUTINE BDyn_Init
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -567,19 +336,9 @@ SUBROUTINE BDyn_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       ErrStat = ErrID_None
       ErrMsg  = "" 
 
-
-      if (p%method .eq. 1) then
-
-         CALL BDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-
-      else
-
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in BDyn_UpdateStates: p%method must be 1 (RK4), 2 (AB4), or 3 (ABM4)'
-         RETURN
-
-      endif
-
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
+      RETURN
 
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -613,39 +372,10 @@ SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ErrStat = ErrID_None
       ErrMsg  = "" 
 
-      do i = 1, p%num_nodes
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
+      RETURN
 
-         ilocal = p%dof_per_node * (i - 1) + 1
-
-         ! Displacement
-         ! For this simple planar-deformation beam model, there is only translational disp/vel/acc in y direction
-         tmp_vector(1) = 0.
-         tmp_vector(2) = x%q(ilocal)
-         tmp_vector(3) = 0.
-
-         y%Line2Mesh%TranslationDisp(:,i) = tmp_vector
-
-         ! initialize Orientaiton to zero
-         y%Line2Mesh%Orientation(:,:,i) = 0.
-
-         ! Direction Cosine Matrix, aka Orientation
-         ! For this simple planar-deformation beam model, there is only rotation about z axis
-         y%Line2Mesh%Orientation(1,1,i) = 1.
-         y%Line2Mesh%Orientation(2,2,i) = 1.
-         y%Line2Mesh%Orientation(3,3,i) = Cos(x%q(ilocal+1))
-
-         ! Translation velocity
-         tmp_vector(1) = 0.
-         tmp_vector(2) = x%dqdt(ilocal)
-         tmp_vector(3) = 0.
-
-         y%Line2Mesh%TranslationVel(:,i) = tmp_vector
-
-         tmp_vector(1) = 0.
-         tmp_vector(2) = 0.
-         tmp_vector(3) = x%dqdt(ilocal+1)
-
-         y%Line2Mesh%RotationVel(:,i) = tmp_vector
 
       enddo
 
@@ -683,79 +413,10 @@ SUBROUTINE BDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat
 
       ! Compute the first time derivatives of the continuous states here:
 
-      ! initialize RHS
-      do i = 1, p%num_dof
-         xdot%q(i) = 0.
-         xdot%dqdt(i) = 0.
-      enddo
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in BDyn_CalcContStateDeriv: THERE IS NOTHING HERE '
+      RETURN
 
-      do k = 1, p%num_elem
-
-         klocal = p%dof_per_node *  p%order * (k-1) + 1  ! dof number on leftmost element node
-
-         do j = 1, (p%order + 1) * p%dof_per_node
-
-            !jlocal = klocal + p%dof_per_node * (j-1) 
-            jlocal = klocal + j - 1 
-
-            do i = 1, (p%order + 1) * p%dof_per_node
-
-               !ilocal = klocal + p%dof_per_node * (i-1)
-               ilocal = klocal + i - 1
-
-               xdot%dqdt(ilocal) = xdot%dqdt(ilocal) - x%q(jlocal) * p%stiff(i,j,k) * p%bc(jlocal)
-
-            enddo
-
-         enddo
-      enddo
-
-      ! enter point forces
-
-      do i = 1, p%num_nodes
-
-         !ilocal = p%dof_per_node *  p%order * (i-1) + 1  ! dof number 
-         ilocal = p%dof_per_node * (i-1) + 1
-
-         xdot%dqdt(ilocal)   = xdot%dqdt(ilocal)   + u%PointMesh%Force(2,i) 
-
-         xdot%dqdt(ilocal+1) = xdot%dqdt(ilocal+1) + u%PointMesh%Moment(3,i)
-
-         ! The following is for the addition of a spring
-         !if (i.eq.18) then
-         !  write(68,*) t, x%q(ilocal), xdot%dqdt(ilocal)
-         !  xdot%dqdt(ilocal)   = xdot%dqdt(ilocal) - x%q(ilocal) * 1.0d10
-         !endif
-
-      enddo
-
-      ! Integrate over line forces; uses nodal quadrature
-      do k = 1, p%num_elem
-
-         nlocal = p%order * (k-1) + 1  ! node number of leftmost element node
-
-         klocal = p%dof_per_node *  p%order * (k-1) + 1  ! dof number on leftmost element node
-
-         do j = 1, (p%order + 1) 
-
-            jlocal = klocal + p%dof_per_node * (j-1) 
-
-            xdot%dqdt(jlocal)   = xdot%dqdt(jlocal)   + u%Line2Mesh%Force(2,nlocal + j - 1)  * p%gll_w(j) * p%det_jac(k)
-
-            xdot%dqdt(jlocal+1) = xdot%dqdt(jlocal+1) + u%Line2Mesh%Moment(3,nlocal + j - 1) * p%gll_w(j) * p%det_jac(k)
-
-         enddo
-      enddo
-
-      do i = 1, p%num_dof
-         xdot%q(i)    =  x%dqdt(i)    * p%bc(i)
-         xdot%dqdt(i) =  xdot%dqdt(i) * p%bc(i)
-      enddo
-
-      ! multiply RHS by inverse of diagonal mass matrix
-      do i = 1, p%num_dof
-         xdot%dqdt(i) = xdot%dqdt(i) / p%m_diag(i)
-      enddo
 
 END SUBROUTINE BDyn_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -816,163 +477,6 @@ SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residu
       Z_residual%DummyConstrState = 0
 
 END SUBROUTINE BDyn_CalcConstrStateResidual
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!   Define constants k1, k2, k3, and k4 as 
-!        k1 = dt * f(t        , x_t        )
-!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-!        k4 = dt * f(t + dt   , x_t + k3   ).
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-!
-! For details, see:
-! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
-!   Cambridge University Press, pp. 704-716, 1992.
-!
-!..................................................................................................................................
-
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                   INTENT(IN   )  :: n           ! time step number
-      TYPE(BDyn_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                       INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-      ! local variables
-         
-      TYPE(BDyn_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
-      TYPE(BDyn_ContinuousStateType)                 :: k1          ! RK4 constant; see above
-      TYPE(BDyn_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
-      TYPE(BDyn_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
-      TYPE(BDyn_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
-      TYPE(BDyn_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-      TYPE(BDyn_InputType)                           :: u_interp    ! interpolated value of inputs 
-
-      INTEGER(IntKi)   :: nq
-      !INTEGER(IntKi)   :: nu
-
-      ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
-
-      CALL MeshCopy ( SrcMesh  = u(1)%PointMesh      &
-                    , DestMesh = u_interp%PointMesh  &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , ErrStat  = ErrStat             &
-                    , ErrMess  = ErrMsg               )
-
-      CALL MeshCopy ( SrcMesh  = u(1)%Line2Mesh      &
-                    , DestMesh = u_interp%Line2Mesh  &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , ErrStat  = ErrStat             &
-                    , ErrMess  = ErrMsg               )
-
-      nq    = size(x%q)
-
-      if (nq .ne. p%num_dof) stop 'nq not right!'
-
-      Allocate( xdot%q(nq),      STAT=ErrStat )
-      Allocate( xdot%dqdt(nq),      STAT=ErrStat )
-
-      Allocate( k1%q(nq),      STAT=ErrStat )
-      Allocate( k1%dqdt(nq),      STAT=ErrStat )
-
-      Allocate( k2%q(nq),      STAT=ErrStat )
-      Allocate( k2%dqdt(nq),      STAT=ErrStat )
-
-      Allocate( k3%q(nq),      STAT=ErrStat )
-      Allocate( k3%dqdt(nq),      STAT=ErrStat )
-
-      Allocate( k4%q(nq),      STAT=ErrStat )
-      Allocate( k4%dqdt(nq),      STAT=ErrStat )
-
-      Allocate( x_tmp%q(nq),      STAT=ErrStat )
-      Allocate( x_tmp%dqdt(nq),      STAT=ErrStat )
-
-      ! interpolate u to find u_interp = u(t)
-      CALL BDyn_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
-
-      ! find xdot at t
-      CALL BDyn_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
-
-      k1%q    = p%dt * xdot%q
-      k1%dqdt = p%dt * xdot%dqdt
-  
-      x_tmp%q    = x%q    + 0.5 * k1%q
-      x_tmp%dqdt = x%dqdt + 0.5 * k1%dqdt
-
-      ! interpolate u to find u_interp = u(t + dt/2)
-      CALL BDyn_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
-
-      ! find xdot at t + dt/2
-      CALL BDyn_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
-
-      k2%q    = p%dt * xdot%q
-      k2%dqdt = p%dt * xdot%dqdt
-
-      x_tmp%q    = x%q    + 0.5 * k2%q
-      x_tmp%dqdt = x%dqdt + 0.5 * k2%dqdt
-
-      ! find xdot at t + dt/2
-      CALL BDyn_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
-
-      k3%q    = p%dt * xdot%q
-      k3%dqdt = p%dt * xdot%dqdt
-
-      x_tmp%q    = x%q    + k3%q
-      x_tmp%dqdt = x%dqdt + k3%dqdt
-
-      ! interpolate u to find u_interp = u(t + dt)
-      CALL BDyn_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
-
-      ! find xdot at t + dt
-      CALL BDyn_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
-
-      k4%q    = p%dt * xdot%q
-      k4%dqdt = p%dt * xdot%dqdt
-
-      x%q    = x%q    +  ( k1%q    + 2. * k2%q    + 2. * k3%q    + k4%q    ) / 6.      
-      x%dqdt = x%dqdt +  ( k1%dqdt + 2. * k2%dqdt + 2. * k3%dqdt + k4%dqdt ) / 6.      
-
-      CALL MeshDestroy ( u_interp%PointMesh       &
-                       , ErrStat  = ErrStat         &
-                       , ErrMess  = ErrMsg           )
-
-      CALL MeshDestroy ( u_interp%Line2Mesh       &
-                       , ErrStat  = ErrStat         &
-                       , ErrMess  = ErrMsg           )
-
-      deAllocate( xdot%q)
-      deAllocate( xdot%dqdt)
-
-      deAllocate( k1%q)
-      deAllocate( k1%dqdt)
-
-      deAllocate( k2%q)
-      deAllocate( k2%dqdt)
-
-      deAllocate( k3%q)
-      deAllocate( k3%dqdt)
-
-      deAllocate( k4%q)
-      deAllocate( k4%dqdt)
-
-      deAllocate( x_tmp%q)
-      deAllocate( x_tmp%dqdt)
-
-END SUBROUTINE BDyn_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine BDyn_gen_gll(N, x, w, ErrStat, ErrMsg)
