@@ -75,6 +75,9 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       INTEGER(IntKi)          :: i                ! do-loop counter
       Real(ReKi)              :: xl               ! left most point
       Real(ReKi)              :: xr               ! right most point
+      REAL(ReKi)              :: blength          !beam length: xr - xl
+      REAL(ReKi)              :: elem_length      !element length: blength/elem_total
+      REAL(ReKi),ALLOCATABLE  :: dloc(:)
 
       INTEGER(IntKi)          :: ErrStat2     ! Error status of the operation
       CHARACTER(LEN(ErrMsg))   :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
@@ -94,26 +97,39 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%num_elem = 1
+      p%elem_total = 1
       p%order    = 4
       p%dof_node = 6
-      p%num_node = p%num_elem * p%order  + 1
-      p%num_dof  = p%num_node * p%dof_node
+      p%node_total = p%elem_total * p%order  + 1
+      p%dof_total  = p%node_total * p%dof_node
+      p%node_elem  = p%order + 1
+      p%dof_elem   = p%node_elem * p%node_elem
 
       xl = 0.   ! left most point (on x axis)
       xr = 10.  ! right most point (on x axis)
+      blength = xr - xl
+      elem_length = blength / p%elem_total
 
       ! allocate all allocatable paramete arrays
 
-      Allocate( p%S(6,6,p%num_node),      STAT=ErrStat )
+      ALLOCATE( p%Stif0(6,6,p%node_total),      STAT=ErrStat )
+      p%Stif0 = 0.0D0
       !Allocate( p%M(6,6,p%num_node),      STAT=ErrStat )
        
-      Allocate( p%gll_w(p%order+1),      STAT=ErrStat )
-      Allocate( p%gll_p(p%order+1),      STAT=ErrStat )
-      Allocate( p%gll_deriv(p%order+1,p%order+1),      STAT=ErrStat )
-
-      Allocate( p%pos(p%num_node*6),      STAT=ErrStat )
-
+      ALLOCATE( p%gll_w(p%node_elem),      STAT=ErrStat )
+      p%gll_w = 0.0D0
+      ALLOCATE( p%gll_p(p%node_elem),      STAT=ErrStat )
+      p%gll_p = 0.0D0
+      ALLOCATE( p%gll_deriv(p%node_elem,p%node_elem),      STAT=ErrStat )
+      p%gll_deriv = 0.0D0
+      ALLOCATE( p%uuN0(p%dof_total),      STAT=ErrStat )
+      p%uuN0 = 0.0D0
+      ALLOCATE( p%uuNf(p%dof_total), STAT = ErrStat)
+      p%uuNf = 0.0D0
+      ALLOCATE( p%bc(dof_total), STAT = ErrStat)
+      p%bc = 0.0D0
+      ALLOCATE( dloc(p%node_total), STAT = ErrStat)
+      dloc = 0.0D0
       ! Check parameters for validity (general case) 
                
 !     IF ( EqualRealNos( p%mu, 0.0_ReKi ) ) THEN
@@ -130,129 +146,35 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       CALL BDyn_gen_deriv(p%order, p%gll_p, p%gll_deriv, ErrStat, ErrMsg)
 
-      p%pos(1) = p%xl
+      CALL NodeLoc(dloc,xl,elem_length,p%gll_p,order,elem_total,node_total,blength)
 
-      dx = (p%xr - p%xl) / p%num_elem ! constant element size; could be variable
+      DO i=1,p%node_total
+          p%uuN0((i-1)*p%dof_node + i) = dloc(i)
+          p%Stif0(1,1,i) = 70.0D+09
+          p%Stif0(2,2,i) = 70.0D+09
+          p%Stif0(3,3,i) = 70.0D+09
+          p%Stif0(4,4,i) = 70.0D+09
+          p%Stif0(5,5,i) = 5.833D+09
+          p%Stif0(6,6,i) = 5.833D+09
+      ENDDO
+      DEALLOCATE(dloc)
 
-      ! start with end points of "base" mesh
-      do i = 1, p%num_elem
+      DO i = 1, p%elem_total
 
-        ilocal = i * p%order + 1
+        p%det_jac(i) = elem_length / 2.   ! element-specific determinant of jacobian of transformation
 
-        p%pos(ilocal) = p%pos(1) + dx * i  ! base-mesh node locations
-   
-        p%det_jac(i) = dx / 2.   ! element-specific determinant of jacobian of transformation
-
-      enddo     
-
-      ! fill base mesh with internal nodes
-
-      do i = 1, p%num_elem
-
-         ilocal = (i-1) * p%order + 1   ! leftmost node of element i
-
-         do j = 2, p%order 
-
-            jlocal = ilocal + j - 1
-
-            p%pos(jlocal) = p%pos(ilocal) + (1. + p%gll_p(j) ) * p%det_jac(i) 
- 
-         enddo
-
-      enddo
-
-      ! Define initial system states here:
-
-      do i = 1, p%num_dof
-         x%q(i)     = 0.   ! displacement w, rotation theta
-      enddo
-
-      p%verif = InitInp%verif
+      ENDDO     
 
       ! Define boundary conditions (0->fixed, 1->free)
-
-      do i = 1, p%num_dof
-         p%bc(i)   = 1
-      enddo
-
-      ! fix left end for a clamped beam
-      p%bc(1) = 0   ! w_1     = 0
-      p%bc(2) = 0   ! theta_1 = 0
-
-      ! fix right end for a clamped beam
-      p%bc(p%num_dof-1) = 0   ! w_n     = 0
-      p%bc(p%num_dof)   = 0   ! theta_n = 0
+      p%bc = 1.0D0
+      DO i=1, dof_node
+          p%bc(i) = 0.0D0
+      ENDDO ! fix left end for a clamped beam 
 
       ! Define initial guess for the system inputs here:
 
       ! Define system output initializations (set up mesh) here:
 
-!     CALL MeshCreate( BlankMesh      = u%PointMesh        &
-!                     ,IOS            = COMPONENT_INPUT        &
-!                     ,NNodes         = p%num_nodes            &
-!                     ,Force          = .TRUE.                 &
-!                     ,Moment         = .TRUE.                 &
-!                     ,nScalars       = 0                      &
-!                     ,ErrStat        = ErrStat2               &
-!                     ,ErrMess        = ErrMsg2                 )
-
-!     CALL MeshCreate( BlankMesh      = u%Line2Mesh                &
-!                     ,IOS            = COMPONENT_INPUT           &
-!                     ,NNodes         = p%num_nodes                 &
-!                     ,Force          = .TRUE.              &
-!                     ,Moment         = .TRUE.              &
-!                     ,nScalars       = 0                        &
-!                     ,ErrStat        = ErrStat2                 &
-!                     ,ErrMess        = ErrMsg2                 )
-
-!     do i = 1, p%num_nodes
-
-!        CALL MeshConstructElement ( Mesh = u%PointMesh            &
-!                                   ,Xelement = ELEMENT_POINT      &
-!                                   ,P1       = I                  &
-!                                   ,ErrStat  = ErrStat2           &
-!                                   ,ErrMess  = ErrMsg2             )
-
-!     enddo
-
-!     do i = 1,p%num_nodes 
-
-!        TmpPos(1) = p%pos(i)
-!        TmpPos(2) = 0.
-!        TmpPos(3) = 0.
-
-!        CALL MeshPositionNode ( Mesh = u%PointMesh             &
-!                               ,INode = i                          &
-!                               ,Pos = TmpPos                       &
-!                               ,ErrStat   = ErrStat2               &
-!                               ,ErrMess   = ErrMsg2                )
-
-!     enddo
-
-       
-!     CALL MeshCommit ( Mesh    = u%PointMesh        &
-!                      ,ErrStat = ErrStat2           &
-!                      ,ErrMess = ErrMsg2            )
-
-!     CALL MeshCommit ( Mesh = u%Line2Mesh            &
-!                      ,ErrStat  = ErrStat2          &
-!                      ,ErrMess   = ErrMsg2          )
-
-!     CALL MeshCopy ( SrcMesh  = u%Line2Mesh          &
-!                   , DestMesh = y%Line2Mesh          &
-!                   , CtrlCode = MESH_SIBLING        &
-!                   , TranslationDisp = .TRUE.       &
-!                   , Orientation     = .TRUE.       &
-!                   , TranslationVel  = .TRUE.       &
-!                   , RotationVel     = .TRUE.       &
-!                   , ErrStat  = ErrStat2            &
-!                   , ErrMess  = ErrMsg2             )
-
-
-      ! set remap flags to true
-      !y%Line2Mesh%RemapFlag = .True.
-      !u%PointMesh%RemapFlag = .True.
-      !u%Line2Mesh%RemapFlag = .True.
 
 END SUBROUTINE BDyn_Init
 !----------------------------------------------------------------------------------------------------------------------------------
