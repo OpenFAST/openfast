@@ -33,10 +33,7 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: ErrStat          ! Error status of the operation
    CHARACTER(1024)                    :: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
-   REAL(DbKi)                         :: dt_global        ! fixed/constant global time step
-   REAL(DbKi)                         :: t_initial        ! time at initialization
-   REAL(DbKi)                         :: t_final          ! time at simulation end 
-   REAL(DbKi)                         :: t_global         ! global-loop time marker
+   REAL(DbKi)                         :: dt_global_dummy  ! fixed/constant global time step
 
    INTEGER(IntKi)                     :: n_t_final        ! total number of time steps
    INTEGER(IntKi)                     :: n_t_global       ! global-loop time counter
@@ -63,66 +60,16 @@ PROGRAM MAIN
    TYPE(BDyn_OutputType),Dimension(:),Allocatable  :: BDyn_Output
    REAL(DbKi) , DIMENSION(:), ALLOCATABLE          :: BDyn_OutputTimes
 
-   TYPE(BDyn_InputType)   :: u1    ! local variable for extrapolated inputs
-   TYPE(BDyn_OutputType)  :: y1    ! local variable for extrapolated outputs
-
-   ! Module 1 deived data typed needed in pc-coupling; predicted states
-
-   TYPE(BDyn_ContinuousStateType)     :: BDyn_ContinuousState_pred
-   TYPE(BDyn_DiscreteStateType)       :: BDyn_DiscreteState_pred
-   TYPE(BDyn_ConstraintStateType)     :: BDyn_ConstraintState_pred
-
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
-
-   REAL(DbKi)                         :: exact           ! exact solution
-   REAL(DbKi)                         :: rms_error       ! rms error
-   REAL(DbKi)                         :: rms_error_norm  ! rms error normalization
-
-   Integer(IntKi)                     :: num_dof
-
-
-
-   ! -------------------------------------------------------------------------
-   ! Delete following
-   Integer(IntKi)                     :: CtrlCode
-   Integer(IntKi)                     :: Ielement
-   Integer(IntKi)                     :: Xelement
 
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
 
-   t_initial = 0.d0
-   t_final   = 0.04d0
-
-   pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
-               ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
-               ! are available to modules that have an implicit dependence on other-module data
-
-   ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 1d-5
-
-   n_t_final = ((t_final - t_initial) / dt_global )
-
-   t_global = t_initial
-
-   ! initialize rms-error quantities
-   rms_error      = 0.
-   rms_error_norm = 0.
-
-   ! define polynomial-order for ModName_Input_ExtrapInterp and ModName_Output_ExtrapInterp
-   ! Must be 0, 1, or 2
-   BDyn_interp_order = 0 
-
-   !BeamDyn: allocate Input and Output arrays; used for interpolation and extrapolation
-   Allocate(BDyn_Input(BDyn_interp_order + 1)) 
-   Allocate(BDyn_InputTimes(BDyn_interp_order + 1)) 
-
-   Allocate(BDyn_Output(BDyn_interp_order + 1)) 
-   Allocate(BDyn_OutputTimes(BDyn_interp_order + 1)) 
+   ! NONE
 
 
    ! -------------------------------------------------------------------------
@@ -134,7 +81,7 @@ PROGRAM MAIN
 
    BDyn_InitInput%verif    = 1  ! 1 - unit force per unit lenght specified through input mesh in InputSolve
 
-   BDyn_InitInput%num_elem = 2  ! number of elements spanning length
+   BDyn_InitInput%num_elem = 1  ! number of elements spanning length
 
    BDyn_InitInput%order    = 12  ! order of spectral elements
 
@@ -146,9 +93,9 @@ PROGRAM MAIN
                    , BDyn_ConstraintState  &
                    , BDyn_OtherState       &
                    , BDyn_Output(1)        &
-                   , dt_global                    &
+                   , dt_global_dummy       &
                    , BDyn_InitOutput       &
-                   , ErrStat                      &
+                   , ErrStat               &
                    , ErrMsg )
 
 
