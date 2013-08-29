@@ -1,15 +1,13 @@
-subroutine NodeLoc(dloc, nquar, xmin, elem_length,& 
+   SUBROUTINE NodeLoc(dloc, nquar, xmin, elem_length,& 
                        &xj, norder, elem_total, node_total, blength)
 
-   implicit double precision (a-h,o-z)
-    
-   integer nquar, norder, node_total,elem_total
-    
-   double precision dloc(node_total), xj(norder+1)
-   double precision xmin, elem_length, blength
+   INTEGER(IntKi), INTENT(IN):: norder, node_total,elem_total
+   REAL(ReKi), INTENT(OUT):: dloc(node_total), xj(norder+1)   
+ 
+   REAL(ReKi), INTENT(IN):: xmin, elem_length, blength
    
-   integer i, npos, nelem
-   double precision temp
+   INTEGER(IntKi):: i, npos, nelem
+   INTEGER(IntKi):: temp
     
     
    dloc(1) = xmin
@@ -36,6 +34,5 @@ subroutine NodeLoc(dloc, nquar, xmin, elem_length,&
          nquar = i
       endif
    enddo
-    
-   return
-end subroutine
+   
+   END SUBROUTINE NodeLoc
