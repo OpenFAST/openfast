@@ -93,7 +93,7 @@ LIB_SOURCES =             \
 
 MODNAME_SOURCES   =             \
 	BeamDyn.f90             \
-	Driver_StaticBeam.f90                \
+	Driver_Static_BDyn.f90                \
 	BeamDyn_Types.f90       \
 
 vpath %.f90 $(LIB_DIR) $(MODNAME_DIR)
@@ -129,10 +129,10 @@ BeamDyn_Types.f90:       Registry_BeamDyn.txt
 BeamDyn_Types.obj:       NWTC_Library.obj
 BeamDyn.obj:             BeamDyn_Types.obj
 
-Driver_StaticBeam.obj:                BeamDyn.obj           NWTC_Library.obj
+Driver_Static_BDyn.obj:                BeamDyn.obj           NWTC_Library.obj
 
 
-#$(OUTPUT_NAME)$(EXE_EXT): Driver_StaticBeam.obj
+#$(OUTPUT_NAME)$(EXE_EXT): Driver_Static_BDyn.obj
 
    # Make sure the destination directory for the intermediate files exist.
 
