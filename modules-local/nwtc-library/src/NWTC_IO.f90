@@ -28,7 +28,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00b-bjj', '20-Aug-2013')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00b-bjj', '29-Aug-2013')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -2604,8 +2604,9 @@ CONTAINS
    OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=ErrStat, ACTION='WRITE' )
 
    IF ( ErrStat /= 0 ) THEN
+      ErrMsg  = ' Cannot open file "'//TRIM( OutFile )//'". Another program may have locked it for writing.' &
+                //' (IOSTAT is '//TRIM(Num2LStr(ErrStat))//')'
       ErrStat = ErrID_Fatal
-      ErrMsg  = ' Cannot open file "'//TRIM( OutFile )//'". Another program may have locked it for writing.'
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -6324,6 +6325,7 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    REAL(SiKi), ALLOCATABLE       :: ColScl(:)                        ! Slope for the column data
 
 
+   INTEGER(IntKi)                :: ErrStat2                         ! temporary error status
    INTEGER(IntKi)                :: I                                ! Generic loop counter
    INTEGER(IntKi)                :: IC                               ! Loop counter for the output channel
    INTEGER(IntKi)                :: IT                               ! Loop counter for the timestep
@@ -6331,8 +6333,7 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    INTEGER(IntKi)                :: LenDesc                          ! Length of the description string, DescStr
    INTEGER(IntKi)                :: NT                               ! Number of time steps
    INTEGER(IntKi)                :: NumOutChans                      ! Number of output channels
-   INTEGER(IntKi)                :: UnIn
-   INTEGER(IntKi)                :: ErrStat2                         ! temporary error status
+   INTEGER(IntKi)                :: UnIn                             ! Unit number for the binary file
 
    INTEGER(B2Ki), ALLOCATABLE    :: TmpOutArray(:)                   ! This array holds the normalized output channels before being written to the binary file
    INTEGER(B4Ki), ALLOCATABLE    :: TmpTimeArray(:)                  ! This array holds the normalized output time channel before being written to the binary file
@@ -6352,6 +6353,12 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    NumOutChans = SIZE(AllOutData,1)     ! The number of output channels
    NT          = SIZE(AllOutData,2)     ! The number of time steps to be written
    LenDesc     = LEN_TRIM( DescStr )    ! Length of the string that contains program name, version, date, and time
+
+      ! Generate the unit number for the binary file
+   UnIn = 0
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
    !...............................................................................................................................
    ! Open the binary file for output
