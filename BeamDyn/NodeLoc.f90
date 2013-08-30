@@ -1,4 +1,4 @@
-   SUBROUTINE NodeLoc(dloc, nquar, xmin, elem_length,& 
+   SUBROUTINE NodeLoc(dloc, xmin, elem_length,& 
                        &xj, norder, elem_total, node_total, blength)
 
    INTEGER(IntKi), INTENT(IN):: norder, node_total,elem_total
