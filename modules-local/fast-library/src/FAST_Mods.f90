@@ -20,7 +20,17 @@ MODULE FAST_Types
 
    USE NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.01.01a-bjj', '16-July-2013' )                  ! The version number of this module
+   
+   INTEGER(IntKi), PARAMETER :: Module_IfW  = 1
+   INTEGER(IntKi), PARAMETER :: Module_ED   = 2
+   INTEGER(IntKi), PARAMETER :: Module_AD   = 3 
+   INTEGER(IntKi), PARAMETER :: Module_SrvD = 4
+   INTEGER(IntKi), PARAMETER :: Module_HD   = 5
+   INTEGER(IntKi), PARAMETER :: Module_SD   = 6
+   INTEGER(IntKi), PARAMETER :: Module_MAP  = 7
+   
+   
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.02.01a-bjj', '23-Aug-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime          ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE.
@@ -32,11 +42,14 @@ MODULE FAST_Types
       INTEGER(IntKi)                    :: n_Out                                   ! Time index into the AllOutData array
       INTEGER(IntKi)                    :: NOutSteps                               ! Maximum number of output steps
 
-      INTEGER(IntKi)                    :: numOuts_AD                              ! number of outputs to print from AeroDyn
-      INTEGER(IntKi)                    :: numOuts_ED                              ! number of outputs to print from ElastoDyn
-      INTEGER(IntKi)                    :: numOuts_HD                              ! number of outputs to print from HydroDyn
       INTEGER(IntKi)                    :: numOuts_IfW                             ! number of outputs to print from InflowWind
+      INTEGER(IntKi)                    :: numOuts_ED                              ! number of outputs to print from ElastoDyn
+      INTEGER(IntKi)                    :: numOuts_AD                              ! number of outputs to print from AeroDyn
       INTEGER(IntKi)                    :: numOuts_SrvD                            ! number of outputs to print from ServoDyn
+      INTEGER(IntKi)                    :: numOuts_HD                              ! number of outputs to print from HydroDyn
+      INTEGER(IntKi)                    :: numOuts_SD                              ! number of outputs to print from SubDyn
+      INTEGER(IntKi)                    :: numOuts_MAP                             ! number of outputs to print from MAP (Mooring Analysis Program)
+      
       INTEGER(IntKi)                    :: UnOu                                    ! I/O unit number for the tabular output file
       INTEGER(IntKi)                    :: UnSum                                   ! I/O unit number for the summary file
 
@@ -45,11 +58,13 @@ MODULE FAST_Types
       CHARACTER(ChanLen), ALLOCATABLE   :: ChannelUnits(:)                         ! Units for the output channels
 
          ! Version numbers of coupled modules
-      TYPE(ProgDesc)                    :: AD_Ver
-      TYPE(ProgDesc)                    :: ED_Ver
-      TYPE(ProgDesc)                    :: HD_Ver
-      TYPE(ProgDesc)                    :: IfW_Ver
-      TYPE(ProgDesc)                    :: SrvD_Ver
+      TYPE(ProgDesc)                    :: IfW_Ver                                 ! version information from InflowWind
+      TYPE(ProgDesc)                    :: ED_Ver                                  ! version information from ElastoDyn
+      TYPE(ProgDesc)                    :: AD_Ver                                  ! version information from AeroDyn
+      TYPE(ProgDesc)                    :: SrvD_Ver                                ! version information from ServoDyn
+      TYPE(ProgDesc)                    :: HD_Ver                                  ! version information from HydroDyn
+      TYPE(ProgDesc)                    :: SD_Ver                                  ! version information from SubDyn
+      TYPE(ProgDesc)                    :: MAP_Ver                                 ! version information from MAP (Mooring Analysis Program)
 
    END TYPE  FAST_OutputType
 
@@ -75,13 +90,15 @@ MODULE FAST_Types
       REAL(DbKi)                :: DT                                               ! Integration time step (s)
       REAL(DbKi)                :: TMax                                             ! Total run time (s)
       INTEGER(IntKi)            :: InterpOrder                                      ! Interpolation order {0,1,2} (-)
-
+      INTEGER(IntKi)            :: PC_Max                                           ! Number of predictor correction iterations
+      
          ! Feature switches:
 
       LOGICAL                   :: CompAero                                         ! Compute aerodynamic forces (flag)
       LOGICAL                   :: CompServo                                        ! Compute servodynamics (flag)
       LOGICAL                   :: CompHydro                                        ! Compute hydrodynamics forces (flag)
       LOGICAL                   :: CompSub                                          ! Compute sub-structural dynamics (flag)
+      LOGICAL                   :: CompMAP                                          ! Compute mooring line dynamics (flag)
       LOGICAL                   :: CompUserPtfmLd                                   ! Compute additional platform loading {false: none, true: user-defined from routine UserPtfmLd} (flag)
       LOGICAL                   :: CompUserTwrLd                                    ! Compute additional tower loading {false: none, true: user-defined from routine UserTwrLd} (flag)
 
@@ -92,6 +109,7 @@ MODULE FAST_Types
       CHARACTER(1024)           :: SrvDFile                                         ! The name of the ServoDyn input file
       CHARACTER(1024)           :: HDFile                                           ! The name of the HydroDyn input file
       CHARACTER(1024)           :: SDFile                                           ! The name of the SubDyn input file
+      CHARACTER(1024)           :: MAPFile                                          ! The name of the MAP input file
 
 
          ! Parameters for file/screen output:
@@ -133,25 +151,4 @@ TYPE(AeroConfig)              :: ADInterfaceComponents                        ! 
 
 
 END MODULE AeroDyn_Types
-!=======================================================================
-!MODULE HydroDyn_Types
-!   ! This module stores data for the FAST-HydroDyn interface
-!
-!   USE                          HydroDyn
-!   USE                          NWTC_Library
-!   USE                          SharedDataTypes                                  ! Defines the data types shared among modules (e.g., Marker and Load)
-!
-!   SAVE
-!
-!   TYPE(HD_DataType)         :: HydroDyn_data                                    ! The HydroDyn internal data
-!
-!   TYPE(HydroConfig)         :: HD_ConfigMarkers                                 ! Configuration markers required for HydroDyn
-!   TYPE(AllHydroMarkers)     :: HD_AllMarkers                                    ! The markers        (is this necessary here?)
-!   TYPE(AllHydroLoads)       :: HD_AllLoads                                      ! the returned loads (is this necessary here?)
-!
-!   TYPE(HD_InitDataType)     :: HydroDyn_InitData                                ! HydroDyn initialization data
-!
-!   LOGICAL                   :: HD_TwrNodes                                      ! This determines if we are applying the loads to the tower (unit length) or to the platform (lumped sum)
-!
-!END MODULE HydroDyn_Types
 !=======================================================================
