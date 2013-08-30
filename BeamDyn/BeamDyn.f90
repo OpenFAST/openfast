@@ -574,6 +574,19 @@ subroutine BDyn_gen_deriv(N, xgll, deriv, ErrStat, ErrMsg)
 
    return
 end subroutine BDyn_gen_deriv
+
+INCLUDE NodeLoc.f90
+INCLUDE Tilde.f90
+INCLUDE OuterProduct.f90
+INCLUDE CrvMatrixR.f90
+INCLUDE CrvMatrixH.f90
+INCLUDE CrvCompose.f90
+INCLUDE ElemNodalDisp.f90
+INCLUDE NodalRelRot.f90
+INCLUDE NodalDataAt0.f90
+INCLUDE NodalData.f90
+INCLUDE ElaticForce.f90
+INCLUDE ElementMatrix.f90
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

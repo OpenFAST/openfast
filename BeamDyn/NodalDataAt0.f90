@@ -2,7 +2,7 @@
 
    INTEGER,INTENT(IN)::node_elem,nelem,norder,dof_node,nnode
    REAL(ReKi),INTENT(IN)::hhp(:,:),Nuu0(:)
-   REAL(ReKi),INTENT(OUT)::E10(:)
+   REAL(ReKi),INTENT(INOUT)::E10(:)
 
    INTEGER:i,temp_id
 

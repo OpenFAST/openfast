@@ -1,4 +1,4 @@
- SUBROUTINE ElemNodalDisp(uu,node_elem,dof_node,nelem,norder,Nu)
+   SUBROUTINE ElemNodalDisp(uu,node_elem,dof_node,nelem,norder,Nu)
 
    REAL(ReKi),INTENT(IN)::uu(:)
    INTEGER,INTENT(IN)::node_elem,dof_node,nelem,norder

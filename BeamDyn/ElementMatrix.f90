@@ -14,44 +14,45 @@
    REAL(ReKi)::Fc(6),Fd(6),Oe(6,6),Pe(6,6),Qe(6,6)
 
    INTEGER::i,j,k,m,n,temp_id1,temp_id2
+   INTEGER::allo_stat
       
 
    ALLOCATE(Fc_elem(dof_node,node_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Fc_elem = ZERO
+   Fc_elem = 0.0D0
    
    ALLOCATE(Fd_elem(dof_node,node_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Fd_elem = ZERO
+   Fd_elem = 0.0D0
    
    ALLOCATE(Oe_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Oe_elem = ZERO
+   Oe_elem = 0.0D0
    
    ALLOCATE(Pe_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Pe_elem = ZERO
+   Pe_elem = 0.0D0
    
    ALLOCATE(Qe_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Qe_elem = ZERO
+   Qe_elem = 0.0D0
    
    ALLOCATE(Se_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Se_elem = ZERO
+   Se_elem = 0.0D0
 
    DO i=1,node_elem
-       E10 = ZERO
-       E1 = ZERO
-       RR0 = ZERO
-       kapa = ZERO
-       Fc = ZERO
-       Fd = ZERO
-       Oe = ZERO
-       Pe = ZERO
-       Qe = ZERO
-       Stif = ZERO
-       cet = ZERO
+       E10 = 0.0D0
+       E1 = 0.0D0
+       RR0 = 0.0D0
+       kapa = 0.0D0
+       Fc = 0.0D0
+       Fd = 0.0D0
+       Oe = 0.0D0
+       Pe = 0.0D0
+       Qe = 0.0D0
+       Stif = 0.0D0
+       cet = 0.0D0
        CALL NodalDataAt0(node_elem,nelem,norder,dof_node,i,hhp,Nuu0,E10)
        CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,&
                       &node_elem,nelem,i,norder,dof_node,&
