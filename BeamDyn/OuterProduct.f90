@@ -3,7 +3,7 @@
 !   REAL(ReKi),INTENT(IN):: vec1(:),vec2(:)
 !   REAL(ReKi),INTENT(OUT)::outer(SIZE(vec1),SIZE(vec2))
 
-!   INTEGER::i,j,n1,n2
+!   INTEGER(IntKi)::i,j,n1,n2
 
 !   n1=SIZE(vec1)
 !   n2=SIZE(vec2)
@@ -22,7 +22,7 @@
    REAL(ReKi),INTENT(IN):: vec1(:),vec2(:)
    REAL(ReKi)::OuterProduct(SIZE(vec1),SIZE(vec2))
 
-   INTEGER::i,j,n1,n2
+   INTEGER(IntKi)::i,j,n1,n2
 
    n1=SIZE(vec1)
    n2=SIZE(vec2)

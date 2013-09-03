@@ -3,7 +3,7 @@
    REAL(ReKi),INTENT(IN)::cc(:)
    REAL(ReKi),INTENT(OUT)::Rr(:,:)
 
-   INTEGER:: i, j
+   INTEGER(IntKi):: i, j
    REAL(ReKi):: c1,c2,c3,c0,tr0
 
    Rr = 0.0D0

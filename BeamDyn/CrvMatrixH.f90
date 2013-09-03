@@ -3,7 +3,7 @@
    REAL(ReKi),INTENT(IN)::cc(:)
    REAL(ReKi),INTENT(OUT)::Hh(:,:)
 
-   INTEGER:: i, j
+   INTEGER(IntKi):: i, j
    REAL(ReKi):: cf1,cf2,cf3,cq,ocq,aa,cb0,cb1,cb2,cb3
    
    cf1 = cc(1)/4.0D0
