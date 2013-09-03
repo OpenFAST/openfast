@@ -11,7 +11,7 @@
    REAL(ReKi)::C11(3,3),C12(3,3),C21(3,3),C22(3,3)
    REAL(ReKi)::epsi(3,3),mu(3,3)
 
-   INTEGER:: i,j
+   INTEGER(IntKi):: i,j
 
    eee = 0.0D0 
    DO i=1,3

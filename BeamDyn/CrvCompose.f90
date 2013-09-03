@@ -1,7 +1,7 @@
    SUBROUTINE CrvCompose(rr,pp,qq,flag)
 
    REAL(ReKi),INTENT(IN):: pp(:), qq(:)
-   INTEGER,INTENT(IN):: flag
+   INTEGER(IntKi),INTENT(IN):: flag
    REAL(ReKi),INTENT(OUT):: rr(:)
 
    REAL(ReKi):: pp0,pp1,pp2,pp3,qq0,qq1,qq2,qq3,tr1,tr2,dd1,dd2

@@ -1,56 +1,56 @@
-SUBROUTINE BeamGenerateStaticMatrix(uuN0,uuNf,hhp,w,Jacobian,Stif0,&
-                                      &node_elem,dof_node,norder,elem_total,dof_total,node_total,&
-                                      &StifK,RHS)
+   SUBROUTINE BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,&
+                        &node_elem,dof_node,norder,elem_total,dof_total,node_total,&
+                        &StifK,RHS)
 
    REAL(ReKi),INTENT(IN)::uuN0(:),uuNf(:),hhp(:,:),w(:),Jacobian
    REAL(ReKi),INTENT(IN)::Stif0(:,:,:)
-   INTEGER,INTENT(IN)::node_elem,dof_node,norder,elem_total,dof_total,node_total
+   INTEGER(IntKi),INTENT(IN)::node_elem,dof_node,norder,elem_total,dof_total,node_total
+   INTEGER(IntKi),INTENT(IN)::dof_elem
    REAL(ReKi),INTENT(INOUT)::StifK(:,:),RHS(:)
 
    REAL(ReKi),ALLOCATABLE::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
    REAL(ReKi),ALLOCATABLE::elk(:,:),elf(:)
    REAL(ReKi)::Stif(6,6)
-   INTEGER::i
-   INTEGER::dof_elem,rot_elem
+   INTEGER(IntKi)::i,allo_stat
+   INTEGER(IntKi)::rot_elem
 
-   dof_elem = dof_node * node_elem
-   rot_elem = 3 * node_elem
+   rot_elem = dof_elem / 2
    
 !   ALLOCATE(StifK(dof_total,dof_total),STAT = allo_stat)
 !   IF(allo_stat/=0) GOTO 9999
-!   StifK = ZERO
+!   StifK = 0.0D0
    
 !   ALLOCATE(RHS(dof_total),STAT = allo_stat)
 !   IF(allo_stat/=0) GOTO 9999
-!   RHS = ZERO
+!   RHS = 0.0D0
    
 
    ALLOCATE(Nuu0(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Nuu0 = ZERO
+   Nuu0 = 0.0D0
    
    ALLOCATE(Nuuu(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Nuuu = ZERO
+   Nuuu = 0.0D0
 
    ALLOCATE(Nrr0(rot_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Nrr0 = ZERO
+   Nrr0 = 0.0D0
 
    ALLOCATE(Nrrr(rot_elem),STAT = allo_stat) 
    IF(allo_stat/=0) GOTO 9999
-   Nrrr = ZERO
+   Nrrr = 0.0D0
 
    ALLOCATE(Next(dof_elem),STAT = allo_stat)
    IF(allo_stat /=0) GOTO 9999
    
    ALLOCATE(elf(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   elf = ZERO
+   elf = 0.0D0
 
    ALLOCATE(elk(dof_elem,dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   elk = ZERO
+   elk = 0.0D0
  
    DO i=1,elem_total
        ! Get Nodal Displacement Vector Nuu0 from Global Vector uuN0 at t=0    
@@ -64,8 +64,8 @@ SUBROUTINE BeamGenerateStaticMatrix(uuN0,uuNf,hhp,w,Jacobian,Stif0,&
        !Compute Nodal Relative Rotation Vector Nrrr
        CALL NodalRelRot(Nuuu,node_elem,i,norder,dof_node,Nrrr)
        !Compute Elemental Matrices: elf, elk
-       elf = ZERO
-       elk = ZERO    
+       elf = 0.0D0
+       elk = 0.0D0    
        CALL ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Next,hhp,Stif0,Jacobian,&
                           &w,node_elem,i,norder,dof_node,elk,elf)
        !Assemble Elemental Matrices into Global Matrices
@@ -93,4 +93,4 @@ SUBROUTINE BeamGenerateStaticMatrix(uuN0,uuNf,hhp,w,Jacobian,Stif0,&
             IF(ALLOCATED(elk)) DEALLOCATE(elk)
         ENDIF
 
-   END SUBROUTINE BeamGenerateStaticMatrix
+   END SUBROUTINE BeamStatic

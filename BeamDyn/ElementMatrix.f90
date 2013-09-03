@@ -4,7 +4,7 @@
    REAL(ReKi),INTENT(IN)::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
    REAL(ReKi),INTENT(IN)::hhp(:,:),Stif0(:,:,:),Jac
    REAL(ReKi),INTENT(IN)::w(:)
-   INTEGER,INTENT(IN)::node_elem,nelem,norder,dof_node
+   INTEGER(IntKi),INTENT(IN)::node_elem,nelem,norder,dof_node
 
    REAL(ReKi),INTENT(OUT)::elk(:,:),elf(:)      
 
@@ -13,8 +13,8 @@
    REAL(ReKi)::E10(3),RR0(3,3),kapa(3),E1(3),Stif(6,6),cet
    REAL(ReKi)::Fc(6),Fd(6),Oe(6,6),Pe(6,6),Qe(6,6)
 
-   INTEGER::i,j,k,m,n,temp_id1,temp_id2
-   INTEGER::allo_stat
+   INTEGER(IntKi)::i,j,k,m,n,temp_id1,temp_id2
+   INTEGER(IntKi)::allo_stat
       
 
    ALLOCATE(Fc_elem(dof_node,node_elem),STAT = allo_stat)
