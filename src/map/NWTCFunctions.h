@@ -48,8 +48,8 @@ void MSQS_Init(MAP_InitInputType_class       &Init    ,                 //      
                MAP_OutputType_class          &Out     ,                 //         |
                void* NULL_TimeInterval          ,                 //         |
                MAP_InitOutputType_class    &InitOut ,
-               MAP_ErrStat             &Error   ,                 //         |
-               MAP_Message             &Msg);                     //         |
+               MAP_ErrStat_class             &Error   ,                 //         |
+               MAP_Message_class             &Msg);                     //         |
                                                                   //         |
 void MSQS_UpdateStates( float T                          ,        //         |
                         int interval                     ,        //         |
@@ -59,8 +59,8 @@ void MSQS_UpdateStates( float T                          ,        //         |
                         void* NULL_DiscreteState         ,        //         |
                         MAP_ConstraintStateType_class &Constrnt,        //         |
                         MAP_OtherStateType_class      &Data    ,        //         |
-                        MAP_ErrStat             &Error   ,        //         |
-                        MAP_Message             &Msg );           //         |
+                        MAP_ErrStat_class             &Error   ,        //         |
+                        MAP_Message_class             &Msg );           //         |
                                                                   //         |
 void MSQS_CalcOutput( float T                          ,          //         |
                       MAP_InputType_class           &In      ,          //         |
@@ -70,8 +70,8 @@ void MSQS_CalcOutput( float T                          ,          //         |
                       MAP_ConstraintStateType_class &Constrnt,          //         |
                       MAP_OtherStateType_class      &Data    ,          //         |
                       MAP_OutputType_class          &Out     ,          //         |
-                      MAP_ErrStat             &Error   ,          //         |
-                      MAP_Message             &Msg );             //         |
+                      MAP_ErrStat_class             &Error   ,          //         |
+                      MAP_Message_class             &Msg );             //         |
                                                                   //         |
 void MSQS_End( MAP_InputType_class           &In      ,                 //         |
                MAP_ParameterType_class       &Param   ,                 //         |
@@ -80,10 +80,10 @@ void MSQS_End( MAP_InputType_class           &In      ,                 //      
                MAP_ConstraintStateType_class &Constrnt,                 //         |
                MAP_OtherStateType_class      &Data    ,                 //         |
                MAP_OutputType_class          &Out     ,                 //         |
-               MAP_ErrStat             &Error   ,                 //         |
-               MAP_Message             &Msg );                    //         |
+               MAP_ErrStat_class             &Error   ,                 //         |
+               MAP_Message_class             &Msg );                    //         |
                                                                   //         |
-void output_python( MAP_OtherStateType_class &Data , MAP_Message &Msg); //   ------+
+void output_python( MAP_OtherStateType_class &Data , MAP_Message_class &Msg); //   ------+
 //============================================================================
 
 

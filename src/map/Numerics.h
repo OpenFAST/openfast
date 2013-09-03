@@ -79,6 +79,7 @@ private:
   PetscBool                msqs_fd_jacobian;  
   PetscBool                msqs_default_setting;
   PetscReal                msqs_tol;
+  PetscBool                msqs_k;  
 
   // PETSc run-time options listed in the MAP input file
   std::vector<std::string> options_string;  
@@ -88,24 +89,26 @@ public:
 Numerics( ) : 
   X           ( NULL       ) ,   // make sure X points to nothing
   help_flag   ( PETSC_TRUE ) ,   // default for the help flag. This is false if '-help' is defined in input 
-  msqs_tol    (1e-2        ) {}  // maximum value of all residuals to guarantee convergence
+  msqs_tol    (1e-2        ) ,
+  msqs_k      ( PETSC_TRUE ) {}  // maximum value of all residuals to guarantee convergence
   
   ~Numerics( ) { /*ierr = PetscFinalize()*/ }
         
   int  InitializeSolver( MAP_OtherStateType_class &other ,
                          MAP_InitInputType_class  &init  ,
-                         MAP_ErrStat              &err   ,  
-                         MAP_Message              &msg   );
+                         MAP_ErrStat_class              &err   ,  
+                         MAP_Message_class              &msg   );
   void setNumericsOptionsString( const std::string &optionStr );
 
   int  PetscSolve           ( MAP_OtherStateType_class &other ,
-                              MAP_ErrStat        &Error , 
-                              MAP_Message        &Msg );
-  void PetscConvergeReason ( MAP_ErrStat &Error, MAP_Message &Msg );
-  int  PetscEnd       ( MAP_ErrStat &err, MAP_Message &msg );    
+                              MAP_ErrStat_class        &Error , 
+                              MAP_Message_class        &Msg );
+  void PetscConvergeReason ( MAP_ErrStat_class &Error, MAP_Message_class &Msg );
+  int  PetscEnd       ( MAP_ErrStat_class &err, MAP_Message_class &msg );    
 
-  PetscBool GetHelpFlag( ) const { return help_flag;      }
-  PetscReal GetMSQSTol ( ) const { return this->msqs_tol; }
+  PetscBool GetHelpFlag ( ) const { return help_flag;      }
+  PetscReal GetMSQSTol  ( ) const { return this->msqs_tol; }
+  PetscBool GetMsqsKFlag( ) const { return this->msqs_k;   } 
 };
 
 #endif // _NUMERICS_H

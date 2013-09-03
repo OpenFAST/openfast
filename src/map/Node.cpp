@@ -44,8 +44,8 @@ SetVarType( const std::string &varStr ,
             const std::string &type   , 
             int               i       , 
             VarType Node::*   ptr     , 
-            MAP_ErrStat       &err    , 
-            MAP_Message       &msg    ) 
+            MAP_ErrStat_class       &err    , 
+            MAP_Message_class       &msg    ) 
 {
   ((*this).*ptr).name = type; // set the name of the VarType 
   ((*this).*ptr).index = i+1; // set the index number of the VarType

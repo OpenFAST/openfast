@@ -1,6 +1,6 @@
 /**
  * ====================================================================================================
- *                              MAP_ErrStat.h
+ *                              MAP_ErrStat_class.h
  * ====================================================================================================
  *	     
  * Copyright Sept. 2012
@@ -47,13 +47,13 @@
  * 
  * @see  MAP_ERROR_CODES is defined in Prerequisite.h
  */
-class MAP_ErrStat{
+class MAP_ErrStat_class{
 private: 
     MAP_ERROR_CODE error;
  
 public: 
-    MAP_ErrStat() : error( MAP_SAFE ){}
-    ~MAP_ErrStat(){}
+    MAP_ErrStat_class() : error( MAP_SAFE ){}
+    ~MAP_ErrStat_class(){}
 
     int error_status() { 
         switch (error){

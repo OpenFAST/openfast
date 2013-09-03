@@ -36,8 +36,8 @@
                   //       #include <boost/algorithm/string.hpp>
                   //       #include <string>
                   //       #include <iomanip>
-                  //       #include "MAP_Message.h" 
-                  //       #include "MAP_ErrStat.h" 
+                  //       #include "MAP_Message_class.h" 
+                  //       #include "MAP_ErrStat_class.h" 
                   
 #include "CableLibrary.h" 
 #include "CatenaryEquation.h"
@@ -182,23 +182,23 @@ public:
   std::string GetElementName( ) const;
     
   // Plots the cable profile in Python using the matPlotLib library
-  bool GetElementPlotArray( std::string &X, std::string &Y, std::string &Z, MAP_ErrStat &err, MAP_Message &Msg );
+  bool GetElementPlotArray( std::string &X, std::string &Y, std::string &Z, MAP_ErrStat_class &err, MAP_Message_class &Msg );
 
   // sets a reference to a cable property in the CableLibrary. 'line_property'
   // is a pointer
   void SetLineProperty( const std::string              &element_type , 
                         std::vector <CableLibrary_ptr> &library      , 
-                        MAP_ErrStat                    &err          ,  
-                        MAP_Message                    &msg          );
+                        MAP_ErrStat_class                    &err          ,  
+                        MAP_Message_class                    &msg          );
     
   // Sets a reference to the upper/lower node. 'fairlead'/'anchor' is a pointer.
   void SetFairlead( const int upper , const std::vector <Node_ptr> &node_library );
   void SetAnchor( const int lower , const std::vector <Node_ptr> &node_library );
     
   // Initialize Lu, H and V variable (name, index and value)
-  void SetV( const int index, MAP_ErrStat &err, MAP_Message &msg );
-  void SetH( const int index, MAP_ErrStat &err, MAP_Message &msg );
-  void SetLu( const std::string  varStr, const int i, MAP_ErrStat &err, MAP_Message &msg );
+  void SetV( const int index, MAP_ErrStat_class &err, MAP_Message_class &msg );
+  void SetH( const int index, MAP_ErrStat_class &err, MAP_Message_class &msg );
+  void SetLu( const std::string  varStr, const int i, MAP_ErrStat_class &err, MAP_Message_class &msg );
 
   void SetHX( ); // used solely to get access to Hx and write data to the output file
   void SetHY( ); // used solely to get access to Hy and write data to the output file 
@@ -274,9 +274,9 @@ public:
   bool GetFairleadFlag( VarType Node::* ptr ) const;
     
   // set element variables
-  void InitializeElement( const double &g, const double &rho_sea, MAP_ErrStat  &err, MAP_Message  &msg ); // throws MAP_ERROR_56 and/or MAP_WARNING_1
+  void InitializeElement( const double &g, const double &rho_sea, MAP_ErrStat_class  &err, MAP_Message_class  &msg ); // throws MAP_ERROR_56 and/or MAP_WARNING_1
 
-  void UpdateElement( MAP_ErrStat &err , MAP_Message &msg );
+  void UpdateElement( MAP_ErrStat_class &err , MAP_Message_class &msg );
 
   // the following four member functions are called at element initialization
   void SetCableDistance( );

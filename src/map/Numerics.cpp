@@ -105,8 +105,8 @@ void Numerics::setNumericsOptionsString( const std::string &optionStr ){
 int Numerics::
 InitializeSolver( MAP_OtherStateType_class &other ,
                   MAP_InitInputType_class  &init  ,
-                  MAP_ErrStat              &err   ,  
-                  MAP_Message              &msg   )
+                  MAP_ErrStat_class              &err   ,  
+                  MAP_Message_class              &msg   )
 {
   PetscScalar PETSc_number = 0.0;	
   int num_eq = other.user_data.sizeOfConstraint();
@@ -141,7 +141,8 @@ InitializeSolver( MAP_OtherStateType_class &other ,
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"MAP Coupled options","SNES");CHKERRQ(ierr);
   {
     this->msqs_fd_jacobian = PETSC_FALSE;    
-    std::string help_str = "";
+    this->msqs_k           = PETSC_FALSE;    
+    std::string help_str   = "";
     PetscReal msqs_scaling = 1.0;
 
     // Are we using finite differencing or the analytical jacobian to solve the problem?
@@ -160,6 +161,9 @@ InitializeSolver( MAP_OtherStateType_class &other ,
     help_str = "Scaling factor for the Newton equation residuals. Chaning this value may help convergence";
     ierr = PetscOptionsReal("-msqs_scaling",help_str.c_str(), "",msqs_scaling,&msqs_scaling,NULL);CHKERRQ(ierr);
     other.user_data.SetFunctionScaling( msqs_scaling );
+
+    help_str = "Compute the Jacobian using central finite-differencing.";
+    ierr = PetscOptionsBool("-msqs_k", help_str.c_str(), 0, this->msqs_k, &this->msqs_k, 0 );CHKERRQ(ierr);
 
     // -help. If '-help' is in the input file, MAP won't solve
     ierr = PetscOptionsHasName( PETSC_NULL , "-help" , &this->help_flag );CHKERRQ( ierr );
@@ -267,8 +271,8 @@ InitializeSolver( MAP_OtherStateType_class &other ,
  */
 int Numerics::
 PetscSolve( MAP_OtherStateType_class &other ,
-            MAP_ErrStat              &err , 
-            MAP_Message              &msg   )
+            MAP_ErrStat_class              &err , 
+            MAP_Message_class              &msg   )
 {
   try {
     ierr = SNESSolve( snes, PETSC_NULL, x ); 
@@ -526,8 +530,8 @@ UserFunctionEvaluations( PetscScalar       *FF ,
  *   - SNES_CONVERGED_ITERATING          :  0 SNESConvergedReason;
  */
 void Numerics::
-PetscConvergeReason( MAP_ErrStat &err , 
-                     MAP_Message &msg )
+PetscConvergeReason( MAP_ErrStat_class &err , 
+                     MAP_Message_class &msg )
 {
   try {
     switch( reason ){
@@ -587,12 +591,12 @@ PetscConvergeReason( MAP_ErrStat &err ,
 /**
  * Clears all PETSc data structures and deallocate memory
  *
- * @param  MAP_ErrStat  err
- * @param  MAP_Message  msg
+ * @param  MAP_ErrStat_class  err
+ * @param  MAP_Message_class  msg
  */
 int Numerics::
-PetscEnd( MAP_ErrStat &err , 
-          MAP_Message &msg )
+PetscEnd( MAP_ErrStat_class &err , 
+          MAP_Message_class &msg )
 {
     ierr = SNESGetIterationNumber( snes, &its );CHKERRQ(ierr);
 

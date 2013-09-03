@@ -34,20 +34,20 @@
 #include <boost/algorithm/string.hpp>
 #include <string>
 #include <iomanip>
-#include "MAP_Message.h" // Needed for argument in VarTYpe function
-#include "MAP_ErrStat.h" // Needed for argument in VarTYpe function
+#include "MAP_Message.h" // Needed for argument in VarType function
+#include "MAP_ErrStat.h" // Needed for argument in VarType function
 #include "Prerequisite.h"
 
 // ====================================================================================================
 // MAPSetUniversalErrorStat
 //
-// Records the error to the MAP_Message contect, and records and error status
+// Records the error to the MAP_Message_class contect, and records and error status
 // ====================================================================================================
 void 
 MAPSetUniversalErrorStat( MAP_ERROR_CODE code ,
                           std::string &userStr ,
-                          MAP_ErrStat &err    ,
-                          MAP_Message &msg  );
+                          MAP_ErrStat_class &err    ,
+                          MAP_Message_class &msg  );
 
 
 // ====================================================================================================
@@ -89,8 +89,8 @@ VarType() : is_fixed ( true      ) ,
   // initializes the properties of a VarType based on the MAP input file specifications
   static void SetGenericVarType(VarType           &var          , 
                                 const std::string &input_string ,  
-                                MAP_ErrStat       &err          , 
-                                MAP_Message       &msg          );    
+                                MAP_ErrStat_class       &err          , 
+                                MAP_Message_class       &msg          );    
  
   static std::string WriteNodeData      ( VarType &var );// prints out VarType.value parameter in this style: "(-9999.9)"
   static std::string WriteGenericVarType( VarType &var );// prints out the VarType in this style: "X[1] :  (-9999.9)"

@@ -45,8 +45,8 @@
 void MAP_OtherStateType_class::
 addCableLibrary( const std::vector<std::string> &T     ,
                  const int                      index  ,
-                 MAP_ErrStat                    &Error ,
-                 MAP_Message                    &Msg   ) 
+                 MAP_ErrStat_class                    &Error ,
+                 MAP_Message_class                    &Msg   ) 
 {    
   CableLibrary_ptr prop_ptr( new CableLibrary );      // create new memory on the heap (dynamically allocated)
 
@@ -413,12 +413,12 @@ MAPCALL_GetWriteOutput( float * arr , const int len ) {
 // ============================================================================
 // writeCableLibraryData
 //
-// write all data from the CableLibrary class to the MAP_Message parameter
+// write all data from the CableLibrary class to the MAP_Message_class parameter
 //
 // @input : Msg          -- Error message status
 // ============================================================================
 void MAP_OtherStateType_class::
-writeCableLibraryData( MAP_Message &Msg) 
+writeCableLibraryData( MAP_Message_class &Msg) 
 {    
   for ( unsigned int i=0 ; i<property.size() ; i++){
 
@@ -485,7 +485,7 @@ writeCableLibraryData( MAP_Message &Msg)
  * ============================================================================
  */
 void MAP_OtherStateType_class::
-writeEnvironmentData  ( MAP_Message &Msg )
+writeEnvironmentData  ( MAP_Message_class &Msg )
 {
   std::ostringstream S;
   S << std::fixed << std::setprecision(3);
@@ -521,7 +521,7 @@ writeEnvironmentData  ( MAP_Message &Msg )
  * ============================================================================
  */
 void MAP_OtherStateType_class::
-WriteNodeData( MAP_Message &Msg )
+WriteNodeData( MAP_Message_class &Msg )
 {
   std::vector < std::vector<std::string> > cell;
   std::string write = "";
@@ -690,8 +690,8 @@ WriteNodeData( MAP_Message &Msg )
 void MAP_OtherStateType_class::
 addNode(const std::vector<std::string> &T     ,
         const int                      index  ,
-        MAP_ErrStat                    &Error ,
-        MAP_Message                    &Msg   ) 
+        MAP_ErrStat_class                    &Error ,
+        MAP_Message_class                    &Msg   ) 
 {  
   // throw an exception if the node type in the MAP input file
   // does not match one of the specified types
@@ -749,8 +749,8 @@ addNode(const std::vector<std::string> &T     ,
 void MAP_OtherStateType_class::
 addElement( const std::vector<std::string> &T     ,
             const int                      index  ,
-            MAP_ErrStat                    &Error ,
-            MAP_Message                    &Msg   ) 
+            MAP_ErrStat_class                    &Error ,
+            MAP_Message_class                    &Msg   ) 
 {
   // create new memory on the heap (dynamically allocated)
   Element_ptr element_ptr( new Element );
@@ -874,8 +874,8 @@ void MAP_OtherStateType_class::
 associateElementVarTypeToNWTCType( const int                     index ,
                                    MAP_ParameterType_class       &P    , 
                                    MAP_ConstraintStateType_class &C    ,
-                                   MAP_ErrStat                   &Err  ,
-                                   MAP_Message                   &Msg  ) 
+                                   MAP_ErrStat_class                   &Err  ,
+                                   MAP_Message_class                   &Msg  ) 
 {
   // Assign element H variable
   if ( this->elementVarTypeBool( index , &Element::H )==true ) {
@@ -913,8 +913,8 @@ associateElementVarTypeToNWTCType( const int                     index ,
 // ============================================================================
 void MAP_OtherStateType_class::
 checkElementVarTypeReferences( const int   index  , 
-                               MAP_ErrStat &Error , 
-                               MAP_Message &Msg   )
+                               MAP_ErrStat_class &Error , 
+                               MAP_Message_class &Msg   )
 {
   if ( this->checkElementReference( index , &Element::Lu ) != 1 ){    
     std::string str = "";
@@ -946,8 +946,8 @@ checkElementVarTypeReferences( const int   index  ,
  */
 void MAP_OtherStateType_class::
 checkNodeVarTypeReferences( const int index    , 
-                            MAP_ErrStat &Error , 
-                            MAP_Message &Msg   )
+                            MAP_ErrStat_class &Error , 
+                            MAP_Message_class &Msg   )
 {
   try {
     if ( this->checkNodeReference( index , &Node::X ) != 1 ){
@@ -1018,8 +1018,8 @@ checkNodeVarTypeReferences( const int index    ,
 void MAP_OtherStateType_class::
 setElementOptions( Element_ptr       &P     , 
                    const std::string &T     , 
-                   MAP_ErrStat       &Error , 
-                   MAP_Message       &Msg   )
+                   MAP_ErrStat_class       &Error , 
+                   MAP_Message_class       &Msg   )
 {
   EnumParser <ElementOptions> parser;
   std::string WORD = boost::to_upper_copy( T );
@@ -1074,7 +1074,7 @@ setElementOptions( Element_ptr       &P     ,
 // @input : Msg          -- Error message status
 // ============================================================================
 void MAP_OtherStateType_class::
-writeElementData( MAP_Message &Msg )
+writeElementData( MAP_Message_class &Msg )
 {
   // initlize the string we are writting to the output message
   std::string write = "";
@@ -1206,7 +1206,7 @@ writeXYZData( const std::string &position ,
               const bool        tail_bool ,
               const std::string &head     ,
               const bool        head_bool ,
-              MAP_Message       &Msg      )
+              MAP_Message_class       &Msg      )
 {    
   std::string write = "";
   std::string temp = "";
@@ -1272,7 +1272,7 @@ summary( )
   // Now print the CableLibrary, Node and Element
   // variables to the Msg parameter
 
-  MAP_Message T;
+  MAP_Message_class T;
 
   T.WriteDataToOutputFile("\n");
 
@@ -1281,16 +1281,19 @@ summary( )
   this->WriteNodeData                 ( T );
   this->writeElementData              ( T );
 
-//  // Disable the ability to write the linearized stiffness matrix for now
-//  // until this is verified to work correctly
-//  //
-//  // If the numerics routine is initialized, run the 
-//  // stiffness matrix linearization
-//  // @todo: find a better/robust/accurate way of calculating the 
-//  //        linearized stiffness matrix.
-//  if ( this->isNumericsUninitialized()==false ){ 
-//    this->writeLinearizedStiffnessMatrix( T );
-//  }
+  if( numeric_method.GetMsqsKFlag() ) { 
+    checkpoint();
+    // Disable the ability to write the linearized stiffness matrix for now
+    // until this is verified to work correctly
+    //
+    // If the numerics routine is initialized, run the 
+    // stiffness matrix linearization
+    // @todo: find a better/robust/accurate way of calculating the 
+    //        linearized stiffness matrix.
+    if ( this->isNumericsUninitialized()==false ){ 
+      this->writeLinearizedStiffnessMatrix( T );
+    }
+  }
 
   return T.GetDataString();
 };
@@ -1374,8 +1377,8 @@ checkElementReference( const int          index ,
 // ============================================================================
 void MAP_OtherStateType_class::
 addDepth( const std::string &T     ,
-          MAP_ErrStat       &Error ,
-          MAP_Message       &Msg   ) 
+          MAP_ErrStat_class       &Error ,
+          MAP_Message_class       &Msg   ) 
 {    
   if ( T == "" ) throw MAP_ERROR_7;
 
@@ -1415,8 +1418,8 @@ addDepth( const std::string &T     ,
 // ============================================================================
 void MAP_OtherStateType_class::
 addGravity( const std::string &T     ,
-            MAP_ErrStat       &Error ,
-            MAP_Message       &Msg   ) 
+            MAP_ErrStat_class       &Error ,
+            MAP_Message_class       &Msg   ) 
 {    
   if ( T == "" ) throw MAP_ERROR_8;
 
@@ -1456,8 +1459,8 @@ addGravity( const std::string &T     ,
 // ============================================================================
 void MAP_OtherStateType_class::
 addSeaDensity( const std::string &T     ,
-               MAP_ErrStat       &Error ,
-               MAP_Message       &Msg   ) 
+               MAP_ErrStat_class       &Error ,
+               MAP_Message_class       &Msg   ) 
 {  
   if ( T == "" ) throw MAP_ERROR_9;
 
@@ -1515,7 +1518,7 @@ setNodeReferenceToUserData( const int index )
 // @input :              -- 
 // ============================================================================
 void MAP_OtherStateType_class::
-setMessageReferenceToUserData( MAP_Message &Msg ) 
+setMessageReferenceToUserData( MAP_Message_class &Msg ) 
 { 
   this->user_data.setMessage( Msg );
 };
@@ -1527,7 +1530,7 @@ setMessageReferenceToUserData( MAP_Message &Msg )
 // @input :              -- 
 // ============================================================================
 void MAP_OtherStateType_class::
-setErrorStatusReferenceToUserData( MAP_ErrStat &error ) 
+setErrorStatusReferenceToUserData( MAP_ErrStat_class &error ) 
 { 
   this->user_data.setErrorCode( error );
 };
@@ -1579,8 +1582,8 @@ setMAP_ConstraintStateType_classReferenceToUserData( MAP_ConstraintStateType_cla
 // @input : Msg          -- Error message status
 // ============================================================================
 void MAP_OtherStateType_class::
-plot( MAP_ErrStat &Error , 
-      MAP_Message &Msg   ) 
+plot( MAP_ErrStat_class &Error , 
+      MAP_Message_class &Msg   ) 
 { 
   Msg.MessageClean();
 
@@ -1749,10 +1752,10 @@ plot( MAP_ErrStat &Error ,
 // @input : Msg          -- Error message status
 // ============================================================================
 std::vector <std::string> MAP_OtherStateType_class::
-plotString( MAP_ErrStat &Error , 
-            MAP_Message &Msg   ) 
+plotString( MAP_ErrStat_class &Error , 
+            MAP_Message_class &Msg   ) 
 {
-  MAP_Message T;
+  MAP_Message_class T;
 
   std::vector <std::string> plot_string;
 
@@ -1809,7 +1812,7 @@ plotString( MAP_ErrStat &Error ,
 // ============================================================================
 void MAP_OtherStateType_class::
 SetSolverOptions( const std::string &inputStr , 
-                  MAP_Message       &msg      )
+                  MAP_Message_class       &msg      )
 {
   this->numeric_method.setNumericsOptionsString( inputStr );
 //this->numeric_method->setNumericsOptionsString( T );
@@ -1823,8 +1826,8 @@ SetSolverOptions( const std::string &inputStr ,
 // @input : Error        -- Error code
 // ============================================================================
 int MAP_OtherStateType_class::
-Solve( MAP_ErrStat &err , 
-       MAP_Message &msg )
+Solve( MAP_ErrStat_class &err , 
+       MAP_Message_class &msg )
 {  
   int errcheck = 0;
   int i = 0;
@@ -1867,8 +1870,8 @@ Solve( MAP_ErrStat &err ,
 //         file for closer inspection post-simulation
 // ============================================================================
 int MAP_OtherStateType_class::
-CheckResidualConvergence( MAP_ErrStat        &err , 
-                          MAP_Message        &msg )
+CheckResidualConvergence( MAP_ErrStat_class        &err , 
+                          MAP_Message_class        &msg )
 {
   double tol = numeric_method.GetMSQSTol();
   //double tol = numeric_method->GetMSQSTol();
@@ -1915,8 +1918,8 @@ CheckResidualConvergence( MAP_ErrStat        &err ,
 // ============================================================================
 void MAP_OtherStateType_class::
 initializeNumericSolver( MAP_InitInputType_class &Init  , 
-                         MAP_ErrStat             &Error , 
-                         MAP_Message             &Msg ) 
+                         MAP_ErrStat_class             &Error , 
+                         MAP_Message_class             &Msg ) 
 {
   numeric_method.InitializeSolver( *this , Init , Error, Msg );
   //numeric_method->InitializeSolver( *this , Init , Error, Msg );
@@ -1932,8 +1935,8 @@ initializeNumericSolver( MAP_InitInputType_class &Init  ,
 // @input : Msg          -- Error message status
 // ============================================================================
 void MAP_OtherStateType_class::
-cleanNumericSolver( MAP_ErrStat &Error , 
-                    MAP_Message &Msg   )
+cleanNumericSolver( MAP_ErrStat_class &Error , 
+                    MAP_Message_class &Msg   )
 {
   numeric_method.PetscEnd( Error, Msg );
   //numeric_method->PetscEnd( Error, Msg );
@@ -1959,8 +1962,8 @@ getNumEquations( )
 // ============================================================================
 void MAP_OtherStateType_class::
 initializeCableElement( const int   index , 
-                        MAP_ErrStat &Error , 
-                        MAP_Message &Msg ) 
+                        MAP_ErrStat_class &Error , 
+                        MAP_Message_class &Msg ) 
 { 
   this->element[index]->InitializeElement( gravity, rho_sea , Error , Msg );
 };
@@ -2202,7 +2205,7 @@ MAPCALL_GetOutputHeader( char **arr  )
     }
     
     if ( this->getElementOptionFlag( i , &Element::Z_POS_flag) ){
-    tempStr = VarType::WriteGenericVarType_name( i , element[i]->fairlead->Z );
+      tempStr = VarType::WriteGenericVarType_name( i , element[i]->fairlead->Z );
       strcpy( arr[count], tempStr.c_str() );
       count++;
     }
@@ -2250,7 +2253,7 @@ MAPCALL_GetOutputHeader( char **arr  )
 // ============================================================================
 void MAP_OtherStateType_class::
 getOutputStreamHeader( const int   index ,
-                       MAP_Message &Msg  ) 
+                       MAP_Message_class &Msg  ) 
 {
   // print the simulation time
   if ( is_coupled_to_FAST==false) { // if MAP isn't coupled to FAST, don't print time in the header
@@ -2315,7 +2318,7 @@ GetOutputString( ) {
 // ============================================================================
 void MAP_OtherStateType_class::
 getOutputStreamUnits( const int index  , 
-                      MAP_Message &Msg ) 
+                      MAP_Message_class &Msg ) 
 {
   // print the simulation time
   if ( is_coupled_to_FAST==false) { // if MAP isn't coupled to FAST, don't print time in the header
@@ -2384,7 +2387,7 @@ getOutputStreamUnits( const int index  ,
 void MAP_OtherStateType_class::
 getOutputStreamValue( const int   index , 
                       const float time  , 
-                      MAP_Message &Msg  ) 
+                      MAP_Message_class &Msg  ) 
 {
   // print the simulation time
   if ( is_coupled_to_FAST==false) { // if MAP isn't coupled to FAST, don't end the line
@@ -2483,8 +2486,8 @@ associateNodeVarTypeToNWTCType( const int                     index ,
                                 MAP_ParameterType_class       &P    , 
                                 MAP_ConstraintStateType_class &C    ,
                                 MAP_OutputType_class          &O    ,
-                                MAP_ErrStat                   &Err  ,
-                                MAP_Message                   &Msg  )
+                                MAP_ErrStat_class                   &Err  ,
+                                MAP_Message_class                   &Msg  )
 {  
   // ==========   X Node VarType assignment  ===============     <-------------------------------------------------------------+
   // Assign data in the Node                                                                     
@@ -3124,7 +3127,7 @@ SetVar( const int index ,
 //         used. At the moment, FX, FY and HZ are being used. 
 // ============================================================================
 void MAP_OtherStateType_class::
-writeLinearizedStiffnessMatrix( MAP_Message &Msg )
+writeLinearizedStiffnessMatrix( MAP_Message_class &Msg )
 {
 
   std::string write        = "";
@@ -3146,7 +3149,7 @@ writeLinearizedStiffnessMatrix( MAP_Message &Msg )
   double      My           = 0.0;
   double      Mz           = 0.0;
 
-  MAP_ErrStat        Err; 
+  MAP_ErrStat_class        Err; 
   std::ostringstream S;
 
   S << std::fixed << std::setprecision(4);

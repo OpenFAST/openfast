@@ -1,6 +1,6 @@
 /**
  * ====================================================================================================
- *                              MAP_Message.h
+ *                              MAP_Message_class.h
  * ====================================================================================================
  *	     
  * Copyright Sept. 2012
@@ -38,10 +38,10 @@
 
 
 // ====================================================================================================
-// MAP_Message
+// MAP_Message_class
 // ====================================================================================================
 class 
-MAP_Message
+MAP_Message_class
 {
 private:
   std::string data_string;
@@ -50,12 +50,12 @@ private:
   std::vector <std::string> error_list;
   std::vector <std::string> warning_list;
 public:
-MAP_Message() : 
+MAP_Message_class() : 
   data_string    ( "" ) , 
   converge_reason( "The solver did not run. Refer to the MAP summary file for more information." ) ,
   status_string  ( "" ) { }
 
-  ~MAP_Message( ) { }
+  ~MAP_Message_class( ) { }
 
   void        RecordToWarningList   ( const std::string &text ); // pushes a warning message (text) to warning_list
   void        RecordToErrorList     ( const std::string &text ); // pushes an error message (text) to error_list

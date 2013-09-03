@@ -38,8 +38,8 @@
                      //   #include <boost/algorithm/string.hpp>
                      //   #include <string>
                      //   #include <iomanip>
-                     //   #include "MAP_Message.h" 
-                     //   #include "MAP_ErrStat.h" 
+                     //   #include "MAP_Message_class.h" 
+                     //   #include "MAP_ErrStat_class.h" 
 
 // ====================================================================================================
 // MAP_BaseType

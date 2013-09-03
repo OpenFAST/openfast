@@ -155,7 +155,14 @@ namespace _TEXT_COLOR{
   const unsigned int STR_CHR = RED.size() + END.size();
 };
 #elif __APPLE__ // Unsupported platform for now
-
+namespace _TEXT_COLOR{
+  const std::string RED      = "\033[1;31m";
+  const std::string YELLOW   = "\033[1;33m";
+  const std::string BLUE     = "\033[1;34m";
+  const std::string END      = "\033[0m";
+  const unsigned int STR_LEN = 25;
+  const unsigned int STR_CHR = RED.size() + END.size();
+}
 #elif __linux
 namespace _TEXT_COLOR{
   const std::string RED      = "\033[1;31m";

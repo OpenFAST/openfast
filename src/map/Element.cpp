@@ -47,8 +47,8 @@
 void Element::
 SetLineProperty( const std::string              &element_type , 
                  std::vector <CableLibrary_ptr> &library      ,
-                 MAP_ErrStat                    &err          ,
-                 MAP_Message                    &msg          ) 
+                 MAP_ErrStat_class                    &err          ,
+                 MAP_Message_class                    &msg          ) 
 {
   for( unsigned int i=0 ; i<library.size() ; i++) {
     
@@ -198,8 +198,8 @@ SetH_and_V_flags( )
 void Element::
 SetLu( const std::string varStr , 
        const int         i      , 
-       MAP_ErrStat       &err   , 
-       MAP_Message       &msg   )
+       MAP_ErrStat_class       &err   , 
+       MAP_Message_class       &msg   )
 {
     this->Lu.name = "Lu";   // name the VarType for out file identification purposes
     this->Lu.index = i+1;   // element number, for out file identification purposes
@@ -254,8 +254,8 @@ SetHY( )
 // ============================================================================
 void Element::
 SetV( const int   index , 
-      MAP_ErrStat &err  , 
-      MAP_Message &msg  ) 
+      MAP_ErrStat_class &err  , 
+      MAP_Message_class &msg  ) 
 {
   std::string varStr = "9999.9";  // initliaze variable
   this->V.name = "V";         // name the VarType for out file identification purposes
@@ -279,8 +279,8 @@ SetV( const int   index ,
 // ============================================================================
 void Element::
 SetH( const int index  , 
-      MAP_ErrStat &err ,
-      MAP_Message &msg )
+      MAP_ErrStat_class &err ,
+      MAP_Message_class &msg )
 {
   std::string varStr = "9999.9";  // initliaze variable
   this->H.name = "H";         // name the VarType for out file identification purposes
@@ -466,8 +466,8 @@ GetAnchorFlag( VarType Node::* ptr ) const
 void Element::
 InitializeElement( const double &g       , 
                    const double &rho_sea , 
-                   MAP_ErrStat  &err     , 
-                   MAP_Message  &msg     ) 
+                   MAP_ErrStat_class  &err     , 
+                   MAP_Message_class  &msg     ) 
 {
   try {
     InitializeCableProperty( g , rho_sea ); // throws MAP_ERROR_56 and/or MAP_WARNING_1
@@ -538,8 +538,8 @@ ResetNodes( )
 // @todo : remove in future versions once we are satisfied this behaves correctly
 // ============================================================================
 void Element::
-UpdateElement( MAP_ErrStat &err , 
-               MAP_Message &msg ) 
+UpdateElement( MAP_ErrStat_class &err , 
+               MAP_Message_class &msg ) 
 { 
   this->SetCableDistance( ); 
   
@@ -863,8 +863,8 @@ bool Element::
 GetElementPlotArray( std::string &X   , 
                    std::string &Y   ,
                    std::string &Z   ,
-                   MAP_ErrStat &err ,
-                   MAP_Message &msg ) 
+                   MAP_ErrStat_class &err ,
+                   MAP_Message_class &msg ) 
 {
   int    N     = 100;                              // number of points being plotted
   double n     = boost::lexical_cast<double>( N ); // number of points being plotted 

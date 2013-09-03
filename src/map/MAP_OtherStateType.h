@@ -58,8 +58,8 @@
                                 *         #include <boost/algorithm/string.hpp>
                                 *         #include <string>
                                 *         #include <iomanip>
-                                *         #include "MAP_Message.h" 
-                                *         #include "MAP_ErrStat.h"
+                                *         #include "MAP_Message_class.h" 
+                                *         #include "MAP_ErrStat_class.h"
                                 *
                                 * #include "Element.h" 
                                 *     #include "Node.h"  
@@ -68,8 +68,8 @@
                                 *             #include <boost/algorithm/string.hpp>
                                 *             #include <string>
                                 *             #include <iomanip>
-                                *             #include "MAP_Message.h" 
-                                *             #include "MAP_ErrStat.h" 
+                                *             #include "MAP_Message_class.h" 
+                                *             #include "MAP_ErrStat_class.h" 
                                 *
                                 * #include <petscsnes.h>
                                 */
@@ -165,19 +165,19 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
 
   //  This is accessed when 'repeat [angle in deg]' is written in the MAP
   //  input file
-  void copyCable( MAP_InitInputType_class &Init , const std::string &angle , MAP_Message &Msg );
+  void copyCable( MAP_InitInputType_class &Init , const std::string &angle , MAP_Message_class &Msg );
 
   // Element input file string
-  void setElementOptions( Element_ptr &P, const std::string &T, MAP_ErrStat &Error , MAP_Message &Msg );
+  void setElementOptions( Element_ptr &P, const std::string &T, MAP_ErrStat_class &Error , MAP_Message_class &Msg );
   bool getElementOptionFlag( int i, bool Element:: *ptr ) { return (*element[i]).*ptr; } 
     
   // clean the file output buffer
   void cleanFileStreamBuffer( ) { output_string.clear(); }
 
   std::string &GetOutputString( );
-  void getOutputStreamHeader( const int index , MAP_Message &Msg ); 
-  void getOutputStreamUnits ( const int index , MAP_Message &Msg );
-  void getOutputStreamValue ( const int index , const float time , MAP_Message &Msg ); 
+  void getOutputStreamHeader( const int index , MAP_Message_class &Msg ); 
+  void getOutputStreamUnits ( const int index , MAP_Message_class &Msg );
+  void getOutputStreamValue ( const int index , const float time , MAP_Message_class &Msg ); 
 
   // write data to a buffer
   void writeToOutputString( const std::string &T ) { *outputStream << T;             }  
@@ -196,16 +196,16 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   // add object to MAP based on the input file string arguments
   void addCableLibrary( const std::vector<std::string> &T     , 
                         const int                      index  , 
-                        MAP_ErrStat                    &Error , 
-                        MAP_Message                    &Msg );
+                        MAP_ErrStat_class                    &Error , 
+                        MAP_Message_class                    &Msg );
   void addNode( const std::vector<std::string> &T     , 
                 const int                      index  , 
-                MAP_ErrStat                    &Error , 
-                MAP_Message                    &Msg );
-  void addElement         ( const std::vector<std::string> &T , const int index , MAP_ErrStat &Error , MAP_Message &Msg );
-  void addDepth           ( const std::string &T, MAP_ErrStat &Error , MAP_Message &Msg );
-  void addGravity         ( const std::string &T, MAP_ErrStat &Error , MAP_Message &Msg );
-  void addSeaDensity      ( const std::string &T, MAP_ErrStat &Error , MAP_Message &Msg );
+                MAP_ErrStat_class                    &Error , 
+                MAP_Message_class                    &Msg );
+  void addElement         ( const std::vector<std::string> &T , const int index , MAP_ErrStat_class &Error , MAP_Message_class &Msg );
+  void addDepth           ( const std::string &T, MAP_ErrStat_class &Error , MAP_Message_class &Msg );
+  void addGravity         ( const std::string &T, MAP_ErrStat_class &Error , MAP_Message_class &Msg );
+  void addSeaDensity      ( const std::string &T, MAP_ErrStat_class &Error , MAP_Message_class &Msg );
   void SetFastCouplingFlag( const bool flag );
 
   void addDepth       ( const double &T ){ this->depth = T; };
@@ -222,21 +222,21 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   // MAP writting functions 
   //
   // These functions are used to create content (not related to the MAP error output) in the 
-  // MAP_Message parameter.
+  // MAP_Message_class parameter.
   // These member print the parameters, inputs outputs and environment properties to the 
-  // MAP_Message varaible
-  void writeEnvironmentData  ( MAP_Message &Msg ); 
-  void writeCableLibraryData ( MAP_Message &Msg ); 
-  void WriteNodeData         ( MAP_Message &Msg ); 
-  void writeElementData      ( MAP_Message &Msg ); 
+  // MAP_Message_class varaible
+  void writeEnvironmentData  ( MAP_Message_class &Msg ); 
+  void writeCableLibraryData ( MAP_Message_class &Msg ); 
+  void WriteNodeData         ( MAP_Message_class &Msg ); 
+  void writeElementData      ( MAP_Message_class &Msg ); 
   void writeXYZData          ( const std::string &position , const std::string &tail ,
                                const bool        tail_bool , const std::string &head ,
-                               const bool        head_bool , MAP_Message       &Msg );
+                               const bool        head_bool , MAP_Message_class       &Msg );
     
   double GetDepth() {return depth;}
     
   // plot the cable profile 
-  void plot( MAP_ErrStat &Error , MAP_Message &Msg );    
+  void plot( MAP_ErrStat_class &Error , MAP_Message_class &Msg );    
 
   // 
   void incrementNumEquations   ( ) { (this->num_equations)++; }
@@ -251,9 +251,9 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   //     - g and rho
   //     - l and h
   //     - H and V (if not user supplied in the MAP input file)
-  void initializeCableElement        ( const int index , MAP_ErrStat &Error , MAP_Message &Msg );
-  void checkElementVarTypeReferences ( const int index , MAP_ErrStat &Error , MAP_Message &Msg );
-  void checkNodeVarTypeReferences    ( const int index , MAP_ErrStat &Error , MAP_Message &Msg );
+  void initializeCableElement        ( const int index , MAP_ErrStat_class &Error , MAP_Message_class &Msg );
+  void checkElementVarTypeReferences ( const int index , MAP_ErrStat_class &Error , MAP_Message_class &Msg );
+  void checkNodeVarTypeReferences    ( const int index , MAP_ErrStat_class &Error , MAP_Message_class &Msg );
 
   // Handle vertical cable
   void ResetVerticalElement    ( const int index ){ element[index]->ResetGhostProperties( ); }
@@ -274,21 +274,21 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   void associateElementVarTypeToNWTCType( const int               index , 
                                           MAP_ParameterType_class       &P    , 
                                           MAP_ConstraintStateType_class &C    ,
-                                          MAP_ErrStat             &Err  ,
-                                          MAP_Message             &Msg); 
+                                          MAP_ErrStat_class             &Err  ,
+                                          MAP_Message_class             &Msg); 
 
   void associateNodeVarTypeToNWTCType   ( const int               index ,
                                           MAP_InputType_class           &I    ,
                                           MAP_ParameterType_class       &P    , 
                                           MAP_ConstraintStateType_class &C    ,
                                           MAP_OutputType_class          &O    ,
-                                          MAP_ErrStat             &Err  ,
-                                          MAP_Message             &Msg);  
+                                          MAP_ErrStat_class             &Err  ,
+                                          MAP_Message_class             &Msg);  
     
   // This is experimental !!! 
   // Computes the linearized stiffness matrix. This result will be writtent to
   // the MAP output file.
-  void writeLinearizedStiffnessMatrix( MAP_Message &Msg );
+  void writeLinearizedStiffnessMatrix( MAP_Message_class &Msg );
     
   // returns the size of property, node and element, respectively
   int getSizeOfCableLibrary( ) const { return property.size(); }
@@ -308,8 +308,8 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   // MAP_OtherStateType_class, and constraint points to the MAP_ConstraintStateType_class
   void setNodeReferenceToUserData( int i );
   void setElementReferenceToUserData( int i );
-  void setMessageReferenceToUserData( MAP_Message &Msg );
-  void setErrorStatusReferenceToUserData( MAP_ErrStat &error );
+  void setMessageReferenceToUserData( MAP_Message_class &Msg );
+  void setErrorStatusReferenceToUserData( MAP_ErrStat_class &error );
   void setMAP_ConstraintStateType_classReferenceToUserData( MAP_ConstraintStateType_class &T );
 
   // sets the boolean to determine if we are solving Newton's equilibrium equation for the 
@@ -386,19 +386,19 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
   // Set the string values from the MAP input file              //             |
   // to a buffer in class Numerics                              //             |
   void SetSolverOptions( const std::string &inputStr ,          //             |
-                         MAP_Message       &msg      );         //             |
+                         MAP_Message_class       &msg      );         //             |
                                                                 //             |
   // solve the functions. Called in MAP_UpdateStates            //             |
-  int Solve( MAP_ErrStat &err, MAP_Message &msg );              //             |
-  int CheckResidualConvergence( MAP_ErrStat        &err ,       //             |
-                                MAP_Message        &msg );      //             |
+  int Solve( MAP_ErrStat_class &err, MAP_Message_class &msg );              //             |
+  int CheckResidualConvergence( MAP_ErrStat_class        &err ,       //             |
+                                MAP_Message_class        &msg );      //             |
                                                                 //             |
   // set the matrix, residual and solution vector size. This    //             |
   //  also sets the PETSc options as defined in the MAP input   //             |
   // file                                                       //             |
   void initializeNumericSolver( MAP_InitInputType_class &Init , //             |
-                                MAP_ErrStat       &Error ,      //             |
-                                MAP_Message       &Msg );       //             |
+                                MAP_ErrStat_class       &Error ,      //             |
+                                MAP_Message_class       &Msg );       //             |
                                                                 //             |
   // if the numeric_method class remains uninitialized, then we //             |
   // cannot proceed with solving it.                            //             |
@@ -407,8 +407,8 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
                                                                 //             |
   // free all PETSc data. This is call only once in the MAP_End //             |
   // function                                                   //             |
-  void cleanNumericSolver( MAP_ErrStat &Error ,                 //             |
-                           MAP_Message &Msg );                  //             |
+  void cleanNumericSolver( MAP_ErrStat_class &Error ,                 //             |
+                           MAP_Message_class &Msg );                  //             |
                                                                 //             |
   // returns the number of equations we are minimizing.         //             |
   int getNumEquations();                                        //   ----------+
@@ -422,7 +422,7 @@ MAP_OtherStateType_class() : num_equations ( 0      ) ,
    */                                                           //             |
   std::string summary( );                                       //             |   
   std::vector <std::string> plotString 
-    ( MAP_ErrStat &Error , MAP_Message &Msg );
+    ( MAP_ErrStat_class &Error , MAP_Message_class &Msg );
   std::string getList();
   //============================================================================
 };

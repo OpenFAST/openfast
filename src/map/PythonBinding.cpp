@@ -54,8 +54,8 @@
                                  *             #include <boost/algorithm/string.hpp>
                                  *             #include <string>
                                  *             #include <iomanip>
-                                 *             #include "MAP_Message.h" 
-                                 *             #include "MAP_ErrStat.h"
+                                 *             #include "MAP_Message_class.h" 
+                                 *             #include "MAP_ErrStat_class.h"
                                  *     
                                  *     #include "Element.h" 
                                  *         #include "Node.h"  
@@ -64,8 +64,8 @@
                                  *                 #include <boost/algorithm/string.hpp>
                                  *                 #include <string>
                                  *                 #include <iomanip>
-                                 *                 #include "MAP_Message.h" 
-                                 *                 #include "MAP_ErrStat.h" 
+                                 *                 #include "MAP_Message_class.h" 
+                                 *                 #include "MAP_ErrStat_class.h" 
                                  *     
                                  *     #include <petscsnes.h>
                                  */
@@ -127,14 +127,14 @@ BOOST_PYTHON_MODULE(MAP) {
   //  Functions callable from Python. are declared in this scope. These functions are located 
   //  in 'External_Functions.cpp' source file.
 
-  class_<MAP_Message>( "MAP_Message" )                                  
-    .def("status"          , &MAP_Message::GetErrorMessage   )                     
-    .def("converge_reason" , &MAP_Message::GetConvergeReason )
+  class_<MAP_Message_class>( "MAP_Message_class" )                                  
+    .def("status"          , &MAP_Message_class::GetErrorMessage   )                     
+    .def("converge_reason" , &MAP_Message_class::GetConvergeReason )
     ;                                                                   
 
-  class_<MAP_ErrStat>( "MAP_ErrStat" )                                  
-    .def("error_status" , &MAP_ErrStat::error_status )
-    .def("reset"        , &MAP_ErrStat::ResetErrorKey )
+  class_<MAP_ErrStat_class>( "MAP_ErrStat_class" )                                  
+    .def("error_status" , &MAP_ErrStat_class::error_status )
+    .def("reset"        , &MAP_ErrStat_class::ResetErrorKey )
     ;	                                                                
 
   class_<MAP_InputType_class>( "MAP_InputType" )                        

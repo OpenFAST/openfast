@@ -56,8 +56,8 @@
 				 //               #include <boost/algorithm/string.hpp>
 				 //               #include <string>
 				 //               #include <iomanip>
-				 //               #include "MAP_Message.h" 
-				 //               #include "MAP_ErrStat.h"
+				 //               #include "MAP_Message_class.h" 
+				 //               #include "MAP_ErrStat_class.h"
 				 //       
 				 //       #include "Element.h" 
 				 //           #include "Node.h"  
@@ -66,10 +66,11 @@
 				 //                   #include <boost/algorithm/string.hpp>
 				 //                   #include <string>
 				 //                   #include <iomanip>
-				 //                   #include "MAP_Message.h" 
-				 //                   #include "MAP_ErrStat.h" 
+				 //                   #include "MAP_Message_class.h" 
+				 //                   #include "MAP_ErrStat_class.h" 
 				 //       
 				 //       #include <petscsnes.h>
+
 
 // ====================================================================================================
 // MAPHeaderCalle
@@ -130,7 +131,7 @@ MAPHeaderCaller( )
 // The cable library should not have parameters start with '#'; if this is
 // the case, an error is returned.
 // ====================================================================================================
-void 
+void
 MSQS_Init( MAP_InitInputType_class       &init           , 
            MAP_InputType_class           &u              , 
            MAP_ParameterType_class       &p              , 
@@ -141,10 +142,10 @@ MSQS_Init( MAP_InitInputType_class       &init           ,
            MAP_OutputType_class          &y              , 
            void*                         NULL_TimeInt    ,
            MAP_InitOutputType_class      &initout        ,
-           MAP_ErrStat                   &err            , 
-           MAP_Message                   &msg            )
+           MAP_ErrStat_class                   &err            , 
+           MAP_Message_class                   &msg            )
 {     
-    
+
 #ifdef NO_PYTHON
   checkpoint();
 #endif /* NO_PYTHON */
@@ -169,6 +170,7 @@ MSQS_Init( MAP_InitInputType_class       &init           ,
   //  -- Node   
   //  -- Cable Library
   try {
+
     // Set depth environmental property. If double depth is uninitialized: 
     if( init.GetDepth_double( ) == -999.9 ) other.addDepth( init.GetDepth( ) , err, msg );  
     else other.addDepth( init.GetDepth_double( ) );
@@ -211,6 +213,7 @@ MSQS_Init( MAP_InitInputType_class       &init           ,
       words.clear();                                            
     }
 
+
     // ==========   Populate Node   ===============
     // Here we set the following properties in the              
     // Node object:                                             
@@ -238,6 +241,7 @@ MSQS_Init( MAP_InitInputType_class       &init           ,
       // clear words for the next pass in the for-loop          
       words.clear();                                            
     }
+
 
     // ==========   Populate Element   ===============     <---------------------+    
     // This initilizes the Element data structure, which by and    
@@ -360,8 +364,7 @@ MSQS_Init( MAP_InitInputType_class       &init           ,
     // Once the initialization is successfully completed, set  
     // the initial conditions for the elements and nodes       
 
-    // set Node.sum_FX, Node.sum_FY and Node.sum_FZ            
-    // to zero                                                 
+    // set Node.sum_FX, Node.sum_FY and Node.sum_FZ to zero                                                 
     other.initializeSumForce();                                 
 
     // This sets the local variables for each element          
@@ -524,12 +527,17 @@ MSQS_UpdateStates( float                         time_in        ,
                    void*                         NULL_DiscState ,
                    MAP_ConstraintStateType_class &z             ,
                    MAP_OtherStateType_class      &other         ,
-                   MAP_ErrStat                   &err           ,
-                   MAP_Message                   &msg           )
+                   MAP_ErrStat_class                   &err           ,
+                   MAP_Message_class                   &msg           )
 {  
   // clean the msg parameter
   msg.MessageClean(); 
   
+  // set reference to msg and err in UserData so errors thrown in UserData will be captured externally 
+  // by the FAST glue code
+  other.setMessageReferenceToUserData( msg );
+  other.setErrorStatusReferenceToUserData( err );
+
   // call the PETSc soliver only if it has been initialized in the MAP_Init routine.
   // The PETSc numerics routine will not be initialized if the '-help' flag is raised
   // as an option in the 'NUMERIC OPTIONS' section of the MAP input file
@@ -581,11 +589,16 @@ MSQS_CalcOutput( float                         time_in              ,
                  MAP_ConstraintStateType_class &z                   ,
                  MAP_OtherStateType_class      &other               ,
                  MAP_OutputType_class          &y                   ,
-                 MAP_ErrStat                   &err                 ,
-                 MAP_Message                   &msg                 )
+                 MAP_ErrStat_class                   &err                 ,
+                 MAP_Message_class                   &msg                 )
 {
   // clean the msg parameter
   msg.MessageClean();   
+
+  // set reference to msg and err in UserData so errors thrown in UserData will be captured externally 
+  // by the FAST glue code
+  other.setMessageReferenceToUserData( msg );
+  other.setErrorStatusReferenceToUserData( err );
     
   if ( other.isNumericsUninitialized()==false && err.error_status()==MAP_SAFE ){
     err.clean_error( ); // set MAP error status (presuming here there is no error
@@ -661,13 +674,16 @@ MSQS_End( MAP_InputType_class           &u                   ,
           MAP_ConstraintStateType_class &z                   ,
           MAP_OtherStateType_class      &other               ,
           MAP_OutputType_class          &y                   ,
-          MAP_ErrStat                   &err                 ,
-          MAP_Message                   &msg                 )
+          MAP_ErrStat_class             &err                 ,
+          MAP_Message_class             &msg                 )
 {
   // set MAP error status (presuming here there is no error just by simply extering 
   // this function from the glue code)    
   err.clean_error( ); 
   msg.MessageClean();
+
+  other.setMessageReferenceToUserData( msg );
+  other.setErrorStatusReferenceToUserData( err );
   
   if ( other.isNumericsUninitialized()==PETSC_TRUE ){
     std::string str = "";

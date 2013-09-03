@@ -35,8 +35,8 @@
                        //   #include <boost/algorithm/string.hpp>
                        //   #include <string>
                        //   #include <iomanip>
-                       //   #include "MAP_Message.h" 
-                       //   #include "MAP_ErrStat.h" 
+                       //   #include "MAP_Message_class.h" 
+                       //   #include "MAP_ErrStat_class.h" 
 
 // Node predefition in order to create the Solving Function 
 // structs. The Node object is declared further below.
@@ -233,8 +233,8 @@ public:
                    const std::string &type   , 
                    int               i       , 
                    VarType Node::*   ptr     , 
-                   MAP_ErrStat       &err    , 
-                   MAP_Message       &msg    );
+                   MAP_ErrStat_class       &err    , 
+                   MAP_Message_class       &msg    );
 
   // initialize (or set) sum_FX, sum_FY, sum_FZ to 0.0
   void SetSumForceToZero( );

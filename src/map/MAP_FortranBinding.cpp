@@ -92,6 +92,7 @@ MAP_Output_Delete( MAP_OutputType_class *This ){ delete This; }                 
 //=================================================================================================
 
 
+
 // ==========   MAPCALL_MSQS_Init Subroutine Bindings   ===============
 //                                                            
 // This is called by the FAST glue code 
@@ -106,10 +107,10 @@ MAPCALL_MSQS_Init( MAP_InitInputType       *InitInp     ,
                    MAP_OutputType          *OutData     ,     
                    MAP_InitOutputType      *InitOutData ,     
                    int                     *stat        ,     
-                   char                    *msg )  
+                   char                    *msg         )  
 {
-  MAP_ErrStat Error;
-  MAP_Message Msg;
+  MAP_ErrStat_class Error;
+  MAP_Message_class Msg;
   void* Nothing = NULL;  
   
   MAP_InitInputType_class *inp = static_cast<MAP_InitInputType_class*>(InitInp->object);
@@ -120,7 +121,7 @@ MAPCALL_MSQS_Init( MAP_InitInputType       *InitInp     ,
   MAP_OutputType_class *y = static_cast<MAP_OutputType_class*>(OutData->object);
   MAP_InitOutputType_class *out = static_cast<MAP_InitOutputType_class*>(InitOutData->object);
 
-  MSQS_Init( *inp    , 
+    MSQS_Init( *inp    , 
              *u      , 
              *p      , 
              Nothing , 
@@ -132,7 +133,7 @@ MAPCALL_MSQS_Init( MAP_InitInputType       *InitInp     ,
              *out    , 
              Error   , 
              Msg     );
-  
+
   std::string buildDate = "";
   buildDate += BUILD_MONTH_CH0  ;
   buildDate += BUILD_MONTH_CH1;
@@ -147,12 +148,12 @@ MAPCALL_MSQS_Init( MAP_InitInputType       *InitInp     ,
   buildDate += BUILD_YEAR_CH3 ;
 
   try {
-    MAPSetInputArray      ( InputData  , u      , OtherData, o );
-    MAPSetParameterArray  ( ParamData  , p      , OtherData, o );
-    MAPSetConstraintArray ( ConstrData , z      , OtherData, o );
-    MAPSetOtherArray      ( Nothing    , Nothing, OtherData, o );
-    MAPSetOutputArray     ( OutData    , y      , OtherData, o );
-    MAPPackOutput         ( OutData   , y, OtherData , o );
+    MAPSetInputArray      ( InputData , u      , OtherData, o );
+    MAPSetParameterArray  ( ParamData , p      , OtherData, o );
+    MAPSetConstraintArray ( ConstrData, z      , OtherData, o );
+    MAPSetOtherArray      ( Nothing   , Nothing, OtherData, o );
+    MAPSetOutputArray     ( OutData   , y      , OtherData, o );
+    MAPPackOutput         ( OutData   , y      , OtherData, o );
     
     // get the program version and build date so that FAST can use this information for something. 
     strcpy( InitOutData->MAP_version, PROGVERSION );
@@ -185,8 +186,8 @@ MAPCALL_MSQS_UpdateStates( float                   time        ,
                            int                     *stat       , 
                            char                    *msg )
 {
-  MAP_ErrStat Error;
-  MAP_Message Msg;
+  MAP_ErrStat_class Error;
+  MAP_Message_class Msg;
   void* Nothing = NULL;
 
   MAP_InputType_class *u = static_cast<MAP_InputType_class*>(InputData->object);
@@ -194,7 +195,7 @@ MAPCALL_MSQS_UpdateStates( float                   time        ,
   MAP_ConstraintStateType_class *z = static_cast<MAP_ConstraintStateType_class*>(ConstrData->object);
   MAP_OtherStateType_class *o = static_cast<MAP_OtherStateType_class*>(OtherData->object);
 
-  try{
+  try {
     MAPUnpackInput     ( InputData , u, OtherData );
     MAPUnpackParameter ( ParamData , p, OtherData );
     MAPUnpackConstraint( ConstrData, z, OtherData );
@@ -212,7 +213,7 @@ MAPCALL_MSQS_UpdateStates( float                   time        ,
                      *z      ,
                      *o      ,
                      Error   ,                                                                    
-                     Msg );
+                     Msg     );
 
   *stat = Error.error_status();
   
@@ -238,8 +239,8 @@ MAPCALL_MSQS_CalcOutput( float                   time        ,
                          int                     *stat       , 
                          char                    *msg )                    
 {                                                                                         
-  MAP_ErrStat Error;                                                                      
-  MAP_Message Msg;                                                                        
+  MAP_ErrStat_class Error;                                                                      
+  MAP_Message_class Msg;                                                                        
   void* Nothing = NULL;                                                                   
 
   MAP_InputType_class *u = static_cast<MAP_InputType_class*>(InputData->object);
@@ -293,8 +294,8 @@ MAPCALL_MSQS_End( MAP_InputType           *InputData  ,
                   int                     *stat       , 
                   char                    *msg )         
 {
-  MAP_ErrStat Error;
-  MAP_Message Msg;
+  MAP_ErrStat_class Error;
+  MAP_Message_class Msg;
   void* Nothing = NULL;
 
   MAP_InputType_class *u = static_cast<MAP_InputType_class*>(InputData->object);
@@ -604,6 +605,7 @@ MAPCALL_SetCableLibraryData( MAP_InitInputType *InitInp )
   S << InitInp->cable_library_data;                                            
   S << "\n";
   inp->SetCableLibraryData( S.str() );                               
+//  inp->
 };                                                                              
 
                                           

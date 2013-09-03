@@ -27,7 +27,7 @@ PROGRAM Main
   TYPE (MAP_ConstraintStateType)         :: MAP_ConstraintState
   TYPE (MAP_OtherStateType)              :: MAP_OtherState
 
-  TYPE (MAP_InputType),      ALLOCATABLE :: MAP_Input (:)
+  TYPE (MAP_InputType),      ALLOCATABLE :: MAP_Input(:)
   REAL(DbKi) , DIMENSION(:), ALLOCATABLE :: MAP_InputTimes
 
   TYPE (MAP_OutputType)                  :: MAP_Output
@@ -53,7 +53,7 @@ PROGRAM Main
   
   ! @bonnie : is this right? What's a good interp order?
   ! @marco: the interp order is specified in the FAST input file. It can be 0, 1, or 2
-  MAP_interp_order = 2 
+  MAP_interp_order = 0
 
   ! MAP: allocate Input and Output arrays; used for interpolation and extrapolation
   Allocate(MAP_OutputTimes(MAP_interp_order + 1)) 
@@ -64,14 +64,14 @@ PROGRAM Main
   !Allocate(MAP_Output(MAP_interp_order + 1)) 
     
   ! set the MAP input file name and other environment terms.
-  MAP_InitInput%filename    = "input6_2.map"! @bonnie : This needs to be set according to what is in the FAST input file. 
+  MAP_InitInput%filename    = "input6.map"  ! @bonnie : This needs to be set according to what is in the FAST input file. 
   MAP_InitInput%gravity     = 9.81          ! @bonnie : This need to be according to g used in FAST
   MAP_InitInput%sea_density = 1025          ! @bonnie : This needs to be set according to seawater density in FAST
   MAP_InitInput%depth       = -350          ! @bonnie : This need to be set according to the water depth in FAST
  
   ! call the initialization routine
   CALL MAP_Init( MAP_InitInput       , &
-                 MAP_Input           , &
+                 MAP_Input(1)        , & 
                  MAP_Parameter       , &
                  MAP_ContinuousState , &
                  MAP_DiscreteState   , &
@@ -86,11 +86,17 @@ PROGRAM Main
      CALL WrScr(ErrMsg) 
   END IF  
 
+  CALL DispNVD( MAP_InitOutput%Ver ) 
+
   DO i = 1, MAP_interp_order + 1  
       MAP_InputTimes(i) = t_initial - (i - 1) * dt_global
       MAP_OutputTimes(i) = t_initial - (i - 1) * dt_global
-      CALL MAP_CopyInput( MAP_Input(1), MAP_Input(i), ErrStat, ErrMsg )
-  ENDDO
+   ENDDO
+   
+  DO i = 2, MAP_interp_order + 1  
+     CALL MAP_CopyInput( MAP_Input(1), MAP_Input(i), MESH_NEWCOPY, ErrStat, ErrMsg )
+  END DO
+
 
   ! should probably delete this at the end bc save/retrieve will need it
   !................
@@ -101,23 +107,61 @@ PROGRAM Main
   ! 3) Same as (2) for MAP_InitOutput_Destroy.
   !................
   CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
-  CALL MAP_DestroyInitInput  ( MAP_InitInput , ErrStat, ErrMsg ) 
+  CALL MAP_DestroyInitInput  ( MAP_InitInput , ErrStat, ErrMsg )
 
   CALL MAP_InitOutput_Destroy( MAP_InitOutput%C_obj%object )  
   CALL MAP_DestroyInitOutput ( MAP_InitOutput , ErrStat, ErrMsg )
 
+  ! @bonnie : don't we need to initialize the messhes once?
+  IF (MAP_interp_order .EQ. 2) THEN
+     DO i = 1,MAP_Input(3)%PtFairleadDisplacement%NNodes
+        MAP_Input(3)%PtFairleadDisplacement%TranslationDisp(1,i) = 0.0  
+        MAP_Input(3)%PtFairleadDisplacement%TranslationDisp(2,i) = 0.0
+        MAP_Input(3)%PtFairleadDisplacement%TranslationDisp(3,i) = 0.0
+     END DO
+     DO i = 1,MAP_Input(2)%PtFairleadDisplacement%NNodes
+        MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(1,i) = 0.0  
+        MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(2,i) = 0.0
+        MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(3,i) = 0.0
+     END DO
+  ELSE IF (MAP_interp_order .EQ. 1) THEN
+     DO i = 1,MAP_Input(2)%PtFairleadDisplacement%NNodes
+        MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(1,i) = 0.0  
+        MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(2,i) = 0.0
+        MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(3,i) = 0.0
+     END DO
+  END IF
+  DO i = 1,MAP_Input(1)%PtFairleadDisplacement%NNodes
+     MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(1,i) = 0.0  
+     MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(2,i) = 0.0
+     MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(3,i) = 0.0
+  END DO
+
+  
   ! -------------------------------------------------------------------------
   ! BEGIN time marching
   ! -------------------------------------------------------------------------
   DO n_t_global = 0, n_t_final
-  
+
+     t_global =  t_initial + dt_global*n_t_global
+
+
+     !==========   NOTE   ======     <-----------------------------------------+
+     ! @bonnie : I am assuming this MAP_InputTimes{:} and MAP_Input{:} 
+     !           will be assigned by the glue code   
+
      MAP_InputTimes(1) = t_global + dt_global
-  
-    ! This is artificial; the node position should be updated by the glue code
-    MAP_Input(:)%PtFairleadDisplacement%TranslationDisp(1,1) = -10+.001*n  ! @bonnie : remove: 
-     
-     
-! @marco: how are we setting MAP_Input?
+     !MAP_InputTimes(2) = MAP_InputTimes(1) - dt_global 
+     !MAP_InputTimes(3) = MAP_InputTimes(2) - dt_global
+
+     MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
+     !MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
+     !MAP_Input(3)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
+     !===========================================================================
+
+
+     ! @bonnie & @jason: the FAST glue code will update the new fairlead position 
+     !                   based on the new platform position in the global frame.
      CALL  MAP_UpdateStates( t_global            , &
                              n_t_global          , &
                              MAP_Input           , &
@@ -153,9 +197,21 @@ PROGRAM Main
   ! -------------------------------------------------------------------------
   ! END time marching
   ! -------------------------------------------------------------------------
+
+
+  !==========   NOTE   ======     <-----------------------------------------+
+  ! @bonnie : I am assuming the glue code will do this
+  IF (MAP_interp_order .EQ. 1) THEN  
+     CALL MeshDestroy(MAP_Input(2)%PtFairleadDisplacement, ErrStat,ErrMsg)
+  ELSE IF (MAP_interp_order .EQ. 2) THEN
+     CALL MeshDestroy(MAP_Input(2)%PtFairleadDisplacement, ErrStat,ErrMsg)
+     CALL MeshDestroy(MAP_Input(3)%PtFairleadDisplacement, ErrStat,ErrMsg)
+  END IF
+  !===========================================================================
+
   
   ! Destroy all objects
-  CALL MAP_End( MAP_Input           , &
+  CALL MAP_End( MAP_Input(1)        , &
                 MAP_Parameter       , &
                 MAP_ContinuousState , &
                 MAP_DiscreteState   , &
@@ -170,7 +226,7 @@ PROGRAM Main
 
   DEALLOCATE(MAP_InputTimes)
   DEALLOCATE(MAP_OutputTimes)
-
+  
   WRITE(*,*) "Program has ended"
     
 END PROGRAM Main

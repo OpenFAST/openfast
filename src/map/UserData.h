@@ -42,8 +42,8 @@
                            *     #include <boost/algorithm/string.hpp>
                            *     #include <string>
                            *     #include <iomanip>
-                           *     #include "MAP_Message.h" 
-                           *     #include "MAP_ErrStat.h" 
+                           *     #include "MAP_Message_class.h" 
+                           *     #include "MAP_ErrStat_class.h" 
                            */
 
 #include "Element.h" /** 
@@ -55,8 +55,8 @@
                       *         #include <boost/algorithm/string.hpp>
                       *         #include <string>
                       *         #include <iomanip>
-                      *         #include "MAP_Message.h" 
-                      *         #include "MAP_ErrStat.h" 
+                      *         #include "MAP_Message_class.h" 
+                      *         #include "MAP_ErrStat_class.h" 
                       */
 #include "Jacobians.h"
 #include <petscsnes.h>
@@ -85,8 +85,8 @@ private:
   std::vector <Element*> element;
   std::vector <A_BLOCK_ptr> JacA;  
   std::vector <B_BLOCK_ptr> JacB;  
-  MAP_Message *msgPtr;  //*message
-  MAP_ErrStat *errPtr;  //*error_status;
+  MAP_Message_class *msgPtr;  //*message
+  MAP_ErrStat_class *errPtr;  //*error_status;
   MAP_ConstraintStateType_class* constraint;
   double msqs_scaling;
   
@@ -141,8 +141,8 @@ public:
   double getConstraint( const int index ) const;
 
   // get/set message pointers
-  void setMessage   ( MAP_Message &msg ) { msgPtr = &msg; }
-  void setErrorCode ( MAP_ErrStat &err ) { errPtr = &err; }
+  void setMessage   ( MAP_Message_class &msg ) { msgPtr = &msg; }
+  void setErrorCode ( MAP_ErrStat_class &err ) { errPtr = &err; }
     
   // These functions are called once in the initialization routine in MSQS_Init
   // for the purpose of setting up references to variables in MAP_OtherStateType_class and 

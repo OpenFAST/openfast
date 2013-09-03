@@ -47,8 +47,8 @@
 void VarType::
 SetGenericVarType ( VarType           &var          , 
                     const std::string &input_string ,
-                    MAP_ErrStat       &err          , 
-                    MAP_Message       &msg          ) 
+                    MAP_ErrStat_class       &err          , 
+                    MAP_Message_class       &msg          ) 
 {
   std::string error_output = "";
   double tempVal = 0.0;
@@ -307,13 +307,13 @@ WriteGenericVarType_value( const int i  ,
 // ====================================================================================================
 // MAPSetUniversalErrorStat
 //
-// Records the error to the MAP_Message contect, and records and error status
+// Records the error to the MAP_Message_class contect, and records and error status
 // ====================================================================================================
 void 
 MAPSetUniversalErrorStat( MAP_ERROR_CODE code     ,
                           std::string    &userStr ,
-                          MAP_ErrStat    &err     ,
-                          MAP_Message    &msg     )
+                          MAP_ErrStat_class    &err     ,
+                          MAP_Message_class    &msg     )
 {
   std::string str = "";                                 
   std::ostringstream S;                                 

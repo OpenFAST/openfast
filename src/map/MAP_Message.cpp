@@ -1,6 +1,6 @@
 /**
  * ====================================================================================================
- *                              MAP_Message.cpp
+ *                              MAP_Message_class.cpp
  * ====================================================================================================
  *	     
  * Copyright Sept. 2012
@@ -34,9 +34,9 @@
 // ====================================================================================================
 // MessageClean
 //
-// -- clean the current instance of the MAP_Message class
+// -- clean the current instance of the MAP_Message_class class
 // ====================================================================================================
-void MAP_Message::
+void MAP_Message_class::
 MessageClean( ) 
 { 
   this->status_string    = "";
@@ -47,8 +47,8 @@ MessageClean( )
 
 
 // RecordToWarningList
-// -- adds a string to the MAP_Message warning type
-void MAP_Message::
+// -- adds a string to the MAP_Message_class warning type
+void MAP_Message_class::
 RecordToWarningList( const std::string &text ) 
 {
   std::string temp_string = "";
@@ -63,7 +63,7 @@ RecordToWarningList( const std::string &text )
 
 
 // RecordToErrorList
-void MAP_Message::
+void MAP_Message_class::
 RecordToErrorList( const std::string &text )
 {
   std::string temp_string = "";
@@ -78,7 +78,7 @@ RecordToErrorList( const std::string &text )
 
 
 // WriteDataToOutputFile
-void MAP_Message::
+void MAP_Message_class::
 WriteDataToOutputFile( const std::string &text )
 {
   this->data_string += text;
@@ -86,7 +86,7 @@ WriteDataToOutputFile( const std::string &text )
 
 
 // WriteErrorToOutputFile 
-void MAP_Message::
+void MAP_Message_class::
 WriteErrorToOutputFile( const std::string &text )
 {
   this->status_string += text;
@@ -95,7 +95,7 @@ WriteErrorToOutputFile( const std::string &text )
 
 
 // GetErrorMessage
-std::string MAP_Message::
+std::string MAP_Message_class::
 GetErrorMessage( )
 { 
   std::string out = "";
@@ -122,7 +122,7 @@ GetErrorMessage( )
 //
 // This string gets written to the MAP output files. 
 // ====================================================================================================
-std::string MAP_Message::
+std::string MAP_Message_class::
 GetDataString( ) const 
 { 
   return this->data_string; 
@@ -133,7 +133,7 @@ GetDataString( ) const
 // GetStatusString
 //
 // ====================================================================================================
-std::string MAP_Message::
+std::string MAP_Message_class::
 GetStatusString( ) const 
 { 
   return this->status_string; 
@@ -145,11 +145,11 @@ GetStatusString( ) const
  * through the python interface why MAP has converged. 
  *
  * @see    Numerics::PetscConverReason( )
- * @see    MAP_Message::GetConvergeReason( )
+ * @see    MAP_Message_class::GetConvergeReason( )
  * @see    BOOST_PYTHON_MODULE(MAP)
  * @param  text  the reason why MAP converged
  */
-void MAP_Message::
+void MAP_Message_class::
 WriteConvergeReason( const std::string &text )
 {
   this->converge_reason = text;
@@ -161,11 +161,11 @@ WriteConvergeReason( const std::string &text )
  *
  * @access  Python
  * @see     Numerics::PetscConverReason( )
- * @see     MAP_Message::GetConvergeReason( )
+ * @see     MAP_Message_class::GetConvergeReason( )
  * @see     BOOST_PYTHON_MODULE(MAP)
  * @return  std:;string  text string of why MAP converged
  */
-std::string MAP_Message::
+std::string MAP_Message_class::
 GetConvergeReason( ) const
 {
   std::string reasonStr = "";
