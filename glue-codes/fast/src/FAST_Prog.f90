@@ -483,38 +483,49 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! Initialize mesh-mapping data
    ! -------------------------------------------------------------------------
 
+   IF ( p_FAST%CompHydro ) THEN
+      IF ( y_HD%WAMIT%Mesh%Initialized  ) THEN
 
-   IF ( y_HD%WAMIT%Mesh%Initialized  ) THEN
+            ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
+         CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
+         CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
 
-         ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
-      CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
-      CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
+         IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
 
-      IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
+               ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
+            CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
+            CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
 
-            ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
-         CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
-         CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
+               ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
+            CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
+            CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
 
-            ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
-         CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
-         CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
+         END IF
+
+      ELSE IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
+
+            ! HydroDyn Morison point mesh to SubDyn point mesh
+            ! HydroDyn Morison line mesh to SubDyn point mesh
 
       END IF
+   END IF !HydroDyn
 
-   ELSE IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
-
-         ! HydroDyn Morison point mesh to SubDyn point mesh
-         ! HydroDyn Morison line mesh to SubDyn point mesh
-
+   IF ( p_FAST%CompMap ) THEN
+      
+         ! MAP point mesh to/from ElastoDyn point mesh
+      CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
+      CALL AllocMapping( y_ED%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
+      
    END IF
-
+   
 
    !...............................................................................................................................
    ! Destroy initializion data
@@ -689,7 +700,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          !----------------------------------------------------------------------------------------
          ! copy the states at step t_global and get prediction for step t_global_next
          ! (note that we need to copy the states because UpdateStates updates the values
-         ! and we need to have the old values for the next pc step)
+         ! and we need to have the old values [at t_global] for the next pc step)
          !----------------------------------------------------------------------------------------
          
          ! ElastoDyn: get predicted states
@@ -745,7 +756,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
                           
          !-----------------------------------------------------------------------------------------
-         ! If correction iteration is to be taken, solve intput-output equations; otherwise move on
+         ! If correction iteration is to be taken, solve intput-output equations using predicted 
+         ! states; otherwise move on
          !-----------------------------------------------------------------------------------------
   
          IF (pc < p_FAST%PC_Max) THEN
@@ -825,7 +837,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                ! Generate glue-code output file
             CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, y_ED%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
                               y_SD%WriteOutput, y_MAP%WriteOutput, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, ErrMsg )
 
                ! Generate AeroDyn's element data if desired:
             CALL ElemOut()
@@ -927,7 +939,7 @@ CONTAINS
          
          IF ( n_t_global > 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
             ADAeroLoads = AD_CalculateLoads( REAL(t_global, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
-               CALL CheckError( ErrStat, ' Error calculating hydrodynamic loads in AeroDyn.'  )
+               CALL CheckError( ErrStat, ' Error calculating aerodynamic loads in AeroDyn.'  )
          end if
          
             !InflowWind outputs
@@ -970,8 +982,8 @@ CONTAINS
 
       IF ( p_FAST%CompSub ) THEN
          
-!         CALL SD_InputSolve( y_ED, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+         CALL SD_InputSolve( y_ED, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
 
          CALL SubDyn_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SubDyn_CalcOutput: '//NewLine//ErrMsg  )
@@ -981,7 +993,8 @@ CONTAINS
 
       IF ( p_FAST%CompMAP ) THEN
          
-!         CALL MAP_InputSolve( y_ED, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
+         ! note: MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads [moment] mapping)      
+         CALL MAP_InputSolve( y_ED, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from MAP_InputSolve: '//NewLine//ErrMsg  )
 
          CALL MAP_CalcOutput( this_time, MAP_Input(1), p_MAP, x_MAP_this, xd_MAP_this, z_MAP_this, OtherSt_MAP, y_MAP, ErrStat, ErrMsg )
@@ -1012,8 +1025,8 @@ CONTAINS
 
       
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
-      ! note: HD_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
-      CALL ED_InputSolve( p_FAST, ED_Input(1), y_SrvD, y_HD, HD_Input(1), MeshMapData, ErrStat, ErrMsg )
+      ! note: HD_InputSolve and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
+      CALL ED_InputSolve( p_FAST, ED_Input(1), y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
             
    
@@ -1124,6 +1137,10 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_MAP_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL MeshMapDestroy( MeshMapData%MAP_P_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+            
+      
       ! -------------------------------------------------------------------------
       ! variables for ExtrapInterp:
       ! -------------------------------------------------------------------------

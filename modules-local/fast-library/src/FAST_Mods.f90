@@ -74,13 +74,17 @@ MODULE FAST_Types
          ! Data structures for mapping the various modules together
 
       TYPE(MeshMapType)                 :: ED_P_2_HD_W_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
-      TYPE(MeshMapType)                 :: ED_P_2_HD_M_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point
-      TYPE(MeshMapType)                 :: ED_P_2_HD_M_L                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2
-                                     
       TYPE(MeshMapType)                 :: HD_W_P_2_ED_P                            ! Map HydroDyn WAMIT Point to ElastoDyn PlatformPtMesh
+      
+      TYPE(MeshMapType)                 :: ED_P_2_HD_M_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point
       TYPE(MeshMapType)                 :: HD_M_P_2_ED_P                            ! Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh
+
+      TYPE(MeshMapType)                 :: ED_P_2_HD_M_L                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2                               
       TYPE(MeshMapType)                 :: HD_M_L_2_ED_P                            ! Map HydroDyn Morison Line2 to ElastoDyn PlatformPtMesh
 
+      TYPE(MeshMapType)                 :: ED_P_2_MAP_P                             ! Map ElastoDyn PlatformPtMesh to MAP point mesh
+      TYPE(MeshMapType)                 :: MAP_P_2_ED_P                             ! Map MAP point mesh to ElastoDyn PlatformPtMesh
+            
    END TYPE FAST_ModuleMapType
 
 
