@@ -436,11 +436,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
       IF (.NOT. p_FAST%CompHydro) CALL CheckError( ErrID_Fatal, 'HydroDyn must be used when MAP is used. Set CompHydro = TRUE or CompMap = FALSE in the FAST input file.' )
       
-      InitInData_MAP%filename    = p_FAST%MAPFile            ! This needs to be set according to what is in the FAST input file. 
-      InitInData_MAP%gravity     = InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
-      InitInData_MAP%sea_density = InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
-!bjj: Looks like Marco is expecting WtrDpth to be negative; check that it is:
-      InitInData_MAP%depth       = InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
+      InitInData_MAP%filename    =  p_FAST%MAPFile            ! This needs to be set according to what is in the FAST input file. 
+      InitInData_MAP%gravity     =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
+      InitInData_MAP%sea_density =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
+      InitInData_MAP%depth       = -InitOutData_HD%WtrDpth    ! This need to be set according to the water depth (negative) in HydroDyn
             
       CALL MAP_Init( InitInData_MAP, MAP_Input(1), p_MAP,  x_MAP, xd_MAP, z_MAP, OtherSt_MAP, y_MAP, dt_global, InitOutData_MAP, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from MAP_Init: '//NewLine//ErrMsg )
