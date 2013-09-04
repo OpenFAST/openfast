@@ -1,11 +1,11 @@
-SUBROUTINE NodalRelRot(Nuuu,node_elem,nelem,norder,dof_node,Nrrr)
+   SUBROUTINE NodalRelRot(Nuuu,node_elem,nelem,norder,dof_node,Nrrr)
 
    REAL(ReKi),INTENT(IN)::Nuuu(:)
-   INTEGER,INTENT(IN)::node_elem,nelem,norder,dof_node
+   INTEGER(IntKi),INTENT(IN)::node_elem,nelem,norder,dof_node
 
-   REAL(ReKi),INTENT(OUT)::Nrrr(:)
+   REAL(ReKi),INTENT(INOUT)::Nrrr(:)
 
-   INTEGER::i,k,temp_id
+   INTEGER(IntKi)::i,k,temp_id
    REAL(ReKi)::Nuuu_temp1(3),Nuuu_temp(3),Nrrr_temp(3)
       
    DO i=1,node_elem

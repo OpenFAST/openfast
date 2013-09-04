@@ -4,14 +4,14 @@
  
    REAL(ReKi),INTENT(IN)::Nuuu(:),Nrrr(:),Nuu0(:),Nrr0(:)
    REAL(ReKi),INTENT(IN)::E10(:),hhp(:,:),Stif0(:,:,:)
-   INTEGER,INTENT(IN)::node_elem,nelem,nnode,norder,dof_node
+   INTEGER(IntKi),INTENT(IN)::node_elem,nelem,nnode,norder,dof_node
 
    REAL(ReKi),INTENT(OUT)::E1(:),RR0(:,:),kapa(:)
    REAL(ReKi),INTENT(OUT)::Stif(:,:),cet
 
    REAL(ReKi)::cc0(3),ccc(3),cc(3),rrr(3),tempR(3,3),tempR6(6,6)
    REAL(ReKi)::Nuuu_temp(3),tempH(3,3),rrp(3),Nuuu_temp1(3)
-   INTEGER::i,temp_id
+   INTEGER(IntKi)::i,temp_id
  
    DO i=1,node_elem
        temp_id = (i-1)*dof_node
