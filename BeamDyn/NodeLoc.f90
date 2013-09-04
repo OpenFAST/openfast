@@ -1,13 +1,13 @@
-   SUBROUTINE NodeLoc(dloc, nquar, xmin, elem_length,& 
+   SUBROUTINE NodeLoc(dloc, xmin, elem_length,& 
                        &xj, norder, elem_total, node_total, blength)
 
-   INTEGER(IntKi), INTENT(IN):: norder, node_total,elem_total
+   INTEGER(IntKi)(IntKi), INTENT(IN):: norder, node_total,elem_total
    REAL(ReKi), INTENT(OUT):: dloc(:), xj(:)   
  
    REAL(ReKi), INTENT(IN):: xmin, elem_length, blength
    
-   INTEGER(IntKi):: i, npos, nelem
-   INTEGER(IntKi):: temp
+   INTEGER(IntKi)(IntKi):: i, npos, nelem
+   INTEGER(IntKi)(IntKi):: temp
     
     
    dloc(1) = xmin
@@ -26,13 +26,5 @@
     
    enddo
       
-   nquar = 1  
-
-   temp = blength*2.0d0/4.0d0
-   do i = 1, nmax 
-      if ( abs(dloc(i)-temp) .lt. abs(dloc(nquar) -temp)) then
-         nquar = i
-      endif
-   enddo
    
    END SUBROUTINE NodeLoc
