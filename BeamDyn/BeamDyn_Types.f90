@@ -33,8 +33,6 @@ IMPLICIT NONE
 ! =========  BDyn_InitInputType  =======
   TYPE, PUBLIC :: BDyn_InitInputType
     CHARACTER(1024)  :: InputFile 
-    INTEGER(IntKi)  :: num_elem 
-    INTEGER(IntKi)  :: order 
   END TYPE BDyn_InitInputType
 ! =======================
 ! =========  BDyn_InitOutputType  =======
@@ -44,7 +42,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  BDyn_ContinuousStateType  =======
   TYPE, PUBLIC :: BDyn_ContinuousStateType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuNf 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Nv 
   END TYPE BDyn_ContinuousStateType
 ! =======================
@@ -62,6 +59,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BDyn_OtherStateType
     TYPE(BDyn_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: xdot 
     INTEGER(IntKi)  :: n 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuNf 
   END TYPE BDyn_OtherStateType
 ! =======================
 ! =========  BDyn_ParameterType  =======
@@ -106,8 +104,6 @@ CONTAINS
    ErrStat = ErrID_None
    ErrMsg  = ""
    DstInitInputData%InputFile = SrcInitInputData%InputFile
-   DstInitInputData%num_elem = SrcInitInputData%num_elem
-   DstInitInputData%order = SrcInitInputData%order
  END SUBROUTINE BDyn_CopyInitInput
 
  SUBROUTINE BDyn_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -154,15 +150,9 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz  = Int_BufSz  + 1  ! num_elem
-  Int_BufSz  = Int_BufSz  + 1  ! order
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%num_elem )
-  Int_Xferred   = Int_Xferred   + 1
-  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%order )
-  Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE BDyn_PackInitInput
 
  SUBROUTINE BDyn_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -198,10 +188,6 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  OutData%num_elem = IntKiBuf ( Int_Xferred )
-  Int_Xferred   = Int_Xferred   + 1
-  OutData%order = IntKiBuf ( Int_Xferred )
-  Int_Xferred   = Int_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -324,18 +310,6 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcContStateData%uuNf)) THEN
-   i1 = SIZE(SrcContStateData%uuNf,1)
-   IF (.NOT.ALLOCATED(DstContStateData%uuNf)) THEN 
-      ALLOCATE(DstContStateData%uuNf(i1),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyContState: Error allocating DstContStateData%uuNf.'
-         RETURN
-      END IF
-   END IF
-   DstContStateData%uuNf = SrcContStateData%uuNf
-ENDIF
 IF (ALLOCATED(SrcContStateData%Nv)) THEN
    i1 = SIZE(SrcContStateData%Nv,1)
    IF (.NOT.ALLOCATED(DstContStateData%Nv)) THEN 
@@ -358,7 +332,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  IF ( ALLOCATED(ContStateData%uuNf) ) DEALLOCATE(ContStateData%uuNf)
   IF ( ALLOCATED(ContStateData%Nv) ) DEALLOCATE(ContStateData%Nv)
  END SUBROUTINE BDyn_DestroyContState
 
@@ -396,15 +369,10 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz    = Re_BufSz    + SIZE( InData%uuNf )  ! uuNf 
   Re_BufSz    = Re_BufSz    + SIZE( InData%Nv )  ! Nv 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  IF ( ALLOCATED(InData%uuNf) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuNf))-1 ) =  PACK(InData%uuNf ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%uuNf)
-  ENDIF
   IF ( ALLOCATED(InData%Nv) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Nv))-1 ) =  PACK(InData%Nv ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%Nv)
@@ -444,12 +412,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  IF ( ALLOCATED(OutData%uuNf) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%uuNf,1))); mask1 = .TRUE.
-    OutData%uuNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuNf))-1 ),mask1,OutData%uuNf)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%uuNf)
-  ENDIF
   IF ( ALLOCATED(OutData%Nv) ) THEN
   ALLOCATE(mask1(SIZE(OutData%Nv,1))); mask1 = .TRUE.
     OutData%Nv = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Nv))-1 ),mask1,OutData%Nv)
@@ -699,6 +661,18 @@ IF (ALLOCATED(SrcOtherStateData%xdot)) THEN
    ENDDO
 ENDIF
    DstOtherStateData%n = SrcOtherStateData%n
+IF (ALLOCATED(SrcOtherStateData%uuNf)) THEN
+   i1 = SIZE(SrcOtherStateData%uuNf,1)
+   IF (.NOT.ALLOCATED(DstOtherStateData%uuNf)) THEN 
+      ALLOCATE(DstOtherStateData%uuNf(i1),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%uuNf.'
+         RETURN
+      END IF
+   END IF
+   DstOtherStateData%uuNf = SrcOtherStateData%uuNf
+ENDIF
  END SUBROUTINE BDyn_CopyOtherState
 
  SUBROUTINE BDyn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -714,6 +688,7 @@ DO i1 = 1, SIZE(OtherStateData%xdot,1)
   CALL BDyn_DestroyContState( OtherStateData%xdot(i1), ErrStat, ErrMsg )
 ENDDO
 ENDIF
+  IF ( ALLOCATED(OtherStateData%uuNf) ) DEALLOCATE(OtherStateData%uuNf)
  END SUBROUTINE BDyn_DestroyOtherState
 
  SUBROUTINE BDyn_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -763,6 +738,7 @@ DO i1 = 1, SIZE(InData%xdot,1)
   IF(ALLOCATED(Int_xdot_Buf)) DEALLOCATE(Int_xdot_Buf)
 ENDDO
   Int_BufSz  = Int_BufSz  + 1  ! n
+  Re_BufSz    = Re_BufSz    + SIZE( InData%uuNf )  ! uuNf 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -786,6 +762,10 @@ DO i1 = 1, SIZE(InData%xdot,1)
 ENDDO
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%n )
   Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(InData%uuNf) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuNf))-1 ) =  PACK(InData%uuNf ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%uuNf)
+  ENDIF
  END SUBROUTINE BDyn_PackOtherState
 
  SUBROUTINE BDyn_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -843,6 +823,12 @@ DO i1 = 1, SIZE(OutData%xdot,1)
 ENDDO
   OutData%n = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(OutData%uuNf) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%uuNf,1))); mask1 = .TRUE.
+    OutData%uuNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuNf))-1 ),mask1,OutData%uuNf)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%uuNf)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1

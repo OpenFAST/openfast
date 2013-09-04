@@ -41,6 +41,26 @@ MODULE BeamDyn
    PUBLIC :: BDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
 CONTAINS
+INCLUDE 'NodeLoc.f90'
+INCLUDE 'Tilde.f90'
+INCLUDE 'OuterProduct.f90'
+INCLUDE 'CrvMatrixR.f90'
+INCLUDE 'CrvMatrixH.f90'
+INCLUDE 'CrvCompose.f90'
+INCLUDE 'ElemNodalDisp.f90'
+INCLUDE 'NodalRelRot.f90'
+INCLUDE 'NodalDataAt0.f90'
+INCLUDE 'NodalData.f90'
+INCLUDE 'ElaticForce.f90'
+INCLUDE 'ElementMatrix.f90'
+INCLUDE 'AssembleStiffK.f90'
+INCLUDE 'AssembleRHS.f90'
+INCLUDE 'BeamStatic.f90'
+INCLUDE 'Norm.f90'
+INCLUDE 'CGSolver.f90'
+INCLUDE 'UpdateConfiguration.f90'
+INCLUDE 'StaticSolution.f90'
+
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, gStat, ErrMsg )
 !
@@ -124,8 +144,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%gll_deriv = 0.0D0
       ALLOCATE( p%uuN0(p%dof_total),      STAT=gStat )
       p%uuN0 = 0.0D0
-      ALLOCATE( p%uuNf(p%dof_total), STAT = gStat)
-      p%uuNf = 0.0D0
+      ALLOCATE( OtherState%uuNf(p%dof_total), STAT = gStat)
+      OtherState%uuNf = 0.0D0
       ALLOCATE( p%bc(dof_total), STAT = gStat)
       p%bc = 0.0D0
       ALLOCATE( dloc(p%node_total), STAT = gStat)
@@ -298,8 +318,6 @@ SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
       gMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
       RETURN
 
-
-      enddo
 
 END SUBROUTINE BDyn_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -575,25 +593,6 @@ subroutine BDyn_gen_deriv(N, xgll, deriv, gStat, ErrMsg)
    return
 end subroutine BDyn_gen_deriv
 
-INCLUDE NodeLoc.f90
-INCLUDE Tilde.f90
-INCLUDE OuterProduct.f90
-INCLUDE CrvMatrixR.f90
-INCLUDE CrvMatrixH.f90
-INCLUDE CrvCompose.f90
-INCLUDE ElemNodalDisp.f90
-INCLUDE NodalRelRot.f90
-INCLUDE NodalDataAt0.f90
-INCLUDE NodalData.f90
-INCLUDE ElaticForce.f90
-INCLUDE ElementMatrix.f90
-INCLUDE AssembleStiffK.f90
-INCLUDE AssembleRHS.f90
-INCLUDE BeamStatic.f90
-INCLUDE Norm.f90
-INCLUDE CGSolver.f90
-INCLUDE UpdateConfiguration.f90
-INCLUDE StaticSolution.f90
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
