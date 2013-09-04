@@ -21,8 +21,15 @@ PROGRAM FAST
 !.................................................................................................
 
 
-   USE FAST_IO_Subs   ! all of the other modules (and their types) are inherited from FAST_IO_Subs
+   USE FAST_IO_Subs   ! all of the ModuleName_types modules are inherited from FAST_IO_Subs
+   
+   USE ElastoDyn
+   USE ServoDyn
+   USE HydroDyn
+   USE SubDyn
+   USE MAP
            
+   
 !TODO:
 !>>>>
    USE TempMod !This is an artifact of SubDyn, which needs to go away.
@@ -390,8 +397,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_SD%SubRotateZ   = 0.0                                ! bjj: not sure what this is supposed to be 
       
             
-!      CALL SD_Init( InitInData_SD, SD_Input(1), p_SD,  x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, dt_global, InitOutData_SD, ErrStat, ErrMsg )
-      CALL SubDyn_Init( InitInData_SD, SD_Input(1), p_SD,  x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, dt_global, InitOutData_SD, ErrStat, ErrMsg )
+      CALL SD_Init( InitInData_SD, SD_Input(1), p_SD,  x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, dt_global, InitOutData_SD, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from SD_Init: '//NewLine//ErrMsg )
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -739,8 +745,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             CALL SD_CopyDiscState   (xd_SD, xd_SD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)  
             CALL SD_CopyConstrState ( z_SD,  z_SD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
          
-            CALL SubDyn_UpdateStates( t_global, n_t_global, SD_Input, SD_InputTimes, p_SD, x_SD_pred, xd_SD_pred, z_SD_pred, OtherSt_SD, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from SubDyn_UpdateStates: '//NewLine//ErrMsg )
+            CALL SD_UpdateStates( t_global, n_t_global, SD_Input, SD_InputTimes, p_SD, x_SD_pred, xd_SD_pred, z_SD_pred, OtherSt_SD, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from SD_UpdateStates: '//NewLine//ErrMsg )
          END IF
             
             
@@ -985,8 +991,8 @@ CONTAINS
          CALL SD_InputSolve( y_ED, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
 
-         CALL SubDyn_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from SubDyn_CalcOutput: '//NewLine//ErrMsg  )
+         CALL SD_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from SD_CalcOutput: '//NewLine//ErrMsg  )
                         
       END IF
       
@@ -1064,7 +1070,6 @@ CONTAINS
    !-----------------------------------------------------------------------------------------------------------------------------
       
       
-      
       !...............................................................................................................................
       ! Clean up modules (and write binary FAST output file), destroy any other variables
       !...............................................................................................................................
@@ -1093,9 +1098,7 @@ CONTAINS
       END IF
 
       IF ( p_FAST%CompSub .AND. ALLOCATED(SD_Input) ) THEN
-!bjj: Let's get consistant names for SubDyn. If ModName = "SD", this should be "SD_End", not "SubDyn_End"         
-      !   CALL SD_End(    SD_Input(1),   p_SD,   x_SD,   xd_SD,   z_SD,   OtherSt_SD,   y_SD,   ErrStat2, ErrMsg2)
-         CALL SubDyn_End(    SD_Input(1),   p_SD,   x_SD,   xd_SD,   z_SD,   OtherSt_SD,   y_SD,   ErrStat2, ErrMsg2)
+         CALL SD_End(    SD_Input(1),   p_SD,   x_SD,   xd_SD,   z_SD,   OtherSt_SD,   y_SD,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
       
@@ -1209,7 +1212,7 @@ CONTAINS
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
          IF ( ALLOCATED(SD_Input)      ) THEN
-            DO j = 2,p_FAST%InterpOrder+1 !note that SD_Input(1) was destroyed in SubDyn_End
+            DO j = 2,p_FAST%InterpOrder+1 !note that SD_Input(1) was destroyed in SD_End
                CALL SD_DestroyInput( SD_Input(j), ErrStat2, ErrMsg2 )
                IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
             END DO
@@ -1227,7 +1230,7 @@ CONTAINS
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
          IF ( ALLOCATED(MAP_Input)      ) THEN
-            DO j = 2,p_FAST%InterpOrder+1 !note that SD_Input(1) was destroyed in SubDyn_End
+            DO j = 2,p_FAST%InterpOrder+1 !note that SD_Input(1) was destroyed in MAP_End
                CALL MAP_DestroyInput( MAP_Input(j), ErrStat2, ErrMsg2 )
                IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
             END DO
