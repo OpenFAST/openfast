@@ -61,8 +61,12 @@ init_type_table()
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
-                                                strcpy( p->mapsto, "MeshType")  ;
+                                                strcpy( p->mapsto, "MeshType")        ;
                                                 add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "dll_type" )        ;
+                                                strcpy( p->mapsto, "DLL_Type")        ;
+                                                add_node_to_end ( p , &Type )         ;
+
   return(0) ;
 }
 
@@ -74,7 +78,7 @@ C_type( char * s )
   if ( !strcmp( s, "LOGICAL") )        return("bool") ;
   if ( !strcmp( s, "REAL(ReKi)") )     return("float") ;
   if ( !strcmp( s, "REAL(DbKi)") )     return("double") ;
-  if ( !strncmp( s, "CHARACTER",9) )     return("char *") ;
+  if ( !strncmp( s, "CHARACTER",9) )   return("char *") ;
   return("unknown") ;
 }
 
