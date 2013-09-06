@@ -607,7 +607,7 @@ CONTAINS
 
    REAL(ReKi)                   :: XOff                                       ! The distance from X to XAry(ILo).
 
-   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+!   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
    INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
 
 
@@ -1071,7 +1071,7 @@ CONTAINS
 
    REAL(ReKi)                   :: Del                                        ! The distances between the regularly spaced points.
 
-   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
+!   INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
 
 
 
@@ -2124,7 +2124,7 @@ CONTAINS
 
    INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
    INTEGER                      :: I                                          ! The index into the arrays.
-   INTEGER                      :: IC                                         ! The curve index into the arrays.
+!   INTEGER                      :: IC                                         ! The curve index into the arrays.
    INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
    INTEGER                      :: NumPts                                     ! Number of points in each curve.
 

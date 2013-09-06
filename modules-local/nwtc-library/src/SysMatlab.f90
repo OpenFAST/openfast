@@ -54,7 +54,7 @@ MODULE SysSubs
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
 
    CHARACTER(10), PARAMETER      :: Endian      = 'BIG_ENDIAN'                      ! The internal format of numbers.
-   CHARACTER( 2), PARAMETER      :: NewLine     = '\n'                              ! The delimiter for New Lines (BJJ: do we want this system-specific ie: CHAR(13)//CHAR(10)???)
+   CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows with Matlab' ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separater.
    CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.
@@ -253,9 +253,9 @@ CONTAINS
 
       ! Close the program
    IF ( StatCode == 0 ) THEN        ! A normal stop
-      CALL mexErrMsgTxt( 'Normal stop.'//ACHAR(10) )    !I don't really want to call this error function.... Is there something else we could call?
+      CALL mexErrMsgTxt( 'Normal stop.'//NewLine )    !I don't really want to call this error function.... Is there something else we could call?
    ELSE                             ! an error occurred
-      CALL mexErrMsgTxt( 'Closing program.'//ACHAR(10) )
+      CALL mexErrMsgTxt( 'Closing program.'//NewLine )
    ENDIF
 
 
@@ -336,7 +336,7 @@ CONTAINS
       WRITE (Str2,Frm, IOSTAT=Stat)  ADJUSTL( Str )
    END IF
 
-   Stat = mexPrintf( TRIM(Str2)//ACHAR(10) )
+   Stat = mexPrintf( TRIM(Str2)//NewLine )
    !call mexEvalString("drawnow;");  ! !bjj: may have to call this to dump string to the screen immediately.
 
 

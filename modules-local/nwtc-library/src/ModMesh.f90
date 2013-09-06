@@ -1952,8 +1952,8 @@ CONTAINS
       END IF
 
       IF ( ALLOCATED(u1%Orientation) ) THEN
-         ErrStat=ErrID_Info
-         ErrMsg='Orientations not implemented in MeshExtrapInterp1; using nearest neighbor approach instead.'
+         !ErrStat=ErrID_Info
+         !ErrMsg='Orientations not implemented in MeshExtrapInterp1; using nearest neighbor approach instead.'
 
          IF (scaleFactor < 0.5) THEN
             u_out%Orientation = u1%Orientation
@@ -2100,9 +2100,9 @@ CONTAINS
       END IF
 
       IF ( ALLOCATED(u1%Orientation) ) THEN
-         ErrStat=ErrID_Info
-         ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
-
+         !ErrStat=ErrID_Info
+         !ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
+         
          IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
             u_out%Orientation = u1%Orientation
          ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
@@ -2111,20 +2111,6 @@ CONTAINS
             u_out%Orientation = u3%Orientation
          END IF
       END IF
-
-
-      !IF ( ASSOCIATED(u_out%RemapFlag) ) THEN
-      !   ErrStat=ErrID_Info
-      !   ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
-      !
-      !   IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
-      !      u_out%RemapFlag = u1%RemapFlag
-      !   ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
-      !      u_out%RemapFlag = u2%RemapFlag
-      !   ELSE
-      !      u_out%RemapFlag = u3%RemapFlag
-      !   END IF
-      !END IF
 
    END SUBROUTINE MeshExtrapInterp2
 

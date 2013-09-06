@@ -76,8 +76,8 @@ CONTAINS
 
    LOGICAL, INTENT(IN), OPTIONAL             :: EchoLibVer                    ! A flag to tell NWTC_Init whether to echo the version of the Library to the screen.
 
-   CHARACTER(*), INTENT(IN), OPTIONAL        :: ProgNameIn                    ! The name of the program calling the library.
-   CHARACTER(*), INTENT(IN), OPTIONAL        :: ProgVerIn                     ! The version of the program calling the library.
+   CHARACTER(*), INTENT(IN), OPTIONAL        :: ProgNameIn                    ! The name of the program calling the library. (Note, modules should not use this input)
+   CHARACTER(*), INTENT(IN), OPTIONAL        :: ProgVerIn                     ! The version of the program calling the library. (Note, modules should not use this input)
 
 
 

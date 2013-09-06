@@ -28,7 +28,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00b-bjj', '29-Aug-2013')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00b-bjj', '6-Sep-2013')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -6907,12 +6907,12 @@ END SUBROUTINE WrBinFAST
 !=======================================================================
    SUBROUTINE Str2IntAry( Str, IntAry, ErrStat, ErrMsg )
       ! Routine converts a string (character array) into an equivalent
-      ! ASCII array of 1-byte integers.
+      ! ASCII array of integers.
       ! This routine is the inverse of the IntAry2Str() routine.
 
          ! Argument declarations:
       CHARACTER(*),   INTENT(IN)    :: Str                                          ! The string to convert
-      INTEGER(B1Ki),  INTENT(OUT)   :: IntAry(:)                                    ! ASCII representation of Str
+      INTEGER(ReKi),  INTENT(OUT)   :: IntAry(:)                                    ! ASCII representation of Str
 
       INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
       CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
@@ -6947,13 +6947,13 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE Str2IntAry
 !=======================================================================
    SUBROUTINE IntAry2Str( IntAry, Str, ErrStat, ErrMsg )
-      ! Routine converts an ASCII array of 1-byte integers into an
+      ! Routine converts an ASCII array of integers into an
       ! equivalent string (character array).
       ! This routine is the inverse of the Str2IntAry() routine.
 
 
          ! Argument declarations:
-      INTEGER(B1Ki),  INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
+      INTEGER(ReKi),  INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
       CHARACTER(*),   INTENT(OUT)   :: Str                                          ! The string representation of IntAry
 
       INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
@@ -6990,5 +6990,82 @@ END SUBROUTINE WrBinFAST
 
    END SUBROUTINE IntAry2Str
 !=======================================================================
+   SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
+   
+      ! This routine packs the DLL_Type data into an integer buffer.
+   
+      TYPE(DLL_Type),                INTENT(IN   ) :: InData
+      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
+      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly
+      
+         ! Local variable
+      INTEGER(IntKi)                               :: Int_BufSz
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
+      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
+      
+      ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
+      IF (ErrStat /= 0 ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
+         RETURN
+      END IF
+            
+      IF ( PRESENT(SizeOnly) ) THEN
+         IF ( SizeOnly ) RETURN
+      ENDIF      
+      
+         ! Put an ascii representation of the strings in the integer array
+      CALL Str2IntAry( InData%FileName, IntKiBuf, ErrStat, ErrMsg )
+      CALL Str2IntAry( InData%ProcName, IntKiBuf((LEN(InData%FileName)+1):) , ErrStat, ErrMsg )
+      
+   END SUBROUTINE DLLTypePack
+   
+!=======================================================================
+   SUBROUTINE DLLTypeUnPack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
+   
+      ! This routine unpacks the DLL_Type data from an integer buffer.
+   
+      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+      TYPE(DLL_Type),                INTENT(  OUT) :: InData
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
+      
+         ! Local variable
+      INTEGER(IntKi)                               :: Int_BufSz
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      IF (.NOT. ALLOCATED(IntKiBuf) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
+      END IF
+      
+      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
+               
+         ! Get an ascii representation of the strings from the integer array
+      Int_BufSz = LEN(InData%FileName)
+      CALL IntAry2Str( IntKiBuf(1:Int_BufSz), InData%FileName, ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
+      Int_BufSz = Int_BufSz + 1
+      CALL IntAry2Str( IntKiBuf(Int_BufSz: ), InData%ProcName, ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
+
+      IF ( LEN_TRIM(InData%FileName) > 0 .AND. LEN_TRIM(InData%ProcName) > 0 ) THEN
+         CALL LoadDynamicLib( InData, ErrStat, ErrMsg )
+      END IF
+      
+   END SUBROUTINE DLLTypeUnPack
+   
+!=======================================================================   
+   
 END MODULE NWTC_IO

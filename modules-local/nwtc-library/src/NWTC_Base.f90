@@ -44,6 +44,7 @@ MODULE NWTC_Base
 
 
       ! Type definition for dynamically loaded libraries:
+      !  Note that changes here may need to be reflected in DLLTypePack() DLLTypeUnPack(), and the FAST Registry.exe
 
    TYPE DLL_Type
 
