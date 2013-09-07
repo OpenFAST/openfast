@@ -30,7 +30,7 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: Module_MAP  = 7
    
    
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.02.01a-bjj', '23-Aug-2013' )                  ! The version number of this module
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.02.02a-bjj', '3-Sep-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime          ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE.
@@ -94,7 +94,7 @@ MODULE FAST_Types
       REAL(DbKi)                :: DT                                               ! Integration time step (s)
       REAL(DbKi)                :: TMax                                             ! Total run time (s)
       INTEGER(IntKi)            :: InterpOrder                                      ! Interpolation order {0,1,2} (-)
-      INTEGER(IntKi)            :: PC_Max                                           ! Number of predictor correction iterations
+      INTEGER(IntKi)            :: NumCrctn                                         ! Number of correction iterations
       
          ! Feature switches:
 
@@ -144,7 +144,7 @@ MODULE AeroDyn_Types
 
    ! This MODULE stores FAST/AeroDyn interface variables.
 
-USE AeroDyn  ! for type;  Precision is also included so the previous line could be removed, too.
+USE AeroDyn  ! for type; 
 USE AeroGenSubs !FOR ElemOut subroutine...
 
 TYPE(AllAeroMarkers)          :: ADAeroMarkers

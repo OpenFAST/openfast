@@ -29,12 +29,7 @@ PROGRAM FAST
    USE SubDyn
    USE MAP
            
-   
-!TODO:
-!>>>>
-   USE TempMod !This is an artifact of SubDyn, which needs to go away.
-!<<<<
-   
+      
 IMPLICIT  NONE
 
 
@@ -440,7 +435,9 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_MAP%gravity     =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
       InitInData_MAP%sea_density =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
       InitInData_MAP%depth       = -InitOutData_HD%WtrDpth    ! This need to be set according to the water depth (negative) in HydroDyn
-            
+      
+      InitInData_MAP%C_obj%coupled_to_FAST = .TRUE.      
+      
       CALL MAP_Init( InitInData_MAP, MAP_Input(1), p_MAP,  x_MAP, xd_MAP, z_MAP, OtherSt_MAP, y_MAP, dt_global, InitOutData_MAP, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from MAP_Init: '//NewLine//ErrMsg )
 
@@ -700,7 +697,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       
       
       ! predictor-corrector loop:
-      DO pc = 1, p_FAST%PC_Max
+      DO pc = 1, p_FAST%NumCrctn + 1
   
          !----------------------------------------------------------------------------------------
          ! copy the states at step t_global and get prediction for step t_global_next
@@ -765,7 +762,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          ! states; otherwise move on
          !-----------------------------------------------------------------------------------------
   
-         IF (pc < p_FAST%PC_Max) THEN
+         IF (pc <= p_FAST%NumCrctn) THEN
   
             
             CALL CalcOutputs_And_SolveForInputs( t_global_next &
@@ -884,19 +881,32 @@ CONTAINS
    
       ! ElastoDyn meshes
       ED_Input(1)%PlatformPtMesh%RemapFlag      = .FALSE.
-      y_ED%PlatformPtMesh%RemapFlag             = .FALSE.
+             y_ED%PlatformPtMesh%RemapFlag      = .FALSE.
       ED_Input(1)%TowerLn2Mesh%RemapFlag        = .FALSE.
-      y_ED%TowerLn2Mesh%RemapFlag               = .FALSE.
+             y_ED%TowerLn2Mesh%RemapFlag        = .FALSE.
 
+      ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
          HD_Input(1)%WAMIT%Mesh%RemapFlag          = .FALSE.
-         y_HD%WAMIT%Mesh%RemapFlag                 = .FALSE.
+                y_HD%WAMIT%Mesh%RemapFlag          = .FALSE.
          HD_Input(1)%Morison%LumpedMesh%RemapFlag  = .FALSE.
-         y_HD%Morison%LumpedMesh%RemapFlag         = .FALSE.
+                y_HD%Morison%LumpedMesh%RemapFlag  = .FALSE.
          HD_Input(1)%Morison%DistribMesh%RemapFlag = .FALSE.
-         y_HD%Morison%DistribMesh%RemapFlag        = .FALSE.
+                y_HD%Morison%DistribMesh%RemapFlag = .FALSE.
       END IF
-   
+
+      ! SubDyn
+      IF ( p_FAST%CompSub ) THEN
+      END IF
+      
+      
+      ! MAP 
+      IF ( p_FAST%CompMAP ) THEN
+         MAP_Input(1)%PtFairleadDisplacement%RemapFlag  = .FALSE.
+                y_MAP%PtFairleadLoad%RemapFlag          = .FALSE.
+         
+      END IF
+         
    
    END SUBROUTINE ResetRemapFlags  
    !...............................................................................................................................
