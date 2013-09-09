@@ -40,6 +40,8 @@ MODULE BeamDyn
    PUBLIC :: BDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
+   PUBLIC :: StaticSolution                      ! for static verificaiton
+
 CONTAINS
 INCLUDE 'NodeLoc.f90'
 INCLUDE 'Tilde.f90'
