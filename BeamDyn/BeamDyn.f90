@@ -124,11 +124,14 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%dof_total  = p%node_total * p%dof_node
       p%node_elem  = p%order + 1
       p%dof_elem   = p%node_elem * p%node_elem
+      p%niter = 100
 
       xl = 0.   ! left most point (on x axis)
       xr = 10.  ! right most point (on x axis)
       blength = xr - xl
       elem_length = blength / p%elem_total
+
+      p%det_jac = elem_length/2.0D0
 
       ! allocate all allocatable paramete arrays
 
