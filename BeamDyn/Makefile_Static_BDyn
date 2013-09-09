@@ -150,7 +150,7 @@ BeamDyn_Types.f90:
    # For compiling the driver/glue code.
 
 $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT): $(LIB_OBJS) $(MODNAME_OBJS) | $(INTER_DIR)
-	$(FC) $(LDFLAGS) -I $(INTER_DIR) -o $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT) \
+	$(FC) $(LDFLAGS) -g -I $(INTER_DIR) -o $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT) \
 	$(foreach src, $(LIB_OBJS), $(addprefix $(INTER_DIR)/,$(src))) \
 	$(foreach src, $(MODNAME_OBJS), $(addprefix $(INTER_DIR)/,$(src)))
 
