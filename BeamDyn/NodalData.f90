@@ -6,7 +6,7 @@
    REAL(ReKi),INTENT(IN)::E10(:),hhp(:,:),Stif0(:,:,:)
    INTEGER(IntKi),INTENT(IN)::node_elem,nelem,nnode,norder,dof_node
 
-   REAL(ReKi),INTENT(OUT)::E1(:),RR0(:,:),kapa(:)
+   REAL(ReKi),INTENT(INOUT)::E1(:),RR0(:,:),kapa(:)
    REAL(ReKi),INTENT(INOUT)::Stif(:,:),cet
 
    REAL(ReKi)::cc0(3),ccc(3),cc(3),rrr(3),tempR(3,3),tempR6(6,6)
