@@ -54,6 +54,7 @@ typedef   ^          ^          ^  gll_deriv {:}{:} - "gll derivative matrix" -
 typedef   ^          ^          ^  uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^  det_jac {:} - - "determinant of transformation jacobian for element" -
 typedef   ^          ^          ^  bc {:} - - "Boundary condition vector" -
+typedef   ^          ^          ^  F_ext {:} - - "Applied force vector" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
