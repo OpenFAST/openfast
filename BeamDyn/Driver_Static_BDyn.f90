@@ -85,6 +85,14 @@ PROGRAM MAIN
 
 !   BDyn_InitInput%order    = 12  ! order of spectral elements
 
+   !Simple_Cant_Beam: allocate Input and Output arrays; used for interpolation and extrapolation
+   Allocate(BDyn_Input(1))
+   Allocate(BDyn_InputTimes(1))
+
+   Allocate(BDyn_Output(1))
+   Allocate(BDyn_OutputTimes(1))
+
+
    CALL BDyn_Init( BDyn_InitInput        &
                    , BDyn_Input(1)         &
                    , BDyn_Parameter        &
@@ -170,6 +178,8 @@ PROGRAM MAIN
       CALL BDyn_DestroyOutput(BDyn_Output(i), ErrStat, ErrMsg )
    enddo
 
+   DEALLOCATE(BDyn_Input)
+   DEALLOCATE(BDyn_Output)
    DEALLOCATE(BDyn_InputTimes)
    DEALLOCATE(BDyn_OutputTimes)
 

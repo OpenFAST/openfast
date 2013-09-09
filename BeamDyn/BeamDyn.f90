@@ -133,7 +133,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       blength = xr - xl
       elem_length = blength / p%elem_total
 
-      p%det_jac = elem_length/2.0D0
+      !p%det_jac = elem_length/2.0D0
+      p%Jacobian = elem_length/2.0D0
 
       ! allocate all allocatable paramete arrays
 
@@ -184,11 +185,9 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ENDDO
       DEALLOCATE(dloc)
 
-      DO i = 1, p%elem_total
-
-        p%det_jac(i) = elem_length / 2.   ! element-specific determinant of jacobian of transformation
-
-      ENDDO     
+!     DO i = 1, p%elem_total
+!        p%det_jac(i) = elem_length / 2.   ! element-specific determinant of jacobian of transformation
+!     ENDDO     
 
       ! Define boundary conditions (0->fixed, 1->free)
       p%bc = 1.0D0
