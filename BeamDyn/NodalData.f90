@@ -11,7 +11,7 @@
 
    REAL(ReKi)::cc0(3),ccc(3),cc(3),rrr(3),tempR(3,3),tempR6(6,6)
    REAL(ReKi)::Nuuu_temp(3),tempH(3,3),rrp(3),Nuuu_temp1(3)
-   INTEGER(IntKi)::i,temp_id
+   INTEGER(IntKi)::i,j,temp_id
  
    DO i=1,node_elem
        temp_id = (i-1)*dof_node
@@ -34,7 +34,7 @@
    CALL CrvCompose(cc,ccc,cc0,0)
    CALL CrvMatrixR(cc,RR0)
 
-   temp_R6 = 0.0d0
+   tempR6 = 0.0d0
    DO i=1,3
        DO j=1,3
            tempR6(i,j) = RR0(i,j)
@@ -44,7 +44,7 @@
 
    Stif(1:6,1:6) = Stif0(1:6,1:6,nnode)
    cet = Stif(5,5) + Stif(6,6)
-   Stif = MATMUL(tempR6,MATMUL(Stif,TRANSPOSE(tempR6))
+   Stif = MATMUL(tempR6,MATMUL(Stif,TRANSPOSE(tempR6)))
 
    temp_id = (nnode-1)*3
    DO i=1,3

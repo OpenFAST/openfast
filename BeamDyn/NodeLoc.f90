@@ -1,12 +1,12 @@
    SUBROUTINE NodeLoc(dloc, xmin, elem_length,& 
                        &xj, norder, elem_total, node_total, blength)
 
-   INTEGER(IntKi)(IntKi), INTENT(IN):: norder, node_total,elem_total
+   INTEGER(IntKi), INTENT(IN):: norder, node_total,elem_total
    REAL(ReKi), INTENT(OUT):: dloc(:), xj(:)   
  
    REAL(ReKi), INTENT(IN):: xmin, elem_length, blength
    
-   INTEGER(IntKi):: i, npos, nelem
+   INTEGER(IntKi):: i, j,npos, nelem
    INTEGER(IntKi):: temp
     
     
