@@ -79,6 +79,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuN0 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: det_jac 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: bc 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_ext 
   END TYPE BDyn_ParameterType
 ! =======================
 ! =========  BDyn_InputType  =======
@@ -953,6 +954,18 @@ IF (ALLOCATED(SrcParamData%bc)) THEN
    END IF
    DstParamData%bc = SrcParamData%bc
 ENDIF
+IF (ALLOCATED(SrcParamData%F_ext)) THEN
+   i1 = SIZE(SrcParamData%F_ext,1)
+   IF (.NOT.ALLOCATED(DstParamData%F_ext)) THEN 
+      ALLOCATE(DstParamData%F_ext(i1),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%F_ext.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%F_ext = SrcParamData%F_ext
+ENDIF
  END SUBROUTINE BDyn_CopyParam
 
  SUBROUTINE BDyn_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -971,6 +984,7 @@ ENDIF
   IF ( ALLOCATED(ParamData%uuN0) ) DEALLOCATE(ParamData%uuN0)
   IF ( ALLOCATED(ParamData%det_jac) ) DEALLOCATE(ParamData%det_jac)
   IF ( ALLOCATED(ParamData%bc) ) DEALLOCATE(ParamData%bc)
+  IF ( ALLOCATED(ParamData%F_ext) ) DEALLOCATE(ParamData%F_ext)
  END SUBROUTINE BDyn_DestroyParam
 
  SUBROUTINE BDyn_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1022,6 +1036,7 @@ ENDIF
   Re_BufSz    = Re_BufSz    + SIZE( InData%uuN0 )  ! uuN0 
   Re_BufSz    = Re_BufSz    + SIZE( InData%det_jac )  ! det_jac 
   Re_BufSz    = Re_BufSz    + SIZE( InData%bc )  ! bc 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%F_ext )  ! F_ext 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1070,6 +1085,10 @@ ENDIF
   IF ( ALLOCATED(InData%bc) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%bc))-1 ) =  PACK(InData%bc ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%bc)
+  ENDIF
+  IF ( ALLOCATED(InData%F_ext) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F_ext))-1 ) =  PACK(InData%F_ext ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%F_ext)
   ENDIF
  END SUBROUTINE BDyn_PackParam
 
@@ -1167,6 +1186,12 @@ ENDIF
     OutData%bc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%bc))-1 ),mask1,OutData%bc)
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%bc)
+  ENDIF
+  IF ( ALLOCATED(OutData%F_ext) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%F_ext,1))); mask1 = .TRUE.
+    OutData%F_ext = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%F_ext))-1 ),mask1,OutData%F_ext)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%F_ext)
   ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
