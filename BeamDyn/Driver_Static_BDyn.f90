@@ -123,10 +123,10 @@ PROGRAM MAIN
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
 
    CALL StaticSolution(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf, BDyn_Parameter%gll_deriv, BDyn_Parameter%gll_w, &
-                       &BDyn_Parameter%Jacobian, BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,&
-                       &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%norder,&
-                       &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total, BDyn_Parameter%node_total,&
-                       &BDyn_Parameter%niter)   
+                      &BDyn_Parameter%det_jac, BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,&
+                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%order,&
+                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total, BDyn_Parameter%node_total,&
+                      &BDyn_Parameter%niter)   
 
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &

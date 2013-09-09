@@ -62,7 +62,7 @@ INCLUDE 'UpdateConfiguration.f90'
 INCLUDE 'StaticSolution.f90'
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, gStat, ErrMsg )
+SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
@@ -85,8 +85,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
                                                                       !   Output is the actual coupling interval that will be used
                                                                       !   by the glue code.
       TYPE(BDyn_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-      INTEGER(IntKi),                   INTENT(  OUT)  :: gStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       !-------------------------------------
       ! local variables
@@ -99,13 +99,13 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       REAL(ReKi)              :: elem_length      !element length: blength/elem_total
       REAL(ReKi),ALLOCATABLE  :: dloc(:)
 
-      INTEGER(IntKi)          :: gStat2     ! Error status of the operation
-      CHARACTER(LEN(gMsg))   :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi)          :: ErrStat2     ! Error status of the operation
+      CHARACTER(LEN(ErrMsg))   :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
       ! Initialize the NWTC Subroutine Library
 
@@ -132,29 +132,29 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! allocate all allocatable paramete arrays
 
-      ALLOCATE( p%Stif0(6,6,p%node_total),      STAT=gStat )
+      ALLOCATE( p%Stif0(6,6,p%node_total),      STAT=ErrStat )
       p%Stif0 = 0.0D0
-      !Allocate( p%M(6,6,p%num_node),      STAT=gStat )
+      !Allocate( p%M(6,6,p%num_node),      STAT=ErrStat )
        
-      ALLOCATE( p%gll_w(p%node_elem),      STAT=gStat )
+      ALLOCATE( p%gll_w(p%node_elem),      STAT=ErrStat )
       p%gll_w = 0.0D0
-      ALLOCATE( p%gll_p(p%node_elem),      STAT=gStat )
+      ALLOCATE( p%gll_p(p%node_elem),      STAT=ErrStat )
       p%gll_p = 0.0D0
-      ALLOCATE( p%gll_deriv(p%node_elem,p%node_elem),      STAT=gStat )
+      ALLOCATE( p%gll_deriv(p%node_elem,p%node_elem),      STAT=ErrStat )
       p%gll_deriv = 0.0D0
-      ALLOCATE( p%uuN0(p%dof_total),      STAT=gStat )
+      ALLOCATE( p%uuN0(p%dof_total),      STAT=ErrStat )
       p%uuN0 = 0.0D0
-      ALLOCATE( OtherState%uuNf(p%dof_total), STAT = gStat)
+      ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
       OtherState%uuNf = 0.0D0
-      ALLOCATE( p%bc(p%dof_total), STAT = gStat)
+      ALLOCATE( p%bc(p%dof_total), STAT = ErrStat)
       p%bc = 0.0D0
-      ALLOCATE( dloc(p%node_total), STAT = gStat)
+      ALLOCATE( dloc(p%node_total), STAT = ErrStat)
       dloc = 0.0D0
       ! Check parameters for validity (general case) 
                
 !     IF ( EqualRealNos( p%mu, 0.0_ReKi ) ) THEN
-!        gStat = ErrID_Fatal
-!        gMsg  = ' Error in BeamDyn: Mass must be non-zero to avoid division-by-zero errors.'
+!        ErrStat = ErrID_Fatal
+!        ErrMsg  = ' Error in BeamDyn: Mass must be non-zero to avoid division-by-zero errors.'
 !        RETURN
 !     END IF
 
@@ -162,9 +162,9 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Calculate general spectral element stuff specific to "order"
 
-      CALL BDyn_gen_gll(p%order, p%gll_p, p%gll_w, gStat, ErrMsg)
+      CALL BDyn_gen_gll(p%order, p%gll_p, p%gll_w, ErrStat, ErrMsg)
 
-      CALL BDyn_gen_deriv(p%order, p%gll_p, p%gll_deriv, gStat, ErrMsg)
+      CALL BDyn_gen_deriv(p%order, p%gll_p, p%gll_deriv, ErrStat, ErrMsg)
 
       CALL NodeLoc(dloc,xl,elem_length,p%gll_p,p%order,p%elem_total,p%node_total,blength)
 
@@ -198,7 +198,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 END SUBROUTINE BDyn_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_End( u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
+SUBROUTINE BDyn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 !
 ! This routine is called at the end of the simulation.
 !..................................................................................................................................
@@ -210,13 +210,13 @@ SUBROUTINE BDyn_End( u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
       TYPE(BDyn_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
       TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       TYPE(BDyn_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                 INTENT(  OUT)  :: gStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
       ! Place any last minute operations or calculations here:
 
@@ -224,27 +224,27 @@ SUBROUTINE BDyn_End( u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
 
       ! Destroy the input data:
 
-      CALL BDyn_DestroyInput( u, gStat, ErrMsg )
+      CALL BDyn_DestroyInput( u, ErrStat, ErrMsg )
 
       ! Destroy the parameter data:
 
-      CALL BDyn_DestroyParam( p, gStat, ErrMsg )
+      CALL BDyn_DestroyParam( p, ErrStat, ErrMsg )
 
       ! Destroy the state data:
 
-      CALL BDyn_DestroyContState(   x,           gStat, ErrMsg )
-      CALL BDyn_DestroyDiscState(   xd,          gStat, ErrMsg )
-      CALL BDyn_DestroyConstrState( z,           gStat, ErrMsg )
-      CALL BDyn_DestroyOtherState(  OtherState,  gStat, ErrMsg )
+      CALL BDyn_DestroyContState(   x,           ErrStat, ErrMsg )
+      CALL BDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+      CALL BDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
+      CALL BDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
 
       ! Destroy the output data:
 
-      CALL BDyn_DestroyOutput( y, gStat, ErrMsg )
+      CALL BDyn_DestroyOutput( y, ErrStat, ErrMsg )
 
 
 END SUBROUTINE BDyn_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, gStat, ErrMsg )
+SUBROUTINE BDyn_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! Routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Constraint states are solved for input t; Continuous and discrete states are updated for t + p%dt
@@ -263,8 +263,8 @@ SUBROUTINE BDyn_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, gStat, E
       TYPE(BDyn_ConstraintStateType),     INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
                                                                       !   Output: Constraint states at t+dt
       TYPE(BDyn_OtherStateType),          INTENT(INOUT) :: OtherState ! Other/optimization states
-      INTEGER(IntKi),                       INTENT(  OUT) :: gStat    ! Error status of the operation
-      CHARACTER(*),                         INTENT(  OUT) :: gMsg     ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                       INTENT(  OUT) :: ErrStat    ! Error status of the operation
+      CHARACTER(*),                         INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -273,20 +273,20 @@ SUBROUTINE BDyn_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, gStat, E
 
       !INTEGER(IntKi) :: i
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
-      gStat = ErrID_Fatal
-      gMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
       RETURN
 
-      IF ( gStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
 END SUBROUTINE BDyn_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
+SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 !
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..................................................................................................................................
@@ -300,8 +300,8 @@ SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
       TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       TYPE(BDyn_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
                                                                     !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                   INTENT(  OUT)  :: gStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! Local variables
       Real(ReKi)           :: tmp_vector(3)
@@ -309,19 +309,19 @@ SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, gStat, ErrMsg )
       INTEGER(IntKi)       :: i
       INTEGER(IntKi)       :: ilocal
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
-      gStat = ErrID_Fatal
-      gMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
       RETURN
 
 
 END SUBROUTINE BDyn_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, gStat, ErrMsg )
+SUBROUTINE BDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 !
 ! Routine for computing derivatives of continuous states.
 !..................................................................................................................................
@@ -334,8 +334,8 @@ SUBROUTINE BDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, gStat, 
       TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
       TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: xdot        ! Continuous state derivatives at t
-      INTEGER(IntKi),                   INTENT(  OUT)  :: gStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
 
       ! local variables
       INTEGER(IntKi)  :: i              ! do-loop counter
@@ -346,21 +346,21 @@ SUBROUTINE BDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, gStat, 
       INTEGER(IntKi)  :: klocal              ! do-loop counter
       INTEGER(IntKi)  :: nlocal              ! do-loop counter
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
       ! Compute the first time derivatives of the continuous states here:
 
-      gStat = ErrID_Fatal
-      gMsg  = ' Error in BDyn_CalcContStateDeriv: THERE IS NOTHING HERE '
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in BDyn_CalcContStateDeriv: THERE IS NOTHING HERE '
       RETURN
 
 
 END SUBROUTINE BDyn_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, gStat, ErrMsg )
+SUBROUTINE BDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! Routine for updating discrete states
 !..................................................................................................................................
@@ -374,13 +374,13 @@ SUBROUTINE BDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, gStat, ErrMsg
                                                                     !   Output: Discrete states at t + Interval
       TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
       TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                   INTENT(  OUT)  :: gStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
       ! Update discrete states here:
 
@@ -388,7 +388,7 @@ SUBROUTINE BDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, gStat, ErrMsg
 
 END SUBROUTINE BDyn_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, gStat, ErrMsg )
+SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
 !
 ! Routine for solving for the residual of the constraint state equations
 !..................................................................................................................................
@@ -402,14 +402,14 @@ SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residu
       TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       TYPE(BDyn_ConstraintStateType), INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state equations using
                                                                       !     the input values described above
-      INTEGER(IntKi),                   INTENT(  OUT)  :: gStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
-      ! Initialize gStat
+      ! Initialize ErrStat
 
-      gStat = ErrID_None
-      gMsg  = "" 
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
 
 
       ! Solve for the constraint states here:
@@ -419,7 +419,7 @@ SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residu
 END SUBROUTINE BDyn_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BDyn_gen_gll(N, x, w, gStat, ErrMsg)
+subroutine BDyn_gen_gll(N, x, w, ErrStat, ErrMsg)
 !
 ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
 !
@@ -440,8 +440,8 @@ subroutine BDyn_gen_gll(N, x, w, gStat, ErrMsg)
    REAL(ReKi),                     INTENT(  OUT)  :: x(N+1)      ! location of GLL nodes
    REAL(ReKi),                     INTENT(  OUT)  :: w(N+1)      ! quadrature weights at GLL nodes
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: gStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: gMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables  
 
@@ -458,10 +458,10 @@ subroutine BDyn_gen_gll(N, x, w, gStat, ErrMsg)
    INTEGER(IntKi)      :: j         ! do-loop counter
    INTEGER(IntKi)      :: k         ! do-loop counter
 
-   ! Initialize gStat
+   ! Initialize ErrStat
 
-   gStat = ErrID_None
-   gMsg  = "" 
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
    tol = 1e-15
 
@@ -497,8 +497,8 @@ subroutine BDyn_gen_gll(N, x, w, gStat, ErrMsg)
       enddo
 
       if (i==maxit) then
-         gStat = ErrID_Fatal
-         gMsg  = ' Error in BeamDyn: BDyn_gen_gll: reached max iterations in gll solve'
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in BeamDyn: BDyn_gen_gll: reached max iterations in gll solve'
       end if
 
       x(i) = x_it
@@ -509,7 +509,7 @@ subroutine BDyn_gen_gll(N, x, w, gStat, ErrMsg)
    return
 end subroutine BDyn_gen_gll
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BDyn_gen_deriv(N, xgll, deriv, gStat, ErrMsg)
+subroutine BDyn_gen_deriv(N, xgll, deriv, ErrStat, ErrMsg)
 !
 ! Calculates derivative array for order N one-dimensional basis function evaluated at location of (N+1) nodes
 !
@@ -534,8 +534,8 @@ subroutine BDyn_gen_deriv(N, xgll, deriv, gStat, ErrMsg)
    REAL(ReKi),           INTENT(IN   )  :: xgll(N+1)       ! location of GLL nodes
    REAL(ReKi),           INTENT(  OUT)  :: deriv(N+1,N+1)  ! derivative tensor
 
-   INTEGER(IntKi),       INTENT(  OUT)  :: gStat         ! Error status of the operation
-   CHARACTER(*),         INTENT(  OUT)  :: gMsg          ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),       INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+   CHARACTER(*),         INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
 
    ! local variables  
 
@@ -552,10 +552,10 @@ subroutine BDyn_gen_deriv(N, xgll, deriv, gStat, ErrMsg)
 
    REAL(ReKi) dleg(N+1,N+1)
 
-   ! Initialize gStat
+   ! Initialize ErrStat
 
-   gStat = ErrID_None
-   gMsg  = "" 
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
    N1 = N+1
 
