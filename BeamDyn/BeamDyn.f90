@@ -146,7 +146,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%uuN0 = 0.0D0
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = gStat)
       OtherState%uuNf = 0.0D0
-      ALLOCATE( p%bc(dof_total), STAT = gStat)
+      ALLOCATE( p%bc(p%dof_total), STAT = gStat)
       p%bc = 0.0D0
       ALLOCATE( dloc(p%node_total), STAT = gStat)
       dloc = 0.0D0
@@ -166,7 +166,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       CALL BDyn_gen_deriv(p%order, p%gll_p, p%gll_deriv, gStat, ErrMsg)
 
-      CALL NodeLoc(dloc,xl,elem_length,p%gll_p,order,elem_total,node_total,blength)
+      CALL NodeLoc(dloc,xl,elem_length,p%gll_p,p%order,p%elem_total,p%node_total,blength)
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + i) = dloc(i)
@@ -187,7 +187,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define boundary conditions (0->fixed, 1->free)
       p%bc = 1.0D0
-      DO i=1, dof_node
+      DO i=1, p%dof_node
           p%bc(i) = 0.0D0
       ENDDO ! fix left end for a clamped beam 
 

@@ -1,5 +1,5 @@
    SUBROUTINE BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,Fext,&
-                        &node_elem,dof_node,norder,elem_total,dof_total,node_total,&
+                        &node_elem,dof_node,norder,elem_total,dof_total,node_total,dof_elem,&
                         &StifK,RHS)
 
    REAL(ReKi),INTENT(IN)::uuN0(:),uuNf(:),hhp(:,:),w(:),Fext(:),Jacobian
