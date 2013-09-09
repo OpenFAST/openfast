@@ -1,16 +1,16 @@
-   SUBROUTINE BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,&
+   SUBROUTINE BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,Fext,&
                         &node_elem,dof_node,norder,elem_total,dof_total,node_total,&
                         &StifK,RHS)
 
-   REAL(ReKi),INTENT(IN)::uuN0(:),uuNf(:),hhp(:,:),w(:),Jacobian
+   REAL(ReKi),INTENT(IN)::uuN0(:),uuNf(:),hhp(:,:),w(:),Fext(:),Jacobian
    REAL(ReKi),INTENT(IN)::Stif0(:,:,:)
    INTEGER(IntKi),INTENT(IN)::node_elem,dof_node,norder,elem_total,dof_total,node_total
    INTEGER(IntKi),INTENT(IN)::dof_elem
    REAL(ReKi),INTENT(INOUT)::StifK(:,:),RHS(:)
 
-   REAL(ReKi),ALLOCATABLE::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
+   REAL(ReKi),ALLOCATABLE::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
    REAL(ReKi),ALLOCATABLE::elk(:,:),elf(:)
-   REAL(ReKi)::Stif(6,6)
+   REAL(ReKi)::Stif(6,6),cet
    INTEGER(IntKi)::i,allo_stat
    INTEGER(IntKi)::rot_elem
 

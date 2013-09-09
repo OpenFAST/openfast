@@ -6,8 +6,8 @@
  
    REAL(ReKi), INTENT(IN):: xmin, elem_length, blength
    
-   INTEGER(IntKi)(IntKi):: i, npos, nelem
-   INTEGER(IntKi)(IntKi):: temp
+   INTEGER(IntKi):: i, npos, nelem
+   INTEGER(IntKi):: temp
     
     
    dloc(1) = xmin
