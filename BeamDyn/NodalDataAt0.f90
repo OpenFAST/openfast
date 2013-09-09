@@ -4,7 +4,7 @@
    REAL(ReKi),INTENT(IN)::hhp(:,:),Nuu0(:)
    REAL(ReKi),INTENT(INOUT)::E10(:)
 
-   INTEGER(IntKi):i,temp_id
+   INTEGER(IntKi)::i,temp_id
 
    DO i=1,node_elem
        temp_id = (i-1)*dof_node  
