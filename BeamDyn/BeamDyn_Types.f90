@@ -79,6 +79,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuN0 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: det_jac 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: bc 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_ext 
   END TYPE BDyn_ParameterType
 ! =======================
 ! =========  BDyn_InputType  =======
@@ -100,6 +101,8 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -201,6 +204,8 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -307,13 +312,16 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
 IF (ALLOCATED(SrcContStateData%Nv)) THEN
-   i1 = SIZE(SrcContStateData%Nv,1)
+   i1_l = LBOUND(SrcContStateData%Nv,1)
+   i1_u = UBOUND(SrcContStateData%Nv,1)
    IF (.NOT.ALLOCATED(DstContStateData%Nv)) THEN 
-      ALLOCATE(DstContStateData%Nv(i1),STAT=ErrStat)
+      ALLOCATE(DstContStateData%Nv(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyContState: Error allocating DstContStateData%Nv.'
@@ -431,6 +439,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -537,6 +547,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -643,28 +655,32 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
 IF (ALLOCATED(SrcOtherStateData%xdot)) THEN
-   i1 = SIZE(SrcOtherStateData%xdot,1)
+   i1_l = LBOUND(SrcOtherStateData%xdot,1)
+   i1_u = UBOUND(SrcOtherStateData%xdot,1)
    IF (.NOT.ALLOCATED(DstOtherStateData%xdot)) THEN 
-      ALLOCATE(DstOtherStateData%xdot(i1),STAT=ErrStat)
+      ALLOCATE(DstOtherStateData%xdot(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%xdot.'
          RETURN
       END IF
    END IF
-   DO i1 = 1, SIZE(SrcOtherStateData%xdot,1)
+   DO i1 = LBOUND(SrcOtherStateData%xdot,1), UBOUND(SrcOtherStateData%xdot,1)
       CALL BDyn_CopyContState( SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat, ErrMsg )
    ENDDO
 ENDIF
    DstOtherStateData%n = SrcOtherStateData%n
 IF (ALLOCATED(SrcOtherStateData%uuNf)) THEN
-   i1 = SIZE(SrcOtherStateData%uuNf,1)
+   i1_l = LBOUND(SrcOtherStateData%uuNf,1)
+   i1_u = UBOUND(SrcOtherStateData%uuNf,1)
    IF (.NOT.ALLOCATED(DstOtherStateData%uuNf)) THEN 
-      ALLOCATE(DstOtherStateData%uuNf(i1),STAT=ErrStat)
+      ALLOCATE(DstOtherStateData%uuNf(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%uuNf.'
@@ -684,7 +700,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 IF (ALLOCATED(OtherStateData%xdot)) THEN
-DO i1 = 1, SIZE(OtherStateData%xdot,1)
+DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
   CALL BDyn_DestroyContState( OtherStateData%xdot(i1), ErrStat, ErrMsg )
 ENDDO
 ENDIF
@@ -728,7 +744,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-DO i1 = 1, SIZE(InData%xdot,1)
+DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
   CALL BDyn_PackContState( Re_xdot_Buf, Db_xdot_Buf, Int_xdot_Buf, InData%xdot(i1), ErrStat, ErrMsg, .TRUE. ) ! xdot 
   IF(ALLOCATED(Re_xdot_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_xdot_Buf  ) ! xdot
   IF(ALLOCATED(Db_xdot_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_xdot_Buf  ) ! xdot
@@ -742,7 +758,7 @@ ENDDO
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-DO i1 = 1, SIZE(InData%xdot,1)
+DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
   CALL BDyn_PackContState( Re_xdot_Buf, Db_xdot_Buf, Int_xdot_Buf, InData%xdot(i1), ErrStat, ErrMsg, OnlySize ) ! xdot 
   IF(ALLOCATED(Re_xdot_Buf)) THEN
     IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_xdot_Buf)-1 ) = Re_xdot_Buf
@@ -804,7 +820,7 @@ ENDDO
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-DO i1 = 1, SIZE(OutData%xdot,1)
+DO i1 = LBOUND(OutData%xdot,1), UBOUND(OutData%xdot,1)
  ! first call BDyn_PackContState to get correctly sized buffers for unpacking
   CALL BDyn_PackContState( Re_xdot_Buf, Db_xdot_Buf, Int_xdot_Buf, OutData%xdot(i1), ErrStat, ErrMsg, .TRUE. ) ! xdot 
   IF(ALLOCATED(Re_xdot_Buf)) THEN
@@ -842,15 +858,20 @@ ENDDO
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
 IF (ALLOCATED(SrcParamData%Stif0)) THEN
-   i1 = SIZE(SrcParamData%Stif0,1)
-   i2 = SIZE(SrcParamData%Stif0,2)
-   i3 = SIZE(SrcParamData%Stif0,3)
+   i1_l = LBOUND(SrcParamData%Stif0,1)
+   i1_u = UBOUND(SrcParamData%Stif0,1)
+   i2_l = LBOUND(SrcParamData%Stif0,2)
+   i2_u = UBOUND(SrcParamData%Stif0,2)
+   i3_l = LBOUND(SrcParamData%Stif0,3)
+   i3_u = UBOUND(SrcParamData%Stif0,3)
    IF (.NOT.ALLOCATED(DstParamData%Stif0)) THEN 
-      ALLOCATE(DstParamData%Stif0(i1,i2,i3),STAT=ErrStat)
+      ALLOCATE(DstParamData%Stif0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%Stif0.'
@@ -860,11 +881,14 @@ IF (ALLOCATED(SrcParamData%Stif0)) THEN
    DstParamData%Stif0 = SrcParamData%Stif0
 ENDIF
 IF (ALLOCATED(SrcParamData%M)) THEN
-   i1 = SIZE(SrcParamData%M,1)
-   i2 = SIZE(SrcParamData%M,2)
-   i3 = SIZE(SrcParamData%M,3)
+   i1_l = LBOUND(SrcParamData%M,1)
+   i1_u = UBOUND(SrcParamData%M,1)
+   i2_l = LBOUND(SrcParamData%M,2)
+   i2_u = UBOUND(SrcParamData%M,2)
+   i3_l = LBOUND(SrcParamData%M,3)
+   i3_u = UBOUND(SrcParamData%M,3)
    IF (.NOT.ALLOCATED(DstParamData%M)) THEN 
-      ALLOCATE(DstParamData%M(i1,i2,i3),STAT=ErrStat)
+      ALLOCATE(DstParamData%M(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%M.'
@@ -881,9 +905,10 @@ ENDIF
    DstParamData%node_elem = SrcParamData%node_elem
    DstParamData%dof_elem = SrcParamData%dof_elem
 IF (ALLOCATED(SrcParamData%gll_w)) THEN
-   i1 = SIZE(SrcParamData%gll_w,1)
+   i1_l = LBOUND(SrcParamData%gll_w,1)
+   i1_u = UBOUND(SrcParamData%gll_w,1)
    IF (.NOT.ALLOCATED(DstParamData%gll_w)) THEN 
-      ALLOCATE(DstParamData%gll_w(i1),STAT=ErrStat)
+      ALLOCATE(DstParamData%gll_w(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%gll_w.'
@@ -893,9 +918,10 @@ IF (ALLOCATED(SrcParamData%gll_w)) THEN
    DstParamData%gll_w = SrcParamData%gll_w
 ENDIF
 IF (ALLOCATED(SrcParamData%gll_p)) THEN
-   i1 = SIZE(SrcParamData%gll_p,1)
+   i1_l = LBOUND(SrcParamData%gll_p,1)
+   i1_u = UBOUND(SrcParamData%gll_p,1)
    IF (.NOT.ALLOCATED(DstParamData%gll_p)) THEN 
-      ALLOCATE(DstParamData%gll_p(i1),STAT=ErrStat)
+      ALLOCATE(DstParamData%gll_p(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%gll_p.'
@@ -905,10 +931,12 @@ IF (ALLOCATED(SrcParamData%gll_p)) THEN
    DstParamData%gll_p = SrcParamData%gll_p
 ENDIF
 IF (ALLOCATED(SrcParamData%gll_deriv)) THEN
-   i1 = SIZE(SrcParamData%gll_deriv,1)
-   i2 = SIZE(SrcParamData%gll_deriv,2)
+   i1_l = LBOUND(SrcParamData%gll_deriv,1)
+   i1_u = UBOUND(SrcParamData%gll_deriv,1)
+   i2_l = LBOUND(SrcParamData%gll_deriv,2)
+   i2_u = UBOUND(SrcParamData%gll_deriv,2)
    IF (.NOT.ALLOCATED(DstParamData%gll_deriv)) THEN 
-      ALLOCATE(DstParamData%gll_deriv(i1,i2),STAT=ErrStat)
+      ALLOCATE(DstParamData%gll_deriv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%gll_deriv.'
@@ -918,9 +946,10 @@ IF (ALLOCATED(SrcParamData%gll_deriv)) THEN
    DstParamData%gll_deriv = SrcParamData%gll_deriv
 ENDIF
 IF (ALLOCATED(SrcParamData%uuN0)) THEN
-   i1 = SIZE(SrcParamData%uuN0,1)
+   i1_l = LBOUND(SrcParamData%uuN0,1)
+   i1_u = UBOUND(SrcParamData%uuN0,1)
    IF (.NOT.ALLOCATED(DstParamData%uuN0)) THEN 
-      ALLOCATE(DstParamData%uuN0(i1),STAT=ErrStat)
+      ALLOCATE(DstParamData%uuN0(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%uuN0.'
@@ -930,9 +959,10 @@ IF (ALLOCATED(SrcParamData%uuN0)) THEN
    DstParamData%uuN0 = SrcParamData%uuN0
 ENDIF
 IF (ALLOCATED(SrcParamData%det_jac)) THEN
-   i1 = SIZE(SrcParamData%det_jac,1)
+   i1_l = LBOUND(SrcParamData%det_jac,1)
+   i1_u = UBOUND(SrcParamData%det_jac,1)
    IF (.NOT.ALLOCATED(DstParamData%det_jac)) THEN 
-      ALLOCATE(DstParamData%det_jac(i1),STAT=ErrStat)
+      ALLOCATE(DstParamData%det_jac(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%det_jac.'
@@ -942,9 +972,10 @@ IF (ALLOCATED(SrcParamData%det_jac)) THEN
    DstParamData%det_jac = SrcParamData%det_jac
 ENDIF
 IF (ALLOCATED(SrcParamData%bc)) THEN
-   i1 = SIZE(SrcParamData%bc,1)
+   i1_l = LBOUND(SrcParamData%bc,1)
+   i1_u = UBOUND(SrcParamData%bc,1)
    IF (.NOT.ALLOCATED(DstParamData%bc)) THEN 
-      ALLOCATE(DstParamData%bc(i1),STAT=ErrStat)
+      ALLOCATE(DstParamData%bc(i1_l:i1_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%bc.'
@@ -952,6 +983,19 @@ IF (ALLOCATED(SrcParamData%bc)) THEN
       END IF
    END IF
    DstParamData%bc = SrcParamData%bc
+ENDIF
+IF (ALLOCATED(SrcParamData%F_ext)) THEN
+   i1_l = LBOUND(SrcParamData%F_ext,1)
+   i1_u = UBOUND(SrcParamData%F_ext,1)
+   IF (.NOT.ALLOCATED(DstParamData%F_ext)) THEN 
+      ALLOCATE(DstParamData%F_ext(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%F_ext.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%F_ext = SrcParamData%F_ext
 ENDIF
  END SUBROUTINE BDyn_CopyParam
 
@@ -971,6 +1015,7 @@ ENDIF
   IF ( ALLOCATED(ParamData%uuN0) ) DEALLOCATE(ParamData%uuN0)
   IF ( ALLOCATED(ParamData%det_jac) ) DEALLOCATE(ParamData%det_jac)
   IF ( ALLOCATED(ParamData%bc) ) DEALLOCATE(ParamData%bc)
+  IF ( ALLOCATED(ParamData%F_ext) ) DEALLOCATE(ParamData%F_ext)
  END SUBROUTINE BDyn_DestroyParam
 
  SUBROUTINE BDyn_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1022,6 +1067,7 @@ ENDIF
   Re_BufSz    = Re_BufSz    + SIZE( InData%uuN0 )  ! uuN0 
   Re_BufSz    = Re_BufSz    + SIZE( InData%det_jac )  ! det_jac 
   Re_BufSz    = Re_BufSz    + SIZE( InData%bc )  ! bc 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%F_ext )  ! F_ext 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1070,6 +1116,10 @@ ENDIF
   IF ( ALLOCATED(InData%bc) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%bc))-1 ) =  PACK(InData%bc ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%bc)
+  ENDIF
+  IF ( ALLOCATED(InData%F_ext) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F_ext))-1 ) =  PACK(InData%F_ext ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%F_ext)
   ENDIF
  END SUBROUTINE BDyn_PackParam
 
@@ -1168,6 +1218,12 @@ ENDIF
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%bc)
   ENDIF
+  IF ( ALLOCATED(OutData%F_ext) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%F_ext,1))); mask1 = .TRUE.
+    OutData%F_ext = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%F_ext))-1 ),mask1,OutData%F_ext)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%F_ext)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -1181,6 +1237,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1331,6 +1389,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2005,7 +2065,6 @@ ENDIF
    ! local variables
  REAL(DbKi) :: t(SIZE(tin))    ! Times associated with the inputs
  REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd
- TYPE(MeshType) :: tmpmesh
  INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)
  REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
@@ -2147,7 +2206,6 @@ ENDIF
    ! local variables
  REAL(DbKi) :: t(SIZE(tin))    ! Times associated with the inputs
  REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd
- TYPE(MeshType) :: tmpmesh
  INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)
  REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
