@@ -51,7 +51,7 @@
    ALLOCATE(elk(dof_elem,dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    elk = 0.0D0
- 
+
    DO i=1,elem_total
        ! Get Nodal Displacement Vector Nuu0 from Global Vector uuN0 at t=0    
        CALL ElemNodalDisp(uuN0,node_elem,dof_node,i,norder,Nuu0)
@@ -71,6 +71,9 @@
        !Assemble Elemental Matrices into Global Matrices
        CALL AssembleStiffK(i,dof_elem,norder,dof_node,elk,StifK)
        CALL AssembleRHS(i,dof_elem,norder,dof_node,elf,RHS)
+       WRITE(*,*) "RHS"
+       WRITE(*,*) RHS
+       STOP
    ENDDO
 
    DEALLOCATE(Nuu0)

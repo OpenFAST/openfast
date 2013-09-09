@@ -6,7 +6,7 @@
    REAL(ReKi),INTENT(IN)::w(:)
    INTEGER(IntKi),INTENT(IN)::node_elem,nelem,norder,dof_node
 
-   REAL(ReKi),INTENT(OUT)::elk(:,:),elf(:)      
+   REAL(ReKi),INTENT(INOUT)::elk(:,:),elf(:)      
 
    REAL(ReKi),ALLOCATABLE::Fc_elem(:,:),Fd_elem(:,:),Oe_elem(:,:,:)
    REAL(ReKi),ALLOCATABLE::Pe_elem(:,:,:),Qe_elem(:,:,:),Se_elem(:,:,:)

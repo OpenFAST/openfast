@@ -120,12 +120,12 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! Define parameters here:
 
       p%elem_total = 1
-      p%order    = 4
+      p%order    = 2
       p%dof_node = 6
       p%node_total = p%elem_total * p%order  + 1
       p%dof_total  = p%node_total * p%dof_node
       p%node_elem  = p%order + 1
-      p%dof_elem   = p%node_elem * p%node_elem
+      p%dof_elem   = p%node_elem * p%dof_node
       p%niter = 100
 
       xl = 0.   ! left most point (on x axis)
@@ -154,6 +154,10 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       OtherState%uuNf = 0.0D0
       ALLOCATE( p%bc(p%dof_total), STAT = ErrStat)
       p%bc = 0.0D0
+      ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
+      p%F_ext = 0.0D0
+      p%F_ext(p%dof_total-1) = 31.4159D0
+      p%bc = 0.0D0
       ALLOCATE( dloc(p%node_total), STAT = ErrStat)
       dloc = 0.0D0
       ! Check parameters for validity (general case) 
@@ -175,13 +179,13 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       CALL NodeLoc(dloc,xl,elem_length,p%gll_p,p%order,p%elem_total,p%node_total,blength)
 
       DO i=1,p%node_total
-          p%uuN0((i-1)*p%dof_node + i) = dloc(i)
-          p%Stif0(1,1,i) = 70.0D+09
-          p%Stif0(2,2,i) = 70.0D+09
-          p%Stif0(3,3,i) = 70.0D+09
-          p%Stif0(4,4,i) = 70.0D+09
-          p%Stif0(5,5,i) = 5.833D+09
-          p%Stif0(6,6,i) = 5.833D+09
+          p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
+          p%Stif0(1,1,i) = 1.0D+04
+          p%Stif0(2,2,i) = 1.0D+04
+          p%Stif0(3,3,i) = 1.0D+04
+          p%Stif0(4,4,i) = 1.0D+04
+          p%Stif0(5,5,i) = 1.0D+02
+          p%Stif0(6,6,i) = 1.0D+02
       ENDDO
       DEALLOCATE(dloc)
 
