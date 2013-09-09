@@ -48,6 +48,7 @@ typedef   ^          ^          ^   node_total - - - "number of nodes" -
 typedef   ^          ^          ^   dof_total  - - - "total dof" -
 typedef   ^          ^          ^   node_elem  - - - "total dof" -
 typedef   ^          ^          ^   dof_elem  - - - "total dof" -
+typedef   ^          ^          ^   niter  - - - "total dof" -
 typedef   ^          ^        Reki gll_w {:} - - "gauss-legendre-lobatto weights" -
 typedef   ^          ^          ^  gll_p {:} - - "gauss-legendre-lobatto points" -
 typedef   ^          ^          ^  gll_deriv {:}{:} - "gll derivative matrix" -
@@ -55,6 +56,7 @@ typedef   ^          ^          ^  uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^  det_jac {:} - - "determinant of transformation jacobian for element" -
 typedef   ^          ^          ^  bc {:} - - "Boundary condition vector" -
 typedef   ^          ^          ^  F_ext {:} - - "Applied force vector" -
+typedef   ^          ^          ^  Jacobian - - - "Applied force vector" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
