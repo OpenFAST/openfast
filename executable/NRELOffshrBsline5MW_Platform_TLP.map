@@ -1,0 +1,31 @@
+---------------------- LINE DICTIONARY ---------------------------------------
+LineType     Diam     MassDenInAir    EA        CB
+(-)          (m)      (kg/m)          (N)       (-)
+Material     0.127    116.026         1.5E9     1.0
+---------------------- NODE PROPERTIES ---------------------------------------
+Node Type     X     Y     Z     M     B     FX   FY   FZ
+(-)  (-)     (m)   (m)   (m)   (kg)  (mˆ3)  (N)  (N)  (N)
+1    fix      27   0    depth   0     0      #    #    #
+2    Vessel   27   0   -47.89   0     0      #    #    #
+---------------------- LINE PROPERTIES ---------------------------------------
+Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
+(-)      (-)       (m)         (-)       (-)       (-)
+1       Material   151.728725   1         2         plot
+2       repeat     0 
+3       repeat     90 
+4       repeat     90 
+5       repeat     180 
+6       repeat     180 
+7       repeat     270 
+8       repeat     270 
+---------------------- SOLVER OPTIONS-----------------------------------------
+Option
+(-)   
+!-msqs_default ls
+!
+! '-msqs_default ls' is equvalent to the following options:
+!
+-snes_type newtonls 
+-ksp_type preonly 
+-pc_type lu
+-pc_factor_nonzeros_along_diagonal
