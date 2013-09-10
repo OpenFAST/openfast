@@ -71,8 +71,8 @@
        !Assemble Elemental Matrices into Global Matrices
        CALL AssembleStiffK(i,dof_elem,norder,dof_node,elk,StifK)
        CALL AssembleRHS(i,dof_elem,norder,dof_node,elf,RHS)
-       WRITE(*,*) "RHS"
-       WRITE(*,*) RHS
+       WRITE(*,*) "StiffK"
+       WRITE(*,*) StifK
        STOP
    ENDDO
 
