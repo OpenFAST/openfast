@@ -13,6 +13,16 @@
    REAL(ReKi)::Nuuu_temp(3),tempH(3,3),rrp(3),Nuuu_temp1(3)
    INTEGER(IntKi)::i,j,temp_id
  
+   rrp = 0.0D0
+   cc0 = 0.0D0
+   ccc = 0.0D0
+   cc  = 0.0D0
+   rrr = 0.0D0
+   tempR = 0.0D0
+   tempR6 = 0.0D0
+   Nuuu_temp = 0.0D0
+   tempH = 0.0D0
+   Nuuu_temp1 = 0.0D0
    DO i=1,node_elem
        temp_id = (i-1)*dof_node
        E1(1) = E1(1) + hhp(i,nnode)*Nuuu(temp_id+1)
