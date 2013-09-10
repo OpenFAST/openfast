@@ -1,0 +1,88 @@
+*********
+FAST Release Date: Monday, September 30, 2013
+Target Date for Completion of Coding/Testing: Tuesday, September 24, 2013
+
+Other components need to be ready to go before the FAST release date [I'm going to be compiling an official FAST executable
+that needs the finished components. I'd also like to add the other components in one big happy archive so it's all in one spot.
+   Can we shoot for Friday, September 27?
+*********
+
+
+This is a list of things that we need to do before our next release. Please update as necessary.
+-------------------------------------------------
+All components:
+-------------------------------------------------
+* I'd like to change the licenses to Apache 2.0 wherever we can.
+* Basic documentation (lists of limitations, etc)
+* check for memory leaks
+* standardize names/locations for modules' output, summary, and echo files
+* TESTING!!!!!
+
+-------------------------------------------------
+FAST
+-------------------------------------------------
+* subdyn integration
+* aerodyn integration
+* remove greg's debug switches
+* CertTest: need updated input files from MAP, HydroDyn, SubDyn so that the 5MW models work
+
+
+-------------------------------------------------
+ElastoDyn
+-------------------------------------------------
+* change aerodyn input/outputs to mesh
+
+
+-------------------------------------------------
+ServoDyn
+-------------------------------------------------
+* update input switches (document that DLL is 5, make the others consistant [or wait until next release]?)
+
+
+-------------------------------------------------
+AeroDyn
+-------------------------------------------------
+* Add meshes
+* link with updated InflowWind
+
+-------------------------------------------------
+InflowWind
+-------------------------------------------------
+
+
+
+-------------------------------------------------
+HydroDyn
+-------------------------------------------------
+
+
+
+-------------------------------------------------
+SubDyn
+-------------------------------------------------
+Have we gotten rid of the non-NREL code?
+
+
+-------------------------------------------------
+MAP
+-------------------------------------------------
+
+
+-------------------------------------------------
+NWTC Library
+-------------------------------------------------
+* MeshMapping: Transfer_Line2_to_Line2 algorithm needs updating
+* Mesh documentation (maybe not for this release)
+
+
+-------------------------------------------------
+Registry
+-------------------------------------------------
+* more documentation
+
+
+
+-------------------------------------------------
+Web site
+-------------------------------------------------
+* reorganize...
