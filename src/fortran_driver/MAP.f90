@@ -382,10 +382,10 @@ CONTAINS
     !   gravity         = the acceleration due to gravity [N] -or- [kg*m/s^2]
     !   sea_density     = density of sea water [kg/m^3]
     !   coupled_to_FAST = flag letting MAP know it is coupled to FAST. MAP won't create the output file when .TRUE.
-    InitInp%C_Obj%gravity         = InitInp%gravity
-    InitInp%C_Obj%sea_density     = InitInp%sea_density
-    InitInp%C_Obj%depth           = InitInp%depth
-    InitInp%C_obj%coupled_to_FAST = .FALSE. ! @bonnie : Maybe keep this a run-time option in the FAST input file? This tells MAP that it is coupled  
+    InitInp%C_Obj%gravity         =  InitInp%gravity
+    InitInp%C_Obj%sea_density     =  InitInp%sea_density
+    InitInp%C_Obj%depth           = -InitInp%depth
+    InitInp%C_obj%coupled_to_FAST = .TRUE.  ! @bonnie : Maybe keep this a run-time option in the FAST input file? This tells MAP that it is coupled  
                                             ! coupeld to FAST. The only implication right now it tells MAP not to create the default output file, 
                                             ! because FAST does this (ussually). 
 
@@ -398,7 +398,11 @@ CONTAINS
 
     ! Read the MAP input file, and pass the arguments to the C++ sructures. 
     ! @note : this call the following C function in MAP_FortranBinding.cpp
-    CALL MAP_ReadInputFileContents( InitInp%filename , InitInp )
+    CALL MAP_ReadInputFileContents( InitInp%filename , InitInp, ErrStat )
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("MAP ERROR: cannot read the MAP input file.",ErrMSg)
+       RETURN
+    END IF
     
     ! This binds MSQS_Init function in C++ with Fortran
     CALL MSQS_Init( InitInp%C_obj   , &
@@ -431,10 +435,10 @@ CONTAINS
     ! get header information for the FAST output file               !          | 
     numHeaderStr = MAP_NumberOfHeaders( O%C_obj )                   !          | 
                                                                     !          | 
-    ALLOCATE( strHdrArray(numHeaderStr) )                         !          | 
-    ALLOCATE( strHdrPtrs (numHeaderStr) )                         !          | 
-    ALLOCATE( strUntArray(numHeaderStr) )                         !          | 
-    ALLOCATE( strUntPtrs (numHeaderStr) )                         !          | 
+    ALLOCATE( strHdrArray(numHeaderStr+1) )                         !          | 
+    ALLOCATE( strHdrPtrs (numHeaderStr+1) )                         !          | 
+    ALLOCATE( strUntArray(numHeaderStr) )                           !          | 
+    ALLOCATE( strUntPtrs (numHeaderStr) )                           !          | 
     ALLOCATE( InitOut%WriteOutputHdr(numHeaderStr) )                !          | 
     ALLOCATE( InitOut%WriteOutputUnt(numHeaderStr) )                !          | 
                                                                     !          | 
@@ -930,9 +934,10 @@ CONTAINS
   !                                                                                              !          |
   ! Reads the MAP input files. Assumes the MAP input file is formated as demonstrated with the   !          |
   !   MAP distruction archives. Any changes to the format, and this read function may fail.      !          |
-  SUBROUTINE MAP_ReadInputFileContents( file , InitInp )                                         !          |
+  SUBROUTINE MAP_ReadInputFileContents( file , InitInp, ErrStat )                                !          |
     TYPE( MAP_InitInputType ) , INTENT(INOUT)       :: InitInp                                   !          |
     CHARACTER(255) , INTENT(IN   )                  :: file                                      !          |
+    INTEGER(IntKi),                   INTENT(  OUT) :: ErrStat                                   !          |
     INTEGER                                         :: success                                   !          |
     INTEGER                                         :: index_begn=1                              !          |
     INTEGER                                         :: index_cabl=0                              !          |
@@ -955,7 +960,7 @@ CONTAINS
        ! @bonnie : I figure the NWTC lib has something more cleaver !          |                 !          |
        !           than what I would create to check if the MAP     !          |                 !          |
        !           input file even exists in the directory it's     !          |                 !          |
-       !           looking in. 
+       !           looking in.                                      !          |                 !          |
                                                                     !          |                 !          |
        ! populate the cable library parameter                       !          |                 !          |
        IF ( index_begn.EQ.1 ) THEN                                  !          |                 !          |

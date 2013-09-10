@@ -67,7 +67,7 @@ PROGRAM Main
   MAP_InitInput%filename    = "input6.map"  ! @bonnie : This needs to be set according to what is in the FAST input file. 
   MAP_InitInput%gravity     = 9.81          ! @bonnie : This need to be according to g used in FAST
   MAP_InitInput%sea_density = 1025          ! @bonnie : This needs to be set according to seawater density in FAST
-  MAP_InitInput%depth       = -350          ! @bonnie : This need to be set according to the water depth in FAST
+  MAP_InitInput%depth       = 350          ! @bonnie : This need to be set according to the water depth in FAST
  
   ! call the initialization routine
   CALL MAP_Init( MAP_InitInput       , &
@@ -85,7 +85,7 @@ PROGRAM Main
   IF ( ErrStat .NE. 0 ) THEN
      CALL WrScr(ErrMsg) 
   END IF  
-
+  
   CALL DispNVD( MAP_InitOutput%Ver ) 
 
   DO i = 1, MAP_interp_order + 1  
