@@ -26,7 +26,6 @@ MODULE ModMesh
 
    USE ModMesh_Types
    IMPLICIT NONE
-!   PRIVATE
 
    INTEGER, PARAMETER :: BUMPUP = 64  ! do not set to less than 2
 
@@ -425,13 +424,13 @@ CONTAINS
     ! Local
       INTEGER i
       LOGICAL                    :: IsNewSib
-      
+
       LOGICAL                    :: IsMotion
       LOGICAL                    :: IsLoad
-      
+
 
          ! Local initializations:
-      
+
       ErrStat = ErrID_None
       ErrMess = ""
       IsMotion = .FALSE.
@@ -564,8 +563,8 @@ CONTAINS
          ENDIF
       ENDIF
 
-!bjj: we will remove this one:      
-      
+!bjj: we will remove this one:
+
       IF ( PRESENT(AddedMass) ) THEN
          IF ( AddedMass ) THEN
             CALL AllocAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'MeshCreate: AddedMass', ErrStat, ErrMess )
@@ -588,32 +587,32 @@ CONTAINS
          ENDIF
       ENDIF
 
-      
+
          !........................
          ! Let's make sure that we have all the necessary fields:
          !........................
       IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
-         
+
          IF ( .NOT. BlankMesh%FieldMask(MASKID_Orientation) ) THEN
             CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
             CALL Eye(BlankMesh%Orientation, ErrStat, ErrMess)  ! set this orientation to the identity matrix
             BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
             ErrStat = ErrID_Info
-            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the Orientation field.'            
+            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the Orientation field.'
          END IF
-         
+
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONDISP)) THEN
             CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationDisp = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
             ErrStat = ErrID_Info
-            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the TranslationDisp field.'            
-         ENDIF                  
-                  
+            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the TranslationDisp field.'
+         ENDIF
+
       END IF
-                  
+
       RETURN
 
    END SUBROUTINE MeshCreate
@@ -808,14 +807,14 @@ CONTAINS
      SzOnly = .FALSE.
      IF ( PRESENT(SizeOnly) ) SzOnly = SizeOnly
 
-     
+
 !bjj: if we modify the code below to check if things are allocated/etc we can remove this requirement
-     IF (.NOT. Mesh%Committed ) THEN  
+     IF (.NOT. Mesh%Committed ) THEN
         ErrStat = ErrID_Fatal
         ErrMess = " MeshPack: Uncommitted meshes cannot be packed."
         RETURN
      END IF
-     
+
     ! Traverse the element list and calculate size needed to store element records
      n_int = 0
      nelem = 0
@@ -1199,19 +1198,19 @@ CONTAINS
          ENDDO
        ENDDO
      ENDIF
-     
-     
+
+
      Mesh%Committed = .TRUE.
-     
+
      RETURN
 
-     
-     
+
+
    END SUBROUTINE MeshUnpack
 
    SUBROUTINE MeshCopy( SrcMesh, DestMesh, CtrlCode, ErrStat , ErrMess   &
-                      , Force, Moment, Orientation, TranslationDisp, TranslationVel, RotationVel, TranslationAcc, RotationAcc, AddedMass, nScalars )
-!bjj: do we also want IOS as an argument? Or do we just set that manually?
+                      ,IOS, Force, Moment, Orientation, TranslationDisp, TranslationVel &
+                      ,RotationVel, TranslationAcc, RotationAcc, AddedMass, nScalars )
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: SrcMesh  ! Mesh being copied
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: DestMesh ! Copy of mesh
      INTEGER(IntKi),              INTENT(IN)    :: CtrlCode ! MESH_NEWCOPY, MESH_SIBLING, or
@@ -1219,6 +1218,7 @@ CONTAINS
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat  ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess  ! Error message
     ! Optional arguments (used only if CtrlCode is MESH_SIBLING):
+     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: IOS               ! If present, IOS of new sibling: input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: Force             ! If present and true, allocate Force field
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: Moment            ! If present and true, allocate Moment field
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: Orientation       ! If present and true, allocate Orientation field
@@ -1230,22 +1230,27 @@ CONTAINS
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: AddedMass         ! If present and true, allocate AddedMess field
      INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          ! If present and > 0 , alloc n Scalars
     ! Local
-     LOGICAL                                    :: Force_l           & ! If present and true, allocate Force field
-                                                 , Moment_l          & ! If present and true, allocate Moment field
-                                                 , Orientation_l     & ! If present and true, allocate Orientation field
-                                                 , TranslationDisp_l & ! If present and true, allocate TranslationDisp field
-                                                 , TranslationVel_l  & ! If present and true, allocate TranslationVel field
-                                                 , RotationVel_l     & ! If present and true, allocate RotationVel field
-                                                 , TranslationAcc_l  & ! If present and true, allocate TranslationAcc field
-                                                 , RotationAcc_l     & ! If present and true, allocate RotationAcc field
-                                                 , AddedMass_l         ! If present and true, allocate AddedMess field
-     INTEGER(IntKi)                             :: nScalars_l          ! If present and true, alloc n Scalars
+     INTEGER(IntKi)                             :: IOS_l               ! IOS of new sibling
+     LOGICAL                                    :: Force_l           & ! If true, allocate Force field
+                                                 , Moment_l          & ! If true, allocate Moment field
+                                                 , Orientation_l     & ! If true, allocate Orientation field
+                                                 , TranslationDisp_l & ! If true, allocate TranslationDisp field
+                                                 , TranslationVel_l  & ! If true, allocate TranslationVel field
+                                                 , RotationVel_l     & ! If true, allocate RotationVel field
+                                                 , TranslationAcc_l  & ! If true, allocate TranslationAcc field
+                                                 , RotationAcc_l     & ! If true, allocate RotationAcc field
+                                                 , AddedMass_l         ! If true, allocate AddedMess field
+     INTEGER(IntKi)                             :: nScalars_l          ! If > 0, alloc n Scalars
      INTEGER i, j, k
 
 
-     ErrStat = ErrID_None
+      ErrStat = ErrID_None
+      ErrMess = ""
+
+      IF (.NOT. SrcMesh%Initialized) RETURN !bjj: maybe we should first CALL MeshDestroy(DestMesh,ErrStat, ErrMess)
 
       IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_SIBLING ) THEN
+
          IF ( CtrlCode .EQ. MESH_NEWCOPY ) THEN
             CALL MeshCreate( DestMesh, IOS=SrcMesh%IOS, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess &
                             ,Force=SrcMesh%FieldMask(MASKID_FORCE)                                              &
@@ -1260,6 +1265,7 @@ CONTAINS
                             ,nScalars=SrcMesh%nScalars                                                          )
 
             IF (ErrStat >= AbortErrLev) RETURN
+
             DestMesh%Position       =  SrcMesh%Position
             DestMesh%RefOrientation =  SrcMesh%RefOrientation
 
@@ -1287,26 +1293,32 @@ CONTAINS
                ENDDO
             ENDDO
 
+
                ! Regenerate new list of elements (point to ElemTable)
-!bjj: call meshCommit?
+   !bjj: call meshCommit?
             DestMesh%nelemlist   = SrcMesh%nelemlist
             DestMesh%maxelemlist = SrcMesh%maxelemlist
             DestMesh%nextelem    = SrcMesh%nextelem
-            ALLOCATE(DestMesh%ElemList(DestMesh%maxelemlist))
-            IF (ErrStat /=0) THEN
-               ErrStat = ErrID_Fatal
-               ErrMess=' MeshCopy: Error allocating ElemList.'
-               RETURN !Early return
-            END IF
 
-            k = 0
-            DO i = 1, NELEMKINDS
-               DO j = 1, DestMesh%ElemTable(i)%nelem
-                  k = k + 1
-                  DestMesh%elemlist(k)%Element => DestMesh%ElemTable(i)%Elements(j)
-                  DestMesh%elemlist(k)%Element%Xelement = i
-               ENDDO
-            END DO
+            IF ( SrcMesh%Committed ) THEN
+
+               ALLOCATE(DestMesh%ElemList(DestMesh%maxelemlist))
+               IF (ErrStat /=0) THEN
+                  ErrStat = ErrID_Fatal
+                  ErrMess=' MeshCopy: Error allocating ElemList.'
+                  RETURN !Early return
+               END IF
+
+               k = 0
+               DO i = 1, NELEMKINDS
+                  DO j = 1, DestMesh%ElemTable(i)%nelem
+                     k = k + 1
+                     DestMesh%elemlist(k)%Element => DestMesh%ElemTable(i)%Elements(j)
+                     DestMesh%elemlist(k)%Element%Xelement = i
+                  ENDDO
+               END DO
+
+            END IF ! SrcMesh%Committed
 
             DestMesh%RemapFlag   = SrcMesh%RemapFlag
 
@@ -1323,8 +1335,8 @@ CONTAINS
                ErrMess = ' MeshCopy: An uncommitted mesh cannot have a sibling.'
                RETURN !early return
             END IF
-               
 
+            IOS_l          = SrcMesh%IOS ; IF ( PRESENT(IOS) )                         IOS_l = IOS
             Force_l            = .FALSE. ; IF ( PRESENT(Force) )                     Force_l = Force
             Moment_l           = .FALSE. ; IF ( PRESENT(Moment) )                   Moment_l = Moment
             Orientation_l      = .FALSE. ; IF ( PRESENT(Orientation) )         Orientation_l = Orientation
@@ -1335,17 +1347,17 @@ CONTAINS
             RotationAcc_l      = .FALSE. ; IF ( PRESENT(RotationAcc) )         RotationAcc_l = RotationAcc
             AddedMass_l        = .FALSE. ; IF ( PRESENT(AddedMass) )             AddedMass_l = AddedMass
             nScalars_l         = 0       ; IF ( PRESENT(nScalars) )               nScalars_l = nScalars
-            CALL MeshCreate( DestMesh, IOS=SrcMesh%IOS, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess &
-                            ,Force=Force_l                                                                      &
-                            ,Moment=Moment_l                                                                    &
-                            ,Orientation=Orientation_l                                                          &
-                            ,TranslationDisp=TranslationDisp_l                                                  &
-                            ,TranslationVel=TranslationVel_l                                                    &
-                            ,RotationVel=RotationVel_l                                                          &
-                            ,TranslationAcc=TranslationAcc_l                                                    &
-                            ,RotationAcc=RotationAcc_l                                                          &
-                            ,AddedMass=AddedMass_l                                                              &
-                            ,nScalars=nScalars_l                                                                &
+            CALL MeshCreate( DestMesh, IOS=IOS_l, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess   &
+                            ,Force=Force_l                                                                  &
+                            ,Moment=Moment_l                                                                &
+                            ,Orientation=Orientation_l                                                      &
+                            ,TranslationDisp=TranslationDisp_l                                              &
+                            ,TranslationVel=TranslationVel_l                                                &
+                            ,RotationVel=RotationVel_l                                                      &
+                            ,TranslationAcc=TranslationAcc_l                                                &
+                            ,RotationAcc=RotationAcc_l                                                      &
+                            ,AddedMass=AddedMass_l                                                          &
+                            ,nScalars=nScalars_l                                                            &
                             ,IsNewSibling=.TRUE.)
             IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1568,8 +1580,8 @@ CONTAINS
    !bjj: check that allocated fields make sense (i.e., Motions must include Orientation and TranslationDisp)
 
    !BJJ: initialize allocated orientation field
-   
-   
+
+
      ! Construct list of elements
 
 
@@ -1601,7 +1613,7 @@ CONTAINS
 
 
       Mesh%Committed = .TRUE.
-            
+
    END SUBROUTINE MeshCommit
 
 ! added 20130102 as stub for AeroDyn work
@@ -2102,7 +2114,7 @@ CONTAINS
       IF ( ALLOCATED(u1%Orientation) ) THEN
          !ErrStat=ErrID_Info
          !ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
-         
+
          IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
             u_out%Orientation = u1%Orientation
          ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
