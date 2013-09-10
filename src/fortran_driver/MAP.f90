@@ -576,12 +576,12 @@ CONTAINS
     CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement , &            !          |
                     DestMesh = y%PtFairleadLoad         , &            !          |
                     CtrlCode = MESH_SIBLING             , &            !          |
+                    IOS      = COMPONENT_OUTPUT         , &            !          |
                     Force    = .TRUE.                   , &            !          |
                     ErrStat  = ErrStat                  , &            !          |
                     ErrMess  = ErrMsg                     )            !          |
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                !          |
                                                                        !          |
-    y%PtFairleadLoad%IOS = COMPONENT_OUTPUT                            !          |
     ! End mesh initialization                                          !   -------+
     !==============================================================================
 
@@ -603,8 +603,8 @@ CONTAINS
     !           called...
     !CALL DispNVD( InitOut%Ver ) 
     
-    WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
-    WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
+    ! WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
+    ! WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
 
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
@@ -850,7 +850,7 @@ CONTAINS
        RETURN
     END IF
 
-    WRITE(*,*) y%writeOutput ! @bonnie : remove
+    ! WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad%NNodes
@@ -880,7 +880,7 @@ CONTAINS
                                                                                          
     ErrStat = ErrID_None                                                                 
     ErrMsg  = ""                                                                         
-                                                                                         
+
     CALL MSQS_End( u%C_obj         , &                                                   
                    p%C_obj         , &                                                   
                    x%C_obj         , &                                                   
