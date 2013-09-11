@@ -74,6 +74,7 @@
    Wrk(:) = fff(4:6)
    Oe(4:6,4:6) = Oe(4:6,4:6) - Tilde(Wrk)
 
+
    Pe = 0.0D0
    Wrk(:) = fff(1:3)
    Pe(4:6,1:3) = Tilde(Wrk) + TRANSPOSE(epsi)
@@ -83,4 +84,8 @@
    Wrk33(1:3,1:3) = Oe(1:3,4:6)
    Qe(4:6,4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Wrk33)
 
+!   WRITE(*,*) "Fc at Node #"
+!   DO i=1,6
+!       WRITE(*,*) Fd(i)
+!   ENDDO
    END SUBROUTINE ElasticForce
