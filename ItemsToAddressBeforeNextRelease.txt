@@ -31,6 +31,7 @@ FAST
 ElastoDyn
 -------------------------------------------------
 * change aerodyn input/outputs to mesh
+* remove AllOuts from output type
 
 
 -------------------------------------------------
@@ -42,8 +43,9 @@ ServoDyn
 -------------------------------------------------
 AeroDyn
 -------------------------------------------------
-* Add meshes
+* Add meshes (?)
 * link with updated InflowWind
+* check that ErrStat values use ErrID_* from the Library. Some are currently just non-zero, which is a problem!
 
 -------------------------------------------------
 InflowWind
