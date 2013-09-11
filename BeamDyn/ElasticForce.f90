@@ -43,7 +43,7 @@
    Wrk = 0.0D0 
    Wrk(1:3) = fff(1:3)
    Fd = 0.0D0 
-   Fd(4:6) = MATMUL(Tilde(Wrk33),E1)
+   Fd(4:6) = MATMUL(Tilde(Wrk),E1)
 
    C11(:,:) = Stif(1:3,1:3)
    C12(:,:) = Stif(1:3,4:6)
