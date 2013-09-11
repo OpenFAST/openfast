@@ -431,6 +431,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
       IF (.NOT. p_FAST%CompHydro) CALL CheckError( ErrID_Fatal, 'HydroDyn must be used when MAP is used. Set CompHydro = TRUE or CompMap = FALSE in the FAST input file.' )
       
+      CALL WrScr(NewLine) !bjj: I'm printing two blank lines here because MAP seems to be writing over the last line on the screen.
+      
       InitInData_MAP%filename    =  p_FAST%MAPFile            ! This needs to be set according to what is in the FAST input file. 
       InitInData_MAP%gravity     =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
       InitInData_MAP%sea_density =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
