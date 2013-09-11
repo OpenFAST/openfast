@@ -64,10 +64,10 @@ PROGRAM Main
   !Allocate(MAP_Output(MAP_interp_order + 1)) 
     
   ! set the MAP input file name and other environment terms.
-  MAP_InitInput%filename    = "input6.map"  ! @bonnie : This needs to be set according to what is in the FAST input file. 
+  MAP_InitInput%filename    = "NRELOffshrBsline5MW_Platform_TLP.map"  ! @bonnie : This needs to be set according to what is in the FAST input file. 
   MAP_InitInput%gravity     = 9.81          ! @bonnie : This need to be according to g used in FAST
   MAP_InitInput%sea_density = 1025          ! @bonnie : This needs to be set according to seawater density in FAST
-  MAP_InitInput%depth       = 350          ! @bonnie : This need to be set according to the water depth in FAST
+  MAP_InitInput%depth       = 200          ! @bonnie : This need to be set according to the water depth in FAST
  
   ! call the initialization routine
   CALL MAP_Init( MAP_InitInput       , &
