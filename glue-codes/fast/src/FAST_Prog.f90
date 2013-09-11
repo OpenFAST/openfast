@@ -434,7 +434,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_MAP%filename    =  p_FAST%MAPFile            ! This needs to be set according to what is in the FAST input file. 
       InitInData_MAP%gravity     =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
       InitInData_MAP%sea_density =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
-      InitInData_MAP%depth       = -InitOutData_HD%WtrDpth    ! This need to be set according to the water depth (negative) in HydroDyn
+      InitInData_MAP%depth       =  InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
       
       InitInData_MAP%C_obj%coupled_to_FAST = .TRUE.      
       
@@ -997,7 +997,7 @@ CONTAINS
 
       IF ( p_FAST%CompSub ) THEN
          
-         CALL SD_InputSolve( y_ED, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
+         CALL SD_InputSolve( y_ED, y_HD, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
 
          CALL SD_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
