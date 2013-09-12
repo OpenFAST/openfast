@@ -66,6 +66,7 @@
        Se_elem(1:6,1:6,i) = Stif(1:6,1:6)
    ENDDO
 
+
    DO i=1,node_elem
        DO j=1,6
            temp_id1 = (i-1)*dof_node+j
@@ -81,13 +82,20 @@
            DO k=1,6
                temp_id1=(i-1)*dof_node+k
                DO m=1,6
-                   temp_id2=(i-1)*dof_node+m
-                   elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(i)*Pe_elem(k,m,i)*hhp(j,i)
-                   elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(j)*Oe_elem(k,m,j)*hhp(i,j)
+                   temp_id2=(j-1)*dof_node+m
+                    elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(i)*Pe_elem(k,m,i)*hhp(j,i)
+                    elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(j)*Oe_elem(k,m,j)*hhp(i,j)
                ENDDO
            ENDDO
        ENDDO
    ENDDO
+
+   j=13
+   WRITE(*,*) "elk column",j
+   DO i=1,18
+       WRITE(*,*) elk(i,j), elk(i,j+1), elk(i,j+2),elk(i,j+3), elk(i,j+4), elk(i,j+5)
+    ENDDO
+   STOP
 
    DO i=1,node_elem
        DO j=1,node_elem
