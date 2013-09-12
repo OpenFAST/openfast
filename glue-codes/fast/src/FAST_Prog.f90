@@ -317,11 +317,11 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! we need the air density (and wind speed) yet.... some strangeness still going on.
       CALL AeroInput(p_ED, p_FAST)            ! Read in the ADFile
 
-         ! some weirdness that we probably won't need anymore....
-      p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
-
+   !      ! some weirdness that we probably won't need anymore....
+   !   p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
+   !
    ELSE
-      p_ED%AirDens = 0
+   !   p_ED%AirDens = 0
       IfW_WriteOutput = 0.0
    END IF
 
