@@ -26,8 +26,12 @@
        CALL Norm(dof_total,RHS,errf)
        IF(errf .LE. TOLF) RETURN
        ui_old = ui
-
+       WRITE(*,*) "# of N-R Iteration", i
        CALL CGSolver(RHS,StifK,ui,bc,dof_total)
+       DO j=1,dof_total
+           WRITE(*,*) "j=",j
+           WRITE(*,*) ui(j)
+       ENDDO
        rel_change = ABS(ui - ui_old)
        CALL Norm(dof_total,uuNf,temp1)
        CALL Norm(dof_total,rel_change,temp2)

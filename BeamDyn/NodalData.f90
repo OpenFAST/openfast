@@ -1,9 +1,9 @@
-   SUBROUTINE NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,&
+   SUBROUTINE NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,Jac,&
                         &node_elem,nelem,nnode,norder,dof_node,&
                         &E1,RR0,kapa,Stif,cet)
  
    REAL(ReKi),INTENT(IN)::Nuuu(:),Nrrr(:),Nuu0(:),Nrr0(:)
-   REAL(ReKi),INTENT(IN)::E10(:),hhp(:,:),Stif0(:,:,:)
+   REAL(ReKi),INTENT(IN)::E10(:),hhp(:,:),Stif0(:,:,:),Jac
    INTEGER(IntKi),INTENT(IN)::node_elem,nelem,nnode,norder,dof_node
 
    REAL(ReKi),INTENT(INOUT)::E1(:),RR0(:,:),kapa(:)
@@ -34,7 +34,9 @@
        rrp(2) = rrp(2) + hhp(i,nnode)*Nrrr(temp_id+2)
        rrp(3) = rrp(3) + hhp(i,nnode)*Nrrr(temp_id+3) 
    ENDDO
+   E1 = E1/Jac
    E1 = E1 + E10
+   rrp = rrp / Jac
 
    temp_id = (nnode-1)*dof_node+3
    DO i=1,3

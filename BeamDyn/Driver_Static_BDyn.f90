@@ -136,6 +136,9 @@ PROGRAM MAIN
                       &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%dof_elem,&
                       &BDyn_Parameter%niter)   
 
+   DO i=1,BDyn_Parameter%dof_total
+       WRITE(*,*) BDyn_OtherState%uuNf(i)
+   ENDDO
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &
 !                                   BDyn_DiscreteState_pred, BDyn_ConstraintState_pred, &
