@@ -53,8 +53,8 @@
        Qe = 0.0D0
        Stif = 0.0D0
        cet = 0.0D0
-       CALL NodalDataAt0(node_elem,nelem,norder,dof_node,i,hhp,Nuu0,E10)
-       CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,&
+       CALL NodalDataAt0(node_elem,nelem,norder,dof_node,i,hhp,Nuu0,Jac,E10)
+       CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,Jac,&
                       &node_elem,nelem,i,norder,dof_node,&
                       &E1,RR0,kapa,Stif,cet)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
@@ -90,12 +90,6 @@
        ENDDO
    ENDDO
 
-   j=13
-   WRITE(*,*) "elk column",j
-   DO i=1,18
-       WRITE(*,*) elk(i,j), elk(i,j+1), elk(i,j+2),elk(i,j+3), elk(i,j+4), elk(i,j+5)
-    ENDDO
-   STOP
 
    DO i=1,node_elem
        DO j=1,node_elem
@@ -114,10 +108,10 @@
    DO i=1,node_elem
        DO j=1,6
            temp_id1 = (i-1)*dof_node+j
-           elf(temp_id1) = -w(i)*Fd_elem(j,i)*Jac
+           elf(temp_id1) = -w(i) * Fd_elem(j,i) * Jac
            elf(temp_id1) = elf(temp_id1) + w(i) * Next((i-1)*dof_node+j) * Jac
            DO m=1,node_elem
-              elf(temp_id1) = elf(temp_id1)-w(m)*hhp(i,m)*Fc_elem(m,j)
+              elf(temp_id1) = elf(temp_id1) - w(m) * hhp(i,m) * Fc_elem(j,m)
            ENDDO
        ENDDO
    ENDDO
