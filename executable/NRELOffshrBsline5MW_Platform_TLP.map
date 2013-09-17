@@ -10,7 +10,7 @@ Node Type     X     Y     Z     M     B     FX   FY   FZ
 ---------------------- LINE PROPERTIES ---------------------------------------
 Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
 (-)      (-)       (m)         (-)       (-)       (-)
-1       Material   151.73       1         2        x_pos
+1       Material   151.73       1         2        plot x_force y_force z_force
 2       repeat     0 
 2       repeat     90 
 2       repeat     90 
@@ -21,10 +21,12 @@ Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
 ---------------------- SOLVER OPTIONS-----------------------------------------
 Option
 (-)   
--msqs_default tr 
-! 3       repeat     90 
-! 4       repeat     90 
-! 5       repeat     180 
-! 6       repeat     180 
-! 7       repeat     270 
-! 8       repeat     270 
+-msqs_tol 1e-6
+-msqs_permute nd
+-snes_type newtontr
+-ksp_type preonly 
+-pc_type lu
+-pc_factor_nonzeros_along_diagonal
+-snes_atol 1e-6
+-snes_rtol 1e-6
+-snes_stol 1e-6
