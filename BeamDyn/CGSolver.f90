@@ -53,8 +53,8 @@
         
       IF(SQRT(alphatop_new) .LE. eps) THEN
 !         goto 20
-          WRITE(*,*) "eps =",SQRT(alphatop_new)
-          WRITE(*,*) "CG Iterations",l
+!          WRITE(*,*) "eps =",SQRT(alphatop_new)
+!          WRITE(*,*) "CG Iterations",l
           RETURN
       ENDIF
           
