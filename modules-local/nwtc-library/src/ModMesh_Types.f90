@@ -33,7 +33,7 @@ MODULE ModMesh_Types
    INTEGER, PUBLIC, PARAMETER :: MASKID_ROTATIONACC = 8
    INTEGER, PUBLIC, PARAMETER :: MASKID_ADDEDMASS = 9
    INTEGER, PUBLIC, PARAMETER :: MASKID_SCALAR = 10
-   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 10 
+   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 10
 
 ! Format of the Int buffer
    INTEGER, PUBLIC, PARAMETER :: HDR_INTBUFSIZE  = 1
@@ -82,8 +82,11 @@ MODULE ModMesh_Types
    TYPE, PUBLIC :: ElemRecType ! a particular element
      INTEGER                     :: Xelement               ! which kind of element
      INTEGER                     :: Nneighbors             ! how many neighbors
+     REAL(ReKi)                  :: det_jac                ! determinant of the Jacobian (e.g., 1/2 the length of a line-2 element)
      INTEGER, POINTER            :: ElemNodes(:) => NULL() ! pointer to the list of nodes
+!bjj: make allocatable ^ ?
      TYPE(ElemRecType), POINTER  :: Neighbors(:) => NULL() ! neighbor list
+!bjj: make allocatable ^ ?
    END TYPE ElemRecType
 
    TYPE, PUBLIC :: ElemTabType   ! table of all elements of a particular type
@@ -178,8 +181,43 @@ CONTAINS
        CASE ( ELEMENT_WEDGE15 )
          NumNodes = 15
        CASE DEFAULT
-         CALL ProgAbort('NumNodes: internal error: invalid argument '//TRIM(Num2LStr(Xelement)))
+         CALL ProgAbort(' NumNodes: invalid argument Xelement = '//TRIM(Num2LStr(Xelement)))
      END SELECT
    END FUNCTION NumNodes
+
+   LOGICAL FUNCTION HasMotionFields(Mesh)
+
+      TYPE(MeshType), INTENT(IN) :: Mesh
+
+      IF (     Mesh%FieldMask(MASKID_TRANSLATIONDISP)    &
+          .or. Mesh%FieldMask(MASKID_ORIENTATION)        &
+          .or. Mesh%FieldMask(MASKID_TRANSLATIONVEL)     &
+          .or. Mesh%FieldMask(MASKID_ROTATIONVEL)        &
+          .or. Mesh%FieldMask(MASKID_TRANSLATIONACC)     &
+          .or. Mesh%FieldMask(MASKID_ROTATIONACC)        &
+          .or. Mesh%FieldMask(MASKID_SCALAR)             &
+          ) THEN
+
+         HasMotionFields = .TRUE.
+      ELSE
+         HasMotionFields = .FALSE.
+      END IF
+
+   END FUNCTION HasMotionFields
+
+   LOGICAL FUNCTION HasLoadFields(Mesh)
+
+      TYPE(MeshType), INTENT(IN) :: Mesh
+
+      IF (     Mesh%FieldMask(MASKID_FORCE)   &
+          .or. Mesh%FieldMask(MASKID_MOMENT)  &
+          ) THEN
+
+         HasLoadFields = .TRUE.
+      ELSE
+         HasLoadFields = .FALSE.
+      END IF
+
+   END FUNCTION HasLoadFields
 
 END MODULE ModMesh_Types
