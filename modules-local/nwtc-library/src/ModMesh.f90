@@ -228,7 +228,10 @@ CONTAINS
      nn = 5
      IF (PRESENT(N)) nn = N
 
+     write(U,*)'-----------  MeshPrintInfo:  -------------'
+
      write(U,*)  'Initialized: ', M%initialized
+     write(U,*)  'Committed:   ', M%Committed
      IF ( ASSOCIATED(M%RemapFlag) ) write(U,*)  'Remap Flag: ', M%RemapFlag
 
      write(U,*)  'Fieldmask:   ', M%FieldMask
@@ -267,7 +270,7 @@ CONTAINS
 ! here, be sure to change the table of parameters used to size and index fieldmask above.
      IF(M%initialized.AND.ASSOCIATED(M%Position))THEN
        isz=size(M%Position,2)
-       write(U,*)'Position: ',isz
+       write(U,*)'Position: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Position(:,i)
        ENDDO
@@ -285,21 +288,21 @@ CONTAINS
 
      IF(ALLOCATED(M%Force))THEN
        isz=size(M%Force,2)
-       write(U,*)'Force: ',isz
+       write(U,*)'Force: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Force(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%Moment))THEN
        isz=size(M%Moment,2)
-       write(U,*)'Moment: ',isz
+       write(U,*)'Moment: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Moment(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%Orientation))THEN
        isz=size(M%Orientation,3)
-       write(U,*)'Orientation: ',isz
+       write(U,*)'Orientation: ',isz,' node(s)'
        DO i=1,min(nn,isz) !bjj: printing this like a matrix:
          write(U,'(1X,I3, 3(1X,F10.4))') i, M%Orientation(1,:,i)
          write(U,'(4X,    3(1X,F10.4))')    M%Orientation(2,:,i)
@@ -308,49 +311,49 @@ CONTAINS
      ENDIF
      IF(ALLOCATED(M%TranslationDisp))THEN
        isz=size(M%TranslationDisp,2)
-       write(U,*)'TranslationDisp: ',isz
+       write(U,*)'TranslationDisp: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%TranslationDisp(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%RotationVel))THEN
        isz=size(M%RotationVel,2)
-       write(U,*)'RotationVel: ',isz
+       write(U,*)'RotationVel: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%RotationVel(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%TranslationVel))THEN
        isz=size(M%TranslationVel,2)
-       write(U,*)'TranslationVel: ',isz
+       write(U,*)'TranslationVel: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%TranslationVel(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%RotationAcc))THEN
        isz=size(M%RotationAcc,2)
-       write(U,*)'RotationAcc: ',isz
+       write(U,*)'RotationAcc: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%RotationAcc(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%TranslationAcc))THEN
        isz=size(M%TranslationAcc,2)
-       write(U,*)'TranslationAcc: ',isz
+       write(U,*)'TranslationAcc: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%TranslationAcc(:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%AddedMass))THEN
        isz=size(M%AddedMass,3)
-       write(U,*)'AddedMass: ',isz
+       write(U,*)'AddedMass: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%AddedMass(:,:,i)
        ENDDO
      ENDIF
      IF(ALLOCATED(M%Scalars))THEN
        isz=size(M%Scalars,1)
-       write(U,*)'Scalars: ',isz
+       write(U,*)'Scalars: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Scalars(:,i)
        ENDDO
@@ -361,11 +364,14 @@ CONTAINS
      IF (ErrStat >= AbortErrLev) THEN
         WRITE(U,*) ' Error in MeshNextElement(): '
         WRITE(U,*) TRIM(ErrMess)
-        RETURN
+        CtrlCode = MESH_NOMORE
       END IF
 
      DO WHILE ( CtrlCode .NE. MESH_NOMORE )
-       WRITE(U,*)'  Ielement: ', Ielement,' ',ElemNames(Xelement)
+       WRITE(U,*)'  Ielement: ', Ielement,' ',ElemNames(Xelement), &
+                 ' det_jac: ',M%ElemList(Ielement)%Element%det_jac,  &
+                 ' Nodes: ',M%ElemList(Ielement)%Element%ElemNodes
+
        CtrlCode = MESH_NEXT
        CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
         IF (ErrStat >= AbortErrLev) THEN
@@ -375,6 +381,7 @@ CONTAINS
          END IF
 
      ENDDO
+     write(U,*)'---------  End of Element List  ----------'
 
    END SUBROUTINE MeshPrintInfo
 
@@ -808,7 +815,7 @@ CONTAINS
      IF ( PRESENT(SizeOnly) ) SzOnly = SizeOnly
 
 
-!bjj: if we modify the code below to check if things are allocated/etc we can remove this requirement
+!bjj: if we modify the code below to check if things are allocated/etc we can remove this requirement (and then we have to rethink the unpack)
      IF (.NOT. Mesh%Committed ) THEN
         ErrStat = ErrID_Fatal
         ErrMess = " MeshPack: Uncommitted meshes cannot be packed."
@@ -852,6 +859,7 @@ CONTAINS
      IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) n_re = n_re + Mesh%Nnodes * 3
      IF ( Mesh%FieldMask(MASKID_ADDEDMASS) ) n_re = n_re + Mesh%Nnodes * 36
      IF ( Mesh%nScalars .GT. 0 ) n_re = n_re + Mesh%Nnodes * Mesh%nScalars
+
      ALLOCATE( ReBuf( n_re ) )
 
      n_db = 0  ! unused for now
@@ -1199,8 +1207,7 @@ CONTAINS
        ENDDO
      ENDIF
 
-
-     Mesh%Committed = .TRUE.
+     CALL MeshCommit(Mesh, ErrStat, ErrMess)
 
      RETURN
 
@@ -1290,6 +1297,12 @@ CONTAINS
                      RETURN !Early return
                   END IF
                   DestMesh%ElemTable(i)%Elements(j)%ElemNodes = SrcMesh%ElemTable(i)%Elements(j)%ElemNodes
+                  DestMesh%ElemTable(i)%Elements(j)%det_jac   = SrcMesh%ElemTable(i)%Elements(j)%det_jac
+                  DestMesh%ElemTable(i)%Elements(j)%Xelement  = SrcMesh%ElemTable(i)%Elements(j)%Xelement
+                  DestMesh%ElemTable(i)%Elements(j)%Nneighbors= SrcMesh%ElemTable(i)%Elements(j)%Nneighbors
+!bjj: allocate Neighbors, too:
+!                  IF (DestMesh%ElemTable(i)%Elements(j)%Nneighbors > 0) then
+
                ENDDO
             ENDDO
 
@@ -1514,6 +1527,11 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: Invalid number of nodes: "//TRIM(Num2LStr(Mesh%Nnodes))
      ENDIF
+     IF (Mesh%Committed ) THEN  !bjj: perhaps this shouldn't be an error? Maybe it just sets Mesh%RemapFlag = .TRUE.
+        ErrStat = ErrID_Fatal
+        ErrMess = " MeshPositionNode: attempt to reposition committed mesh."
+     END IF
+
      IF ( .NOT. ( Inode .GE. 1 .AND. Inode .LE. Mesh%Nnodes ) ) THEN
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: not 1 <= Inode("//TRIM(Num2LStr(Inode))//") <= "//TRIM(Num2LStr(Mesh%Nnodes))
@@ -1534,6 +1552,8 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: RefOrientation array not big enough"
      ENDIF
+
+
 
      IF ( ErrStat .NE. ErrID_None ) RETURN   ! early return on error
 
@@ -1557,7 +1577,10 @@ CONTAINS
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess ! Error message
     ! Local
-     INTEGER n0d, n1d, n2d, n3d, nn, i, j, NElem
+     REAL(ReKi)                                 :: n1_n2_vector(3)               ! vector going from node 1 to node 2 in a Line2 element
+     INTEGER n0d, n1d, n2d, n3d, nn, i, j, NElem, n1,n2
+     LOGICAL                                    :: NodeInElement(Mesh%NNodes)    ! determines if each node is part of an element
+
      !TYPE(ElemListType), POINTER :: tmp(:)
 
      ! Check for spatial constraints -- can't mix 1D with 2D with 3D
@@ -1575,7 +1598,29 @@ CONTAINS
        RETURN  ! Early return
      ENDIF
 
-   !bjj: check that every node is part of an element.
+     IF ( ALL( Mesh%ElemTable(:)%nelem /= SUM(Mesh%ElemTable(:)%nelem ) ) ) THEN
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshCommit: a mesh can have only one type of element."
+       RETURN  ! Early return
+     ENDIF
+
+     ! Check that every node is part of an element.
+      NodeInElement = .FALSE.
+      DO i = 1, NELEMKINDS
+         DO j = 1, Mesh%ElemTable(i)%nelem
+            DO n1 = 1,NumNodes( Mesh%ElemTable(i)%XElement )
+               n2 = Mesh%ElemTable(i)%Elements(j)%ElemNodes(n1)
+               NodeInElement( n2 ) = .TRUE.
+            END DO
+         END DO
+      END DO
+
+      IF ( .NOT. ALL(NodeInElement) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess = "MeshCommit: all nodes must be part of an element."
+         RETURN  ! Early return
+      END IF
+
 
    !bjj: check that allocated fields make sense (i.e., Motions must include Orientation and TranslationDisp)
 
@@ -1612,6 +1657,23 @@ CONTAINS
      END DO
 
 
+     ! calculate det_jac:
+
+     DO j=1,Mesh%ElemTable(ELEMENT_POINT)%nelem
+         Mesh%ElemTable(ELEMENT_POINT)%Elements(J)%det_jac  = 0.0_ReKi
+     END DO
+
+     DO j = 1,Mesh%ElemTable(ELEMENT_LINE2)%nelem
+
+        n1_n2_vector = Mesh%Position(:,Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(2)) &
+                     - Mesh%Position(:,Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(1))
+
+        Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) )   ! = L / 2
+
+     END DO
+
+     ! we're finished:
+
       Mesh%Committed = .TRUE.
 
    END SUBROUTINE MeshCommit
@@ -1636,6 +1698,9 @@ CONTAINS
      ELSEIF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes ) THEN !BJJ moved to ELSE
        ErrStat = ErrID_Fatal
        ErrMess="MeshConstructElement_1PT: invalid P1 ("//TRIM(Num2LStr(P1))//") for mesh with "//TRIM(Num2LStr(Mesh%Nnodes))//" nodes."
+     ELSEIF (Mesh%Committed ) THEN
+        ErrStat = ErrID_Fatal
+        ErrMess = " MeshConstructElement_1PT: attempt to add element to committed mesh."
      ENDIF
      IF ( ErrStat .NE. ErrID_None ) THEN
         CALL WrScr(TRIM(ErrMess))
@@ -1644,6 +1709,7 @@ CONTAINS
     ! Business
      IF ( Xelement .EQ. ELEMENT_POINT ) THEN
        Mesh%ElemTable(ELEMENT_POINT)%nelem = Mesh%ElemTable(ELEMENT_POINT)%nelem + 1
+       Mesh%ElemTable(ELEMENT_POINT)%XElement = ELEMENT_POINT
 
        IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GE. Mesh%ElemTable(ELEMENT_POINT)%maxelem ) THEN
 !write(0,*)'>>>>>>>>>> bumping maxpoint',Mesh%ElemTable(ELEMENT_POINT)%maxelem
@@ -1663,6 +1729,7 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess = 'MeshConstructElement_1PT called for invalid element type'
      ENDIF
+
      RETURN
 
    END SUBROUTINE MeshConstructElement_1PT
@@ -1688,6 +1755,9 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess ="MeshConstructElement_2PT: invalid P1 ("//TRIM(Num2LStr(P1))//") or P2 ("//TRIM(Num2LStr(P2))//&
                      ") for mesh with "//TRIM(Num2LStr(Mesh%Nnodes))//" nodes."
+     ELSEIF (Mesh%Committed ) THEN
+        ErrStat = ErrID_Fatal
+        ErrMess = " MeshConstructElement_2PT: attempt to add element to committed mesh."
      ENDIF
 ! TODO: hook the element into a list of elements stored in this mesh to
 ! allow traversal over elements
@@ -1698,6 +1768,8 @@ CONTAINS
     ! Business
      IF ( Xelement .EQ. ELEMENT_LINE2 ) THEN
        Mesh%ElemTable(ELEMENT_LINE2)%nelem = Mesh%ElemTable(ELEMENT_LINE2)%nelem + 1
+       Mesh%ElemTable(ELEMENT_LINE2)%XElement = ELEMENT_LINE2
+
        IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GE. Mesh%ElemTable(ELEMENT_LINE2)%maxelem ) THEN
 !write(0,*)'>>>>>>>>>> bumping maxline2',Mesh%ElemTable(ELEMENT_LINE2)%maxelem
          ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_LINE2)%maxelem+BUMPUP))
@@ -1712,6 +1784,7 @@ CONTAINS
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(1) = P1
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(2) = P2
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%Xelement = ELEMENT_LINE2
+
      ELSE
        ErrMess = 'MeshConstructElement_2PT called for invalid element type'
        ErrStat = ErrID_Fatal
@@ -1838,10 +1911,15 @@ CONTAINS
      INTEGER(IntKi),OPTIONAL,     INTENT(OUT)   :: Xelement  ! Element identifier
      TYPE(ElemRecType),POINTER,OPTIONAL,INTENT(INOUT)   :: ElemRec ! Return array of elements of kind Xelement
 
-  ! TODO : check to make sure mesh is committed first
 
      ErrStat = ErrID_None
      ErrMess = ""
+
+     IF (.not. Mesh%Committed) THEN
+       ErrStat = ErrID_Fatal
+       ErrMess = "MeshNextElement: Uncommitted mesh."
+       RETURN ! Early Return
+     ENDIF
 
      IF ( .NOT. CtrlCode .EQ. MESH_NEXT .AND. (CtrlCode .LT. 0 .OR. CtrlCode .GT. Mesh%nelemlist) ) THEN
        ErrStat = ErrID_Fatal

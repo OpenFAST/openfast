@@ -26,17 +26,22 @@ MODULE ModMesh_Mapping
       INTEGER(IntKi) :: OtherMesh_Element    ! Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src
       REAL(ReKi)     :: distance             ! magnitude of couple_arm
       REAL(ReKi)     :: couple_arm(3)        ! Vector between a point and node 1 of an element
-      REAL(ReKi)     :: elem_position        ! 1-D element-level location [0,1] based on closest-line projection of point
+!      REAL(ReKi)     :: elem_position        ! 1-D element-level location [0,1] based on closest-line projection of point
+      REAL(ReKi)     :: shape_fn(2)          ! shape functions: 1-D element-level location [0,1] based on closest-line projection of point
    END TYPE MapType
 
    TYPE, PUBLIC :: MeshMapType
       TYPE(MapType),ALLOCATABLE :: MapLoads(:)
       TYPE(MapType),ALLOCATABLE :: MapMotions(:)
       TYPE(MeshType)            :: Temp_Lumped_Points_Src  ! Stored here for efficiency
+      TYPE(MeshType)            :: Temp_Lumped_Points_Dest ! Stored here for efficiency
       REAL(ReKi),ALLOCATABLE    :: RotatedPosition(:,:)    ! Orientation^T * RefOrientation * couple_arm for each mapped node (NOTE that changes with the orientation field. stored here for efficiency.)
       REAL(ReKi),ALLOCATABLE    :: RotatedPosition_n2(:,:) ! Orientation^T * RefOrientation * distance vector for each mapped node (NOTE that changes with the orientation field. stored here for efficiency; needed for linear combinations of 2 nodes)
    END TYPE
 
+      ! note that these parameters must be negative (positive indicates the node/element it is mapped to)
+   INTEGER(IntKi),  PARAMETER   :: NODE_NOT_MAPPED = -1
+   INTEGER(IntKi),  PARAMETER   :: NODE_IGNORED    = -2
 
    PUBLIC :: AllocMapping
    PUBLIC :: MeshMapDestroy
@@ -44,7 +49,9 @@ MODULE ModMesh_Mapping
    PUBLIC :: Transfer_Line2_to_Point
    PUBLIC :: Transfer_Point_to_Line2
    PUBLIC :: Transfer_Line2_to_Line2
-  ! PUBLIC :: Lump_Line2_to_Point
+   !PUBLIC :: Lump_Line2_to_Point
+
+
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -65,58 +72,103 @@ SUBROUTINE AllocMapping( Src, Dest, MeshMap, ErrStat, ErrMsg )
       ! local variables:
 
    INTEGER(IntKi)                           :: PointsInMap
+   LOGICAL                                  :: MapCreated
 
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   MapCreated = .FALSE.
+
 
    IF ( .NOT. Dest%Committed .OR. .NOT. Src%Committed ) THEN
       ErrStat = ErrID_Fatal
       ErrMsg  = " Both meshes must be committed before they can be mapped."
       RETURN
    END IF
-   
-      !................................................
-      ! Allocate the mapping for Motions and Scalars:
-      ! bjj: we shouldn't have to allocate this if the Disp/Vel/Acc/Scalar fields aren't allocated
-      !................................................
-   
-   PointsInMap = Dest%Nnodes
 
-   IF ( PointsInMap < 1 ) THEN
-      ErrStat = ErrID_Fatal
-      IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-      ErrMsg  = TRIM(ErrMsg)//' AllocMapping: MeshMap%MapMotions not allocated because no nodes were found to map.'
-   ELSE
 
-         ! Allocate the mapping structure:
-      ALLOCATE( MeshMap%MapMotions(PointsInMap), STAT=ErrStat )
-      IF ( ErrStat /= 0 ) THEN
+      !................................................
+      ! Allocate the mapping for Motions and Scalars (if both meshes have some):
+      !................................................
+   IF ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) THEN
+
+      PointsInMap = Dest%Nnodes
+
+      IF ( PointsInMap < 1 ) THEN
          ErrStat = ErrID_Fatal
          IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg  = ' AllocMapping: Error trying to allocate MeshMap%MapMotions.'
+         ErrMsg  = TRIM(ErrMsg)//' AllocMapping: MeshMap%MapMotions not allocated because no nodes were found to map.'
+      ELSE
+
+            ! Allocate the mapping structure:
+         ALLOCATE( MeshMap%MapMotions(PointsInMap), STAT=ErrStat )
+         IF ( ErrStat /= 0 ) THEN
+            ErrStat = ErrID_Fatal
+            IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg  = ' AllocMapping: Error trying to allocate MeshMap%MapMotions.'
+         ELSE
+            MapCreated = .TRUE.
+         END IF
+
       END IF
 
-   END IF
+   END IF !HasMotionFields
 
 
       !................................................
       ! Allocate the mapping for Loads:
-      ! bjj: we shouldn't have to allocate this if the Force/Moment fields aren't allocated
       !................................................
-   PointsInMap = Src%Nnodes
+   IF ( HasLoadFields(Src) .AND. HasLoadFields(Dest) ) THEN
 
-   IF ( PointsInMap < 1 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' AllocMapping: MeshMap%MapLoads not allocated because no nodes were found to map.'
-   ELSE
 
-         ! Allocate the mapping structure:
-      ALLOCATE( MeshMap%MapLoads(PointsInMap), STAT=ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' AllocMapping: Error trying to allocate MeshMap%MapLoads.'
+      ! check that the appropriate combinations of source/destination force/moments exist:
+      IF ( Src%FieldMask(MASKID_Force) ) THEN
+         IF (.NOT. Dest%FieldMask(MASKID_Force) ) THEN
+            ErrStat = ErrID_Fatal
+            IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg  = ' AllocMapping: Destination mesh does not contain force but source mesh does.'
+         END IF
+      END IF
+      IF ( Src%FieldMask(MASKID_Moment) ) THEN
+         IF (.NOT. Dest%FieldMask(MASKID_Moment) ) THEN
+            ErrStat = ErrID_Fatal
+            IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg  = ' AllocMapping: Destination mesh does not contain moment but source mesh moment.'
+         END IF
       END IF
 
+      ! get size of mapping:
+      IF ( Src%ElemTable(ELEMENT_LINE2)%nelem > 0 .AND. Dest%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN
+         PointsInMap = Src%ElemTable(ELEMENT_LINE2)%nelem  !we're mapping elements to element
+      ELSE
+         PointsInMap = Src%Nnodes !otherwise, we're mapping node to element
+      END IF
+
+
+      IF ( PointsInMap < 1 ) THEN
+         ErrStat = ErrID_Fatal
+         IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+         ErrMsg  = ' AllocMapping: MeshMap%MapLoads not allocated because no nodes were found to map.'
+      ELSE
+
+            ! Allocate the mapping structure:
+         ALLOCATE( MeshMap%MapLoads(PointsInMap), STAT=ErrStat )
+         IF ( ErrStat /= 0 ) THEN
+            ErrStat = ErrID_Fatal
+            IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg  = ' AllocMapping: Error trying to allocate MeshMap%MapLoads.'
+         ELSE
+            MapCreated = .TRUE.
+         END IF
+
+      END IF
+
+   END IF ! HasLoadFields
+
+   IF ( .NOT. MapCreated ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+      ErrMsg  = ' AllocMapping: Neither MapMotions or MapLoads was allocated. Meshes may not have compatible fields for mapping.'
    END IF
 
 
@@ -139,7 +191,7 @@ SUBROUTINE AllocMapping( Src, Dest, MeshMap, ErrStat, ErrMsg )
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal
          IF ( LEN_TRIM(ErrMsg) /= 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg  = ' AllocMapping: Error trying to allocate MeshMap%RotatedPosition.'
+         ErrMsg  = ' AllocMapping: Error trying to allocate MeshMap%RotatedPosition_n2.'
       END IF
    ELSE
       PointsInMap = MAX(Dest%Nnodes,Src%Nnodes)
@@ -174,7 +226,8 @@ SUBROUTINE MeshMapDestroy( MeshMap, ErrStat, ErrMsg )
    IF (ALLOCATED(MeshMap%RotatedPosition   )) DEALLOCATE(MeshMap%RotatedPosition   )
    IF (ALLOCATED(MeshMap%RotatedPosition_n2)) DEALLOCATE(MeshMap%RotatedPosition_n2)
 
-   CALL MeshDestroy( MeshMap%Temp_Lumped_Points_Src, ErrStat, ErrMsg )
+   CALL MeshDestroy( MeshMap%Temp_Lumped_Points_Src,  ErrStat, ErrMsg )
+   CALL MeshDestroy( MeshMap%Temp_Lumped_Points_Dest, ErrStat, ErrMsg )
 
 END SUBROUTINE MeshMapDestroy
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -284,24 +337,8 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcOrie
       endif
 
       !.................
-      ! other checks for available mesh fields:
+      ! other checks for available mesh fields (now done in alloc mapping routine)
       !.................
-
-      if (Src%FieldMask(MASKID_FORCE) )  then
-         if (.not. Dest%FieldMask(MASKID_FORCE) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg  = ' Error in Transfer_Line2_to_Point: Src has Force, but Dest does not.'
-            RETURN
-         endif
-      endif
-
-      if (Src%FieldMask(MASKID_MOMENT) )  then
-         if (.not. Dest%FieldMask(MASKID_MOMENT) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg  = ' Error in Transfer_Line2_to_Point: Src has Moment, but Dest does not.'
-            RETURN
-         endif
-      endif
 
       !........................
       ! Create mapping (including the temporary src mesh)
@@ -389,7 +426,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
       ! u_Dest1 = u_Src + [Orientation_Src^T * RefOrientation_Src - I] * [p_Dest - p_Src] at Source Node n1
       ! u_Dest2 = u_Src + [Orientation_Src^T * RefOrientation_Src - I] * [p_Dest - p_Src] at Source Node n2
-      ! u_Dest = (1-elem_position)*u_Dest1 + elem_position*u_Dest2
+      ! u_Dest = (1.-elem_position)*u_Dest1 + elem_position*u_Dest2
    if ( Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp) ) then
       do i=1, Dest%Nnodes
          if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
@@ -409,8 +446,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
          end if
 
-         Dest%TranslationDisp(:,i) = (1. - MeshMap%MapMotions(i)%elem_position)*FieldValueN1  &
-                                         + MeshMap%MapMotions(i)%elem_position *FieldValueN2
+         Dest%TranslationDisp(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*FieldValueN1  &
+                                   + MeshMap%MapMotions(i)%shape_fn(2)*FieldValueN2
 
       end do
 
@@ -431,9 +468,9 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
             ! Get the closest node (node closest in the projection)
             ! We can't interpolate the DCM, so we'll use the nearest neighbor.
-         ! (1. - MeshMap%MapMotions(i)%elem_position)*FieldValueN1 + MeshMap%MapMotions(i)%elem_position *FieldValueN2
+         ! MeshMap%MapMotions(i)%shape_fn(1)*FieldValueN1 + MeshMap%MapMotions(i)%shape_fn(2)*FieldValueN2
 
-         IF ( NINT( MeshMap%MapMotions(i)%elem_position ) == 0 ) THEN
+         IF ( NINT( MeshMap%MapMotions(i)%shape_fn(2) ) == 0 ) THEN
             n = n1
          ELSE
             n = n2
@@ -462,8 +499,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
             FieldValueN2 = FieldValueN2 + cross_product ( Src%RotationVel(:,n2), MeshMap%RotatedPosition_n2(:,i) )
          endif
 
-         Dest%TranslationVel(:,i) = (1. - MeshMap%MapMotions(i)%elem_position)*FieldValueN1  &
-                                        + MeshMap%MapMotions(i)%elem_position *FieldValueN2
+         Dest%TranslationVel(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*FieldValueN1  &
+                                  + MeshMap%MapMotions(i)%shape_fn(2)*FieldValueN2
 
 
       end do
@@ -479,8 +516,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-         Dest%RotationVel(:,i) = (1. - MeshMap%MapMotions(i)%elem_position)*Src%RotationVel(:,n1)  &
-                                     + MeshMap%MapMotions(i)%elem_position *Src%RotationVel(:,n2)
+         Dest%RotationVel(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%RotationVel(:,n1)  &
+                               + MeshMap%MapMotions(i)%shape_fn(2)*Src%RotationVel(:,n2)
       end do
 
    end if
@@ -511,8 +548,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
                                            cross_product( Src%RotationVel(:,n2), MeshMap%RotatedPosition_n2(:,i) ))
          endif
 
-         Dest%TranslationAcc(:,i) = (1. - MeshMap%MapMotions(i)%elem_position)*FieldValueN1  &
-                                        + MeshMap%MapMotions(i)%elem_position *FieldValueN2
+         Dest%TranslationAcc(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*FieldValueN1  &
+                                  + MeshMap%MapMotions(i)%shape_fn(2)*FieldValueN2
 
       end do
    endif
@@ -527,8 +564,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-         Dest%RotationAcc(:,i) = (1. - MeshMap%MapMotions(i)%elem_position)*Src%RotationAcc(:,n1)  &
-                                     + MeshMap%MapMotions(i)%elem_position *Src%RotationAcc(:,n2)
+         Dest%RotationAcc(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%RotationAcc(:,n1)  &
+                               + MeshMap%MapMotions(i)%shape_fn(2)*Src%RotationAcc(:,n2)
 
 
       end do
@@ -543,8 +580,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-         Dest%Scalars(:,i) = (1. - MeshMap%MapMotions(i)%elem_position)*Src%Scalars(:,n1)  &
-                                 + MeshMap%MapMotions(i)%elem_position *Src%Scalars(:,n2)
+         Dest%Scalars(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%Scalars(:,n1)  &
+                           + MeshMap%MapMotions(i)%shape_fn(2)*Src%Scalars(:,n2)
 
       end do
    end if
@@ -552,7 +589,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 END SUBROUTINE Transfer_Motions_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, ErrMsg)
+SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, ErrMsg, UseClosestNode)
 !This routine projects Mesh1 onto a Line2 mesh (Mesh2) to find the element mappings between the two meshes.
 !..................................................................................................................................
    TYPE(MeshType),                 INTENT(IN   )  :: Mesh1                           ! The mesh in the outer mapping loop (Dest for Motions/Scalars; Src for Loads)
@@ -563,8 +600,9 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
    INTEGER(IntKi),                 INTENT(IN   )  :: Mesh1_TYPE                      ! Type of Mesh1 elements to map
    INTEGER(IntKi),   PARAMETER                    :: Mesh2_TYPE  = ELEMENT_LINE2     ! Type of Mesh2 elements on map (MUST BE ELEMENT_LINE2)
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         ! Error message if ErrStat /= ErrID_None
+   LOGICAL,          OPTIONAL,     INTENT(IN   )  :: UseClosestNode                 ! Option to ignore closest node (if UseClosestNode=FALSE) if node doesn't prlject on any elements
 
       ! local variables
 
@@ -592,6 +630,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
    LOGICAL         :: UseMesh2Node(Mesh2%NNodes)    ! determines if the node on the second mesh is part of the mapping (i.e., contained in an element of the appropriate type)
 
    LOGICAL         :: found
+   LOGICAL         :: on_element
 
 
 
@@ -610,13 +649,13 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
    end do
 
    ! Map the source nodes to destination nodes:
-   Map(:)%OtherMesh_Element = -1 ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
+   Map(:)%OtherMesh_Element = NODE_NOT_MAPPED ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
 
 
    do iElem = 1, Mesh1%ElemTable(Mesh1_TYPE)%nelem   ! number of Mesh1_TYPE elements on Mesh1
       do iNode = 1, SIZE( Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes )
          i = Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes(iNode)  ! the nodes on element iElem
-         IF ( Map(i)%OtherMesh_Element > 0 ) CYCLE  ! we already mapped this node; let's move on
+         IF ( Map(i)%OtherMesh_Element > 0 ) CYCLE  ! we already mapped this node; let's move on to the next iNode (or iElem)
 
          ! destination point
          Mesh1_xyz = Mesh1%Position(:, i)
@@ -648,7 +687,18 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
 
             elem_position = DOT_PRODUCT(n1_n2_vector,n1_Point_vector) / denom
 
-            if (elem_position .le. 1_ReKi .and. elem_position .ge. 0_ReKi) then !we're ON the element (between the two nodes)
+                  ! note: i forumlated it this way because Fortran doesn't do shortcutting and I don't want to call EqualRealNos if we don't need it:
+            if ( elem_position .le. 1.0_ReKi .and. elem_position .ge. 0.0_ReKi ) then !we're ON the element (between the two nodes)
+               on_element = .true.
+            elseif (EqualRealNos( elem_position, 1.0_ReKi )) then !we're ON the element (at a node)
+               on_element = .true.
+            elseif (EqualRealNos( elem_position,  0.0_ReKi )) then !we're ON the element (at a node)
+               on_element = .true.
+            else !we're not on the element
+               on_element = .false.
+            end if
+
+            if (on_element) then
 
                ! calculate distance between point and line (note: this is actually the distance squared);
                ! will only store information once we have determined the closest element
@@ -659,7 +709,10 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
                   found = .true.
 
                   Map(i)%OtherMesh_Element = jElem
-                  Map(i)%elem_position     = elem_position
+                  !Map(i)%elem_position     = elem_position
+                  Map(i)%shape_fn(1)       = 1.0_ReKi - elem_position
+                  Map(i)%shape_fn(2)       = elem_position
+
                   !Map(i)%couple_arm        = n1_Point_vector
 
                !write(*,*) 'found the element ', jElem
@@ -673,6 +726,13 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
             ! if failed to find an element that the Point projected into, find the nearest point that is in the Line2 Mesh
             ! compare with CreateMapping_NearestNeighbor algorithm
          if (.not. found) then
+
+            IF ( PRESENT(UseClosestNode) ) THEN
+               IF ( .NOT. UseClosestNode ) THEN !Let's ignore this node
+                  Map(i)%OtherMesh_Element = NODE_IGNORED
+                  CYCLE ! go to the next iNode (or iElem)
+               END IF
+            END IF
 
             ! Find the nearest neighbor node for this particular node
 
@@ -706,7 +766,9 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
             end do !j
 
             Map(i)%OtherMesh_Element = elem_with_min_dist
-            Map(i)%elem_position     = elem_position
+            !Map(i)%elem_position     = elem_position
+            Map(i)%shape_fn(1)       = 1.0_ReKi - elem_position
+            Map(i)%shape_fn(2)       = elem_position
 
             if (elem_with_min_dist .lt. 1 )  then
                ErrStat = ErrID_Fatal
@@ -823,7 +885,6 @@ SUBROUTINE Calculate_RotatedPosition_N2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
 
 END SUBROUTINE Calculate_RotatedPosition_N2
-
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
@@ -1055,24 +1116,8 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcOrie
 
 
       !.................
-      ! other checks for available mesh fields:
+      ! other checks for available mesh fields (now done in alloc mapping routine):
       !.................
-
-      if (Src%FieldMask(MASKID_FORCE) )  then
-         if (.not. Dest%FieldMask(MASKID_FORCE) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg  = ' Error in Transfer_Point_to_Point: Src has Force, but Dest does not.'
-            RETURN
-         endif
-      endif
-
-      if (Src%FieldMask(MASKID_MOMENT) )  then
-         if (.not. Dest%FieldMask(MASKID_MOMENT) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg  = ' Error in Transfer_Point_to_Point: Src has Moment, but Dest does not.'
-            RETURN
-         endif
-      endif
 
       !........................
       ! Create mapping
@@ -1104,7 +1149,7 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcOrie
 
 
 END SUBROUTINE Transfer_Point_to_Point
-!..................................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_TYPE, ErrStat, ErrMsg )
 ! This routine creates the node-to-node (nearest neighbor). We map FROM Mesh1 to Mesh2
 !.......................................................................................
@@ -1146,7 +1191,7 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_T
    end do
 
    ! Map the source nodes to destination nodes:
-   Map(:)%OtherMesh_Element = -1 ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
+   Map(:)%OtherMesh_Element = NODE_NOT_MAPPED ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
 
    do iElem = 1, Mesh1%ElemTable(Mesh1_TYPE)%nelem   ! number of Mesh1_TYPE elements on Mesh1 = number of points on Mesh1
       do iNode = 1, SIZE( Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes )
@@ -1203,7 +1248,7 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_T
 
 
 END SUBROUTINE CreateMapping_NearestNeighbor
-!..................................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
 ! Given a nearest-neighbor mapping, this routine transfers motions between nodes on the mesh.
 !..................................................................................................................................
@@ -1337,7 +1382,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 
 END SUBROUTINE Transfer_Motions_Point_to_Point
-!..................................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, Map, ErrStat, ErrMsg, SrcOrient )
 ! Given a nearest-neighbor mapping, this routine transfers loads between nodes on the mesh.
 !..................................................................................................................................
@@ -1468,12 +1513,14 @@ SUBROUTINE Calculate_RotatedPosition( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
 END SUBROUTINE Calculate_RotatedPosition
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
+SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
 ! for transfering displacement-type or force-type data from Line2 mesh to Line2 Mesh
 !
    TYPE(MeshType),         INTENT(IN   ) ::  Src
    TYPE(MeshType),         INTENT(INOUT) ::  Dest
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  ! a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp ! a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap
 
@@ -1552,50 +1599,53 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
       ! Check that the mapping data structure is the correct size:
       !........................
 
-      if (SIZE(MeshMap%MapLoads) < Src%nnodes) then
+      !BJJ: THIS IS SUPPOSED TO BE ON THE ELEMENT LEVEL NOW.
+      !if (SIZE(MeshMap%MapLoads) < Src%nnodes) then
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = ' Error in Transfer_Line2_to_Line2: MeshMap%MapLoads(:) should be allocated to Src%nnodes.'
+      !   RETURN
+      !endif
+
+      IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in Transfer_Point_to_Point: MeshMap%MapLoads(:) should be allocated to Src%nnodes.'
+         ErrMsg  = ' Error in Transfer_Line2_to_Line2: SrcDisp and DestDisp arguments are required.'
          RETURN
-      endif
-
+      END IF
 
       !.................
-      ! other checks for available mesh fields:
+      ! other checks for available mesh fields (now done in AllocMapping routine)
       !.................
 
-      if (Src%FieldMask(MASKID_FORCE) )  then
-         if (.not. Dest%FieldMask(MASKID_FORCE) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg  = ' Error in Transfer_Line2_to_Line2: Src has Force, but Dest does not.'
-            RETURN
-         endif
-      endif
-
-      if (Src%FieldMask(MASKID_MOMENT) )  then
-         if (.not. Dest%FieldMask(MASKID_MOMENT) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg  = ' Error in Transfer_Line2_to_Line2: Src has Moment, but Dest does not.'
-            RETURN
-         endif
-      endif
 
       !........................
       ! Create mapping
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
-         ! project points to line2 mesh
-         CALL CreateMapping_ProjectToLine2(Src, Dest, MeshMap%MapLoads, ELEMENT_LINE2, ErrStat, ErrMsg)
+         !........................
+         ! Create a temporary mesh for lumped point elements of the line2 meshes
+         !........................
+         CALL Create_PointMesh( Src, MeshMap%Temp_Lumped_Points_Src, ErrStat, ErrMsg )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+         CALL Create_PointMesh( Dest, MeshMap%Temp_Lumped_Points_Dest, ErrStat, ErrMsg )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+
+         !........................
+         ! Do the mapping
+         !........................
+
+         CALL CreateMapping_ProjectLine2ToLine2(Src, Dest, MeshMap%MapLoads, ErrStat, ErrMsg)
             IF (ErrStat >= AbortErrLev) RETURN
 
       end if
-
 
       !........................
       ! Transfer data
       !........................
 
-      CALL Transfer_Loads_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
+      CALL Transfer_Loads_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
 
    end if ! algorithm for loads
@@ -1603,7 +1653,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
 END SUBROUTINE Transfer_Line2_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Transfer_Loads_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
+SUBROUTINE Transfer_Loads_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 ! Given a mapping, this routine transfers the loads from nodes on Line2 elements to nodes on another Line2 mesh.
 !..................................................................................................................................
 
@@ -1614,94 +1664,448 @@ SUBROUTINE Transfer_Loads_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp   ! The source mesh's cooresponding position mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp  ! The destination mesh's cooresponding position mesh
+!   TYPE(MeshType), OPTIONAL,       INTENT(IN   )  :: SrcDisp   ! The source mesh's cooresponding position mesh
+!   TYPE(MeshType), OPTIONAL,       INTENT(IN   )  :: DestDisp  ! The destination mesh's cooresponding position mesh
 
       ! local variables
-   REAL(ReKi)                                     :: RotationMatrix(3,3)
-   REAL(ReKi)                                     :: torque(3)
+!   REAL(ReKi)                                     :: RotationMatrix(3,3)
+!   REAL(ReKi)                                     :: torque(3)
 
-   INTEGER(IntKi)                                 :: i         ! counter over the nodes
+   REAL(ReKi), DIMENSION(3)                       :: xyz1, xyz2, Dest_xyz, tmp_vec ! Position + TranslationDisp for source and destination nodes
+   REAL(ReKi)                                     :: Moment_ForceComp(3,Dest%NNodes) ! a temporary holder for the force component of the moment
+
+   REAL(ReKi)                                     :: Scale_F(3)    ! scale for the forces
+   REAL(ReKi)                                     :: Scale_M(3)    ! scale for the moment component of the moments
+   REAL(ReKi)                                     :: Scale_MF(3)   ! scale for the force component of the moments
+   REAL(ReKi), DIMENSION(3)                       :: Scale_F_Denom, Scale_M_Denom, Scale_MF_Denom !temporary vectors to hold values for denominator in calculation of variables Scale_*.
+!   REAL(ReKi), DIMENSION(3)                       :: Scale_F_Num, Scale_F_Den, Scale_M_Num, Scale_M_Den, Scale_MF_Num, Scale_MF_Den !temporary vectors to hold values for numerator and denominator
+
+   INTEGER(IntKi)                                 :: i         ! counter over the elements
    INTEGER(IntKi)                                 :: n1, n2    ! temporary space for node numbers
+
+   REAL(ReKi), PARAMETER                          :: TOL = 0.1 ! Error limit: ABS(1-Scale_*) <= TOL [0.1=10% error]
+
+!Possible combinations (if fields exist):
+! Src%Force  Src%Moment  Dest%Force Dest%Moment
+!----------  ----------  ---------- -----------
+!  T             T           T           T
+!  T             F           T           T
+!  T             F           T           F
+!  F             T           F           T
+!  F             T           T           T
 
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! set this to the identity matrix for now:
-   RotationMatrix(:,1) = (/ 1._ReKi, 0._ReKi, 0._ReKi /)
-   RotationMatrix(:,2) = (/ 0._ReKi, 1._ReKi, 0._ReKi /)
-   RotationMatrix(:,3) = (/ 0._ReKi, 0._ReKi, 1._ReKi /)
+
+   !   ! set this to the identity matrix for now:
+   !RotationMatrix(:,1) = (/ 1._ReKi, 0._ReKi, 0._ReKi /)
+   !RotationMatrix(:,2) = (/ 0._ReKi, 1._ReKi, 0._ReKi /)
+   !RotationMatrix(:,3) = (/ 0._ReKi, 0._ReKi, 1._ReKi /)
 
 
    ! initialization; required to handle superposition of loads
-   if (Dest%FieldMask(MASKID_FORCE) ) Dest%Force  = 0.     ! whole array initialization
-   if (Dest%FieldMask(MASKID_Moment)) Dest%Moment = 0.     ! whole array initialization
+   if (Dest%FieldMask(MASKID_FORCE) ) Dest%Force  = 0._ReKi     ! whole array initialization
+   if (Dest%FieldMask(MASKID_MOMENT)) Dest%Moment = 0._ReKi     ! whole array initialization
 
-      ! calculate MeshMap%RotatedPosition and MeshMap%RotatedPosition_n2:
-   !CALL Calculate_RotatedPosition_N2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
       ! ---------------------------- Force ------------------------------------------------
       ! Transfer this source force to destination force and/or moment fields:
 
+   Scale_F        = 0.0_ReKi
+   Scale_F_Denom  = 0.0_ReKi
+   Scale_M        = 0.0_ReKi
+   Scale_M_Denom  = 0.0_ReKi
+   Scale_MF       = 0.0_ReKi
+   Scale_MF_Denom = 0.0_ReKi
+
+   Moment_ForceComp = 0.0_ReKi
+
    if ( Src%FieldMask(MASKID_Force) ) THEN
 
-      if ( Dest%FieldMask(MASKID_Force) ) then
-         do i = 1, Src%NNodes
-            if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had elements that weren't the correct type (e.g., LINE2 and LINE3 elements on same mesh)
+      ! ( Dest%FieldMask(MASKID_Force) ) is .TRUE.
 
-            n1 = Dest%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapLoads(i)%OtherMesh_Element)%ElemNodes(1)
-            n2 = Dest%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapLoads(i)%OtherMesh_Element)%ElemNodes(2)
+      DO i = 1, Src%ElemTable(ELEMENT_LINE2)%nelem  ! the source elements
 
-            Dest%Force(:,n1) = Dest%Force(:,n1) + Src%Force(:,i)*(1. - MeshMap%MapMotions(i)%elem_position)
-            Dest%Force(:,n2) = Dest%Force(:,n2) + Src%Force(:,i)*(     MeshMap%MapMotions(i)%elem_position)
+         IF ( MeshMap%MapLoads(i)%OtherMesh_Element > 0 ) THEN       ! Otherwise, we're ignoring it
+            n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+            n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
 
-         end do
-      end if ! transfer to destination force field
+            Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) = Dest%Force(:,    MeshMap%MapLoads(i)%OtherMesh_Element ) &
+                                                                 + Src%Force(:,n1)*MeshMap%MapLoads(i)%shape_fn(1)         &
+                                                                 + Src%Force(:,n2)*MeshMap%MapLoads(i)%shape_fn(2)
+         END IF
 
+
+      END DO !loop through source elements
+
+     !........................
+      ! Lump the values on line2 elements to nodes on a point mesh
+      ! These point and line2 meshes have the same nodes so there is no mapping here:
+      !........................
+
+      CALL Lump_Line2_to_Point( Src,  MeshMap%Temp_Lumped_Points_Src,  ErrStat, ErrMsg, SrcDisp )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      !ELSE
+      !   CALL Lump_Line2_to_Point( Src, MeshMap%Temp_Lumped_Points_Src, ErrStat, ErrMsg )
+      !END IF
+      !IF (ErrStat >= AbortErrLev) RETURN
+
+
+         ! Lump the calculated dest%force:
+      CALL Lump_Line2_to_Point( Dest, MeshMap%Temp_Lumped_Points_Dest, ErrStat, ErrMsg, DestDisp )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+
+         ! Calculate Scale_F
+
+      ! Compute the numerator of Scale_F
+      DO i=1,MeshMap%Temp_Lumped_Points_Src%Nnodes
+         Scale_F = Scale_F + MeshMap%Temp_Lumped_Points_Src%Force(:,i)
+      END DO
+
+      ! Compute the denominator of Scale_F
+      DO i=1,MeshMap%Temp_Lumped_Points_Dest%Nnodes
+         Scale_F_Denom = Scale_F_Denom + MeshMap%Temp_Lumped_Points_Dest%Force(:,i)
+      END DO
+
+print *, 'Scale_F_Numer=',Scale_F
+print *, 'Scale_F_Denom=',Scale_F_Denom
+      ! Divide numerator by denominator for Scale_F
+      DO i=1,3
+         IF ( .NOT. EqualRealNos( Scale_F_Denom(i), 0.0_ReKi ) ) THEN
+
+            Scale_F(i) = Scale_F(i) / Scale_F_Denom(i)
+
+            IF ( ABS(1.0 - Scale_F(i)) > TOL ) THEN
+               ErrStat = ErrID_Warn
+               IF (LEN_TRIM(ErrMsg)/=0) ErrMsg = TRIM(ErrMsg)//NewLine
+               ErrMsg  = TRIM(ErrMsg)//" Transfer_Loads_Line2_to_Line2: Mesh mapping contains large errors (Scale_F("//&
+                         TRIM(Num2LStr(i))//") is not close to 1). Consider using a different mesh."
+               IF (ErrStat >= AbortErrLev) RETURN
+            END IF
+
+         ELSEIF ( EqualRealNos( Scale_F(i), 0.0_ReKi ) ) THEN
+            Scale_F(i) = 1.0_ReKi  ! 0/0
+         ELSE
+            ErrStat = ErrID_Fatal
+            IF (LEN_TRIM(ErrMsg)/=0) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg  = TRIM(ErrMsg)//" Transfer_Loads_Line2_to_Line2: Meshes cannot be mapped (Scale_F("//&
+                      TRIM(Num2LStr(i))//") denominator is zero)."
+            RETURN
+         END IF
+      END DO
+
+      ! Dest%Force--it exists (check in allocMapping routine)--now contains F^D'
+
+      ! scale the forces:
+      Dest%Force(1,:) = Dest%Force(1,:) * Scale_F(1)
+      Dest%Force(2,:) = Dest%Force(2,:) * Scale_F(2)
+      Dest%Force(3,:) = Dest%Force(3,:) * Scale_F(3)
+
+print *, 'Scale_F=',Scale_F
+
+!bjj: we need to replace SrcDisp%TranslationDisp and DestDisp%TranslationDisp with some checks about if they're present, etc
+
+            ! calculate M^D'_F and Scale_MF  (the force component of the destination moment)
       if ( Dest%FieldMask(MASKID_Moment) ) then
 
-         ! if the distance between source and destination nodes is greater than "zero", we need to add a
-         ! moment to the destination mesh to account for the mismatch between points
+         DO i = 1, Src%ElemTable(ELEMENT_LINE2)%nelem  ! the source elements
+print *, 'calculating values: element=', i, ' node=', MeshMap%MapLoads(i)%OtherMesh_Element
 
-         do i = 1, Src%NNodes
-            if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had elements that weren't the correct type (e.g., LINE2 and LINE3 elements on same mesh)
+            IF ( MeshMap%MapLoads(i)%OtherMesh_Element > 0 ) THEN       ! Otherwise, we're ignoring it
 
-            n1 = Dest%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapLoads(i)%OtherMesh_Element)%ElemNodes(1)
-            n2 = Dest%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapLoads(i)%OtherMesh_Element)%ElemNodes(2)
+               n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+               n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+
+               xyz1  = Src%Position(:,n1) + SrcDisp%TranslationDisp(:,n1)
+               xyz2  = Src%Position(:,n2) + SrcDisp%TranslationDisp(:,n2)
+
+               tmp_vec =  xyz1*MeshMap%MapLoads(i)%shape_fn(1)                   &
+                        + xyz2*MeshMap%MapLoads(i)%shape_fn(2)                   &
+                        - Dest%Position(:,MeshMap%MapLoads(i)%OtherMesh_Element) &
+                        - DestDisp%TranslationDisp(:,MeshMap%MapLoads(i)%OtherMesh_Element)
+!print *, '[Src%Position(n1) + SrcDisp%TranslationDisp(n1)]*S1=', xyz1*MeshMap%MapLoads(i)%shape_fn(1)
+!print *, '[Src%Position(n2) + SrcDisp%TranslationDisp(n2)]*S2=', xyz2*MeshMap%MapLoads(i)%shape_fn(2)
+!print *, 'Dest%Position(m) + DestDisp%TranslationDisp(m)=', Dest%Position(:,MeshMap%MapLoads(i)%OtherMesh_Element)  +  DestDisp%TranslationDisp(:,MeshMap%MapLoads(i)%OtherMesh_Element)
+!print *, 'tmp_vec=',tmp_vec
+!print *,'========'
+!
+               Moment_ForceComp(:,MeshMap%MapLoads(i)%OtherMesh_Element) =                        &
+                                    Moment_ForceComp(:,MeshMap%MapLoads(i)%OtherMesh_Element )    &
+                                 + cross_product( tmp_vec,                                        &
+                                                  Src%Force(:,n1)*MeshMap%MapLoads(i)%shape_fn(1) &
+                                                + Src%Force(:,n2)*MeshMap%MapLoads(i)%shape_fn(2)  )
+!print *, Moment_ForceComp
+            END IF
+
+         END DO !loop through source elements
 
 
-               ! calculation torque vector based on offset force: torque = couple_arm X Force  (depends on sign of couple)
+         ! Compute the numerator of Scale_MF
+         DO i=1,MeshMap%Temp_Lumped_Points_Src%Nnodes
+            xyz1     = Src%Position(:,i) + SrcDisp%TranslationDisp(:,i)
+            Scale_MF = Scale_MF + cross_product(xyz1,MeshMap%Temp_Lumped_Points_Src%Force(:,i))
+         END DO
 
-            ! RotationMatrix = MATMUL( TRANSPOSE( Src%Orientation(:,i) ), Src%RefOrientation(:,i) )
-            torque = CROSS_PRODUCT( Src%Force(:,i), MATMUL( RotationMatrix, (Dest%Position(:,n1) - Src%Position(:,i)) ))
-            Dest%Moment(:,n1) = Dest%Moment(:,n1) + torque*(1. - MeshMap%MapMotions(i)%elem_position)
+         ! Compute the denominator of Scale_MF
+         DO i=1,MeshMap%Temp_Lumped_Points_Dest%Nnodes
+            xyz1           = Dest%Position(:,i) + DestDisp%TranslationDisp(:,i)
+            Scale_MF_Denom = Scale_MF_Denom + cross_product(xyz1,MeshMap%Temp_Lumped_Points_Dest%Force(:,i))
+         END DO
 
-            torque = CROSS_PRODUCT( Src%Force(:,i), MATMUL( RotationMatrix, (Dest%Position(:,n2) - Src%Position(:,i)) ))
-            Dest%Moment(:,n2) = Dest%Moment(:,n2) + torque*(     MeshMap%MapMotions(i)%elem_position)
-         end do
+
+print *, 'Scale_MF_Numer=',Scale_MF
+print *, 'Scale_MF_Denom=',Scale_MF_Denom
+         ! calculate Scale_MF
+         DO i=1,3
+            IF ( .NOT. EqualRealNos( Scale_MF_Denom(i), 0.0_ReKi ) ) THEN
+
+               Scale_MF(i) = Scale_MF(i) / Scale_MF_Denom(i)
+
+               IF ( ABS(1.0 - Scale_MF(i)) > TOL ) THEN
+                  ErrStat = ErrID_Warn
+                  IF (LEN_TRIM(ErrMsg)/=0) ErrMsg = TRIM(ErrMsg)//NewLine
+                  ErrMsg  = TRIM(ErrMsg)//" Transfer_Loads_Line2_to_Line2: Mesh mapping contains large errors (Scale_MF("//&
+                            TRIM(Num2LStr(i))//") is not close to 1). Consider using a different mesh."
+                  IF (ErrStat >= AbortErrLev) RETURN
+               END IF
+
+            ELSEIF ( EqualRealNos( Scale_MF(i), 0.0_ReKi ) ) THEN
+               Scale_MF(i) = 1.0_ReKi  ! 0/0
+            ELSE
+               ErrStat = ErrID_Fatal
+               IF (LEN_TRIM(ErrMsg)/=0) ErrMsg = TRIM(ErrMsg)//NewLine
+               ErrMsg  = TRIM(ErrMsg)//" Transfer_Loads_Line2_to_Line2: Meshes cannot be mapped (Scale_MF("//&
+                         TRIM(Num2LStr(i))//") denominator is zero)."
+               RETURN
+            END IF
+         END DO   ! 3 components of Scale_MF
+
+
+         Moment_ForceComp(1,:) = Moment_ForceComp(1,:)* Scale_MF(1)
+         Moment_ForceComp(2,:) = Moment_ForceComp(2,:)* Scale_MF(2)
+         Moment_ForceComp(3,:) = Moment_ForceComp(3,:)* Scale_MF(3)
 
       end if ! transfer to destination moment field
+print *, 'Scale_MF=',Scale_MF
 
-   end if
+
+   end if !source has force
 
       ! ---------------------------- Moments ------------------------------------------------
       ! Transfer this source moment to the destination moment field
 
-   if ( Src%FieldMask(MASKID_Moment) .AND. Dest%FieldMask(MASKID_Moment) ) then
+   if ( Src%FieldMask(MASKID_Moment) ) then !
 
-         do i = 1, Src%NNodes
-            if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had elements that weren't the correct type (e.g., LINE2 and LINE3 elements on same mesh)
+      DO i = 1, Src%ElemTable(ELEMENT_LINE2)%nelem  ! the source elements
 
-            n1 = Dest%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapLoads(i)%OtherMesh_Element)%ElemNodes(1)
-            n2 = Dest%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapLoads(i)%OtherMesh_Element)%ElemNodes(2)
+         n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+         n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
 
-            Dest%Moment(:,n1) = Dest%Moment(:,n1) + Src%Moment(:,i)*(1. - MeshMap%MapMotions(i)%elem_position)
-            Dest%Moment(:,n2) = Dest%Moment(:,n2) + Src%Moment(:,i)*(     MeshMap%MapMotions(i)%elem_position)
+            ! Compute the numerator of Scale_M
+         Scale_M = Scale_M + Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac * ( Src%Moment(:,n1) + Src%Moment(:,n2) )
 
-         end do
+         IF ( MeshMap%MapLoads(i)%OtherMesh_Element > 0 ) THEN       ! Otherwise, we're ignoring it
 
-   end if
+            Dest%Moment(:,MeshMap%MapLoads(i)%OtherMesh_Element) =  Dest%Moment(:,   MeshMap%MapLoads(i)%OtherMesh_Element ) &
+                                                                   + Src%Moment(:,n1)*MeshMap%MapLoads(i)%shape_fn(1)        &
+                                                                   + Src%Moment(:,n2)*MeshMap%MapLoads(i)%shape_fn(2)
+         END IF
+
+
+      END DO !loop through source elements
+
+         ! Calculate Scale_M:
+      DO i=1,Dest%ElemTable(ELEMENT_LINE2)%nelem
+         n1 = Dest%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+         n2 = Dest%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+
+            ! Compute the denominator of Scale_M
+         Scale_M_Denom = Scale_M_Denom + Dest%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac * &
+                           ( Dest%Moment(:,n1) + Dest%Moment(:,n2) )
+
+
+      END DO
+
+print *, 'Scale_M_Numer=',Scale_M
+print *, 'Scale_M_Denom=',Scale_M_Denom
+      DO i=1,3
+         IF ( .NOT. EqualRealNos( Scale_M_Denom(i), 0.0_ReKi ) ) THEN
+
+            Scale_M(i) = Scale_M(i) / Scale_M_Denom(i)
+
+            IF ( ABS(1.0 - Scale_M(i)) > TOL ) THEN
+               ErrStat = ErrID_Warn
+               IF (LEN_TRIM(ErrMsg)/=0) ErrMsg = TRIM(ErrMsg)//NewLine
+               ErrMsg  = TRIM(ErrMsg)//" Transfer_Loads_Line2_to_Line2: Mesh mapping contains large errors (Scale_M("//&
+                         TRIM(Num2LStr(i))//") is not close to 1). Consider using a different mesh."
+               IF (ErrStat >= AbortErrLev) RETURN
+            END IF
+
+         ELSEIF ( EqualRealNos( Scale_M(i), 0.0_ReKi ) ) THEN
+            Scale_M(i) = 1.0_ReKi  ! 0/0
+         ELSE
+            ErrStat = ErrID_Fatal
+            IF (LEN_TRIM(ErrMsg)/=0) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg  = TRIM(ErrMsg)//" Transfer_Loads_Line2_to_Line2: Meshes cannot be mapped (Scale_M("//&
+                      TRIM(Num2LStr(i))//") denominator is zero)."
+            RETURN
+         END IF
+      END DO
+
+
+            ! scale the moments:
+
+      Dest%Moment(1,:) = Dest%Moment(1,:) * Scale_M(1) + Moment_ForceComp(1,:)
+      Dest%Moment(2,:) = Dest%Moment(2,:) * Scale_M(2) + Moment_ForceComp(2,:)
+      Dest%Moment(3,:) = Dest%Moment(3,:) * Scale_M(3) + Moment_ForceComp(3,:)
+
+   end if !src has moment field
+
+print *, 'Scale_M=',Scale_M
 
 END SUBROUTINE Transfer_Loads_Line2_to_Line2
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE CreateMapping_ProjectLine2ToLine2(Src, Dest, Map, ErrStat, ErrMsg)
+!This routine projects Dest onto Src to find the element mappings between the two meshes. This is used in the mapping for
+! Line2-to-Line2 Loads.
+!..................................................................................................................................
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest                           ! The mesh in the outer mapping loop (Dest)
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                            ! The mesh in the inner mapping loop (Src )
+
+   TYPE(MapType),                  INTENT(INOUT)  :: Map(:)                         ! The mapping from Src to Dest
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+
+   REAL(ReKi)      :: denom
+   REAL(ReKi)      :: dist
+   REAL(ReKi)      :: min_dist
+   REAL(ReKi)      :: elem_position
+
+   REAL(ReKi)      :: Dest_xyz(3)
+   REAL(ReKi)      :: Src_xyz(3)
+
+   REAL(ReKi)      :: n1_n2_vector(3)     ! vector going from node 1 to node 2 in Line2 element
+   REAL(ReKi)      :: n1_Point_vector(3)  ! vector going from node 1 in Line 2 element to Destination Point
+   REAL(ReKi)      :: tmp(3)              ! temporary vector for cross product calculation
+
+   INTEGER(IntKi)  :: point_with_min_dist
+   INTEGER(IntKi)  :: elem_with_min_dist
+
+   INTEGER(IntKi)  :: iElem, iNode, i  ! do-loop counter for elements on Dest, associated node(S)
+   INTEGER(IntKi)  :: jElem, jNode, j  ! do-loop counter for elements on Src, associated node
+
+   INTEGER(IntKi)  :: n1, n2           ! nodes associated with an element
+
+   LOGICAL         :: UseDestNode(Dest%NNodes)    ! determines if the node on the destination mesh is part of the mapping (i.e., contained in an element of the appropriate type)
+
+   LOGICAL         :: on_element
+
+
+
+      ! initialization
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+   ! Map the source nodes to destination nodes:
+   Map(:)%OtherMesh_Element = NODE_IGNORED ! initialize this so we know if we've mapped this line2 element or if we're going to ignore it
+
+   ! the index, j, of Map(j) corresponds to the source element
+   ! the value of Map(j) is the destination node
+
+   ! Determine which nodes on Dest can be in the mapping (we don't want to do the projection and search more than than once per node!)
+   UseDestNode = .FALSE.
+   do iElem = 1, Dest%ElemTable(ELEMENT_LINE2)%nelem  ! number of point elements on Dest
+      do iNode = 1, SIZE( Dest%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes )
+
+         UseDestNode( Dest%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(iNode)    ) = .TRUE. ! use this node (it's part of a line2 element)
+
+      end do
+   end do
+
+   ! initialize closest destination node on source mesh:
+
+   Map(:)%distance = HUGE( Map(1)%distance )
+
+   ! project each of the nodes on the destination mesh onto the source elements
+
+   do i = 1, Dest%NNodes   ! a particular node on destination mesh (on a line2 element)
+      IF (.NOT. UseDestNode(i) ) CYCLE
+
+      ! point on destination node
+      Dest_xyz = Dest%Position(:, i)
+
+      do jElem = 1, Src%ElemTable(ELEMENT_LINE2)%nelem  ! let's see which source elements the projection lies on
+
+            ! grab node numbers associated with the jElem_th element
+         n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(1)
+         n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(2)
+
+            ! Calculate vectors used in projection operation
+         n1_n2_vector    = Src%Position(:,n2) - Src%Position(:,n1)
+         n1_Point_vector = Dest_xyz - Src%Position(:,n1)
+
+         denom           = DOT_PRODUCT( n1_n2_vector, n1_n2_vector )
+         IF ( EqualRealNos( denom, 0.0_ReKi ) ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = ' Error in CreateMapping_ProjectLine2ToLine2: Division by zero because Line2 element nodes are in same position.'
+            RETURN
+         END IF
+
+            ! project point onto line defined by n1 and n2
+         elem_position = DOT_PRODUCT(n1_n2_vector,n1_Point_vector) / denom
+
+            ! note: i forumlated it this way because Fortran doesn't do shortcutting and I don't want to call EqualRealNos if we don't need it:
+         if ( elem_position .le. 1.0_ReKi .and. elem_position .ge. 0.0_ReKi ) then !we're ON the element (between the two nodes)
+            on_element = .true.
+         elseif (EqualRealNos( elem_position, 1.0_ReKi )) then !we're ON the element (at a node)
+            on_element = .true.
+         elseif (EqualRealNos( elem_position,  0.0_ReKi )) then !we're ON the element (at a node)
+            on_element = .true.
+         else !we're not on the element
+            on_element = .false.
+         end if
+
+         if (on_element) then
+
+            ! calculate distance between point and line (note: this is actually the distance squared);
+            ! will only store information once we have determined the closest element
+            tmp  = cross_product( n1_n2_vector, n1_Point_vector )
+            dist = DOT_PRODUCT(tmp,tmp) / denom
+  print *,'dest node=',i, ' source element=',jElem, ' dist=',dist, ' elem_position=',elem_position
+
+            if (dist .lt. Map(jElem)%distance) then
+
+               Map(jElem)%OtherMesh_Element = i
+               Map(jElem)%shape_fn(1)       = 1.0_ReKi - elem_position
+               Map(jElem)%shape_fn(2)       = elem_position
+               Map(jElem)%distance          = dist
+
+               !Map(jElem)%couple_arm        = n1_Point_vector
+
+            end if !the point is closest to this line2 element
+
+         endif !found on the element
+
+      end do !jElem
+
+   end do ! i
+
+   do jElem = 1, Dest%ElemTable(ELEMENT_LINE2)%nelem  ! number of point elements on Dest
+ print *,'source element=',jElem, ' dest node=',Map(jElem)%OtherMesh_Element, ' dist=',Map(jElem)%distance, ' elem_position=',Map(jElem)%shape_fn(2)
+   end do ! jElem
+
+
+END SUBROUTINE CreateMapping_ProjectLine2ToLine2
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcTransDisp )
 !
@@ -1747,7 +2151,7 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcTrans
 
    ! local variables
    REAL(ReKi) :: det_jac
-   REAL(ReKi) :: n1_n2_vector(3) ! vector going from node 1 to node 2 in a Line2 element
+!  REAL(ReKi) :: n1_n2_vector(3) ! vector going from node 1 to node 2 in a Line2 element
    REAL(ReKi) :: pCrossf(3)      ! a temporary vector storing cross product of positions with forces
    REAL(ReKi) :: p1(3), p2(3)    ! temporary position vectors
 
@@ -1807,9 +2211,12 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcTrans
       n1 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
       n2 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
 
-      n1_n2_vector = Line2_Src%Position(:,n2) - Line2_Src%Position(:,n1)
+      !n1_n2_vector = Line2_Src%Position(:,n2) - Line2_Src%Position(:,n1)
+      !
+      !det_jac = SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) ) / 6._ReKi  ! = L / 6 = det_jac/3.
 
-      det_jac = SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) ) / 6._ReKi  ! = L / 6
+      det_jac = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 3.0_ReKi
+
 
       if (Point_Dest%FieldMask(MASKID_FORCE) ) then
 
@@ -1839,10 +2246,8 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcTrans
             p2 = Line2_Src%Position(:,n2)
 
             IF ( PRESENT(SrcTransDisp) ) THEN
-               IF ( SrcTransDisp%FieldMask(MASKID_TRANSLATIONDISP) ) then
-                  p1 = p1 + SrcTransDisp%TranslationDisp(:,n1)
-                  p2 = p1 + SrcTransDisp%TranslationDisp(:,n2)
-               END IF
+               p1 = p1 + SrcTransDisp%TranslationDisp(:,n1)
+               p2 = p1 + SrcTransDisp%TranslationDisp(:,n2)
             ELSEIF (Line2_Src%FieldMask(MASKID_TRANSLATIONDISP)) THEN
                p1 = p1 + Line2_Src%TranslationDisp(:,n1)
                p2 = p1 + Line2_Src%TranslationDisp(:,n2)
