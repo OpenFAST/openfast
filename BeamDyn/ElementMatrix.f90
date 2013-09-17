@@ -72,7 +72,7 @@
            temp_id1 = (i-1)*dof_node+j
            DO k=1,6
                temp_id2 = (i-1)*dof_node+k
-               elk(temp_id1,temp_id2) = w(i)*Qe_elem(j,k,i)*Jac
+               elk(temp_id1,temp_id2) = elk(temp_id1, temp_id2) + w(i)*Qe_elem(j,k,i)*Jac
            ENDDO
        ENDDO
    ENDDO
@@ -108,13 +108,16 @@
    DO i=1,node_elem
        DO j=1,6
            temp_id1 = (i-1)*dof_node+j
-           elf(temp_id1) = -w(i) * Fd_elem(j,i) * Jac
-           elf(temp_id1) = elf(temp_id1) + w(i) * Next((i-1)*dof_node+j) * Jac
+           elf(temp_id1) = elf(temp_id1) - w(i) * Fd_elem(j,i) * Jac
+!           elf(temp_id1) = elf(temp_id1) + w(i) * Next((i-1)*dof_node+j) * Jac
+!           elf(temp_id1) = elf(temp_id1) +  Next((i-1)*dof_node+j) 
            DO m=1,node_elem
               elf(temp_id1) = elf(temp_id1) - w(m) * hhp(i,m) * Fc_elem(j,m)
            ENDDO
        ENDDO
    ENDDO
+
+
 
    DEALLOCATE(Fc_elem)
    DEALLOCATE(Fd_elem)

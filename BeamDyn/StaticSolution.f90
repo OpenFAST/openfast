@@ -17,21 +17,31 @@
    ui = 0.0D0
 
    DO i=1,niter
+       WRITE(*,*) "# of N-R Iteration", i
+!       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        CALL BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,F_ext,&
                       &node_elem,dof_node,norder,elem_total,dof_total,node_total,dof_elem,&
                       &StifK,RHS)
+!       RHS(dof_total-1) = RHS(dof_total-1) - 3.14159D+01
+       RHS = RHS + F_ext
+!       DO j=1,dof_total
+!           WRITE(*,*) "j=",j
+!           WRITE(*,*) "RHS(j)=",RHS(j)
+!       ENDDO
+!       STOP
        errf = 0.0D0
        CALL Norm(dof_total,RHS,errf)
        IF(errf .LE. TOLF) RETURN
        ui_old = ui
-       WRITE(*,*) "# of N-R Iteration", i
+       
        CALL CGSolver(RHS,StifK,ui,bc,dof_total)
-       DO j=1,dof_total
-           WRITE(*,*) "j=",j
-           WRITE(*,*) ui(j)
-       ENDDO
+!       DO j=1,dof_total
+!           WRITE(*,*) "j=",j
+!           WRITE(*,*) "ui(j)=",ui(j)
+!       ENDDO
+!       STOP
        rel_change = ABS(ui - ui_old)
        CALL Norm(dof_total,uuNf,temp1)
        CALL Norm(dof_total,rel_change,temp2)
@@ -40,6 +50,10 @@
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
            
+!       DO j=1,dof_total
+!           WRITE(*,*) "j=",j
+!           WRITE(*,*) "uuNf(j)=",uuNf(j)
+!       ENDDO
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            STOP
