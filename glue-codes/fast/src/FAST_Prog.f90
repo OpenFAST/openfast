@@ -315,11 +315,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    
    IF ( p_FAST%CompAero ) THEN
    ! we need the air density (and wind speed) yet.... some strangeness still going on.
-      CALL AeroInput(p_ED, p_FAST)            ! Read in the ADFile
+      CALL AeroInput(InitOutData_ED, y_ED, p_ED, p_FAST)            ! Read in the ADFile
 
-   !      ! some weirdness that we probably won't need anymore....
-   !   p_ED%AirDens   = AD_GetConstant('AirDensity', ErrStat)
-   !
    ELSE
    !   p_ED%AirDens = 0
       IfW_WriteOutput = 0.0
@@ -952,7 +949,7 @@ CONTAINS
 
                                     
       IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( p_ED, x_ED, OtherSt_ED, ED_Input(1), y_ED, ErrStat, ErrMsg )
+         CALL AD_InputSolve( y_ED, ErrStat, ErrMsg )
          
          IF ( n_t_global > 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
             ADAeroLoads = AD_CalculateLoads( REAL(t_global, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
@@ -960,7 +957,7 @@ CONTAINS
          end if
          
             !InflowWind outputs
-         IfW_WriteOutput = AD_GetUndisturbedWind( REAL(this_time, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%FASTHH /), ErrStat )
+         IfW_WriteOutput = AD_GetUndisturbedWind( REAL(this_time, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%HubHt /), ErrStat )
             CALL CheckError( ErrStat, 'Message from IfW_CalcOutput: '//NewLine//ErrMsg  )
 
       END IF

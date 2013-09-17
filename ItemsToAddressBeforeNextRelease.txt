@@ -25,14 +25,14 @@ FAST
 * aerodyn integration
 * remove greg's debug switches
 * CertTest: need updated input files from MAP, HydroDyn, SubDyn so that the 5MW models work
-
+* Fix issues with P-C algorithm
+   (1) apparently I misinterpreted the need for the extrapolated outputs.
+   (2) Mike/Jason need to agree on path forward with direct feedthrough issues
 
 -------------------------------------------------
 ElastoDyn
 -------------------------------------------------
-* change aerodyn input/outputs to mesh
-* remove AllOuts from output type
-
+* need to discuss new meshes with Jason
 
 -------------------------------------------------
 ServoDyn
