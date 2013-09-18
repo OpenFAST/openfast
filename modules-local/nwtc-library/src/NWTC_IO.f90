@@ -7067,5 +7067,20 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE DLLTypeUnPack
    
 !=======================================================================   
+SUBROUTINE RemoveNullChar( Str )
+
+   ! This routine removes trailing C_NULL characters, which can be present when
+   ! passing strings between C and Fortran
+   
+   CHARACTER(*), INTENT(INOUT) :: Str
+
+   INTEGER(IntKi)  :: I
+
+      I = INDEX( Str, C_NULL_CHAR ) - 1 
+      IF ( I > 0 ) Str = Str(1:I) 
+
+END SUBROUTINE RemoveNullChar
+   
+!=======================================================================
    
 END MODULE NWTC_IO
