@@ -1,7 +1,7 @@
 
 
 MAP Summary File.
-Outputs were generated using MAP version 0.87.06a-mdm on <2013-09-11.11:21:09>
+Outputs were generated using MAP version 0.87.06a-mdm on <2013-09-17.13:59:46>
 
 
     Sea Density [kg/m^3]: 1025.000
@@ -11,7 +11,7 @@ Outputs were generated using MAP version 0.87.06a-mdm on <2013-09-11.11:21:09>
     Cable Type          : Material
     Diam         [m]    : 0.127
     MassDenInAir [kg/m] : 116.027
-    EA           [N]    : 1500000.000
+    EA           [kN]   : 1500000.000
     CB                  : 1.000
 
             |  Node 1 Data:             Node 2 Data:             Node 3 Data:             Node 4 Data:             
@@ -22,9 +22,9 @@ Y  [m]   :  |  0.000                    0.000                    0.000          
 Z  [m]   :  |  -200.000                 -47.890                  -200.000                 -47.890                  
 M  [kg]  :  |  0.000                    0.000                    0.000                    0.000                    
 B  [m^3] :  |  0.000                    0.000                    0.000                    0.000                    
-FX [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FY [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FZ [N]   :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
+FX [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FY [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FZ [kN]  :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
 
 
             |  Node 5 Data:             Node 6 Data:             Node 7 Data:             Node 8 Data:             
@@ -35,9 +35,9 @@ Y  [m]   :  |  -27.000                  -27.000                  -27.000        
 Z  [m]   :  |  -200.000                 -47.890                  -200.000                 -47.890                  
 M  [kg]  :  |  0.000                    0.000                    0.000                    0.000                    
 B  [m^3] :  |  0.000                    0.000                    0.000                    0.000                    
-FX [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FY [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FZ [N]   :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
+FX [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FY [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FZ [kN]  :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
 
 
             |  Node 9 Data:             Node 10 Data:            Node 11 Data:            Node 12 Data:            
@@ -48,9 +48,9 @@ Y  [m]   :  |  0.000                    0.000                    0.000          
 Z  [m]   :  |  -200.000                 -47.890                  -200.000                 -47.890                  
 M  [kg]  :  |  0.000                    0.000                    0.000                    0.000                    
 B  [m^3] :  |  0.000                    0.000                    0.000                    0.000                    
-FX [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FY [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FZ [N]   :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
+FX [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FY [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FZ [kN]  :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
 
 
             |  Node 13 Data:            Node 14 Data:            Node 15 Data:            Node 16 Data:            
@@ -61,9 +61,9 @@ Y  [m]   :  |  27.000                   27.000                   27.000         
 Z  [m]   :  |  -200.000                 -47.890                  -200.000                 -47.890                  
 M  [kg]  :  |  0.000                    0.000                    0.000                    0.000                    
 B  [m^3] :  |  0.000                    0.000                    0.000                    0.000                    
-FX [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FY [N]   :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
-FZ [N]   :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
+FX [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FY [kN]  :  |  (-1.235)                 (1.235)                  (-1.235)                 (1.235)                  
+FZ [kN]  :  |  (-3680.147)              (3833.523)               (-3680.147)              (3833.523)               
 
 
 Element 1 properties:
@@ -73,8 +73,8 @@ Element 1 properties:
     Y Position [m] : |  0.0         -> 0.0        
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 2 properties:
@@ -84,8 +84,8 @@ Element 2 properties:
     Y Position [m] : |  0.0         -> 0.0        
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 3 properties:
@@ -95,8 +95,8 @@ Element 3 properties:
     Y Position [m] : |  -27.0       -> -27.0      
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 4 properties:
@@ -106,8 +106,8 @@ Element 4 properties:
     Y Position [m] : |  -27.0       -> -27.0      
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 5 properties:
@@ -117,8 +117,8 @@ Element 5 properties:
     Y Position [m] : |  0.0         -> 0.0        
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 6 properties:
@@ -128,8 +128,8 @@ Element 6 properties:
     Y Position [m] : |  0.0         -> 0.0        
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 7 properties:
@@ -139,8 +139,8 @@ Element 7 properties:
     Y Position [m] : |  27.0        -> 27.0       
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 Element 8 properties:
@@ -150,8 +150,8 @@ Element 8 properties:
     Y Position [m] : |  27.0        -> 27.0       
     Z Position [m] : |  -200.0      -> -47.9      
     Length     [m] : |  151.7
-    H          [N] : |  (1.7)
-    V          [N] : |  (3833.5)
+    H          [kN]: |  (1.7)
+    V          [kN]: |  (3833.5)
 
 
 
@@ -174,15 +174,23 @@ Material     0.127    116.027         1.5E6     1.0
 14 Vessel -5.5038664522323119e-007 26.999999999999993 -47.89 0 0 # # # 
 15 fix -5.5038664522323119e-007 26.999999999999993 depth 0 0 # # # 
 16 Vessel -5.5038664522323119e-007 26.999999999999993 -47.89 0 0 # # # 
-1       Material   151.73       1         2        x_pos                                                                                                                                                                                                       
-2 Material 151.73 3 4 x_pos  
-3 Material 151.73 5 6 x_pos  
-4 Material 151.73 7 8 x_pos  
-5 Material 151.73 9 10 x_pos  
-6 Material 151.73 11 12 x_pos  
-7 Material 151.73 13 14 x_pos  
-8 Material 151.73 15 16 x_pos  
--msqs_default tr                                                                                                                                                                                                                                               
+1       Material   151.73       1         2        plot x_force y_force z_force                                                                                                                                                                                
+2 Material 151.73 3 4 plot x_force y_force z_force  
+3 Material 151.73 5 6 plot x_force y_force z_force  
+4 Material 151.73 7 8 plot x_force y_force z_force  
+5 Material 151.73 9 10 plot x_force y_force z_force  
+6 Material 151.73 11 12 plot x_force y_force z_force  
+7 Material 151.73 13 14 plot x_force y_force z_force  
+8 Material 151.73 15 16 plot x_force y_force z_force  
+-msqs_tol 1e-6                                                                                                                                                                                                                                                 
+-msqs_permute nd                                                                                                                                                                                                                                               
+-snes_type newtontr                                                                                                                                                                                                                                            
+-ksp_type preonly                                                                                                                                                                                                                                              
+-pc_type lu                                                                                                                                                                                                                                                    
+-pc_factor_nonzeros_along_diagonal                                                                                                                                                                                                                             
+-snes_atol 1e-6                                                                                                                                                                                                                                                
+-snes_rtol 1e-6                                                                                                                                                                                                                                                
+-snes_stol 1e-6                                                                                                                                                                                                                                                
 ----------------------- END INPUT FILE CONTENTS ---------------------------------------
 
 

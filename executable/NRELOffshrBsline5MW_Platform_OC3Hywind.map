@@ -11,8 +11,6 @@ Node Type       X     Y     Z     M     B     FX    FY    FZ
 Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
 (-)      (-)       (m)         (-)       (-)       (-)
 1       Material   902.2        1         2        plot
-2       repeat     120
-3       repeat     240
 ---------------------- SOLVER OPTIONS-----------------------------------------
 Option
 (-)   
