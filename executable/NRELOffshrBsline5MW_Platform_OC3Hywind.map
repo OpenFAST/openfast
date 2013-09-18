@@ -10,7 +10,9 @@ Node Type       X     Y     Z     M     B     FX    FY    FZ
 ---------------------- LINE PROPERTIES ---------------------------------------
 Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
 (-)      (-)       (m)         (-)       (-)       (-)
-1       Material   902.2        1         2        plot
+1       Material   902.2        1         2        plot x_force y_force z_force
+2       repeat     120
+3       repeat     240 
 ---------------------- SOLVER OPTIONS-----------------------------------------
 Option
 (-)   
