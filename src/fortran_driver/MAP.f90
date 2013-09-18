@@ -343,10 +343,10 @@ CONTAINS
     INTEGER( KIND=C_INT )                           :: status_from_MAP = 0
     CHARACTER( KIND=C_CHAR,LEN=1024 )               :: message_from_MAP = ""//CHAR(0)
     !TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( 'MAP', 'date', 'huh' )
-    INTEGER(IntKi)                                  :: i = 0
+    INTEGER(IntKi)                                  :: i 
     REAL(ReKi)                                      :: Pos(3)
-    INTEGER(IntKi)                                  :: NumNodes = 0
-    INTEGER(C_INT)                                  :: numHeaderStr=0
+    INTEGER(IntKi)                                  :: NumNodes 
+    INTEGER(C_INT)                                  :: numHeaderStr
     CHARACTER(16),DIMENSION(:), ALLOCATABLE, TARGET :: strHdrArray ! Hopefully none of the headers are more than 16 characters long
     TYPE(C_PTR), DIMENSION(:), ALLOCATABLE          :: strHdrPtrs
     CHARACTER(15),DIMENSION(:), ALLOCATABLE, TARGET :: strUntArray ! Hopefully none of the headers are more than 10 characters long
@@ -354,6 +354,11 @@ CONTAINS
 
     ErrStat = ErrID_None
     ErrMsg  = "" 
+!@marco: Fortran SAVEs variables if you initialize them in their declaration statments (if you enter the routine 2x, it retains the value from the 
+! previous call instead of reinitializing them).  C programmers find this very strange. :)
+    i = 0
+    NumNodes = 0
+    numHeaderStr = 0
 
     ! Initialize the NWTC Subroutine Library
     CALL NWTC_Init( )   
@@ -454,7 +459,9 @@ CONTAINS
                                                                     !          | 
     DO i = 1, numHeaderStr                                          !          | 
        InitOut%WriteOutputHdr(i) = strHdrArray(i)                   !          | 
+       CALL RemoveNullChar( InitOut%WriteOutputHdr(i) )       
        InitOut%WriteOutputUnt(i) = strUntArray(i)                   !          | 
+       CALL RemoveNullChar( InitOut%WriteOutputUnt(i) )       
     END DO                                                          !          | 
                                                                     !          | 
     DEALLOCATE( strHdrArray )                                       !          | 
@@ -591,12 +598,10 @@ CONTAINS
 
     ! Give the program discription (name, version number, date)
     InitOut%MAP_version = InitOut%C_obj%MAP_version
-    I = INDEX(InitOut%MAP_version, C_NULL_CHAR ) - 1 
-    IF ( I > 0 ) InitOut%MAP_version = InitOut%MAP_version(1:I) 
+    CALL RemoveNullChar( InitOut%MAP_version )       
 
     InitOut%MAP_date = InitOut%C_obj%MAP_date
-    I = INDEX( InitOut%MAP_date, C_NULL_CHAR ) - 1 
-    IF ( I > 0 ) InitOut%MAP_date = InitOut%MAP_date(1:I) 
+    CALL RemoveNullChar( InitOut%MAP_date )       
 
     InitOut%Ver = ProgDesc('MAP',InitOut%MAP_version,InitOut%MAP_date)
 
@@ -606,9 +611,9 @@ CONTAINS
     !           called...
     !CALL DispNVD( InitOut%Ver ) 
     
-    WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
-    WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
-
+    !WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
+    !WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
+        
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
 
@@ -853,7 +858,7 @@ CONTAINS
        RETURN
     END IF
 
-    WRITE(*,*) y%writeOutput ! @bonnie : remove
+    !WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad%NNodes
