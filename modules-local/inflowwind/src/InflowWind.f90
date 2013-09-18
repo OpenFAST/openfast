@@ -78,6 +78,7 @@ MODULE InflowWind
    PUBLIC :: IfW_CalcOutput                                    ! Calculate the wind velocities
    PUBLIC :: IfW_End                                           ! Ending routine (includes clean up)
 
+   PUBLIC :: WindInf_ADhack_diskVel
 
       ! These routines satisfy the framework, but do nothing at present.
    PUBLIC :: IfW_UpdateStates                                  ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
@@ -121,7 +122,7 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
       TYPE( IfW_ConstraintStateType ),    INTENT(  OUT)  :: ConstrStateGuess  ! Initial guess of the constraint states
       TYPE( IfW_OtherStateType ),         INTENT(  OUT)  :: OtherStates       ! Initial other/optimization states
       TYPE( IfW_OutputType ),             INTENT(  OUT)  :: OutData           ! Initial output (outputs are not calculated; only the output mesh is initialized)
-      REAL(DbKi),                         INTENT(INOUT)  :: TimeInterval      ! Coupling time interval in seconds: InflowWind does not change this.
+      REAL(DbKi),                         INTENT(IN   )  :: TimeInterval      ! Coupling time interval in seconds: InflowWind does not change this.
       TYPE( IfW_InitOutputType ),         INTENT(  OUT)  :: InitOutData       ! Initial output data -- Names, units, and version info.
 
 
@@ -884,6 +885,120 @@ SUBROUTINE IfW_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_resi
 
 END SUBROUTINE IfW_CalcConstrStateResidual
 !====================================================================================================
+!====================================================================================================
+FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
+! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
+! when a consensus on the definition of "average velocity" is determined, this function will be
+! removed.  InpPosition(2) should be the rotor radius; InpPosition(3) should be hub height
+!----------------------------------------------------------------------------------------------------
+
+      ! Passed variables
+
+   REAL(DbKi),                  INTENT(IN)     :: Time
+   TYPE( Ifw_ParameterType ),   INTENT(IN)     :: ParamData         ! Parameters
+   TYPE( IfW_OtherStateType ),  INTENT(INOUT)  :: OtherStates       ! Other/optimization states
+
+   INTEGER(intKi), INTENT(OUT)       :: ErrStat
+   CHARACTER(*),INTENT(OUT)   :: ErrMsg
+
+      ! Function definition
+   REAL(ReKi)                 :: WindInf_ADhack_diskVel(3)
+
+      ! Local variables
+   REAL(ReKi)                    :: Delta_tmp            ! interpolated Delta   at input TIME
+   REAL(ReKi)                    :: P                    ! temporary storage for slope (in time) used in linear interpolation
+   REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
+   REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
+
+   
+   
+   ErrStat = ErrID_None
+
+   SELECT CASE ( ParamData%WindFileType )
+      CASE (HH_WindNumber)
+            
+         !-------------------------------------------------------------------------------------------------
+         ! Linearly interpolate in time (or use nearest-neighbor to extrapolate) 
+         ! (compare with NWTC_Num.f90\InterpStpReal)
+         !-------------------------------------------------------------------------------------------------
+
+      
+            ! Let's check the limits.
+         IF ( Time <= OtherStates%HHWind%Tdata(1) .OR. OtherStates%HHWind%NumDataLines == 1 )  THEN
+
+            OtherStates%HHWind%TimeIndex      = 1
+            V_tmp         = OtherStates%HHWind%V      (1)
+            Delta_tmp     = OtherStates%HHWind%Delta  (1)
+            VZ_tmp        = OtherStates%HHWind%VZ     (1)
+
+         ELSE IF ( Time >= OtherStates%HHWind%Tdata(OtherStates%HHWind%NumDataLines) )  THEN
+
+            OtherStates%HHWind%TimeIndex = OtherStates%HHWind%NumDataLines - 1
+            V_tmp                 = OtherStates%HHWind%V      (OtherStates%HHWind%NumDataLines)
+            Delta_tmp             = OtherStates%HHWind%Delta  (OtherStates%HHWind%NumDataLines)
+            VZ_tmp                = OtherStates%HHWind%VZ     (OtherStates%HHWind%NumDataLines)
+               
+         ELSE
+   
+              ! Let's interpolate!
+
+            OtherStates%HHWind%TimeIndex = MAX( MIN( OtherStates%HHWind%TimeIndex, OtherStates%HHWind%NumDataLines-1 ), 1 )
+
+            DO
+
+               IF ( Time < OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex) )  THEN
+
+                  OtherStates%HHWind%TimeIndex = OtherStates%HHWind%TimeIndex - 1
+
+               ELSE IF ( Time >= OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex+1) )  THEN
+
+                  OtherStates%HHWind%TimeIndex = OtherStates%HHWind%TimeIndex + 1
+
+               ELSE
+                  P           = ( Time - OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex) )/( OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex+1) &
+                                 - OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex) )
+                  V_tmp       = ( OtherStates%HHWind%V(      OtherStates%HHWind%TimeIndex+1) - OtherStates%HHWind%V(      OtherStates%HHWind%TimeIndex) )*P  &
+                                + OtherStates%HHWind%V(      OtherStates%HHWind%TimeIndex)
+                  Delta_tmp   = ( OtherStates%HHWind%Delta(  OtherStates%HHWind%TimeIndex+1) - OtherStates%HHWind%Delta(  OtherStates%HHWind%TimeIndex) )*P  &
+                                + OtherStates%HHWind%Delta(  OtherStates%HHWind%TimeIndex)
+                  VZ_tmp      = ( OtherStates%HHWind%VZ(     OtherStates%HHWind%TimeIndex+1) - OtherStates%HHWind%VZ(     OtherStates%HHWind%TimeIndex) )*P  &
+                                + OtherStates%HHWind%VZ(     OtherStates%HHWind%TimeIndex)
+                  EXIT
+
+               END IF
+
+            END DO
+
+         END IF         
+                                      
+      !-------------------------------------------------------------------------------------------------
+      ! calculate the wind speed at this time
+      !-------------------------------------------------------------------------------------------------
+      
+         WindInf_ADhack_diskVel(1) =  V_tmp * COS( Delta_tmp )
+         WindInf_ADhack_diskVel(2) = -V_tmp * SIN( Delta_tmp )
+         WindInf_ADhack_diskVel(3) =  VZ_tmp      
+                                  
+
+
+      CASE (FF_WindNumber)
+
+         WindInf_ADhack_diskVel(1)   = OtherStates%FFWind%MeanFFWS
+         WindInf_ADhack_diskVel(2:3) = 0.0                 
+
+      CASE DEFAULT
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' WindInf_ADhack_diskVel: Undefined wind type.'
+
+   END SELECT
+
+   RETURN
+
+END FUNCTION WindInf_ADhack_diskVel                       
+                       
+
+
+
 !====================================================================================================
 END MODULE InflowWind
 
