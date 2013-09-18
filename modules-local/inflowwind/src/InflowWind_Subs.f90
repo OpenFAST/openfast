@@ -122,7 +122,8 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
       CALL WrScr( NewLine//'  No file extension found. Assuming '//TRIM(FileName)// &
                   ' is a binary FF wind file with a ".wnd" extension.')
       ParamData%WindFileType = FF_WindNumber
-      FileName = TRIM(FileName)//'.wnd'
+      ParamData%WindFileName = TRIM(ParamData%WindFileName)//'.wnd'
+      !FileName = TRIM(FileName)//'.wnd'
       RETURN
    END IF
 

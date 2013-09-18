@@ -68,7 +68,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v1.00.00', '17-Sept-2013' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v2.00.00', '17-Sept-2013' )
 
 
 
@@ -212,7 +212,7 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
       IF ( InitData%WindFileType == DEFAULT_WindNumber ) THEN
          CALL GetWindType( ParamData, TmpErrStat, TmpErrMsg )
          ErrStat  = MAX( ErrStat, TmpErrStat )
-         IF (TmpErrStat /= 0 )         ErrMsg   = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg)
+         IF (TmpErrStat /= ErrID_None )         ErrMsg   = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg)
          IF (ErrStat >= AbortErrLev)   RETURN
       ELSE
          ParamData%WindFileType = InitData%WindFileType
@@ -263,7 +263,7 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
 
             HH_InitData%ReferenceHeight = InitData%ReferenceHeight
             HH_InitData%Width           = InitData%Width
-            HH_InitData%WindFileName    = InitData%WindFileName
+            HH_InitData%WindFileName    = ParamData%WindFileName
 
             CALL IfW_HHWind_Init(HH_InitData,   HH_InitGuess,  ParamData%HHWind,                         &
                                  HH_ContStates, HH_DiscStates, HH_ConstrStates,     OtherStates%HHWind,  &
@@ -305,7 +305,7 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
 
             FF_InitData%ReferenceHeight = InitData%ReferenceHeight
             FF_InitData%Width           = InitData%Width
-            FF_InitData%WindFileName    = InitData%WindFileName
+            FF_InitData%WindFileName    = ParamData%WindFileName
 
             CALL IfW_FFWind_Init(FF_InitData,   FF_InitGuess,  ParamData%FFWind,                         &
                                  FF_ContStates, FF_DiscStates, FF_ConstrStates,     OtherStates%FFWind,  &
