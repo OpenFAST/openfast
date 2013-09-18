@@ -139,20 +139,4 @@ MODULE FAST_Types
 
 END MODULE FAST_Types
 !=======================================================================
-MODULE AeroDyn_Types
 
-
-   ! This MODULE stores FAST/AeroDyn interface variables.
-
-USE AeroDyn  ! for type; 
-USE AeroGenSubs !FOR ElemOut subroutine...
-
-TYPE(AllAeroMarkers)          :: ADAeroMarkers
-TYPE(AeroLoadsOptions)        :: ADIntrfaceOptions
-TYPE(AllAeroLoads)            :: ADAeroLoads
-TYPE(AeroConfig)              :: ADInterfaceComponents                        ! The configuration markers that make up the bodies where aerodynamic calculations will be needed
-
-
-
-END MODULE AeroDyn_Types
-!=======================================================================

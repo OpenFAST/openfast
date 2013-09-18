@@ -83,7 +83,27 @@ REAL(DbKi),         ALLOCATABLE       :: SrvD_InputTimes(:)                     
 
 
    ! Data for the AeroDyn module:
+TYPE(AD_InitInputType)                :: InitInData_AD                           ! Initialization input data
+TYPE(AD_InitOutputType)               :: InitOutData_AD                          ! Initialization output data
+TYPE(AD_ContinuousStateType)          :: x_AD                                    ! Continuous states
+TYPE(AD_DiscreteStateType)            :: xd_AD                                   ! Discrete states
+TYPE(AD_ConstraintStateType)          :: z_AD                                    ! Constraint states
+TYPE(AD_OtherStateType)               :: OtherSt_AD                              ! Other/optimization states
+TYPE(AD_ParameterType)                :: p_AD                                    ! Parameters
+TYPE(AD_InputType)                    :: u_AD                                    ! System inputs
+TYPE(AD_OutputType)                   :: y_AD                                    ! System outputs
+                                                                                 
+TYPE(AD_ContinuousStateType)          :: x_AD_pred                               ! Predicted continuous states
+TYPE(AD_DiscreteStateType)            :: xd_AD_pred                              ! Predicted discrete states
+TYPE(AD_ConstraintStateType)          :: z_AD_pred                               ! Predicted constraint states
+                                                                                 
+TYPE(AD_InputType), ALLOCATABLE       :: AD_Input(:)                             ! Array of inputs associated with SrvD_InputTimes
+REAL(DbKi),         ALLOCATABLE       :: AD_InputTimes(:)                        ! Array of times associated with SrvD_Input
 
+
+   
+   
+   
    ! Data for InflowWind module:
 REAL(ReKi)                            :: IfW_WriteOutput(3)                      ! Temporary hack for getting wind speeds from InflowWind
 
@@ -201,6 +221,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder (from FAST_Init)
    ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input and ED_InputTimes.") 
+   ALLOCATE( AD_Input( p_FAST%InterpOrder+1 ), AD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating AD_Input and AD_InputTimes.") 
    ALLOCATE( SrvD_Input( p_FAST%InterpOrder+1 ), SrvD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SrvD_Input and SrvD_InputTimes.") 
    ALLOCATE( HD_Input( p_FAST%InterpOrder+1 ), HD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
@@ -315,8 +337,39 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    
    IF ( p_FAST%CompAero ) THEN
    ! we need the air density (and wind speed) yet.... some strangeness still going on.
-      CALL AeroInput(InitOutData_ED, y_ED, p_ED, p_FAST)            ! Read in the ADFile
+      CALL AeroInput(InitInData_AD, InitOutData_ED, y_ED, p_ED, p_FAST)            ! set the InitInp_AD
+            
+      CALL AD_Init( InitInData_AD, AD_Input(1), p_AD, x_AD, xd_AD, z_AD, OtherSt_AD, y_AD, dt_global, InitOutData_AD, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, 'Message from AD_Init: '//NewLine//ErrMsg )
+            
+      IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
+        CALL CheckError(ErrID_Fatal, "The value of DT in AeroDyn must be the same as the value of DT in FAST.")
+      
+      
+         ! Copy values for interpolation/extrapolation:
 
+      ! TODO: Need to talk to Bonnie about using the following.
+      DO j = 1, p_FAST%InterpOrder + 1
+         AD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !AD_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL AD_CopyInput (AD_Input(1),  AD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
+      END DO
+      CALL AD_CopyInput (AD_Input(1),  u_AD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
+
+
+         ! Initialize predicted states for pc loop:
+      CALL AD_CopyContState   ( x_AD,  x_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from AD_CopyContState (init): '//NewLine//ErrMsg )
+      CALL AD_CopyDiscState   (xd_AD, xd_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from AD_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL AD_CopyConstrState ( z_AD,  z_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from AD_CopyConstrState (init): '//NewLine//ErrMsg )
+                  
    ELSE
    !   p_ED%AirDens = 0
       IfW_WriteOutput = 0.0
@@ -471,7 +524,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
 
-   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, AD_Prog, InitOutData_HD, &
+   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, &
                          InitOutData_SD, InitOutData_MAP, ErrStat, ErrMsg )
    CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
 
@@ -536,6 +589,9 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    CALL ED_DestroyInitInput(  InitInData_ED, ErrStat, ErrMsg )
    CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat, ErrMsg )
 
+   CALL AD_DestroyInitInput(  InitInData_AD, ErrStat, ErrMsg )
+   CALL AD_DestroyInitOutput( InitOutData_AD, ErrStat, ErrMsg )
+   
    CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
    CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
 
@@ -580,6 +636,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                           , x_HD  , xd_HD  , z_HD   &
                           , x_SD  , xd_SD  , z_SD   &
                           , x_MAP , xd_MAP , z_MAP  &
+                          , x_AD  , xd_AD  , z_AD   &
                           )           
               
         
@@ -694,6 +751,32 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
       END IF  ! MAP
       
+      ! AeroDyn
+      IF ( p_FAST%CompAero ) THEN
+         
+         CALL AD_Input_ExtrapInterp(AD_Input, AD_InputTimes, u_AD, t_global_next, ErrStat, ErrMsg)
+            CALL CheckError(ErrStat,'Message from AD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+         !CALL AD_Output_ExtrapInterp(AD_Output, AD_OutputTimes, y_AD, t_global_next, ErrStat, ErrMsg)
+         !   CALL CheckError(ErrStat,'Message from AD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+            
+         ! Shift "window" of AD_Input and AD_Output
+  
+         DO j = p_FAST%InterpOrder, 1, -1
+            CALL AD_CopyInput (AD_Input(j),  AD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+           !CALL AD_CopyOutput(AD_Output(j), AD_Output(j+1), MESH_UPDATECOPY, Errstat, ErrMsg)
+            AD_InputTimes(j+1)  = AD_InputTimes(j)
+           !AD_OutputTimes(j+1) = AD_OutputTimes(j)
+         END DO
+  
+         CALL AD_CopyInput (u_AD,  AD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+        !CALL AD_CopyOutput(y_AD,  AD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
+         AD_InputTimes(1)  = t_global_next          
+        !AD_OutputTimes(1) = t_global_next 
+            
+      END IF  ! AeroDyn      
+      
       
       ! predictor-corrector loop:
       DO pc = 1, p_FAST%NumCrctn + 1
@@ -712,7 +795,17 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          CALL ED_UpdateStates( t_global, n_t_global, ED_Input, ED_InputTimes, p_ED, x_ED_pred, xd_ED_pred, z_ED_pred, OtherSt_ED, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
                  
+         ! AeroDyn: get predicted states
+         IF (p_FAST%CompAero) THEN
+            CALL AD_CopyContState   ( x_AD,  x_AD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
+            CALL AD_CopyDiscState   (xd_AD, xd_AD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)  
+            CALL AD_CopyConstrState ( z_AD,  z_AD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
+         
+            CALL AD_UpdateStates( t_global, n_t_global, AD_Input, AD_InputTimes, p_AD, x_AD_pred, xd_AD_pred, z_AD_pred, OtherSt_AD, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AD_UpdateStates: '//NewLine//ErrMsg )
+         END IF            
 
+                        
          ! ServoDyn: get predicted states
          IF (p_FAST%CompServo) THEN
             CALL SrvD_CopyContState   ( x_SrvD,  x_SrvD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
@@ -720,7 +813,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             CALL SrvD_CopyConstrState ( z_SrvD,  z_SrvD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
          
             CALL SrvD_UpdateStates( t_global, n_t_global, SrvD_Input, SrvD_InputTimes, p_SrvD, x_SrvD_pred, xd_SrvD_pred, z_SrvD_pred, OtherSt_SrvD, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
+               CALL CheckError( ErrStat, 'Message from SrvD_UpdateStates: '//NewLine//ErrMsg )
          END IF            
             
             
@@ -770,6 +863,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                       , x_HD_pred  , xd_HD_pred  , z_HD_pred   &
                       , x_SD_pred  , xd_SD_pred  , z_SD_pred   &
                       , x_MAP_pred , xd_MAP_pred , z_MAP_pred  &
+                      , x_AD_pred  , xd_AD_pred  , z_AD_pred   &
                       )           
                                                            
          END IF
@@ -786,12 +880,21 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL ED_CopyConstrState ( z_ED_pred,  z_ED, MESH_UPDATECOPY, Errstat, ErrMsg)      
       
       
+      ! AeroDyn: copy final predictions to actual states; copy current outputs to next 
+      IF (p_FAST%CompAero) THEN
+         CALL AD_CopyContState   ( x_AD_pred,  x_AD, MESH_UPDATECOPY, Errstat, ErrMsg)
+         CALL AD_CopyDiscState   (xd_AD_pred, xd_AD, MESH_UPDATECOPY, Errstat, ErrMsg)  
+         CALL AD_CopyConstrState ( z_AD_pred,  z_AD, MESH_UPDATECOPY, Errstat, ErrMsg)      
+      END IF
+            
+      
       ! ServoDyn: copy final predictions to actual states; copy current outputs to next 
       IF (p_FAST%CompServo) THEN
          CALL SrvD_CopyContState   ( x_SrvD_pred,  x_SrvD, MESH_UPDATECOPY, Errstat, ErrMsg)
          CALL SrvD_CopyDiscState   (xd_SrvD_pred, xd_SrvD, MESH_UPDATECOPY, Errstat, ErrMsg)  
          CALL SrvD_CopyConstrState ( z_SrvD_pred,  z_SrvD, MESH_UPDATECOPY, Errstat, ErrMsg)      
       END IF
+      
       
       ! HydroDyn: copy final predictions to actual states
       IF (p_FAST%CompHydro) THEN
@@ -840,8 +943,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                               y_SD%WriteOutput, y_MAP%WriteOutput, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
 
-               ! Generate AeroDyn's element data if desired:
-            CALL ElemOut()
+!!bjj: FIX THIS >>>>                
+!               ! Generate AeroDyn's element data if desired:
+!            CALL ElemOut()
+!!<<<               
 
          END IF
 
@@ -883,7 +988,13 @@ CONTAINS
              y_ED%PlatformPtMesh%RemapFlag      = .FALSE.
       ED_Input(1)%TowerLn2Mesh%RemapFlag        = .FALSE.
              y_ED%TowerLn2Mesh%RemapFlag        = .FALSE.
+      ED_Input(1)%BladeLn2Mesh%RemapFlag        = .FALSE.
+             y_ED%BladeLn2Mesh%RemapFlag        = .FALSE.
 
+             
+      ! AeroDyn meshes
+             
+             
       ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
          HD_Input(1)%WAMIT%Mesh%RemapFlag          = .FALSE.
@@ -915,6 +1026,7 @@ CONTAINS
                                             , x_HD_this  , xd_HD_this  , z_HD_this   &
                                             , x_SD_this  , xd_SD_this  , z_SD_this   &
                                             , x_MAP_this , xd_MAP_this , z_MAP_this  &
+                                            , x_AD_this  , xd_AD_this  , z_AD_this   &
                                             )
    ! This subroutine solves the input-output relations for all of the modules. It is a subroutine because it gets done twice--
    ! once at the start of the n_t_global loop and once in the pc loop, using different states.
@@ -941,6 +1053,10 @@ CONTAINS
       TYPE(MAP_ContinuousStateType)         :: x_MAP_this                              ! These continuous states (either actual or predicted)
       TYPE(MAP_DiscreteStateType)           :: xd_MAP_this                             ! These discrete states (either actual or predicted)
       TYPE(MAP_ConstraintStateType)         :: z_MAP_this                              ! These constraint states (either actual or predicted)
+      !AD:      
+      TYPE(AD_ContinuousStateType)          :: x_AD_this                               ! These continuous states (either actual or predicted)
+      TYPE(AD_DiscreteStateType)            :: xd_AD_this                              ! These discrete states (either actual or predicted)
+      TYPE(AD_ConstraintStateType)          :: z_AD_this                               ! These constraint states (either actual or predicted)
 
       
       
@@ -949,16 +1065,22 @@ CONTAINS
 
                                     
       IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( y_ED, ErrStat, ErrMsg )
+         CALL AD_InputSolve( AD_Input(1), y_ED, ErrStat, ErrMsg )
          
          IF ( n_t_global > 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
-            ADAeroLoads = AD_CalculateLoads( REAL(t_global, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
-               CALL CheckError( ErrStat, ' Error calculating aerodynamic loads in AeroDyn.'  )
+            CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AD_CalcOutput: '//NewLine//ErrMsg  )
+            !ADAeroLoads = AD_CalculateLoads( REAL(t_global, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
+            !  CALL CheckError( ErrStat, ' Error calculating aerodynamic loads in AeroDyn.'  )
          end if
-         
+ 
+!bjj FIX THIS>>>>>         
             !InflowWind outputs
-         IfW_WriteOutput = AD_GetUndisturbedWind( REAL(this_time, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%HubHt /), ErrStat )
-            CALL CheckError( ErrStat, 'Message from IfW_CalcOutput: '//NewLine//ErrMsg  )
+         IF ( allocated(y_AD%IfW_Outputs%WriteOutput) ) &
+         IfW_WriteOutput = y_AD%IfW_Outputs%WriteOutput
+!         IfW_WriteOutput = AD_GetUndisturbedWind( REAL(this_time, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%HubHt /), ErrStat )
+!            CALL CheckError( ErrStat, 'Message from IfW_CalcOutput: '//NewLine//ErrMsg  )
+!<<<         
 
       END IF
 
@@ -1040,7 +1162,7 @@ CONTAINS
       
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
       ! note: HD_InputSolve and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
-      CALL ED_InputSolve( p_FAST, ED_Input(1), y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
+      CALL ED_InputSolve( p_FAST, ED_Input(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
             
    
@@ -1092,13 +1214,15 @@ CONTAINS
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
+      IF ( p_FAST%CompAero .AND. ALLOCATED(AD_Input) ) THEN
+         CALL AD_End(   AD_Input(1),   p_AD,   x_AD,   xd_AD,   z_AD,   OtherSt_AD,   y_AD,   ErrStat2, ErrMsg2 )
+         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      END IF
+      
       IF ( p_FAST%CompServo .AND. ALLOCATED(SrvD_Input) ) THEN
          CALL SrvD_End( SrvD_Input(1), p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
-
-      CALL AeroDyn_End( ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( 'Error ending AeroDyn.' )
 
       IF ( p_FAST%CompHydro .AND. ALLOCATED(HD_Input) ) THEN
          CALL HydroDyn_End(    HD_Input(1),   p_HD,   x_HD,   xd_HD,   z_HD,   OtherSt_HD,   y_HD,   ErrStat2, ErrMsg2)
@@ -1123,6 +1247,9 @@ CONTAINS
       CALL ED_DestroyInitInput(  InitInData_ED,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL ED_DestroyInitOutput( InitOutData_ED,       ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
+      CALL AD_DestroyInitInput(  InitInData_AD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL AD_DestroyInitOutput( InitOutData_AD,       ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+            
       CALL SrvD_DestroyInitInput(  InitInData_SrvD,    ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL SrvD_DestroyInitOutput( InitOutData_SrvD,   ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
@@ -1194,7 +1321,23 @@ CONTAINS
                            
          
       ! AeroDyn
-      ! Doesn't currently conform to the framework
+      IF ( p_FAST%CompAero ) THEN
+         CALL AD_DestroyInput( u_AD, ErrStat2, ErrMsg2 )
+         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+
+         IF ( ALLOCATED(AD_Input)      )  THEN
+            DO j = 2,p_FAST%InterpOrder+1 !note that AD_Input(1) was destroyed in AD_End
+               CALL AD_DestroyInput( AD_Input(j), ErrStat2, ErrMsg2 )
+               IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+            END DO
+            DEALLOCATE( AD_Input )
+         END IF
+      ELSE
+         IF ( ALLOCATED(AD_Input)      ) DEALLOCATE( AD_Input )         
+      END IF
+
+      IF ( ALLOCATED(AD_InputTimes) ) DEALLOCATE( AD_InputTimes )
+                  
       
       ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
