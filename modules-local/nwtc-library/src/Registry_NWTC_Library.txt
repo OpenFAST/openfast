@@ -34,7 +34,6 @@ usefrom     ^               ^            CHARACTER(512)        Lines     {:}
 #bjj ???: add Marshall's FNlist_Type, InpErrsType, too????
 
 
-
 # ----------- NWTC_Num.f90 ---------------------------------
 #bjj ???: use Marshall's CubSplineType, RegCubSplineType, RegGridType
 
