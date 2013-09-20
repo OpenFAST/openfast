@@ -949,6 +949,9 @@ CONTAINS
     INTEGER                                         :: index_elem=0                              !          |
     INTEGER                                         :: index_optn=0                              !          |
     CHARACTER(255)                                  :: temp                                      !          |
+                                                                                                 !          |
+    ErrStat = ErrID_None                                                                         !          |
+                                                                                                 !          |    
     ! Open the MAP input file                                                                    !          |
     OPEN ( UNIT=1 , FILE=file )                                                                  !          |
                                                                                                  !          |
