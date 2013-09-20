@@ -1,6 +1,9 @@
 ArcWin.txt
+
 Archive.bat
-FAST.exe
+bin\FAST_win32.exe
+bin\MAP_win32.dll
+bin\Registry_win32.exe
 
 CertTest\DateTime.exe
 CertTest\Update.bat

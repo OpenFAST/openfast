@@ -44,6 +44,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
 @IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
 
+CALL CopyFilesForRelease.bat
 
 :DoIt
 @ECHO.
@@ -52,7 +53,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @FAST_SourceFiles_ED.txt @FAST_SourceFiles_SrvD.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe
@@ -64,7 +65,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @ArcMaint.txt
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @ArcMaint.txt @FAST_SourceFiles_ED.txt @FAST_SourceFiles_SrvD.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%_all.exe
@@ -76,7 +77,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt
+@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @FAST_SourceFiles_ED.txt @FAST_SourceFiles_SrvD.txt
 @%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
 @COPY ARCHTMP.tar.gz %ARCHPATH%\%ARCHNAME%.tar.gz
 @DEL ARCHTMP.tar, ARCHTMP.tar.gz

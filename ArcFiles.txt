@@ -4,36 +4,33 @@ Archive.bat
 ChangeLog.txt
 Disclaimer.txt
 license.txt
+Notice.txt
 README_FAST8.pdf
 
-OutListParameters.xlsx
-
-Compiling\Compile_FAST.bat
-Compiling\makefile
+FAST_SourceFiles_ED.txt
+FAST_SourceFiles_SrvD.txt
 
 Source\FAST_IO.f90
 Source\FAST_Mods.f90
 Source\FAST_Prog.f90
 
-Source\PitchCntrl_ACH.f90
-Source\UserSubs.f90
-Source\UserVSCont_KP.f90
+Source\dependencies\NWTC_Library\*
+Source\dependencies\ElastoDyn\*
+Source\dependencies\AeroDyn\*
+Source\dependencies\InflowWind\*
+Source\dependencies\ServoDyn\*
+Source\dependencies\HydroDyn\*
+Source\dependencies\SubDyn\*
+Source\dependencies\MAP\*
 
-Source\ElastoDyn.f90
-Source\ElastoDyn_Types.f90
-Source\ElastoDyn_Registry.txt
-Source\ServoDyn.f90
-Source\ServoDyn_Types.f90
-Source\BladedInterface.f90
-Source\Windows_defs.f90
-Source\Windows_defs_IVF.f90
-Source\linux_defs.f90
-Source\ServoDyn_Registry.txt
-Source\Registry_NWTC_Library.txt
-Source\ModulesNotConverted\AeroDyn\*
-Source\ModulesNotConverted\HydroDyn\*
-Source\ModulesNotConverted\InflowWind\*
+OutListParameters.xlsx
 
+Compiling\Compile_FAST.bat
+Compiling\makefile
+Compiling\Compile_DISCON_DLL.bat
+Compiling\makefile_DISCON_DLL
+Compiling\VisualStudio\FAST_VisualStudio.vfproj
+Compiling\VisualStudio\RunRegistry.bat
 
 Utilities\ModeShapePolyFitting.xls
 Utilities\DISCON_DLL_template.f90
