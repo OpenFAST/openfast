@@ -2,6 +2,9 @@ ArcFiles.txt
 Archive.bat
 ChangeLog.txt
 Disclaimer.txt
+
+FAST_SourceFiles.txt
+
 Samples/LES.fdp
 Samples/SampleInflowWindInput.hwc
 Samples/Steady.wnd
@@ -9,18 +12,15 @@ Samples/Turb.sum
 Samples/Turb.wnd
 Samples/TurbSim_AD.ctp
 Samples/FORMAT_FF_Sum_File.pdf
-Source/CTWind.f90
-Source/FDWind.f90
-Source/FFWind.f90
-Source/HAWCWind.f90
-Source/HHWind.f90
-Source/InflowWindMod.f90
-Source/SharedInflowDefs.f90
-Source/UserWind.f90
+
+Source/InflowWind_Make.txt
+Source/InflowWind_Driver.txt
+
 TestRoutines/Fortran/ReadMe.txt
 TestRoutines/Fortran/InflowWind_Test.f90
-TestRoutines/Matlab/intelf10msvs2003opts.bat
+TestRoutines/Matlab/intelf12msvs2010shellopts.bat
 TestRoutines/Matlab/make_InflowWind_mexFunc.m
 TestRoutines/Matlab/InflowWind_gateway.f90
-TestRoutines/Matlab/InflowWind_mex.mexw32
+TestRoutines/Matlab/Test_InflowWind_mexFunc.m
+
 
