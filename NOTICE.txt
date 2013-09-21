@@ -1,0 +1,6 @@
+NWTC Subroutine Library
+
+Copyright (c) 2013  National Renewable Energy Laboratory
+
+This product indludes software developed at
+National Renewable Energy Laboratory (http://www.nrel.gov, http://wind.nrel.gov)
