@@ -34,10 +34,11 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: NumModules  = 7
    
    
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.03.01a-bjj', '20-Sep-2013' )                  ! The version number of this module
-   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime          ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
+                                ProgDesc( 'FAST', 'v8.03.01a-bjj', '20-Sep-2013' ) ! The version number of this module
+   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
-   LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE.
+   LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
 
 
    TYPE, PUBLIC :: FAST_OutputType

@@ -681,6 +681,60 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       !ED_OutputTimes(1) = t_global_next 
   
       
+      ! AeroDyn
+      IF ( p_FAST%CompAero ) THEN
+         
+         CALL AD_Input_ExtrapInterp(AD_Input, AD_InputTimes, u_AD, t_global_next, ErrStat, ErrMsg)
+            CALL CheckError(ErrStat,'Message from AD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+         !CALL AD_Output_ExtrapInterp(AD_Output, AD_OutputTimes, y_AD, t_global_next, ErrStat, ErrMsg)
+         !   CALL CheckError(ErrStat,'Message from AD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+            
+         ! Shift "window" of AD_Input and AD_Output
+  
+         DO j = p_FAST%InterpOrder, 1, -1
+            CALL AD_CopyInput (AD_Input(j),  AD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+           !CALL AD_CopyOutput(AD_Output(j), AD_Output(j+1), MESH_UPDATECOPY, Errstat, ErrMsg)
+            AD_InputTimes(j+1)  = AD_InputTimes(j)
+           !AD_OutputTimes(j+1) = AD_OutputTimes(j)
+         END DO
+  
+         CALL AD_CopyInput (u_AD,  AD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+        !CALL AD_CopyOutput(y_AD,  AD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
+         AD_InputTimes(1)  = t_global_next          
+        !AD_OutputTimes(1) = t_global_next 
+            
+      END IF  ! AeroDyn      
+      
+      
+      ! ServoDyn
+      IF ( p_FAST%CompServo ) THEN
+         
+         CALL SrvD_Input_ExtrapInterp(SrvD_Input, SrvD_InputTimes, u_SrvD, t_global_next, ErrStat, ErrMsg)
+            CALL CheckError(ErrStat,'Message from SrvD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+         !CALL SrvD_Output_ExtrapInterp(SrvD_Output, SrvD_OutputTimes, y_SrvD, t_global_next, ErrStat, ErrMsg)
+         !   CALL CheckError(ErrStat,'Message from SrvD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+            
+         ! Shift "window" of SrvD_Input and SrvD_Output
+  
+         DO j = p_FAST%InterpOrder, 1, -1
+            CALL SrvD_CopyInput (SrvD_Input(j),  SrvD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+           !CALL SrvD_CopyOutput(SrvD_Output(j), SrvD_Output(j+1), MESH_UPDATECOPY, Errstat, ErrMsg)
+            SrvD_InputTimes(j+1)  = SrvD_InputTimes(j)
+           !SrvD_OutputTimes(j+1) = SrvD_OutputTimes(j)
+         END DO
+  
+         CALL SrvD_CopyInput (u_SrvD,  SrvD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+        !CALL SrvD_CopyOutput(y_SrvD,  SrvD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
+         SrvD_InputTimes(1)  = t_global_next          
+        !SrvD_OutputTimes(1) = t_global_next 
+            
+      END IF  ! ServoDyn       
+      
+      
       ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
          
@@ -734,6 +788,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
       END IF  ! SubDyn
       
+      
       ! MAP
       IF ( p_FAST%CompMAP ) THEN
          
@@ -759,33 +814,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          !MAP_OutputTimes(1) = t_global_next 
             
       END IF  ! MAP
-      
-      ! AeroDyn
-      IF ( p_FAST%CompAero ) THEN
-         
-         CALL AD_Input_ExtrapInterp(AD_Input, AD_InputTimes, u_AD, t_global_next, ErrStat, ErrMsg)
-            CALL CheckError(ErrStat,'Message from AD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
-            
-         !CALL AD_Output_ExtrapInterp(AD_Output, AD_OutputTimes, y_AD, t_global_next, ErrStat, ErrMsg)
-         !   CALL CheckError(ErrStat,'Message from AD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
-            
-            
-         ! Shift "window" of AD_Input and AD_Output
-  
-         DO j = p_FAST%InterpOrder, 1, -1
-            CALL AD_CopyInput (AD_Input(j),  AD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-           !CALL AD_CopyOutput(AD_Output(j), AD_Output(j+1), MESH_UPDATECOPY, Errstat, ErrMsg)
-            AD_InputTimes(j+1)  = AD_InputTimes(j)
-           !AD_OutputTimes(j+1) = AD_OutputTimes(j)
-         END DO
-  
-         CALL AD_CopyInput (u_AD,  AD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-        !CALL AD_CopyOutput(y_AD,  AD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
-         AD_InputTimes(1)  = t_global_next          
-        !AD_OutputTimes(1) = t_global_next 
-            
-      END IF  ! AeroDyn      
-      
+       
       
       ! predictor-corrector loop:
       DO pc = 1, p_FAST%NumCrctn + 1
@@ -804,6 +833,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          CALL ED_UpdateStates( t_global, n_t_global, ED_Input, ED_InputTimes, p_ED, x_ED_pred, xd_ED_pred, z_ED_pred, OtherSt_ED, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
                  
+            
          ! AeroDyn: get predicted states
          IF (p_FAST%CompAero) THEN
             CALL AD_CopyContState   ( x_AD,  x_AD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
@@ -836,6 +866,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                CALL CheckError( ErrStat, 'Message from HydroDyn_UpdateStates: '//NewLine//ErrMsg )
          END IF
             
+         
          ! SubDyn: get predicted states
          IF (p_FAST%CompSub) THEN
             CALL SD_CopyContState   ( x_SD,  x_SD_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
@@ -1071,7 +1102,6 @@ CONTAINS
       
       CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, y_ED, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
-
                                     
       IF ( p_FAST%CompAero ) THEN
          CALL AD_InputSolve( AD_Input(1), y_ED, ErrStat, ErrMsg )
@@ -1124,7 +1154,6 @@ CONTAINS
 
       END IF
 
-
       IF ( p_FAST%CompSub ) THEN
          
          CALL SD_InputSolve( y_ED, y_HD, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
@@ -1135,7 +1164,6 @@ CONTAINS
                         
       END IF
       
-
       IF ( p_FAST%CompMAP ) THEN
          
          ! note: MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads [moment] mapping)      
@@ -1146,9 +1174,7 @@ CONTAINS
             CALL CheckError( ErrStat, 'Message from MAP_CalcOutput: '//NewLine//ErrMsg  )
                
       END IF
-      
-      
-
+           
          ! User Tower Loading
       IF ( p_FAST%CompUserTwrLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrTwr_CalcOutput()
       !   CALL UserTwrLd ( JNode, X, XD, t, p_FAST%DirRoot, y_UsrTwr%AddedMass(1:6,1:6,J), (/ y_UsrTwr%Force(:,J),y_UsrTwr%Moment(:,J) /) )
@@ -1180,9 +1206,7 @@ CONTAINS
       !.....................................................................              
          
       CALL ResetRemapFlags()
-      
-         
-         
+                        
    END SUBROUTINE CalcOutputs_And_SolveForInputs  
    !...............................................................................................................................
    SUBROUTINE ExitThisProgram( Error, ErrLev )
