@@ -198,7 +198,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    y_FAST%UnSum = -1                                                    ! set the summary file unit to -1 to indicate it's not open
    y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
    y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
-
+   p_FAST%ModuleInitialized = .FALSE.                                   ! no modules are initialized
 
       ! Get the current time
    CALL DATE_AND_TIME ( Values=StrtTime )                               ! Let's time the whole simulation
@@ -244,6 +244,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
    CALL ED_Init( InitInData_ED, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
+   p_FAST%ModuleInitialized(Module_ED) = .TRUE.
    CALL CheckError( ErrStat, 'Message from ED_Init: '//NewLine//ErrMsg )
 
    IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -291,6 +292,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
       CALL SrvD_Init( InitInData_SrvD, SrvD_Input(1), p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, dt_global, InitOutData_SrvD, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
       CALL CheckError( ErrStat, 'Message from SrvD_Init: '//NewLine//ErrMsg )
 
       !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
@@ -343,6 +345,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL AeroInput(InitInData_AD, InitOutData_ED, y_ED, p_ED, p_FAST)            ! set the InitInp_AD
             
       CALL AD_Init( InitInData_AD, AD_Input(1), p_AD, x_AD, xd_AD, z_AD, OtherSt_AD, y_AD, dt_global, InitOutData_AD, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_AD) = .TRUE.
       CALL CheckError( ErrStat, 'Message from AD_Init: '//NewLine//ErrMsg )
             
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -391,6 +394,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_HD%OutRootName  = p_FAST%OutFileRoot
 
       CALL HydroDyn_Init( InitInData_HD, HD_Input(1), p_HD,  x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, dt_global, InitOutData_HD, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_HD) = .TRUE.
          CALL CheckError( ErrStat, 'Message from HydroDyn_Init: '//NewLine//ErrMsg )
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -446,6 +450,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       
             
       CALL SD_Init( InitInData_SD, SD_Input(1), p_SD,  x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, dt_global, InitOutData_SD, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_SD) = .TRUE.
          CALL CheckError( ErrStat, 'Message from SD_Init: '//NewLine//ErrMsg )
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -494,6 +499,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_MAP%C_obj%coupled_to_FAST = .TRUE.      
       
       CALL MAP_Init( InitInData_MAP, MAP_Input(1), p_MAP,  x_MAP, xd_MAP, z_MAP, OtherSt_MAP, y_MAP, dt_global, InitOutData_MAP, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_MAP) = .TRUE.
          CALL CheckError( ErrStat, 'Message from MAP_Init: '//NewLine//ErrMsg )
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
@@ -1237,7 +1243,8 @@ CONTAINS
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
       
-      IF ( p_FAST%CompMAP .AND. ALLOCATED(MAP_Input) ) THEN
+      !IF ( p_FAST%CompMAP .AND. ALLOCATED(MAP_Input) .AND. p_FAST%ModuleInitialized(Module_MAP) ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_MAP) ) THEN
          CALL MAP_End(    MAP_Input(1),   p_MAP,   x_MAP,   xd_MAP,   z_MAP,   OtherSt_MAP,   y_MAP,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
@@ -1379,7 +1386,8 @@ CONTAINS
       IF ( ALLOCATED(SD_InputTimes) ) DEALLOCATE( SD_InputTimes )
       
       ! MAP      
-      IF ( p_FAST%CompMAP ) THEN
+      !IF ( p_FAST%CompMAP ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_MAP)  ) THEN        
          CALL MAP_DestroyInput( u_MAP, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 

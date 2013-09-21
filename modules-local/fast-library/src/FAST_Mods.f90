@@ -31,9 +31,10 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: Module_HD   = 5
    INTEGER(IntKi), PARAMETER :: Module_SD   = 6
    INTEGER(IntKi), PARAMETER :: Module_MAP  = 7
+   INTEGER(IntKi), PARAMETER :: NumModules  = 7
    
    
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.02.02a-bjj', '3-Sep-2013' )                  ! The version number of this module
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver = ProgDesc( 'FAST', 'v8.03.01a-bjj', '20-Sep-2013' )                  ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime          ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL, PARAMETER :: GenerateAdamsModel = .FALSE.
@@ -134,6 +135,8 @@ MODULE FAST_Types
       CHARACTER(1024)           :: FTitle                                          ! The description line from the FAST (glue-code) input file
 
 
+      LOGICAL                   :: ModuleInitialized(NumModules)                   ! An array determining if the module has been initialized
+      
          ! other parameters we may/may not need
    CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
 
