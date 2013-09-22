@@ -12,7 +12,7 @@ MODULE InflowWind_Subs
 !  1 Aug 2012    v1.01.00a-bjj                              B. Jonkman
 ! 10 Aug 2012    v1.01.00b-bjj                              B. Jonkman
 !----------------------------------------------------------------------------------------------------
-! File last changed: $Date$
+! File last committed: $Date$
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !----------------------------------------------------------------------------------------------------
