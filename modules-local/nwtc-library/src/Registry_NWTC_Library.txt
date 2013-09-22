@@ -3,6 +3,11 @@
 # the "usefrom" keyword defines the types for the registry without generating
 # a NWTC_Library_Types.f90 file
 #
+#.............................................................
+# File last committed: $Date$
+# (File) Revision #: $Rev$
+# URL: $HeadURL$
+#.............................................................
 
 
 usefrom   NWTC_Library    ProgDesc       CHARACTER(99)         Name
