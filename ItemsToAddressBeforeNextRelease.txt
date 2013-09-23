@@ -1,9 +1,7 @@
 *********
 FAST Release Date: Monday, September 30, 2013
-Target Date for Completion of Coding/Testing: Tuesday, September 24, 2013
 
-Other components need to be ready to go before the FAST release date [I'm going to be compiling an official FAST executable
-that needs the finished components. I'd also like to add the other components in one big happy archive so it's all in one spot.
+Other components need to be ready to go before the FAST release date
    Can we shoot for Friday, September 27?
 *********
 
@@ -22,12 +20,17 @@ All components:
 FAST
 -------------------------------------------------
 * subdyn integration
-* aerodyn integration
 * remove greg's debug switches
-* CertTest: need updated input files from MAP, HydroDyn, SubDyn so that the 5MW models work
+* CertTest: need updated input files from SubDyn so that the 5MW models work
 * Fix issues with P-C algorithm
    (1) apparently I misinterpreted the need for the extrapolated outputs.
    (2) Mike/Jason need to agree on path forward with direct feedthrough issues
+
+* get version numbers (maybe from SVN) on all the dependency source code
+* update matlab script for conversion to this version
+* update change log
+* update makefile
+
 
 -------------------------------------------------
 ElastoDyn
@@ -43,32 +46,24 @@ ServoDyn
 -------------------------------------------------
 AeroDyn
 -------------------------------------------------
-* Add meshes (?)
-* link with updated InflowWind
-* check that ErrStat values use ErrID_* from the Library. Some are currently just non-zero, which is a problem!
+*mlb is adding tower aerodynamic forces
 
 -------------------------------------------------
 InflowWind
 -------------------------------------------------
 
-
-
 -------------------------------------------------
 HydroDyn
 -------------------------------------------------
-
-
 
 -------------------------------------------------
 SubDyn
 -------------------------------------------------
 Have we gotten rid of the non-NREL code?
 
-
 -------------------------------------------------
 MAP
 -------------------------------------------------
-
 
 -------------------------------------------------
 NWTC Library
@@ -81,7 +76,6 @@ NWTC Library
 Registry
 -------------------------------------------------
 * more documentation
-
 
 
 -------------------------------------------------

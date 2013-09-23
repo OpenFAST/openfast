@@ -2,8 +2,10 @@ ArcWin.txt
 
 Archive.bat
 bin\FAST_win32.exe
-bin\MAP_win32.dll
+bin\MAP.dll
 bin\Registry_win32.exe
+
+Compiling\VisualStudio\FAST_Solution.sln
 
 CertTest\DateTime.exe
 CertTest\Update.bat

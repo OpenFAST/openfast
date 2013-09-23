@@ -29,7 +29,7 @@ Compiling\Compile_FAST.bat
 Compiling\makefile
 Compiling\Compile_DISCON_DLL.bat
 Compiling\makefile_DISCON_DLL
-Compiling\VisualStudio\FAST_VisualStudio.vfproj
+Compiling\VisualStudio\FAST_Project.vfproj
 Compiling\VisualStudio\RunRegistry.bat
 
 Utilities\ModeShapePolyFitting.xls
@@ -77,7 +77,7 @@ CertTest\ConvertFiles.m
 CertTest\Bell.txt
 CertTest\CertTest.bat
 CertTest\DateTime.exe
-CertTest\FASTCertTestCases.xls
+CertTest\FASTCertTestCases.xlsx
 CertTest\Pitch.ipt
 CertTest\PlotCertTestResults.m
 CertTest\Spd_Trq.dat
@@ -99,7 +99,6 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_Blade.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Tower_Onshore.dat
-
 
 
 CertTest\AOC\AeroData\S814_1.dat
