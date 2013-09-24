@@ -13,8 +13,9 @@ set depend_dir=./Source/dependencies
 
 
 :BinDir
-COPY "%REG_Loc%\registry.exe"   "%bin_dir%\Registry_win32.exe"
-COPY "%MAP_DLL%"                "%bin_dir%"
+COPY "%REG_Loc%\registry.exe"        "%bin_dir%\Registry_win32.exe"
+COPY "%MAP_DLL%"                     "%bin_dir%"
+COPY "%CRUNCH%"                      "%bin_dir%"
 
 
 :dependencies

@@ -4,6 +4,7 @@ Archive.bat
 bin\FAST_win32.exe
 bin\MAP.dll
 bin\Registry_win32.exe
+bin\crunch_win32.exe
 
 Compiling\VisualStudio\FAST_Solution.sln
 

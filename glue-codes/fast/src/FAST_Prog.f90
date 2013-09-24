@@ -184,9 +184,9 @@ REAL                                  :: UsrTime1                               
 
 INTEGER(IntKi)                        :: J                                       ! generic loop counter
 INTEGER                               :: StrtTime (8)                            ! Start time of simulation
-INTEGER(IntKi)                        :: n_TMax                                  ! The time step of TMax (the end time of the simulation)
+INTEGER(IntKi)                        :: n_TMax_m1                               ! The time step of TMax - dt (the end time of the simulation)
 INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter 
-INTEGER(IntKi)                        :: pc                                      ! predictor-corrector loop counter 
+INTEGER(IntKi)                        :: j_pc                                    ! predictor-corrector loop counter 
 INTEGER(IntKi)                        :: Step                                    ! Current simulation time step
 INTEGER(IntKi)                        :: ErrStat                                 ! Error status
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
@@ -274,7 +274,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    CALL ED_CopyInput (ED_Input(1),  u_ED,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
       CALL CheckError( ErrStat, 'Message from ED_CopyInput (u_ED): '//NewLine//ErrMsg )
    
-      ! Initialize predicted states for pc loop:
+      ! Initialize predicted states for j_pc loop:
    CALL ED_CopyContState   ( x_ED,  x_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)
       CALL CheckError( ErrStat, 'Message from ED_CopyContState (init): '//NewLine//ErrMsg )
    CALL ED_CopyDiscState   (xd_ED, xd_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
@@ -304,13 +304,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in ServoDyn must be the same as the value of DT in FAST.")
 
-      ! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
-      !bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
-      CALL SrvD_CopyOutput( y_SrvD, y_SrvD_prev, MESH_NEWCOPY, ErrStat, ErrMsg)      
-         y_SrvD_prev%ElecPwr = 0.0
-         y_SrvD_prev%GenTrq  = 0.0
-         
-         
+      !! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
+      !!bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
+      !CALL SrvD_CopyOutput( y_SrvD, y_SrvD_prev, MESH_NEWCOPY, ErrStat, ErrMsg)               
+      !   
          
       ! Initialize Input-Output arrays for interpolation/extrapolation:
          
@@ -329,7 +326,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL SrvD_CopyInput (SrvD_Input(1),  u_SrvD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
          CALL CheckError( ErrStat, 'Message from SrvD_CopyInput (u_SrvD): '//NewLine//ErrMsg )
    
-         ! Initialize predicted states for pc loop:
+         ! Initialize predicted states for j_pc loop:
       CALL SrvD_CopyContState   ( x_SrvD,  x_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from SrvD_CopyContState (init): '//NewLine//ErrMsg )
       CALL SrvD_CopyDiscState   (xd_SrvD, xd_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
@@ -372,7 +369,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
 
 
-         ! Initialize predicted states for pc loop:
+         ! Initialize predicted states for j_pc loop:
       CALL AD_CopyContState   ( x_AD,  x_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from AD_CopyContState (init): '//NewLine//ErrMsg )
       CALL AD_CopyDiscState   (xd_AD, xd_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
@@ -421,7 +418,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          CALL CheckError( ErrStat, 'Message from HydroDyn_CopyInput: '//NewLine//ErrMsg )
 
 
-         ! Initialize predicted states for pc loop:
+         ! Initialize predicted states for j_pc loop:
       CALL HydroDyn_CopyContState   ( x_HD,  x_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from HydroDyn_CopyContState (init): '//NewLine//ErrMsg )
       CALL HydroDyn_CopyDiscState   (xd_HD, xd_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
@@ -475,7 +472,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL SD_CopyInput (SD_Input(1),  u_SD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
          CALL CheckError( ErrStat, 'Message from SD_CopyInput (u_SD): '//NewLine//ErrMsg )      
              
-         ! Initialize predicted states for pc loop:
+         ! Initialize predicted states for j_pc loop:
       CALL SD_CopyContState   ( x_SD,  x_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from SD_CopyContState (init): '//NewLine//ErrMsg )
       CALL SD_CopyDiscState   (xd_SD, xd_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
@@ -524,7 +521,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL MAP_CopyInput (MAP_Input(1),  u_MAP,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
          CALL CheckError( ErrStat, 'Message from MAP_CopyInput (u_MAP): '//NewLine//ErrMsg )
                
-         ! Initialize predicted states for pc loop:
+         ! Initialize predicted states for j_pc loop:
       CALL MAP_CopyContState   ( x_MAP,  x_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from MAP_CopyContState (init): '//NewLine//ErrMsg )
       CALL MAP_CopyDiscState   (xd_MAP, xd_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
@@ -621,27 +618,21 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! loose coupling
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-      ! Start simulation.  Initialize the simulation status.
-
    CALL WrScr1 ( '' )
-!   CALL SimStatus ()
 
-      ! Loop through time.
+   
+   !...............................................................................................................................
+   ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
+   !...............................................................................................................................
+   
+      t_global   = t_initial
+      n_t_global = -1  ! initialize here because CalcOutputs_And_SolveForInputs uses it
+      Step       = 0_IntKi
+      n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
-   Step   = 0_IntKi
-   n_TMax = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax
-      
-   t_global = t_initial
    
-   
-  DO n_t_global = 0, n_TMax
-  
-     t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = t_global + p_FAST%dt
-     
       ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
       ! This code will be specific to the underlying modules
-      
       
       CALL CalcOutputs_And_SolveForInputs( t_global &
                           , x_ED  , xd_ED  , z_ED   &
@@ -651,18 +642,29 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                           , x_MAP , xd_MAP , z_MAP  &
                           , x_AD  , xd_AD  , z_AD   &
                           )           
-              
-        
+         
       ! ServoDyn: copy current outputs to store as previous outputs for next step
       CALL SrvD_CopyOutput ( y_SrvD, y_SrvD_prev, MESH_UPDATECOPY, Errstat, ErrMsg)
       
+      ! we should probably print out the values here, too.
       
-      !........................................
-      ! 1) Extrapolate inputs (and outputs -- bjj: output extrapolation not necessary, yet) 
+   !...............................................................................................................................
+   ! Time Stepping:
+   !...............................................................................................................................         
+   
+   DO n_t_global = 0, n_TMax_m1
+      
+      ! this takes data from n_t_global and gets values at n_t_global + 1
+  
+      t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = t_global + p_FAST%dt
+                       
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Step 1: Extrapolate Inputs (gives predicted values at t+dt
+      ! 
+      ! a) Extrapolate inputs (and outputs -- bjj: output extrapolation not necessary, yet) 
       !    to t + dt (i.e., t_global_next); will only be used by modules with an implicit dependence on input data.
-      !  then,
-      ! 2) Shift "window" of the ModName_Input and ModName_Output
-      !........................................
+      ! b) Shift "window" of the ModName_Input and ModName_Output
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
       ! ElastoDyn
       CALL ED_Input_ExtrapInterp(ED_Input, ED_InputTimes, u_ED, t_global_next, ErrStat, ErrMsg)
@@ -821,12 +823,19 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
        
       
       ! predictor-corrector loop:
-      DO pc = 1, p_FAST%NumCrctn + 1
+      DO j_pc = 0, p_FAST%NumCrctn
   
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Step 2: Advance states (yield state and constraint values at t_global_next)
+      !
+      ! x, xd, and z contain val0ues at t_global;
+      ! values at t_global_next are stored in the *_pred variables.
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
          !----------------------------------------------------------------------------------------
          ! copy the states at step t_global and get prediction for step t_global_next
          ! (note that we need to copy the states because UpdateStates updates the values
-         ! and we need to have the old values [at t_global] for the next pc step)
+         ! and we need to have the old values [at t_global] for the next j_pc step)
          !----------------------------------------------------------------------------------------
          
          ! ElastoDyn: get predicted states
@@ -893,14 +902,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          END IF
             
                           
-         !-----------------------------------------------------------------------------------------
-         ! If correction iteration is to be taken, solve intput-output equations using predicted 
-         ! states; otherwise move on
-         !-----------------------------------------------------------------------------------------
-  
-         IF (pc <= p_FAST%NumCrctn) THEN
-  
-            
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Step 3: Input-Output Solve      
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+               
             CALL CalcOutputs_And_SolveForInputs( t_global_next &
                       , x_ED_pred  , xd_ED_pred  , z_ED_pred   &
                       , x_SrvD_pred, xd_SrvD_pred, z_SrvD_pred &
@@ -909,10 +914,13 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                       , x_MAP_pred , xd_MAP_pred , z_MAP_pred  &
                       , x_AD_pred  , xd_AD_pred  , z_AD_pred   &
                       )           
-                                                           
-         END IF
-  
-      enddo ! PC
+                      
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Step 4: Correct (continue in loop) or Save (advance to next time)
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            
+            
+      enddo ! j_pc
       
       !----------------------------------------------------------------------------------------
       ! copy the final predicted states from step t_global_next to actual states for that step
@@ -964,9 +972,11 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       END IF
                
             
-      !----------------------------------------------------------------------------------------
-      ! update the global time
-      !----------------------------------------------------------------------------------------
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! We've advanced everything to the next time step: 
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      
+      ! update the global time 
   
       t_global = t_global_next 
       
@@ -1073,8 +1083,9 @@ CONTAINS
                                             , x_AD_this  , xd_AD_this  , z_AD_this   &
                                             )
    ! This subroutine solves the input-output relations for all of the modules. It is a subroutine because it gets done twice--
-   ! once at the start of the n_t_global loop and once in the pc loop, using different states.
+   ! once at the start of the n_t_global loop and once in the j_pc loop, using different states.
    ! *** Note that modules that do not have direct feedthrough should be called first. ***
+   ! also note that this routine uses variables from the main routine (not declared as arguments)
    !...............................................................................................................................
       REAL(DbKi)                            :: this_time                               ! The current simulation time (actual or time of prediction)
       !ElastoDyn:
@@ -1104,38 +1115,15 @@ CONTAINS
 
       
       
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
+      !           modules coupled together
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      
       CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, y_ED, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
-                                    
-      IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( AD_Input(1), y_ED, ErrStat, ErrMsg )
+
          
-         IF ( n_t_global > 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
-            CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AD_CalcOutput: '//NewLine//ErrMsg  )
-            !ADAeroLoads = AD_CalculateLoads( REAL(t_global, ReKi), ADAeroMarkers, ADInterfaceComponents, ADIntrfaceOptions, ErrStat )
-            !  CALL CheckError( ErrStat, ' Error calculating aerodynamic loads in AeroDyn.'  )
-         end if
- 
-!bjj FIX THIS>>>>>         
-            !InflowWind outputs
-         IF ( allocated(y_AD%IfW_Outputs%WriteOutput) ) &
-         IfW_WriteOutput = y_AD%IfW_Outputs%WriteOutput
-!         IfW_WriteOutput = AD_GetUndisturbedWind( REAL(this_time, ReKi), (/0.0_ReKi, 0.0_ReKi, p_ED%HubHt /), ErrStat )
-!            CALL CheckError( ErrStat, 'Message from IfW_CalcOutput: '//NewLine//ErrMsg  )
-!<<<         
-
-      END IF
-
-      IF ( p_FAST%CompServo ) THEN
-            ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
-         CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), y_ED, IfW_WriteOutput, y_SrvD_prev   ) 
-
-         CALL SrvD_CalcOutput( this_time, SrvD_Input(1), p_SrvD, x_SrvD_this, xd_SrvD_this, z_SrvD_this, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from SrvD_CalcOutput: '//NewLine//ErrMsg  )
-
-      END IF
-
       IF ( p_FAST%CompHydro ) THEN
 
          ! note: HD_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
@@ -1156,7 +1144,45 @@ CONTAINS
    !-----------------------------------------------------------------------------------------------------------------------------
 !<<<<<<<
 
+      END IF         
+         
+         
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Option 2: Solve for inputs based only on the current outputs. This is much faster than option 1 when the coupled modules
+      !           do not have direct feedthrough.
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                           
+      IF ( p_FAST%CompAero ) THEN
+         CALL AD_InputSolve( AD_Input(1), y_ED, ErrStat, ErrMsg )
+         
+         IF ( n_t_global > 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
+            CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AD_CalcOutput: '//NewLine//ErrMsg  )
+         END IF
+ 
+!bjj FIX THIS>>>>>         
+            !InflowWind outputs
+         IF ( allocated(y_AD%IfW_Outputs%WriteOutput) ) &
+         IfW_WriteOutput = y_AD%IfW_Outputs%WriteOutput
+!<<<         
+
       END IF
+
+      IF ( p_FAST%CompServo ) THEN
+         
+            ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
+         IF ( n_t_global < 0 ) THEN
+            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), y_ED, IfW_WriteOutput )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead
+         ELSE
+            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), y_ED, IfW_WriteOutput, y_SrvD_prev   ) 
+         END IF
+
+         CALL SrvD_CalcOutput( this_time, SrvD_Input(1), p_SrvD, x_SrvD_this, xd_SrvD_this, z_SrvD_this, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from SrvD_CalcOutput: '//NewLine//ErrMsg  )
+
+      END IF
+
+
 
       IF ( p_FAST%CompSub ) THEN
          
@@ -1246,27 +1272,32 @@ CONTAINS
       CALL FAST_End( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      IF ( ALLOCATED(ED_Input) ) THEN
+!      IF ( ALLOCATED(ED_Input) ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_ED) ) THEN
          CALL ED_End(   ED_Input(1),   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
-      IF ( p_FAST%CompAero .AND. ALLOCATED(AD_Input) ) THEN
+!      IF ( p_FAST%CompAero .AND. ALLOCATED(AD_Input) ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_AD) ) THEN
          CALL AD_End(   AD_Input(1),   p_AD,   x_AD,   xd_AD,   z_AD,   OtherSt_AD,   y_AD,   ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
       
-      IF ( p_FAST%CompServo .AND. ALLOCATED(SrvD_Input) ) THEN
+!      IF ( p_FAST%CompServo .AND. ALLOCATED(SrvD_Input) ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_SrvD) ) THEN
          CALL SrvD_End( SrvD_Input(1), p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
-      IF ( p_FAST%CompHydro .AND. ALLOCATED(HD_Input) ) THEN
+!      IF ( p_FAST%CompHydro .AND. ALLOCATED(HD_Input) ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_HD) ) THEN
          CALL HydroDyn_End(    HD_Input(1),   p_HD,   x_HD,   xd_HD,   z_HD,   OtherSt_HD,   y_HD,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
-      IF ( p_FAST%CompSub .AND. ALLOCATED(SD_Input) ) THEN
+!      IF ( p_FAST%CompSub .AND. ALLOCATED(SD_Input) ) THEN
+      IF ( p_FAST%ModuleInitialized(Module_SD) ) THEN
          CALL SD_End(    SD_Input(1),   p_SD,   x_SD,   xd_SD,   z_SD,   OtherSt_SD,   y_SD,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF

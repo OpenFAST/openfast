@@ -30,6 +30,8 @@ FAST
 * update matlab script for conversion to this version
 * update change log
 * update makefile
+* update notice.txt
+* modify OutListParameters.xlsx
 
 
 -------------------------------------------------
