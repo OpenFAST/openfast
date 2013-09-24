@@ -459,7 +459,9 @@ CONTAINS
                                                                     !          | 
     DO i = 1, numHeaderStr                                          !          | 
        InitOut%WriteOutputHdr(i) = strHdrArray(i)                   !          | 
+       CALL RemoveNullChar( InitOut%WriteOutputHdr(i) )             !          |
        InitOut%WriteOutputUnt(i) = strUntArray(i)                   !          | 
+       CALL RemoveNullChar( InitOut%WriteOutputUnt(i) )             !          |
     END DO                                                          !          | 
                                                                     !          | 
     DEALLOCATE( strHdrArray )                                       !          | 
@@ -611,8 +613,8 @@ CONTAINS
     !           called...
     !CALL DispNVD( InitOut%Ver ) 
     
-    WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
-    WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
+    !WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
+    !WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
 
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
@@ -858,7 +860,7 @@ CONTAINS
        RETURN
     END IF
 
-    WRITE(*,*) y%writeOutput ! @bonnie : remove
+    !WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad%NNodes
