@@ -1,5 +1,0 @@
-fortran_driver\MAP.f90
-fortran_driver\MAP_C_Types.f90
-fortran_driver\MAP_Types.f90
-
-..\executable\MAP.lib
