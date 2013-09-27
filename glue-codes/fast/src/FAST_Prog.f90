@@ -32,6 +32,7 @@ PROGRAM FAST
    
    USE ElastoDyn
    USE ServoDyn
+   USE AeroDyn
    USE HydroDyn
    USE SubDyn
    USE MAP
@@ -66,6 +67,7 @@ TYPE(ED_ConstraintStateType)          :: z_ED_pred                              
 
 TYPE(ED_InputType), ALLOCATABLE       :: ED_Input(:)                             ! Array of inputs associated with ED_InputTimes
 REAL(DbKi),         ALLOCATABLE       :: ED_InputTimes(:)                        ! Array of times associated with ED_Input
+TYPE(ED_OutputType),ALLOCATABLE       :: ED_Output(:)                            ! Array of outputs associated with ED_OutputTimes = ED_InputTimes
 
 
    ! Data for the ServoDyn module:
@@ -198,6 +200,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! initialization
    !...............................................................................................................................
 
+   HD_DebugUn = -1
+
 
    y_FAST%UnSum = -1                                                    ! set the summary file unit to -1 to indicate it's not open
    y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
@@ -220,14 +224,14 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       ! ... Open and read input files, initialize global parameters. ...
    CALL FAST_Init( p_FAST, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Message from FAST_Init: '//NewLine//ErrMsg )
+      CALL CheckError( ErrStat, 'Message from FAST_Init: '//NewLine//ErrMsg )
    
    dt_global = p_FAST%dt
 
    
       ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder (from FAST_Init)
-   ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input and ED_InputTimes.") 
+   ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), ED_Output( p_FAST%InterpOrder+1 ),STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input, ED_Output, and ED_InputTimes.") 
    ALLOCATE( AD_Input( p_FAST%InterpOrder+1 ), AD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating AD_Input and AD_InputTimes.") 
    ALLOCATE( SrvD_Input( p_FAST%InterpOrder+1 ), SrvD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
@@ -247,41 +251,12 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    InitInData_ED%InputFile     = p_FAST%EDFile
    InitInData_ED%ADInputFile   = p_FAST%ADFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
-   CALL ED_Init( InitInData_ED, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, dt_global, InitOutData_ED, ErrStat, ErrMsg )
+   CALL ED_Init( InitInData_ED, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ED_Output(1), dt_global, InitOutData_ED, ErrStat, ErrMsg )
    p_FAST%ModuleInitialized(Module_ED) = .TRUE.
-   CALL CheckError( ErrStat, 'Message from ED_Init: '//NewLine//ErrMsg )
+      CALL CheckError( ErrStat, 'Message from ED_Init: '//NewLine//ErrMsg )
 
    IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
-        CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")
-
-
-   ! Initialize Input-Output arrays for interpolation/extrapolation:
-
-   ! We fill ED_InputTimes with negative times, but the ED_Input values are identical for each of those times; this allows
-   ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation
-   ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as
-   ! order = SIZE(ED_Input)
-
-   DO j = 1, p_FAST%InterpOrder + 1
-      ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-      !ED_OutputTimes(i) = t_initial - (j - 1) * dt
-   END DO
-
-   DO j = 2, p_FAST%InterpOrder + 1
-      CALL ED_CopyInput (ED_Input(1),  ED_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from ED_CopyInput (ED_Input): '//NewLine//ErrMsg )
-   END DO
-   CALL ED_CopyInput (ED_Input(1),  u_ED,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-      CALL CheckError( ErrStat, 'Message from ED_CopyInput (u_ED): '//NewLine//ErrMsg )
-   
-      ! Initialize predicted states for j_pc loop:
-   CALL ED_CopyContState   ( x_ED,  x_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-      CALL CheckError( ErrStat, 'Message from ED_CopyContState (init): '//NewLine//ErrMsg )
-   CALL ED_CopyDiscState   (xd_ED, xd_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
-      CALL CheckError( ErrStat, 'Message from ED_CopyDiscState (init): '//NewLine//ErrMsg )
-   CALL ED_CopyConstrState ( z_ED,  z_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-      CALL CheckError( ErrStat, 'Message from ED_CopyConstrState (init): '//NewLine//ErrMsg )
-         
+        CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")         
    
    ! ........................
    ! initialize ServoDyn 
@@ -292,12 +267,12 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_SrvD%RootName      = p_FAST%OutFileRoot
       InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
       CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat, ErrMsg)
-      CALL CheckError( ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, ErrMsg )
 
       InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
       CALL SrvD_Init( InitInData_SrvD, SrvD_Input(1), p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, dt_global, InitOutData_SrvD, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
-      CALL CheckError( ErrStat, 'Message from SrvD_Init: '//NewLine//ErrMsg )
+         CALL CheckError( ErrStat, 'Message from SrvD_Init: '//NewLine//ErrMsg )
 
       !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
 
@@ -308,32 +283,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       !!bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
       !CALL SrvD_CopyOutput( y_SrvD, y_SrvD_prev, MESH_NEWCOPY, ErrStat, ErrMsg)               
       !   
-         
-      ! Initialize Input-Output arrays for interpolation/extrapolation:
-         
-
-   ! Initialize Input-Output arrays for interpolation/extrapolation:
-
-      DO j = 1, p_FAST%InterpOrder + 1
-         SrvD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-         !SrvD_OutputTimes(i) = t_initial - (j - 1) * dt
-      END DO
-
-      DO j = 2, p_FAST%InterpOrder + 1
-         CALL SrvD_CopyInput (SrvD_Input(1),  SrvD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from SrvD_CopyInput (SrvD_Input): '//NewLine//ErrMsg )
-      END DO
-      CALL SrvD_CopyInput (SrvD_Input(1),  u_SrvD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-         CALL CheckError( ErrStat, 'Message from SrvD_CopyInput (u_SrvD): '//NewLine//ErrMsg )
-   
-         ! Initialize predicted states for j_pc loop:
-      CALL SrvD_CopyContState   ( x_SrvD,  x_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from SrvD_CopyContState (init): '//NewLine//ErrMsg )
-      CALL SrvD_CopyDiscState   (xd_SrvD, xd_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
-         CALL CheckError( ErrStat, 'Message from SrvD_CopyDiscState (init): '//NewLine//ErrMsg )
-      CALL SrvD_CopyConstrState ( z_SrvD,  z_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from SrvD_CopyConstrState (init): '//NewLine//ErrMsg )
-             
+                      
    END IF
 
 
@@ -343,39 +293,15 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    
    IF ( p_FAST%CompAero ) THEN
    ! we need the air density (and wind speed) yet.... some strangeness still going on.
-      CALL AeroInput(InitInData_AD, InitOutData_ED, y_ED, p_ED, p_FAST)            ! set the InitInp_AD
+      CALL AD_SetInitInput(InitInData_AD, InitOutData_ED, ED_Output(1), p_FAST, ErrStat, ErrMsg)            ! set the values in InitInData_AD
+         CALL CheckError( ErrStat, 'Message from AD_SetInitInput: '//NewLine//ErrMsg )
             
       CALL AD_Init( InitInData_AD, AD_Input(1), p_AD, x_AD, xd_AD, z_AD, OtherSt_AD, y_AD, dt_global, InitOutData_AD, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_AD) = .TRUE.
-      CALL CheckError( ErrStat, 'Message from AD_Init: '//NewLine//ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AD_Init: '//NewLine//ErrMsg )
             
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
-        CALL CheckError(ErrID_Fatal, "The value of DT in AeroDyn must be the same as the value of DT in FAST.")
-      
-      
-         ! Copy values for interpolation/extrapolation:
-
-      ! TODO: Need to talk to Bonnie about using the following.
-      DO j = 1, p_FAST%InterpOrder + 1
-         AD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-         !AD_OutputTimes(i) = t_initial - (j - 1) * dt
-      END DO
-
-      DO j = 2, p_FAST%InterpOrder + 1
-         CALL AD_CopyInput (AD_Input(1),  AD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
-      END DO
-      CALL AD_CopyInput (AD_Input(1),  u_AD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-         CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
-
-
-         ! Initialize predicted states for j_pc loop:
-      CALL AD_CopyContState   ( x_AD,  x_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from AD_CopyContState (init): '//NewLine//ErrMsg )
-      CALL AD_CopyDiscState   (xd_AD, xd_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
-         CALL CheckError( ErrStat, 'Message from AD_CopyDiscState (init): '//NewLine//ErrMsg )
-      CALL AD_CopyConstrState ( z_AD,  z_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from AD_CopyConstrState (init): '//NewLine//ErrMsg )
+        CALL CheckError(ErrID_Fatal, "The value of DT in AeroDyn must be the same as the value of DT in FAST.")      
                   
    ELSE
    !   p_ED%AirDens = 0
@@ -400,31 +326,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in HydroDyn must be the same as the value of DT in FAST.")
-
-      
-         ! Copy values for interpolation/extrapolation:
-
-      ! TODO: Need to talk to Bonnie about using the following.
-      DO j = 1, p_FAST%InterpOrder + 1
-         HD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-         !HD_OutputTimes(i) = t_initial - (j - 1) * dt
-      END DO
-
-      DO j = 2, p_FAST%InterpOrder + 1
-         CALL HydroDyn_CopyInput (HD_Input(1),  HD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from HydroDyn_CopyInput: '//NewLine//ErrMsg )
-      END DO
-      CALL HydroDyn_CopyInput (HD_Input(1),  u_HD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyInput: '//NewLine//ErrMsg )
-
-
-         ! Initialize predicted states for j_pc loop:
-      CALL HydroDyn_CopyContState   ( x_HD,  x_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyContState (init): '//NewLine//ErrMsg )
-      CALL HydroDyn_CopyDiscState   (xd_HD, xd_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
-         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyDiscState (init): '//NewLine//ErrMsg )
-      CALL HydroDyn_CopyConstrState ( z_HD,  z_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyConstrState (init): '//NewLine//ErrMsg )
+     
          
    !-----------------------------------------------------------------------------------------------------------------------------
    !  For debug purposes, open an output file for writing the current timestep's inputs and outputs for HydroDyn
@@ -446,7 +348,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       !InitInData_SD%UseInputFile = .TRUE. 
       InitInData_SD%SDInputFile  = p_FAST%SDFile
       InitInData_SD%RootName     = p_FAST%OutFileRoot
-      InitInData_SD%TP_RefPoint  = y_ED%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
+      InitInData_SD%TP_RefPoint  = ED_Output(1)%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
       InitInData_SD%SubRotateZ   = 0.0                                ! bjj: not sure what this is supposed to be 
       
             
@@ -456,30 +358,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in SubDyn must be the same as the value of DT in FAST.")
-
-      
-         ! Copy values for interpolation/extrapolation:
-
-      DO j = 1, p_FAST%InterpOrder + 1
-         SD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-         !SD_OutputTimes(i) = t_initial - (j - 1) * dt
-      END DO
-
-      DO j = 2, p_FAST%InterpOrder + 1
-         CALL SD_CopyInput (SD_Input(1),  SD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from SD_CopyInput (SD_Input): '//NewLine//ErrMsg )
-      END DO
-      CALL SD_CopyInput (SD_Input(1),  u_SD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-         CALL CheckError( ErrStat, 'Message from SD_CopyInput (u_SD): '//NewLine//ErrMsg )      
-             
-         ! Initialize predicted states for j_pc loop:
-      CALL SD_CopyContState   ( x_SD,  x_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from SD_CopyContState (init): '//NewLine//ErrMsg )
-      CALL SD_CopyDiscState   (xd_SD, xd_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
-         CALL CheckError( ErrStat, 'Message from SD_CopyDiscState (init): '//NewLine//ErrMsg )
-      CALL SD_CopyConstrState ( z_SD,  z_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from SD_CopyConstrState (init): '//NewLine//ErrMsg )
-                  
+                        
    END IF
    
    ! ........................
@@ -505,30 +384,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in MAP must be the same as the value of DT in FAST.")
-
-      
-         ! Copy values for interpolation/extrapolation:
-
-      DO j = 1, p_FAST%InterpOrder + 1
-         MAP_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-         !MAP_OutputTimes(i) = t_initial - (j - 1) * dt
-      END DO
-
-      DO j = 2, p_FAST%InterpOrder + 1
-         CALL MAP_CopyInput (MAP_Input(1),  MAP_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from MAP_CopyInput (MAP_Input): '//NewLine//ErrMsg )
-      END DO
-      CALL MAP_CopyInput (MAP_Input(1),  u_MAP,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-         CALL CheckError( ErrStat, 'Message from MAP_CopyInput (u_MAP): '//NewLine//ErrMsg )
                
-         ! Initialize predicted states for j_pc loop:
-      CALL MAP_CopyContState   ( x_MAP,  x_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from MAP_CopyContState (init): '//NewLine//ErrMsg )
-      CALL MAP_CopyDiscState   (xd_MAP, xd_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
-         CALL CheckError( ErrStat, 'Message from MAP_CopyDiscState (init): '//NewLine//ErrMsg )
-      CALL MAP_CopyConstrState ( z_MAP,  z_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)
-         CALL CheckError( ErrStat, 'Message from MAP_CopyConstrState (init): '//NewLine//ErrMsg )
-         
    END IF
 
 
@@ -536,11 +392,11 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, &
                          InitOutData_SD, InitOutData_MAP, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
+      CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
 
 
    CALL FAST_WrSum( p_FAST, y_FAST, ErrStat, ErrMsg )
-   CALL CheckError( ErrStat, 'Message from FAST_WrSum: '//NewLine//ErrMsg )
+      CALL CheckError( ErrStat, 'Message from FAST_WrSum: '//NewLine//ErrMsg )
 
 
    ! -------------------------------------------------------------------------
@@ -553,7 +409,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
          CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
-         CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+         CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
 
          IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
@@ -561,13 +417,13 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
             CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
-            CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
+            CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
 
                ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
             CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
-            CALL AllocMapping( y_ED%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
+            CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
 
          END IF
@@ -585,7 +441,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          ! MAP point mesh to/from ElastoDyn point mesh
       CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
-      CALL AllocMapping( y_ED%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
+      CALL AllocMapping( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
       
    END IF
@@ -625,24 +481,210 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................
    
-      t_global   = t_initial
-      n_t_global = -1  ! initialize here because CalcOutputs_And_SolveForInputs uses it
-      Step       = 0_IntKi
-      n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
+   t_global   = t_initial
+   n_t_global = -1  ! initialize here because CalcOutputs_And_SolveForInputs uses it
+   Step       = 0
+   n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
-   
-      ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
-      ! This code will be specific to the underlying modules
+!bjj FIX >>>>>
+   IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN 
+      CALL ED_CalcOutput( t_global, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED,  ED_Output(1), ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from ED_CalcOutput (initialization): '//NewLine//ErrMsg )
+   END IF
+!end bjj FIX <<<<
+
+   ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
+   ! This code will be specific to the underlying modules
       
-      CALL CalcOutputs_And_SolveForInputs( t_global &
-                          , x_ED  , xd_ED  , z_ED   &
-                          , x_SrvD, xd_SrvD, z_SrvD &
-                          , x_HD  , xd_HD  , z_HD   &
-                          , x_SD  , xd_SD  , z_SD   &
-                          , x_MAP , xd_MAP , z_MAP  &
-                          , x_AD  , xd_AD  , z_AD   &
-                          )           
+   CALL CalcOutputs_And_SolveForInputs( t_global &
+                        , x_ED  , xd_ED  , z_ED   &
+                        , x_SrvD, xd_SrvD, z_SrvD &
+                        , x_HD  , xd_HD  , z_HD   &
+                        , x_SD  , xd_SD  , z_SD   &
+                        , x_MAP , xd_MAP , z_MAP  &
+                        , x_AD  , xd_AD  , z_AD   &
+                        )           
+   
+   !...............
+   ! Copy values of these initial guesses for interpolation/extrapolation and 
+   ! initialize predicted states for j_pc loop (use MESH_NEWCOPY here so we can use MESH_UPDATE copy later)
+   !...............
          
+   ! Initialize Input-Output arrays for interpolation/extrapolation:
+
+   ! We fill ED_InputTimes with negative times, but the ED_Input values are identical for each of those times; this allows
+   ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation
+   ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as
+   ! order = SIZE(ED_Input)
+
+   DO j = 1, p_FAST%InterpOrder + 1
+      ED_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+      !ED_OutputTimes(j) = t_initial - (j - 1) * dt
+   END DO
+      
+   DO j = 2, p_FAST%InterpOrder + 1
+      CALL ED_CopyInput (ED_Input(1),  ED_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from ED_CopyInput (ED_Input): '//NewLine//ErrMsg )
+      
+      CALL ED_CopyOutput (ED_Output(1), ED_Output(j), MESH_NEWCOPY, Errstat, ErrMsg) !BJJ: THIS IS REALLY ONLY NECESSARY FOR ED-HD COUPLING AT THE MOMENT
+         CALL CheckError( ErrStat, 'Message from ED_CopyOutput (ED_Output): '//NewLine//ErrMsg )
+   END DO
+   CALL ED_CopyInput (ED_Input(1),  u_ED,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+      CALL CheckError( ErrStat, 'Message from ED_CopyInput (u_ED): '//NewLine//ErrMsg )
+   CALL ED_CopyOutput (ED_Output(1), y_ED, MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+      CALL CheckError( ErrStat, 'Message from ED_CopyOutput (y_ED): '//NewLine//ErrMsg )   
+   
+      
+      ! Initialize predicted states for j_pc loop:
+   CALL ED_CopyContState   ( x_ED,  x_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+      CALL CheckError( ErrStat, 'Message from ED_CopyContState (init): '//NewLine//ErrMsg )
+   CALL ED_CopyDiscState   (xd_ED, xd_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+      CALL CheckError( ErrStat, 'Message from ED_CopyDiscState (init): '//NewLine//ErrMsg )
+   CALL ED_CopyConstrState ( z_ED,  z_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+      CALL CheckError( ErrStat, 'Message from ED_CopyConstrState (init): '//NewLine//ErrMsg )   
+   
+      
+   IF (p_FAST%CompServo) THEN      
+      ! Initialize Input-Output arrays for interpolation/extrapolation:
+         
+      DO j = 1, p_FAST%InterpOrder + 1
+         SrvD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !SrvD_OutputTimes(j) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL SrvD_CopyInput (SrvD_Input(1),  SrvD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from SrvD_CopyInput (SrvD_Input): '//NewLine//ErrMsg )
+      END DO
+      CALL SrvD_CopyInput (SrvD_Input(1),  u_SrvD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from SrvD_CopyInput (u_SrvD): '//NewLine//ErrMsg )
+   
+         ! Initialize predicted states for j_pc loop:
+      CALL SrvD_CopyContState   ( x_SrvD,  x_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from SrvD_CopyContState (init): '//NewLine//ErrMsg )
+      CALL SrvD_CopyDiscState   (xd_SrvD, xd_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from SrvD_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL SrvD_CopyConstrState ( z_SrvD,  z_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from SrvD_CopyConstrState (init): '//NewLine//ErrMsg )
+   
+   END IF ! CompServo
+   
+   
+   IF (p_FAST%CompAero) THEN      
+         ! Copy values for interpolation/extrapolation:
+
+      ! TODO: Need to talk to Bonnie about using the following.
+      DO j = 1, p_FAST%InterpOrder + 1
+         AD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !AD_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL AD_CopyInput (AD_Input(1),  AD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
+      END DO
+      CALL AD_CopyInput (AD_Input(1),  u_AD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from AD_CopyInput: '//NewLine//ErrMsg )
+
+
+         ! Initialize predicted states for j_pc loop:
+      CALL AD_CopyContState   ( x_AD,  x_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from AD_CopyContState (init): '//NewLine//ErrMsg )
+      CALL AD_CopyDiscState   (xd_AD, xd_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from AD_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL AD_CopyConstrState ( z_AD,  z_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from AD_CopyConstrState (init): '//NewLine//ErrMsg )      
+      
+   END IF ! CompAero
+   
+   
+   IF (p_FAST%CompHydro) THEN      
+         ! Copy values for interpolation/extrapolation:
+
+      DO j = 1, p_FAST%InterpOrder + 1
+         HD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !HD_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL HydroDyn_CopyInput (HD_Input(1),  HD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from HydroDyn_CopyInput: '//NewLine//ErrMsg )
+      END DO
+      CALL HydroDyn_CopyInput (HD_Input(1),  u_HD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyInput: '//NewLine//ErrMsg )
+
+
+         ! Initialize predicted states for j_pc loop:
+      CALL HydroDyn_CopyContState   ( x_HD,  x_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyContState (init): '//NewLine//ErrMsg )
+      CALL HydroDyn_CopyDiscState   (xd_HD, xd_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL HydroDyn_CopyConstrState ( z_HD,  z_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from HydroDyn_CopyConstrState (init): '//NewLine//ErrMsg )
+         
+   END IF !CompHydro
+         
+   
+   IF (p_FAST%CompSub) THEN      
+
+         ! Copy values for interpolation/extrapolation:
+      DO j = 1, p_FAST%InterpOrder + 1
+         SD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !SD_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL SD_CopyInput (SD_Input(1),  SD_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from SD_CopyInput (SD_Input): '//NewLine//ErrMsg )
+      END DO
+      CALL SD_CopyInput (SD_Input(1),  u_SD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from SD_CopyInput (u_SD): '//NewLine//ErrMsg )      
+             
+         ! Initialize predicted states for j_pc loop:
+      CALL SD_CopyContState   ( x_SD,  x_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from SD_CopyContState (init): '//NewLine//ErrMsg )
+      CALL SD_CopyDiscState   (xd_SD, xd_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from SD_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL SD_CopyConstrState ( z_SD,  z_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from SD_CopyConstrState (init): '//NewLine//ErrMsg )
+      
+   END IF ! CompSub         
+      
+   
+   IF (p_FAST%CompMAP) THEN      
+         ! Copy values for interpolation/extrapolation:
+
+      DO j = 1, p_FAST%InterpOrder + 1
+         MAP_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !MAP_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL MAP_CopyInput (MAP_Input(1),  MAP_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from MAP_CopyInput (MAP_Input): '//NewLine//ErrMsg )
+      END DO
+      CALL MAP_CopyInput (MAP_Input(1),  u_MAP,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from MAP_CopyInput (u_MAP): '//NewLine//ErrMsg )
+               
+         ! Initialize predicted states for j_pc loop:
+      CALL MAP_CopyContState   ( x_MAP,  x_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from MAP_CopyContState (init): '//NewLine//ErrMsg )
+      CALL MAP_CopyDiscState   (xd_MAP, xd_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from MAP_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL MAP_CopyConstrState ( z_MAP,  z_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from MAP_CopyConstrState (init): '//NewLine//ErrMsg )
+
+   END IF ! CompMAP
+
+      
+!BJJ: TODO:      
+      ! copy the inputs into the history arrays (don't just use their guesses...)
+      ! copy the ED output array into the history array
+      ! check y_ED so that it's using the correct values here... maybe we need ED_Output(1)? or maybe it doesn't matter if there are sibling meshes? or not?
+      
+
+      
+      
       ! ServoDyn: copy current outputs to store as previous outputs for next step
       CALL SrvD_CopyOutput ( y_SrvD, y_SrvD_prev, MESH_UPDATECOPY, Errstat, ErrMsg)
       
@@ -670,19 +712,19 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL ED_Input_ExtrapInterp(ED_Input, ED_InputTimes, u_ED, t_global_next, ErrStat, ErrMsg)
          CALL CheckError(ErrStat,'Message from ED_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
   
-      !CALL ED_Output_ExtrapInterp(ED_Output, ED_OutputTimes, y_ED, t_global_next, ErrStat, ErrMsg)
-      !   CALL CheckError(ErrStat,'Message from ED_Output_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+      CALL ED_Output_ExtrapInterp(ED_Output, ED_InputTimes, y_ED, t_global_next, ErrStat, ErrMsg) !this extrapolated value is used in the ED-HD coupling
+         CALL CheckError(ErrStat,'Message from ED_Output_ExtrapInterp (FAST): '//NewLine//ErrMsg )
          
          
       DO j = p_FAST%InterpOrder, 1, -1
          CALL ED_CopyInput (ED_Input(j),  ED_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-         !CALL ED_CopyOutput (ED_Output(i),  ED_Output(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+         CALL ED_CopyOutput (ED_Output(j),  ED_Output(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
          ED_InputTimes(j+1) = ED_InputTimes(j)
          !ED_OutputTimes(j+1) = ED_OutputTimes(j)
       END DO
   
       CALL ED_CopyInput (u_ED,  ED_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-      !CALL ED_CopyOutput (y_ED,  ED_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+      CALL ED_CopyOutput (y_ED,  ED_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
       ED_InputTimes(1)  = t_global_next
       !ED_OutputTimes(1) = t_global_next 
   
@@ -993,7 +1035,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          IF ( EqualRealNos( t_global, OutTime ) )  THEN
 
                ! Generate glue-code output file
-            CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, y_ED%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
+            CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, ED_Output(1)%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
                               y_SD%WriteOutput, y_MAP%WriteOutput, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
 
@@ -1033,30 +1075,49 @@ CONTAINS
    ! This routine resets the remap flags on all of the meshes
    !...............................................................................................................................
 
+   INTEGER(IntKi) :: k  ! counter for blades
+         
       !.....................................................................
       ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
       !.....................................................................     
    
       ! ElastoDyn meshes
-      ED_Input(1)%PlatformPtMesh%RemapFlag      = .FALSE.
-             y_ED%PlatformPtMesh%RemapFlag      = .FALSE.
-      ED_Input(1)%TowerLn2Mesh%RemapFlag        = .FALSE.
-             y_ED%TowerLn2Mesh%RemapFlag        = .FALSE.
-      ED_Input(1)%BladeLn2Mesh%RemapFlag        = .FALSE.
-             y_ED%BladeLn2Mesh%RemapFlag        = .FALSE.
+      ED_Input( 1)%PlatformPtMesh%RemapFlag     = .FALSE.
+      ED_Output(1)%PlatformPtMesh%RemapFlag     = .FALSE.
+      ED_Input( 1)%TowerLn2Mesh%RemapFlag       = .FALSE.
+      ED_Output(1)%TowerLn2Mesh%RemapFlag       = .FALSE.
+      ED_Input( 1)%BladeLn2Mesh%RemapFlag       = .FALSE.
+      ED_Output(1)%BladeLn2Mesh%RemapFlag       = .FALSE.
 
              
       ! AeroDyn meshes
-             
+      IF ( p_FAST%CompAero ) THEN
+         
+         DO k=1,SIZE(AD_Input(1)%InputMarkers)
+            AD_Input(1)%InputMarkers(k)%RemapFlag = .FALSE.
+                  y_AD%OutputLoads(  k)%RemapFlag = .FALSE.
+         END DO
+                  
+         IF (AD_Input(1)%Twr_InputMarkers%Committed) THEN
+            AD_Input(1)%Twr_InputMarkers%RemapFlag = .FALSE.
+                   y_AD%Twr_OutputLoads%RemapFlag  = .FALSE.
+         END IF
+      END IF
              
       ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
-         HD_Input(1)%WAMIT%Mesh%RemapFlag          = .FALSE.
-                y_HD%WAMIT%Mesh%RemapFlag          = .FALSE.
-         HD_Input(1)%Morison%LumpedMesh%RemapFlag  = .FALSE.
-                y_HD%Morison%LumpedMesh%RemapFlag  = .FALSE.
-         HD_Input(1)%Morison%DistribMesh%RemapFlag = .FALSE.
-                y_HD%Morison%DistribMesh%RemapFlag = .FALSE.
+         IF (HD_Input(1)%WAMIT%Mesh%Committed) THEN
+            HD_Input(1)%WAMIT%Mesh%RemapFlag          = .FALSE.
+                   y_HD%WAMIT%Mesh%RemapFlag          = .FALSE.
+         END IF
+         IF (HD_Input(1)%Morison%LumpedMesh%Committed) THEN
+            HD_Input(1)%Morison%LumpedMesh%RemapFlag  = .FALSE.
+                   y_HD%Morison%LumpedMesh%RemapFlag  = .FALSE.
+         END IF
+         IF (HD_Input(1)%Morison%DistribMesh%Committed) THEN
+            HD_Input(1)%Morison%DistribMesh%RemapFlag = .FALSE.
+                   y_HD%Morison%DistribMesh%RemapFlag = .FALSE.
+         END IF
       END IF
 
       ! SubDyn
@@ -1120,19 +1181,28 @@ CONTAINS
       !           modules coupled together
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
-      CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, y_ED, ErrStat, ErrMsg )
+     
+      IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN
+         
+!bjj: We want to use this >>>>>>         
+         !CALL ED_HD_InputOutputSolve(  this_time, p_FAST &
+         !                              , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+         !                              , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+         !                              , MeshMapData , ErrStat, ErrMsg )         
+         !   CALL CheckError( ErrStat, ErrMsg  )
+         !   
+!bjj: instead of this >>>>>>                        
+      CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
+         
+         ! note: HD_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
+      CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+
+      CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from HydroDyn_CalcOutput: '//NewLine//ErrMsg  )
 
          
-      IF ( p_FAST%CompHydro ) THEN
-
-         ! note: HD_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
-         CALL HD_InputSolve( y_ED, HD_Input(1), MeshMapData, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-
-         CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HydroDyn_CalcOutput: '//NewLine//ErrMsg  )
-
 !>>>>>>>>> bjj: move/fix this later
    !-----------------------------------------------------------------------------------------------------------------------------
    !  For debug purposes, write out the current timestep's inputs and outputs for HydroDyn
@@ -1142,10 +1212,16 @@ CONTAINS
         CALL Write_HD_Debug(HD_DebugUn, t_global, HD_Input(1), y_HD, ED_Input(1), OtherSt_HD, MeshMapData, ErrStat, ErrMsg)
    !
    !-----------------------------------------------------------------------------------------------------------------------------
-!<<<<<<<
-
-      END IF         
+!<<<<<<< bjj: end move/fix later
+!<<<<< bjj: end of section 
+                      
+      ELSE
          
+         CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
+         
+      END IF
+                         
          
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 2: Solve for inputs based only on the current outputs. This is much faster than option 1 when the coupled modules
@@ -1153,9 +1229,9 @@ CONTAINS
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                            
       IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( AD_Input(1), y_ED, ErrStat, ErrMsg )
+         CALL AD_InputSolve( AD_Input(1), ED_Output(1), ErrStat, ErrMsg )
          
-         IF ( n_t_global > 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
+         IF ( n_t_global >= 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
             CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, 'Message from AD_CalcOutput: '//NewLine//ErrMsg  )
          END IF
@@ -1172,9 +1248,9 @@ CONTAINS
          
             ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
          IF ( n_t_global < 0 ) THEN
-            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), y_ED, IfW_WriteOutput )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead
+            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), ED_Output(1), IfW_WriteOutput )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead
          ELSE
-            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), y_ED, IfW_WriteOutput, y_SrvD_prev   ) 
+            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), ED_Output(1), IfW_WriteOutput, y_SrvD_prev   ) 
          END IF
 
          CALL SrvD_CalcOutput( this_time, SrvD_Input(1), p_SrvD, x_SrvD_this, xd_SrvD_this, z_SrvD_this, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
@@ -1186,7 +1262,7 @@ CONTAINS
 
       IF ( p_FAST%CompSub ) THEN
          
-         CALL SD_InputSolve( y_ED, y_HD, SD_Input(1), MeshMapData, ErrStat, ErrMsg )
+         CALL SD_InputSolve( SD_Input(1), ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
 
          CALL SD_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
@@ -1197,7 +1273,7 @@ CONTAINS
       IF ( p_FAST%CompMAP ) THEN
          
          ! note: MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads [moment] mapping)      
-         CALL MAP_InputSolve( y_ED, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
+         CALL MAP_InputSolve( MAP_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from MAP_InputSolve: '//NewLine//ErrMsg  )
 
          CALL MAP_CalcOutput( this_time, MAP_Input(1), p_MAP, x_MAP_this, xd_MAP_this, z_MAP_this, OtherSt_MAP, y_MAP, ErrStat, ErrMsg )
@@ -1214,7 +1290,7 @@ CONTAINS
       IF ( p_FAST%CompUserPtfmLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrPtfm_CalcOutput()
       !
       !   CALL UserPtfmLd ( x_ED%QT(1:6), x_ED%QDT(1:6), t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, (/ y_UsrPtfm%Force,y_UsrPtfm%Moment /) )
-      !   CALL UserPtfmLd ( y_ED%PlatformPtMesh, t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, u_ED%PlatformPtMesh )
+      !   CALL UserPtfmLd ( ED_Output(1)%PlatformPtMesh, t, p_FAST%DirRoot, y_UsrPtfm%AddedMass, u_ED%PlatformPtMesh )
       !
       !      ! Ensure that the platform added mass matrix returned by UserPtfmLd, PtfmAM, is symmetric; Abort if necessary:
       !   IF ( .NOT. IsSymmetric( y_UsrPtfm%AddedMass ) ) THEN
@@ -1258,7 +1334,7 @@ CONTAINS
    !
    ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
 
-        CLOSE( HD_DebugUn )
+        IF (HD_DebugUn > 0) CLOSE( HD_DebugUn )
    !
    !-----------------------------------------------------------------------------------------------------------------------------
       
@@ -1266,43 +1342,36 @@ CONTAINS
       !...............................................................................................................................
       ! Clean up modules (and write binary FAST output file), destroy any other variables
       !...............................................................................................................................
-!bjj: if any of these operations produces an error > AbortErrLev, we should also set Error = TRUE and update ErrLev appropriately.
-!We should also make sure that we don't End something that hasn't been initialized (e.g., if HD_Input isn't allocated, we don't want to call this...)
+!bjj: if any of these operations produces an error >= AbortErrLev, we should also set Error = TRUE and update ErrLev appropriately.
 
       CALL FAST_End( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-!      IF ( ALLOCATED(ED_Input) ) THEN
       IF ( p_FAST%ModuleInitialized(Module_ED) ) THEN
-         CALL ED_End(   ED_Input(1),   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   y_ED,   ErrStat2, ErrMsg2 )
+         CALL ED_End(   ED_Input(1),   p_ED,   x_ED,   xd_ED,   z_ED,   OtherSt_ED,   ED_Output(1),   ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
-!      IF ( p_FAST%CompAero .AND. ALLOCATED(AD_Input) ) THEN
       IF ( p_FAST%ModuleInitialized(Module_AD) ) THEN
          CALL AD_End(   AD_Input(1),   p_AD,   x_AD,   xd_AD,   z_AD,   OtherSt_AD,   y_AD,   ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
       
-!      IF ( p_FAST%CompServo .AND. ALLOCATED(SrvD_Input) ) THEN
       IF ( p_FAST%ModuleInitialized(Module_SrvD) ) THEN
          CALL SrvD_End( SrvD_Input(1), p_SrvD, x_SrvD, xd_SrvD, z_SrvD, OtherSt_SrvD, y_SrvD, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
-!      IF ( p_FAST%CompHydro .AND. ALLOCATED(HD_Input) ) THEN
       IF ( p_FAST%ModuleInitialized(Module_HD) ) THEN
          CALL HydroDyn_End(    HD_Input(1),   p_HD,   x_HD,   xd_HD,   z_HD,   OtherSt_HD,   y_HD,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
 
-!      IF ( p_FAST%CompSub .AND. ALLOCATED(SD_Input) ) THEN
       IF ( p_FAST%ModuleInitialized(Module_SD) ) THEN
          CALL SD_End(    SD_Input(1),   p_SD,   x_SD,   xd_SD,   z_SD,   OtherSt_SD,   y_SD,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
       
-      !IF ( p_FAST%CompMAP .AND. ALLOCATED(MAP_Input) .AND. p_FAST%ModuleInitialized(Module_MAP) ) THEN
       IF ( p_FAST%ModuleInitialized(Module_MAP) ) THEN
          CALL MAP_End(    MAP_Input(1),   p_MAP,   x_MAP,   xd_MAP,   z_MAP,   OtherSt_MAP,   y_MAP,   ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
@@ -1356,34 +1425,46 @@ CONTAINS
       CALL ED_DestroyInput( u_ED, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-      IF ( ALLOCATED(ED_Input)      ) THEN
+      CALL ED_DestroyOutput( y_ED, ErrStat2, ErrMsg2 )
+      IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      
+      IF ( ALLOCATED(ED_Input)   ) THEN
          DO j = 2,p_FAST%InterpOrder+1  !note that ED_Input(1) was destroyed in ED_End
             CALL ED_DestroyInput( ED_Input(j), ErrStat2, ErrMsg2 )
             IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                  
          END DO
          DEALLOCATE( ED_Input )
       END IF
+
+      IF ( ALLOCATED(ED_Output)   ) THEN
+         DO j = 2,p_FAST%InterpOrder+1  !note that ED_Input(1) was destroyed in ED_End
+            CALL ED_DestroyOutput( ED_Output(j), ErrStat2, ErrMsg2 )
+            IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )         
+         END DO
+         DEALLOCATE( ED_Output )
+      END IF            
       
       IF ( ALLOCATED(ED_InputTimes) ) DEALLOCATE( ED_InputTimes )
-
-      ! ServoDyn               
-      IF ( p_FAST%CompServo ) THEN
+      
+      
+      ! ServoDyn     
+      IF ( ALLOCATED(SrvD_Input)      ) THEN
          
-         CALL SrvD_DestroyOutput( y_SrvD_prev, ErrStat2, ErrMsg2)
-            IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+         IF ( p_FAST%CompServo ) THEN
+         
+            CALL SrvD_DestroyOutput( y_SrvD_prev, ErrStat2, ErrMsg2)
+               IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
                   
-         CALL SrvD_DestroyInput( u_SrvD, ErrStat2, ErrMsg2 )
-         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+            CALL SrvD_DestroyInput( u_SrvD, ErrStat2, ErrMsg2 )
+            IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
-         IF ( ALLOCATED(SrvD_Input)      )  THEN
             DO j = 2,p_FAST%InterpOrder+1 !note that SrvD_Input(1) was destroyed in SrvD_End
                CALL SrvD_DestroyInput( SrvD_Input(j), ErrStat2, ErrMsg2 )
                IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
             END DO
-            DEALLOCATE( SrvD_Input )
          END IF
-      ELSE
-         IF ( ALLOCATED(SrvD_Input)      ) DEALLOCATE( SrvD_Input )         
+         
+         DEALLOCATE( SrvD_Input )
       END IF
 
       IF ( ALLOCATED(SrvD_InputTimes) ) DEALLOCATE( SrvD_InputTimes )
@@ -1445,7 +1526,6 @@ CONTAINS
       IF ( ALLOCATED(SD_InputTimes) ) DEALLOCATE( SD_InputTimes )
       
       ! MAP      
-      !IF ( p_FAST%CompMAP ) THEN
       IF ( p_FAST%ModuleInitialized(Module_MAP)  ) THEN        
          CALL MAP_DestroyInput( u_MAP, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
@@ -1462,6 +1542,34 @@ CONTAINS
       END IF
 
       IF ( ALLOCATED(MAP_InputTimes) ) DEALLOCATE( MAP_InputTimes )
+      
+      ! -------------------------------------------------------------------------
+      ! predicted state variables:
+      ! -------------------------------------------------------------------------
+
+      CALL ED_DestroyContState   (  x_ED_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL ED_DestroyDiscState   ( xd_ED_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL ED_DestroyConstrState (  z_ED_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+                                                     
+      CALL AD_DestroyContState   (  x_AD_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL AD_DestroyDiscState   ( xd_AD_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL AD_DestroyConstrState (  z_AD_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+                                                     
+      CALL SrvD_DestroyContState   (  x_SrvD_pred,   ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL SrvD_DestroyDiscState   ( xd_SrvD_pred,   ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL SrvD_DestroyConstrState (  z_SrvD_pred,   ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      
+      CALL HydroDyn_DestroyContState   (  x_HD_pred, ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL HydroDyn_DestroyDiscState   ( xd_HD_pred, ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL HydroDyn_DestroyConstrState (  z_HD_pred, ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      
+      CALL SD_DestroyContState   (  x_SD_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL SD_DestroyDiscState   ( xd_SD_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL SD_DestroyConstrState (  z_SD_pred,       ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      
+      CALL MAP_DestroyContState   (  x_MAP_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL MAP_DestroyDiscState   ( xd_MAP_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL MAP_DestroyConstrState (  z_MAP_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       
       !............................................................................................................................
       ! Set exit error code if there was an error;

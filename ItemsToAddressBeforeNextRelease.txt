@@ -32,6 +32,7 @@ FAST
 * update makefile
 * update notice.txt
 * modify OutListParameters.xlsx
+* add registry dependency in project (if NWTC Library or HydroDyn_Output_include(?) change, basically everything that needs the -I)
 
 
 -------------------------------------------------

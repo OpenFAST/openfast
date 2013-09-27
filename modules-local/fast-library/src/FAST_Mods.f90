@@ -104,6 +104,7 @@ MODULE FAST_Types
       REAL(DbKi)                :: TMax                                             ! Total run time (s)
       INTEGER(IntKi)            :: InterpOrder                                      ! Interpolation order {0,1,2} (-)
       INTEGER(IntKi)            :: NumCrctn                                         ! Number of correction iterations
+      INTEGER(IntKi)            :: KMax                                             ! Maximum number of input-output-solve iterations (KMax >= 1)
       
          ! Feature switches:
 
