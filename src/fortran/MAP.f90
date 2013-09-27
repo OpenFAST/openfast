@@ -345,13 +345,13 @@ CONTAINS
     CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
     ! Local variables
-    INTEGER( KIND=C_INT )                           :: status_from_MAP = 0
-    CHARACTER( KIND=C_CHAR,LEN=1024 )               :: message_from_MAP = ""//CHAR(0)
-    !TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( 'MAP', 'date', 'huh' )
-    INTEGER(IntKi)                                  :: i = 0
+    INTEGER( KIND=C_INT )                           :: status_from_MAP 
+    CHARACTER( KIND=C_CHAR,LEN=1024 )               :: message_from_MAP 
+    !TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( 'MAP', 'version', 'date' )
+    INTEGER(IntKi)                                  :: i 
     REAL(ReKi)                                      :: Pos(3)
-    INTEGER(IntKi)                                  :: NumNodes = 0
-    INTEGER(C_INT)                                  :: numHeaderStr=0
+    INTEGER(IntKi)                                  :: NumNodes 
+    INTEGER(C_INT)                                  :: numHeaderStr
     CHARACTER(16),DIMENSION(:), ALLOCATABLE, TARGET :: strHdrArray ! Hopefully none of the headers are more than 16 characters long
     TYPE(C_PTR), DIMENSION(:), ALLOCATABLE          :: strHdrPtrs
     CHARACTER(15),DIMENSION(:), ALLOCATABLE, TARGET :: strUntArray ! Hopefully none of the headers are more than 10 characters long
@@ -359,7 +359,15 @@ CONTAINS
 
     ErrStat = ErrID_None
     ErrMsg  = "" 
+! @marco: when you initialize values in their declaration statements, Fortran gives them the SAVE attribute (which means they don't get reinitialized on subsequent calls to the routine)
+!  C programmers complain about this. :)
 
+    status_from_MAP = 0
+    message_from_MAP = ""//CHAR(0)
+    i = 0
+    NumNodes = 0
+    numHeaderStr = 0
+    
     ! Initialize the NWTC Subroutine Library
     CALL NWTC_Init( )   
     
@@ -635,6 +643,7 @@ CONTAINS
     CHARACTER(*)                    , INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
     ! Local variables
+!@marco: see my comment in the init routine about initializing variables in their declaration statements
     INTEGER(KIND=C_INT)                             :: status_from_MAP = 0
     CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP = ""//CHAR(0)
     REAL(KIND=C_FLOAT)                              :: time = 0
@@ -775,7 +784,7 @@ CONTAINS
     ! Local variables
     INTEGER(KIND=C_INT)                             :: status_from_MAP
     CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP = ""//CHAR(0)
-    REAL(KIND=C_FLOAT)                              :: time = 0
+    REAL(KIND=C_FLOAT)                              :: time 
 
     time = t
 
