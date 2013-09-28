@@ -178,7 +178,7 @@ REAL(DbKi)                            :: TiLstPrn                               
 REAL(DbKi)                            :: dt_global                               ! we're limiting our simulation to lock-step time steps for now
 REAL(DbKi)                            :: t_global                                ! Current simulation time
 REAL(DbKi)                            :: t_global_next                           ! next simulation time (t_global + p_FAST%dt)
-REAL(DbKi), PARAMETER                 :: t_initial = 0.0                         ! Initial time
+REAL(DbKi), PARAMETER                 :: t_initial = 0.0_DbKi                    ! Initial time
 REAL(DbKi)                            :: OutTime                                 ! Used to determine if output should be generated at this simulation time
 
 REAL(ReKi)                            :: PrevClockTime                           ! Clock time at start of simulation in seconds
@@ -216,7 +216,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    Step          = 0                                                    ! The first step counter
 
    AbortErrLev   = ErrID_Fatal                                          ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
-
+   t_global      = t_initial - 20.                                      ! initialize this to a number < t_initial for error message in ProgAbort
    
       ! ... Initialize NWTC Library (open console, set pi constants) ...
    CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
@@ -486,13 +486,9 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    Step       = 0
    n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
-!bjj FIX >>>>>
-   IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN 
-      CALL ED_CalcOutput( t_global, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED,  ED_Output(1), ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from ED_CalcOutput (initialization): '//NewLine//ErrMsg )
-   END IF
-!end bjj FIX <<<<
-
+!ED_Output(1)%PlatformPtMesh%TranslationAcc = 0.0_ReKi
+!ED_Output(1)%PlatformPtMesh%RotationAcc    = 0.0_ReKi
+  
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
       
@@ -504,7 +500,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                         , x_MAP , xd_MAP , z_MAP  &
                         , x_AD  , xd_AD  , z_AD   &
                         )           
-   
+      
    !...............
    ! Copy values of these initial guesses for interpolation/extrapolation and 
    ! initialize predicted states for j_pc loop (use MESH_NEWCOPY here so we can use MESH_UPDATE copy later)
@@ -1065,7 +1061,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    !...............................................................................................................................
    !  Write simulation times and stop
    !...............................................................................................................................
-        
+   n_t_global =  n_TMax_m1 + 1    
    CALL ExitThisProgram( Error=.FALSE. )
 
 
@@ -1173,61 +1169,38 @@ CONTAINS
       TYPE(AD_ContinuousStateType)          :: x_AD_this                               ! These continuous states (either actual or predicted)
       TYPE(AD_DiscreteStateType)            :: xd_AD_this                              ! These discrete states (either actual or predicted)
       TYPE(AD_ConstraintStateType)          :: z_AD_this                               ! These constraint states (either actual or predicted)
-
+            
       
-      
+         
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
+      ! If you are doing this option at the beginning as well as the end (after option 2), you must initialize the values of
+      ! y_MAP,
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      
-     
-      IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN
          
-!bjj: We want to use this >>>>>>         
-         !CALL ED_HD_InputOutputSolve(  this_time, p_FAST &
-         !                              , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-         !                              , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-         !                              , MeshMapData , ErrStat, ErrMsg )         
-         !   CALL CheckError( ErrStat, ErrMsg  )
-         !   
-!bjj: instead of this >>>>>>                        
-      CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
          
-         ! note: HD_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
-      CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-
-      CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from HydroDyn_CalcOutput: '//NewLine//ErrMsg  )
-
-         
-!>>>>>>>>> bjj: move/fix this later
-   !-----------------------------------------------------------------------------------------------------------------------------
-   !  For debug purposes, write out the current timestep's inputs and outputs for HydroDyn
-   !
-   ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-
-        CALL Write_HD_Debug(HD_DebugUn, t_global, HD_Input(1), y_HD, ED_Input(1), OtherSt_HD, MeshMapData, ErrStat, ErrMsg)
-   !
-   !-----------------------------------------------------------------------------------------------------------------------------
-!<<<<<<< bjj: end move/fix later
-!<<<<< bjj: end of section 
-                      
-      ELSE
+      !IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN
+      !   
+      !   CALL ED_HD_InputOutputSolve(  this_time, p_FAST &
+      !                                 , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+      !                                 , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+      !                                 , y_MAP, MAP_Input(1),MeshMapData , ErrStat, ErrMsg )         
+      !      CALL CheckError( ErrStat, ErrMsg  )
+      !   
+      !ELSE
          
          CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )
-         
-      END IF
-                         
+            CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
+            
+      !END IF
+                  
          
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 2: Solve for inputs based only on the current outputs. This is much faster than option 1 when the coupled modules
       !           do not have direct feedthrough.
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-                           
+            
       IF ( p_FAST%CompAero ) THEN
          CALL AD_InputSolve( AD_Input(1), ED_Output(1), ErrStat, ErrMsg )
          
@@ -1242,6 +1215,16 @@ CONTAINS
          IfW_WriteOutput = y_AD%IfW_Outputs%WriteOutput
 !<<<         
 
+      END IF
+      
+      
+      IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve)
+         CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+            
+         CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
+            
       END IF
 
       IF ( p_FAST%CompServo ) THEN
@@ -1305,13 +1288,30 @@ CONTAINS
       ! note: HD_InputSolve and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
       CALL ED_InputSolve( p_FAST, ED_Input(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
+
+         
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
+      !           modules coupled together
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+         
+         
+      IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN
+         
+         CALL ED_HD_InputOutputSolve(  this_time, p_FAST &
+                                       , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+                                       , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+                                       , y_MAP, MAP_Input(1), MeshMapData , ErrStat, ErrMsg )         
+            CALL CheckError( ErrStat, ErrMsg  )
+         
+      END IF
             
-   
       !.....................................................................
       ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
       !.....................................................................              
          
-      CALL ResetRemapFlags()
+      CALL ResetRemapFlags()         
+         
                         
    END SUBROUTINE CalcOutputs_And_SolveForInputs  
    !...............................................................................................................................
@@ -1328,15 +1328,6 @@ CONTAINS
       INTEGER(IntKi)                       :: ErrStat2                                    ! Error status
       CHARACTER(LEN(ErrMsg))               :: ErrMsg2                                     ! Error message
 
-      
-   !-----------------------------------------------------------------------------------------------------------------------------
-   !  For debug purposes, close an output file for writing the current timestep's inputs and outputs for HydroDyn
-   !
-   ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-
-        IF (HD_DebugUn > 0) CLOSE( HD_DebugUn )
-   !
-   !-----------------------------------------------------------------------------------------------------------------------------
       
       
       !...............................................................................................................................
@@ -1491,6 +1482,16 @@ CONTAINS
       
       ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
+         
+   !-----------------------------------------------------------------------------------------------------------------------------
+   !  For debug purposes, close an output file for writing the current timestep's inputs and outputs for HydroDyn
+   !
+   ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
+
+        IF (HD_DebugUn > 0) CLOSE( HD_DebugUn )
+   !
+   !-----------------------------------------------------------------------------------------------------------------------------               
+         
          CALL HydroDyn_DestroyInput( u_HD, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
@@ -1574,8 +1575,19 @@ CONTAINS
       !............................................................................................................................
       ! Set exit error code if there was an error;
       !............................................................................................................................
-      IF (Error) CALL ProgAbort( ' Simulation error level: '//TRIM(GetErrStr(ErrLev)), &   !This assumes PRESENT(ErrID) is .TRUE.
-                                  TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+      IF (Error) THEN !This assumes PRESENT(ErrID) is also .TRUE. :
+         IF ( t_global < t_initial ) THEN
+            ErrMsg = 'at initialization'
+         ELSEIF ( n_t_global > n_TMax_m1 ) THEN
+            ErrMsg = 'after computing the solution'
+         ELSE            
+            ErrMsg = 'at simulation time '//TRIM(Num2LStr(t_global))//' of '//TRIM(Num2LStr(p_FAST%TMax))//' seconds'
+         END IF
+                    
+         
+         CALL ProgAbort( 'FAST encountered an error '//TRIM(ErrMsg)//'.'//NewLine//' Simulation error level: '&
+                         //TRIM(GetErrStr(ErrLev)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+      END IF
       
       !............................................................................................................................
       !  Write simulation times and stop
