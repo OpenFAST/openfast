@@ -69,6 +69,7 @@ TYPE(ED_InputType), ALLOCATABLE       :: ED_Input(:)                            
 REAL(DbKi),         ALLOCATABLE       :: ED_InputTimes(:)                        ! Array of times associated with ED_Input
 TYPE(ED_OutputType),ALLOCATABLE       :: ED_Output(:)                            ! Array of outputs associated with ED_OutputTimes = ED_InputTimes
 
+TYPE(MeshType)                        :: u_ED_Without_SD_HD                      ! For the ED coupling to SD, we save the inputs on the PlatformPtMesh that aren't contributed by SubDyn or HydroDyn
 
    ! Data for the ServoDyn module:
 TYPE(SrvD_InitInputType)              :: InitInData_SrvD                         ! Initialization input data
@@ -258,6 +259,9 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in ElastoDyn must be the same as the value of DT in FAST.")         
    
+   CALL MeshCopy( ED_Input(1)%PlatformPtMesh, u_ED_Without_SD_HD, MESH_NEWCOPY, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, 'Message from MeshCopy (u_ED_Without_SD_HD): '//NewLine//ErrMsg )
+   
    ! ........................
    ! initialize ServoDyn 
    ! ........................
@@ -403,50 +407,9 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! Initialize mesh-mapping data
    ! -------------------------------------------------------------------------
 
-   IF ( p_FAST%CompHydro ) THEN
-      IF ( y_HD%WAMIT%Mesh%Initialized  ) THEN
-
-            ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
-         CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
-         CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
-
-         IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
-
-               ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
-            CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
-            CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
-
-               ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
-            CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
-            CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
-
-         END IF
-
-      ELSE IF ( y_HD%Morison%LumpedMesh%Initialized ) THEN
-
-            ! HydroDyn Morison point mesh to SubDyn point mesh
-            ! HydroDyn Morison line mesh to SubDyn point mesh
-
-      END IF
-   END IF !HydroDyn
-
-   IF ( p_FAST%CompMap ) THEN
-      
-         ! MAP point mesh to/from ElastoDyn point mesh
-      CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
-      CALL AllocMapping( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
-      
-   END IF
+   CALL InitModuleMappings()
    
-
+   
    !...............................................................................................................................
    ! Destroy initializion data
    ! Note that we're ignoring any errors here (we'll print them when we try to destroy at program exit)
@@ -486,13 +449,14 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    Step       = 0
    n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
-!ED_Output(1)%PlatformPtMesh%TranslationAcc = 0.0_ReKi
-!ED_Output(1)%PlatformPtMesh%RotationAcc    = 0.0_ReKi
+      ! we initialize these because we might need them if Option 1 is called at the beginning of CalcOutputs_And_SolveForInputs:
+   ED_Output(1)%PlatformPtMesh%TranslationAcc     = 0.0_ReKi
+   ED_Output(1)%PlatformPtMesh%RotationAcc        = 0.0_ReKi
   
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
       
-   CALL CalcOutputs_And_SolveForInputs( t_global &
+   CALL CalcOutputs_And_SolveForInputs( t_global, .TRUE. &
                         , x_ED  , xd_ED  , z_ED   &
                         , x_SrvD, xd_SrvD, z_SrvD &
                         , x_HD  , xd_HD  , z_HD   &
@@ -671,20 +635,15 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          CALL CheckError( ErrStat, 'Message from MAP_CopyConstrState (init): '//NewLine//ErrMsg )
 
    END IF ! CompMAP
-
-      
-!BJJ: TODO:      
-      ! copy the inputs into the history arrays (don't just use their guesses...)
-      ! copy the ED output array into the history array
-      ! check y_ED so that it's using the correct values here... maybe we need ED_Output(1)? or maybe it doesn't matter if there are sibling meshes? or not?
-      
-
-      
+                 
       
       ! ServoDyn: copy current outputs to store as previous outputs for next step
-      CALL SrvD_CopyOutput ( y_SrvD, y_SrvD_prev, MESH_UPDATECOPY, Errstat, ErrMsg)
+      ! note that this is a violation of the framework as this is basically a state, but it's only used for the
+      ! GH-Bladed DLL, which itself violates the framework....
+   CALL SrvD_CopyOutput ( y_SrvD, y_SrvD_prev, MESH_UPDATECOPY, Errstat, ErrMsg)
       
-      ! we should probably print out the values here, too.
+!BJJ: TODO:      
+      ! Print out the outputs values at n_t_global = 0:
       
    !...............................................................................................................................
    ! Time Stepping:
@@ -944,7 +903,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       ! Step 3: Input-Output Solve      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                
-            CALL CalcOutputs_And_SolveForInputs( t_global_next &
+            CALL CalcOutputs_And_SolveForInputs( t_global_next, .FALSE. &
                       , x_ED_pred  , xd_ED_pred  , z_ED_pred   &
                       , x_SrvD_pred, xd_SrvD_pred, z_SrvD_pred &
                       , x_HD_pred  , xd_HD_pred  , z_HD_pred   &
@@ -1067,6 +1026,77 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
 CONTAINS
    !...............................................................................................................................
+   SUBROUTINE InitModuleMappings()
+   ! This routine initializes all of the mapping data structures needed between the various modules.
+   !...............................................................................................................................
+
+   
+   IF ( p_FAST%CompHydro ) THEN ! HydroDyn-{ElastoDyn or SubDyn}
+      
+      IF ( .NOT. p_FAST%CompSub ) THEN ! these get mapped to ElastoDyn
+      
+         IF ( y_HD%WAMIT%Mesh%Committed  ) THEN
+
+               ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
+            CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
+            CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
+
+         END IF            
+            
+         IF ( y_HD%Morison%LumpedMesh%Committed ) THEN
+
+                  ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
+               CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
+               CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
+
+         END IF               
+               
+         IF ( y_HD%Morison%DistribMesh%Committed ) THEN
+                  ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
+               CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
+               CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
+
+         END IF
+
+      ELSE ! these get mapped to SubDyn
+
+            ! HydroDyn Morison point mesh to SubDyn point mesh
+            ! HydroDyn Morison line mesh to SubDyn point mesh
+
+      END IF ! HydroDyn-SubDyn
+      
+   END IF !HydroDyn-{ElastoDyn or SubDyn}
+
+   IF ( p_FAST%CompMap ) THEN
+      
+         ! MAP point mesh to/from ElastoDyn point mesh
+      CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
+      CALL AllocMapping( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
+      
+   END IF   ! MAP-ElastoDyn
+   
+   
+   IF ( p_FAST%CompSub ) THEN
+   
+         ! SubDyn transition piece point mesh to/from ElastoDyn point mesh
+      CALL AllocMapping( y_SD%Y1mesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AllocMapping SD_TP_2_ED_P: '//NewLine//ErrMsg )
+      CALL AllocMapping( ED_Output(1)%PlatformPtMesh, SD_Input(1)%TPMesh,  MeshMapData%ED_P_2_SD_TP, ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_SD_TP: '//NewLine//ErrMsg )      
+   
+   END IF ! SubDyn-ElastoDyn
+
+
+   END SUBROUTINE InitModuleMappings
+   !...............................................................................................................................
    SUBROUTINE ResetRemapFlags()
    ! This routine resets the remap flags on all of the meshes
    !...............................................................................................................................
@@ -1118,6 +1148,10 @@ CONTAINS
 
       ! SubDyn
       IF ( p_FAST%CompSub ) THEN
+         IF (SD_Input(1)%TPMesh%Committed) THEN
+            SD_Input(1)%TPMesh%RemapFlag = .FALSE.
+                   y_SD%Y1Mesh%RemapFlag = .FALSE.
+         END IF         
       END IF
       
       
@@ -1131,7 +1165,7 @@ CONTAINS
    
    END SUBROUTINE ResetRemapFlags  
    !...............................................................................................................................
-   SUBROUTINE CalcOutputs_And_SolveForInputs( this_time &
+   SUBROUTINE CalcOutputs_And_SolveForInputs( this_time, calcJacobian &
                                             , x_ED_this  , xd_ED_this  , z_ED_this   &
                                             , x_SrvD_this, xd_SrvD_this, z_SrvD_this &
                                             , x_HD_this  , xd_HD_this  , z_HD_this   &
@@ -1144,33 +1178,33 @@ CONTAINS
    ! *** Note that modules that do not have direct feedthrough should be called first. ***
    ! also note that this routine uses variables from the main routine (not declared as arguments)
    !...............................................................................................................................
-      REAL(DbKi)                            :: this_time                               ! The current simulation time (actual or time of prediction)
-      !ElastoDyn:
-      TYPE(ED_ContinuousStateType)          :: x_ED_this                               ! These continuous states (either actual or predicted)
-      TYPE(ED_DiscreteStateType)            :: xd_ED_this                              ! These discrete states (either actual or predicted)
-      TYPE(ED_ConstraintStateType)          :: z_ED_this                               ! These constraint states (either actual or predicted)
-      !ServoDyn:
-      TYPE(SrvD_ContinuousStateType)        :: x_SrvD_this                             ! These continuous states (either actual or predicted)
-      TYPE(SrvD_DiscreteStateType)          :: xd_SrvD_this                            ! These discrete states (either actual or predicted)
-      TYPE(SrvD_ConstraintStateType)        :: z_SrvD_this                             ! These constraint states (either actual or predicted)
-      !HydroDyn:
-      TYPE(HydroDyn_ContinuousStateType)    :: x_HD_this                               ! These continuous states (either actual or predicted)
-      TYPE(HydroDyn_DiscreteStateType)      :: xd_HD_this                              ! These discrete states (either actual or predicted)
-      TYPE(HydroDyn_ConstraintStateType)    :: z_HD_this                               ! These constraint states (either actual or predicted)
-      !SubDyn:
-      TYPE(SD_ContinuousStateType)          :: x_SD_this                               ! These continuous states (either actual or predicted)
-      TYPE(SD_DiscreteStateType)            :: xd_SD_this                              ! These discrete states (either actual or predicted)
-      TYPE(SD_ConstraintStateType)          :: z_SD_this                               ! These constraint states (either actual or predicted)
-      !MAP:      
-      TYPE(MAP_ContinuousStateType)         :: x_MAP_this                              ! These continuous states (either actual or predicted)
-      TYPE(MAP_DiscreteStateType)           :: xd_MAP_this                             ! These discrete states (either actual or predicted)
-      TYPE(MAP_ConstraintStateType)         :: z_MAP_this                              ! These constraint states (either actual or predicted)
-      !AD:      
-      TYPE(AD_ContinuousStateType)          :: x_AD_this                               ! These continuous states (either actual or predicted)
-      TYPE(AD_DiscreteStateType)            :: xd_AD_this                              ! These discrete states (either actual or predicted)
-      TYPE(AD_ConstraintStateType)          :: z_AD_this                               ! These constraint states (either actual or predicted)
-            
-      
+      REAL(DbKi)                        , intent(in   ) :: this_time                          ! The current simulation time (actual or time of prediction)
+      LOGICAL                           , intent(in   ) :: calcJacobian                       ! Should we calculate Jacobians in Option 1?
+      !ElastoDyn:                                     
+      TYPE(ED_ContinuousStateType)      , intent(in   ) :: x_ED_this                          ! These continuous states (either actual or predicted)
+      TYPE(ED_DiscreteStateType)        , intent(in   ) :: xd_ED_this                         ! These discrete states (either actual or predicted)
+      TYPE(ED_ConstraintStateType)      , intent(in   ) :: z_ED_this                          ! These constraint states (either actual or predicted)
+      !ServoDyn:                                      
+      TYPE(SrvD_ContinuousStateType)    , intent(in   ) :: x_SrvD_this                        ! These continuous states (either actual or predicted)
+      TYPE(SrvD_DiscreteStateType)      , intent(in   ) :: xd_SrvD_this                       ! These discrete states (either actual or predicted)
+      TYPE(SrvD_ConstraintStateType)    , intent(in   ) :: z_SrvD_this                        ! These constraint states (either actual or predicted)
+      !HydroDyn:                                      
+      TYPE(HydroDyn_ContinuousStateType), intent(in   ) :: x_HD_this                          ! These continuous states (either actual or predicted)
+      TYPE(HydroDyn_DiscreteStateType)  , intent(in   ) :: xd_HD_this                         ! These discrete states (either actual or predicted)
+      TYPE(HydroDyn_ConstraintStateType), intent(in   ) :: z_HD_this                          ! These constraint states (either actual or predicted)
+      !SubDyn:                                        
+      TYPE(SD_ContinuousStateType)      , intent(in   ) :: x_SD_this                          ! These continuous states (either actual or predicted)
+      TYPE(SD_DiscreteStateType)        , intent(in   ) :: xd_SD_this                         ! These discrete states (either actual or predicted)
+      TYPE(SD_ConstraintStateType)      , intent(in   ) :: z_SD_this                          ! These constraint states (either actual or predicted)
+      !MAP: (because of some copying in the Fortran-C interoperability, these are intent INOUT) 
+      TYPE(MAP_ContinuousStateType)     , intent(inout) :: x_MAP_this                         ! These continuous states (either actual or predicted) 
+      TYPE(MAP_DiscreteStateType)       , intent(inout) :: xd_MAP_this                        ! These discrete states (either actual or predicted)
+      TYPE(MAP_ConstraintStateType)     , intent(inout) :: z_MAP_this                         ! These constraint states (either actual or predicted)
+      !AD:                                
+      TYPE(AD_ContinuousStateType)      , intent(in   ) :: x_AD_this                          ! These continuous states (either actual or predicted)
+      TYPE(AD_DiscreteStateType)        , intent(in   ) :: xd_AD_this                         ! These discrete states (either actual or predicted)
+      TYPE(AD_ConstraintStateType)      , intent(in   ) :: z_AD_this                          ! These constraint states (either actual or predicted)
+                  
          
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
@@ -1180,14 +1214,28 @@ CONTAINS
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          
          
-      !IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN
+      
+      !IF ( p_FAST%CompHydro .OR. p_FAST%CompSub ) THEN
+      !
+      !   IF ( .NOT. p_FAST%CompSub ) THEN
       !   
-      !   CALL ED_HD_InputOutputSolve(  this_time, p_FAST &
+      !      CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
       !                                 , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
       !                                 , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-      !                                 , y_MAP, MAP_Input(1),MeshMapData , ErrStat, ErrMsg )         
-      !      CALL CheckError( ErrStat, ErrMsg  )
+      !                                 , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+      !         CALL CheckError( ErrStat, ErrMsg  )
+      !      
+      !   ELSEIF ( .NOT. p_FAST%CompHydro ) THEN
       !   
+      !      CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+      !                                 , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+      !                                 , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
+      !                                 , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+      !         CALL CheckError( ErrStat, ErrMsg  )
+      !
+      !            
+      !   ELSE ! Both enabled... (not currently allowed)
+      !   END IF      
       !ELSE
          
          CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
@@ -1218,15 +1266,16 @@ CONTAINS
       END IF
       
       
-      IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve)
-         CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-            
-         CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
-            
-      END IF
-
+      !IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve)
+      !   CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+      !      CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+      !      
+      !   CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
+      !      CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
+      !      
+      !END IF
+      
+      
       IF ( p_FAST%CompServo ) THEN
          
             ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
@@ -1252,6 +1301,7 @@ CONTAINS
             CALL CheckError( ErrStat, 'Message from SD_CalcOutput: '//NewLine//ErrMsg  )
                         
       END IF
+      
       
       IF ( p_FAST%CompMAP ) THEN
          
@@ -1286,7 +1336,9 @@ CONTAINS
       
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
       ! note: HD_InputSolve and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
-      CALL ED_InputSolve( p_FAST, ED_Input(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), MeshMapData, ErrStat, ErrMsg )
+      ! note: u_ED_Without_SD_HD must have the same Position, RefOrientation, and Elements as ED_Input(1)%PlatformPtMesh [which we need to do differently if RemapFlag changes during simulation]
+      CALL ED_InputSolve( p_FAST, ED_Input(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), y_SD, SD_Input(1), &
+                             MeshMapData, u_ED_Without_SD_HD, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
 
          
@@ -1295,17 +1347,32 @@ CONTAINS
       !           modules coupled together
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          
+      
+      
+      IF ( p_FAST%CompHydro .OR. p_FAST%CompSub ) THEN
+      
+         IF ( .NOT. p_FAST%CompSub ) THEN
          
-      IF ( p_FAST%CompHydro .AND. .NOT. p_FAST%CompSub ) THEN
-         
-         CALL ED_HD_InputOutputSolve(  this_time, p_FAST &
-                                       , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-                                       , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-                                       , y_MAP, MAP_Input(1), MeshMapData , ErrStat, ErrMsg )         
-            CALL CheckError( ErrStat, ErrMsg  )
-         
-      END IF
+            CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+                                          , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+                                          , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+                                          , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+               CALL CheckError( ErrStat, ErrMsg  )
             
+         ELSEIF ( .NOT. p_FAST%CompHydro ) THEN
+         
+            CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+                                       , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+                                       , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
+                                       , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+               CALL CheckError( ErrStat, ErrMsg  )
+      
+                  
+         !ELSE ! Both enabled... (not currently allowed)
+         END IF      
+         
+      END IF ! HD and/or SD coupled to FAST
+                              
       !.....................................................................
       ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
       !.....................................................................              
@@ -1407,7 +1474,11 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%ED_P_2_MAP_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL MeshMapDestroy( MeshMapData%MAP_P_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
             
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_SD_TP,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL MeshMapDestroy( MeshMapData%SD_TP_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))                  
       
+      
+      CALL MeshDestroy(    u_ED_Without_SD_HD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       ! -------------------------------------------------------------------------
       ! variables for ExtrapInterp:
       ! -------------------------------------------------------------------------

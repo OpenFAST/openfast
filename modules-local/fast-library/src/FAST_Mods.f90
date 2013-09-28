@@ -37,6 +37,8 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: Module_MAP  = 7
    INTEGER(IntKi), PARAMETER :: NumModules  = 7
    
+   INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
+   INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
                                 ProgDesc( 'FAST', 'v8.03.01a-bjj', '20-Sep-2013' ) ! The version number of this module
@@ -94,6 +96,9 @@ MODULE FAST_Types
       TYPE(MeshMapType)                 :: ED_P_2_MAP_P                             ! Map ElastoDyn PlatformPtMesh to MAP point mesh
       TYPE(MeshMapType)                 :: MAP_P_2_ED_P                             ! Map MAP point mesh to ElastoDyn PlatformPtMesh
             
+      TYPE(MeshMapType)                 :: ED_P_2_SD_TP                             ! Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh
+      TYPE(MeshMapType)                 :: SD_TP_2_ED_P                             ! Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh
+                  
    END TYPE FAST_ModuleMapType
 
 
@@ -144,8 +149,12 @@ MODULE FAST_Types
       LOGICAL                   :: ModuleInitialized(NumModules)                   ! An array determining if the module has been initialized
       
          ! other parameters we may/may not need
-   CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
+      CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
 
+         ! Stored Jacobians:
+      REAL(ReKi)                :: Jac_ED_HD (SizeJac_ED_HD , SizeJac_ED_HD)       ! Stored Jacobian in ED_HD_InputOutputSolve
+      REAL(ReKi)                :: Jac_ED_SD (SizeJac_ED_SD , SizeJac_ED_SD)       ! Stored Jacobian in ED_SD_InputOutputSolve
+   
    END TYPE FAST_ParameterType
 
 
