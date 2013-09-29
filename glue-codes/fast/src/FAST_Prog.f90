@@ -180,7 +180,6 @@ REAL(DbKi)                            :: dt_global                              
 REAL(DbKi)                            :: t_global                                ! Current simulation time
 REAL(DbKi)                            :: t_global_next                           ! next simulation time (t_global + p_FAST%dt)
 REAL(DbKi), PARAMETER                 :: t_initial = 0.0_DbKi                    ! Initial time
-REAL(DbKi)                            :: OutTime                                 ! Used to determine if output should be generated at this simulation time
 
 REAL(ReKi)                            :: PrevClockTime                           ! Clock time at start of simulation in seconds
 REAL                                  :: UsrTime1                                ! User CPU time for simulation initialization
@@ -465,6 +464,12 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                         , x_AD  , xd_AD  , z_AD   &
                         )           
       
+      !----------------------------------------------------------------------------------------
+      ! Check to see if we should output data this time step:
+      !----------------------------------------------------------------------------------------
+
+      CALL WriteOutputToFile()   
+   
    !...............
    ! Copy values of these initial guesses for interpolation/extrapolation and 
    ! initialize predicted states for j_pc loop (use MESH_NEWCOPY here so we can use MESH_UPDATE copy later)
@@ -982,6 +987,38 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       ! Check to see if we should output data this time step:
       !----------------------------------------------------------------------------------------
 
+      CALL WriteOutputToFile()
+      
+      !----------------------------------------------------------------------------------------
+      ! Display simulation status every SttsTime-seconds:
+      !----------------------------------------------------------------------------------------
+
+      IF ( t_global - TiLstPrn >= p_FAST%SttsTime )  THEN !bjj: perhaps we should do this with integer math now...
+
+         CALL SimStatus( TiLstPrn, PrevClockTime, t_global, p_FAST%TMax )
+
+      ENDIF
+      
+            
+  END DO ! n_t_global
+  
+  
+   !...............................................................................................................................
+   !  Write simulation times and stop
+   !...............................................................................................................................
+   n_t_global =  n_TMax_m1 + 1               ! set this for the message in ProgAbort, if necessary
+   CALL ExitThisProgram( Error=.FALSE. )
+
+
+CONTAINS
+   !...............................................................................................................................
+   SUBROUTINE WriteOutputToFile()
+   ! This routine determines if it's time to write to the output files, and calls the routine to write to the files
+   ! with the output data. It should be called after all the output solves for a given time have been completed.
+   !...............................................................................................................................
+      REAL(DbKi)                      :: OutTime                                 ! Used to determine if output should be generated at this simulation time
+
+      
       IF ( t_global >= p_FAST%TStart )  THEN
 
             !bjj FIX THIS algorithm!!! this assumes dt_out is an integer multiple of dt; we will probably have to do some interpolation to get these outputs at the times we want them....
@@ -1002,29 +1039,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          END IF
 
       ENDIF
-
-      !----------------------------------------------------------------------------------------
-      ! Display simulation status every SttsTime-seconds:
-      !----------------------------------------------------------------------------------------
-
-      IF ( t_global - TiLstPrn >= p_FAST%SttsTime )  THEN !bjj: perhaps we should do this with integer math now...
-
-         CALL SimStatus( TiLstPrn, PrevClockTime, t_global, p_FAST%TMax )
-
-      ENDIF
-      
             
-  END DO ! n_t_global
-  
-  
-   !...............................................................................................................................
-   !  Write simulation times and stop
-   !...............................................................................................................................
-   n_t_global =  n_TMax_m1 + 1    
-   CALL ExitThisProgram( Error=.FALSE. )
-
-
-CONTAINS
+   END SUBROUTINE WriteOutputToFile      
    !...............................................................................................................................
    SUBROUTINE InitModuleMappings()
    ! This routine initializes all of the mapping data structures needed between the various modules.
