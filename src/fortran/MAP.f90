@@ -594,27 +594,27 @@ CONTAINS
     CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement , &            !          |
                     DestMesh = y%PtFairleadLoad         , &            !          |
                     CtrlCode = MESH_SIBLING             , &            !          |
+                    IOS      = COMPONENT_OUTPUT         , &            !          |
                     Force    = .TRUE.                   , &            !          |
                     ErrStat  = ErrStat                  , &            !          |
                     ErrMess  = ErrMsg                     )            !          |
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                !          |
                                                                        !          |
-    y%PtFairleadLoad%IOS = COMPONENT_OUTPUT                            !          |
     ! End mesh initialization                                          !   -------+
     !==============================================================================
 
 
     ! Give the program discription (name, version number, date)
     InitOut%MAP_version = InitOut%C_obj%MAP_version
-    I = INDEX(InitOut%MAP_version, C_NULL_CHAR ) - 1 
-    IF ( I > 0 ) InitOut%MAP_version = InitOut%MAP_version(1:I) 
+    CALL RemoveNullChar( InitOut%MAP_version )
 
     InitOut%MAP_date = InitOut%C_obj%MAP_date
-    I = INDEX( InitOut%MAP_date, C_NULL_CHAR ) - 1 
-    IF ( I > 0 ) InitOut%MAP_date = InitOut%MAP_date(1:I) 
+    CALL RemoveNullChar( InitOut%MAP_date )
 
     InitOut%Ver = ProgDesc('MAP',InitOut%MAP_version,InitOut%MAP_date)
 
+!@marco 9/28: add this when you add dt to your parameters:    
+    !p%dt = interval
 
     ! @bonnie : everything below this line is just garbage. It will probably be removed from the source when final merging between 
     !           FAST and MAP occurs. This is only being printed to see evidence of these 'features'. I guess this is what they are 
@@ -658,7 +658,9 @@ CONTAINS
     !CALL CheckError(ErrStat2,ErrMsg2)
     !IF ( ErrStat >= AbortErrLev ) RETURN
             
-    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
+!@marco 9/28: you should change this call to use t+p%dt instead of t:
+!    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t , ErrStat, ErrMsg)
     !CALL CheckError(ErrStat2,ErrMsg2)
     !IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -770,7 +772,7 @@ CONTAINS
 
   !==========   MAP_CalcOutput   ======     <---------------------------------------------------------------+  
   SUBROUTINE MAP_CalcOutput( t, u, p, x, xd, z, O, y, ErrStat, ErrMsg )    
-    REAL(DbKi)                      , INTENT(INOUT) :: t
+    REAL(DbKi)                      , INTENT(IN   ) :: t
     TYPE( MAP_InputType )           , INTENT(INOUT) :: u       ! INTENT(IN   )
     TYPE( MAP_ParameterType )       , INTENT(INOUT) :: p       ! INTENT(IN   )
     TYPE( MAP_ContinuousStateType ) , INTENT(INOUT) :: x       ! INTENT(IN   )
