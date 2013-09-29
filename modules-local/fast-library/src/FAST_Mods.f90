@@ -149,7 +149,7 @@ MODULE FAST_Types
       LOGICAL                   :: ModuleInitialized(NumModules)                   ! An array determining if the module has been initialized
       
          ! other parameters we may/may not need
-      CHARACTER(1024)              :: DirRoot                                         ! The absolute name of the root file (including the full path)
+      CHARACTER(1024)           :: DirRoot                                         ! The absolute name of the root file (including the full path)
 
          ! Stored Jacobians:
       REAL(ReKi)                :: Jac_ED_HD (SizeJac_ED_HD , SizeJac_ED_HD)       ! Stored Jacobian in ED_HD_InputOutputSolve

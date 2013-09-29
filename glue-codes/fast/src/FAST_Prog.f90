@@ -1282,14 +1282,14 @@ CONTAINS
       END IF
       
       
-      !IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve)
-      !   CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-      !      
-      !   CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
-      !      
-      !END IF
+      IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve)
+         CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+            
+         CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
+            
+      END IF
       
       
       IF ( p_FAST%CompServo ) THEN
