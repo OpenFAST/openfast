@@ -1275,11 +1275,10 @@ CONTAINS
             
       IF ( p_FAST%CompAero ) THEN
          CALL AD_InputSolve( AD_Input(1), ED_Output(1), ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AD_InputSolve: '//NewLine//ErrMsg  )
          
-         IF ( n_t_global >= 0 ) THEN !bjj: this version of AeroDyn cannot be called before ED_UpdateStates or it becomes unstable
-            CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AD_CalcOutput: '//NewLine//ErrMsg  )
-         END IF
+         CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AD_CalcOutput: '//NewLine//ErrMsg  )
  
 !bjj FIX THIS>>>>>         
             !InflowWind outputs
@@ -1290,7 +1289,8 @@ CONTAINS
       END IF
       
       
-      IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve)
+      IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve); however the code doesn't work without it.
+         
          CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
             
