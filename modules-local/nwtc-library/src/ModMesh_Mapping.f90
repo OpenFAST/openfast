@@ -1602,6 +1602,10 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    ! ------------------------------------------------------------------------------------------------------------------------------
    if (Src%FieldMask(MASKID_FORCE) .or. Src%FieldMask(MASKID_MOMENT)) then
 
+      ErrStat = ErrID_Fatal
+      ErrMsg  = ' Error in Transfer_Line2_to_Line2: Loads mapping is yet implemented.'
+      RETURN
+      
       !........................
       ! Check that the mapping data structure is the correct size:
       !........................
@@ -1780,8 +1784,8 @@ SUBROUTINE Transfer_Loads_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
          Scale_F_Denom = Scale_F_Denom + MeshMap%Temp_Lumped_Points_Dest%Force(:,i)
       END DO
 
-print *, 'Scale_F_Numer=',Scale_F
-print *, 'Scale_F_Denom=',Scale_F_Denom
+!print *, 'Scale_F_Numer=',Scale_F
+!print *, 'Scale_F_Denom=',Scale_F_Denom
       ! Divide numerator by denominator for Scale_F
       DO i=1,3
          IF ( .NOT. EqualRealNos( Scale_F_Denom(i), 0.0_ReKi ) ) THEN

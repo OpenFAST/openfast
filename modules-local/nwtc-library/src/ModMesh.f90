@@ -612,8 +612,8 @@ CONTAINS
             IF (ErrStat >= AbortErrLev) RETURN
             CALL Eye(BlankMesh%Orientation, ErrStat, ErrMess)  ! set this orientation to the identity matrix
             BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
-            ErrStat = ErrID_Info
-            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the Orientation field.'
+         !   ErrStat = ErrID_Info
+         !   ErrMess = ' MeshCreate: Meshes with motion fields must also contain the Orientation field.'
          END IF
 
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONDISP)) THEN
@@ -621,8 +621,8 @@ CONTAINS
             IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationDisp = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
-            ErrStat = ErrID_Info
-            ErrMess = ' MeshCreate: Meshes with motion fields must also contain the TranslationDisp field.'
+         !   ErrStat = ErrID_Info
+         !   ErrMess = ' MeshCreate: Meshes with motion fields must also contain the TranslationDisp field.'
          ENDIF
 
       END IF
