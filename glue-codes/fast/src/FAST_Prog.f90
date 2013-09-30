@@ -180,6 +180,7 @@ REAL(DbKi)                            :: dt_global                              
 REAL(DbKi)                            :: t_global                                ! Current simulation time
 REAL(DbKi)                            :: t_global_next                           ! next simulation time (t_global + p_FAST%dt)
 REAL(DbKi), PARAMETER                 :: t_initial = 0.0_DbKi                    ! Initial time
+REAL(DbKi)                            :: NextJacCalcTime                         ! Time between calculating Jacobians in the HD-ED and SD-ED simulations
 
 REAL(ReKi)                            :: PrevClockTime                           ! Clock time at start of simulation in seconds
 REAL                                  :: UsrTime1                                ! User CPU time for simulation initialization
@@ -207,16 +208,17 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
    y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
    p_FAST%ModuleInitialized = .FALSE.                                   ! no modules are initialized
-
+   
       ! Get the current time
    CALL DATE_AND_TIME ( Values=StrtTime )                               ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
-   PrevClockTime = TimeValues2Seconds( StrtTime )                       ! We'll use this time for the SimStats routine
-   TiLstPrn      = t_initial                                            ! The first value of t_global, used to write simulation stats to screen (s)
-   Step          = 0                                                    ! The first step counter
+   PrevClockTime   = TimeValues2Seconds( StrtTime )                     ! We'll use this time for the SimStats routine
+   TiLstPrn        = t_initial                                          ! The first value of t_global, used to write simulation stats to screen (s)
+   Step            = 0                                                  ! The first step counter
 
-   AbortErrLev   = ErrID_Fatal                                          ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
-   t_global      = t_initial - 20.                                      ! initialize this to a number < t_initial for error message in ProgAbort
+   AbortErrLev     = ErrID_Fatal                                        ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
+   t_global        = t_initial - 20.                                    ! initialize this to a number < t_initial for error message in ProgAbort
+   NextJacCalcTime = t_global  - 1.                                     ! We want to calculate the Jacobian on the first step (I just made it negative to ensure it is <= t_global
    
       ! ... Initialize NWTC Library (open console, set pi constants) ...
    CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
@@ -455,7 +457,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
       
-   CALL CalcOutputs_And_SolveForInputs( t_global, .TRUE. &
+   CALL CalcOutputs_And_SolveForInputs( t_global &
                         , x_ED  , xd_ED  , z_ED   &
                         , x_SrvD, xd_SrvD, z_SrvD &
                         , x_HD  , xd_HD  , z_HD   &
@@ -907,8 +909,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 3: Input-Output Solve      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-               
-            CALL CalcOutputs_And_SolveForInputs( t_global_next, .FALSE. &
+                                       
+            CALL CalcOutputs_And_SolveForInputs( t_global_next &
                       , x_ED_pred  , xd_ED_pred  , z_ED_pred   &
                       , x_SrvD_pred, xd_SrvD_pred, z_SrvD_pred &
                       , x_HD_pred  , xd_HD_pred  , z_HD_pred   &
@@ -1181,7 +1183,7 @@ CONTAINS
    
    END SUBROUTINE ResetRemapFlags  
    !...............................................................................................................................
-   SUBROUTINE CalcOutputs_And_SolveForInputs( this_time, calcJacobian &
+   SUBROUTINE CalcOutputs_And_SolveForInputs( this_time &
                                             , x_ED_this  , xd_ED_this  , z_ED_this   &
                                             , x_SrvD_this, xd_SrvD_this, z_SrvD_this &
                                             , x_HD_this  , xd_HD_this  , z_HD_this   &
@@ -1195,7 +1197,6 @@ CONTAINS
    ! also note that this routine uses variables from the main routine (not declared as arguments)
    !...............................................................................................................................
       REAL(DbKi)                        , intent(in   ) :: this_time                          ! The current simulation time (actual or time of prediction)
-      LOGICAL                           , intent(in   ) :: calcJacobian                       ! Should we calculate Jacobians in Option 1?
       !ElastoDyn:                                     
       TYPE(ED_ContinuousStateType)      , intent(in   ) :: x_ED_this                          ! These continuous states (either actual or predicted)
       TYPE(ED_DiscreteStateType)        , intent(in   ) :: xd_ED_this                         ! These discrete states (either actual or predicted)
@@ -1221,15 +1222,22 @@ CONTAINS
       TYPE(AD_DiscreteStateType)        , intent(in   ) :: xd_AD_this                         ! These discrete states (either actual or predicted)
       TYPE(AD_ConstraintStateType)      , intent(in   ) :: z_AD_this                          ! These constraint states (either actual or predicted)
                   
-         
+         ! Local variable:
+      LOGICAL                                           :: calcJacobian                       ! Should we calculate Jacobians in Option 1?
+      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
       ! If you are doing this option at the beginning as well as the end (after option 2), you must initialize the values of
       ! y_MAP,
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-         
-         
+
+      IF ( EqualRealNos( this_time, NextJacCalcTime ) .OR. NextJacCalcTime < this_time )  THEN
+         calcJacobian = .TRUE.
+         NextJacCalcTime = this_time + p_FAST%DT_UJac
+      ELSE
+          calcJacobian = .FALSE.
+      END IF
       
       !IF ( p_FAST%CompHydro .OR. p_FAST%CompSub ) THEN
       !

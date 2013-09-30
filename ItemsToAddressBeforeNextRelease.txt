@@ -24,17 +24,20 @@ FAST
 * remove greg's debug switches
 * CertTest: need updated input files from SubDyn so that the 5MW models work
 * Fix issues with P-C algorithm
-   (1) apparently I misinterpreted the need for the extrapolated outputs.
-   (2) Mike/Jason need to agree on path forward with direct feedthrough issues
 
 * get version numbers (maybe from SVN) on all the dependency source code
-* update matlab script for conversion to this version
+* update matlab script for conversion to this version [test it] -> add new line for AeroDyn
 * update change log
 * update makefile
 * update notice.txt
 * modify OutListParameters.xlsx
 * add registry dependency in project (if NWTC Library changes, basically everything that needs the -I)
 * renumber tests 20:22 to + 2 = 22:24
+* cert test scale factor needs units ()
+
+* Calculate HD and SD portions of the Jacobian once only
+* See if AD can be called on the first step now
+* bug in plotting results for TLP FairxTen tensions
 
 * document these issues:
   - you may have to decrease your time step
@@ -45,7 +48,9 @@ FAST
 -------------------------------------------------
 ElastoDyn
 -------------------------------------------------
-* need to discuss new meshes with Jason
+* Future work:
+  + need to discuss new meshes for AeroDyn (which AeroDyn doesn't really use).
+  + Fix blade root/tip as well as tower base/top so they are used.
 
 -------------------------------------------------
 ServoDyn

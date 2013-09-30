@@ -41,7 +41,7 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.03.01a-bjj', '20-Sep-2013' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.03.02a-bjj', '29-Sep-2013' ) ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
@@ -154,6 +154,8 @@ MODULE FAST_Types
          ! Stored Jacobians:
       REAL(ReKi)                :: Jac_ED_HD (SizeJac_ED_HD , SizeJac_ED_HD)       ! Stored Jacobian in ED_HD_InputOutputSolve
       REAL(ReKi)                :: Jac_ED_SD (SizeJac_ED_SD , SizeJac_ED_SD)       ! Stored Jacobian in ED_SD_InputOutputSolve
+      REAL(DbKi)                :: DT_UJac                                         ! Time between when we need to re-calculate these Jacobians
+      REAL(ReKi)                :: UJacSclFact                                     ! Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians
    
    END TYPE FAST_ParameterType
 
