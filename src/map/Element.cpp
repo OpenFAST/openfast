@@ -723,7 +723,7 @@ InitializeHAndV( const double &g       ,
   assert( lambda != 9999.9 );
 
   // set up temporary variables to store the estimate forces from Peyrot & Goulois
-  const double tempH = abs( omega*l / ( 2*lambda ) );
+  const double tempH = fabs( omega*l / ( 2*lambda ) );
   const double tempV = ( omega/2 ) * ( (h/tanh( lambda ) ) + Lu.value );
 
   // fairlead node forces
@@ -1904,7 +1904,7 @@ CheckMaximumLineLength( )
 
     if( this->Lu.value>=Lmax && this->GetOmitContactFlag()==false ) {  // true if the line is as long or longer than its
                                                                        // maximum possible value with seabed interaction        
-      throw MAP_ERROR_85;
+//      throw MAP_ERROR_85;
     };
   }
 }

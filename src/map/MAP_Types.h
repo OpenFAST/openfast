@@ -81,6 +81,7 @@
     double * FZ ;     int FZ_Len ;
     double * M ;     int M_Len ;
     double * B ;     int B_Len ;
+    double dt ;
   } MAP_ParameterType_t ;
   typedef struct MAP_InputType {
     void * object ;

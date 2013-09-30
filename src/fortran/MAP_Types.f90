@@ -7,18 +7,23 @@
 ! MAP_Types
 !.................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012 National Renewable Energy Laboratory
-!
-! This file is part of MAP.
-!
-! MAP is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-! published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-!
-! This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-! of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-!
-! You should have received a copy of the GNU General Public License along with ModuleName.
-! If not, see <http://www.gnu.org/licenses/>.
+
+!    Licensed to the Apache Software Foundation (ASF) under one
+!    or more contributor license agreements.  See the NOTICE file
+!    distributed with this work for additional information
+!    regarding copyright ownership.  The ASF licenses this file
+!    to you under the Apache License, Version 2.0 (the
+!    'License'); you may not use this file except in compliance
+!    with the License.  You may obtain a copy of the License at
+!    
+!    http://www.apache.org/licenses/LICENSE-2.0
+!    
+!    Unless required by applicable law or agreed to in writing,
+!    software distributed under the License is distributed on an
+!    'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+!    KIND, either express or implied.  See the License for the
+!    specific language governing permissions and limitations
+!    under the License.
 !
 !
 ! W A R N I N G : This file was automatically generated from the FAST registry.  Changes made to this file may be lost.
@@ -195,6 +200,7 @@ IMPLICIT NONE
     INTEGER(C_int) :: M_Len = 0 
     TYPE(C_ptr) :: B = C_NULL_PTR 
     INTEGER(C_int) :: B_Len = 0 
+    REAL(KIND=C_DOUBLE) :: dt 
   END TYPE MAP_ParameterType_C
   TYPE, PUBLIC :: MAP_ParameterType
     TYPE( c_ptr ) :: MAP_UserData = C_NULL_ptr
@@ -212,6 +218,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: FZ 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: M 
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: B 
+    REAL(DbKi)  :: dt 
   END TYPE MAP_ParameterType
 ! =======================
 ! =========  MAP_InputType  =======
@@ -2164,6 +2171,7 @@ ENDIF
        CALL MAP_F2C_Param_B( ParamData%C_obj, c_dbl_value, ParamData%C_obj%B_Len )
        DEALLOCATE( c_dbl_value )
     ENDIF
+    ParamData%C_obj%dt = ParamData%dt
  END SUBROUTINE MAP_F2C_CopyParam
 
   SUBROUTINE MAP_C2F_CopyParam( ParamData, ErrStat, ErrMsg )
@@ -2287,6 +2295,7 @@ ENDIF
           ParamData%B(i) = dbl_arr(i)
        END DO
     ENDIF
+    ParamData%dt = ParamData%C_obj%dt
  END SUBROUTINE MAP_C2F_CopyParam
 
  SUBROUTINE MAP_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -2364,6 +2373,7 @@ IF ( ALLOCATED( SrcParamData%B ) ) THEN
   IF (.NOT.ALLOCATED(DstParamData%B)) ALLOCATE(DstParamData%B(i1))
   DstParamData%B = SrcParamData%B
 ENDIF
+  DstParamData%dt = SrcParamData%dt
  END SUBROUTINE MAP_CopyParam
 
  SUBROUTINE MAP_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2436,6 +2446,7 @@ ENDIF
   Db_BufSz    = Db_BufSz    + SIZE( InData%FZ )  ! FZ 
   Db_BufSz    = Db_BufSz    + SIZE( InData%M )  ! M 
   Db_BufSz    = Db_BufSz    + SIZE( InData%B )  ! B 
+  Db_BufSz   = Db_BufSz   + 1  ! dt
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -2491,6 +2502,8 @@ ENDIF
     IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%B))-1 ) =  PACK(InData%B ,.TRUE.)
     Db_Xferred   = Db_Xferred   + SIZE(InData%B)
   ENDIF
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%dt )
+  Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE MAP_PackParam
 
  SUBROUTINE MAP_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2604,6 +2617,8 @@ ENDIF
   DEALLOCATE(mask1)
     Db_Xferred   = Db_Xferred   + SIZE(OutData%B)
   ENDIF
+  OutData%dt = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1

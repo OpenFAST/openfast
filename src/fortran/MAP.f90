@@ -1,8 +1,3 @@
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 MODULE MAP
   
   USE MAP_Types
@@ -345,12 +340,12 @@ CONTAINS
     CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
     ! Local variables
-    INTEGER( KIND=C_INT )                           :: status_from_MAP 
-    CHARACTER( KIND=C_CHAR,LEN=1024 )               :: message_from_MAP 
-    !TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( 'MAP', 'version', 'date' )
-    INTEGER(IntKi)                                  :: i 
+    INTEGER( KIND=C_INT )                           :: status_from_MAP
+    CHARACTER( KIND=C_CHAR,LEN=1024 )               :: message_from_MAP
+    !TYPE(ProgDesc)                                  :: MAP_Ver = ProgDesc( 'MAP', 'date', 'date' )
+    INTEGER(IntKi)                                  :: i
     REAL(ReKi)                                      :: Pos(3)
-    INTEGER(IntKi)                                  :: NumNodes 
+    INTEGER(IntKi)                                  :: NumNodes
     INTEGER(C_INT)                                  :: numHeaderStr
     CHARACTER(16),DIMENSION(:), ALLOCATABLE, TARGET :: strHdrArray ! Hopefully none of the headers are more than 16 characters long
     TYPE(C_PTR), DIMENSION(:), ALLOCATABLE          :: strHdrPtrs
@@ -361,13 +356,13 @@ CONTAINS
     ErrMsg  = "" 
 ! @marco: when you initialize values in their declaration statements, Fortran gives them the SAVE attribute (which means they don't get reinitialized on subsequent calls to the routine)
 !  C programmers complain about this. :)
-
+! @bonnie: noted. I wasn't aware of this. 
     status_from_MAP = 0
     message_from_MAP = ""//CHAR(0)
     i = 0
     NumNodes = 0
     numHeaderStr = 0
-    
+	
     ! Initialize the NWTC Subroutine Library
     CALL NWTC_Init( )   
     
@@ -398,7 +393,7 @@ CONTAINS
     InitInp%C_Obj%gravity         =  InitInp%gravity
     InitInp%C_Obj%sea_density     =  InitInp%sea_density
     InitInp%C_Obj%depth           = -InitInp%depth
-    InitInp%C_obj%coupled_to_FAST = .FALSE.  ! @bonnie : Maybe keep this a run-time option in the FAST input file? This tells MAP that it is coupled  
+    InitInp%C_obj%coupled_to_FAST = .TRUE.  ! @bonnie : Maybe keep this a run-time option in the FAST input file? This tells MAP that it is coupled  
                                             ! coupeld to FAST. The only implication right now it tells MAP not to create the default output file, 
                                             ! because FAST does this (ussually). 
 
@@ -467,9 +462,7 @@ CONTAINS
                                                                     !          | 
     DO i = 1, numHeaderStr                                          !          | 
        InitOut%WriteOutputHdr(i) = strHdrArray(i)                   !          | 
-       CALL RemoveNullChar( InitOut%WriteOutputHdr(i) )             !          |
        InitOut%WriteOutputUnt(i) = strUntArray(i)                   !          | 
-       CALL RemoveNullChar( InitOut%WriteOutputUnt(i) )             !          |
     END DO                                                          !          | 
                                                                     !          | 
     DEALLOCATE( strHdrArray )                                       !          | 
@@ -594,27 +587,32 @@ CONTAINS
     CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement , &            !          |
                     DestMesh = y%PtFairleadLoad         , &            !          |
                     CtrlCode = MESH_SIBLING             , &            !          |
-                    IOS      = COMPONENT_OUTPUT         , &            !          |
+! @bonnie: I must have an old version of NWTC_library because the compilers complains about this next line. 
+!                    IOS      = COMPONENT_OUTPUT         , &            !          |
                     Force    = .TRUE.                   , &            !          |
                     ErrStat  = ErrStat                  , &            !          |
                     ErrMess  = ErrMsg                     )            !          |
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                !          |
                                                                        !          |
+    y%PtFairleadLoad%IOS = COMPONENT_OUTPUT                            !          |
     ! End mesh initialization                                          !   -------+
     !==============================================================================
 
 
     ! Give the program discription (name, version number, date)
     InitOut%MAP_version = InitOut%C_obj%MAP_version
-    CALL RemoveNullChar( InitOut%MAP_version )
+    I = INDEX(InitOut%MAP_version, C_NULL_CHAR ) - 1 
+    IF ( I > 0 ) InitOut%MAP_version = InitOut%MAP_version(1:I) 
 
     InitOut%MAP_date = InitOut%C_obj%MAP_date
-    CALL RemoveNullChar( InitOut%MAP_date )
+    I = INDEX( InitOut%MAP_date, C_NULL_CHAR ) - 1 
+    IF ( I > 0 ) InitOut%MAP_date = InitOut%MAP_date(1:I) 
 
     InitOut%Ver = ProgDesc('MAP',InitOut%MAP_version,InitOut%MAP_date)
 
 !@marco 9/28: add this when you add dt to your parameters:    
     !p%dt = interval
+! @bonnie: what exactly am I adding here?
 
     ! @bonnie : everything below this line is just garbage. It will probably be removed from the source when final merging between 
     !           FAST and MAP occurs. This is only being printed to see evidence of these 'features'. I guess this is what they are 
@@ -644,23 +642,28 @@ CONTAINS
 
     ! Local variables
 !@marco: see my comment in the init routine about initializing variables in their declaration statements
-    INTEGER(KIND=C_INT)                             :: status_from_MAP = 0
-    CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP = ""//CHAR(0)
-    REAL(KIND=C_FLOAT)                              :: time = 0
-    INTEGER(KIND=C_INT)                             :: interval = 0
-    INTEGER(IntKi)                                  :: i=0
-
-
+!@bonnie: ok, fixed.
+    INTEGER(KIND=C_INT)                             :: status_from_MAP 
+    CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP
+    REAL(KIND=C_FLOAT)                              :: time 
+    INTEGER(KIND=C_INT)                             :: interval 
+    INTEGER(IntKi)                                  :: i
     TYPE(MAP_InputType)                             :: u_interp    ! Inputs at t
     
+	status_from_MAP = 0
+    message_from_MAP = ""//CHAR(0)
+    time = 0
+    interval = 0
+    i=0
+	
     ! create space for arrays/meshes in u_interp
     CALL MAP_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg )      
     !CALL CheckError(ErrStat2,ErrMsg2)
     !IF ( ErrStat >= AbortErrLev ) RETURN
             
 !@marco 9/28: you should change this call to use t+p%dt instead of t:
-!    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
-    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t , ErrStat, ErrMsg)
+    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+!    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
     !CALL CheckError(ErrStat2,ErrMsg2)
     !IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -785,9 +788,11 @@ CONTAINS
 
     ! Local variables
     INTEGER(KIND=C_INT)                             :: status_from_MAP
-    CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP = ""//CHAR(0)
-    REAL(KIND=C_FLOAT)                              :: time 
+    CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP
+    REAL(KIND=C_FLOAT)                              :: time
 
+	message_from_MAP = ""//CHAR(0)
+    time = 0
     time = t
 
     ! Now call the _F2C_ routines for the INTENT(IN   ) C objects
@@ -871,7 +876,7 @@ CONTAINS
        RETURN
     END IF
 
-    !WRITE(*,*) y%writeOutput ! @bonnie : remove
+    WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad%NNodes
@@ -895,10 +900,13 @@ CONTAINS
     TYPE( MAP_OutputType ) ,          INTENT(INOUT) :: y                                 
     INTEGER(IntKi),                   INTENT(  OUT) :: ErrStat                           
     CHARACTER(*),                     INTENT(  OUT) :: ErrMsg                            
-    INTEGER(KIND=C_INT)                             :: status_from_MAP=0                 
-    CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP = ""//CHAR(0)    
-    INTEGER(IntKi)                                  :: i=0 
-                                                                                         
+    INTEGER(KIND=C_INT)                             :: status_from_MAP               
+    CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP    
+    INTEGER(IntKi)                                  :: i
+                                                   
+    status_from_MAP=0                 
+    message_from_MAP = ""//CHAR(0)    
+    i=0 												   
     ErrStat = ErrID_None                                                                 
     ErrMsg  = ""                                                                         
                                                                                          
@@ -962,9 +970,6 @@ CONTAINS
     INTEGER                                         :: index_elem=0                              !          |
     INTEGER                                         :: index_optn=0                              !          |
     CHARACTER(255)                                  :: temp                                      !          |
-                                                                                                 !          |    
-    ErrStat = ErrID_None                                                                         !          |
-                                                                                                 !          |    
     ! Open the MAP input file                                                                    !          |
     OPEN ( UNIT=1 , FILE=file )                                                                  !          |
                                                                                                  !          |

@@ -67,7 +67,8 @@ PROGRAM Main
   MAP_InitInput%gravity     = 9.81          ! @bonnie : This need to be according to g used in FAST
   MAP_InitInput%sea_density = 1025          ! @bonnie : This needs to be set according to seawater density in FAST
   MAP_InitInput%depth       = 150           ! @bonnie : This need to be set according to the water depth in FAST
- 
+  MAP_Parameter%dt = dt_global              ! @bonnie : This is for the glue code to set
+
   ! call the initialization routine
   CALL MAP_Init( MAP_InitInput       , &
                  MAP_Input(1)        , & 
@@ -148,11 +149,11 @@ PROGRAM Main
      ! @bonnie : I am assuming this MAP_InputTimes{:} and MAP_Input{:} 
      !           will be assigned by the glue code   
 
-!     MAP_InputTimes(1) = t_global + dt_global
+     !MAP_InputTimes(1) = t_global + dt_global
      !MAP_InputTimes(2) = MAP_InputTimes(1) - dt_global 
      !MAP_InputTimes(3) = MAP_InputTimes(2) - dt_global
 
-!     MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
+     !MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
      !MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
      !MAP_Input(3)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
      !===========================================================================
