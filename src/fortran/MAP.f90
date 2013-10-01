@@ -3,6 +3,8 @@ MODULE MAP
   USE MAP_Types
   USE NWTC_Library
 
+  IMPLICIT NONE
+  
   PRIVATE
  
   PUBLIC :: MAP_Init
@@ -662,6 +664,7 @@ CONTAINS
     CALL MAP_F2C_CopyInput       ( u_interp, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C input state conversion error.",ErrMSg)
+       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
@@ -674,18 +677,21 @@ CONTAINS
     CALL MAP_F2C_CopyContState   ( x, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C continuous state conversion error.",ErrMSg)
+       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
     CALL MAP_F2C_CopyConstrState ( z, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C constraint state conversion error.",ErrMSg)
+       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
     CALL MAP_F2C_CopyOtherState  ( O, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C other state conversion error.",ErrMSg)
+       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
@@ -701,6 +707,10 @@ CONTAINS
                             status_from_MAP , &
                             message_from_MAP  )
 
+    ! delete the temporary input arrays/meshes 
+   CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
+    
+    
     ! Give the MAP code/message status to the FAST 
     IF( status_from_MAP .NE. 0 ) THEN
        IF( status_from_MAP .EQ. 1 ) THEN
@@ -739,10 +749,6 @@ CONTAINS
        RETURN
     END IF
 
-
-    ! delete the temporary input arrays/meshes 
-    CALL MAP_DestroyInput( u_interp, ErrStat, ErrMsg )      
-
   END SUBROUTINE MAP_UpdateStates                                                                !   -------+
   !==========================================================================================================
 
@@ -764,6 +770,7 @@ CONTAINS
     INTEGER(KIND=C_INT)                             :: status_from_MAP
     CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP
     REAL(KIND=C_FLOAT)                              :: time
+    INTEGER(IntKi)                                  :: i ! Loop counter
 
     message_from_MAP = ""//CHAR(0)
     time = 0
