@@ -49,11 +49,12 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-  fprintf(stderr,"----- FAST Registry  --------------\n") ;
-  fprintf(stderr,"Revision $Rev$\n") ;
-  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
+  fprintf(stderr,"\n") ;
+  fprintf(stderr,"----- FAST Registry (v2.01.00, 30-Sep-2013) --------------\n") ;
+//  fprintf(stderr,"Revision $Rev$\n") ;
+//  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
   fprintf(stderr,"URL  $URL$\n" ) ;
-  fprintf(stderr,"-----------------------------------\n") ;
+  fprintf(stderr,"----------------------------------------------------------\n") ;
 
   sym_forget() ;
 //  thisprog = *argv ;
@@ -148,6 +149,8 @@ usage:
   gen_io_boilerplate() ;  /* 20091213 jm.  Generate the io_boilerplate_temporary.inc file */
 #endif
 
+  fprintf(stderr,"input file: %s\n",fname_in);
+
   init_parser() ;
   init_type_table() ;
   init_dim_table() ;
@@ -198,7 +201,7 @@ usage:
     show_nodelist(ModNames) ;
     fprintf(stderr,"--- Done ---\n") ;
   }
- 
+
   gen_module_files( "." ) ;
 
 cleanup:
@@ -276,7 +279,7 @@ substitute( char * str , char * match , char * replace, char * result )
        if ( matches( p, "define" ) ) nmatch = 2 ;
      }
    }
-   
+
    for ( p = str , q = result ; *p ; )
    {
       if ( matches( p, match ) )

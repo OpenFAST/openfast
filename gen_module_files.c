@@ -794,6 +794,10 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
       if ( r->type == NULL ) {
         fprintf(stderr,"Registry warning generating %_Destroy%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       } else {
+
+  if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
+  fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
+  }
         if ( !strcmp( r->type->name, "meshtype" ) ) {
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"DO i%d = LBOUND(%sData%%%s,%d), UBOUND(%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
@@ -808,31 +812,36 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           char nonick2[NAMELEN] ;
           remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
-  if (r->dims[0]->deferred) {
-  fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
-  }
+//  if (r->dims[0]->deferred) {
+//  fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
+//  }
   fprintf(fp,"DO i%d = LBOUND(%sData%%%s,%d), UBOUND(%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
           }
           fprintf(fp,"  CALL %s_Destroy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
                           r->type->module->nickname,fast_interface_type_shortname(nonick2),nonick,r->name,dimstr(r->ndims)) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
   fprintf(fp,"ENDDO\n") ;
-  if (r->dims[0]->deferred) {
-  fprintf(fp,"ENDIF\n") ;
-  }
+//  if (r->dims[0]->deferred) {
+//  fprintf(fp,"DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
+//  fprintf(fp,"ENDIF\n") ;
+//  }
           }
         } else if ( r->ndims > 0 ) {
-          if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
-          {
+//        if ( r->dims[0]->deferred )     // if one dim is they all have to be; see check in type.c
+//        {
 //            if ( r->ndims == 1 ) {
 //  fprintf(fp,"DO i = 1, SIZE(%sData%%%s)\n",nonick,r->name  ) ;
 //            }
-            fprintf(fp,"  IF ( ALLOCATED(%sData%%%s) ) DEALLOCATE(%sData%%%s)\n",nonick,r->name,nonick,r->name) ;
+//            fprintf(fp,"  IF ( ALLOCATED(%sData%%%s) ) DEALLOCATE(%sData%%%s)\n",nonick,r->name,nonick,r->name) ;
 //            if ( r->ndims == 1 ) {
 //  fprintf(fp,"ENDDO\n") ;
 //            }
-          }
+//          }
         }
+  if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
+  fprintf(fp,"   DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
+  fprintf(fp,"ENDIF\n") ;
+  }
       }
     }
   }
@@ -1691,6 +1700,8 @@ gen_module_files ( char * dirname )
         { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
       else
         { sprintf(fname,"%s_Types.f90",p->name) ; }
+   fprintf(stderr,"generating %s\n",fname) ;
+
       if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
       print_warning(fp,fname, "") ;
       if ( sw_ccode == 1 ) {

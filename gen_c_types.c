@@ -574,6 +574,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
       char ** p ;
     
       sprintf(fname,"%s_C_Types.f90",ModName->name) ;
+  fprintf(stderr,"generating %s\n",fname) ;
       if ((fpt = fopen( fname , "w" )) == NULL ) return(1) ;
       print_warning(fpt,fname,"!") ;
       for ( p = template_c_types ; *p ; p++ ) {
