@@ -337,8 +337,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    !  For debug purposes, open an output file for writing the current timestep's inputs and outputs for HydroDyn
    !
    ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-
-      CALL HydroDyn_Open_Debug_Outputs( p_FAST%OutFileRoot, HD_DebugUn, ErrStat, ErrMsg )
+   !
+   !   CALL HydroDyn_Open_Debug_Outputs( p_FAST%OutFileRoot, HD_DebugUn, ErrStat, ErrMsg )
    !
    !-----------------------------------------------------------------------------------------------------------------------------
    END IF   ! CompHydro
@@ -1666,6 +1666,10 @@ CONTAINS
       CALL MAP_DestroyContState   (  x_MAP_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       CALL MAP_DestroyDiscState   ( xd_MAP_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       CALL MAP_DestroyConstrState (  z_MAP_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      
+!TODO:
+!BJJ: do I have to call these other routines for MAP's c_obj stuff, like Marco indicates in his glue code?
+!CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
       
       !............................................................................................................................
       ! Set exit error code if there was an error;
