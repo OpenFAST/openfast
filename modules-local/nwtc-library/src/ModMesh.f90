@@ -165,9 +165,6 @@ CONTAINS
             END IF
       END IF
 
-      IF ( M%fieldmask(MASKID_ADDEDMASS) ) THEN
-      END IF
-
       IF ( M%fieldmask(MASKID_SCALAR) .AND. ALLOCATED(M%Scalars)) THEN
          WRITE (UnIn, IOSTAT=ErrStat2)   M%Scalars
             IF ( ErrStat2 /= 0 ) THEN
@@ -250,7 +247,6 @@ CONTAINS
      IF ( M%FieldMask( MASKID_ROTATIONVEL     ) )  write(U,*)  '  Defined : RotationVel'
      IF ( M%FieldMask( MASKID_TRANSLATIONACC  ) )  write(U,*)  '  Defined : TranslationAcc'
      IF ( M%FieldMask( MASKID_ROTATIONACC     ) )  write(U,*)  '  Defined : RotationAcc'
-     IF ( M%FieldMask( MASKID_ADDEDMASS       ) )  write(U,*)  '  Defined : AddedMass'
      IF ( M%FieldMask( MASKID_SCALAR          ) )  write(U,*)  '  Defined : Scalar'
      write(U,*)  'Ios:         ', M%Ios
      write(U,*)  'Nnodes:      ', M%Nnodes
@@ -351,13 +347,6 @@ CONTAINS
          write(U,*)' ',i,M%TranslationAcc(:,i)
        ENDDO
      ENDIF
-     IF(ALLOCATED(M%AddedMass))THEN
-       isz=size(M%AddedMass,3)
-       write(U,*)'AddedMass: ',isz,' node(s)'
-       DO i=1,min(nn,isz)
-         write(U,*)' ',i,M%AddedMass(:,:,i)
-       ENDDO
-     ENDIF
      IF(ALLOCATED(M%Scalars))THEN
        isz=size(M%Scalars,1)
        write(U,*)'Scalars: ',isz,' node(s)'
@@ -409,7 +398,6 @@ CONTAINS
                           ,RotationVel                                                     &
                           ,TranslationAcc                                                  &
                           ,RotationAcc                                                     &
-                          ,AddedMass                                                       &
                           ,nScalars                                                        &
                           ,IsNewSibling                                                    &
                          )
@@ -430,7 +418,6 @@ CONTAINS
       LOGICAL,OPTIONAL,INTENT(IN):: RotationVel          ! If present and true, allocate RotationVel field
       LOGICAL,OPTIONAL,INTENT(IN):: TranslationAcc       ! If present and true, allocate TranslationAcc field
       LOGICAL,OPTIONAL,INTENT(IN):: RotationAcc          ! If present and true, allocate RotationAcc field
-      LOGICAL,OPTIONAL,INTENT(IN):: AddedMass            ! If present and true, allocate AddedMass field
 !
       INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present and > 0, allocate nScalars Scalars
       LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         ! If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, RefOrientation, and ElemTable)
@@ -577,17 +564,6 @@ CONTAINS
          ENDIF
       ENDIF
 
-!bjj: we will remove this one:
-
-      IF ( PRESENT(AddedMass) ) THEN
-         IF ( AddedMass ) THEN
-            CALL AllocAry( BlankMesh%AddedMass, 6, 6, Nnodes, 'MeshCreate: AddedMass', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
-            BlankMesh%AddedMass = 0.
-            BlankMesh%FieldMask(MASKID_AddedMass) = .TRUE.
-         ENDIF
-      ENDIF
-
 
       BlankMesh%nScalars = 0
       IF ( PRESENT(nScalars) ) THEN
@@ -669,7 +645,7 @@ CONTAINS
       IF ( ALLOCATED(Mesh%RotationAcc)    ) DEALLOCATE(Mesh%RotationAcc)
       IF ( ALLOCATED(Mesh%TranslationAcc) ) DEALLOCATE(Mesh%TranslationAcc)
       IF ( ALLOCATED(Mesh%Scalars)        ) DEALLOCATE(Mesh%Scalars)
-
+      
 
 
 !#if 0
@@ -864,7 +840,6 @@ CONTAINS
      IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) n_re = n_re + Mesh%Nnodes * 3
      IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) n_re = n_re + Mesh%Nnodes * 3
      IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_ADDEDMASS) ) n_re = n_re + Mesh%Nnodes * 36
      IF ( Mesh%nScalars .GT. 0 ) n_re = n_re + Mesh%Nnodes * Mesh%nScalars
 
      ALLOCATE( ReBuf( n_re ) )
@@ -985,15 +960,6 @@ CONTAINS
            ReBuf(ic) = Mesh%TranslationAcc(3,i) ; ic = ic + 1
          ENDDO
        ENDIF
-       IF ( Mesh%FieldMask(MASKID_ADDEDMASS) ) THEN ! n_re = n_re + Mesh%Nnodes * 36
-         DO i = 1, Mesh%Nnodes
-           DO jj = 1,6
-             DO ii = 1,6
-               ReBuf(ic) = Mesh%AddedMass(ii,jj,i) ; ic = ic + 1
-             ENDDO
-           ENDDO
-         ENDDO
-       ENDIF
        IF ( Mesh%nScalars .GT. 0 ) THEN ! n_re = n_re + Mesh%Nnodes * Mesh%nScalar
          DO i = 1, Mesh%Nnodes
            DO ii = 1,Mesh%nScalars
@@ -1030,7 +996,6 @@ CONTAINS
      RotationVel = .FALSE.
      TranslationAcc = .FALSE.
      RotationAcc = .FALSE.
-     AddedMass = .FALSE.
      nScalars = 0
      IF ( Int_Buf(HDR_FIELDMASK+MASKID_FORCE-1)       .EQ. 1 ) Force = .TRUE.
      IF ( Int_Buf(HDR_FIELDMASK+MASKID_MOMENT-1)      .EQ. 1 ) Moment = .TRUE.
@@ -1040,7 +1005,6 @@ CONTAINS
      IF ( Int_Buf(HDR_FIELDMASK+MASKID_ROTATIONVEL-1)    .EQ. 1 ) RotationVel = .TRUE.
      IF ( Int_Buf(HDR_FIELDMASK+MASKID_TRANSLATIONACC-1) .EQ. 1 ) TranslationAcc = .TRUE.
      IF ( Int_Buf(HDR_FIELDMASK+MASKID_ROTATIONACC-1)    .EQ. 1 ) RotationAcc = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_ADDEDMASS-1)   .EQ. 1 ) AddedMass = .TRUE.
      IF ( Int_Buf(HDR_FIELDMASK+MASKID_SCALAR-1)      .GT. 0 ) nScalars = Int_Buf(HDR_FIELDMASK+MASKID_SCALAR-1)
 
 !write(0,*)'Int_Buf(HDR_INTBUFSIZE) ',Int_Buf(HDR_INTBUFSIZE)
@@ -1052,7 +1016,7 @@ CONTAINS
                      ,TranslationDisp=TranslationDisp                                  &
                      ,TranslationVel=TranslationVel, RotationVel=RotationVel           &
                      ,TranslationAcc=TranslationAcc, RotationAcc=RotationAcc           &
-                     ,AddedMass=AddedMass, nScalars = nScalars                         &
+                     , nScalars = nScalars                                             &
                     )
      IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1197,15 +1161,6 @@ CONTAINS
          Mesh%TranslationAcc(3,i) = Re_Buf(ic) ; ic = ic + 1
        ENDDO
      ENDIF
-     IF ( Mesh%FieldMask(MASKID_ADDEDMASS) ) THEN
-       DO i = 1, Mesh%Nnodes
-         DO jj = 1,6
-           DO ii = 1,6
-             Mesh%AddedMass(ii,jj,i) = Re_Buf(ic) ; ic = ic + 1
-           ENDDO
-         ENDDO
-       ENDDO
-     ENDIF
      IF ( Mesh%nScalars .GT. 0 ) THEN
        DO i = 1, Mesh%Nnodes
          DO ii = 1,Mesh%nScalars
@@ -1224,7 +1179,7 @@ CONTAINS
 
    SUBROUTINE MeshCopy( SrcMesh, DestMesh, CtrlCode, ErrStat , ErrMess   &
                       ,IOS, Force, Moment, Orientation, TranslationDisp, TranslationVel &
-                      ,RotationVel, TranslationAcc, RotationAcc, AddedMass, nScalars )
+                      ,RotationVel, TranslationAcc, RotationAcc, nScalars )
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: SrcMesh  ! Mesh being copied
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: DestMesh ! Copy of mesh
      INTEGER(IntKi),              INTENT(IN)    :: CtrlCode ! MESH_NEWCOPY, MESH_SIBLING, or
@@ -1241,7 +1196,6 @@ CONTAINS
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationVel       ! If present and true, allocate RotationVel field
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationAcc    ! If present and true, allocate TranslationAcc field
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationAcc       ! If present and true, allocate RotationAcc field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: AddedMass         ! If present and true, allocate AddedMess field
      INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          ! If present and > 0 , alloc n Scalars
     ! Local
      INTEGER(IntKi)                             :: IOS_l               ! IOS of new sibling
@@ -1252,8 +1206,7 @@ CONTAINS
                                                  , TranslationVel_l  & ! If true, allocate TranslationVel field
                                                  , RotationVel_l     & ! If true, allocate RotationVel field
                                                  , TranslationAcc_l  & ! If true, allocate TranslationAcc field
-                                                 , RotationAcc_l     & ! If true, allocate RotationAcc field
-                                                 , AddedMass_l         ! If true, allocate AddedMess field
+                                                 , RotationAcc_l       ! If true, allocate RotationAcc field
      INTEGER(IntKi)                             :: nScalars_l          ! If > 0, alloc n Scalars
      INTEGER i, j, k
 
@@ -1275,7 +1228,6 @@ CONTAINS
                             ,RotationVel=SrcMesh%FieldMask(MASKID_ROTATIONVEL)                                  &
                             ,TranslationAcc=SrcMesh%FieldMask(MASKID_TRANSLATIONACC)                            &
                             ,RotationAcc=SrcMesh%FieldMask(MASKID_ROTATIONACC)                                  &
-                            ,AddedMass=SrcMesh%FieldMask(MASKID_ADDEDMASS)                                      &
                             ,nScalars=SrcMesh%nScalars                                                          )
 
             IF (ErrStat >= AbortErrLev) RETURN
@@ -1365,7 +1317,6 @@ CONTAINS
             RotationVel_l      = .FALSE. ; IF ( PRESENT(RotationVel) )         RotationVel_l = RotationVel
             TranslationAcc_l   = .FALSE. ; IF ( PRESENT(TranslationAcc) )   TranslationAcc_l = TranslationAcc
             RotationAcc_l      = .FALSE. ; IF ( PRESENT(RotationAcc) )         RotationAcc_l = RotationAcc
-            AddedMass_l        = .FALSE. ; IF ( PRESENT(AddedMass) )             AddedMass_l = AddedMass
             nScalars_l         = 0       ; IF ( PRESENT(nScalars) )               nScalars_l = nScalars
             CALL MeshCreate( DestMesh, IOS=IOS_l, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess   &
                             ,Force=Force_l                                                                  &
@@ -1376,7 +1327,6 @@ CONTAINS
                             ,RotationVel=RotationVel_l                                                      &
                             ,TranslationAcc=TranslationAcc_l                                                &
                             ,RotationAcc=RotationAcc_l                                                      &
-                            ,AddedMass=AddedMass_l                                                          &
                             ,nScalars=nScalars_l                                                            &
                             ,IsNewSibling=.TRUE.)
             IF (ErrStat >= AbortErrLev) RETURN
@@ -1506,7 +1456,6 @@ CONTAINS
       IF ( ALLOCATED(SrcMesh%RotationVel    ) .AND. ALLOCATED(DestMesh%RotationVel    ) ) DestMesh%RotationVel = SrcMesh%RotationVel
       IF ( ALLOCATED(SrcMesh%TranslationAcc ) .AND. ALLOCATED(DestMesh%TranslationAcc ) ) DestMesh%TranslationAcc = SrcMesh%TranslationAcc
       IF ( ALLOCATED(SrcMesh%RotationAcc    ) .AND. ALLOCATED(DestMesh%RotationAcc    ) ) DestMesh%RotationAcc = SrcMesh%RotationAcc
-      IF ( ALLOCATED(SrcMesh%AddedMass      ) .AND. ALLOCATED(DestMesh%AddedMass      ) ) DestMesh%AddedMass = SrcMesh%AddedMass
       IF ( ALLOCATED(SrcMesh%Scalars        ) .AND. ALLOCATED(DestMesh%Scalars        ) ) DestMesh%Scalars = SrcMesh%Scalars
 
 
@@ -2044,10 +1993,6 @@ CONTAINS
          u_out%Scalars = u1%Scalars + (u2%Scalars - u1%Scalars) * scaleFactor
       END IF
 
-      IF ( ALLOCATED(u1%AddedMass) ) THEN
-         u_out%AddedMass = u1%AddedMass + (u2%AddedMass - u1%AddedMass) * scaleFactor
-      END IF
-
       IF ( ALLOCATED(u1%Orientation) ) THEN
          !ErrStat=ErrID_Info
          !ErrMsg='Orientations not implemented in MeshExtrapInterp1; using nearest neighbor approach instead.'
@@ -2189,13 +2134,6 @@ CONTAINS
                        + ( (t(2)-t(3))*u1%Scalars + t(3)*u2%Scalars - t(2)*u3%Scalars )*scaleFactor * t_out
       END IF
 
-      IF ( ALLOCATED(u1%AddedMass) ) THEN
-         u_out%AddedMass =   u1%AddedMass &
-                          + ( t(3)**2 * ( u1%AddedMass - u2%AddedMass) &
-                            + t(2)**2 * (-u1%AddedMass + u3%AddedMass) ) * scaleFactor &
-                          + ( (t(2)-t(3))*u1%AddedMass + t(3)*u2%AddedMass - t(2)*u3%AddedMass )*scaleFactor*t_out
-      END IF
-
       IF ( ALLOCATED(u1%Orientation) ) THEN
          !ErrStat=ErrID_Info
          !ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
@@ -2303,10 +2241,6 @@ CONTAINS
          u_out%Scalars = u(1)%Scalars + (u(2)%Scalars - u(1)%Scalars) * scaleFactor
       END IF
 
-      IF ( ALLOCATED(u(1)%AddedMass) ) THEN
-         u_out%AddedMass = u(1)%AddedMass + (u(2)%AddedMass - u(1)%AddedMass) * scaleFactor
-      END IF
-
       IF ( ALLOCATED(u(1)%Orientation) ) THEN
          ErrStat=ErrID_Info
          ErrMsg='Orientations not implemented in MeshExtrapInterp; using nearest neighbor approach instead.'
@@ -2394,14 +2328,6 @@ CONTAINS
          u_out%Scalars =   u(1)%Scalars &
                        + ( t(3)**2 * (u(1)%Scalars - u(2)%Scalars) + t(2)**2*(-u(1)%Scalars + u(3)%Scalars) )*scaleFactor * t_out &
                        + ( (t(2)-t(3))*u(1)%Scalars + t(3)*u(2)%Scalars - t(2)*u(3)%Scalars )*scaleFactor * t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%AddedMass) ) THEN
-         u_out%AddedMass =   u(1)%AddedMass &
-                          + ( t(3)**2 * ( u(1)%AddedMass - u(2)%AddedMass) &
-                            + t(2)**2 * (-u(1)%AddedMass + u(3)%AddedMass) ) * scaleFactor * t_out &
-                          + ( (t(2)-t(3))*u(1)%AddedMass + t(3)*u(2)%AddedMass &
-                                                         - t(2)*u(3)%AddedMass )*scaleFactor*t_out**2
       END IF
 
       IF ( ALLOCATED(u(1)%Orientation) ) THEN
