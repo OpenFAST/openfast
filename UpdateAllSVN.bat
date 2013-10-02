@@ -69,3 +69,5 @@ SVN update %SubDyn%
 @SET NWTC_Library=
 @SET ServoDyn=
 @SET SubDyn=
+
+PAUSE
