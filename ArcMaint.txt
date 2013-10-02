@@ -58,3 +58,17 @@ CertTest\TstFiles\Test17.opt
 
 CertTest\TstFiles\Test18.outb
 CertTest\TstFiles\Test18.opt
+
+CertTest\TstFiles\Test19.outb
+CertTest\TstFiles\Test19.opt
+
+
+
+CertTest\TstFiles\Test22.outb
+CertTest\TstFiles\Test22.opt
+
+CertTest\TstFiles\Test23.outb
+CertTest\TstFiles\Test23.opt
+
+CertTest\TstFiles\Test24.outb
+CertTest\TstFiles\Test24.opt
