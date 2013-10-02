@@ -38,9 +38,8 @@ MODULE ModMesh_Types
    INTEGER, PUBLIC, PARAMETER :: MASKID_ROTATIONVEL = 6
    INTEGER, PUBLIC, PARAMETER :: MASKID_TRANSLATIONACC = 7
    INTEGER, PUBLIC, PARAMETER :: MASKID_ROTATIONACC = 8
-   INTEGER, PUBLIC, PARAMETER :: MASKID_ADDEDMASS = 9
-   INTEGER, PUBLIC, PARAMETER :: MASKID_SCALAR = 10
-   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 10
+   INTEGER, PUBLIC, PARAMETER :: MASKID_SCALAR = 9
+   INTEGER, PUBLIC, PARAMETER :: FIELDMASK_SIZE = 9
 
 ! Format of the Int buffer
    INTEGER, PUBLIC, PARAMETER :: HDR_INTBUFSIZE  = 1
@@ -121,7 +120,6 @@ MODULE ModMesh_Types
       INTEGER :: nelemlist                                   ! Number of elements in the list (ElemList)
       INTEGER :: maxelemlist                                 ! Maximum number of elements in the list
       INTEGER :: nextelem                                    ! Next element in the list
-      INTEGER :: spatial !bjj: unused?
       TYPE(ElemListType), POINTER :: ElemList(:) => NULL()   ! All of the elements in the mesh
 
      ! Node position and reference orientation, which are always allocated (and shared between siblings):
@@ -145,7 +143,6 @@ MODULE ModMesh_Types
       REAL(ReKi), ALLOCATABLE :: TranslationVel(:,:)     ! Field: Translational velocities (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: RotationAcc(:,:)        ! Field: Rotational accelerations (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: TranslationAcc(:,:)     ! Field: Translational accelerations (3,NNodes)
-      REAL(ReKi), ALLOCATABLE :: AddedMass(:,:,:)        ! Field: Added mass matrix (6,6,NNodes)
       REAL(ReKi), ALLOCATABLE :: Scalars(:,:)            ! Scalars (nScalars,NNodes)
       INTEGER                 :: nScalars                ! Stores value of nScalars when created
 !bjj: to be added later:       REAL(ReKi), ALLOCATABLE :: ElementScalars(nElementScalars,nelemlist)       ! Scalars associated with elements
