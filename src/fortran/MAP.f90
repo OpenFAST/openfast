@@ -599,6 +599,10 @@ CONTAINS
 
     p%dt = interval ! warning: dt should NEVER, EVER EVER be changed or f2c/c2f'ed. Never CALL MAP_F2C_CopyParam
                     ! or CALL MAP_C2F_CopyParam
+                    
+    CALL MAP_InitInput_Destroy ( InitInp%C_obj%object )  
+    CALL MAP_InitOutput_Destroy( InitOut%C_obj%object )
+     
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
 
