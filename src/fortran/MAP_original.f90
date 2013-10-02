@@ -3,14 +3,23 @@ MODULE MAP
   USE MAP_Types
   USE NWTC_Library
 
-  IMPLICIT NONE
-  
   PRIVATE
  
   PUBLIC :: MAP_Init
   PUBLIC :: MAP_UpdateStates
   PUBLIC :: MAP_CalcOutput
   PUBLIC :: MAP_End
+
+
+!  ! ==========   MAP_GetVersionNumber   ======     <--------------------------------------------------------+
+!  INTERFACE                                                                                      !          | 
+!     FUNCTION MAP_GetVersionNumber( ) BIND(c, name='MAPCALL_GetVersionNumber')                   !          | 
+!       IMPORT                                                                                    !          | 
+!       IMPLICIT NONE                                                                             !          | 
+!       CHARACTER(KIND=C_CHAR) :: MAP_GetVersionNumber                                            !          | 
+!     END FUNCTION MAP_GetVersionNumber                                                           !          | 
+!  END INTERFACE                                                                                  !   -------+
+!  !==========================================================================================================
 
 
   ! ==========   MAP_NumberOfHeaders   ======     <---------------------------------------------------------+
@@ -345,12 +354,15 @@ CONTAINS
 
     ErrStat = ErrID_None
     ErrMsg  = "" 
+! @marco: when you initialize values in their declaration statements, Fortran gives them the SAVE attribute (which means they don't get reinitialized on subsequent calls to the routine)
+!  C programmers complain about this. :)
+! @bonnie: noted. I wasn't aware of this. 
     status_from_MAP = 0
     message_from_MAP = ""//CHAR(0)
     i = 0
     NumNodes = 0
     numHeaderStr = 0
-
+	
     ! Initialize the NWTC Subroutine Library
     CALL NWTC_Init( )   
     
@@ -381,8 +393,10 @@ CONTAINS
     InitInp%C_Obj%gravity         =  InitInp%gravity
     InitInp%C_Obj%sea_density     =  InitInp%sea_density
     InitInp%C_Obj%depth           = -InitInp%depth
-    InitInp%C_obj%coupled_to_FAST = .TRUE.  
-    
+    InitInp%C_obj%coupled_to_FAST = .TRUE.  ! @bonnie : Maybe keep this a run-time option in the FAST input file? This tells MAP that it is coupled  
+                                            ! coupeld to FAST. The only implication right now it tells MAP not to create the default output file, 
+                                            ! because FAST does this (ussually). 
+
     ! Set the gravity constant, water depth, and sea density in MAP.
     ! This calls functions in MAP_FortranBinding.cpp
     CALL MAP_SetGravity         ( InitInp%C_obj )
@@ -448,9 +462,7 @@ CONTAINS
                                                                     !          | 
     DO i = 1, numHeaderStr                                          !          | 
        InitOut%WriteOutputHdr(i) = strHdrArray(i)                   !          | 
-       CALL RemoveNullChar( InitOut%WriteOutputHdr(i) )             !          | 
        InitOut%WriteOutputUnt(i) = strUntArray(i)                   !          | 
-       CALL RemoveNullChar( InitOut%WriteOutputUnt(i) )             !          | 
     END DO                                                          !          | 
                                                                     !          | 
     DEALLOCATE( strHdrArray )                                       !          | 
@@ -575,7 +587,8 @@ CONTAINS
     CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement , &            !          |
                     DestMesh = y%PtFairleadLoad         , &            !          |
                     CtrlCode = MESH_SIBLING             , &            !          |
-                    IOS      = COMPONENT_OUTPUT         , &            !          | 
+! @bonnie: I must have an old version of NWTC_library because the compilers complains about this next line. 
+!                    IOS      = COMPONENT_OUTPUT         , &            !          |
                     Force    = .TRUE.                   , &            !          |
                     ErrStat  = ErrStat                  , &            !          |
                     ErrMess  = ErrMsg                     )            !          |
@@ -597,11 +610,17 @@ CONTAINS
 
     InitOut%Ver = ProgDesc('MAP',InitOut%MAP_version,InitOut%MAP_date)
 
-    p%dt = interval ! warning: dt should NEVER, EVER EVER be changed or f2c/c2f'ed. Never CALL MAP_F2C_CopyParam
-                    ! or CALL MAP_C2F_CopyParam
+!@marco 9/28: add this when you add dt to your parameters:    
+    !p%dt = interval
+! @bonnie: what exactly am I adding here?
 
-    CALL MAP_InitInput_Destroy ( InitInp%C_obj%object )  
-    CALL MAP_InitOutput_Destroy( InitOut%C_obj%object )  
+    ! @bonnie : everything below this line is just garbage. It will probably be removed from the source when final merging between 
+    !           FAST and MAP occurs. This is only being printed to see evidence of these 'features'. I guess this is what they are 
+    !           called...
+    !CALL DispNVD( InitOut%Ver ) 
+    
+    !WRITE(*,*) InitOut%WriteOutputHdr ! @bonnie : this is artificial. Remove.
+    !WRITE(*,*) InitOut%WriteOutputUnt ! @bonnie : this is artificial. Remove.
 
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
@@ -622,40 +641,40 @@ CONTAINS
     CHARACTER(*)                    , INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
     ! Local variables
+!@marco: see my comment in the init routine about initializing variables in their declaration statements
+!@bonnie: ok, fixed.
     INTEGER(KIND=C_INT)                             :: status_from_MAP 
     CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP
     REAL(KIND=C_FLOAT)                              :: time 
     INTEGER(KIND=C_INT)                             :: interval 
     INTEGER(IntKi)                                  :: i
     TYPE(MAP_InputType)                             :: u_interp    ! Inputs at t
-    INTEGER(IntKi)                                  :: ErrStat2    ! Error status of the operation
-    CHARACTER(LEN(ErrMsg))                          :: ErrMsg2     ! Error message if ErrStat /= ErrID_None
-
     
-    status_from_MAP = 0
+	status_from_MAP = 0
     message_from_MAP = ""//CHAR(0)
+    time = 0
+    interval = 0
     i=0
+	
+    ! create space for arrays/meshes in u_interp
+    CALL MAP_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg )      
+    !CALL CheckError(ErrStat2,ErrMsg2)
+    !IF ( ErrStat >= AbortErrLev ) RETURN
+            
+!@marco 9/28: you should change this call to use t+p%dt instead of t:
+    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+!    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
+    !CALL CheckError(ErrStat2,ErrMsg2)
+    !IF ( ErrStat >= AbortErrLev ) RETURN
+
     ! set the time and coupling interval to something readable by MAP (using KIND=C_INT/C_FLOAT instead
     ! of the native IntKi/DbKi format in FAST)
     time = t
     interval = n
     
-    ! create space for arrays/meshes in u_interp
-    CALL MAP_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg )      
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP Mesh copy failed in MAP_UpdateStates().",ErrMSg)
-       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
-       RETURN
-    END IF
-
-            
-    CALL MAP_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
-    IF (ErrStat .NE. ErrID_None ) THEN
-       CALL MAP_CheckError("FAST/MAP Mesh extrapolation failed in MAP_UpdateStates().",ErrMSg)
-       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
-       RETURN
-    END IF
-    
+    ! Copy the mesh input to the MAP C types
+    ! @marco: the Position field is fixed in the initialization routine. TranslationDisp is the displacement from the original position.
+    !         if you need the absolute position, add them: u_interp%PtFairleadDisplacement(1)%TranslationDisp(1,i) + u_interp%PtFairleadDisplacement(1)%Pos
     ! Copy the mesh input to the MAP C types
     DO i = 1,u_interp%PtFairleadDisplacement%NNodes
        u_interp%X(i) = u_interp%PtFairleadDisplacement%Position(1,i) + u_interp%PtFairleadDisplacement%TranslationDisp(1,i)
@@ -668,34 +687,30 @@ CONTAINS
     CALL MAP_F2C_CopyInput       ( u_interp, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C input state conversion error.",ErrMSg)
-       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
-    !CALL MAP_F2C_CopyParam       ( p, ErrStat, ErrMsg ) 
-    !IF (ErrStat .NE. ErrID_None ) THEN
-    !   CALL MAP_CheckError("FAST/MAP F2C parameter state conversion error.",ErrMSg)
-    !   RETURN
-    !END IF
+    CALL MAP_F2C_CopyParam       ( p, ErrStat, ErrMsg ) 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP F2C parameter state conversion error.",ErrMSg)
+       RETURN
+    END IF
 
     CALL MAP_F2C_CopyContState   ( x, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C continuous state conversion error.",ErrMSg)
-       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
     CALL MAP_F2C_CopyConstrState ( z, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C constraint state conversion error.",ErrMSg)
-       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
     CALL MAP_F2C_CopyOtherState  ( O, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
        CALL MAP_CheckError("FAST/MAP F2C other state conversion error.",ErrMSg)
-       CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
        RETURN
     END IF
 
@@ -711,10 +726,6 @@ CONTAINS
                             status_from_MAP , &
                             message_from_MAP  )
 
-    ! delete the temporary input arrays/meshes 
-   CALL MAP_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
-    
-    
     ! Give the MAP code/message status to the FAST 
     IF( status_from_MAP .NE. 0 ) THEN
        IF( status_from_MAP .EQ. 1 ) THEN
@@ -753,6 +764,11 @@ CONTAINS
        RETURN
     END IF
 
+
+    ! delete the temporary input arrays/meshes 
+    CALL MAP_DestroyInput( u_interp, ErrStat, ErrMsg )      
+    !@Marco: make sure that this is destroyed on early return, above.
+
   END SUBROUTINE MAP_UpdateStates                                                                !   -------+
   !==========================================================================================================
 
@@ -774,9 +790,8 @@ CONTAINS
     INTEGER(KIND=C_INT)                             :: status_from_MAP
     CHARACTER(KIND=C_CHAR,len=1024)                 :: message_from_MAP
     REAL(KIND=C_FLOAT)                              :: time
-    INTEGER(IntKi)                                  :: i ! Loop counter
 
-    message_from_MAP = ""//CHAR(0)
+	message_from_MAP = ""//CHAR(0)
     time = 0
     time = t
 
@@ -787,11 +802,11 @@ CONTAINS
        RETURN
     END IF
 
-    !CALL MAP_F2C_CopyParam( p, ErrStat, ErrMsg ) 
-    !IF (ErrStat .NE. ErrID_None ) THEN
-    !   CALL MAP_CheckError("FAST/MAP F2C parameter state conversion error.",ErrMSg)
-    !   RETURN
-    !END IF
+    CALL MAP_F2C_CopyParam( p, ErrStat, ErrMsg ) 
+    IF (ErrStat .NE. ErrID_None ) THEN
+       CALL MAP_CheckError("FAST/MAP F2C parameter state conversion error.",ErrMSg)
+       RETURN
+    END IF
 
     CALL MAP_F2C_CopyContState( x, ErrStat, ErrMsg ) 
     IF (ErrStat .NE. ErrID_None ) THEN
@@ -861,7 +876,7 @@ CONTAINS
        RETURN
     END IF
 
-    ! WRITE(*,*) y%writeOutput
+    WRITE(*,*) y%writeOutput ! @bonnie : remove
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad%NNodes
@@ -891,7 +906,7 @@ CONTAINS
                                                    
     status_from_MAP=0                 
     message_from_MAP = ""//CHAR(0)    
-    i=0
+    i=0 												   
     ErrStat = ErrID_None                                                                 
     ErrMsg  = ""                                                                         
                                                                                          
@@ -955,27 +970,22 @@ CONTAINS
     INTEGER                                         :: index_elem=0                              !          |
     INTEGER                                         :: index_optn=0                              !          |
     CHARACTER(255)                                  :: temp                                      !          |
-    
-    INTEGER                                         :: Un
-    CHARACTER(1024)                                 :: ErrMsg
-                                                                                                 !          |
-    ErrStat = ErrID_None                                                                         !          |
     ! Open the MAP input file                                                                    !          |
-    CALL GetNewUnit( Un, ErrStat, ErrMsg )
-    CALL OpenFInpFile ( Un, file, ErrStat, ErrMsg )
-    IF ( ErrStat >= AbortErrLev ) THEN
-       RETURN
-    END IF
-    !          |
+    OPEN ( UNIT=1 , FILE=file )                                                                  !          |
+                                                                                                 !          |
     ! Read the contents of the MAP input file                                                    !          |
     !==========   MAP_InitInpInputType   ======     <--------------------------+                 !          | 
     DO                                                              !          |                 !          |
        ! read one line of the MAP input file                        !          |                 !          |
-       READ( Un , '(A)' , IOSTAT=success ) temp                      !          |                 !          |
-!       CALL ReadStr( Un, file, temp, 'temp', 'MAP line',success, ErrMsg )
+       READ( 1 , '(A)' , IOSTAT=success ) temp                      !          |                 !          |
+                                                                    !          |                 !          |
        ! we are no longer reading the MAP input file if we          !          |                 !          |
        !   reached the end                                          !          |                 !          |
        IF ( success.NE.0 ) EXIT                                     !          |                 !          |
+       ! @bonnie : I figure the NWTC lib has something more cleaver !          |                 !          |
+       !           than what I would create to check if the MAP     !          |                 !          |
+       !           input file even exists in the directory it's     !          |                 !          |
+       !           looking in.                                      !          |                 !          |
                                                                     !          |                 !          |
        ! populate the cable library parameter                       !          |                 !          |
        IF ( index_begn.EQ.1 ) THEN                                  !          |                 !          |
@@ -1032,11 +1042,9 @@ CONTAINS
                                                                     !          |                 !          |
     END DO                                                          !   -------+                 !          |
     !===========================================================================                 !          |
-                             
-   ! ErrStat = ErrID_None
-    !          |
+                                                                                                 !          |
     ! Close the MAP input file                                                                   !          |
-    CLOSE( Un )                                                                                   !          |
+    CLOSE( 1 )                                                                                   !          |
                                                                                                  !          |
   END SUBROUTINE MAP_ReadInputFileContents                                                       !   -------+
   !==========================================================================================================

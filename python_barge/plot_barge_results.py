@@ -1,6 +1,6 @@
 """
 This program is distributed AS IS, WITHOUT WARRANTY, and NO PROMISE FOR SUPPORT.
-USE AT YOUR OWN RISK ;o)
+USE AT YOUR OWN RISK
 """
 
 if __name__ == '__main__':  

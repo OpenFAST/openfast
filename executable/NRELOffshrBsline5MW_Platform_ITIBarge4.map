@@ -14,9 +14,7 @@ Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
 (-)      (-)       (m)         (-)       (-)       (-)
 1       Material  473.312       1         2        plot fair_tension
 2       Material  473.312       3         4        plot fair_tension
-3       repeat    90
-4       repeat    180
-5       repeat    270
+3       repeat    90 180 270
 ---------------------- SOLVER OPTIONS-----------------------------------------
 Option
 (-)   

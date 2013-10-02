@@ -106,10 +106,10 @@ PROGRAM Main
   !    Can we call MAP_InitInput_Destroy from MAP_DestroyInitInput?
   ! 3) Same as (2) for MAP_InitOutput_Destroy.
   !................
-  CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
+!  CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
   CALL MAP_DestroyInitInput  ( MAP_InitInput , ErrStat, ErrMsg )
 
-  CALL MAP_InitOutput_Destroy( MAP_InitOutput%C_obj%object )  
+!  CALL MAP_InitOutput_Destroy( MAP_InitOutput%C_obj%object )  
   CALL MAP_DestroyInitOutput ( MAP_InitOutput , ErrStat, ErrMsg )
 
   ! @bonnie : don't we need to initialize the messhes once?
