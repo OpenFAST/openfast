@@ -73,7 +73,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v2.00.00', '17-Sept-2013' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v2.00.00b-adp', '17-Sept-2013' )
 
 
 
@@ -139,19 +139,19 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
 
          ! Local variables
 
-      TYPE(IfW_HHWind_InitInputType)                     :: HH_InitData       ! initialization info   
-      TYPE(IfW_HHWind_InputType)                         :: HH_InitGuess      ! input positions.      
-      TYPE(IfW_HHWind_ContinuousStateType)               :: HH_ContStates     ! Unused                
-      TYPE(IfW_HHWind_DiscreteStateType)                 :: HH_DiscStates     ! Unused                
-      TYPE(IfW_HHWind_ConstraintStateType)               :: HH_ConstrStates   ! Unused                
-      TYPE(IfW_HHWind_OutputType)                        :: HH_OutData        ! output velocities     
+      TYPE(IfW_HHWind_InitInputType)                     :: HH_InitData       ! initialization info
+      TYPE(IfW_HHWind_InputType)                         :: HH_InitGuess      ! input positions.
+      TYPE(IfW_HHWind_ContinuousStateType)               :: HH_ContStates     ! Unused
+      TYPE(IfW_HHWind_DiscreteStateType)                 :: HH_DiscStates     ! Unused
+      TYPE(IfW_HHWind_ConstraintStateType)               :: HH_ConstrStates   ! Unused
+      TYPE(IfW_HHWind_OutputType)                        :: HH_OutData        ! output velocities
 
-      TYPE(IfW_FFWind_InitInputType)                     :: FF_InitData       ! initialization info   
-      TYPE(IfW_FFWind_InputType)                         :: FF_InitGuess      ! input positions.      
-      TYPE(IfW_FFWind_ContinuousStateType)               :: FF_ContStates     ! Unused                
-      TYPE(IfW_FFWind_DiscreteStateType)                 :: FF_DiscStates     ! Unused                
-      TYPE(IfW_FFWind_ConstraintStateType)               :: FF_ConstrStates   ! Unused                
-      TYPE(IfW_FFWind_OutputType)                        :: FF_OutData        ! output velocities     
+      TYPE(IfW_FFWind_InitInputType)                     :: FF_InitData       ! initialization info
+      TYPE(IfW_FFWind_InputType)                         :: FF_InitGuess      ! input positions.
+      TYPE(IfW_FFWind_ContinuousStateType)               :: FF_ContStates     ! Unused
+      TYPE(IfW_FFWind_DiscreteStateType)                 :: FF_DiscStates     ! Unused
+      TYPE(IfW_FFWind_ConstraintStateType)               :: FF_ConstrStates   ! Unused
+      TYPE(IfW_FFWind_OutputType)                        :: FF_OutData        ! output velocities
 
 
 !     TYPE(CT_Backgr)                                    :: BackGrndValues
@@ -192,8 +192,8 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
          !----------------------------------------------------------------------------------------------
 
       ParamData%DT            = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
-      ParamData%WindFileType  = InitData%WindFileType    
-      ParamData%WindFileName  = InitData%WindFileName    
+      ParamData%WindFileType  = InitData%WindFileType
+      ParamData%WindFileName  = InitData%WindFileName
 
       CALL NWTC_Init()                                   ! This might not be needed
       CALL DispNVD( IfW_Ver )                            ! This might be changed later
@@ -445,19 +445,19 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
 
          ! Local variables
 
-      TYPE(IfW_HHWind_InitInputType)                     :: HH_InitData       ! initialization info  
-      TYPE(IfW_HHWind_InputType)                         :: HH_InData         ! input positions.      
-      TYPE(IfW_HHWind_ContinuousStateType)               :: HH_ContStates     ! Unused               
-      TYPE(IfW_HHWind_DiscreteStateType)                 :: HH_DiscStates     ! Unused               
-      TYPE(IfW_HHWind_ConstraintStateType)               :: HH_ConstrStates   ! Unused               
-      TYPE(IfW_HHWind_OutputType)                        :: HH_OutData        ! output velocities   
+      TYPE(IfW_HHWind_InitInputType)                     :: HH_InitData       ! initialization info
+      TYPE(IfW_HHWind_InputType)                         :: HH_InData         ! input positions.
+      TYPE(IfW_HHWind_ContinuousStateType)               :: HH_ContStates     ! Unused
+      TYPE(IfW_HHWind_DiscreteStateType)                 :: HH_DiscStates     ! Unused
+      TYPE(IfW_HHWind_ConstraintStateType)               :: HH_ConstrStates   ! Unused
+      TYPE(IfW_HHWind_OutputType)                        :: HH_OutData        ! output velocities
 
-      TYPE(IfW_FFWind_InitInputType)                     :: FF_InitData       ! initialization info 
-      TYPE(IfW_FFWind_InputType)                         :: FF_InData         ! input positions.     
-      TYPE(IfW_FFWind_ContinuousStateType)               :: FF_ContStates     ! Unused             
-      TYPE(IfW_FFWind_DiscreteStateType)                 :: FF_DiscStates     ! Unused               
-      TYPE(IfW_FFWind_ConstraintStateType)               :: FF_ConstrStates   ! Unused               
-      TYPE(IfW_FFWind_OutputType)                        :: FF_OutData        ! output velocities    
+      TYPE(IfW_FFWind_InitInputType)                     :: FF_InitData       ! initialization info
+      TYPE(IfW_FFWind_InputType)                         :: FF_InData         ! input positions.
+      TYPE(IfW_FFWind_ContinuousStateType)               :: FF_ContStates     ! Unused
+      TYPE(IfW_FFWind_DiscreteStateType)                 :: FF_DiscStates     ! Unused
+      TYPE(IfW_FFWind_ConstraintStateType)               :: FF_ConstrStates   ! Unused
+      TYPE(IfW_FFWind_OutputType)                        :: FF_OutData        ! output velocities
 
 
 
@@ -634,17 +634,17 @@ SUBROUTINE IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGues
 
          ! Local variables
 
-      TYPE(IfW_HHWind_InputType)                         :: HH_InitData       ! input positions.     
-      TYPE(IfW_HHWind_ContinuousStateType)               :: HH_ContStates     ! Unused              
-      TYPE(IfW_HHWind_DiscreteStateType)                 :: HH_DiscStates     ! Unused             
-      TYPE(IfW_HHWind_ConstraintStateType)               :: HH_ConstrStates   ! Unused              
-      TYPE(IfW_HHWind_OutputType)                        :: HH_OutData        ! output velocities    
+      TYPE(IfW_HHWind_InputType)                         :: HH_InitData       ! input positions.
+      TYPE(IfW_HHWind_ContinuousStateType)               :: HH_ContStates     ! Unused
+      TYPE(IfW_HHWind_DiscreteStateType)                 :: HH_DiscStates     ! Unused
+      TYPE(IfW_HHWind_ConstraintStateType)               :: HH_ConstrStates   ! Unused
+      TYPE(IfW_HHWind_OutputType)                        :: HH_OutData        ! output velocities
 
-      TYPE(IfW_FFWind_InputType)                         :: FF_InitData       ! input positions.   
-      TYPE(IfW_FFWind_ContinuousStateType)               :: FF_ContStates     ! Unused              
-      TYPE(IfW_FFWind_DiscreteStateType)                 :: FF_DiscStates     ! Unused             
-      TYPE(IfW_FFWind_ConstraintStateType)               :: FF_ConstrStates   ! Unused               
-      TYPE(IfW_FFWind_OutputType)                        :: FF_OutData        ! output velocities    
+      TYPE(IfW_FFWind_InputType)                         :: FF_InitData       ! input positions.
+      TYPE(IfW_FFWind_ContinuousStateType)               :: FF_ContStates     ! Unused
+      TYPE(IfW_FFWind_DiscreteStateType)                 :: FF_DiscStates     ! Unused
+      TYPE(IfW_FFWind_ConstraintStateType)               :: FF_ConstrStates   ! Unused
+      TYPE(IfW_FFWind_OutputType)                        :: FF_OutData        ! output velocities
 
 
 !     TYPE(CT_Backgr)                                    :: BackGrndValues
@@ -915,19 +915,19 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
    REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
    REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
 
-   
-   
+
+
    ErrStat = ErrID_None
 
    SELECT CASE ( ParamData%WindFileType )
       CASE (HH_WindNumber)
-            
+
          !-------------------------------------------------------------------------------------------------
-         ! Linearly interpolate in time (or use nearest-neighbor to extrapolate) 
+         ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
          ! (compare with NWTC_Num.f90\InterpStpReal)
          !-------------------------------------------------------------------------------------------------
 
-      
+
             ! Let's check the limits.
          IF ( Time <= OtherStates%HHWind%Tdata(1) .OR. OtherStates%HHWind%NumDataLines == 1 )  THEN
 
@@ -942,9 +942,9 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
             V_tmp                 = OtherStates%HHWind%V      (OtherStates%HHWind%NumDataLines)
             Delta_tmp             = OtherStates%HHWind%Delta  (OtherStates%HHWind%NumDataLines)
             VZ_tmp                = OtherStates%HHWind%VZ     (OtherStates%HHWind%NumDataLines)
-               
+
          ELSE
-   
+
               ! Let's interpolate!
 
             OtherStates%HHWind%TimeIndex = MAX( MIN( OtherStates%HHWind%TimeIndex, OtherStates%HHWind%NumDataLines-1 ), 1 )
@@ -974,22 +974,22 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
 
             END DO
 
-         END IF         
-                                      
+         END IF
+
       !-------------------------------------------------------------------------------------------------
       ! calculate the wind speed at this time
       !-------------------------------------------------------------------------------------------------
-      
+
          WindInf_ADhack_diskVel(1) =  V_tmp * COS( Delta_tmp )
          WindInf_ADhack_diskVel(2) = -V_tmp * SIN( Delta_tmp )
-         WindInf_ADhack_diskVel(3) =  VZ_tmp      
-                                  
+         WindInf_ADhack_diskVel(3) =  VZ_tmp
+
 
 
       CASE (FF_WindNumber)
 
          WindInf_ADhack_diskVel(1)   = OtherStates%FFWind%MeanFFWS
-         WindInf_ADhack_diskVel(2:3) = 0.0                 
+         WindInf_ADhack_diskVel(2:3) = 0.0
 
       CASE DEFAULT
          ErrStat = ErrID_Fatal
@@ -999,8 +999,8 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
 
    RETURN
 
-END FUNCTION WindInf_ADhack_diskVel                       
-                       
+END FUNCTION WindInf_ADhack_diskVel
+
 
 
 
