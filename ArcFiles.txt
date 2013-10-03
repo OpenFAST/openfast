@@ -49,9 +49,9 @@ Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\ED_Primary
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\FAST_Primary_v8.03.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\SrvD_Primary_v1.01.x.dat
 
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversion\newInputs_ED_v1_00.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversion\newInputs_ED_v1_01.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversion\newInputs_SrvD_v1_01.m
+Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_00.m
+Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_01.m
+Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_SrvD_v1_01.m
 
 Utilities\SimulationToolbox\FAST2Matlab\AeroDyn2Matlab.m
 Utilities\SimulationToolbox\FAST2Matlab\Fast2Matlab.m
@@ -343,7 +343,7 @@ CertTest\Test24.cru
 
 
 
-CertTest\TstFiles\Test01_ElastoDyn.sum
+CertTest\TstFiles\Test01.sum
 CertTest\TstFiles\Test01.sts
 CertTest\TstFiles\Test01.azi
 
@@ -361,7 +361,7 @@ CertTest\TstFiles\Test04.pmf
 CertTest\TstFiles\Test05_ElastoDyn.sum
 CertTest\TstFiles\Test05.sts
 
-CertTest\TstFiles\Test06_ElastoDyn.sum
+CertTest\TstFiles\Test06.sum
 CertTest\TstFiles\Test06.sts
 
 CertTest\TstFiles\Test07_ElastoDyn.sum
@@ -378,7 +378,7 @@ CertTest\TstFiles\Test09.sts
 CertTest\TstFiles\Test10_ElastoDyn.sum
 CertTest\TstFiles\Test10.sts
 
-CertTest\TstFiles\Test11_ElastoDyn.sum
+CertTest\TstFiles\Test11.sum
 CertTest\TstFiles\Test11.sts
 
 CertTest\TstFiles\Test12_ElastoDyn.sum
@@ -389,7 +389,7 @@ CertTest\TstFiles\Test13.sts
 CertTest\TstFiles\Test13.pmf
 
 
-CertTest\TstFiles\Test15_ElastoDyn.sum
+CertTest\TstFiles\Test15.sum
 CertTest\TstFiles\Test15.sts
 
 CertTest\TstFiles\Test16_ElastoDyn.sum
@@ -399,19 +399,19 @@ CertTest\TstFiles\Test17_ElastoDyn.sum
 CertTest\TstFiles\Test17.sts
 CertTest\TstFiles\Test17.pmf
 
-CertTest\TstFiles\Test18_ElastoDyn.sum
+CertTest\TstFiles\Test18.sum
 CertTest\TstFiles\Test18.sts
 
-CertTest\TstFiles\Test19_ElastoDyn.sum
+CertTest\TstFiles\Test19.sum
 CertTest\TstFiles\Test19.sts
 
 
 
-CertTest\TstFiles\Test22_ElastoDyn.sum
+CertTest\TstFiles\Test22.sum
 CertTest\TstFiles\Test22.sts
 
-CertTest\TstFiles\Test23_ElastoDyn.sum
+CertTest\TstFiles\Test23.sum
 CertTest\TstFiles\Test23.sts
 
-CertTest\TstFiles\Test24_ElastoDyn.sum
+CertTest\TstFiles\Test24.sum
 CertTest\TstFiles\Test24.sts

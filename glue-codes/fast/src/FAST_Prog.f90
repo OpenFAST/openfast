@@ -1019,7 +1019,6 @@ CONTAINS
    ! with the output data. It should be called after all the output solves for a given time have been completed.
    !...............................................................................................................................
       REAL(DbKi)                      :: OutTime                                 ! Used to determine if output should be generated at this simulation time
-
       
       IF ( t_global >= p_FAST%TStart )  THEN
 
@@ -1029,14 +1028,10 @@ CONTAINS
          IF ( EqualRealNos( t_global, OutTime ) )  THEN
 
                ! Generate glue-code output file
-            CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, ED_Output(1)%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
+
+               CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, ED_Output(1)%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
                               y_SD%WriteOutput, y_MAP%WriteOutput, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
-
-!!bjj: FIX THIS >>>>                
-!               ! Generate AeroDyn's element data if desired:
-!            CALL ElemOut()
-!!<<<               
 
          END IF
 
