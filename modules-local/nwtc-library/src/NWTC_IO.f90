@@ -1923,7 +1923,7 @@ CONTAINS
    CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
    CALL WrScr('')
    CALL WrScr( 'This program comes with ABSOLUTELY NO WARRANTY. '//&
-               'See the "license.txt" file distribued with this software for details.')
+               'See the "license.txt" file distributed with this software for details.')
    CALL WrScr(Stars)
    CALL WrScr('')
 
