@@ -10,7 +10,7 @@ Node Type       X       Y       Z     M     B     FX    FY    FZ
 3    fix     171.985 386.95   depth    0     0     #     #     #
 4    Vessel   20.0    20.0     -4.0    0     0     #     #     #
 ---------------------- LINE PROPERTIES ---------------------------------------
-Element  LineType  UnstrLen    NodeAnch  NodeFair  Flags
+Line   LineType  UnstrLen    NodeAnch  NodeFair  Flags
 (-)      (-)       (m)         (-)       (-)       (-)
 1       Material  473.312       1         2        plot fair_tension
 2       Material  473.312       3         4        plot fair_tension

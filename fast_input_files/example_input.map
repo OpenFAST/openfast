@@ -1,0 +1,29 @@
+---------------------- LINE DICTIONARY -----------------------------------------------------
+LineType  Diam     MassDenInAir    EA         CB
+(-)       (m)      (kg/m)         (kN)        (-)
+steel     0.25     343.6          9.817E6     1.0
+nylon     0.30      98.6          9.896E5     1.0
+---------------------- NODE PROPERTIES -----------------------------------------------------
+Node      Type      X        Y         Z        M        V        FX       FY      FZ
+(-)       (-)      (m)      (m)       (m)      (kg)     (m^3)    (kN)     (kN)    (kN)
+1         Fix       400      0        -350      0        0        #        #       #
+2         Connect   #90      #0       #-80      0        0        0        0       0
+3         Vessel    20       30       -10       0        0        #        #       #
+4         Vessel    20      -30       -10       0        0        #        #       #
+---------------------- LINE PROPERTIES -----------------------------------------------------
+Line     LineType  UnstrLen   NodeAnch  NodeFair  Flags
+(-)      (-)       (m)        (-)       (-)       (-)
+1        steel     520         1         2        plot x_pos
+2        nylon     90          2         3        plot x_force
+3        nylon     90          2         4        plot z_force 
+3 repeat 120 	   240
+---------------------- SOLVER OPTIONS-----------------------------------------
+Option
+(-)
+-snes_type newtontr
+-ksp_type preonly
+-pc_type lu
+-pc_factor_nonzeros_along_diagonal
+-snes_atol 1e-6
+-snes_rtol 1e-6
+-snes_stol 1e-6   
