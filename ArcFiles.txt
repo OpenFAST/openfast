@@ -1,26 +1,25 @@
-ArcFiles.txt
-Archive.bat
 ChangeLog.txt
 Disclaimer.txt
+license.txt
 
 FAST_SourceFiles.txt
 
-Samples/LES.fdp
-Samples/SampleInflowWindInput.hwc
-Samples/Steady.wnd
-Samples/Turb.sum
-Samples/Turb.wnd
-Samples/TurbSim_AD.ctp
-Samples/FORMAT_FF_Sum_File.pdf
+SampleCase/README.txt
+SampleCase/Sample1.bin
+SampleCase/Sample1.bts
+SampleCase/Sample1.cts
+SampleCase/Sample1.dat
+SampleCase/Sample1.hh
+SampleCase/Sample1.inp
+SampleCase/Sample1.sum
+SampleCase/Sample1.twr
+SampleCase/Sample1.u
+SampleCase/Sample1.v
+SampleCase/Sample1.w
+SampleCase/Sample1.wnd
 
-Source/InflowWind_Make.txt
-Source/InflowWind_Driver.txt
-
-TestRoutines/Fortran/ReadMe.txt
-TestRoutines/Fortran/InflowWind_Test.f90
-TestRoutines/Matlab/intelf12msvs2010shellopts.bat
-TestRoutines/Matlab/make_InflowWind_mexFunc.m
-TestRoutines/Matlab/InflowWind_gateway.f90
-TestRoutines/Matlab/Test_InflowWind_mexFunc.m
-
-
+Source/InflowWind_Driver.f90
+Source/InflowWind_Driver_Subs.f90
+Source/InflowWind_Driver_Types.f90
+Source/Testing/IfW_FFWind_Test.f90
+Source/Testing/IfW_HHWind_Test.f90
