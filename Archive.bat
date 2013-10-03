@@ -23,7 +23,7 @@ GOTO CheckSyntax
 :MBUHL-20665S
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
-@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+@SET SEVENZIP="C:\Program Files (x86)\7-Zip\7z.exe"
 GOTO CheckSyntax
 
 ::=======================================================================================================
