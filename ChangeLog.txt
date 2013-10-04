@@ -3947,11 +3947,24 @@ v8.00.00c-bjj 9-Apr-2013 B. Jonkman
   I modified the source code so that the /assume:realloc_lhs switch isn't necessary. This required a manual change to the ED_Input_ExtrapInterp routine
     (bug reported in bugzilla).
 
-ElastoDyn v1.01.00a-bjj 9-Jul-2013
+ServoDyn v1.01.01b-bjj
+  I added the Bladed DLL Interface as a standard option.
+
+ElastoDyn v1.01.02a-bjj
   I created a new variable called PtfmRefzt to replace PtfmRef, with PtfmRefzt = - PtfmRef.
   I created a new variable called TowerBsHt to replace TwrRBHt and TwrDraft, with TowerBsHt = TwrRBHt - TwrDraft
 
-FAST v8.00.00c-bjj 11-Jul-2013 B. Jonkman
-  I added an input called InterpOrder to the main input file.
+FAST v8.03.02b-bjj 3-Oct-2013 B. Jonkman
+  I integrated MAP, SubDyn, HydroDyn, and new versions of AeroDyn and InflowWind (in FAST framework).
+  I updated the coupling scheme with a predictor-corrector approach.
+  I added a summary file.
+  I added new inputs to the main input file, including InterpOrder, AbortErrLev, DT_UJac, UJacSclFact, CompMAP, and MAPFile.
+    UJacSclFact is used to scale the loads from HydroDyn or SubDyn in the Jacobian calculation so that they are roughly the same
+      order of magnitude as the accelerations from ElastoDyn.
+    DT_UJac determines how often the Jacobian needs to be calculated in the ElastoDyn-HydroDyn and ElastoDyn-SubDyn coupling.
+      If the system doesn't rotate much, it can be set to a value larger than TMax.
+  I added the NREL 5MW Baseline turbine tests to the CertTest cases.
+  I reorganized the files in the CertTest folder by turbine.
+  We distribute under the Apache 2.0 license.
 
-v8.03.01a-bjj B. Jonkman
+

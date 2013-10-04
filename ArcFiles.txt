@@ -22,6 +22,7 @@ Source\dependencies\ServoDyn\*
 Source\dependencies\HydroDyn\*
 Source\dependencies\SubDyn\*
 Source\dependencies\MAP\*
+Source\dependencies\FAST_dependencies.xlsx
 
 OutListParameters.xlsx
 
@@ -99,12 +100,16 @@ CertTest\5MW_Baseline\Wind\NoShr_12.wnd
 CertTest\5MW_Baseline\Wind\90m_12mps.inp
 CertTest\5MW_Baseline\Wind\90m_12mps.bts
 
-CertTest\5MW_Baseline\38060.pdf
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn.ipt
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Blade.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Tower_Onshore.dat
+
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_TowerDrag.ipt
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_Tower_TwrDrag.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_Tower.dat
+
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5.ipt
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT2.ipt
@@ -130,7 +135,10 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_Tower_ITIBarge4.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_HydroDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_SubDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Tower_Monopile_RF.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT05.ipt
+
 
 
 CertTest\AOC\AeroData\S814_1.dat
