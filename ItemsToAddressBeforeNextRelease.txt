@@ -9,26 +9,15 @@ This is a list of things that we need to do before our next release. Please upda
 All components:
 -------------------------------------------------
 * check for fft and LAPACK licensing requirements...
-* Basic documentation (lists of limitations, etc)
-
 * TESTING!!!!!
-
-* make sure aerodyn's elm file gets created!
-* add check for ad in pc algorithm
 
 -------------------------------------------------
 FAST
 -------------------------------------------------
-* subdyn integration
 * remove greg's debug switches
-* CertTest: need updated input files from SubDyn so that the 5MW models work
 
-* add file with version numbers for all dependency code. maybe an xls file that keeps versions released together (and links?)
-* update matlab script for conversion to this version [test it] -> add new line for AeroDyn
-* update change log
 * update makefile
 * update notice.txt
-
 
 
 * document these issues:
@@ -74,8 +63,6 @@ HydroDyn
 -------------------------------------------------
 SubDyn
 -------------------------------------------------
-* line added to InitOutputType:
-typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 
 
 -------------------------------------------------
