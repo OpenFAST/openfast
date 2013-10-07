@@ -15,20 +15,11 @@
    REAL(ReKi),ALLOCATABLE::elk(:,:),elf(:)
    REAL(ReKi),ALLOCATABLE::elm(:,:),elg(:,:)
 
-!   REAL(ReKi)::Stif(6,6),cet
 
    INTEGER(IntKi)::i,allo_stat
    INTEGER(IntKi)::rot_elem
 
    rot_elem = dof_elem / 2
-   
-!   ALLOCATE(StifK(dof_total,dof_total),STAT = allo_stat)
-!   IF(allo_stat/=0) GOTO 9999
-!   StifK = 0.0D0
-   
-!   ALLOCATE(RHS(dof_total),STAT = allo_stat)
-!   IF(allo_stat/=0) GOTO 9999
-!   RHS = 0.0D0
    
 
    ALLOCATE(Nuu0(dof_elem),STAT = allo_stat)
