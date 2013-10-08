@@ -33,10 +33,12 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: ErrStat          ! Error status of the operation
    CHARACTER(1024)                    :: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
-   REAL(DbKi)                         :: dt_global_dummy  ! fixed/constant global time step
+   REAL(DbKi)                         :: dt_global        ! fixed/constant global time step
 
    REAL(DbKi)::t_intitial
    REAL(DbKi)::t_final
+   REAL(DbKi)::rhoinf,alfam,alfaf,gama,beta
+   REAL(DbKi)::coef(9)
 
    INTEGER(IntKi)                     :: n_t_final        ! total number of time steps
    INTEGER(IntKi)                     :: n_t_global       ! global-loop time counter
@@ -68,27 +70,22 @@ PROGRAM MAIN
    Integer(IntKi)                     :: j               ! counter for various loops
 
 
-   ! -------------------------------------------------------------------------
-   ! Initialization of glue-code time-step variables
-   ! -------------------------------------------------------------------------
 
-   ! NONE
+   t_initial = 0.0D0
+   t_final = 0.04d0
+   
+   dt_global = 1.0D-3
+   
+   n_t_final = ((t_final - t_initial) / dt_global)
+   
+   rhoinf = 0.0D0
+   alfam = 0.0D0
+   alfaf = 0.0D0
+   gama = 0.0D0
+   beta = 0.0D0
+   
+   coef = 0.0D0
 
-
-   ! -------------------------------------------------------------------------
-   ! Initialization of Modules
-   !  note that in this example, we are assuming that dt_global is not changed 
-   !  in the modules, i.e., that both modules are called at the same glue-code  
-   !  defined coupling interval.
-   ! -------------------------------------------------------------------------
-
-!   BDyn_InitInput%verif    = 1  ! 1 - unit force per unit lenght specified through input mesh in InputSolve
-
-!   BDyn_InitInput%num_elem = 1  ! number of elements spanning length
-
-!   BDyn_InitInput%order    = 12  ! order of spectral elements
-
-   !Simple_Cant_Beam: allocate Input and Output arrays; used for interpolation and extrapolation
    Allocate(BDyn_Input(1))
    Allocate(BDyn_InputTimes(1))
 
@@ -108,35 +105,29 @@ PROGRAM MAIN
                    , BDyn_InitOutput       &
                    , ErrStat               &
                    , ErrMsg )
-
-
-!------------------------------------------------
-! start - playground
-!------------------------------------------------
-
-!------------------------------------------------
-! end - playground
-!------------------------------------------------
-
-   ! We fill BDyn_InputTimes with negative times, but the BDyn_Input values are identical for each of those times; this allows 
-   ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
-   ! for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as 
-   ! order = SIZE(BDyn_Input)
+                   
+                   
+   CALL TiSchmComputeParameters(rhoinf, alfam,alfaf,gama,beta)
+   CALL TiSchmComputeCoefficients(beta,gama,dt_global,alfam,alfaf,coef)
 
    ! -------------------------------------------------------------------------
    ! Time-stepping loops
-   ! -------------------------------------------------------------------------
+   ! -------------------------------------------------------------------------  
 
-   ! write headers for output columns:
-       
 
-   ! write initial condition for q1
-   !CALL WrScr  ( '  'c//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
+   DO n_t_global = 0,n_t_final
 
-   DO n_t_global = 1,n_t_final
 
-       CALL DynamicSolution()
-       CALL UpdateStructuralConfiguration(uuNf,vvNf,aaNf,xxNf,uuNi,vvNi,aaNi,xxNi)
+       CALL DynamicSolution(BDyn_Parameter%uuN0,BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,&
+                        &BDyn_OtherState%xxNi,BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,&
+                        &BDyn_OtherState%xxNf,BDyn_Parameter%gll_deriv, BDyn_Parameter%gll_w,BDyn_Parameter%Jacobian,&
+                        &BDyn_Parameter%Stif0,BDyn_Parameter%m00,BDyn_Parameter%mEta0,BDyn_Parameter%rho0,BDyn_Parameter%bc,&
+                        &&BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%order,&
+                        &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%dof_elem,&
+                        &coef,BDyn_Parameter%niter)
+                        
+       CALL UpdateStructuralConfiguration(BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,BDyn_OtherState%xxNf,&
+                                         &BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,BDyn_OtherState%xxNi)
 
    ENDDO 
 
@@ -198,6 +189,52 @@ PROGRAM MAIN
 
 
 END PROGRAM MAIN
+
+
+   SUBROUTINE TiSchmComputeParameters(rhoinf, alfam,alfaf,gama,beta)
+
+   REAL(ReKi),INTENT(IN)::rhoinf
+   REAL(ReKi),INTENT(INOUT)::alfam, alfaf, gama, beta
+
+   REAL(ReKi)::tr0
+
+
+   tr0 = rhoinf + 1.0D0
+   alfam = (2.0D0 * rhoinf - 1.0D0) / tr0
+   alfaf = rhoinf / tr0
+   gama = 0.5D0 - alfam + alfaf
+   beta = 0.25 * (1.0D0 - alfam + alfaf) * (1.0D0 - alfam + alfaf)
+   
+
+   END SUBROUTINE TiSchmComputeParameters
+   
+   
+   SUBROUTINE TiSchmComputeCoefficients(beta,gama,deltat,alfaM,alfaF,coef)
+
+   REAL(ReKi),INTENT(IN)::beta, gama, deltat, alfaM, alfaF
+
+   REAL(ReKi),INTENT(INOUT):: coef(:)
+
+   REAL(ReKi)::deltat2, oalfaM, tr0, tr1, tr2
+
+   deltat2 = deltat * deltat
+   oalfaM = 1.0D0 - alfaM
+   tr0 =  alfaF / oalfaM
+   tr1 = alfaM / oalfaM
+   tr2 = (1.0D0 - alfaF) / oalfaM
+
+   coef(1) = beta * tr0 * deltat2
+   coef(2) = (0.5D0 - beta/oalfaM) * deltat2
+   coef(3) = gama * tr0 * deltat
+   coef(4) = (1.0D0 - gama / oalfaM) * deltat
+   coef(5) = tr0
+   coef(6) = -tr1
+   coef(7) = gama * tr2 * deltat
+   coef(8) = beta * tr2 * deltat2
+   coef(9) = tr2 
+
+   END SUBROUTINE TiSchmComputeCoefficients
+
 
 
    SUBROUTINE UpdateStructuralConfiguration(uuNf,vvNf,aaNf,xxNf,uuNi,vvNi,aaNi,xxNi)
