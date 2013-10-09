@@ -10,13 +10,14 @@ endif
 .SUFFIXES: .c .o
 
 CC_TOOLS = gcc
+DEST_DIR = ..
 CFLAGS = #-ansi
 LDFLAGS =
-DEBUG = -g 
+DEBUG = -g
 OBJ = registry.o my_strtok.o reg_parse.o data.o type.o misc.o sym.o symtab_gen.o gen_module_files.o gen_c_types.o
 
-registry.exe : $(OBJ)
-	$(CC_TOOLS) -o registry.exe $(DEBUG) $(LDFLAGS) $(OBJ)
+$(DEST_DIR)/registry.exe : $(OBJ)
+	$(CC_TOOLS) -o $(DEST_DIR)/registry.exe $(DEBUG) $(LDFLAGS) $(OBJ)
 
 .c.o :
 	$(CC_TOOLS) $(CFLAGS) -c $(DEBUG) $<
@@ -25,7 +26,7 @@ clean clena:
 	$(RM) $(OBJ) gen_comms.c standard.o
 
 superclean : clean
-	$(RM) registry.exe
+	$(RM) $(DEST_DIR)/registry.exe
 
 # regenerate this list with "makedepend -Y *.c"
 
@@ -46,7 +47,7 @@ gen_wrf_io.o: protos.h registry.h data.h
 misc.o: protos.h registry.h data.h
 my_strtok.o: registry.h protos.h data.h
 reg_parse.o: registry.h protos.h data.h
-registry.o: protos.h registry.h data.h Template_data.c Template_registry.c 
+registry.o: protos.h registry.h data.h Template_data.c Template_registry.c
 sym.o: sym.h
 type.o: registry.h protos.h data.h
 gen_interp.o: registry.h protos.h data.h
