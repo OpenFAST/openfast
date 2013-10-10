@@ -22,7 +22,7 @@
 PROGRAM MAIN
 
    USE BeamDynDynamic
-   USE BeamDyn_Types
+   USE BeamDynDynamic_Types
 
    USE NWTC_Library
 
@@ -39,6 +39,7 @@ PROGRAM MAIN
    REAL(DbKi)::t_final
    REAL(DbKi)::rhoinf,alfam,alfaf,gama,beta
    REAL(DbKi)::coef(9)
+   REAL(DbKi)::StepEndTime
 
    INTEGER(IntKi)                     :: n_t_final        ! total number of time steps
    INTEGER(IntKi)                     :: n_t_global       ! global-loop time counter
@@ -117,6 +118,7 @@ PROGRAM MAIN
 
    DO n_t_global = 0,n_t_final
 
+       StepEndTime = StepEndTime + (n_t_global + 1) * dt_global
 
        CALL DynamicSolution(BDyn_Parameter%uuN0,BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,&
                         &BDyn_OtherState%xxNi,BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,&
@@ -124,18 +126,12 @@ PROGRAM MAIN
                         &BDyn_Parameter%Stif0,BDyn_Parameter%m00,BDyn_Parameter%mEta0,BDyn_Parameter%rho0,BDyn_Parameter%bc,&
                         &&BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%order,&
                         &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%dof_elem,&
-                        &coef,BDyn_Parameter%niter)
+                        &coef,BDyn_Parameter%niter,dt_global,StepEndTime)
                         
        CALL UpdateStructuralConfiguration(BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,BDyn_OtherState%xxNf,&
                                          &BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,BDyn_OtherState%xxNi)
 
-   ENDDO 
-
-   CALL StaticSolution(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf, BDyn_Parameter%gll_deriv, BDyn_Parameter%gll_w, &
-                      &BDyn_Parameter%Jacobian, BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
-                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%order,&
-                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%dof_elem,&
-                      &BDyn_Parameter%niter)   
+   ENDDO    
 
    DO i=1,BDyn_Parameter%dof_total
        WRITE(*,*) BDyn_OtherState%uuNf(i)

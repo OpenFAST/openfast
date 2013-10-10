@@ -1,8 +1,8 @@
-   SUBROUTINE BeamDynamic(uuN0,uuNf,uuNv,uuNa,hhp,w,Jacobian,Stif0,m00,mEta0,rho0,Fext,&
+   SUBROUTINE BeamDynamic(uuN0,uuNf,uuNv,uuNa,hhp,w,Jacobian,Stif0,m00,mEta0,rho0,&
                         &node_elem,dof_node,norder,elem_total,dof_total,node_total,dof_elem,&
                         &StifK,MassM,DampG,RHS)
 
-   REAL(ReKi),INTENT(IN)::uuN0(:),uuNf(:),hhp(:,:),w(:),Fext(:),Jacobian
+   REAL(ReKi),INTENT(IN)::uuN0(:),uuNf(:),hhp(:,:),w(:),Jacobian
    REAL(ReKi),INTENT(IN)::uuNv(:),uuNa(:)
    REAL(ReKi),INTENT(IN)::Stif0(:,:,:)
    REAL(ReKi),INTENT(IN)::m00,mEta0(:),rho0(:,:) 
@@ -10,6 +10,7 @@
    INTEGER(IntKi),INTENT(IN)::dof_elem
    REAL(ReKi),INTENT(INOUT)::StifK(:,:),RHS(:)
    REAL(ReKi),INTENT(INOUT)::MassM(:,:),DampG(:,:)
+
    REAL(ReKi),ALLOCATABLE::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
    REAL(ReKi),ALLOCATABLE::Nvvv(:),Naaa(:)
    REAL(ReKi),ALLOCATABLE::elk(:,:),elf(:)
@@ -48,6 +49,7 @@
 
    ALLOCATE(Next(dof_elem),STAT = allo_stat)
    IF(allo_stat /=0) GOTO 9999
+   Next = 0.0D0
    
    ALLOCATE(elf(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
@@ -75,7 +77,7 @@
 
        CALL ElemNodalDisp(uuNa,node_elem,dof_node,i,norder,Naaa)
 
-       CALL ElemNodalDisp(Fext,node_elem,dof_node,i,norder,Next)
+!       CALL ElemNodalDisp(Fext,node_elem,dof_node,i,norder,Next)
        !Compute Nodal Relative Rotation Vector Nrr0 
        CALL NodalRelRot(Nuu0,node_elem,i,norder,dof_node,Nrr0)
        !Compute Nodal Relative Rotation Vector Nrrr
@@ -119,7 +121,9 @@
             IF(ALLOCATED(Next)) DEALLOCATE(Next)
             IF(ALLOCATED(elf)) DEALLOCATE(elf)
             IF(ALLOCATED(elk)) DEALLOCATE(elk)
+            IF(ALLOCATED(elm)) DEALLOCATE(elm)
+            IF(ALLOCATED(elg)) DEALLOCATE(elg)
         ENDIF
 
-   END SUBROUTINE BeamStatic
+   END SUBROUTINE BeamDynamic
 
