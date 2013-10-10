@@ -18,7 +18,7 @@
 !**********************************************************************************************************************************
 MODULE BeamDynDynamic
 
-   USE BeamDyn_Types
+   USE BeamDynDynamic_Types
    USE NWTC_Library
 
    IMPLICIT NONE
@@ -40,7 +40,7 @@ MODULE BeamDynDynamic
    PUBLIC :: BDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
-   PUBLIC :: StaticSolution                      ! for static verificaiton
+   PUBLIC :: DynamicSolution                      ! for static verificaiton
 
 CONTAINS
 INCLUDE 'NodeLoc.f90'
@@ -140,8 +140,12 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ALLOCATE( p%Stif0(6,6,p%node_total),      STAT=ErrStat )
       p%Stif0 = 0.0D0
-      !Allocate( p%M(6,6,p%num_node),      STAT=ErrStat )
        
+      ALLOCATE( p%mEta0(3),      STAT=ErrStat )
+      p%mEta0 = 0.0D0
+      ALLOCATE( p%rho0(3,3),      STAT=ErrStat )
+      p%rho0 = 0.0D0
+
       ALLOCATE( p%gll_w(p%node_elem),      STAT=ErrStat )
       p%gll_w = 0.0D0
       ALLOCATE( p%gll_p(p%node_elem),      STAT=ErrStat )
@@ -152,11 +156,22 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%uuN0 = 0.0D0
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
       OtherState%uuNf = 0.0D0
+      ALLOCATE( OtherState%uuNi(p%dof_total), STAT = ErrStat)
+      OtherState%uuNi = 0.0D0
+      ALLOCATE( OtherState%vvNf(p%dof_total), STAT = ErrStat)
+      OtherState%vvNf = 0.0D0
+      ALLOCATE( OtherState%vvNi(p%dof_total), STAT = ErrStat)
+      OtherState%vvNi = 0.0D0
+      ALLOCATE( OtherState%aaNf(p%dof_total), STAT = ErrStat)
+      OtherState%aaNf = 0.0D0
+      ALLOCATE( OtherState%aaNi(p%dof_total), STAT = ErrStat)
+      OtherState%aaNi = 0.0D0
+      ALLOCATE( OtherState%xxNf(p%dof_total), STAT = ErrStat)
+      OtherState%xxNf = 0.0D0
+      ALLOCATE( OtherState%xxNi(p%dof_total), STAT = ErrStat)
+      OtherState%xxNi = 0.0D0
       ALLOCATE( p%bc(p%dof_total), STAT = ErrStat)
       p%bc = 0.0D0
-      ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
-      p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D0
 !      p%F_ext(p%dof_total - 1) = -6.28D+01
       p%bc = 0.0D0
       ALLOCATE( dloc(p%node_total), STAT = ErrStat)
@@ -181,14 +196,19 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
-          p%Stif0(1,1,i) = 1.0D+04
-          p%Stif0(2,2,i) = 1.0D+04
-          p%Stif0(3,3,i) = 1.0D+04
-          p%Stif0(4,4,i) = 1.0D+04
-          p%Stif0(5,5,i) = 1.0D+02
-          p%Stif0(6,6,i) = 1.0D+02
+          p%Stif0(1,1,i) = 3.50D+08 
+          p%Stif0(2,2,i) = 1.09162D+08
+          p%Stif0(3,3,i) = 1.09162D+08
+          p%Stif0(4,4,i) = 7.57037D+04
+          p%Stif0(5,5,i) = 7.28000D+04
+          p%Stif0(6,6,i) = 2.91900D+05
       ENDDO
       DEALLOCATE(dloc)
+      p%m00 = 1.35000D+01
+      p%mEta0 = 0.0D0
+      p%rho0(1,1) = 1.40625D-02
+      p%rho0(2,2) = 2.81250D-03
+      p%rho0(3,3) = 1.12500D-02
 
 !     DO i = 1, p%elem_total
 !        p%det_jac(i) = elem_length / 2.   ! element-specific determinant of jacobian of transformation

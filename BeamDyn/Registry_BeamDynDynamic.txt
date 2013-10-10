@@ -21,6 +21,7 @@ typedef BeamDyn/BDyn InitOutputType Reki DummyInitVar - - - "A variable" -
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 !typedef BeamDyn ContinuousStateType ReKi uuNf      {:} - -  "nodal displacements and rotations" - 
+!typedef      ^         ^             ^   Nv        {:} - -  "nodal linear and angular velocities" -
 
 # Define discrete (nondifferentiable) states here:
 typedef BeamDyn/BDyn BDyn_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
@@ -34,6 +35,13 @@ typedef BeamDyn/BDyn ConstraintStateType ReKi DummyConstrState - - - "A variable
 typedef BeamDyn/BDyn OtherStateType BDyn_ContinuousStateType  xdot  {:} - - "previous state derivs for m-step time integrator"  -
 typedef      ^             ^        IntKi n   - - - "tracks time step for which OtherState was updated last" -
 typedef BeamDyn/BDyn OtherStateType ReKi uuNf     {:} - - "Nodal displacements and rotations" -
+typedef BeamDyn/BDyn OtherStateType ReKi uuNi     {:} - - "Initial nodal displacements and rotations at a time step" -
+typedef BeamDyn/BDyn OtherStateType ReKi vvNi     {:} - - "Initial nodal linear and angular velocities at a time step" -
+typedef BeamDyn/BDyn OtherStateType ReKi vvNf     {:} - - "Final nodal linear and angular velocities at a time step" -
+typedef BeamDyn/BDyn OtherStateType ReKi aaNi     {:} - - "Initial nodal linear and angular accelerations at a time step" -
+typedef BeamDyn/BDyn OtherStateType ReKi aaNf     {:} - - "Final nodal linear and angular accelerations at a time step" -
+typedef BeamDyn/BDyn OtherStateType ReKi xxNi     {:} - - "Initial nodal algorithmic accelerations at a time step" -
+typedef BeamDyn/BDyn OtherStateType ReKi xxNf     {:} - - "Final nodal algorithmic accelerations at a time step" -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -54,8 +62,11 @@ typedef   ^          ^          ^  gll_deriv {:}{:} - "gll derivative matrix" -
 typedef   ^          ^          ^  uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^  det_jac {:} - - "determinant of transformation jacobian for element" -
 typedef   ^          ^          ^  bc {:} - - "Boundary condition vector" -
-typedef   ^          ^          ^  F_ext {:} - - "Applied force vector" -
+!typedef   ^          ^          ^  F_ext {:} - - "Applied force vector" -
 typedef   ^          ^          ^  Jacobian - - - "Applied force vector" -
+typedef   ^          ^          ^  m00 - - - "Mass per unit span" -
+typedef   ^          ^          ^  mEta {:} - - "Mass * Section center location" -
+typedef   ^          ^          ^  rho0 {:} {:} - "Sectional tensor of inertia" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
