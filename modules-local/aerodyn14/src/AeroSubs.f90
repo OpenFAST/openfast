@@ -1,12 +1,24 @@
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
 MODULE AeroSubs
 
    USE                     NWTC_Library
-   USE                     InflowWind
-   USE                     SharedInflowDefns
+   USE                     AeroDyn_Types
+   USE  InflowWind
+   USE  InflowWind_Types
+
+   USE AeroGenSubs, ONLY : MaxInfl
 
 
     IMPLICIT                NONE
 
+    
+   INTEGER(IntKi) , PARAMETER, DIMENSION(1:6)  :: MRvector = (/ 0, 0, 1, 1, 2, 3 /)  !bjj why aren't these parameters? Now they are.
+   INTEGER(IntKi) , PARAMETER, DIMENSION(1:6)  :: NJVector = (/ 1, 3, 2, 4, 3, 4 /)    
+                     
 
 CONTAINS
 ! ************************************************
@@ -14,33 +26,24 @@ CONTAINS
 !   SymDyn and FAST.
 ! ************************************************
 !  UNIVERSITY OF UTAH, MECHANICAL ENGINEERING DEPARTMENT
-!====================================================================================================
-SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
-!====================================================================================================
 
+
+! Updated version that uses FAST Interface types
+!====================================================================================================
+SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
+!====================================================================================================
    USE                           AeroGenSubs, ONLY: AllocArrays
-
-   USE                           AD_IOParams
-   USE                           AeroTime
-   USE                           ElOutParams
-   USE                           Airfoil
-   USE                           Blade
-   USE                           Element
-   USE                           InducedVel
-   USE                           Rotor
-   USE                           Switch
-   USE                           TwrProps
-   USE                           Wind
-
-
    IMPLICIT                      NONE
-
       ! Passed Variables:
-   INTEGER, INTENT(IN)       :: UnIn
-   CHARACTER(*), INTENT(IN)  :: AeroInFile
-   CHARACTER(*), INTENT(OUT) :: WindFileName
-   CHARACTER(*), INTENT(OUT) :: Title           ! used for ADOUT() -- bjj: get rid of this when ADOUT is gone!!!!
-   INTEGER, INTENT(OUT)      :: ErrStat
+   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState  ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
       ! Local Variables:
 
@@ -48,23 +51,28 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
    INTEGER                    :: IELM
    INTEGER                    :: IndPrint
    INTEGER                    :: K
+   INTEGER                    :: UnIn
 
    CHARACTER(1024)            :: LINE
    CHARACTER(1024)            :: FilePath             ! The path name of the AeroDyn input file (so files listed in it can be defined relative to the main input file location)
 
+      ! Function definition
+
+   UnIn = p%UnADin
+
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
-   CALL OpenFInpFile(UnIn, TRIM(AeroInFile), ErrStat)
-   IF (ErrStat /= 0 ) RETURN
+   CALL OpenFInpFile(UnIn, TRIM(InitInp%ADFileName), ErrStat)
+   IF (ErrStat /= ErrID_None ) RETURN
 
-   CALL GetPath( AeroInFile, FilePath )
+   CALL GetPath( InitInp%ADFileName, FilePath )
 
    !-------------------------------------------------------------------------------------------------
    ! If the echo file is open, write the header...
    !-------------------------------------------------------------------------------------------------
-   IF ( Echo ) THEN      
-      WRITE( UnEc, '(// A /)' ) 'AeroDyn input data from file "'//TRIM( AeroInFile )//'":'  
+   IF ( p%Echo ) THEN
+      WRITE( p%UnEc, '(// A /)' ) 'AeroDyn input data from file "'//TRIM( InitInp%ADFileName )//'":'
    END IF
 
    !-------------------------------------------------------------------------------------------------
@@ -72,194 +80,197 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
    !-------------------------------------------------------------------------------------------------
 
       ! Read in the title line
-   CALL ReadStr( UnIn, AeroInFile, Title, 'Title', 'File title', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   CALL WrScr( ' Heading of the AeroDyn input file: '//TRIM(Title) )
-
+!   IF (NWTC_VerboseComments) THEN
+      CALL WrScr( ' Heading of the AeroDyn input file: '//NewLine//'   '//TRIM(InitInp%Title) )
+!   END IF
+   p%TITLE = InitInp%TITLE
 
       ! Read in the units specifier  - REMOVE SOON!!!!!
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'Units', 'Units option', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Units', VarDescr='Units option', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    LINE = ADJUSTL( LINE )
    CALL Conv2UC(LINE(1:3))
 
    IF (LINE(1:2) /= 'SI') THEN
       CALL ProgWarn( 'English units are no longer allowed in AeroDyn. Please modify your input files to use the metric system.')
-      ErrStat = 1
+      ErrStat = ErrID_Fatal
       RETURN
    END IF
 
-   SIunit = .TRUE.
-
+   p%SIunit = .TRUE.
 
       ! Read in the stall model
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'DStall', 'Stall model', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='DStall', VarDescr='Stall model', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    CALL Conv2UC(LINE(1:7))
 
    SELECT CASE ( TRIM(Line) )
       CASE ('STEADY')
-         DStall = .FALSE.
-      CASE ('BEDDOES')
-         DStall = .TRUE.
+         P%DStall = .FALSE.
+      CASE ('BEDDOES')   !  added -- maybe the input format changed? jm
+         P%DStall = .TRUE.
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "STEADY" or "BEDDOES" stall model option.')
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
    END SELECT
 
 
       ! Read in the CM option
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'PMoment', 'Pitching moment option', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='PMoment', VarDescr='Pitching moment option', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    CALL Conv2UC(LINE(1:6))
 
    SELECT CASE ( TRIM(Line) )
       CASE ('USE_CM')
-         PMoment = .TRUE.
+         P%PMoment = .TRUE.
       CASE ('NO_CM')
-         PMoment = .FALSE.
+         P%PMoment = .FALSE.
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "USE_CM" or "NO_CM" pitching moment option.')
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
    END SELECT
 
 
       ! Read in the inflow model option
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'DynInfl', 'Inflow model', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='DynInfl', VarDescr='Inflow model', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    CALL Conv2UC(LINE(1:7))
 
    SELECT CASE ( Line(1:5) )
       CASE ('EQUIL')
-         DynInfl = .FALSE.
-         DynInit = .FALSE.
+         P%DynInfl = .FALSE.
+         O%DynInit = .FALSE.
 
          IF (Line(6:7) == 'DA') THEN
-            EqAIDmult = 1.0
-            EquilDA   = .TRUE.
-            EquilDT   = .FALSE.
+            P%Inducedvel%EqAIDmult = 1.0
+            P%Inducedvel%EquilDA   = .TRUE.
+            P%Inducedvel%EquilDT   = .FALSE.
          ELSEIF (LINE(6:7) == 'DB') THEN
-            EqAIDmult = 1.0
-            EquilDA   = .TRUE.
-            EquilDT   = .TRUE.
+            P%Inducedvel%EqAIDmult = 1.0
+            P%Inducedvel%EquilDA   = .TRUE.
+            P%Inducedvel%EquilDT   = .TRUE.
          ELSEIF (LINE(6:7) == 'DT') THEN
-            EqAIDmult = 0.0
-            EquilDA   = .FALSE.
-            EquilDT   = .TRUE.
+            P%Inducedvel%EqAIDmult = 0.0
+            P%Inducedvel%EquilDA   = .FALSE.
+            P%Inducedvel%EquilDT   = .TRUE.
          ELSE
-            EqAIDmult = 0.0
-            EquilDA   = .FALSE.
-            EquilDT   = .FALSE.
+            P%Inducedvel%EqAIDmult = 0.0
+            P%Inducedvel%EquilDA   = .FALSE.
+            P%Inducedvel%EquilDT   = .FALSE.
          ENDIF
 
       CASE ('DYNIN')
-         DynInfl = .TRUE.
-         DynInit = .TRUE.
+         P%DynInfl = .TRUE.
+         O%DynInit = .TRUE.
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "EQUIL" or "DYNIN" inflow model option.')
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
    END SELECT
 
 
       ! Read in the wake model
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'Wake', 'Wake model', ErrStat)
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Wake', VarDescr='Wake model', ErrStat=ErrStat)
    IF ( ErrStat /= 0 ) RETURN
 
    CALL Conv2UC(LINE(1:5))
 
    SELECT CASE ( TRIM(Line) )
       CASE ('NONE')
-         Wake = .FALSE.
-         Swirl = .FALSE.
+         P%Wake = .FALSE.
+         P%Swirl = .FALSE.
 
          CALL ProgWarn( ' All wake calculations are turned off! This option is recommended only '// &
                         'in high winds or for debugging.' )
       CASE ('WAKE')
-         Wake = .TRUE.
-         Swirl = .FALSE.
+         P%Wake = .TRUE.
+         P%Swirl = .FALSE.
       CASE ('SWIRL')
-         Wake = .TRUE.
-         Swirl = .TRUE.
+         P%Wake = .TRUE.
+         P%Swirl = .TRUE.
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "NONE", "WAKE", or "SWIRL" wake model option.')
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
    END SELECT
 
       ! Read in the tolerance for the wake model
-   CALL ReadVar( UnIn, AeroInFile, AToler, 'AToler', 'Induction factor tolerance', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Inducedvel%AToler, VarName='AToler', VarDescr='Induction factor tolerance', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
+
 
        ! Read in the tip-loss model for EQUIL inflow
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'TLoss', 'Tip-loss model', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='TLoss', VarDescr='Tip-loss model', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF ( DynInfl ) THEN          ! Initialize these variables, though they shouldn't be used
-      TLoss = .FALSE.
-      GTech = .FALSE.
+   IF ( P%DynInfl ) THEN          ! Initialize these variables, though they shouldn't be used
+      P%Inducedvel%TLoss = .FALSE.
+      P%Inducedvel%GTech = .FALSE.
    ELSE
       CALL Conv2UC(LINE(1:5))
 
       SELECT CASE ( LINE(1:5) )
          CASE ('NONE ')
-            TLoss = .FALSE.
-            GTech = .FALSE.
+            P%Inducedvel%TLoss = .FALSE.
+            P%Inducedvel%GTech = .FALSE.
          CASE ('PRAND')
-            TLoss = .TRUE.
-            GTech = .FALSE.
+            P%Inducedvel%TLoss = .TRUE.
+            P%Inducedvel%GTech = .FALSE.
          CASE ('GTECH')
-            TLoss = .TRUE.
-            GTech = .TRUE.
+            P%Inducedvel%TLoss = .TRUE.
+            P%Inducedvel%GTech = .TRUE.
          CASE DEFAULT
             CALL ProgWarn( ' Error: Expecting "NONE", "PRAND", or "GTECH" tip-loss model option.')
-            ErrStat = 1
+            ErrStat = ErrID_Fatal
             RETURN
       END SELECT
    END IF
 
 
        ! Read in the hub-loss model for EQUIL inflow
-   CALL ReadVar( UnIn, AeroInFile, LINE, 'HLoss', 'Hub-loss model', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='HLoss', VarDescr='Hub-loss model', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF ( DynInfl ) THEN          ! Initialize these variables, though they shouldn't be used
-      HLoss = .FALSE.
+   IF ( P%DynInfl ) THEN          ! Initialize these variables, though they shouldn't be used
+      P%Inducedvel%HLoss = .FALSE.
    ELSE
       CALL Conv2UC( LINE(1:5) )
 
       SELECT CASE ( LINE(1:5) )
          CASE ('NONE')
-            HLoss = .FALSE.
+            P%Inducedvel%HLoss = .FALSE.
          CASE ('PRAND')
-            HLoss = .TRUE.
+            P%Inducedvel%HLoss = .TRUE.
          CASE DEFAULT
             CALL ProgWarn( ' Error: Expecting "NONE" or "PRAND" hub-loss model option.')
-            ErrStat = 1
+            ErrStat = ErrID_Fatal
             RETURN
       END SELECT
    END IF
 
 
       ! Read in the wind file name
-   CALL ReadVar( UnIn, AeroInFile, WindFileName, 'WindFileName', 'Name of the wind file', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
-   IF ( PathIsRelative( WindFileName ) ) WindFileName = TRIM(FilePath)//TRIM(WindFileName)
+   CALL ReadVar( UnIn, InitInp%ADFileName, InitInp%WindFileName, VarName='WindFileName', VarDescr='Name of the wind file', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
+   IF ( PathIsRelative( InitInp%WindFileName ) ) InitInp%WindFileName = TRIM(FilePath)//TRIM(InitInp%WindFileName)
 
       ! Read in the wind reference (hub) height above ground
-   CALL ReadVar( UnIn, AeroInFile, HH, 'RefHt', 'Wind reference height', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Rotor%HH, VarName='RefHt', VarDescr='Wind reference height', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
 !bjj: this is a hack job to allow both the new tower influence and the old tower wake models to be used
-   CALL ReadStr( UnIn, AeroInFile, Line, 'NewTowerModel?', 'Check for tower influence model', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+!   CALL ReadStr( UnIn, InitInp%ADFileName, LINE, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat )
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat, ErrMsg=ErrMess )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
       ! Check if this is the "special string" to indicate the new tower influence model
    CALL Conv2UC( Line )
@@ -268,147 +279,150 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
       !----------------------------------------------------------------------------------------------
       ! New tower influence model, as implemented by PJM
       !----------------------------------------------------------------------------------------------
-      PJM_Version = .TRUE.
-
+      P%TwrProps%PJM_Version = .TRUE.
 
          ! Read in the tower potential flow switch
-      CALL ReadVar( UnIn, AeroInFile, TwrPotent, 'TwrPotent', 'Tower influence model', ErrStat)
-      IF ( ErrStat /= 0 ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrPotent, VarName='TwrPotent', VarDescr='Tower influence model', ErrStat=ErrStat)
+      IF ( ErrStat /= ErrID_None ) RETURN
 
          ! Read in the tower shadow switch
-      CALL ReadVar( UnIn, AeroInFile, TwrShadow, 'TwrShadow', 'Tower shadow model', ErrStat)
-      IF ( ErrStat /= 0 ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrShadow, VarName='TwrShadow', VarDescr='Tower shadow model', ErrStat=ErrStat)
+      IF ( ErrStat /= ErrID_None ) RETURN
 
          ! Read in the tower drag file name
-      CALL ReadVar( UnIn, AeroInFile, TwrFile, 'TwrFile', 'Tower data file name', ErrStat)
-      IF ( ErrStat /= 0 ) RETURN
-      
-      IF ( PathIsRelative( TwrFile ) ) TwrFile = TRIM(FilePath)//TRIM(TwrFile)
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrFile, VarName='TwrFile', VarDescr='Tower data file name', ErrStat=ErrStat)
+      IF ( ErrStat /= ErrID_None ) RETURN
+
+      IF ( PathIsRelative( P%TwrProps%TwrFile ) ) P%TwrProps%TwrFile = TRIM(FilePath)//TRIM(P%TwrProps%TwrFile)
+
+         ! Read in the flag to tell AeroDyn to compute tower aerodynamics.
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%CalcTwrAero, VarName='CalcTwrAero', VarDescr='Flag to calculate tower aerodynamics', ErrStat=ErrStat)
+      IF ( ErrStat /= ErrID_None ) RETURN
 
    ELSE
       !----------------------------------------------------------------------------------------------
       ! Old tower influence model, read TwrShad from Line for now
       !----------------------------------------------------------------------------------------------
-      PJM_Version = .FALSE.
+      P%TwrProps%PJM_Version = .FALSE.
 
-      TwrPotent = .FALSE.     ! We don't want to read the tower file!
-      TwrShadow = .FALSE.     ! We don't want to read the tower file!
+      P%TwrProps%TwrPotent = .FALSE.     ! We don't want to read the tower file!
+      P%TwrProps%TwrShadow = .FALSE.     ! We don't want to read the tower file!
 
          ! Read in the tower shadow deficit
       IF ( INDEX( 'FTft', Line(:1) ) > 0 )  THEN
          CALL ProgWarn( ' Invalid numeric input. "'//TRIM( Line )//'" found when trying to read TwrShad.' )
 
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       ELSE
-         READ (Line,*,IOSTAT=ErrStat)  TwrShad
-         CALL CheckIOS ( ErrStat, AeroInFile, 'TwrShad', NumType, .TRUE. )
-
-         IF ( Echo )  THEN
-            WRITE (UnEc,"( 2X, ES11.4e2, 2X, A, T30, ' - ', A )")  TwrShad, "TwrShad", 'Tower shadow deficit'
+         READ (Line,*,IOSTAT=ErrStat)  P%TwrProps%TwrShad
+         CALL CheckIOS ( ErrStat, InitInp%ADFileName, 'TwrShad', NumType, .TRUE. )
+!bjj: is this aborting?
+         IF ( p%Echo )  THEN
+            WRITE (p%UnEc,"( 2X, ES11.4e2, 2X, A, T30, ' - ', A )")  P%TwrProps%TwrShad, "TwrShad", 'Tower shadow deficit'
          END IF
 
       END IF
 !----------------
 
-      IF ( TwrShad >= 1.0 ) THEN
+      IF ( P%TwrProps%TwrShad >= 1.0 ) THEN
          CALL ProgWarn( ' Tower shadow deficit cannot be >= 1.  Setting default deficit = 0.3' )
-         TwrShad = 0.3
+         P%TwrProps%TwrShad = 0.3
       END IF
 
 
          ! Read in the tower shadow width
-      CALL ReadVar( UnIn, AeroInFile, ShadHWid, 'ShadHWid', 'Tower shadow half width', ErrStat)
-      IF ( ErrStat /= 0 ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%ShadHWid, VarName='ShadHWid', VarDescr='Tower shadow half width', ErrStat=ErrStat)
+      IF ( ErrStat /= ErrID_None ) RETURN
 
-      IF ( ShadHWid <= 0.0 ) THEN
+      IF ( P%TwrProps%ShadHWid <= 0.0 ) THEN
          CALL ProgWarn( ' Tower shadow width cannot be <= zero.  Setting default half width = 1.0' )
-         ShadHWid = 1.0
+         P%TwrProps%ShadHWid = 1.0
       END IF
 
 
          ! Read in the tower shadow reference point (distance from yaw axis to hub)
-      CALL ReadVar( UnIn, AeroInFile, T_Shad_Refpt, 'T_Shad_Refpt', 'Tower shadow reference point', ErrStat)
-      IF ( ErrStat /= 0 ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%T_Shad_Refpt, VarName='T_Shad_Refpt', VarDescr='Tower shadow reference point', ErrStat=ErrStat)
+      IF ( ErrStat /= ErrID_None ) RETURN
 
          ! Constants used in tower shadow calculations
-      TShadC1 = ShadHWid / SQRT ( ABS( T_Shad_Refpt ) )
-      TShadC2 = TwrShad  * SQRT ( ABS( T_Shad_Refpt ) )
+      P%TwrProps%TShadC1 = P%TwrProps%ShadHWid / SQRT ( ABS( P%TwrProps%T_Shad_Refpt ) )
+      P%TwrProps%TShadC2 = P%TwrProps%TwrShad  * SQRT ( ABS( P%TwrProps%T_Shad_Refpt ) )
 
    END IF
 
 
       ! Read in the air density
-   CALL ReadVar( UnIn, AeroInFile, Rho, 'Rho', 'Air density', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%Rho, VarName='Rho', VarDescr='Air density', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    !bjj do we need to check the the air density is non-negative?
 
-   IF ( Rho == 0.0 .AND. DynInfl ) THEN  ! Turn off the GDW if RHO = 0.  It will crash
+   IF ( P%Wind%Rho == 0.0 .AND. P%DynInfl ) THEN  ! Turn off the GDW if RHO = 0.  It will crash
       CALL ProgWarn( 'Air density is zero. Dynamic Inflow will be turned off to avoid program crash.' )
-      DynInfl = .FALSE.
+      P%DynInfl = .FALSE.
    ENDIF
 
       ! Read in the kinematic viscosity
-   CALL ReadVar( UnIn, AeroInFile, KinVisc, 'KinVisc', 'Kinematic viscosity', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%KinVisc, 'KinVisc', 'Kinematic viscosity', ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
       ! Aero calculation time interval
-   CALL ReadVar( UnIn, AeroInFile, DtAero, 'DtAero', 'Aero calculation time step', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%DtAero, 'DtAero', 'Aero calculation time step', ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
       ! Read the number of airfoil files
-   CALL ReadVar( UnIn, AeroInFile, NumFoil, 'NumFoil', 'Number of airfoil files', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%AirFoil%NumFoil, 'NumFoil', 'Number of airfoil files', ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF ( NumFoil < 1 ) THEN
+   IF ( P%AirFoil%NumFoil < 1 ) THEN
       CALL ProgWarn( ' Error: Number of airfoil files must be a positive integer.')
-      ErrStat = 1
+      ErrStat = ErrID_Fatal
       RETURN
    END IF
 
       !..............................................................................................
       ! Allocate space for the airfoil data file name(s), then read them
       !..............................................................................................
-   IF (.NOT. ALLOCATED(FoilNm)) THEN
-      ALLOCATE ( FoilNm( NumFoil ) , STAT=ErrStat )
-      IF ( ErrStat /= 0 ) THEN
+   IF (.NOT. ALLOCATED(P%AirFoil%FoilNm)) THEN
+      ALLOCATE ( P%AirFoil%FoilNm( P%AirFoil%NumFoil ) , STAT=ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
          CALL ProgWarn(' Error allocating space for the FoilNm array.')
          RETURN
       END IF
    END IF
 
-   CALL ReadAryLines( UnIn, AeroInFile, FoilNm(1:NumFoil), NumFoil, 'FoilNm', 'Airfoil file names', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadAryLines( UnIn, InitInp%ADFileName, P%AirFoil%FoilNm, P%AirFoil%NumFoil, AryName='FoilNm', AryDescr='Airfoil file names', ErrStat=ErrStat, ErrMsg=ErrMess )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   DO K=1,NumFoil
-      IF ( PathIsRelative( FoilNm(K) ) ) FoilNm(K) = TRIM(FilePath)//TRIM( FoilNm(K) )
-   END DO      
+   DO K=1,P%AirFoil%NumFoil
+      IF ( PathIsRelative( P%AirFoil%FoilNm(K) ) ) P%AirFoil%FoilNm(K) = TRIM(FilePath)//TRIM( P%AirFoil%FoilNm(K) )
+   END DO
 
 
       ! Read in the number of blade elements
-   CALL ReadVar( UnIn, AeroInFile, NElm, 'NElm', 'Number of blade elements', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Element%NElm, VarName='NElm', VarDescr='Number of blade elements', ErrStat=ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
 
       !..............................................................................................
       ! Allocate space for blade element data and read the arrays
       ! Read blade element data, check some inputs, convert twist to radians
       !..............................................................................................
-   CALL AllocArrays ('Element')
+   CALL AllocArrays (InitInp, P, x, xd, z, O, y, 'Element')
 
-   NumElOut    = 0 ! Initialize the element print array index
-   NumWndElOut = 0
+   O%ElOut%NumElOut    = 0 ! Initialize the element print array index
+   O%ElOut%NumWndElOut = 0
 
-   CALL ReadCom( UnIn, AeroInFile, 'Element table headers', ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadCom( UnIn, InitInp%ADFileName, 'Element table headers', ErrStat)
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   DO IElm = 1, NElm
+   DO IElm = 1, p%Element%NElm
 
       READ(UnIn,'(A)',IOSTAT=ErrStat) Line      !read into a line to see if print/no print is enabled
 
       IF (ErrStat == 0) THEN
-         READ(Line,*,IOSTAT=ErrStat) RElm(IElm), Twist(IElm), DR(IElm), C(IElm), NFoil(IElm)
+         READ(Line,*,IOSTAT=ErrStat) P%Element%RElm(IElm), P%Element%Twist(IElm), P%Blade%DR(IElm), P%Blade%C(IElm), P%AirFoil%NFoil(IElm)
       END IF
 
       IF ( ErrStat == 0 ) THEN
@@ -419,22 +433,22 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
 
          CALL Conv2UC(LINE)
 
-         ElPrList(IElm) = 0               ! INITIALIZE
+         O%ElOut%ElPrList(IElm) = 0               ! INITIALIZE
          IndPrint = INDEX(LINE,"PRINT")
          IF (IndPrint > 0) THEN
             IF (LINE(IndPrint-2:IndPrint+4) /= "NOPRINT") THEN
-               NumElOut = NumElOut + 1
-               ElPrList(IElm) = NumElOut
+               O%ElOut%NumElOut = O%ElOut%NumElOut + 1
+               O%ElOut%ElPrList(IElm) = O%ElOut%NumElOut
             END IF
          ENDIF
 
 
-         WndElPrList(IElm) = 0            ! INITIALIZE
+         O%ElOut%WndElPrList(IElm) = 0            ! INITIALIZE
          IndPrint = INDEX(LINE,"WIND")
          IF (IndPrint > 0) THEN
             IF (LINE(IndPrint-2:IndPrint-1) /= "NO") THEN
-               NumWndElOut = NumWndElOut + 1
-               WndElPrList(IElm) = NumWndElOut
+               O%ElOut%NumWndElOut = O%ElOut%NumWndElOut + 1
+               O%ElOut%WndElPrList(IElm) = O%ElOut%NumWndElOut
             END IF
          ENDIF
 
@@ -442,43 +456,43 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
          ! Echo data to the file NWTC_Library echo file, if requested
          !'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-         IF ( Echo ) THEN     ! NWTC_Library echo file
-            WRITE (UnEc,'(4(2X,ES11.4e2),2X,I11,1(2X,L11))')  RElm(IElm), Twist(IElm), DR(IElm), C(IElm), NFoil(IElm), &
-                   ElPrList(IElm) /= 0  !,  WndElPrList(IElm) == 0
+         IF ( p%Echo ) THEN     ! NWTC_Library echo file
+            WRITE (p%UnEc,'(4(2X,ES11.4e2),2X,I11,1(2X,L11))')  P%Element%RElm(IElm), P%Element%Twist(IElm), P%Blade%DR(IElm), P%Blade%C(IElm), P%AirFoil%NFoil(IElm), &
+                   O%ElOut%ElPrList(IElm) /= 0  !, O%ElOut%WndElPrList(IElm) == 0
          END IF
 
       ELSE IF ( ErrStat < 0 ) THEN
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.' )
 
          CALL ProgWarn( ' Premature end of file while reading line '//TRIM(Int2Lstr(IElm))// &
-                     ' of the AeroDyn element table in file "'//TRIM(AeroInFile)//'."' )
+                     ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
          RETURN
       ELSE
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))// &
-                       ' of the AeroDyn element table in file "'//TRIM(AeroInFile)//'."' )
+                       ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
          RETURN
       END IF
 
 
          ! Check for valid data:
 
-      IF( C(IElm) <= 0.0 ) THEN
+      IF( P%Blade%C(IElm) <= 0.0 ) THEN
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.'// &
                        ' Chord length must be larger than 0.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       ENDIF
 
-      IF (NFoil(IElm) < 1 .OR. NFoil(IElm) > NumFoil) THEN
+      IF (p%AirFoil%NFoil(IElm) < 1 .OR. p%AirFoil%NFoil(IElm) > p%AirFoil%NumFoil) THEN
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.'// &
-                       ' Airfoil file ID must be a number between 1 and '//TRIM(Int2Lstr(NumFoil))//'.' )
-         ErrStat = 1
+                       ' Airfoil file ID must be a number between 1 and '//TRIM(Int2Lstr(p%AirFoil%NumFoil))//'.' )
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
 
          ! Convert Twist to radians:
 
-      Twist(IElm) = Twist(IElm)*D2R
+      P%Element%Twist(IElm) = P%Element%Twist(IElm)*D2R
 
    ENDDO ! IELM
 
@@ -486,23 +500,20 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
       !..............................................................................................
       ! Read multiple airfoil table option
       !..............................................................................................
-!bjj, this would be ideal, but it's annoying to read EOF for all these files...
-!   CALL ReadVar( UnIn, AeroInFile, Line, 'MultiTab', 'Multiple airfoil table option', ErrStat)
-!   IF ( ErrStat > 0 ) RETURN
 
       READ(UnIn,*,IOSTAT=ErrStat) Line         !read MultiTab -- it may not exist
       IF (ErrStat > 0 ) THEN
-         CALL WrScr1 ( ' Invalid character input for file "'//TRIM( AeroInFile )//'".' )
+         CALL WrScr1 ( ' Invalid character input for file "'//TRIM( InitInp%ADFileName )//'".' )
          CALL ProgWarn ( ' The error occurred while trying to read "MultiTab".' )
          RETURN
       ELSE IF (ErrStat == 0) THEN
-         IF ( Echo )  THEN
-            WRITE (UnEc, "( 15X, A, T30, ' - ', A, /, 2X, A )" )  &
+         IF ( p%Echo )  THEN
+            WRITE (p%UnEc, "( 15X, A, T30, ' - ', A, /, 2X, A )" )  &
                          'MultiTab', 'Multiple airfoil table option', '"'//TRIM( Line )//'"'
          END IF
       ELSE
-         MultiTab = .FALSE.
-         Reynolds = .FALSE.
+         p%MultiTab = .FALSE.
+         p%Reynolds = .FALSE.
       !  CALL PremEOF ( TRIM( Fil ), Variable, TrapThisError )
       END IF
 
@@ -514,55 +525,56 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
    !-------------------------------------------------------------------------------------------------
    ! Read airfoil data and check for MultiTab values using LINE, which was read above
    !-------------------------------------------------------------------------------------------------
-   CALL READFL()                                      ! Read airfoil files; bjj: make sure there isn't a conflict with ErrStat when this gets rewritten; also make it use the same UnIn
-
-   MulTabLoc = 0.0                                    ! Initialize this value
+   CALL READFL(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess)                                      !
+!bjj: does this still work? with the way ErrStat is set?
+   O%AirFoil%MulTabLoc = 0.0                                    ! Initialize this value
 
 
             ! Read in the type of airfoil data table in each file
    IF ( ErrStat < 0 ) THEN             ! If we hit the end of the file without MultiTab, use only 1 airfoil table
-      IF ( ANY( NTables(1:NumFoil) > 1 ) ) THEN
+      IF ( ANY( p%AirFoil%NTables(1:p%AirFoil%NumFoil) > 1 ) ) THEN
          CALL ProgWarn( ' Error reading multiple airfoil table option. Only one table for each file will be used.' )
       END IF
-      MultiTab = .FALSE.
-      Reynolds = .FALSE.
-      ErrStat  = 0
+      p%MultiTab = .FALSE.
+      p%Reynolds = .FALSE.
+      ErrStat  = ErrID_None
    ELSE ! ErrStat = 0
 
-      IF ( ANY( NTables(1:NumFoil) > 1 ) ) THEN
+      IF ( ANY( p%AirFoil%NTables(1:p%AirFoil%NumFoil) > 1 ) ) THEN
          CALL Conv2UC(LINE(1:6))
 
          SELECT CASE ( TRIM(Line) )
             CASE ( 'USER' )
-               MultiTab = .TRUE.
-               Reynolds = .FALSE.
+               p%MultiTab = .TRUE.
+               p%Reynolds = .FALSE.
 
-               DO K = 1, NumFoil
-                  IF ( NTables(K) > 1 ) THEN
-                     IF ( ( MulTabLoc < MulTabMet(K,1) ) .OR. ( MulTabLoc > MulTabMet(K,NTables(K) ) ))THEN  !bjj: why don't we have this error elsewhere??? can't MulTabLoc change?
+               DO K = 1, p%AirFoil%NumFoil
+                  IF ( p%AirFoil%NTables(K) > 1 ) THEN
+                     IF ( ( O%AirFoil%MulTabLoc < p%AirFoil%MulTabMet(K,1) ) .OR. &
+                          ( O%AirFoil%MulTabLoc > p%AirFoil%MulTabMet(K,p%AirFoil%NTables(K) ) ))THEN
                         CALL ProgWarn( 'Error interpolating between airfoil tables. '// &
-                                 ' Initial interpolation value = '//TRIM(Num2LStr(MulTabLoc))// &
-                                 ' is outside table range of '//TRIM(Num2LStr(MulTabMet(K,1)))// &
-                                 ' to '//TRIM(Num2LStr(MulTabMet(K,NTables(K))))// &
+                                 ' Initial interpolation value = '//TRIM(Num2LStr(O%AirFoil%MulTabLoc))// &
+                                 ' is outside table range of '//TRIM(Num2LStr(p%AirFoil%MulTabMet(K,1)))// &
+                                 ' to '//TRIM(Num2LStr(p%AirFoil%MulTabMet(K,p%AirFoil%NTables(K))))// &
                                  ' in airfoil file #'//TRIM(Int2LStr(K))//'.' )
-                        ErrStat = 1
+                        ErrStat = ErrID_Fatal
                         RETURN
                      END IF
                   END IF ! NTables(K) > 1
                ENDDO ! K
 
             CASE ( 'RENUM' )
-               MultiTab = .TRUE.
-               Reynolds = .TRUE.
+               p%MultiTab = .TRUE.
+               p%Reynolds = .TRUE.
             CASE ( 'SINGLE' )
-               MultiTab = .FALSE.
-               Reynolds = .FALSE.
+               p%MultiTab = .FALSE.
+               p%Reynolds = .FALSE.
             CASE DEFAULT
                CALL WrScr( ' Error: control model option must be "SINGLE" or "MULTI".' )
          END SELECT
       ELSE
-         MultiTab = .FALSE.
-         Reynolds = .FALSE.
+         p%MultiTab = .FALSE.
+         p%Reynolds = .FALSE.
       END IF
 
    ENDIF
@@ -570,80 +582,70 @@ SUBROUTINE AD_GetInput(UnIn, AeroInFile, WindFileName, Title, ErrStat )
    !-------------------------------------------------------------------------------------------------
    ! Read tower drag input file, if necessary
    !-------------------------------------------------------------------------------------------------
-   IF (TwrPotent .OR. TwrShadow) THEN                 ! Read in the tower drag file
-      CALL READTwr(UnIn, TwrFile, ErrStat)
-      IF (ErrStat /= 0) RETURN
+   IF (p%TwrProps%TwrPotent .OR. p%TwrProps%TwrShadow .OR. p%TwrProps%CalcTwrAero) THEN                 ! Read in the tower drag file
+      CALL READTwr(UnIn, InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
+      IF (ErrStat /= ErrID_None) RETURN
    END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Initialize variables for printing
    !-------------------------------------------------------------------------------------------------
-   IF ( NumElOut > 0 .OR. NumWndElOut > 0 ) THEN
-      ElemPrn = .TRUE.
-      CALL AllocArrays ('ElPrint')     ! Allocate arrays with dimension NumElOut
+   IF ( O%ElOut%NumElOut > 0 .OR. O%ElOut%NumWndElOut > 0 ) THEN
+      p%ElemPrn = .TRUE.
+      CALL AllocArrays (InitInp, P, x, xd, z, O, y, 'ElPrint')
 
       ElIndex = 0                      ! Re-Initialize the element print array index for wind
-      DO IElm = 1, NElm
-         IF (WndElPrList(IElm) > 0) THEN
+      DO IElm = 1, p%Element%NElm
+         IF (O%ElOut%WndElPrList(IElm) > 0) THEN
             ElIndex = ElIndex + 1
-            WndElPrNum(ElIndex) = IElm
+            O%ElOut%WndElPrNum(ElIndex) = IElm
          END IF
       END DO ! IELM
 
       ElIndex = 0 ! Re-Initialize the element print array index
-      DO IElm = 1, NElm
-         IF (ElPrList(IElm) > 0) THEN
+      DO IElm = 1, p%Element%NElm
+         IF (O%ElOut%ElPrList(IElm) > 0) THEN
             ElIndex = ElIndex + 1
-            ElPrNum(ElIndex) = IElm
+            O%ElOut%ElPrNum(ElIndex) = IElm
          END IF
       END DO ! IELM
    ELSE
-      ElemPrn = .FALSE.
+      p%ElemPrn = .FALSE.
    END IF
 
    !-------------------------------------------------------------------------------------------------
-   ! Initialize BEDDOES dynamic stall data
+   ! Initialize Beddoes dynamic stall data
    !-------------------------------------------------------------------------------------------------
-   IF ( DStall ) CALL BEDDAT()
+   IF ( p%DStall ) CALL BEDDAT( P, x, xd, z, O, y, ErrStat, ErrMess )
 
 
    RETURN
 
 END SUBROUTINE AD_GetInput
 !====================================================================================================
-   SUBROUTINE ADOut ( TITLE, HubRad, WindFileName )
+   SUBROUTINE ADOut(InitInp, P, O, ErrStat, ErrMess )
+!   SUBROUTINE ADOut(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
  !  used to output data pertinent
  !  to the yaw dynamics routines
  ! *****************************************************
-
-USE                         AD_IOParams
-USE                         ElOutParams
-USE                         AeroTime
-USE                         Airfoil
-USE                         Blade
-USE                         Element
-USE                         InducedVel
-USE                         Rotor
-USE                         Switch
-USE                         Wind
-
-USE                         TwrProps
-
-
-
 IMPLICIT                    NONE
+      ! Passed Variables:
+   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+!   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+!   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+!   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+!   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-
-   ! Passed Variables:
-
-CHARACTER(*),  INTENT(IN):: TITLE
-REAL(ReKi),    INTENT(IN):: HubRad
-CHARACTER(*),  INTENT(IN):: WindFileName
 
    ! Local Variables:
 
 INTEGER                  :: IElm
 INTEGER                  :: IFoil
+INTEGER                  :: UnOut
 
 CHARACTER(  2)           :: Dst_Unit
 CHARACTER(150)           :: Frmt
@@ -653,8 +655,11 @@ CHARACTER(  3)           :: Vel_Unit
 
 CHARACTER(1)             :: Delim
 
+   ! Function definition
 
-IF (SIUNIT) THEN
+UnOut = p%UnADopt
+
+IF (p%SIUNIT) THEN
    Dst_Unit  = 'm'
    Mass_Unit = 'kg'
    Vel_Unit  = 'mps'
@@ -665,117 +670,117 @@ ELSE
 ENDIF
 
  ! Reiterate the input file
-WRITE(UnADopt,'(/A)') 'Inputs read in from the AeroDyn input file:'
-WRITE(UnADopt,'(A/)') TRIM(TITLE)
+WRITE(UnOut,'(/A)') 'Inputs read in from the AeroDyn input file:'
+WRITE(UnOut,'(A/)') TRIM(p%TITLE)
 
 
 MESAGE = 'Units for input and output'
-IF ( SIUNIT ) THEN
-   WRITE(UnADopt,'(A)') 'SI'//TAB//MESAGE
+IF ( p%SIUNIT ) THEN
+   WRITE(UnOut,'(A)') 'SI'//TAB//MESAGE
 ELSE
-   WRITE(UnADopt,'(A)') 'ENGLISH'//TAB//MESAGE
+   WRITE(UnOut,'(A)') 'ENGLISH'//TAB//MESAGE
 ENDIF
 
 MESAGE = 'Dynamic stall model'
-IF ( DSTALL ) THEN
-   WRITE(UnADopt,'(A)') 'BEDDOES'//TAB//MESAGE//' [Beddoes]'
+IF ( p%DSTALL ) THEN
+   WRITE(UnOut,'(A)') 'BEDDOES'//TAB//MESAGE//' [Beddoes]'
 ELSE
-   WRITE(UnADopt,'(A)') 'STEADY'//TAB//MESAGE//' [NO Dynamic stall]'
+   WRITE(UnOut,'(A)') 'STEADY'//TAB//MESAGE//' [NO Dynamic stall]'
 ENDIF
 
 MESAGE = 'Aerodynamic pitching moment model'
-IF ( PMOMENT ) THEN
-   WRITE(UnADopt,'(A)') 'USE_CM'//TAB//MESAGE//' [Pitching Moments calculated]'
+IF ( p%PMOMENT ) THEN
+   WRITE(UnOut,'(A)') 'USE_CM'//TAB//MESAGE//' [Pitching Moments calculated]'
 ELSE
-   WRITE(UnADopt,'(A)') 'NO_CM'//TAB//MESAGE//' [NO Pitching Moments calculated]'
+   WRITE(UnOut,'(A)') 'NO_CM'//TAB//MESAGE//' [NO Pitching Moments calculated]'
 ENDIF
 
 MESAGE = 'Inflow model'
-IF ( DYNINFL ) THEN
-   WRITE(UnADopt,'(A)') 'DYNIN'//TAB//MESAGE//' [Dynamic Inflow]'
+IF ( p%DYNINFL ) THEN
+   WRITE(UnOut,'(A)') 'DYNIN'//TAB//MESAGE//' [Dynamic Inflow]'
 ELSE
-   IF ( EquilDA .AND. EquilDT )  THEN
-      WRITE(UnADopt,'(A)') 'EQUILDB'//TAB//MESAGE//' [Equilibrium w/ axial and tangential drag]'
-   ELSEIF ( EquilDA )  THEN
-      WRITE(UnADopt,'(A)') 'EQUILDA'//TAB//MESAGE//' [Equilibrium w/ axial drag]'
-   ELSEIF ( EquilDT )  THEN
-      WRITE(UnADopt,'(A)') 'EQUILDA'//TAB//MESAGE//' [Equilibrium w/ tangential drag]'
+   IF ( p%InducedVel%EquilDA .AND. p%InducedVel%EquilDT )  THEN
+      WRITE(UnOut,'(A)') 'EQUILDB'//TAB//MESAGE//' [Equilibrium w/ axial and tangential drag]'
+   ELSEIF ( p%InducedVel%EquilDA )  THEN
+      WRITE(UnOut,'(A)') 'EQUILDA'//TAB//MESAGE//' [Equilibrium w/ axial drag]'
+   ELSEIF ( p%InducedVel%EquilDT )  THEN
+      WRITE(UnOut,'(A)') 'EQUILDA'//TAB//MESAGE//' [Equilibrium w/ tangential drag]'
    ELSE
-      WRITE(UnADopt,'(A)') 'EQUIL'//TAB//MESAGE//' [Equilibrium]'
+      WRITE(UnOut,'(A)') 'EQUIL'//TAB//MESAGE//' [Equilibrium]'
    ENDIF
 ENDIF
 
 
 MESAGE = 'Induction factor model'
-IF ( WAKE ) THEN
-   IF (SWIRL) THEN
-      WRITE(UnADopt,'(A)') 'SWIRL'//TAB//MESAGE//' [Normal and Radial flow induction factors calculated]'
+IF ( p%WAKE ) THEN
+   IF (p%SWIRL) THEN
+      WRITE(UnOut,'(A)') 'SWIRL'//TAB//MESAGE//' [Normal and Radial flow induction factors calculated]'
    ELSE
-      WRITE(UnADopt,'(A)') 'WAKE'//TAB//MESAGE//' [Normal flow induction factors calculated]'
+      WRITE(UnOut,'(A)') 'WAKE'//TAB//MESAGE//' [Normal flow induction factors calculated]'
    ENDIF
-   WRITE(UnADopt,'(A)') TRIM(Num2LStr(ATOLER))//TAB// 'Convergence tolerance for induction factor'
+   WRITE(UnOut,'(A)') TRIM(Num2LStr(p%InducedVel%ATOLER))//TAB// 'Convergence tolerance for induction factor'
 ELSE
-   WRITE(UnADopt,'(A)') 'NONE'//TAB//MESAGE//' [NO induction factors calculated]'
-   WRITE(UnADopt,'(A)') '[Not Used]'//TAB//'Convergence tolerance for induction factor'
+   WRITE(UnOut,'(A)') 'NONE'//TAB//MESAGE//' [NO induction factors calculated]'
+   WRITE(UnOut,'(A)') '[Not Used]'//TAB//'Convergence tolerance for induction factor'
 ENDIF
 
 MESAGE = 'Tip-loss model'
-IF (.NOT. DYNINFL) THEN
-   IF ( TLOSS ) THEN
-      IF (GTECH) THEN
-         WRITE(UnADopt,'(A)') 'GTECH'//TAB//MESAGE//' [Georgia Tech correction to Prandtl model]'
+IF (.NOT. p%DYNINFL) THEN
+   IF ( p%InducedVel%TLOSS ) THEN
+      IF (p%InducedVel%GTECH) THEN
+         WRITE(UnOut,'(A)') 'GTECH'//TAB//MESAGE//' [Georgia Tech correction to Prandtl model]'
       ELSE
-         WRITE(UnADopt,'(A)') 'PRAND'//TAB//MESAGE//' [Prandtl model]'
+         WRITE(UnOut,'(A)') 'PRAND'//TAB//MESAGE//' [Prandtl model]'
       ENDIF
    ELSE
-      WRITE(UnADopt,'(A)') 'NONE'//TAB//MESAGE//' [NO tip-loss calculated]'
+      WRITE(UnOut,'(A)') 'NONE'//TAB//MESAGE//' [NO tip-loss calculated]'
    ENDIF
 ELSE
-      WRITE(UnADopt,'(A)') '[Not Used]'//TAB//MESAGE
+      WRITE(UnOut,'(A)') '[Not Used]'//TAB//MESAGE
 ENDIF
 
 MESAGE = 'Hub-loss model'
-IF (.NOT. DYNINFL) THEN
-   IF ( HLOSS ) THEN
-      WRITE(UnADopt,'(A)') 'PRAND'//TAB//MESAGE//' [Prandtl model]'
+IF (.NOT. p%DYNINFL) THEN
+   IF ( p%InducedVel%HLOSS ) THEN
+      WRITE(UnOut,'(A)') 'PRAND'//TAB//MESAGE//' [Prandtl model]'
    ELSE
-      WRITE(UnADopt,'(A)') 'NONE'//TAB//MESAGE//' [NO hub-loss calculated]'
+      WRITE(UnOut,'(A)') 'NONE'//TAB//MESAGE//' [NO hub-loss calculated]'
    ENDIF
 ELSE
-      WRITE(UnADopt,'(A)') '[Not Used]'//TAB//MESAGE
+      WRITE(UnOut,'(A)') '[Not Used]'//TAB//MESAGE
 ENDIF
 
 
-WRITE(UnADopt, '(A)') '"'//TRIM(WindFileName)//'"'//TAB//'  Wind file name'
+WRITE(UnOut, '(A)') '"'//TRIM(InitInp%WindFileName)//'"'//TAB//'  Wind file name'
 
-WRITE(UnADopt,'(A)') TRIM(Num2LStr(HH))//TAB// 'Wind reference (hub) height, '//TRIM(Dst_Unit)
+WRITE(UnOut,'(A)') TRIM(Num2LStr(p%Rotor%HH))//TAB// 'Wind reference (hub) height, '//TRIM(Dst_Unit)
 
-IF ( PJM_Version ) THEN
-   WRITE(UnADopt,'(L2, A)') TwrPotent, TAB//'Calculate tower potential flow [T or F]'
-   WRITE(UnADopt,'(L2, A)') TwrShadow, TAB//'Calculate tower shadow [T or F]'
-   IF ( TwrPotent .OR. TwrShadow ) THEN
-      WRITE(UnADopt,'(A)') '"'//TRIM( TwrFile )//'"'//TAB//'Tower drag file name'
+IF ( p%TwrProps%PJM_Version ) THEN
+   WRITE(UnOut,'(L2, A)') p%TwrProps%TwrPotent, TAB//'Calculate tower potential flow [T or F]'
+   WRITE(UnOut,'(L2, A)') p%TwrProps%TwrShadow, TAB//'Calculate tower shadow [T or F]'
+   IF ( p%TwrProps%TwrPotent .OR. p%TwrProps%TwrShadow ) THEN
+      WRITE(UnOut,'(A)') '"'//TRIM( P%TwrProps%TwrFile )//'"'//TAB//'Tower drag file name'
    ELSE
-      WRITE(UnADopt,'(A)') '[none]'//TAB//'No tower drag properties file'
+      WRITE(UnOut,'(A)') '[none]'//TAB//'No tower drag properties file'
    ENDIF
 ELSE
-   WRITE(UnADopt,'(A)') TRIM(Num2LStr(TwrShad))//TAB// 'Tower shadow centerline velocity deficit'
-   WRITE(UnADopt,'(A)') TRIM(Num2LStr(ShadHWid))//TAB// 'Tower shadow half width, '//TRIM(Dst_Unit)
-   WRITE(UnADopt,'(A)') TRIM(Num2LStr(T_Shad_Refpt))//TAB// 'Tower shadow reference point, '//TRIM(Dst_Unit)
+   WRITE(UnOut,'(A)') TRIM(Num2LStr(p%TwrProps%TwrShad))//TAB// 'Tower shadow centerline velocity deficit'
+   WRITE(UnOut,'(A)') TRIM(Num2LStr(p%TwrProps%ShadHWid))//TAB// 'Tower shadow half width, '//TRIM(Dst_Unit)
+   WRITE(UnOut,'(A)') TRIM(Num2LStr(p%TwrProps%T_Shad_Refpt))//TAB// 'Tower shadow reference point, '//TRIM(Dst_Unit)
 END IF
 
 
-WRITE(UnADopt,'(A)') TRIM(Num2LStr(RHO))//TAB// 'Air density, '//TRIM(Mass_Unit)//'/'//TRIM(Dst_Unit)//'^3'
-WRITE(UnADopt,'(A)') TRIM(Num2LStr(KinVisc))//TAB// 'Kinematic air viscosity, '//TRIM(Dst_Unit)//'^2/sec'
+WRITE(UnOut,'(A)') TRIM(Num2LStr(p%Wind%RHO))//TAB// 'Air density, '//TRIM(Mass_Unit)//'/'//TRIM(Dst_Unit)//'^3'
+WRITE(UnOut,'(A)') TRIM(Num2LStr(p%Wind%KinVisc))//TAB// 'Kinematic air viscosity, '//TRIM(Dst_Unit)//'^2/sec'
 
-WRITE(UnADopt,'(A)') TRIM(Num2LStr(DTAERO))//TAB// 'Time interval for aerodynamic calculations, sec'
+WRITE(UnOut,'(A)') TRIM(Num2LStr(p%DTAERO))//TAB// 'Time interval for aerodynamic calculations, sec'
 
-WRITE(UnADopt,'(A)') TRIM(Int2LStr(NUMFOIL))//TAB// 'Number of airfoil files used. Files listed below:'
-DO IFoil = 1, NUMFOIL
-   WRITE(UnADopt,'(A)') '"'//TRIM(FOILNM(IFoil))//'"'
+WRITE(UnOut,'(A)') TRIM(Int2LStr(p%AirFoil%NUMFOIL))//TAB// 'Number of airfoil files used. Files listed below:'
+DO IFoil = 1, p%AirFoil%NUMFOIL
+   WRITE(UnOut,'(A)') '"'//TRIM(p%AirFoil%FOILNM(IFoil))//'"'
 END DO ! IFoil
 
-WRITE(UnADopt,'(A)') TRIM(Int2LStr(NELM))//TAB// 'Number of blade elements per blade'
+WRITE(UnOut,'(A)') TRIM(Int2LStr(p%Element%NELM))//TAB// 'Number of blade elements per blade'
 
    Delim = ' ' !or Delim = TAB
 
@@ -784,93 +789,95 @@ WRITE(UnADopt,'(A)') TRIM(Int2LStr(NELM))//TAB// 'Number of blade elements per b
    !-------------------------------------------------------------------------------------------------
    Frmt = '(3X,A10,8("'//Delim//'",A10))'
 
-   WRITE(UnADopt,'( )')
+   WRITE(UnOut,'( )')
 
       ! column names
 
-   WRITE(UnADopt,Frmt) '  Element ', &
-                       '   RELM   ', &
-                       '   Twist  ', &
-                       '    DR    ', &
-                       '   Chord  ', &
-                       '   NFoil  ', &
-                       '  Print?  ', &
-                       ' Tip-loss ', &
-                       ' Hub-loss '
+   WRITE(UnOut,Frmt) '  Element ', &
+                     '   RELM   ', &
+                     '   Twist  ', &
+                     '    DR    ', &
+                     '   Chord  ', &
+                     '   NFoil  ', &
+                     '  Print?  ', &
+                     ' Tip-loss ', &
+                     ' Hub-loss '
 
       ! column units
 
-   WRITE(UnADopt,Frmt) '    (-)   ', &
-                       '    (m)   ', &
-                       '   (deg)  ', &
-                       '    (m)   ', &
-                       '    (m)   ', &
-                       '    (-)   ', &
-                       ' (Yes/No) ', &
-                       ' constant ', &
-                       ' constant '
+   WRITE(UnOut,Frmt) '    (-)   ', &
+                     '    (m)   ', &
+                     '   (deg)  ', &
+                     '    (m)   ', &
+                     '    (m)   ', &
+                     '    (-)   ', &
+                     ' (Yes/No) ', &
+                     ' constant ', &
+                     ' constant '
 
-   WRITE(UnADopt,Frmt) '----------', &
-                       '----------', &
-                       '----------', &
-                       '----------', &
-                       '----------', &
-                       '----------', &
-                       '----------', &
-                       '----------', &
-                       '----------'
+   WRITE(UnOut,Frmt) '----------', &
+                     '----------', &
+                     '----------', &
+                     '----------', &
+                     '----------', &
+                     '----------', &
+                     '----------', &
+                     '----------', &
+                     '----------'
 
       ! column data
    Frmt = '(3X, I10, 4("'//Delim//'",F10.5),"'//Delim//'",I10,"'//Delim//'",A10, 2("'//Delim//'",F10.5) )'
 
-   DO IElm = 1, NELM
+   DO IElm = 1, p%Element%NELM
 
-      IF (ElPrList(IElm) /= 0) THEN
+      IF (O%ElOut%ElPrList(IElm) /= 0) THEN
          MESAGE = 'Yes'
       ELSE
          MESAGE = 'No'
       ENDIF
 
-      WRITE(UnADopt, Frmt) IElm, RELM(IElm), TWIST(IElm)*R2D, DR(IElm),  C(IElm), &
-                           NFOIL(IElm), TRIM(Mesage), TLCNST(IElm), HLCNST(IElm)
+      WRITE(UnOut, Frmt) IElm, p%Element%RELM(IElm), p%Element%TWIST(IElm)*R2D, p%Blade%DR(IElm),  p%Blade%C(IElm), &
+                         p%AirFoil%NFOIL(IElm), TRIM(Mesage), p%Element%TLCNST(IElm), p%Element%HLCNST(IElm)
    END DO
 
 
-IF ( MultiTab ) THEN
-   WRITE(UnADopt,'(A)') 'MULTI    Multiple airfoil tables used'
+IF ( p%MultiTab ) THEN
+   WRITE(UnOut,'(A)') 'MULTI    Multiple airfoil tables used'
 ELSE
-   WRITE(UnADopt,'( )')
+   WRITE(UnOut,'( )')
 ENDIF
 
-      WRITE(UnADopt,"(/' Rotor radius     = ',F7.3,' m')") R
-      WRITE(UnADopt,"( ' Hub radius       = ',F7.3,' m')") HubRad
-      WRITE(UnADopt,"( ' Number of blades = ',I3       )") NB
+      WRITE(UnOut,"(/' Rotor radius     = ',F7.3,' m')") p%Blade%R
+      WRITE(UnOut,"( ' Hub radius       = ',F7.3,' m')") p%HubRad
+      WRITE(UnOut,"( ' Number of blades = ',I3       )") p%NumBl
 
-IF ( DSTALL ) CALL BEDWRT
+IF ( p%DSTALL ) CALL BEDWRT( P, O, ErrStat, ErrMess )
 
-IF ( ELEMPRN ) WRITE(UnADopt,'(/A/)')'Blade element aerodynamic time series data written to file.' !bjj: what? isn't that what "Print? Y/N" is for?
+IF ( p%ELEMPRN ) WRITE(UnOut,'(/A/)')'Blade element aerodynamic time series data written to file.'
 
-CLOSE (UnADopt )
-
+CLOSE (UnOut )
 
 RETURN
 END SUBROUTINE ADOut
 
  ! ****************************************************
-   SUBROUTINE READFL
+   SUBROUTINE READFL(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
  !  Reads a data file containing airfoil angle of attack,
  !   CL and CD, and dynamic stall parameters
  ! ****************************************************
-
-USE                             AD_IOParams
-USE                             Airfoil
-USE                             Bedoes
-USE                             AeroGenSubs, ONLY: AllocArrays
-USE                             Switch
-
-
-IMPLICIT                        NONE
-
+!====================================================================================================
+   USE                           AeroGenSubs, ONLY: AllocArrays
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Local Variables:
 
@@ -897,14 +904,18 @@ CHARACTER( 40)               :: TITLE  (2)
 CHARACTER(1024)              :: LINE
 
 
-NUNIT    = UnAirfl
-NumCL    = 0
+   ErrStat = ErrID_None
+   ErrMess = ""
+
+
+NUNIT    = p%UnAirfl
+p%AirFoil%NumCL    = 0
 
  ! The first loop checks existence and file length to set NumCL
-DO NFOILID = 1, NUMFOIL
+DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading # of lines
-   CALL OpenFInpFile (NUNIT, TRIM(FOILNM(NFOILID)))
+   CALL OpenFInpFile (NUNIT, TRIM(p%AirFoil%FOILNM(NFOILID)))
 
  ! Determine the maximum number of aerodata points in all files
 
@@ -915,7 +926,7 @@ DO NFOILID = 1, NUMFOIL
       NumLines = NumLines + 1
    END DO
 
-   NumCL = MAX(NumLines - 14, NumCL)
+   p%AirFoil%NumCL = MAX(NumLines - 14, p%AirFoil%NumCL)
 
    CLOSE (NUNIT)
 
@@ -923,13 +934,14 @@ END DO ! NFOILID
 
  ! Allocate the arrays
 
-Call AllocArrays ('Aerodata')
+CALL AllocArrays (InitInp, P, x, xd, z, O, y, 'Aerodata')
+
 
  ! The second loop reads the files
-DO NFOILID = 1, NUMFOIL
+DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading inputs
-   CALL OpenFInpFile (NUNIT, TRIM(Adjustl(FOILNM(NFOILID))) )
+   CALL OpenFInpFile (NUNIT, TRIM(Adjustl(p%AirFoil%FOILNM(NFOILID))) )
 
  ! Set up the file to read the aerodata
    READ(NUNIT,'( A )') TITLE(1)
@@ -939,145 +951,145 @@ DO NFOILID = 1, NUMFOIL
  !   NTables = number of airfoil data tables
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , '# of tables' )
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '# of tables' )
 
-   READ(LINE,*,ERR=205) NTables( NFOILID )
+   READ(LINE,*,ERR=205) p%AirFoil%NTables( NFOILID )
 
  ! Allocate local arrays with NTables dimension
 
    Sttus = 0
-   IF (.NOT. ALLOCATED(CLPosPI)) ALLOCATE ( CLPosPI(NTables(NFOILID)) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(CLPosPI)) ALLOCATE ( CLPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CLPosPI array.' )
 
-   IF (.NOT. ALLOCATED(CDPosPI)) ALLOCATE ( CDPosPI(NTables(NFOILID)) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(CDPosPI)) ALLOCATE ( CDPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDPosPI array.' )
 
-   IF (.NOT. ALLOCATED(CMPosPI)) ALLOCATE ( CMPosPI(NTables(NFOILID)) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(CMPosPI)) ALLOCATE ( CMPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CMPosPI array.' )
 
-   IF (.NOT. ALLOCATED(CLNegPI)) ALLOCATE ( CLNegPI(NTables(NFOILID)) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(CLNegPI)) ALLOCATE ( CLNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CLNegPI array.' )
 
-   IF (.NOT. ALLOCATED(CDNegPI)) ALLOCATE ( CDNegPI(NTables(NFOILID)) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(CDNegPI)) ALLOCATE ( CDNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDNegPI array.' )
 
-   IF (.NOT. ALLOCATED(CMNegPI)) ALLOCATE ( CMNegPI(NTables(NFOILID)) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(CMNegPI)) ALLOCATE ( CMNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CMNegPI array.' )
 
 
  ! Read in airfoil data table identification array
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'multi-table metric' )
-   READ(LINE,*,ERR=205)  (MulTabMet ( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'multi-table metric' )
+   READ(LINE,*,ERR=205)  (p%AirFoil%MulTabMet ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
  ! Read in four lines that are no longer used
  ! These are retained for future USE and backwards compatibility only
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , '5th line' )
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '5th line' )
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , '6th line' )
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '6th line' )
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , '7th line' )
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '7th line' )
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , '8th line' )
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '8th line' )
 
  ! Read Beddoes stall parameters
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'Angle of zero lift (AOL)' )
-   IF (DSTALL) READ(LINE,*,ERR=205)  (AOL( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'Angle of zero lift (AOL)' )
+   IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%AOL( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'CNA' )
-   IF (DSTALL) READ(LINE,*,ERR=205)  (CNA   ( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNA' )
+   IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CNA   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'CNS' )
-   IF (DSTALL) READ(LINE,*,ERR=205)  (CNS   ( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNS' )
+   IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CNS   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'CNSL' )
-   IF (DSTALL) READ(LINE,*,ERR=205)  (CNSL  ( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNSL' )
+   IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CNSL  ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'AOD' )
-   IF (DSTALL) READ(LINE,*,ERR=205)  (AOD   ( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'AOD' )
+   IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%AOD   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(FOILNM(NFOILID)) , 'CDO' )
-   IF (DSTALL) READ(LINE,*,ERR=205)  (CDO   ( NFOILID, K ), K = 1, NTables(NFOILID))
+   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CDO' )
+   IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CDO   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
  ! Convert angles to radians
-   IF (DSTALL) THEN
-      AOD   ( NFOILID, : ) = AOD( NFOILID, : )*D2R
-      AOL   ( NFOILID, : ) = AOL( NFOILID, : )*D2R
+   IF (p%DSTALL) THEN
+      O%Beddoes%AOD   ( NFOILID, : ) = O%Beddoes%AOD( NFOILID, : )*D2R
+      O%Beddoes%AOL   ( NFOILID, : ) = O%Beddoes%AOL( NFOILID, : )*D2R
    ENDIF
 
 
  ! Read airfoil data tables to end of file
 
-   NLIFT(NFOILID) = 0
+   p%AirFoil%NLIFT(NFOILID) = 0
    ALPosPI = .FALSE.
    ALNegPI = .FALSE.
 
-   DO I = 1, NumCL
+   DO I = 1, p%AirFoil%NumCL
 
-      IF ( PMOMENT ) THEN
+      IF ( p%PMOMENT ) THEN
 
-         READ( NUNIT,*,END=150 ) AL(NFOILID,I), &
-             (CL(NFOILID,I,IPHI), CD(NFOILID,I,IPHI), &
-              CM(NFOILID,I,IPHI), IPHI = 1, NTables(NFOILID))
+         READ( NUNIT,*,END=150 ) O%AirFoil%AL(NFOILID,I), &
+             (O%AirFoil%CL(NFOILID,I,IPHI), O%AirFoil%CD(NFOILID,I,IPHI), &
+              O%AirFoil%CM(NFOILID,I,IPHI), IPHI = 1, p%AirFoil%NTables(NFOILID))
 
       ELSE
 
-         READ( NUNIT,*,END=150 ) AL(NFOILID,I), &
-             (CL(NFOILID,I,IPHI), CD(NFOILID,I,IPHI), &
-              IPHI = 1, NTables(NFOILID))
+         READ( NUNIT,*,END=150 ) O%AirFoil%AL(NFOILID,I), &
+             (O%AirFoil%CL(NFOILID,I,IPHI), O%AirFoil%CD(NFOILID,I,IPHI), &
+              IPHI = 1, p%AirFoil%NTables(NFOILID))
 
-         CM(NFOILID,I,:) = 0.
+         O%AirFoil%CM(NFOILID,I,:) = 0.
 
       ENDIF
 
  ! Check to see if values look reasonable
 
-      DO IPHI = 1, NTables(NFOILID)
-        IF ( ABS( AL( NFOILID, I ) ) > 185.) THEN
+      DO IPHI = 1, p%AirFoil%NTables(NFOILID)
+        IF ( ABS( O%AirFoil%AL( NFOILID, I ) ) > 185.) THEN
            CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
                            ' Angle of attack exceeds 185 degrees.')
-        ELSEIF (ABS( CL( NFOILID, I, IPHI ) ) > 3. ) THEN
+        ELSEIF (ABS( O%AirFoil%CL( NFOILID, I, IPHI ) ) > 3. ) THEN
            CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
                            ' Coefficient of Lift exceeds 3.0.')
-        ELSEIF (ABS( CD( NFOILID, I, IPHI ) ) > 3. ) THEN
+        ELSEIF (ABS( O%AirFoil%CD( NFOILID, I, IPHI ) ) > 3. ) THEN
            CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
                            ' Coefficient of Drag exceeds 3.0.')
-        ELSEIF (ABS( CM( NFOILID, I, IPHI ) ) > 3. ) THEN
+        ELSEIF (ABS( O%AirFoil%CM( NFOILID, I, IPHI ) ) > 3. ) THEN
            CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
                            ' Coefficient of Moment exceeds 3.0.')
         ENDIF
       ENDDO ! IPHI
 
  ! Store the values at 180 deg. and -180 deg. for check
-      IF ( AL (NFOILID, I ) == 180. ) THEN
+      IF ( O%AirFoil%AL (NFOILID, I ) == 180. ) THEN
          ALPosPI = .TRUE.
-         Do IPHI = 1, NTables(NFOILID)
-            CLPosPI(IPHI) = CL(NFOILID,I,IPHI)
-            CDPosPI(IPHI) = CD(NFOILID,I,IPHI)
-            CMPosPI(IPHI) = CM(NFOILID,I,IPHI)
+         Do IPHI = 1, p%AirFoil%NTables(NFOILID)
+            CLPosPI(IPHI) = O%AirFoil%CL(NFOILID,I,IPHI)
+            CDPosPI(IPHI) = O%AirFoil%CD(NFOILID,I,IPHI)
+            CMPosPI(IPHI) = O%AirFoil%CM(NFOILID,I,IPHI)
          END Do ! IPHI
 
-      ELSEIF ( AL (NFOILID, I ) == -180. ) THEN
+      ELSEIF ( O%AirFoil%AL (NFOILID, I ) == -180. ) THEN
          ALNegPI = .TRUE.
-         Do IPHI = 1, NTables(NFOILID)
-            CLNegPI(IPHI) = CL(NFOILID,I,IPHI)
-            CDNegPI(IPHI) = CD(NFOILID,I,IPHI)
-            CMNegPI(IPHI) = CM(NFOILID,I,IPHI)
+         Do IPHI = 1, p%AirFoil%NTables(NFOILID)
+            CLNegPI(IPHI) = O%AirFoil%CL(NFOILID,I,IPHI)
+            CDNegPI(IPHI) = O%AirFoil%CD(NFOILID,I,IPHI)
+            CMNegPI(IPHI) = O%AirFoil%CM(NFOILID,I,IPHI)
           END Do ! IPHI
       ENDIF
 
-      AL ( NFOILID, I ) = AL(NFOILID,I) * D2R
-      NLIFT ( NFOILID ) = NLIFT(NFOILID) + 1
+      O%AirFoil%AL ( NFOILID, I ) = O%AirFoil%AL(NFOILID,I) * D2R
+      p%AirFoil%NLIFT ( NFOILID ) = p%AirFoil%NLIFT(NFOILID) + 1
 
    ENDDO ! I
 
@@ -1085,11 +1097,11 @@ DO NFOILID = 1, NUMFOIL
 
  ! Check to see if values at 180 deg. equal those at -180 deg.
    IF (ALPosPI .AND. ALNegPI) THEN
-      Do IPHI = 1, NTables(NFOILID)
+      Do IPHI = 1, p%AirFoil%NTables(NFOILID)
          IF (CLPosPI(IPHI) /= CLNegPI(IPHI) .OR. &
              CDPosPI(IPHI) /= CDNegPI(IPHI) .OR. &
              CMPosPI(IPHI) /= CMNegPI(IPHI)) THEN
-            CALL ProgAbort( ' The airfoil data at +180 deg is different from -180 deg in file :'//Trim(FOILNM(NFOILID)) )
+            CALL ProgAbort( ' The airfoil data at +180 deg is different from -180 deg in file :'//Trim(P%AirFoil%FOILNM(NFOILID)) )
          ENDIF
       END Do ! IPHI
    ENDIF
@@ -1107,29 +1119,29 @@ DO NFOILID = 1, NUMFOIL
 END DO !NUMFOIL
 RETURN
 
-!bjj FIX THIS GOTO!!!!!!!!
-205 CALL ProgAbort( ' Error reading line: "'//TRIM(Line)//'" in file : "'//TRIM(FOILNM(NFOILID))//'"' )
-
+205 CALL ProgAbort( ' Error reading line: "'//TRIM(Line)//'" in file : "'//TRIM(P%AirFoil%FOILNM(NFOILID))//'"' )
 
 RETURN
 END SUBROUTINE READFL
 
-!====================================================================================================
-SUBROUTINE READTwr(UnIn, FilName, ErrStat)
+ ! ****************************************************
+   SUBROUTINE READTwr(UnIn, InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 ! This subroutine reads the tower properties input file, allocating TwrProps variables to do so.
 ! The tower data file contains radius and Re vs CD data as well as the tower wake constant.
+ ! ****************************************************
 !====================================================================================================
-
-   USE                             TwrProps
-
-   IMPLICIT                        NONE
-
-      ! Passed variables:
-
-   INTEGER,      INTENT(IN)     :: UnIn      ! unit number for tower input file
-   CHARACTER(*), INTENT(IN)     :: FilName   ! name of the tower input file
-   INTEGER,      INTENT(OUT)    :: ErrStat   ! returns 0 if no errors were encountered; non-zero otherwise
-
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   INTEGER, INTENT(IN)                    :: UnIn
+   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
       ! Local Variables:
 
@@ -1137,12 +1149,14 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
    INTEGER                      :: J         ! loop counter for columns in the data tables
 
    CHARACTER(99)                :: Fmt       ! format for printing to an echo file
+   CHARACTER(1024)              :: FilName   ! file name
 
    !-------------------------------------------------------------------------------------------------
    ! Open the file for reading
    !-------------------------------------------------------------------------------------------------
-   CALL OpenFInpFile (UnIn, TRIM(FilName), ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   FilName = p%TwrProps%TwrFile
+   CALL OpenFInpFile (UnIn, TRIM(FilName), ErrStat, ErrMess )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
 
    !-------------------------------------------------------------------------------------------------
@@ -1151,47 +1165,47 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
 
       ! Read in 2 header/comment lines
    CALL ReadCom( UnIn, FilName, 'Title line 1', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    CALL ReadCom( UnIn, FilName, 'Title line 2', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat /= ErrID_None ) RETURN
 
 
       ! Read in number of tower height entries, NTwrHt
-   CALL ReadVar( UnIn, FilName, NTwrHt, 'NTwrHt', 'Number of tower stations', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrHt, 'NTwrHt', 'Number of tower stations', ErrStat )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF (NTwrHt < 1) THEN
+   IF (p%TwrProps%NTwrHt < 1) THEN
       CALL ProgWarn( 'Number of tower height entries, NTwrHt, must be greater than zero.' )
-      ErrStat = 1
+      ErrStat = ErrID_Fatal
       RETURN
    ENDIF
 
       ! Read in number of tower Reynolds number entries, NTwrRe
-   CALL ReadVar( UnIn, FilName, NTwrRe, 'NTwrRe', 'Number of tower Reynolds number rows', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrRe, 'NTwrRe', 'Number of tower Reynolds number rows', ErrStat )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF (NTwrRe < 1) THEN
+   IF (p%TwrProps%NTwrRe < 1) THEN
       CALL ProgWarn( 'Number of tower Reynolds number entries, NTwrRe, must be greater than zero.' )
-      ErrStat = 1
+      ErrStat = ErrID_Fatal
       RETURN
    ENDIF
 
 
       ! Read in number of tower CD entries, NTwrCD
-   CALL ReadVar( UnIn, FilName, NTwrCD, 'NTwrCD', 'Number of tower CD columns', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrCD, 'NTwrCD', 'Number of tower CD columns', ErrStat )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF (NTwrCD < 1) THEN
+   IF (p%TwrProps%NTwrCD < 1) THEN
       CALL ProgWarn( 'Number of tower CD entries, NTwrCD, must be greater than zero.' )
-      ErrStat = 1
+      ErrStat = ErrID_Fatal
       RETURN
    ENDIF
 
 
       ! Read in constant for tower wake model = 0 full potential flow = 0.1 model of Bak et al.
-   CALL ReadVar( UnIn, FilName, Tower_Wake_Constant, 'Tower_Wake_Constant', 'Constant for tower wake model', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   CALL ReadVar( UnIn, FilName, p%TwrProps%Tower_Wake_Constant, 'Tower_Wake_Constant', 'Constant for tower wake model', ErrStat )
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    ! bjj: should there be a sanity check here, too?
 
@@ -1200,47 +1214,47 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
    ! read in the next 2 sections of this file.
    !-------------------------------------------------------------------------------------------------
 
-   IF ( .NOT. ALLOCATED( TwrHtFr ) ) THEN
-      ALLOCATE ( TwrHtFr(NTwrHt) , STAT=ErrStat )
+   IF ( .NOT. ALLOCATED( p%TwrProps%TwrHtFr ) ) THEN
+      ALLOCATE ( p%TwrProps%TwrHtFr(p%TwrProps%NTwrHt) , STAT=ErrStat )
       IF ( ErrStat /= 0 ) THEN
          CALL ProgWarn( ' Error allocating memory for TwrHtFr array.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
 
-   IF ( .NOT. ALLOCATED( TwrWid ) ) THEN
-      ALLOCATE ( TwrWid(NTwrHt) , STAT=ErrStat )
+   IF ( .NOT. ALLOCATED( p%TwrProps%TwrWid ) ) THEN
+      ALLOCATE ( p%TwrProps%TwrWid(p%TwrProps%NTwrHt) , STAT=ErrStat )
       IF ( ErrStat /= 0 ) THEN
          CALL ProgWarn( ' Error allocating memory for TwrWid array.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
 
-   IF ( .NOT. ALLOCATED( NTwrCDCol ) ) THEN
-      ALLOCATE ( NTwrCDCol(NTwrHt) , STAT=ErrStat )
+   IF ( .NOT. ALLOCATED( p%TwrProps%NTwrCDCol ) ) THEN
+      ALLOCATE ( p%TwrProps%NTwrCDCol(p%TwrProps%NTwrHt) , STAT=ErrStat )
       IF ( ErrStat /= 0 ) THEN
          CALL ProgWarn( ' Error allocating memory for NTwrCDCol array.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
 
-   IF ( .NOT. ALLOCATED( TwrRe ) ) THEN
-      ALLOCATE ( TwrRe(NTwrRe) , STAT=ErrStat )
+   IF ( .NOT. ALLOCATED( p%TwrProps%TwrRe ) ) THEN
+      ALLOCATE ( p%TwrProps%TwrRe(p%TwrProps%NTwrRe) , STAT=ErrStat )
       IF ( ErrStat /= 0 ) THEN
          CALL ProgWarn( ' Error allocating memory for TwrRe array.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
 
-   IF ( .NOT. ALLOCATED( TwrCD ) ) THEN
-      ALLOCATE ( TwrCD(NTwrRe, NTwrCD) , STAT=ErrStat )
+   IF ( .NOT. ALLOCATED( p%TwrProps%TwrCD ) ) THEN
+      ALLOCATE ( p%TwrProps%TwrCD(p%TwrProps%NTwrRe, p%TwrProps%NTwrCD) , STAT=ErrStat )
       IF ( ErrStat /= 0 ) THEN
          CALL ProgWarn( ' Error allocating memory for TwrCD array.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
@@ -1251,22 +1265,22 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
    !-------------------------------------------------------------------------------------------------
       ! Read in 2 header/comment lines
    CALL ReadCom( UnIn, FilName, 'Distributed Tower Properties header 1', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    CALL ReadCom( UnIn, FilName, 'Distributed Tower Properties header 2', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat /= ErrID_None ) RETURN
 
 
-      ! Read tower radius data table
+      ! Read tower height data table
 
-   DO I = 1, NTwrHt     ! 1 line per fraction of height
+   DO I = 1, p%TwrProps%NTwrHt     ! 1 line per fraction of height
 
 
-      READ( UnIn,*,IOSTAT=ErrStat ) TwrHtFr(I), TwrWid(I), NTwrCDCol(I)
+      READ( UnIn,*,IOSTAT=ErrStat ) p%TwrProps%TwrHtFr(I), p%TwrProps%TwrWid(I), p%TwrProps%NTwrCDCol(I)
 
       IF ( ErrStat == 0 ) THEN
-         IF ( Echo ) THEN
-            WRITE (UnEc,'(2X,ES11.4e2, 2X,ES11.4e2, 2X,I11)')  TwrHtFr(I), TwrWid(I), NTwrCDCol(I)
+         IF ( p%Echo ) THEN
+            WRITE (p%UnEc,'(2X,ES11.4e2, 2X,ES11.4e2, 2X,I11)')  p%TwrProps%TwrHtFr(I), p%TwrProps%TwrWid(I), p%TwrProps%NTwrCDCol(I)
          END IF
       ELSE IF ( ErrStat < 0 ) THEN
          CALL ProgWarn( ' Premature end of file while reading line '//TRIM(Int2Lstr(I))// &
@@ -1284,37 +1298,37 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
       !..............................................................................................
 
          ! Make sure tower height fractions are between 0 and 1
-      IF ( TwrHtFr( I ) < 0.0 .OR. TwrHtFr( I ) > 1.0 ) THEN
+      IF ( p%TwrProps%TwrHtFr( I ) < 0.0 .OR. p%TwrProps%TwrHtFr( I ) > 1.0 ) THEN
          CALL ProgWarn( ' Error on line '//TRIM(Int2Lstr(I))//' of the distributed tower properties in file "' &
                            //TRIM(FilName)//'." Tower height fractions must be between 0.0 and 1.0.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
 
 
          ! Make sure the tower height increases for each entry
       IF (I > 1) THEN
-         IF (TwrHtFr(I) <= TwrHtFr(I-1)) THEN
+         IF (p%TwrProps%TwrHtFr(I) <= p%TwrProps%TwrHtFr(I-1)) THEN
             CALL ProgWarn( ' Error on line '//TRIM(Int2Lstr(I))//' of the distributed tower properties in file "' &
                            //TRIM(FilName)//'." Tower height fraction entries must be in order of increasing height.' )
-            ErrStat = 1
+            ErrStat = ErrID_Fatal
             RETURN
          ENDIF
       ENDIF
 
          ! Make sure tower width is positive
-      IF ( TwrWid( I ) <= 0.0 ) THEN
+      IF ( p%TwrProps%TwrWid( I ) <= 0.0 ) THEN
          CALL ProgWarn( ' Error on line '//TRIM(Int2Lstr(I))//' of the distributed tower properties in file "' &
                            //TRIM(FilName)//'." Tower width must be positive.' )
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       ENDIF
 
          ! Make sure the tower CD column is within range
-      IF ( NTwrCDCol(I) < 1 .OR. NTwrCDCol(I) > NTwrCD ) THEN
+      IF ( p%TwrProps%NTwrCDCol(I) < 1 .OR. p%TwrProps%NTwrCDCol(I) > P%TwrProps%NTwrCD ) THEN
          CALL ProgWarn( ' Error on line '//TRIM(Int2Lstr(I))//' of the distributed tower properties in file "' &
-                           //TRIM(FilName)//'." Tower height CD column must be between 1 and '//TRIM(Int2Lstr(NTwrCD))//'.' )
-         ErrStat = 1
+                           //TRIM(FilName)//'." Tower height CD column must be between 1 and '//TRIM(Int2Lstr(P%TwrProps%NTwrCD))//'.' )
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
 
@@ -1327,20 +1341,20 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
 
       ! Read in 2 header/comment lines
    CALL ReadCom( UnIn, FilName, 'Re vs CD Properties header 1', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat /= ErrID_None ) RETURN
 
    CALL ReadCom( UnIn, FilName, 'Re vs CD Properties header 2', ErrStat )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat /= ErrID_None ) RETURN
 
-   Fmt = '('//TRIM(Int2Lstr(NTwrCD+1))//'(2X,ES11.4e2))'
+   Fmt = '('//TRIM(Int2Lstr(p%TwrProps%NTwrCD+1))//'(2X,ES11.4e2))'
 
-   DO I = 1, NTwrRe
+   DO I = 1, p%TwrProps%NTwrRe
 
-      READ( UnIn,*,IOSTAT=ErrStat ) TwrRe(I), (TwrCD(I,J), J = 1, NTwrCD)
+      READ( UnIn,*,IOSTAT=ErrStat ) p%TwrProps%TwrRe(I), (p%TwrProps%TwrCD(I,J), J = 1, p%TwrProps%NTwrCD)
 
       IF ( ErrStat == 0 ) THEN
-         IF ( Echo ) THEN
-            WRITE (UnEc,Fmt)  TwrRe(I), (TwrCD(I,J), J = 1, NTwrCD)
+         IF ( p%Echo ) THEN
+            WRITE (p%UnEc,Fmt)  p%TwrProps%TwrRe(I), (p%TwrProps%TwrCD(I,J), J = 1, p%TwrProps%NTwrCD)
          END IF
       ELSE IF ( ErrStat < 0 ) THEN
          CALL ProgWarn( ' Premature end of file while reading line '//TRIM(Int2Lstr(I))// &
@@ -1363,48 +1377,41 @@ SUBROUTINE READTwr(UnIn, FilName, ErrStat)
    RETURN
 
 END SUBROUTINE READTwr
-!====================================================================================================
+
 ! Dynamics Program aerodynamics force interface gateway
-   SUBROUTINE ELEMFRC (PSI, RLOCAL, J, IBlade, VNROTOR2, VT, VNW, &
-                       VNB, DFN, DFT, PMA, Initial)
+ ! ****************************************************
+   SUBROUTINE ELEMFRC(P, O, ErrStat, ErrMess, &
+                      PSI, RLOCAL, J, IBlade, VNROTOR2, VT, VNW, &
+                      VNB, DFN, DFT, PMA, Initial)
+!   SUBROUTINE ELEMFRC (PSI, RLOCAL, J, IBlade, VNROTOR2, VT, VNW, &
+!                       VNB, DFN, DFT, PMA, Initial)
+ ! ****************************************************
  !  calculates the aerodynamic forces on one
  !  blade element.  Inputs include all velocities.
  !  Normal and tangential forces and 'A' are returned.
- ! ************************************************
+!====================================================================================================
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-USE                           Airfoil
-USE                           ElOutParams
-USE                           Blade
-USE                           Element
-USE                           ElemInflow
-USE                           InducedVel
-USE                           Rotor
-USE                           Switch
-USE                           Wind
-
-IMPLICIT                      NONE
-
-
-   ! Passed Variables:
-
-REAL(ReKi),INTENT(OUT)     :: DFN
-REAL(ReKi),INTENT(OUT)     :: DFT
-REAL(ReKi),INTENT(OUT)     :: PMA
-REAL(ReKi),INTENT(IN)      :: PSI
-REAL(ReKi),INTENT(IN)      :: RLOCAL
-REAL(ReKi),INTENT(IN)      :: VNB
-REAL(ReKi),INTENT(IN)      :: VNROTOR2
-REAL(ReKi),INTENT(IN)      :: VNW
-REAL(ReKi),INTENT(INOUT)   :: VT
-
-INTEGER, INTENT(IN)        :: J
-INTEGER, INTENT(IN)        :: IBlade
-
-LOGICAL,   INTENT(IN)      :: Initial
+   REAL(ReKi),INTENT(OUT)     :: DFN
+   REAL(ReKi),INTENT(OUT)     :: DFT
+   REAL(ReKi),INTENT(OUT)     :: PMA
+   REAL(ReKi),INTENT(IN)      :: PSI
+   REAL(ReKi),INTENT(IN)      :: RLOCAL
+   REAL(ReKi),INTENT(IN)      :: VNB
+   REAL(ReKi),INTENT(IN)      :: VNROTOR2
+   REAL(ReKi),INTENT(IN)      :: VNW
+   REAL(ReKi),INTENT(INOUT)   :: VT
+   INTEGER, INTENT(IN)        :: J
+   INTEGER, INTENT(IN)        :: IBlade
+   LOGICAL,   INTENT(IN)      :: Initial
 
    ! Local Variables:
 
-INTEGER                    :: ErrStat
 REAL(ReKi)                 :: CDA
 REAL(ReKi)                 :: CLA
 REAL(ReKi)                 :: CMA
@@ -1416,31 +1423,10 @@ REAL(ReKi)                 :: SPHI
 REAL(ReKi)                 :: Vinduced
 REAL(ReKi)                 :: VN
 
-!DJL Start of proposed change (commented out for release)
-!DJL LOGICAL(1)                 :: DYN ! Flag used in debugging dyn-equil switch
-!DJL LOGICAL(1)                 :: FirstPass = .TRUE.  ! Flag to indicate the first pass
-!DJL LOGICAL(1)                 :: DYNwait   = .FALSE. ! Flag to wait for GDW reactivation
-
-!DJL REAL(ReKi)                 :: SwitchTime = 0.0 ! The last time the GDW was switched on or off
-!DJL REAL(ReKi)                 :: Dyn_WT     = 0.0 ! The last time we passed GDW on threshold
-
-!DJL CHARACTER( 15)             :: Num2LStr
-!DJL CHARACTER(100)             :: MESAGE
-
-!DJL SAVE ! We need to save values for the next time
-
-
-! Inititalize the DYN flag
-!DJL IF (FirstPass) THEN
-!DJL    DYN = DYNINIT ! USE DYNINIT because DYNINFLOW may be FALSE on initialization
-!DJL    FirstPass = .FALSE.
-!DJL ENDIF
-!DJL END of proposed change
-
 
    ! initialize TanInd variables
-A (J,IBLADE) = 0.0
-AP(J,IBLADE) = 0.0
+O%Element%A (J,IBLADE) = 0.0
+O%Element%AP(J,IBLADE) = 0.0
 
 
  !-mlb  Check for being at the center of rotation.
@@ -1449,126 +1435,90 @@ AP(J,IBLADE) = 0.0
 
 
 IF ( RLOCAL < 0.01 )  THEN
-   A (J,IBLADE) = 0.0
-   AP(J,IBLADE) = 0.0
-ELSEIF( DYNINFL .AND. R * REVS < 2.0 )  THEN   !ACH 3/10/03 This block deals with dyn. inflow problems at low tip speed
-   A (J,IBLADE) = 0.0
-   AP(J,IBLADE) = 0.0
-   DYNINIT = .TRUE.    !Re-initialize if we begin using dynamic inflow again
+   O%Element%A (J,IBLADE) = 0.0
+   O%Element%AP(J,IBLADE) = 0.0
+ELSEIF( P%DYNINFL .AND. P%Blade%R * O%Rotor%REVS < 2.0 )  THEN   !ACH 3/10/03 This block deals with dyn. inflow problems at low tip speed
+   O%Element%A (J,IBLADE) = 0.0
+   O%Element%AP(J,IBLADE) = 0.0
+   O%DYNINIT = .TRUE.    !Re-initialize if we begin using dynamic inflow again
 ELSE
 
  ! Turn wake off when using dynamic inflow and tip speed goes low.  Wake will remain off.
-! Eliminated with the addtion of the ELSEIF above - ACH 3/10/03
-!   IF( WAKE .AND. DYNINFL .AND. (TIME > 20D0) .AND. (R * REVS < 5.0) ) THEN
-!      WAKE = .FALSE.
-!      WRITE(*,*) 'Wake turned off because tip speed < 5'
-!   ENDIF
 
  ! Get induction factor = A using static airfoil coefficients
-   IF ( WAKE .AND. .NOT. Initial) THEN
+   IF ( P%WAKE .AND. .NOT. Initial) THEN
 
-!DJL Start of proposed change (commented out in release version)
-!DJL Testing of possible fix to GDW problem at low wind speed - 05/30/03
-!DJL       IF ( DYNINFL .AND. DYN) THEN ! The GDW routines are active
-
-!DJL          IF ( TotalInf <= 0.1 ) THEN ! Deactivate GDW
-!DJL             MESAGE = " TotalInf has dropped below 0.1; GDW is being turned off. Time = " &
-!DJL                      //Num2LStr(REAL(TIME, ReKi))
-!DJL             CALL ErrLog ( MESAGE, '(A)', 'ELEMFRC', 301, 'WARN' )
-!DJL        DYN = .FALSE.
-!DJL             SwitchTime = REAL(TIME, ReKi)
-!DJL          ENDIF
-
-!DJL       ELSEIF ( DYNINFL .AND. .NOT. DYN ) THEN ! GDW inactivated
-
-!DJL          IF ( TotalInf >= 0.1 ) THEN ! Passed threshold
-
-!DJL             IF ( TIME - SwitchTime > 5.0 .AND. .NOT. DYNwait) THEN ! 5 seconds elapsed since last trigger - prepare to reactivate
-!DJL                DYNwait = .TRUE.
-!DJL                DYN_WT  = REAL(TIME, ReKi)
-!DJL             ENDIF
-
-!DJL          ELSE
-
-!DJL             IF (DYNwait) DYNwait = .FALSE. ! dropped below threshold - no activation of GDW
-
-!DJL          ENDIF
-!DJL       ENDIF
-
-!DJL       IF (DYNwait .AND. TIME - DYN_WT > 0.1) THEN ! Activate GDW
-!DJL          MESAGE = " TotalInf has returned above 0.1; GDW is being turned on. Time = " &
-!DJL                  //Num2LStr(REAL(TIME, ReKi))
-!DJL          CALL ErrLog ( MESAGE, '(A)', 'ELEMFRC', 302, 'WARN' )
-!DJL          DYNwait = .FALSE.
-!DJL          DYN = .TRUE.
-!DJL          SwitchTime = REAL(TIME, ReKi)
-!DJL       ENDIF
-
-      IF ( DYNINFL ) THEN
-!DJL USE statement below in place of above IF - Not yet ready for prime-time (commented out for release)
-!DJL      IF ( DYN ) THEN
-!DJL End of proposed change
-
+      IF ( P%DYNINFL ) THEN
  !       USE dynamic inflow model to find A
-         CALL VINDINF( J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes VT, A, and AP
+         CALL VINDINF( P, O, ErrStat, ErrMess, &
+                       J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes VT, A, and AP
       ELSE
  !       USE momentum balance to find A
-         CALL VIND( J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes VT, A, and AP
+         CALL VIND( P, O, ErrStat, ErrMess, &
+                    J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes VT, A, and AP
  !       Apply skewed-wake correction, if applicable
-         IF( SKEW ) CALL VNMOD( J, IBlade, RLOCAL, PSI ) !changes A
+         IF( O%SKEW ) CALL VNMOD( P, O, ErrStat, ErrMess,&
+                                  J, IBlade, RLOCAL, PSI ) !changes A
       ENDIF
    ELSE
  !    Ignore the wake calculation entirely
-      A (J,IBLADE) = 0.0
-      AP(J,IBLADE) = 0.0
+      O%Element%A (J,IBLADE) = 0.0
+      O%Element%AP(J,IBLADE) = 0.0
    ENDIF
 
 ENDIF
 
-Vinduced = VNW  * A(J,IBLADE)
+Vinduced = VNW  * O%Element%A(J,IBLADE)
 VN = VNW + VNB - Vinduced
 
-SumInfl = SumInfl + Vinduced * RLOCAL * DR(J)
+O%InducedVel%SumInfl = O%InducedVel%SumInfl + Vinduced * RLOCAL * p%Blade%DR(J)
 
  ! Get the angle of attack
 
 PHI   = ATAN2( VN, VT )
-ALPHA(J,IBlade) = PHI - PITNOW
+O%Element%ALPHA(J,IBlade) = PHI - o%Element%PITNOW
 
-CALL MPI2PI ( ALPHA(J,IBlade) )
+CALL MPI2PI ( O%Element%ALPHA(J,IBlade) )
 
-W2(J,IBlade) = VN * VN + VT * VT
+O%Element%W2(J,IBlade) = VN * VN + VT * VT
 
  ! Get the Reynold's number for the element
  !  Returns Reynold's number x 10^6    !bjj: Reynold's number x 10^-6 ?
-ReNum = GetReynolds( SQRT(W2(J,IBlade)), C(J) )
-IF (Reynolds) MulTabLoc = ReNum
+ReNum = GetReynolds( SQRT(O%Element%W2(J,IBlade)), P%Blade%C(J), P%Wind%KinVisc )
+IF (P%Reynolds) O%AirFoil%MulTabLoc = ReNum
 
  ! Get lift coefficient from dynamic stall routine if desired
  !  note that the induced velocity was calculated
  !  using the static CL, not the dynamic CL
 
-IF ( DSTALL ) THEN
- ! USE BEDDOES dynamic stall model
+IF ( P%DSTALL ) THEN
+ ! USE Beddoes dynamic stall model
    IF (Initial) THEN ! USE static data on first pass
-      CALL BEDINIT (J, IBlade, ALPHA(J,IBlade))
-      CALL CLCD( ALPHA(J,IBlade), CLA, CDA, CMA, NFOIL(J), ErrStat )
+      CALL BEDINIT ( P, O, ErrStat, ErrMess, &
+                     J, IBlade, O%Element%ALPHA(J,IBlade))
+      CALL CLCD( P, O, ErrStat, ErrMess, &
+                 O%Element%ALPHA(J,IBlade), CLA, CDA, CMA, P%AirFoil%NFOIL(J) )
+      IF (ErrStat >= AbortErrLev) RETURN
    ELSE
-      CALL BEDDOES( W2(J,IBlade), J, IBlade, ALPHA(J,IBlade), CLA, CDA, CMA)
+      CALL BeddoesModel( P,  O,  ErrStat, ErrMess, &
+                        O%Element%W2(J,IBlade), J, IBlade, O%Element%ALPHA(J,IBlade), CLA, CDA, CMA)
+      IF (ErrStat >= AbortErrLev) RETURN
    ENDIF
 ELSE
  ! Don't USE dynamic stall model
-   CALL CLCD( ALPHA(J,IBlade), CLA, CDA, CMA, NFOIL(J), ErrStat )
+   CALL CLCD( P,  O,  ErrStat, ErrMess, &
+              O%Element%ALPHA(J,IBlade), CLA, CDA, CMA, P%AirFoil%NFOIL(J) )
+      IF (ErrStat >= AbortErrLev) RETURN
 ENDIF
 
-QA       = 0.5 * RHO * W2(J,IBlade) * DR(J) * C(J)
+QA       = 0.5 * P%Wind%RHO * O%Element%W2(J,IBlade) * P%Blade%DR(J) * P%Blade%C(J)
 CPHI     = COS( PHI )
 SPHI     = SIN( PHI )
 DFN      = ( CLA * CPHI + CDA * SPHI ) * QA
 DFT      = ( CLA * SPHI - CDA * CPHI ) * QA
 
-IF ( PMOMENT ) THEN
-   PMA  = CMA * QA * C(J)
+IF ( P%PMOMENT ) THEN
+   PMA  = CMA * QA * P%Blade%C(J)
 ELSE
    PMA  = 0.
    CMA  = 0.
@@ -1578,21 +1528,21 @@ ENDIF
  ! Save values at appropriate station
 
 IF ( IBLADE == 1 ) THEN
-   IF ( ElPrList(J) > 0 )  THEN
-      AAA    ( ElPrList(J) )    = A (J,IBLADE)
-      AAP    ( ElPrList(J) )    = AP(J,IBLADE)
-      ALF    ( ElPrList(J) )    = ALPHA(J,IBlade) * R2D
-      CDD    ( ElPrList(J) )    = CDA
-      CLL    ( ElPrList(J) )    = CLA
-      CMM    ( ElPrList(J) )    = CMA
-      CNN    ( ElPrList(J) )    = CLA * COS(ALPHA(J,IBlade)) + CDA * SIN(ALPHA(J,IBlade))
-      CTT    ( ElPrList(J) )    =-CDA * COS(ALPHA(J,IBlade)) + CLA * SIN(ALPHA(J,IBlade))
-      DFNSAV ( ElPrList(J) )    = DFN
-      DFTSAV ( ElPrList(J) )    = DFT
-      DynPres( ElPrList(J) )    = 0.5 * RHO * W2(J,IBlade)
-      PITSAV ( ElPrList(J) )    = PITNOW * R2D
-      PMM    ( ElPrList(J) )    = PMA
-      ReyNum ( ElPrList(J) )    = ReNum
+   IF ( O%ElOut%ElPrList(J) > 0 )  THEN
+      O%ElOut%AAA    ( O%ElOut%ElPrList(J) )    = O%Element%A (J,IBLADE)
+      O%ElOut%AAP    ( O%ElOut%ElPrList(J) )    = O%Element%AP(J,IBLADE)
+      O%ElOut%ALF    ( O%ElOut%ElPrList(J) )    = O%Element%ALPHA(J,IBlade) * R2D
+      O%ElOut%CDD    ( O%ElOut%ElPrList(J) )    = CDA
+      O%ElOut%CLL    ( O%ElOut%ElPrList(J) )    = CLA
+      O%ElOut%CMM    ( O%ElOut%ElPrList(J) )    = CMA
+      O%ElOut%CNN    ( O%ElOut%ElPrList(J) )    = CLA * COS(O%Element%ALPHA(J,IBlade)) + CDA * SIN(O%Element%ALPHA(J,IBlade))
+      O%ElOut%CTT    ( O%ElOut%ElPrList(J) )    =-CDA * COS(O%Element%ALPHA(J,IBlade)) + CLA * SIN(O%Element%ALPHA(J,IBlade))
+      O%ElOut%DFNSAV ( O%ElOut%ElPrList(J) )    = DFN
+      O%ElOut%DFTSAV ( O%ElOut%ElPrList(J) )    = DFT
+      O%ElOut%DynPres( O%ElOut%ElPrList(J) )    = 0.5 * P%Wind%RHO * O%Element%W2(J,IBlade)
+      O%ElOut%PITSAV ( O%ElOut%ElPrList(J) )    = o%Element%PITNOW * R2D
+      O%ElOut%PMM    ( O%ElOut%ElPrList(J) )    = PMA
+      O%ElOut%ReyNum ( O%ElOut%ElPrList(J) )    = ReNum
    ENDIF
 
 ENDIF
@@ -1601,82 +1551,82 @@ RETURN
 END SUBROUTINE ELEMFRC
 
 !======================================================
-   SUBROUTINE VIND( J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )
+   SUBROUTINE VIND( P, O, ErrStat, ErrMess, &
+                      J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )
+!   SUBROUTINE VIND( J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )
  !  calculates the axial induction factor for each
  !  annular segment and time step.
  ! ***************************************************
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-USE                              Blade
-USE                              Element
-USE                              InducedVel
+   REAL(ReKi),INTENT(IN)         :: RLOCAL
+   REAL(ReKi),INTENT(IN)         :: VNB
+   REAL(ReKi),INTENT(IN)         :: VNROTOR2
+   REAL(ReKi),INTENT(IN)         :: VNW
+   REAL(ReKi),INTENT(INOUT)      :: VT
 
+   INTEGER, INTENT(IN)           :: J
+   INTEGER, INTENT(IN)           :: IBlade
 
-IMPLICIT                         NONE
-
-
-   ! Passed Variables:
-REAL(ReKi),INTENT(IN)         :: RLOCAL
-REAL(ReKi),INTENT(IN)         :: VNB
-REAL(ReKi),INTENT(IN)         :: VNROTOR2
-REAL(ReKi),INTENT(IN)         :: VNW
-REAL(ReKi),INTENT(INOUT)      :: VT
-
-INTEGER, INTENT(IN)           :: J
-INTEGER, INTENT(IN)           :: IBlade
 
    ! Local Variables:
 
-REAL(ReKi)                    :: A2
-REAL(ReKi)                    :: A2P
-REAL(ReKi)                    :: AI
-REAL(ReKi)                    :: ALPHA
-REAL(ReKi)                    :: ASTEP
-REAL(ReKi)                    :: ATOLER2
-REAL(ReKi)                    :: ATOLERBY10
-REAL(ReKi)                    :: CDA
-REAL(ReKi)                    :: CLA
-REAL(ReKi)                    :: CMA
-REAL(ReKi)                    :: DAI
-REAL(ReKi)                    :: DAI1
-REAL(ReKi)                    :: DELAI
-REAL(ReKi)                    :: PHI
-REAL(ReKi), ALLOCATABLE, SAVE :: OLD_A_NS  ( :, : )
-REAL(ReKi), ALLOCATABLE, SAVE :: OLD_AP_NS ( :, : )
-REAL(ReKi)                    :: SOLFACT
-REAL(ReKi)                    :: VNA
-REAL(ReKi)                    :: VT2_Inv
-REAL(ReKi)                    :: VTA
+   REAL(ReKi)                    :: A2
+   REAL(ReKi)                    :: A2P
+   REAL(ReKi)                    :: AI
+   REAL(ReKi)                    :: ALPHA
+   REAL(ReKi)                    :: ASTEP
+   REAL(ReKi)                    :: ATOLER2
+   REAL(ReKi)                    :: ATOLERBY10
+   REAL(ReKi)                    :: CDA
+   REAL(ReKi)                    :: CLA
+   REAL(ReKi)                    :: CMA
+   REAL(ReKi)                    :: DAI
+   REAL(ReKi)                    :: DAI1
+   REAL(ReKi)                    :: DELAI
+   REAL(ReKi)                    :: PHI
+   REAL(ReKi)                    :: SOLFACT
+   REAL(ReKi)                    :: VNA
+   REAL(ReKi)                    :: VT2_Inv
+   REAL(ReKi)                    :: VTA
 
-INTEGER                       :: ICOUNT
-INTEGER                       :: MAXICOUNT
-INTEGER                       :: Sttus
+   INTEGER                       :: ICOUNT
+   INTEGER                       :: MAXICOUNT
+   INTEGER                       :: Sttus
 
+   ErrStat = ErrID_None
+   ErrMess = ""
 
  ! Allocate and initialize the local array on the first pass
-IF ( .NOT. ALLOCATED (OLD_A_NS) ) THEN
-   ALLOCATE ( OLD_A_NS ( NELM, NB) , STAT=Sttus )
+IF ( .NOT. ALLOCATED (O%Element%OLD_A_NS) ) THEN
+   ALLOCATE ( O%Element%OLD_A_NS ( P%Element%NELM, P%Blade%NB) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLD_A_NS array.' )
-   OLD_A_NS(:,:) = 0.0
+   O%Element%OLD_A_NS(:,:) = 0.0
 ENDIF
 
  ! Allocate and initialize the local array on the first pass
-IF ( .NOT. ALLOCATED (OLD_AP_NS) ) THEN
-   ALLOCATE ( OLD_AP_NS ( NELM, NB) , STAT=Sttus )
+IF ( .NOT. ALLOCATED (O%Element%OLD_AP_NS) ) THEN
+   ALLOCATE ( O%Element%OLD_AP_NS ( P%Element%NELM, P%Blade%NB) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLD_AP_NS array.' )
-   OLD_AP_NS(:,:) = 0.0
+   O%Element%OLD_AP_NS(:,:) = 0.0
 ENDIF
 
  ! Set maximum iterations
-MAXICOUNT = 1000     !bjj why isn't this a parameter?
+MAXICOUNT = P%MAXICOUNT
 
  ! CH--  Alternate convergence criteria
-ATOLER2    =  2.0 * ATOLER
-ATOLERBY10 =  0.1 * ATOLER
+ATOLER2    =  2.0 * P%InducedVel%ATOLER
+ATOLERBY10 =  0.1 * P%InducedVel%ATOLER
 
  ! Bypass calculations for low wind speed, assume no induced velocity.
 
 IF ( VNROTOR2 < 0.1 ) THEN
-   A(J,IBLADE) = 0.0
+   O%Element%A(J,IBLADE) = 0.0
    RETURN
 ENDIF
 
@@ -1686,33 +1636,37 @@ ENDIF
 IF ( RLOCAL == 0.0 ) THEN   ! Avoid div/0 in FAST2
    SOLFACT = 1.0/VNROTOR2
 ELSE
-   SOLFACT = NB * C(J) / ( TWOPI * RLOCAL * VNROTOR2)
+   SOLFACT = P%Blade%NB * P%Blade%C(J) / ( TWOPI * RLOCAL * VNROTOR2)
 ENDIF
 VT2_Inv = 1. / ( VT * VT )
 
  !-mlb  Let's USE the old value of the A from before it was corrected for skew.
-AI      = OLD_A_NS( J, IBLADE )
+AI      = O%Element%OLD_A_NS( J, IBLADE )
 DAI1    = 0.05
-A2P     = OLD_AP_NS( J, IBLADE )
+A2P     = O%Element%OLD_AP_NS( J, IBLADE )
 ASTEP   = 0.5
 ICOUNT  = 0
 
  ! Check for extremely high VN and bypass calculations if necessary
 
 IF ( ABS( VNB ) > 100. ) THEN
-   A( J, IBLADE ) = 0.0
-   CALL VINDERR( VNW, VNB, 'VNB', J, IBLADE )
+   O%Element%A( J, IBLADE ) = 0.0
+   CALL VINDERR( P, O, ErrStat, ErrMess, &
+                 VNW, VNB, 'VNB', J, IBLADE )
    RETURN
 ELSEIF ( ABS( VT ) > 400. ) THEN
-   A( J, IBLADE ) = 0.0
-   CALL VINDERR( VNW, VT, 'VT', J, IBLADE )
+   O%Element%A( J, IBLADE ) = 0.0
+   CALL VINDERR( P, O, ErrStat, ErrMess, &
+                 VNW, VT, 'VT', J, IBLADE )
    RETURN
 ENDIF
 
 A2 = AI
 
-CALL AXIND ( VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
-            J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+CALL AXIND ( P, O, ErrStat, ErrMess, &
+             VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
+             J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+      IF (ErrStat >= AbortErrLev) RETURN
 
 DAI = A2  - AI
 
@@ -1729,8 +1683,10 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
 
    A2 = AI
 
-   CALL AXIND ( VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
-             J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+   CALL AXIND ( P, O, ErrStat, ErrMess,       &
+                VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
+                J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+      IF (ErrStat >= AbortErrLev) RETURN
 
    DAI = A2  - AI
 
@@ -1741,8 +1697,8 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
    IF ( ICOUNT > MAXICOUNT ) THEN
       CALL ProgWarn( 'Induction factor calculation did not converge after'//TRIM(Int2LStr(MAXICOUNT))// &
                      ' iterations. AeroDyn will continue using induction factors from previous successful time step.' )
-      A2  = OLD_A_NS (J,IBLADE)
-      A2P = OLD_AP_NS(J,IBLADE)
+      A2  = O%Element%OLD_A_NS (J,IBLADE)
+      A2P = O%Element%OLD_AP_NS(J,IBLADE)
       EXIT
    ENDIF
 
@@ -1757,118 +1713,109 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
 END DO
 
  ! Passed test, we're done
-A (J,IBLADE) = A2
-AP(J,IBLADE) = A2P
+O%Element%A (J,IBLADE) = A2
+O%Element%AP(J,IBLADE) = A2P
 VT = VT * ( 1. + A2P )  !bjj: why are we changing the total velocity?
-OLD_A_NS  (J,IBLADE) = A2
-OLD_AP_NS (J,IBLADE) = A2P
-
-
+O%Element%OLD_A_NS  (J,IBLADE) = A2
+O%Element%OLD_AP_NS (J,IBLADE) = A2P
 
 RETURN
 END SUBROUTINE VIND
 
 
-
  ! ***************************************************
-   SUBROUTINE VINDERR( VNW, VX, VID, J, IBLADE )
+   SUBROUTINE VINDERR( P, O, ErrStat, ErrMess, &
+                      VNW, VX, VID, J, IBLADE )
+!   SUBROUTINE VINDERR( VNW, VX, VID, J, IBLADE )
  !  used to write warning messages to the screen
  !  when VN or VT is high.
  ! ***************************************************
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
+
+   REAL(ReKi),INTENT(IN)      :: VNW
+   REAL(ReKi),INTENT(IN)      :: VX
+
+   INTEGER   ,INTENT(IN)      :: IBLADE
+   INTEGER   ,INTENT(IN)      :: J
+
+   CHARACTER(  *),INTENT(IN)  :: VID
 
 
-
-IMPLICIT                      NONE
-
-
-   ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: VNW
-REAL(ReKi),INTENT(IN)      :: VX
-
-INTEGER   ,INTENT(IN)      :: IBLADE
-INTEGER   ,INTENT(IN)      :: J
-
-CHARACTER(  *),INTENT(IN)  :: VID
-
-   ! Local Variables:
-
-INTEGER   , SAVE           :: NERRORS = 0
-
-LOGICAL,    SAVE           :: AFLAG   = .FALSE.
-
+   ErrStat = ErrID_None
+   ErrMess = ""
 
  ! Don't write messages if we've already done it 5 times
 
-IF ( AFLAG ) RETURN
+IF ( O%AFLAGVinderr ) RETURN
 
-NERRORS = NERRORS + 1
+O%NERRORS = O%NERRORS + 1
 
    CALL ProgWarn( ' High '//TRIM(VID)//' velocity encountered during induction factor calculation.' )
    CALL WrScr( '  Blade number '//TRIM(Int2LStr(IBLADE))//', Element number '//TRIM(Int2LStr(J )) )
    CALL WrScr( '  VNW = '       //TRIM(Num2LStr(VNW))//', '//TRIM(VID)//' = '//TRIM(Num2LStr(VX)) )
 
-IF ( NERRORS >= 5 ) THEN
-   AFLAG = .TRUE.
+IF ( O%NERRORS >= 5 ) THEN
+   O%AFLAGVinderr = .TRUE.
    CALL ProgWarn( ' Induced velocity warning written 5 times. '//&
                  ' The message will not be repeated, though the condition may persist.' )
 ENDIF
 
 
-
 RETURN
 END SUBROUTINE VINDERR
 
-
-
  ! ******************************************************
-   SUBROUTINE AXIND ( VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, &
+   SUBROUTINE  AXIND (P, O, ErrStat, ErrMess,      &
+                      VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2,     &
                       A2P, J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+!   SUBROUTINE AXIND ( VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, &
+!                      A2P, J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
  !  calculates a new axial induction factor from
  !   given values of velocities and geometry.  This routine
  !   is called by vind as part of the iteration process
  ! ******************************************************
+!USE                           Element
+!USE                           InducedVel
+!USE                           Airfoil, ONLY: NFoil
+!USE                           Switch
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-USE                           Element
-USE                           InducedVel
-USE                           Airfoil, ONLY: NFoil
-USE                           Switch
+   REAL(ReKi),INTENT(INOUT)   :: A2
+   REAL(ReKi),INTENT(INOUT)   :: A2P
+   REAL(ReKi),INTENT(OUT)     :: ALPHA
+   REAL(ReKi),INTENT(OUT)     :: CDA
+   REAL(ReKi),INTENT(OUT)     :: CLA
+   REAL(ReKi),INTENT(OUT)     :: CMA
+   REAL(ReKi),INTENT(OUT)     :: PHI
+   REAL(ReKi),INTENT(IN)      :: RLOCAL
+   REAL(ReKi),INTENT(IN)      :: SOLFACT
+   REAL(ReKi),INTENT(OUT)     :: VNA
+   REAL(ReKi),INTENT(IN)      :: VNB
+   REAL(ReKi),INTENT(IN)      :: VNROTOR2
+   REAL(ReKi),INTENT(IN)      :: VNW
+   REAL(ReKi),INTENT(IN)      :: VT
+   REAL(ReKi),INTENT(IN)      :: VT2_Inv
+   REAL(ReKi),INTENT(OUT)     :: VTA
 
-
-IMPLICIT                      NONE
-
-
-   ! Passed Variables:
-REAL(ReKi),INTENT(INOUT)   :: A2
-REAL(ReKi),INTENT(INOUT)   :: A2P
-REAL(ReKi),INTENT(OUT)     :: ALPHA
-REAL(ReKi),INTENT(OUT)     :: CDA
-REAL(ReKi),INTENT(OUT)     :: CLA
-REAL(ReKi),INTENT(OUT)     :: CMA
-REAL(ReKi),INTENT(OUT)     :: PHI
-REAL(ReKi),INTENT(IN)      :: RLOCAL
-REAL(ReKi),INTENT(IN)      :: SOLFACT
-REAL(ReKi),INTENT(OUT)     :: VNA
-REAL(ReKi),INTENT(IN)      :: VNB
-REAL(ReKi),INTENT(IN)      :: VNROTOR2
-REAL(ReKi),INTENT(IN)      :: VNW
-REAL(ReKi),INTENT(IN)      :: VT
-REAL(ReKi),INTENT(IN)      :: VT2_Inv
-REAL(ReKi),INTENT(OUT)     :: VTA
-
-INTEGER   ,INTENT(IN)      :: J
+   INTEGER   ,INTENT(IN)      :: J
 
    ! Local Variables:
 
-REAL(ReKi)                 :: CH
-REAL(ReKi)                 :: CPhi                                                     ! COS( PHI )
-REAL(ReKi), SAVE           :: HUBLOSS = 1
-REAL(ReKi), SAVE           :: LOSS = 1
-REAL(ReKi)                 :: SPHI
-REAL(ReKi)                 :: SWRLARG
-REAL(ReKi), SAVE           :: TIPLOSS = 1
-REAL(ReKi)                 :: W2
-
-INTEGER                    :: ErrStat
+   REAL(ReKi)                 :: CH
+   REAL(ReKi)                 :: CPhi                                                     ! COS( PHI )
+   REAL(ReKi)                 :: SPHI
+   REAL(ReKi)                 :: SWRLARG
+   REAL(ReKi)                 :: W2
 
 
 VNA    = VNW * ( 1. - A2 ) + VNB
@@ -1876,11 +1823,13 @@ VTA    = VT  * ( 1. + A2P )
 
  ! Get airfoil CL and CD
 PHI    = ATAN2( VNA, VTA )
-ALPHA  = PHI - PITNOW
+ALPHA  = PHI - o%Element%PITNOW
 
 CALL MPI2PI ( ALPHA )
 
-CALL CLCD ( ALPHA, CLA, CDA, CMA, NFoil(J), ErrStat )
+CALL CLCD ( P,  O,  ErrStat, ErrMess, &
+            ALPHA, CLA, CDA, CMA, P%AirFoil%NFoil(J) )
+      IF (ErrStat >= AbortErrLev) RETURN
 
 W2   = VNA * VNA + VTA * VTA
 SPHI = VNA/SQRT( W2 )
@@ -1888,44 +1837,45 @@ CPhi = COS( Phi )
 
  ! Calculate new value of A.  Optionally include normal force due to drag.
 
-CH = W2*SOLFACT*( CLA*CPhi + EqAIDmult*CDA*SPhi )
+CH = W2*SOLFACT*( CLA*CPhi + P%InducedVel%EqAIDmult*CDA*SPhi )
 
 
  ! Get the tip loss values for the element (if they change)
-IF (TLOSS) CALL GetTipLoss (J, SPHI, TIPLOSS, RLOCAL)
+IF (p%InducedVel%TLOSS) CALL GetTipLoss ( P, O, ErrStat, ErrMess,      &
+                                          J, SPHI, O%TIPLOSS, RLOCAL)
 
  ! Get the hub loss values for the element (if they change)
-IF (HLOSS) CALL GetPrandtlLoss (HLCNST(J), SPHI, HUBLOSS)
+IF (p%InducedVel%HLOSS) CALL GetPrandtlLoss ( P%Element%HLCNST(J), SPHI, O%HUBLOSS)
 
  ! Get the total loss for the element
-LOSS = TIPLOSS * HUBLOSS
+O%LOSS = O%TIPLOSS * O%HUBLOSS
 
  ! Check for diverging CH and correct if necessary
 
 IF ( ABS( CH ) > 2. ) CH = SIGN( 2., CH )
 
-IF ( CH < 0.96*LOSS ) THEN
-   A2 = 0.5*( 1 - SQRT( 1.0 - CH/LOSS ) )
+IF ( CH < 0.96*O%LOSS ) THEN
+   A2 = 0.5*( 1 - SQRT( 1.0 - CH/O%LOSS ) )
 ELSE
-   A2 = 0.1432 + SQRT( -0.55106 + .6427*CH/LOSS)
+   A2 = 0.1432 + SQRT( -0.55106 + .6427*CH/O%LOSS)
 ENDIF
 
  ! Calculate induced swirl (a') if desired.
  !  From C. Ross Harmon's paper on PROPX.
 
-IF ( SWIRL ) THEN
-   IF ( EquilDT )  THEN     ! USE PROP-PC style tangential induction equation with the addition of the drag term.
+IF ( p%SWIRL ) THEN
+   IF ( p%InducedVel%EquilDT )  THEN     ! USE PROP-PC style tangential induction equation with the addition of the drag term.
          ! Because of the singularity that occurs when phi approaches zero,
          ! let's test for small phi and set a' equal to a small, negative number.
       IF ( ( ABS( SPhi ) > 0.01 ) .AND. ( ABS( CPhi ) > 0.01 ) )  THEN
-         A2P = SOLFACT*( CLA*SPhi - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*LOSS*SPhi*CPhi )
+         A2P = SOLFACT*( CLA*SPhi - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SPhi*CPhi )
       ELSEIF ( ABS( SPhi ) > 0.01 )  THEN   ! Tangential velocity near zero, phi near 90 degrees.
-         A2P = SOLFACT*( CLA*SPhi - CDA*SIGN( 0.01, CPhi ) )*( 1.0 + A2P )*VNROTOR2/( 4.0*LOSS*SPhi*SIGN( 0.01, CPhi ) )
+         A2P = SOLFACT*( CLA*SPhi - CDA*SIGN( 0.01, CPhi ) )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SPhi*SIGN( 0.01, CPhi ) )
       ELSE   ! Normal velocity near zero, phi near 0 degrees.
-         A2P = SOLFACT*( CLA*SIGN( 0.01, SPhi ) - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*LOSS*SIGN( 0.01, SPhi )*CPhi )
+         A2P = SOLFACT*( CLA*SIGN( 0.01, SPhi ) - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SIGN( 0.01, SPhi )*CPhi )
       ENDIF
    ELSE
-      SWRLARG = 1.0 + 4.0*LOSS*A2*VNW*VNA*VT2_Inv
+      SWRLARG = 1.0 + 4.0*O%LOSS*A2*VNW*VNA*VT2_Inv
       IF ( SWRLARG < 0.0 ) THEN
          A2P = 0.0
       ELSE
@@ -1937,25 +1887,22 @@ ELSE
 ENDIF
 
 
-
 RETURN
 END SUBROUTINE AXIND
 
 
  ! ***************************************************
-   FUNCTION GetReynolds( WindSpd, ChordLen )
+   FUNCTION GetReynolds( WindSpd, ChordLen, KinVisc )
  !  computes the Reynolds number for the element, divided by 1.0E6
  ! ***************************************************
 
-   USE                           Wind,       ONLY: KinVisc
-
 IMPLICIT                      NONE
-
 
    ! Passed Variables:
 
 REAL(ReKi),INTENT(IN)      :: WindSpd
 REAL(ReKi),INTENT(IN)      :: ChordLen
+REAL(ReKi),INTENT(IN)      :: KinVisc
 
    ! function definition
 REAL(ReKi)     :: GetReynolds
@@ -1967,74 +1914,75 @@ RETURN
 END FUNCTION GetReynolds
 
  ! ***************************************************
-   SUBROUTINE GetTipLoss( J, SPHI, TIPLOSS, RLOCAL )
+   SUBROUTINE GetTipLoss( P, O, ErrStat, ErrMess,      &
+                          J, SPHI, TIPLOSS, RLOCAL )
+!   SUBROUTINE GetTipLoss( J, SPHI, TIPLOSS, RLOCAL )
  !  computes the tip loss constant for element J
  !  TIPLOSS is returned to AXIND
  ! Uses the Prandtl tip loss model with a correction
  !  from Georgia Tech (2002 ASME Wind Energy Symposium)
  ! ***************************************************
-
-
-USE                           Blade
-USE                           Element
-USE                           Switch
-
-
-IMPLICIT                      NONE
-
+!USE                           Blade
+!USE                           Element
+!USE                           Switch
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi), INTENT(IN)     :: SPHI
-REAL(ReKi), INTENT(IN)     :: RLOCAL
-REAL(ReKi), INTENT(OUT)    :: TIPLOSS
+   REAL(ReKi), INTENT(IN)     :: SPHI
+   REAL(ReKi), INTENT(IN)     :: RLOCAL
+   REAL(ReKi), INTENT(OUT)    :: TIPLOSS
 
-INTEGER   , INTENT(IN)     :: J
+   INTEGER   , INTENT(IN)     :: J
 
 
    ! Local Variables:
 
-REAL(ReKi)                 :: Dist2pt7 = 0.7 ! current element distance to r/R = 0.7
-REAL(ReKi)                 :: OLDDist7       ! previous element distance to r/R = 0.7
-REAL(ReKi)                 :: percentR
-REAL(ReKi), SAVE           :: TLpt7 ! Tiploss factor at r/R = 0.7
+   REAL(ReKi)                 :: Dist2pt7 = 0.7 ! current element distance to r/R = 0.7
+   REAL(ReKi)                 :: OLDDist7       ! previous element distance to r/R = 0.7
+   REAL(ReKi)                 :: percentR
 
-INTEGER                    :: Jpt7 = 0 ! The element closest to r/R = 0.7
-
-LOGICAL,    SAVE           :: FirstPass = .TRUE.
+   INTEGER                    :: Jpt7 = 0 ! The element closest to r/R = 0.7
 
 
+   ErrStat = ErrID_None
+   ErrMess = ""
 
  ! Calculate PRANDTL tip loss model
-CALL GetPrandtlLoss( TLCNST(J), SPHI, TIPLOSS )
+CALL GetPrandtlLoss( P%Element%TLCNST(J), SPHI, TIPLOSS )
 
 
  ! Apply Georgia Tech correction to Prandtl model if activated
-IF (GTECH) THEN
-   percentR = RLOCAL/R
+IF (p%InducedVel%GTECH) THEN
+   percentR = RLOCAL/P%Blade%R
 
  ! Search for the element closest to r/R = 0.7
-   IF (FirstPass) THEN
+   IF (O%FirstPassGTL) THEN
     ! If the current element is closer than the previous, update values
       IF ( ABS(percentR - 0.7) < Dist2pt7 ) THEN
          OLDDist7 = Dist2pt7
          Dist2pt7 = ABS(percentR - 0.7)
          Jpt7 = J
-         TLpt7 = TIPLOSS
+         O%TLpt7 = TIPLOSS
       ENDIF
-      IF (J == NELM) THEN ! We're done after one pass through the blades
-         FirstPass = .FALSE.
+      IF (J == P%Element%NELM) THEN ! We're done after one pass through the blades
+         O%FirstPassGTL = .FALSE.
       ELSE
          RETURN ! Don't do the correction until we calculate the correct TLpt7
       ENDIF
    ENDIF
 
-   IF ( J == Jpt7 ) TLpt7 = TIPLOSS ! Update the value of TLpt7 at the proper element
+   IF ( J == Jpt7 ) O%TLpt7 = TIPLOSS ! Update the value of TLpt7 at the proper element
 
  ! Do the actual Georgia Tech correction to the Prandtl model
    IF (percentR >= 0.7) THEN
       TIPLOSS = (TIPLOSS**0.85 + 0.5 ) / 2.0
    ELSE
-      TIPLOSS = 1.0 - percentR*(1.0 - TLpt7)/0.7
+      TIPLOSS = 1.0 - percentR*(1.0 - O%TLpt7)/0.7
    ENDIF
 ENDIF
 
@@ -2051,42 +1999,40 @@ END SUBROUTINE GetTipLoss
  !  HUBLOSS is returned to AXIND
  ! Uses the Prandtl loss model
  ! ***************************************************
-
-IMPLICIT                      NONE
-
-
+   IMPLICIT                      NONE
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: LCnst
-REAL(ReKi),INTENT(OUT)     :: PrLOSS
-REAL(ReKi),INTENT(IN)      :: SPHI
 
+   REAL(ReKi),INTENT(IN)      :: LCnst
+   REAL(ReKi),INTENT(OUT)     :: PrLOSS
+   REAL(ReKi),INTENT(IN)      :: SPHI
 
    ! Local Variables:
 
-REAL(ReKi)                 :: F
-
+   REAL(ReKi)                 :: F
 
  ! Calculate PRANDTL loss model
  !  Check values of SPHI to save runtime.
-IF ( ABS( SPHI ) < 1.E-4 ) THEN
-   PrLOSS = 1.0
-ELSE
- ! USE ABS function to account for unusual PHI.
-   F = ABS( LCnst / SPHI )
- !  Check values of F to avoid underflow of EXP function.
-   IF ( F < 7. ) THEN
-      PrLOSS = ACOS( EXP( -F ) ) / PIBY2
-   ELSE
+   IF ( ABS( SPHI ) < 1.E-4 ) THEN
       PrLOSS = 1.0
+   ELSE
+    ! USE ABS function to account for unusual PHI.
+      F = ABS( LCnst / SPHI )
+    !  Check values of F to avoid underflow of EXP function.
+      IF ( F < 7. ) THEN
+         PrLOSS = ACOS( EXP( -F ) ) / PIBY2
+      ELSE
+         PrLOSS = 1.0
+      ENDIF
    ENDIF
-ENDIF
 
 
 RETURN
 END SUBROUTINE GetPrandtlLoss
 
 !====================================================================================================
-SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
+SUBROUTINE GetTwrInfluence ( P, O, ErrStat, ErrMess,      &
+                             VX, VY, InputPosition)
+!SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
 !  Computes tower shadow or dam influence on the blade
 !  Note that this routine assumes there are NO tower deflections.
 !
@@ -2101,12 +2047,15 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
 !  deficit at each given time.  Will need the tower position, too.
 !====================================================================================================
 
-   USE                           TwrProps
-   USE                           Rotor,      ONLY: HH
-
+!   USE                           TwrProps
+!   USE                           Rotor,      ONLY: HH
 
    IMPLICIT                      NONE
-
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
       ! Passed Variables:
 
@@ -2115,8 +2064,6 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
    REAL(ReKi), INTENT(IN)     :: InputPosition(3)     !velocities in global coordinates with tower effect
 
       ! Local Variables:
-
-   LOGICAL, SAVE              :: AFLAG   = .FALSE.    ! set to .TRUE. on possible tower strike
 
    REAL(ReKi)                 :: ANGLE                ! Angle determining whether blade is upwind or downwind of tower
    REAL(ReKi)                 :: CenterDist           ! Distance from blade element to wake centerline
@@ -2148,12 +2095,12 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
    !-------------------------------------------------------------------------------------------------
    ! This subroutine is only valid for TwrPotent and TwrShadow features
    !-------------------------------------------------------------------------------------------------
-   IF (.NOT. TwrPotent .AND. .NOT. TwrShadow) RETURN
+   IF (.NOT. p%TwrProps%TwrPotent .AND. .NOT. p%TwrProps%TwrShadow) RETURN
 
    !-------------------------------------------------------------------------------------------------
    ! Initialize some variables
    !-------------------------------------------------------------------------------------------------
-   ZGrnd   = InputPosition(3) - HH                    ! distance between position and hub      !BJJ: this should really be the tower height (position), not HH
+   ZGrnd   = InputPosition(3) - p%Rotor%HH            ! distance between position and hub !BJJ: this should really be the tower height (position), not HH
    V_total = SQRT( VX**2 + VY**2 )                    ! total wind speed
 
    !-------------------------------------------------------------------------------------------------
@@ -2167,7 +2114,8 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
    ! BJJ: If we're above the tower top, is the radius zero?
    !-------------------------------------------------------------------------------------------------
 
-   CALL GetTwrSectProp (InputPosition(:), V_total, TwrRad, TwrCD_Station)     ! Get the tower properties for the current element location
+   CALL GetTwrSectProp (P, O, ErrStat, ErrMess,      &
+                        InputPosition(:), V_total, TwrRad, TwrCD_Station)     ! Get the tower properties for the current element location
 
    Distance = SQRT ( InputPosition(1)**2 + InputPosition(2)**2 ) / TwrRad     ! normalized distance to tower center
 
@@ -2176,12 +2124,12 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
 
       IF (ZGrnd < 0.0) THEN      !bjj added this condition.... check that it's correct
 
-         IF( .NOT. AFLAG) THEN
+         IF( .NOT. O%AFLAGTwrInflu) THEN
             CALL ProgWarn( ' Tower model temporarily disabled due to possible tower strike.'// &
                            ' This message will not be repeated though the condition may persist.' )
                !write a blank line (so FAST doesn't write over it)
-            CALL WrScr( ' ' ) 
-            AFLAG = .TRUE.
+            CALL WrScr( ' ' )
+            O%AFLAGTwrInflu = .TRUE.
          ENDIF
 
          RETURN
@@ -2204,7 +2152,7 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
    !  Calculate the influence due to potential flow around tower based on velocity at element
    !-------------------------------------------------------------------------------------------------
 
-   IF ( TwrPotent ) THEN
+   IF ( P%TwrProps%TwrPotent ) THEN
 
          ! When above the tower, smooth the transition to the free-stream
       IF ( ZGrnd > 0 )  THEN
@@ -2222,7 +2170,7 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
       Ywind = Ywind / TwrRad
 
 
-      Xtemp  = Xwind + Tower_Wake_Constant !PJM fixed this error 3/30/06
+      Xtemp  = Xwind + P%TwrProps%Tower_Wake_Constant !PJM fixed this error 3/30/06
       Xtemp2 = Xtemp * Xtemp
       Ytemp2 = Ywind * Ywind
 
@@ -2241,7 +2189,7 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
    ! Calculate the influence of tower shadow if user specifies and we are downwind of the tower
    !-------------------------------------------------------------------------------------------------
 
-   IF ( TwrShadow ) THEN
+   IF ( P%TwrProps%TwrShadow ) THEN
 
       theta  = ATAN2( InputPosition(2), InputPosition(1) )     ! angle between x-axis and line from tower to blade element
       angle  = ABS( theta - phi )
@@ -2293,15 +2241,22 @@ SUBROUTINE GetTwrInfluence (VX, VY, InputPosition)
 END SUBROUTINE GetTwrInfluence
 
 !====================================================================================================
-SUBROUTINE GetTwrSectProp (InputPosition, VelHor, TwrElRad, TwrElCD)
+SUBROUTINE GetTwrSectProp ( P, O, ErrStat, ErrMess,      &
+                            InputPosition, VelHor, TwrElRad, TwrElCD )
+!SUBROUTINE GetTwrSectProp (InputPosition, VelHor, TwrElRad, TwrElCD)
 !  Returns the tower radius and CD for the vertical location
 !   of the element currently being evaluated for tower influence.
 !====================================================================================================
 
-   USE                           Rotor,      ONLY: HH
-   USE                           TwrProps
+!   USE                           Rotor,      ONLY: HH
+!   USE                           TwrProps
 
    IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
 
       ! Passed Variables:
@@ -2325,51 +2280,54 @@ SUBROUTINE GetTwrSectProp (InputPosition, VelHor, TwrElRad, TwrElCD)
    INTEGER                    :: N2P1      ! Index position + 1 in table for interpolation
 
 
+   ErrStat = ErrID_None
+   ErrMess = ""
+
    !-------------------------------------------------------------------------------------------------
    ! Get the tower radius, TwrElRad, by interpolating into the TwrWid(:) array
    !-------------------------------------------------------------------------------------------------
 
-   TwrElHt  = InputPosition(3) / HH                                  !!!!BJJ!!!! HH????
-   TwrElRad = 0.5*InterpBin( TwrElHt, TwrHtFr, TwrWid, N2, NTwrHt )
+   TwrElHt  = InputPosition(3) / P%Rotor%HH                                  !!!!BJJ!!!! HH????   !MLB: It's the hub height.  It really should be the tower height.
+   TwrElRad = 0.5*InterpBin( TwrElHt, p%TwrProps%TwrHtFr, p%TwrProps%TwrWid, N2, p%TwrProps%NTwrHt )
 
    !-------------------------------------------------------------------------------------------------
    ! Get the section CD, TwrElCD, by interpolating into the TwrCD(:,:) array
    !-------------------------------------------------------------------------------------------------
 
-   IF ( NTwrRe == 1 ) THEN                                  ! There is only one Re row
+   IF ( p%TwrProps%NTwrRe == 1 ) THEN                                  ! There is only one Re row
 
-      IF ( NTwrCD == 1 ) THEN                               ! There is only one CD column
-         TwrElCD = TwrCD(1,1)
-      ELSE IF ( NTwrHt == 1 ) THEN                          ! There is more than one column of CD, but only one used
-         TwrElCD = TwrCD(1,NTwrCDCol(1))
+      IF ( p%TwrProps%NTwrCD == 1 ) THEN                               ! There is only one CD column
+         TwrElCD = p%TwrProps%TwrCD(1,1)
+      ELSE IF ( p%TwrProps%NTwrHt == 1 ) THEN                          ! There is more than one column of CD, but only one used
+         TwrElCD = p%TwrProps%TwrCD(1,p%TwrProps%NTwrCDCol(1))
       ELSE                                                  ! Interpolate;  this will be the same Indx as before...
-         TwrElCD = InterpStp( TwrElHt, TwrHtFr, TwrCD(1,:), N2, NTwrHt )
+         TwrElCD = InterpStp( TwrElHt, p%TwrProps%TwrHtFr, p%TwrProps%TwrCD(1,:), N2, p%TwrProps%NTwrHt )
       END IF
 
    ELSE                                                     ! There are multiple Re rows
 
-      TwrElRe = GetReynolds( VelHor, 2.0*TwrElRad )
+      TwrElRe = GetReynolds( VelHor, 2.0*TwrElRad, P%Wind%KinVisc )
 
-      IF ( NTwrCD == 1 ) THEN                               ! There is only one CD column
-         TwrElCD = InterpBin( TwrElRe, TwrRe, TwrCD(:,1), N1, NTwrRe )
-      ELSE IF ( NTwrHt == 1 ) THEN                          ! Interpolate over Re only
-         TwrElCD = InterpBin( TwrElRe, TwrRe, TwrCD(:,NTwrCDCol(1)), N1, NTwrRe )
+      IF ( p%TwrProps%NTwrCD == 1 ) THEN                               ! There is only one CD column
+         TwrElCD = InterpBin( TwrElRe, p%TwrProps%TwrRe, p%TwrProps%TwrCD(:,1), N1, p%TwrProps%NTwrRe )
+      ELSE IF ( p%TwrProps%NTwrHt == 1 ) THEN                          ! Interpolate over Re only
+         TwrElCD = InterpBin( TwrElRe, p%TwrProps%TwrRe, p%TwrProps%TwrCD(:,p%TwrProps%NTwrCDCol(1)), N1, p%TwrProps%NTwrRe )
       ELSE                                                  ! A 2-D interpolation is needed
-         CALL LocateBin( TwrElRe, TwrRe, N1, NTwrRe )
+         CALL LocateBin( TwrElRe, p%TwrProps%TwrRe, N1, p%TwrProps%NTwrRe )
 
             ! Let's use nearest-neighbor extrapolation with bi-linear interpolation:
 
-         N1   = MIN( MAX( N1, 1 ), NTwrRe-1 )
+         N1   = MIN( MAX( N1, 1 ), p%TwrProps%NTwrRe-1 )
          N1P1 = N1+1
 
-         P1   = MIN( MAX( (TwrElRe - TwrRe(N1))   / (TwrRe(N1P1)   - TwrRe(N1))  , REAL(0.0, ReKi) ), REAL(1.0, ReKi) )
+         P1   = MIN( MAX( (TwrElRe - p%TwrProps%TwrRe(N1))   / (p%TwrProps%TwrRe(N1P1)   - p%TwrProps%TwrRe(N1))  , REAL(0.0, ReKi) ), REAL(1.0, ReKi) )
 
          N2P1 = N2 + 1
-         P2   = MIN( MAX( (TwrElHt - TwrHtFr(N2)) / (TwrHtFr(N2P1) - TwrHtFr(N2)), REAL(0.0, ReKi) ), REAL(1.0, ReKi) )
+         P2   = MIN( MAX( (TwrElHt - p%TwrProps%TwrHtFr(N2)) / (p%TwrProps%TwrHtFr(N2P1) - p%TwrProps%TwrHtFr(N2)), REAL(0.0, ReKi) ), REAL(1.0, ReKi) )
 
 
-         TwrElCD1 = TwrCD(N1,N2  ) + P1 * ( TwrCD(N1P1,N2  ) - TwrCD(N1,N2  ) )
-         TwrElCD2 = TwrCD(N1,N2P1) + P1 * ( TwrCD(N1P1,N2P1) - TwrCD(N1,N2P1) )
+         TwrElCD1 = p%TwrProps%TwrCD(N1,N2  ) + P1 * ( p%TwrProps%TwrCD(N1P1,N2  ) - p%TwrProps%TwrCD(N1,N2  ) )
+         TwrElCD2 = p%TwrProps%TwrCD(N1,N2P1) + P1 * ( p%TwrProps%TwrCD(N1P1,N2P1) - p%TwrProps%TwrCD(N1,N2P1) )
 
 
          TwrElCD = TwrElCD1 + P2 * ( TwrElCD2 - TwrElCD1 )
@@ -2380,36 +2338,45 @@ SUBROUTINE GetTwrSectProp (InputPosition, VelHor, TwrElRad, TwrElCD)
 
 RETURN
 END SUBROUTINE GetTwrSectProp
+
+
 !====================================================================================================
-FUNCTION AD_WindVelocityWithDisturbance( InputPosition, ErrStat  )
+FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, ErrMsg,      &
+                                          InputPosition )
+!                                          InputPosition, TShadC1, TShadC2, PJM_Version  )
+!FUNCTION AD_WindVelocityWithDisturbance( InputPosition, TShadC1, TShadC2, PJM_Version, LeStat  )
 !  This function computes the (dimensional) wind velocity components at the location InputPosition
 !  in the inertial frame of reference, including any tower shadow defecit.
 !  ** Formerly SUBROUTINE VEL and later SUBROUTINE VWrel2G( VNRotor2, At_Hub ) **
 !----------------------------------------------------------------------------------------------------
 
-   USE                              AeroTime,   ONLY: Time  ! input time, used to get the wind speed
-   USE                              Rotor,      ONLY: HH
-   USE                              TwrProps,   ONLY: PJM_Version, TShadC1, TShadC2
-
-
 
    IMPLICIT                         NONE
 
-
       ! Passed Variables:
 
-   REAL(ReKi),INTENT(IN)            :: InputPosition(3)
-   INTEGER,   INTENT(OUT),OPTIONAL  :: ErrStat
+      REAL(DbKi),                   INTENT(IN   )  :: Time        ! Current simulation time in seconds
+      TYPE(AD_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
+      TYPE(AD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(AD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(AD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(AD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Other/optimization states
+      TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
+                                                                       !   nectivity information does not have to be recalculated)
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+   REAL(ReKi),INTENT(IN)            :: InputPosition(3)
+!   REAL(ReKi),INTENT(IN)            :: TShadC1
+!   REAL(ReKi),INTENT(IN)            :: TShadC2
+!   LOGICAL,INTENT(IN)               :: PJM_Version
 
       ! function definition
 
    REAL(ReKi)                      :: AD_WindVelocityWithDisturbance(3)
 
-
       ! Local variables
-
-   TYPE(InflIntrpOut)               :: InflowVel
 
    REAL(ReKi)                       :: angle    ! absolute difference between theta and phi
    REAL(ReKi)                       :: dist     ! distance from blade element to wake centerline
@@ -2423,32 +2390,57 @@ FUNCTION AD_WindVelocityWithDisturbance( InputPosition, ErrStat  )
 
    INTEGER                          :: Sttus
 
+   INTEGER                          :: TmpErrStat
+   CHARACTER(LEN(ErrMsg))           :: TmpErrMsg
+
+   !TYPE(IfW_ConstraintStateType)    :: IfW_ConstrStates
+   !TYPE(IfW_ContinuousStateType)    :: IfW_ContStates
+   !TYPE(IfW_DiscreteStateType)      :: IfW_DiscStates
+   TYPE(IfW_InputType)              :: IfW_Inputs  ! Position in IfW format.
+   !TYPE(IfW_OtherStateType)         :: IfW_OtherStates
+   !TYPE(IfW_OutputType)             :: IfW_Outputs
+   !TYPE(IfW_ParameterType)          :: IfW_Params  ! IfW parameters.
+   !
+
+      ! Allocate the Position array in IfW_Inputs.
+
+   CALL AllocAry( IfW_Inputs%Position, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev)  RETURN
+
 
       ! Get the undisturbed velocity
+!mlb: Although IfW is capable of getting velocities for a lot of points, we will do them one at a time in this temporary release.
 
-   InflowVel = WindInf_GetVelocity( REAL(Time, ReKi), InputPosition, Sttus)
+   IfW_Inputs%Position(:,1) = InputPosition(:)
 
-   IF ( PRESENT(ErrStat) ) THEN  !BJJ: This is a hack job used for A2AD
-      ErrStat = Sttus
-      IF (Sttus /= 0) CALL ProgWarn( ' Error getting velocity in AeroDyn/AD_WindVelocityWithDisturbance().' )
-   ELSE
-      IF (Sttus /=0) CALL ProgAbort( ' Error getting velocity in AeroDyn/AD_WindVelocityWithDisturbance().' )
+!   InflowVel = WindInf_GetVelocity( REAL(o%Time, ReKi), InputPosition, Sttus)
+   CALL IfW_CalcOutput( Time, IfW_Inputs, p%IfW_Params, &
+                              x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, O%IfW_OtherStates, &   ! States -- none in this case
+                              y%IfW_Outputs, TmpErrStat, TmpErrMsg )
+
+   IF (TmpErrStat /= ErrID_None) THEN
+      IF (ErrStat/=ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
+      ErrMsg = TRIM(ErrMsg)//TmpErrMsg
+      ErrStat = MAX(TmpErrStat,ErrStat)
+      CALL ProgWarn( ' Error getting velocity in AeroDyn/AD_WindVelocityWithDisturbance().' )
+      IF (ErrStat >= AbortErrLev) RETURN
    END IF
 
-   AD_WindVelocityWithDisturbance(:) = InflowVel%Velocity(:)
+   AD_WindVelocityWithDisturbance(:) = y%IfW_Outputs%Velocity(:,1)
 
 
          ! Add the tower influence to the undisturbed velocity.
 
-   IF ( PJM_Version ) THEN
+   IF ( p%TwrProps%PJM_Version ) THEN
 
-      CALL GetTwrInfluence ( AD_WindVelocityWithDisturbance(1), AD_WindVelocityWithDisturbance(2), InputPosition(:) )
+      CALL GetTwrInfluence ( P, O, ErrStat, ErrMsg, &
+                             AD_WindVelocityWithDisturbance(1), AD_WindVelocityWithDisturbance(2), InputPosition(:) )
 
    ELSE !Old tower version
 
          ! Apply tower shadow if the blade element is in the wake
 
-      IF ( TShadC2 > 0.0 ) THEN ! Perform calculations only if the wake strength is positive
+      IF ( p%TwrProps%TShadC2 > 0.0 ) THEN ! Perform calculations only if the wake strength is positive
 
             ! Bypass tower shadow for zero horizontal wind, check U-component first to save time.
 
@@ -2466,18 +2458,18 @@ FUNCTION AD_WindVelocityWithDisturbance( InputPosition, ErrStat  )
                radius = SQRT( InputPosition(1)**2 + InputPosition(2)**2 )                             ! bjj: shouldn't this be relative to the hub position?
 
                RootR  = SQRT( radius )
-               width  = TShadC1 * RootR                                                               ! half width of the wake after accounting for wake expansion proportional to square root of RADIUS
+               width  = p%TwrProps%TShadC1 * RootR                                                               ! half width of the wake after accounting for wake expansion proportional to square root of RADIUS
 
                IF ( width > 0 ) THEN   ! Skip cases with zero width or radius so we don't divide by zero
 
                   dist = radius * SIN( angle )                                                        ! distance from blade element to wake centerline
-                  IF ( InputPosition(3) > HH )  THEN                                                  ! Apply shadow in arc above hub to maintain a continuous deficit function.  Somewhat of a nacelle deficit.
-                     dist = SQRT( dist**2 + (InputPosition(3)-HH)**2 )                                !bjj: I think this should use hub position, not HH
+                  IF ( InputPosition(3) > p%Rotor%HH )  THEN                                                  ! Apply shadow in arc above hub to maintain a continuous deficit function.  Somewhat of a nacelle deficit.
+                     dist = SQRT( dist**2 + (InputPosition(3)-p%Rotor%HH)**2 )                                !bjj: I think this should use hub position, not HH
                   END IF
 
                   IF ( width > dist ) THEN   ! There is velocity deficit in the wake only.
                      temp   = COS ( PiBy2 * dist/width )
-                     shadow = TShadC2/RootR * temp * temp
+                     shadow = p%TwrProps%TShadC2/RootR * temp * temp
 
                         ! Adjust only the horizontal components; vertical wind is not changed
 
@@ -2496,8 +2488,10 @@ FUNCTION AD_WindVelocityWithDisturbance( InputPosition, ErrStat  )
 RETURN
 
 END FUNCTION AD_WindVelocityWithDisturbance
+
 !====================================================================================================
-   SUBROUTINE DiskVel
+SUBROUTINE DiskVel ( Time, P, O, ErrStat, ErrMess )
+!   SUBROUTINE DiskVel
  !  calculates the mean velocities relative to the rotor disk
  !  calls routine to get wind velocity at a specified location
  !
@@ -2505,55 +2499,54 @@ END FUNCTION AD_WindVelocityWithDisturbance
  !  Combined VELD and GETSKEW 04/24/01
  !  Updated 12/1/09 to use new inflow module; WindInf_ADhack_diskVel MUST be replaced!
  ! ********************************************
-
-USE                           AeroTime, ONLY: time
-USE                           InflowWind
-USE                           Rotor
-USE                           Switch
-USE                           Wind
-
-
-IMPLICIT                      NONE
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   REAL(DbKi), INTENT(IN) :: Time
+   TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
 
-REAL(ReKi)                 :: Vinplane
-REAL(ReKi)                 :: VXY
-REAL(ReKi)                 :: AvgInfVel(3)
-REAL(ReKi)                 :: Position(3)
-INTEGER                    :: ErrStat
+   REAL(ReKi)                 :: Vinplane
+   REAL(ReKi)                 :: VXY
+   REAL(ReKi)                 :: AvgInfVel(3)
+   REAL(ReKi)                 :: Position(3)
 
-Position = (/0.0, 0.0, HH /)
-AvgInfVel(:) = WindInf_ADhack_diskVel( REAL(Time, ReKi), Position, ErrStat )
+Position = (/0.0, 0.0, P%Rotor%HH /)
+!AvgInfVel(:) = WindInf_ADhack_diskVel( REAL(O%Time, ReKi), Position, ErrStat )
 
-VXY   = AvgInfVel(1) * CYaw - AvgInfVel(2) * SYaw
+AvgInfVel(:) = WindInf_ADhack_diskVel( Time,p%IfW_Params, O%IfW_OtherStates,ErrStat, ErrMess )
+
+VXY   = AvgInfVel(1) * O%Rotor%CYaw - AvgInfVel(2) * O%Rotor%SYaw
 
  ! Mean velocities in rotor disk coord. Includes yaw rate.
  ! X = Normal to plane, parallel to axis of rotation DOWNWIND
  ! Y = Inplane, horizontal to left (looking downwind)
  ! Z = Inplane, vertical up
 
-VROTORX = VXY * CTILT + AvgInfVel(3) * STILT
+O%Wind%VROTORX = VXY * O%Rotor%CTILT + AvgInfVel(3) * O%Rotor%STILT
 
-VROTORY = AvgInfVel(1) * SYaw + AvgInfVel(2) * CYaw + YAWVEL
+O%Wind%VROTORY = AvgInfVel(1) * O%Rotor%SYaw + AvgInfVel(2) * O%Rotor%CYaw + O%Rotor%YAWVEL
 
-VROTORZ = -1.* VXY * STILT + AvgInfVel(3) * CTILT
+O%Wind%VROTORZ = -1.* VXY * O%Rotor%STILT + AvgInfVel(3) * O%Rotor%CTILT
 
  ! Skewed wake correction not needed for GDW
-IF (.NOT. DYNINFL) THEN
+IF (.NOT. P%DYNINFL) THEN
  !  Set SKEW flag and assign values to related parameters
  !   used in the skewed wake correction.
 
  ! Vinplane is the resultant in-plane velocity
-   Vinplane = SQRT( VROTORY * VROTORY + VROTORZ * VROTORZ )
+   Vinplane = SQRT( O%Wind%VROTORY * O%Wind%VROTORY + O%Wind%VROTORZ * O%Wind%VROTORZ )
 
  ! SKEW is TRUE if there is a cross flow, FALSE otherwise.
    IF ( Vinplane >= 1.0E-3 ) THEN
-      SKEW   = .TRUE.
-      SDEL   =  VROTORY/Vinplane
-      CDEL   = -VROTORZ/Vinplane
-      ANGFLW = ATAN2( ABS( VROTORX - AVGINFL ), Vinplane )
+      O%SKEW   = .TRUE.
+      O%Wind%SDEL   =  O%Wind%VROTORY/Vinplane
+      O%Wind%CDEL   = -O%Wind%VROTORZ/Vinplane
+      O%Wind%ANGFLW = ATAN2( ABS( O%Wind%VROTORX - O%Rotor%AVGINFL ), Vinplane )
    ELSE
-      SKEW   = .FALSE.
+      O%SKEW   = .FALSE.
    ENDIF
 
 ENDIF
@@ -2562,41 +2555,143 @@ ENDIF
 
 RETURN
 END SUBROUTINE DiskVel
+!=======================================================================
+SUBROUTINE TwrAeroLoads ( p, Node, NodeDCMGbl, NodeVelGbl, NodeWindVelGbl, NodeFrcGbl )
+
+
+      ! This routine calcualtes the aeroynamic loads of all tower nodes above the mean sea level.
+      ! It doesn't worry about whether or not a node is below water.  The aero loads will be far less than the hydro loads.
+
+
+   USE                                          AeroDyn_Types
+   USE                                          NWTC_Library
+
+   IMPLICIT                                     NONE
+
+
+      ! Arguments:
+
+   REAL(ReKi), INTENT(IN )                   :: NodeDCMGbl    (3,3)           ! The direction-cosine matrix used to transform from the global system to the node system.
+   REAL(ReKi), INTENT(OUT)                   :: NodeFrcGbl    (3)             ! The forces per unit length at the current tower element.
+   REAL(ReKi), INTENT(IN )                   :: NodeVelGbl    (3)             ! The 3 components of the translational velocity at the node in the global system.
+   REAL(ReKi), INTENT(IN )                   :: NodeWindVelGbl(3)             ! The 3 components of the wind at the node in the global system.
+
+   INTEGER,    INTENT(IN )                   :: Node                          ! Tower node index.
+
+   TYPE(AD_ParameterType), INTENT(IN)        :: p                             ! The AeroDyn parameters.
+
+
+      ! Local variables.
+
+   REAL(ReKi)                                :: NodeFrcLcl    (3)             ! The forces per unit length on the tower node in the local system.
+   REAL(ReKi)                                :: NodeLocTwr    (3)             ! The location of the node in the tower coordinate system.  This is used to get the tower section properties.
+   REAL(ReKi)                                :: NodeVelRelGbl (3)             ! The relative wind velocity in the global reference frame..
+   REAL(ReKi)                                :: NodeVelRelLcl (3)             ! The relative wind velocity in the local reference frame..
+   REAL(ReKi)                                :: RelNmlWndSpd                  ! The relative wind speed normal to the tower axis.  sqrt(u^2+v^2)
+   REAL(ReKi)                                :: TwrFrcLcl     (3)             ! The drag coefficient corresponding to the computed Reynolds Number.
+   REAL(ReKi)                                :: TwrNodeCd                     ! The drag coefficient corresponding to the computed Reynolds Number.
+   REAL(ReKi)                                :: TwrNodeRe                     ! The Reynolds Number computed using the wind speed normal to the tower axis.
+   REAL(ReKi)                                :: WndDirLcl                     ! The wind direction relative to the local node coordinate system using only the u and v components.
+
+   INTEGER(IntKi)                            :: IndLo                         ! The index pointing to the lower of the two points bounding an interpolated value.
+
+
+
+      ! Calculate the relative local wind velocity.
+
+   NodeVelRelGbl(:) = NodeWindVelGbl(:) - NodeVelGbl(:)
+
+
+      ! Transform the relative velocity into the node coordinate system.
+
+   NodeVelRelLcl(:) = MATMUL( NodeDCMGbl, NodeVelRelGbl )
+
+
+      ! Compute the relative normal wind speed and its square.
+
+   RelNmlWndSpd  = SQRT( DOT_PRODUCT( NodeVelRelLcl(1:2), NodeVelRelLcl(1:2) ) )
+
+
+      ! Compute the Reynolds Number.  Because interpolation is expensive, we will compute the magnitude of the drag and resolve it into components.
+
+   TwrNodeRe = GetReynolds( RelNmlWndSpd, p%TwrProps%TwrNodeWidth(Node), p%Wind%KinVisc )
+
+
+      ! Get the local value of the drag coefficient.
+
+   IndLo = 1
+
+!MLB: Why have two different calls?  Can't the second accommodate the first?  Is the first method more efficient than the second method if there is only one Cd column?
+!MLB: This logic was stolen from AeroSubs.f90\GetTwrSectProp().
+
+   IF ( p%TwrProps%NTwrCD == 1 ) THEN                               ! There is only one CD column
+      TwrNodeCd = InterpBin( TwrNodeRe, p%TwrProps%TwrRe, p%TwrProps%TwrCD(:,1), IndLo, p%TwrProps%NTwrRe )
+   ELSE IF ( p%TwrProps%NTwrHt == 1 ) THEN                          ! Interpolate over Re only
+      TwrNodeCd = InterpBin( TwrNodeRe, p%TwrProps%TwrRe, p%TwrProps%TwrCD(:,p%TwrProps%NTwrCDCol(1)), IndLo, p%TwrProps%NTwrRe )  !MLB Why have two different calls?  Can't the second accommodate the first?
+   END IF
+
+
+      ! Compute the forces on the tower in the local system.
+
+   NodeFrcLcl(1) = 0.5*TwrNodeCd*p%Wind%Rho*p%TwrProps%TwrNodeWidth(Node)*RelNmlWndSpd*NodeVelRelLcl(1)
+   NodeFrcLcl(2) = 0.5*TwrNodeCd*p%Wind%Rho*p%TwrProps%TwrNodeWidth(Node)*RelNmlWndSpd*NodeVelRelLcl(2)
+   NodeFrcLcl(3) = 0.0
+
+
+      ! Convert the force to global coordinates.
+
+   NodeFrcGbl = MATMUL( TRANSPOSE( NodeDCMGbl ), NodeFrcLcl )
+
+
+! Temporarily set the returned force to zero until we figure why the forces are not being applied correctly.
+!NodeFrcGbl(:) = 0.0
+
+
+   RETURN
+
+END SUBROUTINE TwrAeroLoads
+!=======================================================================
 
 
  ! ****************************************
-   SUBROUTINE VNMOD( J, IBlade, RLOCAL, PSI )
+   SUBROUTINE VNMOD( P, O, ErrStat, ErrMess, &
+                     J, IBlade, RLOCAL, PSI )
+!   SUBROUTINE VNMOD( J, IBlade, RLOCAL, PSI )
  !  applies the skewed wake correction
  !   to the axial induction factor A.
  ! ****************************************
-
-USE                           Blade
-USE                           Element
-USE                           Wind
-
-
-IMPLICIT                      NONE
-
+!USE                           Blade
+!USE                           Element
+!USE                           Wind
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
 
-REAL(ReKi),INTENT(IN)      :: PSI
-REAL(ReKi),INTENT(IN)      :: RLOCAL
+   REAL(ReKi),INTENT(IN)      :: PSI
+   REAL(ReKi),INTENT(IN)      :: RLOCAL
 
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
 
    ! Local Variables:
 
-REAL(ReKi)                 :: BB
-REAL(ReKi)                 :: SANG
+   REAL(ReKi)                 :: BB
+   REAL(ReKi)                 :: SANG
 
 
-SANG = SIN( ANGFLW )
+   ErrStat = ErrID_None
+   ErrMess = ""
+
+SANG = SIN( O%Wind%ANGFLW )
 BB   = 0.7363 * SQRT( ( 1. - SANG )/(1. + SANG) )
 
-A(J,IBLADE) = A(J,IBLADE) * ( 1. + 2. * RLOCAL/R * BB *  &
-             ( SDEL * SIN( PSI ) + CDEL * COS( PSI ) )  )
+O%Element%A(J,IBLADE) = O%Element%A(J,IBLADE) * ( 1. + 2. * RLOCAL/P%Blade%R * BB *  &
+             ( O%Wind%SDEL * SIN( PSI ) + O%Wind%CDEL * COS( PSI ) )  )
 
 
 
@@ -2605,197 +2700,198 @@ END SUBROUTINE VNMOD
 
 
  ! **********************************************************
-   SUBROUTINE BEDINIT( J, IBlade, ALPHA )
+   SUBROUTINE BEDINIT( P, O, ErrStat, ErrMess, &
+                       J, IBlade, ALPHA )
+!   SUBROUTINE BEDINIT( J, IBlade, ALPHA )
  !  calculates initial values of Beddoes 'f' arrays
  ! **********************************************************
-
-USE                           Airfoil
-USE                           Bedoes
-
-
-IMPLICIT                      NONE
-
+!USE                           Airfoil
+!USE                           Beddoes
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(INOUT)   :: ALPHA
+   REAL(ReKi),INTENT(INOUT)   :: ALPHA
 
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
 
 
    ! Local Variables:
 
-REAL(ReKi)                 :: AOL1
-REAL(ReKi)                 :: CNA1
-REAL(ReKi)                 :: FSPA
-REAL(ReKi)                 :: FSPB
-REAL(ReKi)                 :: FSPCA
-REAL(ReKi)                 :: FSPCB
-REAL(ReKi)                 :: P
-REAL(ReKi)                 :: P1
-REAL(ReKi)                 :: P2
-REAL(ReKi)                 :: SRFP
-REAL(ReKi)                 :: TEMP
+   REAL(ReKi)                 :: AOL1
+   REAL(ReKi)                 :: CNA1
+   REAL(ReKi)                 :: FSPA
+   REAL(ReKi)                 :: FSPB
+   REAL(ReKi)                 :: FSPCA
+   REAL(ReKi)                 :: FSPCB
+   REAL(ReKi)                 :: P0
+   REAL(ReKi)                 :: P1
+   REAL(ReKi)                 :: P2
+   REAL(ReKi)                 :: SRFP
+   REAL(ReKi)                 :: TEMP
 
-INTEGER                    :: I
-INTEGER                    :: I1
-INTEGER                    :: I1P1
-INTEGER                    :: I2
-INTEGER                    :: I2P1
-INTEGER                    :: N
-INTEGER                    :: NP1
+   INTEGER                    :: I
+   INTEGER                    :: I1
+   INTEGER                    :: I1P1
+   INTEGER                    :: I2
+   INTEGER                    :: I2P1
+   INTEGER                    :: N
+   INTEGER                    :: NP1
 
+   ErrStat = ErrID_None
+   ErrMess = ""
 
-ANE(J,IBLADE) = ALPHA
-AFE(J,IBLADE) = ALPHA
+O%Beddoes%ANE(J,IBLADE) = ALPHA
+O%Beddoes%AFE(J,IBLADE) = ALPHA
 
-I = NFOIL(J)
+I = P%AirFoil%NFOIL(J)
 
-IF ( NTables(I) > 1 ) THEN
-   MulTabLoc = MIN( MAX( MulTabLoc, MulTabMet(I,1) ), MulTabMet(I,NTables(I)) )
-   CALL LocateBin( MulTabLoc, MulTabMet(I,1:NTables(I)), N, NTables(I) )
+IF ( P%AirFoil%NTables(I) > 1 ) THEN
+   O%AirFoil%MulTabLoc = MIN( MAX( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1) ), P%AirFoil%MulTabMet(I,P%AirFoil%NTables(I)) )
+   CALL LocateBin( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1:P%AirFoil%NTables(I)), N, P%AirFoil%NTables(I) )
 
    IF (N == 0 ) THEN
-      CNA1 = CNA(I,1)
-      AOL1 = AOL(I,1)
-   ELSE IF( N == NTables(I) ) THEN
-      CNA1 = CNA(I,N)
-      AOL1 = AOL(I,N)
+      CNA1 = O%Beddoes%CNA(I,1)
+      AOL1 = O%Beddoes%AOL(I,1)
+   ELSE IF( N == P%AirFoil%NTables(I) ) THEN
+      CNA1 = O%Beddoes%CNA(I,N)
+      AOL1 = O%Beddoes%AOL(I,N)
    ELSE
       NP1   = N+1
-      P     = (MulTabLoc-MulTabMet(I,N))/(MulTabMet(I,NP1)-MulTabMet(I,N))
-      CNA1  = CNA(I,N) + P * ( CNA(I,NP1) - CNA(I,N) )
-      AOL1  = AOL(I,N) + P * ( AOL(I,NP1) - AOL(I,N) )
+      P0    = (O%AirFoil%MulTabLoc-P%AirFoil%MulTabMet(I,N))/(P%AirFoil%MulTabMet(I,NP1)-P%AirFoil%MulTabMet(I,N))
+      CNA1  = O%Beddoes%CNA(I,N) + P0 * ( O%Beddoes%CNA(I,NP1) - O%Beddoes%CNA(I,N) )
+      AOL1  = O%Beddoes%AOL(I,N) + P0 * ( O%Beddoes%AOL(I,NP1) - O%Beddoes%AOL(I,N) )
    END IF
 ELSE
-   CNA1  = CNA(I,1)
-   AOL1  = AOL(I,1)
+   CNA1  = O%Beddoes%CNA(I,1)
+   AOL1  = O%Beddoes%AOL(I,1)
 ENDIF
 
-CNPOT(J,IBLADE) = CNA1 * (ALPHA - AOL1)
-CNP(J,IBLADE)   = CNPOT(J,IBLADE)
+O%Beddoes%CNPOT(J,IBLADE) = CNA1 * (ALPHA - AOL1)
+O%Beddoes%CNP(J,IBLADE)   = O%Beddoes%CNPOT(J,IBLADE)
 
 
-ALPHA = MIN( MAX( ALPHA, AL(I,1) ), AL(I,NLIFT(I)) )
-CALL LocateBin( ALPHA, AL(I,1:NLIFT(I)), I1, NLIFT(I) )
+ALPHA = MIN( MAX( ALPHA, O%AirFoil%AL(I,1) ), O%AirFoil%AL(I,P%AirFoil%NLIFT(I)) )
+CALL LocateBin( ALPHA, O%AirFoil%AL(I,1:P%AirFoil%NLIFT(I)), I1, P%AirFoil%NLIFT(I) )
 
 IF ( I1 == 0 ) THEN
    I1   = 1
    I1P1 = 2
    P1   = 0.0
-ELSEIF ( I1 == NLIFT(I) ) THEN
+ELSEIF ( I1 == P%AirFoil%NLIFT(I) ) THEN
    I1P1 = I1
    I1   = I1 - 1
    P1   = 1.0
 ELSE
    I1P1 = I1 + 1
-   P1   = ( AL(I,I1) - ALPHA ) / ( AL(I,I1) - AL(I,I1P1) )
+   P1   = (  O%AirFoil%AL(I,I1) - ALPHA ) / (  O%AirFoil%AL(I,I1) -  O%AirFoil%AL(I,I1P1) )
 ENDIF
 
 
-IF ( NTables(I) > 1 ) THEN
+IF ( P%AirFoil%NTables(I) > 1 ) THEN
 
  ! Locate the multiple airfoil table position in the table
 
 
-   MulTabLoc = MIN( MAX( MulTabLoc, MulTabMet(I,1) ), MulTabMet(I,NTables(I)) )
-   CALL LocateBin( MulTabLoc, MulTabMet(I,1:NTables(I)), I2, NTables(I) )
+   O%AirFoil%MulTabLoc = MIN( MAX( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1) ), P%AirFoil%MulTabMet(I,P%AirFoil%NTables(I)) )
+   CALL LocateBin( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1:P%AirFoil%NTables(I)), I2, P%AirFoil%NTables(I) )
 
    IF ( I2 == 0 ) THEN
       I2P1 = 2
       I2   = 1
       P2   = 0.0
-   ELSE IF( I2 == NTables(I) ) THEN
+   ELSE IF( I2 == P%AirFoil%NTables(I) ) THEN
       I2P1 = I2
       I2   = I2 - 1
       P2   = 1.0
    ELSE
       I2P1 = I2 + 1
-      P2 = (MulTabLoc-MulTabMet(I,I2))/(MulTabMet(I,I2P1)-MulTabMet(I,I2))
+      P2 = (O%AirFoil%MulTabLoc-P%AirFoil%MulTabMet(I,I2))/(P%AirFoil%MulTabMet(I,I2P1)-P%AirFoil%MulTabMet(I,I2))
    ENDIF
 
  ! Interpolate the F-table values
 
-   FSPB  = FTB( I,I1,I2P1) - (FTB( I,I1,I2P1) - FTB( I,I1P1,I2P1))*P1
-   FSPCB = FTBC(I,I1,I2P1) - (FTBC(I,I1,I2P1) - FTBC(I,I1P1,I2P1))*P1
-   FSPA  = FTB( I,I1,I2  ) - (FTB( I,I1,I2  ) - FTB( I,I1P1,I2  ))*P1
-   FSPCA = FTBC(I,I1,I2  ) - (FTBC(I,I1,I2  ) - FTBC(I,I1P1,I2  ))*P1
+   FSPB  = O%Beddoes%FTB( I,I1,I2P1) - (O%Beddoes%FTB( I,I1,I2P1) - O%Beddoes%FTB( I,I1P1,I2P1))*P1
+   FSPCB = O%Beddoes%FTBC(I,I1,I2P1) - (O%Beddoes%FTBC(I,I1,I2P1) - O%Beddoes%FTBC(I,I1P1,I2P1))*P1
+   FSPA  = O%Beddoes%FTB( I,I1,I2  ) - (O%Beddoes%FTB( I,I1,I2  ) - O%Beddoes%FTB( I,I1P1,I2  ))*P1
+   FSPCA = O%Beddoes%FTBC(I,I1,I2  ) - (O%Beddoes%FTBC(I,I1,I2  ) - O%Beddoes%FTBC(I,I1P1,I2  ))*P1
 
-   FSP( J,IBLADE) = FSPA  + P2 * ( FSPB - FSPA )
-   FSPC(J,IBLADE) = FSPCA + P2 * ( FSPCB - FSPCA )
+   O%Beddoes%FSP( J,IBLADE) = FSPA  + P2 * ( FSPB - FSPA )
+   O%Beddoes%FSPC(J,IBLADE) = FSPCA + P2 * ( FSPCB - FSPCA )
 
 ELSE
 
-   FSP( J,IBLADE) = FTB( I,I1,1) - ( FTB( I,I1,1) - FTB( I,I1P1,1) )*P1
-   FSPC(J,IBLADE) = FTBC(I,I1,1) - ( FTBC(I,I1,1) - FTBC(I,I1P1,1) )*P1
+   O%Beddoes%FSP( J,IBLADE) = O%Beddoes%FTB( I,I1,1) - ( O%Beddoes%FTB( I,I1,1) - O%Beddoes%FTB( I,I1P1,1) )*P1
+   O%Beddoes%FSPC(J,IBLADE) = O%Beddoes%FTBC(I,I1,1) - ( O%Beddoes%FTBC(I,I1,1) - O%Beddoes%FTBC(I,I1P1,1) )*P1
 
 ENDIF
 
-IF ( ABS( AFE(J,IBLADE) - AOL1 ) < 1.E-10 ) THEN
+IF ( ABS( O%Beddoes%AFE(J,IBLADE) - AOL1 ) < 1.E-10 ) THEN
 
-   FSP(J,IBLADE)  = 1.0
-   FSPC(J,IBLADE) = 1.0
+   O%Beddoes%FSP(J,IBLADE)  = 1.0
+   O%Beddoes%FSPC(J,IBLADE) = 1.0
 
 ELSE
 
-   TEMP = 2.*SQRT(ABS(FSP(J,IBLADE)/(AFE(J,IBLADE)-AOL1)))-1.
-   FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
-   IF ( FSP(J,IBLADE) >  1.0 ) FSP(J,IBLADE) =  1.0
-   IF ( FSP(J,IBLADE) < -1.0 ) FSP(J,IBLADE) = -1.0
+   TEMP = 2.*SQRT(ABS(O%Beddoes%FSP(J,IBLADE)/(O%Beddoes%AFE(J,IBLADE)-AOL1)))-1.
+   O%Beddoes%FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+   IF ( O%Beddoes%FSP(J,IBLADE) >  1.0 ) O%Beddoes%FSP(J,IBLADE) =  1.0
+   IF ( O%Beddoes%FSP(J,IBLADE) < -1.0 ) O%Beddoes%FSP(J,IBLADE) = -1.0
 
-   IF ( ABS( AFE(J,IBLADE) ) < 1.E-10 ) THEN
-      FSPC(J,IBLADE) = 1.0
+   IF ( ABS( O%Beddoes%AFE(J,IBLADE) ) < 1.E-10 ) THEN
+      O%Beddoes%FSPC(J,IBLADE) = 1.0
    ELSE
-      TEMP = FSPC(J,IBLADE)/((AFE(J,IBLADE)-AOL1)*AFE(J,IBLADE))
-      FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
-      IF ( FSPC(J,IBLADE) >  1.0 ) FSPC(J,IBLADE) =  1.0
-      IF ( FSPC(J,IBLADE) < -1.0 ) FSPC(J,IBLADE) = -1.0
+      TEMP = O%Beddoes%FSPC(J,IBLADE)/((O%Beddoes%AFE(J,IBLADE)-AOL1)*O%Beddoes%AFE(J,IBLADE))
+      O%Beddoes%FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+      IF ( O%Beddoes%FSPC(J,IBLADE) >  1.0 ) O%Beddoes%FSPC(J,IBLADE) =  1.0
+      IF ( O%Beddoes%FSPC(J,IBLADE) < -1.0 ) O%Beddoes%FSPC(J,IBLADE) = -1.0
    ENDIF
 
 ENDIF
 
-SRFP = SQRT( ABS( FSP(J,IBLADE) ) ) * SIGN( 1., FSP(J,IBLADE) ) + 1.
-FK   = 0.25 * SRFP * SRFP
-CVN(J,IBLADE) = CNPOT(J,IBLADE) * ( 1. - FK )
-
-
+SRFP = SQRT( ABS( O%Beddoes%FSP(J,IBLADE) ) ) * SIGN( 1., O%Beddoes%FSP(J,IBLADE) ) + 1.
+O%Beddoes%FK   = 0.25 * SRFP * SRFP
+O%Beddoes%CVN(J,IBLADE) = O%Beddoes%CNPOT(J,IBLADE) * ( 1. - O%Beddoes%FK )
 
 RETURN
 END SUBROUTINE BEDINIT
 
 
  ! *****************************************************
-   SUBROUTINE BedUpdate
+   SUBROUTINE BedUpdate( O )
  !  Update old Beddoes parameters at new time step
  ! *****************************************************
+!USE            Beddoes
+   IMPLICIT                      NONE
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
 
-
-USE            Bedoes
-
-
-ANE1    = ANE
-ADOT1   = ADOT
-OLDXN   = XN
-OLDYN   = YN
-CNPOT1  = CNPOT
-OLDDPP  = DPP
-FSP1    = FSP
-FSPC1   = FSPC
-OLDTAU  = TAU
-OLDDF   = DF
-OLDDFC  = DFC
-OLDDN   = DN
-OLDCNV  = CNV
-CVN1    = CVN
-CNP1    = CNP
-CNPD1   = CNPD
-OLDSEP  = BEDSEP
-QX1     = QX
-OLDDQ   = DQ
-AFE1    = AFE
-DQP1    = DQP
-DFAFE1  = DFAFE
-
+O%Beddoes%ANE1    = O%Beddoes%ANE
+O%Beddoes%ADOT1   = O%Beddoes%ADOT
+O%Beddoes%OLDXN   = O%Beddoes%XN
+O%Beddoes%OLDYN   = O%Beddoes%YN
+O%Beddoes%CNPOT1  = O%Beddoes%CNPOT
+O%Beddoes%OLDDPP  = O%Beddoes%DPP
+O%Beddoes%FSP1    = O%Beddoes%FSP
+O%Beddoes%FSPC1   = O%Beddoes%FSPC
+O%Beddoes%OLDTAU  = O%Beddoes%TAU
+O%Beddoes%OLDDF   = O%Beddoes%DF
+O%Beddoes%OLDDFC  = O%Beddoes%DFC
+O%Beddoes%OLDDN   = O%Beddoes%DN
+O%Beddoes%OLDCNV  = O%Beddoes%CNV
+O%Beddoes%CVN1    = O%Beddoes%CVN
+O%Beddoes%CNP1    = O%Beddoes%CNP
+O%Beddoes%CNPD1   = O%Beddoes%CNPD
+O%Beddoes%OLDSEP  = O%Beddoes%BEDSEP
+O%Beddoes%QX1     = O%Beddoes%QX
+O%Beddoes%OLDDQ   = O%Beddoes%DQ
+O%Beddoes%AFE1    = O%Beddoes%AFE
+O%Beddoes%DQP1    = O%Beddoes%DQP
+O%Beddoes%DFAFE1  = O%Beddoes%DFAFE
 
 
 RETURN
@@ -2803,31 +2899,37 @@ END SUBROUTINE BedUpdate
 
 
  ! *****************************************************
-   SUBROUTINE BEDDAT
+   SUBROUTINE BEDDAT ( P, x, xd, z, O, y, ErrStat, ErrMess )
  !  USED TO INPUT PARAMETERS FOR THE
- !   BEDDOES DYNAMIC STALL MODEL
+ !   Beddoes DYNAMIC STALL MODEL
  ! *****************************************************
-
-
-USE                           Airfoil
-USE                           Bedoes
-USE                           Switch
-
-
-IMPLICIT                      NONE
-
+!USE                           Airfoil
+!USE                           Beddoes
+!USE                           Switch
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Local Variables:
 
-REAL(ReKi)                 :: ETA
-REAL(ReKi)                 :: CA
-REAL(ReKi)                 :: SA
+   REAL(ReKi)                 :: ETA
+   REAL(ReKi)                 :: CA
+   REAL(ReKi)                 :: SA
 
-INTEGER                    :: I
-INTEGER                    :: J
-INTEGER                    :: K
+   INTEGER                    :: I
+   INTEGER                    :: J
+   INTEGER                    :: K
 
 
+   ErrStat = ErrID_None
+   ErrMess = ""
 
  ! Empirical constants for the Beddoes model
 
@@ -2839,81 +2941,82 @@ INTEGER                    :: K
  !          the separation point
  ! AS    = Speed of sound for Mach number calculation
 
-TVL   = 11.0
-TP    = 1.7
-TV    = 6.0
-TF    = 3.0
+P%Beddoes%TVL   = 11.0
+P%Beddoes%TP    = 1.7
+P%Beddoes%TV    = 6.0
+P%Beddoes%TF    = 3.0
 ETA   = .99  !bjj: this doesn't seem to be used for anything....
 
-IF ( SIUNIT ) THEN
+IF ( P%SIUNIT ) THEN
  ! SI UNITS--m/sec
-   AS = 335.
+   P%Beddoes%AS = 335.
 ELSE
  ! ENGLISH UNITS--ft/sec
-   AS = 1100.
+   P%Beddoes%AS = 1100.
 ENDIF
 
  ! Generate table of F values from airfoil data table
 
-DO J =1,NUMFOIL
-   DO K =1,NTables(J)
-      DO I = 1, NLIFT(J)
+DO J =1,P%AirFoil%NUMFOIL
+   DO K =1,P%AirFoil%NTables(J)
+      DO I = 1, P%AirFoil%NLIFT(J)
 
-         CA = COS( AL(J,I) )
-         SA = SIN( AL(J,I) )
-         CN = CL(J,I,K) * CA + ( CD(J,I,K) - CDO(J,K) ) * SA
-         CC = CL(J,I,K) * SA - ( CD(J,I,K) - CDO(J,K) ) * CA
+         CA = COS( O%AirFoil%AL(J,I) )
+         SA = SIN( O%AirFoil%AL(J,I) )
+         O%Beddoes%CN = O%AirFoil%CL(J,I,K) * CA + ( O%AirFoil%CD(J,I,K) - O%Beddoes%CDO(J,K) ) * SA
+         O%Beddoes%CC = O%AirFoil%CL(J,I,K) * SA - ( O%AirFoil%CD(J,I,K) - O%Beddoes%CDO(J,K) ) * CA
 
-         IF ( ABS( CNA(J,K) ) .GT. 1.E-6 ) THEN
-            FTB(J,I,K)  = CN / CNA(J,K)
-            FTBC(J,I,K) = CC / CNA(J,K)
+         IF ( ABS( O%Beddoes%CNA(J,K) ) .GT. 1.E-6 ) THEN
+            O%Beddoes%FTB(J,I,K)  = O%Beddoes%CN / O%Beddoes%CNA(J,K)
+            O%Beddoes%FTBC(J,I,K) = O%Beddoes%CC / O%Beddoes%CNA(J,K)
          ELSE
-            FTB(J,I,K)  = 1.0
-            FTBC(J,I,K) = 1.0
+            O%Beddoes%FTB(J,I,K)  = 1.0
+            O%Beddoes%FTBC(J,I,K) = 1.0
          ENDIF
 
       END DO !I
    END DO !K
 END DO !J
 
-VOR   = .FALSE.
-SHIFT = .FALSE.
+O%Beddoes%VOR   = .FALSE.
+O%Beddoes%SHIFT = .FALSE.
 
-BEDSEP = .FALSE.
-ANE1   = 0.
-OLDCNV = 0.
-CVN1   = 0.
-CNPOT1 = 0.
-CNP1   = 0.
-CNPD1  = 0.
-OLDDF  = 0.
-OLDDFC = 0.
-OLDDPP = 0.
-FSP1   = 0.
-FSPC1  = 0.
-TAU    = 0.
-OLDTAU = 0.
-OLDXN  = 0.
-OLDYN  = 0.
-
-
+O%Beddoes%BEDSEP = .FALSE.
+O%Beddoes%ANE1   = 0.
+O%Beddoes%OLDCNV = 0.
+O%Beddoes%CVN1   = 0.
+O%Beddoes%CNPOT1 = 0.
+O%Beddoes%CNP1   = 0.
+O%Beddoes%CNPD1  = 0.
+O%Beddoes%OLDDF  = 0.
+O%Beddoes%OLDDFC = 0.
+O%Beddoes%OLDDPP = 0.
+O%Beddoes%FSP1   = 0.
+O%Beddoes%FSPC1  = 0.
+O%Beddoes%TAU    = 0.
+O%Beddoes%OLDTAU = 0.
+O%Beddoes%OLDXN  = 0.
+O%Beddoes%OLDYN  = 0.
 
 RETURN
 END SUBROUTINE BEDDAT
 
 
  ! *****************************************************
-   SUBROUTINE BEDWRT
+   SUBROUTINE BEDWRT( P, O, ErrStat, ErrMess )
  !  USED TO OUTPUT PARAMETERS FOR THE
- !   BEDDOES DYNAMIC STALL MODEL
+ !   Beddoes DYNAMIC STALL MODEL
  ! *****************************************************
 
-USE                           AD_IOParams
-USE                           Airfoil
-USE                           Bedoes
-
-IMPLICIT                      NONE
-
+!USE                           AD_IOParams
+!USE                           Airfoil
+!USE                           Beddoes
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Local Variables:
 
@@ -2922,22 +3025,26 @@ INTEGER                    :: K
 
 CHARACTER(70)              :: Frmt
 
+   ErrStat = ErrID_None
+   ErrMess = ""
+
+
 Frmt = '(3X,A, 21(:F8.4,3X) )'
-DO K = 1, NTables(1)
-   WRITE(UnADopt,'(/A/)') '  BEDDOES DYNAMIC STALL PARAMETERS:'
-   WRITE(UnADopt, Frmt) 'CN SLOPE         ', ( CNA(I,K),      I = 1, NUMFOIL )
-   WRITE(UnADopt, Frmt) 'STALL CN (UPPER) ', ( CNS(I,K),      I = 1, NUMFOIL )
-   WRITE(UnADopt, Frmt) 'STALL CN (LOWER) ', ( CNSL(I,K),     I = 1, NUMFOIL )
-   WRITE(UnADopt, Frmt) 'ZERO LIFT AOA    ', ( AOL(I,K)*R2D,  I = 1, NUMFOIL )
-   WRITE(UnADopt, Frmt) 'MIN DRAG AOA     ', ( AOD(I,K)*R2D,  I = 1, NUMFOIL )
-   WRITE(UnADopt, Frmt) 'MIN DRAG COEFF   ', ( CDO(I,K),      I = 1, NUMFOIL )
-   WRITE(UnADopt,'(/)')
+DO K = 1, P%AirFoil%NTables(1)
+   WRITE(P%UnADopt,'(/A/)') '  BEDDOES DYNAMIC STALL PARAMETERS:'
+   WRITE(P%UnADopt, Frmt) 'CN SLOPE         ', ( O%Beddoes%CNA(I,K),      I = 1, P%AirFoil%NUMFOIL )
+   WRITE(P%UnADopt, Frmt) 'STALL CN (UPPER) ', ( O%Beddoes%CNS(I,K),      I = 1, P%AirFoil%NUMFOIL )
+   WRITE(P%UnADopt, Frmt) 'STALL CN (LOWER) ', ( O%Beddoes%CNSL(I,K),     I = 1, P%AirFoil%NUMFOIL )
+   WRITE(P%UnADopt, Frmt) 'ZERO LIFT AOA    ', ( O%Beddoes%AOL(I,K)*R2D,  I = 1, P%AirFoil%NUMFOIL )
+   WRITE(P%UnADopt, Frmt) 'MIN DRAG AOA     ', ( O%Beddoes%AOD(I,K)*R2D,  I = 1, P%AirFoil%NUMFOIL )
+   WRITE(P%UnADopt, Frmt) 'MIN DRAG COEFF   ', ( O%Beddoes%CDO(I,K),      I = 1, P%AirFoil%NUMFOIL )
+   WRITE(P%UnADopt,'(/)')
 ENDDO !K
 
-WRITE(UnADopt,*) '    VORTEX TRANSIT TIME FROM LE TO TE ', TVL
-WRITE(UnADopt,*) '    PRESSURE TIME CONSTANT            ', TP
-WRITE(UnADopt,*) '    VORTEX TIME CONSTANT              ', TV
-WRITE(UnADopt,*) '    F-PARAMETER TIME CONSTANT         ', TF
+WRITE(P%UnADopt,*) '    VORTEX TRANSIT TIME FROM LE TO TE ', P%Beddoes%TVL
+WRITE(P%UnADopt,*) '    PRESSURE TIME CONSTANT            ', P%Beddoes%TP
+WRITE(P%UnADopt,*) '    VORTEX TIME CONSTANT              ', P%Beddoes%TV
+WRITE(P%UnADopt,*) '    F-PARAMETER TIME CONSTANT         ', P%Beddoes%TF
 
 
 
@@ -2946,7 +3053,8 @@ END SUBROUTINE BEDWRT
 
 
  ! ******************************************************
-   SUBROUTINE BEDDOES( W2, J, IBlade, ALPHA, CLA, CDA ,CMA )
+   SUBROUTINE BeddoesModel( P,  O,  ErrStat, ErrMess, &
+                      W2, J, IBlade, ALPHA, CLA, CDA ,CMA )
  !  uses the Beddoes dynamic stall model
  !   the routine is entered with an angle of attack
  !   and returns CL and CD.
@@ -2962,85 +3070,86 @@ END SUBROUTINE BEDWRT
  !   CMA   = Moment coeff. which is calculated by the routine
  ! ******************************************************
 
-USE                           Airfoil
-USE                           Bedoes
-
-IMPLICIT                      NONE
-
+!USE                           Airfoil
+!USE                           Beddoes
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: ALPHA
-REAL(ReKi),INTENT(OUT)     :: CDA
-REAL(ReKi),INTENT(OUT)     :: CLA
-REAL(ReKi),INTENT(OUT)     :: CMA
-REAL(ReKi),INTENT(IN)      :: W2
+   REAL(ReKi),INTENT(IN)      :: ALPHA
+   REAL(ReKi),INTENT(OUT)     :: CDA
+   REAL(ReKi),INTENT(OUT)     :: CLA
+   REAL(ReKi),INTENT(OUT)     :: CMA
+   REAL(ReKi),INTENT(IN)      :: W2
 
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
 
    ! Local Variables:
 
-REAL(ReKi)                 :: AE
-REAL(ReKi)                 :: AOD1
-REAL(ReKi)                 :: AOL1
-REAL(ReKi)                 :: CA
-REAL(ReKi)                 :: CDO1
-REAL(ReKi)                 :: CNA1
-REAL(ReKi)                 :: CNS1
-REAL(ReKi)                 :: CNSL1
-REAL(ReKi)                 :: P
-REAL(ReKi)                 :: SA
-REAL(ReKi)                 :: VREL
+   REAL(ReKi)                 :: AE
+   REAL(ReKi)                 :: AOD1
+   REAL(ReKi)                 :: AOL1
+   REAL(ReKi)                 :: CA
+   REAL(ReKi)                 :: CDO1
+   REAL(ReKi)                 :: CNA1
+   REAL(ReKi)                 :: CNS1
+   REAL(ReKi)                 :: CNSL1
+   REAL(ReKi)                 :: P1
+   REAL(ReKi)                 :: SA
+   REAL(ReKi)                 :: VREL
 
-INTEGER                    :: I
-INTEGER                    :: N
-INTEGER                    :: NP1
-
-
+   INTEGER                    :: I
+   INTEGER                    :: N
+   INTEGER                    :: NP1
 
  ! Check to see if element has multiple airfoil tables, then interpolate values
  !  of constants based on the current location.
 
-I = NFOIL(J)
+I = P%AirFoil%NFOIL(J)
 
-IF (NTables(I) > 1)THEN
+IF (P%AirFoil%NTables(I) > 1)THEN
 
-   MulTabLoc = MIN( MAX( MulTabLoc, MulTabMet(I,1) ), MulTabMet(I,NTables(I)) )
-   CALL LocateBin( MulTabLoc, MulTabMet(I,1:NTables(I)), N, NTables(I) )
+   O%AirFoil%MulTabLoc = MIN( MAX( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1) ), P%AirFoil%MulTabMet(I,P%AirFoil%NTables(I)) )
+   CALL LocateBin( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1:P%AirFoil%NTables(I)), N, P%AirFoil%NTables(I) )
 
    IF ( N == 0 ) THEN
-      CNA1  = CNA( I,1)
-      AOL1  = AOL( I,1)
-      CNS1  = CNS( I,1)
-      CNSL1 = CNSL(I,1)
-      AOD1  = AOD( I,1)
-      CDO1  = CDO( I,1)
-   ELSE IF ( N == NTables(I) ) THEN
-      CNA1  = CNA( I,N)
-      AOL1  = AOL( I,N)
-      CNS1  = CNS( I,N)
-      CNSL1 = CNSL(I,N)
-      AOD1  = AOD( I,N)
-      CDO1  = CDO( I,N)
+      CNA1  = O%Beddoes%CNA( I,1)
+      AOL1  = O%Beddoes%AOL( I,1)
+      CNS1  = O%Beddoes%CNS( I,1)
+      CNSL1 = O%Beddoes%CNSL(I,1)
+      AOD1  = O%Beddoes%AOD( I,1)
+      CDO1  = O%Beddoes%CDO( I,1)
+   ELSE IF ( N == P%AirFoil%NTables(I) ) THEN
+      CNA1  = O%Beddoes%CNA( I,N)
+      AOL1  = O%Beddoes%AOL( I,N)
+      CNS1  = O%Beddoes%CNS( I,N)
+      CNSL1 = O%Beddoes%CNSL(I,N)
+      AOD1  = O%Beddoes%AOD( I,N)
+      CDO1  = O%Beddoes%CDO( I,N)
    ELSE
       NP1   = N+1
-      P     = (MulTabLoc-MulTabMet(I,N))/(MulTabMet(I,NP1)-MulTabMet(I,N))
+      P1     = (O%AirFoil%MulTabLoc-P%AirFoil%MulTabMet(I,N))/(P%AirFoil%MulTabMet(I,NP1)-P%AirFoil%MulTabMet(I,N))
 
-      CNA1  = CNA(I,N) + P * ( CNA(I,NP1) - CNA(I,N) )
-      AOL1  = AOL(I,N) + P * ( AOL(I,NP1) - AOL(I,N) )
-      CNS1  = CNS(I,N) + P * ( CNS(I,NP1) - CNS(I,N) )
-      CNSL1 = CNSL(I,N)+ P * ( CNSL(I,NP1)- CNSL(I,N))
-      AOD1  = AOD(I,N) + P * ( AOD(I,NP1) - AOD(I,N) )
-      CDO1  = CDO(I,N) + P * ( CDO(I,NP1) - CDO(I,N) )
+      CNA1  = O%Beddoes%CNA(I,N) + P1 * ( O%Beddoes%CNA(I,NP1) - O%Beddoes%CNA(I,N) )
+      AOL1  = O%Beddoes%AOL(I,N) + P1 * ( O%Beddoes%AOL(I,NP1) - O%Beddoes%AOL(I,N) )
+      CNS1  = O%Beddoes%CNS(I,N) + P1 * ( O%Beddoes%CNS(I,NP1) - O%Beddoes%CNS(I,N) )
+      CNSL1 = O%Beddoes%CNSL(I,N)+ P1 * ( O%Beddoes%CNSL(I,NP1)- O%Beddoes%CNSL(I,N))
+      AOD1  = O%Beddoes%AOD(I,N) + P1 * ( O%Beddoes%AOD(I,NP1) - O%Beddoes%AOD(I,N) )
+      CDO1  = O%Beddoes%CDO(I,N) + P1 * ( O%Beddoes%CDO(I,NP1) - O%Beddoes%CDO(I,N) )
    END IF
 
 ELSE
-   CNA1  = CNA(I,1)
-   AOL1  = AOL(I,1)
-   CNS1  = CNS(I,1)
-   CNSL1 = CNSL(I,1)
-   AOD1  = AOD(I,1)
-   CDO1  = CDO(I,1)
+   CNA1  = O%Beddoes%CNA(I,1)
+   AOL1  = O%Beddoes%AOL(I,1)
+   CNS1  = O%Beddoes%CNS(I,1)
+   CNSL1 = O%Beddoes%CNSL(I,1)
+   AOD1  = O%Beddoes%AOD(I,1)
+   CDO1  = O%Beddoes%CDO(I,1)
 ENDIF
 
  ! Jump back if lift-curve slope is zero
@@ -3051,129 +3160,132 @@ IF ( CNA1 == 0.0 ) THEN
    RETURN
 ENDIF
 
-AN   = ALPHA
+O%Beddoes%AN   = ALPHA
 VREL = SQRT( W2 )
 
-CALL ATTACH( VREL, J, IBlade, CNA1, AOL1, AE )
+CALL ATTACH( P, O, ErrStat, ErrMess, &
+             VREL, J, IBlade, CNA1, AOL1, AE )
 
-CALL SEPAR( NLIFT(I), J, IBlade, I, CNA1, AOL1, CNS1, CNSL1 )
+CALL SEPAR(  P, O, ErrStat, ErrMess, &
+             P%AirFoil%NLIFT(I), J, IBlade, I, CNA1, AOL1, CNS1, CNSL1 )
 
-CALL VORTEX( J, IBlade, AE )
+CALL VORTEX( P, O, ErrStat, ErrMess, &
+             J, IBlade, AE )
 
-CA  = COS( AN )
-SA  = SIN( AN )
-CLA = CN * CA + CC * SA
-CDA = CN * SA - CC * CA + CDO1
-CMA = PMC
-
-
+CA  = COS( O%Beddoes%AN )
+SA  = SIN( O%Beddoes%AN )
+CLA = O%Beddoes%CN * CA + O%Beddoes%CC * SA
+CDA = O%Beddoes%CN * SA - O%Beddoes%CC * CA + CDO1
+CMA = O%AirFoil%PMC
 
 RETURN
-END SUBROUTINE BEDDOES
+END SUBROUTINE BeddoesModel
 
 
  ! ******************************************************
-   SUBROUTINE ATTACH( VREL, J, IBlade, CNA1, AOL1, AE )
- !  PART OF THE BEDDOES DYNAMIC STALL MODEL.
+   SUBROUTINE ATTACH( P, O, ErrStat, ErrMess, &
+                      VREL, J, IBlade, CNA1, AOL1, AE )
+ !  PART OF THE Beddoes DYNAMIC STALL MODEL.
  ! ******************************************************
 
-USE                           AeroTime
-USE                           Bedoes
-USE                           Blade  !C
-
-
-IMPLICIT                      NONE
-
+!USE                           AeroTime
+!USE                           Beddoes
+!USE                           Blade  !C
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(OUT)     :: AE
-REAL(ReKi),INTENT(IN)      :: AOL1
-REAL(ReKi),INTENT(IN)      :: CNA1
-REAL(ReKi),INTENT(IN)      :: VREL
+   REAL(ReKi),INTENT(OUT)     :: AE
+   REAL(ReKi),INTENT(IN)      :: AOL1
+   REAL(ReKi),INTENT(IN)      :: CNA1
+   REAL(ReKi),INTENT(IN)      :: VREL
 
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
-
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
 
    ! Local Variables:
 
-REAL(ReKi)                 :: B2
-REAL(ReKi)                 :: BS
-REAL(ReKi)                 :: CNI
-REAL(ReKi)                 :: CNQ
-REAL(ReKi)                 :: CO
-REAL(ReKi)                 :: DA
-REAL(ReKi)                 :: PRP
-REAL(ReKi)                 :: X
-REAL(ReKi)                 :: XKA
-REAL(ReKi)                 :: XM
-
-LOGICAL,    SAVE           :: SuperSonic = .FALSE.
+   REAL(ReKi)                 :: B2
+   REAL(ReKi)                 :: BS
+   REAL(ReKi)                 :: CNI
+   REAL(ReKi)                 :: CNQ
+   REAL(ReKi)                 :: CO
+   REAL(ReKi)                 :: DA
+   REAL(ReKi)                 :: PRP
+   REAL(ReKi)                 :: X0
+   REAL(ReKi)                 :: XKA
+   REAL(ReKi)                 :: XM
 
 
-IF ( ABS( AN ) <= PIBY2 ) THEN
-   ANE(J,IBLADE) = AN
-ELSEIF ( AN > PiBy2 ) THEN
-   ANE(J,IBLADE) = PI - AN
+   ErrStat = ErrID_None
+   ErrMess = ""
+
+IF ( ABS( O%Beddoes%AN ) <= PIBY2 ) THEN
+   O%Beddoes%ANE(J,IBLADE) = O%Beddoes%AN
+ELSEIF ( O%Beddoes%AN > PiBy2 ) THEN
+   O%Beddoes%ANE(J,IBLADE) = PI - O%Beddoes%AN
 ELSE
-   ANE(J,IBLADE) = - PI - AN
+   O%Beddoes%ANE(J,IBLADE) = - PI - O%Beddoes%AN
 ENDIF
 
 
-XM  = VREL / AS
+XM  = VREL / p%Beddoes%AS
 
  ! Check to see that the element is not supersonic
-IF ( .NOT. SuperSonic .AND. XM >= 1.0 ) THEN
+IF ( .NOT. O%SuperSonic .AND. XM >= 1.0 ) THEN
    XM = 0.7
-   SuperSonic = .TRUE.
+   O%SuperSonic = .TRUE.
 
    CALL ProgWarn( ' Blade #'//TRIM(Int2LStr(IBLADE))//' element #'//TRIM(Int2LStr(J))//' is supersonic! '//&
                   ' Other elements are likely supersonic as well. Supersonic mach nos. will be set to '//&
                   TRIM(Num2LStr(XM))//' to attempt continuation.' )
-ELSEIF (SuperSonic .AND. XM < 1.0) THEN
-   SuperSonic = .FALSE.
+ELSEIF (O%SuperSonic .AND. XM < 1.0) THEN
+   O%SuperSonic = .FALSE.
    CALL ProgWarn( ' Supersonic condition has subsided with Blade #'// TRIM(Int2LStr(IBLADE))// &
                   ' element #'//TRIM(Int2LStr(J))//'.')
 ENDIF
 
 B2  = 1.0 - XM * XM
-DS  = 2. * DT * VREL/C(J)
-BS  = B2 * DS
+O%Beddoes%DS  = 2. * o%DT * VREL/p%Blade%C(J)
+BS  = B2 * O%Beddoes%DS
 XKA = .75/( ( 1. - XM ) + PI * B2 * XM * XM * 0.413 )
-X   = DT * AS / C(J) / XKA
-CO  = XKA * C(J) / AS / XM
+X0  = o%DT * p%Beddoes%AS / p%Blade%C(J) / XKA
+CO  = XKA * p%Blade%C(J) / p%Beddoes%AS / XM
 
-DA  = ANE(J,IBLADE) - ANE1(J,IBLADE)
-ADOT(J,IBLADE) = DA / DT
+DA  = O%Beddoes%ANE(J,IBLADE) - O%Beddoes%ANE1(J,IBLADE)
+O%Beddoes%ADOT(J,IBLADE) = DA / o%DT
 
-PRP = ADOT(J,IBLADE) * C(J) / VREL
+PRP = O%Beddoes%ADOT(J,IBLADE) * p%Blade%C(J) / VREL
 PRP = SAT( PRP, 0.03, 0.1 )
-ADOT(J,IBLADE) = PRP * VREL / C(J)
+O%Beddoes%ADOT(J,IBLADE) = PRP * VREL / p%Blade%C(J)
 
-DN(J,IBLADE) = OLDDN(J,IBLADE) * EXP(-X) + &
-               (ADOT(J,IBLADE) - ADOT1(J,IBLADE)) * EXP(-.5*X)
-CNI = 4. * CO * ( ADOT(J,IBLADE) - DN(J,IBLADE) )
-CMI = -.25 * CNI
+O%Beddoes%DN(J,IBLADE) = O%Beddoes%OLDDN(J,IBLADE) * EXP(-X0) + &
+               (O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%ADOT1(J,IBLADE)) * EXP(-.5*X0)
+CNI = 4. * CO * ( O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%DN(J,IBLADE) )
+O%Beddoes%CMI = -.25 * CNI
 
-QX(J,IBLADE) = (ADOT(J,IBLADE) - ADOT1(J,IBLADE)) * C(J)/VREL/DT
-DQ(J,IBLADE) = OLDDQ(J,IBLADE)*EXP(-X) + &
-               ( QX(J,IBLADE) - QX1(J,IBLADE) ) * EXP(-.5*X)
-CNQ = -CO * (QX(J,IBLADE) - DQ(J,IBLADE))
-DQP(J,IBLADE) = DQP1(J,IBLADE) * EXP(-X/XKA) + (QX(J,IBLADE) &
-                - QX1(J,IBLADE)) * EXP(-.5*X/XKA)
+O%Beddoes%QX(J,IBLADE) = (O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%ADOT1(J,IBLADE)) * P%Blade%C(J)/VREL/o%DT
+O%Beddoes%DQ(J,IBLADE) = O%Beddoes%OLDDQ(J,IBLADE)*EXP(-X0) + &
+               ( O%Beddoes%QX(J,IBLADE) - O%Beddoes%QX1(J,IBLADE) ) * EXP(-.5*X0)
+CNQ = -CO * (O%Beddoes%QX(J,IBLADE) - O%Beddoes%DQ(J,IBLADE))
+O%Beddoes%DQP(J,IBLADE) = O%Beddoes%DQP1(J,IBLADE) * EXP(-X0/XKA) + (O%Beddoes%QX(J,IBLADE) &
+                - O%Beddoes%QX1(J,IBLADE)) * EXP(-.5*X0/XKA)
 
-CMQ = -.25 * CNQ - (XKA*CO/3.) * (QX(J,IBLADE) - DQP(J,IBLADE))
+O%Beddoes%CMQ = -.25 * CNQ - (XKA*CO/3.) * (O%Beddoes%QX(J,IBLADE) - O%Beddoes%DQP(J,IBLADE))
 
-CNIQ = MIN( ABS( CNI+CNQ ), 1. ) * SIGN( 1., CNI+CNQ )
+O%Beddoes%CNIQ = MIN( ABS( CNI+CNQ ), 1. ) * SIGN( 1., CNI+CNQ )
 
-XN(J,IBLADE) = OLDXN(J,IBLADE)*EXP(-.14*BS) + .3*DA*EXP(-.07*BS)
-YN(J,IBLADE) = OLDYN(J,IBLADE)*EXP(-.53*BS) + .7*DA*EXP(-.265*BS)
+O%Beddoes%XN(J,IBLADE) = O%Beddoes%OLDXN(J,IBLADE)*EXP(-.14*BS) + .3*DA*EXP(-.07*BS)
+O%Beddoes%YN(J,IBLADE) = O%Beddoes%OLDYN(J,IBLADE)*EXP(-.53*BS) + .7*DA*EXP(-.265*BS)
 
-AE   = ANE(J,IBLADE) - YN(J,IBLADE) - XN(J,IBLADE)
-CNCP = CNA1 * ( AE - AOL1 )
-CNPOT(J,IBLADE) = CNCP + CNIQ
-CC   =  CNPOT(J,IBLADE) * AE
-
+AE   = O%Beddoes%ANE(J,IBLADE) - O%Beddoes%YN(J,IBLADE) - O%Beddoes%XN(J,IBLADE)
+O%Beddoes%CNCP = CNA1 * ( AE - AOL1 )
+O%Beddoes%CNPOT(J,IBLADE) = O%Beddoes%CNCP + O%Beddoes%CNIQ
+O%Beddoes%CC   =  O%Beddoes%CNPOT(J,IBLADE) * AE
 
 
 RETURN
@@ -3181,85 +3293,93 @@ END SUBROUTINE ATTACH
 
 
  ! ******************************************************
-   SUBROUTINE SEPAR( NFT, J, IBlade, IFOIL, CNA1, AOL1, CNS1, CNSL1 )
- !  PART OF THE BEDDOES DYNAMIC STALL MODEL
+   SUBROUTINE SEPAR( P, O, ErrStat, ErrMess, &
+                     NFT, J, IBlade, IFOIL, CNA1, AOL1, CNS1, CNSL1 )
+!   SUBROUTINE SEPAR( NFT, J, IBlade, IFOIL, CNA1, AOL1, CNS1, CNSL1 )
+ !  PART OF THE Beddoes DYNAMIC STALL MODEL
  ! ******************************************************
 
-USE                           Airfoil
-USE                           Bedoes
-
-IMPLICIT                      NONE
-
+!USE                           Airfoil
+!USE                           Beddoes
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: AOL1
-REAL(ReKi),INTENT(IN)      :: CNA1
-REAL(ReKi),INTENT(IN)      :: CNS1
-REAL(ReKi),INTENT(IN)      :: CNSL1
+   REAL(ReKi),INTENT(IN)      :: AOL1
+   REAL(ReKi),INTENT(IN)      :: CNA1
+   REAL(ReKi),INTENT(IN)      :: CNS1
+   REAL(ReKi),INTENT(IN)      :: CNSL1
 
-INTEGER   ,INTENT(IN)      :: IFOIL
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
-INTEGER   ,INTENT(IN)      :: NFT
+   INTEGER   ,INTENT(IN)      :: IFOIL
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
+   INTEGER   ,INTENT(IN)      :: NFT
 
    ! Local Variables:
 
-REAL(ReKi)                 :: AFEP
-REAL(ReKi)                 :: AFF
-REAL(ReKi)                 :: CMPA
-REAL(ReKi)                 :: CMPB
-REAL(ReKi)                 :: FSPA
-REAL(ReKi)                 :: FSPB
-REAL(ReKi)                 :: FSPCA
-REAL(ReKi)                 :: FSPCB
-REAL(ReKi)                 :: P1
-REAL(ReKi)                 :: P2
-REAL(ReKi)                 :: SRFP
-REAL(ReKi)                 :: SRFPC
-REAL(ReKi)                 :: TEMP
-REAL(ReKi)                 :: TFE
+   REAL(ReKi)                 :: AFEP
+   REAL(ReKi)                 :: AFF
+   REAL(ReKi)                 :: CMPA
+   REAL(ReKi)                 :: CMPB
+   REAL(ReKi)                 :: FSPA
+   REAL(ReKi)                 :: FSPB
+   REAL(ReKi)                 :: FSPCA
+   REAL(ReKi)                 :: FSPCB
+   REAL(ReKi)                 :: P1
+   REAL(ReKi)                 :: P2
+   REAL(ReKi)                 :: SRFP
+   REAL(ReKi)                 :: SRFPC
+   REAL(ReKi)                 :: TEMP
+   REAL(ReKi)                 :: TFE
 
-INTEGER                    :: I1
-INTEGER                    :: I1P1
-INTEGER                    :: I2
-INTEGER                    :: I2P1
+   INTEGER                    :: I1
+   INTEGER                    :: I1P1
+   INTEGER                    :: I2
+   INTEGER                    :: I2P1
+
+   ErrStat = ErrID_None
+   ErrMess = ""
 
 
-TFE  = TF
-DPP(J,IBLADE)   = OLDDPP(J,IBLADE) * EXP(-DS/TP) &
-                 + ( CNPOT(J,IBLADE) - CNPOT1(J,IBLADE) ) * EXP(-.5*DS/TP)
-CNP(J,IBLADE)  = CNPOT(J,IBLADE) -   DPP(J,IBLADE)
-CNPD(J,IBLADE) = CNP(J,IBLADE) - CNP1(J,IBLADE)
+TFE  = p%Beddoes%TF
+O%Beddoes%DPP(J,IBLADE)   = O%Beddoes%OLDDPP(J,IBLADE) * EXP(-O%Beddoes%DS/P%Beddoes%TP) &
+                 + ( O%Beddoes%CNPOT(J,IBLADE) - O%Beddoes%CNPOT1(J,IBLADE) ) * EXP(-.5*O%Beddoes%DS/P%Beddoes%TP)
+O%Beddoes%CNP(J,IBLADE)  =  O%Beddoes%CNPOT(J,IBLADE) -   O%Beddoes%DPP(J,IBLADE)
+O%Beddoes%CNPD(J,IBLADE) =  O%Beddoes%CNP(J,IBLADE) -  O%Beddoes%CNP1(J,IBLADE)
 
  ! USE CNPD to determine if AOA is increasing or decreasing.
  ! Vortex lift decays more rapidly for decreasing AOA.
 
-IF ( ANE(J,IBLADE) * CNPD(J,IBLADE) < 0. ) THEN
-   SHIFT = .TRUE.
+IF ( O%Beddoes%ANE(J,IBLADE) * O%Beddoes%CNPD(J,IBLADE) < 0. ) THEN
+   O%Beddoes%SHIFT = .TRUE.
 ELSE
-   SHIFT = .FALSE.
+   O%Beddoes%SHIFT = .FALSE.
 ENDIF
 
-AFF = CNP(J,IBLADE)/CNA1 + AOL1
+AFF = O%Beddoes%CNP(J,IBLADE)/CNA1 + AOL1
 
-IF ( ABS( AN ) <= PIBY2 ) THEN
-   AFE(J,IBLADE) =  AFF
-ELSEIF ( AN > PIBY2 ) THEN
-   AFE(J,IBLADE) = PI -  AFF
+IF ( ABS( O%Beddoes%AN ) <= PIBY2 ) THEN
+   O%Beddoes%AFE(J,IBLADE) =  AFF
+ELSEIF ( O%Beddoes%AN > PIBY2 ) THEN
+   O%Beddoes%AFE(J,IBLADE) = PI -  AFF
 ELSE
-   AFE(J,IBLADE) = -PI -  AFF
+   O%Beddoes%AFE(J,IBLADE) = -PI -  AFF
 ENDIF
 
-CALL MPI2PI ( AFE(J,IBLADE) )
+CALL MPI2PI ( O%Beddoes%AFE(J,IBLADE) )
 
-IF ( ( AFE(J,IBLADE) < AL(IFOIL,1) ) .OR.  &
-     ( AFE(J,IBLADE) > AL(IFOIL,NLIFT(IFOIL) ) ) ) THEN !bjj compare w/ MIN(MAX()) below.  Is NLIFT(IFOIL)=NFT ? yes!!!
-   CALL ProgAbort( ' Angle of attack = '//Num2LStr(REAL( AFE(J,IBLADE)*R2D, ReKi ))// &
+IF ( ( O%Beddoes%AFE(J,IBLADE) < O%AirFoil%AL(IFOIL,1) ) .OR.  &
+     ( O%Beddoes%AFE(J,IBLADE) > O%AirFoil%AL(IFOIL,p%AirFoil%NLIFT(IFOIL) ) ) ) THEN
+   CALL ProgAbort( ' Angle of attack = '//Num2LStr(REAL( O%Beddoes%AFE(J,IBLADE)*R2D, ReKi ))// &
                    ' is outside table.' )
 ENDIF
 
-AFE(J,IBLADE) = MIN( MAX( AFE(J,IBLADE), AL(IFOIL,1) ), AL(IFOIL,NFT) )
-CALL LocateBin( AFE(J,IBLADE), AL(IFOIL,1:NFT), I1, NFT )
+O%Beddoes%AFE(J,IBLADE) = MIN( MAX( O%Beddoes%AFE(J,IBLADE), O%AirFoil%AL(IFOIL,1) ), O%AirFoil%AL(IFOIL,NFT) )
+CALL LocateBin( O%Beddoes%AFE(J,IBLADE), O%AirFoil%AL(IFOIL,1:NFT), I1, NFT )
 
 IF (I1 == 0) THEN
    I1 = 1
@@ -3269,20 +3389,20 @@ END IF
 
 I1P1 = I1 + 1
 
-P1 = ( AL(IFOIL,I1) - AFE(J,IBLADE) ) / ( AL(IFOIL,I1) - AL(IFOIL,I1P1) )
+P1 = ( O%AirFoil%AL(IFOIL,I1) - O%Beddoes%AFE(J,IBLADE) ) / ( O%AirFoil%AL(IFOIL,I1) - O%AirFoil%AL(IFOIL,I1P1) )
 
-IF ( NTables(IFOIL) > 1 ) THEN
+IF ( p%AirFoil%NTables(IFOIL) > 1 ) THEN
 
  ! Locate the multiple airfoil position in the table
 
-   MulTabLoc = MIN( MAX( MulTabLoc, MulTabMet(IFOIL,1) ), MulTabMet(IFOIL,NTables(IFOIL)) )
-   CALL LocateBin( MulTabLoc, MulTabMet(IFOIL,1:NTables(IFOIL)),I2,NTables(IFOIL) )
+   O%AirFoil%MulTabLoc = MIN( MAX( O%AirFoil%MulTabLoc, p%AirFoil%MulTabMet(IFOIL,1) ), p%AirFoil%MulTabMet(IFOIL,p%AirFoil%NTables(IFOIL)) )
+   CALL LocateBin( O%AirFoil%MulTabLoc, p%AirFoil%MulTabMet(IFOIL,1:p%AirFoil%NTables(IFOIL)),I2,p%AirFoil%NTables(IFOIL) )
 
    IF ( I2 == 0 ) THEN
       I2   = 1
       I2P1 = 2
       P2   = 0.0
-   ELSE IF ( I2 == NTables(IFOIL) ) THEN
+   ELSE IF ( I2 == p%AirFoil%NTables(IFOIL) ) THEN
       I2P1 = I2
       I2   = I2 - 1
 
@@ -3290,79 +3410,79 @@ IF ( NTables(IFOIL) > 1 ) THEN
    ELSE
       I2P1 = I2 + 1
 
-      P2=(MulTabLoc-MulTabMet(IFOIL,I2))/(MulTabMet(IFOIL,I2P1)-MulTabMet(IFOIL,I2))
+      P2=(O%AirFoil%MulTabLoc-p%AirFoil%MulTabMet(IFOIL,I2))/(p%AirFoil%MulTabMet(IFOIL,I2P1)-p%AirFoil%MulTabMet(IFOIL,I2))
    END IF
 
  ! Interpolate the F-table values
 
 
-   FSPB  = FTB( IFOIL,I1,I2P1) - (FTB( IFOIL,I1,I2P1) - FTB( IFOIL,I1P1,I2P1) ) * P1
-   FSPCB = FTBC(IFOIL,I1,I2P1) - (FTBC(IFOIL,I1,I2P1) - FTBC(IFOIL,I1P1,I2P1) ) * P1
-   FSPA  = FTB( IFOIL,I1,I2  ) - (FTB( IFOIL,I1,I2  ) - FTB( IFOIL,I1P1,I2  ) ) * P1
-   FSPCA = FTBC(IFOIL,I1,I2  ) - (FTBC(IFOIL,I1,I2  ) - FTBC(IFOIL,I1P1,I2  ) ) * P1
+   FSPB  = O%Beddoes%FTB( IFOIL,I1,I2P1) - (O%Beddoes%FTB( IFOIL,I1,I2P1) - O%Beddoes%FTB( IFOIL,I1P1,I2P1) ) * P1
+   FSPCB = O%Beddoes%FTBC(IFOIL,I1,I2P1) - (O%Beddoes%FTBC(IFOIL,I1,I2P1) - O%Beddoes%FTBC(IFOIL,I1P1,I2P1) ) * P1
+   FSPA  = O%Beddoes%FTB( IFOIL,I1,I2  ) - (O%Beddoes%FTB( IFOIL,I1,I2  ) - O%Beddoes%FTB( IFOIL,I1P1,I2  ) ) * P1
+   FSPCA = O%Beddoes%FTBC(IFOIL,I1,I2  ) - (O%Beddoes%FTBC(IFOIL,I1,I2  ) - O%Beddoes%FTBC(IFOIL,I1P1,I2  ) ) * P1
 
-   FSP(J,IBLADE) = FSPA  + P2 * (FSPB-FSPA)
+   O%Beddoes%FSP(J,IBLADE) = FSPA  + P2 * (FSPB-FSPA)
 
-   FSPC(J,IBLADE)= FSPCA + P2 * (FSPCB-FSPCA)
+   O%Beddoes%FSPC(J,IBLADE)= FSPCA + P2 * (FSPCB-FSPCA)
 
 ELSE
 
-   FSP(J,IBLADE) = FTB(IFOIL,I1,1) - (FTB(IFOIL,I1,1) - FTB(IFOIL,I1P1,1) ) * P1
+   O%Beddoes%FSP(J,IBLADE) = O%Beddoes%FTB(IFOIL,I1,1) - (O%Beddoes%FTB(IFOIL,I1,1) - O%Beddoes%FTB(IFOIL,I1P1,1) ) * P1
 
-   FSPC(J,IBLADE)= FTBC(IFOIL,I1,1) - (FTBC(IFOIL,I1,1) - FTBC(IFOIL,I1P1,1) ) * P1
+   O%Beddoes%FSPC(J,IBLADE)= O%Beddoes%FTBC(IFOIL,I1,1) - (O%Beddoes%FTBC(IFOIL,I1,1) - O%Beddoes%FTBC(IFOIL,I1P1,1) ) * P1
 
 ENDIF
 
-IF ( ABS( AFE(J,IBLADE) - AOL1 ) < 1.E-10 ) THEN
-   FSP(J,IBLADE)  = 1.0
-   FSPC(J,IBLADE) = 1.0
+IF ( ABS( O%Beddoes%AFE(J,IBLADE) - AOL1 ) < 1.E-10 ) THEN
+   O%Beddoes%FSP(J,IBLADE)  = 1.0
+   O%Beddoes%FSPC(J,IBLADE) = 1.0
 ELSE
-   TEMP = 2.*SQRT(ABS(FSP(J,IBLADE)/(AFE(J,IBLADE)-AOL1)))-1.
-   FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
-   IF ( FSP(J,IBLADE) >  1.0 ) FSP(J,IBLADE) =  1.0
-   IF ( FSP(J,IBLADE) < -1.0 ) FSP(J,IBLADE) = -1.0
+   TEMP = 2.*SQRT(ABS(O%Beddoes%FSP(J,IBLADE)/(O%Beddoes%AFE(J,IBLADE)-AOL1)))-1.
+   O%Beddoes%FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+   IF ( O%Beddoes%FSP(J,IBLADE) >  1.0 ) O%Beddoes%FSP(J,IBLADE) =  1.0
+   IF ( O%Beddoes%FSP(J,IBLADE) < -1.0 ) O%Beddoes%FSP(J,IBLADE) = -1.0
 
-   IF ( ABS( AFE(J,IBLADE) ) < 1.E-10 ) THEN
-      FSPC(J,IBLADE) = 1.0
+   IF ( ABS( O%Beddoes%AFE(J,IBLADE) ) < 1.E-10 ) THEN
+      O%Beddoes%FSPC(J,IBLADE) = 1.0
    ELSE
-      TEMP = FSPC(J,IBLADE)/((AFE(J,IBLADE)-AOL1)*AFE(J,IBLADE))
-      FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
-      IF ( FSPC(J,IBLADE) >  1.0 ) FSPC(J,IBLADE) =  1.0
-      IF ( FSPC(J,IBLADE) < -1.0 ) FSPC(J,IBLADE) = -1.0
+      TEMP = O%Beddoes%FSPC(J,IBLADE)/((O%Beddoes%AFE(J,IBLADE)-AOL1)*O%Beddoes%AFE(J,IBLADE))
+      O%Beddoes%FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+      IF ( O%Beddoes%FSPC(J,IBLADE) >  1.0 ) O%Beddoes%FSPC(J,IBLADE) =  1.0
+      IF ( O%Beddoes%FSPC(J,IBLADE) < -1.0 ) O%Beddoes%FSPC(J,IBLADE) = -1.0
    ENDIF
 
 ENDIF
 
-IF ( CNP(J,IBLADE) > CNS1  ) BEDSEP(J,IBLADE) = .TRUE.
-IF ( CNP(J,IBLADE) < CNSL1 ) BEDSEP(J,IBLADE) = .TRUE.
+IF ( O%Beddoes%CNP(J,IBLADE) > CNS1  ) O%Beddoes%BEDSEP(J,IBLADE) = .TRUE.
+IF ( O%Beddoes%CNP(J,IBLADE) < CNSL1 ) O%Beddoes%BEDSEP(J,IBLADE) = .TRUE.
 
-IF ( BEDSEP(J,IBLADE) ) TAU(J,IBLADE) = OLDTAU(J,IBLADE) + DS/TVL
+IF ( O%Beddoes%BEDSEP(J,IBLADE) ) O%Beddoes%TAU(J,IBLADE) = O%Beddoes%OLDTAU(J,IBLADE) + O%Beddoes%DS/P%Beddoes%TVL
 
-IF (SHIFT) TFE = 1.5*TFE
+IF (O%Beddoes%SHIFT) TFE = 1.5*TFE
 
-DF(J,IBLADE) = OLDDF(J,IBLADE) * EXP(-DS/TFE)  &
-              + (FSP(J,IBLADE) - FSP1(J,IBLADE)) * EXP(-.5*DS/TFE)
-DFC(J,IBLADE)= OLDDFC(J,IBLADE) * EXP(-DS/TFE) &
-              + (FSPC(J,IBLADE) - FSPC1(J,IBLADE)) * EXP(-.5*DS/TFE)
+O%Beddoes%DF(J,IBLADE) = O%Beddoes%OLDDF(J,IBLADE) * EXP(-O%Beddoes%DS/TFE)  &
+              + (O%Beddoes%FSP(J,IBLADE) - O%Beddoes%FSP1(J,IBLADE)) * EXP(-.5*O%Beddoes%DS/TFE)
+O%Beddoes%DFC(J,IBLADE)= O%Beddoes%OLDDFC(J,IBLADE) * EXP(-O%Beddoes%DS/TFE) &
+              + (O%Beddoes%FSPC(J,IBLADE) - O%Beddoes%FSPC1(J,IBLADE)) * EXP(-.5*O%Beddoes%DS/TFE)
 
-FP   = FSP(J,IBLADE) - DF(J,IBLADE)
-FPC  = FSPC(J,IBLADE) - DFC(J,IBLADE)
-SRFP = SQRT( ABS(FP) )  * SIGN( 1., FP ) + 1.
-SRFPC= SQRT( ABS(FPC) ) * SIGN( 1.,FPC )
+O%Beddoes%FP   = O%Beddoes%FSP(J,IBLADE) - O%Beddoes%DF(J,IBLADE)
+O%Beddoes%FPC  = O%Beddoes%FSPC(J,IBLADE) - O%Beddoes%DFC(J,IBLADE)
+SRFP = SQRT( ABS(O%Beddoes%FP) )  * SIGN( 1., O%Beddoes%FP ) + 1.
+SRFPC= SQRT( ABS(O%Beddoes%FPC) ) * SIGN( 1.,O%Beddoes%FPC )
 
-FK   = 0.25 * SRFP * SRFP
-CN   = CNCP * FK + CNIQ
+O%Beddoes%FK   = 0.25 * SRFP * SRFP
+O%Beddoes%CN   = O%Beddoes%CNCP * O%Beddoes%FK + O%Beddoes%CNIQ
 
-CC   =  CC * SRFPC
+O%Beddoes%CC   =  O%Beddoes%CC * SRFPC
 
-DFAFE(J,IBLADE) = DFAFE1(J,IBLADE) * EXP(-DS/(.1*TFE)) &
-                 + (AFE(J,IBLADE) - AFE1(J,IBLADE)) * EXP(-.5*DS/(.1*TFE))
+O%Beddoes%DFAFE(J,IBLADE) = O%Beddoes%DFAFE1(J,IBLADE) * EXP(-O%Beddoes%DS/(.1*TFE)) &
+                 + (O%Beddoes%AFE(J,IBLADE) - O%Beddoes%AFE1(J,IBLADE)) * EXP(-.5*O%Beddoes%DS/(.1*TFE))
 
-AFEP=AFE(J,IBLADE) - DFAFE(J,IBLADE)
+AFEP=O%Beddoes%AFE(J,IBLADE) - O%Beddoes%DFAFE(J,IBLADE)
 
 
-AFEP = MIN( MAX( AFEP, AL(IFOIL,1) ), AL(IFOIL,NFT) )
-CALL LocateBin( AFEP, AL(IFOIL,1:NFT), I1, NFT )
+AFEP = MIN( MAX( AFEP, O%AirFoil%AL(IFOIL,1) ), O%AirFoil%AL(IFOIL,NFT) )
+CALL LocateBin( AFEP, O%AirFoil%AL(IFOIL,1:NFT), I1, NFT )
 
 IF (I1 == 0) THEN
    I1   = 1
@@ -3374,23 +3494,23 @@ ELSEIF ( I1 == NFT ) THEN
    P1   = 1.0
 ELSE
    I1P1 = I1 + 1
-   P1 = (AL(IFOIL,I1) - AFEP)/(AL(IFOIL,I1) - AL(IFOIL,I1P1))
+   P1 = (O%AirFoil%AL(IFOIL,I1) - AFEP)/(O%AirFoil%AL(IFOIL,I1) - O%AirFoil%AL(IFOIL,I1P1))
 END IF
 
 
-IF (NTables(IFOIL) > 1) THEN
+IF (p%AirFoil%NTables(IFOIL) > 1) THEN
 
  ! Interpolate the F-table values
 
-   CMPB = CM(IFOIL,I1,I2P1) - (CM(IFOIL,I1,I2P1) - CM(IFOIL,I1P1,I2P1) ) * P1
+   CMPB = O%AirFoil%CM(IFOIL,I1,I2P1) - (O%AirFoil%CM(IFOIL,I1,I2P1) - O%AirFoil%CM(IFOIL,I1P1,I2P1) ) * P1
 
-   CMPA = CM(IFOIL,I1,I2) - (CM(IFOIL,I1,I2) - CM(IFOIL,I1P1,I2) ) * P1
+   CMPA = O%AirFoil%CM(IFOIL,I1,I2) - (O%AirFoil%CM(IFOIL,I1,I2) - O%AirFoil%CM(IFOIL,I1P1,I2) ) * P1
 
-   PMC = CMPA  + P2*(CMPB-CMPA)
+   O%AirFoil%PMC = CMPA  + P2*(CMPB-CMPA)
 
 ELSE
 
-   PMC = CM(IFOIL,I1,1) - ( (CM(IFOIL,I1,1) - CM(IFOIL,I1P1,1) ) * P1 )
+   O%AirFoil%PMC = O%AirFoil%CM(IFOIL,I1,1) - ( (O%AirFoil%CM(IFOIL,I1,1) - O%AirFoil%CM(IFOIL,I1P1,1) ) * P1 )
 
 ENDIF
 
@@ -3401,83 +3521,84 @@ END SUBROUTINE SEPAR
 
 
  ! ******************************************************
-   SUBROUTINE VORTEX( J, IBlade, AE )
- !  PART OF THE BEDDOES DYNAMIC STALL MODEL
+   SUBROUTINE VORTEX( P, O, ErrStat, ErrMess, &
+                      J, IBlade, AE )
+ !  PART OF THE Beddoes DYNAMIC STALL MODEL
  ! ******************************************************
 
-USE                           Airfoil
-USE                           Bedoes
-
-
-IMPLICIT                      NONE
-
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: AE
+   REAL(ReKi),INTENT(IN)      :: AE
 
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
 
    ! Local Variables:
+   REAL(ReKi)                 :: CMV
+   REAL(ReKi)                 :: TSH
+   REAL(ReKi)                 :: TVE
 
-REAL(ReKi)                 :: CMV
-REAL(ReKi)                 :: TSH
-REAL(ReKi)                 :: TVE
+   ErrStat = ErrID_None
+   ErrMess = ""
 
+TVE = P%Beddoes%TV
+O%Beddoes%CVN(J,IBLADE) = O%Beddoes%CNCP * ( 1. - O%Beddoes%FK )
 
-
-TVE = TV
-CVN(J,IBLADE) = CNCP * ( 1. - FK )
-
-IF ( TAU(J,IBLADE) < 1. ) THEN
-   VOR = .TRUE.
-   IF (SHIFT) VOR = .FALSE.
+IF ( O%Beddoes%TAU(J,IBLADE) < 1. ) THEN
+   O%Beddoes%VOR = .TRUE.
+   IF (O%Beddoes%SHIFT) O%Beddoes%VOR = .FALSE.
 ELSE
-   VOR = .FALSE.
+   O%Beddoes%VOR = .FALSE.
 ENDIF
 
-IF (VOR) THEN
-   CNV(J,IBLADE) = OLDCNV(J,IBLADE) * EXP(-DS/TVE)  &
-                 + (CVN(J,IBLADE) - CVN1(J,IBLADE)) * EXP(-.5*DS/TVE)
+IF (O%Beddoes%VOR) THEN
+   O%Beddoes%CNV(J,IBLADE) = O%Beddoes%OLDCNV(J,IBLADE) * EXP(-O%Beddoes%DS/TVE)  &
+                 + (O%Beddoes%CVN(J,IBLADE) - O%Beddoes%CVN1(J,IBLADE)) * EXP(-.5*O%Beddoes%DS/TVE)
 ELSE
-   CNV(J,IBLADE) = OLDCNV(J,IBLADE) * EXP(-DS/(TVE*.5))
+   O%Beddoes%CNV(J,IBLADE) = O%Beddoes%OLDCNV(J,IBLADE) * EXP(-O%Beddoes%DS/(TVE*.5))
 ENDIF
 
-CN  = CN + CNV(J,IBLADE)
-CC  = CC + CNV(J,IBLADE) * AE * (1.- TAU(J,IBLADE))
-CMV = -0.2 * (1. - COS(PI*TAU(J,IBLADE)) ) * CNV(J,IBLADE)
-PMC = PMC + CMV + CMI + CMQ
+O%Beddoes%CN  = O%Beddoes%CN + O%Beddoes%CNV(J,IBLADE)
+O%Beddoes%CC  = O%Beddoes%CC + O%Beddoes%CNV(J,IBLADE) * AE * (1.- O%Beddoes%TAU(J,IBLADE))
+CMV = -0.2 * (1. - COS(PI*O%Beddoes%TAU(J,IBLADE)) ) * O%Beddoes%CNV(J,IBLADE)
+O%AirFoil%PMC = O%AirFoil%PMC + CMV + O%Beddoes%CMI + O%Beddoes%CMQ
 
-TSH = 2.*(1.- FP)/.19
+TSH = 2.*(1.- O%Beddoes%FP)/.19
 
-IF ( TAU(J,IBLADE) .GT. 1. + TSH/TVL .AND. .NOT. SHIFT) THEN
-   TAU(J,IBLADE) = 0.
-   BEDSEP(J,IBLADE) = .FALSE.
+IF ( O%Beddoes%TAU(J,IBLADE) .GT. 1. + TSH/p%Beddoes%TVL .AND. .NOT. O%Beddoes%SHIFT) THEN
+   O%Beddoes%TAU(J,IBLADE) = 0.
+   O%Beddoes%BEDSEP(J,IBLADE) = .FALSE.
 ENDIF
 
-IF ( TAU(J,IBLADE) .GT. 1. ) THEN
-   IF ( ANE(J,IBLADE) .LT. 0. ) THEN
+IF ( O%Beddoes%TAU(J,IBLADE) .GT. 1. ) THEN
+   IF ( O%Beddoes%ANE(J,IBLADE) .LT. 0. ) THEN
 
-      IF (CNPD(J,IBLADE) .LE. 0. .AND. CNPD1(J,IBLADE) .GE. 0.) THEN
-         BEDSEP(J,IBLADE) = .FALSE.
-         TAU(J,IBLADE) = 0.
+      IF (O%Beddoes%CNPD(J,IBLADE) .LE. 0. .AND. O%Beddoes%CNPD1(J,IBLADE) .GE. 0.) THEN
+         O%Beddoes%BEDSEP(J,IBLADE) = .FALSE.
+         O%Beddoes%TAU(J,IBLADE) = 0.
       ENDIF
 
-      IF (ANE1(J,IBLADE) .GT. 0.) THEN
-         BEDSEP(J,IBLADE) = .FALSE.
-         TAU(J,IBLADE) = 0.
+      IF (O%Beddoes%ANE1(J,IBLADE) .GT. 0.) THEN
+         O%Beddoes%BEDSEP(J,IBLADE) = .FALSE.
+         O%Beddoes%TAU(J,IBLADE) = 0.
       ENDIF
 
    ELSE
 
-      IF (CNPD(J,IBLADE) .GE. 0. .AND. CNPD1(J,IBLADE) .LE. 0.) THEN
-         BEDSEP(J,IBLADE) = .FALSE.
-         TAU(J,IBLADE) = 0.
+      IF (O%Beddoes%CNPD(J,IBLADE) .GE. 0. .AND. O%Beddoes%CNPD1(J,IBLADE) .LE. 0.) THEN
+         O%Beddoes%BEDSEP(J,IBLADE) = .FALSE.
+         O%Beddoes%TAU(J,IBLADE) = 0.
       ENDIF
 
-      IF (ANE1(J,IBLADE) .LT. 0.) THEN
-         BEDSEP(J,IBLADE) = .FALSE.
-         TAU(J,IBLADE) = 0.
+      IF (O%Beddoes%ANE1(J,IBLADE) .LT. 0.) THEN
+         O%Beddoes%BEDSEP(J,IBLADE) = .FALSE.
+         O%Beddoes%TAU(J,IBLADE) = 0.
       ENDIF
 
    ENDIF
@@ -3490,7 +3611,9 @@ END SUBROUTINE VORTEX
 
 
  ! ******************************************************
-   SUBROUTINE CLCD( ALPHA, CLA, CDA, CMA, I, ErrStat )
+   SUBROUTINE CLCD( P,  O,  ErrStat, ErrMess, &
+                    ALPHA, CLA, CDA, CMA, I )
+!   SUBROUTINE CLCD( ALPHA, CLA, CDA, CMA, I, ErrStat )
  !  returns values of lift and drag coeffs.
  !   This subroutine interpolates airfoil coefficients
  !   from a table of airfoil data.  The table must consist
@@ -3510,64 +3633,67 @@ END SUBROUTINE VORTEX
  !    MulTabLoc= Multiple airfoil table location for this element
  !    MulTabMet= Array containing the multiple airfoil table metric
  ! ******************************************************
-
-
-USE                           Airfoil
-
-IMPLICIT                      NONE
-
+!USE                           Airfoil
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(INOUT)   :: ALPHA
-REAL(ReKi),INTENT(OUT)     :: CDA
-REAL(ReKi),INTENT(OUT)     :: CLA
-REAL(ReKi),INTENT(OUT)     :: CMA
+   REAL(ReKi),INTENT(INOUT)   :: ALPHA
+   REAL(ReKi),INTENT(OUT)     :: CDA
+   REAL(ReKi),INTENT(OUT)     :: CLA
+   REAL(ReKi),INTENT(OUT)     :: CMA
 
-INTEGER   ,INTENT(IN)      :: I      ! NFOIL(J)
-INTEGER,   INTENT(OUT)     :: ErrStat
+   INTEGER   ,INTENT(IN)      :: I      ! NFOIL(J)
 
    ! Local Variables:
 
-REAL(ReKi)                 :: CDA1
-REAL(ReKi)                 :: CDA2
-REAL(ReKi)                 :: CLA1
-REAL(ReKi)                 :: CLA2
-REAL(ReKi)                 :: CMA1
-REAL(ReKi)                 :: CMA2
-REAL(ReKi)                 :: P1
-REAL(ReKi)                 :: P2
+   REAL(ReKi)                 :: CDA1
+   REAL(ReKi)                 :: CDA2
+   REAL(ReKi)                 :: CLA1
+   REAL(ReKi)                 :: CLA2
+   REAL(ReKi)                 :: CMA1
+   REAL(ReKi)                 :: CMA2
+   REAL(ReKi)                 :: P1
+   REAL(ReKi)                 :: P2
 
-INTEGER                    :: N1
-INTEGER                    :: N1P1
-INTEGER                    :: N2
-INTEGER                    :: N2P1
-INTEGER                    :: NTAB
+   INTEGER                    :: N1
+   INTEGER                    :: N1P1
+   INTEGER                    :: N2
+   INTEGER                    :: N2P1
+   INTEGER                    :: NTAB
 
+ErrStat = ErrID_None
+ErrMess = ""
 
-IF (.NOT. ALLOCATED(NFoil) ) THEN
+IF (.NOT. ALLOCATED(P%AirFoil%NFoil) ) THEN
    CDA = 0
    CLA = 0
    CMA = 0
-   ErrStat = 1
+   ErrStat = ErrID_Fatal
    RETURN
 ELSE
-   ErrStat = 0
+   ErrStat = ErrID_None
 END IF
 
-NTAB = NLIFT(I)
+NTAB = P%AirFoil%NLIFT(I)
 
-IF ( ( ALPHA < AL(I,1) ) .OR. ( ALPHA > AL(I,NTAB) ) )   THEN
+IF ( ( ALPHA < O%AirFoil%AL(I,1) ) .OR. ( ALPHA > O%AirFoil%AL(I,NTAB) ) )   THEN
 !bjj: This error message isn't necessarially accurate:
    CALL ProgAbort( ' Angle of attack = '//TRIM(Num2LStr(ALPHA*R2D))// &
                    ' deg is outside data table range. '// & !Blade #'//TRIM(Int2LStr(IBLADE))//&
                    ' Airfoil '//TRIM(Int2LStr(I))//'.' )
 !                   ' element '//TRIM(Int2LStr(J))//'.' )
 
-   ErrStat = 1
+   ErrStat = ErrID_Fatal
+   RETURN
 ENDIF
 
-ALPHA = MIN( MAX( ALPHA, AL(I,1) ), AL(I,NTAB) )
-CALL LocateBin (ALPHA, AL(I,1:NTAB), N1, NTAB )
+ALPHA = MIN( MAX( ALPHA, O%AirFoil%AL(I,1) ), O%AirFoil%AL(I,NTAB) )
+CALL LocateBin (ALPHA, O%AirFoil%AL(I,1:NTAB), N1, NTAB )
 
 IF (N1 == 0) THEN
    N1   = 1
@@ -3579,37 +3705,37 @@ ELSEIF(N1 == NTAB) THEN
    P1   = 1.0
 ELSE
    N1P1 = N1 + 1
-   P1   = ( ALPHA - AL(I, N1) )/( AL(I, N1P1) - AL(I, N1) )
+   P1   = ( ALPHA - O%AirFoil%AL(I, N1) )/( O%AirFoil%AL(I, N1P1) - O%AirFoil%AL(I, N1) )
 END IF
 
  ! If the element has multiple airfoil tables, do a 2-D linear interpolation
  !  for Cl and CD
 
-IF (NTables(I) > 1) THEN
+IF (P%AirFoil%NTables(I) > 1) THEN
 
-   MulTabLoc = MIN( MAX( MulTabLoc, MulTabMet(I,1) ), MulTabMet(I,NTables(I)) )
-   CALL LocateBin (MulTabLoc, MulTabMet(I,1:NTables(I)),N2,NTables(I))
+   O%AirFoil%MulTabLoc = MIN( MAX( O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1) ), P%AirFoil%MulTabMet(I,P%AirFoil%NTables(I)) )
+   CALL LocateBin (O%AirFoil%MulTabLoc, P%AirFoil%MulTabMet(I,1:P%AirFoil%NTables(I)),N2,P%AirFoil%NTables(I))
 
    IF (N2 == 0) THEN
       N2   = 1
       N2P1 = 2
       P2   = 0.0
-   ELSE IF ( N2 == NTables(I) ) THEN
+   ELSE IF ( N2 == P%AirFoil%NTables(I) ) THEN
       N2P1 = N2
       N2   = N2 - 1
       P2   = 1.0
    ELSE
       N2P1 = N2 + 1
-      P2   = (MulTabLoc - MulTabMet(I,N2))/(MulTabMet(I,N2P1)-MulTabMet(I,N2))
+      P2   = (O%AirFoil%MulTabLoc - P%AirFoil%MulTabMet(I,N2))/(P%AirFoil%MulTabMet(I,N2P1)-P%AirFoil%MulTabMet(I,N2))
    END IF
 
-   CLA1 = CL(I,N1,N2) + P1 * ( CL(I,N1P1,N2) - CL(I,N1,N2) )
-   CDA1 = CD(I,N1,N2) + P1 * ( CD(I,N1P1,N2) - CD(I,N1,N2) )
-   CMA1 = CM(I,N1,N2) + P1 * ( CM(I,N1P1,N2) - CM(I,N1,N2) )
+   CLA1 = O%AirFoil%CL(I,N1,N2) + P1 * ( O%AirFoil%CL(I,N1P1,N2) - O%AirFoil%CL(I,N1,N2) )
+   CDA1 = O%AirFoil%CD(I,N1,N2) + P1 * ( O%AirFoil%CD(I,N1P1,N2) - O%AirFoil%CD(I,N1,N2) )
+   CMA1 = O%AirFoil%CM(I,N1,N2) + P1 * ( O%AirFoil%CM(I,N1P1,N2) - O%AirFoil%CM(I,N1,N2) )
 
-   CLA2 = CL(I,N1,N2P1) + P1 * ( CL(I,N1P1,N2P1) - CL(I,N1,N2P1) )
-   CDA2 = CD(I,N1,N2P1) + P1 * ( CD(I,N1P1,N2P1) - CD(I,N1,N2P1) )
-   CMA2 = CM(I,N1,N2P1) + P1 * ( CM(I,N1P1,N2P1) - CM(I,N1,N2P1) )
+   CLA2 = O%AirFoil%CL(I,N1,N2P1) + P1 * ( O%AirFoil%CL(I,N1P1,N2P1) - O%AirFoil%CL(I,N1,N2P1) )
+   CDA2 = O%AirFoil%CD(I,N1,N2P1) + P1 * ( O%AirFoil%CD(I,N1P1,N2P1) - O%AirFoil%CD(I,N1,N2P1) )
+   CMA2 = O%AirFoil%CM(I,N1,N2P1) + P1 * ( O%AirFoil%CM(I,N1P1,N2P1) - O%AirFoil%CM(I,N1,N2P1) )
 
    CLA = CLA1 + P2 * ( CLA2 - CLA1 )
    CDA = CDA1 + P2 * ( CDA2 - CDA1 )
@@ -3617,9 +3743,9 @@ IF (NTables(I) > 1) THEN
 
 ELSE
 
-   CLA  = CL(I,N1,1) + P1 * ( CL(I,N1P1,1) - CL(I,N1,1) )
-   CDA  = CD(I,N1,1) + P1 * ( CD(I,N1P1,1) - CD(I,N1,1) )
-   CMA  = CM(I,N1,1) + P1 * ( CM(I,N1P1,1) - CM(I,N1,1) )
+   CLA  = O%AirFoil%CL(I,N1,1) + P1 * ( O%AirFoil%CL(I,N1P1,1) - O%AirFoil%CL(I,N1,1) )
+   CDA  = O%AirFoil%CD(I,N1,1) + P1 * ( O%AirFoil%CD(I,N1P1,1) - O%AirFoil%CD(I,N1,1) )
+   CMA  = O%AirFoil%CM(I,N1,1) + P1 * ( O%AirFoil%CM(I,N1P1,1) - O%AirFoil%CM(I,N1,1) )
 
 ENDIF
 
@@ -3677,37 +3803,36 @@ END FUNCTION SAT
 
  ! **************************************
 
-   SUBROUTINE Inflow()
+   SUBROUTINE Inflow( P, O, ErrStat, ErrMess )
 
  ! Gateway to the dynamic inflow routines.
  ! Called by NEWTIME after a time step.
  ! **************************************
 
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-USE               AeroTime
-USE               DynInflow
-USE               Switch
+      IF ( P%DYNINFL ) THEN
 
-
-IMPLICIT          NONE
-
-      IF ( DYNINFL ) THEN
-
- ! INITIALIZE DYNAMIC INFLOW PARAMETERS
-         IF ( DYNINIT .AND. ( TIME > 0.0D0 ) ) THEN
-            CALL INFINIT
-            !WRITE(*,*) 'Activating dynamic inflow calculation'
-            old_Alph = 0.0
-            old_Beta = 0.0
-            DYNINIT = .FALSE.
-            SKEW = .FALSE.
-         ENDIF
+! INITIALIZE DYNAMIC INFLOW PARAMETERS
+        IF ( O%DYNINIT .AND. ( O%TIME > 0.0D0 ) ) THEN
+           CALL INFINIT( P, O, ErrStat, ErrMess )
+           !WRITE(*,*) 'Activating dynamic inflow calculation'
+           O%DynInflow%old_Alph = 0.0
+           O%DynInflow%old_Beta = 0.0
+           O%DYNINIT = .FALSE.
+           O%SKEW = .FALSE.
+        ENDIF
 
  ! Update the dynamic inflow parameters
-         CALL INFUPDT
-         CALL GetPhiLq
+         CALL INFUPDT(P, O, ErrStat, ErrMess)
+         CALL GetPhiLq(P, O, ErrStat, ErrMess)
  ! Calculate the dynamic inflow paremeters for the new time step
-         IF( TIME > 1.0D0 ) CALL INFDIST
+         IF( O%TIME > 1.0D0 ) CALL INFDIST(P, O, ErrStat, ErrMess)
 
       ENDIF   ! DYNINFL
 
@@ -3717,77 +3842,73 @@ END SUBROUTINE Inflow
 
  ! **************************************
 
-   SUBROUTINE GetRM (rLocal, DFN, DFT, psi, J, IBlade)
+   SUBROUTINE GetRM ( P,  O,  ErrStat, ErrMess, &
+                      rLocal, DFN, DFT, psi, J, IBlade)
 
  ! Returns RM(MODE), the [mode]-th moment of the blade normal force.
  !  Here, the force is in [N/m], while the moment arm is
  !  non-dimensional (RLOCAL/R).  Also see FUNCTION XPHI.
  ! Called as each element is processed by AeroDyn.
  ! **************************************
-
-
-USE                           Blade
-USE                           DynInflow
-USE                           Switch
-
-
-IMPLICIT                      NONE
-
+   IMPLICIT                      NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: DFN
-REAL(ReKi),INTENT(IN)      :: DFT
-REAL(ReKi),INTENT(IN)      :: psi
-REAL(ReKi),INTENT(IN)      :: rLocal
+   REAL(ReKi),INTENT(IN)      :: DFN
+   REAL(ReKi),INTENT(IN)      :: DFT
+   REAL(ReKi),INTENT(IN)      :: psi
+   REAL(ReKi),INTENT(IN)      :: rLocal
 
-INTEGER,   INTENT(IN)      :: J
-INTEGER,   INTENT(IN)      :: IBlade
-
+   INTEGER,   INTENT(IN)      :: J
+   INTEGER,   INTENT(IN)      :: IBlade
 
    ! Local Variables:
+   REAL(ReKi)                 :: fElem
+   ! psiBar is Suzuki's, WindPsi is Shawler's
+   !REAL(ReKi)                :: psiBar
+   REAL(ReKi)                 :: Rzero
+   REAL(ReKi)                 :: WindPsi
 
-REAL(ReKi)                 :: fElem
-! psiBar is Suzuki's, WindPsi is Shawler's
-!REAL(ReKi)                :: psiBar
-REAL(ReKi)                 :: Rzero
-REAL(ReKi)                 :: WindPsi
+   INTEGER                    :: mode
 
-INTEGER                    :: mode
+   ErrStat = ErrID_None
+   ErrMess = ""
 
 
-
-IF ( SWIRL ) THEN
+IF ( P%SWIRL ) THEN
    fElem = SQRT( DFN * DFN + DFT * DFT )
 ELSE
    fElem = DFN
 ENDIF
-fElem = fElem / R
+fElem = fElem / P%Blade%R
 
-Rzero = rLocal / R
+Rzero = rLocal / P%Blade%R
 ! Suzukis inflow azimuth measure
 !psiBar = - psi - piBy2
 ! Shawler: wind based inflow azimuth measure
-CALL WindAzimuthZero (psi,WindPsi)
+CALL WindAzimuthZero (psi,O%Wind%VrotorY,O%Wind%VrotorZ,WindPsi)
 
 ! Save values rotor loads for USE in Newtime (to accumulate rotor loads)
-DO mode = 1, MAXINFL0
-   RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )
+DO mode = 1, P%DynInflow%MAXINFLO
+   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )
 END DO ! mode
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++
 !Suzuki's method
-!DO mode = MAXINFL0+1, maxInfl
-!   RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode)) * psiBar )
-!   RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode)) * psiBar )
+!DO mode = MaxInflo+1, maxInfl
+!   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode)) * psiBar )
+!   O%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode)) * psiBar )
 !END DO ! mode
 ! Shawler's method
-DO mode = MAXINFL0+1, maxInfl
-   RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode)) * Windpsi )
-   RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode)) * Windpsi )
+DO mode = p%DynInflow%MaxInflo+1, maxInfl
+   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode)) * WindPsi )
+   O%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode)) * WindPsi )
 END DO ! mode
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
 
 RETURN
 END SUBROUTINE GetRM
@@ -3795,7 +3916,7 @@ END SUBROUTINE GetRM
 
  ! **************************************
 
-   SUBROUTINE GetPhiLq
+   SUBROUTINE GetPhiLq( P, O, ErrStat, ErrMess )
 
  ! Accumulate the rotor forces for dynamic inflow calculations
  !  PhiLqC is Lq times PHI (shape function) in COS equation.
@@ -3804,81 +3925,80 @@ END SUBROUTINE GetRM
  !   are summed here after a time step.
  ! **************************************
 
-USE            Blade
-USE            DynInflow
-USE            Element
+!USE            Blade
+!USE            DynInflow
+!USE            Element
+
+   IMPLICIT       NONE
+      ! Passed Variables:
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
 
-IMPLICIT       NONE
+   INTEGER     :: iblad
+   INTEGER     :: ielem
+   INTEGER     :: mode
 
+   ErrStat = ErrID_None
+   ErrMess = ""
 
-INTEGER     :: iblad
-INTEGER     :: ielem
-INTEGER     :: mode
-
-
-
-PhiLqC = 0.
-PhiLqS = 0.
+O%DynInflow%PhiLqC = 0.
+O%DynInflow%PhiLqS = 0.
 
 DO mode = 1, maxInfl
-   DO iblad = 1, NB
-      DO ielem = 1, NELM
-         PhiLqC(mode) = PhiLqC(mode) + RMC_SAVE(iblad, ielem, mode)
-         IF (mode >= maxInfl0+1) &
-         PhiLqS(mode) = PhiLqS(mode) + RMS_SAVE(iblad, ielem, mode)
+   DO iblad = 1, P%Blade%NB
+      DO ielem = 1, P%Element%NELM
+         O%DynInflow%PhiLqC(mode) = O%DynInflow%PhiLqC(mode) + O%DynInflow%RMC_SAVE(iblad, ielem, mode)
+         IF (mode >= p%DynInflow%MaxInflo+1) &
+         O%DynInflow%PhiLqS(mode) = O%DynInflow%PhiLqS(mode) + O%DynInflow%RMS_SAVE(iblad, ielem, mode)
       END DO !ielem
    END DO !iblad
 END DO !mode
-
-
 
 RETURN
 END SUBROUTINE GetPhiLq
 
 
  ! *************************************************************
-   SUBROUTINE infinit
+   SUBROUTINE infinit( P, O, ErrStat, ErrMess )
  !  Initializes the variables in the dynamic inflow equation.
  !  Called only once to initialize the GDW parameters.
  ! *************************************************************
+      IMPLICIT                      NONE
 
-
-USE                           AeroTime
-USE                           Blade
-USE                           DynInflow
-USE                           Element
-USE                           Rotor
-USE                           Wind
-
-
-IMPLICIT                      NONE
-
+      TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+      TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+      INTEGER, INTENT(OUT)                   :: ErrStat
+      CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Local Variables:
 
-REAL(ReKi)                 :: tauCos ( maxInfl )
-REAL(ReKi)                 :: tauSin ( maxInfl0+1 : maxInfl )
-REAL(ReKi)                 :: v1
-REAL(ReKi)                 :: v2
-REAL(ReKi)                 :: v3
-REAL(ReKi)                 :: Vplane2
+      REAL(ReKi)                 :: tauCos ( maxInfl )
+      REAL(ReKi)                 :: tauSin ( P%DynInflow%MaxInflo+1 : maxInfl )
+      REAL(ReKi)                 :: v1
+      REAL(ReKi)                 :: v2
+      REAL(ReKi)                 :: v3
+      REAL(ReKi)                 :: Vplane2
 
-INTEGER                    :: i
-INTEGER                    :: iElem
-INTEGER                    :: irow
-INTEGER                    :: jBlade
-INTEGER                    :: jcol
-INTEGER                    :: k
-INTEGER                    :: mode
+      INTEGER                    :: i
+      INTEGER                    :: iElem
+      INTEGER                    :: irow
+      INTEGER                    :: jBlade
+      INTEGER                    :: jcol
+      INTEGER                    :: k
+      INTEGER                    :: mode
 
+   ErrStat = ErrID_None
+   ErrMess = ""
 
  ! Initialize the MRvector & NJVector.
  !  MRvector is the azimuthal mode of the inflow distribution.
  !  NJvector is the radial mode of the inflow distribution.
 
-MRVector(:) = (/ 0, 0, 1, 1, 2, 3 /)  !bjj why aren't these parameters?
-NJVector(:) = (/ 1, 3, 2, 4, 3, 4 /)
+!P%DynInflow%MRVector(:) = (/ 0, 0, 1, 1, 2, 3 /)  !bjj why aren't these parameters? Now they are.
+!P%DynInflow%NJVector(:) = (/ 1, 3, 2, 4, 3, 4 /)
 
  ! For your reference,
  !  Marray(irow,jcol) = MRvector(jcol)
@@ -3887,82 +4007,83 @@ NJVector(:) = (/ 1, 3, 2, 4, 3, 4 /)
  !  Jarray(irow,jcol) = NJvector(irow)
 
  ! Initialize the time derivatives.
-dAlph_dt(:,:) = 0.
-dBeta_dt(:,:) = 0.
+O%DynInflow%dAlph_dt(:,:) = 0.
+O%DynInflow%dBeta_dt(:,:) = 0.
 
- ! Set up the constants.
- !  xMinv is [M]^-1.  Because [M]^-1 is just a diagonal matrix,
- !  it is stored as a column vector.
-DO irow = 1, maxInfl
-   xMinv(irow) = PIBY2 / hfunc(MRvector(irow), NJvector(irow))   !bjj: this is really just a parameter, too.
-END DO !irow
+! ! Set up the constants.
+! !  xMinv is [M]^-1.  Because [M]^-1 is just a diagonal matrix,
+! !  it is stored as a column vector.
+!bjj: this is a parameter that we'll set at initialization
+!DO irow = 1, maxInfl
+!   p%DynInflow%xMinv(irow) = PIBY2 / hfunc(MRvector(irow), NJvector(irow))   !bjj: this is really just a parameter, too.
+!END DO !irow
 
  ! Set up the GAMMA matrix which is used to calculate [L] matrix.
  !  FUNCTION FGAMMA is called.
 DO irow = 1, maxInfl
    DO jcol = 1, maxInfl
-      gamma( irow, jcol )  &
+      O%DynInflow%gamma( irow, jcol )  &
            = fgamma( MRvector( irow ), NJvector( irow ),  &
-                     MRvector( jcol ), NJvector( jcol )  )        !bjj: this is really just a parameter, too.
+                     MRvector( jcol ), NJvector( jcol )  )  !bjj: this is really just a parameter, too.
    END DO !jcol
 END DO !irow
 
  ! calculate and store the M-R matrices, which are used in Subroutine LMATRIX.
 DO irow = 1, maxInfl
    DO jcol = 1, maxInfl
-      MminR  (irow,jcol) = MIN( MRvector(jcol) , MRvector(irow) ) !bjj: this is really just a parameter, too.
-      MplusR (irow,jcol) =      MRvector(jcol) + MRvector(irow)   !bjj: this is really just a parameter, too.
-      MminusR(irow,jcol) = ABS( MRvector(jcol) - MRvector(irow) ) !bjj: this is really just a parameter, too.
+      O%DynInflow%MminR  (irow,jcol) = MIN( MRvector(jcol) , MRvector(irow) )
+      O%DynInflow%MplusR (irow,jcol) =      MRvector(jcol) + MRvector(irow)
+      O%DynInflow%MminusR(irow,jcol) = ABS( MRvector(jcol) - MRvector(irow) )
    END DO !jcol
 END DO !irow
 
  ! Calculate the tip speed of the rotor. This isn't constant in ADAMS.
  !  Thus, it will be updated at every time step in ADAMS.
-TipSpeed = MAX(r * revs, 1.0e-6)
+O%DynInflow%TipSpeed = MAX(P%Blade%r * O%Rotor%revs, 1.0e-6)
 
  ! Calculate the disk loading normalization factor.
  !  This is not exactly pressure but let's call it P0.
  !  The actual unit is [N/m] or [Pa*m].
  !    Pzero = PI * AirDensity * (Rotational Speed)^2 * (Radius)^3
- !    Pzero = pi * rho * revs**2 * r**3
- !    Pzero = pi * rho * revs * revs * r * r * r
-Pzero = pi * rho * TipSpeed * TipSpeed * r
+ !    Pzero = pi * rho * revs**2 * P%Blade%r**3
+ !    Pzero = pi * rho * revs * revs * P%Blade%r * P%Blade%r * P%Blade%r
+O%DynInflow%Pzero = pi * p%Wind%rho * O%DynInflow%TipSpeed * O%DynInflow%TipSpeed * P%Blade%r
  ! Non-dimensional time
-DT0   = DT * REVS !bjj: this isn't used in this subroutine?
+O%DynInflow%DTO   = o%DT * O%Rotor%REVS !bjj: this isn't used in this subroutine?
 
  ! Calculate the initial values of inflow distribution parameters
 
  ! Calculate the non-dimensional wind velocity components.
 
-v1 =   VrotorZ / TipSpeed     !inplane, upward
-v2 =   VrotorY / TipSpeed     !inplane, right looking downwind
-v3 = - VrotorX / TipSpeed     !out-of-plane, normal to the rotor
+v1 =   O%Wind%VrotorZ / O%DynInflow%TipSpeed     !inplane, upward
+v2 =   O%Wind%VrotorY / O%DynInflow%TipSpeed     !inplane, right looking downwind
+v3 = - O%Wind%VrotorX / O%DynInflow%TipSpeed     !out-of-plane, normal to the rotor
 
  ! Calculate the initial value of lambda_m by taking the average
  !  of the induction factors(A). The A's are calculated by
  !  momentum balance during the first rotation of the trim solution.
-xLambda_M = 0.
-DO jBlade=1,nb
-   DO iElem =1,nelm
-      xLambda_M = xLambda_M + a(iElem,jBlade)
+O%DynInflow%xLambda_M = 0.
+DO jBlade=1,P%Blade%nb
+   DO iElem =1,P%Element%nelm
+      O%DynInflow%xLambda_M = O%DynInflow%xLambda_M + O%Element%a(iElem,jBlade)
    END DO !iElem
 END DO !jBlade
-xLambda_M = xLambda_M / ( nb * nelm )
+O%DynInflow%xLambda_M = O%DynInflow%xLambda_M / ( P%Blade%nb * P%Element%nelm )
 
  ! A's are normalized by the normal wind speed, while Lambda's are
  !  mormalized by the tip speed. Make the conversion.
  !  xLambda_M = xLambda_M * (-VrotorX/TipSpeed)
-xLambda_M = xLambda_M * v3
+O%DynInflow%xLambda_M = O%DynInflow%xLambda_M * v3
 
  ! totalInf is the non-dimensional total wind speed normal to the rotor.
-totalInf = - v3 + xLambda_M
+O%DynInflow%totalInf = - v3 + O%DynInflow%xLambda_M
  ! Vplane2 is the square of in-plane component of the non-dimensional
  !  wind velocity.
 Vplane2 = v1 * v1 + v2 * v2
  ! VTOTAL is the total wind speed at the rotor.
-Vtotal  = SQRT( totalInf * totalInf + Vplane2 )
+O%DynInflow%Vtotal  = SQRT( O%DynInflow%totalInf * O%DynInflow%totalInf + Vplane2 )
  ! VPARAM is the velocity parameter.
-Vparam  =( Vplane2 + ( totalInf + old_LmdM ) * totalInf ) / Vtotal
+O%DynInflow%Vparam  =( Vplane2 + ( O%DynInflow%totalInf + O%DynInflow%old_LmdM ) * O%DynInflow%totalInf ) / O%DynInflow%Vtotal
 
  ! Calculate the disk skew angle function using the effective disk angle
  !  of attack.
@@ -3976,159 +4097,160 @@ Vparam  =( Vplane2 + ( totalInf + old_LmdM ) * totalInf ) / Vtotal
 !xKaiS = TAN( .5 * ATAN(  v1 / totalInf ) )
  !xkai = TAN( .5 * SIGN( ATAN( SQRT( vplane2 ) / totalInf ), v2 ) )
  !Shawler:
-xkai = TAN( .5 * ATAN( SQRT( Vplane2 ) / totalInf ) )
+O%DynInflow%xkai = TAN( .5 * ATAN( SQRT( Vplane2 ) / O%DynInflow%totalInf ) )
  !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
  ! To calculate the initial values of xAlpha & xBeta, get [L] matrices
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  ! Suzuki:
-!CALL LMATRIX ( xKaiC, 1 )
-!CALL LMATRIX ( xKaiS, 2 )
+!CALL LMATRIX ( o,p,xKaiC, 1 )
+!CALL LMATRIX ( o,p,xKaiS, 2 )
  ! Shawler:
-CALL LMATRIX ( xKai, 1 )
-CALL LMATRIX ( xKai, 2 )
+CALL LMATRIX ( o,p, 1 )
+CALL LMATRIX ( o,p, 2 )
 ! CALL LMATRIX ( xkai )
  ! Here we need [L_cos] & [L_sin], not [L_***}^-1.
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
  ! Get TAU's (pressure coefficient). Refer to Subroutine INFDIST.
-DO mode = 1, maxInfl0
-   tauCos(mode) = - PhiLqC(mode) / Pzero * .5
+DO mode = 1, P%DynInflow%MaxInflo
+   tauCos(mode) = - O%DynInflow%PhiLqC(mode) / O%DynInflow%Pzero * .5
 END DO !mode
 
-DO mode = maxInfl0+1, maxInfl
-   tauCos(mode) = - PhiLqC(mode) / Pzero
-   tauSin(mode) = - PhiLqS(mode) / Pzero
+DO mode = P%DynInflow%MaxInflo+1, maxInfl
+   tauCos(mode) = - O%DynInflow%PhiLqC(mode) / O%DynInflow%Pzero
+   tauSin(mode) = - O%DynInflow%PhiLqS(mode) / O%DynInflow%Pzero
 END DO !mode
 
  ! Get the steady values of alpha(1)
  !  If m=0 and n=1, USE VTOTAL.
-xAlpha(1) = 0.
+O%DynInflow%xAlpha(1) = 0.
 DO k = 1, maxInfl
-   xAlpha(1) = xAlpha(1) + xLcos(1,k) * tauCos(k)
+   O%DynInflow%xAlpha(1) = O%DynInflow%xAlpha(1) + O%DynInflow%xLcos(1,k) * tauCos(k)
 END DO !k
-xAlpha(1) = .5 * xAlpha(1) / Vtotal
+O%DynInflow%xAlpha(1) = .5 * O%DynInflow%xAlpha(1) / O%DynInflow%Vtotal
 
  ! If m=0 but NOT n=1, USE VPARAM.
-DO i = 2, maxInfl0
-   xAlpha(i) = 0.
+DO i = 2, P%DynInflow%MaxInflo
+   O%DynInflow%xAlpha(i) = 0.
    DO k = 1, maxInfl
-      xAlpha(i) = xAlpha(i) + xLcos(i,k) * tauCos(k)
+      O%DynInflow%xAlpha(i) = O%DynInflow%xAlpha(i) + O%DynInflow%xLcos(i,k) * tauCos(k)
    END DO !k
-   xAlpha(i) = .5 * xAlpha(i) / Vparam
+   O%DynInflow%xAlpha(i) = .5 * O%DynInflow%xAlpha(i) / O%DynInflow%Vparam
 END DO !i
 
  ! Get the steady values of alpha's & beta's
-DO i = maxInfl0+1, maxInfl
-   xAlpha(i) = 0.
+DO i = P%DynInflow%MaxInflo+1, maxInfl
+   O%DynInflow%xAlpha(i) = 0.
  ! akihiro
 !   DO k = 1, maxInfl
-   DO k = maxInfl0+1, maxInfl
-      xAlpha(i) = xAlpha(i) + xLcos(i,k) * tauCos(k)
+   DO k = P%DynInflow%MaxInflo+1, maxInfl
+      O%DynInflow%xAlpha(i) = O%DynInflow%xAlpha(i) + O%DynInflow%xLcos(i,k) * tauCos(k)
    END DO !k
-   xAlpha(i) = .5 * xAlpha(i) / Vparam
+   O%DynInflow%xAlpha(i) = .5 * O%DynInflow%xAlpha(i) / O%DynInflow%Vparam
 
-   xBeta (i) = 0.
-   DO k = maxInfl0+1, maxInfl
-      xBeta (i) = xBeta (i) + xLsin(i,k) * tauSin(k)
+   O%DynInflow%xBeta (i) = 0.
+   DO k = P%DynInflow%MaxInflo+1, maxInfl
+      O%DynInflow%xBeta (i) = O%DynInflow%xBeta (i) + O%DynInflow%xLsin(i,k) * tauSin(k)
    END DO !k
-   xBeta (i) = .5 * xBeta (i) / Vparam
+   O%DynInflow%xBeta (i) = .5 * O%DynInflow%xBeta (i) / O%DynInflow%Vparam
 END DO !i
 
  ! Invert [L_cos] & [L_sin] matrices in case the XKAI is constant
  !  and the same [L]'s are used later.
-CALL MATINV  ( xLcos, xLsin, maxInfl, maxInfl0, 1 )
-CALL MATINV  ( xLcos, xLsin, maxInfl, maxInfl0, 2 )
-
-
+CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 1 )
+CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2 )
 
 RETURN
 END SUBROUTINE infinit
 
 
  ! **********************************************************************
-   SUBROUTINE infupdt
+   SUBROUTINE infupdt( P, O, ErrStat, ErrMess )
  !  INFUPDT updates the OLD variables of inflow distribution parameters.
  !   The program must call this subroutine before calling
  !   the subroutine INFDIST.
  ! **********************************************************************
 
+!USE            DynInflow
 
-USE            DynInflow
+   IMPLICIT       NONE
+
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
+   INTEGER     :: i
 
 
-IMPLICIT       NONE
-
-
-INTEGER     :: i
-!rm not used:INTEGER(4)  :: mode
-
-
+   ErrStat = ErrID_None
+   ErrMess = ""
 
 !+++++++++++++++++++++++++++
 !Suzuki:
 !oldKaiC     = xKaiC
 !oldKaiS     = xKaiS
 !Shawler:
-oldKai = xKai
+O%DynInflow%oldKai = O%DynInflow%xKai
 !+++++++++++++++++++++++++++
 
-old_LmdM    = xLambda_M
+O%DynInflow%old_LmdM    = O%DynInflow%xLambda_M
 
 DO i = 1, maxInfl
-   old_Alph(i)   = xAlpha  (i)
-   dAlph_dt(i,4) = dAlph_dt(i,3)
-   dAlph_dt(i,3) = dAlph_dt(i,2)
-   dAlph_dt(i,2) = dAlph_dt(i,1)
+   O%DynInflow%old_Alph(i)   = O%DynInflow%xAlpha  (i)
+   O%DynInflow%dAlph_dt(i,4) = O%DynInflow%dAlph_dt(i,3)
+   O%DynInflow%dAlph_dt(i,3) = O%DynInflow%dAlph_dt(i,2)
+   O%DynInflow%dAlph_dt(i,2) = O%DynInflow%dAlph_dt(i,1)
 END DO !i
 
-DO i = maxInfl0+1, maxInfl
-   old_Beta(i)   = xBeta   (i)
-   dBeta_dt(i,4) = dBeta_dt(i,3)
-   dBeta_dt(i,3) = dBeta_dt(i,2)
-   dBeta_dt(i,2) = dBeta_dt(i,1)
+DO i = P%DynInflow%MaxInflo+1, maxInfl
+   O%DynInflow%old_Beta(i)   = O%DynInflow%xBeta   (i)
+   O%DynInflow%dBeta_dt(i,4) = O%DynInflow%dBeta_dt(i,3)
+   O%DynInflow%dBeta_dt(i,3) = O%DynInflow%dBeta_dt(i,2)
+   O%DynInflow%dBeta_dt(i,2) = O%DynInflow%dBeta_dt(i,1)
 END DO !i
-
-
 
 RETURN
 END SUBROUTINE infupdt
 
 
  ! **********************************************************************
-   SUBROUTINE DynDebug (RHScos, RHSsin)
+   SUBROUTINE DynDebug (P, x, xd, z, O, y, ErrStat, ErrMess, RHScos, RHSsin)
  !  Write out debugging information
  ! **********************************************************************
 
-USE                           AeroTime
-USE                           DynInflow
-
-
-IMPLICIT                      NONE
-
+   IMPLICIT                      NONE
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Passed Variables:
 
-REAL(ReKi)                 :: RHScos ( maxInfl )
-REAL(ReKi)                 :: RHSsin ( maxInfl0+1:maxInfl )
+   REAL(ReKi)                 :: RHScos ( maxInfl )
+   REAL(ReKi)                 :: RHSsin ( P%DynInflow%MaxInflo+1:maxInfl )
 
 
    ! Local Variables:
 
-INTEGER                    :: i
-INTEGER                    :: NumOut
-INTEGER                    :: UnDyn = 80
+   INTEGER                    :: i
+   INTEGER                    :: NumOut
+   INTEGER, PARAMETER         :: UnDyn = 80
 
-LOGICAL                    :: OnePass = .TRUE.
+   CHARACTER(50)              :: Frmt
 
-CHARACTER(50)              :: Frmt
+   ErrStat = ErrID_None
+   ErrMess = ""
 
-SAVE                                                   ! Save *all* local variables.  Is this necessary, or is OnePass enough.
+!SAVE                                                   ! Save *all* local variables.  Is this necessary, or is OnePass enough.
 
+NumOut = maxInfl+(maxInfl-P%DynInflow%MaxInflo) + 1
 
-NumOut = maxInfl+(maxInfl-maxInfl0) + 1
-
-IF (OnePass) THEN
+IF (O%OnePassDynDbg) THEN
 
    CALL OpenFOutFile (UnDyn, 'DynDebug.plt')
 
@@ -4139,78 +4261,76 @@ IF (OnePass) THEN
             ( TAB,    'dAlph_dt',       i,         &
                        i = 1, maxInfl ),         &
             ( TAB,    'dBeta_dt',       i,         &
-                     i = maxInfl0+1, maxInfl ),  &
+                     i = P%DynInflow%MaxInflo+1, maxInfl ),  &
               TAB,    'TotalInf'
 
-   OnePass = .FALSE.
+   O%OnePassDynDbg = .FALSE.
 
 ENDIF
 
 Frmt = '( F10.3,    ( : A1, ES12.5 ) )'
 
-IF (TIME > 0.0D0) THEN
+IF (O%TIME > 0.0D0) THEN
 
    WRITE(Frmt(10:12), '(I3)') NumOut
-   WRITE(UnDyn,Frmt) TIME,                    &
-        ( TAB,       dAlph_dt(i,1),               &
+   WRITE(UnDyn,Frmt) O%TIME,                    &
+        ( TAB,       O%DynInflow%dAlph_dt(i,1),               &
                    i = 1, maxInfl ),          &
-        ( TAB,       dBeta_dt(i,1),               &
-                   i = maxInfl0+1, maxInfl ), &
-              TAB,   totalInf
+        ( TAB,       O%DynInflow%dBeta_dt(i,1),               &
+                   i = P%DynInflow%MaxInflo+1, maxInfl ), &
+              TAB,   O%DynInflow%totalInf
 
 ENDIF
-
-
 
 RETURN
 END SUBROUTINE DynDebug
 
 
  ! **********************************************************************
-   SUBROUTINE infdist
+   SUBROUTINE infdist( P, O, ErrStat, ErrMess )
  !  INFDIST calculates the inflow (induced flow) distribution
  !  parameters using Generalized Dynamic Wake Theory.
  ! **********************************************************************
-
-USE                           AeroTime
-USE                           Blade
-USE                           DynInflow
-USE                           Rotor
-USE                           Wind
-
-
-IMPLICIT                      NONE
-
+!USE                           AeroTime
+!USE                           Blade
+!USE                           DynInflow
+!USE                           Rotor
+!USE                           Wind
+   IMPLICIT                      NONE
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Local Variables:
 
-REAL(ReKi)                 :: RHScos ( maxInfl )                     ! The cosine terms go from 1 to 6.  The sine terms go from 3 to 6.
-REAL(ReKi)                 :: RHSsin ( maxInfl0+1:maxInfl )          ! The right hand side of the governing equation.
-REAL(ReKi)                 :: tauCos ( maxInfl )                     ! Forcing Functions
-REAL(ReKi)                 :: tauSin ( maxInfl0+1:maxInfl )
-REAL(ReKi)                 :: v1
-REAL(ReKi)                 :: v2
-REAL(ReKi)                 :: v3
-REAL(ReKi)                 :: Vplane2
+   REAL(ReKi)                 :: RHScos ( maxInfl )                     ! The cosine terms go from 1 to 6.  The sine terms go from 3 to 6.
+   REAL(ReKi)                 :: RHSsin ( P%DynInflow%MaxInflo+1:maxInfl )          ! The right hand side of the governing equation.
+   REAL(ReKi)                 :: tauCos ( maxInfl )                     ! Forcing Functions
+   REAL(ReKi)                 :: tauSin ( P%DynInflow%MaxInflo+1:maxInfl )
+   REAL(ReKi)                 :: v1
+   REAL(ReKi)                 :: v2
+   REAL(ReKi)                 :: v3
+   REAL(ReKi)                 :: Vplane2
 
-INTEGER                    :: i
-INTEGER                    :: k
-INTEGER                    :: mode
+   INTEGER                    :: i
+   INTEGER                    :: k
+   INTEGER                    :: mode
 
+   ErrStat = ErrID_None
+   ErrMess = ""
+O%DynInflow%TipSpeed = MAX(P%Blade%r  * O%Rotor%revs, 1.0e-6)   !bjj: why is this here AND in InfInit()?
 
-
-      TipSpeed = MAX(r  * revs, 1.0e-6)   !bjj: why is this here AND in InfInit()?
-
-      Pzero    = pi * rho * TipSpeed * TipSpeed * r
+O%DynInflow%Pzero    = pi * p%Wind%rho * O%DynInflow%TipSpeed * O%DynInflow%TipSpeed * P%Blade%r
 
  ! Non-dimensional time
-      DT0      = DT * REVS
+O%DynInflow%DTO      = o%DT * O%Rotor%REVS
 
  ! Calculate the wind velocity components in rotor-fixed
  !  coordinates(1-2-3), which are normalized by the tipspeed.
-v1 =   VrotorZ / TipSpeed     !inplane, upward
-v2 =   VrotorY / TipSpeed     !inplane, right looking downwind
-v3 = - VrotorX / TipSpeed     !out-of-plane (normal to the rotor)
+v1 =   O%Wind%VrotorZ / O%DynInflow%TipSpeed     !inplane, upward
+v2 =   O%Wind%VrotorY / O%DynInflow%TipSpeed     !inplane, right looking downwind
+v3 = - O%Wind%VrotorX / O%DynInflow%TipSpeed     !out-of-plane (normal to the rotor)
  ! Vplane2 is the square of in-plane component of the non-dimensional
  !  wind velocity.
 Vplane2  = v1 * v1 + v2 * v2
@@ -4220,29 +4340,29 @@ Vplane2  = v1 * v1 + v2 * v2
  !        v3:        positive upwind (thus, in normal condition, v3 < 0 )
  ! xLambda_M: positive downwind (opposite to A(i,j) )
  !  old_LmdM:  positive downwind (opposite to A(i,j) )
-totalInf = - v3 + old_LmdM
-! if ( totalInf .le. 0. ) then
+O%DynInflow%totalInf = - v3 + O%DynInflow%old_LmdM
+! if ( O%DynInflow%totalInf .le. 0. ) then
 !     call usrmes( .true. , &
 !        'In SUBROUTINE INFDIST. totalInf =< 0.', &
 !        27, 'WARN' )
 ! endif
 
  !  VTOTAL is the speed of the total inflow to the rotor.
-Vtotal = SQRT( totalInf * totalInf + Vplane2 )
-IF (vtotal <= 1.0e-6) vtotal=1.0e-6
+O%DynInflow%Vtotal = SQRT( O%DynInflow%totalInf * O%DynInflow%totalInf + Vplane2 )
+IF (O%DynInflow%vtotal <= 1.0e-6) O%DynInflow%vtotal=1.0e-6
 
  ! VPARAM is the inflow velocity parameter.
-Vparam = ( Vplane2 + ( totalInf + old_LmdM ) * totalInf ) / Vtotal
+O%DynInflow%Vparam = ( Vplane2 + ( O%DynInflow%totalInf + O%DynInflow%old_LmdM ) * O%DynInflow%totalInf ) / O%DynInflow%Vtotal
  ! Calculate the disk skew angle function
  !  using the effective disk angle of attack.
-IF ( totalInf == 0. ) THEN
-!   WRITE(*,*) v3, old_LmdM
+IF (O%DynInflow% totalInf == 0. ) THEN
+!   WRITE(*,*) v3, O%DynInflow%old_LmdM
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Suzuki:
 !   xKaiC = 0.
 !   xKaiS = 0.
 ! Shawler:
-    xKai = 0
+    O%DynInflow%xKai = 0
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ELSE
  ! Note the definition of Yaw Angle is around -Z axis.
@@ -4252,7 +4372,7 @@ ELSE
 !   xKaiS = TAN( .5 * ATAN(  v1 / totalInf ) )
 !!   xKaiC = TAN( .5 * SIGN( ATAN( SQRT( vplane2 ) / totalInf ), v2 ) )
 ! Shawler:
-   xkai  = TAN( .5 *       ATAN( SQRT( vplane2 ) / totalInf )       )
+   O%DynInflow%xkai  = TAN( .5 *       ATAN( SQRT( vplane2 ) / O%DynInflow%totalInf )       )
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ENDIF
 
@@ -4262,19 +4382,19 @@ ENDIF
  !  Then invert [L_cos] & [L_sin] matrices.
 !IF ( xKaiC /= oldKaiC ) THEN
 !   CALL LMATRIX ( xKaiC, 1 )
-!   CALL MATINV  ( xLcos, xLsin, maxInfl, maxInfl0, 1 )
+!   CALL MATINV  ( xLcos, xLsin, maxInfl, MaxInflo, 1 )
 !ENDIF
 
 !IF ( xKaiS /= oldKaiS ) THEN
-!   CALL LMATRIX ( xKaiS, 2 )
-!   CALL MATINV  ( xLcos, xLsin, maxInfl, maxInfl0, 2 )
+!   CALL LMATRIX ( O%DynInflow%xKaiS, 2 )
+!   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2 )
 !ENDIF
 ! Shawler:
 !IF ( xKai /= oldKai ) THEN
-   CALL LMATRIX ( xKai, 1 )
-   CALL LMATRIX ( xKai, 2 )
-   CALL MATINV  ( xLcos, xLsin, maxInfl, maxInfl0, 1 )
-   CALL MATINV  ( xLcos, xLsin, maxInfl, maxInfl0, 2 )
+   CALL LMATRIX ( o,p, 1 )
+   CALL LMATRIX ( o,p, 2 )
+   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 1 )
+   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2 )
 !ENDIF
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -4287,14 +4407,14 @@ ENDIF
  !  Put a minus sign for each forcing function.
 
  ! The modes for r=0.
-DO mode = 1, maxInfl0
-   tauCos(mode) = - PhiLqC(mode) / Pzero * .5
+DO mode = 1, P%DynInflow%MaxInflo
+   tauCos(mode) = - O%DynInflow%PhiLqC(mode) / O%DynInflow%Pzero * .5
 END DO !mode
 
  ! The modes for r>0.
-DO mode = maxInfl0+1, maxInfl
-   tauCos(mode) = - PhiLqC(mode) / Pzero
-   tauSin(mode) = - PhiLqS(mode) / Pzero
+DO mode = P%DynInflow%MaxInflo+1, maxInfl
+   tauCos(mode) = - O%DynInflow%PhiLqC(mode) / O%DynInflow%Pzero
+   tauSin(mode) = - O%DynInflow%PhiLqS(mode) / O%DynInflow%Pzero
 END DO !mode
 
  ! Solve for the time derivatives of xAlpha's, {d(alpha)_dt}.
@@ -4305,44 +4425,44 @@ END DO !mode
  !  USE "VTOTAL" for the first row of r=0. Cosine Matrix only.
 RHScos(1) = 0.
 DO k = 1, maxInfl
-   RHScos(1) = RHScos(1) + xLcos(1,k) * old_Alph(k)
+   RHScos(1) = RHScos(1) + O%DynInflow%xLcos(1,k) * O%DynInflow%old_Alph(k)
 END DO !k
-RHScos(1) = .5 * tauCos(1) - vtotal * RHScos(1)
+RHScos(1) = .5 * tauCos(1) - O%DynInflow%vtotal * RHScos(1)
 
  ! USE "VPARAM" for the second row or higher of r=0.
-DO i = 2, maxInfl0
+DO i = 2, P%DynInflow%MaxInflo
    RHScos(i) = 0.
    DO k = 1, maxInfl
-      RHScos(i) = RHScos(i) + xLcos(i,k) * old_Alph(k)
+      RHScos(i) = RHScos(i) + O%DynInflow%xLcos(i,k) * O%DynInflow%old_Alph(k)
    END DO !k
-   RHScos(i) = .5 * tauCos(i) - Vparam * RHScos(i)
+   RHScos(i) = .5 * tauCos(i) - O%DynInflow%Vparam * RHScos(i)
 END DO !i
 
  ! Rows with r=1 or greater. Both cosine and sine matrices.
-DO i = maxInfl0+1, maxInfl
+DO i = P%DynInflow%MaxInflo+1, maxInfl
    RHScos(i) = 0.
    RHSsin(i) = 0.
  ! First, calculate {rhs} = V[L]^-1*{alpha}
    DO k = 1, maxInfl
-!   DO 260 k = maxInfl0+1, maxInfl
-      RHScos(i) = RHScos(i) + xLcos(i,k) * old_Alph(k)
+!   DO 260 k = MaxInflo+1, maxInfl
+      RHScos(i) = RHScos(i) + O%DynInflow%xLcos(i,k) * O%DynInflow%old_Alph(k)
    END DO !k
-   DO k = maxInfl0+1, maxInfl
-      RHSsin(i) = RHSsin(i) + xLsin(i,k) * old_Beta(k)
+   DO k = P%DynInflow%MaxInflo+1, maxInfl
+      RHSsin(i) = RHSsin(i) + O%DynInflow%xLsin(i,k) * O%DynInflow%old_Beta(k)
    END DO !k
  ! Second, calculate {rhs} = 0.5*{tau} - [V]{rhs}
  !                         = 0.5*{tau} - [V][L]^-1*{alpha}
  !  USE "VPARAM" for m>0
-   RHScos(i) = .5 * tauCos(i) - Vparam * RHScos(i)
-   RHSsin(i) = .5 * tauSin(i) - Vparam * RHSsin(i)
+   RHScos(i) = .5 * tauCos(i) - O%DynInflow%Vparam * RHScos(i)
+   RHSsin(i) = .5 * tauSin(i) - O%DynInflow%Vparam * RHSsin(i)
 END DO !i
 
-DO i = 1, maxInfl0
-   dAlph_dt(i,1) = xMinv(i) * RHScos(i)
+DO i = 1, P%DynInflow%MaxInflo
+   O%DynInflow%dAlph_dt(i,1) = p%DynInflow%xMinv(i) * RHScos(i)
 END DO !i
-DO i = maxInfl0+1, maxInfl
-   dAlph_dt(i,1) = xMinv(i) * RHScos(i)
-   dBeta_dt(i,1) = xMinv(i) * RHSsin(i)
+DO i = P%DynInflow%MaxInflo+1, maxInfl
+   O%DynInflow%dAlph_dt(i,1) = p%DynInflow%xMinv(i) * RHScos(i)
+   O%DynInflow%dBeta_dt(i,1) = p%DynInflow%xMinv(i) * RHSsin(i)
 END DO !i
 
  ! Integration using Adams-Bashford predictor corrector method.
@@ -4351,69 +4471,68 @@ END DO !i
  ! USE DT*REVS for compatibility with AeroDyn (DT0 not constant).
  !  DT is in module 'Lift'
  ! Determines xAlpha and xBeta
-CALL ABPRECOR ( xAlpha, old_Alph, dAlph_dt, DT0, maxInfl, 1 )
-CALL ABPRECOR ( xBeta,  old_Beta, dBeta_dt, DT0, maxInfl, maxInfl0+1 )
+CALL ABPRECOR ( O%DynInflow%xAlpha, O%DynInflow%old_Alph, O%DynInflow%dAlph_dt, O%DynInflow%DTO, maxInfl, 1 )
+CALL ABPRECOR ( O%DynInflow%xBeta,  O%DynInflow%old_Beta, O%DynInflow%dBeta_dt, O%DynInflow%DTO, maxInfl, P%DynInflow%MaxInflo+1 )
 
  ! Calculate the new lambda_m.
-!bjj: why are there 2 do loops? can't they be combined???? (assuming maxInfl0 < maxInfl) or is one of these supposed to be sin?
-xLambda_M= 0.
-DO k = 1, maxInfl0-1
-   xLambda_M = xLambda_M + xLcos(1,k) * xAlpha(k)
+!bjj: why are there 2 do loops? can't they be combined???? (assuming MaxInflo < maxInfl) or is one of these supposed to be sin?
+O%DynInflow%xLambda_M= 0.
+DO k = 1, P%DynInflow%MaxInflo-1
+   O%DynInflow%xLambda_M = O%DynInflow%xLambda_M + O%DynInflow%xLcos(1,k) * O%DynInflow%xAlpha(k)
 END DO !k
-DO k = maxInfl0, maxInfl
-   xLambda_M = xLambda_M + xLcos(1,k) * xAlpha(k)
+DO k = P%DynInflow%MaxInflo, maxInfl
+   O%DynInflow%xLambda_M = O%DynInflow%xLambda_M + O%DynInflow%xLcos(1,k) * O%DynInflow%xAlpha(k)
 END DO !k
 ! xLambda_M = 2. / sqrt(3.) * xLambda_M
-xLambda_M = 1.1547005 * xLambda_M
+O%DynInflow%xLambda_M = 1.1547005 * O%DynInflow%xLambda_M
 
 ! Added additional output for GDW debugging - comment out for distribution
-!CALL DynDebug (RHScos, RHSsin)
-
-
+!CALL DynDebug (P, x, xd, z, O, y, ErrStat, ErrMess, RHScos, RHSsin)
 
 RETURN
 END SUBROUTINE infdist
 
  ! *************************************************************
-   SUBROUTINE vindinf( iradius, iblade, rlocal, vnw, VNB, VT, psi )
+   SUBROUTINE vindinf( P, O, ErrStat, ErrMess, &
+                       iradius, iblade, rlocal, vnw, VNB, VT, psi )
  !  vindinf calculates the axial induction factor for each
  !   element position using the calculated inflow parameters.
  !  Called by ElemFrc for each element at a new time step.
  ! *************************************************************
 
-USE                           Blade
-USE                           DynInflow
-USE                           Element
-USE                           Switch
-
-
-IMPLICIT                      NONE
+   IMPLICIT                      NONE
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
 
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: psi
-REAL(ReKi),INTENT(IN)      :: rlocal
-REAL(ReKi),INTENT(IN)      :: VNB
-REAL(ReKi),INTENT(IN)      :: vnw
-REAL(ReKi),INTENT(INOUT)   :: VT
+   REAL(ReKi),INTENT(IN)      :: psi
+   REAL(ReKi),INTENT(IN)      :: rlocal
+   REAL(ReKi),INTENT(IN)      :: VNB
+   REAL(ReKi),INTENT(IN)      :: vnw
+   REAL(ReKi),INTENT(INOUT)   :: VT
 
-INTEGER,   INTENT(IN)      :: iradius
-INTEGER,   INTENT(IN)      :: iblade
+   INTEGER,   INTENT(IN)      :: iradius
+   INTEGER,   INTENT(IN)      :: iblade
 
    ! Local Variables:
 
-REAL(ReKi)                 :: A2P
-!Suzuki uses psiBar, Shawler - WindPsi
-!REAL(ReKi)                 :: psibar
-REAL(ReKi)                 :: Rzero
-REAL(ReKi)                 :: SWRLARG
-REAL(ReKi)                 :: Windpsi
+   REAL(ReKi)                 :: A2P
+   !Suzuki uses psiBar, Shawler - WindPsi
+   !REAL(ReKi)                 :: psibar
+   REAL(ReKi)                 :: Rzero
+   REAL(ReKi)                 :: SWRLARG
+   REAL(ReKi)                 :: Windpsi
 
-INTEGER                    :: mode
+   INTEGER                    :: mode
 
+ErrStat = ErrID_None
+ErrMess = ""
 
  ! Rzero is the non-dimensional radius.
-Rzero  = rlocal / r
+Rzero  = rlocal / P%Blade%r
 
  ! PSIBAR is the azimuth angle measured counterclockwise from
  !  the horizontal to the left looking downwind.  The directions
@@ -4422,58 +4541,54 @@ Rzero  = rlocal / r
 !Suzuki:
 ! psiBar = - psi - piBy2
 ! Shawler:
-CALL WindAzimuthZero (psi,WindPsi)
+CALL WindAzimuthZero (psi,O%Wind%VrotorY,O%Wind%VrotorZ,WindPsi)
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
  ! Calculate the induction factor using the inflow parameters.
  !  Here it's normalized by the tipspeed.
 
-A(iRadius,iBlade) =  0.
+O%Element%A(iRadius,iBlade) =  0.
 
-DO mode = 1, maxInfl0
-   A(iRadius,iBlade) = A(iRadius,iBlade)  &
-                     + xphi(Rzero,mode) * xAlpha(mode)
+DO mode = 1, p%DynInflow%MaxInflo
+   O%Element%A(iRadius,iBlade) = O%Element%A(iRadius,iBlade)  &
+                     + xphi(Rzero,mode) * O%DynInflow%xAlpha(mode)
 !  &  + phis(Rzero, MRvector(mode), NJvector(mode) )* xAlpha(mode)
 END DO !mode
 
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !Suzuki:
-!DO mode = maxInfl0+1, maxInfl
+!DO mode = MaxInflo+1, maxInfl
 !   A(iRadius,iBlade) = A(iRadius,iBlade) + xphi(Rzero,mode) *      &
 !!  &    + phis(Rzero, MRvector(mode), NJvector(mode) ) *
 !            ( xAlpha(mode) * COS( REAL(MRvector(MODE)) * psibar )  &
 !            + xBeta (mode) * SIN( REAL(MRvector(MODE)) * psibar ) )
 !END DO !mode
 ! Shawler:
-DO mode = maxInfl0+1, maxInfl
-   A(iRadius,iBlade) = A(iRadius,iBlade) + xphi(Rzero,mode) *      &
-!  &     + phis(Rzero, MRvector(mode), NJvector(mode) ) *
-            ( xAlpha(mode) * COS( REAL(MRvector(MODE)) * Windpsi )  &
-            + xBeta (mode) * SIN( REAL(MRvector(MODE)) * Windpsi ) )
+DO mode = p%DynInflow%MaxInflo+1, maxInfl
+   O%Element%A(iRadius,iBlade) = O%Element%A(iRadius,iBlade) + xphi(Rzero,mode) *      &
+            ( O%DynInflow%xAlpha(mode) * COS( REAL(MRvector(MODE)) * Windpsi )  &
+            + O%DynInflow%xBeta (mode) * SIN( REAL(MRvector(MODE)) * Windpsi ) )
 END DO !mode
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
  ! A is positive upwind, while alpha's & beta's are positve downwind.
  !  Also, they are normalized by different factors.
-A(iRadius,iBlade) = - A(iRadius,iBlade) * TipSpeed / VNW
+O%Element%A(iRadius,iBlade) = - O%Element%A(iRadius,iBlade) * O%DynInflow%TipSpeed / VNW
 
  ! Calculate induced swirl (a') if desired.
 
-IF ( SWIRL ) THEN
+IF ( P%SWIRL ) THEN
  ! akihiro 10/26/99
-   SWRLARG = 1.0 + 4.0 *  A(iradius,iblade) * VNW * &
-!   SWRLARG = 1.0 + 4.0 * TIPLOSS * A(iradius,iblade) * VNW *
-           ( (1.0 - A(iradius,iblade)) * VNW + VNB ) / VT / VT
+   SWRLARG = 1.0 + 4.0 *  O%Element%A(iradius,iblade) * VNW * &
+           ( (1.0 - O%Element%A(iradius,iblade)) * VNW + VNB ) / VT / VT
    IF ( SWRLARG > 0.0 ) THEN
       A2P = 0.5 * ( -1.0 + SQRT( SWRLARG ) )
       VT  = VT * ( 1.0 + A2P)
 ! bjj: this value was not properly set before. We could also just replace the local A2P variable with AP() instead.
-      AP(iRadius,iBlade) = A2P
+      O%Element%AP(iRadius,iBlade) = A2P
    ENDIF
 
 ENDIF
-
-
 
 RETURN
 END SUBROUTINE vindinf
@@ -4525,22 +4640,21 @@ RETURN
 END SUBROUTINE ABPRECOR
 
  ! ***********************************************************************
-   SUBROUTINE LMATRIX ( X, matrixMode )
+   SUBROUTINE LMATRIX ( o, p, matrixMode )
  !  LMATRIX calculates the [L_***] matrix using Gamma matrix and xkai=X.
  !   matrixMode = 1 : Calculate [L_cos] matrix
  !   matrixMode = 2 : Calculate [L_sin] matrix
  ! ***********************************************************************
 
-USE                           DynInflow
-
+!USE                           DynInflow
 
 IMPLICIT                      NONE
-
-
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: X
-
+TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
+TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
 INTEGER   ,INTENT(IN)      :: matrixMode
+
+REAL(ReKi)      :: X 
 
 
    ! Local Variables:
@@ -4550,6 +4664,8 @@ REAL(ReKi)                 :: XM
 INTEGER                    :: IROW
 INTEGER                    :: JCOL
 
+
+X = O%DynInflow%xKai
 
  ! Check the value of X
 IF ( ( X < -1.) .OR. ( X > 1.) ) THEN
@@ -4564,38 +4680,36 @@ SELECT CASE ( matrixMode )
    CASE (1)
     DO JCOL = 1, maxInfl
        XM = X ** MRvector(JCOL)
-       DO IROW = 1, maxInfl0
-          xLcos( IROW, JCOL ) = GAMMA( IROW, JCOL ) * XM
+       DO IROW = 1, p%DynInflow%MaxInflo
+          O%DynInflow%xLcos( IROW, JCOL ) = O%DynInflow%gamma( IROW, JCOL ) * XM
        END DO !IROW
     END DO !JCOL
 
  ! Calculate the [L_cos] matrix,
  !  the rows for r=1 and higher.
-    DO IROW = maxInfl0+1, maxInfl
+    DO IROW = p%DynInflow%MaxInflo+1, maxInfl
        DO JCOL = 1, maxInfl
-          xLcos( IROW, JCOL ) = GAMMA( IROW, JCOL )  &
-                  *(    X  ** MminusR( IROW, JCOL )  &
-                      + X  ** MplusR ( IROW, JCOL )  &
-                  *  (-1.) ** MminR  ( IROW, JCOL )  )
+          O%DynInflow%xLcos( IROW, JCOL ) = O%DynInflow%GAMMA( IROW, JCOL )  &
+                  *(    X  ** O%DynInflow%MminusR( IROW, JCOL )  &
+                      + X  ** O%DynInflow%MplusR ( IROW, JCOL )  &
+                  *  (-1.) ** O%DynInflow%MminR  ( IROW, JCOL )  )
        END DO !JCOL
     END DO !IROW
 
  ! Calculate [L_sin] matrix.
    CASE (2)
-    DO IROW = maxInfl0+1, maxInfl
-       DO JCOL = maxInfl0+1, maxInfl
-          xLsin( IROW, JCOL ) = GAMMA( IROW, JCOL )  &
-                  *(    X  ** MminusR( IROW, JCOL )  &
-                      - X  ** MplusR ( IROW, JCOL )  &
-                  *  (-1.) ** MminR  ( IROW, JCOL )  )
+    DO IROW = p%DynInflow%MaxInflo+1, maxInfl
+       DO JCOL = p%DynInflow%MaxInflo+1, maxInfl
+          O%DynInflow%xLsin( IROW, JCOL ) = O%DynInflow%GAMMA( IROW, JCOL )  &
+                  *(    X  ** O%DynInflow%MminusR( IROW, JCOL )  &
+                      - X  ** O%DynInflow%MplusR ( IROW, JCOL )  &
+                  *  (-1.) ** O%DynInflow%MminR  ( IROW, JCOL )  )
       END DO !JCOL
     END DO !IROW
 
    CASE DEFAULT
     CALL ProgAbort( 'Value of matrixMode = '//TRIM(Int2LStr(matrixMode))//' must be 1 or 2.')
 END SELECT
-
-
 
 RETURN
 END SUBROUTINE LMATRIX
@@ -4638,7 +4752,7 @@ SELECT CASE ( invMode )
     CALL GAUSSJ(A0,N)
 
  ! [L_sin] matrix needs a dummy array, because the index goes
- !  from maxInfl0(=N0) to maxInfl(=N),
+ !  from MaxInflo(=N0) to maxInfl(=N),
  !  which is incompatible with SUBROUTINE GAUSSJ.
  !BJJ: IS THIS REALLY NECESSARY?  Aren't the indicies an abstraction?? if you pass an array (1:3) and use it as (0:2) in another subroutine, it's really okay???
    CASE (2)
@@ -4992,7 +5106,7 @@ END FUNCTION phis
 
 
 !***********************************************************
-SUBROUTINE WindAzimuthZero (psi,WindPsi)
+SUBROUTINE WindAzimuthZero (psi,VrotorY,VrotorZ,WindPsi)
 ! Subroutine added by JRS to define the zero azimuth datum in
 ! a wind based co-ordinate system, for USE in the dynamic inflow
 ! routines.
@@ -5005,14 +5119,14 @@ SUBROUTINE WindAzimuthZero (psi,WindPsi)
 ! and rises with a clockwise rotation.
 
 
-USE                           Wind
+!USE                           Wind
 
 
 IMPLICIT                      NONE
 
 
    ! Passed Variables:
-REAL(ReKi),INTENT(IN)      :: psi
+REAL(ReKi),INTENT(IN)      :: psi,VrotorY,VrotorZ
 REAL(ReKi),INTENT(OUT)     :: WindPsi
 
 WindPsi = psi - ATAN2(VrotorY,-VrotorZ)
@@ -5023,186 +5137,35 @@ END SUBROUTINE WindAzimuthZero
  !     ************* END OF FILE ***************
 
 ! ********************************************************************
-  SUBROUTINE AeroDyn_Terminate ( )
-! ********************************************************************
-
-   USE   AD_IOParams
-   USE   Airfoil
-   USE   Bedoes
-   USE   Blade
-   USE   DynInflow
-   USE   Element
-   USE   ElOutParams
-   USE   ElemInflow
-   USE   TwrProps
-
-
-      ! Deallocate memory for arrays stored in AeroDyn modules
-
-        ! Airfoil
-   IF ( ALLOCATED( FOILNM     ) )   DEALLOCATE( FOILNM      )
-   IF ( ALLOCATED( AL         ) )   DEALLOCATE( AL          )
-   IF ( ALLOCATED( CD         ) )   DEALLOCATE( CD          )
-   IF ( ALLOCATED( CL         ) )   DEALLOCATE( CL          )
-   IF ( ALLOCATED( CM         ) )   DEALLOCATE( CM          )
-   IF ( ALLOCATED( MulTabMet  ) )   DEALLOCATE( MulTabMet   )
-   IF ( ALLOCATED( NFOIL      ) )   DEALLOCATE( NFOIL       )
-   IF ( ALLOCATED( NLIFT      ) )   DEALLOCATE( NLIFT       )
-   IF ( ALLOCATED( NTables    ) )   DEALLOCATE( NTables     )
-   IF ( ALLOCATED( FOILNM     ) )   DEALLOCATE( FOILNM      )
-
-
-        ! Bedoes
-   IF ( ALLOCATED( ADOT       ) )   DEALLOCATE( ADOT        )
-   IF ( ALLOCATED( ADOT1      ) )   DEALLOCATE( ADOT1       )
-   IF ( ALLOCATED( AFE        ) )   DEALLOCATE( AFE         )
-   IF ( ALLOCATED( AFE1       ) )   DEALLOCATE( AFE1        )
-   IF ( ALLOCATED( ANE        ) )   DEALLOCATE( ANE         )
-   IF ( ALLOCATED( ANE1       ) )   DEALLOCATE( ANE1        )
-   IF ( ALLOCATED( AOD        ) )   DEALLOCATE( AOD         )
-   IF ( ALLOCATED( AOL        ) )   DEALLOCATE( AOL         )
-   IF ( ALLOCATED( CDO        ) )   DEALLOCATE( CDO         )
-   IF ( ALLOCATED( CNA        ) )   DEALLOCATE( CNA         )
-   IF ( ALLOCATED( CNP        ) )   DEALLOCATE( CNP         )
-   IF ( ALLOCATED( CNP1       ) )   DEALLOCATE( CNP1        )
-   IF ( ALLOCATED( CNPD       ) )   DEALLOCATE( CNPD        )
-   IF ( ALLOCATED( CNPD1      ) )   DEALLOCATE( CNPD1       )
-   IF ( ALLOCATED( CNPOT      ) )   DEALLOCATE( CNPOT       )
-   IF ( ALLOCATED( CNPOT1     ) )   DEALLOCATE( CNPOT1      )
-   IF ( ALLOCATED( CNS        ) )   DEALLOCATE( CNS         )
-   IF ( ALLOCATED( CNSL       ) )   DEALLOCATE( CNSL        )
-   IF ( ALLOCATED( CNV        ) )   DEALLOCATE( CNV         )
-   IF ( ALLOCATED( CVN        ) )   DEALLOCATE( CVN         )
-   IF ( ALLOCATED( CVN1       ) )   DEALLOCATE( CVN1        )
-   IF ( ALLOCATED( DF         ) )   DEALLOCATE( DF          )
-   IF ( ALLOCATED( DFAFE      ) )   DEALLOCATE( DFAFE       )
-   IF ( ALLOCATED( DFAFE1     ) )   DEALLOCATE( DFAFE1      )
-   IF ( ALLOCATED( DFC        ) )   DEALLOCATE( DFC         )
-   IF ( ALLOCATED( DN         ) )   DEALLOCATE( DN          )
-   IF ( ALLOCATED( DPP        ) )   DEALLOCATE( DPP         )
-   IF ( ALLOCATED( DQ         ) )   DEALLOCATE( DQ          )
-   IF ( ALLOCATED( DQP        ) )   DEALLOCATE( DQP         )
-   IF ( ALLOCATED( DQP1       ) )   DEALLOCATE( DQP1        )
-   IF ( ALLOCATED( FSP        ) )   DEALLOCATE( FSP         )
-   IF ( ALLOCATED( FSP1       ) )   DEALLOCATE( FSP1        )
-   IF ( ALLOCATED( FSPC       ) )   DEALLOCATE( FSPC        )
-   IF ( ALLOCATED( FSPC1      ) )   DEALLOCATE( FSPC1       )
-   IF ( ALLOCATED( FTB        ) )   DEALLOCATE( FTB         )
-   IF ( ALLOCATED( FTBC       ) )   DEALLOCATE( FTBC        )
-   IF ( ALLOCATED( OLDCNV     ) )   DEALLOCATE( OLDCNV      )
-   IF ( ALLOCATED( OLDDF      ) )   DEALLOCATE( OLDDF       )
-   IF ( ALLOCATED( OLDDFC     ) )   DEALLOCATE( OLDDFC      )
-   IF ( ALLOCATED( OLDDN      ) )   DEALLOCATE( OLDDN       )
-   IF ( ALLOCATED( OLDDPP     ) )   DEALLOCATE( OLDDPP      )
-   IF ( ALLOCATED( OLDDQ      ) )   DEALLOCATE( OLDDQ       )
-   IF ( ALLOCATED( OLDTAU     ) )   DEALLOCATE( OLDTAU      )
-   IF ( ALLOCATED( OLDXN      ) )   DEALLOCATE( OLDXN       )
-   IF ( ALLOCATED( OLDYN      ) )   DEALLOCATE( OLDYN       )
-   IF ( ALLOCATED( QX         ) )   DEALLOCATE( QX          )
-   IF ( ALLOCATED( QX1        ) )   DEALLOCATE( QX1         )
-   IF ( ALLOCATED( TAU        ) )   DEALLOCATE( TAU         )
-   IF ( ALLOCATED( XN         ) )   DEALLOCATE( XN          )
-   IF ( ALLOCATED( YN         ) )   DEALLOCATE( YN          )
-   IF ( ALLOCATED( BEDSEP     ) )   DEALLOCATE( BEDSEP      )
-   IF ( ALLOCATED( OLDSEP     ) )   DEALLOCATE( OLDSEP      )
-
-
-        ! Blade
-   IF ( ALLOCATED( C          ) )   DEALLOCATE( C           )
-   IF ( ALLOCATED( DR         ) )   DEALLOCATE( DR          )
-
-
-        ! DynInflow
-   IF ( ALLOCATED( RMC_SAVE   ) )   DEALLOCATE( RMC_SAVE    )
-   IF ( ALLOCATED( RMS_SAVE   ) )   DEALLOCATE( RMS_SAVE    )
-
-
-        ! Element
-   IF ( ALLOCATED( A          ) )   DEALLOCATE( A           )
-   IF ( ALLOCATED( AP         ) )   DEALLOCATE( AP          )
-   IF ( ALLOCATED( HLCNST     ) )   DEALLOCATE( HLCNST      )
-   IF ( ALLOCATED( RELM       ) )   DEALLOCATE( RELM        )
-   IF ( ALLOCATED( TLCNST     ) )   DEALLOCATE( TLCNST      )
-   IF ( ALLOCATED( TWIST      ) )   DEALLOCATE( TWIST       )
-
-
-        ! ElOutParams
-   IF ( ALLOCATED( AAA        ) )   DEALLOCATE( AAA         )
-   IF ( ALLOCATED( AAP        ) )   DEALLOCATE( AAP         )
-   IF ( ALLOCATED( ALF        ) )   DEALLOCATE( ALF         )
-   IF ( ALLOCATED( CDD        ) )   DEALLOCATE( CDD         )
-   IF ( ALLOCATED( CLL        ) )   DEALLOCATE( CLL         )
-   IF ( ALLOCATED( CMM        ) )   DEALLOCATE( CMM         )
-   IF ( ALLOCATED( CNN        ) )   DEALLOCATE( CNN         )
-   IF ( ALLOCATED( CTT        ) )   DEALLOCATE( CTT         )
-   IF ( ALLOCATED( DFNSAV     ) )   DEALLOCATE( DFNSAV      )
-   IF ( ALLOCATED( DFTSAV     ) )   DEALLOCATE( DFTSAV      )
-   IF ( ALLOCATED( DynPres    ) )   DEALLOCATE( DynPres     )
-   IF ( ALLOCATED( PITSAV     ) )   DEALLOCATE( PITSAV      )
-   IF ( ALLOCATED( PMM        ) )   DEALLOCATE( PMM         )
-   IF ( ALLOCATED( ReyNum     ) )   DEALLOCATE( ReyNum      )
-   IF ( ALLOCATED( SaveVX     ) )   DEALLOCATE( SaveVX      )
-   IF ( ALLOCATED( SaveVY     ) )   DEALLOCATE( SaveVY      )
-   IF ( ALLOCATED( SaveVZ     ) )   DEALLOCATE( SaveVZ      )
-   IF ( ALLOCATED( WndElPrList) )   DEALLOCATE( WndElPrList )
-   IF ( ALLOCATED( WndElPrNum ) )   DEALLOCATE( WndElPrNum  )
-   IF ( ALLOCATED( ElPrList   ) )   DEALLOCATE( ElPrList    )
-   IF ( ALLOCATED( ElPrNum    ) )   DEALLOCATE( ElPrNum     )
-
-      ! ElemInflow
-
-   IF ( ALLOCATED( W2         ) )   DEALLOCATE( W2          )
-   IF ( ALLOCATED( Alpha      ) )   DEALLOCATE( Alpha       )
-
-         ! TwrProps
-   IF ( ALLOCATED( TwrHtFr ) )      DEALLOCATE ( TwrHtFr    )
-   IF ( ALLOCATED( TwrWid  ) )      DEALLOCATE ( TwrWid     )
-   IF ( ALLOCATED( TwrCD  ) )       DEALLOCATE ( TwrCD      )
-   IF ( ALLOCATED( TwrRe ) )        DEALLOCATE ( TwrRe      )
-   IF ( ALLOCATED( NTwrCDCol ) )    DEALLOCATE ( NTwrCDCol  )
-
-   ! DEALLOCATE ( OLD_A_NS )     !FH these are local variables of SUBROUTINE VIND
-   ! DEALLOCATE ( OLD_AP_NS )       !FH which cannot be DEALLOCATED here ... still a small memory leak ...
-
-      ! Close files that were opened in AeroDyn
-
-      ! AD_IOParams
-   CLOSE(UnADin)              ! ipt file
-   CLOSE(UnADopt)             ! opt file
-   CLOSE(UnAirfl)             ! Airfoil data file
-   CLOSE(UnWind)              ! HH or FF wind file
-
-
-      ! NWTC_Library
-   CLOSE(UnEc)                ! I/O unit number for the echo file.
-
-
-!      ! Close wind inflow
-!   CALL WindInf_Terminate( ErrStat )
-
-   RETURN
-END SUBROUTINE AeroDyn_Terminate
 !====================================================================================================
-SUBROUTINE CheckRComp( ADFile, HubRadius, TipRadius, ErrStat )
+SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
+                       ADFile, HubRadius, TipRadius )
 ! This routine checks to see if RElm(:) and DR(:) are compatible within a millimeter;
 !----------------------------------------------------------------------------------------------------
 
-   USE                           Blade,      ONLY: DR
-   USE                           Element,    ONLY: NElm, RElm
+!   USE                           Blade,      ONLY: DR
+!   USE                           Element,    ONLY: NElm, RElm
 
    IMPLICIT                      NONE
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
       ! Passed variables
 
    CHARACTER(*), INTENT(IN)   :: ADFile                     ! Name of the AeroDyn input file, used for printing error message
    REAL(ReKi),   INTENT(IN)   :: HubRadius                  ! Hub radius, used to verify that RElm and DR are input correctly
    REAL(ReKi),   INTENT(IN)   :: TipRadius                  ! Tip radius, used to verify that RElm and DR are input correctly
-   INTEGER,      INTENT(OUT)  :: ErrStat
 
 
       ! Local variables.
 
-   REAL(ReKi)                 :: DRNodesNew(NElm)           ! Length of variable-spaced blade elements--calculated from input RElm(:).
+   REAL(ReKi)                 :: DRNodesNew(P%Element%NElm) ! Length of variable-spaced blade elements--calculated from input RElm(:).
    REAL(ReKi)                 :: DRSum                      ! Sum of DRs--should be close to TipRadius
    REAL(ReKi), PARAMETER      :: EPS = EPSILON(HubRadius)   ! A small value used to compare two numbers
 
@@ -5214,34 +5177,36 @@ SUBROUTINE CheckRComp( ADFile, HubRadius, TipRadius, ErrStat )
 
       ! Initialize ErrStat to 0 (no error):
 
-   ErrStat = 0
+   ErrStat = ErrID_None
+   ErrMess = ""
 
 
       ! Calculate DRNodesNew(:) based on input RElm(:) and compare to input DR(:):
 
-!   AssumedHubRadius = RElm(1) - 0.5*DR(1)
-   DRNodesNew(1)    = 2.0*( RElm(1) - HubRadius )
+!   AssumedHubRadius = P%Element%RElm(1) - 0.5*P%Blade%DR(1)
+   DRNodesNew(1)    = 2.0*( P%Element%RElm(1) - HubRadius )
    DRSum            = DRNodesNew(1) + HubRadius
 
    IF ( DRNodesNew(1) <= EPS )  THEN                              ! Check to see if RElm(1) > HubRad; if not, ProgAbort program
-      CALL WrScr(' RElm(1) must be larger than the hub radius (HubRadius = RElm(1) - 0.5*DR(1)). ')
-      ErrStat = 1
+      ErrMess = ' RElm(1) must be larger than the hub radius (HubRadius = RElm(1) - 0.5*DR(1)). '
+      ErrStat = ErrID_Fatal
       RETURN
-   ELSEIF ( ABS( DRNodesNew(1) - DR(1) ) > 0.001 )  THEN     ! Check to see if the calculated DRNodes(1) is close to the inputted DRNodes(1); if not, set flag--this will cause the program to ProgAbort later.
-      ErrStat = 1
+   ELSEIF ( ABS( DRNodesNew(1) - P%Blade%DR(1) ) > 0.001 )  THEN     ! Check to see if the calculated DRNodes(1) is close to the inputted DRNodes(1); if not, set flag--this will cause the program to ProgAbort later.
+      ErrStat = ErrID_Fatal
    ENDIF
 
-   DO I = 2,NElm ! Loop through all but the innermost blade element
+   DO I = 2,P%Element%NElm ! Loop through all but the innermost blade element
 
-      DRNodesNew(I) = 2.0*( RElm(I) - RElm(I-1) ) - DRNodesNew(I-1)
+      DRNodesNew(I) = 2.0*( P%Element%RElm(I) - P%Element%RElm(I-1) ) - DRNodesNew(I-1)
       DRSum         = DRSum + DRNodesNew(I)
 
+
       IF ( DRNodesNew(I) <= EPS )  THEN                           ! Check to see if it is possible to have compatible DR(:) with the input RElm(:); if not, abort program
-         CALL WrScr( 'RElm('//TRIM( Int2LStr(I) )//') produces ill-conditioned DR(:)' )
-         ErrStat = 1
+         ErrMess = 'RElm('//TRIM( Int2LStr(I) )//') produces ill-conditioned DR(:)' 
+         ErrStat = ErrID_Fatal
          RETURN
-      ELSEIF ( ABS( DRNodesNew(I) - DR(I) ) > 0.001 )  THEN  ! Check to see if the calculated DRNodes(I) is close to the inputted DRNodes(I); if not, set flag--this will cause the program to Abort later.
-         ErrStat = 1
+      ELSEIF ( ABS( DRNodesNew(I) - P%Blade%DR(I) ) > 0.001 )  THEN  ! Check to see if the calculated DRNodes(I) is close to the inputted DRNodes(I); if not, set flag--this will cause the program to Abort later.
+         ErrStat = ErrID_Fatal
       ENDIF
 
    END DO             ! I - all but the innermost blade element
@@ -5249,16 +5214,17 @@ SUBROUTINE CheckRComp( ADFile, HubRadius, TipRadius, ErrStat )
 
       ! Abort program if necessary
 
-   IF ( ErrStat /= 0 )  THEN
+   IF ( ErrStat /= ErrID_None )  THEN
 
          ! Write error message since the input DR(:) are not close to the calculated DRNodesNew(:)
 
-      CALL WrScr1(' Input values for DR(:) are not compatible with input RElm(:). ')
-      CALL WrScr (' To make them compatible, please modify DR in the AeroDyn input file, '// TRIM( ADFile ) //', as follows:')
+      ErrMess = ' Input values for DR(:) are not compatible with input RElm(:).'
+      CALL WrScr1(TRIM(ErrMess))
+      CALL WrScr( ' To make them compatible, please modify DR in the AeroDyn input file, '// TRIM( ADFile ) //', as follows:' )
       CALL WrScr1(' DR (Old) --> DR (New) ')
 
-      DO I = 1,NElm
-         WRITE( DRChange, "(' ', F13.4, ' --> ', F13.4, ' ')" ) DR(I), DRNodesNew(I)
+      DO I = 1,P%Element%NElm
+         WRITE( DRChange, "(' ', F13.4, ' --> ', F13.4, ' ')" ) P%Blade%DR(I), DRNodesNew(I)
          CALL WrScr( DRChange )
       ENDDO !I
 
@@ -5268,8 +5234,8 @@ SUBROUTINE CheckRComp( ADFile, HubRadius, TipRadius, ErrStat )
 
          ! Abort program since SUM( DRNodes(:) ) /= ( TipRadius - HubRadius)
 
-      CALL WrScr(' TipRadius must be equal to HubRadius + SUM( DR(:) ). ')
-      ErrStat = 1
+      CALL WrScr(' TipRadius must be equal to HubRadius + SUM( P%Blade%DR(:) ). ')
+      ErrStat = ErrID_Fatal
 
       RETURN
 

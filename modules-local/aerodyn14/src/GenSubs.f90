@@ -1,372 +1,397 @@
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
  MODULE AeroGenSubs
 
 
    USE NWTC_LIBRARY
+   USE AeroDyn_Types
+
+IMPLICIT        NONE
 
 ! SUBROUTINE AllocArrays( Arg )
 ! SUBROUTINE ElemOpen( ElemFile )
 ! SUBROUTINE ElemOut( )
 
+   INTEGER(IntKi) , PARAMETER :: MAXINFL = 6 
+
+
  CONTAINS
  ! ****************************************************
-   SUBROUTINE AllocArrays ( Arg )
+   SUBROUTINE AllocArrays ( InitInp, P, xc, xd, z, O, y, Arg  )
  !  Allocates space to the phenomenal number of arrays
  !  we use in this program
  ! ****************************************************
 
+   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: xc          ! Initial continuous states
+   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   CHARACTER(*) :: Arg
 
-USE             Airfoil
-USE             Bedoes
-USE             Blade
-USE             DynInflow
-USE             Element
-USE             ElOutParams
-USE             Switch
-
-
-IMPLICIT        NONE
 
 
    ! Passed Variables:
 
-CHARACTER(*) :: Arg
 
 
    ! Local Variables:
 
 INTEGER(4)   :: Sttus
 
+INTEGER :: NElm, NB, MaxTable, NumCl, NumFoil, NumElOut, NumWndElOut
+
+NB          = P%Blade%NB
+Nelm        = P%Element%Nelm
+NumFoil     = P%AirFoil%NumFoil
+NumCl       = P%AirFoil%NumCl
+MaxTable    = P%AirFoil%MaxTable
+NumElOut    = O%ElOut%NumElOut
+NumWndElOut = O%ElOut%NumWndElOut
+
+
 Sttus = 0.0
 
 IF (Arg(1:7) == 'Element') THEN
 
-   IF (.NOT. ALLOCATED(ElPrList)) ALLOCATE ( ElPrList(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%ElOut%ElPrList)) ALLOCATE ( O%ElOut%ElPrList(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for ElPrList array.' )
-   ElPrList ( : ) = 0
+   O%ElOut%ElPrList ( : ) = 0
 
-   IF (.NOT. ALLOCATED(WndElPrList)) ALLOCATE ( WndElPrList(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%ElOut%WndElPrList)) ALLOCATE ( O%ElOut%WndElPrList(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for WndElPrList array.' )
-   WndElPrList ( : ) = 0
+   O%ElOut%WndElPrList ( : ) = 0
 
-   IF (.NOT. ALLOCATED(A)) ALLOCATE ( A(NELM,NB) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%Element%A)) ALLOCATE ( O%Element%A(NELM,NB) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for A array.' )
-   A ( :, : ) = 0.0
+   O%Element%A ( :, : ) = 0.0
 
-   IF (.NOT. ALLOCATED(AP)) ALLOCATE ( AP(NELM,NB) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%Element%AP)) ALLOCATE ( O%Element%AP(NELM,NB) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AP array.' )
 
 ! Beddoes arrays
-   IF (DSTALL) THEN
+   IF (P%Dstall) THEN
 
-      IF (.NOT. ALLOCATED(ADOT)) ALLOCATE ( ADOT(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%ADOT)) ALLOCATE ( O%Beddoes%ADOT(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ADOT array.' )
-      ADOT ( :, : ) = 0.0
+      O%Beddoes%ADOT ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(ADOT1)) ALLOCATE ( ADOT1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%ADOT1)) ALLOCATE ( O%Beddoes%ADOT1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ADOT1 array.' )
 
-      IF (.NOT. ALLOCATED(AFE)) ALLOCATE ( AFE(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%AFE)) ALLOCATE ( O%Beddoes%AFE(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AFE array.' )
-      AFE(:,:) = 0.0
+      O%Beddoes%AFE(:,:) = 0.0
 
-
-      IF (.NOT. ALLOCATED(AFE1)) ALLOCATE ( AFE1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%AFE1)) ALLOCATE ( O%Beddoes%AFE1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AFE1 array.' )
 
-      IF (.NOT. ALLOCATED(ANE)) ALLOCATE ( ANE(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%ANE)) ALLOCATE ( O%Beddoes%ANE(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ANE array.' )
-      ANE ( :, : ) = 0.0
+      O%Beddoes%ANE ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(ANE1)) ALLOCATE ( ANE1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%ANE1)) ALLOCATE ( O%Beddoes%ANE1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ANE1 array.' )
 
-      IF (.NOT. ALLOCATED(AOD)) ALLOCATE ( AOD(NELM,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%AOD)) ALLOCATE ( O%Beddoes%AOD(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AOD array.' )
-
-      IF (.NOT. ALLOCATED(AOL)) ALLOCATE ( AOL(NELM,MAXTABLE) , STAT=Sttus )
+      O%Beddoes%AOD = 0.0_ReKi
+      
+      IF (.NOT. ALLOCATED(O%Beddoes%AOL)) ALLOCATE ( O%Beddoes%AOL(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AOL array.' )
+      O%Beddoes%AOL = 0.0_ReKi
 
-      IF (.NOT. ALLOCATED(BEDSEP)) ALLOCATE ( BEDSEP(NELM,NB) , STAT=Sttus )
-      IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for BEDSEP array.' )
-      BEDSEP(:,:) = .FALSE.
 
-      IF (.NOT. ALLOCATED(CDO)) ALLOCATE ( CDO(NELM,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CDO)) ALLOCATE ( O%Beddoes%CDO(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDO array.' )
 
-      IF (.NOT. ALLOCATED(CNA)) ALLOCATE ( CNA(NELM,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNA)) ALLOCATE ( O%Beddoes%CNA(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNA array.' )
 
-      IF (.NOT. ALLOCATED(CNP)) ALLOCATE ( CNP(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNP)) ALLOCATE ( O%Beddoes%CNP(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNP array.' )
-      CNP ( :, : ) = 0.0
+      O%Beddoes%CNP ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(CNP1)) ALLOCATE ( CNP1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNP1)) ALLOCATE ( O%Beddoes%CNP1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNP1 array.' )
 
-      IF (.NOT. ALLOCATED(CNPD)) ALLOCATE ( CNPD(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNPD)) ALLOCATE ( O%Beddoes%CNPD(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNPD array.' )
-      CNPD ( :, : ) = 0.0
+      O%Beddoes%CNPD ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(CNPD1)) ALLOCATE ( CNPD1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNPD1)) ALLOCATE ( O%Beddoes%CNPD1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNPD1 array.' )
 
-      IF (.NOT. ALLOCATED(CNPOT)) ALLOCATE ( CNPOT(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNPOT)) ALLOCATE ( O%Beddoes%CNPOT(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNPOT array.' )
-      CNPOT ( :, : ) = 0.0
+      O%Beddoes%CNPOT ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(CNPOT1)) ALLOCATE ( CNPOT1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNPOT1)) ALLOCATE ( O%Beddoes%CNPOT1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNPOT1 array.' )
 
-      IF (.NOT. ALLOCATED(CNS)) ALLOCATE ( CNS(NELM,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNS)) ALLOCATE ( O%Beddoes%CNS(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNS array.' )
 
-      IF (.NOT. ALLOCATED(CNSL)) ALLOCATE ( CNSL(NELM,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNSL)) ALLOCATE ( O%Beddoes%CNSL(NELM,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNSL array.' )
 
-      IF (.NOT. ALLOCATED(CNV)) ALLOCATE ( CNV(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CNV)) ALLOCATE ( O%Beddoes%CNV(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNV array.' )
-      CNV ( :, : ) = 0.0
+      O%Beddoes%CNV ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(CVN)) ALLOCATE ( CVN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CVN)) ALLOCATE ( O%Beddoes%CVN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CVN array.' )
-      CVN ( :, : ) = 0.0
+      O%Beddoes%CVN ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(CVN1)) ALLOCATE ( CVN1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%CVN1)) ALLOCATE ( O%Beddoes%CVN1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CVN1 array.' )
 
-      IF (.NOT. ALLOCATED(DF)) ALLOCATE ( DF(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DF)) ALLOCATE ( O%Beddoes%DF(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DF array.' )
-      DF( :, : ) = 0.0
+      O%Beddoes%DF( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DFAFE)) ALLOCATE ( DFAFE(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DFAFE)) ALLOCATE ( O%Beddoes%DFAFE(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DFAFE array.' )
-      DFAFE ( :, : ) = 0.0
+      O%Beddoes%DFAFE ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DFAFE1)) ALLOCATE ( DFAFE1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DFAFE1)) ALLOCATE ( O%Beddoes%DFAFE1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DFAFE1 array.' )
 
-      IF (.NOT. ALLOCATED(DFC)) ALLOCATE ( DFC(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DFC)) ALLOCATE ( O%Beddoes%DFC(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DFC array.' )
-      DFC ( :, : ) = 0.0
+      O%Beddoes%DFC ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DN)) ALLOCATE ( DN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DN)) ALLOCATE ( O%Beddoes%DN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DN array.' )
-      DN ( :, : ) = 0.0
+      O%Beddoes%DN ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DPP)) ALLOCATE ( DPP(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DPP)) ALLOCATE ( O%Beddoes%DPP(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DP array.' )
-      DPP ( :, : ) = 0.0
+      O%Beddoes%DPP ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DQ)) ALLOCATE ( DQ(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DQ)) ALLOCATE ( O%Beddoes%DQ(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DQ array.' )
-      DQ ( :, : ) = 0.0
+      O%Beddoes%DQ ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DQP)) ALLOCATE ( DQP(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DQP)) ALLOCATE ( O%Beddoes%DQP(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DQP array.' )
-      DQP ( :, : ) = 0.0
+      O%Beddoes%DQP ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(DQP1)) ALLOCATE ( DQP1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%DQP1)) ALLOCATE ( O%Beddoes%DQP1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DQP1 array.' )
 
-      IF (.NOT. ALLOCATED(FSP)) ALLOCATE ( FSP(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%FSP)) ALLOCATE ( O%Beddoes%FSP(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for FSP array.' )
-      FSP ( :, : ) = 0.0
+      O%Beddoes%FSP ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(FSP1)) ALLOCATE ( FSP1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%FSP1)) ALLOCATE ( O%Beddoes%FSP1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for FSP1 array.' )
 
-      IF (.NOT. ALLOCATED(FSPC)) ALLOCATE ( FSPC(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%FSPC)) ALLOCATE ( O%Beddoes%FSPC(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for FSPC array.' )
-      FSPC ( :, : ) = 0.0
+      O%Beddoes%FSPC ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(FSPC1)) ALLOCATE ( FSPC1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%FSPC1)) ALLOCATE ( O%Beddoes%FSPC1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for FSPC1 array.' )
 
-      IF (.NOT. ALLOCATED(OLDCNV)) ALLOCATE ( OLDCNV(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDCNV)) ALLOCATE ( O%Beddoes%OLDCNV(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDCNV array.' )
 
-      IF (.NOT. ALLOCATED(OLDDF)) ALLOCATE ( OLDDF(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDDF)) ALLOCATE ( O%Beddoes%OLDDF(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDDF array.' )
 
-      IF (.NOT. ALLOCATED(OLDDFC)) ALLOCATE ( OLDDFC(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDDFC)) ALLOCATE ( O%Beddoes%OLDDFC(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDDFC array.' )
 
-      IF (.NOT. ALLOCATED(OLDDN)) ALLOCATE ( OLDDN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDDN)) ALLOCATE ( O%Beddoes%OLDDN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDDN array.' )
 
-      IF (.NOT. ALLOCATED(OLDDPP)) ALLOCATE ( OLDDPP(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDDPP)) ALLOCATE ( O%Beddoes%OLDDPP(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDDP array.' )
 
-      IF (.NOT. ALLOCATED(OLDDQ)) ALLOCATE ( OLDDQ(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDDQ)) ALLOCATE ( O%Beddoes%OLDDQ(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDDQ array.' )
 
-      IF (.NOT. ALLOCATED(OLDTAU)) ALLOCATE ( OLDTAU(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDTAU)) ALLOCATE ( O%Beddoes%OLDTAU(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDTAU array.' )
 
-      IF (.NOT. ALLOCATED(OLDXN)) ALLOCATE ( OLDXN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDXN)) ALLOCATE ( O%Beddoes%OLDXN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDXN array.' )
 
-      IF (.NOT. ALLOCATED(OLDYN)) ALLOCATE ( OLDYN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDYN)) ALLOCATE ( O%Beddoes%OLDYN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDYN array.' )
 
-      IF (.NOT. ALLOCATED(OLDSEP)) ALLOCATE ( OLDSEP(NELM,NB) , STAT=Sttus )
-      IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDSEP array.' )
-
-      IF (.NOT. ALLOCATED(QX)) ALLOCATE ( QX(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%QX)) ALLOCATE ( O%Beddoes%QX(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for QX array.' )
-      QX ( :, : ) = 0.0
+      O%Beddoes%QX ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(QX1)) ALLOCATE ( QX1(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%QX1)) ALLOCATE ( O%Beddoes%QX1(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for QX1 array.' )
 
-      IF (.NOT. ALLOCATED(TAU)) ALLOCATE ( TAU(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%TAU)) ALLOCATE ( O%Beddoes%TAU(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for TAU array.' )
-      TAU(:,:) = 0.0
+      O%Beddoes%TAU(:,:) = 0.0
 
-      IF (.NOT. ALLOCATED(XN)) ALLOCATE ( XN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%XN)) ALLOCATE ( O%Beddoes%XN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for XN array.' )
-      XN ( :, : ) = 0.0
+      O%Beddoes%XN ( :, : ) = 0.0
 
-      IF (.NOT. ALLOCATED(YN)) ALLOCATE ( YN(NELM,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%YN)) ALLOCATE ( O%Beddoes%YN(NELM,NB) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for YN array.' )
-      YN ( :, : ) = 0.0
+      O%Beddoes%YN ( :, : ) = 0.0
+
+      IF (.NOT. ALLOCATED(O%Beddoes%OLDSEP)) ALLOCATE ( O%Beddoes%OLDSEP(NELM,NB) , STAT=Sttus )
+      IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLDSEP array.' )
+
+      IF (.NOT. ALLOCATED(O%Beddoes%BEDSEP)) ALLOCATE ( O%Beddoes%BEDSEP(NELM,NB) , STAT=Sttus )
+      IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for BEDSEP array.' )
+      O%Beddoes%BEDSEP(:,:) = .FALSE.
 
    ENDIF ! Beddoes arrays
 
-   IF (.NOT. ALLOCATED(C)) ALLOCATE ( C(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%Blade%C)) ALLOCATE ( P%Blade%C(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for C array.' )
 
-   IF (.NOT. ALLOCATED(DR)) ALLOCATE ( DR(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%Blade%DR)) ALLOCATE ( P%Blade%DR(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DR array.' )
 
-   IF (.NOT. ALLOCATED(RELM)) ALLOCATE ( RELM(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%Element%RELM)) ALLOCATE ( P%Element%RELM(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for RELM array.' )
 
-   IF (.NOT. ALLOCATED(TWIST)) ALLOCATE ( TWIST(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%Element%TWIST)) ALLOCATE ( P%Element%TWIST(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for TWIST array.' )
 
-   IF (.NOT. ALLOCATED(TLCNST)) ALLOCATE ( TLCNST(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%Element%TLCNST)) ALLOCATE ( P%Element%TLCNST(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for TLCNST array.' )
-   TLCNST = 99.0
+   P%Element%TLCNST = 99.0
 
-   IF (.NOT. ALLOCATED(HLCNST)) ALLOCATE ( HLCNST(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%Element%HLCNST)) ALLOCATE ( P%Element%HLCNST(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for HLCNST array.' )
-   HLCNST = 99.0
+   P%Element%HLCNST = 99.0
 
-   IF (.NOT. ALLOCATED(NFOIL)) ALLOCATE ( NFOIL(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%AirFoil%NFOIL)) ALLOCATE ( P%AirFoil%NFOIL(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for NFOIL array.' )
 
-   IF (.NOT. ALLOCATED(NLIFT)) ALLOCATE ( NLIFT(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%AirFoil%NLIFT)) ALLOCATE ( P%AirFoil%NLIFT(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for NLIFT array.' )
 
-   IF (.NOT. ALLOCATED(NTables)) ALLOCATE ( NTables(NELM) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(P%AirFoil%NTables)) ALLOCATE ( P%AirFoil%NTables(NELM) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for NTables array.' )
 
-   IF (DYNINFL .OR. DYNINIT) THEN
-      IF (.NOT. ALLOCATED(RMC_SAVE)) ALLOCATE ( RMC_SAVE ( NB, NELM, MAXINFL ) , STAT=Sttus )
+   IF (P%Dyninfl .OR. O%Dyninit) THEN
+      IF (.NOT. ALLOCATED(O%DynInflow%RMC_SAVE)) ALLOCATE ( O%DynInflow%RMC_SAVE ( NB, NELM, MAXINFL ) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for RMC_SAVE array.' )
-      RMC_SAVE = 0.0
+      O%DynInflow%RMC_SAVE = 0.0
 
-      IF (.NOT. ALLOCATED(RMS_SAVE)) ALLOCATE ( RMS_SAVE ( NB, NELM, MAXINFL ) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%DynInflow%RMS_SAVE)) ALLOCATE ( O%DynInflow%RMS_SAVE ( NB, NELM, MAXINFL ) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for RMS_SAVE array.' )
-      RMS_SAVE = 0.0
+      O%DynInflow%RMS_SAVE = 0.0
    ENDIF
-
 
 ELSEIF (Arg(1:7) == 'ElPrint') THEN
 
-   IF ( NumElOut > 0 ) THEN
-      IF (.NOT. ALLOCATED(AAA)) ALLOCATE ( AAA(NumElOut) , STAT=Sttus )
+   IF ( O%ElOut%NumElOut > 0 ) THEN
+      IF (.NOT. ALLOCATED(O%ElOut%AAA)) ALLOCATE ( O%ElOut%AAA(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AAA array.' )
 
-      IF (.NOT. ALLOCATED(AAP)) ALLOCATE ( AAP(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%AAP)) ALLOCATE ( O%ElOut%AAP(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AAP array.' )
 
-      IF (.NOT. ALLOCATED(ALF)) ALLOCATE ( ALF(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%ALF)) ALLOCATE ( O%ElOut%ALF(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ALF array.' )
 
-      IF (.NOT. ALLOCATED(CDD)) ALLOCATE ( CDD(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%CDD)) ALLOCATE ( O%ElOut%CDD(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDD array.' )
 
-      IF (.NOT. ALLOCATED(CLL)) ALLOCATE ( CLL(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%CLL)) ALLOCATE ( O%ElOut%CLL(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CLL array.' )
 
-      IF (.NOT. ALLOCATED(CMM)) ALLOCATE ( CMM(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%CMM)) ALLOCATE ( O%ElOut%CMM(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CMM array.' )
 
-      IF (.NOT. ALLOCATED(CNN)) ALLOCATE ( CNN(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%CNN)) ALLOCATE ( O%ElOut%CNN(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CNN array.' )
 
-      IF (.NOT. ALLOCATED(CTT)) ALLOCATE ( CTT(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%CTT)) ALLOCATE ( O%ElOut%CTT(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CTT array.' )
 
-      IF (.NOT. ALLOCATED(DFNSAV)) ALLOCATE ( DFNSAV(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%DFNSAV)) ALLOCATE ( O%ElOut%DFNSAV(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DFNSAV array.' )
 
-      IF (.NOT. ALLOCATED(DFTSAV)) ALLOCATE ( DFTSAV(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%DFTSAV)) ALLOCATE ( O%ElOut%DFTSAV(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DFTSAV array.' )
 
-      IF (.NOT. ALLOCATED(DynPres)) ALLOCATE ( DynPres(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%DynPres)) ALLOCATE ( O%ElOut%DynPres(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for DynPres array.' )
 
-      IF (.NOT. ALLOCATED(PMM)) ALLOCATE ( PMM(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%PMM)) ALLOCATE ( O%ElOut%PMM(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for PMM array.' )
 
-      IF (.NOT. ALLOCATED(PITSAV)) ALLOCATE ( PITSAV(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%PITSAV)) ALLOCATE ( O%ElOut%PITSAV(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for PITSAV array.' )
 
-      IF (.NOT. ALLOCATED(ReyNum)) ALLOCATE ( ReyNum(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%ReyNum)) ALLOCATE ( O%ElOut%ReyNum(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for ReyNum array.' )
 
-      IF (.NOT. ALLOCATED(ElPrNum)) ALLOCATE ( ElPrNum(NumElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%ElPrNum)) ALLOCATE ( O%ElOut%ElPrNum(NumElOut) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for ElPrNum array.' )
-      ElPrNum ( : ) = 0
+      O%ElOut%ElPrNum ( : ) = 0
 
    END IF
 
    IF ( NumWndElOut > 0 ) THEN
 
-      IF (.NOT. ALLOCATED(WndElPrNum)) ALLOCATE ( WndElPrNum(NumWndElOut) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%WndElPrNum)) ALLOCATE ( O%ElOut%WndElPrNum(NumWndElOut) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for WndElPrNum array.' )
-      WndElPrNum ( : ) = 0
+      O%ElOut%WndElPrNum ( : ) = 0
 
-      IF (.NOT. ALLOCATED(SaveVX)) ALLOCATE ( SaveVX(NumWndElOut,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%SaveVX)) ALLOCATE ( O%ElOut%SaveVX(NumWndElOut,NB) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for SaveVX array.' )
 
-      IF (.NOT. ALLOCATED(SaveVY)) ALLOCATE ( SaveVY(NumWndElOut,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%SaveVY)) ALLOCATE ( O%ElOut%SaveVY(NumWndElOut,NB) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for SaveVY array.' )
 
-      IF (.NOT. ALLOCATED(SaveVZ)) ALLOCATE ( SaveVZ(NumWndElOut,NB) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%ElOut%SaveVZ)) ALLOCATE ( O%ElOut%SaveVZ(NumWndElOut,NB) , STAT=Sttus )
       IF ( Sttus /= 0 )  CALL ProgAbort ( ' Error allocating memory for SaveVZ array.' )
 
    END IF
 
 ELSEIF (Arg(1:8) == 'Aerodata') THEN
 
-   IF (.NOT. ALLOCATED(AL)) ALLOCATE ( AL(NumFoil,NumCL) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%AirFoil%AL)) ALLOCATE ( O%AirFoil%AL(NumFoil,NumCL) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for AL array.' )
 
-   IF (.NOT. ALLOCATED(CD)) ALLOCATE ( CD(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%AirFoil%CD)) ALLOCATE ( O%AirFoil%CD(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CD array.' )
 
-   IF (.NOT. ALLOCATED(CL)) ALLOCATE ( CL(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%AirFoil%CL)) ALLOCATE ( O%AirFoil%CL(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CL array.' )
 
-   IF (.NOT. ALLOCATED(CM)) ALLOCATE ( CM(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(O%AirFoil%CM)) ALLOCATE ( O%AirFoil%CM(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CM array.' )
 
-   IF (.NOT. ALLOCATED(MulTabMet)) ALLOCATE ( MulTabMet(NumFoil,MAXTABLE) , STAT=Sttus )
+   IF (.NOT. ALLOCATED(p%AirFoil%MulTabMet)) ALLOCATE ( p%AirFoil%MulTabMet(NumFoil,MAXTABLE) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for MulTabMet array.' )
 
-   IF (DSTALL) THEN
+   IF (P%DSTALL) THEN
 
-      IF (.NOT. ALLOCATED(FTB)) ALLOCATE ( FTB(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%FTB)) ALLOCATE ( O%Beddoes%FTB(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for FTB array.' )
 
-      IF (.NOT. ALLOCATED(FTBC)) ALLOCATE ( FTBC(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
+      IF (.NOT. ALLOCATED(O%Beddoes%FTBC)) ALLOCATE ( O%Beddoes%FTBC(NumFoil,NumCL,MAXTABLE) , STAT=Sttus )
       IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for FTBC array.' )
 
    ENDIF ! Beddoes arrays
+
+!jm we did not recognize the argument consider that an error
+ELSE
+
+   CALL ProgAbort( 'Unknown switch argument to AllocArrays' )
 
 ENDIF
 
@@ -376,26 +401,19 @@ RETURN
 END SUBROUTINE AllocArrays
 
  ! *****************************************************
-   SUBROUTINE ElemOpen (ElemFile)
+   SUBROUTINE ElemOpen (ElemFile, P, O, ErrStat, ErrMsg, AD_Ver )
  !  This subroutine opens the element output file and writes
  !   column headings separated by tab characters
  !  ElemFile = file name
  ! *****************************************************
 
-USE               Blade    ! We need the number of blades for the wind output
-
-USE               ElOutParams
-USE               Element
-USE               Switch
-
-
-IMPLICIT          NONE
-
-
    ! Passed Variables:
-
-CHARACTER(  *) :: ElemFile
-
+   CHARACTER(*), INTENT(IN) :: ElemFile
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState  Initial other/optimization states
+   INTEGER(IntKi),               INTENT(OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(ProgDesc)    ,           INTENT(IN)     :: AD_Ver
 
    ! Local Variables:
 
@@ -409,24 +427,33 @@ CHARACTER(140) :: Frmt
 CHARACTER(  3) :: Prs_Unit
 
 
-IF (NumWndElOut > 0) THEN
-   CALL OpenFOutFile (UnWndOut, TRIM(ElemFile)//'.wind')
-   WRITE (UnWndOut,"( 'This file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )")  &
-        TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
+ErrStat = ErrID_None
+ErrMsg = ""
+
+
+
+IF (O%ElOut%NumWndElOut > 0) THEN
+   CALL GetNewUnit(P%UnWndOut)
+   CALL OpenFOutFile (P%UnWndOut, TRIM(ElemFile)//'.wind', ErrStat, ErrMsg)
+   IF (ErrStat /= ErrID_None) RETURN
+   WRITE (P%UnWndOut,"( 'This file was generated by ' , A , ' on ' , A , ' at ' , A , '.' )")  &
+        GETNVD(AD_Ver), CurDate(), CurTime()
 ENDIF
 
 
  ! Open the Element Print file if requested
-IF (ELEMPRN) THEN
-   CALL OpenFOutFile (UnElem, TRIM(ElemFile))
-   WRITE (UnElem,"( 'This file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )")  &
-        TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
+IF (p%ELEMPRN) THEN
+   CALL GetNewUnit(P%UnElem)
+   CALL OpenFOutFile (p%UnElem, TRIM(ElemFile), ErrStat, ErrMsg)
+   IF (ErrStat /= ErrID_None) RETURN
+   WRITE (p%UnElem,"( 'This file was generated by ' , A , ' on ' , A , ' at ' , A , '.' )")  &
+        GETNVD(AD_Ver), CurDate(), CurTime()
 ELSE
    RETURN
 ENDIF
 
  ! Set the units labels
-IF (SIUNIT) THEN
+IF (p%SIUNIT) THEN
   Dst_Unit = 'm'
   Frc_Unit = 'N'
   Prs_Unit = 'Pa'
@@ -439,31 +466,31 @@ ENDIF
 
 Frmt = '( A4, 3(A1,A2,I2.2),    (: A1, A, I2.2 ) )'
 
-IF ( PMOMENT ) THEN
-   WRITE(Frmt(22:24), '(I3)') 14*NumElOut
-   WRITE(UnElem, Frmt) 'Time',                    &
-               TAB,    'VX',       NELM,          &
-               TAB,    'VY',       NELM,          &
-               TAB,    'VZ',       NELM,          &
-             ( TAB,    'Alpha',    ElPrNum(JE),  &
-               TAB,    'DynPres',  ElPrNum(JE),  &
-               TAB,    'CLift',    ElPrNum(JE),  &
-               TAB,    'CDrag',    ElPrNum(JE),  &
-               TAB,    'CNorm',    ElPrNum(JE),  &
-               TAB,    'CTang',    ElPrNum(JE),  &
-               TAB,    'CMomt',    ElPrNum(JE),  &
-               TAB,    'Pitch',    ElPrNum(JE),  &
-               TAB,    'AxInd',    ElPrNum(JE),  &
-               TAB,    'TanInd',   ElPrNum(JE),  &
-               TAB,    'ForcN',    ElPrNum(JE),  &
-               TAB,    'ForcT',    ElPrNum(JE),  &
-               TAB,    'Pmomt',    ElPrNum(JE),  &
-               TAB,    'ReNum',    ElPrNum(JE),  &
-                         JE = 1, NumElOut )
+IF ( p%PMOMENT ) THEN
+   WRITE(Frmt(22:24), '(I3)') 14*O%ElOut%NumElOut
+   WRITE(p%UnElem, Frmt) 'Time',                    &
+               TAB,    'VX',       p%Element%NELM,          &
+               TAB,    'VY',       p%Element%NELM,          &
+               TAB,    'VZ',       p%Element%NELM,          &
+             ( TAB,    'Alpha',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'DynPres',  O%ElOut%ElPrNum(JE),  &
+               TAB,    'CLift',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CDrag',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CNorm',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CTang',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CMomt',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'Pitch',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'AxInd',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'TanInd',   O%ElOut%ElPrNum(JE),  &
+               TAB,    'ForcN',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'ForcT',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'Pmomt',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'ReNum',    O%ElOut%ElPrNum(JE),  &
+                         JE = 1, O%ElOut%NumElOut )
 
    Frmt = '( A5, 3(A1,A8),    (: A1, A ) )'
-   WRITE(Frmt(17:19), '(I3)') 14*NumElOut
-   WRITE(UnElem, Frmt) '(sec)',                       &
+   WRITE(Frmt(17:19), '(I3)') 14*O%ElOut%NumElOut
+   WRITE(p%UnElem, Frmt) '(sec)',                       &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
@@ -481,31 +508,31 @@ IF ( PMOMENT ) THEN
                TAB,    '('//TRIM(Frc_Unit)//')',      &
                TAB,    '('//TRIM(Frc_Unit)//'-'//TRIM(Dst_Unit)//')', &
                TAB,    '(x10^6)',                     &
-                         JE = 1, NumElOut )
+                         JE = 1, O%ElOut%NumElOut )
 
 ELSE
-   WRITE(Frmt(22:24), '(I3)') 12*NumElOut
-   WRITE(UnElem, Frmt) 'Time',                    &
-               TAB,    'VX',       NELM,          &
-               TAB,    'VY',       NELM,          &
-               TAB,    'VZ',       NELM,          &
-             ( TAB,    'Alpha',    ElPrNum(JE),  &
-               TAB,    'DynPres',  ElPrNum(JE),  &
-               TAB,    'CLift',    ElPrNum(JE),  &
-               TAB,    'CDrag',    ElPrNum(JE),  &
-               TAB,    'CNorm',    ElPrNum(JE),  &
-               TAB,    'CTang',    ElPrNum(JE),  &
-               TAB,    'Pitch',    ElPrNum(JE),  &
-               TAB,    'AxInd',    ElPrNum(JE),  &
-               TAB,    'TanInd',   ElPrNum(JE),  &
-               TAB,    'ForcN',    ElPrNum(JE),  &
-               TAB,    'ForcT',    ElPrNum(JE),  &
-               TAB,    'ReNum',    ElPrNum(JE),  &
-                         JE = 1, NumElOut )
+   WRITE(Frmt(22:24), '(I3)') 12*O%ElOut%NumElOut
+   WRITE(p%UnElem, Frmt) 'Time',                    &
+               TAB,    'VX',       p%Element%NELM,          &
+               TAB,    'VY',       p%Element%NELM,          &
+               TAB,    'VZ',       p%Element%NELM,          &
+             ( TAB,    'Alpha',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'DynPres',  O%ElOut%ElPrNum(JE),  &
+               TAB,    'CLift',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CDrag',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CNorm',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'CTang',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'Pitch',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'AxInd',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'TanInd',   O%ElOut%ElPrNum(JE),  &
+               TAB,    'ForcN',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'ForcT',    O%ElOut%ElPrNum(JE),  &
+               TAB,    'ReNum',    O%ElOut%ElPrNum(JE),  &
+                         JE = 1, O%ElOut%NumElOut )
 
    Frmt = '( A5, 3(A1,A8),    (: A1, A ) )'
-   WRITE(Frmt(17:19), '(I3)') 12*NumElOut
-   WRITE(UnElem, Frmt) '(sec)',                       &
+   WRITE(Frmt(17:19), '(I3)') 12*O%ElOut%NumElOut
+   WRITE(p%UnElem, Frmt) '(sec)',                       &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
@@ -521,28 +548,28 @@ ELSE
                TAB,    '('//TRIM(Frc_Unit)//')',      &
                TAB,    '('//TRIM(Frc_Unit)//')',      &
                TAB,    '(x10^6)',                     &
-                         JE = 1, NumElOut )
+                         JE = 1, O%ElOut%NumElOut )
 ENDIF
 
-IF ( NumWndElOut > 0 ) THEN
+IF ( O%ElOut%NumWndElOut > 0 ) THEN
    Frmt = '( A4, XXX(A1,A2,I2.2,"-B",I1.1) )'
-   WRITE(Frmt(7:9), '(I3)') 3*NumWndElOut*NB
+   WRITE(Frmt(7:9), '(I3)') 3*O%ElOut%NumWndElOut*p%NumBl
 
-   WRITE(UnWndOut, Frmt) 'Time',          &
-             ( ( TAB, 'VX',  WndElPrNum(JE),  JB,   &
-                 TAB, 'VY',  WndElPrNum(JE),  JB,   &
-                 TAB, 'VZ',  WndElPrNum(JE),  JB,   &
-                   JE = 1, NumWndElOut ) , &
-                   JB = 1, NB )
+   WRITE(p%UnWndOut, Frmt) 'Time',          &
+             ( ( TAB, 'VX',  O%ElOut%WndElPrNum(JE),  JB,   &
+                 TAB, 'VY',  O%ElOut%WndElPrNum(JE),  JB,   &
+                 TAB, 'VZ',  O%ElOut%WndElPrNum(JE),  JB,   &
+                   JE = 1, O%ElOut%NumWndElOut ) , &
+                   JB = 1, p%NumBl )
 
    Frmt = '( A5, XXX(A1,A8) )'
-   WRITE(Frmt(7:9), '(I3)') 3*NumWndElOut*NB
+   WRITE(Frmt(7:9), '(I3)') 3*O%ElOut%NumWndElOut*p%NumBl
 
-   WRITE(UnWndOut, Frmt)   '(sec)',                       &
+   WRITE(p%UnWndOut, Frmt)   '(sec)',                       &
                ( TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                  TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
                  TAB,    '('//TRIM(Dst_Unit)//'/sec)',  &
-                                  JE = 1, NumWndElOut*NB )
+                                  JE = 1, O%ElOut%NumWndElOut*p%NumBl )
 ENDIF
 
 RETURN
@@ -550,88 +577,81 @@ END SUBROUTINE ElemOpen
 
 
  ! *****************************************************
-   SUBROUTINE ElemOut
+   SUBROUTINE ElemOut( time, P, O )
  !  This subroutine writes the element output values
  !   for the desired elements
  ! *****************************************************
 
-USE               Blade       ! Get the number of blades
-
-USE               ElOutParams
-USE               AeroTime
-USE               Switch
-
-
-IMPLICIT          NONE
+ 
+   REAL(DbKi), INTENT(IN) :: time
+   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(IN)  :: O !therState  Initial other/optimization states
 
 
    ! Local Variables:
 
-INTEGER(4)     :: JE
-
-INTEGER(4)     :: JB    ! Counter for number of blades
-
-CHARACTER(30)  :: Frmt
-
+   INTEGER(IntKi)     :: JE
+   INTEGER(IntKi)     :: JB    ! Counter for number of blades
+   CHARACTER(30)  :: Frmt
 
 
  ! Write the element data if requested
-IF (ELEMPRN) THEN
+IF (p%ELEMPRN) THEN
 
    Frmt = '( F10.3,    ( : A1, ES12.5 ) )'
 
-   IF ( PMOMENT ) THEN
-      WRITE(Frmt(10:12), '(I3)') 14*NumElOut + 3
-      WRITE(UnElem,Frmt) TIME,      TAB,           &
-                     VXSAV,         TAB,           &
-                     VYSAV,         TAB,           &
-                     VZSAV,                        &
-                   ( TAB,   ALF    (JE), &
-                     TAB,   DynPres(JE), &
-                     TAB,   CLL    (JE), &
-                     TAB,   CDD    (JE), &
-                     TAB,   CNN    (JE), &
-                     TAB,   CTT    (JE), &
-                     TAB,   CMM    (JE), &
-                     TAB,   PITSAV (JE), &
-                     TAB,   AAA    (JE), &
-                     TAB,   AAP    (JE), &
-                     TAB,   DFNSAV (JE), &
-                     TAB,   DFTSAV (JE), &
-                     TAB,   PMM    (JE), &
-                     TAB,   ReyNum (JE), &
-                            JE= 1, NumElOut )
+   IF ( P%PMOMENT ) THEN
+      WRITE(Frmt(10:12), '(I3)') 14*O%ElOut%NumElOut + 3
+      WRITE(p%UnElem,Frmt) TIME,                 &
+                     TAB,   O%ElOut%VXSAV,       &
+                     TAB,   O%ElOut%VYSAV,       &
+                     TAB,   O%ElOut%VZSAV,       &
+                   ( TAB,   O%ElOut%ALF    (JE), &
+                     TAB,   O%ElOut%DynPres(JE), &
+                     TAB,   O%ElOut%CLL    (JE), &
+                     TAB,   O%ElOut%CDD    (JE), &
+                     TAB,   O%ElOut%CNN    (JE), &
+                     TAB,   O%ElOut%CTT    (JE), &
+                     TAB,   O%ElOut%CMM    (JE), &
+                     TAB,   O%ElOut%PITSAV (JE), &
+                     TAB,   O%ElOut%AAA    (JE), &
+                     TAB,   O%ElOut%AAP    (JE), &
+                     TAB,   O%ElOut%DFNSAV (JE), &
+                     TAB,   O%ElOut%DFTSAV (JE), &
+                     TAB,   O%ElOut%PMM    (JE), &
+                     TAB,   O%ElOut%ReyNum (JE), &
+                            JE= 1, O%ElOut%NumElOut )
 
 
    ELSE
-      WRITE(Frmt(10:12), '(I3)') 12*NumElOut + 3
-      WRITE(UnElem,Frmt) TIME,      TAB,           &
-                     VXSAV,         TAB,           &
-                     VYSAV,         TAB,           &
-                     VZSAV,                        &
-                   ( TAB,   ALF    (JE), &
-                     TAB,   DynPres(JE), &
-                     TAB,   CLL    (JE), &
-                     TAB,   CDD    (JE), &
-                     TAB,   CNN    (JE), &
-                     TAB,   CTT    (JE), &
-                     TAB,   PITSAV (JE), &
-                     TAB,   AAA    (JE), &
-                     TAB,   AAP    (JE), &
-                     TAB,   DFNSAV (JE), &
-                     TAB,   DFTSAV (JE), &
-                     TAB,   ReyNum (JE), &
-                            JE= 1, NumElOut )
+      WRITE(Frmt(10:12), '(I3)') 12*O%ElOut%NumElOut + 3
+      WRITE(p%UnElem,Frmt) TIME,                 &
+                     TAB,   O%ElOut%VXSAV,       &
+                     TAB,   O%ElOut%VYSAV,       &
+                     TAB,   O%ElOut%VZSAV,       &
+                   ( TAB,   O%ElOut%ALF    (JE), &
+                     TAB,   O%ElOut%DynPres(JE), &
+                     TAB,   O%ElOut%CLL    (JE), &
+                     TAB,   O%ElOut%CDD    (JE), &
+                     TAB,   O%ElOut%CNN    (JE), &
+                     TAB,   O%ElOut%CTT    (JE), &
+                     TAB,   O%ElOut%PITSAV (JE), &
+                     TAB,   O%ElOut%AAA    (JE), &
+                     TAB,   O%ElOut%AAP    (JE), &
+                     TAB,   O%ElOut%DFNSAV (JE), &
+                     TAB,   O%ElOut%DFTSAV (JE), &
+                     TAB,   O%ElOut%ReyNum (JE), &
+                            JE= 1, O%ElOut%NumElOut )
    ENDIF ! PMOMENT
 
-IF (NumWndElOut > 0) THEN
+IF (O%ElOut%NumWndElOut > 0) THEN
 
-   WRITE(Frmt(10:12), '(I3)') 3*NumWndElOut*NB
-   WRITE(UnWndOut,Frmt) TIME,                   &
-                    ( (  TAB, SaveVX( JE, JB ), &
-                         TAB, SaveVY( JE, JB ), &
-                         TAB, SaveVZ( JE, JB ), &
-                              JE = 1,NumWndElOut ), JB = 1,NB )
+   WRITE(Frmt(10:12), '(I3)') 3*O%ElOut%NumWndElOut*p%NumBl
+   WRITE(p%UnWndOut,Frmt) TIME,                   &
+                    ( (  TAB, O%ElOut%SaveVX( JE, JB ), &
+                         TAB, O%ElOut%SaveVY( JE, JB ), &
+                         TAB, O%ElOut%SaveVZ( JE, JB ), &
+                              JE = 1,O%ElOut%NumWndElOut ), JB = 1,p%NumBl )
 ENDIF
 
 ENDIF ! ELEMPRN
