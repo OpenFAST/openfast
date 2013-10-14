@@ -1,3 +1,26 @@
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2013  National Renewable Energy Laboratory
+!
+!    This file is part of SubDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
 MODULE SubDyn_Output
 
       ! This MODULE stores variables used for output.
@@ -3738,7 +3761,8 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
    
    
       ! ..... Public Subroutines ...................................................................................................
-   
+   PUBLIC :: SDOut_CloseSum
+   PUBLIC :: SDOut_OpenSum
    PUBLIC :: SDOut_MapOutputs
    PUBLIC :: SDOut_OpenOutput
    PUBLIC :: SDOut_CloseOutput
@@ -3822,9 +3846,9 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
    !Allocate WriteOuput  
    ALLOCATE( y%WriteOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
    IF ( ErrStat /= ErrID_None ) THEN
-	 ErrMsg  = ' Error allocating space for WriteOutput array.'
-	 ErrStat = ErrID_Fatal
-	 RETURN
+    ErrMsg  = ' Error allocating space for WriteOutput array.'
+    ErrStat = ErrID_Fatal
+    RETURN
    END IF
    y%WriteOutput = 0
 
@@ -3836,83 +3860,83 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
   IF ( ErrStat /=0) RETURN
   
   DO I=1,p%NMOutputs
-	ALLOCATE( p%MOutLst(I)%NodeIDs(p%MoutLst(I)%NoutCnt), STAT = ErrStat )
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst(I)%NodeIDs arrays in SD_Init'
-		RETURN
-	END IF
-	p%MOutLst(I)%NodeIDs=Init%MemberNodes(p%MoutLst(I)%MemberID,p%MOutLst(I)%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
+   ALLOCATE( p%MOutLst(I)%NodeIDs(p%MoutLst(I)%NoutCnt), STAT = ErrStat )
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst(I)%NodeIDs arrays in SDOut_Init'
+      RETURN
+   END IF
+   p%MOutLst(I)%NodeIDs=Init%MemberNodes(p%MoutLst(I)%MemberID,p%MOutLst(I)%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
 
-	ALLOCATE( p%MOutLst(I)%ElmIDs(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmIDs has for each selected node within the member, several element numbers to refer to for averaging (max 2 elements)
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst(I)%ElmIDs arrays in SD_Init'
-		RETURN
-	END IF 
-	p%MOutLst(I)%ElmIDs=0  !Initialize to 0
+   ALLOCATE( p%MOutLst(I)%ElmIDs(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmIDs has for each selected node within the member, several element numbers to refer to for averaging (max 2 elements)
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst(I)%ElmIDs arrays in SDOut_Init'
+      RETURN
+   END IF 
+   p%MOutLst(I)%ElmIDs=0  !Initialize to 0
 
-	ALLOCATE( p%MOutLst(I)%ElmNds(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmNds has for each selected node within the member, for each element number to refer to for averaging, the flag 1 or 2 depending on whether it is the 1st or last node of that element
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst(I)%ElmNds arrays in SD_Init'
-		RETURN
-	END IF 
+   ALLOCATE( p%MOutLst(I)%ElmNds(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmNds has for each selected node within the member, for each element number to refer to for averaging, the flag 1 or 2 depending on whether it is the 1st or last node of that element
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst(I)%ElmNds arrays in SDOut_Init'
+      RETURN
+   END IF 
 
-	ALLOCATE( p%MOutLst(I)%Me(12,12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Me has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x12 matrix
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst(I)%Me arrays in SD_Init'
-		RETURN
-	END IF 
-	ALLOCATE( p%MOutLst(I)%Ke(12,12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Ke has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x12 matrix
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst(I)%Ke arrays in SD_Init'
-		RETURN
-	END IF 
+   ALLOCATE( p%MOutLst(I)%Me(12,12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Me has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x12 matrix
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst(I)%Me arrays in SDOut_Init'
+      RETURN
+   END IF 
+   ALLOCATE( p%MOutLst(I)%Ke(12,12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Ke has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x12 matrix
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst(I)%Ke arrays in SDOut_Init'
+      RETURN
+   END IF 
     ALLOCATE( p%MOutLst(I)%Fg(12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Fg has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x1 vector
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst(I)%Fg arrays in SD_Init'
-		RETURN
-	END IF 
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst(I)%Fg arrays in SDOut_Init'
+      RETURN
+   END IF 
 
 
 
-	DO J=1,p%MoutLst(I)%NoutCnt !Iterate on requested nodes for that member
-		!I need to get at most 2 elements that belong to the same MoutLst(I)%MemberID
-		!make use of MemberNodes and NodesConnE
-		NconEls=Init%NodesConnE(p%MoutLst(I)%NodeIDs(J),1)!Number of elements connecting to the j-th node
+   DO J=1,p%MoutLst(I)%NoutCnt !Iterate on requested nodes for that member
+      !I need to get at most 2 elements that belong to the same MoutLst(I)%MemberID
+      !make use of MemberNodes and NodesConnE
+      NconEls=Init%NodesConnE(p%MoutLst(I)%NodeIDs(J),1)!Number of elements connecting to the j-th node
 
-		K2=0    !Initialize counter
-		DO K=1, NconEls 
-			L=Init%NodesConnE(p%MoutLst(I)%NodeIDs(J),k+1)  !k-th Element Number 
-			M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
+      K2=0    !Initialize counter
+      DO K=1, NconEls 
+         L=Init%NodesConnE(p%MoutLst(I)%NodeIDs(J),k+1)  !k-th Element Number 
+         M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
             
             !Select only the other node, not the one where elements connect to
             Junk=M(1)
             IF (M(1) .EQ. p%MoutLst(I)%NodeIDs(J)) Junk=M(2)
                         
-			IF (ANY(Init%MemberNodes(p%MoutLst(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
-				IF (K2 .EQ. 2) EXIT
-				K2=K2+1
-				p%MoutLst(I)%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
+         IF (ANY(Init%MemberNodes(p%MoutLst(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+            IF (K2 .EQ. 2) EXIT
+            K2=K2+1
+            p%MoutLst(I)%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
 
-				p%MoutLst(I)%ElmNds(J,K2)=1                        !store whether first or second node of element  
-				IF (M(2) .EQ. p%MoutLst(I)%NodeIDs(J) ) p%MoutLst(I)%ElmNds(J,K2)=2 !store whether first or second node of element  
+            p%MoutLst(I)%ElmNds(J,K2)=1                        !store whether first or second node of element  
+            IF (M(2) .EQ. p%MoutLst(I)%NodeIDs(J) ) p%MoutLst(I)%ElmNds(J,K2)=2 !store whether first or second node of element  
 
-				!Calculate Ke, Me to be used for output
-				CALL ElemK( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
-				p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
-				p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst(I)%Ke(:,:,J,K2) )
-				CALL ElemM( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
-				p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst(I)%Me(:,:,J,K2) )   
+            !Calculate Ke, Me to be used for output
+            CALL ElemK( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
+            p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
+            p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst(I)%Ke(:,:,J,K2) )
+            CALL ElemM( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
+            p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst(I)%Me(:,:,J,K2) )   
                 
                 CALL ElemG( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%rho, p%elemprops(L)%DirCos, p%MoutLst(I)%Fg(:,J,K2), Init%g )
-		   END IF    
-	 	ENDDO    
-	  ENDDO
+         END IF    
+      ENDDO    
+     ENDDO
 
    ENDDO       
 
@@ -3926,7 +3950,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
     ALLOCATE ( p%MOutLst2(p%NMembers), STAT = ErrStat )     !this list contains different arrays for each of its elements
     IF ( ErrStat /= ErrID_None ) THEN
         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst2 array in SD_Init'
+         ErrMsg  = 'Error allocating p%MOutLst2 array in SDOut_Init'
          RETURN
     END IF
     
@@ -3937,7 +3961,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
       ALLOCATE( p%MOutLst2(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !1st and last node of member
       IF ( ErrStat/= 0 ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst2(I)%NodeIDs arrays in SD_Init'
+         ErrMsg  = 'Error allocating p%MOutLst2(I)%NodeIDs arrays in SDOut_Init'
          RETURN
       END IF
       p%MOutLst2(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
@@ -3963,7 +3987,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
              IF (M(1) .EQ. p%MoutLst2(I)%NodeIDs(J)) Junk=M(2)
              
              IF (ANY(Init%MemberNodes(p%MoutLst2(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
-              
+                 
                   p%MoutLst2(I)%ElmID2s(K2)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
                   
                   p%MoutLst2(I)%ElmNd2s(K2)=1                        !store whether first or second node of element  
@@ -4047,22 +4071,22 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
        END IF
        
     ALLOCATE( p%MOutLst3(I)%Me(12,12,1,NconEls), STAT = ErrStat ) !Me has for each selected joint, and for each element attached to that node, a 12x12 matrix (extra dimension redundant)
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst3(I)%Me arrays in SDOut_Init'
-		RETURN
-	END IF 
-	ALLOCATE( p%MOutLst3(I)%Ke(12,12,1,NconEls), STAT = ErrStat ) !Ke has for each selected joint, and for each element attached to that node  a 12x12 matrix
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst3(I)%Ke arrays in SDOut_Init'
-		RETURN
-	END IF 
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst3(I)%Me arrays in SDOut_Init'
+      RETURN
+   END IF 
+   ALLOCATE( p%MOutLst3(I)%Ke(12,12,1,NconEls), STAT = ErrStat ) !Ke has for each selected joint, and for each element attached to that node  a 12x12 matrix
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst3(I)%Ke arrays in SDOut_Init'
+      RETURN
+   END IF 
     ALLOCATE( p%MOutLst3(I)%Fg(12,1,NconEls), STAT = ErrStat ) !Fg has for each selected joint, and for each element attached to that node  a 12x1 vector
-	IF ( ErrStat/= 0 ) THEN
-		ErrStat = ErrID_Fatal
-		ErrMsg  = 'Error allocating p%MOutLst3(I)%Ke arrays in SDOut_Init'
-		RETURN
+   IF ( ErrStat/= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error allocating p%MOutLst3(I)%Ke arrays in SDOut_Init'
+      RETURN
     END IF 
     
          DO K=1, NconEls 
@@ -4100,16 +4124,16 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
 
   ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
   IF ( ErrStat /= ErrID_None ) THEN
-	ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-	ErrStat = ErrID_Fatal
-	RETURN
+   ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
+   ErrStat = ErrID_Fatal
+   RETURN
   END IF
 
   ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
   IF ( ErrStat /= ErrID_None ) THEN
-	ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-	ErrStat = ErrID_Fatal
-	RETURN
+   ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
+   ErrStat = ErrID_Fatal
+   RETURN
   END IF
 
    
@@ -4147,9 +4171,9 @@ SUBROUTINE ReactMatx(Init, p, ErrStat, ErrMsg)
    
    ALLOCATE ( p%TIreact(6,DOFC), STAT = ErrStat )
    IF ( ErrStat /= ErrID_None ) THEN
-	ErrMsg  = ' Error allocating space for TIreact array.'
-	ErrStat = ErrID_Fatal
-	RETURN
+      ErrMsg  = ' Error allocating space for TIreact array.'
+      ErrStat = ErrID_Fatal
+      RETURN
    END IF
    
    p%TIreact=0 !Initialize
@@ -4201,7 +4225,7 @@ END SUBROUTINE ReactMatx
 !====================================================================================================
 SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
-! This is called by SubDyn_CalcOutput() at each time step.
+! This is called by SD_CalcOutput() at each time step.
 ! This routine does fill Allouts
 !---------------------------------------------------------------------------------------------------- 
    REAL(DbKi),                    INTENT( IN    )  :: CurrentTime          ! Current simulation time in seconds
@@ -4243,7 +4267,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
       ! Only generate member-based outputs for the number of user-requested member outputs
       !Now store and identify needed output as requested by user
       !p%MOutLst has the mapping for the member, node, elements per node, to be used
-      !MXNYZZZ   will need to connects of p%MOutLst(X)%ElmIDs(Y,1:2) if it is a force or accel; else to u%UFL(p%MOutLst(X)%NodeIDs(Y)) 
+      !MXNYZZZ   will need to connects to p%MOutLst(X)%ElmIDs(Y,1:2) if it is a force or accel; else to u%UFL(p%MOutLst(X)%NodeIDs(Y)) 
       !Inertial Load for the elements that are needed
       
   DO I=1,p%NMOutputs
@@ -4368,9 +4392,9 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
        
        ALLOCATE ( ReactNs(6*p%NReact), STAT = ErrStat )
        IF ( ErrStat /= ErrID_None ) THEN
-	      ErrMsg  = ' Error allocating space for ReactNs array.'
-	      ErrStat = ErrID_Fatal
-	      RETURN
+         ErrMsg  = ' Error allocating space for ReactNs array.'
+         ErrStat = ErrID_Fatal
+         RETURN
        END IF
        
        ReactNs = 0.0 !Initialize
@@ -4458,7 +4482,87 @@ END SUBROUTINE SDOut_MapOutputs
         
    
    END SUBROUTINE CALC_LOCAL 
- 
+
+   !====================================================================================================
+SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
+
+
+      ! Passed variables
+      
+   INTEGER,                 INTENT( IN    )   :: UnSum                ! the unit number for the SubDyn summary file          
+   INTEGER,                 INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),            INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+  
+
+      ! Local variables
+   LOGICAL                                :: Err                                       ! determines if an error exists      
+
+      ! Initialize ErrStat
+         
+   ErrStat = ErrID_None         
+   ErrMsg  = ""
+   
+   Err = .FALSE.
+
+      ! Write any closing information in the summary file
+      
+   IF ( UnSum > 0 ) THEN
+      WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat)  'This summary file was closed on '//CurDate()//' at '//CurTime()//'.'
+      IF (ErrStat /= 0) THEN
+         Err = .TRUE.
+         ErrMsg  = 'Problem writing to summary file'
+      END IF
+   END IF   
+   
+      ! Close the file
+   
+   CLOSE( UnSum, IOSTAT=ErrStat )
+   IF (ErrStat /= 0) THEN
+      Err = .TRUE.
+      ErrMsg  = 'Problem closing summary file'
+   END IF
+   
+   IF ( Err ) ErrStat = ErrID_Fatal
+      
+                      
+END SUBROUTINE SDOut_CloseSum            
+
+!====================================================================================================
+SUBROUTINE SDOut_OpenSum( UnSum, SummaryName, SD_Prog, ErrStat, ErrMsg )
+
+
+      ! Passed variables
+      
+   INTEGER,                 INTENT(   OUT )   :: UnSum                ! the unit number for the SubDyn summary file          
+   CHARACTER(*),            INTENT( IN    )   :: SummaryName          ! the name of the SubDyn summary file
+   TYPE(ProgDesc),          INTENT( IN    )   :: SD_Prog              ! the name/version/date of the  program
+   INTEGER,                 INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),            INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+           
+
+       ! Initialize ErrStat
+         
+   ErrStat = ErrID_None         
+   ErrMsg  = ""       
+      
+
+   CALL GetNewUnit( UnSum )
+
+   CALL OpenFOutFile ( UnSum, SummaryName, ErrStat ) 
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Failed to open summary file.'
+      RETURN
+   END IF
+      
+      
+         ! Write the summary file header
+      
+   WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat)  'This summary file was generated by '//TRIM( SD_Prog%Name )//&
+                     ' '//TRIM( SD_Prog%Ver )//' on '//CurDate()//' at '//CurTime()//'.'
+                      
+END SUBROUTINE SDOut_OpenSum 
+
 !====================================================================================================
 SUBROUTINE SDOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
@@ -4786,7 +4890,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
    IF (p%OutAll) THEN   !Finish populating the OutParam with all the joint forces and moments
        ToTNames0=RESHAPE(SPREAD( (/"FKxe", "FKye", "FKze", "MKxe", "MKye", "MKze", "FMxe", "FMye", "FMze", "MMxe", "MMye", "MMze"/), 2, 2), (/24/) )
-       ToTUnits=RESHAPE(SPREAD( (/"(N)","(N)","(N)", "(N*m)","(N*m)","(N*m)", "(N)","(N)","(N)", "(N*m)","(N*m)","(N*m)"/), 2, 2), (/24/) )
+       ToTUnits=RESHAPE(SPREAD( (/"(N)  ","(N)  ","(N)  ", "(N*m)","(N*m)","(N*m)", "(N)  ","(N)  ","(N)  ", "(N*m)","(N*m)","(N*m)"/), 2, 2), (/24/) )
        DO I=1,p%Nmembers
            DO K=1,2
             DO J=1,12  !looks like I cnanot vectorize TRIM etc in Fortran

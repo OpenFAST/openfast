@@ -1,3 +1,8 @@
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
 MODULE SD_FEM
   USE NWTC_Library
   USE SubDyn_Types
@@ -71,7 +76,7 @@ END SUBROUTINE NodeCon
 
 !----------------------------------------------------------------------------
 !----------------------------------------------------------------------------
-SUBROUTINE SubDyn_Discrt(Init,p, ErrStat, ErrMsg)
+SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    USE NWTC_Library
    USE SubDyn_Types
    IMPLICIT NONE
@@ -87,8 +92,7 @@ SUBROUTINE SubDyn_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER(4)                    :: Sttus
    INTEGER                       :: TempNProp
    REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
-   INTEGER, ALLOCATABLE          :: TempMembers(:, :)        
-   INTEGER                       :: UnOut     
+   INTEGER, ALLOCATABLE          :: TempMembers(:, :)          
    CHARACTER(1024)               :: OutFile
    CHARACTER(  50)               :: tempStr ! string number of nodes in member
    CHARACTER(1024)               :: OutFmt
@@ -426,51 +430,7 @@ Init%Props(1:kprop, 1:Init%PropSetsCol) = TempProps
 IF (ALLOCATED(TempProps)) DEALLOCATE(TempProps)
 IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
 
-
-
-!--------------------------------------
-! write discretized data to a txt file
-CALL GetNewUnit( UnOut ) 
-
-OutFile = (trim(Init%RootName)//'_Descritize.txt' )
-CALL OpenFOutFile ( UnOut, OutFile , ErrStat )
-
-IF ( ErrStat /= ErrID_None ) THEN
-   CLOSE( UnOut )
-   RETURN
-END IF
-
-WRITE(UnOut, '(A)')  'NNodes, Nelems, NProps, NCMass'
-WRITE(UnOut, '(4(1x, I5))' ) Init%NNode, Init%NElem, Init%NProp, Init%NCMass
-WRITE(UnOut, '(A)')  'Node No.    X       Y      Z'
-WRITE(UnOut, '(F6.0, E15.6, E15.6, E15.6)') ((Init%Nodes(i, j), j = 1, Init%JointsCol), i = 1, Init%NNode)
-WRITE(UnOut, '(A)')  'Elem No.,    Node_I,     Node_J,      Prop_I,      Prop_J'
-WRITE(UnOut, '(5(1x, I6))') ((p%Elems(i, j), j = 1, Init%MembersCol), i = 1, Init%NElem)
-WRITE(UnOut, '(A)')  'Prop No.     YoungE       ShearG       MatDens     XsecD      XsecT'
-WRITE(UnOut, '(F6.0, E15.6, E15.6, E15.6, E15.6, E15.6 ) ') ((Init%Props(i, j), j = 1, 6), i = 1, Init%NProp)
-WRITE(UnOut, '(A)')  'No. of Reaction DOFs'
-WRITE(UnOut, '(I6)')p%NReact*6
-WRITE(UnOut, '(A)')  'Reaction DOF ID      LOCK'
-WRITE(UnOut, '(I6, I6)') ((Init%BCs(i, j), j = 1, 2), i = 1, p%NReact*6)
-WRITE(UnOut, '(A)')  'No. of Interface DOFs'
-WRITE(UnOut, '(I6)')Init%NInterf*6
-WRITE(UnOut, '(A)')  'Interface DOF ID      LOCK'
-WRITE(UnOut, '(I6, I6)') ((Init%IntFc(i, j), j = 1, 2), i = 1, Init%NInterf*6)
-WRITE(UnOut, '(A)')  'Number of concentrated masses'
-WRITE(UnOut, '(I6)')Init%NCMass
-WRITE(UnOut, '(A)')  'JointCMass     Mass         JXX             JYY             JZZ'
-WRITE(UnOut, '(F6.0, E15.6, E15.6, E15.6, E15.6)') ((Init%Cmass(i, j), j = 1, 5), i = 1, Init%NCMass)
-WRITE(UnOut, '(A)')  'Number of members'
-WRITE(UnOut, '(I6)')p%NMembers
-WRITE(UnOut, '(A)')  'Number of nodes per member'
-WRITE(tempStr, '(I10)') Init%NDiv + 1 
-WRITE(UnOut, '(A)')  'Member Nodes'
-OutFmt = ('('//trim(tempStr)//'(I6))')
-WRITE(UnOut, trim(OutFmt)) ((Init%MemberNodes(i, j), j = 1, Init%NDiv+1), i = 1, p%NMembers)
-
-CLOSE(UnOut)
-
-END SUBROUTINE SubDyn_Discrt
+END SUBROUTINE SD_Discrt
 !------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------
 SUBROUTINE GetNewNode(k, x, y, z, Init)
@@ -1078,36 +1038,6 @@ IF (ALLOCATED(Ke)) DEALLOCATE(Ke)
 IF (ALLOCATED(Me)) DEALLOCATE(Me)
 IF (ALLOCATED(nn)) DEALLOCATE(nn)
    
-   
-!--------------------------------------
-! write assembed K M to a txt file
-CALL GetNewUnit( UnDbg ) 
-
-OutFile = (trim(Init%RootName)//'_Regular_K_M.txt' )
-CALL OpenFOutFile ( UnDbg, OutFile , ErrStat )
-
-IF ( ErrStat /= ErrID_None ) THEN
-   CLOSE( UnDbg )
-   RETURN
-END IF
-
-WRITE(UnDbg, '(A, I6)') ('TDOFs', Init%TDOF )
-WRITE(UnDbg, '(A)') ('Stiffness matrix K' )
-
-WRITE(UnDbg, '(I6, I6, e15.6)') ( ((i, j, Init%K(i, j)), i = 1, Init%TDOF), j = 1, Init%TDOF)
-
-WRITE(UnDbg, '(A)') ('   ' )
-WRITE(UnDbg, '(A)') ('Mass matrix M' )
-
-WRITE(UnDbg, '(I6, I6, e15.6)') ( ((i, j, Init%M(i, j)), i = 1, Init%TDOF), j = 1, Init%TDOF)
-
-WRITE(UnDbg, '(A)') ('   ' )
-WRITE(UnDbg, '(A)') ('Gravity force vector FG' )
-
-WRITE(UnDbg, '(I6, e15.6)') ((i, Init%FG(i)), i = 1, Init%TDOF)
-
-
-CLOSE(UnDbg)
 
 
 END SUBROUTINE AssembleKM
@@ -1116,7 +1046,7 @@ END SUBROUTINE AssembleKM
 
 SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
    !This should be from local to global -RRD
-   !Convention used: keep x (local) in global X-Z plane in the general x positive direction
+   !Convention used: keep x (local) in global X-Z plane in the general x positive direction  THIS IS THE OLD WAY (huimin's)
    USE NWTC_Library
    IMPLICIT NONE
 
@@ -1376,7 +1306,6 @@ SUBROUTINE ApplyConstr(Init,p)
    INTEGER                  :: I, J, k
    INTEGER                  :: bgn_j, end_j, row_n
    
-   
    DO I = 1, p%NReact*6
       row_n = Init%BCs(I, 1)
       
@@ -1427,5 +1356,48 @@ SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
 
    
 END SUBROUTINE ElemG
+
+!------------------------------------------------------------------------------------------------------
+SUBROUTINE LumpForces(Area1,Area2,crat,L,rho, g, DirCos, F)
+         !This rountine calculates the lumped gravity forces at the nodes given the element geometry
+         !It assumes a linear variation of the dimensions from node 1 to node 2, thus the area may be quadratically varying if crat<>1
+   REAL(ReKi), INTENT( OUT)           :: F(12)
+   REAL(ReKi), INTENT( IN )           :: Area1,Area2,crat !X-sectional areas at node 1 and node 2, t2/t1 thickness ratio
+   REAL(ReKi), INTENT( IN )           :: g !gravity
+   REAL(ReKi), INTENT( IN )           :: L !Length of element
+   REAL(ReKi), INTENT( IN )           :: rho !density
+   REAL(ReKi), INTENT( IN )           :: DirCos(3, 3)
+
+    !LOCALS
+   REAL(ReKi)                         :: TempCoeff,a0,a1,a2  !coefficients of the gravity quadratically distributed force
+
+   
+   !Calculate quadratic polynomial coefficients
+   a0=A1
+   a2=( (Area1+A2) - (Area1*crat+Area2/crat) )/L**2.  !*x**2
+   a1= (Area2-Area1)/L -a2*L                       !*x                   
+   
+   !Now calculate the Lumped Forces
+   F = 0
+   F(3) = -(a0*L/2. +a1*L**2/6. +a2*L**3/12. )*rho*g  !Forces along z (must be negative on earth)
+   F(9) = -(a0*L/2. +a1*L**2/3. +a2*L**3/4.  )*rho*g  !Forces along z (must be negative on earth)
+
+   !Now calculate the Lumped Moments
+   !HERE TO BE COMPLETED FOR THE BELOW
+   TempCoeff = 1.0/12.0*g*L*L*rho*Area2  !RRD : I am changing this to >0 sign 6/10/13
+      
+   !F(4) = TempCoeff*( DirCos(1, 3)*DirCos(2, 1) - DirCos(1, 1)*DirCos(2, 3) ) !These do not work if convnetion on z2>z1, x2>x1, y2>y1 are not followed as I have discovered 7/23
+   !F(5) = TempCoeff*( DirCos(1, 3)*DirCos(2, 2) - DirCos(1, 2)*DirCos(2, 3) ) 
+   
+   !RRD attempt at new dircos which keeps x in the X-Y plane
+         F(4) = -TempCoeff * SQRT(1-DirCos(3,3)**2) * DirCos(1,1)
+         F(5) = -TempCoeff * SQRT(1-DirCos(3,3)**2) * DirCos(2,1)
+    !RRD ends
+   F(10) = -F(4)
+   F(11) = -F(5)
+   !F(12) is 0 for g along z alone
+
+   
+END SUBROUTINE LumpForces
 
 END MODULE SD_FEM

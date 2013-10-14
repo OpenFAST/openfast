@@ -6,21 +6,23 @@
 !
 !    This file is part of SubDyn.
 !
-!    SubDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
 !
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!     http://www.apache.org/licenses/LICENSE-2.0
 !
-!    You should have received a copy of the GNU General Public License along with SubDyn.
-!    If not, see <http://www.gnu.org/licenses/>.
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
 !
 !**********************************************************************************************************************************
 PROGRAM TestSubDyn
 
    USE NWTC_Library
    USE SubDyn
-   USE TempMod
    USE SubDyn_Types
    USE SubDyn_Output
 
@@ -119,10 +121,28 @@ PROGRAM TestSubDyn
    REAL(DbKi)                                         :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
    CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
    
+      ! Other/Misc variables
+REAL(DbKi)                            :: TiLstPrn                                 ! The time of the last print
+REAL(DbKi)                            :: TMax
+REAL(DbKi)                            :: OutTime                                  ! Used to determine if output should be generated at this simulation time
+REAL(ReKi)                            :: PrevClockTime                            ! Clock time at start of simulation in seconds
+REAL                                  :: UsrTime1                                 ! User CPU time for simulation initialization
+INTEGER                               :: StrtTime (8)                             ! Start time of simulation
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
 
+        ! Get the current time
+   CALL DATE_AND_TIME ( Values=StrtTime )                               ! Let's time the whole simulation
+   CALL CPU_TIME ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
+   PrevClockTime = TimeValues2Seconds( StrtTime )                       ! We'll use this time for the SimStats routine
+   TiLstPrn      = 0.0_DbKi                                             ! The first value of ZTime, used to write simulation stats to screen (s)
+  
+   
+         ! Initialize the NWTC Subroutine Library
+
+   CALL NWTC_Init( )
+   
    IF ( command_argument_count() > 1 ) CALL print_help()
 
   
@@ -159,11 +179,11 @@ PROGRAM TestSubDyn
    END IF
    
    
-  
+  TMax = TimeInterval * drvrInitInp%NSteps
    
          ! Initialize the module
    
-   CALL SubDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, TimeInterval, InitOutData, ErrStat1, ErrMsg1 )
+   CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, TimeInterval, InitOutData, ErrStat1, ErrMsg1 )
    
 
 
@@ -195,6 +215,7 @@ PROGRAM TestSubDyn
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = 'File not found'
                CALL WrScr( ErrMsg )
+               CLOSE ( UnInp ) 
                STOP
             END IF 
       END DO  
@@ -230,6 +251,7 @@ PROGRAM TestSubDyn
    !u(1)%UFL(3) = -0.001821207  !-0.001821235   !This is for testbeam.txt
    ! u(1)%UFL(3)=-12.958  !this is for testbeam3
     
+  
    DO n = 0,drvrInitInp%NSteps
 
       Time = n*TimeInterval
@@ -283,20 +305,28 @@ PROGRAM TestSubDyn
       END IF   
          ! Calculate outputs at n
       
-      CALL SubDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+      CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF
 
          
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-                                     
-      CALL SubDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, z_next, OtherState, ErrStat, ErrMsg )
+                                  
+      CALL SD_UpdateStates( Time, n, u,      InputTime,  p, x, xd, z, OtherState, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF     
       
-      
+   !.....................................................
+      ! Display simulation status every SttsTime-seconds:
+      !.....................................................
+
+      IF ( Time - TiLstPrn >= 1 )  THEN
+
+         CALL SimStatus( TiLstPrn, PrevClockTime, Time, TMax )
+
+      ENDIF   
    END DO
 
 
@@ -328,7 +358,7 @@ PROGRAM TestSubDyn
 !
 !         ! Calculate the outputs at Time
 !
-!      CALL SubDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+!      CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 !      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
 !         CALL WrScr( ErrMsg )
 !      END IF
@@ -422,7 +452,7 @@ PROGRAM TestSubDyn
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
-   !CALL SubDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   !CALL SD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
    !IF ( ErrStat /= ErrID_None ) THEN
    !   CALL WrScr( ErrMsg )
@@ -461,11 +491,22 @@ PROGRAM TestSubDyn
    ! Routine to terminate program execution (again)
    !...............................................................................................................................
 
-   CALL SubDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   CALL SD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( ErrMsg )
    END IF
 
+   !!............................................................................................................................
+   !   ! Set exit error code if there was an error;
+   !   !............................................................................................................................
+   !   IF (Error) CALL ProgAbort( ' Simulation error level: '//TRIM(GetErrStr(ErrLev)), &   !This assumes PRESENT(ErrID) is .TRUE.
+   !                               TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+   !   
+   !   !............................................................................................................................
+   !   !  Write simulation times and stop
+   !   !............................................................................................................................
+
+      CALL RunTimes( StrtTime, UsrTime1, Time )
    
 CONTAINS
 
@@ -509,6 +550,8 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
    CHARACTER(1024)                                  :: FileName             ! Name of SubDyn input file  
+   
+   UnEChoLocal=-1
    
    FileName = TRIM(inputFile)
    
@@ -858,7 +901,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
 END SUBROUTINE ReadDriverInputFile
 
-   subroutine print_help()
+subroutine print_help()
     print '(a)', 'usage: cmdline [OPTIONS]'
     print '(a)', ''
     print '(a)', 'Without further options, cmdline prints the date and exits.'
@@ -868,6 +911,170 @@ END SUBROUTINE ReadDriverInputFile
     print '(a)', '  -v, --version     print version information and exit'
     print '(a)', '  -h, --help        print usage information and exit'
     print '(a)', '  -t, --time        print time'
-   end subroutine print_help
+end subroutine print_help
+ 
+
+
+SUBROUTINE RunTimes( StrtTime, UsrTime1, ZTime )
+! This routine displays a message that gives that status of the simulation and the predicted end time of day.
+!..................................................................................................................................
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+
+   INTEGER                      :: StrtTime (8)                                    ! Start time of simulation
+   REAL                         :: UsrTime1                                        ! User CPU time for simulation initialization.
+   REAL(DbKi)                   :: ZTime                                           ! The final simulation time (not necessarially TMax)
+
+      ! Local variables
+
+   REAL                         :: ClckTime                                        ! Elapsed clock time for the simulation phase of the run.
+   REAL                         :: Factor                                          ! Ratio of seconds to a specified time period.
+   REAL                         :: TRatio                                          ! Ration of simulation time to elapsed clock time.
+   REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
+
+   REAL                         :: UsrTime                                         ! User CPU time for entire run.
+   INTEGER                      :: EndTimes (8)                                    ! An array holding the ending clock time of the simulation.
+
+   CHARACTER( 8)                :: TimePer
+
+
+      ! Get the end times to compare with start times.
+
+   CALL DATE_AND_TIME ( VALUES=EndTimes )
+   CALL CPU_TIME ( UsrTime )
+
+
+   ! Calculate the elapsed wall-clock time in seconds.
+
+!bjj: I think this calculation will be wrong at certain times (e.g. if it's near midnight on the last day of the month), but to my knowledge, no one has complained...
+   ClckTime =  0.001*( EndTimes(8) - StrtTime(8) ) + ( EndTimes(7) - StrtTime(7) ) + 60.0*( EndTimes(6) - StrtTime(6) ) &
+            + 3600.0*( EndTimes(5) - StrtTime(5) ) + SecPerDay*( EndTimes(3) - StrtTime(3) )
+
+
+      ! Calculate CPU times.
+
+   UsrTime  = UsrTime - UsrTime1
+
+
+   IF ( .NOT. EqualRealNos( UsrTime, 0.0 ) )  THEN
+
+      TRatio = ZTime / UsrTime
+
+      IF     ( UsrTime > SecPerDay )  THEN
+         Factor = 1.0/SecPerDay
+         TimePer = ' days'
+      ELSEIF ( UsrTime >  3600.0 )  THEN
+         Factor = 1.0/3600.0
+         TimePer = ' hours'
+      ELSEIF ( UsrTime >    60.0 )  THEN
+         Factor = 1.0/60.0
+         TimePer = ' minutes'
+      ELSE
+         Factor = 1.0
+         TimePer = ' seconds'
+      ENDIF
+
+      CALL WrOver( '                                                                                   ' )
+      CALL WrScr1( ' Total Real Time:       '//TRIM( Num2LStr( Factor*ClckTime      ) )//TRIM( TimePer ) )
+      CALL WrScr ( ' Total CPU Time:        '//TRIM( Num2LStr( Factor*UsrTime       ) )//TRIM( TimePer ) )
+      CALL WrScr ( ' Simulated Time:        '//TRIM( Num2LStr( Factor*REAL( ZTime ) ) )//TRIM( TimePer ) )
+      CALL WrScr ( ' Time Ratio (Sim/CPU):  '//TRIM( Num2LStr( TRatio ) ) )
+
+   ENDIF
+
+   RETURN
+END SUBROUTINE RunTimes
    
+   !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SimStatus( PrevSimTime, PrevClockTime, ZTime, TMax )
+! This routine displays a message that gives that status of the simulation and the predicted end time of day.
+!..................................................................................................................................
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+   REAL(DbKi), INTENT(IN)       :: ZTime                                           ! Current simulation time (s)
+   REAL(DbKi), INTENT(IN)       :: TMax                                            ! Expected simulation time (s)
+   REAL(DbKi), INTENT(INOUT)    :: PrevSimTime                                     ! Previous time message was written to screen (s > 0)
+   REAL(ReKi), INTENT(INOUT)    :: PrevClockTime                                   ! Previous clock time in seconds past midnight
+
+
+      ! Local variables.
+
+   REAL(ReKi)                   :: CurrClockTime                                   ! Current time in seconds past midnight.
+   REAL(ReKi)                   :: DeltTime                                        ! The amount of time elapsed since the last call.
+   REAL(ReKi)                   :: EndTime                                         ! Approximate time of day when simulation will complete.
+   REAL(ReKi), PARAMETER        :: InSecHr  = 1.0_ReKi/3600.0_ReKi                 ! Inverse of the number of seconds in an hour
+   REAL(ReKi), PARAMETER        :: InSecMn  = 1.0_ReKi/  60.0_ReKi                 ! Inverse of the number of seconds in a minute
+   REAL(ReKi)                   :: SimTimeLeft                                     ! Approximate clock time remaining before simulation completes
+
+   REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
+
+   INTEGER(4)                   :: EndHour                                         ! The hour when the simulations is expected to complete.
+   INTEGER(4)                   :: EndMin                                          ! The minute when the simulations is expected to complete.
+   INTEGER(4)                   :: EndSec                                          ! The second when the simulations is expected to complete.
+   INTEGER(4)                   :: TimeAry  (8)                                    ! An array containing the elements of the start time.
+
+   CHARACTER( 8)                :: ETimeStr                                        ! String containing the end time.
+
+
+   IF ( ZTime <= PrevSimTime ) RETURN
+
+
+      ! How many seconds past midnight?
+
+   CALL DATE_AND_TIME ( Values=TimeAry )
+   CurrClockTime = TimeValues2Seconds( TimeAry )
+
+      ! Calculate elapsed clock time
+
+   DeltTime = CurrClockTime - PrevClockTime
+
+
+      ! We may have passed midnight since the last revoultion.  We will assume that (ZTime - PrevSimTime) of simulation time doesn't take more than a day.
+
+   IF ( CurrClockTime < PrevClockTime )  THEN
+      DeltTime = DeltTime + SecPerDay
+   ENDIF
+
+
+      ! Estimate the end time in hours, minutes, and seconds
+
+   SimTimeLeft = ( TMax - ZTime )*DeltTime/( ZTime - PrevSimTime )            ! DeltTime/( ZTime - PrevSimTime ) is the delta_ClockTime divided by the delta_SimulationTime
+   EndTime  =  MOD( CurrClockTime+SimTimeLeft, SecPerDay )
+   EndHour  =  INT(   EndTime*InSecHr )
+   EndMin   =  INT( ( EndTime - REAL( 3600*EndHour ) )*InSecMn )
+   EndSec   = NINT(   EndTime - REAL( 3600*EndHour + 60*EndMin ) )
+
+   WRITE (ETimeStr,"(I2.2,2(':',I2.2))")  EndHour, EndMin, EndSec
+
+   CALL WrOver ( ' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
+                 ' seconds.  Estimated final completion at '//ETimeStr//'.'                             )
+
+
+      ! Let's save this time as the previous time for the next call to the routine
+   PrevClockTime = CurrClockTime
+   PrevSimTime   = ZTime
+
+   RETURN
+END SUBROUTINE SimStatus
+!----------------------------------------------------------------------------------------------------------------------------------
+FUNCTION TimeValues2Seconds( TimeAry )
+! This routine takes an array of time values such as that returned from
+!     CALL DATE_AND_TIME ( Values=TimeAry )
+! and converts TimeAry to the number of seconds past midnight.
+!..................................................................................................................................
+
+      ! Passed variables:
+   INTEGER, INTENT(IN)          :: TimeAry  (8)                                    ! An array containing the elements of the time
+   REAL(ReKi)                   :: TimeValues2Seconds                              ! Current time in seconds past midnight
+
+
+   TimeValues2Seconds = 3600*TimeAry(5) + 60*TimeAry(6) + TimeAry(7) + 0.001_ReKi*TimeAry(8)
+
+END FUNCTION TimeValues2Seconds
+!----------------------------------------------------------------------------------------------------------------------------------
+
 END PROGRAM TestSubDyn
