@@ -19,7 +19,7 @@
 
    !Compute Fi
    Fi(1:3)= m00*tempA+MATMUL(Tilde(omd),mEta)+MATMUL(Tilde(ome),beta)
-   Fi(4:6) = MATMUL(Tilde(mEta,tempA) + nu + MATMUL(Tilde(ome),gama) 
+   Fi(4:6) = MATMUL(Tilde(mEta),tempA) + nu + MATMUL(Tilde(ome),gama) 
 
    !Mass Matrix
    Mi = 0.0D0
