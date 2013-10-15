@@ -1,3340 +1,827 @@
+!**********************************************************************************************************************************
+! The HydroDyn and HydroDyn_Types modules make up a template for creating user-defined calculations in the FAST Modularization 
+! Framework. HydroDyns_Types will be auto-generated based on a description of the variables for the module.
+!
+! "HydroDyn" should be replaced with the name of your module. Example: HydroDyn
+! "HydroDyn" (in HydroDyn_*) should be replaced with the module name or an abbreviation of it. Example: HD
+!..................................................................................................................................
+! LICENSING
+! Copyright (C) 2013  National Renewable Energy Laboratory
+!
+!    This file is part of HydroDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!    
+!**********************************************************************************************************************************
+! File last committed: $Date: 2013-10-03 12:45:53 -0600 (Thu, 03 Oct 2013) $
+! (File) Revision #: $Rev: 259 $
+! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/HydroDyn.f90 $
+!**********************************************************************************************************************************
 MODULE HydroDyn
 
-   USE                                 NWTC_Library
-   USE                                 SharedDataTypes    !bjj: add this to NWTC_Library????
-   
-   USE                                 FixedBottomSupportStructure
-   USE                                 FloatingPlatform 
-   USE                                 HD_Output
-   USE                                 Waves       
-   
-   
-   
+   USE HydroDyn_Types   
+   USE NWTC_Library
+   USE WAMIT
+   USE HydroDyn_Input
+   USE HydroDyn_Output
+   USE Current
+      
    IMPLICIT NONE
+   
    PRIVATE
- 
-   !-------------------------------------------------------------------------------------------------
-   ! Definitions of public data parameters
-   !-------------------------------------------------------------------------------------------------
-   TYPE(ProgDesc), PARAMETER, PUBLIC :: HD_Prog = ProgDesc( 'HydroDyn', 'v1.00.02c-bjj', '04-June-2013' )   ! the name/version/date of the hydrodynamics program
-!v1.01.02a-bjj
-   !-------------------------------------------------------------------------------------------------
-   ! Definitions of private parameters
-   !-------------------------------------------------------------------------------------------------    
-   INTEGER, PARAMETER                           :: Unknown_Type    = -1          ! Unknown/unset value
-   INTEGER, PARAMETER                           :: FixedBtm_Type   =  1          ! fixed bottom/monopile tower support structure
-   INTEGER, PARAMETER                           :: FloatPltfm_Type =  2          ! floating platform support structure
-
-   !-------------------------------------------------------------------------------------------------
-   ! Definitions of private types 
-   !-------------------------------------------------------------------------------------------------
- 
-   TYPE Node_DataType
-      REAL(ReKi)                                :: Position(3)             ! Center position of the element in the ground coordinate system (X,Y,Z)
-      REAL(ReKi)                                :: DNode                   ! Length of the element
-      REAL(ReKi)                                :: D                       ! Diameter (m)
-      REAL(ReKi)                                :: CA                      ! Normalized hydrodynamic added mass   coefficient in Morison's equation (-)
-      REAL(ReKi)                                :: CD                      ! Normalized hydrodynamic viscous drag coefficient in Morison's equation (-)
-   END TYPE       
 
   
-   !-------------------------------------------------------------------------------------------------
-   ! Definitions of public types and routines
-   !-------------------------------------------------------------------------------------------------
-   PUBLIC                                       :: HD_Init                    ! Subroutine to initialize module
-   PUBLIC                                       :: HD_CalculateLoads          ! Subroutine to calculate hydrodynamic loads
-   PUBLIC                                       :: HD_Terminate               ! Subroutine to terminate module
-   PUBLIC                                       :: HD_CheckLin                ! Function to determine if a linearization analysis can be performed with HydroDyn's settings
-   
-   PUBLIC :: HD_DestroyInitOutput
-   
-   PUBLIC                                       :: HD_GetUndisturbedWaveElev  ! Returns undisturbed wave elevation
-   
-   INTERFACE HD_GetValue
-      MODULE PROCEDURE HD_GetValue_CHAR
-      MODULE PROCEDURE HD_GetValue_AllOuts
-   END INTERFACE HD_GetValue
-      
-      
-   PUBLIC                                       :: HD_GetValue                ! Returns ancillary values that other codes may want to use
-!   PUBLIC                                       :: HD_GetValue_CHAR           ! Returns ancillary values that other codes may want to use
-!   PUBLIC                                       :: HD_GetValue_AllOuts        ! Returns ancillary values that other codes may want to use
-
-
-   TYPE, PUBLIC :: HD_InitOutputType
-     CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr 
-     CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt 
-     REAL(ReKi)    , DIMENSION(:), ALLOCATABLE  :: WriteOutput 
-     TYPE(ProgDesc)  :: Ver 
-   END TYPE HD_InitOutputType
-
-
-   TYPE, PUBLIC :: HD_DataType                                                ! The type is public
-      PRIVATE                                                                 ! but the data is private
-      INTEGER                                   :: StrctType   = Unknown_Type ! Type of support structure (valid choices are parameters FloatPltfm_Type and FixedBtm_Type)
-      INTEGER                                   :: UnSum       = -1           ! Unit number for the HydroDyn summary file   
-      TYPE(Waves_DataType)                      :: Waves_data                 ! waves module data   
-      TYPE(FltPtfm_DataType)                    :: FltPtfm_data               ! floating platform module data   
-      
-      TYPE(HD_OutputDataType)                   :: HDOut_Data                 ! output data
-      REAL(DbKi)                                :: LastCalcTime = 0.0         ! The last time an output was calculated
-
-      INTEGER                                   :: NElements    = 0           ! number of elements in the structure
-      TYPE(Node_DataType), ALLOCATABLE          :: Node  (:)                  ! the elements/nodes that make up the structural discretization
-      
-      REAL(ReKi)                                :: MaxDiam  = 0.0             ! Maximum value of input array LRadAnch (stores a maximum value for graphics capabilities).  ! was MaxLRadAnch
-      
-   END TYPE HD_DataType
-
-
-   TYPE, PUBLIC :: HD_InitDataType
-      REAL(ReKi)                                :: Gravity                    ! Gravitational acceleration in m/s^2
-      
-      CHARACTER(1024)                           :: FileName                   ! Name of the input file
-      CHARACTER(1024)                           :: OutRootName                ! The name of the root file (without extension) including the full path.  This may be useful if you want this routine to write a permanent record of what it does to be stored with the simulation results: the results should be stored in a file whose name (including path) is generated by appending any suitable extension to OutRootName
-   END TYPE
-
-
-      ! Data types developed for HydroDyn
-
-   TYPE, PUBLIC :: AllHydroMarkers
-      TYPE(Marker), ALLOCATABLE  :: Substructure (:)  
-   END TYPE
-   
-   TYPE, PUBLIC :: AllHydroLoads
-      TYPE(Load),   ALLOCATABLE  :: Substructure (:)  
-   END TYPE
-      
-   TYPE, PUBLIC :: HydroConfig
-      TYPE(Marker)               :: Substructure
-   END TYPE HydroConfig
+   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.00.01a-gjh', '02-Oct-2013' )
 
    
-!   REAL(ReKi), PARAMETER                        :: RePrcsn = PRECISION( 0.0_ReKi )  ! precision of ReKi values (used to test for equality)
+      ! ..... Public Subroutines ...................................................................................................
 
+   PUBLIC :: HydroDyn_Init                           ! Initialization routine
+   PUBLIC :: HydroDyn_End                            ! Ending routine (includes clean up)
    
+   PUBLIC :: HydroDyn_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
+                                                    !   continuous states, and updating discrete states
+   PUBLIC :: HydroDyn_CalcOutput                     ! Routine for computing outputs
+   
+   PUBLIC :: HydroDyn_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+   PUBLIC :: HydroDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
+   PUBLIC :: HydroDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
+      
+   !PUBLIC :: HydroDyn_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
+   !PUBLIC :: HydroDyn_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the continuous 
+   !                                                 !   states (x)
+   !PUBLIC :: HydroDyn_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the discrete 
+   !                                                 !   states (xd)
+   !PUBLIC :: HydroDyn_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+                                                    !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
+                                                    !   states (z)
+   
+ 
 CONTAINS
-!====================================================================================================
-SUBROUTINE HD_CalculateLoads( CurrentTime,  HD_Markers, HD_Data, HD_Loads, HD_InitOutput, ErrStat )
-!     This public subroutine computes hydrodynamic loads.
-! 
-!----------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
+! This routine is called at the start of the simulation to perform initialization steps. 
+! The parameters are set here and not changed during the simulation.
+! The initial states and initial guess for the input are defined.
+!..................................................................................................................................
 
-! bjj: do we not care about HD_ConfigMarkers? Shouldn't that also be passed for future reference?
+      TYPE(HydroDyn_InitInputType),       INTENT(INOUT)  :: InitInp     ! Input data for initialization routine. TODO: This does not follow the template due to the interface of HydroDyn_CopyInitInput()
+      TYPE(HydroDyn_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
+      TYPE(HydroDyn_ParameterType),       INTENT(  OUT)  :: p           ! Parameters      
+      TYPE(HydroDyn_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
+      TYPE(HydroDyn_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
+      TYPE(HydroDyn_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states            
+      TYPE(HydroDyn_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated; 
+                                                                        !   only the output mesh is initialized)
+      REAL(DbKi),                         INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that 
+                                                                        !   (1) HydroDyn_UpdateStates() is called in loose coupling &
+                                                                        !   (2) HydroDyn_UpdateDiscState() is called in tight coupling.
+                                                                        !   Input is the suggested time from the glue code; 
+                                                                        !   Output is the actual coupling interval that will be used 
+                                                                        !   by the glue code.
+      TYPE(HydroDyn_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      ! Passed variables
-
-   REAL(DbKi),                 INTENT( IN    )     :: CurrentTime                ! Current simulation time (sec)    
-
-   TYPE(AllHydroMarkers),      INTENT( IN    )     :: HD_Markers                 ! the markers of the loads calculated at this time 
-   TYPE(HD_DataType),          INTENT( INOUT )     :: HD_Data                    ! the internal hydrodyn data
-   TYPE(AllHydroLoads),        INTENT( INOUT )     :: HD_Loads                   ! the loads calculated at this time (it's INOUT so we don't have to reallocate space each call, but really is an OUTPUT)
-   TYPE(HD_InitOutputType),    intent(inout)       :: HD_InitOutput !for framework only (temporary)
-   INTEGER,                    INTENT(   OUT )     :: ErrStat                    ! Returns zero if no errors were encountered
-   
-    
-      ! local variables
-   
-   REAL(ReKi)                                      :: X    (6)                   ! Temp array holding 3 components of translational displacement and the 3 components of the rotational displacement
-   REAL(ReKi)                                      :: XD   (6)                   ! Temp array holding 3 components of the translational velocity and the 3 components of the rotational (angular) velocity
-   REAL(ReKi)                                      :: Ft   (6)                   ! Temp variable holding the 3 forces and 3 moments ; positive forces are in the direction of motion.
-   INTEGER                                         :: J                          ! The number of the current node / element (-) 
-   INTEGER                                         :: I                          ! The number of the current output 
-   INTEGER                                         :: NMarkers                   ! The number of markers sent to this subroutine
-   
-   CHARACTER(1024) :: ErrMsg
-   
-   !-------------------------------------------------------------------------------------------------
-   ! initialize the error status
-   !-------------------------------------------------------------------------------------------------
+      
+         ! Local variables
+         
+      CHARACTER(1024)                        :: SummaryName                         ! name of the HydroDyn summary file   
+      TYPE(HydroDyn_InitInputType)           :: InitLocal                           ! Local version of the initialization data, needed because the framework data (InitInp) is read-only
+      TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves module initialization
+      TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
+      LOGICAL                                :: hasWAMITOuts                        ! Are there any WAMIT-related outputs
+      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
+      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
+      INTEGER                                :: I, J                                ! Generic counters
+      
+         ! These are dummy variables to satisfy the framework, but are not used 
+         
+      TYPE(Waves_InputType)                  :: Waves_u                             ! Waves module initial guess for the input; the input mesh is not defined because it is not used by the waves module
+      TYPE(Waves_ParameterType)              :: Waves_p                             ! Waves module parameters
+      TYPE(Waves_ContinuousStateType)        :: Waves_x                             ! Waves module initial continuous states
+      TYPE(Waves_DiscreteStateType)          :: Waves_xd                            ! Waves module discrete states
+      TYPE(Waves_ConstraintStateType)        :: Waves_z                             ! Waves module initial guess of the constraint states
+      TYPE(Waves_OtherStateType)             :: WavesOtherState                     ! Waves module other/optimization states 
+      TYPE(Waves_OutputType)                 :: Waves_y                             ! Waves module outputs   
+      TYPE(Current_InputType)                :: Current_u                           ! Current module initial guess for the input; the input mesh is not defined because it is not used by the Current module
+      TYPE(Current_ParameterType)            :: Current_p                           ! Current module parameters
+      TYPE(Current_ContinuousStateType)      :: Current_x                           ! Current module initial continuous states
+      TYPE(Current_DiscreteStateType)        :: Current_xd                          ! Current module discrete states
+      TYPE(Current_ConstraintStateType)      :: Current_z                           ! Current module initial guess of the constraint states
+      TYPE(Current_OtherStateType)           :: CurrentOtherState                   ! Current module other/optimization states 
+      TYPE(Current_OutputType)               :: Current_y                           ! Wave module outputs   
+!bjj removed (see comments below):      TYPE(WAMIT_OutputType)                 :: WAMIT_y
+      TYPE(WAMIT_ConstraintStateType)        :: WAMIT_z                             ! Initial guess of the constraint states
+      TYPE(Morison_ContinuousStateType)      :: Morison_x                           ! Morison continuous states
+      TYPE(Morison_DiscreteStateType)        :: Morison_xd                          ! Morison module discrete states
+      TYPE(Morison_ConstraintStateType)      :: Morison_z                           ! Morison  of the constraint states
+         
+      
+         ! Initialize ErrStat
+         
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
+      
+      
+         ! Copy the initialization input data to a local version because the framework states InitInp should have INTENT (IN), but due to an issue the the
+         ! copy routine, we needed to make it (INOUT), which means we actually don't need this local version!!  I'm leaving this with the idea that the
+         ! copy routine will get modified so that InitInp can have INTENT (IN) again.  GJH 4-Apr-2013
+         
+      CALL HydroDyn_CopyInitInput( InitInp, InitLocal, MESH_NEWCOPY, ErrStat, ErrMsg )   
+      IF ( ErrStat > ErrID_Warn ) RETURN
+      
+      
+         ! Initialize the NWTC Subroutine Library
+         
+      CALL NWTC_Init(  )
      
-   ErrStat = 0
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   ! write previous output if we've passed the last calculation time 
-   ! (this still has problems with going backwards in time, but will write the "best" solution 
-   ! when called multiple times per time step.)
-   !-------------------------------------------------------------------------------------------------
-      
-   IF ( ( CurrentTime > HD_Data%LastCalcTime ) ) THEN
-   
-      CALL HDOut_WriteOutputs(HD_Data%HDOut_Data, ErrStat )
-      IF ( ErrStat > 0 ) RETURN  !less than zero in this case means that there aren't any outputs
-      
-      ErrStat = 0
-      
-   END IF     
-      
-   !-------------------------------------------------------------------------------------------------
-   ! check that the HD_Loads and HD_Markers are allocated properly
-   !-------------------------------------------------------------------------------------------------
-   NMarkers = SIZE( HD_Markers%Substructure )
-   
-   IF ( .NOT. ALLOCATED( HD_Loads%Substructure ) ) THEN
-   
-      ALLOCATE( HD_Loads%Substructure( NMarkers ), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         CALL ProgAbort( ' Error allocating substructure load array in HydroDyn.', TrapErrors = .TRUE. )
-         RETURN
-      END IF
-      
-   ELSEIF ( SIZE( HD_Loads%Substructure ) /= NMarkers ) THEN
-   
-      CALL ProgAbort( ' Substructure load array is the wrong size in HydroDyn.', TrapErrors = .TRUE. )
-      ErrStat = 1
-      RETURN
-   
-   END IF
-         
-!   IF ( SIZE( HD_Markers%Substructure ) /= HD_Data%NElements ) THEN
-!   
-!      CALL ProgAbort( ' Substructure marker array is the wrong size in HydroDyn.', TrapErrors = .TRUE. )
-!      ErrStat = 1
-!      RETURN
-!      
-!   END IF
-      
-      
-   !-------------------------------------------------------------------------------------------------
-   ! get the loads from the appropriate module
-   !-------------------------------------------------------------------------------------------------      
-   
-   SELECT CASE ( HD_Data%StrctType )
-   
-      CASE ( FloatPltfm_Type )
-      
-            ! These loads are point loads
-
-!bjj question for jmj: you made a comment about floating platforms not requiring any elements ... how does that come into play here???
-
-         DO J = 1,NMarkers !there should be only one marker at the moment
-      
-            X( 1:3) = HD_Markers%Substructure(J)%Position                               ! The 3 components of the translational        displacement (in m  )   of the current marker (platform reference or tower node)
-            X( 4:6) = GetSmllRotAngs( HD_Markers%Substructure(J)%Orientation, ErrStat ) ! The 3 components of the rotational           displacement (in rad)   of the current marker (platform or tower element) relative to the inertial frame origin
-            XD(1:3) = HD_Markers%Substructure(J)%TranslationVel                         ! The 3 components of the translational        velocity     (in m/s)   of the current marker (platform reference or tower node)
-            XD(4:6) = HD_Markers%Substructure(J)%RotationVel                            ! The 3 components of the rotational (angular) velocity     (in rad/s) of the current marker (platform or tower element) relative to the inertial frame origin
-                       
-
-            IF ( J == NMarkers ) THEN !the last one is the point load
-               CALL FltngPtfmLd( X, XD, CurrentTime, HD_Loads%Substructure(J)%AddedMass, Ft, HD_Data%Waves_data, &
-                                        HD_Data%FltPtfm_data, ErrStat )   
-            ELSE     ! these are loads per unit length
-               CALL MorisonTwrLd ( J, HD_Data%Node(J)%D, HD_Data%Node(J)%CA, HD_Data%Node(J)%CD, &
-                                 X, XD, CurrentTime, HD_Loads%Substructure(J)%AddedMass, Ft, HD_Data%Waves_data, ErrStat )
-            END IF                                 
-            
-            HD_Loads%Substructure(J)%Force  = Ft(1:3)          ! the 3                                              components of the portion of the platform force                  (in N    ) acting at the platform reference    associated with everything but the added-mass effects
-                                                               ! or the surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower    force  per unit length (in N/m  )        at the current tower element associated with everything but the added-mass effects; positive forces are in the direction of motion.
-            HD_Loads%Substructure(J)%Moment = Ft(4:6)          ! the 3                                              components of the portion of the platform moment                 (in N-m  ) acting at the platform reference    associated with everything but the added-mass effects
-                                                               ! or the roll/xi (1), pitch/yi (2), and yaw/zi   (3)-components of the portion of the tower    moment per unit length (in N-m/m) acting at the current tower element associated with everything but the added-mass effects; 
-                                                               
-                                                               ! Platform added mass matrix is (kg, kg-m, kg-m^2)
-            IF ( ErrStat /= 0 ) RETURN
-            
-         END DO            
-         
-      CASE ( FixedBtm_Type )
-      
-            ! These loads are per unit length
-            
-         DO J = 1,NMarkers
-         
-            X( 1:3) = HD_Markers%Substructure(J)%Position                                 ! The 3 components of the translational        displacement (in m  )   of the current node
-            X( 4:6) = GetSmllRotAngs( HD_Markers%Substructure(J)%Orientation, ErrStat )   ! The 3 components of the rotational           displacement (in rad)   of the current element relative to the inertial frame origin
-            XD(1:3) = HD_Markers%Substructure(J)%TranslationVel                           ! The 3 components of the translational        velocity     (in m/s)   of the current node
-            XD(4:6) = HD_Markers%Substructure(J)%RotationVel                              ! The 3 components of the rotational (angular) velocity     (in rad/s) of the current element relative to the inertial frame origin
-         
-            CALL MorisonTwrLd ( J, HD_Data%Node(J)%D, HD_Data%Node(J)%CA, HD_Data%Node(J)%CD, &
-                                X, XD, CurrentTime, HD_Loads%Substructure(J)%AddedMass, Ft, HD_Data%Waves_data, ErrStat )
-            HD_Loads%Substructure(J)%Force  = Ft(1:3)          ! The surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force per unit length (in N/m)         at the current tower element associated with everything but the added-mass effects; positive forces are in the direction of motion.
-            HD_Loads%Substructure(J)%Moment = Ft(4:6)          ! The roll/xi (1), pitch/yi (2), and yaw/zi (3)-components of the portion of the tower moment per unit length (in N-m/m) acting at the current tower element associated with everything but the added-mass effects; 
-                                                               ! Fixed-Bottom added mass matrix is per unit length of element (kg/m, kg-m/m, kg-m^2/m)
-            IF ( ErrStat /= 0 ) RETURN
-
-         END DO            
-      
-      CASE DEFAULT
-      
-         CALL ProgAbort( ' Unknown support structure type in HD_CalculateLoads().', TrapErrors = .TRUE. )
-         ErrStat = 1
-         RETURN
-   
-   END SELECT 
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   ! calculate output as requested
-   !-------------------------------------------------------------------------------------------------
-      
-   CALL HDOut_CalcOutput ( CurrentTime, HD_Data%HDOut_Data, HD_Data%FltPtfm_data, HD_Data%Waves_data,  ErrStat )   
-   HD_Data%LastCalcTime = CurrentTime
-
-   
-   !bjj:
-
-   DO I = 1,HD_Data%HDOut_Data%NumOuts
-      HD_InitOutput%WriteOutput(I) = HD_Data%HDOut_Data%OutParam(I)%SignM * HD_Data%HDOut_Data%AllOuts( HD_Data%HDOut_Data%OutParam(I)%Indx )      
-   END DO    
-
-END SUBROUTINE HD_CalculateLoads
-!====================================================================================================
-FUNCTION HD_CheckLin( HD_Data, ErrStat )
-!   This public function checks that HydroDyn's data is properly set for linearization analysis.
-!   The function returns .TRUE. if all linearization checks have been passed and .FALSE. if HydroDyn
-!   will not be able to perform a linearization analysis based on the current settings.
-!
-! bjj: this function is still a bit of a hack, but I'm just tyring to get HydroDyn separate from FAST
-! and ADAMS right now.
-!----------------------------------------------------------------------------------------------------
-      
-      ! Passed variables
-      
-   TYPE(HD_DataType),         INTENT( INOUT )   :: HD_Data              ! the hydrodyn data 
-   INTEGER,                   INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
-
-   LOGICAL                                      :: HD_CheckLin
-   
-   
-      ! Initialize the error status
-   ErrStat = 0
-   HD_CheckLin = .TRUE.
-   
-      !       
-   IF ( HD_Data%Waves_data%WaveMod  /= 0  )  THEN     ! bjj: this should be done in the Waves module
-      CALL ProgAbort ( ' HydroDyn can''t linearize a model with incident wave kinematics.  Set WaveMod to 0.', &
-                         TrapErrors = .TRUE.  )
-      ErrStat = -1
-      HD_CheckLin = .FALSE.      
-   ELSE IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-      
-      IF ( FP_GetValue( "RdtnTMax", HD_Data%FltPtfm_data, ErrStat ) /= 0.0  ) THEN
-         CALL ProgAbort ( ' HydroDyn can''t linearize a model with wave radiation damping.  Set RdtnTMax to 0.0.', &
-                            TrapErrors = .TRUE. )
-         ErrStat = -1
-         HD_CheckLin = .FALSE.      
-      END IF
-   END IF
-
-END FUNCTION HD_CheckLin
-!====================================================================================================
-SUBROUTINE HD_GetInput( HD_Data, FileName, Current_Data, Waves_InitData, FP_InitData, HDOut_InitData, ErrStat )
-!     This private subroutine reads the input required for HydroDyn from the file whose name is an  
-!     input parameter.
-!----------------------------------------------------------------------------------------------------   
-
-   
-      ! Passed variables
-   
-   TYPE(HD_DataType),         INTENT( INOUT )   :: HD_Data              ! the hydrodyn data 
-   CHARACTER(*),              INTENT( IN    )   :: FileName             ! Name of the HydroDyn input file   
-   TYPE(Current_DataType),    INTENT(   OUT )   :: Current_Data         ! The current data from the input file
-   TYPE(Waves_InitDataType),  INTENT(   OUT )   :: Waves_InitData       ! The waves data from the input file
-   TYPE(FltPtfm_InitDataType),INTENT(   OUT )   :: FP_InitData          ! The floating platform data from the input file
-   TYPE(HDO_InitDataType)    ,INTENT(   OUT )   :: HDOut_InitData       ! the values needed to initialize the the HydroDyn Output module   
-
-   INTEGER,                   INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
-   
-  
-      ! Local variables
-      
-   REAL(ReKi)                                   :: LAngAnch             ! Azimuth angle   of the current anchor   relative to the positive xi-axis of the inertial frame.
-   REAL(ReKi)                                   :: LAngFair             ! Azimuth angle   of the current fairlead relative to the positive xt-axis of the platform.
-   REAL(ReKi)                                   :: LDpthAnch            ! Depth           of the current anchor   relative to the origin           of the inertial frame.
-   REAL(ReKi)                                   :: LDrftFair            ! Draft           of the current fairlead relative to the platform reference point.
-   REAL(ReKi)                                   :: LRadAnch             ! Radial distance of the current anchor   relative to the origin           of the inertial frame.
-   REAL(ReKi)                                   :: LRadFair             ! Radial distance of the current fairlead relative to the platform reference point.
-         
-   INTEGER                                      :: I                    ! generic integer for counting
-   INTEGER                                      :: J                    ! generic integer for counting
-
-   INTEGER                                      :: UnIn                 ! Unit number for the input file
-      
-   CHARACTER(80)                                :: Line                 ! String to temporarially hold value of read line   
-   CHARACTER(1024)                              :: TmpPath              ! Temporary storage for relative path name
-   CHARACTER(1024)                              :: TmpFmt             ! Temporary storage for format statement
-   CHARACTER(1024)                              :: ErrMsg
-  
-   !-------------------------------------------------------------------------------------------------
-   ! Open the file
-   !-------------------------------------------------------------------------------------------------   
-   CALL GetNewUnit( UnIn )   
-   CALL OpenFInpFile( UnIn, TRIM(FileName), ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! File header
-   !-------------------------------------------------------------------------------------------------
-   
-   CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 1', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-   CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 2', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Features section
-   !-------------------------------------------------------------------------------------------------
-   
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Features header', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-      ! monopile or  floating platform
-
-
-   CALL ReadVar( UnIn, FileName, HD_Data%StrctType, 'SupportStrct', 'Switch for structure type', ErrStat )
-
-   IF (ErrStat /= 0) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   IF ( HD_Data%StrctType /= FloatPltfm_Type .AND. HD_Data%StrctType /= FixedBtm_Type ) THEN
-      CALL ProgAbort ( ' Error in file "'//TRIM(FileName)//&
-                  '": Support structure must be either '//TRIM(Int2LStr(FloatPltfm_Type))// &
-                  ' or '//TRIM(Int2LStr(FixedBtm_Type))//'.', .TRUE. )
-      ErrStat = 1      
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Environmental conditions section
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-      ! WtrDens - Water density.
-      
-   CALL ReadVar ( UnIn, FileName, Waves_InitData%WtrDens, 'WtrDens', 'Water density', ErrStat )
-
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   IF ( Waves_InitData%WtrDens < 0.0 )  THEN
-      CALL ProgAbort ( ' WtrDens must not be negative.', .TRUE. )
-      ErrStat = 1
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-      
-      ! WtrDpth - Water depth   
-      
-   CALL ReadVar ( UnIn, FileName, Waves_InitData%WtrDpth, 'WtrDpth', 'Water depth', ErrStat )
-
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   IF ( Waves_InitData%WtrDpth <= 0.0 )  THEN
-      CALL ProgAbort ( ' WtrDpth must be greater than zero.', .TRUE. )
-      ErrStat = 1
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for waves
-   !-------------------------------------------------------------------------------------------------
-      
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Wave header', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-!BJJ: verify that these tests can be performed (i.e., do we have the correct data to compare here?)
-!   IF ( HD_Data%StrctType == FixedBtm_Type ) THEN
-!
-!!!JASON: WHAT LOADING DO WE APPLY TO THE FLEXIBLE PORTION OF THE TOWER EXTENDING BELOW THE SEABED?
-! bjj: replace this :
-!         IF ( ( TwrDraft - TwrRBHt ) < WtrDpth )  THEN   ! Print out a warning when the flexible portion of the support structure does not extend to the seabed.
-! with this:
-!         IF ( ( HydroConfig%Substructure%Position(3) ) < -WtrDpth )  THEN   ! Print out a warning when the flexible portion of the support structure does not extend to the seabed.
-!            CALL ProgWarn( ' Hydrodynamic loading will only be applied to the flexible portion of the support structure.'// &
-!                           ' Make sure that ( TwrDraft - TwrRBHt ) >= WtrDpth if you want hydrodynamic loading applied'// &
-!                           ' along the entire submerged portion of the support structure. ')
-!         ENDIF
-!      
-!   ELSE IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-!   
-!      IF ( WtrDpth <= PtfmDraft  )  THEN
-!         CALL ProgAbort ( ' WtrDpth must be greater than PtfmDraft.', .TRUE. )
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!         
-!      IF ( FP_InitData%LineMod == 1 )  THEN  ! .TRUE if we have standard quasi-static mooring lines.
-!         DO I = 1,FP_InitData%NumLines ! Loop through all mooring lines
-!
-!            IF ( WtrDpth < -FP_InitData%MooringLine(I)%LAnchzi )  THEN
-!               CALL ProgAbort ( ' WtrDpth must not be less than LDpthAnch('//TRIM( Int2LStr( I ) )//').', .TRUE. )
-!               ErrStat = 1
-!               CLOSE( UnIn )
-!               RETURN
-!            END IF
-!               
-!         ENDDO             ! I - All mooring lines
-!      END IF
-!      
-!   END IF
-
-
-      
-      ! WaveMod - Wave kinematics model switch.
-
-   CALL ReadVar ( UnIn, FileName, Line, 'WaveMod', 'Wave kinematics model switch', ErrStat )
-
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   
-   Waves_InitData%WavePhase = 0.0
-   Waves_InitData%WaveNDAmp = .TRUE.
-   
-   IF ( LEN_TRIM(Line) > 1 ) THEN
-   
-      CALL Conv2UC( Line )    ! Convert Line to upper case.
-            
-      IF ( Line(1:2) == '1P' )  THEN                     ! The user wants to specify the phase in place of a random phase
-
-         READ (Line(3:),*,IOSTAT=ErrStat)  Waves_InitData%WavePhase
-         IF ( ErrStat /= 0 ) THEN
-            CALL CheckIOS ( ErrStat, FileName, 'WavePhase', NumType, .TRUE. )
-            CLOSE( UnIn )
-            RETURN
-         END IF
-         Waves_InitData%WaveMod   = 10                               ! Internally define WaveMod = 10 to mean regular waves with a specified (nonrandom) phase
-         Waves_InitData%WavePhase = Waves_InitData%WavePhase*D2R     ! Convert the phase from degrees to radians
-
-      ELSE                                               ! The user must have specified WaveMod incorrectly.
-
-         ErrStat = 1
-
-      ENDIF
-
-   
-   ELSE
-   
-      READ( Line, *, IOSTAT=ErrStat ) Waves_InitData%WaveMod
-      
-      IF ( ErrStat /= 0 ) THEN
-         CALL CheckIOS ( ErrStat, FileName, 'WaveMod', NumType, .TRUE. )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   END IF ! LEN_TRIM(Line)
-
-
-   IF ( ErrStat /= 0 .OR. Waves_InitData%WaveMod < 0 .OR. Waves_InitData%WaveMod > 3 ) THEN
-   
-      IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-      
-         CALL ProgAbort ( ' WaveMod must be 0, 1, 1P#, 2, or 3.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      
-      ELSE IF ( ErrStat /= 0 .OR. Waves_InitData%WaveMod /= 4 )  THEN
-            
-         CALL ProgAbort ( ' WaveMod must be 0, 1, 1P#, 2, 3, or 4.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-         
-      END IF
-      
-   END IF          
-      
-      
-      ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface. 
-      
-   IF ( HD_Data%StrctType == FixedBtm_Type .AND. Waves_InitData%WaveMod > 0 ) THEN
-   
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveStMod, 'WaveStMod', &
-         'Model switch for stretching incident wave kinematics to instantaneous free surface', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF        
-
-      IF ( ( Waves_InitData%WaveStMod /= 0 ) .AND. ( Waves_InitData%WaveStMod /= 1 ) .AND. &
-           ( Waves_InitData%WaveStMod /= 2 ) .AND. ( Waves_InitData%WaveStMod /= 3 ) )  THEN
-         CALL ProgAbort ( ' WaveStMod must be 0, 1, 2, or 3.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( ( Waves_InitData%WaveStMod /= 3 ) .AND. ( Waves_InitData%WaveMod == 4 ) )  THEN
-         CALL ProgAbort ( ' WaveStMod must be set to 3 when WaveMod is set to 4.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   ELSE !don't use this one
-   
-         ! NOTE: Do not read in WaveStMod for floating platforms since it is
-         !       inconsistent to use stretching (which is a nonlinear correction) for
-         !       the viscous drag term in Morison's equation while not accounting for
-         !       stretching in the diffraction and radiation problems (according to
-         !       Paul Sclavounos, there are such corrections).  Instead, the viscous
-         !       drag term from Morison's equation is computed by integrating up to
-         !       the MSL, regardless of the instantaneous free surface elevation.
-
-      Waves_InitData%WaveStMod = 0
-
-      CALL ReadCom ( UnIn, FileName, 'unused WaveStMod', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-         
-   END IF
-
-         
-      ! WaveTMax - Analysis time for incident wave calculations.  
-      
-   IF ( Waves_InitData%WaveMod > 0 )  THEN   ! .TRUE if we have incident waves.
-   
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveTMax, 'WaveTMax', &
-                              'Analysis time for incident wave calculations', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-         
-!      IF ( WaveTMax < TMax )  THEN
-!         CALL ProgAbort ( ' WaveTMax must not be less than TMax.', .TRUE. )    
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
         
-   ELSE
+         ! Display the module information
 
-      Waves_InitData%WaveTMax = 0.0
+      CALL DispNVD( HydroDyn_ProgDesc )        
       
-      CALL ReadCom ( UnIn, FileName, 'unused WaveTMax',  ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   END IF   
-            
+         ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
+         !   this module must be called here:
+                 
+      p%DT  = Interval
       
-      ! WaveDT - Time step for incident wave calculations   
       
-   IF ( Waves_InitData%WaveMod > 0 )  THEN   ! .TRUE if we have incident waves.
-   
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveDT, 'WaveDT', &
-                         'Time step for incident wave calculations', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( Waves_InitData%WaveDT <= 0.0 )  THEN
-         CALL ProgAbort ( ' WaveDT must be greater than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   ELSE
-   
-      Waves_InitData%WaveDT = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused WaveDT', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   END IF        
-
-      
-      ! WaveHs - Significant wave height    
-      
-   IF ( ( Waves_InitData%WaveMod /= 0 ) .AND. ( Waves_InitData%WaveMod /= 3 ) .AND. ( Waves_InitData%WaveMod /= 4 ) ) THEN   ! .TRUE. (when WaveMod = 1, 2, or 10) if we have plane progressive (regular) or JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, but not GH Bladed wave data.
-
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveHs, 'WaveHs', 'Significant wave height', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( Waves_InitData%WaveHs <= 0.0 )  THEN
-         CALL ProgAbort ( ' WaveHs must be greater than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   ELSE
-   
-      Waves_InitData%WaveHs = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused WaveHs', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF      
-
-      
-      ! WaveTp - Peak spectral period.
-
-   IF ( ( Waves_InitData%WaveMod /= 0 ) .AND. ( Waves_InitData%WaveMod /= 3 ) .AND. ( Waves_InitData%WaveMod /= 4 ) ) THEN   ! .TRUE. (when WaveMod = 1, 2, or 10) if we have plane progressive (regular) or JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, but not GH Bladed wave data.
-
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveTp, 'WaveTp', 'Peak spectral period', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( Waves_InitData%WaveTp <= 0.0 )  THEN
-         CALL ProgAbort ( ' WaveTp must be greater than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   ELSE
-   
-      Waves_InitData%WaveTp = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused WaveTp', ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   END IF      
-
-      
-      ! WavePkShp - Peak shape parameter.
-      
-   IF ( Waves_InitData%WaveMod == 2 ) THEN   ! .TRUE if we have JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, but not GH Bladed wave data.
-
-
-      CALL ReadVar ( UnIn, FileName, Line, 'WavePkShp', 'Peak shape parameter', ErrStat )
-      
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-               
-      CALL Conv2UC( Line )    ! Convert Line to upper case.
-
-      IF ( TRIM(Line) == 'DEFAULT' )  THEN   ! .TRUE. when one wants to use the default value of the peak shape parameter, conditioned on significant wave height and peak spectral period.
-
-         Waves_InitData%WavePkShp = WavePkShpDefault ( Waves_InitData%WaveHs, Waves_InitData%WaveTp )
-
-      ELSE                                   ! The input must have been specified numerically.
-
-         READ (Line,*,IOSTAT=ErrStat)  Waves_InitData%WavePkShp
+      IF ( InitInp%UseInputFile ) THEN
          
-         IF ( ErrStat /= 0 ) THEN
-            CALL CheckIOS ( ErrStat, FileName, 'WavePkShp', NumType, .TRUE. )
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-         IF ( ( Waves_InitData%WavePkShp < 1.0 ) .OR. ( Waves_InitData%WavePkShp > 7.0 ) )  THEN        
-            CALL ProgAbort ( ' WavePkShp must be greater than or equal to 1 and less than or equal to 7.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-      END IF
-
-   ELSE
-
-      Waves_InitData%WavePkShp = 1.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused WavePkShp', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF      
-
-      
-      ! WaveDir - Wave heading direction.  
-      
-   IF ( ( Waves_InitData%WaveMod > 0 ) .AND. ( Waves_InitData%WaveMod /= 4 ) )  THEN   ! .TRUE if we have incident waves, but not GH Bladed wave data.
-
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveDir, 'WaveDir', 'Wave heading direction', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( ( Waves_InitData%WaveDir <= -180.0 ) .OR. ( Waves_InitData%WaveDir > 180.0 ) )  THEN
-         CALL ProgAbort ( ' WaveDir must be greater than -180 and less than or equal to 180.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   ELSE
-
-      Waves_InitData%WaveDir = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused WaveDir', ErrStat)
-      
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF      
-
-      
-      ! WaveSeed(1), !WaveSeed(2)
-
-   IF ( ( Waves_InitData%WaveMod > 0 ) .AND. ( Waves_InitData%WaveMod /= 4 ) .AND. ( Waves_InitData%WaveMod /= 10 ) )  THEN   !.TRUE. for plane progressive (regular) with random phase or irregular wave 
-
-      DO I = 1,2
-      
-         WRITE(Line,'(I2)') I
-      
-         CALL ReadVar ( UnIn, FileName, Waves_InitData%WaveSeed(I), 'WaveSeed('//TRIM(Line)//')', &
-                                       'Random seed #'//TRIM(Line), ErrStat )
-      
-         IF ( ErrStat /= 0 ) THEN
-            CLOSE( UnIn )
-            RETURN
-         END IF
-      
-      END DO !I
-
-
-   ELSE
-
-      DO I = 1,2
-
-         Waves_InitData%WaveSeed(I) = 0
-
-         WRITE(Line,'(I2)') I
-      
-         CALL ReadCom ( UnIn, FileName, 'unused WaveSeed('//TRIM(Line)//')' , ErrStat)
-
-         IF ( ErrStat /= 0 ) THEN
-            CLOSE( UnIn )
-            RETURN
-         END IF
-      
-      END DO !I
-   
-   END IF      
-      
-      
-      
-      ! GHWvFile   
-      
-   IF ( Waves_InitData%WaveMod == 4 ) THEN      ! .TRUE if we are to use GH Bladed wave data.
-
-      CALL ReadVar ( UnIn, FileName, Waves_InitData%GHWvFile, 'GHWvFile', &
-                                     'Root name of GH Bladed files containing wave data', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( LEN_TRIM( Waves_InitData%GHWvFile ) == 0 )  THEN      
-         CALL ProgAbort ( ' GHWvFile must not be an empty string.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   ELSE !don't use this one
-
-      Waves_InitData%GHWvFile = ""
-      
-      CALL ReadCom ( UnIn, FileName, 'unused GHWvFile', ErrStat )
-      
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   END IF
-
-
-      ! NWaveElev
-
-   CALL ReadVar ( UnIn, FileName, Waves_InitData%NWaveElev, 'NWaveElev', &
-                                  'Number of points where the incident wave elevations can be output', ErrStat )
-      
-   IF ( ErrStat /= 0 ) THEN
-   
-      CLOSE( UnIn )
-      RETURN
-      
-   END IF
-      
-   IF ( Waves_InitData%NWaveElev < 0 ) THEN
-       
-      CALL ProgAbort ( ' NWaveElev must not be negative.', TrapErrors = .TRUE. )
-      CLOSE( UnIn )
-      RETURN
-      
-   ELSE
-      
-         ! allocate space for the output location arrays: 
-      
-      ALLOCATE ( Waves_InitData%WaveElevxi(Waves_InitData%NWaveElev), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         CALL ProgAbort ( ' Error allocating space for WaveElevxi array.', TrapErrors = .TRUE. )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-      ALLOCATE ( Waves_InitData%WaveElevyi(Waves_InitData%NWaveElev), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         CALL ProgAbort ( ' Error allocating space for WaveElevyi array.', TrapErrors = .TRUE. )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   END IF
-
-
-      ! WaveElevxi
+                  
+         ! Parse all HydroDyn-related input files and populate the *_InitInputType derived types
          
-   IF ( Waves_InitData%NWaveElev > 0 ) THEN
-            
-      CALL ReadAry ( UnIn, FileName, Waves_InitData%WaveElevxi, Waves_InitData%NWaveElev, 'WaveElevxi', &
-                           'List of xi-coordinates for points where the incident wave elevations can be output', ErrStat, ErrMsg )         
-      
-   ELSE
-         ! this adds a line to the echo file, even if NWaveElev < 1
-         
-      CALL ReadCom ( UnIn, FileName, 'unused WaveElevxi', ErrStat )
-      
-   END IF
-         
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-      
-      
-      ! WaveElevyi
-
-   IF ( Waves_InitData%NWaveElev > 0 ) THEN
-
-      CALL ReadAry ( UnIn, FileName, Waves_InitData%WaveElevyi, Waves_InitData%NWaveElev, 'WaveElevyi', &
-                           'List of yi-coordinates for points where the incident wave elevations can be output', ErrStat, ErrMsg )         
-
-   ELSE
-   
-      CALL ReadCom ( UnIn, FileName, 'unused WaveElevyi', ErrStat )
-      
-   END IF
-      
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for current
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Current header', ErrStat )
-   
-   IF (ErrStat /= 0) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-      ! CurrMod - Current profile model switch
-      
-   CALL ReadVar ( UnIn, FileName, Current_Data%CurrMod, 'CurrMod', 'Current profile model switch', ErrStat )
-
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   IF ( ( Current_Data%CurrMod /= 0 ) .AND. ( Current_Data%CurrMod /= 1 ) .AND. ( Current_Data%CurrMod /= 2 ) )  THEN
-      CALL ProgAbort ( ' CurrMod must be 0, 1, or 2.', .TRUE. )
-      ErrStat = 1
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   IF ( ( Current_Data%CurrMod /= 0 ) .AND. ( Waves_InitData%WaveMod == 4 ) )  THEN
-      CALL ProgAbort ( ' CurrMod must be set to 0 when WaveMod is set to 4.', .TRUE. )
-      ErrStat = 1
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-      ! CurrSSV0 - Sub-surface current velocity at still water level
-      
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-    
-      CALL ReadVar ( UnIn, FileName, Current_Data%CurrSSV0, 'CurrSSV0', 'Sub-surface current velocity at still water level', &
-                         ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( Current_Data%CurrSSV0 < 0.0 )  THEN
-         CALL ProgAbort ( ' CurrSSV0 must not be less than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN         
-      END IF  
-  
-   ELSE
-
-      Current_Data%CurrSSV0 = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused CurrSSV0', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-   
-     
-      ! CurrSSDir - Sub-surface current heading direction
-   
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-  
-  
-      CALL ReadVar ( UnIn, FileName, Line, 'CurrSSDir', 'Sub-surface current heading direction', ErrStat )
-      
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-            
-            
-      CALL Conv2UC( Line )    ! Convert Line to upper case.
-
-      IF ( TRIM(Line) == 'DEFAULT' )  THEN   ! .TRUE. when one wants to use the default value of codirectionality between sub-surface current and incident wave propogation heading directions.
-
-         IF ( Waves_InitData%WaveMod == 0 ) THEN
-            CALL ProgAbort ( ' CurrSSDir must not be set to ''DEFAULT'' when WaveMod is set to 0.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN         
-         END IF  
-
-         Current_Data%CurrSSDir = Waves_InitData%WaveDir
-
-      ELSE                                   ! The input must have been specified numerically.
-
-         READ (Line,*,IOSTAT=ErrStat)  Current_Data%CurrSSDir
-         CALL CheckIOS ( ErrStat, FileName, 'CurrSSDir', NumType, .TRUE. )
-
-         IF ( ErrStat /= 0 ) THEN
-            CLOSE( UnIn )
+         CALL HydroDynInput_GetInput( InitLocal, ErrStat, ErrMsg )
+         IF ( ErrStat > ErrID_Warn ) THEN
             RETURN
          END IF
-
-         IF ( ( Current_Data%CurrSSDir <= -180.0 ) .OR. ( Current_Data%CurrSSDir > 180.0 ) )  THEN 
-            CALL ProgAbort ( ' CurrSSDir must be greater than -180 and less than or equal to 180.', .TRUE. ) 
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN         
-         END IF  
-
-      END IF
-  
-  
-   ELSE
-
-      Current_Data%CurrSSDir = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused CurrSSDir', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-   
-   
-      ! CurrNSRef - Near-surface current reference depth.
-   
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-  
-      CALL ReadVar ( UnIn, FileName, Current_Data%CurrNSRef, 'CurrNSRef', 'Near-surface current reference depth', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( Current_Data%CurrNSRef <= 0.0 ) THEN
-         CALL ProgAbort ( ' CurrNSRef must be greater than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-  
-   ELSE
-   
-      Current_Data%CurrNSRef = 0.0
-
-      CALL ReadCom ( UnIn, FileName, 'unused CurrNSRef', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-   
-   
-      ! CurrNSV0 - Near-surface current velocity at still water level.
-   
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-  
-      CALL ReadVar ( UnIn, FileName, Current_Data%CurrNSV0, 'CurrNSV0', 'Near-surface current velocity at still water level', &
-                           ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-  
-      IF ( Current_Data%CurrNSV0 < 0.0 ) THEN
-         CALL ProgAbort ( ' CurrNSV0 must not be less than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-    
-   ELSE
-   
-      Current_Data%CurrNSV0 = 0.0
-
-      CALL ReadCom ( UnIn, FileName, 'unused CurrNSV0' , ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-
-   
-      ! CurrNSDir - Near-surface current heading direction.
-
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-  
-      CALL ReadVar ( UnIn, FileName, Current_Data%CurrNSDir, 'CurrNSDir', 'Near-surface current heading direction', ErrStat )
-  
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-  
-      IF ( ( Current_Data%CurrNSDir <= -180.0 ) .OR. ( Current_Data%CurrNSDir > 180.0 ) )  THEN
-         CALL ProgAbort ( ' CurrNSDir must be greater than -180 and less than or equal to 180.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
+         
       END IF
            
-   ELSE
-   
-      Current_Data%CurrNSDir = 0.0
       
-      CALL ReadCom ( UnIn, FileName, 'unused CurrNSDir', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-   
-   
-      ! CurrDIV - Depth-independent current velocity.
-
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-  
-      CALL ReadVar ( UnIn, FileName, Current_Data%CurrDIV, 'CurrDIV', 'Depth-independent current velocity', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( Current_Data%CurrDIV < 0.0 ) THEN
-         CALL ProgAbort ( ' CurrDIV must not be less than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
+      
+         ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
+         !   because the HydroDynInput module is also responsible for parsing all this 
+         !   initialization data from a file
          
-   ELSE
-
-      Current_Data%CurrDIV = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused CurrDIV'  , ErrStat )
-      
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-   
-   
-      ! CurrDIDir - Depth-independent current heading direction.
-   
-   IF ( Current_Data%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-  
-  
-      CALL ReadVar ( UnIn, FileName, Current_Data%CurrDIDir, 'CurrDIDir', 'Depth-independent current heading direction', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( ( Current_Data%CurrDIDir <= -180.0 ) .OR. ( Current_Data%CurrDIDir > 180.0 ) ) THEN
-         CALL ProgAbort ( ' CurrDIDir must be greater than -180 and less than or equal to 180.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-  
-  
-   ELSE
-
-      Current_Data%CurrDIDir = 0.0
-      
-      CALL ReadCom ( UnIn, FileName, 'unused CurrDIDir', ErrStat )
-      
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section to define the discretization 
-   !-------------------------------------------------------------------------------------------------
-
-   CALL HD_GetDiscretization(UnIn, FileName, HD_Data, HDOut_InitData%NumMemberNodes, ErrStat)
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-!   !-------------------------------------------------------------------------------------------------
-!   ! Data section for monopile tower
-!   !-------------------------------------------------------------------------------------------------
-!
-!      ! Header
-!      
-!   CALL ReadCom( UnIn, FileName, 'Monopile header', ErrStat )
-!   
-!   IF ( ErrStat /= 0 ) THEN
-!      CLOSE( UnIn )
-!      RETURN
-!   END IF
-!
-!
-!
-!      ! MPLdMod - Tower loading model switch
-!
-!   IF ( HD_Data%StrctType == FixedBtm_Type ) THEN
-!      
-!      CALL ReadVar ( UnIn, FileName, MPLdMod, 'MPLdMod', 'Tower loading model switch', ErrStat )
-!      
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!      IF ( ( MPLdMod /= 0 ) .AND. ( MPLdMod /= 1 ) .AND. ( MPLdMod /= 2 ) )  THEN         
-!         CALL ProgAbort ( ' MPLdMod must be 0, 1, or 2.', .TRUE. )
-!         CLOSE( UnIn )
-!         ErrStat = 1
-!         RETURN
-!      END IF      
-!      
-!   ELSE
-!   
-!      MPLdMod = 0
-!      CALL ReadCom ( UnIn, FileName, 'unused MPLdMod', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!   END IF
-!
-!
-!      ! MPNodes
-!      
-!!   IF ( HD_Data%StrctType == FixedBtm_Type ) THEN
-!!
-!!      CALL ReadVar ( UnIn, FileName, MPNodes, 'MPNodes', 'Number of tower nodes', ErrStat )
-!!      IF ( ErrStat /= 0 ) THEN
-!!         CLOSE( UnIn )
-!!         RETURN
-!!      END IF
-!!
-!!      IF ( MPNodes < 1 ) THEN
-!!      
-!!         CALL ProgAbort( 'MPNodes must be greater than 0.', TrapErrors = .TRUE. )
-!!         ErrStat = 1
-!!         CLOSE( UnIn )
-!!         RETURN
-!!      
-!!      END IF
-!!
-!!   ELSE
-!         
-!      MPNodes = 0
-!      CALL ReadCom ( UnIn, FileName, 'unused MPNodes', ErrStat )
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!!   END IF   
-!      
-!      
-!      ! MPzi(MPNodes)
-!
-!!   IF ( MPNodes > 0  ) THEN
-!!   
-!!      ALLOCATE( MPzi(MPNodes), STAT=ErrStat )
-!!      
-!!      IF ( ErrStat /= 0 ) THEN
-!!         CALL ProgAbort( ' Error allocating space for array MPzi.', TrapErrors = .TRUE. )
-!!         CLOSE( UnIn )
-!!         RETURN
-!!      END IF
-!!      
-!!      
-!!      CALL ReadAry ( UnIn, FileName, MPzi, MPNodes, 'MPzi', 'Tower node locations', ErrStat )
-!!
-!!   ELSE
-!
-!      CALL ReadCom ( UnIn, FileName, 'unused MPzi', ErrStat )
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!!   END IF
-!         
-!      ! MPDiam - Tower diameter in Morison's equation
-!
-!   IF ( MPLdMod == 1 ) THEN      ! we will be using the built-in Morison's equation         
-!   
-!      CALL ReadVar ( UnIn, FileName, MPDiam, 'MPDiam', 'Tower diameter in Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( MPDiam < 0.0 ) THEN
-!         CALL ProgAbort ( ' MPDiam must not be negative.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   ELSE
-!   
-!      MPDiam = 0.0
-!      
-!      CALL ReadCom ( UnIn, FileName, 'unused MPDiam', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!   
-!   END IF
-!
-!
-!      ! MPCA - Normalized hydrodynamic added mass coefficient in Morison's equation
-!
-!   IF ( MPLdMod == 1 ) THEN      ! we will be using the built-in Morison's equation         
-!
-!      CALL ReadVar ( UnIn, FileName, MPCA, 'MPCA', &
-!                        'Normalized hydrodynamic added mass coefficient in Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( MPCA < 0.0 )  THEN
-!         CALL ProgAbort ( ' MPCA must not be negative.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   ELSE
-!
-!      MPCA = 0.0
-!      CALL ReadCom ( UnIn, FileName, 'unused MPCA',   ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!   
-!   END IF
-!
-!
-!      ! MPCD - Normalized hydrodynamic viscous drag coefficient in Morison's equation
-!
-!   IF ( MPLdMod == 1 ) THEN      ! we will be using the built-in Morison's equation         
-!
-!      CALL ReadVar ( UnIn, FileName, MPCD, 'MPCD', &
-!                        'Normalized hydrodynamic viscous drag coefficient in Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( MPCD < 0.0 ) THEN
-!         CALL ProgAbort ( ' MPCD must not be negative.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF        
-!
-!
-!   ELSE  ! We must not be using the built-in Morison's equation, so skip these inputs.
-!     
-!      MPCD = 0.0
-!      CALL ReadCom ( UnIn, FileName, 'unused MPCD',   ErrStat )
-!      
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for floating platform
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Floating platform header', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   !!!!!!!!!!!!!!!!!!!!!!!!
-   
-!   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN ! (should this be done in FAST?)
-!
-!instead of the following 2 checks, now check that the HydroConfig marker for platform is at 0,0,0
-!      IF ( TwrDraft > 0.0 ) THEN
-!         CALL ProgAbort ( ' TwrDraft must be less than or equal to zero when PtfmLdMod is set to "'//TRIM(Line)//'".', .TRUE. )  ! Do not allow the combination of tower hydrodynamics using Morison's equation and platform hydrodynamics using the true form of the using the true form of the hydrodynamics equations since the true equations require that the shape of the platform does not change above the MSL (platform reference point)--Consider the linear hydrostatic restoring matrix, for example.
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( PtfmRef /= 0.0 ) THEN
-!         CALL ProgAbort ( ' PtfmRef must be zero when PtfmLdMod is set to "'//TRIM(Line)//'".', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!bjj: like this:
-!      IF ( HydroConfig%Substructure%Position  /= ( 0,0,0 ) .OR.
-!           HydroConfig%Substructure%Orientation /= eye(3) ) THEN
-!      
-!         CALL ProgAbort ( ' HydroConfig%Substructure%Position must be zero and Orientation must be the identity matrix when PtfmLdMod is set to "'//TRIM(Line)//'".', .TRUE. )
-!           
-!      END IF
-!
-!   END IF
-
-
-      ! WAMITFile - Root name of WAMIT output files
-
-   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-   
-      CALL ReadVar ( UnIn, FileName, FP_InitData%WAMITFile, 'WAMITFile', 'Root name of WAMIT output files', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( LEN_TRIM( FP_InitData%WAMITFile ) == 0 ) THEN
-         CALL ProgAbort ( ' WAMITFile must not be an empty string.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
+      CALL HydroDynInput_ProcessInitData( InitLocal, ErrStat, ErrMsg )     
+      IF ( ErrStat > ErrID_Warn ) THEN      
          RETURN
       END IF
       
       
-         ! if this is a relative path, let's make it relative to the location of the main input file
-         
-      IF ( PathIsRelative( FP_InitData%WAMITFile ) ) THEN      
-         CALL GetPath( FileName, TmpPath ) 
-         FP_InitData%WAMITFile = TRIM(TmpPath)//TRIM(FP_InitData%WAMITFile)
-      END IF
-         
-
-   ELSE         
-   
-      FP_InitData%WAMITFile = ""
-   
-      CALL ReadCom( UnIn, FileName, 'unused WAMITFile', ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   END IF
-
-
-      ! WAMITFile - Root name of WAMIT output files
-
-   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-   
-      CALL ReadVar ( UnIn, FileName, FP_InitData%WAMITULEN, 'WAMITULEN', 'WAMIT characteristic body length scale', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF                     
-
-   ELSE         
-   
-      FP_InitData%WAMITULEN = 1.0
-   
-      CALL ReadCom( UnIn, FileName, 'unused WAMITULEN', ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   END IF
-
-
-
-      ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
-
-   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-   
-      CALL ReadVar ( UnIn, FileName, FP_InitData%PtfmVol0, 'PtfmVol0', &
-         'Displaced volume of water when the platform is in its undisplaced position', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-
-      IF ( FP_InitData%PtfmVol0 < 0.0 ) THEN
-         CALL ProgAbort ( ' PtfmVol0 must not be negative.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   ELSE         
-   
-      FP_InitData%PtfmVol0 = 0.0
-      
-      CALL ReadCom( UnIn, FileName, 'unused PtfmVol0', ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   END IF
-
-
-!      ! PtfmNodes - Number of platform nodes used in calculation of viscous drag term from Morison's equation
-!
-!   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-!   
-!      CALL ReadVar ( UnIn, FileName, PtfmNodes, 'PtfmNodes', &
-!         'Number of platform nodes used in calculation of viscous drag term from Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( PtfmNodes < 0 ) THEN
-!         CALL ProgAbort ( ' PtfmNodes must not be less than 0.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   ELSE         
-!   
-!      PtfmNodes = 0
-!      
-!      CALL ReadCom( UnIn, FileName, 'unused PtfmNodes', ErrStat )
-!   
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!   END IF
-!
-!
-!      ! PtfmDraft - Effective platform draft in calculation of viscous drag term from Morison's equation
-!
-!   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-!   
-!      CALL ReadVar ( UnIn, FileName, PtfmDraft, 'PtfmDraft', &
-!         'Effective platform draft in calculation of viscous drag term from Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( PtfmDraft < 0.0 ) THEN
-!         CALL ProgAbort ( ' PtfmDraft must not be negative.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   ELSE         
-!   
-!      PtfmDraft = 0.0
-!      
-!      CALL ReadCom( UnIn, FileName, 'unused PtfmDraft', ErrStat )
-!   
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!   END IF
-!
-!
-!      ! PtfmDiam - Effective platform diameter in calculation of viscous drag term from Morison's equation
-!
-!   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-!   
-!      CALL ReadVar ( UnIn, FileName, FP_InitData%PtfmDiam, 'PtfmDiam', &
-!         'Effective platform diameter in calculation of viscous drag term from Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( FP_InitData%PtfmDiam < 0.0 ) THEN
-!         CALL ProgAbort ( ' PtfmDiam must not be negative.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!   
-!   ELSE         
-!   
-!      FP_InitData%PtfmDiam = 0.0
-!            
-!      CALL ReadCom( UnIn, FileName, 'unused PtfmDiam', ErrStat )
-!   
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!   END IF
-!
-!
-!      ! PtfmCD - Effective platform normalized hydrodynamic viscous drag coefficient in calculation of viscous drag term from Morison's equation
-!
-!   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-!   
-!      CALL ReadVar ( UnIn, FileName, FP_InitData%PtfmCD, 'PtfmCD', &
-!         'Effective platform normalized hydrodynamic viscous drag coefficient in Morison''s equation', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!      IF ( FP_InitData%PtfmCD < 0.0 ) THEN
-!         CALL ProgAbort ( ' PtfmCD must not be negative.', .TRUE. )
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   ELSE         
-!   
-!      FP_InitData%PtfmCD = 0.0
-!      
-!      CALL ReadCom( UnIn, FileName, 'unused PtfmCD', ErrStat )
-!   
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!   END IF
-
-
-      ! RdtnTMax - Analysis time for wave radiation kernel calculations
-      ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
-
-   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-   
-      CALL ReadVar ( UnIn, FileName, FP_InitData%RdtnTMax, 'RdtnTMax', &
-                                    'Analysis time for wave radiation kernel calculations', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( FP_InitData%RdtnTMax < 0.0 ) THEN
-         CALL ProgAbort ( ' RdtnTMax must not be negative.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   ELSE         
-   
-      FP_InitData%RdtnTMax = 0.0
-   
-      CALL ReadCom( UnIn, FileName, 'unused RdtnTMax', ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   END IF
-
-
-      ! RdtnDT - Time step for wave radiation kernel calculations
-
-   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-   
-      CALL ReadVar ( UnIn, FileName, FP_InitData%RdtnDT, 'RdtnDT', 'Time step for wave radiation kernel calculations', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( FP_InitData%RdtnDT <= 0.0 ) THEN
-         CALL ProgAbort ( ' RdtnDT must be greater than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   ELSE         
-   
-      FP_InitData%RdtnDT = 0.0
-   
-      CALL ReadCom( UnIn, FileName, 'unused RdtnDT', ErrStat )
-   
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-   END IF
-
-!bjj: should we add this?
-!test for numerical stability
-!      IF ( FP_InitData%RdtnDT <= FP_InitData%RdtnTMax*EPSILON(FP_InitData%RdtnDT) )  THEN  ! Test RdtnDT and RdtnTMax to ensure numerical stability -- HINT: see the use of OnePlusEps." 
-!         CALL ProgAbort ( ' RdtnDT must be greater than '//TRIM ( Num2LStr( RdtnTMax*EPSILON(RdtnDT) ) )//' seconds.', .TRUE. ) 
-!         ErrStat = 1
-!         CLOSE( UnIn )
-!         RETURN   
-!      END IF
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for mooring lines (ONLY valid for StrctType == FloatPltfm_Type)
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Mooring lines header', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-         ! LineMod - Mooring line model switch.
-         
-   IF ( HD_Data%StrctType == FloatPltfm_Type )  THEN
-
-      CALL ReadVar ( UnIn, FileName, FP_InitData%LineMod, 'LineMod', 'Mooring line model switch', ErrStat )
-      
-      IF ( ErrStat /= 0 )  THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-
-      IF ( ( FP_InitData%LineMod /= 1 ) .AND. ( FP_InitData%LineMod /= 2 ) ) THEN
-         CALL ProgAbort ( ' LineMod must be 1 or 2.', .TRUE. )
-         CLOSE( UnIn )
-         ErrStat = 1
-         RETURN
-      END IF
-
-   ELSE 
-   
-      FP_InitData%LineMod = 0 ! Set LineMod to zero for "none".
-
-      CALL ReadCom ( UnIn, FileName, 'unused LineMod', ErrStat )
-
-      IF ( ErrStat /= 0 )  THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-
-   END IF
-
-
-      ! NumLines - Number of mooring lines
-      
-   IF ( FP_InitData%LineMod == 1 ) THEN
-
-      CALL ReadVar ( UnIn, FileName, FP_InitData%NumLines, 'NumLines', 'Number of mooring lines', ErrStat )
-
-      IF ( ErrStat /= 0 ) THEN
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-      IF ( FP_InitData%NumLines < 0 ) THEN   
-         CALL ProgAbort ( ' NumLines must not be less than zero.', .TRUE. )
-         ErrStat = 1
-         CLOSE( UnIn )
-         RETURN   
-      END IF
-      
-         ! Allocate the input mooring line array.
-         ! NOTE: We must ALLOCATE these arrays even when LineMod <> 1 because the
-         !       arrays are passed into the InitFltngPtfm() routine.
      
-      ALLOCATE ( FP_InitData%MooringLine ( FP_InitData%NumLines ) , STAT=ErrStat )
-      IF ( ErrStat /= 0 )  THEN
-         CALL ProgAbort ( ' Error allocating memory for the MooringLine array.', .TRUE. )
-         CLOSE( UnIn )
-         RETURN
-      END IF
          
-   
-   ELSE
-   
-      FP_InitData%NumLines = 0
+         
+         ! Open a summary of the HydroDyn Initialization. Note: OutRootName must be set by the caller because there may not be an input file to obtain this rootname from.
+         
+      IF ( InitLocal%HDSum ) THEN 
+         
+         SummaryName = TRIM(InitLocal%OutRootName)//'_HydroDyn.sum'
+         CALL HDOut_OpenSum( InitLocal%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat, ErrMsg )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
+         IF ( ErrStat > ErrID_Warn ) RETURN
       
-      CALL ReadCom ( UnIn, FileName, 'unused NumLines', ErrStat )
-
-      IF ( ErrStat /= 0 )  THEN
-         CLOSE( UnIn )
+      ELSE
+         
+         InitLocal%UnSum = -1
+         
+      END IF
+      
+      
+         ! Set summary unit number in Waves, Radiation, and Morison initialization input data
+         
+      InitLocal%Waves%UnSum           = InitLocal%UnSum
+      InitLocal%WAMIT%Conv_Rdtn%UnSum = InitLocal%UnSum
+      InitLocal%Morison%UnSum         = InitLocal%UnSum      
+    
+      
+         ! Now call each sub-module's *_Init subroutine
+         ! to fully initialize each sub-module based on the necessary initialization data
+      
+         
+         ! Initialize Current module
+         
+      CALL Current_Init(InitLocal%Current, Current_u, Current_p, Current_x, Current_xd, Current_z, CurrentOtherState, &
+                                 Current_y, Interval, Current_InitOut, ErrStat, ErrMsg )   
+      IF ( ErrStat > ErrID_Warn ) THEN      
+         RETURN
+      END IF 
+      
+      ! Verify that Current_Init() did not request a different Interval!
+      
+      IF ( p%DT /= Interval ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Current Module attempted to change timestep interval, but this is not allowed.  Current Module must use the HydroDyn Interval.'
+      END IF
+      
+      
+         ! Copy initialization output data from Current module into the initialization input data for the Waves module
+         
+      ALLOCATE ( InitLocal%Waves%CurrVxi(InitLocal%Current%NMorisonNodes), STAT = ErrStat )
+      IF ( ErrStat /= 0 ) THEN 
+         ErrMsg = ' Error allocating memory for the CurrVxi array.'
+         RETURN
+      END IF
+      ALLOCATE ( InitLocal%Waves%CurrVyi(InitLocal%Current%NMorisonNodes), STAT = ErrStat )
+      IF ( ErrStat /= 0 ) THEN 
+         ErrMsg = ' Error allocating memory for the CurrVyi array.'
          RETURN
       END IF
       
-   END IF
-    
-   
-      ! Skip the header/comment lines.
-
-   CALL ReadCom ( UnIn, FileName, 'mooring line parameter names', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   
-   CALL ReadCom ( UnIn, FileName, 'mooring line parameter units', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   
-
-   IF ( FP_InitData%LineMod == 1 )  THEN  ! .TRUE if we have standard quasi-static mooring lines.
-
-!!bjj: why are we printing this twice? (once in the comments and now again here) probably because it looks nicer to have the headers printed exactly on top of the columns   
-!
-!      IF ( Echo )  THEN
-!
-!         WRITE (UnEc, "( '   LRadAnch     LAngAnch     LDpthAnch    LRadFair     LAngFair     LDrftFair"// &
-!                      "    LUnstrLen    LDiam        LMassDen     LEAStff      LSeabedCD    LTenTol     LineNodes   LSNodes:' )" )
-!         WRITE (UnEc, "( '   --------     --------     ---------    --------     --------     ---------"// &
-!                      "    ---------    -----        --------     -------      ---------    -------     ---------   --------' )" )
-!!         Frmt = '( I5, 1X, 12( 2X, '//TRIM( OutFmt )//'), 4X, I5 )'
-!
-!      ENDIF
-
-
-         ! Read in the mooring line data.
-         ! NOTE: Store the x-, y-, and z-coordinates of each anchor and fairlead,
-         !       instead of the radius, angle, and depth/draft.
-
+      InitLocal%Waves%CurrVxi       = Current_InitOut%CurrVxi 
+      InitLocal%Waves%CurrVyi       = Current_InitOut%CurrVyi 
+      InitLocal%Waves%PCurrVxiPz0   = Current_InitOut%PCurrVxiPz0
+      InitLocal%Waves%PCurrVyiPz0   = Current_InitOut%PCurrVyiPz0
+         
       
-      DO I = 1,FP_InitData%NumLines ! Loop through all mooring lines
-
-         READ (UnIn,*,IOSTAT=ErrStat) LRadAnch                            , LAngAnch                            , &
-                                      LDpthAnch                           , LRadFair                            , &
-                                      LAngFair                            , LDrftFair                           , &
-                                      FP_InitData%MooringLine(I)%LUnstrLen, FP_InitData%MooringLine(I)%LDiam    , &
-                                      FP_InitData%MooringLine(I)%LMassDen , FP_InitData%MooringLine(I)%LEAStff  , &
-                                      FP_InitData%MooringLine(I)%LSeabedCD, FP_InitData%MooringLine(I)%LTenTol  , &
-                                      FP_InitData%MooringLine(I)%LineNodes 
-   !bjj: we're now going to assume LSNodes are equally distributed instead of allowing the user to input them like this:                                      
-                                                                          !,                                       &
-!                                       ( TmpAry(J), J=1, MIN(MaxLineNodes,FP_InitData%MooringLine(I)%LineNodes) )
-
-
-         CALL CheckIOS ( ErrStat, FileName, 'mooring line '//TRIM( Int2LStr( I ) )//' properties', NumType, .TRUE. )
-         IF ( ErrStat /= 0 ) THEN
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-         IF (     FP_InitData%MooringLine(I)%LineNodes < 0           ) THEN
-            CALL ProgAbort( ' LineNodes('//TRIM( Int2LStr( I ) )//') must not be a negative number.', TrapErrors = .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN       
-!         ELSEIF ( FP_InitData%MooringLine(I)%LineNodes > MaxLineNodes ) THEN        ! error if we didn't read the whole array
-!            CALL ProgAbort( ' LineNodes('//TRIM( Int2LStr( I ) )//') must not be larger than ' &
-!                                        //TRIM(Int2LStr(MaxLineNodes))//'.', TrapErrors = .TRUE. )
-!            ErrStat = 1
-!            CLOSE( UnIn )
-!            RETURN       
-         END IF
-
-        
-         ALLOCATE ( FP_InitData%MooringLine(I)%LSNodes ( FP_InitData%MooringLine(I)%LineNodes ) , STAT=ErrStat )
+      
+      
+         ! Initialize Waves module
+          
+      CALL Waves_Init(InitLocal%Waves, Waves_u, Waves_p, Waves_x, Waves_xd, Waves_z, WavesOtherState, &
+                                 Waves_y, Interval, Waves_InitOut, ErrStat, ErrMsg )
+      IF ( ErrStat > ErrID_Warn ) THEN      
+         RETURN
+      END IF
+      
+      
+      ! Verify that Waves_Init() did not request a different Interval!
+      
+      IF ( p%DT /= Interval ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Waves Module attempted to change timestep interval, but this is not allowed.  Waves Module must use the HydroDyn Interval.'
+      END IF
+     
+      
+  
+         ! Is there a WAMIT body? 
+      
+      IF ( InitLocal%HasWAMIT ) THEN
+         
+            ! Copy Waves initialization output into the initialization input type for the WAMIT module
+         
+         ALLOCATE ( InitLocal%WAMIT%WaveTime   (0:Waves_InitOut%NStepWave-1                    ) , STAT=ErrStat )
          IF ( ErrStat /= 0 )  THEN
-            CALL ProgAbort ( ' Error allocating memory for the LSNodes array.', .TRUE. )
-            CLOSE( UnIn )
-            RETURN
-         END IF
-            
-         DO J = 1,FP_InitData%MooringLine(I)%LineNodes
-               
-               ! We'll assume LineNodes equally spaced nodes from 0 to LUnstrLen:
-               
-            FP_InitData%MooringLine(I)%LSNodes(J) = (J - 0.5) * ( FP_InitData%MooringLine(I)%LUnstrLen / &
-                                                                  FP_InitData%MooringLine(I)%LineNodes )
-            
-!               ! Check the user-input values:
-!            
-!            FP_InitData%MooringLine(I)%LSNodes(J) = TmpAry(J)                                    
-!
-!            IF ( ( FP_InitData%MooringLine(I)%LSNodes(J) < 0                                    ) .OR.  &
-!                 ( FP_InitData%MooringLine(I)%LSNodes(J) > FP_InitData%MooringLine(I)%LUnstrLen )  ) THEN                 
-!               CALL ProgAbort ( ' Error: Check that 0 <= LSNodes('//TRIM( Int2LStr( J ) )//') <= LUnstrLen on mooring line ' &
-!                                                                  //TRIM( Int2LStr( I ) )//'.', .TRUE. )
-!               CLOSE( UnIn )
-!               ErrStat = 1
-!               RETURN
-!            END IF                             
-         END DO !J            
-
-         !IF ( Echo )  THEN
-         !   WRITE( TmpFmt, '( 12( 2X, '//TRIM( HD_Data%HDOut_Data%OutFmt )// '), 2X, I5  ) ' )                  &
-         !                           LRadAnch                            , LAngAnch                            , &
-         !                           LDpthAnch                           , LRadFair                            , &
-         !                           LAngFair                            , LDrftFair                           , &
-         !                           FP_InitData%MooringLine(I)%LUnstrLen, FP_InitData%MooringLine(I)%LDiam    , &
-         !                           FP_InitData%MooringLine(I)%LMassDen , FP_InitData%MooringLine(I)%LEAStff  , &
-         !                           FP_InitData%MooringLine(I)%LSeabedCD, FP_InitData%MooringLine(I)%LTenTol  , &
-         !                           FP_InitData%MooringLine(I)%LineNodes
-         !   
-         !   
-         !   IF ( FP_InitData%MooringLine(I)%LineNodes  > 0 ) THEN       ! break this up for gfortran
-         !   
-         !      WRITE (UnEc,'( A, 4X, ' //TRIM( Int2LStr(FP_InitData%MooringLine(I)%LineNodes) )//'( 2X, '   &
-         !                              //TRIM( HD_Data%HDOut_Data%OutFmt )//' ) )'                        ) &
-         !                                TRIM( TmpFmt ),  FP_InitData%MooringLine(I)%LSNodes
-         !                             
-         !   ELSE
-         !      WRITE (UnEc, '( A )' ) TRIM( TmpFmt)
-         !   END IF                                      
-         !                     
-         !ENDIF
-         !
-         IF ( LRadAnch                             <  0.0       ) THEN
-            CALL ProgAbort ( ' LRadAnch('//TRIM( Int2LStr( I ) )//') must not be less than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
+            ErrMsg  = ' Error allocating memory for the WaveTime array.'
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
 
-         IF ( LRadFair                             <  0.0       ) THEN
-            CALL ProgAbort ( ' LRadFair('//TRIM( Int2LStr( I ) )//') must not be less than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
+         ALLOCATE ( InitLocal%WAMIT%WaveElevC0 (2, 0:Waves_InitOut%NStepWave2                  ) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg  = ' Error allocating memory for the WaveElevC0 array.'
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
 
-         IF ( LDrftFair                            <  0.0       ) THEN
-            CALL ProgAbort ( ' LDrftFair('//TRIM( Int2LStr( I ) )//') must not be less than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
+         ALLOCATE ( InitLocal%WAMIT%WaveElev   (0:Waves_InitOut%NStepWave-1,InitLocal%Waves%NWaveElev  ) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg  = ' Error allocating memory for the WaveElev array.'
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
-
-         IF ( LDpthAnch                            <  LDrftFair ) THEN
-            CALL ProgAbort ( ' LDpthAnch('//TRIM( Int2LStr( I ) )//') must not be less than'// &
-                           ' LDrftFair('//TRIM( Int2LStr( I ) )//').', .TRUE.                 )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
+      
+         InitLocal%WAMIT%NWaveElev    = InitLocal%Waves%NWaveElev
+         InitLocal%WAMIT%RhoXg        = Waves_InitOut%RhoXg
+         InitLocal%WAMIT%NStepWave    = Waves_InitOut%NStepWave
+         InitLocal%WAMIT%NStepWave2   = Waves_InitOut%NStepWave2
+         InitLocal%WAMIT%WaveDOmega   = Waves_InitOut%WaveDOmega
+         InitLocal%WAMIT%WaveElevC0   = Waves_InitOut%WaveElevC0
+         InitLocal%WAMIT%WaveTime     = Waves_InitOut%WaveTime
+         InitLocal%WAMIT%WaveElev     = Waves_InitOut%WaveElev
          
-         IF ( Waves_InitData%WtrDpth < LDpthAnch               )  THEN
-            CALL ProgAbort ( ' WtrDpth must not be less than LDpthAnch('//TRIM( Int2LStr( I ) )//').', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF                  
-
-         IF ( FP_InitData%MooringLine(I)%LUnstrLen <= 0.0       ) THEN
-            CALL ProgAbort ( ' LUnstrLen('//TRIM( Int2LStr( I ) )//') must be greater than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-         IF ( FP_InitData%MooringLine(I)%LDiam     <  0.0       ) THEN
-            CALL ProgAbort ( ' LDiam('//TRIM( Int2LStr( I ) )//') must not be less than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-         IF ( FP_InitData%MooringLine(I)%LMassDen  <  0.0       ) THEN
-            CALL ProgAbort ( ' LMassDen('//TRIM( Int2LStr( I ) )//') must not be less than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-         IF ( FP_InitData%MooringLine(I)%LEAStff   <= 0.0       ) THEN
-            CALL ProgAbort ( ' LEAStff('//TRIM( Int2LStr( I ) )//') must be greater than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-               ! NOTE: Values of LSeabedCD less than zero indicate no seabed interaction (i.e., the mooring line may fall below the anchor)
-
-         IF ( FP_InitData%MooringLine(I)%LTenTol   <= 0.0       ) THEN
-            CALL ProgAbort ( ' LTenTol('//TRIM( Int2LStr( I ) )//') must be greater than zero.', .TRUE. )
-            ErrStat = 1
-            CLOSE( UnIn )
-            RETURN
-         END IF
-
-
-         HD_Data%MaxDiam                    = MAX( HD_Data%MaxDiam, LRadAnch )         ! Find the maximum value of the input array LRadAnch
-
-         LAngAnch                           =  LAngAnch*D2R                            ! Convert the azimuth angle of the current
-         LAngFair                           =  LAngFair*D2R                            ! anchor and fairlead from degrees to radians.
-
-         FP_InitData%MooringLine(I)%LAnchxi =  LRadAnch *COS(LAngAnch)                 !
-         FP_InitData%MooringLine(I)%LAnchyi =  LRadAnch *SIN(LAngAnch)                 ! Convert the radius, azimuth angle, and depth of the current anchor   to x-, y-, and z-coordinates into the inertial frame       coordinate system
-         FP_InitData%MooringLine(I)%LAnchzi = -LDpthAnch                               !
-         FP_InitData%MooringLine(I)%LFairxt =  LRadFair *COS(LAngFair)                 !
-         FP_InitData%MooringLine(I)%LFairyt =  LRadFair *SIN(LAngFair)                 ! Convert the radius, azimuth angle, and draft of the current fairlead to x-, y-, and z-coordinates into the tower base / platform coordinate system
-         FP_InitData%MooringLine(I)%LFairzt = -LDrftFair                               !
-
-
-      END DO             ! I - All mooring lines
-
-!   ELSE
-!   
-!      DO I = 1,FP_InitData%NumLines ! Loop through all mooring lines
-!      
-!         CALL ReadCom( UnIn, FileName, 'unused mooring line '//TRIM( Int2LStr( I ) )//' properties', ErrStat )
-!
-!         IF ( ErrStat /= 0 ) THEN
-!            CLOSE( UnIn )
-!            RETURN
-!         END IF         
-!      
-!      END DO
-
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for output
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Output header', ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-!      ! NWaveKin - Number of points where the incident wave kinematics can be output
-!
-!   CALL ReadVar ( UnIn, FileName, HD_Data%HDOut_Data%NWaveKin, 'NWaveKin', &
-!      'Number of points where the incident wave kinematics can be output', ErrStat )
-!
-!   IF ( ErrStat /= 0 ) THEN
-!      CLOSE( UnIn )
-!      RETURN
-!   END IF
-!
-!
-!   IF ( ( HD_Data%HDOut_Data%NWaveKin < 0 ) .OR. ( HD_Data%HDOut_Data%NWaveKin > 9 ) ) THEN
-!      CALL ProgAbort ( ' NWaveKin must be between 0 and 9 (inclusive).', .TRUE. )
-!      ErrStat = 1
-!      CLOSE( UnIn )
-!      RETURN
-!   END IF
-
-
-!      ! WaveKinNd - List of tower nodes that have wave kinematics sensors.
-!
-!   IF ( HD_Data%HDOut_Data%NWaveKin > 0 ) THEN
-!      CALL ReadAry ( UnIn, FileName, HD_Data%HDOut_Data%WaveKinNd(1:HD_Data%HDOut_Data%NWaveKin), HD_Data%HDOut_Data%NWaveKin, &
-!                         'WaveKinNd', 'List of tower nodes that have wave kinematics sensors', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!      
-!         ! Check to see if all WaveKinNd(:) analysis points are existing analysis points:
-!
-!      DO I=1,HD_Data%HDOut_Data%NWaveKin
-!              
-!         IF ( ( HD_Data%HDOut_Data%WaveKinNd(I) < 1 ) .OR. ( HD_Data%HDOut_Data%WaveKinNd(I) > HD_Data%NElements ) )  THEN 
-!            CALL ProgAbort ( ' All WaveKinNd values must be between 1 and '//TRIM( Int2LStr( HD_Data%NElements ) )//' (inclusive).', .TRUE. )
-!            ErrStat = 1
-!            CLOSE( UnIn )
-!            RETURN
-!         END IF
-!                           
-!      END DO ! I      
-!
-!   ELSE
-!   
-!      CALL ReadCom ( UnIn, FileName, 'unused WaveKinNd', ErrStat )
-!
-!      IF ( ErrStat /= 0 ) THEN
-!         CLOSE( UnIn )
-!         RETURN
-!      END IF
-!
-!   END IF
-
-
-      ! OutList - list of requested parameters to output to a file
-
-   CALL ReadOutputList ( UnIn, FileName, HDOut_InitData%OutList, HD_Data%HDOut_Data%NumOuts, &
-                                              'OutList', 'List of outputs requested', ErrStat, ErrMsg, -1 )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CLOSE( UnIn )
-      CALL WrScr( ErrMsg )
-      RETURN
-   END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! This is the end of the input file
-   !-------------------------------------------------------------------------------------------------
-   CLOSE ( UnIn )
-   RETURN    
-   
-   
-END SUBROUTINE HD_GetInput
-!====================================================================================================
-SUBROUTINE HD_GetDiscretization(UnIn, FileName, HD_Data, NumMemberNodes, ErrStat)
-! This private subroutine is used to read the joint, morison member property, and morison member
-! sections from the HydroDyn input file.  With this data, it creates the discretization that
-! HydroDyn will use, storing in it in the HD_Data%Nodes data structure.
-!----------------------------------------------------------------------------------------------------
-
-      ! Passed variables
-   
-   TYPE(HD_DataType),         INTENT( INOUT )   :: HD_Data              ! the hydrodyn data 
-   INTEGER,                   INTENT( IN    )   :: UnIn                 ! Unit number of open input file
-   CHARACTER(*),              INTENT( IN    )   :: FileName             ! Name of the HydroDyn input file   
-   INTEGER,                   INTENT(   OUT )   :: NumMemberNodes(9)    ! the number of nodes for each of the first [9] members
-
-   INTEGER,                   INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
-   
-   
-      ! Local variable types
-      
-   TYPE JointType
-      INTEGER                                   :: ID
-      REAL(ReKi)                                :: Position(3)
-   END TYPE JointType
-   
-   TYPE SetType
-      INTEGER                                   :: ID
-      REAL(ReKi)                                :: D  (2)
-      REAL(ReKi)                                :: CA (2)
-      REAL(ReKi)                                :: CD (2)
-   END TYPE SetType
-         
-   TYPE MemberType
-      INTEGER                                   :: NumElements
-      INTEGER                                   :: SetIndx
-      INTEGER                                   :: JointIndx (2)
-   END TYPE MemberType
-
-      ! Local variables
-      
-   REAL(ReKi)                                   :: DNode (3)
-   REAL(ReKi)                                   :: DSlope
-   REAL(ReKi)                                   :: CASlope
-   REAL(ReKi)                                   :: CDSlope
-   
-   TYPE(JointType),   ALLOCATABLE               :: Joint    (:)                  
-   TYPE(SetType),     ALLOCATABLE               :: Set      (:)                 
-   TYPE(MemberType),  ALLOCATABLE               :: Member   (:)                 
-
-   INTEGER                                      :: I                    ! Generic loop counter      
-   INTEGER                                      :: J                    ! Generic loop counter      
-   INTEGER                                      :: K                    ! Generic loop counter      
-   INTEGER                                      :: JointID(2)
-   INTEGER                                      :: NJoints              ! Number of joints defined
-   INTEGER                                      :: NSets                ! Number of member property sets
-   INTEGER                                      :: NMembers             ! Number of members defined  
-   INTEGER                                      :: SetID
-
-   LOGICAL                                      :: FoundIt              ! lets us know if we found a matching ID
-   CHARACTER(1024) :: ErrMsg
-
-   !-------------------------------------------------------------------------------------------------
-   ! initialize values
-   !-------------------------------------------------------------------------------------------------
-   ErrStat   = 0
-   NumMemberNodes = 0
-   
-      !..............................................................................................
-      ! Joints
-      !..............................................................................................
-
-   CALL ReadCom( UnIn, FileName, 'Joints header', ErrStat )   
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-
-      ! NJoints
-      
-   CALL ReadVar( UnIn, FileName, NJoints, 'NJoints', 'Number of joints in the structure', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-
-   
-   IF ( NJoints < 2  .AND. NJoints /= 0 ) THEN
-      CALL ExitThisRoutine( ' There must be either no joints or at least two joints defined in the HydroDyn dataset.' )
-      ErrStat = 1
-      RETURN
-   ELSE
-         ! Allocate Joint array
-         
-      ALLOCATE( Joint( NJoints ), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN   
-         CALL ExitThisRoutine( ' Error allocating space for HydroDyn joints.' )
-         ErrStat = 1
-         RETURN
-      END IF
-         
-   END IF
-   
-      ! Skip the 2 header/comment lines.
-
-   CALL ReadCom ( UnIn, FileName, 'joint parameter names', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-   CALL ReadCom ( UnIn, FileName, 'joint parameter units', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-   
-   ! Read in joint data: JointID, Jointxi, Jointyi, Jointzi
-   
-   DO I = 1,NJoints ! Loop through all joints
-
-      READ (UnIn,*,IOSTAT=ErrStat) Joint(I)%ID, ( Joint(I)%Position(J), J=1,3 )           
-
-      CALL CheckIOS ( ErrStat, FileName, 'Joint property (line '//TRIM( Int2LStr( I ) )//')', NumType, .TRUE. )
-      IF ( ErrStat /= 0 )  THEN
-         CALL ExitThisRoutine()
-         RETURN
-      END IF
-      
-      !IF ( Echo )  THEN
-      !   WRITE (UnEc,'( I5, 3( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
-      !                                         Joint(I)%ID, ( Joint(I)%Position(J), J=1,3 )
-      !ENDIF
-
-
-         ! check that the joint numbers are unique
-         
-      DO J = 1,I-1
-         IF ( Joint(J)%ID == Joint(I)%ID ) THEN
-            CALL ExitThisRoutine( ' Duplicate joint ID# '//TRIM( Int2LStr(Joint(J)%ID) )//' found.')
-            ErrStat = 1
-            RETURN      
-         END IF
-      END DO  !J
-      
-   END DO !I
-   
-   
-      !..............................................................................................
-      ! Morison member property sets
-      !..............................................................................................
-
-
-   CALL ReadCom( UnIn, FileName, 'Member properties header', ErrStat )   
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-
-      ! NSets
-      
-   CALL ReadVar( UnIn, FileName, NSets, 'NSets', 'Number of member property sets', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-
-   
-!   IF ( NSets < 1 ) THEN
-!   
-!      CALL ExitThisRoutine( ' There must be at least one member property set defined in the HydroDyn dataset.' )
-   IF ( NSets < 0 ) THEN
-   
-      CALL ExitThisRoutine( ' The number of Morison member property sets defined in the HydroDyn dataset must not be negative.' )
-      ErrStat = 1
-      RETURN
-      
-   ELSE
-         ! Allocate Set array
-         
-      ALLOCATE( Set( NSets ), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN   
-         CALL ExitThisRoutine( ' Error allocating space for HydroDyn property sets.' )
-         ErrStat = 1
-         RETURN
-      END IF
-         
-   END IF
-   
-   
-      ! Skip the header/comment lines.
-
-   CALL ReadCom ( UnIn, FileName, 'member property set parameter names', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-   CALL ReadCom ( UnIn, FileName, 'member property set parameter units', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-   
-   ! read member property data
-   
-   DO I = 1,NSets ! Loop through all joints
-
-      READ (UnIn,*,IOSTAT=ErrStat) Set(I)%ID, Set(I)%D(1), Set(I)%D(2), Set(I)%CA(1), Set(I)%CA(2), Set(I)%CD(1), Set(I)%CD(2)
-
-      CALL CheckIOS ( ErrStat, FileName, 'Member property set (line '//TRIM( Int2LStr( I ) )//')', NumType, .TRUE. )
-      IF ( ErrStat /= 0 )  THEN
-         CALL ExitThisRoutine()
-         RETURN
-      END IF
-      
-      !IF ( Echo )  THEN
-      !   WRITE (UnEc,'( I5, 6( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
-      !                             Set(I)%ID, Set(I)%D(1), Set(I)%D(2), Set(I)%CA(1), Set(I)%CA(2), Set(I)%CD(1), Set(I)%CD(2)
-      !ENDIF
-      !
-       
-         ! check that the set id numbers are unique
-         
-      DO J = 1,I-1
-         IF ( Set(J)%ID == Set(I)%ID ) THEN
-            CALL ExitThisRoutine( ' Duplicate set ID# '//TRIM( Int2LStr(Set(J)%ID) )//' found.')
-            ErrStat = 1
-            RETURN      
-         END IF
-      END DO  ! J
-      
-         ! check that the properties are valid
-
-      IF ( ( Set(I)%D( 1) < 0 ) .OR. ( Set(I)%D( 2) < 0 ) .OR. &
-           ( Set(I)%CA(1) < 0 ) .OR. ( Set(I)%CA(2) < 0 ) .OR. &
-           ( Set(I)%CD(1) < 0 ) .OR. ( Set(I)%CD(2) < 0 ) ) THEN  
-            CALL ExitThisRoutine( " Values for D1, D2, CA1, CA2, CD1, and CD2 must not be negative in HydroDyn's Set ID# " & 
-                                              //TRIM( Int2LStr(Set(I)%ID) )//".")
-            ErrStat = 1
-            RETURN      
-      END IF
-      
-
-   END DO !I
-
-
-      !..............................................................................................
-      ! Morison members (with nodes/elements)
-      !..............................................................................................
-
-   CALL ReadCom( UnIn, FileName, 'Members header', ErrStat )   
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-
-      ! NMembers
-      
-   CALL ReadVar( UnIn, FileName, NMembers, 'NMembers', 'Number of members in the structure', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-   
-!   IF ( NMembers < 1 ) THEN
-!      CALL ExitThisRoutine( ' There must be at least one member defined in the HydroDyn dataset.' )
-! In the general case, there can be 0 members, but we don't have equations/interface to handle this yet. jmj says ptfmnodes could be 0 in FAST.
-
-   IF ( NMembers < 0 ) THEN
-      CALL ExitThisRoutine( ' The number of Morison members defined in the HydroDyn dataset must not be negative.' )
-      ErrStat = 1
-      RETURN
-   ELSE
-         ! Allocate Member array
-         
-      ALLOCATE( Member( NMembers ), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN   
-         CALL ExitThisRoutine( ' Error allocating space for HydroDyn members.' )
-         ErrStat = 1
-         RETURN
-      END IF
-         
-   END IF
-   
-      ! Skip the header/comment lines.
-
-   CALL ReadCom ( UnIn, FileName, 'member parameter names', ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ExitThisRoutine()
-      RETURN
-   END IF
-   
-!   CALL ReadCom ( UnIn, FileName, 'member parameter units', ErrStat )
-!   IF ( ErrStat /= 0 )  THEN
-!      CALL ExitThisRoutine()
-!      RETURN
-!   END IF
-   
-   
-   ! read member data
-   
-   HD_Data%NElements = 0           ! initialize total number of elements
-   
-   DO I = 1,NMembers ! Loop through all members
-
-      READ (UnIn,*,IOSTAT=ErrStat) JointID(1), JointID(2), SetID, Member(I)%NumElements
-
-      CALL CheckIOS ( ErrStat, FileName, 'Member (line '//TRIM( Int2LStr( I ) )//')', NumType, .TRUE. )
-      IF ( ErrStat /= 0 )  THEN
-         CALL ExitThisRoutine()
-         RETURN
-      END IF
-!      
-!      IF ( Echo )  THEN
-!!         WRITE (UnEc,'( I5, 3( 2X, ' //TRIM( HD_Data%HDOut_Data%OutFmt )// ') )' ) & 
-!         WRITE (UnEc,'( I7, 3( 2X, I7) )' ) & 
-!                                   JointID(1), JointID(2), SetID, Member(I)%NumElements
-!      ENDIF
-      
-      
-         ! check that NumElements is valid
-      
-      IF ( Member(I)%NumElements < 1 ) THEN
-         CALL ExitThisRoutine( ' Each member in the HydroDyn dataset must contain at least one element.' )
-         ErrStat = 1
-         RETURN
-      END IF
-
-      HD_Data%NElements = HD_Data%NElements + Member(I)%NumElements
-      
-      
-         ! check that the property set number is valid
-         
-      FoundIt = .FALSE.
-      DO J = 1,NSets
-         IF ( Set(J)%ID == SetID ) THEN
-            Member(I)%SetIndx = J
-            FoundIt           = .TRUE.            
-            EXIT  ! exit this DO loop
-         END IF
-      END DO
-         
-      IF ( .NOT. FoundIt ) THEN  ! we didn't find it
-         CALL ExitThisRoutine( ' Member (line '//TRIM( Int2LStr( I ) )//') contains an invalid property set number.' )
-         ErrStat = 1
-         RETURN      
-      END IF
-     
-     
-         ! check that the joint numbers are valid
-         
-      DO K = 1,2    
+            ! Initialize the WAMIT Calculations 
            
-         FoundIt = .FALSE.
-         
-         DO J = 1,NJoints
-            IF ( Joint(J)%ID == JointID(K) ) THEN
-               Member(I)%JointIndx(K) = J
-               FoundIt                = .TRUE.            
-               EXIT  ! exit this DO loop
-            END IF
-         END DO
-            
-         IF ( .NOT. FoundIt ) THEN  ! we didn't find it
-            CALL ExitThisRoutine( ' Member (line '//TRIM( Int2LStr( I ) )//') contains an invalid Joint' &
-                                                  //TRIM( Int2LStr( K ) )//' number.' )
-            ErrStat = 1
-            RETURN      
+         CALL WAMIT_Init(InitLocal%WAMIT, u%WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT, WAMIT_z, OtherState%WAMIT, &
+                                 y%WAMIT, Interval, InitOut%WAMIT, ErrStat, ErrMsg )
+         IF ( ErrStat > ErrID_Warn ) THEN 
+            RETURN
          END IF
          
-      END DO !K
-      
-   END DO !I - members
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Set return value for HD_Output (this array was already initialized to 0)
-   !-------------------------------------------------------------------------------------------------
-   DO I = 1, MIN( NMembers, SIZE(NumMemberNodes) )
-      NumMemberNodes(I) = Member(I)%NumElements
-   END DO      
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! We will check that the discretization follows the criteria that are required for the current
-   ! version of the FloatingPlatform and FixedBottomSupportStructure modules.
-   ! When these modules are more robust, this check can be removed.
-   !-------------------------------------------------------------------------------------------------
-
-   SELECT CASE ( HD_Data%StrctType )
-   
-      CASE ( FloatPltfm_Type )
-      
-         ! for now, we check that there is one member, that d1=d2, ca(:)=0, cd1=cd2, and jointxi=jointyi=0
-         ! also, ( jointzi(1) = 0 and jointzi(2) < 0 ) OR ( jointzi(2) = 0 and jointzi(1) < 0 )
-      
-         IF      ( NMembers /= 1                                                                               ) THEN
-            CALL ExitThisRoutine( ' Exactly one Morison member must be defined for floating platform substructures.' )
-            RETURN
-         ELSE IF ( Set( Member(1)%SetIndx )%D(1) /= Set( Member(1)%SetIndx )%D(2)                              ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Morison member properties D1 and D2 must be equal for floating platform substructures.' )
-            RETURN         
-         ELSE IF ( Set( Member(1)%SetIndx )%CA(1) /= 0.0_ReKi .OR. Set( Member(1)%SetIndx )%CA(2) /= 0.0_ReKi  ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Morison member properties CA1 and CA2 must be zero for floating platform substructures.' )
-            RETURN
-         ELSE IF ( Set( Member(1)%SetIndx )%CD(1) /= Set( Member(1)%SetIndx )%CD(2)                            ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Morison member properties CD1 and CD2 must be equal for floating platform substructures.' )
-            RETURN         
-         ELSE IF ( Joint( Member(1)%JointIndx(1) )%Position(1) /= 0.0_ReKi .OR. &
-                   Joint( Member(1)%JointIndx(1) )%Position(2) /= 0.0_ReKi .OR. &
-                   Joint( Member(1)%JointIndx(2) )%Position(1) /= 0.0_ReKi .OR. &
-                   Joint( Member(1)%JointIndx(2) )%Position(2) /= 0.0_ReKi                                     ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Jointxi and Jointyi must be zero for floating platform substructures.' )
-            RETURN         
-         ELSE IF ( Joint( Member(1)%JointIndx(1) )%Position(3) /= 0.0_ReKi                                     ) THEN      ! note comparison of floating points!                                          
-            IF ( Joint( Member(1)%JointIndx(1) )%Position(3) >= 0.0_ReKi .OR. &
-                 Joint( Member(1)%JointIndx(2) )%Position(3) /= 0.0_ReKi ) THEN
-               CALL ExitThisRoutine( &
-                         ' The two values of Jointzi must be zero and a negative number for floating platform substructures.' )
-               RETURN         
-            END IF
-         ELSE IF  ( Joint( Member(1)%JointIndx(2) )%Position(3) /= 0.0_ReKi                                    ) THEN      ! note comparison of floating points!
-            IF ( Joint( Member(1)%JointIndx(2) )%Position(3) >= 0.0_ReKi .OR. &
-                 Joint( Member(1)%JointIndx(1) )%Position(3) /= 0.0_ReKi ) THEN
-               CALL ExitThisRoutine( &
-                         ' The two values of Jointzi must be zero and a negative number for floating platform substructures.' )
-               RETURN         
-            END IF           
-         END IF            
-      
-      CASE ( FixedBtm_Type )
-      
-         ! for now, we check that there is one member, that d1=d2, ca1=ca2, cd1=cd2, and jointxi=jointyi=0
-!bjj is this correct????         ! also, jointzi(1) = 0 and jointzi(2)<0
-
-         IF      ( NMembers /= 1                                                                               ) THEN
-            CALL ExitThisRoutine( ' Exactly one Morison member must be defined for fixed bottom substructures.' )
-            RETURN
-         ELSE IF ( Set( Member(1)%SetIndx )%D(1)  /= Set( Member(1)%SetIndx )%D(2)                             ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Morison member properties D1 and D2 must be equal for fixed bottom substructures.' )
-            RETURN         
-         ELSE IF ( Set( Member(1)%SetIndx )%CA(1) /= Set( Member(1)%SetIndx )%CA(2)                            ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Morison member properties CA1 and CA2 must be equal for fixed bottom substructures.' )
-            RETURN
-         ELSE IF ( Set( Member(1)%SetIndx )%CD(1) /= Set( Member(1)%SetIndx )%CD(2)                            ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Morison member properties CD1 and CD2 must be equal for fixed bottom substructures.' )
-            RETURN         
-         ELSE IF ( Joint( Member(1)%JointIndx(1) )%Position(1) /= 0.0_ReKi .OR. &
-                   Joint( Member(1)%JointIndx(1) )%Position(2) /= 0.0_ReKi .OR. &
-                   Joint( Member(1)%JointIndx(2) )%Position(1) /= 0.0_ReKi .OR. &
-                   Joint( Member(1)%JointIndx(2) )%Position(2) /= 0.0_ReKi                                     ) THEN      ! note comparison of floating points!
-            CALL ExitThisRoutine( ' Jointxi and Jointyi must be zero for fixed bottom substructures.' )
-            RETURN         
-!         ELSE IF ( Joint( Member(1)%JointIndx(1) )%Position(3) /= 0.0_ReKi                                     ) THEN      ! note comparison of floating points!                                          
-!            IF ( Joint( Member(1)%JointIndx(1) )%Position(3) >= 0.0_ReKi .OR. &
-!                 Joint( Member(1)%JointIndx(2) )%Position(3) /= 0.0_ReKi ) THEN
-!               CALL ExitThisRoutine( ' The two values of Jointzi must be zero and a negative number for fixed bottom substructures.' )
-!               RETURN         
-!            END IF
-!         ELSE IF  ( Joint( Member(1)%JointIndx(2) )%Position(3) /= 0.0_ReKi                                    ) THEN      ! note comparison of floating points!
-!            IF ( Joint( Member(1)%JointIndx(2) )%Position(3) >= 0.0_ReKi .OR. &
-!                 Joint( Member(1)%JointIndx(1) )%Position(3) /= 0.0_ReKi ) THEN
-!               CALL ExitThisRoutine( ' The two values of Jointzi must be zero and a negative number for fixed bottom substructures.' )
-!               RETURN         
-!            END IF           
-         END IF            
-      
-      
-!      CASE DEFAULT
-   
-   END SELECT
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Create the nodes/elements for the discretization using above inputs
-   !-------------------------------------------------------------------------------------------------
-   
-      ! Allocate Node array
-   ALLOCATE ( HD_Data%Node( HD_Data%NElements ), STAT = ErrStat )   
-   IF ( ErrStat /= 0 ) THEN
-      CALL ExitThisRoutine( ' Error allocating space for HydroDyn nodes array.' )
-      RETURN
-   END IF
-   
-      ! FOR NOW, WE'LL CREATE EVENLY SPACED ELEMENTS ON EACH MEMBER
-      ! this is something we can make a bit more sophisticated in the future
-      
-   J = 1                      ! counter for the current element
          
-   DO I = 1,NMembers
-   
-!      HD_Data%MaxDiam = MAX( HD_Data%MaxDiam, SQRT( DOT_PRODUCT(Joint( Member(I)%JointIndx(1) )%Position(1:2),    &
-!                                                                Joint( Member(I)%JointIndx(1) )%Position(1:2))) , &
-!                                              SQRT( DOT_PRODUCT(Joint( Member(I)%JointIndx(2) )%Position(1:2)     &
-!                                                                Joint( Member(I)%JointIndx(2) )%Position(1:2)))   )  ! let's make sure the graphics also cover the JOINTs we've defined
-   
-      DNode   = ( Joint( Member(I)%JointIndx(2) )%Position - Joint( Member(I)%JointIndx(1) )%Position ) / Member(I)%NumElements
-      DSlope  = ( Set  ( Member(I)%SetIndx      )%D( 2)    - Set  ( Member(I)%SetIndx      )%D( 1)    ) / Member(I)%NumElements
-      CASlope = ( Set  ( Member(I)%SetIndx      )%CA(2)    - Set  ( Member(I)%SetIndx      )%CA(1)    ) / Member(I)%NumElements
-      CDSlope = ( Set  ( Member(I)%SetIndx      )%CD(2)    - Set  ( Member(I)%SetIndx      )%CD(1)    ) / Member(I)%NumElements
-                  
-      DO K = 1,Member(I)%NumElements
-            
-         HD_Data%Node(J)%DNode     = SQRT( DOT_PRODUCT( DNode, DNode ) )
-         HD_Data%Node(J)%Position  = Joint( Member(I)%JointIndx(1) )%Position + ( K - 0.5 )*DNode    ! the center of evenly spaced elements
-         HD_Data%Node(J)%D         = Set  ( Member(I)%SetIndx      )%D( 1)    + ( K - 0.5 )*DSlope
-         HD_Data%Node(J)%CA        = Set  ( Member(I)%SetIndx      )%CA(1)    + ( K - 0.5 )*CASlope
-         HD_Data%Node(J)%CD        = Set  ( Member(I)%SetIndx      )%CD(1)    + ( K - 0.5 )*CDSlope
-         
-!print *, J, HD_Data%Node(J)         
-!bjj check that this interpolation is correct for all of the values
-         
-         J = J + 1                              ! move on to the next element
-      END DO               
-   
-   END DO !I      
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Clean up the allocated data
-   !-------------------------------------------------------------------------------------------------  
-   ErrStat = 0   
-   CALL ExitThisRoutine ()   
-   
-   RETURN
-   
-CONTAINS
-
-   !=================================================================================================
-   SUBROUTINE ExitThisRoutine( ErrMsg )   
-   ! This subroutine cleans up after the enveloping routine
-   !-------------------------------------------------------------------------------------------------
-         ! local variables
-         
-      INTEGER                            :: AllocStat
-      CHARACTER(*), INTENT(IN), OPTIONAL :: ErrMsg
-         
-      !----------------------------------------------------------------------------------------------
-      ! If this subroutine ends on an error, print the message here:
-      !----------------------------------------------------------------------------------------------   
-      IF ( PRESENT( ErrMsg ) ) CALL ProgAbort( ErrMsg, TrapErrors = .TRUE. )
-
-      !----------------------------------------------------------------------------------------------
-      ! Deallocate space from local variables (in case it's compiled with /QSAVE)
-      !----------------------------------------------------------------------------------------------
+            ! Verify that WAMIT_Init() did not request a different Interval!
       
-      IF ( ALLOCATED( Joint  ) ) DEALLOCATE ( Joint , STAT = AllocStat )
-      IF ( ALLOCATED( Set    ) ) DEALLOCATE ( Set   , STAT = AllocStat )
-      IF ( ALLOCATED( Member ) ) DEALLOCATE ( Member, STAT = AllocStat )
-      
-        
-   END SUBROUTINE ExitThisRoutine
-   !=================================================================================================
-   
-END SUBROUTINE HD_GetDiscretization
-!====================================================================================================
-FUNCTION HD_GetValue_CHAR(VarName, HD_Data, ErrStat)
-!  This function returns a real scalar value whose name is listed in the VarName input argument.
-!  If the name is not recognized, an error is returned in ErrStat.
-!----------------------------------------------------------------------------------------------------
-
-   CHARACTER(*),        INTENT( IN    )   :: VarName
-   TYPE( HD_DataType ), INTENT( INOUT )   :: HD_Data
-   INTEGER,             INTENT(   OUT )   :: ErrStat
-   REAL(ReKi)                             :: HD_GetValue_CHAR        ! This function
-
-
-   INTEGER                                :: Indx
-
-   CHARACTER(20)                          :: VarNameUC
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Set the initial error status and return value
-   !-------------------------------------------------------------------------------------------------
-   
-   ErrStat          = 0
-   HD_GetValue_CHAR = 0
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Warn if HydroDyn hasn't been properly initialized
-   !-------------------------------------------------------------------------------------------------
-   IF ( HD_Data%StrctType == Unknown_Type ) THEN
-      CALL ProgWarn( ' HydroDyn has not been initialized before calling HD_GetValue().')
-      ErrStat = -1
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Return the requested values.
-   !-------------------------------------------------------------------------------------------------
-
-   VarNameUC = VarName
-   CALL Conv2UC( VarNameUC )
-
-   SELECT CASE ( TRIM(VarNameUC) )
-
-      CASE ( 'PTFMDIAM', 'PLATFORMDIAMETER' )
-         IF ( HD_DATA%StrctType == FloatPltfm_Type .AND. ALLOCATED(HD_Data%Node) ) THEN
-            IF ( SIZE(HD_Data%Node) > 0 ) THEN
-               HD_GetValue_CHAR = HD_Data%Node(1)%D
-            ELSE
-               HD_GetValue_CHAR = 0.0
-               ErrStat = 1
-            END IF               
-         ELSE
-            HD_GetValue_CHAR = 0.0
-            ErrStat = 1
+         IF ( p%DT /= Interval ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'WAMIT Module attempted to change timestep interval, but this is not allowed.  WAMIT Module must use the HydroDyn Interval.'
          END IF
-         
-      CASE ( 'WTRDENS', 'WATERDENSITY' )
-         HD_GetValue_CHAR = HD_Data%Waves_Data%WtrDens
-
-      CASE ( 'WTRDPTH', 'WATERDEPTH' )
-         HD_GetValue_CHAR = HD_Data%Waves_Data%WtrDpth
-
-      CASE ( 'MAXLRADANCH', 'MAXDIAM' )
-         HD_GetValue_CHAR = HD_Data%MaxDiam                     
-
-      CASE ( 'NWAVEELEV' )
-         HD_GetValue_CHAR = REAL( HD_Data%Waves_Data%NWaveElev, ReKi )
-
-      CASE ( 'WAVEDIR', 'WAVEDIRECTION' )
-         HD_GetValue_CHAR = HD_Data%Waves_Data%WaveDir                     
-
-      CASE DEFAULT
-
-!bjj start of proposed change v1.00.00c-bjj
-!         IF ( VarNameUC(1:8) == 'WAVEELEV' ) THEN
-!         
-!         ELSEIF ( VarNameUS(1:7) == 'LINEPOS' ) THEN
-!         
-!         END IF
-!bjj end of proposed change v1.00.00c-bjj
-         
-
       
-         CALL WrScr( ' Invalid variable name "'//TRIM(VarName)//'" in HD_GetValue().' )
-         ErrStat = 1
-         HD_GetValue_CHAR = 0.0
-
-   END SELECT
-   
-END FUNCTION HD_GetValue_CHAR
-!====================================================================================================
-FUNCTION HD_GetValue_AllOuts(OutputID, HD_Data, ErrStat)
-!  This function returns a real scalar value whose parameter ID is listed in the OutputID input argument.
-!  If the ID is not recognized, an error is returned in ErrStat.
-!  To use this function, please USE the parameters listed in MODULE HD_Output as the OutputID (these 
-!  are the same parameter names as are stored in the file "HydroDynOutListParameters.xlsx"
-!----------------------------------------------------------------------------------------------------
-
-   INTEGER,             INTENT( IN    )   :: OutputID
-   TYPE( HD_DataType ), INTENT( INOUT )   :: HD_Data
-   INTEGER,             INTENT(   OUT )   :: ErrStat
-   REAL(ReKi)                             :: HD_GetValue_AllOuts
-
-   !-------------------------------------------------------------------------------------------------
-   ! Set the initial error status and return value
-   !-------------------------------------------------------------------------------------------------   
-   ErrStat             = 0
-   HD_GetValue_AllOuts = 0
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Warn if HydroDyn hasn't been properly initialized
-   !-------------------------------------------------------------------------------------------------
-   IF ( HD_Data%StrctType == Unknown_Type ) THEN
-      CALL ProgWarn( ' HydroDyn has not been initialized before calling HD_GetValue().')
-      ErrStat = -1
-      RETURN
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Check that OutputID is valid
-   !-------------------------------------------------------------------------------------------------
-   IF ( OutputID < 1 .OR. OutputID > MaxOutPts ) THEN
-      CALL WrScr( ' Invalid output variable ID "'//TRIM(Int2LStr(OutputID))//'" in HD_GetValue().' )
-      ErrStat = 1
-      RETURN
-   END IF
-   
-
-   !-------------------------------------------------------------------------------------------------
-   ! Return the requested values.
-   !-------------------------------------------------------------------------------------------------  
-
-   HD_GetValue_AllOuts = HD_Data%HDOut_Data%AllOuts(OutputID)
-   
-
-END FUNCTION HD_GetValue_AllOuts
-!====================================================================================================
-FUNCTION HD_GetUndisturbedWaveElev(Position, Time, HD_Data, ErrStat)
-
-      ! Passed variables   
-   REAL(ReKi),          INTENT( IN    )   :: Position(2)                ! the x and y coordinates where the wave elevation is requested, in meters
-   REAL(DbKi),          INTENT( IN    )   :: Time                       ! the time at which the wave elevation is desired (need not be CurrentTime), in seconds
-   
-   TYPE( HD_DataType ), INTENT( INOUT )   :: HD_Data                    ! the module data (INOUT b/c Waves Index is changed in the WaveElevation function)
-   INTEGER,             INTENT(   OUT )   :: ErrStat                    ! an error code
-   
-   REAL(ReKi)                             :: HD_GetUndisturbedWaveElev  ! the wave elevation (z) at Position(:), in meters
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Set the initial error status and return value
-   !-------------------------------------------------------------------------------------------------   
-   ErrStat                   = 0
-   HD_GetUndisturbedWaveElev = 0
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Warn if HydroDyn hasn't been properly initialized
-   !-------------------------------------------------------------------------------------------------
-   IF ( HD_Data%StrctType == Unknown_Type ) THEN
-      CALL ProgAbort( ' HydroDyn has not been initialized before calling HD_GetUndisturbedWaveElev().', TrapErrors = .TRUE.)
-      ErrStat = -1
-      RETURN
-   END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! interpolate into wave
-   !-------------------------------------------------------------------------------------------------
-
-   HD_GetUndisturbedWaveElev = Waves_GetUndisturbedElev( Position, Time, HD_Data%Waves_Data, ErrStat )
-   
-   IF ( ErrStat /= 0 ) THEN
-      CALL ProgAbort( ' Unable to get wave elevation in HD_GetUndisturbedWaveElev().', TrapErrors = .TRUE.)
-   END IF      
-
-   RETURN
-
-END FUNCTION
-!====================================================================================================
-SUBROUTINE HD_Init( HydroDyn_InitData, HD_ConfigMarkers, HD_AllMarkers, HD_Data, HD_InitOutput, ErrStat )
-!     This public subroutine initializes the HydroDyn module.
-! 
-!----------------------------------------------------------------------------------------------------
-
-!must return (1) discretization and (2) the dimension [0=point load, 1=load per unit length, 2=load per unit area, 3=load per unit volume]
-
-      ! Passed variables
-
-   TYPE(HD_InitDataType),      INTENT( IN  )    :: HydroDyn_InitData    
-   TYPE(HydroConfig),          INTENT( IN  )    :: HD_ConfigMarkers
-   TYPE(AllHydroMarkers),      INTENT( OUT )    :: HD_AllMarkers
-   TYPE(HD_DataType),          INTENT( OUT )    :: HD_Data              ! a return value (the data initialized here)
-   TYPE(HD_InitOutputType),    intent(out)      :: HD_InitOutput !for framework only    
-   INTEGER,                    INTENT( OUT )    :: ErrStat              ! Returns zero if no errors were encountered
-                
-                
-      ! Internal variables                
-                
-   TYPE(Current_DataType)                       :: Current_Data         ! the values needed to initialize the current in the waves module
-   TYPE(FltPtfm_InitDataType)                   :: FltPtfm_InitData     ! the values needed to initialize the the floating platform module
-   TYPE(HDO_InitDataType)                       :: HDO_InitData         ! the values needed to initialize the the HydroDyn Output module   
-   TYPE(Waves_InitDataType)                     :: Waves_InitData       ! the values needed to initialize the the waves module
-   
-   
-   INTEGER                                      :: I                    ! Internal loop counter
-   INTEGER                                      :: NMarkerElements      ! number of markers made up of the HydroDyn Node elements
-   INTEGER                                      :: NMarkers             ! number of markers where loads will be calculated
-   
-   CHARACTER(1024)                              :: SummaryName          ! name of the HydroDyn summary file
-                
-   integer(intki) :: errstat2
-   character(1024) :: errmsg2
-   
-      ! Initialize NWTC_Library
-      
-   CALL NWTC_Init( )
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Display the HydroDyn version on the screen
-   !-------------------------------------------------------------------------------------------------
-
-   CALL WrScr1 ( ' Using '//TRIM( HD_Prog%Name )//' '//TRIM( HD_Prog%Ver )//'.' )  
-
-   SummaryName = TRIM(HydroDyn_InitData%OutRootName)//'_HydroDyn.hds'
-   CALL HDOut_OpenSum( HD_Data%UnSum, SummaryName, HD_Prog, ErrStat )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
-   IF ( ErrStat /= 0 ) RETURN
-
-   !-------------------------------------------------------------------------------------------------
-   ! Read data from HydroDyn input file 
-   !-------------------------------------------------------------------------------------------------
-      
-   CALL HD_GetInput( HD_Data, HydroDyn_InitData%FileName, Current_Data, Waves_InitData, FltPtfm_InitData, HDO_InitData, ErrStat )   
-   IF ( ErrStat /= 0 ) RETURN
-      
-   
-      ! Check HD input with values in input file
-   IF ( HD_Data%StrctType == FloatPltfm_Type ) THEN
-
-      IF ( HydroDyn_InitData%Gravity <= 0.0 ) THEN
-         CALL ProgAbort ( ' Gravity must be greater than zero when using a floating platform.', .TRUE. )
-         ErrStat = 1
-         RETURN
       END IF
       
-   END IF         
+!      CALL WAMIT_CopyOutput( WAMIT_y, y%WAMIT, MESH_NEWCOPY, ErrStat, ErrMsg )
+!!bjj: added to avoid memory leak:      
+!bjj: but then, it had an issue with the sibling mesh, so I just replaced WAMIT_y with y%WAMIT in WAMIT_Init, above
+!call wamit_destroyoutput(wamit_y, ErrStat, ErrMsg, .TRUE.)
+
+         ! Are there Morison elements?
+       
+      IF ( InitLocal%Morison%NMembers > 0 ) THEN
          
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize wave module 
-   ! (this must happen before initializing other support structure module and output module!)
-   !-------------------------------------------------------------------------------------------------
-      
-   Waves_InitData%Gravity = HydroDyn_InitData%Gravity
-   Waves_InitData%DirRoot = HydroDyn_InitData%OutRootName
-   
-
-   Waves_InitData%NWaveKin0 = HD_Data%NElements
-   
-   ALLOCATE ( Waves_InitData%DZNodes(   Waves_InitData%NWaveKin0 ), STAT = ErrStat )
-   IF ( ErrStat /= 0 ) THEN
-      CALL ProgAbort ( ' Error allocating space for DZNodes array in HD_Init().', TrapErrors = .TRUE. )
-      RETURN
-   END IF   
-
-   ALLOCATE ( Waves_InitData%WaveKinzi0( Waves_InitData%NWaveKin0 ), STAT = ErrStat )
-   IF ( ErrStat /= 0 ) THEN
-      CALL ProgAbort ( ' Error allocating space for WaveKinzi0 array in HD_Init().', TrapErrors = .TRUE. )
-      RETURN !bjj memory leaks with /QSAVE !!!!
-   END IF      
-
-
-   DO I = 1,HD_Data%NElements 
-      Waves_InitData%DZNodes   (I) = HD_Data%Node(I)%DNode
-      Waves_InitData%WaveKinzi0(I) = HD_Data%Node(I)%Position(3) ! bjj: setting WaveKinzi0 this way assumes Position(1:2) /= 0; if we allow more compilcated structures, this needs to be changed!!!!
-   END DO ! I      
-  
-      
-   CALL InitWaves ( Waves_InitData, Current_Data, HD_Data%Waves_data, HD_Data%UnSum, ErrStat   )      
-   IF ( ErrStat /= 0 ) RETURN !bjj memory leaks with /QSAVE !!!!
-      
-      
-      ! clean up the variables we've allocated (though they should get cleared automatically at subroutine exit, unless /QSAVE)
-      
-   IF ( ALLOCATED( Waves_InitData%DZNodes    ) ) DEALLOCATE ( Waves_InitData%DZNodes    ) 
-   IF ( ALLOCATED( Waves_InitData%WaveElevxi ) ) DEALLOCATE ( Waves_InitData%WaveElevxi ) 
-   IF ( ALLOCATED( Waves_InitData%WaveElevyi ) ) DEALLOCATE ( Waves_InitData%WaveElevyi ) 
-   IF ( ALLOCATED( Waves_InitData%WaveKinzi0 ) ) DEALLOCATE ( Waves_InitData%WaveKinzi0 ) 
-      
-      
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize appropriate support structure module
-   ! (this must happen after initializing the waves module and before the output module!)
-   !-------------------------------------------------------------------------------------------------
-      
-   SELECT CASE ( HD_Data%StrctType )
-   
-      CASE ( FloatPltfm_Type )
-      
-         !...........................................................................................
-         ! check that the configuration marker is where it should be for the current implementation
-         ! of the floating platform module
-         !...........................................................................................
-
-         IF ( ANY( HD_ConfigMarkers%Substructure%Position /= 0.0_ReKi ) ) THEN  !note comparisons of Real numbers here
-            CALL ProgAbort( ' The floating platform model in HydroDyn requires that the substructure position be (0, 0, 0).', &
-                              TrapErrors = .TRUE. )
-            ErrStat = 1
+         
+                ! Copy Waves initialization output into the initialization input type for the Morison module
+         
+         ALLOCATE ( InitLocal%Morison%WaveTime   (0:Waves_InitOut%NStepWave-1                    ) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg  = ' Error allocating memory for the WaveTime array.'
+            ErrStat = ErrID_Fatal
             RETURN
-         END IF         
-         
-         !...........................................................................................
-         ! initialize the rest of the data that needs to be sent to the floating platform module
-         !...........................................................................................
-      
-         FltPtfm_InitData%DirRoot  = HydroDyn_InitData%OutRootName
-         
-            ! bjj: we have already checked that one node exists, but if that restriction changes,
-            ! this will need to be changed, too (to prevent ungraceful crashing and other errors!):
-                     
-         FltPtfm_InitData%PtfmDiam = HD_Data%Node(1)%D          
-         FltPtfm_InitData%PtfmCD   = HD_Data%Node(1)%CD                 
-         
-         !...........................................................................................
-         ! call the initialization routine
-         !...........................................................................................
-         
-         CALL InitFltngPtfmLd( FltPtfm_InitData, HD_Data%Waves_data, HD_Data%FltPtfm_data, ErrStat )
-         IF ( ErrStat /= 0 ) RETURN
-         
-                  
-         !...........................................................................................
-         ! clean up after ourselves here:
-         !...........................................................................................
-         
-         IF ( ALLOCATED( FltPtfm_InitData%MooringLine ) ) THEN
-         
-            DO I = 1,FltPtfm_InitData%NumLines
-               IF ( ALLOCATED(  FltPtfm_InitData%MooringLine(I)%LSNodes ) ) &
-                    DEALLOCATE( FltPtfm_InitData%MooringLine(I)%LSNodes )               
-            END DO ! I
-         
-            DEALLOCATE ( FltPtfm_InitData%MooringLine ) 
          END IF
       
+         ALLOCATE ( InitLocal%Morison%WaveVel0   (0:Waves_InitOut%NStepWave-1,InitLocal%Morison%NNodes,3) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg =' Error allocating memory for the WaveVel0 array.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+         
+         ALLOCATE ( InitLocal%Morison%WaveAcc0   (0:Waves_InitOut%NStepWave-1,InitLocal%Morison%NNodes,3) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg =' Error allocating memory for the WaveAcc0 array.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
       
-         !...........................................................................................
-         !  Set output markers
-         !...........................................................................................
-         
-         NMarkers        = 1
-         NMarkerElements = 0
-         
-            ! 1 per element
-         
-         
-         
-            ! 1 for the fix-point loads calculated at the platform reference
-         
+         ALLOCATE ( InitLocal%Morison%WaveDynP0   (0:Waves_InitOut%NStepWave-1,InitLocal%Morison%NNodes) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg =' Error allocating memory for the WaveDynP0 array.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
       
-      CASE ( FixedBtm_Type )
+         InitLocal%Morison%NStepWave    = Waves_InitOut%NStepWave
+         InitLocal%Morison%WaveAcc0     = Waves_InitOut%WaveAcc0
+         InitLocal%Morison%WaveDynP0    = Waves_InitOut%WaveDynP0
+         InitLocal%Morison%WaveTime     = Waves_InitOut%WaveTime
+         InitLocal%Morison%WaveVel0     = Waves_InitOut%WaveVel0
+         
+         
+            ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
+            
+         IF ( InitLocal%OutSwtch > 0 ) THEN
+            InitLocal%Morison%OutSwtch     = 2  ! only HydroDyn or the Driver code will write outputs to the file
+         END IF
+        
       
-         ! bjj: we have already checked that one node exists
+            ! Initialize the Morison Element Calculations 
+      
+         CALL Morison_Init(InitLocal%Morison, u%Morison, p%Morison, Morison_x, Morison_xd, Morison_z, OtherState%Morison, &
+                               y%Morison, Interval, InitOut%Morison, ErrStat, ErrMsg )
+         IF ( ErrStat > ErrID_Warn ) THEN 
+            RETURN
+         END IF                   
+      
+         
+            ! Verify that Morison_Init() did not request a different Interval!
+      
+         IF ( p%DT /= Interval ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Morison Module attempted to change timestep interval, but this is not allowed.  Morison Module must use the HydroDyn Interval.'
+         END IF
+         
+      END IF  ! ( InitLocal%Morison%NMembers > 0 )
+     
+      
+         ! Close the summary file
+         
+      CALL HDOut_CloseSum( InitLocal%UnSum, ErrStat, ErrMsg )
+      IF ( ErrStat > ErrID_Warn ) RETURN  
+      
+      
+         ! Create the Output file if requested
+      
+      p%OutSwtch      = InitLocal%OutSwtch 
+      p%Delim         = ''
+      !p%Morison%Delim = p%Delim  ! Need to set this from within Morison to follow framework
+      !p%WAMIT%Delim   = p%Delim  ! Need to set this from within Morison to follow framework
+      p%OutFmt        = InitLocal%OutFmt
+      p%OutSFmt       = InitLocal%OutSFmt
+      
+      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
+         CALL HDOut_OpenOutput( HydroDyn_ProgDesc, InitInp%OutRootName, p, InitOut, ErrStat, ErrMsg )
+         IF (ErrStat > ErrID_Warn ) RETURN
+      END IF
+     
+         ! Aggregate the sub-module initialization outputs for the glue code
+      IF ( p%OutSwtch == 2 .OR. p%OutSwtch == 3 ) THEN
+         
+         hasWAMITOuts   = .FALSE.
+         hasMorisonOuts = .FALSE.
+         numHydroOuts   = 0
+         
+         IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
+            hasWAMITOuts = .TRUE.
+            numHydroOuts = p%WAMIT%NumOuts       
+         END IF
+         IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
+            hasMorisonOuts = .TRUE.
+            numHydroOuts = numHydroOuts + p%Morison%NumOuts       
+         END IF
+      
+            ! Allocate the aggregate arrays
+         
+         ALLOCATE ( InitOut%WriteOutputHdr ( numHydroOuts ) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg  = ' Error allocating memory for the WriteOutputHdr array.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+         
+         ALLOCATE ( InitOut%WriteOutputUnt ( numHydroOuts ) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg  = ' Error allocating memory for the WriteOutputUnt array.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+         
+         ALLOCATE ( y%WriteOutput         ( numHydroOuts ) , STAT=ErrStat )
+         IF ( ErrStat /= 0 )  THEN
+            ErrMsg  = ' Error allocating memory for the WriteOutput array.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+         J = 1
+         IF ( hasWAMITOuts ) THEN
+            DO I=1, p%WAMIT%NumOuts
+               InitOut%WriteOutputHdr(J) = InitOut%WAMIT%WriteOutputHdr(I)
+               InitOut%WriteOutputUnt(J) = InitOut%WAMIT%WriteOutputUnt(I)
+               J = J + 1
+            END DO
+         END IF
+         
+         IF ( hasMorisonOuts ) THEN
+            DO I=1, p%Morison%NumOuts
+               InitOut%WriteOutputHdr(J) = InitOut%Morison%WriteOutputHdr(I)
+               InitOut%WriteOutputUnt(J) = InitOut%Morison%WriteOutputUnt(I)
+               J = J + 1
+            END DO
+         END IF
+         
+      END IF
+      
+      
+ 
 
-         ! nothing to do (initialize) here
+         ! Define initial guess for the system inputs here:
+
+         ! Define system output initializations (set up mesh) here:
+         
+         InitOut%Ver = HydroDyn_ProgDesc
+         
+            ! These two come directly from processing the inputs, and so will exist even if not using Morison elements
+         InitOut%WtrDens = InitLocal%Morison%WtrDens
+         InitOut%WtrDpth = InitLocal%Morison%WtrDpth
+         
+         ! Define initialization-routine output here:
+         
+         
+         ! Destroy the local initializatin data
+         ! TODO: Verify that this is being done by the glue code.  GJH 6/18/13
+!bjj: I uncommented this new source line because it was showing up as a memeory leak 7/26/2013
+!bjj:   You should make sure this gets destroyed even if the routine returns early, though.
+      CALL HydroDyn_DestroyInitInput( InitLocal,  ErrStat, ErrMsg )
+                                        
 
 
-         ! set number of markers here
+END SUBROUTINE HydroDyn_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+! This routine is called at the end of the simulation.
+!..................................................................................................................................
+
+      TYPE(HydroDyn_InputType),           INTENT(INOUT)  :: u           ! System inputs
+      TYPE(HydroDyn_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
+      TYPE(HydroDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
+      TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
+      TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
+      TYPE(HydroDyn_OutputType),          INTENT(INOUT)  :: y           ! System outputs
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat      ! Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
+
+
+
+         ! Initialize ErrStat
          
-         NMarkers        = HD_Data%NElements
-         NMarkerElements = HD_Data%NElements
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      
+      
+         ! Place any last minute operations or calculations here:
+
+
+         ! Close files here:     
+                  
+          CALL HDOut_CloseOutput( p, ErrStat, ErrMsg )           
+          
+
+         ! Destroy the input data:
          
+      CALL HydroDyn_DestroyInput( u, ErrStat, ErrMsg )
+
+
+         ! Destroy the parameter data:
       
-      CASE DEFAULT
+      CALL HydroDyn_DestroyParam( p, ErrStat, ErrMsg )
+
+
+         ! Destroy the state data:
+         
+      CALL HydroDyn_DestroyContState(   x,           ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+         
+
+         ! Destroy the output data:
+         
+      CALL HydroDyn_DestroyOutput( y, ErrStat, ErrMsg )
+
+
       
-         CALL ProgAbort( ' Unknown support structure type in HD_CalculateLoads().', TrapErrors = .TRUE. )
-         ErrStat = 1
+
+END SUBROUTINE HydroDyn_End
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
+! Continuous, constraint, and discrete states are updated to values at t + Interval.
+!..................................................................................................................................
+
+      REAL(DbKi),                         INTENT(IN   )  :: t               ! Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   )  :: n               ! Current step of the simulation: t = n*Interval
+      TYPE(HydroDyn_InputType),           INTENT(INOUT ) :: Inputs(:)       ! Inputs at InputTimes
+      REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)   ! Times in seconds associated with Inputs
+      TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p               ! Parameters
+      TYPE(HydroDyn_ContinuousStateType), INTENT(INOUT)  :: x               ! Input: Continuous states at t;
+                                                                            !   Output: Continuous states at t + Interval
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(INOUT)  :: xd              ! Input: Discrete states at t;
+                                                                            !   Output: Discrete states at t + Interval
+      TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT)  :: z               ! Input: Constraint states at t;
+                                                                            !   Output: Constraint states at t + Interval
+      TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState      ! Other/optimization states
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+
+         ! Local variables
+      INTEGER                                            :: I               ! Generic loop counter
+      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
+      TYPE(HydroDyn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
+      TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
+      TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
+      INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
+      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+      INTEGER                                            :: nTime           ! number of inputs 
+!BJJ: I'd probably make this (below) an OtherState variable so you don't have to allocate/deallocate each time 
+      TYPE(WAMIT_InputType), ALLOCATABLE                 :: Inputs_WAMIT(:)  
+      
+      
+          ! Create dummy variables required by framework but which are not used by the module
+      
+      TYPE(WAMIT_ConstraintStateType)    :: WAMIT_z            ! constraint states
+      
+      
+         ! Initialize variables
+
+      ErrStat   = ErrID_None           ! no error has occurred
+      ErrMsg    = ""
+      
+      
+         ! Return without doing any work if the input mesh is not initialized (NOT USING WAMIT)
+      
+      IF ( .NOT. Inputs(1)%WAMIT%Mesh%Initialized  ) RETURN
+      
+      nTime = size(Inputs)   
+      
+      
+         ! Allocate array of WAMIT inputs
+         ! TODO: We should avoid allocating this at each time step if we can!
+         
+      ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat )
+      IF (ErrStat /=0) THEN
+         ErrMsg = ' Failed to allocate array Inputs_WAMIT.'
          RETURN
-   
-   END SELECT
-   
-      
-   !-------------------------------------------------------------------------------------------------
-   ! Initizlize HydroDyn Output module
-   ! (this must happen after initializing other support structure modules and wave module!)
-   !-------------------------------------------------------------------------------------------------     
-      
-   HDO_InitData%ProgInfo    = TRIM( HD_Prog%Name )//' '//TRIM( HD_Prog%Ver )
-   HDO_InitData%OutFileName = TRIM(HydroDyn_InitData%OutRootName)//'_HydroDyn.out'     ! name of the file to write (bjj: what about overlapping instances of HydroDyn? (perhaps OutRootName should take care of this!)
-   HDO_InitData%NWaveElev   = Waves_InitData%NWaveElev
+      END IF
 
-   CALL HDOut_Init( HDO_InitData, HD_Data%HDOut_Data, HD_Data%FltPtfm_data, ErrStat )   
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Fill the variables that return the discretization 
-   !-------------------------------------------------------------------------------------------------
-
-   ALLOCATE( HD_AllMarkers%Substructure( NMarkers ), STAT=ErrStat )
-   IF ( ErrStat /= 0 ) THEN
-      CALL ProgAbort( ' Error allocating substructure markers in HydroDyn.', TrapErrors = .TRUE. )
-      RETURN
-   END IF
-   
-      ! These are the nodes that make up the discretization (values are per unit length)
-   DO I = 1,NMarkerElements
-   !bjj: ask jmj if this is the same!!!
-      HD_AllMarkers%Substructure(I)%Position = HD_Data%Node(I)%Position - HD_ConfigMarkers%Substructure%Position       ! position relative to the substructure marker 
          
-   END DO
-   
-   
-      ! These are the fixed-point markers
-   DO I = NMarkerElements+1,NMarkers
-   
-      HD_AllMarkers%Substructure(I)%Position = HD_ConfigMarkers%Substructure%Position
+         ! Loop over number of inputs and copy them into an array of WAMIT inputs
       
-   END DO
-   
-
-!...........................
-   
-CALL AllocAry( HD_InitOutput%WriteOutputHdr, HD_Data%HDOut_Data%NumOuts, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
-CALL AllocAry( HD_InitOutput%WriteOutputUnt, HD_Data%HDOut_Data%NumOuts, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
-CALL AllocAry( HD_InitOutput%WriteOutput,    HD_Data%HDOut_Data%NumOuts, 'WriteOutput',    ErrStat2, ErrMsg2 )
-  
-HD_InitOutput%Ver = HD_Prog
-HD_InitOutput%WriteOutputHdr = HD_Data%HDOut_Data%OutParam(1:HD_Data%HDOut_Data%NumOuts)%Name
-HD_InitOutput%WriteOutputUnt = HD_Data%HDOut_Data%OutParam(1:HD_Data%HDOut_Data%NumOuts)%Units
-   
-END SUBROUTINE HD_Init
-!====================================================================================================
-SUBROUTINE HD_Terminate ( HD_Data, ErrStat )
-! This public subroutine is called at program termination.  It deallocates variables and closes files.
-!----------------------------------------------------------------------------------------------------  
-   
-      ! Passed variables   
-   
-   TYPE( HD_DataType ), INTENT( INOUT )   :: HD_Data
-   INTEGER,             INTENT(   OUT )   :: ErrStat
-
-
-      ! Internal variables
-
-   LOGICAL                                :: Err
-
-
-      ! Initialize error status code
-
-   ErrStat = 0
-   Err     = .FALSE.
-
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Write the last line to our output file
-   ! bjj: this may produce strange results?
-   !-------------------------------------------------------------------------------------------------
-   CALL HDOut_WriteOutputs( HD_Data%HDOut_Data, ErrStat )   
-   !non-zero error just indicates there is no Output data to write
-   ErrStat = 0
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Clean up the modules we have used
-   !-------------------------------------------------------------------------------------------------
-
-   CALL Waves_Terminate(HD_Data%Waves_data,   ErrStat)
-   IF ( ErrStat /= 0 ) Err = .TRUE.  
-   
-   CALL FP_Terminate(  HD_Data%FltPtfm_data, ErrStat)
-   IF ( ErrStat /= 0 ) Err = .TRUE.
+      DO I=1,nTime
+         CALL WAMIT_CopyInput( Inputs(I)%WAMIT, Inputs_WAMIT(I), MESH_NEWCOPY, ErrStat, ErrMsg )     
+      END DO
       
-   CALL FB_Terminate()
+         
+         
+         ! Update the WAMIT module states
       
-   CALL HDOut_Terminate( HD_Data%HDOut_Data, ErrStat )
-   IF ( ErrStat /= 0 ) Err = .TRUE.
-
+      CALL WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT, x%WAMIT, xd%WAMIT, WAMIT_z, OtherState%WAMIT, ErrStat, ErrMsg )
+     
+!bjj: fix for memory leak:
+      DO I=1,nTime
+         CALL WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat, ErrMsg )     
+      END DO
       
-   !-------------------------------------------------------------------------------------------------
-   ! Deallocate HD memory               
-   !-------------------------------------------------------------------------------------------------
+      DEALLOCATE(Inputs_WAMIT)
+     
       
-   IF ( ALLOCATED( HD_Data%Node ) ) DEALLOCATE( HD_Data%Node, STAT = ErrStat )
-   IF ( ErrStat /= 0 ) Err = .TRUE.
-      
-   !-------------------------------------------------------------------------------------------------
-   ! Close any files
-   !-------------------------------------------------------------------------------------------------
-   CALL HDOut_CloseSum( HD_Data%UnSum, ErrStat )
-   IF ( ErrStat /= 0 ) Err = .TRUE.
+END SUBROUTINE HydroDyn_UpdateStates
 
 
-   !-------------------------------------------------------------------------------------------------
-   ! Reset any initialization values
-   !-------------------------------------------------------------------------------------------------
-   HD_Data%LastCalcTime = 0.0
-   HD_Data%NElements    = 0.0
-   HD_Data%MaxDiam      = 0.0
-   HD_Data%StrctType    = Unknown_Type    
-   HD_Data%UnSum        = -1
-
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
+! Routine for computing outputs, used in both loose and tight coupling.
+!..................................................................................................................................
    
-   !-------------------------------------------------------------------------------------------------
-   ! Return ErrStat = 1 if any error occurred while cleaning up
-   !-------------------------------------------------------------------------------------------------
-   IF ( Err ) ErrStat = 1
-   
-   
-END SUBROUTINE HD_Terminate
-!====================================================================================================
+      REAL(DbKi),                         INTENT(IN   )  :: Time        ! Current simulation time in seconds
+      TYPE(HydroDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
+      TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(HydroDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(HydroDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(HydroDyn_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
+                                                                        !   nectivity information does not have to be recalculated)
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
- SUBROUTINE HD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(HD_initoutputtype), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  IF ( ALLOCATED(InitOutputData%WriteOutputHdr) ) DEALLOCATE(InitOutputData%WriteOutputHdr)
-  IF ( ALLOCATED(InitOutputData%WriteOutputUnt) ) DEALLOCATE(InitOutputData%WriteOutputUnt)
-  IF ( ALLOCATED(InitOutputData%WriteOutput) )   DEALLOCATE(InitOutputData%WriteOutput)
- END SUBROUTINE HD_DestroyInitOutput
+      INTEGER                                            :: I, J        ! Generic counters
+      
+         ! Create dummy variables required by framework but which are not used by the module
+         
+      !TYPE(WAMIT_ContinuousStateType) :: WAMIT_x           ! Initial continuous states
+      TYPE(WAMIT_ConstraintStateType) :: WAMIT_z           ! Initial guess of the constraint states
+      !TYPE(WAMIT_OtherStateType)      :: WAMITOtherState  ! Initial other/optimization states            
+     
+      TYPE(Morison_ContinuousStateType) :: Morison_x           ! Initial continuous states
+      TYPE(Morison_DiscreteStateType)   :: Morison_xd           ! Initial discrete states
+      TYPE(Morison_ConstraintStateType) :: Morison_z           ! Initial guess of the constraint states
+      
+         ! Initialize ErrStat
+         
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      
+      
+         ! Compute outputs here:
+         
+      IF ( u%WAMIT%Mesh%Initialized ) THEN  ! Make sure we are using WAMIT / there is a valid mesh
+         CALL WAMIT_CalcOutput( Time, u%WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT,  &
+                                WAMIT_z, OtherState%WAMIT, y%WAMIT, ErrStat, ErrMsg )
+      END IF
+      
+      IF ( u%Morison%LumpedMesh%Initialized ) THEN  ! Make sure we are using Morison / there is a valid mesh
+         CALL Morison_CalcOutput( Time, u%Morison, p%Morison, Morison_x, Morison_xd,  &
+                                Morison_z, OtherState%Morison, y%Morison, ErrStat, ErrMsg )
+      END IF
+      
+         ! Write the HydroDyn-level output file data if the user requested module-level output
+      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN   
+         CALL HDOut_WriteOutputs( Time, y, p, ErrStat, ErrMsg )         
+      END IF
+      
+         ! Aggregate the sub-module outputs for the glue code
+      IF ( p%OutSwtch == 2 .OR. p%OutSwtch == 3 ) THEN
+         J = 1
+         IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
+            DO I=1, p%WAMIT%NumOuts
+               y%WriteOutput(J) = y%WAMIT%WriteOutput(I)
+               J = J + 1
+            END DO
+         END IF
+         
+         IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
+            DO I=1, p%Morison%NumOuts
+               y%WriteOutput(J) = y%Morison%WriteOutput(I)
+               J = J + 1
+            END DO
+         END IF
+         
+      END IF
+      
+END SUBROUTINE HydroDyn_CalcOutput
 
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
+! Tight coupling routine for computing derivatives of continuous states
+!..................................................................................................................................
+   
+      REAL(DbKi),                         INTENT(IN   )  :: Time        ! Current simulation time in seconds
+      TYPE(HydroDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                    
+      TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters                             
+      TYPE(HydroDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(HydroDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
+      TYPE(HydroDyn_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+               
+         ! Initialize ErrStat
+         
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      
+      
+         ! Compute the first time derivatives of the continuous states here:
+      
+    !  dxdt%DummyContState = 0
+         
+
+END SUBROUTINE HydroDyn_CalcContStateDeriv
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
+! Tight coupling routine for updating discrete states
+!..................................................................................................................................
+   
+      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
+      INTEGER(IntKi),                     INTENT(IN   ) :: n               ! Current step of the simulation: t = n*Interval
+      TYPE(HydroDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
+      TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters                                 
+      TYPE(HydroDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at Time; 
+                                                                       !   Output: Discrete states at Time + Interval
+      TYPE(HydroDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states           
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      
+         ! Create dummy variables required by framework but which are not used by the module
+         ! TODO: considering adding these to HydroDyn_ContinuousStateType, HydroDyn_ConstraintStateType, HydroDyn_OtherStateType
+      TYPE(WAMIT_ContinuousStateType) :: WAMIT_x           ! Initial continuous states
+      TYPE(WAMIT_ConstraintStateType) :: WAMIT_z           ! Initial guess of the constraint states
+      TYPE(WAMIT_OtherStateType)      :: WAMITOtherState  ! Initial other/optimization states     
+      
+      
+         ! Initialize ErrStat
+         
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      
+      
+         ! Update discrete states 
+         
+      IF ( u%WAMIT%Mesh%Initialized ) THEN    
+         CALL WAMIT_UpdateDiscState( Time, n, u%WAMIT, p%WAMIT, WAMIT_x, xd%WAMIT, WAMIT_z, WAMITOtherState, ErrStat, ErrMsg )          
+         IF ( ErrStat > ErrID_Warn )  RETURN
+      END IF
+      
+
+END SUBROUTINE HydroDyn_UpdateDiscState
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE HydroDyn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )   
+! Tight coupling routine for solving for the residual of the constraint state equations
+!..................................................................................................................................
+   
+      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
+      TYPE(HydroDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
+      TYPE(HydroDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters                           
+      TYPE(HydroDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(HydroDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(HydroDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
+      TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
+      TYPE(HydroDyn_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using  
+                                                                       !     the input values described above      
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+               
+         ! Initialize ErrStat
+         
+      ErrStat = ErrID_None         
+      ErrMsg  = ""               
+      
+      
+         ! Solve for the constraint states here:
+      
+      
+
+END SUBROUTINE HydroDyn_CalcConstrStateResidual
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+   
 END MODULE HydroDyn
+!**********************************************************************************************************************************
