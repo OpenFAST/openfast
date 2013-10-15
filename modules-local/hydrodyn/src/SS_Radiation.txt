@@ -1,0 +1,62 @@
+##################  Registry for SS Radiation ###############
+# column  1: <keyword>
+# column  2: ModuleName/ModName or ^ to use the value from the previous line (ModName is nickname for ModuleName)
+# column  3: Derived data type (without "ModName_" prefix)
+# column  4: Derived data types's Field type
+# column  5: Variable name
+# column  6: Dimension of variable {:} for allocatable
+# column  7: Variable's initial value (if set in the data type)
+# column  8: I think this is a switch for mixed-language programming; it's mostly unused
+# column  9: Description
+# column 10: Units
+###################################################################################################################################
+# File last committed: $Date: 2013-09-21 22:50:10 -0600 (Sat, 21 Sep 2013) $
+# (File) Revision #: $Rev: 198 $
+# URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/SS_Radiation.txt $
+###################################################################################################################################
+
+typedef SS_Radiation/SS_Rad   InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file" -
+typedef   ^                 	^           ReKi	    DOFs      {1}{6} - -   "Vector with enable platf. DOFs" "m/s or rad/s"
+
+typedef   ^              InitOutputType CHARACTER(10)    WriteOutputHdr  {7} - -  "Header of the output" -
+typedef   ^              InitOutputType CHARACTER(10)    WriteOutputUnt  {7} - -  "Units of the output" -
+
+typedef   ^              ContinuousStateType ReKi     x             {:}{:} - -  "Continuous States" -
+typedef   ^              ContinuousStateType ReKi     DummyContState   - - -  "Dummy constant" -
+
+
+typedef   ^              DiscreteStateType   ReKi     DummyDiscState - - -  "" -
+
+# Define constraint states here:
+typedef   ^              ConstraintStateType ReKi     DummyConstrState - - - "" -
+
+# Define any data that are not considered actual states here:
+#   e.g. data used only for efficiency purposes
+#   at a given time, etc.)
+typedef   ^              OtherStateType      IntKi    Step - - - "Current Time step" -
+typedef   ^              ^                   DbKi   LastTime - - - "Last Time step" -
+typedef   ^              ^                   ReKi   dxdt {:}{:} - - "Old Values of dxdt to used by the solver" -
+
+# ..... Parameters .........................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+
+typedef   ^              ParameterType DbKi     DT     - - - "Time step" seconds
+typedef   ^               ^            ReKi     A      {:}{:} - - "A matrix" -
+typedef   ^               ^            ReKi     B      {:}{:} - - "B matrix" -
+typedef   ^               ^            ReKi     C      {:}{:} - - "C matrix" -
+typedef   ^               ^            INTEGER  N       -     - - "Number of states" -
+
+# ..... Inputs .............................
+# Define inputs that are contained on the mesh here:
+typedef   ^             InputType      ReKi dq {6}{1} - -   "Body velocities" -
+typedef   ^             ^              ReKi DummyInput - - -   "Dummy" -
+
+
+# ..... Outputs ............................
+typedef   ^             OutputType           ReKi y  {6}{1} - -   "Force" -
+typedef   ^             ^                    ReKi WriteOutput {1}{7} - -   "output Data" "kN" -
+
+
+
+
