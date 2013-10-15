@@ -1,47 +1,86 @@
-@ECHO OFF
+@ECHO ON
 
-IF NOT "%1"==""  GOTO SetVars
-
-ECHO 
-ECHO  The syntax for creating an archive is "Archive <version>"
-ECHO.
-ECHO  Example:  "archive 1.00.01"
-
-GOTO Done
-
-:SetVars
-SET ARCHPATH=Archive
-SET PROGNAME=HydroDyn
-SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
-SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
+@SET ARCHROOT=HD
+@SET PROGNAME=HydroDyn
 
 
-@ECHO ------------------------------------------
-@ECHO Archiving %PROGNAME% for general distribution.
-@ECHO ------------------------------------------
-SET ARCHNAME=%PROGNAME%_v%1
-SET FILELIST=ArcFiles.txt
+IF "%COMPUTERNAME%"=="APLATT-21846S" GOTO APLATT-21846S
+IF "%COMPUTERNAME%"=="BJONKMAN-23080S" GOTO BJONKMAN-23080S
+IF "%COMPUTERNAME%"=="MBUHL-20665S" GOTO MBUHL-20665S
+IF "%COMPUTERNAME%"=="GHAYMAN-17919S" GOTO GHAYMAN-17919S
 
+:APLATT-21846S
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
+
+:BJONKMAN-23080S
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
+
+:MBUHL-20665S
+@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files (x86)\7-Zip\7z.exe"
+GOTO CheckSyntax
+
+:GHAYMAN-17919S
+@SET WINZIP="C:\Program Files\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
+
+::=======================================================================================================
+
+:CheckSyntax
+@IF NOT "%1"==""  GOTO DeleteOld
+
+@ECHO 
+@ECHO  The syntax for creating an archive is "Archive <version>"
+@ECHO.
+@ECHO  Example:  "archive 1.01.00"
+
+@GOTO Done
 
 :DeleteOld
-IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
-IF EXIST %ARCHNAME%.exe DEL %ARCHNAME%.exe
+@IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
+@IF EXIST ARCHTMP.exe DEL ARCHTMP.exe
+@IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
+@IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
 
 
 :DoIt
-%WINZIP% -a -o -P ARCHTMP @%FILELIST%
-ECHO Creating self-extracting archive...
-%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt 
+@ECHO.
+@ECHO -------------------------------------------------------------------------
+@ECHO Archiving %PROGNAME% for general Windows distribution.
+@ECHO -------------------------------------------------------------------------
+@ECHO.
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt @ArcWin.txt
+@%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
+@COPY ARCHTMP.exe Archive\%ARCHROOT%_v%1.exe
+@DEL ARCHTMP.zip, ARCHTMP.exe
 
-ECHO The self-extracting archive has been created.
-COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe
-DEL ARCHTMP.zip, ARCHTMP.exe
+
+
+@ECHO.
+@ECHO -------------------------------------------------------------------------
+@ECHO Archiving %PROGNAME% for general distribution (tar.gz).
+@ECHO -------------------------------------------------------------------------
+@ECHO.
+@rem first create a tar file, then compress it (gzip allows only one file)
+@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
+@%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
+@COPY ARCHTMP.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
+@DEL ARCHTMP.tar, ARCHTMP.tar.gz
+
 
 
 :Done
-SET ARCHNAME=
-SET ARCHPATH=
-SET PROGNAME=
-SET FILELIST=
-SET WINZIP=
-SET WINZIPSE=
+@SET ARCHROOT=
+@SET PROGNAME=
+@SET WINZIP=
+@SET WINZIPSE=
+@SET SEVENZIP=

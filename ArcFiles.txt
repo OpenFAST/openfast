@@ -1,24 +1,38 @@
-ArcFiles.txt
-Archive.bat
-ChangeLog.txt
+
+readme.txt
+changelog.txt
 Disclaimer.txt
-HydroDynOutListParameters.xlsx
+license.txt
+MorisonOutListParameters.xlsx 
+NOTICE.txt
+WAMITOutListParameters.xlsx
 
-Source\FixedBottomSupportStructure.f90
-Source\FloatingPlatform.f90
-Source\Hydro_IO.f90
-Source\HydroDyn.f90
-Source\UserLine.f90
-Source\Waves.f90
+Documentation\README_HDv2.pdf
 
-Source\FFTMod.f90
-Source\fftpack.f
+Source\HydroDyn_DriverCode.f90
+Source\RegistryFiles\CreateTypes.bat 
+Source\RegistryFiles\include\Registry_NWTC_Library.txt
 
-UtilityCodes\MatlabGeneratedOutput\Write_ChckOutLst.m
-UtilityCodes\TestInterface\TestInterface.f90
 
-Samples\NRELOffshrBsline5MW_HydroDyn_Monopile_RF.dat
-Samples\NRELOffshrBsline5MW_Hydrodyn_TLP.ipt
-Samples\HydroData\tlpmit.1
-Samples\HydroData\tlpmit.3
-Samples\HydroData\tlpmit.hst
+Samples\NRELOffshrBsline5MW_Monopile_RF_HydroDyn.dat
+Samples\NRELOffshrBsline5MW_ITIBarge4_HydroDyn.dat
+Samples\NRELOffshrBsline5MW_Floating_TLP_Hydrodyn.dat
+Samples\NRELOffshrBsline5MW_Floating_OC3Hywind_HydroDyn.dat
+
+CertTest\Test_001.dvr
+CertTest\Test_001.ipt
+CertTest\Test_002.dvr
+CertTest\Test_002.ipt
+CertTest\OC4_Jacket.dvr
+CertTest\OC4_Jacket.ipt
+CertTest\OC3_Tripod.dvr
+CertTest\OC3_Tripod.ipt
+
+CertTest\NREL_Results\OC3_Tripod_HydroDyn.out    
+CertTest\NREL_Results\OC3_Tripod_HydroDyn.sum
+CertTest\NREL_Results\OC4_Jacket_HydroDyn.out
+CertTest\NREL_Results\OC4_Jacket_HydroDyn.sum
+CertTest\NREL_Results\Test_001_HydroDyn.out
+CertTest\NREL_Results\Test_001_HydroDyn.sum
+CertTest\NREL_Results\Test_002_HydroDyn.out
+CertTest\NREL_Results\Test_002_HydroDyn.sum

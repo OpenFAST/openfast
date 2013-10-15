@@ -1,0 +1,2 @@
+bin\HydroDynDriver_win32.exe
+bin\Registry_win32.exe
