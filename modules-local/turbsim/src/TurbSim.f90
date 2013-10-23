@@ -229,7 +229,6 @@ LOGICAL                 ::  HubPr                           ! Flag to indicate i
 
 CHARACTER(1)            ::  Comp (3) = (/ 'u', 'v', 'w' /)  ! The names of the wind components
 
-REAL(ReKi), EXTERNAL    ::  FindZ0                          ! An external function for the modified von Karman spectra
 
 !BONNIE:*****************************
 !    Time = TIMEF() ! Initialize the Wall Clock Time counter
@@ -351,6 +350,7 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
    IF ( WrBHHTP )  THEN   
 
       CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin' )
+!      CALL OpenBin ( UGTP, TRIM( RootName)//'.bin', 2 )  !RECORD LENGTH (2) IS NOT USED HERE
       FormStr = "( 3X , A , ' (hub-height binary turbulence-parameter file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.bin'
       CALL WrScr ( '    '//TRIM( RootName)//'.bin (a binary hub-height turbulence-parameter file)' )

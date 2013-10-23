@@ -1,3 +1,6 @@
+MODULE ModifiedvKrm_mod
+   
+CONTAINS
 !=======================================================================
 SUBROUTINE Mod_vKrm ( Ht, Ucmp, Spec )
 
@@ -73,3 +76,4 @@ FUNCTION CalcDiff(z0Guess, z, sigma, U, f)
 RETURN
 END FUNCTION CalcDiff
 !=======================================================================
+END MODULE ModifiedvKrm_mod

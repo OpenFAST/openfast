@@ -1,6 +1,7 @@
 MODULE TSSubs
 
    USE                     NWTC_Library
+   USE                     ModifiedvKrm_mod
    IMPLICIT                NONE
 
       ! Create interface for a generic getWindSpeed that actually uses specific routines.
