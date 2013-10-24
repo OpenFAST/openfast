@@ -2413,7 +2413,7 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
 
    IfW_Inputs%Position(:,1) = InputPosition(:)
 
-!   InflowVel = WindInf_GetVelocity( REAL(o%Time, ReKi), InputPosition, Sttus)
+!   InflowVel = WindInf_GetVelocity( REAL(Time, ReKi), InputPosition, Sttus)
    CALL IfW_CalcOutput( Time, IfW_Inputs, p%IfW_Params, &
                               x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, O%IfW_OtherStates, &   ! States -- none in this case
                               y%IfW_Outputs, TmpErrStat, TmpErrMsg )
@@ -2514,7 +2514,7 @@ SUBROUTINE DiskVel ( Time, P, O, ErrStat, ErrMess )
    REAL(ReKi)                 :: Position(3)
 
 Position = (/0.0, 0.0, P%Rotor%HH /)
-!AvgInfVel(:) = WindInf_ADhack_diskVel( REAL(O%Time, ReKi), Position, ErrStat )
+!AvgInfVel(:) = WindInf_ADhack_diskVel( REAL(Time, ReKi), Position, ErrStat )
 
 AvgInfVel(:) = WindInf_ADhack_diskVel( Time,p%IfW_Params, O%IfW_OtherStates,ErrStat, ErrMess )
 
@@ -3057,7 +3057,7 @@ END SUBROUTINE BEDWRT
                       W2, J, IBlade, ALPHA, CLA, CDA ,CMA )
  !  uses the Beddoes dynamic stall model
  !   the routine is entered with an angle of attack
- !   and returns CL and CD.
+ !   and returns CL, CD, and CM.
  !  This routine is used regardless of whether the element
  !   is actually in dynamic stall state.
  !
@@ -3154,9 +3154,10 @@ ENDIF
 
  ! Jump back if lift-curve slope is zero
 
-IF ( CNA1 == 0.0 ) THEN
+IF ( EqualRealNos(CNA1, 0.0_ReKi) ) THEN
    CLA = 0.0
    CDA = CDO1
+   CMA = 0.0
    RETURN
 ENDIF
 
@@ -3670,9 +3671,9 @@ ErrStat = ErrID_None
 ErrMess = ""
 
 IF (.NOT. ALLOCATED(P%AirFoil%NFoil) ) THEN
-   CDA = 0
-   CLA = 0
-   CMA = 0
+   CDA = 0.
+   CLA = 0.
+   CMA = 0.
    ErrStat = ErrID_Fatal
    RETURN
 ELSE
@@ -3803,7 +3804,7 @@ END FUNCTION SAT
 
  ! **************************************
 
-   SUBROUTINE Inflow( P, O, ErrStat, ErrMess )
+   SUBROUTINE Inflow( Time, P, O, ErrStat, ErrMess )
 
  ! Gateway to the dynamic inflow routines.
  ! Called by NEWTIME after a time step.
@@ -3811,6 +3812,7 @@ END FUNCTION SAT
 
    IMPLICIT                      NONE
       ! Passed Variables:
+   REAL(DbKi),                   INTENT(IN)  :: Time
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
@@ -3819,7 +3821,7 @@ END FUNCTION SAT
       IF ( P%DYNINFL ) THEN
 
 ! INITIALIZE DYNAMIC INFLOW PARAMETERS
-        IF ( O%DYNINIT .AND. ( O%TIME > 0.0D0 ) ) THEN
+        IF ( O%DYNINIT .AND. ( TIME > 0.0D0 ) ) THEN
            CALL INFINIT( P, O, ErrStat, ErrMess )
            !WRITE(*,*) 'Activating dynamic inflow calculation'
            O%DynInflow%old_Alph = 0.0
@@ -3832,7 +3834,7 @@ END FUNCTION SAT
          CALL INFUPDT(P, O, ErrStat, ErrMess)
          CALL GetPhiLq(P, O, ErrStat, ErrMess)
  ! Calculate the dynamic inflow paremeters for the new time step
-         IF( O%TIME > 1.0D0 ) CALL INFDIST(P, O, ErrStat, ErrMess)
+         IF( TIME > 1.0D0 ) CALL INFDIST(P, O, ErrStat, ErrMess)
 
       ENDIF   ! DYNINFL
 
@@ -4215,11 +4217,12 @@ END SUBROUTINE infupdt
 
 
  ! **********************************************************************
-   SUBROUTINE DynDebug (P, x, xd, z, O, y, ErrStat, ErrMess, RHScos, RHSsin)
+   SUBROUTINE DynDebug (Time, P, x, xd, z, O, y, ErrStat, ErrMess, RHScos, RHSsin)
  !  Write out debugging information
  ! **********************************************************************
 
    IMPLICIT                      NONE
+   REAL(DbKi),                   INTENT(IN)  :: Time
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
    TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
    TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
@@ -4270,10 +4273,10 @@ ENDIF
 
 Frmt = '( F10.3,    ( : A1, ES12.5 ) )'
 
-IF (O%TIME > 0.0D0) THEN
+IF (TIME > 0.0D0) THEN
 
    WRITE(Frmt(10:12), '(I3)') NumOut
-   WRITE(UnDyn,Frmt) O%TIME,                    &
+   WRITE(UnDyn,Frmt) TIME,                    &
         ( TAB,       O%DynInflow%dAlph_dt(i,1),               &
                    i = 1, maxInfl ),          &
         ( TAB,       O%DynInflow%dBeta_dt(i,1),               &
@@ -4487,7 +4490,7 @@ END DO !k
 O%DynInflow%xLambda_M = 1.1547005 * O%DynInflow%xLambda_M
 
 ! Added additional output for GDW debugging - comment out for distribution
-!CALL DynDebug (P, x, xd, z, O, y, ErrStat, ErrMess, RHScos, RHSsin)
+!CALL DynDebug (Time, P, x, xd, z, O, y, ErrStat, ErrMess, RHScos, RHSsin)
 
 RETURN
 END SUBROUTINE infdist
