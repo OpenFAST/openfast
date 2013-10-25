@@ -106,7 +106,7 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Tower_Onshore.dat
 
-CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_TowerDrag.ipt
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_TwrDrag.ipt
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_Tower_TwrDrag.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT5_Tower.dat
 
