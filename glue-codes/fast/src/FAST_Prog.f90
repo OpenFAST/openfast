@@ -1079,11 +1079,37 @@ CONTAINS
 
          END IF
 
-      ELSE ! these get mapped to SubDyn
-
+      ELSE ! these get mapped to SubDyn (in ED_SD_HD coupling)
+                  
+         CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_Input(1)%PlatformPtMesh, SD_Input(1)%TPMesh, SD_Input(1)%LMesh, &
+                                     HD_Input(1)%Morison%LumpedMesh, HD_Input(1)%Morison%DistribMesh, ErrStat, ErrMsg)
+         
+                     
             ! HydroDyn Morison point mesh to SubDyn point mesh
+         IF ( y_HD%Morison%LumpedMesh%Committed .AND. SD_Input(1)%LMesh%Committed ) THEN
+            
+            CALL AllocMapping( y_HD%Morison%LumpedMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_P_2_SD_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_SD_P: '//NewLine//ErrMsg )              
+            CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_P: '//NewLine//ErrMsg )
+                              
+         END IF
+            
             ! HydroDyn Morison line mesh to SubDyn point mesh
+         IF ( y_HD%Morison%DistribMesh%Committed .AND. SD_Input(1)%LMesh%Committed) THEN
+            CALL AllocMapping( y_HD%Morison%DistribMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_SD_P: '//NewLine//ErrMsg )
+            CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_L: '//NewLine//ErrMsg )
+         END IF
 
+         
+            ! HydroDyn WAMIT mesh must not be used !BJJ: seems like this is a moot point, but we'll check anyway.
+         IF ( y_HD%WAMIT%Mesh%Committed ) THEN
+            CALL CheckError( ErrID_FATAL, "When SubDyn is used, HydroDyn cannot contain a (committed) WAMIT mesh." )
+         END IF                     
+         
+         
       END IF ! HydroDyn-SubDyn
       
    END IF !HydroDyn-{ElastoDyn or SubDyn}
@@ -1241,28 +1267,31 @@ CONTAINS
           calcJacobian = .FALSE.
       END IF
       
-      !IF ( p_FAST%CompHydro .OR. p_FAST%CompSub ) THEN
+      !IF ( p_FAST%CompHydro ) THEN
       !
       !   IF ( .NOT. p_FAST%CompSub ) THEN
       !   
       !      CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-      !                                 , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-      !                                 , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-      !                                 , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+      !                                    , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+      !                                    , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+      !                                    , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
       !         CALL CheckError( ErrStat, ErrMsg  )
       !      
-      !   ELSEIF ( .NOT. p_FAST%CompHydro ) THEN
-      !   
-      !      CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-      !                                 , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-      !                                 , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
-      !                                 , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
-      !         CALL CheckError( ErrStat, ErrMsg  )
-      !
-      !            
-      !   ELSE ! Both enabled... (not currently allowed)
+      !   ELSE ! Both enabled
+      !      
+      !      
+      !      
       !   END IF      
-      !ELSE
+      !   
+      !ELSEIF ( p_FAST%CompSub ) THEN
+      !   
+      !   CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+      !                              , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+      !                              , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
+      !                              , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+      !      CALL CheckError( ErrStat, ErrMsg  )
+      !
+      !ELSE ! no HD or SD coupled to ED
          
          CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
@@ -1290,16 +1319,16 @@ CONTAINS
 
       END IF
       
-      
-      IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve); however the code doesn't work without it.
-         
-         CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-            
-         CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
-            
-      END IF
+      !
+      !IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve); however the code doesn't work without it.
+      !   
+      !   CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+      !      CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+      !      
+      !   CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
+      !      CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
+      !      
+      !END IF
       
       
       IF ( p_FAST%CompServo ) THEN
@@ -1323,8 +1352,8 @@ CONTAINS
          CALL SD_InputSolve( SD_Input(1), ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
 
-         CALL SD_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from SD_CalcOutput: '//NewLine//ErrMsg  )
+         !CALL SD_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
+         !   CALL CheckError( ErrStat, 'Message from SD_CalcOutput: '//NewLine//ErrMsg  )
                         
       END IF
       
@@ -1372,10 +1401,8 @@ CONTAINS
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-         
-      
-      
-      IF ( p_FAST%CompHydro .OR. p_FAST%CompSub ) THEN
+                     
+      IF ( p_FAST%CompHydro ) THEN
       
          IF ( .NOT. p_FAST%CompSub ) THEN
          
@@ -1385,19 +1412,19 @@ CONTAINS
                                           , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
                CALL CheckError( ErrStat, ErrMsg  )
             
-         ELSEIF ( .NOT. p_FAST%CompHydro ) THEN
-         
-            CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-                                       , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-                                       , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
-                                       , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
-               CALL CheckError( ErrStat, ErrMsg  )
-      
-                  
-         !ELSE ! Both enabled... (not currently allowed)
+         ELSE ! Both enabled
+
          END IF      
          
-      END IF ! HD and/or SD coupled to FAST
+      ELSEIF ( p_FAST%CompSub ) THEN
+         
+         CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+                                    , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+                                    , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
+                                    , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+            CALL CheckError( ErrStat, ErrMsg  )
+                  
+      END IF ! HD and/or SD coupled to ElastoDyn
                               
       !.....................................................................
       ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
