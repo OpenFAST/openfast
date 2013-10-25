@@ -37,11 +37,18 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: Module_MAP  = 7
    INTEGER(IntKi), PARAMETER :: NumModules  = 7
    
+   INTEGER(IntKi), PARAMETER :: Type_Onshore            = 1
+   INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
+   INTEGER(IntKi), PARAMETER :: Type_Offshore_Floating  = 3
+   
+   
+   
+   
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.03.02b-bjj', '3-Oct-2013' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.04.00a-bjj', '10-Oct-2013' ) ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
@@ -99,6 +106,19 @@ MODULE FAST_Types
       TYPE(MeshMapType)                 :: ED_P_2_SD_TP                             ! Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh
       TYPE(MeshMapType)                 :: SD_TP_2_ED_P                             ! Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh
                   
+      TYPE(MeshMapType)                 :: SD_P_2_HD_M_P                            ! Map SubDyn y2Mesh Point to HydroDyn Morison Point
+      TYPE(MeshMapType)                 :: HD_M_P_2_SD_P                            ! Map HydroDyn Morison Point to SubDyn y2Mesh Point
+      
+      TYPE(MeshMapType)                 :: SD_P_2_HD_M_L                            ! Map SubDyn y2Mesh Point to HydroDyn Morison Line2                               
+      TYPE(MeshMapType)                 :: HD_M_L_2_SD_P                            ! Map HydroDyn Morison Line2 to SubDyn y2Mesh Point
+      
+      
+         ! Stored Jacobians:
+      REAL(ReKi)                  :: Jac_ED_HD (SizeJac_ED_HD , SizeJac_ED_HD)      ! Stored Jacobian in ED_HD_InputOutputSolve
+      REAL(ReKi)                  :: Jac_ED_SD (SizeJac_ED_SD , SizeJac_ED_SD)      ! Stored Jacobian in ED_SD_InputOutputSolve
+      REAL(ReKi),     ALLOCATABLE :: Jac_ED_SD_HD(:,:)                              ! Stored Jacobian in ED_SD_HD_InputOutputSolve      
+      INTEGER ,       ALLOCATABLE :: Jac_u_indx(:,:)                                ! matrix to help fill/pack the u vector in computing the jacobian
+      
    END TYPE FAST_ModuleMapType
 
 
@@ -151,12 +171,13 @@ MODULE FAST_Types
          ! other parameters we may/may not need
       CHARACTER(1024)           :: DirRoot                                         ! The absolute name of the root file (including the full path)
 
-         ! Stored Jacobians:
-      REAL(ReKi)                :: Jac_ED_HD (SizeJac_ED_HD , SizeJac_ED_HD)       ! Stored Jacobian in ED_HD_InputOutputSolve
-      REAL(ReKi)                :: Jac_ED_SD (SizeJac_ED_SD , SizeJac_ED_SD)       ! Stored Jacobian in ED_SD_InputOutputSolve
+         ! Data for Jacobians:
       REAL(DbKi)                :: DT_UJac                                         ! Time between when we need to re-calculate these Jacobians
-      REAL(ReKi)                :: UJacSclFact                                     ! Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians
+      REAL(ReKi)                :: UJacSclFact                                     ! Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians      
+      INTEGER(IntKi)            :: SizeJac_ED_SD_HD(4)                             ! (1)=size of ED portion; (2)=size of SD portion [2 meshes]; (3)=size of HD portion; (4)=size of matrix; 
    
+      INTEGER(IntKi)            :: TurbineType                                     ! Type_Onshore, Type_Offshore_Fixed, or Type_Offshore_Floating
+      
    END TYPE FAST_ParameterType
 
 

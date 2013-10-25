@@ -451,8 +451,14 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
       ! we initialize these because we might need them if Option 1 is called at the beginning of CalcOutputs_And_SolveForInputs:
-   ED_Output(1)%PlatformPtMesh%TranslationAcc     = 0.0_ReKi
-   ED_Output(1)%PlatformPtMesh%RotationAcc        = 0.0_ReKi
+   ED_Output(1)%PlatformPtMesh%TranslationAcc = 0.0_ReKi
+   ED_Output(1)%PlatformPtMesh%RotationAcc    = 0.0_ReKi
+   
+   IF (y_SD%y2Mesh%committed) THEN
+      y_SD%y2Mesh%TranslationAcc = 0.0_ReKi
+      y_SD%y2Mesh%RotationAcc    = 0.0_ReKi
+   END IF
+      
   
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
@@ -540,7 +546,6 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    IF (p_FAST%CompAero) THEN      
          ! Copy values for interpolation/extrapolation:
 
-      ! TODO: Need to talk to Bonnie about using the following.
       DO j = 1, p_FAST%InterpOrder + 1
          AD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
          !AD_OutputTimes(i) = t_initial - (j - 1) * dt
@@ -648,10 +653,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       ! note that this is a violation of the framework as this is basically a state, but it's only used for the
       ! GH-Bladed DLL, which itself violates the framework....
    CALL SrvD_CopyOutput ( y_SrvD, y_SrvD_prev, MESH_UPDATECOPY, Errstat, ErrMsg)
-      
-!BJJ: TODO:      
-      ! Print out the outputs values at n_t_global = 0:
-      
+           
    !...............................................................................................................................
    ! Time Stepping:
    !...............................................................................................................................         
@@ -1164,7 +1166,12 @@ CONTAINS
          IF (SD_Input(1)%TPMesh%Committed) THEN
             SD_Input(1)%TPMesh%RemapFlag = .FALSE.
                    y_SD%Y1Mesh%RemapFlag = .FALSE.
-         END IF         
+         END IF    
+         
+         IF (SD_Input(1)%LMesh%Committed) THEN
+            SD_Input(1)%LMesh%RemapFlag  = .FALSE.
+                   y_SD%Y2Mesh%RemapFlag = .FALSE.
+         END IF    
       END IF
       
       
@@ -1496,6 +1503,8 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%ED_P_2_SD_TP,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL MeshMapDestroy( MeshMapData%SD_TP_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))                  
       
+      IF ( ALLOCATED(MeshMapData%Jac_ED_SD_HD   ) ) DEALLOCATE(MeshMapData%Jac_ED_SD_HD   ) 
+      IF ( ALLOCATED(MeshMapData%Jac_u_indx     ) ) DEALLOCATE(MeshMapData%Jac_u_indx     ) 
       
       CALL MeshDestroy(    u_ED_Without_SD_HD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       ! -------------------------------------------------------------------------
