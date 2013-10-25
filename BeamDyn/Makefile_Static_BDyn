@@ -27,7 +27,7 @@ ifeq ($(OS),Windows_NT)
 else
 #   LIB_DIR = $(HOME)/PC/CAEtools/Miscellaneous/NWTC_Library/trunk/source
    LIB_DIR  = ../NWTC_Library/source
-   REGISTRY = ../FAST/Registry/Source/registry.exe
+   REGISTRY = ../FAST_Registry/registry.exe
 endif
 
 MODNAME_DIR = .
