@@ -27,7 +27,7 @@ ifeq ($(OS),Windows_NT)
 else
 #   LIB_DIR = $(HOME)/PC/CAEtools/Miscellaneous/NWTC_Library/trunk/source
    LIB_DIR  = ../NWTC_Library/source
-   REGISTRY = ../FAST/Registry/Source/registry.exe
+   REGISTRY = ../FAST_Registry/registry.exe
 endif
 
 MODNAME_DIR = .
@@ -95,7 +95,7 @@ LIB_SOURCES =             \
 MODNAME_SOURCES   =             \
 	BeamDynDynamic.f90             \
 	Driver_Dynamic.f90                \
-	BeamDynDynamic_Types.f90       \
+	BeamDyn_Types.f90       \
 
 vpath %.f90 $(LIB_DIR) $(MODNAME_DIR)
 vpath %.mod $(INTER_DIR)
@@ -126,14 +126,14 @@ NWTC_Num.obj:            NWTC_IO.obj
 #NWTC_Library.obj:        NWTC_Aero.obj         ModMesh.obj
 NWTC_Library.obj:        NWTC_IO.obj           NWTC_Num.obj         ModMesh.obj
 
-BeamDynDynamic_Types.f90:       Registry_BeamDynDynamic.txt
-BeamDynDynamic_Types.obj:       NWTC_Library.obj
+BeamDyn_Types.f90:       Registry_BeamDynDynamic.txt
+BeamDyn_Types.obj:       NWTC_Library.obj
 BeamDynDynamic.obj:             BeamDyn_Types.obj
 
 Driver_Dynamic_BDyn.obj:                BeamDynDynamic.obj           NWTC_Library.obj
 
 
-#$(OUTPUT_NAME)$(EXE_EXT): Driver_Static_BDyn.obj
+#$(OUTPUT_NAME)$(EXE_EXT): Driver_Dynamic_BDyn.obj
 
    # Make sure the destination directory for the intermediate files exist.
 
