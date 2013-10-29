@@ -107,7 +107,7 @@ MODNAME_OBJS = $(MODNAME_SOURCES:.f90=.obj)
    # Rule to do everything.
 
 all:     default
-default: BeamDynDynamic_Types.f90 $(INTER_DIR) $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT)
+default: BeamDyn_Types.f90 $(INTER_DIR) $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT)
 
    # General rule for making the files.
 
@@ -128,12 +128,12 @@ NWTC_Library.obj:        NWTC_IO.obj           NWTC_Num.obj         ModMesh.obj
 
 BeamDyn_Types.f90:       Registry_BeamDynDynamic.txt
 BeamDyn_Types.obj:       NWTC_Library.obj
-BeamDynDynamic.obj:             BeamDyn_Types.obj
+BeamDynDynamic.obj:      BeamDyn_Types.obj
 
-Driver_Dynamic_BDyn.obj:                BeamDynDynamic.obj           NWTC_Library.obj
+Driver_Dynamic.obj:                BeamDynDynamic.obj           NWTC_Library.obj
 
 
-#$(OUTPUT_NAME)$(EXE_EXT): Driver_Dynamic_BDyn.obj
+#$(OUTPUT_NAME)$(EXE_EXT): Driver_Dynamic.obj
 
    # Make sure the destination directory for the intermediate files exist.
 
@@ -143,7 +143,7 @@ $(INTER_DIR):
 
    # Run the registry if the input file changes.
 
-BeamDynDynamic_Types.f90:
+BeamDyn_Types.f90:
 	$(REGISTRY) Registry_BeamDynDynamic.txt
 
 

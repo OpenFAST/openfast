@@ -20,7 +20,7 @@ typedef BeamDyn/BDyn InitOutputType Reki DummyInitVar - - - "A variable" -
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-#typedef BeamDyn ContinuousStateType ReKi uuNf      {:} - -  "nodal displacements and rotations" - 
+typedef BeamDyn ContinuousStateType ReKi uuNf      {:} - -  "nodal displacements and rotations" - 
 #typedef      ^         ^             ^   Nv        {:} - -  "nodal linear and angular velocities" -
 
 # Define discrete (nondifferentiable) states here:
@@ -62,11 +62,11 @@ typedef   ^          ^          ^  gll_deriv {:}{:} - "gll derivative matrix" -
 typedef   ^          ^          ^  uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^  det_jac {:} - - "determinant of transformation jacobian for element" -
 typedef   ^          ^          ^  bc {:} - - "Boundary condition vector" -
-!typedef   ^          ^          ^  F_ext {:} - - "Applied force vector" -
+#typedef   ^          ^          ^  F_ext {:} - - "Applied force vector" -
 typedef   ^          ^          ^  Jacobian - - - "Applied force vector" -
 typedef   ^          ^          ^  m00 - - - "Mass per unit span" -
-typedef   ^          ^          ^  mEta {:} - - "Mass * Section center location" -
-typedef   ^          ^          ^  rho0 {:} {:} - "Sectional tensor of inertia" -
+typedef   ^          ^          ^  mEta0 {:} - - "Mass * Section center location" -
+typedef   ^          ^          ^  rho0 {:}{:} - "Sectional tensor of inertia" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
