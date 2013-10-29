@@ -68,8 +68,8 @@ MODULE FAST_Types
       INTEGER(IntKi)                    :: numOuts_SD                              ! number of outputs to print from SubDyn
       INTEGER(IntKi)                    :: numOuts_MAP                             ! number of outputs to print from MAP (Mooring Analysis Program)
       
-      INTEGER(IntKi)                    :: UnOu                                    ! I/O unit number for the tabular output file
-      INTEGER(IntKi)                    :: UnSum                                   ! I/O unit number for the summary file
+      INTEGER(IntKi)                    :: UnOu    = -1                            ! I/O unit number for the tabular output file
+      INTEGER(IntKi)                    :: UnSum   = -1                            ! I/O unit number for the summary file
 
       CHARACTER(1024)                   :: FileDescLines(3)                        ! Description lines to include in output files (header, time run, plus module names/versions)
       CHARACTER(ChanLen), ALLOCATABLE   :: ChannelNames(:)                         ! Names of the output channels

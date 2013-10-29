@@ -400,15 +400,18 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
 
 
-   CALL FAST_WrSum( p_FAST, y_FAST, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Message from FAST_WrSum: '//NewLine//ErrMsg )
-
-
    ! -------------------------------------------------------------------------
    ! Initialize mesh-mapping data
    ! -------------------------------------------------------------------------
 
    CALL InitModuleMappings()
+   
+   ! -------------------------------------------------------------------------
+   ! Write initialization data to FAST summary file:
+   ! -------------------------------------------------------------------------
+   
+   CALL FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, 'Message from FAST_WrSum: '//NewLine//ErrMsg )
    
    
    !...............................................................................................................................
@@ -1127,6 +1130,8 @@ CONTAINS
    
    IF ( p_FAST%CompSub ) THEN
    
+      ! NOTE: the AllocMapping routine returns fatal errors if either mesh is not committed
+      
          ! SubDyn transition piece point mesh to/from ElastoDyn point mesh
       CALL AllocMapping( y_SD%Y1mesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from AllocMapping SD_TP_2_ED_P: '//NewLine//ErrMsg )
@@ -1279,6 +1284,12 @@ CONTAINS
       !      
       !   ELSE ! Both enabled
       !      
+      !      CALL ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+      !                                    , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+      !                                    , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
+      !                                    , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+      !                                    , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+      !         CALL CheckError( ErrStat, ErrMsg  )
       !      
       !      
       !   END IF      
@@ -1319,23 +1330,12 @@ CONTAINS
 
       END IF
       
-      !
-      !IF (p_FAST%CompHydro) THEN !jmj doesn't think we need this here (because it's taken care of in ED_HD_InputOutputSolve); however the code doesn't work without it.
-      !   
-      !   CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-      !      
-      !   CALL HydroDyn_CalcOutput( this_time, HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD, ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, 'Message from HD_CalcOutput: '//NewLine//ErrMsg  )
-      !      
-      !END IF
-      
-      
+                       
       IF ( p_FAST%CompServo ) THEN
          
             ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
          IF ( n_t_global < 0 ) THEN
-            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), ED_Output(1), IfW_WriteOutput )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead
+            CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), ED_Output(1), IfW_WriteOutput )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
          ELSE
             CALL SrvD_InputSolve( p_FAST, SrvD_Input(1), ED_Output(1), IfW_WriteOutput, y_SrvD_prev   ) 
          END IF
@@ -1343,18 +1343,6 @@ CONTAINS
          CALL SrvD_CalcOutput( this_time, SrvD_Input(1), p_SrvD, x_SrvD_this, xd_SrvD_this, z_SrvD_this, OtherSt_SrvD, y_SrvD, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from SrvD_CalcOutput: '//NewLine//ErrMsg  )
 
-      END IF
-
-
-
-      IF ( p_FAST%CompSub ) THEN
-         
-         CALL SD_InputSolve( SD_Input(1), ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
-
-         !CALL SD_CalcOutput( this_time, SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD, ErrStat, ErrMsg )
-         !   CALL CheckError( ErrStat, 'Message from SD_CalcOutput: '//NewLine//ErrMsg  )
-                        
       END IF
       
       
@@ -1388,10 +1376,26 @@ CONTAINS
       !
       END IF
 
+      !! HydroDyn and SubDyn inputs...
+      !
+      !IF (p_FAST%CompHydro) THEN 
+      !   
+      !   CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+      !      CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
+      !                  
+      !END IF
+      !      
+      !IF ( p_FAST%CompSub ) THEN
+      !   
+      !   CALL SD_InputSolve( SD_Input(1), ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
+      !      CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
+      !                  
+      !END IF          
       
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
-      ! note: HD_InputSolve and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
+      ! note: HD_InputSolve, SD_InputSolve, and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
       ! note: u_ED_Without_SD_HD must have the same Position, RefOrientation, and Elements as ED_Input(1)%PlatformPtMesh [which we need to do differently if RemapFlag changes during simulation]
+      
       CALL ED_InputSolve( p_FAST, ED_Input(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), y_SD, SD_Input(1), &
                              MeshMapData, u_ED_Without_SD_HD, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
@@ -1413,7 +1417,15 @@ CONTAINS
                CALL CheckError( ErrStat, ErrMsg  )
             
          ELSE ! Both enabled
-
+            
+            CALL ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+                                          , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
+                                          , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
+                                          , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
+                                          , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+               CALL CheckError( ErrStat, ErrMsg  )
+            
+            
          END IF      
          
       ELSEIF ( p_FAST%CompSub ) THEN
