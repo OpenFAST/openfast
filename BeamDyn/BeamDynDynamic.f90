@@ -18,7 +18,7 @@
 !**********************************************************************************************************************************
 MODULE BeamDynDynamic
 
-   USE BeamDynDynamic_Types
+   USE BeamDyn_Types
    USE NWTC_Library
 
    IMPLICIT NONE
@@ -63,6 +63,8 @@ INCLUDE 'BeamDynamic.f90'
 INCLUDE 'Norm.f90'
 INCLUDE 'CGSolver.f90'
 INCLUDE 'UpdateDynamic.f90'
+INCLUDE 'TiSchmPredictorStep.f90'
+INCLUDE 'AppliedNodalLoad.f90'
 INCLUDE 'DynamicSolution.f90'
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -121,8 +123,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 2 
-      p%order    = 5 
+      p%elem_total = 1 
+      p%order    = 2 
       p%dof_node = 6
       p%node_total = p%elem_total * p%order  + 1
       p%dof_total  = p%node_total * p%dof_node
@@ -131,7 +133,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%niter = 100
 
       xl = 0.   ! left most point (on x axis)
-      xr = 10.  ! right most point (on x axis)
+      xr = 1.  ! right most point (on x axis)
       blength = xr - xl
       elem_length = blength / p%elem_total
 

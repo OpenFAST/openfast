@@ -1,6 +1,7 @@
    SUBROUTINE UpdateDynamic(ainc,uf,vf,af,xf,coef,node_total,dof_node)
 
-   REAL(ReKi), INTENT(IN):: ainc(:), coef(:)
+   REAL(ReKi), INTENT(IN):: ainc(:)
+   REAL(DbKi),INTENT(IN)::coef(:)
    INTEGER(IntKi), INTENT(IN):: node_total, dof_node
    REAL(ReKi), INTENT(INOUT):: uf(:),vf(:),af(:),xf(:)
 
@@ -23,9 +24,9 @@
        ENDDO
 
        DO j=1, 6
-           vvNf(temp_id+j) = vvNf(temp_id+j) + coef(7) * ainc(temp_id+j)
-           aaNf(temp_id+j) = aaNf(temp_id+j) + ainc(temp_id+j)
-           xxNf(temp_id+j) = xxNf(temp_id+j) + coef(9) * ainc(temp_id+j)
+           vf(temp_id+j) = vf(temp_id+j) + coef(7) * ainc(temp_id+j)
+           af(temp_id+j) = af(temp_id+j) + ainc(temp_id+j)
+           xf(temp_id+j) = xf(temp_id+j) + coef(9) * ainc(temp_id+j)
        ENDDO
    ENDDO
 

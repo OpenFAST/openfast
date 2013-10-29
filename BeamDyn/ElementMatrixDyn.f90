@@ -1,4 +1,4 @@
-   SUBROUTINE ElementMatrixDyn(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv Naaa hhp,Stif0,m00 mEta0 rho0 Jac,&
+   SUBROUTINE ElementMatrixDyn(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,hhp,Stif0,m00,mEta0,rho0,Jac,&
                             &w,node_elem,nelem,norder,dof_node,elk,elf,elm,elg)
 
    REAL(ReKi),INTENT(IN)::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
@@ -8,7 +8,7 @@
    REAL(ReKi),INTENT(IN)::w(:)
    INTEGER(IntKi),INTENT(IN)::node_elem,nelem,norder,dof_node
 
-   REAL(ReKi),INTENT(INOUT)::elk(:,:),elf(:), elm(:), elg(:)      
+   REAL(ReKi),INTENT(INOUT)::elk(:,:),elf(:), elm(:,:), elg(:,:)      
 
    REAL(ReKi),ALLOCATABLE::Fc_elem(:,:),Fd_elem(:,:),Oe_elem(:,:,:)
    REAL(ReKi),ALLOCATABLE::Pe_elem(:,:,:),Qe_elem(:,:,:),Se_elem(:,:,:)
@@ -172,6 +172,11 @@
        ENDDO
    ENDDO
 
+!   i=1
+!   WRITE(*,*) "Column #:",i
+!   DO i=1,18
+!       WRITE(*,*) elm(i,13),elm(i,14),elm(i,15),elm(i,16),elm(i,17),elm(i,18)
+!   ENDDO 
 
 
    DEALLOCATE(Fc_elem)
@@ -199,5 +204,5 @@
             IF(ALLOCATED(Mi_elem)) DEALLOCATE(Mi_elem)
             IF(ALLOCATED(Gi_elem)) DEALLOCATE(Gi_elem)
         ENDIF
-
+ 
    END SUBROUTINE ElementMatrixDyn

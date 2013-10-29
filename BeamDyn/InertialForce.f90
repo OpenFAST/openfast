@@ -6,6 +6,7 @@
 
    REAL(ReKi)::beta(3),gama(3),nu(3),epsi(3,3),mu(3,3)
    REAL(ReKi)::ome(3),omd(3),tempV(3),tempA(3)
+   INTEGER(IntKi)::i
 
    ! Prepare
    ome(:) = vvv(4:6)
@@ -23,7 +24,9 @@
 
    !Mass Matrix
    Mi = 0.0D0
-   Mi(1:3,1:3) = m00*I3(3,3)
+   DO i=1,3
+       Mi(i,i) = m00
+   ENDDO
    Mi(1:3,4:6) = TRANSPOSE(Tilde(mEta))
    Mi(4:6,1:3) = Tilde(mEta)
    Mi(4:6,4:6) = rho
@@ -31,7 +34,7 @@
    !Gyroscopic Matrix
    Gi = 0.0D0
    epsi = MATMUL(Tilde(ome),rho)
-   mu = MATMUL(Tilde(ome),TRANSPOSE(Tilde(mEta))
+   mu = MATMUL(Tilde(ome),TRANSPOSE(Tilde(mEta)))
    Gi(1:3,4:6) = TRANSPOSE(Tilde(beta)) + mu
    Gi(4:6,4:6) = epsi - Tilde(gama)
 
@@ -39,9 +42,13 @@
    Ki = 0.0D0
    Ki(1:3,4:6) = MATMUL(Tilde(omd),TRANSPOSE(Tilde(mEta))) +&
                 &MATMUL(Tilde(ome),mu)
-   Ki(4:6,4:6) = MATMUL(Tilde(tempA),Tilde(mEta) + &
+   Ki(4:6,4:6) = MATMUL(Tilde(tempA),Tilde(mEta)) + &
                 &MATMUL(rho,Tilde(omd)) - Tilde(nu) +&
                 &MATMUL(epsi,Tilde(ome)) - &
                 &MATMUL(Tilde(ome),Tilde(gama))
+!   WRITE(*,*) "Ki at Node #"
+!   DO i=1,6
+!       WRITE(*,*) Ki(i,1),Ki(i,2),Ki(i,3),Ki(i,4),Ki(i,5),Ki(i,6)
+!   ENDDO
 
    END SUBROUTINE InertialForce

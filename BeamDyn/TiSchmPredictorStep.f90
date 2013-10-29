@@ -1,6 +1,7 @@
    SUBROUTINE TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
 
-   REAL(ReKi),INTENT(IN)::uuNi(:),vvNi(:),aaNi(:),xxNi(:),coef(:),deltat
+   REAL(ReKi),INTENT(IN)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
+   REAL(DbKi),INTENT(IN)::deltat,coef(:)
    REAL(ReKi),INTENT(INOUT)::uuNf(:),vvNf(:),aaNf(:),xxNf(:)
 
    INTEGER(IntKi),INTENT(IN)::node_total,dof_node

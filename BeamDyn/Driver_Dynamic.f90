@@ -22,7 +22,7 @@
 PROGRAM MAIN
 
    USE BeamDynDynamic
-   USE BeamDynDynamic_Types
+   USE BeamDyn_Types
 
    USE NWTC_Library
 
@@ -35,7 +35,7 @@ PROGRAM MAIN
 
    REAL(DbKi)                         :: dt_global        ! fixed/constant global time step
 
-   REAL(DbKi)::t_intitial
+   REAL(DbKi)::t_initial
    REAL(DbKi)::t_final
    REAL(DbKi)::rhoinf,alfam,alfaf,gama,beta
    REAL(DbKi)::coef(9)
@@ -71,6 +71,22 @@ PROGRAM MAIN
    Integer(IntKi)                     :: j               ! counter for various loops
 
 
+   INTERFACE
+       SUBROUTINE TiSchmComputeCoefficients(beta,gama,dt_global,alfam,alfaf,coef)
+       USE BeamDyn_Types
+       REAL(DbKi),INTENT(IN)::beta,gama,alfam,alfaf
+       REAL(DbKi),INTENT(IN)::dt_global
+       REAL(DbKi),INTENT(INOUT)::coef(:)
+       END SUBROUTINE TiSchmComputeCoefficients
+   END INTERFACE
+
+   INTERFACE
+      SUBROUTINE UpdateStructuralConfiguration(uuNf,vvNf,aaNf,xxNf,uuNi,vvNi,aaNi,xxNi)
+      USE BeamDyn_Types
+      REAL(ReKi),INTENT(IN)::uuNf(:),vvNf(:),aaNf(:),xxNf(:)
+      REAL(ReKi),INTENT(INOUT)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
+      END SUBROUTINE UpdateStructuralConfiguration
+   END INTERFACE
 
    t_initial = 0.0D0
    t_final = 0.04d0
@@ -102,7 +118,7 @@ PROGRAM MAIN
                    , BDyn_ConstraintState  &
                    , BDyn_OtherState       &
                    , BDyn_Output(1)        &
-                   , dt_global_dummy       &
+                   , dt_global       &
                    , BDyn_InitOutput       &
                    , ErrStat               &
                    , ErrMsg )
@@ -124,7 +140,7 @@ PROGRAM MAIN
                         &BDyn_OtherState%xxNi,BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,&
                         &BDyn_OtherState%xxNf,BDyn_Parameter%gll_deriv, BDyn_Parameter%gll_w,BDyn_Parameter%Jacobian,&
                         &BDyn_Parameter%Stif0,BDyn_Parameter%m00,BDyn_Parameter%mEta0,BDyn_Parameter%rho0,BDyn_Parameter%bc,&
-                        &&BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%order,&
+                        &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node, BDyn_Parameter%order,&
                         &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%dof_elem,&
                         &coef,BDyn_Parameter%niter,dt_global,StepEndTime)
                         
@@ -189,10 +205,12 @@ END PROGRAM MAIN
 
    SUBROUTINE TiSchmComputeParameters(rhoinf, alfam,alfaf,gama,beta)
 
-   REAL(ReKi),INTENT(IN)::rhoinf
-   REAL(ReKi),INTENT(INOUT)::alfam, alfaf, gama, beta
+   USE BeamDyn_Types
 
-   REAL(ReKi)::tr0
+   REAL(DbKi),INTENT(IN)::rhoinf
+   REAL(DbKi),INTENT(INOUT)::alfam, alfaf, gama, beta
+
+   REAL(DbKi)::tr0
 
 
    tr0 = rhoinf + 1.0D0
@@ -207,11 +225,16 @@ END PROGRAM MAIN
    
    SUBROUTINE TiSchmComputeCoefficients(beta,gama,deltat,alfaM,alfaF,coef)
 
-   REAL(ReKi),INTENT(IN)::beta, gama, deltat, alfaM, alfaF
+   USE BeamDyn_Types
 
-   REAL(ReKi),INTENT(INOUT):: coef(:)
+   REAL(DbKi),INTENT(IN)::beta, gama, alfaM, alfaF
 
-   REAL(ReKi)::deltat2, oalfaM, tr0, tr1, tr2
+   REAL(DbKi),INTENT(IN)::deltat
+
+   REAL(DbKi),INTENT(INOUT):: coef(:)
+
+   REAL(DbKi)::oalfaM, tr0, tr1, tr2
+   REAL(DbKi)::deltat2
 
    deltat2 = deltat * deltat
    oalfaM = 1.0D0 - alfaM
@@ -235,7 +258,10 @@ END PROGRAM MAIN
 
    SUBROUTINE UpdateStructuralConfiguration(uuNf,vvNf,aaNf,xxNf,uuNi,vvNi,aaNi,xxNi)
    
+   USE BeamDyn_Types
+
    REAL(ReKi),INTENT(IN)::uuNf(:),vvNf(:),aaNf(:),xxNf(:)
+
    REAL(ReKi),INTENT(INOUT)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
     
    uuNi = uuNf

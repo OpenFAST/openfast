@@ -84,6 +84,7 @@
 
 !   WRITE(*,*) "Stif at Node #"
 !   DO i=1,6
-!       WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
+!       WRITE(*,*) Qe(i,1), Qe(i,2), Qe(i,3), Qe(i,4), Qe(i,5), Qe(i,6)
 !   ENDDO
+!   STOP
    END SUBROUTINE ElasticForce
