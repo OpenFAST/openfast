@@ -114,9 +114,8 @@ MODULE FAST_Types
       
       
          ! Stored Jacobians:
-      REAL(ReKi)                  :: Jac_ED_HD (SizeJac_ED_HD , SizeJac_ED_HD)      ! Stored Jacobian in ED_HD_InputOutputSolve
-      REAL(ReKi)                  :: Jac_ED_SD (SizeJac_ED_SD , SizeJac_ED_SD)      ! Stored Jacobian in ED_SD_InputOutputSolve
-      REAL(ReKi),     ALLOCATABLE :: Jac_ED_SD_HD(:,:)                              ! Stored Jacobian in ED_SD_HD_InputOutputSolve      
+      REAL(ReKi),     ALLOCATABLE :: Jacobian_ED_SD_HD(:,:)                         ! Stored Jacobian in ED_HD_InputOutputSolve, ED_SD_InputOutputSolve, or ED_SD_HD_InputOutputSolve      
+      INTEGER ,       ALLOCATABLE :: Jacobian_pivot(:)                              ! Pivot array used for LU decomposition of Jacobian_ED_SD_HD
       INTEGER ,       ALLOCATABLE :: Jac_u_indx(:,:)                                ! matrix to help fill/pack the u vector in computing the jacobian
       
    END TYPE FAST_ModuleMapType

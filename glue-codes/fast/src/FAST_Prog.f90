@@ -1047,98 +1047,114 @@ CONTAINS
    SUBROUTINE InitModuleMappings()
    ! This routine initializes all of the mapping data structures needed between the various modules.
    !...............................................................................................................................
-
    
-   IF ( p_FAST%CompHydro ) THEN ! HydroDyn-{ElastoDyn or SubDyn}
+      IF ( p_FAST%CompHydro ) THEN ! HydroDyn-{ElastoDyn or SubDyn}
       
-      IF ( .NOT. p_FAST%CompSub ) THEN ! these get mapped to ElastoDyn
       
-         IF ( y_HD%WAMIT%Mesh%Committed  ) THEN
+         IF ( .NOT. p_FAST%CompSub ) THEN ! these get mapped to ElastoDyn
+                                    
+            CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, ErrMsg )
+      
+            IF ( y_HD%WAMIT%Mesh%Committed  ) THEN
 
-               ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
-            CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
-            CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
+                  ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
+               CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
+               CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
 
-         END IF            
+            END IF            
             
-         IF ( y_HD%Morison%LumpedMesh%Committed ) THEN
+            IF ( y_HD%Morison%LumpedMesh%Committed ) THEN
 
-                  ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
-               CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
-               CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
+                     ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
+                  CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
+                  CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
 
-         END IF               
+            END IF               
                
-         IF ( y_HD%Morison%DistribMesh%Committed ) THEN
-                  ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
-               CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
-               CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
+            IF ( y_HD%Morison%DistribMesh%Committed ) THEN
+                     ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
+                  CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
+                  CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
 
-         END IF
+            END IF
 
-      ELSE ! these get mapped to SubDyn (in ED_SD_HD coupling)
+         ELSE ! these get mapped to SubDyn (in ED_SD_HD coupling)
                   
-         CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_Input(1)%PlatformPtMesh, SD_Input(1)%TPMesh, SD_Input(1)%LMesh, &
-                                     HD_Input(1)%Morison%LumpedMesh, HD_Input(1)%Morison%DistribMesh, ErrStat, ErrMsg)
+            CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_Input(1)%PlatformPtMesh, SD_Input(1)%TPMesh, SD_Input(1)%LMesh, &
+                                        HD_Input(1)%Morison%LumpedMesh, HD_Input(1)%Morison%DistribMesh, ErrStat, ErrMsg)
          
                      
-            ! HydroDyn Morison point mesh to SubDyn point mesh
-         IF ( y_HD%Morison%LumpedMesh%Committed .AND. SD_Input(1)%LMesh%Committed ) THEN
+               ! HydroDyn Morison point mesh to SubDyn point mesh
+            IF ( y_HD%Morison%LumpedMesh%Committed .AND. SD_Input(1)%LMesh%Committed ) THEN
             
-            CALL AllocMapping( y_HD%Morison%LumpedMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_P_2_SD_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_SD_P: '//NewLine//ErrMsg )              
-            CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_P: '//NewLine//ErrMsg )
+               CALL AllocMapping( y_HD%Morison%LumpedMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_P_2_SD_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_SD_P: '//NewLine//ErrMsg )              
+               CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_P: '//NewLine//ErrMsg )
                               
-         END IF
+            END IF
             
-            ! HydroDyn Morison line mesh to SubDyn point mesh
-         IF ( y_HD%Morison%DistribMesh%Committed .AND. SD_Input(1)%LMesh%Committed) THEN
-            CALL AllocMapping( y_HD%Morison%DistribMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_SD_P: '//NewLine//ErrMsg )
-            CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_L: '//NewLine//ErrMsg )
+               ! HydroDyn Morison line mesh to SubDyn point mesh
+            IF ( y_HD%Morison%DistribMesh%Committed .AND. SD_Input(1)%LMesh%Committed) THEN
+               CALL AllocMapping( y_HD%Morison%DistribMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_SD_P: '//NewLine//ErrMsg )
+               CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_L: '//NewLine//ErrMsg )
+            END IF
+
+         
+               ! HydroDyn WAMIT mesh must not be used !BJJ: seems like this is a moot point, but we'll check anyway.
+            IF ( y_HD%WAMIT%Mesh%Committed ) THEN
+               CALL CheckError( ErrID_FATAL, "When SubDyn is used, HydroDyn cannot contain a (committed) WAMIT mesh." )
+            END IF                     
+         
+         
+         END IF ! HydroDyn-SubDyn
+    
+      END IF !HydroDyn-{ElastoDyn or SubDyn}
+
+      IF ( p_FAST%CompMap ) THEN
+      
+            ! MAP point mesh to/from ElastoDyn point mesh
+         CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
+         CALL AllocMapping( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
+      
+      END IF   ! MAP-ElastoDyn
+   
+   
+      IF ( p_FAST%CompSub ) THEN
+               
+         IF ( .NOT. p_FAST%CompHydro ) THEN
+            CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_SD, SizeJac_ED_SD, 'Jacobian for ED-SD coupling', ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, ErrMsg )
          END IF
-
-         
-            ! HydroDyn WAMIT mesh must not be used !BJJ: seems like this is a moot point, but we'll check anyway.
-         IF ( y_HD%WAMIT%Mesh%Committed ) THEN
-            CALL CheckError( ErrID_FATAL, "When SubDyn is used, HydroDyn cannot contain a (committed) WAMIT mesh." )
-         END IF                     
-         
-         
-      END IF ! HydroDyn-SubDyn
       
-   END IF !HydroDyn-{ElastoDyn or SubDyn}
-
-   IF ( p_FAST%CompMap ) THEN
       
-         ! MAP point mesh to/from ElastoDyn point mesh
-      CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
-      CALL AllocMapping( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
+         ! NOTE: the AllocMapping routine returns fatal errors if either mesh is not committed
       
-   END IF   ! MAP-ElastoDyn
+            ! SubDyn transition piece point mesh to/from ElastoDyn point mesh
+         CALL AllocMapping( y_SD%Y1mesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AllocMapping SD_TP_2_ED_P: '//NewLine//ErrMsg )
+         CALL AllocMapping( ED_Output(1)%PlatformPtMesh, SD_Input(1)%TPMesh,  MeshMapData%ED_P_2_SD_TP, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_SD_TP: '//NewLine//ErrMsg )      
    
-   
-   IF ( p_FAST%CompSub ) THEN
-   
-      ! NOTE: the AllocMapping routine returns fatal errors if either mesh is not committed
+      END IF ! SubDyn-ElastoDyn
       
-         ! SubDyn transition piece point mesh to/from ElastoDyn point mesh
-      CALL AllocMapping( y_SD%Y1mesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping SD_TP_2_ED_P: '//NewLine//ErrMsg )
-      CALL AllocMapping( ED_Output(1)%PlatformPtMesh, SD_Input(1)%TPMesh,  MeshMapData%ED_P_2_SD_TP, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_SD_TP: '//NewLine//ErrMsg )      
    
-   END IF ! SubDyn-ElastoDyn
+      IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD ) ) THEN   
+         CALL AllocAry( MeshMapData%Jacobian_pivot, SIZE(MeshMapData%Jacobian_ED_SD_HD), 'Pivot array for Jacobian LU decomposition', ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, ErrMsg )
+      END IF
+   
 
 
    END SUBROUTINE InitModuleMappings
@@ -1542,8 +1558,10 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%ED_P_2_SD_TP,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL MeshMapDestroy( MeshMapData%SD_TP_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))                  
       
-      IF ( ALLOCATED(MeshMapData%Jac_ED_SD_HD   ) ) DEALLOCATE(MeshMapData%Jac_ED_SD_HD   ) 
-      IF ( ALLOCATED(MeshMapData%Jac_u_indx     ) ) DEALLOCATE(MeshMapData%Jac_u_indx     ) 
+      IF ( ALLOCATED(MeshMapData%Jacobian_ED_SD_HD   ) ) DEALLOCATE(MeshMapData%Jacobian_ED_SD_HD   ) 
+      IF ( ALLOCATED(MeshMapData%Jacobian_pivot      ) ) DEALLOCATE(MeshMapData%Jacobian_pivot      ) 
+      IF ( ALLOCATED(MeshMapData%Jac_u_indx          ) ) DEALLOCATE(MeshMapData%Jac_u_indx          ) 
+            
       
       CALL MeshDestroy(    u_ED_Without_SD_HD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       ! -------------------------------------------------------------------------
