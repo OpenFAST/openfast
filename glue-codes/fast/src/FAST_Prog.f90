@@ -1048,6 +1048,39 @@ CONTAINS
    ! This routine initializes all of the mapping data structures needed between the various modules.
    !...............................................................................................................................
    
+   INTEGER   :: K       ! loop counter
+   INTEGER   :: NumBl   ! number of blades
+   
+   
+      IF ( p_FAST%CompAero ) THEN ! ED-AD
+         
+         ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
+         NumBl = SIZE(ED_Input(1)%BladeLn2Mesh,1)            
+         ALLOCATE( MeshMapData%ED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_ED_L_B(NumBl), STAT=ErrStat )
+            IF ( ErrStat /= 0 ) THEN
+               CALL CheckError( ErrID_Fatal, "Error allocating MeshMapData%ED_L_2_AD_L_B and MeshMapData%AD_L_2_ED_L_B")
+            END IF
+         
+         DO K=1,NumBl         
+            CALL AllocMapping( ED_Output(1)%BladeLn2Mesh(K), AD_Input(1)%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping ED_L_2_AD_L_('//TRIM(Num2LStr(K))//'): '//NewLine//ErrMsg )
+            CALL AllocMapping( y_AD%OutputLoads(K), ED_Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping AD_L_2_ED_L_('//TRIM(Num2LStr(K))//'): '//NewLine//ErrMsg )         
+         END DO
+         
+         
+         ! Tower mesh:
+         IF ( AD_Input(1)%Twr_InputMarkers%Committed ) THEN
+            CALL AllocMapping( ED_Output(1)%TowerLn2Mesh, AD_Input(1)%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping ED_L_2_AD_L_T: '//NewLine//ErrMsg )
+            CALL AllocMapping( y_AD%Twr_OutputLoads, ED_Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from AllocMapping AD_L_2_ED_L_T: '//NewLine//ErrMsg )
+         END IF
+                  
+      END IF
+   
+   
+   
       IF ( p_FAST%CompHydro ) THEN ! HydroDyn-{ElastoDyn or SubDyn}
       
       
@@ -1174,9 +1207,10 @@ CONTAINS
       ED_Output(1)%PlatformPtMesh%RemapFlag     = .FALSE.
       ED_Input( 1)%TowerLn2Mesh%RemapFlag       = .FALSE.
       ED_Output(1)%TowerLn2Mesh%RemapFlag       = .FALSE.
-      ED_Input( 1)%BladeLn2Mesh%RemapFlag       = .FALSE.
-      ED_Output(1)%BladeLn2Mesh%RemapFlag       = .FALSE.
-
+      DO K=1,SIZE(ED_Input(1)%BladeLn2Mesh)
+         ED_Input( 1)%BladeLn2Mesh(K)%RemapFlag = .FALSE.
+         ED_Output(1)%BladeLn2Mesh(K)%RemapFlag = .FALSE.
+      END DO
              
       ! AeroDyn meshes
       IF ( p_FAST%CompAero ) THEN
@@ -1332,7 +1366,7 @@ CONTAINS
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             
       IF ( p_FAST%CompAero ) THEN
-         CALL AD_InputSolve( AD_Input(1), ED_Output(1), ErrStat, ErrMsg )
+         CALL AD_InputSolve( AD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from AD_InputSolve: '//NewLine//ErrMsg  )
          
          CALL AD_CalcOutput( this_time, AD_Input(1), p_AD, x_AD_this, xd_AD_this, z_AD_this, OtherSt_AD, y_AD, ErrStat, ErrMsg )
@@ -1544,26 +1578,10 @@ CONTAINS
       ! Deallocate/Destroy structures associated with mesh mapping
       ! -------------------------------------------------------------------------
 
-      CALL MeshMapDestroy( MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MeshMapDestroy( MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MeshMapDestroy( MeshMapData%HD_M_L_2_ED_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-
-      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-
-      CALL MeshMapDestroy( MeshMapData%ED_P_2_MAP_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MeshMapDestroy( MeshMapData%MAP_P_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-            
-      CALL MeshMapDestroy( MeshMapData%ED_P_2_SD_TP,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MeshMapDestroy( MeshMapData%SD_TP_2_ED_P,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))                  
-      
-      IF ( ALLOCATED(MeshMapData%Jacobian_ED_SD_HD   ) ) DEALLOCATE(MeshMapData%Jacobian_ED_SD_HD   ) 
-      IF ( ALLOCATED(MeshMapData%Jacobian_pivot      ) ) DEALLOCATE(MeshMapData%Jacobian_pivot      ) 
-      IF ( ALLOCATED(MeshMapData%Jac_u_indx          ) ) DEALLOCATE(MeshMapData%Jac_u_indx          ) 
-            
-      
+      CALL Destroy_FAST_ModuleMapType( MeshMapData, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+                        
       CALL MeshDestroy(    u_ED_Without_SD_HD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      
       ! -------------------------------------------------------------------------
       ! variables for ExtrapInterp:
       ! -------------------------------------------------------------------------

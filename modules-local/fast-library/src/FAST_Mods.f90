@@ -87,10 +87,11 @@ MODULE FAST_Types
    END TYPE  FAST_OutputType
 
 
-   TYPE, PUBLIC :: FAST_ModuleMapType
+   TYPE, PUBLIC :: FAST_ModuleMapType ! make sure anything added in this type gets destroyed in Destroy_FAST_ModuleMapType
 
          ! Data structures for mapping the various modules together
 
+            ! ED <-> HD
       TYPE(MeshMapType)                 :: ED_P_2_HD_W_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
       TYPE(MeshMapType)                 :: HD_W_P_2_ED_P                            ! Map HydroDyn WAMIT Point to ElastoDyn PlatformPtMesh
       
@@ -100,19 +101,29 @@ MODULE FAST_Types
       TYPE(MeshMapType)                 :: ED_P_2_HD_M_L                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2                               
       TYPE(MeshMapType)                 :: HD_M_L_2_ED_P                            ! Map HydroDyn Morison Line2 to ElastoDyn PlatformPtMesh
 
+            ! ED <-> MAP
       TYPE(MeshMapType)                 :: ED_P_2_MAP_P                             ! Map ElastoDyn PlatformPtMesh to MAP point mesh
       TYPE(MeshMapType)                 :: MAP_P_2_ED_P                             ! Map MAP point mesh to ElastoDyn PlatformPtMesh
             
+            ! ED <-> SD
       TYPE(MeshMapType)                 :: ED_P_2_SD_TP                             ! Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh
       TYPE(MeshMapType)                 :: SD_TP_2_ED_P                             ! Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh
                   
+            ! SD <-> HD
       TYPE(MeshMapType)                 :: SD_P_2_HD_M_P                            ! Map SubDyn y2Mesh Point to HydroDyn Morison Point
       TYPE(MeshMapType)                 :: HD_M_P_2_SD_P                            ! Map HydroDyn Morison Point to SubDyn y2Mesh Point
       
       TYPE(MeshMapType)                 :: SD_P_2_HD_M_L                            ! Map SubDyn y2Mesh Point to HydroDyn Morison Line2                               
       TYPE(MeshMapType)                 :: HD_M_L_2_SD_P                            ! Map HydroDyn Morison Line2 to SubDyn y2Mesh Point
       
-      
+         ! ED <-> AD
+      TYPE(MeshMapType), ALLOCATABLE    :: ED_L_2_AD_L_B(:)                         ! Map ElastoDyn BladeLn2Mesh line2 mesh to AeroDyn InputMarkers line2 mesh
+      TYPE(MeshMapType), ALLOCATABLE    :: AD_L_2_ED_L_B(:)                         ! Map AeroDyn InputMarkers line2 mesh to ElastoDyn BladeLn2Mesh line2 mesh
+         
+      TYPE(MeshMapType)                 :: ED_L_2_AD_L_T                            ! Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn Twr_InputMarkers line2 mesh
+      TYPE(MeshMapType)                 :: AD_L_2_ED_L_T                            ! Map AeroDyn Twr_InputMarkers line2 mesh to ElastoDyn TowerLn2Mesh line2 mesh
+         
+            
          ! Stored Jacobians:
       REAL(ReKi),     ALLOCATABLE :: Jacobian_ED_SD_HD(:,:)                         ! Stored Jacobian in ED_HD_InputOutputSolve, ED_SD_InputOutputSolve, or ED_SD_HD_InputOutputSolve      
       INTEGER ,       ALLOCATABLE :: Jacobian_pivot(:)                              ! Pivot array used for LU decomposition of Jacobian_ED_SD_HD
@@ -179,7 +190,92 @@ MODULE FAST_Types
       
    END TYPE FAST_ParameterType
 
+   
+CONTAINS
+!..................................................................................................................................
+   SUBROUTINE Destroy_FAST_ModuleMapType( MeshMapData, ErrStat, ErrMsg )
 
+   TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData               ! Data for mapping between modules
+   INTEGER(IntKi),                 INTENT(OUT  )  :: ErrStat                   ! Error status
+   CHARACTER(*),                   INTENT(OUT  )  :: ErrMsg                    ! Message associated with errro status
+   
+   ! local variables
+   INTEGER(IntKi)                                 :: k                         ! loop counter  
+   INTEGER(IntKi)                                 :: ErrStat2                  ! Temporary Error status
+   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                   ! Temporary Error message
+                                    
+      ErrStat = ErrID_None
+      ErrMsg = ""
+   
+            ! ED <-> HD
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 ); CALL CheckError( )
+
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2 ); CALL CheckError( )
+
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%HD_M_L_2_ED_P, ErrStat2, ErrMsg2 ); CALL CheckError( )
+
+            ! ED <-> MAP
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_MAP_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%MAP_P_2_ED_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+                  
+            ! ED <-> SD
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_SD_TP,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%SD_TP_2_ED_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )                  
+      
+      
+            ! SD <-> HD
+      CALL MeshMapDestroy( MeshMapData%SD_P_2_HD_M_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%HD_M_P_2_SD_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      
+      CALL MeshMapDestroy( MeshMapData%SD_P_2_HD_M_L,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%HD_M_L_2_SD_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      
+                 
+         ! ED <-> AD
+      IF ( ALLOCATED( MeshMapData%ED_L_2_AD_L_B ) ) THEN                  
+         DO K=1,SIZE( MeshMapData%ED_L_2_AD_L_B, 1 )
+            CALL MeshMapDestroy( MeshMapData%ED_L_2_AD_L_B(K),  ErrStat2, ErrMsg2 ); CALL CheckError( )            
+         END DO
+
+         DEALLOCATE( MeshMapData%ED_L_2_AD_L_B )
+      END IF
+      
+      IF ( ALLOCATED( MeshMapData%AD_L_2_ED_L_B ) ) THEN         
+         DO K=1,SIZE( MeshMapData%AD_L_2_ED_L_B, 1 )
+            CALL MeshMapDestroy( MeshMapData%AD_L_2_ED_L_B(K),  ErrStat2, ErrMsg2 ); CALL CheckError( )            
+         END DO
+
+         DEALLOCATE( MeshMapData%AD_L_2_ED_L_B )
+      END IF
+                             
+      CALL MeshMapDestroy( MeshMapData%ED_L_2_AD_L_T,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%AD_L_2_ED_L_T,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      
+      
+      
+         ! Stored Jacobians:
+      IF ( ALLOCATED(MeshMapData%Jacobian_ED_SD_HD   ) ) DEALLOCATE(MeshMapData%Jacobian_ED_SD_HD   ) 
+      IF ( ALLOCATED(MeshMapData%Jacobian_pivot      ) ) DEALLOCATE(MeshMapData%Jacobian_pivot      ) 
+      IF ( ALLOCATED(MeshMapData%Jac_u_indx          ) ) DEALLOCATE(MeshMapData%Jac_u_indx          ) 
+   
+   CONTAINS
+   
+      SUBROUTINE CheckError( )
+      
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            ErrStat = MAX(ErrStat, ErrStat2)           
+            IF ( LEN_TRIM(ErrMsg) > 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg = TRIM(ErrMsg)//TRIM(ErrMsg2)
+         END IF
+            
+      END SUBROUTINE CheckError
+   
+   
+   END SUBROUTINE Destroy_FAST_ModuleMapType
+!..................................................................................................................................  
 END MODULE FAST_Types
 !=======================================================================
 
