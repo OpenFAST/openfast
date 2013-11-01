@@ -22,7 +22,7 @@
    REAL(ReKi)::F_ext(dof_total)
 
    REAL(ReKi)::ai(dof_total),rel_change(dof_total),ai_old(dof_total)
-   REAL(ReKi),PARAMETER:: TOLF = 1.0d-20   
+   REAL(ReKi),PARAMETER:: TOLF = 1.0d-5   
 
    INTEGER(IntKi)::i,j,k
 
@@ -32,7 +32,7 @@
 
    DO i=1,niter
        WRITE(*,*) "# of N-R Iteration", i
-       IF(i==2) STOP
+!       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -78,11 +78,11 @@
            
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
-       DO j=1,dof_total
-           WRITE(*,*) "j=",j
-           WRITE(*,*) "xxNf(j)=",xxNf(j)
-       ENDDO
-       STOP
+!       DO j=1,dof_total
+!           WRITE(*,*) "j=",j
+!           WRITE(*,*) "xxNf(j)=",xxNf(j)
+!       ENDDO
+!       STOP
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            STOP

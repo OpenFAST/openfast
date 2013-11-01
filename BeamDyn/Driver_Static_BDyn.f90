@@ -64,6 +64,12 @@ PROGRAM MAIN
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
 
+   OPEN(unit = 10, file = 'Displacement_u1.dat', status = 'unknown')
+   OPEN(unit = 20, file = 'Displacement_u2.dat', status = 'unknown')
+   OPEN(unit = 30, file = 'Displacement_u3.dat', status = 'unknown')
+   OPEN(unit = 40, file = 'Rotation_p1.dat', status = 'unknown')
+   OPEN(unit = 50, file = 'Rotation_p2.dat', status = 'unknown')
+   OPEN(unit = 60, file = 'Rotation_p3.dat', status = 'unknown')
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
@@ -136,8 +142,14 @@ PROGRAM MAIN
                       &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%dof_elem,&
                       &BDyn_Parameter%niter)   
 
-   DO i=1,BDyn_Parameter%dof_total
-       WRITE(*,*) BDyn_OtherState%uuNf(i)
+   DO i=1,BDyn_Parameter%node_total
+       j = (i - 1) * BDyn_Parameter%dof_node
+       WRITE(10,*) BDyn_OtherState%uuNf(j+1)
+       WRITE(20,*) BDyn_OtherState%uuNf(j+2)
+       WRITE(30,*) BDyn_OtherState%uuNf(j+3)
+       WRITE(40,*) BDyn_OtherState%uuNf(j+4)
+       WRITE(50,*) BDyn_OtherState%uuNf(j+5)
+       WRITE(60,*) BDyn_OtherState%uuNf(j+6)
    ENDDO
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &
