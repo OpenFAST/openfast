@@ -24,6 +24,12 @@
    fff = 0.0D0 
    fff = MATMUL(Stif,eee)
 
+!   DO i=1,6
+!      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
+!   ENDDO
+!   DO i=1,6
+!      WRITE(*,*) eee(i)
+!   ENDDO
    Wrk = 0.0D0     
    Wrk = MATMUL(TRANSPOSE(RR0),tempS)
    e1s = Wrk(1)      !epsilon_{11} in material basis
@@ -37,6 +43,9 @@
        fff(i+3) = fff(i+3) + cet*e1s*k1s*RR0(i,1)
    ENDDO 
 
+!   DO i=1,6
+!      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
+!   ENDDO
    Fc = 0.0D0
    Fc = fff
    Wrk = 0.0D0 

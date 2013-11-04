@@ -17,7 +17,7 @@
    REAL(ReKi),ALLOCATABLE::elm(:,:),elg(:,:)
 
 
-   INTEGER(IntKi)::i,allo_stat
+   INTEGER(IntKi)::i,allo_stat,j
    INTEGER(IntKi)::rot_elem
 
    rot_elem = dof_elem / 2
@@ -87,6 +87,10 @@
        elk = 0.0D0    
        elm = 0.0D0    
        elg = 0.0D0    
+!       DO j=1,dof_elem
+!           WRITE(*,*) "j = ",j
+!           WRITE(*,*) "Naaa = ",Naaa(j)
+!       ENDDO       
        CALL ElementMatrixDyn(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,hhp,Stif0,m00,mEta0,rho0,Jacobian,&
                           &w,node_elem,i,norder,dof_node,elk,elf,elm,elg)
        !Assemble Elemental Matrices into Global Matrices
