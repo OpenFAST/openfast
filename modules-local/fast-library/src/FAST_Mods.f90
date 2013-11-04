@@ -41,9 +41,7 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Floating  = 3
    
-   
-   
-   
+         
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    

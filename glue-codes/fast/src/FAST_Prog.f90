@@ -458,8 +458,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ED_Output(1)%PlatformPtMesh%RotationAcc    = 0.0_ReKi
    
    IF (y_SD%y2Mesh%committed) THEN
-      y_SD%y2Mesh%TranslationAcc = 0.0_ReKi
-      y_SD%y2Mesh%RotationAcc    = 0.0_ReKi
+      !y_SD%y2Mesh%TranslationAcc = 0.0_ReKi
+      !y_SD%y2Mesh%RotationAcc    = 0.0_ReKi
    END IF
       
   
