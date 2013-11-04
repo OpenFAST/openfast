@@ -11,6 +11,15 @@ All components:
 * check for fft and LAPACK licensing requirements...
 * TESTING!!!!!
 
+
+-------------------------------------------------
+Potential optimizations:
+-------------------------------------------------
+* Replace MATMUL() with DGEMM/SGEMM  from BLAS; this will also replace TRANSPOSE in the equations   [should help reduce stack issues?]
+* Replace "WHERE / ENDWHERE" construct
+
+
+
 -------------------------------------------------
 FAST
 -------------------------------------------------

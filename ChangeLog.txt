@@ -3968,3 +3968,5 @@ FAST v8.03.02b-bjj 3-Oct-2013 B. Jonkman
   We distribute under the Apache 2.0 license.
 
 
+FAST v8.04.00a-bjj 10-Oct-2013 B. Jonkman
+  I added the coupling ED-HD-SD coupling so that HD and SD can be used together.
