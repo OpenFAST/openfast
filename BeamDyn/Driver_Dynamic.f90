@@ -133,7 +133,9 @@ PROGRAM MAIN
 
 
    DO n_t_global = 0,n_t_final
-
+       WRITE(*,*) "***TIME STEP NO: ",n_t_global+1
+       WRITE(*,*) "***INITIAL TIME = ", (n_t_global)*dt_global
+       IF(n_t_global==2) STOP
        StepEndTime = StepEndTime + (n_t_global + 1) * dt_global
 
        CALL DynamicSolution(BDyn_Parameter%uuN0,BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,&
@@ -147,11 +149,11 @@ PROGRAM MAIN
        CALL UpdateStructuralConfiguration(BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,BDyn_OtherState%xxNf,&
                                          &BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,BDyn_OtherState%xxNi)
 
+       DO i=BDyn_Parameter%dof_total-5,BDyn_Parameter%dof_total
+           WRITE(*,*) BDyn_OtherState%uuNf(i)
+       ENDDO
    ENDDO    
 
-   DO i=1,BDyn_Parameter%dof_total
-       WRITE(*,*) BDyn_OtherState%uuNf(i)
-   ENDDO
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &
 !                                   BDyn_DiscreteState_pred, BDyn_ConstraintState_pred, &

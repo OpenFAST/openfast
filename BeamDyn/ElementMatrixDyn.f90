@@ -86,7 +86,10 @@
                       &node_elem,nelem,i,norder,dof_node,&
                       &E1,RR0,kapa,Stif,cet)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
-       
+!   k = 0    
+!   DO j=1,3
+!       WRITE(*,*) "kapa(j) = ", kapa(j)
+!   ENDDO
        CALL NodalDataMass(RR0, mEta0, rho0, mEta, rho)
        CALL InertialForce(m00, mEta, rho, Nvvv, Naaa, Fi, Mi, Gi, Ki)
        Fc_elem(1:6,i) = Fc(1:6)

@@ -6,6 +6,7 @@
 
    INTEGER(IntKi)::i,temp_id
 
+
    DO i=1,node_elem
        temp_id = (i-1)*dof_node  
        E10(1) = E10(1) + hhp(i,nnode)*Nuu0(temp_id+1)

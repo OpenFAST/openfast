@@ -31,8 +31,8 @@
    ai = 0.0D0
 
    DO i=1,niter
-       WRITE(*,*) "# of N-R Iteration", i
-!       IF(i==3) STOP
+       WRITE(*,*) "N-R Iteration #", i
+       IF(i==100) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -61,6 +61,7 @@
 !       STOP
        errf = 0.0D0
        CALL Norm(dof_total,RHS,errf)
+       WRITE(*,*) "Norm(RHS) = ", errf
        IF(errf .LE. TOLF) RETURN
        ai_old = ai
        
