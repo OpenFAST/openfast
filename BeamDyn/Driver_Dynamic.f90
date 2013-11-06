@@ -69,7 +69,8 @@ PROGRAM MAIN
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
-
+   REAL(DbKi):: DoubleTest
+   REAL(ReKi):: SingleTest
 
    INTERFACE
        SUBROUTINE TiSchmComputeCoefficients(beta,gama,dt_global,alfam,alfaf,coef)
@@ -87,6 +88,13 @@ PROGRAM MAIN
       REAL(ReKi),INTENT(INOUT)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
       END SUBROUTINE UpdateStructuralConfiguration
    END INTERFACE
+
+   DoubleTest = 0.999999942023391 
+   SingleTest = 0.999999942023391
+
+   WRITE(*,*) "DoubleTest = ", DoubleTest
+   WRITE(*,*) "SingleTest = ", SingleTest
+!   STOP
 
    t_initial = 0.0D0
    t_final = 0.04d0

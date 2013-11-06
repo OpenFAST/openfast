@@ -27,8 +27,8 @@
 !   DO i=1,6
 !      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
 !   ENDDO
-!   DO i=1,6
-!      WRITE(*,*) eee(i)
+!   DO i=1,3
+!      WRITE(*,*) "RR011=",RR0(1,1)
 !   ENDDO
    Wrk = 0.0D0     
    Wrk = MATMUL(TRANSPOSE(RR0),tempS)

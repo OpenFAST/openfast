@@ -32,7 +32,7 @@
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #", i
-       IF(i==100) STOP
+!       IF(i==10) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
