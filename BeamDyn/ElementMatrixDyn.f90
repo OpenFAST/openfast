@@ -81,14 +81,15 @@
        Ki = 0.0D0
        mEta = 0.0D0
        rho = 0.0D0
+!   WRITE(*,*) "Node #:", i
        CALL NodalDataAt0(node_elem,nelem,norder,dof_node,i,hhp,Nuu0,Jac,E10)
        CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,Jac,&
                       &node_elem,nelem,i,norder,dof_node,&
                       &E1,RR0,kapa,Stif,cet)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
 !   k = 0    
-!   DO j=1,3
-!       WRITE(*,*) "kapa(j) = ", kapa(j)
+!   DO j=1,6
+!       WRITE(*,*) "j = ", j,"Fc(j) = ", Fc(j)
 !   ENDDO
        CALL NodalDataMass(RR0, mEta0, rho0, mEta, rho)
        CALL InertialForce(m00, mEta, rho, Nvvv, Naaa, Fi, Mi, Gi, Ki)

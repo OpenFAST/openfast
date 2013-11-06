@@ -38,7 +38,6 @@
    E1 = E1 + E10
    rrp = rrp / Jac
 
-
    temp_id = (nnode-1)*dof_node+3
    DO i=1,3
        cc0(i) = Nuu0(temp_id+i)
@@ -51,7 +50,7 @@
    CALL CrvMatrixR(cc,RR0)
    
 !   DO i=1,3
-!       WRITE(*,200)  RR0(i,1),RR0(i,2),RR0(i,3)
+!       WRITE(*,*)  RR0(i,1),RR0(i,2),RR0(i,3)
 !       200 FORMAT(3ES20.10)
 !   ENDDO
    tempR6 = 0.0d0

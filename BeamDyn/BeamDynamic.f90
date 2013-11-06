@@ -97,6 +97,9 @@
        CALL AssembleStiffK(i,dof_elem,norder,dof_node,elk,StifK)
        CALL AssembleStiffK(i,dof_elem,norder,dof_node,elm,MassM)
        CALL AssembleStiffK(i,dof_elem,norder,dof_node,elg,DampG)
+!       DO j=1,dof_elem
+!           WRITE(*,*) "j=",j,elf(j)
+!       ENDDO
        CALL AssembleRHS(i,dof_elem,norder,dof_node,elf,RHS)
 !      WRITE(*,*) "StiffK"
 !      WRITE(*,*) StifK
