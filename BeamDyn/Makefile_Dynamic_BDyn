@@ -37,12 +37,9 @@ MODNAME_DIR = .
    # Name of compiler to use and flags to use.
 
 FC     = gfortran
-FFLAGS = -O3 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none
-FFLAGS = -O3 -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
-LDFLAGS = -O3 -fbacktrace
-
-   # Precision.
-
+#FFLAGS = -O3 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none -fdefault-real-8 -fdefault-double-8
+FFLAGS = -O3 -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8 
+LDFLAGS = -O3 -fbacktrace -fdefault-real-8 -fdefault-double-8# Precision.  
 # Use "SingPrec" for single precision and "DoubPrec" for double precision.  You may also need to change an option switch to make constants DP.
 #PREC = SingPrec
 PREC = DoubPrec

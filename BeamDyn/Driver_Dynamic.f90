@@ -92,9 +92,12 @@ PROGRAM MAIN
    DoubleTest = 0.999999942023391 
    SingleTest = 0.999999942023391
 
+   DoubleTest = 1.
+   SingleTest = 1.
+
    WRITE(*,*) "DoubleTest = ", DoubleTest
    WRITE(*,*) "SingleTest = ", SingleTest
-!   STOP
+   STOP
 
    t_initial = 0.0D0
    t_final = 0.04d0

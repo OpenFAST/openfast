@@ -119,8 +119,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 2 
-      p%order    = 5 
+      p%elem_total = 20 
+      p%order    = 2 
       p%dof_node = 6
       p%node_total = p%elem_total * p%order  + 1
       p%dof_total  = p%node_total * p%dof_node
@@ -156,8 +156,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%bc = 0.0D0
       ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
       p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D0
-!      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
+!      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D0
+      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total - 1) = -6.28D+01
       p%bc = 0.0D0
