@@ -6917,7 +6917,7 @@ END SUBROUTINE WrBinFAST
 
          ! Argument declarations:
       CHARACTER(*),   INTENT(IN)    :: Str                                          ! The string to convert
-      INTEGER(ReKi),  INTENT(OUT)   :: IntAry(:)                                    ! ASCII representation of Str
+      INTEGER(IntKi),  INTENT(OUT)  :: IntAry(:)                                    ! ASCII representation of Str
 
       INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
       CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
@@ -6958,7 +6958,7 @@ END SUBROUTINE WrBinFAST
 
 
          ! Argument declarations:
-      INTEGER(ReKi),  INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
+      INTEGER(IntKi), INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
       CHARACTER(*),   INTENT(OUT)   :: Str                                          ! The string representation of IntAry
 
       INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status

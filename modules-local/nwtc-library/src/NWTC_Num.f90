@@ -1051,7 +1051,7 @@ CONTAINS
 
    RETURN
 
-  END SUBROUTINE GaussElim
+   END SUBROUTINE GaussElim
 !=======================================================================
    SUBROUTINE GetOffsetReg ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )
 
