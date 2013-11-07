@@ -110,7 +110,7 @@ default: BeamDyn_Types.f90 $(INTER_DIR) $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT)
 
 # -B is needed for MinGW version of Gfortran
 %.obj: %.f90
-	$(FC) $(FFLAGS) -g -c $< -o $(INTER_DIR)/$@ -J $(INTER_DIR) -B $(INTER_DIR)
+	$(FC) -I $(INTER_DIR) $(FFLAGS) -g -c $< -o $(INTER_DIR)/$@ -J $(INTER_DIR) -B $(INTER_DIR)
 
    #  Dependency rules.
 
