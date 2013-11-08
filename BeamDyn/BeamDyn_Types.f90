@@ -39,42 +39,35 @@ IMPLICIT NONE
 ! =======================
 ! =========  BDyn_InitOutputType  =======
   TYPE, PUBLIC :: BDyn_InitOutputType
-    REAL(ReKi)  :: DummyInitVar 
+    REAL(DbKi)  :: DummyInitVar 
   END TYPE BDyn_InitOutputType
 ! =======================
 ! =========  BDyn_ContinuousStateType  =======
   TYPE, PUBLIC :: BDyn_ContinuousStateType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuNf 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: uuNf 
   END TYPE BDyn_ContinuousStateType
 ! =======================
 ! =========  BDyn_DiscreteStateType  =======
   TYPE, PUBLIC :: BDyn_DiscreteStateType
-    REAL(ReKi)  :: DummyDiscState 
+    REAL(DbKi)  :: DummyDiscState 
   END TYPE BDyn_DiscreteStateType
 ! =======================
 ! =========  BDyn_ConstraintStateType  =======
   TYPE, PUBLIC :: BDyn_ConstraintStateType
-    REAL(ReKi)  :: DummyConstrState 
+    REAL(DbKi)  :: DummyConstrState 
   END TYPE BDyn_ConstraintStateType
 ! =======================
 ! =========  BDyn_OtherStateType  =======
   TYPE, PUBLIC :: BDyn_OtherStateType
     TYPE(BDyn_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: xdot 
     INTEGER(IntKi)  :: n 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuNf 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuNi 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: vvNi 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: vvNf 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: aaNi 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: aaNf 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xxNi 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xxNf 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: uuNf 
   END TYPE BDyn_OtherStateType
 ! =======================
 ! =========  BDyn_ParameterType  =======
   TYPE, PUBLIC :: BDyn_ParameterType
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0 
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M 
+    REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0 
+    REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M 
     INTEGER(IntKi)  :: elem_total 
     INTEGER(IntKi)  :: order 
     INTEGER(IntKi)  :: dof_node 
@@ -83,16 +76,14 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: node_elem 
     INTEGER(IntKi)  :: dof_elem 
     INTEGER(IntKi)  :: niter 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: gll_w 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: gll_p 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: gll_deriv 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuN0 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: det_jac 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: bc 
-    REAL(ReKi)  :: Jacobian 
-    REAL(ReKi)  :: m00 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: mEta0 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rho0 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: gll_w 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: gll_p 
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: gll_deriv 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: uuN0 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: det_jac 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: bc 
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: F_ext 
+    REAL(DbKi)  :: Jacobian 
   END TYPE BDyn_ParameterType
 ! =======================
 ! =========  BDyn_InputType  =======
@@ -269,12 +260,12 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz   = Re_BufSz   + 1  ! DummyInitVar
+  Db_BufSz   = Db_BufSz   + 1  ! DummyInitVar
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%DummyInitVar )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%DummyInitVar )
+  Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE BDyn_PackInitOutput
 
  SUBROUTINE BDyn_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -310,8 +301,8 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  OutData%DummyInitVar = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
+  OutData%DummyInitVar = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -392,13 +383,13 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz    = Re_BufSz    + SIZE( InData%uuNf )  ! uuNf 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%uuNf )  ! uuNf 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
   IF ( ALLOCATED(InData%uuNf) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuNf))-1 ) =  PACK(InData%uuNf ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%uuNf)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%uuNf))-1 ) =  PACK(InData%uuNf ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%uuNf)
   ENDIF
  END SUBROUTINE BDyn_PackContState
 
@@ -437,9 +428,9 @@ ENDIF
   Int_BufSz  = 0
   IF ( ALLOCATED(OutData%uuNf) ) THEN
   ALLOCATE(mask1(SIZE(OutData%uuNf,1))); mask1 = .TRUE.
-    OutData%uuNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuNf))-1 ),mask1,OutData%uuNf)
+    OutData%uuNf = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%uuNf))-1 ),mask1,OutData%uuNf)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%uuNf)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%uuNf)
   ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
@@ -506,12 +497,12 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz   = Re_BufSz   + 1  ! DummyDiscState
+  Db_BufSz   = Db_BufSz   + 1  ! DummyDiscState
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%DummyDiscState )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%DummyDiscState )
+  Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE BDyn_PackDiscState
 
  SUBROUTINE BDyn_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -547,8 +538,8 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  OutData%DummyDiscState = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
+  OutData%DummyDiscState = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -614,12 +605,12 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz   = Re_BufSz   + 1  ! DummyConstrState
+  Db_BufSz   = Db_BufSz   + 1  ! DummyConstrState
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%DummyConstrState )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%DummyConstrState )
+  Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE BDyn_PackConstrState
 
  SUBROUTINE BDyn_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -655,8 +646,8 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  OutData%DummyConstrState = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
+  OutData%DummyConstrState = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -704,97 +695,6 @@ IF (ALLOCATED(SrcOtherStateData%uuNf)) THEN
    END IF
    DstOtherStateData%uuNf = SrcOtherStateData%uuNf
 ENDIF
-IF (ALLOCATED(SrcOtherStateData%uuNi)) THEN
-   i1_l = LBOUND(SrcOtherStateData%uuNi,1)
-   i1_u = UBOUND(SrcOtherStateData%uuNi,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%uuNi)) THEN 
-      ALLOCATE(DstOtherStateData%uuNi(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%uuNi.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%uuNi = SrcOtherStateData%uuNi
-ENDIF
-IF (ALLOCATED(SrcOtherStateData%vvNi)) THEN
-   i1_l = LBOUND(SrcOtherStateData%vvNi,1)
-   i1_u = UBOUND(SrcOtherStateData%vvNi,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%vvNi)) THEN 
-      ALLOCATE(DstOtherStateData%vvNi(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%vvNi.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%vvNi = SrcOtherStateData%vvNi
-ENDIF
-IF (ALLOCATED(SrcOtherStateData%vvNf)) THEN
-   i1_l = LBOUND(SrcOtherStateData%vvNf,1)
-   i1_u = UBOUND(SrcOtherStateData%vvNf,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%vvNf)) THEN 
-      ALLOCATE(DstOtherStateData%vvNf(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%vvNf.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%vvNf = SrcOtherStateData%vvNf
-ENDIF
-IF (ALLOCATED(SrcOtherStateData%aaNi)) THEN
-   i1_l = LBOUND(SrcOtherStateData%aaNi,1)
-   i1_u = UBOUND(SrcOtherStateData%aaNi,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%aaNi)) THEN 
-      ALLOCATE(DstOtherStateData%aaNi(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%aaNi.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%aaNi = SrcOtherStateData%aaNi
-ENDIF
-IF (ALLOCATED(SrcOtherStateData%aaNf)) THEN
-   i1_l = LBOUND(SrcOtherStateData%aaNf,1)
-   i1_u = UBOUND(SrcOtherStateData%aaNf,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%aaNf)) THEN 
-      ALLOCATE(DstOtherStateData%aaNf(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%aaNf.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%aaNf = SrcOtherStateData%aaNf
-ENDIF
-IF (ALLOCATED(SrcOtherStateData%xxNi)) THEN
-   i1_l = LBOUND(SrcOtherStateData%xxNi,1)
-   i1_u = UBOUND(SrcOtherStateData%xxNi,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%xxNi)) THEN 
-      ALLOCATE(DstOtherStateData%xxNi(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%xxNi.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%xxNi = SrcOtherStateData%xxNi
-ENDIF
-IF (ALLOCATED(SrcOtherStateData%xxNf)) THEN
-   i1_l = LBOUND(SrcOtherStateData%xxNf,1)
-   i1_u = UBOUND(SrcOtherStateData%xxNf,1)
-   IF (.NOT.ALLOCATED(DstOtherStateData%xxNf)) THEN 
-      ALLOCATE(DstOtherStateData%xxNf(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyOtherState: Error allocating DstOtherStateData%xxNf.'
-         RETURN
-      END IF
-   END IF
-   DstOtherStateData%xxNf = SrcOtherStateData%xxNf
-ENDIF
  END SUBROUTINE BDyn_CopyOtherState
 
  SUBROUTINE BDyn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -813,27 +713,6 @@ ENDDO
 ENDIF
 IF (ALLOCATED(OtherStateData%uuNf)) THEN
    DEALLOCATE(OtherStateData%uuNf)
-ENDIF
-IF (ALLOCATED(OtherStateData%uuNi)) THEN
-   DEALLOCATE(OtherStateData%uuNi)
-ENDIF
-IF (ALLOCATED(OtherStateData%vvNi)) THEN
-   DEALLOCATE(OtherStateData%vvNi)
-ENDIF
-IF (ALLOCATED(OtherStateData%vvNf)) THEN
-   DEALLOCATE(OtherStateData%vvNf)
-ENDIF
-IF (ALLOCATED(OtherStateData%aaNi)) THEN
-   DEALLOCATE(OtherStateData%aaNi)
-ENDIF
-IF (ALLOCATED(OtherStateData%aaNf)) THEN
-   DEALLOCATE(OtherStateData%aaNf)
-ENDIF
-IF (ALLOCATED(OtherStateData%xxNi)) THEN
-   DEALLOCATE(OtherStateData%xxNi)
-ENDIF
-IF (ALLOCATED(OtherStateData%xxNf)) THEN
-   DEALLOCATE(OtherStateData%xxNf)
 ENDIF
  END SUBROUTINE BDyn_DestroyOtherState
 
@@ -884,14 +763,7 @@ DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
   IF(ALLOCATED(Int_xdot_Buf)) DEALLOCATE(Int_xdot_Buf)
 ENDDO
   Int_BufSz  = Int_BufSz  + 1  ! n
-  Re_BufSz    = Re_BufSz    + SIZE( InData%uuNf )  ! uuNf 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%uuNi )  ! uuNi 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%vvNi )  ! vvNi 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%vvNf )  ! vvNf 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%aaNi )  ! aaNi 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%aaNf )  ! aaNf 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%xxNi )  ! xxNi 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%xxNf )  ! xxNf 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%uuNf )  ! uuNf 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -916,36 +788,8 @@ ENDDO
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%n )
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(InData%uuNf) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuNf))-1 ) =  PACK(InData%uuNf ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%uuNf)
-  ENDIF
-  IF ( ALLOCATED(InData%uuNi) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuNi))-1 ) =  PACK(InData%uuNi ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%uuNi)
-  ENDIF
-  IF ( ALLOCATED(InData%vvNi) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%vvNi))-1 ) =  PACK(InData%vvNi ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%vvNi)
-  ENDIF
-  IF ( ALLOCATED(InData%vvNf) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%vvNf))-1 ) =  PACK(InData%vvNf ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%vvNf)
-  ENDIF
-  IF ( ALLOCATED(InData%aaNi) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%aaNi))-1 ) =  PACK(InData%aaNi ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%aaNi)
-  ENDIF
-  IF ( ALLOCATED(InData%aaNf) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%aaNf))-1 ) =  PACK(InData%aaNf ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%aaNf)
-  ENDIF
-  IF ( ALLOCATED(InData%xxNi) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%xxNi))-1 ) =  PACK(InData%xxNi ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%xxNi)
-  ENDIF
-  IF ( ALLOCATED(InData%xxNf) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%xxNf))-1 ) =  PACK(InData%xxNf ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%xxNf)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%uuNf))-1 ) =  PACK(InData%uuNf ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%uuNf)
   ENDIF
  END SUBROUTINE BDyn_PackOtherState
 
@@ -1006,51 +850,9 @@ ENDDO
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(OutData%uuNf) ) THEN
   ALLOCATE(mask1(SIZE(OutData%uuNf,1))); mask1 = .TRUE.
-    OutData%uuNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuNf))-1 ),mask1,OutData%uuNf)
+    OutData%uuNf = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%uuNf))-1 ),mask1,OutData%uuNf)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%uuNf)
-  ENDIF
-  IF ( ALLOCATED(OutData%uuNi) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%uuNi,1))); mask1 = .TRUE.
-    OutData%uuNi = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuNi))-1 ),mask1,OutData%uuNi)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%uuNi)
-  ENDIF
-  IF ( ALLOCATED(OutData%vvNi) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%vvNi,1))); mask1 = .TRUE.
-    OutData%vvNi = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%vvNi))-1 ),mask1,OutData%vvNi)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%vvNi)
-  ENDIF
-  IF ( ALLOCATED(OutData%vvNf) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%vvNf,1))); mask1 = .TRUE.
-    OutData%vvNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%vvNf))-1 ),mask1,OutData%vvNf)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%vvNf)
-  ENDIF
-  IF ( ALLOCATED(OutData%aaNi) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%aaNi,1))); mask1 = .TRUE.
-    OutData%aaNi = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%aaNi))-1 ),mask1,OutData%aaNi)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%aaNi)
-  ENDIF
-  IF ( ALLOCATED(OutData%aaNf) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%aaNf,1))); mask1 = .TRUE.
-    OutData%aaNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%aaNf))-1 ),mask1,OutData%aaNf)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%aaNf)
-  ENDIF
-  IF ( ALLOCATED(OutData%xxNi) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%xxNi,1))); mask1 = .TRUE.
-    OutData%xxNi = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%xxNi))-1 ),mask1,OutData%xxNi)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%xxNi)
-  ENDIF
-  IF ( ALLOCATED(OutData%xxNf) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%xxNf,1))); mask1 = .TRUE.
-    OutData%xxNf = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%xxNf))-1 ),mask1,OutData%xxNf)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%xxNf)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%uuNf)
   ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
@@ -1192,36 +994,20 @@ IF (ALLOCATED(SrcParamData%bc)) THEN
    END IF
    DstParamData%bc = SrcParamData%bc
 ENDIF
+IF (ALLOCATED(SrcParamData%F_ext)) THEN
+   i1_l = LBOUND(SrcParamData%F_ext,1)
+   i1_u = UBOUND(SrcParamData%F_ext,1)
+   IF (.NOT.ALLOCATED(DstParamData%F_ext)) THEN 
+      ALLOCATE(DstParamData%F_ext(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%F_ext.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%F_ext = SrcParamData%F_ext
+ENDIF
    DstParamData%Jacobian = SrcParamData%Jacobian
-   DstParamData%m00 = SrcParamData%m00
-IF (ALLOCATED(SrcParamData%mEta0)) THEN
-   i1_l = LBOUND(SrcParamData%mEta0,1)
-   i1_u = UBOUND(SrcParamData%mEta0,1)
-   IF (.NOT.ALLOCATED(DstParamData%mEta0)) THEN 
-      ALLOCATE(DstParamData%mEta0(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%mEta0.'
-         RETURN
-      END IF
-   END IF
-   DstParamData%mEta0 = SrcParamData%mEta0
-ENDIF
-IF (ALLOCATED(SrcParamData%rho0)) THEN
-   i1_l = LBOUND(SrcParamData%rho0,1)
-   i1_u = UBOUND(SrcParamData%rho0,1)
-   i2_l = LBOUND(SrcParamData%rho0,2)
-   i2_u = UBOUND(SrcParamData%rho0,2)
-   IF (.NOT.ALLOCATED(DstParamData%rho0)) THEN 
-      ALLOCATE(DstParamData%rho0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%rho0.'
-         RETURN
-      END IF
-   END IF
-   DstParamData%rho0 = SrcParamData%rho0
-ENDIF
  END SUBROUTINE BDyn_CopyParam
 
  SUBROUTINE BDyn_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1256,11 +1042,8 @@ ENDIF
 IF (ALLOCATED(ParamData%bc)) THEN
    DEALLOCATE(ParamData%bc)
 ENDIF
-IF (ALLOCATED(ParamData%mEta0)) THEN
-   DEALLOCATE(ParamData%mEta0)
-ENDIF
-IF (ALLOCATED(ParamData%rho0)) THEN
-   DEALLOCATE(ParamData%rho0)
+IF (ALLOCATED(ParamData%F_ext)) THEN
+   DEALLOCATE(ParamData%F_ext)
 ENDIF
  END SUBROUTINE BDyn_DestroyParam
 
@@ -1298,8 +1081,8 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz    = Re_BufSz    + SIZE( InData%Stif0 )  ! Stif0 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%M )  ! M 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%Stif0 )  ! Stif0 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%M )  ! M 
   Int_BufSz  = Int_BufSz  + 1  ! elem_total
   Int_BufSz  = Int_BufSz  + 1  ! order
   Int_BufSz  = Int_BufSz  + 1  ! dof_node
@@ -1308,26 +1091,24 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! node_elem
   Int_BufSz  = Int_BufSz  + 1  ! dof_elem
   Int_BufSz  = Int_BufSz  + 1  ! niter
-  Re_BufSz    = Re_BufSz    + SIZE( InData%gll_w )  ! gll_w 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%gll_p )  ! gll_p 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%gll_deriv )  ! gll_deriv 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%uuN0 )  ! uuN0 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%det_jac )  ! det_jac 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%bc )  ! bc 
-  Re_BufSz   = Re_BufSz   + 1  ! Jacobian
-  Re_BufSz   = Re_BufSz   + 1  ! m00
-  Re_BufSz    = Re_BufSz    + SIZE( InData%mEta0 )  ! mEta0 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%rho0 )  ! rho0 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%gll_w )  ! gll_w 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%gll_p )  ! gll_p 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%gll_deriv )  ! gll_deriv 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%uuN0 )  ! uuN0 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%det_jac )  ! det_jac 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%bc )  ! bc 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%F_ext )  ! F_ext 
+  Db_BufSz   = Db_BufSz   + 1  ! Jacobian
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
   IF ( ALLOCATED(InData%Stif0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Stif0))-1 ) =  PACK(InData%Stif0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%Stif0)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%Stif0))-1 ) =  PACK(InData%Stif0 ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%Stif0)
   ENDIF
   IF ( ALLOCATED(InData%M) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M))-1 ) =  PACK(InData%M ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%M)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M))-1 ) =  PACK(InData%M ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%M)
   ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%elem_total )
   Int_Xferred   = Int_Xferred   + 1
@@ -1346,41 +1127,35 @@ ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%niter )
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(InData%gll_w) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%gll_w))-1 ) =  PACK(InData%gll_w ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%gll_w)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%gll_w))-1 ) =  PACK(InData%gll_w ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%gll_w)
   ENDIF
   IF ( ALLOCATED(InData%gll_p) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%gll_p))-1 ) =  PACK(InData%gll_p ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%gll_p)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%gll_p))-1 ) =  PACK(InData%gll_p ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%gll_p)
   ENDIF
   IF ( ALLOCATED(InData%gll_deriv) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%gll_deriv))-1 ) =  PACK(InData%gll_deriv ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%gll_deriv)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%gll_deriv))-1 ) =  PACK(InData%gll_deriv ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%gll_deriv)
   ENDIF
   IF ( ALLOCATED(InData%uuN0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuN0))-1 ) =  PACK(InData%uuN0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%uuN0)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%uuN0))-1 ) =  PACK(InData%uuN0 ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%uuN0)
   ENDIF
   IF ( ALLOCATED(InData%det_jac) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%det_jac))-1 ) =  PACK(InData%det_jac ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%det_jac)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%det_jac))-1 ) =  PACK(InData%det_jac ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%det_jac)
   ENDIF
   IF ( ALLOCATED(InData%bc) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%bc))-1 ) =  PACK(InData%bc ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%bc)
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%bc))-1 ) =  PACK(InData%bc ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%bc)
   ENDIF
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%Jacobian )
-  Re_Xferred   = Re_Xferred   + 1
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%m00 )
-  Re_Xferred   = Re_Xferred   + 1
-  IF ( ALLOCATED(InData%mEta0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%mEta0))-1 ) =  PACK(InData%mEta0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%mEta0)
+  IF ( ALLOCATED(InData%F_ext) ) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%F_ext))-1 ) =  PACK(InData%F_ext ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%F_ext)
   ENDIF
-  IF ( ALLOCATED(InData%rho0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%rho0))-1 ) =  PACK(InData%rho0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%rho0)
-  ENDIF
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%Jacobian )
+  Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE BDyn_PackParam
 
  SUBROUTINE BDyn_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1418,15 +1193,15 @@ ENDIF
   Int_BufSz  = 0
   IF ( ALLOCATED(OutData%Stif0) ) THEN
   ALLOCATE(mask3(SIZE(OutData%Stif0,1),SIZE(OutData%Stif0,2),SIZE(OutData%Stif0,3))); mask3 = .TRUE.
-    OutData%Stif0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stif0))-1 ),mask3,OutData%Stif0)
+    OutData%Stif0 = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%Stif0))-1 ),mask3,OutData%Stif0)
   DEALLOCATE(mask3)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%Stif0)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%Stif0)
   ENDIF
   IF ( ALLOCATED(OutData%M) ) THEN
   ALLOCATE(mask3(SIZE(OutData%M,1),SIZE(OutData%M,2),SIZE(OutData%M,3))); mask3 = .TRUE.
-    OutData%M = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M))-1 ),mask3,OutData%M)
+    OutData%M = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%M))-1 ),mask3,OutData%M)
   DEALLOCATE(mask3)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%M)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%M)
   ENDIF
   OutData%elem_total = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
@@ -1446,56 +1221,48 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(OutData%gll_w) ) THEN
   ALLOCATE(mask1(SIZE(OutData%gll_w,1))); mask1 = .TRUE.
-    OutData%gll_w = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%gll_w))-1 ),mask1,OutData%gll_w)
+    OutData%gll_w = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%gll_w))-1 ),mask1,OutData%gll_w)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%gll_w)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%gll_w)
   ENDIF
   IF ( ALLOCATED(OutData%gll_p) ) THEN
   ALLOCATE(mask1(SIZE(OutData%gll_p,1))); mask1 = .TRUE.
-    OutData%gll_p = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%gll_p))-1 ),mask1,OutData%gll_p)
+    OutData%gll_p = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%gll_p))-1 ),mask1,OutData%gll_p)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%gll_p)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%gll_p)
   ENDIF
   IF ( ALLOCATED(OutData%gll_deriv) ) THEN
   ALLOCATE(mask2(SIZE(OutData%gll_deriv,1),SIZE(OutData%gll_deriv,2))); mask2 = .TRUE.
-    OutData%gll_deriv = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%gll_deriv))-1 ),mask2,OutData%gll_deriv)
+    OutData%gll_deriv = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%gll_deriv))-1 ),mask2,OutData%gll_deriv)
   DEALLOCATE(mask2)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%gll_deriv)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%gll_deriv)
   ENDIF
   IF ( ALLOCATED(OutData%uuN0) ) THEN
   ALLOCATE(mask1(SIZE(OutData%uuN0,1))); mask1 = .TRUE.
-    OutData%uuN0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuN0))-1 ),mask1,OutData%uuN0)
+    OutData%uuN0 = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%uuN0))-1 ),mask1,OutData%uuN0)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%uuN0)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%uuN0)
   ENDIF
   IF ( ALLOCATED(OutData%det_jac) ) THEN
   ALLOCATE(mask1(SIZE(OutData%det_jac,1))); mask1 = .TRUE.
-    OutData%det_jac = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%det_jac))-1 ),mask1,OutData%det_jac)
+    OutData%det_jac = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%det_jac))-1 ),mask1,OutData%det_jac)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%det_jac)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%det_jac)
   ENDIF
   IF ( ALLOCATED(OutData%bc) ) THEN
   ALLOCATE(mask1(SIZE(OutData%bc,1))); mask1 = .TRUE.
-    OutData%bc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%bc))-1 ),mask1,OutData%bc)
+    OutData%bc = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%bc))-1 ),mask1,OutData%bc)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%bc)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%bc)
   ENDIF
-  OutData%Jacobian = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
-  OutData%m00 = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
-  IF ( ALLOCATED(OutData%mEta0) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%mEta0,1))); mask1 = .TRUE.
-    OutData%mEta0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%mEta0))-1 ),mask1,OutData%mEta0)
+  IF ( ALLOCATED(OutData%F_ext) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%F_ext,1))); mask1 = .TRUE.
+    OutData%F_ext = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%F_ext))-1 ),mask1,OutData%F_ext)
   DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%mEta0)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%F_ext)
   ENDIF
-  IF ( ALLOCATED(OutData%rho0) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%rho0,1),SIZE(OutData%rho0,2))); mask2 = .TRUE.
-    OutData%rho0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%rho0))-1 ),mask2,OutData%rho0)
-  DEALLOCATE(mask2)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%rho0)
-  ENDIF
+  OutData%Jacobian = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
