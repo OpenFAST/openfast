@@ -38,14 +38,14 @@ MODNAME_DIR = .
 
 FC     = gfortran
 #FFLAGS = -O3 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none
-FFLAGS = -O3 -fbacktrace -ffree-line-length-none -x f95-cpp-input
+FFLAGS = -O3 -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
 LDFLAGS = -O3 -fbacktrace
 
    # Precision.
 
 # Use "SingPrec" for single precision and "DoubPrec" for double precision.  You may also need to change an option switch to make constants DP.
-PREC = SingPrec
-#PREC = DoubPrec
+#PREC = SingPrec
+PREC = DoubPrec
 
    #==========================================================#
    # You should not need to change anything beyond this point #
@@ -89,6 +89,7 @@ LIB_SOURCES =             \
 	ModMesh_Types.f90  \
 	ModMesh.f90        \
         ModMesh_Mapping.f90  \
+	NWTC_Library_Types.f90   \
 	NWTC_Library.f90   \
 
 
