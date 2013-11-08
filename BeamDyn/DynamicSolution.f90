@@ -22,7 +22,7 @@
    REAL(ReKi)::F_ext(dof_total)
 
    REAL(ReKi)::ai(dof_total),rel_change(dof_total),ai_old(dof_total)
-   REAL(ReKi),PARAMETER:: TOLF = 1.0d-5   
+   REAL(ReKi),PARAMETER:: TOLF = 1.0d-4   
 
    INTEGER(IntKi)::i,j,k
 
@@ -60,6 +60,9 @@
 !       ENDDO
 !       STOP
        errf = 0.0D0
+       DO j=1,dof_node
+           RHS(j) = 0.0D0
+       ENDDO
        CALL Norm(dof_total,RHS,errf)
        WRITE(*,*) "Norm(RHS) = ", errf
        IF(errf .LE. TOLF) RETURN
@@ -75,7 +78,7 @@
        CALL Norm(dof_total,aaNf,temp1)
        CALL Norm(dof_total,rel_change,temp2)
        errx = temp2
-       IF(errx .LT. TOLF*temp1) RETURN
+!       IF(errx .LT. TOLF*temp1) RETURN
            
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
