@@ -156,7 +156,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%bc = 0.0D0
       ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
       p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 0.1D0
+      p%F_ext(p%dof_total-1) = -3.14159D+01 * 1.0D-01
+!      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
 !      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total - 1) = -6.28D+01
