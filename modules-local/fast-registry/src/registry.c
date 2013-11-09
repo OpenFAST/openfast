@@ -50,7 +50,7 @@ main( int argc, char *argv[], char *env[] )
 #endif
 
   fprintf(stderr,"\n") ;
-  fprintf(stderr,"----- FAST Registry (v2.01.00, 30-Sep-2013) --------------\n") ;
+  fprintf(stderr,"----- FAST Registry (v2.01.01, 8-Nov-2013) --------------\n") ;
 //  fprintf(stderr,"Revision $Rev$\n") ;
 //  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
   fprintf(stderr,"URL  $URL$\n" ) ;

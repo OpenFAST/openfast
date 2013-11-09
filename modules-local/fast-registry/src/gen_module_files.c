@@ -874,9 +874,9 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
          {
            sprintf(derefrecurse,"%s%%%s",deref,r->name) ;
            for ( j = r->ndims ; j > 0 ; j-- ) {
-//fprintf(fp,"  DO i%d%d = 1,SIZE(u_out%s)\n",j,recurselevel,derefrecurse) ;
-  fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",j,recurselevel,derefrecurse,j,derefrecurse,j) ;
-             sprintf(derefrecurse,"%s%%%s(i%d%d)",deref,r->name,j,recurselevel) ;
+  
+fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j,derefrecurse,j,derefrecurse,j) ;
+             sprintf(derefrecurse,"%s%%%s(i%d%d)",deref,r->name,recurselevel,j) ;
            }
            gen_extint_order( fp, ModName, order, r1, derefrecurse, recurselevel+1 ) ;
            for ( j = r->ndims ; j > 0 ; j-- ) {
