@@ -18,7 +18,7 @@
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #:", i
-       IF(i==21) STOP
+       IF(i==6) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        CALL BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,F_ext,&
@@ -30,12 +30,12 @@
 !       ENDDO
 !       STOP
 !       RHS(dof_total-1) = RHS(dof_total-1) - 3.14159D+01
-       RHS = RHS + F_ext
 !       DO j=1,dof_total
 !           WRITE(*,*) "j=",j
-!           WRITE(*,*) "RHS(j)=",RHS(j)
+!           WRITE(*,*) RHS(j)
 !       ENDDO
 !       STOP
+       RHS = RHS + F_ext
        errf = 0.0D0
        DO j=1,dof_node
            RHS(j) = 0.0D0   
@@ -58,12 +58,12 @@
 !       IF(errx .LT. TOLF*temp1) RETURN
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
-       IF(i==20) THEN    
+!       IF(i==20) THEN    
        DO j=1,dof_total
-           WRITE(*,*) "j=",j
-           WRITE(*,*) "uuNf(j)=",uuNf(j)
+!           WRITE(*,*) "j=",j
+           WRITE(*,*) uuNf(j)
        ENDDO
-       ENDIF
+!       ENDIF
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            STOP

@@ -27,9 +27,6 @@
 !   DO i=1,6
 !      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
 !   ENDDO
-!   DO i=1,3
-!      WRITE(*,*) "RR011=",RR0(1,1)
-!   ENDDO
    Wrk = 0.0D0     
    Wrk = MATMUL(TRANSPOSE(RR0),tempS)
    e1s = Wrk(1)      !epsilon_{11} in material basis
@@ -38,10 +35,10 @@
    Wrk = MATMUL(TRANSPOSE(RR0),tempK)
    k1s = Wrk(1)      !kapa_{1} in material basis
      
-!   DO i=1,3
-!       fff(i) = fff(i) + 0.5D0*cet*k1s*k1s*RR0(i,1)
-!       fff(i+3) = fff(i+3) + cet*e1s*k1s*RR0(i,1)
-!   ENDDO 
+   DO i=1,3
+       fff(i) = fff(i) + 0.5D0*cet*k1s*k1s*RR0(i,1)
+       fff(i+3) = fff(i+3) + cet*e1s*k1s*RR0(i,1)
+   ENDDO 
 
 !   DO i=1,6
 !      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
@@ -68,15 +65,19 @@
    ENDDO
    Wrk33 = 0.0D0
    Wrk33 = OuterProduct(Wrk,Wrk) 
-!   C12 = C12 + cet*k1s*Wrk33
-!   C21 = C21 + cet*k1s*Wrk33
-!   C22 = C22 + cet*e1s*Wrk33
+   C12 = C12 + cet*k1s*Wrk33
+   C21 = C21 + cet*k1s*Wrk33
+   C22 = C22 + cet*e1s*Wrk33
 
    epsi = 0.0D0 
    mu = 0.0D0
    epsi = MATMUL(C11,Tilde(E1))
    mu = MATMUL(C21,Tilde(E1))
    
+!   WRITE(*,*) "epsi at Node #"
+!   DO i=1,3
+!       WRITE(*,*) epsi(i,1),epsi(i,2),epsi(i,3)
+!   ENDDO
    Wrk = 0.0D0
 
    Oe = 0.0D0
@@ -100,9 +101,9 @@
    Wrk33(1:3,1:3) = Oe(1:3,4:6)
    Qe(4:6,4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Wrk33)
 
-!   WRITE(*,*) "Stif at Node #"
+!   WRITE(*,*) "Oe at Node #"
 !   DO i=1,6
-!       WRITE(*,*) Qe(i,1), Qe(i,2), Qe(i,3), Qe(i,4), Qe(i,5), Qe(i,6)
+!       WRITE(*,*) Oe(i,1), Oe(i,2), Oe(i,3), Oe(i,4), Oe(i,5), Oe(i,6)
 !   ENDDO
 !   STOP
    END SUBROUTINE ElasticForce
