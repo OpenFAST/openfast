@@ -71,11 +71,15 @@
    ENDDO
      
    temp_id = 3
+   Nuuu_temp = 0.0D0
    DO i=1,3
        Nuuu_temp1(i) = Nuuu(temp_id+i)
    ENDDO
+   tempH = 0.0D0
    CALL CrvmatrixH(rrr,tempH)
+   cc = 0.0D0
    cc = MATMUL(tempH,rrp)
+   tempR = 0.0D0
    CALL CrvMatrixR(Nuuu_temp1,tempR)
    kapa = MATMUL(tempR,cc)
       
