@@ -212,8 +212,6 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       ! Get the current time
    CALL DATE_AND_TIME ( Values=StrtTime )                               ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
-   PrevClockTime   = TimeValues2Seconds( StrtTime )                     ! We'll use this time for the SimStats routine
-   TiLstPrn        = t_initial                                          ! The first value of t_global, used to write simulation stats to screen (s)
    Step            = 0                                                  ! The first step counter
 
    AbortErrLev     = ErrID_Fatal                                        ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
@@ -463,6 +461,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    END IF
       
   
+   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, t_global, p_FAST%TMax )
+
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
       
@@ -997,10 +997,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       CALL WriteOutputToFile()
       
       !----------------------------------------------------------------------------------------
-      ! Display simulation status every SttsTime-seconds:
-      !----------------------------------------------------------------------------------------
-
-      IF ( t_global - TiLstPrn >= p_FAST%SttsTime )  THEN !bjj: perhaps we should do this with integer math now...
+      ! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
+      !----------------------------------------------------------------------------------------   
+      
+      IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
 
          CALL SimStatus( TiLstPrn, PrevClockTime, t_global, p_FAST%TMax )
 

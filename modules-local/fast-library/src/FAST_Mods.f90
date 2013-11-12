@@ -164,6 +164,8 @@ MODULE FAST_Types
       REAL(DbKi)                :: SttsTime                                        ! Amount of time between screen status messages (sec)
       REAL(DbKi)                :: TStart                                          ! Time to begin tabular output
       REAL(DbKi)                :: DT_Out                                          ! Time step for tabular output (sec)
+      
+      INTEGER                   :: n_SttsTime                                      ! Number of time steps between screen status messages (-)
       LOGICAL                   :: WrBinOutFile                                    ! Write a binary output file? (.outb)
       LOGICAL                   :: WrTxtOutFile                                    ! Write a text (formatted) output file? (.out)
       LOGICAL                   :: SumPrint                                        ! Print summary data to file? (.sum)
