@@ -9,61 +9,48 @@
  
    REAL(ReKi)::errf,temp1,temp2,errx
    REAL(ReKi)::StifK(dof_total,dof_total), RHS(dof_total)
-   REAL(ReKi)::ui(dof_total),rel_change(dof_total),ui_old(dof_total)
-   REAL(ReKi),PARAMETER:: TOLF = 1.0d-5   
+   REAL(ReKi)::ui(dof_total)
+   REAL(ReKi)::feqv(dof_total-6),Eref,ui_temp(dof_total-6),Enorm
+   REAL(ReKi),PARAMETER:: TOLF = 1.0D-07   
 
    INTEGER(IntKi)::i,j,k
 
    ui = 0.0D0
+   Eref = 0.0D0
+
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #:", i
-       IF(i==6) STOP
+       IF(i==20) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        CALL BeamStatic(uuN0,uuNf,hhp,w,Jacobian,Stif0,F_ext,&
                       &node_elem,dof_node,norder,elem_total,dof_total,node_total,dof_elem,&
                       &StifK,RHS)
-!       k=12
-!       DO j=1,dof_total
-!           WRITE(*,*) StifK(j,k+1),StifK(j,k+2),StifK(j,k+3),StifK(j,k+4),StifK(j,k+5),StifK(j,k+6)
-!       ENDDO
-!       STOP
-!       RHS(dof_total-1) = RHS(dof_total-1) - 3.14159D+01
-!       DO j=1,dof_total
-!           WRITE(*,*) "j=",j
-!           WRITE(*,*) RHS(j)
-!       ENDDO
-!       STOP
        RHS = RHS + F_ext
+       feqv = 0.0D0
        errf = 0.0D0
-       DO j=1,dof_node
-           RHS(j) = 0.0D0   
+       DO j=1,dof_total-6
+           feqv(j) = RHS(j+6) 
        ENDDO
-       CALL Norm(dof_total,RHS,errf)
-       WRITE(*,*) "NORM(RHS) = ", errf
-!       IF(errf .LE. TOLF) RETURN
-       ui_old = ui
-       
+       CALL Norm(dof_total-6,feqv,errf)
+       WRITE(*,*) "NORM(feqv) = ", errf
+
        CALL CGSolver(RHS,StifK,ui,bc,dof_total)
-!       DO j=1,dof_total
-!           WRITE(*,*) "j=",j
-!           WRITE(*,*) "ui(j)=",ui(j)
-!       ENDDO
-!       STOP
-       rel_change = ABS(ui - ui_old)
-       CALL Norm(dof_total,uuNf,temp1)
-       CALL Norm(dof_total,rel_change,temp2)
-       errx = temp2
-!       IF(errx .LT. TOLF*temp1) RETURN
+       ui_temp = 0.0D0
+       DO j=1,dof_total-6
+           ui_temp(j) = ui(j+6)
+       ENDDO
+       IF(i==1) Eref = DOT_PRODUCT(ui_temp,feqv)*TOLF
+       IF(i .GT. 1) THEN
+           Enorm = 0.0D0 
+           Enorm = DOT_PRODUCT(ui_temp,feqv)
+           WRITE(*,*) "Enorm = ", Enorm
+           WRITE(*,*) "Eref = ", Eref
+           IF(Enorm .LE. Eref) RETURN
+       ENDIF
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
-!       IF(i==20) THEN    
-       DO j=1,dof_total
-!           WRITE(*,*) "j=",j
-           WRITE(*,*) uuNf(j)
-       ENDDO
-!       ENDIF
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            STOP
