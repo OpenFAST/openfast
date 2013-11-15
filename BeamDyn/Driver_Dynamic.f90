@@ -102,11 +102,11 @@ PROGRAM MAIN
    t_initial = 0.0D0
    t_final = 0.04d0
    
-   dt_global = 1.0D-3
+   dt_global = 1.0D-4
    
    n_t_final = ((t_final - t_initial) / dt_global)
    
-   rhoinf = 1.0D0
+   rhoinf = 0.0D0
    alfam = 0.0D0
    alfaf = 0.0D0
    gama = 0.0D0
@@ -146,7 +146,7 @@ PROGRAM MAIN
    DO n_t_global = 0,n_t_final
        WRITE(*,*) "***TIME STEP NO: ",n_t_global+1
        WRITE(*,*) "***INITIAL TIME = ", (n_t_global)*dt_global
-       IF(n_t_global==3) STOP
+       IF(n_t_global==4) STOP
        StepEndTime =  (n_t_global + 1) * dt_global
        WRITE(*,*) "StepEndTime = ", StepEndTime
        CALL DynamicSolution(BDyn_Parameter%uuN0,BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,&

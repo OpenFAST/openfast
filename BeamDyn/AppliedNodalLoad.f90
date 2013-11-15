@@ -10,7 +10,7 @@
 
    F_ext(dof_total-3) = 1.0D+05 * SIN(20.0D0 * time)
 
-   WRITE(*,*) F_ext(dof_total-3)
+!   WRITE(*,*) F_ext(dof_total-3)
 !   STOP
 
    END SUBROUTINE AppliedNodalLoad

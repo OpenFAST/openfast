@@ -41,10 +41,10 @@
        DO j=1,dof_total-6
            ui_temp(j) = ui(j+6)
        ENDDO
-       IF(i==1) Eref = DOT_PRODUCT(ui_temp,feqv)*TOLF
+       IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
-           Enorm = DOT_PRODUCT(ui_temp,feqv)
+           Enorm = SQRT(DOT_PRODUCT(ui_temp,feqv))
            WRITE(*,*) "Enorm = ", Enorm
            WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN

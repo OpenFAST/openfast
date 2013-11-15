@@ -32,7 +32,7 @@
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #", i
-!       IF(i==10) STOP
+       IF(i==20) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -82,10 +82,10 @@
            
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
-!       DO j=1,dof_total
+       DO j=dof_total-5,dof_total
 !           WRITE(*,*) "j=",j
-!           WRITE(*,*) "xxNf(j)=",xxNf(j)
-!       ENDDO
+           WRITE(*,*) "uuNf(j)=",uuNf(j)
+       ENDDO
 !       STOP
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
