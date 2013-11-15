@@ -22,17 +22,19 @@
    REAL(ReKi)::F_ext(dof_total)
 
    REAL(ReKi)::ai(dof_total),rel_change(dof_total),ai_old(dof_total)
-   REAL(ReKi),PARAMETER:: TOLF = 1.0d-4   
+   REAL(ReKi)::feqv(dof_total-6),Eref,ai_temp(dof_total-6),Enorm
+   REAL(ReKi),PARAMETER:: TOLF = 1.0D-06   
 
    INTEGER(IntKi)::i,j,k
 
    CALL TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
    CALL AppliedNodalLoad(F_ext,time,dof_total)
    ai = 0.0D0
+   Eref = 0.0D0
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #", i
-       IF(i==20) STOP
+!       IF(i==10) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -60,32 +62,32 @@
 !       ENDDO
 !       STOP
        errf = 0.0D0
-       DO j=1,dof_node
-           RHS(j) = 0.0D0
+       feqv = 0.0D0
+       DO j=1,dof_total-6
+           feqv(j) = RHS(j+6)
        ENDDO
-       CALL Norm(dof_total,RHS,errf)
-       WRITE(*,*) "Norm(RHS) = ", errf
-       IF(errf .LE. TOLF) RETURN
-       ai_old = ai
+       CALL Norm(dof_total-6,feqv,errf)
+       WRITE(*,*) "NORM(feqv) = ", errf
        
        CALL CGSolver(RHS,StifK,ai,bc,dof_total)
-!       DO j=1,dof_total
-!           WRITE(*,*) "j=",j
-!           WRITE(*,*) "ai(j)=",ai(j)
-!       ENDDO
-!       STOP
-       rel_change = ABS(ai - ai_old)
-       CALL Norm(dof_total,aaNf,temp1)
-       CALL Norm(dof_total,rel_change,temp2)
-       errx = temp2
-!       IF(errx .LT. TOLF*temp1) RETURN
-           
+       ai_temp = 0.0D0
+       DO j=1,dof_total-6
+           ai_temp(j) = ai(j+6)
+       ENDDO
+       IF(i==1) Eref = SQRT(DOT_PRODUCT(ai_temp,feqv))*TOLF
+       IF(i .GT. 1) THEN
+           Enorm = 0.0D0
+           Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
+           WRITE(*,*) "Enorm = ", Enorm
+           WRITE(*,*) "Eref = ", Eref
+           IF(Enorm .LE. Eref) RETURN
+       ENDIF    
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
-       DO j=dof_total-5,dof_total
+!       DO j=dof_total-5,dof_total
 !           WRITE(*,*) "j=",j
-           WRITE(*,*) "uuNf(j)=",uuNf(j)
-       ENDDO
+!           WRITE(*,*) "uuNf(j)=",uuNf(j)
+!       ENDDO
 !       STOP
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
