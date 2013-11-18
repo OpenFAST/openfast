@@ -94,7 +94,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! local variables
       !-------------------------------------
 
-      INTEGER(IntKi)          :: i                ! do-loop counter
+      INTEGER(IntKi)          :: i,j                ! do-loop counter
       Real(ReKi)              :: xl               ! left most point
       Real(ReKi)              :: xr               ! right most point
       REAL(ReKi)              :: blength          !beam length: xr - xl
@@ -119,8 +119,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 1 
-      p%order    = 2 
+      p%elem_total = 2 
+      p%order    = 5 
       p%dof_node = 6
       p%node_total = p%elem_total * p%order  + 1
       p%dof_total  = p%node_total * p%dof_node
@@ -193,6 +193,11 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ENDDO
       DEALLOCATE(dloc)
 
+      OPEN(unit = 110, file = 'NodeLocation.dat', status = 'unknown')
+      DO i=1,p%node_total
+          j = (i-1) * p%dof_node
+          WRITE(110,*) p%uuN0(j+1)
+      ENDDO
 !     DO i = 1, p%elem_total
 !        p%det_jac(i) = elem_length / 2.   ! element-specific determinant of jacobian of transformation
 !     ENDDO     
