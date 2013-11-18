@@ -1,12 +1,13 @@
-   SUBROUTINE BldGaussPointData(hhx,hpx,Nuuu,Nrrr,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa)
+   SUBROUTINE BldGaussPointData(hhx,hpx,Nuuu,Nrrr,Stif0,uu0,E10,node_elem,dof_node,&
+                                &uuu,uup,E1,RR0,kapa,Stif,cet)
 
-   REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuuu(:),Nrrr(:),E10(:)
-   REAL(ReKi),INTENT(OUT):: uuu(:),uup(:),E1(:),RR0(:,:),kapa(:)
+   REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuuu(:),Nrrr(:),uu0(:),E10(:),Stif0(:,:)
+   REAL(ReKi),INTENT(OUT):: uuu(:),uup(:),E1(:),RR0(:,:),kapa(:),Stif(:,:),cet
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node
 
    REAL(ReKi):: rrr(3),rrp(3),hhi,hpi,cc(3)
-   REAL(ReKi):: rotu_temp(3),rot_temp(3),rot0_temp(3),Wrk(3:3)
-   INTEGER(IntKi):: inode,temp_id,temp_id2,i
+   REAL(ReKi):: rotu_temp(3),rot_temp(3),rot0_temp(3),Wrk(3,3),tempR6(6,6)
+   INTEGER(IntKi):: inode,temp_id,temp_id2,i,j
 
 
    uuu = 0.0D0
@@ -44,6 +45,21 @@
    RR0 = 0.0D0
    CALL CrvCompose(cc,rot_temp,rot0_temp,0)
    CALL CrvMatrixR(cc,RR0)
+
+   tempR6 = 0.0D0
+   DO i=1,3
+       DO j=1,3
+           tempR6(i,j) = RR0(i,j)
+           tempR6(i+3,j+3) = RR0(i,j)
+       ENDDO
+   ENDDO
+
+   cet = 0.0D0
+   Stif = 0.0D0
+   cet = Stif0(5,5) + Stif0(6,6)
+   Stif(1:6,1:6) = Stif0(1:6,1:6)
+   Stif = MATMUL(tempR6,MATMUL(Stif,TRANSPOSE(tempR6)))
+
    Wrk = 0.0D0
    kapa = 0.0D0
    CALL CrvMatrixH(rrr,Wrk)

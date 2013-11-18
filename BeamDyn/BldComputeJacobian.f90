@@ -4,7 +4,7 @@
    REAL(ReKi),INTENT(OUT):: hhx(:),hpx(:)
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node
 
-   REAL(ReKi)::Gup0(3),
+   REAL(ReKi)::Gup0(3)
    INTEGER(IntKi)::inode,temp_id,i
 
    hhx = 0.0D0
@@ -15,10 +15,12 @@
    DO inode=1,node_elem
        temp_id = (inode-1)*dof_node
        DO i=1,3
+!           WRITE(*,*) "Nuu0 =", Nuu0(temp_id+i)
            Gup0(i) = Gup0(i) + hpx(inode)*Nuu0(temp_id+i)
        ENDDO
    ENDDO
 
+   jacobian = 0.0D0
    jacobian = SQRT(DOT_PRODUCT(Gup0,Gup0))
 
    DO inode=1,node_elem
