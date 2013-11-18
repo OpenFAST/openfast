@@ -2,7 +2,7 @@
 
    REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuu0(:),Nrr0(:)
    REAL(ReKi),INTENT(INOUT):: uu0(:),E10(:)
-   INTEGER(IntKi),INTENT(IN):: node_elem,dof_node,  
+   INTEGER(IntKi),INTENT(IN):: node_elem,dof_node 
 
    REAL(ReKi):: hhi,hpi,rot0_temp(3),rotu_temp(3),rot_temp(3)
    INTEGER(IntKi):: inode,temp_id,temp_id2,i
