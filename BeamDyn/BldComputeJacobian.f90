@@ -15,7 +15,6 @@
    DO inode=1,node_elem
        temp_id = (inode-1)*dof_node
        DO i=1,3
-!           WRITE(*,*) "Nuu0 =", Nuu0(temp_id+i)
            Gup0(i) = Gup0(i) + hpx(inode)*Nuu0(temp_id+i)
        ENDDO
    ENDDO
