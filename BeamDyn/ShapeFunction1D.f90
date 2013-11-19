@@ -29,8 +29,8 @@
            hhh(3) = temp3 * (1.0D0 - rr * rr)*(rr + temp4)
            hhh(4) = temp2 * (rr * rr - temp1)*(1.0D0 + rr)
            hhr(1) = temp2 * (2.0D0 * rr - 3.0D0 * rr * rr + temp1)
-           hhr(2) = -temp3 * (rr - temp4 - rr*rr*rr + rr*rr*temp4)
-           hhr(3) = temp3 * (rr + temp4 -rr*rr*rr - rr*rr*temp4)
+           hhr(2) = -temp3 * (1.0D0 - 3.0D0 * rr * rr + temp4 * 2.0D0 * rr)
+           hhr(3) = temp3 * (1.0D0 - 3.0D0 * rr * rr - temp4 * 2.0D0 * rr)
            hhr(4) = temp2 *(2.0D0 * rr + 3.0D0 * rr * rr - temp1)
    END SELECT
            
