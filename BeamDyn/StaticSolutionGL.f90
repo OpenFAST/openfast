@@ -6,9 +6,9 @@
    INTEGER(IntKi),INTENT(IN):: niter,elem_total,node_elem,dof_node,ngp,dof_total,node_total
 
    REAL(ReKi):: StifK(dof_total,dof_total),RHS(dof_total)
-   REAL(ReKi):: ui(dof_total),ui_temp(dof_total)
+   REAL(ReKi):: ui(dof_total),ui_temp(dof_total-6)
    REAL(ReKi):: Eref,Enorm,feqv(dof_total-6),errf
-   REAL(ReKi),PARAMETER:: TOLF = 1.0D-07
+   REAL(ReKi),PARAMETER:: TOLF = 1.0D-10
 
    INTEGER(IntKi):: i,j
 
