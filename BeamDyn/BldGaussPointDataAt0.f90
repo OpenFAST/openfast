@@ -15,7 +15,7 @@
        temp_id = (inode-1)*dof_node
        temp_id2 = (inode-1)*dof_node/2
        DO i=1,3
-           uu0(i) = uu0(+i) + hhi*Nuu0(temp_id+i)
+           uu0(i) = uu0(i) + hhi*Nuu0(temp_id+i)
            uu0(i+3) = uu0(i+3) + hhi*Nrr0(temp_id2+i)
            E10(i) = E10(i) + hpi*Nuu0(temp_id+i)
        ENDDO

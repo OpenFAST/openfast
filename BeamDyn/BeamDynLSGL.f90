@@ -16,7 +16,7 @@
 !**********************************************************************************************************************************
 !
 !**********************************************************************************************************************************
-MODULE BeamDynGL
+MODULE BeamDynLSGL
 
    USE BeamDyn_Types
    USE NWTC_Library
@@ -52,12 +52,13 @@ INCLUDE 'CrvCompose.f90'
 INCLUDE 'ElemNodalDispGL.f90'
 INCLUDE 'NodalRelRotGL.f90'
 INCLUDE 'BldSet1DGaussPointScheme.f90'
-INCLUDE 'ShapeFunction1D.f90'
-INCLUDE 'BldComputeJacobian.f90'
+!INCLUDE 'ShapeFunction1D.f90'
+INCLUDE 'diffmtc.f90'
+INCLUDE 'BldComputeJacobianLSGL.f90'
 INCLUDE 'BldGaussPointDataAt0.f90'
 INCLUDE 'BldGaussPointData.f90'
 INCLUDE 'ElasticForce.f90'
-INCLUDE 'ElementMatrixGL.f90'
+INCLUDE 'ElementMatrixLSGL.f90'
 INCLUDE 'AssembleStiffKGL.f90'
 INCLUDE 'AssembleRHSGL.f90'
 INCLUDE 'BldGenerateStaticElement.f90'
@@ -407,11 +408,89 @@ END SUBROUTINE BDyn_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 
+subroutine BDyn_gen_gll_LSGL(N, x, w)
+!
+! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
+!
+! For details, see
+! @book{Deville-etal:2002,
+!  author =    {M. O. Deville and P. F. Fischer and E. H. Mund},
+!  title =     {High-Order Methods for Incompressible Fluid Flow},
+!  publisher = {Cambridge University Press},
+!  address = {Cambridge},
+!  year =      2002
+!}
+!
+!..................................................................................................................................
+
+   ! input variables
+
+   INTEGER(IntKi),                 INTENT(IN   )  :: N           ! Order of spectral element
+   REAL(ReKi),                     INTENT(  OUT)  :: x(N+1)      ! location of GLL nodes
+   REAL(ReKi),                     INTENT(  OUT)  :: w(N+1)      ! quadrature weights at GLL nodes
+
+
+   ! local variables  
+
+   REAL(ReKi)          :: tol       ! tolerance for newton-raphson solve
+   INTEGER(IntKi)      :: maxit     ! maximum allowable iterations in newton-raphson solve
+   REAL(ReKi)          :: x_it      ! current NR-iteration value
+   REAL(ReKi)          :: x_old     ! last NR-iteration value
+
+   REAL(ReKi)          :: dleg(N+1)   ! legendre polynomial
+
+   INTEGER(IntKi)      :: N1        ! N+1
+
+   INTEGER(IntKi)      :: i         ! do-loop counter
+   INTEGER(IntKi)      :: j         ! do-loop counter
+   INTEGER(IntKi)      :: k         ! do-loop counter
+
+
+   tol = 1e-15
+
+   N1 = N+1
+
+   maxit = 1e3  
+
+   ! enter known endpoints  [-1.0, 1.0]
+   x(1) = -1.
+   x(N1) = 1.
+
+   pi = acos(-1.)  ! perhaps use NWTC library value, but does not matter here; just used to guess at solution
+
+   do i = 1, N1
+
+      x_it = -cos(pi * float(i-1) / N) ! initial guess - chebyshev points
+
+      do j = 1, maxit
+         x_old = x_it
+         dleg(1) = 1.0
+         dleg(2) = x_it
+         do k = 2,N
+            dleg(k+1) = (  (2.0*dfloat(k) - 1.0) * dleg(k) * x_it &
+                            - (dfloat(k)-1.0)*dleg(k-1) ) / dfloat(k)
+         enddo
+
+         x_it = x_it - ( x_it * dleg(N1) - dleg(N) ) / &
+                       (dfloat(N1) * dleg(N1) )
+
+         if (abs(x_it - x_old) .lt. tol) then
+            exit
+         end if
+      enddo
+
+      x(i) = x_it
+      w(i) = 2.0 / (dfloat(N * N1) * dleg(N1)**2 )
+
+   enddo
+
+end subroutine BDyn_gen_gll_LSGL
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-END MODULE BeamDynGL
+END MODULE BeamDynLSGL
 !**********************************************************************************************************************************

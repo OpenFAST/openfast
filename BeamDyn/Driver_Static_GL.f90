@@ -22,6 +22,7 @@
 PROGRAM MAIN
 
    USE BeamDynGL
+!   USE BeamDynLSGL
    USE BeamDyn_Types
 
    USE NWTC_Library

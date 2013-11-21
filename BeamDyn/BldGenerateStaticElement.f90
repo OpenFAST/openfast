@@ -53,6 +53,7 @@
        elk = 0.0D0
        elf = 0.0D0
        CALL ElementMatrixGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Stif0,ngp,node_elem,dof_node,elk,elf)
+!       CALL ElementMatrixLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Stif0,ngp,node_elem,dof_node,elk,elf)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elk,StifK)
        CALL AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,elf,RHS)
