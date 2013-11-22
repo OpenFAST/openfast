@@ -43,7 +43,7 @@ MODULE BeamDynLSGL
    PUBLIC :: StaticSolutionGL                      ! for static verificaiton
 
 CONTAINS
-INCLUDE 'NodeLocGL.f90'
+INCLUDE 'NodeLoc.f90'
 INCLUDE 'Tilde.f90'
 INCLUDE 'OuterProduct.f90'
 INCLUDE 'CrvMatrixR.f90'
@@ -103,7 +103,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       Real(ReKi)              :: xr               ! right most point
       REAL(ReKi)              :: blength          !beam length: xr - xl
       REAL(ReKi)              :: elem_length      !element length: blength/elem_total
-      REAL(ReKi),ALLOCATABLE  :: dloc(:)
+      REAL(ReKi),ALLOCATABLE  :: dloc(:),GLL_temp(:),w_temp(:)
 
       INTEGER(IntKi)          :: ErrStat2     ! Error status of the operation
       CHARACTER(LEN(ErrMsg))   :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
@@ -123,7 +123,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 1 
+      p%elem_total = 3 
       p%node_elem   = 3 
       p%ngp = p%node_elem - 1
       p%dof_node = 6
@@ -148,7 +148,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%bc = 0.0D0
       ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
       p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 1.0D-01
+      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D+00
 !      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
 !      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
@@ -157,7 +157,15 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ALLOCATE( dloc(p%node_total), STAT = ErrStat)
       dloc = 0.0D0
 
-      CALL NodeLocGL(dloc,xl,elem_length,p%node_elem,p%elem_total)
+      ALLOCATE( GLL_temp(p%node_elem), STAT = ErrStat)
+      GLL_temp = 0.0D0
+
+      ALLOCATE( w_temp(p%node_elem), STAT = ErrStat)
+      w_temp = 0.0D0
+
+      CALL BDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
+!      CALL NodeLocGL(dloc,xl,elem_length,p%node_elem,p%elem_total)
+      CALL NodeLoc(dloc,xl,elem_length,GLL_temp,p%node_elem-1,p%elem_total,p%node_total,blength)
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
@@ -169,6 +177,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
           p%Stif0(6,6) = 1.0D+02
       ENDDO
       DEALLOCATE(dloc)
+      DEALLOCATE(GLL_temp)
+      DEALLOCATE(w_temp)
 
       OPEN(unit = 110, file = 'NodeLocation.dat', status = 'unknown')
       DO i=1,p%node_total
