@@ -23,7 +23,7 @@
    jacobian = 0.0D0
    jacobian = SQRT(DOT_PRODUCT(Gup0,Gup0))
    
-   WRITE(*,*) "Jacobian = ", jacobian
+   !WRITE(*,*) "Jacobian = ", jacobian
 
    DO inode=1,node_elem
        hpx(inode) = hpx(inode)/jacobian

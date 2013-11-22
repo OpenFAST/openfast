@@ -21,8 +21,8 @@
 !**********************************************************************************************************************************
 PROGRAM MAIN
 
-   USE BeamDynGL
-!   USE BeamDynLSGL
+!   USE BeamDynGL
+   USE BeamDynLSGL
    USE BeamDyn_Types
 
    USE NWTC_Library
@@ -43,6 +43,8 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: pc               ! counter for pc iterations
 
    INTEGER(IntKi)                     :: BDyn_interp_order     ! order of interpolation/extrapolation
+
+   INTEGER(IntKi),PARAMETER:: OutUnit = 10
 
    ! BeamDyn Derived-types variables; see Registry_BeamDyn.txt for details
 
@@ -65,12 +67,14 @@ PROGRAM MAIN
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
 
-   OPEN(unit = 10, file = 'Displacement_u1GL.dat', status = 'unknown')
-   OPEN(unit = 20, file = 'Displacement_u2GL.dat', status = 'unknown')
-   OPEN(unit = 30, file = 'Displacement_u3GL.dat', status = 'unknown')
-   OPEN(unit = 40, file = 'Rotation_p1GL.dat', status = 'unknown')
-   OPEN(unit = 50, file = 'Rotation_p2GL.dat', status = 'unknown')
-   OPEN(unit = 60, file = 'Rotation_p3GL.dat', status = 'unknown')
+
+   OPEN(unit = OutUnit, file = 'BeamDyn.out', status = 'REPLACE',ACTION = 'WRITE')
+!   OPEN(unit = 10, file = 'Displacement_u1GL.dat', status = 'unknown')
+!   OPEN(unit = 20, file = 'Displacement_u2GL.dat', status = 'unknown')
+!   OPEN(unit = 30, file = 'Displacement_u3GL.dat', status = 'unknown')
+!   OPEN(unit = 40, file = 'Rotation_p1GL.dat', status = 'unknown')
+!   OPEN(unit = 50, file = 'Rotation_p2GL.dat', status = 'unknown')
+!   OPEN(unit = 60, file = 'Rotation_p3GL.dat', status = 'unknown')
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
@@ -143,15 +147,29 @@ PROGRAM MAIN
                       &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%ngp,&
                       &BDyn_Parameter%niter)   
 
+   WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
+   WRITE(OutUnit,*) '=========================================='
    DO i=1,BDyn_Parameter%node_total
        j = (i - 1) * BDyn_Parameter%dof_node
-       WRITE(10,*) BDyn_OtherState%uuNf(j+1)
-       WRITE(20,*) BDyn_OtherState%uuNf(j+2)
-       WRITE(30,*) BDyn_OtherState%uuNf(j+3)
-       WRITE(40,*) BDyn_OtherState%uuNf(j+4)
-       WRITE(50,*) BDyn_OtherState%uuNf(j+5)
-       WRITE(60,*) BDyn_OtherState%uuNf(j+6)
+       WRITE(OutUnit,1000) i,BDyn_Parameter%uuN0(j+1),BDyn_Parameter%uuN0(j+2),BDyn_Parameter%uuN0(j+3),&
+                          &BDyn_Parameter%uuN0(j+4),BDyn_Parameter%uuN0(j+5),BDyn_Parameter%uuN0(j+6)
+!       WRITE(10,*) BDyn_OtherState%uuNf(j+1)
+!       WRITE(20,*) BDyn_OtherState%uuNf(j+2)
+!       WRITE(30,*) BDyn_OtherState%uuNf(j+3)
+!       WRITE(40,*) BDyn_OtherState%uuNf(j+4)
+!       WRITE(50,*) BDyn_OtherState%uuNf(j+5)
+!       WRITE(60,*) BDyn_OtherState%uuNf(j+6)
    ENDDO
+  
+   WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
+   WRITE(OutUnit,*) '=========================================='
+   DO i=1,BDyn_Parameter%node_total
+       j = (i - 1) * BDyn_Parameter%dof_node
+       WRITE(OutUnit,1000) i,BDyn_OtherState%uuNf(j+1),BDyn_OtherState%uuNf(j+2),BDyn_OtherState%uuNf(j+3),&
+                          &BDyn_OtherState%uuNf(j+4),BDyn_OtherState%uuNf(j+5),BDyn_OtherState%uuNf(j+6)
+   ENDDO
+   1000 FORMAT (' ',I5.2,6F23.17)
+   CLOSE (OutUnit)
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &
 !                                   BDyn_DiscreteState_pred, BDyn_ConstraintState_pred, &
