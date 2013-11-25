@@ -206,6 +206,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
    y_FAST%UnSum = -1                                                    ! set the summary file unit to -1 to indicate it's not open
    y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
+   y_FAST%UnGra = -1                                                    ! set the binary graphics output file unit to -1 to indicate it's not open
+   
    y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
    p_FAST%ModuleInitialized = .FALSE.                                   ! no modules are initialized
    
@@ -322,6 +324,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
       InitInData_HD%UseInputFile = .TRUE.
       InitInData_HD%InputFile    = p_FAST%HDFile
       InitInData_HD%OutRootName  = p_FAST%OutFileRoot
+      InitInData_HD%TMax         = p_FAST%TMax
 
       CALL HydroDyn_Init( InitInData_HD, HD_Input(1), p_HD,  x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, dt_global, InitOutData_HD, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
@@ -346,8 +349,16 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    ! ........................
 
    IF (p_FAST%CompSub) THEN
-            
+          
+      IF (p_FAST%CompHydro) THEN
+         InitInData_SD%WtrDpth = InitOutData_HD%WtrDpth
+      ELSE
+         InitInData_SD%WtrDpth = 0.0_ReKi
+      END IF
+      
+      
       InitInData_SD%g            = InitOutData_ED%Gravity
+      
       !InitInData_SD%UseInputFile = .TRUE. 
       InitInData_SD%SDInputFile  = p_FAST%SDFile
       InitInData_SD%RootName     = p_FAST%OutFileRoot
@@ -475,6 +486,10 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                         , x_AD  , xd_AD  , z_AD   &
                         )           
       
+      IF (p_FAST%WrGraphics) THEN
+         CALL WriteInputMeshesToFile( ED_Input(1), SD_Input(1), HD_Input(1), MAP_Input(1), AD_Input(1), TRIM(p_FAST%OutFileRoot)//'_InputMeshes.bin', ErrStat, ErrMsg) 
+      END IF 
+
       !----------------------------------------------------------------------------------------
       ! Check to see if we should output data this time step:
       !----------------------------------------------------------------------------------------
@@ -1037,10 +1052,14 @@ CONTAINS
                CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, ED_Output(1)%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
                               y_SD%WriteOutput, y_MAP%WriteOutput, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
-
+                              
          END IF
 
       ENDIF
+      
+      IF (p_FAST%WrGraphics) THEN
+         CALL WriteMotionMeshesToFile(t_global, ED_Output(1), SD_Input(1), y_SD, HD_Input(1), MAP_Input(1), y_FAST%UnGra, ErrStat, ErrMsg, TRIM(p_FAST%OutFileRoot)//'.gra') 
+      END IF
             
    END SUBROUTINE WriteOutputToFile      
    !...............................................................................................................................
@@ -1188,7 +1207,6 @@ CONTAINS
             CALL CheckError( ErrStat, ErrMsg )
       END IF
    
-
 
    END SUBROUTINE InitModuleMappings
    !...............................................................................................................................

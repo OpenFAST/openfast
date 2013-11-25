@@ -46,7 +46,7 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.04.00a-bjj', '10-Oct-2013' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.04.00a-bjj', '25-Nov-2013' ) ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
@@ -68,7 +68,8 @@ MODULE FAST_Types
       
       INTEGER(IntKi)                    :: UnOu    = -1                            ! I/O unit number for the tabular output file
       INTEGER(IntKi)                    :: UnSum   = -1                            ! I/O unit number for the summary file
-
+      INTEGER(IntKi)                    :: UnGra   = -1                            ! I/O unit number for mesh graphics
+      
       CHARACTER(1024)                   :: FileDescLines(3)                        ! Description lines to include in output files (header, time run, plus module names/versions)
       CHARACTER(ChanLen), ALLOCATABLE   :: ChannelNames(:)                         ! Names of the output channels
       CHARACTER(ChanLen), ALLOCATABLE   :: ChannelUnits(:)                         ! Units for the output channels
@@ -87,7 +88,7 @@ MODULE FAST_Types
 
    TYPE, PUBLIC :: FAST_ModuleMapType ! make sure anything added in this type gets destroyed in Destroy_FAST_ModuleMapType
 
-         ! Data structures for mapping the various modules together
+         ! Data structures for mapping and coupling the various modules together 
 
             ! ED <-> HD
       TYPE(MeshMapType)                 :: ED_P_2_HD_W_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
@@ -169,6 +170,7 @@ MODULE FAST_Types
       LOGICAL                   :: WrBinOutFile                                    ! Write a binary output file? (.outb)
       LOGICAL                   :: WrTxtOutFile                                    ! Write a text (formatted) output file? (.out)
       LOGICAL                   :: SumPrint                                        ! Print summary data to file? (.sum)
+      LOGICAL                   :: WrGraphics                                      ! Write binary output files with mesh grahpics information? (.gra, .bin)
       CHARACTER(1)              :: Delim                                           ! Delimiter between columns of text output file (.out): space or tab
       CHARACTER(20)             :: OutFmt                                          ! Format used for text tabular output (except time); resulting field should be 10 characters
       CHARACTER(1024)           :: OutFileRoot                                     ! The rootname of the output files
