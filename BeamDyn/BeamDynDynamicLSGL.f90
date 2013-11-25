@@ -16,7 +16,7 @@
 !**********************************************************************************************************************************
 !
 !**********************************************************************************************************************************
-MODULE BeamDynLSGL
+MODULE BeamDynDynamicLSGL
 
    USE BeamDyn_Types
    USE NWTC_Library
@@ -40,7 +40,7 @@ MODULE BeamDynLSGL
    PUBLIC :: BDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
-   PUBLIC :: StaticSolutionGL                      ! for static verificaiton
+   PUBLIC :: DynamicSolutionGL                      ! for static verificaiton
 
 CONTAINS
 INCLUDE 'NodeLoc.f90'
@@ -51,6 +51,7 @@ INCLUDE 'CrvMatrixH.f90'
 INCLUDE 'CrvCompose.f90'
 INCLUDE 'ElemNodalDispGL.f90'
 INCLUDE 'NodalRelRotGL.f90'
+
 !INCLUDE 'BldSet1DGaussPointScheme.f90'
 !INCLUDE 'ShapeFunction1D.f90'
 INCLUDE 'BldGaussPointWeight.f90'
@@ -60,14 +61,18 @@ INCLUDE 'BldComputeJacobianLSGL.f90'
 INCLUDE 'BldGaussPointDataAt0.f90'
 INCLUDE 'BldGaussPointData.f90'
 INCLUDE 'ElasticForce.f90'
-INCLUDE 'ElementMatrixLSGL.f90'
+INCLUDE 'BldGaussPointDataMass.f90'
+INCLUDE 'InertialForce.f90'
+INCLUDE 'ElementMatrixDynLSGL.f90'
 INCLUDE 'AssembleStiffKGL.f90'
 INCLUDE 'AssembleRHSGL.f90'
-INCLUDE 'BldGenerateStaticElement.f90'
+INCLUDE 'BldGenerateDynamicElement.f90'
 INCLUDE 'Norm.f90'
 INCLUDE 'CGSolver.f90'
-INCLUDE 'UpdateConfiguration.f90'
-INCLUDE 'StaticSolutionGL.f90'
+INCLUDE 'UpdateDynamic.f90'
+INCLUDE 'TiSchmPredictorStep.f90'
+INCLUDE 'AppliedNodalLoad.f90'
+INCLUDE 'DynamicSolutionGL.f90'
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
@@ -100,7 +105,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! local variables
       !-------------------------------------
 
-      INTEGER(IntKi)          :: i,j                ! do-loop counter
+      INTEGER(IntKi)          :: i                ! do-loop counter
       Real(ReKi)              :: xl               ! left most point
       Real(ReKi)              :: xr               ! right most point
       REAL(ReKi)              :: blength          !beam length: xr - xl
@@ -125,16 +130,17 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 3 
-      p%node_elem   = 3 
-      p%ngp = p%node_elem - 1
+      p%elem_total = 1
+      p%node_elem  = 3
+      p%ngp = p%node_elem - 1 
       p%dof_node = 6
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
       p%dof_total  = p%node_total * p%dof_node
+      
       p%niter = 100
 
       xl = 0.   ! left most point (on x axis)
-      xr = 10.  ! right most point (on x axis)
+      xr = 1.  ! right most point (on x axis)
       blength = xr - xl
       elem_length = blength / p%elem_total
 
@@ -142,51 +148,66 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ALLOCATE( p%Stif0(p%dof_node,p%dof_node),      STAT=ErrStat )
       p%Stif0 = 0.0D0
+       
+      ALLOCATE( p%mEta0(3),      STAT=ErrStat )
+      p%mEta0 = 0.0D0
+      ALLOCATE( p%rho0(3,3),      STAT=ErrStat )
+      p%rho0 = 0.0D0
+
       ALLOCATE( p%uuN0(p%dof_total),      STAT=ErrStat )
       p%uuN0 = 0.0D0
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
       OtherState%uuNf = 0.0D0
+      ALLOCATE( OtherState%uuNi(p%dof_total), STAT = ErrStat)
+      OtherState%uuNi = 0.0D0
+      ALLOCATE( OtherState%vvNf(p%dof_total), STAT = ErrStat)
+      OtherState%vvNf = 0.0D0
+      ALLOCATE( OtherState%vvNi(p%dof_total), STAT = ErrStat)
+      OtherState%vvNi = 0.0D0
+      ALLOCATE( OtherState%aaNf(p%dof_total), STAT = ErrStat)
+      OtherState%aaNf = 0.0D0
+      ALLOCATE( OtherState%aaNi(p%dof_total), STAT = ErrStat)
+      OtherState%aaNi = 0.0D0
+      ALLOCATE( OtherState%xxNf(p%dof_total), STAT = ErrStat)
+      OtherState%xxNf = 0.0D0
+      ALLOCATE( OtherState%xxNi(p%dof_total), STAT = ErrStat)
+      OtherState%xxNi = 0.0D0
       ALLOCATE( p%bc(p%dof_total), STAT = ErrStat)
       p%bc = 0.0D0
-      ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
-      p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D+00
-!      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
-!      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
-!      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
-!      p%F_ext(p%dof_total - 1) = -6.28D+01
-      p%bc = 0.0D0
+
       ALLOCATE( dloc(p%node_total), STAT = ErrStat)
       dloc = 0.0D0
-
+      
       ALLOCATE( GLL_temp(p%node_elem), STAT = ErrStat)
       GLL_temp = 0.0D0
 
       ALLOCATE( w_temp(p%node_elem), STAT = ErrStat)
       w_temp = 0.0D0
 
-      CALL BDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
+
 !      CALL NodeLocGL(dloc,xl,elem_length,p%node_elem,p%elem_total)
+
+      CALL BDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
       CALL NodeLoc(dloc,xl,elem_length,GLL_temp,p%node_elem-1,p%elem_total,p%node_total,blength)
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
-          p%Stif0(1,1) = 1.0D+04
-          p%Stif0(2,2) = 1.0D+04
-          p%Stif0(3,3) = 1.0D+04
-          p%Stif0(4,4) = 1.0D+04
-          p%Stif0(5,5) = 1.0D+02
-          p%Stif0(6,6) = 1.0D+02
+          p%Stif0(1,1) = 3.50D+08 
+          p%Stif0(2,2) = 1.09162D+08
+          p%Stif0(3,3) = 1.09162D+08
+          p%Stif0(4,4) = 7.57037D+04
+          p%Stif0(5,5) = 7.28000D+04
+          p%Stif0(6,6) = 2.91900D+05
       ENDDO
       DEALLOCATE(dloc)
       DEALLOCATE(GLL_temp)
       DEALLOCATE(w_temp)
-
-      OPEN(unit = 110, file = 'NodeLocation.dat', status = 'unknown')
-      DO i=1,p%node_total
-          j = (i-1) * p%dof_node
-          WRITE(110,*) p%uuN0(j+1)
-      ENDDO
+      
+      p%m00 = 1.35000D+01
+      p%mEta0 = 0.0D0
+      p%rho0(1,1) = 1.40625D-02
+      p%rho0(2,2) = 2.81250D-03
+      p%rho0(3,3) = 1.12500D-02    
 
       ! Define boundary conditions (0->fixed, 1->free)
       p%bc = 1.0D0
@@ -194,6 +215,9 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
           p%bc(i) = 0.0D0
       ENDDO ! fix left end for a clamped beam 
 
+      ! Define initial guess for the system inputs here:
+
+      ! Define system output initializations (set up mesh) here:
 
 
 END SUBROUTINE BDyn_Init
@@ -419,7 +443,6 @@ SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residu
 END SUBROUTINE BDyn_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
-
 subroutine BDyn_gen_gll_LSGL(N, x, w)
 !
 ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
@@ -498,11 +521,10 @@ subroutine BDyn_gen_gll_LSGL(N, x, w)
 
 end subroutine BDyn_gen_gll_LSGL
 
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-END MODULE BeamDynLSGL
+END MODULE BeamDynDynamicLSGL
 !**********************************************************************************************************************************

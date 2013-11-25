@@ -21,7 +21,8 @@
 !**********************************************************************************************************************************
 PROGRAM MAIN
 
-   USE BeamDynDynamicGL
+!   USE BeamDynDynamicGL
+   USE BeamDynDynamicLSGL
    USE BeamDyn_Types
 
    USE NWTC_Library
