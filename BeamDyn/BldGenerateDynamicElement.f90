@@ -75,8 +75,11 @@
        CALL ElemNodalDispGL(vvNf,node_elem,dof_node,nelem,Nvvv)
        CALL ElemNodalDispGL(aaNf,node_elem,dof_node,nelem,Naaa)
        
-       CALL ElementMatrixDynGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,Stif0,m00,mEta0,rho0,&
-                              &ngp,node_elem,dof_node,elk,elf,elm,elg)
+!       CALL ElementMatrixDynGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,Stif0,m00,mEta0,rho0,&
+!                              &ngp,node_elem,dof_node,elk,elf,elm,elg)
+
+       CALL ElementMatrixDynLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,Stif0,m00,mEta0,rho0,&
+                                &ngp,node_elem,dof_node,elk,elf,elm,elg)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elk,StifK)
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)
