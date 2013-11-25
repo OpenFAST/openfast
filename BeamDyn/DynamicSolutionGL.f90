@@ -35,7 +35,7 @@
    Eref = 0.0D0
 
    DO i=1,niter
-       WRITE(*,*) "N-R Iteration #", i
+!       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==10) STOP
        StifK = 0.0D0
        RHS = 0.0D0
@@ -69,7 +69,7 @@
            feqv(j) = RHS(j+6)
        ENDDO
        CALL Norm(dof_total-6,feqv,errf)
-       WRITE(*,*) "NORM(feqv) = ", errf
+!       WRITE(*,*) "NORM(feqv) = ", errf
        
        CALL CGSolver(RHS,StifK,ai,bc,dof_total)
        ai_temp = 0.0D0
@@ -80,8 +80,8 @@
        IF(i .GT. 1) THEN
            Enorm = 0.0D0
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
-           WRITE(*,*) "Enorm = ", Enorm
-           WRITE(*,*) "Eref = ", Eref
+!           WRITE(*,*) "Enorm = ", Enorm
+!           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)

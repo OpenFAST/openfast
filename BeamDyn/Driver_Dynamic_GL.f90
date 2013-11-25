@@ -49,6 +49,8 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: pc               ! counter for pc iterations
 
    INTEGER(IntKi)                     :: BDyn_interp_order     ! order of interpolation/extrapolation
+   
+   INTEGER(IntKi),PARAMETER:: OutUnit = 10
 
    ! BeamDyn Derived-types variables; see Registry_BeamDyn.txt for details
 
@@ -90,6 +92,8 @@ PROGRAM MAIN
       END SUBROUTINE UpdateStructuralConfiguration
    END INTERFACE
 
+    OPEN(unit = OutUnit, file = 'Dynamic.out', status = 'REPLACE',ACTION = 'WRITE')
+
    DoubleTest = 1.
    SingleTest = 1.
 
@@ -97,7 +101,7 @@ PROGRAM MAIN
    WRITE(*,*) "SingleTest = ", SingleTest
 
    t_initial = 0.0D0
-   t_final = 0.04d0
+   t_final = 2.0d0
    
    dt_global = 1.0D-3
    
@@ -141,11 +145,11 @@ PROGRAM MAIN
 
 
    DO n_t_global = 0,n_t_final
-       WRITE(*,*) "***TIME STEP NO: ",n_t_global+1
-       WRITE(*,*) "***INITIAL TIME = ", (n_t_global)*dt_global
-       IF(n_t_global==4) STOP
+       WRITE(*,2000) n_t_global+1,(n_t_global)*dt_global 
+!       WRITE(*,*) "***INITIAL TIME = ", (n_t_global)*dt_global
+!       IF(n_t_global==4) STOP
        StepEndTime =  (n_t_global + 1) * dt_global
-       WRITE(*,*) "StepEndTime = ", StepEndTime
+!       WRITE(*,*) "StepEndTime = ", StepEndTime
        CALL DynamicSolutionGL(BDyn_Parameter%uuN0,BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,&
                         &BDyn_OtherState%xxNi,BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,&
                         &BDyn_OtherState%xxNf,&
@@ -154,14 +158,59 @@ PROGRAM MAIN
                         &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
                         &coef,BDyn_Parameter%niter,BDyn_Parameter%ngp,dt_global,StepEndTime)
                         
+       IF(n_t_global == 0) THEN
+           WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
+           WRITE(OutUnit,*) '=========================================='
+           DO i=1,BDyn_Parameter%node_total
+           j = (i - 1) * BDyn_Parameter%dof_node
+           WRITE(OutUnit,1000) i,BDyn_Parameter%uuN0(j+1),BDyn_Parameter%uuN0(j+2),BDyn_Parameter%uuN0(j+3),&
+                                &BDyn_Parameter%uuN0(j+4),BDyn_Parameter%uuN0(j+5),BDyn_Parameter%uuN0(j+6)
+           ENDDO
+       ENDIF
+       
+       WRITE(OutUnit,3000) n_t_global+1
+       WRITE(OutUnit,4000) (n_t_global)*dt_global
+       WRITE(OutUnit,5000) (n_t_global + 1) * dt_global
+                        
        CALL UpdateStructuralConfiguration(BDyn_OtherState%uuNf,BDyn_OtherState%vvNf,BDyn_OtherState%aaNf,BDyn_OtherState%xxNf,&
                                          &BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,BDyn_OtherState%xxNi)
 
-       DO i=BDyn_Parameter%dof_total-5,BDyn_Parameter%dof_total
-           WRITE(*,*) BDyn_OtherState%uuNf(i)
+!       DO i=BDyn_Parameter%dof_total-5,BDyn_Parameter%dof_total
+!           WRITE(*,*) BDyn_OtherState%uuNf(i)
+!       ENDDO
+
+       WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
+       WRITE(OutUnit,*) '=========================================='
+       DO i=1,BDyn_Parameter%node_total
+           j = (i - 1) * BDyn_Parameter%dof_node
+           WRITE(OutUnit,1000) i,BDyn_OtherState%uuNf(j+1),BDyn_OtherState%uuNf(j+2),BDyn_OtherState%uuNf(j+3),&
+                              &BDyn_OtherState%uuNf(j+4),BDyn_OtherState%uuNf(j+5),BDyn_OtherState%uuNf(j+6)
        ENDDO
+       
+       WRITE(OutUnit,*) 'Nodal Velocity (vvNf):'
+       WRITE(OutUnit,*) '=========================================='
+       DO i=1,BDyn_Parameter%node_total
+           j = (i - 1) * BDyn_Parameter%dof_node
+           WRITE(OutUnit,1000) i,BDyn_OtherState%vvNf(j+1),BDyn_OtherState%vvNf(j+2),BDyn_OtherState%vvNf(j+3),&
+                              &BDyn_OtherState%vvNf(j+4),BDyn_OtherState%vvNf(j+5),BDyn_OtherState%vvNf(j+6)
+       ENDDO
+       
+       WRITE(OutUnit,*) 'Nodal Acceleration (aaNf):'
+       WRITE(OutUnit,*) '=========================================='
+       DO i=1,BDyn_Parameter%node_total
+           j = (i - 1) * BDyn_Parameter%dof_node
+           WRITE(OutUnit,1000) i,BDyn_OtherState%aaNf(j+1),BDyn_OtherState%aaNf(j+2),BDyn_OtherState%aaNf(j+3),&
+                              &BDyn_OtherState%aaNf(j+4),BDyn_OtherState%aaNf(j+5),BDyn_OtherState%aaNf(j+6)
+       ENDDO
+   
    ENDDO    
 
+   1000 FORMAT (' ',I5.2,6F23.17)
+   2000 FORMAT ('*TIME STEP NO:',I5.2,'       ','INITIAL TIME = ',ES12.5)
+   3000 FORMAT ('TIME STE NO: ', I5.2)
+   4000 FORMAT ('INITIAL TIME = ', ES12.5)
+   5000 FORMAT ('TIME STEP END = ', ES12.5)
+   CLOSE (OutUnit)
 
    CALL BDyn_End( BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
                     BDyn_ConstraintState, BDyn_OtherState, BDyn_Output(1), ErrStat, ErrMsg )
