@@ -65,7 +65,10 @@ INCLUDE 'AssembleStiffKGL.f90'
 INCLUDE 'AssembleRHSGL.f90'
 INCLUDE 'BldGenerateStaticElement.f90'
 INCLUDE 'Norm.f90'
-INCLUDE 'CGSolver.f90'
+!INCLUDE 'CGSolver.f90'
+INCLUDE 'ludcmp.f90'
+INCLUDE 'lubksb.f90'
+
 INCLUDE 'UpdateConfiguration.f90'
 INCLUDE 'StaticSolutionGL.f90'
 
@@ -125,8 +128,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 2 
-      p%node_elem   = 5 
+      p%elem_total = 3 
+      p%node_elem   = 3 
       p%ngp = p%node_elem - 1
       p%dof_node = 6
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
@@ -150,7 +153,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%bc = 0.0D0
       ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
       p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -1.80D+02
+      p%F_ext(p%dof_total-1) = -1.80D+02 * 2.0D0
 !      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D+00
 !      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
 !      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02

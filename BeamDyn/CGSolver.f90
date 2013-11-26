@@ -10,8 +10,8 @@
    REAL(ReKi):: beta_cg, p(dof_total), r(dof_total)
     
     
-   eps = 1.0D-10
-   lmax = 1000000
+   eps = 1.0D-05
+   lmax = 100000000
     
    ui = 0.0d0  ! use zero as initial condition
      
