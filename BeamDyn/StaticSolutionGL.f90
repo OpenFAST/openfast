@@ -11,6 +11,7 @@
    REAL(ReKi),PARAMETER:: TOLF = 1.0D-10
 
    INTEGER(IntKi):: i,j
+   INTEGER(IntKi):: temp_id,k !For Debug
 
    ui = 0.0D0
    Eref = 0.0D0
@@ -48,6 +49,11 @@
        ENDIF
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
+       DO j=1,node_total
+           DO k=1,dof_node
+               WRITE(*,*) "uuNf",k," = ",uuNf((j-1)*6+k)
+           ENDDO
+       ENDDO
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            STOP

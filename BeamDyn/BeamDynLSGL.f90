@@ -150,7 +150,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%bc = 0.0D0
       ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
       p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D+00
+      p%F_ext(p%dof_total-1) = -1.80D+02
+!      p%F_ext(p%dof_total-1) = -3.14159D+01 * 2.0D+00
 !      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
 !      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
@@ -171,12 +172,24 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
-          p%Stif0(1,1) = 1.0D+04
-          p%Stif0(2,2) = 1.0D+04
-          p%Stif0(3,3) = 1.0D+04
-          p%Stif0(4,4) = 1.0D+04
-          p%Stif0(5,5) = 1.0D+02
-          p%Stif0(6,6) = 1.0D+02
+ !         p%Stif0(1,1) = 1.0D+04
+ !         p%Stif0(2,2) = 1.0D+04
+ !         p%Stif0(3,3) = 1.0D+04
+ !         p%Stif0(4,4) = 1.0D+04
+ !         p%Stif0(5,5) = 1.0D+02
+ !         p%Stif0(6,6) = 1.0D+02
+          p%Stif0(1,1) = 1.37D+06
+          p%Stif0(2,2) = 1.37D+06
+          p%Stif0(3,3) = 1.37D+06
+          p%Stif0(4,4) = 1.73D+04
+          p%Stif0(5,5) = 6.08D+04
+          p%Stif0(6,6) = 1.43D+05
+          p%Stif0(4,5) = 1.80D+04
+          p%Stif0(4,6) = 3.58D+02
+          p%Stif0(5,6) = 3.77D+02
+          p%Stif0(5,4) = 1.80D+04
+          p%Stif0(6,4) = 3.58D+02
+          p%Stif0(6,5) = 3.77D+02     
       ENDDO
       DEALLOCATE(dloc)
       DEALLOCATE(GLL_temp)
