@@ -6284,7 +6284,6 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
 !       running the simulation (i.e., don't run for a long time only to find out that the file cannot be opened for writing).
 !..................................................................................................................................
 
-
    IMPLICIT                     NONE
 
    INTEGER(IntKi), PARAMETER     :: LenName     = ChanLen            ! Number of characters allowed in a channel name
@@ -6446,6 +6445,9 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    !...............................................................................................................................
    ! Find the range of our output channels
    !...............................................................................................................................
+!BJJ: This scaling has issues if the channel contains NaN.
+
+   
    ColMin(:) = AllOutData(:,1_IntKi)         ! Initialize the Min values for each channel
    ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
 
@@ -6723,6 +6725,66 @@ END SUBROUTINE WrBinFAST
    RETURN
    END SUBROUTINE WrFileNR ! ( Unit, Str )
 !=======================================================================
+   SUBROUTINE WrMatrix( A, Un, ReFmt )
+      REAL(ReKi),     INTENT(IN) :: A(:,:)
+      INTEGER,        INTENT(IN) :: Un
+      CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+
+      INTEGER        :: nr, nc  ! size (rows and columns) of A
+      INTEGER        :: i, j    ! indices into A
+      CHARACTER(256) :: Fmt
+   
+   
+      nr = SIZE(A,1)
+      nc = SIZE(A,2)
+
+      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"   
+
+      DO i=1,nr
+         WRITE( Un, Fmt ) (A(i,j), j=1,nc)
+      END DO
+
+   RETURN
+   END SUBROUTINE WrMatrix
+!=======================================================================  
+   SUBROUTINE WrML ( Str )
+
+
+      ! This routine writes out a string in the middle of a line.
+
+
+      ! Argument declarations.
+
+   CHARACTER(*)                 :: Str
+
+
+
+   CALL WrNR ( Str )
+
+
+   RETURN
+   END SUBROUTINE WrML ! ( Str )
+!=======================================================================
+   SUBROUTINE WrPr ( Str )
+
+
+      ! This routine writes out a prompt to the screen without
+      ! following it with a new line, though a new line precedes it.
+
+
+      ! Argument declarations:
+
+   CHARACTER(*), INTENT(IN)     :: Str                                          ! The prompt string to print.
+
+
+
+   CALL WrScr ( ' ' )
+   CALL WrNR  ( TRIM( Str )//' > ' )
+
+
+   RETURN
+   END SUBROUTINE WrPr ! ( Str )
+!=======================================================================
    SUBROUTINE WrReAryFileNR ( Unit, Ary, Fmt, ErrStat, ErrMsg  )
 
 
@@ -6761,44 +6823,6 @@ END SUBROUTINE WrBinFAST
 
    RETURN
    END SUBROUTINE WrReAryFileNR ! ( Unit, Ary, Fmt, ErrStat, ErrMsg )
-!=======================================================================
-   SUBROUTINE WrML ( Str )
-
-
-      ! This routine writes out a string in the middle of a line.
-
-
-      ! Argument declarations.
-
-   CHARACTER(*)                 :: Str
-
-
-
-   CALL WrNR ( Str )
-
-
-   RETURN
-   END SUBROUTINE WrML ! ( Str )
-!=======================================================================
-   SUBROUTINE WrPr ( Str )
-
-
-      ! This routine writes out a prompt to the screen without
-      ! following it with a new line, though a new line precedes it.
-
-
-      ! Argument declarations:
-
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The prompt string to print.
-
-
-
-   CALL WrScr ( ' ' )
-   CALL WrNR  ( TRIM( Str )//' > ' )
-
-
-   RETURN
-   END SUBROUTINE WrPr ! ( Str )
 !=======================================================================
    RECURSIVE SUBROUTINE WrScr ( InStr )
 

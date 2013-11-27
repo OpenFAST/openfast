@@ -56,7 +56,7 @@ CONTAINS
    ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
    !...............................................................................................................................
       INTEGER, INTENT(INOUT)                ::  UnIn     ! fortran output unit
-      TYPE(MeshType),INTENT(INOUT)          ::      M    ! mesh to be reported on
+      TYPE(MeshType),INTENT(IN)          ::      M    ! mesh to be reported on
 
       INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   ! Indicates whether an error occurred (see NWTC_Library)
       CHARACTER(*),    INTENT(OUT)          :: ErrMsg    ! Error message associated with the ErrStat
@@ -252,16 +252,18 @@ CONTAINS
      write(U,*)  'Nnodes:      ', M%Nnodes
 
 
-     DO i = 1, NELEMKINDS
-       IF ( M%ElemTable(i)%nelem .GT. 0 ) THEN
-         WRITE(U,*)ElemNames(i),' nelem: ',M%ElemTable(i)%nelem,' max: ',M%ElemTable(i)%maxelem
-         IF(M%initialized.AND.ASSOCIATED(M%ElemTable(i)%Elements))THEN
-           DO j = 1,min(nn,M%ElemTable(i)%nelem)
-             write(U,*)' ',j,M%ElemTable(i)%Elements(j)%ElemNodes(:)
-           ENDDO
-         ENDIF
-       ENDIF
-     END DO
+     IF (ASSOCIATED(M%ElemTable)) THEN
+        DO i = 1, NELEMKINDS
+          IF ( M%ElemTable(i)%nelem .GT. 0 ) THEN
+            WRITE(U,*)ElemNames(i),' nelem: ',M%ElemTable(i)%nelem,' max: ',M%ElemTable(i)%maxelem
+            IF(M%initialized.AND.ASSOCIATED(M%ElemTable(i)%Elements))THEN
+              DO j = 1,min(nn,M%ElemTable(i)%nelem)
+                write(U,*)' ',j,M%ElemTable(i)%Elements(j)%ElemNodes(:)
+              ENDDO
+            ENDIF
+          ENDIF
+        END DO
+      END IF
 
 ! Here are some built in derived data types that can represent values at the nodes
 ! the last dimension of each of these has range 1:nnodes for the mesh being represented
@@ -271,14 +273,14 @@ CONTAINS
 ! Whether or not these are allocated is indicted in the fieldmask, which can
 ! be interrogated by a routine using an instance of the type. If you add a field
 ! here, be sure to change the table of parameters used to size and index fieldmask above.
-     IF(M%initialized.AND.ASSOCIATED(M%Position))THEN
+     IF(ASSOCIATED(M%Position))THEN
        isz=size(M%Position,2)
        write(U,*)'Position: ',isz,' node(s)'
        DO i=1,min(nn,isz)
          write(U,*)' ',i,M%Position(:,i)
        ENDDO
      ENDIF
-     IF(M%initialized.AND.ASSOCIATED(M%RefOrientation))THEN
+     IF(ASSOCIATED(M%RefOrientation))THEN
        isz=size(M%RefOrientation,3)
        write(U,*)'RefOrientation: ',isz
        DO i=1,min(nn,isz) !bjj: printing this like a matrix:
@@ -364,10 +366,15 @@ CONTAINS
       END IF
 
      DO WHILE ( CtrlCode .NE. MESH_NOMORE )
-       WRITE(U,*)'  Ielement: ', Ielement,' ',ElemNames(Xelement), &
-                 ' det_jac: ',M%ElemList(Ielement)%Element%det_jac,  &
-                 ' Nodes: ',M%ElemList(Ielement)%Element%ElemNodes
 
+       WRITE(U,'("  Ielement: ",I10,1x,A," det_jac: ",ES15.7," Nodes:",'//&
+                Num2LStr( size(M%ElemList(Ielement)%Element%ElemNodes) )//'(1x,I10))') &
+                    Ielement,&
+                    ElemNames(Xelement), &
+                    M%ElemList(Ielement)%Element%det_jac,  &
+                    M%ElemList(Ielement)%Element%ElemNodes
+       
+       
        CtrlCode = MESH_NEXT
        CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
         IF (ErrStat >= AbortErrLev) THEN
@@ -696,14 +703,13 @@ CONTAINS
                Mesh%ElemTable(i)%nelem = 0  ; Mesh%ElemTable(i)%maxelem = 0
                IF (ASSOCIATED(Mesh%ElemTable(i)%Elements)) THEN
                   DO j = 1, SIZE(Mesh%ElemTable(i)%Elements)
-                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) THEN
+                     IF (ALLOCATED(Mesh%ElemTable(i)%Elements(j)%ElemNodes)) THEN
                         DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
-                        NULLIFY(Mesh%ElemTable(i)%Elements(j)%ElemNodes)
                      ENDIF
-                     IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) THEN
-                        DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-                        NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
-                     ENDIF
+                     !IF (ASSOCIATED(Mesh%ElemTable(i)%Elements(j)%Neighbors)) THEN
+                     !   DEALLOCATE(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                     !   NULLIFY(Mesh%ElemTable(i)%Elements(j)%Neighbors)
+                     !ENDIF
                   ENDDO
                   DEALLOCATE(Mesh%ElemTable(i)%Elements)
                   NULLIFY(Mesh%ElemTable(i)%Elements)
