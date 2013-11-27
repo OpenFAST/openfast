@@ -86,13 +86,11 @@ MODULE ModMesh_Types
 
 
    TYPE, PUBLIC :: ElemRecType ! a particular element
-     INTEGER                     :: Xelement               ! which kind of element
-     INTEGER                     :: Nneighbors             ! how many neighbors
-     REAL(ReKi)                  :: det_jac                ! determinant of the Jacobian (e.g., 1/2 the length of a line-2 element)
-     INTEGER, POINTER            :: ElemNodes(:) => NULL() ! pointer to the list of nodes
-!bjj: make allocatable ^ ?
-     TYPE(ElemRecType), POINTER  :: Neighbors(:) => NULL() ! neighbor list
-!bjj: make allocatable ^ ?
+     INTEGER                        :: Xelement      ! which kind of element
+     INTEGER                        :: Nneighbors    ! how many neighbors
+     REAL(ReKi)                     :: det_jac       ! determinant of the Jacobian (e.g., 1/2 the length of a line-2 element)
+     INTEGER,           ALLOCATABLE :: ElemNodes(:)  ! the list of nodes
+!     TYPE(ElemRecType), POINTER     :: Neighbors(:)  ! neighbor list (cannot be allocatable because it's a subtype of itself)
    END TYPE ElemRecType
 
    TYPE, PUBLIC :: ElemTabType   ! table of all elements of a particular type
