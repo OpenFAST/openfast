@@ -18,12 +18,18 @@
    REAL(ReKi):: errf,temp1,temp2,errx
    REAL(ReKi):: StifK(dof_total,dof_total), RHS(dof_total)
    REAL(ReKi):: MassM(dof_total,dof_total), DampG(dof_total,dof_total)
+
+   REAL(ReKi):: StifK_LU(dof_total-6,dof_total-6),RHS_LU(dof_total-6)
+
    REAL(ReKi):: F_ext(dof_total)
    REAL(ReKi):: Fedge(dof_total)
 
    REAL(ReKi)::ai(dof_total),ai_temp(dof_total-6)
    REAL(ReKi)::feqv(dof_total-6),Eref,Enorm
    REAL(ReKi),PARAMETER:: TOLF = 1.0D-09   
+   
+   REAL(ReKi)::d
+   INTEGER(IntKi):: indx(dof_total-6)
 
    INTEGER(IntKi)::i,j,k
    
@@ -67,14 +73,21 @@
        feqv = 0.0D0
        DO j=1,dof_total-6
            feqv(j) = RHS(j+6)
+           RHS_LU(j) = RHS(j+6)
+           DO k=1,dof_total-6
+               StifK_LU(j,k) = StifK(j+6,k+6)
+           ENDDO
        ENDDO
        CALL Norm(dof_total-6,feqv,errf)
 !       WRITE(*,*) "NORM(feqv) = ", errf
        
-       CALL CGSolver(RHS,StifK,ai,bc,dof_total)
-       ai_temp = 0.0D0
+!       CALL CGSolver(RHS,StifK,ai,bc,dof_total)
+       CALL ludcmp(StifK_LU,dof_total-6,indx,d)
+       CALL lubksb(StifK_LU,dof_total-6,indx,RHS_LU,ai_temp)
+
+       ai = 0.0D0
        DO j=1,dof_total-6
-           ai_temp(j) = ai(j+6)
+           ai(j+6) = ai_temp(j)
        ENDDO
        IF(i==1) Eref = SQRT(DOT_PRODUCT(ai_temp,feqv))*TOLF
        IF(i .GT. 1) THEN

@@ -68,7 +68,10 @@ INCLUDE 'AssembleStiffKGL.f90'
 INCLUDE 'AssembleRHSGL.f90'
 INCLUDE 'BldGenerateDynamicElement.f90'
 INCLUDE 'Norm.f90'
-INCLUDE 'CGSolver.f90'
+!INCLUDE 'CGSolver.f90'
+INCLUDE 'ludcmp.f90'
+INCLUDE 'lubksb.f90'
+
 INCLUDE 'UpdateDynamic.f90'
 INCLUDE 'TiSchmPredictorStep.f90'
 INCLUDE 'AppliedNodalLoad.f90'
@@ -130,7 +133,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 1
+      p%elem_total = 10
       p%node_elem  = 3
       p%ngp = p%node_elem - 1 
       p%dof_node = 6
