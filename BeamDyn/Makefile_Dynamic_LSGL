@@ -158,5 +158,5 @@ $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT): $(LIB_OBJS) $(MODNAME_OBJS) | $(INTER_DIR)
    # Cleanup afterwards.
 
 clean:
-	$(DEL_CMD) $(INTER_DIR)$(PATH_SEP)*.mod $(INTER_DIR)$(PATH_SEP)*.obj $(OUTPUT_NAME)$(EXE_EXT) BeamDyn_Types.f90 *.dat
+	$(DEL_CMD) $(INTER_DIR)$(PATH_SEP)*.mod $(INTER_DIR)$(PATH_SEP)*.obj $(OUTPUT_NAME)$(EXE_EXT) BeamDyn_Types.f90 *.dat *.out
 
