@@ -81,6 +81,7 @@
    
    CALL diffmtc(ngp-1,1,rr,GLL_temp,1,hhx,hpx)
    
+
    RootForce = 0.0D0
    DO i=1,ngp
        temp_id = (i-1)*dof_node

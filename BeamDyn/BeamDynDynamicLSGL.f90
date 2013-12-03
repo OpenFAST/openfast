@@ -41,6 +41,7 @@ MODULE BeamDynDynamicLSGL
    PUBLIC :: BDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
    PUBLIC :: DynamicSolutionGL                      ! for static verificaiton
+   PUBLIC:: ComputeRootForce
 
 CONTAINS
 INCLUDE 'NodeLoc.f90'
@@ -76,6 +77,9 @@ INCLUDE 'UpdateDynamic.f90'
 INCLUDE 'TiSchmPredictorStep.f90'
 INCLUDE 'AppliedNodalLoad.f90'
 INCLUDE 'DynamicSolutionGL.f90'
+
+INCLUDE 'ComputeStrainForceGP.f90'
+INCLUDE 'ComputeRootForce.f90'
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
@@ -175,6 +179,9 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       OtherState%xxNf = 0.0D0
       ALLOCATE( OtherState%xxNi(p%dof_total), STAT = ErrStat)
       OtherState%xxNi = 0.0D0
+      ALLOCATE( OtherState%RootForce(p%dof_node), STAT = ErrStat)
+      OtherState%RootForce = 0.0D0
+
       ALLOCATE( p%bc(p%dof_total), STAT = ErrStat)
       p%bc = 0.0D0
 
