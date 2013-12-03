@@ -144,8 +144,12 @@ PROGRAM MAIN
    CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
                       &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
                       &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
-                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,BDyn_Parameter%ngp,&
-                      &BDyn_Parameter%niter)   
+                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
+                      &BDyn_Parameter%ngp,BDyn_Parameter%niter)   
+
+   CALL ComputeRootForce(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
+                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
+                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
 
    WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
    WRITE(OutUnit,*) '=========================================='
@@ -168,6 +172,10 @@ PROGRAM MAIN
        WRITE(OutUnit,1000) i,BDyn_OtherState%uuNf(j+1),BDyn_OtherState%uuNf(j+2),BDyn_OtherState%uuNf(j+3),&
                           &BDyn_OtherState%uuNf(j+4),BDyn_OtherState%uuNf(j+5),BDyn_OtherState%uuNf(j+6)
    ENDDO
+   WRITE(OutUnit,*) 'Root Forces'
+   WRITE(OutUnit,*) '=========================================='
+   WRITE(OutUnit,1000) 1,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),BDyn_OtherState%RootForce(3),&
+                          &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6)
    1000 FORMAT (' ',I5.2,6F23.17)
    CLOSE (OutUnit)
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
