@@ -176,7 +176,7 @@ PROGRAM MAIN
    WRITE(OutUnit,*) '=========================================='
    WRITE(OutUnit,1000) 1,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),BDyn_OtherState%RootForce(3),&
                           &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6)
-   1000 FORMAT (' ',I5.2,6F23.17)
+   1000 FORMAT (' ',I5.2,6F23.12)
    CLOSE (OutUnit)
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &

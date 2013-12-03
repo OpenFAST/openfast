@@ -158,6 +158,10 @@ PROGRAM MAIN
                         &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
                         &coef,BDyn_Parameter%niter,BDyn_Parameter%ngp,dt_global,StepEndTime)
                         
+       CALL ComputeRootForce(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
+                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
+                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
+
        IF(n_t_global == 0) THEN
            WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
            WRITE(OutUnit,*) '=========================================='
@@ -202,10 +206,15 @@ PROGRAM MAIN
            WRITE(OutUnit,1000) i,BDyn_OtherState%aaNf(j+1),BDyn_OtherState%aaNf(j+2),BDyn_OtherState%aaNf(j+3),&
                               &BDyn_OtherState%aaNf(j+4),BDyn_OtherState%aaNf(j+5),BDyn_OtherState%aaNf(j+6)
        ENDDO
-   
+
+
+       WRITE(OutUnit,*) 'Root Force::'
+       WRITE(OutUnit,*) '=========================================='
+       WRITE(OutUnit,1000) 1,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),BDyn_OtherState%RootForce(3),&
+                          &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6) 
    ENDDO    
 
-   1000 FORMAT (' ',I5.2,6F23.17)
+   1000 FORMAT (' ',I5.2,6F23.12)
    2000 FORMAT ('*TIME STEP NO:',I5.2,'       ','INITIAL TIME = ',ES12.5)
    3000 FORMAT ('TIME STE NO: ', I5.2)
    4000 FORMAT ('INITIAL TIME = ', ES12.5)
