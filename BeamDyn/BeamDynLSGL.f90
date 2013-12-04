@@ -132,7 +132,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! Define parameters here:
 
       p%elem_total = 1 
-      p%node_elem   = 33
+      p%node_elem   = 13
       p%ngp = p%node_elem - 1
       p%dof_node = 6
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
