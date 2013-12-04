@@ -11,7 +11,7 @@
 
    REAL(ReKi):: ui(dof_total),ui_temp(dof_total-6)
    REAL(ReKi):: Eref,Enorm,feqv(dof_total-6),errf
-   REAL(ReKi),PARAMETER:: TOLF = 1.0D-12
+   REAL(ReKi),PARAMETER:: TOLF = 1.0D-20
    REAL(ReKi):: d
 
    INTEGER(IntKi):: indx(dof_total-6)

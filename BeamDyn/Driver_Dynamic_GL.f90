@@ -214,7 +214,7 @@ PROGRAM MAIN
                           &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6) 
    ENDDO    
 
-   1000 FORMAT (' ',I5.2,6F23.12)
+   1000 FORMAT (' ',I5.2,6ES21.12)
    2000 FORMAT ('*TIME STEP NO:',I5.2,'       ','INITIAL TIME = ',ES12.5)
    3000 FORMAT ('TIME STE NO: ', I5.2)
    4000 FORMAT ('INITIAL TIME = ', ES12.5)

@@ -26,7 +26,7 @@
 
    REAL(ReKi)::ai(dof_total),ai_temp(dof_total-6)
    REAL(ReKi)::feqv(dof_total-6),Eref,Enorm
-   REAL(ReKi),PARAMETER:: TOLF = 1.0D-09   
+   REAL(ReKi),PARAMETER:: TOLF = 1.0D-10   
    
    REAL(ReKi)::d
    INTEGER(IntKi):: indx(dof_total-6)
