@@ -393,6 +393,36 @@ where $H$ is the tangent tensor that relates the curvature vector $k$ and rotati
 In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
 $n^{th}$-order Lagrangian interpolants, where nodes are located at the $n+1$
 GLL-quadrature points in the $[-1,1]$ element natural-coordinate domain.
+%Need more work here: a figure shows some LS elements and a short discussion of its advantages.
+
+\section{Numerical Examples}
+
+\subsection{Example 1: Static bending of a cantilever beam}
+
+The first example is a benchmark problem for geometrically nonlinear
+analysis of beams \cite{Simo1985,Xiao2012}. We calculate the static
+deflection of a cantilever beam that is subjected at its free end to
+a constant moment $M$.  The length of the beam $L$ is $10\,in$ and the cross-sectional stiffness 
+matrix is given below:
+\begin{equation}
+    \label{StifE1}
+    C = 10^3 \times \begin{bmatrix}
+	1770 & 0    & 0    & 0    & 0    & 0   \\
+	     & 1770 & 0    & 0    & 0    & 0   \\
+	     &      & 1770 & 0    & 0    & 0   \\
+	     &      &      & 8.16 & 0    & 0   \\
+	     &      &      &      & 86.9 & 0   \\
+	     &      &      &      &      & 215
+\end{bmatrix}
+\end{equation} 
+The load is given by the following equation:
+\begin{equation}
+    \label{E1Load}
+    M_2 = \lambda \bar{M}_2
+\end{equation}
+where $\bar{M}_2 = \lambda \pi \frac{EI_2}{L}$. The parameter $\lambda$ will vary between $0$ and $2$. In 
+this case, the beam is discretized with two $5^{th}$ order elements. 
+
 
 
  
