@@ -252,15 +252,15 @@ displacement array as $\underline{q}=\left[
 \underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the 1D
 displacement and $\vec{p}$ is the rotation parameter vector. The
 acceleration array can thus be defined as $\underline{a}=\left[
-\ddot{\underline{u}}^T~~ \ddot{\underline{p}}^T \right]$. For nonlinear
+\ddot{\underline{u}}^T~~ \dot{\underline{\omega}}^T \right]$. For nonlinear
 finite element analysis, the discretized and incremental forms of
 displacement, velocity, and acceleration array are written as
 \begin{align}
 	\label{Discretized}
 	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\Delta \underline{q}^T = \left[ \Delta \underline{u}^T~~\Delta \underline{p}^T \right] \\
-	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\Delta \underline{\dot{q}}^T = \left[\Delta \underline{\dot{u}}^T~~\Delta \underline{\dot{p}}^T \right] \\
+	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\Delta \underline{\dot{v}}^T = \left[\Delta \underline{\dot{u}}^T~~\Delta \underline{\omega}^T \right] \\
 %	\label{Incremental}
-	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{\ddot{q}}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \ddot{\underline{p}}^T \right]	
+	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
 \end{align}
 where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
 a column matrix of nodal values.  The governing equations for beams are
@@ -281,7 +281,7 @@ externally applied loads, respectively. They are defined as follows
 	\label{hatG}
 	\hat{\tens{G}} &= \int_0^l \tens{N}^T \tens{\mathcal{G}}^I~\tens{N} dx_1\\ 
 	\label{hatK}
-	\hat{\tens{K}}&=\int_0^l \left[ \tens{N}^T (\tens{\mathcal{K}}^I + \mathcal{\tens{Q}})~ \tens{N} + \tens{N}^T \mathcal{\tens{P}}~ \tens{N}^\prime + \tens{N}^{\prime T} \mathcal{\tens{S}}~ \tens{N}^\prime + \tens{N}^{\prime T} \mathcal{\tens{O}}~ \tens{N} \right] d x_1 \\	
+	\hat{\tens{K}}&=\int_0^l \left[ \tens{N}^T (\tens{\mathcal{K}}^I + \mathcal{\tens{Q}})~ \tens{N} + \tens{N}^T \mathcal{\tens{P}}~ \tens{N}^\prime + \tens{N}^{\prime T} \mathcal{\tens{C}}~ \tens{N}^\prime + \tens{N}^{\prime T} \mathcal{\tens{O}}~ \tens{N} \right] d x_1 \\	
 	\label{hatF}
 	\hat{\vec{F}} &= \int_0^l (\tens{N}^T \vec{\mathcal{F}}^I + \tens{N}^T \mathcal{\vec{F}}^D + \tens{N}^{\prime T} \mathcal{\vec{F}}^C)dx_1 \\
 	\label{hatFext}
@@ -308,50 +308,47 @@ elastic forces obtained from Eq.~\eqref{GovernGEBT-1} and
 	\end{bmatrix}
 	\mathcal{\vec{F}}^C \equiv \tens{\Upsilon}~ \mathcal{\vec{F}}^C
 \end{align}
-where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens{\mathcal{G}}^I$, $\tens{\mathcal{K}}^I$, $\mathcal{\tens{S}}$, $\mathcal{\tens{O}}$, $\mathcal{\tens{P}}$, $\mathcal{\tens{Q}}$, and $\vec{\mathcal{F}}^I$ in Eq.~\eqref{hatG}, Eq.~\eqref{hatK}, and Eq.~\eqref{hatF} are defined as
+where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens{\mathcal{G}}^I$, $\tens{\mathcal{K}}^I$,  $\mathcal{\tens{O}}$, $\mathcal{\tens{P}}$, $\mathcal{\tens{Q}}$, and $\vec{\mathcal{F}}^I$ in Eq.~\eqref{hatG}, Eq.~\eqref{hatK}, and Eq.~\eqref{hatF} are defined as
 \begin{align}
         \label{mathcalG}
         \tens{\mathcal{G}}^I &= \begin{bmatrix}
-        \tens{0} & 2m\tilde{\eta}^T \dot{\tens{H}}-2 \tilde{\beta} \tens{H}  \\
-        \tens{0} & 2 \tens{\varrho} \tens{\dot{H}} + \tens{\varepsilon} \tens{H}
+        \tens{0} & (\tilde{\omega} m \vec{\eta})^T+\tilde{\omega} m \tilde{\eta}^T  \\
+        \tens{0} & \tilde{\omega} \tens{\varrho}-\widetilde{\tens{\varrho} \vec{\omega}}
         \end{bmatrix} \\
         \label{mathcalK}
         \tens{\mathcal{K}}^I &= \begin{bmatrix}
-        \tens{0} & m \tilde{\eta}^T \ddot{\tens{H}} - 2 \tilde{\beta} \tens{\dot{H}} - \tilde{\alpha} \tens{H} \\
-        \tens{0} & \tens{\varrho} \ddot{\tens{H}} + \tens{\varepsilon} \dot{\tens{H}} + (\ddot{\tilde{u}} m \tilde{\eta}-\tilde{\gamma}) \tens{H}
+        \tens{0} & \dot{\tilde{\omega}}m\tilde{\eta}^T + \tilde{\omega} \tilde{\omega}m\tilde{\eta}^T  \\
+        \tens{0} & \ddot{\tilde{u}}m\tilde{\eta} + \tens{\varrho} \dot{\tilde{\omega}}-\widetilde{\tens{\varrho} \vec{\dot{\omega}}}+\tilde{\omega} \tens{\varrho} \tilde{\omega} - \tilde{\omega}  \widetilde{\tens{\varrho} \vec{\omega}}
         \end{bmatrix}\\
-	\label{mathcalS}
-	\mathcal{\tens{S}} &= \tens{\mathcal{C}} \begin{bmatrix}
-	\underline{\underline{I}} & \underline{\underline{0}} \\
-	\underline{\underline{0}} & \tens{H}
-	\end{bmatrix} \\
 	\label{mathcalO}
 	\mathcal{\tens{O}} &= \begin{bmatrix}
-	\underline{\underline{0}} & \tilde{F}^T \tens{H} \\
-	\underline{\underline{0}}& \tilde{M}^T \tens{H}
-	\end{bmatrix} + \tens{\mathcal{C}} \begin{bmatrix}
-	\underline{\underline{0}} & (\tilde{x}^\prime_0 + \tilde{u}^\prime) \tens{H} \\
-	\underline{\underline{0}} & \tens{H}^\prime
+	\tens{0} & \tens{C}_{11} \tilde{E_1} - \tilde{F} \\
+	\tens{0}& \tens{C}_{21} \tilde{E_1} - \tilde{M}
 	\end{bmatrix} \\
 	\label{mathcalP}
 	\mathcal{\tens{P}} &= \begin{bmatrix}
-	\underline{\underline{0}} & \underline{\underline{0}} \\
-	\tilde{F} & \underline{\underline{0}}
-	\end{bmatrix} + \tens{\Upsilon}~ \mathcal{\tens{S}} \\
+	\tens{0} & \tens{0} \\
+	\tilde{F} +  (\tens{C}_{11} \tilde{E_1})^T & (\tens{C}_{21} \tilde{E_1})^T
+	\end{bmatrix}  \\
 	\label{mathcalQ}
 	\mathcal{\tens{Q}} &= \tens{\Upsilon}~ \mathcal{\tens{O}} \\
 	\label{mathcalF}
 	\vec{\mathcal{F}}^I &= \begin{Bmatrix}
-	m \ddot{\vec{u}} + \vec{\alpha} \\
-	m \tilde{\eta} \ddot{\vec{u}} + \vec{\gamma}
+	m \ddot{\vec{u}} + (\dot{\tilde{\omega}} + \tilde{\omega} \tilde{\omega})m \vec{\eta} \\
+	m \tilde{\eta} \ddot{\vec{u}} +\tens{\varrho}\dot{\vec{\omega}}+\tilde{\omega}\tens{\varrho}\vec{\omega}
 	\end{Bmatrix}
 \end{align}
-where $\tens{I}$ a $3 \times 3$ identity matrix; operator $\tens{H}$ is the tangent tensor which relates the angular velocity vector $\vec{\omega}$ and the rotation parameter vector $\vec{p}$ as
-\begin{equation}
-	\label{operatorH}
-	\vec{\omega} = \tens{H}(\vec{p}) \dot{\vec{p}}
-\end{equation}
-The following notations were introduced to simply the writing of the above expressions $\vec{\alpha} = (\dot{\tilde{\omega}} + \tilde{\omega} \tilde{\omega} ) m \vec{\eta}$, $\vec{\beta} = \tilde{\omega} m \vec{\eta}$, $\vec{\gamma} = \tens{\varrho} \dot{\vec{\omega}} + \tilde{\omega} \tens{\varrho} \vec{\omega}$, and $\tens{\varepsilon} = \tilde{\omega} \tens{\varrho} + (\tilde{\omega} \tens{\varrho})^T - \widetilde{\tens{\varrho} \vec{\omega}}$.   
+The following notations were introduced to simply the writing of the above expressions
+\begin{align}
+    \label{E1}
+    \vec{E}_1 &= \vec{x}_0^\prime + \vec{u}^\prime \\
+    \label{PartC}
+    \tens{\mathcal{C}} &= \begin{bmatrix}
+    \tens{C}_{11} & \tens{C}_{12} \\
+    \tens{C}_{21} & \tens{C}_{22}
+    \end{bmatrix}
+\end{align}
+ 
 The derivation and linearization of governing equations of geometrically exact beam theory can be found in Bauchau\cite{Bauchau:2010}.
 
 \section{Interpolation of Rotation Field by Spectral Finite Element}
@@ -378,45 +375,27 @@ the nodal value at the $k^{th}$ node, for three reasons: 1) rotations do not
 form a linear space so that they have to be composed instead of added; 2)
 rescaling operation is needed to eliminate the singularity existing in the
 vectorial rotation parameters; 3) it is lack of objectivity, which is
-defined by Crisfield and Jeleni\'c\cite{Crisfield1999} and refers
+defined by Crisfield and Jeleni\'c\cite{Crisfield1999} refers
 to the invariance of strain measures computed through interpolation to the
 addition of a rigid body motion. Therefore, we adopt a more robust
 interpolation approach proposed by Crisfield and Jeleni\'c
 \cite{Crisfield1999} to deal with the finite rotations.
 \begin{description}
     \item[Step 1:] Compute the nodal relative rotations, $\vec{\hat{r}}^k$ by removing the rigid body rotation, $\vec{\hat{c}}^1$, from the finite rotation at each node, $\vec{\hat{r}}^k = \vec{\hat{c}}^{1-} \oplus \vec{\hat{c}}^k$.
-    \item[Step 2:] Interpolate the relative rotation field: $\vec{r}(s) = h^k(s) \vec{\hat{r}}^k$ and $\vec{r}^\prime(s) = h^{k \prime}(s) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(s) = R(\vec{\hat{c}}^1)H(\vec{r}) \vec{r}^\prime$.
+    \item[Step 2:] Interpolate the relative rotation field: $\vec{r}(s) = h^k(s) \vec{\hat{r}}^k$ and $\vec{r}^\prime(s) = h^{k \prime}(s) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(s) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
     \item[Step 3:] Restore the rigid body rotation removed in Step 1: $\vec{c}(s) = \vec{\hat{c}}^1 \oplus \vec{r}(s)$.
 \end{description} 
+where $H$ is the tangent tensor that relates the curvature vector $k$ and rotation vector $p$ as
+\begin{equation}
+    \label{Tensor}
+    \vec{k} = \tens{H}~ \vec{p}^\prime
+\end{equation}
+In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
+$n^{th}$-order Lagrangian interpolants, where nodes are located at the $n+1$
+GLL-quadrature points in the $[-1,1]$ element natural-coordinate domain.
+
 
  
- \section{Content of Full Paper} 
-
-In the full paper, we will provide more details of the theoretical
-derivations along with various numerical examples. A demonstration example
-will be provided in Section III to show the advantage of nodal quadrature
-using spectral finite elements in interpolating the rotation field over the
-traditional method. Static and dynamic examples will be presented to show
-the accuracy and capability of the newly developed beam solver. Moreover, we
-will briefly introduce the format of the current code, which is in
-accordance to the FAST modularization framework. 
-
-%\section{Conclusion}
-
-%After much typing, the paper can now conclude.
-%Four rocks were next to the channel.
-%This caused a few standing waves during the rip that one could ride on
-%the way in or jump on the way out.
-
-%\section*{Appendix}
-
-%An appendix, if needed, it should appear before the acknowledgments.
-%Use the 'starred' version of the \verb|\section| commands to avoid
-%section numbering.
-
-%\section*{Acknowledgments}
-
-%A place to recognize others or simply thank Kleb and Wood for this template.
 
 \bibliographystyle{aiaa}
 \bibliography{references,local_bib}
