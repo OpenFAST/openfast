@@ -137,8 +137,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 10
-      p%node_elem  = 3
+      p%elem_total = 2
+      p%node_elem  = 10
       p%ngp = p%node_elem - 1 
       p%dof_node = 6
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
@@ -147,7 +147,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%niter = 100
 
       xl = 0.   ! left most point (on x axis)
-      xr = 1.  ! right most point (on x axis)
+      xr = 10.  ! right most point (on x axis)
       blength = xr - xl
       elem_length = blength / p%elem_total
 
@@ -202,22 +202,39 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
-          p%Stif0(1,1) = 3.50D+08 
-          p%Stif0(2,2) = 1.09162D+08
-          p%Stif0(3,3) = 1.09162D+08
-          p%Stif0(4,4) = 7.57037D+04
-          p%Stif0(5,5) = 7.28000D+04
-          p%Stif0(6,6) = 2.91900D+05
+!          p%Stif0(1,1) = 3.50D+08 
+!          p%Stif0(2,2) = 1.09162D+08
+!          p%Stif0(3,3) = 1.09162D+08
+!          p%Stif0(4,4) = 7.57037D+04
+!          p%Stif0(5,5) = 7.28000D+04
+!          p%Stif0(6,6) = 2.91900D+05
+          p%Stif0(1,1) = 1.37D+06
+          p%Stif0(2,2) = 1.37D+06 
+          p%Stif0(3,3) = 1.37D+06 
+          p%Stif0(4,4) = 1.73D+04
+          p%Stif0(5,5) = 6.08D+04
+          p%Stif0(6,6) = 1.43D+05
+          p%Stif0(4,5) = 1.80D+04
+          p%Stif0(4,6) = 3.58D+02
+          p%Stif0(5,6) = 3.77D+02
+          p%Stif0(5,4) = 1.80D+04
+          p%Stif0(6,4) = 3.58D+02
+          p%Stif0(6,5) = 3.77D+02 
       ENDDO
       DEALLOCATE(dloc)
       DEALLOCATE(GLL_temp)
       DEALLOCATE(w_temp)
       
-      p%m00 = 1.35000D+01
-      p%mEta0 = 0.0D0
-      p%rho0(1,1) = 1.40625D-02
-      p%rho0(2,2) = 2.81250D-03
-      p%rho0(3,3) = 1.12500D-02    
+!      p%m00 = 1.35000D+01
+!      p%mEta0 = 0.0D0
+!      p%rho0(1,1) = 1.40625D-02
+!      p%rho0(2,2) = 2.81250D-03
+!      p%rho0(3,3) = 1.12500D-02    
+      p%m00 = 1.61D+01
+      p%mEta0 = 0.0D0 
+      p%rho0(1,1) = 2.74D-06 
+      p%rho0(2,2) = 7.90D-07
+      p%rho0(3,3) = 1.95D-06
 
       ! Define boundary conditions (0->fixed, 1->free)
       p%bc = 1.0D0

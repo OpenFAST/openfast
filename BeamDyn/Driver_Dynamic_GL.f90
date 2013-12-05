@@ -51,6 +51,7 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: BDyn_interp_order     ! order of interpolation/extrapolation
    
    INTEGER(IntKi),PARAMETER:: OutUnit = 10
+   INTEGER(IntKi),PARAMETER:: OutQiUnit = 20
 
    ! BeamDyn Derived-types variables; see Registry_BeamDyn.txt for details
 
@@ -93,6 +94,7 @@ PROGRAM MAIN
    END INTERFACE
 
     OPEN(unit = OutUnit, file = 'Dynamic.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = OutQiUnit, file = 'Qi.out', status = 'REPLACE',ACTION = 'WRITE')
 
    DoubleTest = 1.
    SingleTest = 1.
@@ -101,13 +103,13 @@ PROGRAM MAIN
    WRITE(*,*) "SingleTest = ", SingleTest
 
    t_initial = 0.0D0
-   t_final = 2.0d0
+   t_final = 4.0d0
    
-   dt_global = 1.0D-3
+   dt_global = 5.0D-03
    
    n_t_final = ((t_final - t_initial) / dt_global)
    
-   rhoinf = 1.0D0
+   rhoinf = 0.0D0
    alfam = 0.0D0
    alfaf = 0.0D0
    gama = 0.0D0
@@ -165,6 +167,7 @@ PROGRAM MAIN
        IF(n_t_global == 0) THEN
            WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
            WRITE(OutUnit,*) '=========================================='
+           WRITE(OutQiUnit,6000) 0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0
            DO i=1,BDyn_Parameter%node_total
            j = (i - 1) * BDyn_Parameter%dof_node
            WRITE(OutUnit,1000) i,BDyn_Parameter%uuN0(j+1),BDyn_Parameter%uuN0(j+2),BDyn_Parameter%uuN0(j+3),&
@@ -182,6 +185,10 @@ PROGRAM MAIN
 !       DO i=BDyn_Parameter%dof_total-5,BDyn_Parameter%dof_total
 !           WRITE(*,*) BDyn_OtherState%uuNf(i)
 !       ENDDO
+       j=BDyn_Parameter%dof_total
+       WRITE(OutQiUnit,6000) (n_t_global+1)*dt_global,BDyn_OtherState%uuNf(j-5),BDyn_OtherState%uuNf(j-4),&
+                            &BDyn_OtherState%uuNf(j-3),BDyn_OtherState%uuNf(j-2),BDyn_OtherState%uuNf(j-1),&
+                            &BDyn_OtherState%uuNf(j)
 
        WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
        WRITE(OutUnit,*) '=========================================='
@@ -214,12 +221,16 @@ PROGRAM MAIN
                           &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6) 
    ENDDO    
 
+   
+
    1000 FORMAT (' ',I5.2,6ES21.12)
    2000 FORMAT ('*TIME STEP NO:',I5.2,'       ','INITIAL TIME = ',ES12.5)
    3000 FORMAT ('TIME STE NO: ', I5.2)
    4000 FORMAT ('INITIAL TIME = ', ES12.5)
    5000 FORMAT ('TIME STEP END = ', ES12.5)
+   6000 FORMAT (ES12.5,6ES21.12)
    CLOSE (OutUnit)
+   CLOSE (OutQiUnit)
 
    CALL BDyn_End( BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
                     BDyn_ConstraintState, BDyn_OtherState, BDyn_Output(1), ErrStat, ErrMsg )
