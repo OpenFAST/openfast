@@ -131,8 +131,8 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 1 
-      p%node_elem   = 13
+      p%elem_total = 2 
+      p%node_elem   = 6
       p%ngp = p%node_elem - 1
       p%dof_node = 6
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
@@ -159,11 +159,18 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
       p%F_ext = 0.0D0
 !      p%F_ext(p%dof_total-1) = -1.80D+02 * 2.0D+00
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 1.0D-00
+!      p%F_ext(p%dof_total-1) = -3.14159D+01 * 1.0D-00
 !      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
 !      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
 !      p%F_ext(p%dof_total - 1) = -6.28D+01
+!-------------------
+!This is the input (bending) used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
+!-------------------
+      p%F_ext(p%dof_total-1) = 2.0D0*27300.4D0
+!------------------
+!END input
+!------------------
       p%bc = 0.0D0
       ALLOCATE( dloc(p%node_total), STAT = ErrStat)
       dloc = 0.0D0
@@ -180,12 +187,13 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       DO i=1,p%node_total
           p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
-          p%Stif0(1,1) = 1.0D+04
-          p%Stif0(2,2) = 1.0D+04
-          p%Stif0(3,3) = 1.0D+04
-          p%Stif0(4,4) = 1.0D+04
-          p%Stif0(5,5) = 1.0D+02
-          p%Stif0(6,6) = 1.0D+02
+!          p%Stif0(1,1) = 1.0D+04
+!          p%Stif0(2,2) = 1.0D+04
+!          p%Stif0(3,3) = 1.0D+04
+!          p%Stif0(4,4) = 1.0D+04
+!          p%Stif0(5,5) = 1.0D+02
+!          p%Stif0(6,6) = 1.0D+02
+
 !          p%Stif0(1,1) = 1.37D+06
 !          p%Stif0(2,2) = 1.37D+06
 !          p%Stif0(3,3) = 1.37D+06
@@ -198,6 +206,18 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !          p%Stif0(5,4) = 1.80D+04
 !          p%Stif0(6,4) = 3.58D+02
 !          p%Stif0(6,5) = 3.77D+02     
+!-------------------
+!This is the input used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
+!-------------------
+          p%Stif0(1,1) = 1770.0D+03
+          p%Stif0(2,2) = 1770.0D+03
+          p%Stif0(3,3) = 1770.0D+03
+          p%Stif0(4,4) = 8.16D+03
+          p%Stif0(5,5) = 86.9D+03
+          p%Stif0(6,6) = 215.0D+03
+!------------------
+!END input
+!------------------
       ENDDO
       DEALLOCATE(dloc)
       DEALLOCATE(GLL_temp)
