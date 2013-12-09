@@ -28,6 +28,15 @@ SET list_of_files=%src_folder%\SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+:NetLib
+SET src_folder=%NETLIB_Loc%\..
+SET dst_folder=%depend_dir%\NetLib
+SET list_of_files=%src_folder%\SourceFiles.txt
+
+if exist "%dst_folder%\*" DEL "%dst_folder%\*"
+for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+
 :ElastoDyn
 SET src_folder=%ED_Loc%\..
 SET dst_folder=%depend_dir%\ElastoDyn
