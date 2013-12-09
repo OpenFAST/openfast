@@ -42,10 +42,12 @@
 
 
 
- \author{Qi Wang\thanks{Research Engineer, National Wind Technology Center, AIAA Member. Email: Qi.Wang2@nrel.gov}}
- \author{Michael A. Sprague\thanks{Senior Research Scientist, Scientific Computing Center.}}
- \author{Jason Jonkman\thanks{Senior Engineer, National Wind Technology Center.}}
- \affil{National Renewable Energy Laboratory, Golden, CO 80401}
+ \author[1]{Qi Wang\thanks{Research Engineer, National Wind Technology Center, AIAA Member. Email: Qi.Wang2@nrel.gov}}
+ \author[1]{Michael A. Sprague\thanks{Senior Research Scientist, Scientific Computing Center.}}
+ \author[1]{Jason Jonkman\thanks{Senior Engineer, National Wind Technology Center.}}
+ \author[2]{Nick Johnson\thanks{Graduate Research Assistant at Colorado School of Mines.}}
+ \affil[1]{National Renewable Energy Laboratory, Golden, CO 80401}
+ \affil[2]{Department of Mechanical Engineering, Colorado School of Mines, Golden, CO 80401}
  
  \renewcommand\Authands{ and }
 
@@ -62,17 +64,11 @@ that exist in composite structures and geometric nonlinearity.   Legendre
 spectral finite elements (LSFEs) are high-rder finite elements with nodes
 located at the Gauss-Legendre-Lobatto points.  LSFEs can be an order of
 magnitude more efficient that low-order finite elements for a given accuracy
-level.  Interpolation of the three-dimensional rotation, a major technical
-barrier in large-deformation simulation, is discussed in the context of
-LSFEs.  It is shown, by numerical example, that the high-order LSFEs, where
-weak forms are evaluated with nodal quadrature, do not suffer from a
-drawback that exists in low-order finite elements where the
-tangent-stiffness matrix is calculated at the Gauss points.  Finally, the
-new LSFE code is implemented in the new FAST Modularization Framework for
+level.    The new LSFE code is implemented in the new FAST Modularization Framework for
 dynamic simulation of highly flexible composite-material wind turbine
 blades.  The framework allows for fully interactive simulations of turbine
 blades in operating conditions.  Numerical examples showing validation and
-LSFE performance will be provided in the final paper.
+LSFE performance are provided in the numerical examples section. It concludes that the implemented code can be used as a efficient high-fidelity beam tool in FAST.
 \end{abstract}
 
 %\section*{Nomenclature}
@@ -113,7 +109,7 @@ beam structures, like high-aspect-ratio wings in aerospace and wind energy,
 composite materials are attractive due to their superior weight-to-strength
 and weight-to stiffness ratios.  However, analysis of structures made of
 composite materials is more difficult than their isotropic counterparts due
-to the coupling effects. The Geometrically Exact Beam Theory (GEBT), which
+to the elastic coupling effects. The Geometrically Exact Beam Theory (GEBT), which
 was first proposed by Reissner in 1973 \cite{Ressiner1973}, is a method that
 has proven powerful for analysis of highly flexible composite beams in the
 helicopter engineering community. During the past several decades, much
@@ -154,7 +150,7 @@ acoustic wave propagation \cite{Sprague:2004}. However, it has seen limited
 application to dynamic analysis of
 beam\cite{Ben-Tal-etal:1995,Ben-Tal-etal:1996,Kudela-etal:2007a,Sprague-Geers:2008}
 and plate
-elements\cite{Zrahia-Bar-Yoseph:1995,Kudela-etal:2007b,Sprague-Brito:2012}. 
+elements\cite{Zrahia-Bar-Yoseph:1995, Kudela-etal:2007b,Sprague-Brito:2012}. 
 
 In this paper, we present a displacement-based implementation of
 geometrically exact beam theory using Legendre spectral finite elements
@@ -162,17 +158,14 @@ geometrically exact beam theory using Legendre spectral finite elements
 implementation of three-dimensional rotation parameters\cite{Wang:GEBT2013}
 and a demonstration example of two-dimensional nonlinear spectral beam
 elements\cite{Wang:SFE2013}. The theoretical foundation, the geometrically
-exact beam theory, is introduced first. Then the interpolation of the 3D
-rotation field by LSFEs is discussed along with a simple numerical example.
-Finally, validation examples are provided to show the accuracy and
-efficiency of the present model for realistic wind turbine blades. The code
-implemented in this work is in accordance to FAST Modularization Framework
+exact beam theory, is introduced first. Then the interpolation of the theory by LSFEs is discussed. Finally, validation examples are provided to show the accuracy and
+efficiency of the present model for composite beam accounting for elastic coupling effects. The code implemented in this work is in accordance to FAST Modularization Framework
 \cite{Jonkman:2013},  which allows simulation of a whole turbine under
 realistic operating conditions.
 
 \section{Geometrically Exact Beam Theory}
 
-For completeness, this section reviews the geometric exact beam theory and
+For completeness, this section reviews the geometrically exact beam theory and
 linearization process of the governing equations. The content of this
 section can be found in many other papers and textbooks.
 Figure~\ref{Kinematics} shows a beam in its initial undeformed and deformed
@@ -201,7 +194,7 @@ as\cite{Bauchau:2010}
 where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in
 the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are
 the beam's sectional forces and moments, respectively; $\vec{u}$ is the 1D
-displacement of the reference line; $\vec{x}_0$ is the position vector of a
+displacement of the reference line; $\vec{x}_0$ is the initial position vector of a
 point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the
 distributed force and moment applied to the beam structure.  Notation
 $(\bullet)^\prime$ indicates a derivative with respect to the beam axis
@@ -259,14 +252,14 @@ displacement, velocity, and acceleration array are written as
 \begin{align}
 	\label{Discretized}
 	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\Delta \underline{q}^T = \left[ \Delta \underline{u}^T~~\Delta \underline{p}^T \right] \\
-	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\Delta \underline{\dot{v}}^T = \left[\Delta \underline{\dot{u}}^T~~\Delta \underline{\omega}^T \right] \\
+	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\Delta \underline{v}^T = \left[\Delta \underline{\dot{u}}^T~~\Delta \underline{\omega}^T \right] \\
 %	\label{Incremental}
 	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
 \end{align}
 where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
 a column matrix of nodal values.  The governing equations for beams are
 highly nonlinear so that a linearization process is needed. According to
-Bauchau\cite{Bauchau:2010}, the linearized governing equations in
+Ref~\cite{Bauchau:2010}, the linearized governing equations in
 Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
 \begin{equation}
 	\label{LinearizedEqn}
@@ -350,9 +343,9 @@ The following notations were introduced to simply the writing of the above expre
     \end{bmatrix}
 \end{align}
  
-The derivation and linearization of governing equations of geometrically exact beam theory can be found in Bauchau\cite{Bauchau:2010}.
+The derivation and linearization of governing equations of geometrically exact beam theory can be found in Ref~\cite{Bauchau:2010}.
 
-\section{Interpolation of Rotation Field by Spectral Finite Element}
+\section{Spectral Finite Element Implementation}
 The displacement fields in a element can be interpolated as
 \begin{align}
     \label{InterpolateDisp}
@@ -362,8 +355,7 @@ The displacement fields in a element can be interpolated as
 \end{align}
 where $\vec{u}$ is the displacement field, $h^k(s), k=1,2,...n$ are the
 shape functions from first to the $n^{th}$ node; $\vec{\hat{u}}$ is the
-nodal values of the displacement field. However, as discussed in
-Bauchau\cite{Bauchau:2010}, the three-dimensional rotation field cannot be
+nodal values of the displacement field. However, as discussed in Ref~\cite{Bauchau-etal:2009}, the three-dimensional rotation field cannot be
 simply interpolated as the displacement field in the form of
 \begin{align}
     \label{InterpolateRot}
@@ -394,20 +386,22 @@ where $H$ is the tangent tensor that relates the curvature vector $k$ and rotati
 In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
 $n^{th}$-order Lagrangian interpolants, where nodes are located at the $n+1$
 GLL-quadrature points in the $[-1,1]$ element natural-coordinate domain.
-%Need more work here: a figure shows some LS elements and a short discussion of its advantages.
+\textcolor{red}{Need more work here: a figure shows some LS elements (non-evenly placed internal nodes) and a short discussion of its advantages.}
+The implementation of GEBT into the FE code, BeamDyn, carries out the integration in the space domain by using reduced Gauss quadrature. Time integration is performed using generalized-$\alpha$ scheme, which is a unconditionally stable, second-order accurate algorithm. More details regarding on the generalized-$\alpha$ method can be found in Ref~\cite{Chung-Hulbert:1993,Bauchau:2010}
+
 
 \section{Numerical Examples}
 
 \subsection{Example 1: Static bending of a cantilever beam}
 
 The first example is a benchmark problem for geometrically nonlinear
-analysis of beams \cite{Simo1985,Xiao2012}. We calculate the static
+analysis of beams \cite{Simo1985,Xiao-Zhong:2012}. We calculate the static
 deflection of a cantilever beam that is subjected at its free end to
 a constant moment $M$.  The length of the beam $L$ is $10\,in$ and the cross-sectional stiffness 
 matrix is given below:
 \begin{equation}
     \label{StifE1}
-    C = 10^3 \times \begin{bmatrix}
+    C^* = 10^3 \times \begin{bmatrix}
 	1770 & 0    & 0    & 0    & 0    & 0   \\
 	     & 1770 & 0    & 0    & 0    & 0   \\
 	     &      & 1770 & 0    & 0    & 0   \\
@@ -415,8 +409,15 @@ matrix is given below:
 	     &      &      &      & 86.9 & 0   \\
 	     &      &      &      &      & 215
 \end{bmatrix}
-\end{equation} 
-The load is given by the following equation:
+\end{equation}
+It is pointed out that the term with a asterisk denotes it is resolved in the material coordinate system. A sketch of this case can be found in Figure~\ref{E1Sketch}.
+\begin{figure}
+    \centering
+    \includegraphics[width=5.0in]{\directory E1Sketch.eps}
+    \caption{Sketch of a cantilever beam.}
+    \label{E1Sketch}
+\end{figure} 
+The load applied at the tip is given by the following equation:
 \begin{equation}
     \label{E1Load}
     M_2 = \lambda \bar{M}_2
@@ -429,7 +430,7 @@ this case, the beam is discretized with two $5^{th}$ order elements. The deforma
     \caption{Deformations of a cantilever beam under several constant bending moments.}
     \label{E1Deform}
 \end{figure}
-The calculated results are compared with the analytical solution, which can be found in Ref.\cite{Mayo:2004} as
+The calculated results are compared with the analytical solution, which can be found in Ref.\cite{Mayo-etal:2004} as
 \begin{equation}
     \label{E1Analytical}
     u_1 = \rho sin \left( \frac{x_1}{\rho} \right) - x_1~~~~~u_3 = \rho \left(1-cos\left(\frac{x_1}{\rho}\right) \right)
@@ -476,7 +477,7 @@ The results can be found in Table~\ref{E1u1} and \ref{E1u3}, respectively. Good 
     \caption{Wiener-Milenkovi\'c rotation parameters along beam axis $x_1$ .}
     \label{E1Rot}
 \end{figure}
-Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is the tip displacement (at $x=L$), as a function of the number of model nodes for the calculation with Dymore4 quadratic elements (QE) and a single Legendre spectral element (LSE), where
+Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is the tip displacement (at $x=L$), as a function of the number of model nodes for the calculation with Dymore quadratic elements (QE) and a single Legendre spectral element (LSE), where
 \begin{equation}
     \label{E1Error}
     \epsilon(u) = \left| \frac{u-u^a}{u^a} \right|
@@ -493,7 +494,112 @@ and $u$ is the test solution and $u^a$ is the analytical solution. The parameter
 \end{figure}
 
 \subsection{Example 2: Static analysis of a composite beam}
+The second example is to show the capability of BeamDyn for composite beams with elastic couplings. The cantilever beam used in this case is $10$ inches long with a boxed cross-section made of composite materials that can be found in Ref.\cite{Yu-etal:2002}. Readers are referred to Figure~\ref{E1Sketch} for sketch of this example. The stiffness matrix is given as
+\begin{equation}
+C^* = 10^3 \times \begin{bmatrix}
+	1368.17 & 0     & 0     & 0      & 0      & 0      \\
+	0       & 88.56 & 0     & 0      & 0      & 0      \\
+	0       & 0     & 38.78 & 0      & 0      & 0      \\
+	0       & 0     & 0     & 16.96  & 17.61  & -0.351 \\
+	0       & 0     & 0     & 17.61  & 59.12  & -0.370 \\
+	0       & 0     & 0     & -0.351 & -0.370 & 141.47
+\end{bmatrix}
+\label{E2Stif}
+\end{equation}
+A concentrated force $P = 150~lbs$ along $x_3$ direction is applied at the free tip. In BeamDyn analysis, the beam is meshed with two $5^{th}$ order elements. The displacements and rotation parameters at each node along beam axis are plotted in Figure~\ref{E2U}.  It is noted that the coupling effects exist between twist and two bendings. The applied in-plane force leads to a fairly large twist angle due to the bending-twist coupling, which can be observed in Figure.~\ref{E2Rot}. It is also noted that the internal nodes of Legendre Spectral Finite Elements are not evenly placed, which is different from conventional elements. 
 
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$Displacements$]{\label{E2Disp}\includegraphics[width=3.0 in]{\directory  E2Disp.eps}} \qquad
+\subfloat[$Rotations$]{\label{E2Rot}\includegraphics[width=3.0in]{\directory  E2Rot.eps}}\\
+\end{tabular}
+\caption{Displacements and rotation parameters along beam axis for Example 2.}
+\label{E2U}
+\end{figure}
+
+The tip displacements and rotations are compared with those obtained by Dymore in Table~\ref{E2Tip} for verification, where the beam is meshed with 10 $3^{rd}$ order elements. Good agreement can be observed between BeamDyn and Dymore results.
+\begin{table}[tbp]
+\centering 
+\caption{Tip displacements and rotation parameters of a composite beam in Example 2}
+\label{E2Tip} 
+	\begin{tabular}{| l | l | l | l | l | l | l |}
+    	\hline
+    	 & $u_1$ & $u_2$ & $u_3$  & $p_1$ & $p_2$ & $p_3$  \\ 
+	 \hline
+	 BeamDyn & -0.09064 & -0.06484 & 1.22998 & 0.18445 & -0.17985 & 0.00488 \\
+	 \hline
+	 Dymore & -0.09064 & -0.06483 & 1.22999 & 0.18443 & -0.17985 & 0.00488 \\
+    	\hline
+    \end{tabular}
+\end{table}
+
+\subsection{Example 3: dynamic analysis of a composite beam under sinusoidal force at the tip}
+
+The last example is a transient analysis of a composite beam with boxed cross-section that is used in Example 2. The beam has the same geometry and boundary conditions as the one in previous example. The mass sectional properties are given by VABS \cite{Yu-etal:2002,Wang-Yu:2012} as
+\begin{equation}
+    \label{E3Mass}
+    M^* = 10^{-2} \times \begin{bmatrix}
+	8.538 & 0     & 0     & 0      & 0      & 0      \\
+	0       & 8.538 & 0     & 0      & 0      & 0      \\
+	0       & 0     & 8.538 & 0      & 0      & 0      \\
+	0       & 0     & 0     & 1.4433  & 0  & 01 \\
+	0       & 0     & 0     & 0  & 0.40972  &0 \\
+	0       & 0     & 0     & 0 & 0 & 1.0336
+\end{bmatrix}    
+\end{equation}
+The beam is divided into two $5^{th}$ order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
+\begin{equation}
+    \label{E3AppliedForce}
+    P = A_F~sin(\omega_F~t)
+\end{equation}
+where $A_F = 1.0 \times 10^2~lbs$ and $\omega_F = 10~rad/s$ (see Figure~\ref{E3SinForce}). The time step used in this example is $0.005~s$ so that a set of converged results can be achieved. The tip displacement and rotation histories of the beam are plotted in Figure~\ref{E3U}. Note that all the components, including three displacements and three rotations, are non-zero due to the elastic coupling effects. The time histories of the stress resultants at the root of the beam are given in Figure~\ref{E3F}.
+\begin{figure}
+    \centering
+    \includegraphics[width=5.0in]{\directory E3SinForce.eps}
+    \caption{The sinusoidal vertical force in Example 3 .}
+    \label{E3SinForce}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \qquad
+\subfloat[$u_2$]{\label{E3U:u2}\includegraphics[width=3.0in]{\directory  E3Tipu2.eps}} \\
+\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \qquad
+\subfloat[$p_1$]{\label{E3U:p1}\includegraphics[width=3.0 in]{\directory  E3Tipp1.eps}} \\
+\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \qquad
+\subfloat[$p_3$]{\label{E3U:p3}\includegraphics[width=3.0 in]{\directory  E3Tipp3.eps}} \\
+\end{tabular}
+\caption{Tip displacement and rotation histories of a composite beam under vertical load.}
+\label{E3U}
+\end{figure} 
+
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$F_1$]{\label{E3F:F1}\includegraphics[width=3.0 in]{\directory  E3RootF1.eps}} \qquad
+\subfloat[$F_2$]{\label{E3F:F2}\includegraphics[width=3.0in]{\directory  E3RootF2.eps}} \\
+\subfloat[$F_3$]{\label{E3F:F3}\includegraphics[width=3.0 in]{\directory E3RootF3.eps}} \qquad
+\subfloat[$M_1$]{\label{E3F:M1}\includegraphics[width=3.0 in]{\directory  E3RootM1.eps}} \\
+\subfloat[$M_2$]{\label{E3F:M2}\includegraphics[width=3.0 in]{\directory  E3RootM2.eps}} \qquad
+\subfloat[$M_3$]{\label{E3F:M3}\includegraphics[width=3.0 in]{\directory  E3RootM3.eps}} \\
+\end{tabular}
+\caption{Stress resulant time histories at the root of a composite beam.}
+\label{E3F}
+\end{figure} 
+ 
+\section{Conclusion}
+This paper presents a displacement-based implementation of geometrically exact beam theory. The Legendre spectral finite elements are adopted to discretize the beam in the space domain. Numerical examples were presented that demonstrate the capability of BeamDyn, a beam solver for wind turbine analysis developed by NREL. A benchmark static problem for nonlinear beam was studied first. The agreement between the results calculated by BeamDyn and analytical solution are excellent. Moreover, a convergence study has been conducted where the convergence rate of Legendre spectral elements are compared with the conventional $2^{nd}$ order elements. Exponential convergence rates were observed as expected for this type of element. A composite cantilever beam were studied both statically and dynamically. The static results are verified against those obtained by Dymore. The elastic coupling effects were shown in these two cases. It concludes that BeamDyn is a powerful tool for composite beam analysis that can be used as a module in the FAST modularization framework.
+
+\section*{Acknowledgments} 
+
+This work was supported by the U.S. Department of Energy under Contract No.\
+DE-AC36-08-GO28308 with the National Renewable Energy Laboratory. Support
+was provided through a Laboratory Directed Research and Development grant
+\textit{High-Fidelity Computational Modeling of Wind-Turbine Structural
+Dynamics}.  The authors acknowledge Professor Oliver A.  Bauchau for the technical
+discussions on the 3D rotation parameters.
  
 
 \bibliographystyle{aiaa}

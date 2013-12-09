@@ -45,6 +45,7 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: BDyn_interp_order     ! order of interpolation/extrapolation
 
    INTEGER(IntKi),PARAMETER:: OutUnit = 10
+   INTEGER(IntKi),PARAMETER:: OutQiUnit = 20
 
    ! BeamDyn Derived-types variables; see Registry_BeamDyn.txt for details
 
@@ -69,12 +70,7 @@ PROGRAM MAIN
 
 
    OPEN(unit = OutUnit, file = 'BeamDyn.out', status = 'REPLACE',ACTION = 'WRITE')
-!   OPEN(unit = 10, file = 'Displacement_u1GL.dat', status = 'unknown')
-!   OPEN(unit = 20, file = 'Displacement_u2GL.dat', status = 'unknown')
-!   OPEN(unit = 30, file = 'Displacement_u3GL.dat', status = 'unknown')
-!   OPEN(unit = 40, file = 'Rotation_p1GL.dat', status = 'unknown')
-!   OPEN(unit = 50, file = 'Rotation_p2GL.dat', status = 'unknown')
-!   OPEN(unit = 60, file = 'Rotation_p3GL.dat', status = 'unknown')
+   OPEN(unit = OutQiUnit, file = 'QiStaticDisp.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
@@ -141,6 +137,7 @@ PROGRAM MAIN
    ! write initial condition for q1
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
 
+
    CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
                       &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
                       &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
@@ -157,12 +154,6 @@ PROGRAM MAIN
        j = (i - 1) * BDyn_Parameter%dof_node
        WRITE(OutUnit,1000) i,BDyn_Parameter%uuN0(j+1),BDyn_Parameter%uuN0(j+2),BDyn_Parameter%uuN0(j+3),&
                           &BDyn_Parameter%uuN0(j+4),BDyn_Parameter%uuN0(j+5),BDyn_Parameter%uuN0(j+6)
-!       WRITE(10,*) BDyn_OtherState%uuNf(j+1)
-!       WRITE(20,*) BDyn_OtherState%uuNf(j+2)
-!       WRITE(30,*) BDyn_OtherState%uuNf(j+3)
-!       WRITE(40,*) BDyn_OtherState%uuNf(j+4)
-!       WRITE(50,*) BDyn_OtherState%uuNf(j+5)
-!       WRITE(60,*) BDyn_OtherState%uuNf(j+6)
    ENDDO
   
    WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
@@ -176,8 +167,18 @@ PROGRAM MAIN
    WRITE(OutUnit,*) '=========================================='
    WRITE(OutUnit,1000) 1,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),BDyn_OtherState%RootForce(3),&
                           &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6)
+
+   DO i=1,BDyn_Parameter%node_total
+       j = (i-1) * BDyn_Parameter%dof_node
+       WRITE(OutQiUnit,2000) BDyn_Parameter%uuN0(j+1),BDyn_OtherState%uuNf(j+1),BDyn_OtherState%uuNf(j+2),&
+                            &BDyn_OtherState%uuNf(j+3),BDyn_OtherState%uuNf(j+4),BDyn_OtherState%uuNf(j+5),&
+                            &BDyn_OtherState%uuNf(j+6)
+   ENDDO
+
    1000 FORMAT (' ',I5.2,6ES21.12)
+   2000 FORMAT (' ',7ES21.12)
    CLOSE (OutUnit)
+   CLOSE (OutQiUnit)
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
 !                                   BDyn_ContinuousState_pred, &
 !                                   BDyn_DiscreteState_pred, BDyn_ConstraintState_pred, &
