@@ -1,0 +1,183 @@
+%&LaTeX
+\section{Geometrically Exact Beam Theory}
+
+For completeness, this section reviews the geometrically exact beam theory and
+linearization process of the governing equations. The content of this
+section can be found in many other papers and textbooks.
+Figure~\ref{Kinematics} shows a beam in its initial undeformed and deformed
+states. A reference frame $\mathbf{b}_i$ is introduced along the beam axis
+for the undeformed state; a frame $\mathbf{B}_i$ is introduced along each
+point of the deformed beam axis. Curvilinear coordinate $x_1$ defines the
+intrinsic parameterization of the reference line.
+\begin{figure}
+\centering
+\includegraphics[width=5.0in]{\directory Kinematics.eps}
+\caption{Schematic of beam deformation} \label{Kinematics}
+\end{figure}
+In this paper, we use matrix notation to denote vectorial or vectorial-like
+quantities. For example, we use a underline to denote a vector
+$\underline{u}$, a bar to denote unit vector $\bar{n}$, and double underline
+to denote a tensor $\underline{\underline{\Delta}}$. Note that sometimes the
+underlines only denote the dimension of the corresponding matrix. The
+governing equations of motion for geometric exact beam theory can be written
+as\cite{Bauchau:2010}
+\begin{align}
+	\label{GovernGEBT-1}
+	\dot{\underline{h}} - \underline{F}^\prime &= \underline{f} \\
+	\label{GovernGEBT-2}
+	\dot{\underline{g}} + \dot{\tilde{u}} \underline{h} - \underline{M}^\prime - (\tilde{x}_0^\prime + \tilde{u}^\prime) \underline{F} &= \underline{m}
+\end{align}
+where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in
+the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are
+the beam's sectional forces and moments, respectively; $\vec{u}$ is the 1D
+displacement of the reference line; $\vec{x}_0$ is the initial position vector of a
+point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the
+distributed force and moment applied to the beam structure.  Notation
+$(\bullet)^\prime$ indicates a derivative with respect to the beam axis
+$x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The
+tilde operator $(\skew{\bullet})$ defines a second-order, skew-symmetric
+tensor corresponding to the given vector. In the literature, it is also
+termed as "cross-product matrix". For example,
+\[
+	\skew{n} = 
+	     		\begin{bmatrix}
+			0 & -n_3 & n_2 \\
+			n_3 & 0 & -n_1 \\
+			-n_2 & n_1 & 0\\
+			\end{bmatrix}	
+\]
+The constitutive equations relate the velocities to the momenta and the one-dimensional strain measures to the sectional resultants as
+\begin{align}
+	\label{ConstitutiveMass}
+	\begin{Bmatrix}
+	\underline{h} \\
+	\underline{g}
+	\end{Bmatrix}
+	= \underline{\underline{\mathcal{M}}} \begin{Bmatrix}
+	\dot{\underline{u}} \\
+	\underline{\omega}
+	\end{Bmatrix} \\
+	\label{ConstitutiveStiff}
+	\begin{Bmatrix}
+	\underline{F} \\
+	\underline{M}
+	\end{Bmatrix}
+	= \underline{\underline{\mathcal{C}}} \begin{Bmatrix}
+	\underline{\epsilon} \\
+	\underline{\kappa}
+	\end{Bmatrix}
+\end{align}
+where $\underline{\underline{\mathcal{M}}}$ and
+$\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass
+and stiffness matrices,respectively, note that they are not really tensors;
+$\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and
+curvatures, respectively. $\underline{\omega}$ is the angular velocity
+vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
+$\underline{\omega} = \mathrm{axial}(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$.
+
+For a displacement-based finite element implementation, there are six
+degree-of-freedoms(DoFs) at each node: 3 displacement components and 3
+rotation components. Here we use $\vec{q}$ to denote the elemental
+displacement array as $\underline{q}=\left[
+\underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the 1D
+displacement and $\vec{p}$ is the rotation parameter vector. The
+acceleration array can thus be defined as $\underline{a}=\left[
+\ddot{\underline{u}}^T~~ \dot{\underline{\omega}}^T \right]$. For nonlinear
+finite element analysis, the discretized and incremental forms of
+displacement, velocity, and acceleration array are written as
+\begin{align}
+	\label{Discretized}
+	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\Delta \underline{q}^T = \left[ \Delta \underline{u}^T~~\Delta \underline{p}^T \right] \\
+	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\Delta \underline{v}^T = \left[\Delta \underline{\dot{u}}^T~~\Delta \underline{\omega}^T \right] \\
+%	\label{Incremental}
+	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
+\end{align}
+where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
+a column matrix of nodal values.  The governing equations for beams are
+highly nonlinear so that a linearization process is needed. According to
+Ref~\cite{Bauchau:2010}, the linearized governing equations in
+Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
+\begin{equation}
+	\label{LinearizedEqn}
+	\hat{\underline{\underline{M}}} \Delta \hat{\underline{a}} +\hat{\underline{\underline{G}}} \Delta \hat{\underline{v}}+ \hat{\underline{\underline{K}}} \Delta \hat{\underline{q}} = \hat{\underline{F}}^{ext} - \hat{\underline{F}}
+\end{equation} 
+where the $\hat{\tens{M}}$, $\hat{\tens{G}}$, and $\hat{\tens{K}}$ are the
+elemental mass, gyroscopic, and stiffness matrices, respectively;
+$\hat{\vec{F}}$ and $\hat{\vec{F}}^{ext}$ are the elemental forces and
+externally applied loads, respectively. They are defined as follows
+\begin{align}
+	\label{hatM} 
+	\hat{\tens{M}}&= \int_0^l \underline{\underline{N}}^T \mathcal{\underline{\underline{M}}} ~\underline{\underline{N}} dx_1 \\
+	\label{hatG}
+	\hat{\tens{G}} &= \int_0^l \tens{N}^T \tens{\mathcal{G}}^I~\tens{N} dx_1\\ 
+	\label{hatK}
+	\hat{\tens{K}}&=\int_0^l \left[ \tens{N}^T (\tens{\mathcal{K}}^I + \mathcal{\tens{Q}})~ \tens{N} + \tens{N}^T \mathcal{\tens{P}}~ \tens{N}^\prime + \tens{N}^{\prime T} \mathcal{\tens{C}}~ \tens{N}^\prime + \tens{N}^{\prime T} \mathcal{\tens{O}}~ \tens{N} \right] d x_1 \\	
+	\label{hatF}
+	\hat{\vec{F}} &= \int_0^l (\tens{N}^T \vec{\mathcal{F}}^I + \tens{N}^T \mathcal{\vec{F}}^D + \tens{N}^{\prime T} \mathcal{\vec{F}}^C)dx_1 \\
+	\label{hatFext}
+	\hat{\vec{F}}^{ext}& = \int_0^l \tens{N}^T \mathcal{\vec{F}}^{ext} dx_1 
+\end{align}
+The new matrix notations in Eq.~\eqref{hatM} to \eqref{hatFext} are briefly
+introduced here. $\mathcal{\tens{M}}$ is the sectional mass matrix resolved
+in inertial system; $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
+elastic forces obtained from Eq.~\eqref{GovernGEBT-1} and
+\eqref{GovernGEBT-2} as
+\begin{align}
+	\label{FC}
+	\mathcal{\vec{F}}^C &= \begin{Bmatrix}
+         \vec{F} \\
+	\vec{M}
+	\end{Bmatrix} = \tens{\mathcal{C}} \begin{Bmatrix}
+	\vec{\epsilon} \\
+	\vec{\kappa}
+	\end{Bmatrix} \\
+	\label{FD}
+	\mathcal{\vec{F}}^D & = \begin{bmatrix}
+	\underline{\underline{0}} & \underline{\underline{0}}\\
+	(\tilde{x}_0^\prime+\tilde{u}^\prime)^T & \underline{\underline{0}}
+	\end{bmatrix}
+	\mathcal{\vec{F}}^C \equiv \tens{\Upsilon}~ \mathcal{\vec{F}}^C
+\end{align}
+where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens{\mathcal{G}}^I$, $\tens{\mathcal{K}}^I$,  $\mathcal{\tens{O}}$, $\mathcal{\tens{P}}$, $\mathcal{\tens{Q}}$, and $\vec{\mathcal{F}}^I$ in Eq.~\eqref{hatG}, Eq.~\eqref{hatK}, and Eq.~\eqref{hatF} are defined as
+\begin{align}
+        \label{mathcalG}
+        \tens{\mathcal{G}}^I &= \begin{bmatrix}
+        \tens{0} & (\tilde{\omega} m \vec{\eta})^T+\tilde{\omega} m \tilde{\eta}^T  \\
+        \tens{0} & \tilde{\omega} \tens{\varrho}-\widetilde{\tens{\varrho} \vec{\omega}}
+        \end{bmatrix} \\
+        \label{mathcalK}
+        \tens{\mathcal{K}}^I &= \begin{bmatrix}
+        \tens{0} & \dot{\tilde{\omega}}m\tilde{\eta}^T + \tilde{\omega} \tilde{\omega}m\tilde{\eta}^T  \\
+        \tens{0} & \ddot{\tilde{u}}m\tilde{\eta} + \tens{\varrho} \dot{\tilde{\omega}}-\widetilde{\tens{\varrho} \vec{\dot{\omega}}}+\tilde{\omega} \tens{\varrho} \tilde{\omega} - \tilde{\omega}  \widetilde{\tens{\varrho} \vec{\omega}}
+        \end{bmatrix}\\
+	\label{mathcalO}
+	\mathcal{\tens{O}} &= \begin{bmatrix}
+	\tens{0} & \tens{C}_{11} \tilde{E_1} - \tilde{F} \\
+	\tens{0}& \tens{C}_{21} \tilde{E_1} - \tilde{M}
+	\end{bmatrix} \\
+	\label{mathcalP}
+	\mathcal{\tens{P}} &= \begin{bmatrix}
+	\tens{0} & \tens{0} \\
+	\tilde{F} +  (\tens{C}_{11} \tilde{E_1})^T & (\tens{C}_{21} \tilde{E_1})^T
+	\end{bmatrix}  \\
+	\label{mathcalQ}
+	\mathcal{\tens{Q}} &= \tens{\Upsilon}~ \mathcal{\tens{O}} \\
+	\label{mathcalF}
+	\vec{\mathcal{F}}^I &= \begin{Bmatrix}
+	m \ddot{\vec{u}} + (\dot{\tilde{\omega}} + \tilde{\omega} \tilde{\omega})m \vec{\eta} \\
+	m \tilde{\eta} \ddot{\vec{u}} +\tens{\varrho}\dot{\vec{\omega}}+\tilde{\omega}\tens{\varrho}\vec{\omega}
+	\end{Bmatrix}
+\end{align}
+The following notations were introduced to simply the writing of the above expressions
+\begin{align}
+    \label{E1}
+    \vec{E}_1 &= \vec{x}_0^\prime + \vec{u}^\prime \\
+    \label{PartC}
+    \tens{\mathcal{C}} &= \begin{bmatrix}
+    \tens{C}_{11} & \tens{C}_{12} \\
+    \tens{C}_{21} & \tens{C}_{22}
+    \end{bmatrix}
+\end{align}
+ 
+The derivation and linearization of governing equations of geometrically exact beam theory can be found in Ref~\cite{Bauchau:2010}.
+
