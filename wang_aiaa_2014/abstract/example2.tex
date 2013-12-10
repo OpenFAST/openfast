@@ -1,0 +1,42 @@
+%&LaTeX
+\subsection{Example 2: Static analysis of a composite beam}
+The second example is to show the capability of BeamDyn for composite beams with elastic couplings. The cantilever beam used in this case is $10$ inches long with a boxed cross-section made of composite materials that can be found in Ref.\cite{Yu-etal:2002}. Readers are referred to Figure~\ref{E1Sketch} for sketch of this example. The stiffness matrix is given as
+\begin{equation}
+C^* = 10^3 \times \begin{bmatrix}
+	1368.17 & 0     & 0     & 0      & 0      & 0      \\
+	0       & 88.56 & 0     & 0      & 0      & 0      \\
+	0       & 0     & 38.78 & 0      & 0      & 0      \\
+	0       & 0     & 0     & 16.96  & 17.61  & -0.351 \\
+	0       & 0     & 0     & 17.61  & 59.12  & -0.370 \\
+	0       & 0     & 0     & -0.351 & -0.370 & 141.47
+\end{bmatrix}
+\label{E2Stif}
+\end{equation}
+A concentrated force $P = 150~lbs$ along $x_3$ direction is applied at the free tip. In BeamDyn analysis, the beam is meshed with two $5^{th}$ order elements. The displacements and rotation parameters at each node along beam axis are plotted in Figure~\ref{E2U}.  It is noted that the coupling effects exist between twist and two bendings. The applied in-plane force leads to a fairly large twist angle due to the bending-twist coupling, which can be observed in Figure.~\ref{E2Rot}. It is also noted that the internal nodes of Legendre Spectral Finite Elements are not evenly placed, which is different from conventional elements. 
+
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$Displacements$]{\label{E2Disp}\includegraphics[width=3.0 in]{\directory  E2Disp.eps}} \qquad
+\subfloat[$Rotations$]{\label{E2Rot}\includegraphics[width=3.0in]{\directory  E2Rot.eps}}\\
+\end{tabular}
+\caption{Displacements and rotation parameters along beam axis for Example 2.}
+\label{E2U}
+\end{figure}
+
+The tip displacements and rotations are compared with those obtained by Dymore in Table~\ref{E2Tip} for verification, where the beam is meshed with 10 $3^{rd}$ order elements. Good agreement can be observed between BeamDyn and Dymore results.
+\begin{table}[tbp]
+\centering 
+\caption{Tip displacements and rotation parameters of a composite beam in Example 2}
+\label{E2Tip} 
+	\begin{tabular}{| l | l | l | l | l | l | l |}
+    	\hline
+    	 & $u_1$ & $u_2$ & $u_3$  & $p_1$ & $p_2$ & $p_3$  \\ 
+	 \hline
+	 BeamDyn & -0.09064 & -0.06484 & 1.22998 & 0.18445 & -0.17985 & 0.00488 \\
+	 \hline
+	 Dymore & -0.09064 & -0.06483 & 1.22999 & 0.18443 & -0.17985 & 0.00488 \\
+    	\hline
+    \end{tabular}
+\end{table}
+
