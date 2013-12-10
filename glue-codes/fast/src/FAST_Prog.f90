@@ -460,7 +460,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    t_global   = t_initial
    n_t_global = -1  ! initialize here because CalcOutputs_And_SolveForInputs uses it
    Step       = 0
-   n_TMax_m1  = ( (p_FAST%TMax - t_initial) / dt_global ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
+   n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / dt_global ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
       ! we initialize these because we might need them if Option 1 is called at the beginning of CalcOutputs_And_SolveForInputs:
    ED_Output(1)%PlatformPtMesh%TranslationAcc = 0.0_ReKi
@@ -677,7 +677,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    !...............................................................................................................................         
    
    DO n_t_global = 0, n_TMax_m1
-      
+!print *, "n_t_global", n_t_global      
       ! this takes data from n_t_global and gets values at n_t_global + 1
   
       t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = t_global + p_FAST%dt
@@ -764,7 +764,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
       END IF  ! ServoDyn       
       
-      
+!print *, "BEFORE hd"       
       ! HydroDyn
       IF ( p_FAST%CompHydro ) THEN
          
@@ -783,7 +783,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             HD_InputTimes(j+1) = HD_InputTimes(j)
             !HD_OutputTimes(j+1)= HD_OutputTimes(j)
          END DO
-  
+  !print *,'after loop'
          CALL HydroDyn_CopyInput (u_HD,  HD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
          !CALL HydroDyn_CopyOutput(y_HD,  HD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
          HD_InputTimes(1) = t_global_next          
@@ -791,6 +791,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
       END IF  ! HydroDyn
 
+!print *, "after hd"   
       
       ! SubDyn
       IF ( p_FAST%CompSub ) THEN
@@ -818,6 +819,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
       END IF  ! SubDyn
       
+!print *, "before map"   
       
       ! MAP
       IF ( p_FAST%CompMAP ) THEN
@@ -845,10 +847,11 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             
       END IF  ! MAP
        
+!print *, "after map"   
       
       ! predictor-corrector loop:
       DO j_pc = 0, p_FAST%NumCrctn
-  
+  !print *,'j_pc',j_pc
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 2: Advance states (yield state and constraint values at t_global_next)
       !
@@ -861,15 +864,17 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
          ! (note that we need to copy the states because UpdateStates updates the values
          ! and we need to have the old values [at t_global] for the next j_pc step)
          !----------------------------------------------------------------------------------------
-         
+!print * , 'copy ed'         
          ! ElastoDyn: get predicted states
          CALL ED_CopyContState   ( x_ED,  x_ED_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
          CALL ED_CopyDiscState   (xd_ED, xd_ED_pred, MESH_UPDATECOPY, Errstat, ErrMsg)  
          CALL ED_CopyConstrState ( z_ED,  z_ED_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
-         
+!print *, 'ed_updatestates'
+
          CALL ED_UpdateStates( t_global, n_t_global, ED_Input, ED_InputTimes, p_ED, x_ED_pred, xd_ED_pred, z_ED_pred, OtherSt_ED, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from ED_UpdateStates: '//NewLine//ErrMsg )
                  
+!print * , 'copy ad'         
             
          ! AeroDyn: get predicted states
          IF (p_FAST%CompAero) THEN
@@ -881,6 +886,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                CALL CheckError( ErrStat, 'Message from AD_UpdateStates: '//NewLine//ErrMsg )
          END IF            
 
+!print * , 'copy srvd'         
                         
          ! ServoDyn: get predicted states
          IF (p_FAST%CompServo) THEN
@@ -892,6 +898,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                CALL CheckError( ErrStat, 'Message from SrvD_UpdateStates: '//NewLine//ErrMsg )
          END IF            
             
+!print * , 'copy hd'         
             
          ! HydroDyn: get predicted states
          IF (p_FAST%CompHydro) THEN
@@ -903,6 +910,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                CALL CheckError( ErrStat, 'Message from HydroDyn_UpdateStates: '//NewLine//ErrMsg )
          END IF
             
+!print * , 'copy sd'         
          
          ! SubDyn: get predicted states
          IF (p_FAST%CompSub) THEN
@@ -914,6 +922,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
                CALL CheckError( ErrStat, 'Message from SD_UpdateStates: '//NewLine//ErrMsg )
          END IF
             
+!print * , 'copy map'         
             
          ! MAP: get predicted states
          IF (p_FAST%CompMAP) THEN
@@ -924,8 +933,8 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
             CALL MAP_UpdateStates( t_global, n_t_global, MAP_Input, MAP_InputTimes, p_MAP, x_MAP_pred, xd_MAP_pred, z_MAP_pred, OtherSt_MAP, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, 'Message from MAP_UpdateStates: '//NewLine//ErrMsg )
          END IF
-            
-                          
+             
+!print *, 'step 3'                          
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 3: Input-Output Solve      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
