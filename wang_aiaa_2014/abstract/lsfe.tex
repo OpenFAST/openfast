@@ -29,7 +29,7 @@ defined by Crisfield and Jeleni\'c\cite{Crisfield1999}, refers to the
 invariance of strain measures computed through interpolation to the addition
 of a rigid-body motion. Therefore, we adopt the more robust interpolation
 approach proposed by Crisfield and Jeleni\'c \cite{Crisfield1999} to deal
-with the finite rotations. Our approach is described as follows:
+with the finite rotations. Our approach is described as follows
 \begin{description}
     \item[Step 1:] Compute the nodal relative rotations, $\vec{\hat{r}}^k$ by removing the rigid body rotation, $\vec{\hat{c}}^1$, from the finite rotation at each node, $\vec{\hat{r}}^k = \vec{\hat{c}}^{1-} \oplus \vec{\hat{c}}^k$.
     \item[Step 2:] Interpolate the relative rotation field: $\vec{r}(s) = h^k(s) \vec{\hat{r}}^k$ and $\vec{r}^\prime(s) = h^{k \prime}(s) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(s) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
