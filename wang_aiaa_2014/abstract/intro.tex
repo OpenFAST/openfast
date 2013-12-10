@@ -1,11 +1,18 @@
 %&LaTeX
 \section{Introduction} 
 
-Wind power is becoming one of the most important renewable energy sources in
-the United States as demonstrated by the fact that the electricity produced
-from wind amounted to 3.56\% of all generated electrical energy for the 12
-months until March 2013\cite{WindWiki}. In recent years, the size of wind
-turbines has been increasing immensely to lower the cost, which also leads
+%Wind power is becoming one of the most important renewable energy sources in
+%the United States as demonstrated by the fact that the electricity produced
+%from wind amounted to 3.56\% of all generated electrical energy for the 12
+%months until March 2013\cite{WindWiki}. 
+Wind power is becoming one of the most important renewable-energy sources in
+the United States.
+%as demonstrated by the fact that the electricity produced
+%from wind amounted to 3.56\% of all generated electrical energy for the 12
+%months until March 2013\cite{WindWiki}. 
+In recent years, the size of wind
+turbines has been increasing immensely to lower the cost, which, because of
+weight restrictions, also leads
 to highly flexible turbine blades. This huge electro-mechanical system poses
 a significant challenge for engineering design and analysis. Although
 possible with modern super computers, direct three-dimensional (3D)
@@ -19,18 +26,17 @@ engineering, joists and lever arms in heavy-machine industries, and
 helicopter rotor blades. The blades, tower, and shaft in a wind turbine
 system can be considered as beams. In the weight-critical applications of
 beam structures, like high-aspect-ratio wings in aerospace and wind energy,
-composite materials are attractive due to their superior weight-to-strength
-and weight-to stiffness ratios.  However, analysis of structures made of
-composite materials is more difficult than their isotropic counterparts due
-to the elastic coupling effects. The Geometrically Exact Beam Theory (GEBT), which
-was first proposed by Reissner in 1973 \cite{Ressiner1973}, is a method that
+composite materials are attractive due to their superior strength-to-weight
+and stiffness-to-weight ratios.  However, analysis of composite-materials
+structures is more difficult than their isotropic counterparts due to
+elastic-coupling effects. The geometrically exact beam theory (GEBT) first
+first proposed by Reissner\cite{Ressiner1973}, is a method that
 has proven powerful for analysis of highly flexible composite beams in the
 helicopter engineering community. During the past several decades, much
 effort has been invested in this area. Simo\cite{Simo1985} and Simo and
 Vu-Quoc\cite{Simo1986} extended Reissner's work to deal with
 three-dimensional (3D) dynamic problems. Jeleni\'c and
-Crisfield\cite{Crisfield1999} implemented this theory using the finite
-element method where a new approach for interpolating the rotation field was
+Crisfield\cite{Crisfield1999} implemented this theory using the finite-element method where a new approach for interpolating the rotation field was
 proposed that preserves the geometric exactness. Betsch and
 Steinmann\cite{Betsch2002} circumvented the interpolation of rotation by
 introducing a re-parameterization of the weak form corresponding to the
@@ -42,37 +48,44 @@ mixed finite elements where both the primary and dual field are
 independently interpolated\cite{CookFEM}. In the mixed formulation, all of
 the necessary ingredients, including Hamilton's principle and kinematic
 equations, are combined in a single variational formulation statement;
-Lagrange multipliers, motion variables, generalized strains, forces
-and moments, linear and angular momenta, and displacement and rotation
-variables are considered as independent quantities. Yu et al.\cite{YuGEBT,
+Lagrange multipliers, motion variables, generalized strains, forces and
+moments, linear and angular momenta, and displacement and rotation variables
+are considered as independent quantities. Yu et al.\cite{YuGEBT,
 Wang:GEBT2013} presented the implementation of GEBT in a mixed formulation;
 various rotation parameters were investigated and the code was validated
-against analytical and numerical solutions. The readers are referred to a
-textbook by Hodges\cite{HodgesBeamBook}, where comprehensive derivations
-and discussions on nonlinear composite beam theories can be found.
+against analytical and numerical solutions. Readers are referred to
+Hodges\cite{HodgesBeamBook}, where comprehensive derivations and
+discussions on nonlinear composite-beam theories can be found.
 
-Legendre spectral finite elements\cite{Patera:1984,Ronquist:1987} are
+Legendre spectral finite elements\cite{Patera:1984,Ronquist:1987} (LSFEs) are
 $p$-type finite elements whose shape functions are Lagrangian interpolants
-with node locations at the Gauss-Lobatto-Legendre points. It combines the
-accuracy of global spectral methods with geometric flexibility of {\it
-h}-type FEs. The spectral FEs have seen extensive, highly successful use in
+with node locations at the Gauss-Lobatto-Legendre (GLL) points. LSFEs combine
+the accuracy of global spectral methods with geometric flexibility of {\it
+h}-type FEs. The spectral FEs have seen successful use in
 the simulation of fluid dynamics\cite{Ronquist:1987, Patera:1984,
 Deville:2002}, two-dimensional elastic wave propagation in solid media in
 geophysics \cite{Komatitsch:1998}, elastodynamics \cite{Sridhar:2006}, and
 acoustic wave propagation \cite{Sprague:2004}. However, it has seen limited
 application to dynamic analysis of
 beam\cite{Ben-Tal-etal:1995,Ben-Tal-etal:1996,Kudela-etal:2007a,Sprague-Geers:2008}
-and plate
-elements\cite{Zrahia-Bar-Yoseph:1995, Kudela-etal:2007b,Sprague-Brito:2012}. 
+and plate elements\cite{Zrahia-Bar-Yoseph:1995,
+Kudela-etal:2007b,Sprague-Brito:2012}.   \mas{we need to add references on
+"quadrature elements"}
+
 
 In this paper, we present a displacement-based implementation of
-geometrically exact beam theory using Legendre spectral finite elements
-(LSFEs).  This work builds on a previous effort which showed the
-implementation of three-dimensional rotation parameters\cite{Wang:GEBT2013}
-and a demonstration example of two-dimensional nonlinear spectral beam
-elements\cite{Wang:SFE2013}. The theoretical foundation, the geometrically
-exact beam theory, is introduced first. Then the interpolation of the theory by LSFEs is discussed. Finally, validation examples are provided to show the accuracy and
-efficiency of the present model for composite beam accounting for elastic coupling effects. The code implemented in this work is in accordance to FAST Modularization Framework
-\cite{Jonkman:2013},  which allows simulation of a whole turbine under
-realistic operating conditions.
+geometrically exact beam theory using LSFEs.  This work builds on a previous
+effort which showed the implementation of three-dimensional rotation
+parameters\cite{Wang:GEBT2013} and a demonstration example of
+two-dimensional nonlinear spectral beam elements\cite{Wang:SFE2013} for
+static deformation.  The code implemented in this work is in accordance to
+FAST Modularization Framework \cite{Jonkman:2013},  which allows simulation
+of a whole turbine under realistic operating conditions.
+\mas{EXPAND ON FAST MODULARIZATION}
+
+The paper is organized as follows.  The theoretical foundation of the
+geometrically exact beam theory is introduced first. Then the GEBT
+discretization by LSFEs is discussed. Finally, verification examples are
+provided to show the accuracy and efficiency of the GEBT LSFEs  for
+isotropic  and composite beams.  
 
