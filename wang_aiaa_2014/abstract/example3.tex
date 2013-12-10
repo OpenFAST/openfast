@@ -1,0 +1,57 @@
+%&LaTeX
+\subsection{Example 3: dynamic analysis of a composite beam under sinusoidal force at the tip}
+
+The last example is a transient analysis of a composite beam with boxed cross-section that is used in Example 2. The beam has the same geometry and boundary conditions as the one in previous example. The mass sectional properties are given by VABS \cite{Yu-etal:2002,Wang-Yu:2012} as
+\begin{equation}
+    \label{E3Mass}
+    M^* = 10^{-2} \times \begin{bmatrix}
+	8.538 & 0     & 0     & 0      & 0      & 0      \\
+	0       & 8.538 & 0     & 0      & 0      & 0      \\
+	0       & 0     & 8.538 & 0      & 0      & 0      \\
+	0       & 0     & 0     & 1.4433  & 0  & 01 \\
+	0       & 0     & 0     & 0  & 0.40972  &0 \\
+	0       & 0     & 0     & 0 & 0 & 1.0336
+\end{bmatrix}    
+\end{equation}
+The beam is divided into two $5^{th}$ order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
+\begin{equation}
+    \label{E3AppliedForce}
+    P = A_F~sin(\omega_F~t)
+\end{equation}
+where $A_F = 1.0 \times 10^2~lbs$ and $\omega_F = 10~rad/s$ (see Figure~\ref{E3SinForce}). The time step used in this example is $0.005~s$ so that a set of converged results can be achieved. The tip displacement and rotation histories of the beam are plotted in Figure~\ref{E3U}. Note that all the components, including three displacements and three rotations, are non-zero due to the elastic coupling effects. The time histories of the stress resultants at the root of the beam are given in Figure~\ref{E3F}.
+\begin{figure}
+    \centering
+    \psfrag{Time}{blah}
+    \includegraphics[width=5.0in]{\directory E3SinForce.eps}
+    \caption{The sinusoidal vertical force in Example 3 .}
+    \label{E3SinForce}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \qquad
+\subfloat[$u_2$]{\label{E3U:u2}\includegraphics[width=3.0in]{\directory  E3Tipu2.eps}} \\
+\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \qquad
+\subfloat[$p_1$]{\label{E3U:p1}\includegraphics[width=3.0 in]{\directory  E3Tipp1.eps}} \\
+\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \qquad
+\subfloat[$p_3$]{\label{E3U:p3}\includegraphics[width=3.0 in]{\directory  E3Tipp3.eps}} \\
+\end{tabular}
+\caption{Tip displacement and rotation histories of a composite beam under vertical load.}
+\label{E3U}
+\end{figure} 
+
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$F_1$]{\label{E3F:F1}\includegraphics[width=3.0 in]{\directory  E3RootF1.eps}} \qquad
+\subfloat[$F_2$]{\label{E3F:F2}\includegraphics[width=3.0in]{\directory  E3RootF2.eps}} \\
+\subfloat[$F_3$]{\label{E3F:F3}\includegraphics[width=3.0 in]{\directory E3RootF3.eps}} \qquad
+\subfloat[$M_1$]{\label{E3F:M1}\includegraphics[width=3.0 in]{\directory  E3RootM1.eps}} \\
+\subfloat[$M_2$]{\label{E3F:M2}\includegraphics[width=3.0 in]{\directory  E3RootM2.eps}} \qquad
+\subfloat[$M_3$]{\label{E3F:M3}\includegraphics[width=3.0 in]{\directory  E3RootM3.eps}} \\
+\end{tabular}
+\caption{Stress resulant time histories at the root of a composite beam.}
+\label{E3F}
+\end{figure} 
+ 
