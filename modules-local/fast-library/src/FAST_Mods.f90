@@ -27,6 +27,9 @@ MODULE FAST_Types
 
    USE NWTC_Library
 
+   TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
+                                ProgDesc( 'FAST', 'v8.04.00b-bjj', '10-Dec-2013' ) ! The version number of this module
+   
    
    INTEGER(IntKi), PARAMETER :: Module_IfW  = 1
    INTEGER(IntKi), PARAMETER :: Module_ED   = 2
@@ -45,8 +48,6 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.04.00a-bjj', '10-Dec-2013' ) ! The version number of this module
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
