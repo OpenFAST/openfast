@@ -167,14 +167,14 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !-------------------
 !This is the input (bending) used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-!      p%F_ext(p%dof_total-1) = 2.0D0*27300.4D0
+      p%F_ext(p%dof_total-1) = -1.6D0*27300.4D0
 !------------------
 !END input
 !------------------
 !-------------------
-!This is the input (bending) used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
+!This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-      p%F_ext(p%dof_total-3) = 1.5D+02
+!      p%F_ext(p%dof_total-3) = 1.5D+02
 !------------------
 !END input
 !------------------
@@ -214,32 +214,32 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !          p%Stif0(6,4) = 3.58D+02
 !          p%Stif0(6,5) = 3.77D+02     
 !-------------------
-!This is the input used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
+!This is the input used for Example 1 (bending) in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-!          p%Stif0(1,1) = 1770.0D+03
-!          p%Stif0(2,2) = 1770.0D+03
-!          p%Stif0(3,3) = 1770.0D+03
-!          p%Stif0(4,4) = 8.16D+03
-!          p%Stif0(5,5) = 86.9D+03
-!          p%Stif0(6,6) = 215.0D+03
+          p%Stif0(1,1) = 1770.0D+03
+          p%Stif0(2,2) = 1770.0D+03
+          p%Stif0(3,3) = 1770.0D+03
+          p%Stif0(4,4) = 8.16D+03
+          p%Stif0(5,5) = 86.9D+03
+          p%Stif0(6,6) = 215.0D+03
 !------------------
 !END input
 !------------------
 !-------------------
-!This is the input used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
+!This is the input used for Example 2 (composite beam under tip shear force) in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-          p%Stif0(1,1) = 1.3681743184D+06
-          p%Stif0(2,2) = 8.8562207505D+04
-          p%Stif0(3,3) = 3.8777942862D+04
-          p%Stif0(4,4) = 1.6959274463D+04
-          p%Stif0(4,5) = 1.7611929624D+04
-          p%Stif0(5,5) = 5.9124766881D+04
-          p%Stif0(4,6) = -3.5060243156D+02
-          p%Stif0(5,6) = -3.7045274908D+02
-          p%Stif0(6,6) =  1.4147152848D+05
-          p%Stif0(5,4) = p%Stif0(4,5)
-          p%Stif0(6,4) = p%Stif0(4,6)
-          p%Stif0(6,5) = p%Stif0(5,6) 
+!          p%Stif0(1,1) = 1.3681743184D+06
+!          p%Stif0(2,2) = 8.8562207505D+04
+!          p%Stif0(3,3) = 3.8777942862D+04
+!          p%Stif0(4,4) = 1.6959274463D+04
+!          p%Stif0(4,5) = 1.7611929624D+04
+!          p%Stif0(5,5) = 5.9124766881D+04
+!          p%Stif0(4,6) = -3.5060243156D+02
+!          p%Stif0(5,6) = -3.7045274908D+02
+!          p%Stif0(6,6) =  1.4147152848D+05
+!          p%Stif0(5,4) = p%Stif0(4,5)
+!          p%Stif0(6,4) = p%Stif0(4,6)
+!          p%Stif0(6,5) = p%Stif0(5,6) 
 !------------------
 !END input
 !------------------
