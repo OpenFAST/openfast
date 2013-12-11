@@ -1247,7 +1247,7 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_T
 
          Map(i)%distance = min_dist
 
-         Map(i)%couple_arm = Mesh2_xyz - Mesh1_xyz
+         Map(i)%couple_arm = Mesh2%Position(:, point_with_min_dist) - Mesh1_xyz            
          !bjj: this is the negative of the case where it's Mesh2=src, so we'll have to multiply by -1 outside this routine if that's the case
 
       end do !iNode
