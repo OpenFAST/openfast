@@ -53,6 +53,9 @@ PROGRAM MAIN
    INTEGER(IntKi),PARAMETER:: OutUnit = 10
    INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
    INTEGER(IntKi),PARAMETER:: QiForUnit = 21
+   INTEGER(IntKi),PARAMETER:: QiRMSu1Unit = 22
+   INTEGER(IntKi),PARAMETER:: QiRMSu2Unit = 23
+   INTEGER(IntKi),PARAMETER:: QiRMSu3Unit = 24
 
    ! BeamDyn Derived-types variables; see Registry_BeamDyn.txt for details
 
@@ -97,6 +100,9 @@ PROGRAM MAIN
     OPEN(unit = OutUnit, file = 'Dynamic.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiDisUnit, file = 'QiDisp.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiForUnit, file = 'QiForce.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRMSu1Unit, file = 'QiRMSu1.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRMSu2Unit, file = 'QiRMSu2.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRMSu3Unit, file = 'QiRMSu3.out', status = 'REPLACE',ACTION = 'WRITE')
 
    DoubleTest = 1.
    SingleTest = 1.
@@ -171,6 +177,9 @@ PROGRAM MAIN
            WRITE(OutUnit,*) '=========================================='
            WRITE(QiDisUnit,6000) 0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0
            WRITE(QiForUnit,6000) 0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0
+           WRITE(QiRMSu1Unit,7000) 0.0D0,0.0D0
+           WRITE(QiRMSu2Unit,7000) 0.0D0,0.0D0
+           WRITE(QiRMSu3Unit,7000) 0.0D0,0.0D0
            DO i=1,BDyn_Parameter%node_total
            j = (i - 1) * BDyn_Parameter%dof_node
            WRITE(OutUnit,1000) i,BDyn_Parameter%uuN0(j+1),BDyn_Parameter%uuN0(j+2),BDyn_Parameter%uuN0(j+3),&
@@ -195,6 +204,9 @@ PROGRAM MAIN
        WRITE(QiForUnit,6000) (n_t_global+1)*dt_global,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),&
                             &BDyn_OtherState%RootForce(3),BDyn_OtherState%RootForce(4),&
                             &BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6)
+       WRITE(QiRMSu1Unit,7000) (n_t_global+1)*dt_global,BDyn_OtherState%uuNf(j-5)
+       WRITE(QiRMSu2Unit,7000) (n_t_global+1)*dt_global,BDyn_OtherState%uuNf(j-4)
+       WRITE(QiRMSu3Unit,7000) (n_t_global+1)*dt_global,BDyn_OtherState%uuNf(j-3)
        WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
        WRITE(OutUnit,*) '=========================================='
        DO i=1,BDyn_Parameter%node_total
@@ -234,8 +246,13 @@ PROGRAM MAIN
    4000 FORMAT ('INITIAL TIME = ', ES12.5)
    5000 FORMAT ('TIME STEP END = ', ES12.5)
    6000 FORMAT (ES12.5,6ES21.12)
+   7000 FORMAT (ES12.5,ES21.12)
    CLOSE (OutUnit)
    CLOSE (QiDisUnit)
+   CLOSE (QiForUnit)
+   CLOSE (QiRMSu1Unit)
+   CLOSE (QiRMSu2Unit)
+   CLOSE (QiRMSu3Unit)
 
    CALL BDyn_End( BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
                     BDyn_ConstraintState, BDyn_OtherState, BDyn_Output(1), ErrStat, ErrMsg )
