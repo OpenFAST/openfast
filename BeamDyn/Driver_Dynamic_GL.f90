@@ -113,7 +113,7 @@ PROGRAM MAIN
    t_initial = 0.0D0
    t_final = 4.0d0
    
-   dt_global = 5.0D-03
+   dt_global = 2.5D-03
    
    n_t_final = ((t_final - t_initial) / dt_global)
    
