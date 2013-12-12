@@ -7,6 +7,8 @@
 \usepackage{subfig}
 \usepackage{authblk}
 \usepackage{psfrag}
+%\usepackage{leftidx}
+\usepackage{fouridx}
 
 
 \input basic.ltx
@@ -25,6 +27,7 @@
 \renewcommand{\vec}[1]{\underline{#1}}
 \renewcommand{\skew}[1]{\widetilde{#1}}
 %------------------------------------------------------------------------------
+\newcommand\Prefix[3]{\vphantom{#3}#1#2#3}
 
 %\title{A Efficient High-Fidelity Beam Solver in FAST Modularization Framework}
 
@@ -99,7 +102,7 @@ beam tool in FAST.
 
 \input{lsfe}
 
-\input{numerics}
+%\input{numerics}
 
 \section{Numerical Examples}
 

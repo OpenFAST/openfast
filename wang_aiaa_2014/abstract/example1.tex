@@ -4,7 +4,7 @@
 The first example is a benchmark problem for geometrically nonlinear
 analysis of beams \cite{Simo1985,Xiao-Zhong:2012}. We calculate the static
 deflection of a cantilever beam that is subjected at its free end to
-a constant moment $M$.  The length of the beam $L$ is $10\,in$ and the cross-sectional stiffness 
+a constant moment $M$.  The length of the beam $L$ is $10$ in and the cross-sectional stiffness 
 matrix is given below:
 \begin{equation}
     \label{StifE1}
@@ -18,7 +18,7 @@ matrix is given below:
 \end{bmatrix}
 \end{equation}
 \mas{add units to above eq}
-It is pointed out that the term with a asterisk denotes it is resolved in the material coordinate system. A sketch of this case can be found in Figure~\ref{E1Sketch}.
+\textcolor{red}{The units associated with the stiffness values throughout this section are $C_{ij}^*$ (lb), $C_{i,j+3}^*$ (lb.in), and $C_{i+3,j+3}^*$ (lb.in$^2$) for $i,j = 1,2,3$.} It is pointed out that the term with a asterisk denotes it is resolved in the material coordinate system. A sketch of this case can be found in Figure~\ref{E1Sketch}.
 \begin{figure}
     \centering
     \includegraphics[width=0.5\textwidth]{\directory E1Sketch.eps}
@@ -31,12 +31,12 @@ The load applied at the tip is given by the following equation:
     M_2 = \lambda \bar{M}_2
 \end{equation}
 where $\bar{M}_2 = \pi \frac{EI_2}{L}$. The parameter $\lambda$ will vary between $0$ and $2$. In 
-this case, the beam is discretized with two $5^{th}$ order elements. The deformations of the beam are shown in Figure~\ref{E1Deform}.
+this case, the beam is discretized with two $5^{th}$ order elements. The deformations of the beam obtained from BeamDyn are shown in Figure~\ref{E1Deform}.
 \begin{figure}
     \centering
     \includegraphics[width=0.5\textwidth]{\directory E1Deform.eps}
     \caption{Deformations of a cantilever beam under six constant
-bending moments. \mas{is this analytical or LSFE-calculated?}}
+bending moments. \mas{is this analytical or LSFE-calculated?}\textcolor{red}{it's obtained from BeamDyn, as noted in the discussion on this figure.}}
     \label{E1Deform}
 \end{figure}
 The calculated results are compared with the analytical solution, which can be found in Ref.\cite{Mayo-etal:2004} as
@@ -80,14 +80,14 @@ The results can be found in Table~\ref{E1u1} and \ref{E1u3}, respectively. Good 
      \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
      \label{WMParameter}
  \end{equation}
- where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of rotation axis. The singularity exists in the above definition can be removed by a rescaling operation, which can be observed in Figure~\ref{E1Rot}.
+ where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of rotation axis. The singularity existing in the above definition can be removed by a rescaling operation, which can be observed in Figure~\ref{E1Rot}.
 \begin{figure}
     \centering
     \includegraphics[width=3.0in]{\directory E1Rot.eps}
     \caption{Wiener-Milenkovi\'c rotation parameters along beam axis $x_1$ .}
     \label{E1Rot}
 \end{figure}
-Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is
+\textcolor{red}{Finally, we conduct a convergence study on the LSFE. The convergence rate is compared with conventional quadratic elements used in Dymore, which is a finite element based multibody dynamics code for the comprehensive modeling of flexible multibody systems. It is pointed out that user can choose element up to $3^rd$ order in Dymore.} Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is
 the tip displacement (at $x=L$), as a function of the number of model nodes
 for the calculation with Dymore quadratic elements (QE) and a single
 Legendre spectral element finite (LSFE), where
@@ -95,7 +95,7 @@ Legendre spectral element finite (LSFE), where
     \label{E1Error}
     \epsilon(u) = \left| \frac{u-u^a}{u^a} \right|
 \end{equation}
-and $u$ is the test solution and $u^a$ is the analytical solution. The parameter $\lambda$ is set to $1.0$ for this case. The Legendre spectral elements (with $p$-refinement) exhibit highly desirable exponential convergence to machine precision error.
+and $u$ is the test solution and $u^a$ is the analytical solution.  The parameter $\lambda$ is set to $1.0$ for this case. The Legendre spectral elements (with $p$-refinement) exhibit highly desirable exponential convergence to machine precision error.
 \begin{figure}
     \centering
     \psfrag{xaxis}[][]{Number of Nodes}
