@@ -10,17 +10,18 @@ matrix is given below:
     \label{StifE1}
     C^* = 10^3 \times \begin{bmatrix}
 	1770 & 0    & 0    & 0    & 0    & 0   \\
-	     & 1770 & 0    & 0    & 0    & 0   \\
-	     &      & 1770 & 0    & 0    & 0   \\
-	     &      &      & 8.16 & 0    & 0   \\
-	     &      &      &      & 86.9 & 0   \\
-	     &      &      &      &      & 215
+	 0    & 1770 & 0    & 0    & 0    & 0   \\
+	 0   &   0   & 1770 & 0    & 0    & 0   \\
+	 0   &   0   &  0    & 8.16 & 0    & 0   \\
+	 0   &   0   &  0    &  0    & 86.9 & 0   \\
+	 0   &   0   &  0    &  0    &   0   & 215
 \end{bmatrix}
 \end{equation}
+\mas{add units to above eq}
 It is pointed out that the term with a asterisk denotes it is resolved in the material coordinate system. A sketch of this case can be found in Figure~\ref{E1Sketch}.
 \begin{figure}
     \centering
-    \includegraphics[width=3.0in]{\directory E1Sketch.eps}
+    \includegraphics[width=0.5\textwidth]{\directory E1Sketch.eps}
     \caption{Sketch of a cantilever beam.}
     \label{E1Sketch}
 \end{figure} 
@@ -33,28 +34,30 @@ where $\bar{M}_2 = \pi \frac{EI_2}{L}$. The parameter $\lambda$ will vary betwee
 this case, the beam is discretized with two $5^{th}$ order elements. The deformations of the beam are shown in Figure~\ref{E1Deform}.
 \begin{figure}
     \centering
-    \includegraphics[width=5.0in]{\directory E1Deform.eps}
-    \caption{Deformations of a cantilever beam under several constant bending moments.}
+    \includegraphics[width=0.5\textwidth]{\directory E1Deform.eps}
+    \caption{Deformations of a cantilever beam under six constant
+bending moments. \mas{is this analytical or LSFE-calculated?}}
     \label{E1Deform}
 \end{figure}
 The calculated results are compared with the analytical solution, which can be found in Ref.\cite{Mayo-etal:2004} as
 \begin{equation}
     \label{E1Analytical}
-    u_1 = \rho sin \left( \frac{x_1}{\rho} \right) - x_1~~~~~u_3 = \rho \left(1-cos\left(\frac{x_1}{\rho}\right) \right)
+    u_1 = \rho \sin \left( \frac{x_1}{\rho} \right) - x_1~~~~~u_3 = \rho
+\left(1-\cos\left(\frac{x_1}{\rho}\right) \right)
 \end{equation}
 The results can be found in Table~\ref{E1u1} and \ref{E1u3}, respectively. Good agreement can be observed between these two sets of results.
 \begin{table}[tbp]
 \centering 
 \caption{Axial displacement $u_1$ of a cantilever beam subject to a constant moment (in inches).}
 \label{E1u1} 
-	\begin{tabular}{| l | l | l | l |}
+	\begin{tabular}{| l | l | l | }
     	\hline
-    	$\lambda$ & Analytical & BeamDyn  & \% Error \\ \hline
-    	0.4       & -2.4317    & -2.4317  & 0.00       \\ \hline
-    	0.8       & -7.6613    & -7.6613  & 0.00       \\ \hline
-    	1.2       & -11.5591   & -11.5591 & 0.00       \\ \hline
-    	1.6       & -11.8921   & -11.8921 & 0.00       \\ \hline
-    	2.0       & -10.0000   & -10.0000  & 0.00       \\ \hline
+    	$\lambda$ & Analytical & BeamDyn  \\ \hline
+    	0.4       & -2.4317    & -2.4317  \\ \hline
+    	0.8       & -7.6613    & -7.6613  \\ \hline
+    	1.2       & -11.5591   & -11.5591 \\ \hline
+    	1.6       & -11.8921   & -11.8921 \\ \hline
+    	2.0       & -10.0000   & -10.0000 \\ \hline
     \end{tabular}
 \end{table}
 
@@ -62,19 +65,19 @@ The results can be found in Table~\ref{E1u1} and \ref{E1u3}, respectively. Good 
 \centering 
 \caption{Vertical displacement $u_3$ of a cantilever beam subject to a constant moment (in inches).}
 \label{E1u3} 
-	\begin{tabular}{| l | l | l | l |}
+	\begin{tabular}{| l | l | l | }
     	\hline
-    	$\lambda$ & Analytical & BeamDyn & \% Error \\ \hline
-    	0.4       & 5.4987     & 5.4987  & 0.00   \\ \hline
-    	0.8       & 7.1978     & 7.1979  & 0.0013   \\ \hline
-    	1.2       & 4.7986     & 4.7986  & 0.00   \\ \hline
-    	1.6       & 1.3747     & 1.3747  & 0.00   \\ \hline
-    	2.0       & 0.0000     & 0.0000  & 0.00   \\ \hline
+    	$\lambda$ & Analytical & BeamDyn  \\ \hline
+    	0.4       & 5.4987     & 5.4987   \\ \hline
+    	0.8       & 7.1978     & 7.1979   \\ \hline
+    	1.2       & 4.7986     & 4.7986   \\ \hline
+    	1.6       & 1.3747     & 1.3747   \\ \hline
+    	2.0       & 0.0000     & 0.0000   \\ \hline
     \end{tabular}
  \end{table}
  The rotation parameters at each node along beam axis $x_1$ obtained from BeamDyn are plotted in Figure~\ref{E1Rot} for $\lambda = 0.8$ and $\lambda = 2.0$, respectively. It is noted that the three-dimensional rotations are represented by Wiener-Milenkovi\'c parameter defined in the following equation:
  \begin{equation}
-     \vec{p} = 4 tan\frac{\phi}{4} \bar{n}
+     \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
      \label{WMParameter}
  \end{equation}
  where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of rotation axis. The singularity exists in the above definition can be removed by a rescaling operation, which can be observed in Figure~\ref{E1Rot}.
@@ -84,7 +87,10 @@ The results can be found in Table~\ref{E1u1} and \ref{E1u3}, respectively. Good 
     \caption{Wiener-Milenkovi\'c rotation parameters along beam axis $x_1$ .}
     \label{E1Rot}
 \end{figure}
-Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is the tip displacement (at $x=L$), as a function of the number of model nodes for the calculation with Dymore quadratic elements (QE) and a single Legendre spectral element (LSE), where
+Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is
+the tip displacement (at $x=L$), as a function of the number of model nodes
+for the calculation with Dymore quadratic elements (QE) and a single
+Legendre spectral element finite (LSFE), where
 \begin{equation}
     \label{E1Error}
     \epsilon(u) = \left| \frac{u-u^a}{u^a} \right|
@@ -92,11 +98,17 @@ Figure~\ref{E1Conv} shows the normalized error $\epsilon(u)$, where $u$ is the t
 and $u$ is the test solution and $u^a$ is the analytical solution. The parameter $\lambda$ is set to $1.0$ for this case. The Legendre spectral elements (with $p$-refinement) exhibit highly desirable exponential convergence to machine precision error.
 \begin{figure}
     \centering
+    \psfrag{xaxis}[][]{Number of Nodes}
     \begin{tabular}{c}
     \subfloat[$u_1$]{\label{E1Conv:u1}\includegraphics[width=3.0 in]{\directory  E1Convu1.eps}} \qquad
 \subfloat[$u_3$]{\label{E1Conv:u3}\includegraphics[width=3.0in]{\directory  E1Convu3.eps}}\\
 \end{tabular}
-\caption{Normalized error of the (a) $u_1$ and (b) $u_3$ displacements as a function of the total number of nodes}
+\caption{Normalized error of the (a) $u_1$ and (b) $u_3$ tip displacements
+of a isotropic cantiler beam (Figure~\ref{E1Sketch}) under constant tip
+moment as a function of the total number of nodes. Results were calculated
+with BeamDyn (LSFE) and Dymore (QE).  LSFE model refinement was accomplished
+by increasing polynomial order and QE model refinement was accomplished by
+increasing the number of elements.  }
 \label{E1Conv}
 \end{figure}
 
