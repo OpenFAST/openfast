@@ -44,6 +44,13 @@ In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
 $n^{th}$-order Lagrangian interpolants, where nodes are located at the $n+1$
 GLL-quadrature points in the $[-1,1]$ element natural-coordinate domain.
 \textcolor{red}{Need more work here: a figure shows some LS elements (non-evenly placed internal nodes) and a short discussion of its advantages.}
-The implementation of GEBT into the FE code, BeamDyn, carries out the integration in the space domain by using reduced Gauss quadrature. Time integration is performed using generalized-$\alpha$ scheme, which is a unconditionally stable, second-order accurate algorithm. More details regarding on the generalized-$\alpha$ method can be found in Ref~\cite{Chung-Hulbert:1993,Bauchau:2010}
+The present implementation  carries out the integration in the space domain by using $n$ point reduced Gauss quadrature with $n$ the order of the interpolation polynomials. 
+
+The geometrically exact beam theory introduced above has been implemented using Legendre spectral finite element, known as BeamDyn, as a module functioning in the FAST modularization framework. The system of nonlinear equations in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are solved using Newton-Raphson method in the linearized form in Eq.~\eqref{LinearizedEqn} at each iteration for corrections to the nodal displacements and rotations until convergence is reached. In the present implementation, a energy-like stopping criterion has been chosen, which is calculated as
+\begin{equation}
+    \label{StoppingCriterion}
+    \| \Delta \mathbf{U}^{(i)T} \left( \fourIdx{t+\Delta t}{}{}{}{\mathbf{R}} -  \fourIdx{t+\Delta t}{}{(i-1)}{}{\mathbf{F}}  \right) \| \leq \| \epsilon_E \left( \Delta \mathbf{U}^{(1)T} \left( \fourIdx{t+\Delta t}{}{}{}{\mathbf{R}} - \fourIdx{t}{}{}{}{\mathbf{F}} \right) \right) \|
+\end{equation}
+where $\|\bullet\|$ denotes the Euclidean norm, $\Delta \mathbf{U}$ is the incremental displacement vector, $\mathbf{R}$ is the vector of externally applied nodal point loads, $\mathbf{F}$ is the vector of nodal point forces corresponding to the internal element stresses, and $\epsilon_E$ is the preset energy tolerance. As pointed out by Bathe and Cimento in Ref.\cite{Bathe-Cimento:1980}, this criterion provides information of when both the displacements and the forces are near their equilibrium values. Time integration is performed using generalized-$\alpha$ scheme in BeamDyn, which is a unconditionally stable, second-order accurate algorithm. The users can choose proper parameters to achieve high frequency numerical dissipation in this scheme. More details regarding the generalized-$\alpha$ method can be found in Ref.\cite{Chung-Hulbert:1993,Bauchau:2010}. 
 
 
