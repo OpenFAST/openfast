@@ -137,14 +137,14 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! Define parameters here:
 
-      p%elem_total = 2
-      p%node_elem  = 6
+      p%elem_total = 1
+      p%node_elem  = 3
       p%ngp = p%node_elem - 1 
       p%dof_node = 6
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
       p%dof_total  = p%node_total * p%dof_node
       
-      p%niter = 100
+      p%niter = 10
 
       xl = 0.   ! left most point (on x axis)
       xr = 10.  ! right most point (on x axis)
