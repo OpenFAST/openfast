@@ -13,6 +13,7 @@ The last example is a transient analysis of a composite beam with boxed cross-se
 	0       & 0     & 0     & 0 & 0 & 1.0336
 \end{bmatrix}    
 \end{equation}
+\mas{add units to above expression}
 The beam is divided into two $5^{th}$ order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
 \begin{equation}
     \label{E3AppliedForce}
@@ -57,7 +58,7 @@ where $A_F = 1.0 \times 10^2~lbs$ and $\omega_F = 10~rad/s$ (see Figure~\ref{E3S
 Finally, we examine here the convergence rates of the LSFEs and conventional quadratic elements. Figure~\ref{E3u1Conv} shows normalized root-mean-square (RMS) error of the numerical solutions for the displacement $u_1$ at the free tip over the time interval $0 \leq t  \leq 4$. Normalized RMS error for $n_{max}$ numerical response values $u_1^n$, where $u_1^n \approx u_1(t^n)$, was calculated as
 \begin{equation}
     \label{RMS}
-    \epsilon(u_1) = \sqrt{\frac{\sum_{k=0}^{n_{max}} \left[ u_1^k - u_b(t^k) \right]^2}{\sum_{k=0}^{n_{max}} \left[ u_b(t^k) \right]^2}}
+    \epsilon_{\mathrm{RMS}}(u_1) = \sqrt{\frac{\sum_{k=0}^{n_{max}} \left[ u_1^k - u_b(t^k) \right]^2}{\sum_{k=0}^{n_{max}} \left[ u_b(t^k) \right]^2}}
 \end{equation}
 where $u_b(t)$ is the benchmark solution; here $u_b(t)$ is a highly resolved numerical solution obtained by BeamDyn with one $20^th$ order element and the time step is $1.0 \times 10^(-4)$. Two time steps are involved in the test calculation, given as $5.0 \times 10^(-3)$ and $2.5 \times 10^(-3)$, respectively. It can be observed that \textcolor{red}{2 observations:1 error due to time integrator; 2 better convergence rate of LSFE}.
 \begin{figure}

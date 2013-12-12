@@ -44,8 +44,10 @@
 
 
  \author[1]{Qi Wang\thanks{Research Engineer, National Wind Technology Center, AIAA Member. Email: Qi.Wang2@nrel.gov}}
- \author[1]{Michael A. Sprague\thanks{Senior Research Scientist, Scientific Computing Center.}}
- \author[1]{Jason Jonkman\thanks{Senior Engineer, National Wind Technology Center.}}
+ \author[1]{Michael A. Sprague\thanks{Senior Research Scientist, Scientific
+Computing Center, AIAA Member. Email: Michael.A.Sprague@nrel.gov}}
+ \author[1]{Jason Jonkman\thanks{Senior Engineer, National Wind Technology
+Center, AIAA Member. Email: Jason.Jonkman@nrel.gov.}}
  \author[2]{Nick Johnson\thanks{Graduate Research Assistant at Colorado School of Mines.}}
  \affil[1]{National Renewable Energy Laboratory, Golden, CO 80401}
  \affil[2]{Department of Mechanical Engineering, Colorado School of Mines, Golden, CO 80401}
@@ -57,19 +59,23 @@
 \maketitle
 
 \begin{abstract}
-This paper presents a numerical implementation and examination of new wind
-turbine blade finite element model based on Geometrically Exact Beam Theory
-(GEBT) and a high-order spectral finite element method.  The
+This paper presents a numerical implementation and examination of a new
+nonlinear beam finite-element (FE) model for highly flexible wind turbine
+blades made of composite materials.  The underlying model is the
+geometrically exact beam theory (GEBT) and spatial discretization is
+achieved with  Legendre spectral finite elements (LSFEs).  The
 displacement-based GEBT is presented, which includes the coupling effects
-that exist in composite structures and geometric nonlinearity.   Legendre
-spectral finite elements (LSFEs) are high-rder finite elements with nodes
-located at the Gauss-Legendre-Lobatto points.  LSFEs can be an order of
-magnitude more efficient that low-order finite elements for a given accuracy
-level.    The new LSFE code is implemented in the new FAST Modularization Framework for
+that exist in composite structures and geometric nonlinearity.   LSFEs are
+high-order finite elements with nodes located at the Gauss-Legendre-Lobatto
+points.  LSFEs can be an order of magnitude more efficient that low-order
+finite elements for a given accuracy level.    The LSFE code is implemented
+in the module called BeamDyn in the new FAST Modularization Framework for
 dynamic simulation of highly flexible composite-material wind turbine
 blades.  The framework allows for fully interactive simulations of turbine
-blades in operating conditions.  Numerical examples showing validation and
-LSFE performance are provided in the numerical examples section. It concludes that the implemented code can be used as a efficient high-fidelity beam tool in FAST.
+blades in operating conditions.  Numerical examples showing verification and
+LSFE performance are provided in the numerical examples section. It
+concludes that the implemented code can be used as a efficient high-fidelity
+beam tool in FAST.
 \end{abstract}
 
 %\section*{Nomenclature}
@@ -92,6 +98,8 @@ LSFE performance are provided in the numerical examples section. It concludes th
 \input{gebt}
 
 \input{lsfe}
+
+\input{numerics}
 
 \section{Numerical Examples}
 
