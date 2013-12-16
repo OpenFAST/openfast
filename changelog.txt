@@ -1,0 +1,37 @@
+SubDyn Change Log
+===============================================================================
+Initial release on 03-April-2013
+
+Updates:
+-------------------------------------------------------------------------------
+v0.00.00a-rrd     03-April-2013
+   Limitations
+   - Limited restrain capabilities (only clamped nodes allowed).
+   - Only Euler-Bernoulli(E-B) or 2-node Timoshenko element formulation (in the future tapered E-B and tapered T will be implemented).
+   - Only circular members allowed (in the future a generic cross-section will be allowed).
+   - Reaction force calculated at (0,0,0) SS-reference frame (e.g., sea-bed level); in the future a reference location will be user input.
+   - Meshing capabilities within the modularization framework not yet implemented.
+   - The code has not yet been fully integrated with FAST.
+   - Reaction forces are not output yet. To be implemented shortly.
+   - Due to licensing restrictions with the solver used during development, we cannot distribute the solver at this time. Later versions will contain a distributable solver.
+ -------------------------------------------------------------------------------
+v0.04.00a-rrd     03-October-2013
+    Official FAST 8.x public release
+      Limitations
+      1.	Tight coupling is not yet supported.
+      2.	Only limited error checking of user’s input is implemented.  Carefully examine the input file if unexpected errors are found.
+      3.	Limited restraint capabilities are available (only clamped nodes allowed).
+      4.	Only nontapered Euler-Bernoulli (E-B) or a 2-node Timoshenko (T) element formulations are available (in the future, tapered E-B and tapered T will be implemented).
+      5.	Only circular members are permitted (in the future, a generic cross-section will be allowed).
+      6.	Reaction loads are calculated at (0,0,-Wdepth) substructure (SS) reference frame (e.g., sea-bed level); in the future, a reference location will be user input.
+      7.	The number of elements per member (NDiv) is constant throughout the structure.
+      8.	The code has not yet been coupled with HydroDyn.
+      9.	Limited testing has been conducted; use caution in interpreting the results and try different numbers of retained modes to ensure convergence of the results if using CBMod.
+      10.	Internal matrices are not stored in sparse form, limiting the total number of possible nodes/degrees of freedom (DOF)/finite elements to about 300/1800.
+      11.	Foundation (soil-structure interaction) modeling is not yet available.
+      12.	The dynamics system reduction is performed in the absence of external loading.
+      13.	Gravitational loading does not impact the global substructure stiffness.
+      14.	Loads (gravitational, inertial, hydrodynamic) can only be applied as concentrated loads at element nodes; distributed loads (per unit length) are not yet supported.
+      15.	Compiling requires the Intel Math Kernel Library (gfortran is not yet supported). Note that IMKL routines used in this release are publicly available LAPACK routines at http://www.netlib.org/lapack .
+-------------------------------------------------------------------------------
+v1.00.00b-rrd     12-Dec-2013
