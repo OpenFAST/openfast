@@ -167,7 +167,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !-------------------
 !This is the input (bending) used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-      p%F_ext(p%dof_total-1) = -2.0D0*27300.4D0
+      p%F_ext(p%dof_total-1) = -0.8D0*27300.4D0
 !------------------
 !END input
 !------------------

@@ -45,13 +45,13 @@
        CALL ElemNodalDispGL(uuN0,node_elem,dof_node,nelem,Nuu0)
        CALL ElemNodalDispGL(uuNf,node_elem,dof_node,nelem,Nuuu)
 
-!       DO j=1,dof_elem
-!           WRITE(*,*) Nuuu(j)
-!       ENDDO
        CALL ElemNodalDispGL(Fext,node_elem,dof_node,nelem,Next)
 
        CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
        CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
+       DO j=1,node_elem
+           WRITE(*,*) Nrrr((j-1)*3+2)
+       ENDDO
        
        elk = 0.0D0
        elf = 0.0D0

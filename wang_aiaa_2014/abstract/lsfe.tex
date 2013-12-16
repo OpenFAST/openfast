@@ -10,7 +10,7 @@ The displacement fields in a element are approximated as
 where $h^k(\xi)$ is the $p^{th}$-order polynomial
 Lagrangian interpolant shape function of node $k$, $k=\{1,2,...,p+1]\}$, 
 and $\vec{\hat{u}}^k$ is
-the $k^{th}$ nodal value. \textcolor{red}{Note that variable $\xi$ is a non-dimensional quantity defined along the span of the element.}
+the $k^{th}$ nodal value. \textcolor{red}{Note that variable $\xi \in \left[-1,1\right]$ is a non-dimensional quantity defined along the span of the element.}
 However, as discussed in Bauchau et al.\cite{Bauchau-etal:2009}, the three-dimensional rotation field cannot be
 simply interpolated as the displacement field in the form of
 \begin{align}
@@ -32,21 +32,21 @@ approach proposed by Crisfield and Jeleni\'c \cite{Crisfield1999} to deal
 with the finite rotations. Our approach is described as follows
 \begin{description}
     \item[Step 1:] Compute the nodal relative rotations, $\vec{\hat{r}}^k$
-by removing the rigid body \mas{clarify this; what is reference?} rotation, $\vec{\hat{c}}^1$, from the finite rotation at each node, $\vec{\hat{r}}^k = \vec{\hat{c}}^{1-} \oplus \vec{\hat{c}}^k$.
-    \item[Step 2:] Interpolate the relative rotation field: $\vec{r}(s) = h^k(s) \vec{\hat{r}}^k$ and $\vec{r}^\prime(s) = h^{k \prime}(s) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(s) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
-    \item[Step 3:] Restore the rigid body rotation removed in Step 1: $\vec{c}(s) = \vec{\hat{c}}^1 \oplus \vec{r}(s)$.
+by removing the reference rotation, $\vec{\hat{c}}^1$, from the finite rotation at each node, $\vec{\hat{r}}^k = \vec{\hat{c}}^{1-} \oplus \vec{\hat{c}}^k$.
+    \item[Step 2:] Interpolate the relative rotation field: $\vec{r}(\xi) = h^k(\xi) \vec{\hat{r}}^k$ and $\vec{r}^\prime(\xi) = h^{k \prime}(\xi) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(\xi) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
+    \item[Step 3:] Restore the rigid body rotation removed in Step 1: $\vec{c}(\xi) = \vec{\hat{c}}^1 \oplus \vec{r}(\xi)$.
 \end{description} 
 where $\tens{H}$ is the tangent tensor that relates the curvature vector $\vec{k}$ and rotation vector $\vec{p}$ as
 \begin{equation}
     \label{Tensor}
     \vec{k} = \tens{H}~ \vec{p}^\prime
 \end{equation}
-In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
+Note that the relative rotation field can be computed with respect to any of the nodes of the element; and we choose node 1 as the reference node for convenient. In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
 $p^{th}$-order Lagrangian interpolants, where nodes are located at the $p+1$
 GLL-quadrature points in the $[-1,1]$ element natural-coordinate domain.
 \textcolor{red}{Need more work here: a figure shows some LS elements
 (non-evenly placed internal nodes) and a short discussion of its
-advantages.} In our implementation, weak-form integrals are evaluated with
+advantages.} In the present implementation, weak-form integrals are evaluated with
 $p$-point reduced Gauss quadrature.
 
 The geometrically exact beam theory introduced above has been implemented using Legendre spectral finite element, known as BeamDyn, as a module functioning in the FAST modularization framework. The system of nonlinear equations in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are solved using Newton-Raphson method in the linearized form in Eq.~\eqref{LinearizedEqn} at each iteration for corrections to the nodal displacements and rotations until convergence is reached. In the present implementation, a energy-like stopping criterion has been chosen, which is calculated as
