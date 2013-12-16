@@ -4039,31 +4039,32 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
  
       p%MOutLst3(I)%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
       
-      ALLOCATE( p%MOutLst3(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !
-       IF ( ErrStat/= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst3(I)%NodeIDs arrays in SDOut_Init'
-         RETURN
-       END IF
-       
-      p%MOutLst3(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
+      !Next stuff to be eliminated
+      !ALLOCATE( p%MOutLst3(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !
+      ! IF ( ErrStat/= 0 ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Error allocating p%MOutLst3(I)%NodeIDs arrays in SDOut_Init'
+      !   RETURN
+      ! END IF
+      ! 
+      !p%MOutLst3(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
        !Now I need to find out which elements are attached to those nodes and still belong to the member I
       !ElmID2s could contain the same element twice if Ndiv=1
-      p%MOutLst3(I)%ElmID2s=0  !Initialize to 0
+      !p%MOutLst3(I)%ElmID2s=0  !Initialize to 0
       
           !I need to get ALL the elements that belong to the same joint
           !make use of MemberNodes and NodesConnE
           
       NconEls=Init%NodesConnE(p%MoutLst3(I)%Noutcnt,1) !Number of elements connecting to the joint
            
-       ALLOCATE( p%MOutLst3(I)%ElmIDs(1,NconEls), STAT = ErrStat )  !element IDs connecting to the joint
+       ALLOCATE( p%MOutLst3(I)%ElmIDs(1,NconEls), STAT = ErrStat )  !element IDs connecting to the joint; (1,NconEls) and not (NconEls) as the same meshauxtype is used with other Moutlst
        IF ( ErrStat/= 0 ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = 'Error allocating p%MOutLst3(I)%ElmIDs arrays in SDOut_Init'
          RETURN
        END IF
        
-       ALLOCATE( p%MOutLst3(I)%ElmNds(1,NconEls), STAT = ErrStat )  !element IDs connecting to the joint
+       ALLOCATE( p%MOutLst3(I)%ElmNds(1,NconEls), STAT = ErrStat )  !This array contains for each element connected to the joint, a flag that tells me whether the joint is node 1 or 2 for the elements
        IF ( ErrStat/= 0 ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = 'Error allocating p%MOutLst3(I)%ElmIDs arrays in SDOut_Init'
@@ -4092,7 +4093,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
          DO K=1, NconEls 
               L=Init%NodesConnE(p%MoutLst3(I)%Noutcnt,k+1)  !k-th Element Number in the set of elements attached to the selected node 
               
-              p%MoutLst3(I)%ElmIDs(1,K)=L     !This array has for each joint requested  the elements to get results for  
+              p%MoutLst3(I)%ElmIDs(1,K)=L     !This array has for each joint requested  the elements' ID to get results for  
               
               M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
              
@@ -4185,31 +4186,31 @@ SUBROUTINE ReactMatx(Init, p, ErrStat, ErrMsg)
     !Other rows done per column actually  
    DO I = 1, DOFC
       
-      n = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID
+      n = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Reacts)
       
       x = Init%Nodes(n, 2)
       y = Init%Nodes(n, 3)
-      z = Init%Nodes(n, 4) !+ Wdepth here to be added- RRD TODO: 7/19/13
+      z = Init%Nodes(n, 4) + Init%WtrDpth  !+ Wdepth here to be added- RRD TODO: 7/19/13
       
       rmndr = MOD(I, 6)  !It gives me the column index among the 6 different kinds
       SELECT CASE (rmndr)
          CASE (1)
-            p%TIreact(4:6, I) = (/0.0, z, -y/)
+            p%TIreact(4:6, I) = (/0.0_ReKi, z, -y/)
             
          CASE (2)
-            p%TIreact(4:6, I) = (/-z, 0.0, x/)
+            p%TIreact(4:6, I) = (/-z, 0.0_ReKi, x/)
             
          CASE (3)
-            p%TIreact(4:6, I) = (/y, -x, 0.0/)
+            p%TIreact(4:6, I) = (/y, -x, 0.0_ReKi/)
          
          CASE (4)
-            p%TIreact(4:6, I) = (/1.0, 0.0, 0.0/)
+            p%TIreact(4:6, I) = (/1.0_ReKi, 0.0_ReKi, 0.0_ReKi/)
             
          CASE (5)
-            p%TIreact(4:6, I) = (/0.0, 1.0, 0.0/)
+            p%TIreact(4:6, I) = (/0.0_ReKi, 1.0_ReKi, 0.0_ReKi/)
             
          CASE (0)
-            p%TIreact(4:6, I) = (/0.0, 0.0, 1.0/)
+            p%TIreact(4:6, I) = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi/)
             
          CASE DEFAULT
             ErrStat = ErrID_Fatal
@@ -4241,7 +4242,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
    !locals
    INTEGER(IntKi)                               ::I,J,K,K2,L,L2      ! Counters
    INTEGER(IntKi), DIMENSION(2)                 ::K3    ! It stores Node IDs for element under consideration (may not be consecutive numbers)
-   
+   INTEGER(IntKi)                               :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%Nmodes
    REAL(ReKi), DIMENSION (6)                 :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
    REAL(ReKi), DIMENSION (6)                 :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
    Real(ReKi), DIMENSION (3,3)              :: DIRCOS    !direction cosice matrix (global to local) (3x3)
@@ -4383,9 +4384,11 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
   !Assign interface translations and rotations accelerations
    AllOuts(IntfTRAss(1:P%TPdofL))= udotdot_TP !u%UFL(2*P%TPdofL+1:3*P%TPdofL)  !TODO need to add these back in!!! GJH 6/6/13
   ! Assign all SSqm, SSqmdot, SSqmdotdot
-  Allouts(SSqm01:SSqm01+p%Nmodes-1)=x%qm
-  Allouts(SSqmd01:SSqmd01+p%Nmodes-1)=x%qmdot
-  Allouts(SSqmdd01:SSqmdd01+p%Nmodes-1)=x%qmdotdot
+   ! We only have space for the first 99 values
+  maxOutModes = min(p%Nmodes,99)
+  Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
+  Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
+  Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = x%qmdotdot(1:maxOutModes)
    
   !Need to Calculate Reaction Forces Now, but only if requested
   IF (p%OutReact) THEN 
@@ -4399,7 +4402,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
        
        ReactNs = 0.0 !Initialize
        
-       DO I=1,p%NReact   !Do for each constrained node
+       DO I=1,p%NReact   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
           
           FK_elm2=0 !Initialize
           FM_elm2=0 !Initialize
@@ -4435,8 +4438,15 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
                 ENDDO           
                 
              ENDDO
-             junk= FK_elm2 + FM_elm2  !Not sure why I need an intermediate step here, but the sum would not work otherwise
-             ReactNs((I-1)*6+1:6*I)=  junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES
+             !junk= FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
+             
+             !NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
+             !   The joind iD of the reaction, i.e. thre reaction node ID is within p%MOutLst3(I)%Noutcnt
+             !The index in Y2mesh is? 
+             !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
+             junk =  (/u%LMesh%Force(:,p%NNodes_I+p%NNodes_L+I),u%LMesh%Moment(:,p%NNodes_I+p%NNodes_L+I)/)
+                
+             ReactNs((I-1)*6+1:6*I)=FK_elm2 - junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES
        ENDDO
        
           !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts
@@ -4444,7 +4454,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
                AllOuts( ReactSS(1:P%TPdofL) ) = matmul(p%TIreact,ReactNs)
   ENDIF
 
-   
+   if (allocated(ReactNs)) deallocate(ReactNs)
    
 END SUBROUTINE SDOut_MapOutputs
 
@@ -4507,12 +4517,12 @@ SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
       ! Write any closing information in the summary file
       
    IF ( UnSum > 0 ) THEN
+      
       WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat)  'This summary file was closed on '//CurDate()//' at '//CurTime()//'.'
       IF (ErrStat /= 0) THEN
          Err = .TRUE.
          ErrMsg  = 'Problem writing to summary file'
       END IF
-   END IF   
    
       ! Close the file
    
@@ -4524,6 +4534,8 @@ SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
    
    IF ( Err ) ErrStat = ErrID_Fatal
       
+   END IF   
+                      
                       
 END SUBROUTINE SDOut_CloseSum            
 
@@ -4601,7 +4613,7 @@ SUBROUTINE SDOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrMsg
    IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
       
          ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'_SubDyn.out'
+      OutFileName = TRIM(OutRootName)//'_SD.out'
       CALL GetNewUnit( p%UnJckF )
    
       CALL OpenFOutFile ( p%UnJckF, OutFileName, ErrStat ) 

@@ -52,6 +52,7 @@ typedef	  ^                           ^	ReKi	       DirCos	          {3}{3}	    
 #	 integer
 typedef	SubDyn/SD	InitInputType	CHARACTER(1024)	SDInputFile	-	-	-	Name of the input file
 typedef	^	^	ReKi	        g	        -	-	-	Gravity acceleration
+typedef	^	^	ReKi	        WtrDpth     - - - Water Depth (positive valued)    
 typedef	^	^	ReKi	        TP_RefPoint 	{3} 	-	-	Gravity acceleration
 typedef	^	^	ReKi          SubRotateZ  - - - Rotation angle in degrees about global Z
 typedef	^	^	CHARACTER(1024)	SubDynSum	-	-	-	SubDyn summary and elem files
@@ -178,15 +179,20 @@ typedef	 ^	                 ^               ReKi	    	KBB         {:}{:}	-	-	Mat
 typedef	 ^	                 ^               ReKi	    	MBM         {:}{:}	-	-	Matrix after C-B reduction
 typedef	 ^	                 ^               ReKi	    	PHI_R         {:}{:}	-	-	Matrix after C-B reduction
 typedef	 ^	                 ^               ReKi	    	PHI_M         {:}{:}	-	-	Matrix after C-B reduction
+typedef	 ^	                 ^               ReKi	    	AM2InvJac    {:}{:}	-	-	Inverse Jacobian for Adams-Boulton 2nd order Integration
+typedef	 ^	                 ^               ReKi	    	TI           {:}{:}	-	-	Matrix to calculate TP reference point reaction at top of structure
 typedef	 ^	                 ^               ReKi	    	TIreact      {:}{:}	-	-	Matrix to calculate single point reaction at base of structure
 typedef	 ^			 ^	         IntKi	        NModes	       -	-	-	Number of modes to retain in C-B method
 typedef	 ^	                 ^	         IntKi   	Elems	      {:}{:}	-	-	Element nodes connections
 typedef	 ^	                 ^               IntKi	    	qmL           	-	-	-       Length of state array
 typedef	 ^	                 ^               IntKi	    	uL           	-	-	-       Length of input array
 typedef	 ^	                 ^               IntKi	    	DofL            -	-       -       Internal nodes # of DOFs
-typedef	 ^	                 ^               IntKi	    	NNodes_L        -	-       -       Internal nodes
+typedef	 ^	                 ^               IntKi	    	NNodes_I        -	-       -       Number of Interface nodes
+typedef	 ^	                 ^               IntKi	    	NNodes_L        -	-       -       Number ofInternal nodes
+typedef	 ^	                 ^               IntKi	    	NNodes_RbarL    -	-       -       Number of Interface + Internal nodes
 typedef	 ^	                 ^               IntKi	    	DofI            -	-       -       Interface nodes # of DOFs
 typedef	 ^	                 ^               IntKi	    	DofR            -	-       -       Interface and restrained nodes # of DOFs
+typedef	 ^	                 ^               IntKi	    	DofRbarL        -	-       -       Interface + internal nodes # of DOFs
 typedef	 ^	                 ^               IntKi	    	DofC            -	-       -       Contrained nodes # of DOFs
 typedef  ^	                 ^	         IntKi	        NReact	        -	-	-	Number of joints with reactions
 typedef	 ^	                 ^	         IntKi	        Reacts	      {:}{:}	-	-	React degree of freedoms
@@ -234,7 +240,7 @@ typedef   ^               InputType          MeshType  LMesh - - -     "Point me
 # Define outputs that are contained on the mesh here:
 #typedef ModuleName SD_OutputType         MeshType MeshedOutput - - -    "Meshed data" -
 typedef   ^               OutputType          MeshType  Y1Mesh - - -     "Transition piece outputs on a point mesh" -
-typedef   ^               OutputType          MeshType  Y2Mesh - - -     "Interior nodes outputs on a point mesh" -
+typedef   ^               OutputType          MeshType  Y2Mesh - - -     "Interior+Interface nodes outputs on a point mesh" -
 # Define outputs that are not on this mesh here:
 typedef   ^               OutputType          ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
 #typedef   ^                 ^                 ReKi     Y1          {:} - -   TP reaction Forces

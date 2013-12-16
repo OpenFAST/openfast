@@ -50,7 +50,7 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
    SortA(Init%MaxMemjnt,2) = 0                                                                                            
                                                                                                                           
    DO I = 1, Init%NNode                                                                                                   
-      Init%NodesConnN(I, 1) = Init%Nodes(I, 1)      !This should not be needed, could remove the extra 1st column like for the other array                                                                      
+      Init%NodesConnN(I, 1) = NINT( Init%Nodes(I, 1) )      !This should not be needed, could remove the extra 1st column like for the other array                                                                      
                                                                                                                           
       k = 0                                                                                                               
       DO J = 1, Init%NElem                          !This should be vectorized                                                                      
@@ -92,7 +92,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER(4)                    :: Sttus
    INTEGER                       :: TempNProp
    REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
-   INTEGER, ALLOCATABLE          :: TempMembers(:, :)          
+   INTEGER, ALLOCATABLE          :: TempMembers(:, :) ,TempReacts(:,:)         
    CHARACTER(1024)               :: OutFile
    CHARACTER(  50)               :: tempStr ! string number of nodes in member
    CHARACTER(1024)               :: OutFmt
@@ -231,22 +231,35 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ENDIF
    Init%BCs = 0
       
+    !Allocate array that will be p%Reacts renumbered and ordered so that ID does not play a role, just ordinal position number will count -RRD
+   ALLOCATE(TempReacts(p%NReact, Init%ReactCol), STAT=Sttus)
+   IF ( Sttus /= 0 )  THEN
+      ErrMsg = ' Error allocating TempReacts arrays'
+      ErrStat = ErrID_Fatal
+      RETURN
+   ENDIF
+   TempReacts=0 !INitialize -RRD
+
    DO I = 1, p%NReact
-      Node1 = p%Reacts(I, 1);
+      Node1 = p%Reacts(I, 1);  !NODE ID
+      TempReacts(I,2:Init%ReactCol)=p%Reacts(I, 2:Init%ReactCol)  !Assign all the appropriate fixity to the new Reacts array -RRD
+      
       flg = 0
       DO J = 1, Init%NJoints
          IF ( Node1 == Init%Joints(J, 1) ) THEN
             Node2 = J
             flg = 1
+            TempReacts(I,1)=Node2      !New node ID for p!React  -RRD
+            EXIT  !Exit J loop if node found -RRD
          ENDIF
       ENDDO
       
       IF (flg == 0) THEN
-         ErrMsg = ' Interf has node not in the node list !'
+         ErrMsg = ' React has node not in the node list !'
          ErrStat = ErrID_Fatal
          RETURN
       ENDIF
-
+      
       
       DO J = 1, 6
          Init%BCs( (I-1)*6+J, 1) = (Node2-1)*6+J;
@@ -254,8 +267,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       ENDDO
       
    ENDDO
+   p%Reacts=TempReacts   !UPDATED REACTS
    
-      
    ! Initialize interface constraint vector
    ! Change the node number
    ALLOCATE(Init%IntFc(6*Init%NInterf, 2), STAT=Sttus)
@@ -290,7 +303,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
   
    ! Change numbering in concentrated mass matrix
    DO I = 1, Init%NCMass
-      Node1 = Init%CMass(I, 1)
+      Node1 = NINT( Init%CMass(I, 1) )
       DO J = 1, Init%NJoints
          IF ( Node1 == Init%Joints(J, 1) ) THEN
             Init%CMass(I, 1) = J
@@ -385,8 +398,8 @@ IF (Init%NDiv .GT. 1) THEN
 
          CALL GetNewNode(knode, x1 + J*dx, y1 + J*dy, z1 + J*dz, Init)
          
-         IF ( ( .NOT.(EqualRealNos( dd , 0.0 ) ) ) .OR. &
-              ( .NOT.( EqualRealNos( dt , 0.0 ) ) ) ) THEN   
+         IF ( ( .NOT.(EqualRealNos( dd , 0.0_ReKi ) ) ) .OR. &
+              ( .NOT.( EqualRealNos( dt , 0.0_ReKi ) ) ) ) THEN   
               ! create a new property set 
               ! k, E, G, rho, d, t, Init
               
@@ -429,6 +442,7 @@ Init%Props(1:kprop, 1:Init%PropSetsCol) = TempProps
 ! deallocate temp matrices
 IF (ALLOCATED(TempProps)) DEALLOCATE(TempProps)
 IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
+IF (ALLOCATED(TempReacts)) DEALLOCATE(TempReacts)
 
 END SUBROUTINE SD_Discrt
 !------------------------------------------------------------------------------------------------------
@@ -784,7 +798,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
-   Init%K = 0
+   Init%K = 0.0_ReKi
 
    ! allocate system mass matrix
    ALLOCATE( Init%M(Init%TDOF, Init%TDOF), STAT=Sttus)
@@ -793,7 +807,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
-   Init%M = 0
+   Init%M = 0.0_ReKi
    
       ! allocate system gravity force vector
    ALLOCATE( Init%FG(Init%TDOF), STAT=Sttus)
@@ -802,7 +816,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
-   Init%FG = 0
+   Init%FG = 0.0_ReKi
 
    
    ! allocate node number in element array
@@ -853,7 +867,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
          r1 = 0.25*(D1 + D2)
          t  = 0.5*(t1+t2)
          
-         IF ( EqualRealNos(t, 0.0) ) THEN
+         IF ( EqualRealNos(t, 0.0_ReKi) ) THEN
             r2 = 0
          ELSE
             r2 = r1 - t
@@ -997,11 +1011,11 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
 !   ! add concentrated mass (compressed row format)
 !   DO I = 1, Init%NCMass
 !      DO J = 1, 3
-!          r = ( Init%CMass(I, 1) - 1 )*6 + J
+!          r = ( NINT( Init%CMass(I, 1) ) - 1 )*6 + J
 !          Init%M(Init%IA(r)) = Init%M(Init%IA(r)) + Init%CMass(I, 2)
 !      ENDDO
 !      DO J = 4, 6
-!          r = ( Init%CMass(I, 1) - 1 )*6 + J
+!          r = ( NINT( Init%CMass(I, 1) ) - 1 )*6 + J
 !          Init%M(Init%IA(r)) = Init%M(Init%IA(r)) + Init%CMass(I, J-1)
 !      ENDDO
 !
@@ -1012,12 +1026,12 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       ! add concentrated mass 
    DO I = 1, Init%NCMass
       DO J = 1, 3
-          r = ( Init%CMass(I, 1) - 1 )*6 + J
+          r = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
           Init%M(r, r) = Init%M(r, r) + Init%CMass(I, 2)
           
       ENDDO
       DO J = 4, 6
-          r = ( Init%CMass(I, 1) - 1 )*6 + J
+          r = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
           Init%M(r, r) = Init%M(r, r) + Init%CMass(I, J-1)
       ENDDO
 
@@ -1026,7 +1040,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       ! add concentrated mass induced gravity force
    DO I = 1, Init%NCMass
       
-      r = ( Init%CMass(I, 1) - 1 )*6 + 3
+      r = ( NINT(Init%CMass(I, 1)) - 1 )*6 + 3
       Init%FG(r) = Init%FG(r) - Init%CMass(I, 2)*Init%g !TODO Changed this sign for concentrated load because now g is positive. GJH 5/6/13
 
    ENDDO ! I concentrated mass induced gravity
@@ -1062,7 +1076,7 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
    Dxy = sqrt( (x2-x1)**2 + (y2-y1)**2 )
    xyz = sqrt( (x1-x2)**2 + (z1-z2)**2 + (y1-y2)**2 )
    
-   IF ( EqualRealNos(xyz, 0.0) ) THEN
+   IF ( EqualRealNos(xyz, 0.0_ReKi) ) THEN
       ErrMsg = ' Same starting and ending location in the element.'
       ErrStat = 4
       RETURN
@@ -1070,7 +1084,7 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
    
    DirCos = 0
    
-   IF ( EqualRealNos(xz, 0.0) ) THEN
+   IF ( EqualRealNos(xz, 0.0_ReKi) ) THEN
       IF( y2 < y1) THEN  !x is kept along global x
          DirCos(1, 1) = 1.0
          DirCos(2, 3) = -1.0
@@ -1100,7 +1114,7 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, xyz, ErrStat, ErrMsg)
       Dx=x2-x1
       Dz=z2-z1
       Delta=xyz
-      IF ( EqualRealNos(Dxy, 0.0) ) THEN !RRD
+      IF ( EqualRealNos(Dxy, 0.0_ReKi) ) THEN !RRD
        IF( Dz < 0) THEN  !x is kept along global x
          DirCos(1, 1) =  1.0
          DirCos(2, 3) = -1.0
@@ -1316,7 +1330,7 @@ SUBROUTINE ApplyConstr(Init,p)
       
          Init%M(row_n, :) = 0
          Init%M(:, row_n) = 0
-         Init%M(row_n, row_n) = 0!0.00001          !what is this???? I changed this to 0.  RRD 7/31
+         Init%M(row_n, row_n) = 0 !0.00001          !what is this???? I changed this to 0.  RRD 7/31
       ENDIF
       
    ENDDO ! I
