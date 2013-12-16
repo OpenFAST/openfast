@@ -35,7 +35,7 @@ init_type_table()
                                                 strcpy( p->mapsto, "REAL(ReKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "siki" )            ;
-                                                strcpy( p->mapsto, "REAL(ReKi)")      ;
+                                                strcpy( p->mapsto, "REAL(SiKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
 
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "logical" )         ;
@@ -57,9 +57,9 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "dbki" )            ;
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "r8Ki" )            ;
-                                                strcpy( p->mapsto, "REAL(DbKi)")      ;
-                                                add_node_to_end ( p , &Type )         ;
+//  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "r8Ki" )            ;
+//                                                strcpy( p->mapsto, "REAL(DbKi)")      ;
+//                                                add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
                                                 strcpy( p->mapsto, "MeshType")        ;
                                                 add_node_to_end ( p , &Type )         ;
