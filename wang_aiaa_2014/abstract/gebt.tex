@@ -5,21 +5,23 @@ For completeness, this section reviews the geometrically exact beam theory and
 linearization process of the governing equations. The content of this
 section can be found in many other papers and textbooks.
 Figure~\ref{Kinematics} shows a beam in its initial undeformed and deformed
-states. A reference frame $\mathbf{b}_i$ is introduced along the beam axis
+states. A reference frame $\mathbf{b}_i$, for $i=\{ 1,2,3 \}$, is introduced along the beam axis
 for the undeformed state; a frame $\mathbf{B}_i$ is introduced along each
-point of the deformed beam axis. Curvilinear coordinate $x_1$ defines the
+point of the deformed beam axis. Curvilinear-coordinate $x_1$ defines the
 intrinsic parameterization of the reference line.
+
 \begin{figure}
 \centering
 \includegraphics[width=5.0in]{\directory Kinematics.eps}
 \caption{Schematic of beam deformation} \label{Kinematics}
 \end{figure}
+
 In this paper, we use matrix notation to denote vectorial or vectorial-like
 quantities. For example, we use a underline to denote a vector
 $\underline{u}$, a bar to denote unit vector $\bar{n}$, and double underline
 to denote a tensor $\underline{\underline{\Delta}}$. Note that sometimes the
 underlines only denote the dimension of the corresponding matrix. The
-governing equations of motion for geometric exact beam theory can be written
+governing equations of motion for geometrically exact beam theory can be written
 as\cite{Bauchau:2010}
 \begin{align}
 	\label{GovernGEBT-1}
@@ -32,12 +34,14 @@ the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are
 the beam's sectional forces and moments, respectively; $\vec{u}$ is the 1D
 displacement of the reference line; $\vec{x}_0$ is the initial position vector of a
 point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the
-distributed force and moment applied to the beam structure.  Notation
-$(\bullet)^\prime$ indicates a derivative with respect to the beam axis
-$x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The
-tilde operator $(\skew{\bullet})$ defines a second-order, skew-symmetric
+distributed force and moment applied to the beam structure.  
+A prime 
+indicates a derivative with respect to the beam axis
+$x_1$ and an overdot indicates a derivative with respect to time. The
+tilde operator,  i.e., $(\skew{\cdot})$, denotes a second-order, skew-symmetric
 tensor corresponding to the given vector. In the literature, it is also
-termed as "cross-product matrix". For example,
+termed as "cross-product matrix". For example, for the vector
+$\overline{n}$,
 \[
 	\skew{n} = 
 	     		\begin{bmatrix}
@@ -95,7 +99,7 @@ displacement, velocity, and acceleration array are written as
 where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
 a column matrix of nodal values.  The governing equations for beams are
 highly nonlinear so that a linearization process is needed. According to
-Ref~\cite{Bauchau:2010}, the linearized governing equations in
+Bauchau\cite{Bauchau:2010}, the linearized governing equations in
 Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
 \begin{equation}
 	\label{LinearizedEqn}
@@ -179,5 +183,6 @@ The following notations were introduced to simply the writing of the above expre
     \end{bmatrix}
 \end{align}
  
-The derivation and linearization of governing equations of geometrically exact beam theory can be found in Ref~\cite{Bauchau:2010}.
+The derivation and linearization of governing equations of geometrically
+exact beam theory can be found in Bauchau\cite{Bauchau:2010}.
 
