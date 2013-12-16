@@ -1,23 +1,23 @@
 %&LaTeX
-\section{Legendre Spectral Finite Elements}
+\section{Numerical Implementation by Legendre Spectral Finite Elements}
 The displacement fields in a element are approximated as
 \begin{align}
     \label{InterpolateDisp}
-    \vec{u}(s) &= h^k(s) \vec{\hat{u}}^k \\
+    \vec{u}(\xi) &= h^k(\xi) \vec{\hat{u}}^k \\
     \label{InterpolateDispp}
-    \vec{u}^\prime(s) &= h^{k\prime}(s) \vec{\hat{u}}^k
+    \vec{u}^\prime(\xi) &= h^{k\prime}(\xi) \vec{\hat{u}}^k
 \end{align}
-where $h^k(s)$ is the $p^{th}$-order-polynomial
-Lagrangian-interpolant shape function of node $k$, $k=\{1,2,...,p+1]\}$, 
+where $h^k(\xi)$ is the $p^{th}$-order polynomial
+Lagrangian interpolant shape function of node $k$, $k=\{1,2,...,p+1]\}$, 
 and $\vec{\hat{u}}^k$ is
-the $k^{th}$ nodal value.
+the $k^{th}$ nodal value. \textcolor{red}{Note that variable $\xi$ is a non-dimensional quantity defined along the span of the element.}
 However, as discussed in Bauchau et al.\cite{Bauchau-etal:2009}, the three-dimensional rotation field cannot be
 simply interpolated as the displacement field in the form of
 \begin{align}
     \label{InterpolateRot}
-    \vec{c}(s) &= h^k(s) \vec{\hat{c}}^k \\
+    \vec{c}(\xi) &= h^k(\xi) \vec{\hat{c}}^k \\
     \label{InterpolateRotp}
-    \vec{c}^\prime(s) &= h^{k \prime}(s) \vec{\hat{c}}^k 
+    \vec{c}^\prime(\xi) &= h^{k \prime}(\xi) \vec{\hat{c}}^k 
 \end{align}    
 where $\vec{c}$ is the rotation field in a element and $\vec{\hat{c}}^k$ is
 the nodal value at the $k^{th}$ node, for three reasons: 1) rotations do not
@@ -35,7 +35,7 @@ with the finite rotations. Our approach is described as follows
     \item[Step 2:] Interpolate the relative rotation field: $\vec{r}(s) = h^k(s) \vec{\hat{r}}^k$ and $\vec{r}^\prime(s) = h^{k \prime}(s) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(s) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
     \item[Step 3:] Restore the rigid body rotation removed in Step 1: $\vec{c}(s) = \vec{\hat{c}}^1 \oplus \vec{r}(s)$.
 \end{description} 
-where $H$ is the tangent tensor that relates the curvature vector $k$ and rotation vector $p$ as
+where $\tens{H}$ is the tangent tensor that relates the curvature vector $\vec{k}$ and rotation vector $\vec{p}$ as
 \begin{equation}
     \label{Tensor}
     \vec{k} = \tens{H}~ \vec{p}^\prime
@@ -57,11 +57,11 @@ where $\|\cdot\|$ denotes the Euclidean norm, $\Delta \mathbf{U}$ is the
 incremental displacement vector, $\mathbf{R}$ is the vector of externally
 applied nodal point loads, $\mathbf{F}$ is the vector of nodal point forces
 corresponding to the internal element stresses, and $\epsilon_E$ is the
-preset energy tolerance. As pointed out by Bathe and
+preset energy tolerance. \textcolor{red}{The superscript on the left side of a variable denotes the time step number while the one on the right side denotes the Newtow-Raphson iteration number.} As pointed out by Bathe and
 Cimento\cite{Bathe-Cimento:1980}, this criterion provides information of
 when both the displacements and the forces are near their equilibrium
-values. Time integration is performed using generalized-$\alpha$ scheme in
-BeamDyn, which is a unconditionally stable, second-order accurate algorithm.
+values. Time integration is performed using the generalized-$\alpha$ scheme in
+BeamDyn, which is an unconditionally stable, second-order accurate algorithm.
 The users can choose proper parameters to achieve high frequency numerical
 dissipation in this scheme. More details regarding the generalized-$\alpha$
 method can be found in Refs.\cite{Chung-Hulbert:1993,Bauchau:2010}. 

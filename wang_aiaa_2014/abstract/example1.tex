@@ -19,8 +19,8 @@ matrix is
 \end{equation}
 which has units of $C_{ij}^*$ (lb), $C_{i,j+3}^*$ (lb.in), and
 $C_{i+3,j+3}^*$ (lb.in$^2$) for $i,j = 1,2,3$; these units apply to all
-subsequent stiffness matrices. It is pointed out that the term with a
-asterisk denotes it is resolved in the material coordinate system. 
+subsequent stiffness matrices. It is pointed out that the term with an
+asterisk denotes that it is resolved in the material coordinate system. 
 
 \begin{figure}
     \centering \includegraphics[width=0.5\textwidth]{\directory
@@ -34,7 +34,7 @@ The load applied at the tip is given by
     \label{E1Load}
     M_2 = \lambda \bar{M}_2
 \end{equation}
-where $\bar{M}_2 = \pi \frac{EI_2}{L}$. The parameter $\lambda$ will vary between $0$ and $2$. In 
+where $\bar{M}_2 = \pi \frac{EI_2}{L}$; and the parameter $\lambda$ will vary between $0$ and $2$. In 
 this case, the beam is discretized with two $5^{th}$-order Legendre
 spectral FEs. The
 static deformations of the beam obtained from BeamDyn are shown in
@@ -95,16 +95,7 @@ model was composed of two 5$^{th}$-order LSFEs.}
     \end{tabular}
  \end{table}
 
-The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained from BeamDyn are plotted in Figure~\ref{E1Rot} for $\lambda = 0.8$ and $\lambda = 2.0$, respectively. It is noted that the three-dimensional rotations are represented by Wiener-Milenkovi\'c parameter defined in the following equation:
- \begin{equation}
-     \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
-     \label{WMParameter}
- \end{equation}
-where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of
-rotation axis. The singularities existing at multiples of $\pm 2 \pi$ in the
-above definition can be removed by a rescaling operation, the results of
-which are shown in Figure~\ref{E1Rot} for two tip-moment values.
-
+The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained from BeamDyn are plotted in Figure~\ref{E1Rot} for $\lambda = 0.8$ and $\lambda = 2.0$, respectively. A rescaling can be observed from this figure for the case $\lambda = 2.0$.
 \begin{figure}
     \centering
     \includegraphics[width=3.0in]{\directory E1Rot.eps}
@@ -118,15 +109,15 @@ Element 1 -- is that true, or is it multi-valued at the element interface?}}
 
 Finally, we conduct a convergence study of the BeamDyn LSFEs. The
 convergence rate is compared with conventional quadratic elements used in
-Dymore\mas{REFERENCE? Manual or soemething?}, which is a finite-element
+Dymore \cite{Dymore:2013}\mas{REFERENCE? Manual or soemething?}, which is a finite-element
 based multibody dynamics code for the comprehensive modeling of flexible
 multibody systems. 
 %It is pointed out that user can choose element up to
 %$3^rd$ order in Dymore. 
 Figure~\ref{E1Conv} shows the normalized error
 $\epsilon(u)$, where $u$ is the calculated tip displacement (at $x=L$), as a function
-of the number of model nodes for the calculation with Dymore quadratic
-elements (QE) and a single Legendre spectral element finite (LSFE), where
+of the number of model nodes for the calculation with Dymore quadratic finite
+elements (QFE) and a single Legendre spectral element finite (LSFE), where
 \begin{equation}
     \label{E1Error}
     \epsilon(u) = \left| \frac{u-u^a}{u^a} \right|
@@ -136,7 +127,7 @@ to $1.0$ for this case. The Legendre spectral elements (with $p$-refinement)
 exhibit highly desirable exponential convergence to machine-precision error,
 whereas the conventional quadratic elements are limited to algebraic
 convergence.    For a given model size, an LSFE model can be orders of magnitude
-more accurate than its QE counterpart.
+more accurate than its QFE counterpart.
 
 \begin{figure}
     \centering
@@ -146,10 +137,10 @@ more accurate than its QE counterpart.
 \subfloat[$u_3$]{\label{E1Conv:u3}\includegraphics[width=3.0in]{\directory  E1Convu3.eps}}\\
 \end{tabular}
 \caption{Normalized error of the (a) $u_1$ and (b) $u_3$ tip displacements
-of a isotropic cantiler beam (Figure~\ref{E1Sketch}) under constant tip
-moment as a function of the total number of nodes. Results were calculated
-with BeamDyn (LSFE) and Dymore (QE).  LSFE model refinement was accomplished
-by increasing polynomial order and QE model refinement was accomplished by
+of a cantiler beam (Figure~\ref{E1Sketch}) under constant tip
+moment ($\lambda = 1.0$) as a function of the total number of nodes. Results were calculated
+with BeamDyn (LSFE) and Dymore (QFE).  LSFE model refinement was accomplished
+by increasing polynomial order and QFE model refinement was accomplished by
 increasing the number of elements.  }
 \label{E1Conv}
 \end{figure}
