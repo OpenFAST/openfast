@@ -8,7 +8,7 @@ Figure~\ref{Kinematics} shows a beam in its initial undeformed and deformed
 states. A reference frame $\mathbf{b}_i$, for $i=\{ 1,2,3 \}$, is introduced along the beam axis
 for the undeformed state; a frame $\mathbf{B}_i$ is introduced along each
 point of the deformed beam axis. Curvilinear-coordinate $x_1$ defines the
-intrinsic parameterization of the reference line.
+intrinsic parameterization of the reference line; \textcolor{red}{ and similarly, $s$ denotes the deformed reference line.}
 
 \begin{figure}
 \centering
@@ -80,7 +80,7 @@ vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
 $\underline{\omega} = \mathrm{axial}(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$.
 
 For a displacement-based finite element implementation, there are six
-degree-of-freedoms(DoFs) at each node: 3 displacement components and 3
+degree-of-freedoms (DoFs) at each node: 3 displacement components and 3
 rotation components. Here we use $\vec{q}$ to denote the elemental
 displacement array as $\underline{q}=\left[
 \underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the 1D
@@ -97,7 +97,7 @@ displacement, velocity, and acceleration array are written as
 	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
 \end{align}
 where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
-a column matrix of nodal values.  The governing equations for beams are
+a column matrix of nodal values. \textcolor{red}{It is noted that given the ``untensorial'' nature, we need to adopt some special algorithm to deal with the 3D rotations which will be introduced in the next section.}   The governing equations for beams are
 highly nonlinear so that a linearization process is needed. According to
 Bauchau\cite{Bauchau:2010}, the linearized governing equations in
 Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
@@ -172,7 +172,7 @@ where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens
 	m \tilde{\eta} \ddot{\vec{u}} +\tens{\varrho}\dot{\vec{\omega}}+\tilde{\omega}\tens{\varrho}\vec{\omega}
 	\end{Bmatrix}
 \end{align}
-The following notations were introduced to simply the writing of the above expressions
+where the following notations were introduced to simplify the writing of the above expressions
 \begin{align}
     \label{E1}
     \vec{E}_1 &= \vec{x}_0^\prime + \vec{u}^\prime \\
@@ -181,8 +181,24 @@ The following notations were introduced to simply the writing of the above expre
     \tens{C}_{11} & \tens{C}_{12} \\
     \tens{C}_{21} & \tens{C}_{22}
     \end{bmatrix}
-\end{align}
- 
+\end{align} 
 The derivation and linearization of governing equations of geometrically
 exact beam theory can be found in Bauchau\cite{Bauchau:2010}.
+
+It is pointed out that the three-dimensional rotations are represented by Wiener-Milenkovi\'c parameters \cite{Bauchau-etal:2008,Wang:GEBT2013} defined in the following equation:
+ \begin{equation}
+     \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
+     \label{WMParameter}
+ \end{equation}
+where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of
+rotation axis. It can be observed that the valid range for this parameter is $|\phi| < 2 \pi$ where a singularity point will be reached at $2\pi$. The singularities existing at multiples of $\pm 2 \pi$ in the
+above definition can be removed by a rescaling operation, as given in Ref~\cite{Bauchau-etal:2008}:
+\begin{equation}
+    \label{RescaledWM}
+    \vec{r} = \begin{cases}
+    4(q_0\vec{p} + p_0 \vec{q} + \tilde{p} \vec{q} ) / (\Delta_1 + \Delta_2), & \text{if } \Delta_2 \geq 0 \\
+    -4(q_0\vec{p} + p_0 \vec{q} + \tilde{p} \vec{q} ) / (\Delta_1 - \Delta_2), & \text{if } \Delta_2 < 0
+    \end{cases}
+\end{equation}
+where $\vec{p}$, $\vec{q}$, and $\vec{r}$ are the vectorial parameterization of three finite rotations such that $\tens{R}(\vec{r}) = \tens{R}(\vec{p}) \tens{R}(\vec{q})$; $p_0 = 2 - \vec{p}^T \vec{p}/8$, $q_0 = 2 - \vec{q}^T \vec{q}/8$, $\Delta_1 = (4-p_0)(4-q_0)$, and $\Delta_2 = p_0 q_0 - \vec{p}^T \vec{q}$.
 

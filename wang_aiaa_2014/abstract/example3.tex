@@ -13,17 +13,17 @@ The last example is a transient analysis of a composite beam with boxed cross-se
 	0       & 0     & 0     & 0 & 0 & 1.0336
 \end{bmatrix}    
 \end{equation}
-The units associated with the mass matrix values are $M_{ii}^*$ (lb.s$^2$/in$^2$) and $M_{i+3,i+3}^*$ (lb.s$^2$) for $i = 1,2,3$. The beam is divided into two $5^{th}$ order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
+The units associated with the mass matrix values are $M_{ii}^*$ (lb.s$^2$/in$^2$) and $M_{i+3,i+3}^*$ (lb.s$^2$) for $i = 1,2,3$. The beam is divided into two $5^{th}$-order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
 \begin{equation}
     \label{E3AppliedForce}
-    P = A_F~sin(\omega_F~t)
+    P = A_F~\text{sin}(\omega_F~t)
 \end{equation}
-where $A_F = 1.0 \times 10^2~lbs$ and $\omega_F = 10~rad/s$ (see Figure~\ref{E3SinForce}). The time step used in this example is $0.005~s$ so that a set of converged results can be achieved. The tip displacement and rotation histories of the beam are plotted in Figure~\ref{E3U}. Note that all the components, including three displacements and three rotations, are non-zero due to the elastic coupling effects. The time histories of the stress resultants at the root of the beam are given in Figure~\ref{E3F}.
+where $A_F = 1.0 \times 10^2$ lbs and $\omega_F = 10$ rad/s (see Figure~\ref{E3SinForce}). The time step used in this example is $0.005$s so that a set of converged results can be achieved. The tip displacement and rotation histories of the beam are plotted in Figure~\ref{E3U}. Note that all the components, including three displacements and three rotations, are non-zero due to the elastic coupling effects. The time histories of the stress resultants at the root of the beam are given in Figure~\ref{E3F}.
 \begin{figure}
     \centering
     \psfrag{Time}{blah}
     \includegraphics[width=3.0in]{\directory E3SinForce.eps}
-    \caption{The sinusoidal vertical force in Example 3 .}
+    \caption{The applied sinusoidal vertical force at the tip in Example 3 .}
     \label{E3SinForce}
 \end{figure}
 
@@ -54,16 +54,16 @@ where $A_F = 1.0 \times 10^2~lbs$ and $\omega_F = 10~rad/s$ (see Figure~\ref{E3S
 \caption{Stress resulant time histories at the root of a composite beam.}
 \label{E3F}
 \end{figure} 
-Finally, we examine here the convergence rates of the LSFEs and conventional quadratic elements. Figure~\ref{E3u1Conv} shows normalized root-mean-square (RMS) error of the numerical solutions for the displacement $u_1$ at the free tip over the time interval $0 \leq t  \leq 4$. Normalized RMS error for $n_{max}$ numerical response values $u_1^n$, where $u_1^n \approx u_1(t^n)$, was calculated as
+Finally, we examine here the convergence rates of the LSFEs and conventional quadratic elements. Figure~\ref{E3Conv} shows normalized root-mean-square (RMS) error of the numerical solutions for the displacement $u_1$ at the free tip over the time interval $0 \leq t  \leq 4$. Normalized RMS error for $n_{max}$ numerical response values $u_1^n$, where $u_1^n \approx u_1(t^n)$, was calculated as
 \begin{equation}
     \label{RMS}
     \epsilon_{\mathrm{RMS}}(u_1) = \sqrt{\frac{\sum_{k=0}^{n_{max}} \left[ u_1^k - u_b(t^k) \right]^2}{\sum_{k=0}^{n_{max}} \left[ u_b(t^k) \right]^2}}
 \end{equation}
-where $u_b(t)$ is the benchmark solution; here $u_b(t)$ is a highly resolved numerical solution obtained by BeamDyn with one $20^th$ order element and the time step is $1.0 \times 10^(-4)$. Two time steps are involved in the test calculation, given as $5.0 \times 10^(-3)$ and $2.5 \times 10^(-3)$, respectively. It can be observed that \textcolor{red}{2 observations:1 error due to time integrator; 2 better convergence rate of LSFE}.
+where $u_b(t)$ is the benchmark solution; here $u_b(t)$ is a highly resolved numerical solution obtained by BeamDyn with one $20^{th}$-order element and the time step is $1.0 \times 10^{-4}$. Two time increment sizes are involved in the test calculation, given as $5.0 \times 10^{-3}$ and $2.5 \times 10^{-3}$, respectively. It can be observed that \textcolor{red}{2 observations:1 error due to time integrator; 2 better convergence rate of LSFE}.
 \begin{figure}
     \centering
-    \label{E3u1Conv}
     \includegraphics[width = 3.0 in]{\directory E3u1Conv.eps}
     \caption{Normalized RMS error of tip displacement $u_1$ histories over $0 \leq t \leq 4$ as a function of number of nodes.}
+    \label{E3Conv}
 \end{figure}
  
