@@ -51,15 +51,21 @@ where $A_F = 1.0 \times 10^2$ lbs and $\omega_F = 10$ rad/s (see Figure~\ref{E3S
 \subfloat[$M_2$]{\label{E3F:M2}\includegraphics[width=3.0 in]{\directory  E3RootM2.eps}} \qquad
 \subfloat[$M_3$]{\label{E3F:M3}\includegraphics[width=3.0 in]{\directory  E3RootM3.eps}} \\
 \end{tabular}
-\caption{Stress resulant time histories at the root of a composite beam.}
+\caption{Stress resultant time histories at the root of a composite beam.}
 \label{E3F}
 \end{figure} 
 Finally, we examine here the convergence rates of the LSFEs and conventional quadratic elements. Figure~\ref{E3Conv} shows normalized root-mean-square (RMS) error of the numerical solutions for the displacement $u_1$ at the free tip over the time interval $0 \leq t  \leq 4$. Normalized RMS error for $n_{max}$ numerical response values $u_1^n$, where $u_1^n \approx u_1(t^n)$, was calculated as
 \begin{equation}
     \label{RMS}
-    \epsilon_{\mathrm{RMS}}(u_1) = \sqrt{\frac{\sum_{k=0}^{n_{max}} \left[ u_1^k - u_b(t^k) \right]^2}{\sum_{k=0}^{n_{max}} \left[ u_b(t^k) \right]^2}}
+    \varepsilon_{\mathrm{RMS}}(u_1) = \sqrt{\frac{\sum_{k=0}^{n_{max}} \left[ u_1^k - u_b(t^k) \right]^2}{\sum_{k=0}^{n_{max}} \left[ u_b(t^k) \right]^2}}
 \end{equation}
-where $u_b(t)$ is the benchmark solution; here $u_b(t)$ is a highly resolved numerical solution obtained by BeamDyn with one $20^{th}$-order element and the time step is $1.0 \times 10^{-4}$. Two time increment sizes are involved in the test calculation, given as $5.0 \times 10^{-3}$ and $2.5 \times 10^{-3}$, respectively. It can be observed that \textcolor{red}{2 observations:1 error due to time integrator; 2 better convergence rate of LSFE}.
+where $u_b(t)$ is the benchmark solution; here $u_b(t)$ is a highly resolved numerical solution obtained by BeamDyn with one $20^{th}$-order element and the time step is $\Delta t_b = 1.0 \times 10^{-4}$. Two time increment sizes are involved in the test calculation, given as $\Delta t_1 = 5.0 \times 10^{-3}$ and $\Delta t_2 = \frac{\Delta t_1}{2} =2.5 \times 10^{-3}$, respectively. The following observations can be made from Figure~\ref{E3Conv}:
+\begin{itemize}
+    \item The non-zero errors are in the time integration scheme. By reducing time increment step $\Delta t$ by 2 ($\Delta t_2 = \frac{\Delta t_1}{2}$), the error is reduced by $4$ ($\varepsilon_2 = \frac{\varepsilon_1}{4}$), which is expected for a second order accurate time integrator.
+    \item The convergence rate of LSFE in the space domain is exponential as expected, which is much faster than the conventional quadratic finite elements.
+\end{itemize}  
+
+%It can be observed that \textcolor{red}{2 observations:1 error due to time integrator; 2 better convergence rate of LSFE.}
 \begin{figure}
     \centering
     \includegraphics[width = 3.0 in]{\directory E3u1Conv.eps}

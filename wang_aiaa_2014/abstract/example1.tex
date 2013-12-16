@@ -95,29 +95,32 @@ model was composed of two 5$^{th}$-order LSFEs.}
     \end{tabular}
  \end{table}
 
-The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained from BeamDyn are plotted in Figure~\ref{E1Rot} for $\lambda = 0.8$ and $\lambda = 2.0$, respectively. A rescaling can be observed from this figure for the case $\lambda = 2.0$.
+The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained from BeamDyn are plotted in Figure~\ref{E1Rot:Rot} for $\lambda = 0.8$ and $\lambda = 2.0$, respectively. A rescaling can be observed from this figure for the case $\lambda = 2.0$. It is noted that although the rotation parameters are not continuous between elements due to the rescaling operation, the relatively rotations are continuous in a single element as described in the previous section, which can be observed from Figure~\ref{E1Rot:Rel}.  
 \begin{figure}
     \centering
-    \includegraphics[width=3.0in]{\directory E1Rot.eps}
-    \caption{Wiener-Milenkovi\'c rotation parameters along beam axis $x_1$
-as calculated by BeamDyn for two tip moments. \mas{Add relative rotation} }
+    \begin{tabular}{c}
+    \subfloat[Rotation parameter $p_2$]{\label{E1Rot:Rot}\includegraphics[width=3.0in]{\directory E1Rot.eps}} \qquad 
+    \subfloat[Relative rotation $r_2$]{\label{E1Rot:Rel}\includegraphics[width=3.0in]{\directory E1RelRot.eps}} 
+    \end{tabular}
+    \caption{(a) Wiener-Milenkovi\'c rotation parameters along beam axis $x_1$
+as calculated by BeamDyn for two tip moments; (b) Relative rotations in two elements for the case $\lambda = 2.0$.  }
     \label{E1Rot}
 \end{figure}
 
 Finally, we conduct a convergence study of the BeamDyn LSFEs. The
 convergence rate is compared with conventional quadratic elements used in
-Dymore \cite{Dymore:2013}\mas{REFERENCE? Manual or soemething?}, which is a finite-element
+Dymore \cite{Dymore:2013}, which is a finite-element
 based multibody dynamics code for the comprehensive modeling of flexible
 multibody systems. 
 %It is pointed out that user can choose element up to
 %$3^rd$ order in Dymore. 
 Figure~\ref{E1Conv} shows the normalized error
-$\epsilon(u)$, where $u$ is the calculated tip displacement (at $x=L$), as a function
+$\varepsilon(u)$, where $u$ is the calculated tip displacement (at $x=L$), as a function
 of the number of model nodes for the calculation with Dymore quadratic finite
 elements (QFE) and a single Legendre spectral element finite (LSFE), where
 \begin{equation}
     \label{E1Error}
-    \epsilon(u) = \left| \frac{u-u^a}{u^a} \right|
+    \varepsilon(u) = \left| \frac{u-u^a}{u^a} \right|
 \end{equation}
 and where $u^a$ is the analytical solution.  The parameter $\lambda$ is set
 to $1.0$ for this case. The Legendre spectral elements (with $p$-refinement)
