@@ -49,9 +49,9 @@
 
        CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
        CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
-       DO j=1,node_elem
-           WRITE(*,*) Nrrr((j-1)*3+2)
-       ENDDO
+!       DO j=1,node_elem
+!           WRITE(*,*) Nrrr((j-1)*3+2)
+!       ENDDO
        
        elk = 0.0D0
        elf = 0.0D0
