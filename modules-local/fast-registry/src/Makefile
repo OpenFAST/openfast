@@ -32,7 +32,7 @@ superclean : clean
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-gen_module_files.o: protos.h registry.h data.h
+gen_module_files.o: protos.h registry.h data.h FAST_preamble.h
 
 data.o: registry.h protos.h data.h
 gen_allocs.o: protos.h registry.h data.h

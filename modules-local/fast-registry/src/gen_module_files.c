@@ -356,7 +356,8 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       }
 
     } else if ( r->ndims == 0 ) {  // scalars
-      if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
+      if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")  ||
+                !strcmp( r->type->mapsto, "REAL(SiKi)")   ) {
   fprintf(fp,"  Re_BufSz   = Re_BufSz   + 1  ! %s\n",r->name ) ;
       }
       else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
@@ -366,7 +367,8 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp,"  Int_BufSz  = Int_BufSz  + 1  ! %s\n",r->name ) ;
       }
     } else { // r->ndims > 0
-      if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
+      if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")  ||
+                !strcmp( r->type->mapsto, "REAL(SiKi)")     ) {
   fprintf(fp,"  Re_BufSz    = Re_BufSz    + SIZE( InData%%%s )  ! %s \n", r->name , r->name ) ;
       }
       else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")     ) {
@@ -480,13 +482,15 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       }
       indent = "" ;
       if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+           !strcmp( r->type->mapsto, "REAL(SiKi)") ||
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
            !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  IF ( ALLOCATED(InData%%%s) ) THEN\n", r->name ) ;
           indent = "  " ;
         }
-        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
+        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+                  !strcmp( r->type->mapsto, "REAL(SiKi)")   ) {
   fprintf(fp,"  %sIF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) =  %s(InData%%%s %s)\n",
              indent,(r->ndims>0)?tmp2:"1",(r->ndims>0)?"PACK":"",r->name,(r->ndims>0)?",.TRUE.":"") ;
   fprintf(fp,"  %sRe_Xferred   = Re_Xferred   + %s\n",indent,(r->ndims>0)?tmp2:"1"  ) ;
@@ -677,19 +681,28 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
       indent = "" ;
       if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+           !strcmp( r->type->mapsto, "REAL(SiKi)") ||
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
            !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
   fprintf(fp,"  IF ( ALLOCATED(OutData%%%s) ) THEN\n", r->name ) ;
           indent = "  " ;
         }
-        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")     ) {
+        if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")  ||
+                  !strcmp( r->type->mapsto, "REAL(SiKi)")     ) {
           if ( r->ndims > 0 ) { sprintf(tmp4,"Re_Xferred:Re_Xferred+(%s)-1",(r->ndims>0)?tmp2:"1") ; }
           else                { sprintf(tmp4,"Re_Xferred") ; }
 
           if ( r->ndims > 0 ) {
             gen_mask_alloc(fp, r->ndims, arrayname ) ;
+
+            if      ( !strcmp( r->type->mapsto, "REAL(ReKi)") ) {
   fprintf(fp,"  %sOutData%%%s = UNPACK(ReKiBuf( %s ),mask%d,OutData%%%s)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+            }
+            else if ( !strcmp( r->type->mapsto, "REAL(SiKi)") )
+               {
+  fprintf(fp,"  %sOutData%%%s = REAL( UNPACK(ReKiBuf( %s ),mask%d,REAL(OutData%%%s,ReKi)), SiKi)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+               }
   fprintf(fp,"  DEALLOCATE(mask%d)\n",r->ndims) ;
           } else {
   fprintf(fp,"  %sOutData%%%s%s = ReKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
@@ -874,7 +887,7 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
          {
            sprintf(derefrecurse,"%s%%%s",deref,r->name) ;
            for ( j = r->ndims ; j > 0 ; j-- ) {
-  
+
 fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j,derefrecurse,j,derefrecurse,j) ;
              sprintf(derefrecurse,"%s%%%s(i%d%d)",deref,r->name,recurselevel,j) ;
            }
@@ -934,7 +947,9 @@ fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j
 
 
        }
-     } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   ) {
+     } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
+                 !strcmp( r->type->mapsto, "REAL(SiKi)") ||
+                 !strcmp( r->type->mapsto, "REAL(DbKi)")   ) {
        if        ( r->ndims==0 ) {
        } else if ( r->ndims==1 && order > 0 ) {
   fprintf(fp,"  ALLOCATE(b1(SIZE(u_out%s%%%s,1)))\n",deref,r->name) ;
@@ -1163,7 +1178,9 @@ gen_rk4( FILE *fp , const node_t * ModName )
       if ( !strcmp( nonick, "parametertype")) {
         for ( r = q->fields ; r ; r = r->next )
         {
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  ||
+               !strcmp( r->type->mapsto, "REAL(SiKi)")  ||
+               !strcmp( r->type->mapsto, "REAL(DbKi)")   )
           {
             if ( !strcmp(make_lower_temp(r->name),"dt") ) {
               founddt = 1 ;
@@ -1230,7 +1247,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
       if ( !strcmp( nonick, "continuousstatetype")) {
         for ( r = q->fields ; r ; r = r->next )
         {
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(ReKi)") || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
           {
   fprintf(fp,"  k%d%%%s = p%%dt * xdot%s%%%s\n",k,r->name,(k<2)?"":"_local",r->name) ;
           }
@@ -1247,7 +1264,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
       if ( !strcmp( nonick, "continuousstatetype")) {
         for ( r = q->fields ; r ; r = r->next )
         {
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)")  || !strcmp( r->type->mapsto, "REAL(SiKi)") || !strcmp( r->type->mapsto, "REAL(DbKi)")   )
           {
             if ( k < 4 ) {
   fprintf(fp,"  x_tmp%%%s = x%%%s + %s k%d%%%s\n",r->name,r->name,(k<3)?"0.5*":"",k,r->name) ;
@@ -1469,7 +1486,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
 
 
 int
-gen_module( FILE * fp , node_t * ModName )
+gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 {
   node_t * p, * q, * r ;
   int i ;
@@ -1479,6 +1496,8 @@ gen_module( FILE * fp , node_t * ModName )
   if ( strlen(ModName->nickname) > 0 ) {
 // gen preamble
     {
+      fprintf( fp, "! %s\n", prog_ver );
+
       char ** p ;
       for ( p = FAST_preamble ; *p ; p++ ) { fprintf( fp, *p, ModName->name ) ; }
     }
@@ -1683,7 +1702,7 @@ gen_module( FILE * fp , node_t * ModName )
 
 
 int
-gen_module_files ( char * dirname )
+gen_module_files ( char * dirname, char * prog_ver )
 {
   FILE * fp, *fpc, *fph ;
   char  fname[NAMELEN], fname2[NAMELEN] ;
@@ -1727,7 +1746,7 @@ gen_module_files ( char * dirname )
         fprintf(fpc,"#include <string.h>\n") ;
         fprintf(fpc,"#include \"%s\"\n\n",fname2) ;
       }
-      gen_module ( fp , p ) ;
+      gen_module ( fp , p, prog_ver ) ;
       close_the_file( fp, "" ) ;
       if ( sw_ccode ) {
         gen_c_module ( fpc , fph , p ) ;

@@ -24,6 +24,7 @@ main( int argc, char *argv[], char *env[] )
   char fname_in[NAMELEN], dir[NAMELEN], fname_tmp[NAMELEN], command[NAMELEN] ;
   FILE * fp_in, *fp_tmp ;
   char * thisprog  ;
+  char * thisprog_ver;
   int mypid ;
   int wrote_template ;
   int sw_keep = 0 ;
@@ -49,8 +50,10 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
+   thisprog_ver = "FAST Registry (v2.01.02, 16-Dec-2013)";
+
   fprintf(stderr,"\n") ;
-  fprintf(stderr,"----- FAST Registry (v2.01.01, 8-Nov-2013) --------------\n") ;
+  fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
 //  fprintf(stderr,"Revision $Rev$\n") ;
 //  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
   fprintf(stderr,"URL  $URL$\n" ) ;
@@ -202,7 +205,7 @@ usage:
     fprintf(stderr,"--- Done ---\n") ;
   }
 
-  gen_module_files( "." ) ;
+  gen_module_files( ".", thisprog_ver ) ;
 
 cleanup:
    if ( ! sw_keep ) {
