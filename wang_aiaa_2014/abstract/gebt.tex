@@ -1,9 +1,11 @@
 %&LaTeX
+
 \section{Geometrically Exact Beam Theory}
 
 For completeness, this section reviews the geometrically exact beam theory
 and linearization process of the governing equations. The content of this
-section can be found in many other papers and textbooks.
+section can be found in other papers and textbooks (see, e.g., 
+Bauchau\cite{Bauchau:2010})
 Figure~\ref{Kinematics} shows a beam in its initial undeformed and deformed
 states. A reference frame $\mathbf{b}_i$, for $i=\{ 1,2,3 \}$, is introduced
 along the beam axis for the undeformed state; a frame $\mathbf{B}_i$ is
@@ -12,10 +14,10 @@ Curvilinear-coordinate $x_1$ defines the intrinsic parameterization of the
 reference line; similarly, $s$ denotes the deformed reference line.
 
 \begin{figure}
-\centering
-\includegraphics[width=5.0in]{\directory Kinematics.eps}
-\caption{Schematic of a beam segment in its undeformed and deformated and
-its associated kinematic variables.} \label{Kinematics}
+\centering \includegraphics[width=5.0in]{\directory Kinematics.eps}
+\caption{Schematic of a beam segment in its undeformed state (i.e.,
+reference configuration) and its deformed state (current configuration) with
+associated kinematic variables.} \label{Kinematics}
 \end{figure}
 
 In this paper, we use matrix notation to denote vectorial or vectorial-like
@@ -32,8 +34,8 @@ as\cite{Bauchau:2010}
 	\dot{\underline{g}} + \dot{\tilde{u}} \underline{h} - \underline{M}^\prime - (\tilde{x}_0^\prime + \tilde{u}^\prime) \underline{F} &= \underline{m}
 \end{align}
 where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in
-the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are
-the beam's sectional forces and moments, respectively; $\vec{u}$ is the 1D
+the reference coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are
+the beam's sectional forces and moments, respectively; $\vec{u}$ is the 
 displacement of the reference line; $\vec{x}_0$ is the initial position vector of a
 point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the
 distributed force and moment applied to the beam structure.  
@@ -42,7 +44,7 @@ indicates a derivative with respect to the beam axis
 $x_1$ and an overdot indicates a derivative with respect to time. The
 tilde operator,  i.e., $(\skew{\cdot})$, denotes a second-order, skew-symmetric
 tensor corresponding to the given vector. In the literature, it is also
-termed as "cross-product matrix". For example, for the vector
+termed as a "cross-product matrix". For example, for the vector
 $\overline{n}$,
 \[
 	\skew{n} = 
@@ -75,9 +77,9 @@ The constitutive equations relate the velocities to the momenta and the one-dime
 \end{align}
 where $\underline{\underline{\mathcal{M}}}$ and
 $\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass
-and stiffness matrices,respectively, note that they are not really tensors;
+and stiffness matrices, respectively (note that they are not tensors);
 $\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and
-curvatures, respectively. $\underline{\omega}$ is the angular velocity
+curvatures, respectively; $\underline{\omega}$ is the angular velocity
 vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
 $\underline{\omega} = \mathrm{axial}(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$.
 
@@ -85,12 +87,12 @@ For a displacement-based finite element implementation, there are six
 degree-of-freedoms (DoFs) at each node: 3 displacement components and 3
 rotation components. Here we use $\vec{q}$ to denote the elemental
 displacement array as $\underline{q}=\left[
-\underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the 1D
-displacement and $\vec{p}$ is the rotation parameter vector. The
+\underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the
+displacement and $\vec{p}$ is the rotation-parameter vector. The
 acceleration array can thus be defined as $\underline{a}=\left[
 \ddot{\underline{u}}^T~~ \dot{\underline{\omega}}^T \right]$. For nonlinear
-finite element analysis, the discretized and incremental forms of
-displacement, velocity, and acceleration array are written as
+finite-element analysis, the discretized and incremental forms of
+displacement, velocity, and acceleration are written as
 \begin{align}
 	\label{Discretized}
 	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\Delta \underline{q}^T = \left[ \Delta \underline{u}^T~~\Delta \underline{p}^T \right] \\
@@ -98,11 +100,14 @@ displacement, velocity, and acceleration array are written as
 %	\label{Incremental}
 	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
 \end{align}
-where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
-a column matrix of nodal values. It is noted that given the ``untensorial'' nature, we need to adopt some special algorithm to deal with the 3D rotations which will be introduced in the next section.   The governing equations for beams are
-highly nonlinear so that a linearization process is needed. According to
-Bauchau\cite{Bauchau:2010}, the linearized governing equations in
-Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
+where $\tens{N}$ is the shape function matrix and $(\hat{\cdot})$ denotes a
+column matrix of nodal values. It is noted that given the ``untensorial''
+nature, we need to adopt a special algorithm to deal with the 3D rotations,
+which will be introduced in the next section.   The governing equations for
+beams are highly nonlinear;  a linearization process is needed if a
+Newton-Raphson nonlinear solver is to be used.
+According to Bauchau\cite{Bauchau:2010}, the linearized governing equations
+in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
 \begin{equation}
 	\label{LinearizedEqn}
 	\hat{\underline{\underline{M}}} \Delta \hat{\underline{a}} +\hat{\underline{\underline{G}}} \Delta \hat{\underline{v}}+ \hat{\underline{\underline{K}}} \Delta \hat{\underline{q}} = \hat{\underline{F}}^{ext} - \hat{\underline{F}}
@@ -123,9 +128,9 @@ externally applied loads, respectively. They are defined as follows
 	\label{hatFext}
 	\hat{\vec{F}}^{ext}& = \int_0^l \tens{N}^T \mathcal{\vec{F}}^{ext} dx_1 
 \end{align}
-The new matrix notations in Eq.~\eqref{hatM} to \eqref{hatFext} are briefly
+The new matrix notations in Eqs.~\eqref{hatM} to \eqref{hatFext} are briefly
 introduced here. $\mathcal{\tens{M}}$ is the sectional mass matrix resolved
-in inertial system; $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
+in reference configuration; $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
 elastic forces obtained from Eq.~\eqref{GovernGEBT-1} and
 \eqref{GovernGEBT-2} as
 \begin{align}
@@ -174,7 +179,7 @@ where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens
 	m \tilde{\eta} \ddot{\vec{u}} +\tens{\varrho}\dot{\vec{\omega}}+\tilde{\omega}\tens{\varrho}\vec{\omega}
 	\end{Bmatrix}
 \end{align}
-where the following notations were introduced to simplify the writing of the above expressions
+where the following notations were introduced to simplify the above expressions
 \begin{align}
     \label{E1}
     \vec{E}_1 &= \vec{x}_0^\prime + \vec{u}^\prime \\
@@ -184,17 +189,16 @@ where the following notations were introduced to simplify the writing of the abo
     \tens{C}_{21} & \tens{C}_{22}
     \end{bmatrix}
 \end{align} 
-The derivation and linearization of governing equations of geometrically
-exact beam theory can be found in Bauchau\cite{Bauchau:2010}.
 
-It is pointed out that the three-dimensional rotations are represented by Wiener-Milenkovi\'c parameters \cite{Bauchau-etal:2008,Wang:GEBT2013} defined in the following equation:
+We note that the 3D rotations are represented as Wiener-Milenkovi\'c parameters \cite{Bauchau-etal:2008,Wang:GEBT2013} defined in the following equation:
  \begin{equation}
      \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
      \label{WMParameter}
  \end{equation}
 where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of
-rotation axis. It can be observed that the valid range for this parameter is $|\phi| < 2 \pi$ where a singularity point will be reached at $2\pi$. The singularities existing at multiples of $\pm 2 \pi$ in the
-above definition can be removed by a rescaling operation at $\pi$, as given in Ref~\cite{Bauchau-etal:2008}:
+rotation axis. It can be observed that the valid range for this parameter is
+$|\phi| < 2 \pi$. The singularities existing at integer multiples of $\pm 2 \pi$ can be removed by a rescaling operation at $\pi$, as given
+in Bauchau et al.\cite{Bauchau-etal:2008}:
 \begin{equation}
     \label{RescaledWM}
     \vec{r} = \begin{cases}
@@ -202,6 +206,9 @@ above definition can be removed by a rescaling operation at $\pi$, as given in R
     -4(q_0\vec{p} + p_0 \vec{q} + \tilde{p} \vec{q} ) / (\Delta_1 - \Delta_2), & \text{if } \Delta_2 < 0
     \end{cases}
 \end{equation}
-where $\vec{p}$, $\vec{q}$, and $\vec{r}$ are the vectorial parameterization of three finite rotations such that $\tens{R}(\vec{r}) = \tens{R}(\vec{p}) \tens{R}(\vec{q})$; $p_0 = 2 - \vec{p}^T \vec{p}/8$, $q_0 = 2 - \vec{q}^T \vec{q}/8$, $\Delta_1 = (4-p_0)(4-q_0)$, and $\Delta_2 = p_0 q_0 - \vec{p}^T \vec{q}$.
-It is noted that the rescaling operation could cause discontinueity of the interpolated rotational field; therefore a more robust interpolation algorithm will be introduced in the next section where the rescaling-independent relative rotation field are interpolated. 
+where $\vec{p}$, $\vec{q}$, and $\vec{r}$ are the vectorial parameterization of three finite rotations such that $\tens{R}(\vec{r}) = \tens{R}(\vec{p}) \tens{R}(\vec{q})$, $p_0 = 2 - \vec{p}^T \vec{p}/8$, $q_0 = 2 - \vec{q}^T \vec{q}/8$, $\Delta_1 = (4-p_0)(4-q_0)$, and $\Delta_2 = p_0 q_0 - \vec{p}^T \vec{q}$.
+It is noted that the rescaling operation could cause a discontinuity of the
+interpolated rotation field; therefore a more robust interpolation algorithm
+will be introduced in the next section where the rescaling-independent
+relative-rotation field is interpolated. 
 %\mas{Add another sentence about invariance}

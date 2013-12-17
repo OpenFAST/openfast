@@ -1,7 +1,10 @@
 %&LaTeX
-\subsection{Example 3: dynamic analysis of a composite beam under sinusoidal force at the tip}
+\subsection{Example 3: Dynamic analysis of a composite beam under sinusoidal force at the tip}
 
-The last example is a transient analysis of a composite beam with boxed cross-section that is used in Example 2. The beam has the same geometry and boundary conditions as the one in previous example. The mass sectional properties are given by VABS \cite{Yu-etal:2002,Wang-Yu:2012} as
+The last example is a transient analysis of a composite beam with boxed
+cross-section; the beam has the same
+geometry and boundary conditions as that of the previous example. The mass
+sectional properties are given by VABS \cite{Yu-etal:2002,Wang-Yu:2012} as
 \begin{equation}
     \label{E3Mass}
     M^* = 10^{-2} \times \begin{bmatrix}
@@ -13,12 +16,15 @@ The last example is a transient analysis of a composite beam with boxed cross-se
 	0       & 0     & 0     & 0 & 0 & 1.0336
 \end{bmatrix}    
 \end{equation}
-The units associated with the mass matrix values are $M_{ii}^*$ (lb.s$^2$/in$^2$) and $M_{i+3,i+3}^*$ (lb.s$^2$) for $i = 1,2,3$. The beam is divided into two $5^{th}$-order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
+The units associated with the mass matrix values are $M_{ii}^*$ (lb s$^2$/in$^2$) and $M_{i+3,i+3}^*$ (lb s$^2$) for $i = 1,2,3$. The beam is divided into two $5^{th}$-order elements in the current calculation and a sinusoidal point force is applied at the free tip in the $x_3$ direction given as
 \begin{equation}
     \label{E3AppliedForce}
     P = A_F~\text{sin}(\omega_F~t)
 \end{equation}
-where $A_F = 1.0 \times 10^2$ lbs and $\omega_F = 10$ rad/s (see Figure~\ref{E3SinForce}). The time step used in this example is $0.005$s so that a set of converged results can be achieved. The tip displacement and rotation histories of the beam are plotted in Figure~\ref{E3U}. Note that all the components, including three displacements and three rotations, are non-zero due to the elastic coupling effects. The time histories of the stress resultants at the root of the beam are given in Figure~\ref{E3F}.
+where $A_F = 1.0 \times 10^2$ lbs and $\omega_F = 10$ rad/s (see
+Figure~\ref{E3SinForce}). 
+The tip displacement and rotation histories of the beam are plotted in
+Figure~\ref{E3U}, where the time step was $0.005$ s. Note that all of the components, including three displacements and three rotations, are non-zero due to the elastic-coupling effects. The time histories of the stress resultants at the root of the beam are given in Figure~\ref{E3F}.
 \begin{figure}
     \centering
     \psfrag{Time}{blah}
@@ -62,8 +68,8 @@ quadratic elements (in Dymore). Figure~\ref{E3Conv} shows normalized root-mean-s
 \end{equation}
 where $u_b(t)$ is the benchmark solution; here $u_b(t)$ is a highly resolved
 numerical solution obtained by BeamDyn with one $20^{th}$-order element and
-the time step is $\Delta t_b = 1.0 \times 10^{-4}$. Two time-increment sizes
-are examined in the test calculations: $\Delta t_1 = 5.0 \times 10^{-3}$ and
+the time increment was $\Delta t_b = 1.0 \times 10^{-4}$ s. Two time-increment sizes
+are examined in the test calculations: $\Delta t_1 = 5.0 \times 10^{-3}$ s and
 $\Delta t_2 = \frac{\Delta t_1}{2}$. The following observations can be made from Figure~\ref{E3Conv}:
 \begin{itemize}
 
@@ -74,7 +80,7 @@ converged with only five nodes, whereas Dymore requires at least 9 nodes.
     \item  The converged error levels are due exclusively to
 time-discretization error.  We note that the converged error for $\Delta t_2
 = \Delta t_1/2$ is one-fourth that for $\Delta t_1$, which is expected for our
-second-order-accurate timne integrator.  
+second-order-accurate time integrator.  
 
 %The non-zero errors are in the time integration scheme. By reducing time
 %increment step $\Delta t$ by 2 ($\Delta t_2 = \frac{\Delta t_1}{2}$), the
@@ -90,7 +96,7 @@ second-order-accurate timne integrator.
     \centering
     \includegraphics[width = 3.0 in]{\directory E3u1Conv.eps}
     \caption{Normalized RMS error of tip displacement $u_1$ histories over
-$0 \leq t \leq 4$ as a function of number of nodes as cacluated by BeamDyn
+$0 \leq t \leq 4$ as a function of number of nodes as calculated by BeamDyn
 (LSFEs) and Dymore (QFEs).}
     \label{E3Conv}
 \end{figure}
