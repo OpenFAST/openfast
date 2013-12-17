@@ -1,19 +1,21 @@
 %&LaTeX
 \section{Geometrically Exact Beam Theory}
 
-For completeness, this section reviews the geometrically exact beam theory and
-linearization process of the governing equations. The content of this
+For completeness, this section reviews the geometrically exact beam theory
+and linearization process of the governing equations. The content of this
 section can be found in many other papers and textbooks.
 Figure~\ref{Kinematics} shows a beam in its initial undeformed and deformed
-states. A reference frame $\mathbf{b}_i$, for $i=\{ 1,2,3 \}$, is introduced along the beam axis
-for the undeformed state; a frame $\mathbf{B}_i$ is introduced along each
-point of the deformed beam axis. Curvilinear-coordinate $x_1$ defines the
-intrinsic parameterization of the reference line; \textcolor{red}{ and similarly, $s$ denotes the deformed reference line.}
+states. A reference frame $\mathbf{b}_i$, for $i=\{ 1,2,3 \}$, is introduced
+along the beam axis for the undeformed state; a frame $\mathbf{B}_i$ is
+introduced along each point of the deformed beam axis.
+Curvilinear-coordinate $x_1$ defines the intrinsic parameterization of the
+reference line; similarly, $s$ denotes the deformed reference line.
 
 \begin{figure}
 \centering
 \includegraphics[width=5.0in]{\directory Kinematics.eps}
-\caption{Schematic of beam deformation} \label{Kinematics}
+\caption{Schematic of a beam segment in its undeformed and deformated and
+its associated kinematic variables.} \label{Kinematics}
 \end{figure}
 
 In this paper, we use matrix notation to denote vectorial or vectorial-like
@@ -97,7 +99,7 @@ displacement, velocity, and acceleration array are written as
 	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
 \end{align}
 where $\tens{N}$ is the shape function matrix and $(\hat{\bullet})$ denotes
-a column matrix of nodal values. \textcolor{red}{It is noted that given the ``untensorial'' nature, we need to adopt some special algorithm to deal with the 3D rotations which will be introduced in the next section.}   The governing equations for beams are
+a column matrix of nodal values. It is noted that given the ``untensorial'' nature, we need to adopt some special algorithm to deal with the 3D rotations which will be introduced in the next section.   The governing equations for beams are
 highly nonlinear so that a linearization process is needed. According to
 Bauchau\cite{Bauchau:2010}, the linearized governing equations in
 Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of

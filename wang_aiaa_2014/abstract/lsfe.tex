@@ -8,9 +8,10 @@ The displacement fields in a element are approximated as
     \vec{u}^\prime(\xi) &= h^{k\prime}(\xi) \vec{\hat{u}}^k
 \end{align}
 where $h^k(\xi)$ is the $p^{th}$-order polynomial
-Lagrangian interpolant shape function of node $k$, $k=\{1,2,...,p+1]\}$, 
-and $\vec{\hat{u}}^k$ is
-the $k^{th}$ nodal value. \textcolor{red}{Note that variable $\xi \in \left[-1,1\right]$ is a non-dimensional quantity defined along the span of the element.}
+Lagrangian-interpolant shape function of node $k$, $k=\{1,2,...,p+1]\}$, 
+$\vec{\hat{u}}^k$ is
+the $k^{th}$ nodal value, and $\xi \in \left[-1,1\right]$ is the element
+natural coordinate.
 However, as discussed in Bauchau et al.\cite{Bauchau-etal:2009}, the three-dimensional rotation field cannot be
 simply interpolated as the displacement field in the form of
 \begin{align}
@@ -44,10 +45,25 @@ where $\tens{H}$ is the tangent tensor that relates the curvature vector $\vec{k
 Note that the relative rotation field can be computed with respect to any of the nodes of the element; and we choose node 1 as the reference node for convenient. In the LSFE approach, shape functions (e.g., those composing $\tens{N}$) are
 $p^{th}$-order Lagrangian interpolants, where nodes are located at the $p+1$
 GLL-quadrature points in the $[-1,1]$ element natural-coordinate domain.
-\textcolor{red}{Need more work here: a figure shows some LS elements
-(non-evenly placed internal nodes) and a short discussion of its
-advantages.} In the present implementation, weak-form integrals are evaluated with
+Figure~\ref{fig:N4_lsfe} shows representative LSFE basis functions for  
+fourth- and eighth-order elements.  Note that nodes are clustered near
+element endpoints.
+In the present implementation, weak-form integrals are evaluated with
 $p$-point reduced Gauss quadrature.
+
+\begin{figure}
+    \centering
+    \psfrag{x}[][]{$\xi$}
+   \subfloat[$p=4$]{
+   \includegraphics[width=0.3\textwidth,clip=true]{\directory N4.eps}}
+   \subfloat[$p=8$]{
+   \includegraphics[width=0.3\textwidth,clip=true]{\directory N8.eps}}
+    \caption{Representative $p+1$ Lagrangian-interpolant shape functions in
+the element natural coordinates for
+(a) fourth- and (b) eighth-order LSFEs, where nodes are located at the
+Guass-Lobatto-Legendre points.}
+    \label{fig:N4_lsfe}
+\end{figure}
 
 The geometrically exact beam theory introduced above has been implemented using Legendre spectral finite element, known as BeamDyn, as a module functioning in the FAST modularization framework. The system of nonlinear equations in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are solved using Newton-Raphson method in the linearized form in Eq.~\eqref{LinearizedEqn} at each iteration for corrections to the nodal displacements and rotations until convergence is reached. In the present implementation, a energy-like stopping criterion has been chosen, which is calculated as
 \begin{equation}
@@ -58,7 +74,7 @@ where $\|\cdot\|$ denotes the Euclidean norm, $\Delta \mathbf{U}$ is the
 incremental displacement vector, $\mathbf{R}$ is the vector of externally
 applied nodal point loads, $\mathbf{F}$ is the vector of nodal point forces
 corresponding to the internal element stresses, and $\epsilon_E$ is the
-preset energy tolerance. \textcolor{red}{The superscript on the left side of a variable denotes the time step number while the one on the right side denotes the Newtow-Raphson iteration number.} As pointed out by Bathe and
+preset energy tolerance. The superscript on the left side of a variable denotes the time step number while the one on the right side denotes the Newtow-Raphson iteration number. As pointed out by Bathe and
 Cimento\cite{Bathe-Cimento:1980}, this criterion provides information of
 when both the displacements and the forces are near their equilibrium
 values. Time integration is performed using the generalized-$\alpha$ scheme in
