@@ -21,15 +21,16 @@ GOTO NotFound
 GOTO UpdateSVN
 
 :BJONKMAN-23080S
-@SET AeroDyn=
-@SET ElastoDyn=
-@SET FAST=
-@SET HydroDyn=
-@SET InflowWind=
-@SET MAP=
-@SET NWTC_Library=
-@SET ServoDyn=
-@SET SubDyn=
+CALL ./Compiling/Set_FAST_Paths.bat
+@SET AeroDyn=%AD_Loc%\..\
+@SET ElastoDyn=%ED_Loc%\..\
+@SET FAST=%FAST_Loc%\..\
+@SET HydroDyn=%HD_Loc%\..\
+@SET InflowWind=%IfW_Loc%\..\
+@SET MAP=%MAP_Loc%\..\..\
+@SET NWTC_Library=%NWTC_Lib_Loc%\..\
+@SET ServoDyn=%SrvD_Loc%\..\
+@SET SubDyn=%SD_Loc%\..\
 GOTO UpdateSVN
 
 :MBUHL-20665S
