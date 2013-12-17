@@ -37,7 +37,7 @@ with the finite rotations. Our approach is described as follows
     \item[Step 1:] Compute the nodal relative rotations, $\vec{\hat{r}}^k$,
 by removing the reference rotation, $\vec{\hat{c}}^1$, from the finite
 rotation at each node, $\vec{\hat{r}}^k = \vec{\hat{c}}^{1-} \oplus
-\vec{\hat{c}}^k$.  \mas{Qi, what is that "1minus" on the c??}
+\vec{\hat{c}}^k$. It is noted that the composition operator here is an equivalent of $\tens{R}_{\vec{r}} = \tens{R}^T(\vec{p})~\tens{R}(\vec{q}).$
 
     \item[Step 2:] Interpolate the relative-rotation field: $\vec{r}(\xi) = h^k(\xi) \vec{\hat{r}}^k$ and $\vec{r}^\prime(\xi) = h^{k \prime}(\xi) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(\xi) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
 
@@ -48,7 +48,6 @@ where $\tens{H}$ is the tangent tensor that relates the curvature vector $\vec{k
     \label{Tensor}
     \vec{k} = \tens{H}~ \vec{p}^\prime
 \end{equation}
-\mas{Qi, should that k be a kappa as in Step 2?}
 
 Note that the relative-rotation field can be computed with respect to any of
 the nodes of the element; we choose node 1 as the reference node for
@@ -77,7 +76,7 @@ Gauss-Lobatto-Legendre points.}
 
 The geometrically exact beam theory has been implemented with LSFEs in a
 code called  as BeamDyn, which is a module of the
-the FAST CAE tool for wind turbine analysis. The system of nonlinear
+the FAST Computer-Aided Engineering (CAE) tool for wind turbine analysis. The system of nonlinear
 equations in Eqs.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are solved
 using the Newton-Raphson method with the linearized form in
 Eq.~\eqref{LinearizedEqn}. 
@@ -104,6 +103,4 @@ integration parameters that introduce high-frequency numerical dissipation.
 More details
 regarding the generalized-$\alpha$ method can be found in
 Refs.\cite{Chung-Hulbert:1993,Bauchau:2010}. 
-
-\mas{Qi: list the $\alpha$-method parameters used in your simulations}
 
