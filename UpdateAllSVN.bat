@@ -21,7 +21,7 @@ GOTO NotFound
 GOTO UpdateSVN
 
 :BJONKMAN-23080S
-CALL ./Compiling/Set_FAST_Paths.bat
+CALL .\Compiling\Set_FAST_Paths.bat
 @SET AeroDyn=%AD_Loc%\..\
 @SET ElastoDyn=%ED_Loc%\..\
 @SET FAST=%FAST_Loc%\..\

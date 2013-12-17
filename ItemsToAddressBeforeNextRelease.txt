@@ -3,6 +3,9 @@ FAST Release Date: Monday, September 30, 2013
 
 *********
 
+*** run dependency walker on all dlls diestributed (MAP, discon) ***
+
+
 
 This is a list of things that we need to do before our next release. Please update as necessary.
 -------------------------------------------------

@@ -4,12 +4,12 @@
 ::=======================================================================================================
 :: run a script to set all of the path locations needed to copy files
 
-CALL ./Compiling/Set_FAST_Paths.bat
+CALL .\Compiling\Set_FAST_Paths.bat
 
 ::=======================================================================================================
 
-set bin_dir=./bin
-set depend_dir=./Source/dependencies
+set bin_dir=.\bin
+set depend_dir=.\Source\dependencies
 
 
 :BinDir
