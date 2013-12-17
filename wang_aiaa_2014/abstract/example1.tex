@@ -20,7 +20,7 @@ matrix is
 which has units of $C_{ij}^*$ (lb), $C_{i,j+3}^*$ (lb.in), and
 $C_{i+3,j+3}^*$ (lb.in$^2$) for $i,j = 1,2,3$; these units apply to all
 subsequent stiffness matrices. It is pointed out that the term with an
-asterisk denotes that it is resolved in the material coordinate system. 
+asterisk denotes that it is resolved in the reference configuration.
 
 \begin{figure}
     \centering \includegraphics[width=0.5\textwidth]{\directory
@@ -39,15 +39,15 @@ this case, the beam is discretized with two $5^{th}$-order Legendre
 spectral FEs. The
 static deformations of the beam obtained from BeamDyn are shown in
 Figure~\ref{E1Deform} for six different tip moments.
-The calculated tip displacements are compared with the analytical solution,
+The calculated tip displacements are compared with the analytical solution
+in Tables~\ref{E1u1} and \ref{E1u3},
 which can be found in Mayo et al.\cite{Mayo-etal:2004} as
 \begin{equation}
     \label{E1Analytical}
     u_1 = \rho \sin \left( \frac{x_1}{\rho} \right) - x_1~~~~~u_3 = \rho
 \left(1-\cos\left(\frac{x_1}{\rho}\right) \right)
 \end{equation}
-Analytical and BeamDyn-calculated results can be found in Table~\ref{E1u1}
-and \ref{E1u3}. At this discretization level, BeamDyn results are virtually
+At this discretization level, BeamDyn results are virtually
 identical to those of the analytical solution.
 
 \begin{figure}
@@ -62,10 +62,8 @@ FEs in BeamDyn.}
 \end{figure}
 
 \begin{table}[tbp]
-\centering 
-\caption{Comparison of analytical and BeamDyn-calculated tip axial displacement
-$u_1$ of a cantilever beam subject to a constant moment (in inches); the BeamDyn
-model was composed of two 5$^{th}$-order LSFEs.}
+\centering \caption{Comparison of analytical and BeamDyn-calculated tip
+axial displacements $u_1$ (in inches) of a cantilever beam subjected to a constant moment; the BeamDyn model was composed of two 5$^{th}$-order LSFEs.}
 \label{E1u1} 
 	\begin{tabular}{| l | l | l | }
     	\hline
@@ -80,8 +78,9 @@ model was composed of two 5$^{th}$-order LSFEs.}
 
 \begin{table}[tbp]
 \centering 
-\caption{Comparison of analytical and BeamDyn-calculated tip vertical displacement
-$u_3$ of a cantilever beam subject to a constant moment (in inches); the BeamDyn
+\caption{Comparison of analytical and BeamDyn-calculated tip vertical
+displacements
+$u_3$ (in inches) of a cantilever beam subjected to a constant moment; the BeamDyn
 model was composed of two 5$^{th}$-order LSFEs.}
 \label{E1u3} 
 	\begin{tabular}{| l | l | l | }
@@ -95,15 +94,23 @@ model was composed of two 5$^{th}$-order LSFEs.}
     \end{tabular}
  \end{table}
 
-The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained from BeamDyn are plotted in Figure~\ref{E1Rot:Rot} for $\lambda = 0.8$ and $\lambda = 2.0$, respectively. A rescaling can be observed from this figure for the case $\lambda = 2.0$. It is noted that although the rotation parameters are not continuous between elements due to the rescaling operation, the relatively rotations are continuous in a single element as described in the previous section, which can be observed from Figure~\ref{E1Rot:Rel}.  
+The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained
+from BeamDyn are plotted in Figure~\ref{E1Rot:Rot} for $\lambda = 0.8$ and
+$\lambda = 2.0$, respectively. A rescaling can be observed from this figure
+for the case $\lambda = 2.0$. It is noted that although the rotation
+parameters are not continuous between elements due to the rescaling
+operation, the relative rotations are continuous in a single element as
+described in the previous section, which can be observed in
+Figure~\ref{E1Rot:Rel}.  
 \begin{figure}
     \centering
     \begin{tabular}{c}
     \subfloat[Rotation parameter $p_2$]{\label{E1Rot:Rot}\includegraphics[width=3.0in]{\directory E1Rot.eps}} \qquad 
     \subfloat[Relative rotation $r_2$]{\label{E1Rot:Rel}\includegraphics[width=3.0in]{\directory E1RelRot.eps}} 
     \end{tabular}
-    \caption{(a) Wiener-Milenkovi\'c rotation parameters along beam axis $x_1$
-as calculated by BeamDyn for two tip moments; (b) Relative rotations in two elements for the cases of $\lambda = 0.8$ and $\lambda = 2.0$.  }
+    \caption{(a) Wiener-Milenkovi\'c rotation parameters along the beam axis
+$x_1$ as calculated by BeamDyn for two tip moments; (b) relative rotations
+in the two elements.}
     \label{E1Rot}
 \end{figure}
 
@@ -117,17 +124,17 @@ multibody systems.
 Figure~\ref{E1Conv} shows the normalized error
 $\varepsilon(u)$, where $u$ is the calculated tip displacement (at $x=L$), as a function
 of the number of model nodes for the calculation with Dymore quadratic finite
-elements (QFE) and a single Legendre spectral element finite (LSFE), where
+elements (QFE) and a single LSFE, where
 \begin{equation}
     \label{E1Error}
     \varepsilon(u) = \left| \frac{u-u^a}{u^a} \right|
 \end{equation}
 and where $u^a$ is the analytical solution.  The parameter $\lambda$ is set
-to $1.0$ for this case. The Legendre spectral elements (with $p$-refinement)
-exhibit highly desirable exponential convergence to machine-precision error,
-whereas the conventional quadratic elements are limited to algebraic
-convergence.    For a given model size, an LSFE model can be orders of magnitude
-more accurate than its QFE counterpart.
+to $1.0$ for this case. The LSFEs (with $p$-refinement) exhibit highly
+desirable exponential convergence to machine-precision error, whereas the
+conventional quadratic elements are limited to algebraic convergence.  Here,
+for a given model size, an LSFE model can be orders of magnitude more
+accurate than its QFE counterpart.
 
 \begin{figure}
     \centering
@@ -137,7 +144,7 @@ more accurate than its QFE counterpart.
 \subfloat[$u_3$]{\label{E1Conv:u3}\includegraphics[width=3.0in]{\directory  E1Convu3.eps}}\\
 \end{tabular}
 \caption{Normalized error of the (a) $u_1$ and (b) $u_3$ tip displacements
-of a cantiler beam (Figure~\ref{E1Sketch}) under constant tip
+of a cantilever beam (Figure~\ref{E1Sketch}) under constant tip
 moment ($\lambda = 1.0$) as a function of the total number of nodes. Results were calculated
 with BeamDyn (LSFE) and Dymore (QFE).  LSFE model refinement was accomplished
 by increasing polynomial order and QFE model refinement was accomplished by
