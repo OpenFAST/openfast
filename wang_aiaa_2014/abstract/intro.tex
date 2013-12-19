@@ -11,13 +11,12 @@ the United States.
 %from wind amounted to 3.56\% of all generated electrical energy for the 12
 %months until March 2013\cite{WindWiki}. 
 In recent years, the size of wind
-turbines has been increasing to lower the cost, which, because of
-weight restrictions, also leads
+turbines has been increasing to lower the cost, which leads
 to highly flexible turbine blades. These huge electro-mechanical systems pose
 a significant challenge for engineering design and analysis. Although
 possible with modern super computers, direct three-dimensional (3D)
-structural analysis is so computationally expensive that engineers are
-always seeking for efficient high-fidelity simplified models.
+structural analysis is so computationally expensive that the wind industry is
+always seeking efficient high-fidelity engineering models.
 
 Beam models are widely used to represent and analyze engineering structures
 that have one of its dimensions much larger than the other two. Many
@@ -40,7 +39,7 @@ this theory using the finite-element (FE) method where a new approach for
 interpolating the rotation field was proposed that preserves the geometric
 exactness. Betsch and Steinmann\cite{Betsch2002} circumvented the
 interpolation of rotation by introducing a re-parameterization of the weak
-form corresponding to the equations of motion of GEBT. It is noted that
+form corresponding to the equations of motion. It is noted that
 Ibrahimbegovi\'c and his colleagues implemented this theory for
 static\cite{Ibrahim1995} and dynamic\cite{Ibrahim1998} analysis. In contrast
 to the displacement-based implementations, the geometrically exact beam theory
@@ -59,7 +58,7 @@ Hodges\cite{HodgesBeamBook}, where comprehensive derivations and discussions
 on nonlinear composite-beam theories can be found.
 
 Legendre spectral finite elements\cite{Patera:1984,Ronquist:1987} (LSFEs)
-are $p$-type finite elements whose shape functions are Lagrangian
+are $p$-type elements whose shape functions are Lagrangian
 interpolants with node locations at the Gauss-Lobatto-Legendre (GLL) points.
 LSFEs combine the accuracy of global spectral methods with the
 geometric-modeling
@@ -71,29 +70,25 @@ acoustic wave propagation \cite{Sprague:2004}. LSFEs have been applied to
 the linear-response analysis of
 beams\cite{Ben-Tal-etal:1995,Ben-Tal-etal:1996,Kudela-etal:2007a,Sprague-Geers:2008,Wang:SFE2013}
 and plate elements\cite{Zrahia-Bar-Yoseph:1995,
-Kudela-etal:2007b,Sprague-Brito:2012}.   Xiao and
-Zhong\cite{Xiao-Zhong:2012} implemented LSFEs based on displacement-based
-GEBT for \textit{two-dimensional} static nonlinear beam deformation. Their
-LSFEs were compared against a commercial mixed-formulation
+Kudela-etal:2007b,Sprague-Brito:2012}. Xiao and Zhong \cite{Xiao-Zhong:2012} reported  a displacement-based implementation by LSFEs for two-dimensional static nonlinear beam deformation. Their
+LSFEs were compared against a mixed-formulation
 low-order-FE GEBT code by Wang and
 Sprague\cite{Wang:SFE2013};  it was shown that the LSFEs provide
 exponential convergence rates, while the low-order FEs were limited to
 an algebraic convergence rate.
 
 In this paper, we present a three-dimensional displacement-based
-implementation of geometrically exact beam theory using LSFEs.  This work
-builds on previous efforts which showed the implementation of 3D rotation
+implementation of the geometrically exact beam theory using LSFEs.  This work
+builds on previous efforts that showed the implementation of 3D rotation
 parameters\cite{Wang:GEBT2013} and a demonstration example of
 two-dimensional nonlinear spectral beam elements\cite{Wang:SFE2013} for
 static deformation.  The code implemented in this work is in accordance with
-the new FAST Modularization Framework\cite{Jonkman:2013},  which allows
-simulation of a whole turbine under realistic operating conditions.
-\mas{EXPAND ON FAST MODULARIZATION}
+the new FAST modularization framework\cite{Jonkman:2013},  which allows coupled aero-hydro-servo-elastic simulation of both land-based and offshore wind turbine under realistic operating conditions. The coupled code will be available in June, 2014.
 
 The paper is organized as follows.  The theoretical foundation of the
-geometrically exact beam theory is introduced first. Then the GEBT
+geometrically exact beam theory is introduced first. Then the spacial
 discretization by LSFEs is discussed. Finally, verification examples are
-provided to show the accuracy and efficiency of the GEBT LSFEs  for
+provided to show the accuracy and efficiency of the present model  for
 composite beams.  
 
 
