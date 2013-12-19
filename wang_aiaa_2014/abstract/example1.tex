@@ -18,9 +18,9 @@ matrix is
 \end{bmatrix}
 \end{equation}
 which has units of $C_{ij}^*$ (lb), $C_{i,j+3}^*$ (lb.in), and
-$C_{i+3,j+3}^*$ (lb.in$^2$) for $i,j = 1,2,3$; these units apply to all
+$C_{i+3,j+3}^*$ (lb.in$^2$) for $i,j = 1,2,3$; these units are adopted for consistency with those used in Ref.~\cite{Yu-etal:2002} in this paper and apply to all
 subsequent stiffness matrices. It is pointed out that the term with an
-asterisk denotes that it is resolved in the material basis.
+asterisk denotes that it is resolved in the material basis and the sectional stiffness matrix $\tens{\mathcal{C}}$ resolved in the inertial basis can be obtained by $\tens{\mathcal{C}} = (\tens{R}~\tens{R}_0) \tens{C}^*(\tens{R}~\tens{R}_0)^T$, where $\tens{R}$ and $\tens{R}_0$ denote the rotation matrix and the corresponding initial rotation matrix, respectively.
 
 \begin{figure}
     \centering \includegraphics[width=0.5\textwidth]{\directory
@@ -35,8 +35,7 @@ The load applied at the tip is given by
     M_2 = \lambda \bar{M}_2
 \end{equation}
 where $\bar{M}_2 = \pi \frac{EI_2}{L}$; and the parameter $\lambda$ will vary between $0$ and $2$. In 
-this case, the beam is discretized with two $5^{th}$-order LSFEs. The
-static deformations of the beam obtained from BeamDyn are shown in
+this case, the beam is discretized with two $5^{th}$-order LSFEs to achieve a converged results. It is noted that the maximum relative rotation in a single element cannot be greater than $\Pi$ as described in Ref.~\cite{Bauchau-etal:2008} in the current parameterization of 3D rotations. The static deformations of the beam obtained from BeamDyn are shown in
 Figure~\ref{E1Deform} for six different tip moments.
 The calculated tip displacements are compared with the analytical solution
 in Table~\ref{E1u},
@@ -81,7 +80,7 @@ displacements $u_1$ and $u_3$ (in inches) of a cantilever beam subjected to a co
     \end{tabular}
 \end{table}
 
-The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained
+The rotation parameter $p_2$ and rotation angle $\phi_2$ at each node along beam axis $x_1$ obtained
 from BeamDyn are plotted in Figure~\ref{E1Rot:Rot} for $\lambda = 0.8$ and
 $\lambda = 2.0$, respectively. A rescaling can be observed from this figure
 for the case $\lambda = 2.0$. It is noted that although the rotation
@@ -92,10 +91,10 @@ Figure~\ref{E1Rot:Rel}.
 \begin{figure}
     \centering
     \begin{tabular}{c}
-    \subfloat[Rotation parameter $p_2$]{\label{E1Rot:Rot}\includegraphics[width=3.0in]{\directory E1Rot.eps}} \qquad 
+    \subfloat[Rotation parameter $p_2$ and rotation angle $\phi_2$]{\label{E1Rot:Rot}\includegraphics[width=3.0in]{\directory E1Rot.eps}} \qquad 
     \subfloat[Relative rotation $r_2$]{\label{E1Rot:Rel}\includegraphics[width=3.0in]{\directory E1RelRot.eps}} 
     \end{tabular}
-    \caption{(a) Wiener-Milenkovi\'c rotation parameters along the beam axis
+    \caption{(a) Wiener-Milenkovi\'c rotation parameters and rotation angles along the beam axis
 $x_1$ as calculated by BeamDyn for two tip moments; (b) relative rotations
 in the two elements.}
     \label{E1Rot}
@@ -105,7 +104,7 @@ Finally, we conduct a convergence study of the BeamDyn LSFEs. The
 convergence rate is compared with conventional quadratic elements used in
 Dymore \cite{Dymore:2013}, which is a well-known FE
 based multibody dynamics code for the comprehensive modeling of flexible
-multibody systems. 
+multibody systems. For each test case, BeamDyn and Dymore have approximately the same number of Newton-Raphson iterations. 
 %It is pointed out that user can choose element up to
 %$3^rd$ order in Dymore. 
 Figure~\ref{E1Conv} shows the normalized error
