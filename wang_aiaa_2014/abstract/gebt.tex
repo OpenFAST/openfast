@@ -11,7 +11,7 @@ states. A reference frame $\mathbf{b}_i$, for $i=\{ 1,2,3 \}$, is introduced
 along the beam axis for the undeformed state; a frame $\mathbf{B}_i$ is
 introduced along each point of the deformed beam axis.
 Curvilinear-coordinate $x_1$ defines the intrinsic parameterization of the
-reference line; similarly, $s$ denotes the deformed reference line. It is noted that the unit vector $\textbf{B}_1$ is not necessarily tangent to the deformed reference line $\textbf{R}$ unless one adopts the Euler-Bernoulli hypothesis.
+reference line; similarly, $s$ denotes the deformed reference line. It is noted that the unit vector $\mathbf{B}_1$ is not necessarily tangent to the deformed reference line $\textbf{R}$ unless one adopts the Euler-Bernoulli hypothesis.
 
 \begin{figure}
 \centering \includegraphics[width=5.0in]{\directory Kinematics.eps}
@@ -97,7 +97,7 @@ $\underline{\omega} = \mathrm{axial}(\dot{\underline{\underline{R}}}~\underline{
 where $\vec{k} = \text{axial} (\tens{R}^\prime \tens{R}^T)$ is the sectional curvature vector resolved in the inertial basis, $\vec{k}_i$ is the corresponding initial curvature vector, and $\bar{\imath}_1$ is the unit vector along $x_1$ direction in the inertial basis. 
 
 For a displacement-based finite element implementation, there are six
-degree-of-freedoms (DoFs) at each node: three displacement components and three
+degree-of-freedoms at each node: three displacement components and three
 rotation components. Here we use $\vec{q}$ to denote the elemental
 displacement array as $\underline{q}=\left[
 \underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the
@@ -118,7 +118,7 @@ column matrix of nodal values. It is noted that given the ``untensorial''
 nature, we need to adopt a special algorithm to deal with the 3D rotations,
 which will be introduced in the next section.   The governing equations for
 beams are highly nonlinear;  a linearization process is needed if a
-Newton-Raphson nonlinear solver is to be used for static analysis and dynamic analysis, in which implicit time integration scheme are adopted.
+Newton-Raphson nonlinear solver is to be used for static analysis and dynamic analysis, for which an implicit time integration scheme is adopted.
 According to Bauchau\cite{Bauchau:2010}, the linearized governing equations
 in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
 \begin{equation}
