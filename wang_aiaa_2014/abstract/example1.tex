@@ -20,7 +20,7 @@ matrix is
 which has units of $C_{ij}^*$ (lb), $C_{i,j+3}^*$ (lb.in), and
 $C_{i+3,j+3}^*$ (lb.in$^2$) for $i,j = 1,2,3$; these units apply to all
 subsequent stiffness matrices. It is pointed out that the term with an
-asterisk denotes that it is resolved in the reference configuration.
+asterisk denotes that it is resolved in the material basis.
 
 \begin{figure}
     \centering \includegraphics[width=0.5\textwidth]{\directory
@@ -35,19 +35,18 @@ The load applied at the tip is given by
     M_2 = \lambda \bar{M}_2
 \end{equation}
 where $\bar{M}_2 = \pi \frac{EI_2}{L}$; and the parameter $\lambda$ will vary between $0$ and $2$. In 
-this case, the beam is discretized with two $5^{th}$-order Legendre
-spectral FEs. The
+this case, the beam is discretized with two $5^{th}$-order LSFEs. The
 static deformations of the beam obtained from BeamDyn are shown in
 Figure~\ref{E1Deform} for six different tip moments.
 The calculated tip displacements are compared with the analytical solution
-in Tables~\ref{E1u1} and \ref{E1u3},
+in Table~\ref{E1u},
 which can be found in Mayo et al.\cite{Mayo-etal:2004} as
 \begin{equation}
     \label{E1Analytical}
     u_1 = \rho \sin \left( \frac{x_1}{\rho} \right) - x_1~~~~~u_3 = \rho
 \left(1-\cos\left(\frac{x_1}{\rho}\right) \right)
 \end{equation}
-At this discretization level, BeamDyn results are virtually
+where $\rho = \frac{EI_2}{M_2}$. At this discretization level, BeamDyn results are virtually
 identical to those of the analytical solution.
 
 \begin{figure}
@@ -63,36 +62,24 @@ FEs in BeamDyn.}
 
 \begin{table}[tbp]
 \centering \caption{Comparison of analytical and BeamDyn-calculated tip
-axial displacements $u_1$ (in inches) of a cantilever beam subjected to a constant moment; the BeamDyn model was composed of two 5$^{th}$-order LSFEs.}
-\label{E1u1} 
-	\begin{tabular}{| l | l | l | }
+displacements $u_1$ and $u_3$ (in inches) of a cantilever beam subjected to a constant moment; the BeamDyn model was composed of two 5$^{th}$-order LSFEs.}
+\label{E1u} 
+	\begin{tabular}{| l | l | l | l | l | }
     	\hline
-    	$\lambda$ & Analytical & BeamDyn  \\ \hline
-    	0.4       & -2.4317    & -2.4317  \\ \hline
-    	0.8       & -7.6613    & -7.6613  \\ \hline
-    	1.2       & -11.5591   & -11.5591 \\ \hline
-    	1.6       & -11.8921   & -11.8921 \\ \hline
-    	2.0       & -10.0000   & -10.0000 \\ \hline
+    	$\lambda$ & Analytical ($u_1$) & BeamDyn ($u_1$) & Analytical ($u_3$) & BeamDyn ($u_3$)  
+	\\ \hline
+    	0.4       & -2.4317    & -2.4317  & 5.4987     & 5.4987
+	\\ \hline
+    	0.8       & -7.6613    & -7.6613  & 7.1978     & 7.1979
+	\\ \hline
+    	1.2       & -11.5591   & -11.5591 & 4.7986     & 4.7986
+	\\ \hline
+    	1.6       & -11.8921   & -11.8921 & 1.3747     & 1.3747
+	\\ \hline
+    	2.0       & -10.0000   & -10.0000 & 0.0000     & 0.0000
+	\\ \hline
     \end{tabular}
 \end{table}
-
-\begin{table}[tbp]
-\centering 
-\caption{Comparison of analytical and BeamDyn-calculated tip vertical
-displacements
-$u_3$ (in inches) of a cantilever beam subjected to a constant moment; the BeamDyn
-model was composed of two 5$^{th}$-order LSFEs.}
-\label{E1u3} 
-	\begin{tabular}{| l | l | l | }
-    	\hline
-    	$\lambda$ & Analytical & BeamDyn  \\ \hline
-    	0.4       & 5.4987     & 5.4987   \\ \hline
-    	0.8       & 7.1978     & 7.1979   \\ \hline
-    	1.2       & 4.7986     & 4.7986   \\ \hline
-    	1.6       & 1.3747     & 1.3747   \\ \hline
-    	2.0       & 0.0000     & 0.0000   \\ \hline
-    \end{tabular}
- \end{table}
 
 The rotation parameter $p_2$ at each node along beam axis $x_1$ obtained
 from BeamDyn are plotted in Figure~\ref{E1Rot:Rot} for $\lambda = 0.8$ and
@@ -116,7 +103,7 @@ in the two elements.}
 
 Finally, we conduct a convergence study of the BeamDyn LSFEs. The
 convergence rate is compared with conventional quadratic elements used in
-Dymore \cite{Dymore:2013}, which is a finite-element
+Dymore \cite{Dymore:2013}, which is a well-known FE
 based multibody dynamics code for the comprehensive modeling of flexible
 multibody systems. 
 %It is pointed out that user can choose element up to

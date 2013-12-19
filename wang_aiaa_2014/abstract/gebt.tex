@@ -21,7 +21,7 @@ associated kinematic variables.} \label{Kinematics}
 \end{figure}
 
 In this paper, we use matrix notation to denote vectorial or vectorial-like
-quantities. For example, we use a underline to denote a vector
+quantities. For example, we use an underline to denote a vector
 $\underline{u}$, a bar to denote unit vector $\bar{n}$, and double underline
 to denote a tensor $\underline{\underline{\Delta}}$. Note that sometimes the
 underlines only denote the dimension of the corresponding matrix. The
@@ -78,13 +78,26 @@ The constitutive equations relate the velocities to the momenta and the one-dime
 where $\underline{\underline{\mathcal{M}}}$ and
 $\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass
 and stiffness matrices, respectively (note that they are not tensors);
-$\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and
+$\underline{\epsilon}$ and $\underline{\kappa}$ are the one-dimensional (1D) strains and
 curvatures, respectively; $\underline{\omega}$ is the angular velocity
 vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
-$\underline{\omega} = \mathrm{axial}(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$.
+$\underline{\omega} = \mathrm{axial}(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$. It is noted that the 1D strain measures are defined as
+\begin{equation}
+    \label{1DStrain}
+    \begin{Bmatrix}
+        \vec{\epsilon} \\
+        \vec{\kappa}
+    \end{Bmatrix}
+    =
+    \begin{Bmatrix}
+        \vec{x}^\prime_0 + \vec{u}^\prime - (\tens{R} ~\tens{R}_0) \bar{\imath}_1 \\
+        \vec{k} + \tens{R}~ \vec{k}_i
+    \end{Bmatrix}
+\end{equation}
+where $\vec{k} = \text{axial} (\tens{R}^\prime \tens{R}^T)$ is the sectional curvature vector resolved in the inertial basis, $\vec{k}_i$ is the corresponding initial curvature vector, and $\bar{\imath}_1$ is the unit vector along $x_1$ direction in the inertial basis. 
 
 For a displacement-based finite element implementation, there are six
-degree-of-freedoms (DoFs) at each node: 3 displacement components and 3
+degree-of-freedoms (DoFs) at each node: three displacement components and three
 rotation components. Here we use $\vec{q}$ to denote the elemental
 displacement array as $\underline{q}=\left[
 \underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the
@@ -115,7 +128,7 @@ in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are in the form of
 where the $\hat{\tens{M}}$, $\hat{\tens{G}}$, and $\hat{\tens{K}}$ are the
 elemental mass, gyroscopic, and stiffness matrices, respectively;
 $\hat{\vec{F}}$ and $\hat{\vec{F}}^{ext}$ are the elemental forces and
-externally applied loads, respectively. They are defined as follows
+externally applied loads, respectively. They are defined for an element of length $l$ along $x_1$ as follows
 \begin{align}
 	\label{hatM} 
 	\hat{\tens{M}}&= \int_0^l \underline{\underline{N}}^T \mathcal{\underline{\underline{M}}} ~\underline{\underline{N}} dx_1 \\
@@ -128,9 +141,9 @@ externally applied loads, respectively. They are defined as follows
 	\label{hatFext}
 	\hat{\vec{F}}^{ext}& = \int_0^l \tens{N}^T \mathcal{\vec{F}}^{ext} dx_1 
 \end{align}
-The new matrix notations in Eqs.~\eqref{hatM} to \eqref{hatFext} are briefly
+where $\mathcal{\vec{F}}^{ext}$ is the applied load vector. The new matrix notations in Eqs.~\eqref{hatM} to \eqref{hatFext} are briefly
 introduced here. $\mathcal{\tens{M}}$ is the sectional mass matrix resolved
-in reference configuration; $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
+in the inertial basis; $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
 elastic forces obtained from Eq.~\eqref{GovernGEBT-1} and
 \eqref{GovernGEBT-2} as
 \begin{align}
@@ -179,7 +192,7 @@ where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens
 	m \tilde{\eta} \ddot{\vec{u}} +\tens{\varrho}\dot{\vec{\omega}}+\tilde{\omega}\tens{\varrho}\vec{\omega}
 	\end{Bmatrix}
 \end{align}
-where the following notations were introduced to simplify the above expressions
+where $m$ is the mass density per unit length, $\vec{\eta}$ is the location of the sectional center of mass, $\tens{\varrho}$ is the moment of inertia tensor, and the following notations were introduced to simplify the above expressions
 \begin{align}
     \label{E1}
     \vec{E}_1 &= \vec{x}_0^\prime + \vec{u}^\prime \\
@@ -190,7 +203,7 @@ where the following notations were introduced to simplify the above expressions
     \end{bmatrix}
 \end{align} 
 
-We note that the 3D rotations are represented as Wiener-Milenkovi\'c parameters \cite{Bauchau-etal:2008,Wang:GEBT2013} defined in the following equation:
+It is noted that the 3D rotations are represented as Wiener-Milenkovi\'c parameters \cite{Bauchau-etal:2008,Wang:GEBT2013} defined in the following equation:
  \begin{equation}
      \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
      \label{WMParameter}
