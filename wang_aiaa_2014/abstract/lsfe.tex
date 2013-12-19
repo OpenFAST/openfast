@@ -8,7 +8,7 @@ The displacement fields in an element are approximated as
     \vec{u}^\prime(\xi) &= \sum_{k=1}^{p+1} h^{k\prime}(\xi) \vec{\hat{u}}^k
 \end{align}
 where $h^k(\xi)$, the component of shape function matrix $\tens{N}$, is the $p^{th}$-order polynomial
-Lagrangian-interpolant shape function of node $k$, $k=\{1,2,...,p+1]\}$, 
+Lagrangian-interpolant shape function of node $k$, $k=\{1,2,...,p+1\}$, 
 $\vec{\hat{u}}^k$ is
 the $k^{th}$ nodal value, and $\xi \in \left[-1,1\right]$ is the element
 natural coordinate.
@@ -38,15 +38,15 @@ by removing the reference rotation, $\vec{\hat{c}}^1$, from the finite
 rotation at each node, $\vec{\hat{r}}^k = (\vec{\hat{c}}^{1-}) \oplus
 \vec{\hat{c}}^k$. It is noted that the minus sign on $\vec{\hat{c}}^1$ denotes that the relative rotation is calculated by removing the reference rotation from each node.  The composition in that equation is an equivalent of $\tens{R}(\vec{\hat{r}}^k) = \tens{R}^T(\vec{\hat{c}}^1)~\tens{R}(\vec{\vec{c}}^k).$
 
-    \item[Step 2:] Interpolate the relative-rotation field: $\vec{r}(\xi) = h^k(\xi) \vec{\hat{r}}^k$ and $\vec{r}^\prime(\xi) = h^{k \prime}(\xi) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(\xi) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$.
-
-    \item[Step 3:] Restore the rigid-body rotation removed in Step 1: $\vec{c}(\xi) = \vec{\hat{c}}^1 \oplus \vec{r}(\xi)$.
-\end{description} 
-where $\tens{H}$ is the tangent tensor that relates the curvature vector $\vec{k}$ and rotation vector $\vec{p}$ as
+    \item[Step 2:] Interpolate the relative-rotation field: $\vec{r}(\xi) = h^k(\xi) \vec{\hat{r}}^k$ and $\vec{r}^\prime(\xi) = h^{k \prime}(\xi) \vec{\hat{r}}^k$. Find the curvature field $\vec{\kappa}(\xi) = \tens{R}(\vec{\hat{c}}^1) \tens{H}(\vec{r}) \vec{r}^\prime$, where $\tens{H}$ is the tangent tensor that relates the curvature vector $\vec{k}$ and rotation vector $\vec{p}$ as
 \begin{equation}
     \label{Tensor}
     \vec{k} = \tens{H}~ \vec{p}^\prime
 \end{equation}
+
+    \item[Step 3:] Restore the rigid-body rotation removed in Step 1: $\vec{c}(\xi) = \vec{\hat{c}}^1 \oplus \vec{r}(\xi)$.
+\end{description} 
+
 
 Note that the relative-rotation field can be computed with respect to any of
 the nodes of the element; we choose node 1 as the reference node for
@@ -74,8 +74,7 @@ Gauss-Lobatto-Legendre points.}
 \end{figure}
 
 The geometrically exact beam theory has been implemented with LSFEs in a
-code called  as BeamDyn, which is a module of the
-the FAST for wind turbine analysis. The system of nonlinear
+code called BeamDyn, which is a module of the FAST for wind turbine analysis. The system of nonlinear
 equations in Eqs.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are solved
 using the Newton-Raphson method with the linearized form in
 Eq.~\eqref{LinearizedEqn}. 
