@@ -77,7 +77,7 @@ The constitutive equations relate the velocities to the momenta and the one-dime
 \end{align}
 where $\underline{\underline{\mathcal{M}}}$ and
 $\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass
-and stiffness matrices resolved in inertial basis, respectively (note that they are not tensors);
+and stiffness matrices resolved in the inertial basis, respectively (note that they are not tensors);
 $\underline{\epsilon}$ and $\underline{\kappa}$ are the one-dimensional (1D) strains and
 curvatures, respectively; $\underline{\omega}$ is the angular velocity
 vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
@@ -142,8 +142,7 @@ externally applied loads, respectively. They are defined for an element of lengt
 	\hat{\vec{F}}^{ext}& = \int_0^l \tens{N}^T \mathcal{\vec{F}}^{ext} dx_1 
 \end{align}
 where $\mathcal{\vec{F}}^{ext}$ is the applied load vector. The new matrix notations in Eqs.~\eqref{hatM} to \eqref{hatFext} are briefly
-introduced here. $\mathcal{\tens{M}}$ is the sectional mass matrix resolved
-in the inertial basis; $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
+introduced here. $\mathcal{\vec{F}}^C$ and $\mathcal{\vec{F}}^D$ are
 elastic forces obtained from Eq.~\eqref{GovernGEBT-1} and
 \eqref{GovernGEBT-2} as
 \begin{align}
@@ -166,7 +165,7 @@ where $\underline{\underline{0}}$ denotes a $3 \times 3$ null matrix. The $\tens
 \begin{align}
         \label{mathcalG}
         \tens{\mathcal{G}}^I &= \begin{bmatrix}
-        \tens{0} & (\tilde{\omega} m \vec{\eta})^T+\tilde{\omega} m \tilde{\eta}^T  \\
+        \tens{0} & (\widetilde{\tilde{\omega} m \vec{\eta}})^T+\tilde{\omega} m \tilde{\eta}^T  \\
         \tens{0} & \tilde{\omega} \tens{\varrho}-\widetilde{\tens{\varrho} \vec{\omega}}
         \end{bmatrix} \\
         \label{mathcalK}
@@ -208,7 +207,7 @@ It is noted that the 3D rotations are represented as Wiener-Milenkovi\'c paramet
      \vec{p} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
      \label{WMParameter}
  \end{equation}
-where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of
+where $\phi$ is the rotation angle and $\bar{n}$ is the unit vector of the
 rotation axis. It can be observed that the valid range for this parameter is
 $|\phi| < 2 \pi$. The singularities existing at integer multiples of $\pm 2 \pi$ can be removed by a rescaling operation at $\pi$, as given
 in Bauchau et al.\cite{Bauchau-etal:2008}:
