@@ -359,7 +359,7 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcOrie
          CALL Create_PointMesh( Src, MeshMap%Temp_Lumped_Points_Src, ErrStat, ErrMsg )
             IF (ErrStat >= AbortErrLev) RETURN
 
-         ! in following call, Src is mesh to loop over, finding a corresponding point for each point in Dest
+         ! in following call, Src is mesh to loop over, finding a corresponding point for each point in Dest (we've got the lumped POINT mesh, so this is just point-to-point)
          CALL CreateMapping_NearestNeighbor( MeshMap%Temp_Lumped_Points_Src, Dest, MeshMap%MapLoads, ELEMENT_POINT, ELEMENT_POINT, ErrStat, ErrMsg )
             IF (ErrStat >= AbortErrLev) RETURN
 
@@ -714,6 +714,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
 
                if (dist .lt. min_dist) then
                   found = .true.
+                  min_dist = dist
 
                   Map(i)%OtherMesh_Element = jElem
                   !Map(i)%elem_position     = elem_position
