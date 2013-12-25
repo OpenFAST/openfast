@@ -2259,10 +2259,10 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcTrans
 
             IF ( PRESENT(SrcTransDisp) ) THEN
                p1 = p1 + SrcTransDisp%TranslationDisp(:,n1)
-               p2 = p1 + SrcTransDisp%TranslationDisp(:,n2)
+               p2 = p2 + SrcTransDisp%TranslationDisp(:,n2)
             ELSEIF (Line2_Src%FieldMask(MASKID_TRANSLATIONDISP)) THEN
                p1 = p1 + Line2_Src%TranslationDisp(:,n1)
-               p2 = p1 + Line2_Src%TranslationDisp(:,n2)
+               p2 = p2 + Line2_Src%TranslationDisp(:,n2)
             END IF
 
             pCrossf = 0.5*det_jac *cross_product( p2-p1, Line2_Src%Force(:,n1) + Line2_Src%Force(:,n2))
