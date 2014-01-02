@@ -44,7 +44,8 @@
 MODULE InflowWind
 
 
-   USE                              InflowWind_Types   !FIXME: this file will replace SharedInflowDefs when I can get it to work with the framework registry generator.
+   USE                              InflowWind_Types   
+   !FIXME: this file will replace SharedInflowDefs when I can get it to work with the framework registry generator.
    USE                              NWTC_Library
 
       !-------------------------------------------------------------------------------------------------
@@ -513,11 +514,17 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
 
             CALL  IfW_HHWind_CalcOutput(  Time,          HH_InData,     ParamData%HHWind,                         &
                                           HH_ContStates, HH_DiscStates, HH_ConstrStates,     OtherStates%HHWind,  &
-                                          HH_OutData,    TmpErrStat,    TmpErrMsg)
-
+                                          HH_OutData,    TmpErrStat,    TmpErrMsg)            
+            
                ! Copy the velocities over
             OutputData%Velocity  = HH_OutData%Velocity
 
+            IF (TmpErrStat /= ErrID_None) THEN
+               ErrMsg   = TRIM(ErrMsg)//NewLine//TRIM(TmpErrMsg)
+               ErrStat  = MAX(ErrStat,TmpErrStat)
+               IF (ErrStat >= AbortErrLev) RETURN
+            ENDIF
+            
 
          CASE (FF_WindNumber)
 
@@ -539,6 +546,15 @@ SUBROUTINE IfW_Init( InitData,   InputGuess,    ParamData,                      
                ! Copy the velocities over
             OutputData%Velocity  = FF_OutData%Velocity
 
+            IF (TmpErrStat /= ErrID_None) THEN
+               ErrMsg   = TRIM(ErrMsg)//NewLine//TRIM(TmpErrMsg)
+               ErrStat  = MAX(ErrStat,TmpErrStat)
+               IF (ErrStat >= AbortErrLev) RETURN
+            ENDIF
+            
+            
+            
+            
 !               OutputData%Velocity(:,PointCounter) = FF_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
 
 
