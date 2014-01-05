@@ -85,7 +85,9 @@ CONTAINS
       !...........
       ! Write nodal information:
       !...........
-
+      
+      IF (.NOT. M%Initialized) RETURN
+      
       WRITE (UnIn, IOSTAT=ErrStat2)   M%Position
          IF ( ErrStat2 /= 0 ) THEN
             CALL CheckError( ErrID_Fatal, 'Error writing Position to the mesh binary file.' )
@@ -222,15 +224,16 @@ CONTAINS
 
    SUBROUTINE MeshPrintInfo ( U, M, N)
      INTEGER, INTENT(IN   )                ::      U  ! fortran output unit
-     TYPE(MeshType),INTENT(INOUT)          ::      M  ! mesh to be reported on
+     TYPE(MeshType),INTENT(IN   )          ::      M  ! mesh to be reported on
      INTEGER, OPTIONAL,INTENT(IN   )       ::      N  ! Number to print, default 5
     ! Local
      INTEGER isz,i,j,nn,CtrlCode,Ielement,Xelement
      INTEGER                    :: ErrStat
      CHARACTER(256)             :: ErrMess
 
-     nn = 5
-     IF (PRESENT(N)) nn = N
+     ErrStat = ErrID_None
+     nn = M%Nnodes !5
+     IF (PRESENT(N)) nn = min(nn,N)
 
      write(U,*)'-----------  MeshPrintInfo:  -------------'
 
@@ -357,33 +360,46 @@ CONTAINS
        ENDDO
      ENDIF
      write(U,*)'--------- Traverse Element List ----------'
-     CtrlCode = 0
-     CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
-     IF (ErrStat >= AbortErrLev) THEN
-        WRITE(U,*) ' Error in MeshNextElement(): '
-        WRITE(U,*) TRIM(ErrMess)
-        CtrlCode = MESH_NOMORE
-      END IF
-
-     DO WHILE ( CtrlCode .NE. MESH_NOMORE )
-
-       WRITE(U,'("  Ielement: ",I10,1x,A," det_jac: ",ES15.7," Nodes:",'//&
+     
+     DO Ielement=1,M%nelemlist
+        Xelement = M%ElemList(Ielement)%Element%Xelement
+        
+        WRITE(U,'("  Ielement: ",I10,1x,A," det_jac: ",ES15.7," Nodes:",'//&
                 Num2LStr( size(M%ElemList(Ielement)%Element%ElemNodes) )//'(1x,I10))') &
                     Ielement,&
                     ElemNames(Xelement), &
                     M%ElemList(Ielement)%Element%det_jac,  &
-                    M%ElemList(Ielement)%Element%ElemNodes
-       
-       
-       CtrlCode = MESH_NEXT
-       CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
-        IF (ErrStat >= AbortErrLev) THEN
-           WRITE(U,*) ' Error in MeshNextElement(): '
-           WRITE(U,*) TRIM(ErrMess)
-           RETURN
-         END IF
+                    M%ElemList(Ielement)%Element%ElemNodes                      
+     END DO 
+     
+     
+     !CtrlCode = 0
+     !CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
+     !IF (ErrStat >= AbortErrLev) THEN
+     !   WRITE(U,*) ' Error in MeshNextElement(): '
+     !   WRITE(U,*) TRIM(ErrMess)
+     !   CtrlCode = MESH_NOMORE
+     ! END IF
 
-     ENDDO
+     !DO WHILE ( CtrlCode .NE. MESH_NOMORE )
+     !
+     !  WRITE(U,'("  Ielement: ",I10,1x,A," det_jac: ",ES15.7," Nodes:",'//&
+     !           Num2LStr( size(M%ElemList(Ielement)%Element%ElemNodes) )//'(1x,I10))') &
+     !               Ielement,&
+     !               ElemNames(Xelement), &
+     !               M%ElemList(Ielement)%Element%det_jac,  &
+     !               M%ElemList(Ielement)%Element%ElemNodes
+     !  
+     !  
+     !  CtrlCode = MESH_NEXT
+     !  CALL MeshNextElement( M, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
+     !   IF (ErrStat >= AbortErrLev) THEN
+     !      WRITE(U,*) ' Error in MeshNextElement(): '
+     !      WRITE(U,*) TRIM(ErrMess)
+     !      RETURN
+     !    END IF
+     !
+     !ENDDO
      write(U,*)'---------  End of Element List  ----------'
 
    END SUBROUTINE MeshPrintInfo
@@ -589,7 +605,7 @@ CONTAINS
          ! Let's make sure that we have all the necessary fields:
          !........................
       IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
-
+!bjj: this can be removed with next round of mesh mapping algorighms
          IF ( .NOT. BlankMesh%FieldMask(MASKID_Orientation) ) THEN
             CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
             IF (ErrStat >= AbortErrLev) RETURN
@@ -823,10 +839,10 @@ CONTAINS
        n_int = n_int + 1                       ! add word for element kind
        n_int = n_int + 1                       ! add word for number of nodes
        n_int = n_int + NumNodes( Xelement )    ! space for nodes in this element
-#if 0
- TODO
-       n_int = n_int + ElemRec%Nneighbors         ! space for neighbor list, stored as element indices
-#endif
+!#if 0
+! TODO
+!       n_int = n_int + ElemRec%Nneighbors         ! space for neighbor list, stored as element indices
+!#endif
        CtrlCode = MESH_NEXT
        CALL MeshNextElement( Mesh, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
        IF (ErrStat >= AbortErrLev) RETURN
@@ -878,13 +894,13 @@ CONTAINS
            IntBuf(ic) = ElemRec%ElemNodes(i)
            ic = ic + 1
          ENDDO
-#if 0
- TODO
-         DO i = 1,ElemRec%Nneighbors
-           IntBuf(ic) = 0 !   ElemRec%Neighbors(i)
-           ic = ic + 1
-         ENDDO
-#endif
+!#if 0
+! TODO
+!         DO i = 1,ElemRec%Nneighbors
+!           IntBuf(ic) = 0 !   ElemRec%Neighbors(i)
+!           ic = ic + 1
+!         ENDDO
+!#endif
          CtrlCode = MESH_NEXT
          CALL MeshNextElement( Mesh, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement, ElemRec=ElemRec )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -988,11 +1004,11 @@ CONTAINS
      CHARACTER(*),                INTENT(  OUT) :: ErrMess
 
    ! Local
-     LOGICAL Force, Moment, Orientation, TranslationDisp, TranslationVel, RotationVel, TranslationAcc, RotationAcc, AddedMass
+     LOGICAL Force, Moment, Orientation, TranslationDisp, TranslationVel, RotationVel, TranslationAcc, RotationAcc
      INTEGER nScalars
      INTEGER i,ic,nelem,n_int,n_re,n_db,l,ii,jj,CtrlCode,x,nelemnodes
      INTEGER Ielement, Xelement
-     TYPE(ElemRecType), POINTER :: ElemRec
+     !TYPE(ElemRecType), POINTER :: ElemRec
 
      Force = .FALSE.
      Moment = .FALSE.
@@ -1363,75 +1379,75 @@ CONTAINS
          ENDDO
 
 
-#if 0
-          IF ( CtrlCode .EQ. MESH_NEWCOPY ) THEN
-             DestMesh%npoint   = SrcMesh%npoint ; DestMesh%maxpoint = SrcMesh%maxpoint
-             IF ( SrcMesh%npoint .GT. 0 .AND. ASSOCIATED( SrcMesh%element_point ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_point, 1, SrcMesh%maxpoint, 'MeshCreate: element_point' )
-               DestMesh%element_point => SrcMesh%element_point
-             ENDIF
-             DestMesh%nline2   = SrcMesh%nline2 ; DestMesh%maxline2 = SrcMesh%maxline2
-             IF ( SrcMesh%nline2 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_line2 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_line2, 2, SrcMesh%maxline2, 'MeshCreate: element_line2' )
-               DestMesh%element_line2 => SrcMesh%element_line2
-             ENDIF
-             DestMesh%nline3   = SrcMesh%nline3 ; DestMesh%maxline3 = SrcMesh%maxline3
-             IF ( SrcMesh%nline3 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_line3 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_line3, 3, SrcMesh%maxline3, 'MeshCreate: element_line3' )
-               DestMesh%element_line3 => SrcMesh%element_line3
-             ENDIF
-             DestMesh%ntri3   = SrcMesh%ntri3 ; DestMesh%maxtri3 = SrcMesh%maxtri3
-             IF ( SrcMesh%ntri3 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tri3 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tri3, 3, SrcMesh%maxtri3, 'MeshCreate: element_tri3' )
-               DestMesh%element_tri3 => SrcMesh%element_tri3
-             ENDIF
-             DestMesh%ntri6   = SrcMesh%ntri6 ; DestMesh%maxtri6 = SrcMesh%maxtri6
-             IF ( SrcMesh%ntri6 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tri6 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tri6, 6, SrcMesh%maxtri6, 'MeshCreate: element_tri6' )
-               DestMesh%element_tri6 => SrcMesh%element_tri6
-             ENDIF
-             DestMesh%nquad4   = SrcMesh%nquad4 ; DestMesh%maxquad4 = SrcMesh%maxquad4
-             IF ( SrcMesh%nquad4 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_quad4 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_quad4, 4, SrcMesh%maxquad4, 'MeshCreate: element_quad4' )
-               DestMesh%element_quad4 => SrcMesh%element_quad4
-             ENDIF
-             DestMesh%nquad8   = SrcMesh%nquad8 ; DestMesh%maxquad8 = SrcMesh%maxquad8
-             IF ( SrcMesh%nquad8 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_quad8 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_quad8, 8, SrcMesh%maxquad8, 'MeshCreate: element_quad8' )
-               DestMesh%element_quad8 => SrcMesh%element_quad8
-             ENDIF
-             DestMesh%ntet4   = SrcMesh%ntet4 ; DestMesh%maxtet4 = SrcMesh%maxtet4
-             IF ( SrcMesh%ntet4 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tet4 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tet4, 4, SrcMesh%maxtet4, 'MeshCreate: element_tet4' )
-               DestMesh%element_tet4 => SrcMesh%element_tet4
-             ENDIF
-             DestMesh%ntet10   = SrcMesh%ntet10 ; DestMesh%maxtet10 = SrcMesh%maxtet10
-             IF ( SrcMesh%ntet10 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tet10 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_tet10, 10, SrcMesh%maxtet10, 'MeshCreate: element_tet10' )
-               DestMesh%element_tet10 = SrcMesh%element_tet10
-             ENDIF
-             DestMesh%nhex8   = SrcMesh%nhex8 ; DestMesh%maxhex8 = SrcMesh%maxhex8
-             IF ( SrcMesh%nhex8 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_hex8 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_hex8, 8, SrcMesh%maxhex8, 'MeshCreate: element_hex8' )
-               DestMesh%element_hex8 => SrcMesh%element_hex8
-             ENDIF
-             DestMesh%nhex20   = SrcMesh%nhex20 ; DestMesh%maxhex20 = SrcMesh%maxhex20
-             IF ( SrcMesh%nhex20 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_hex20 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_hex20, 20, SrcMesh%maxhex20, 'MeshCreate: element_hex20' )
-               DestMesh%element_hex20 => SrcMesh%element_hex20
-             ENDIF
-             DestMesh%nwedge6   = SrcMesh%nwedge6 ; DestMesh%maxwedge6 = SrcMesh%maxwedge6
-             IF ( SrcMesh%nwedge6 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_wedge6 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_wedge6, 6, SrcMesh%maxwedge6, 'MeshCreate: element_wedge6' )
-               DestMesh%element_wedge6 => SrcMesh%element_wedge6
-             ENDIF
-             DestMesh%nwedge15   = SrcMesh%nwedge15 ; DestMesh%maxwedge15 = SrcMesh%maxwedge15
-             IF ( SrcMesh%nwedge15 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_wedge15 ) ) THEN
-      !         CALL AllocPAry( DestMesh%element_wedge15, 15, SrcMesh%maxwedge15, 'MeshCreate: element_wedge15' )
-               DestMesh%element_wedge15 => SrcMesh%element_wedge15
-             ENDIF
-          ENDIF
-#endif
+!#if 0
+!          IF ( CtrlCode .EQ. MESH_NEWCOPY ) THEN
+!             DestMesh%npoint   = SrcMesh%npoint ; DestMesh%maxpoint = SrcMesh%maxpoint
+!             IF ( SrcMesh%npoint .GT. 0 .AND. ASSOCIATED( SrcMesh%element_point ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_point, 1, SrcMesh%maxpoint, 'MeshCreate: element_point' )
+!               DestMesh%element_point => SrcMesh%element_point
+!             ENDIF
+!             DestMesh%nline2   = SrcMesh%nline2 ; DestMesh%maxline2 = SrcMesh%maxline2
+!             IF ( SrcMesh%nline2 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_line2 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_line2, 2, SrcMesh%maxline2, 'MeshCreate: element_line2' )
+!               DestMesh%element_line2 => SrcMesh%element_line2
+!             ENDIF
+!             DestMesh%nline3   = SrcMesh%nline3 ; DestMesh%maxline3 = SrcMesh%maxline3
+!             IF ( SrcMesh%nline3 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_line3 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_line3, 3, SrcMesh%maxline3, 'MeshCreate: element_line3' )
+!               DestMesh%element_line3 => SrcMesh%element_line3
+!             ENDIF
+!             DestMesh%ntri3   = SrcMesh%ntri3 ; DestMesh%maxtri3 = SrcMesh%maxtri3
+!             IF ( SrcMesh%ntri3 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tri3 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_tri3, 3, SrcMesh%maxtri3, 'MeshCreate: element_tri3' )
+!               DestMesh%element_tri3 => SrcMesh%element_tri3
+!             ENDIF
+!             DestMesh%ntri6   = SrcMesh%ntri6 ; DestMesh%maxtri6 = SrcMesh%maxtri6
+!             IF ( SrcMesh%ntri6 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tri6 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_tri6, 6, SrcMesh%maxtri6, 'MeshCreate: element_tri6' )
+!               DestMesh%element_tri6 => SrcMesh%element_tri6
+!             ENDIF
+!             DestMesh%nquad4   = SrcMesh%nquad4 ; DestMesh%maxquad4 = SrcMesh%maxquad4
+!             IF ( SrcMesh%nquad4 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_quad4 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_quad4, 4, SrcMesh%maxquad4, 'MeshCreate: element_quad4' )
+!               DestMesh%element_quad4 => SrcMesh%element_quad4
+!             ENDIF
+!             DestMesh%nquad8   = SrcMesh%nquad8 ; DestMesh%maxquad8 = SrcMesh%maxquad8
+!             IF ( SrcMesh%nquad8 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_quad8 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_quad8, 8, SrcMesh%maxquad8, 'MeshCreate: element_quad8' )
+!               DestMesh%element_quad8 => SrcMesh%element_quad8
+!             ENDIF
+!             DestMesh%ntet4   = SrcMesh%ntet4 ; DestMesh%maxtet4 = SrcMesh%maxtet4
+!             IF ( SrcMesh%ntet4 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tet4 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_tet4, 4, SrcMesh%maxtet4, 'MeshCreate: element_tet4' )
+!               DestMesh%element_tet4 => SrcMesh%element_tet4
+!             ENDIF
+!             DestMesh%ntet10   = SrcMesh%ntet10 ; DestMesh%maxtet10 = SrcMesh%maxtet10
+!             IF ( SrcMesh%ntet10 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_tet10 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_tet10, 10, SrcMesh%maxtet10, 'MeshCreate: element_tet10' )
+!               DestMesh%element_tet10 = SrcMesh%element_tet10
+!             ENDIF
+!             DestMesh%nhex8   = SrcMesh%nhex8 ; DestMesh%maxhex8 = SrcMesh%maxhex8
+!             IF ( SrcMesh%nhex8 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_hex8 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_hex8, 8, SrcMesh%maxhex8, 'MeshCreate: element_hex8' )
+!               DestMesh%element_hex8 => SrcMesh%element_hex8
+!             ENDIF
+!             DestMesh%nhex20   = SrcMesh%nhex20 ; DestMesh%maxhex20 = SrcMesh%maxhex20
+!             IF ( SrcMesh%nhex20 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_hex20 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_hex20, 20, SrcMesh%maxhex20, 'MeshCreate: element_hex20' )
+!               DestMesh%element_hex20 => SrcMesh%element_hex20
+!             ENDIF
+!             DestMesh%nwedge6   = SrcMesh%nwedge6 ; DestMesh%maxwedge6 = SrcMesh%maxwedge6
+!             IF ( SrcMesh%nwedge6 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_wedge6 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_wedge6, 6, SrcMesh%maxwedge6, 'MeshCreate: element_wedge6' )
+!               DestMesh%element_wedge6 => SrcMesh%element_wedge6
+!             ENDIF
+!             DestMesh%nwedge15   = SrcMesh%nwedge15 ; DestMesh%maxwedge15 = SrcMesh%maxwedge15
+!             IF ( SrcMesh%nwedge15 .GT. 0 .AND. ASSOCIATED( SrcMesh%element_wedge15 ) ) THEN
+!      !         CALL AllocPAry( DestMesh%element_wedge15, 15, SrcMesh%maxwedge15, 'MeshCreate: element_wedge15' )
+!               DestMesh%element_wedge15 => SrcMesh%element_wedge15
+!             ENDIF
+!          ENDIF
+!#endif
       ELSE IF ( CtrlCode .EQ. MESH_UPDATECOPY ) THEN
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
@@ -1502,7 +1518,7 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: Position array not associated"
      ENDIF
-     IF ( .NOT. SIZE(Mesh%Position,2) .EQ. Mesh%Nnodes ) THEN
+     IF ( .NOT. SIZE(Mesh%Position,2) .GE. Mesh%Nnodes ) THEN
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: Position array not big enough"
      ENDIF
@@ -1510,7 +1526,7 @@ CONTAINS
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: RefOrientation array not associated"
      ENDIF
-     IF ( .NOT. SIZE(Mesh%RefOrientation,3) .EQ. Mesh%Nnodes ) THEN
+     IF ( .NOT. SIZE(Mesh%RefOrientation,3) .GE. Mesh%Nnodes ) THEN
        ErrStat = ErrID_Fatal
        ErrMess = "MeshPositionNode: RefOrientation array not big enough"
      ENDIF
@@ -1583,12 +1599,28 @@ CONTAINS
          RETURN  ! Early return
       END IF
 
-
-   !bjj: check that allocated fields make sense (i.e., Motions must include Orientation and TranslationDisp)
-
-   !BJJ: initialize allocated orientation field
-
-
+      IF ( .NOT. ANY(Mesh%FieldMask) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess = "MeshCommit: Mesh does not contain any fields."
+         RETURN
+      END IF
+         
+      
+     ! make sure the arrays are allocated properly...
+      IF ( SIZE(Mesh%Position,2) < Mesh%Nnodes) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess = "MeshCommit: Position array smaller than number of nodes."
+         RETURN  ! Early return
+      ELSEIF ( SIZE(Mesh%Position,2) > Mesh%Nnodes ) THEN
+         
+         ! bjj: need to get rid of the extra storage so that this doesn't cause errors in MeshCopy....
+         
+         
+      END IF
+        
+      
+      
+      
      ! Construct list of elements
 
 
@@ -1631,6 +1663,12 @@ CONTAINS
                      - Mesh%Position(:,Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(1))
 
         Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) )   ! = L / 2
+        
+        IF ( EqualRealNos( Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
+           ErrStat = ErrID_Fatal
+           ErrMess = " MeshCommit: Line2 element has 0 length."
+           RETURN
+        END IF
 
      END DO
 
@@ -1711,7 +1749,7 @@ CONTAINS
     ! Safety first
      IF ( .NOT. Mesh%Initialized ) THEN
        ErrStat = ErrID_Fatal
-       ErrMess = "MeshConstructElement_1PT: attempt to use uncreated mesh."
+       ErrMess = "MeshConstructElement_2PT: attempt to use uncreated mesh."
      ELSEIF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes .OR. &
           P2 .LT. 1 .OR. P2 .GT. Mesh%Nnodes ) THEN
        ErrStat = ErrID_Fatal
@@ -1864,6 +1902,61 @@ CONTAINS
      ErrMess = 'MeshConstructElement_20PT not supported'
    END SUBROUTINE MeshConstructElement_20PT
 
+!................................................................                                                                                                                                                      
+   SUBROUTINE MeshSplitElement_2PT( Mesh, Xelement, ErrStat, ErrMess, E1, P1  )
+      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
+      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
+      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
+      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
+      INTEGER,                     INTENT(IN   ) :: E1        ! number of element in Element Table
+      INTEGER,                     INTENT(IN   ) :: P1        ! node number
+
+      
+      IF ( mesh_debug ) print*,'Called MeshSplitElement_2PT'
+      ErrStat = ErrID_None
+      ErrMess = ""
+      
+      ! Safety first
+      IF ( Xelement .NE. ELEMENT_LINE2 ) THEN
+         ErrMess = 'MeshSplitElement_2PT called for invalid element type.'
+         ErrStat = ErrID_Fatal        
+      ELSEIF ( .NOT. Mesh%Initialized ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess = "MeshSplitElement_2PT: attempt to use uncreated mesh."
+      ELSEIF ( P1 .LT. 1 .OR. P1 .GT. Mesh%Nnodes ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess ="MeshSplitElement_2PT: invalid P1 ("//TRIM(Num2LStr(P1))//") for mesh with "//TRIM(Num2LStr(Mesh%Nnodes))//" nodes."
+      ELSEIF ( E1 .LT. 1 .OR. E1 .GT. Mesh%ElemTable(ELEMENT_LINE2)%nelem ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess ="MeshSplitElement_2PT: invalid E1 ("//TRIM(Num2LStr(E1))//") for mesh with "//TRIM(Num2LStr(Mesh%ElemTable(ELEMENT_LINE2)%nelem))//" Line2 elements."
+      ELSEIF (Mesh%Committed ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess = " MeshSplitElement_2PT: attempt to add element to committed mesh."
+      ELSEIF ( Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(1) == P1 .OR. &
+              Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(2) == P1 ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMess ="MeshSplitElement_2PT: node P1 ("//TRIM(Num2LStr(P1))//") is already a node of element E1 ("//TRIM(Num2LStr(E1))//")."                
+      ENDIF
+     
+      IF ( ErrStat .NE. ErrID_None ) THEN
+         CALL WrScr( TRIM(ErrMess) )
+         RETURN  !  early return on error
+      ENDIF
+               
+     
+    ! Business
+      ! E1 currently has nodes (n1,n2):
+      ! Create a new element with nodes (p1,n2):
+      CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess, p1=P1, p2=Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(2))
+    
+         ! Make element E1 now have nodes (n1,p1):
+      Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(2) = P1
+    
+      RETURN
+       
+   END SUBROUTINE MeshSplitElement_2PT
+!................................................................                                                                           
+                                                                           
    SUBROUTINE MeshNextElement ( Mesh, CtrlCode, ErrStat, ErrMess, Ielement, Xelement, ElemRec )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(INOUT) :: CtrlCode  ! CtrlCode

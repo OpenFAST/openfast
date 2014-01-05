@@ -1446,7 +1446,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, Map, ErrStat, ErrMsg, SrcOr
          ! force in the source mesh, then we need to add a moment to the destination mesh to account
          ! for the mismatch between points
 
-         if (Map(i)%distance .gt. 0_ReKi) then
+         !if (Map(i)%distance .gt. 0_ReKi) then
 
             if (Src%FieldMask(MASKID_FORCE) ) then
 
@@ -1463,7 +1463,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, Map, ErrStat, ErrMsg, SrcOr
 
             endif
 
-         endif
+         !endif
 
       endif
 

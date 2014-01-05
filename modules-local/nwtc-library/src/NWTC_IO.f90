@@ -6730,18 +6730,25 @@ END SUBROUTINE WrBinFAST
       INTEGER,        INTENT(IN) :: Un
       CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
 
+      INTEGER        :: ErrStat
       INTEGER        :: nr, nc  ! size (rows and columns) of A
-      INTEGER        :: i, j    ! indices into A
+      INTEGER        :: i       ! indices into A
       CHARACTER(256) :: Fmt
    
    
       nr = SIZE(A,1)
       nc = SIZE(A,2)
 
-      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"   
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
 
       DO i=1,nr
-         WRITE( Un, Fmt ) (A(i,j), j=1,nc)
+         WRITE( Un, Fmt, IOSTAT=ErrStat ) A(i,:)
+         IF (ErrStat /= 0) THEN
+            CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix().')
+            RETURN
+         END IF
+         
+         
       END DO
 
    RETURN
