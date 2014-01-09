@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00b-bjj', '1-Oct-2013')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00c-bjj', '4-Jan-2014')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -7118,5 +7118,28 @@ SUBROUTINE RemoveNullChar( Str )
 END SUBROUTINE RemoveNullChar
    
 !=======================================================================
+SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
+
+   ! This routine sets the error status
+
+   INTEGER(IntKi),                    INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
+   CHARACTER(*),                      INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None
+                                                                     
+   INTEGER(IntKi),                    INTENT(INOUT)  :: ErrStat      ! Error status of the operation
+   CHARACTER(*),                      INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
+
+   CHARACTER(*),                      INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
    
+
+   IF ( ErrStatLcl /= ErrID_None ) THEN
+   
+      IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//NewLine
+      ErrMess = TRIM(RoutineName)//': '//TRIM(ErrMessLcl)         
+      ErrStat = MAX(ErrStat,ErrStatLcl)
+      
+   END IF
+      
+END SUBROUTINE SetErrStat    
+
+
 END MODULE NWTC_IO
