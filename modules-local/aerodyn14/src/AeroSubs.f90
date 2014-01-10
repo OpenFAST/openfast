@@ -52,19 +52,27 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    INTEGER                    :: IndPrint
    INTEGER                    :: K
    INTEGER                    :: UnIn
+   INTEGER                    :: ErrStatLcl
 
+   LOGICAL                    :: PremEOF_indicator
    CHARACTER(1024)            :: LINE
    CHARACTER(1024)            :: FilePath             ! The path name of the AeroDyn input file (so files listed in it can be defined relative to the main input file location)
 
+   !bjj: error handling here needs to be fixed! (we overwrite any non-AbortErrLev errors)
+   
       ! Function definition
 
-   UnIn = p%UnADin
+   !UnIn = p%UnADin
+   call GetNewUnit(UnIn, ErrStat, ErrMess)
 
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
-   CALL OpenFInpFile(UnIn, TRIM(InitInp%ADFileName), ErrStat)
-   IF (ErrStat /= ErrID_None ) RETURN
+   CALL OpenFInpFile(UnIn, TRIM(InitInp%ADFileName), ErrStat, ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
    CALL GetPath( InitInp%ADFileName, FilePath )
 
@@ -80,8 +88,11 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    !-------------------------------------------------------------------------------------------------
 
       ! Read in the title line
-   CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
 !   IF (NWTC_VerboseComments) THEN
       CALL WrScr( ' Heading of the AeroDyn input file: '//NewLine//'   '//TRIM(InitInp%Title) )
@@ -89,8 +100,11 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    p%TITLE = InitInp%TITLE
 
       ! Read in the units specifier  - REMOVE SOON!!!!!
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Units', VarDescr='Units option', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Units', VarDescr='Units option', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
    LINE = ADJUSTL( LINE )
    CALL Conv2UC(LINE(1:3))
@@ -98,14 +112,18 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    IF (LINE(1:2) /= 'SI') THEN
       CALL ProgWarn( 'English units are no longer allowed in AeroDyn. Please modify your input files to use the metric system.')
       ErrStat = ErrID_Fatal
+      CLOSE(UnIn)
       RETURN
    END IF
 
    p%SIunit = .TRUE.
 
       ! Read in the stall model
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='DStall', VarDescr='Stall model', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='DStall', VarDescr='Stall model', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
    CALL Conv2UC(LINE(1:7))
 
@@ -117,13 +135,17 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "STEADY" or "BEDDOES" stall model option.')
          ErrStat = ErrID_Fatal
+         CLOSE(UnIn)
          RETURN
    END SELECT
 
 
       ! Read in the CM option
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='PMoment', VarDescr='Pitching moment option', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='PMoment', VarDescr='Pitching moment option', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
    CALL Conv2UC(LINE(1:6))
 
@@ -135,14 +157,18 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "USE_CM" or "NO_CM" pitching moment option.')
          ErrStat = ErrID_Fatal
+         CLOSE(UnIn)
          RETURN
    END SELECT
 
 
       ! Read in the inflow model option
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='DynInfl', VarDescr='Inflow model', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
-
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='DynInfl', VarDescr='Inflow model', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
+   
    CALL Conv2UC(LINE(1:7))
 
    SELECT CASE ( Line(1:5) )
@@ -174,14 +200,17 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "EQUIL" or "DYNIN" inflow model option.')
          ErrStat = ErrID_Fatal
+         CLOSE(UnIn)
          RETURN
    END SELECT
 
 
       ! Read in the wake model
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Wake', VarDescr='Wake model', ErrStat=ErrStat)
-   IF ( ErrStat /= 0 ) RETURN
-
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Wake', VarDescr='Wake model', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
    CALL Conv2UC(LINE(1:5))
 
    SELECT CASE ( TRIM(Line) )
@@ -200,18 +229,24 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       CASE DEFAULT
          CALL ProgWarn( ' Error: Expecting "NONE", "WAKE", or "SWIRL" wake model option.')
          ErrStat = ErrID_Fatal
+         CLOSE(UnIn)
          RETURN
    END SELECT
 
       ! Read in the tolerance for the wake model
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%Inducedvel%AToler, VarName='AToler', VarDescr='Induction factor tolerance', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
-
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Inducedvel%AToler, VarName='AToler', VarDescr='Induction factor tolerance', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
        ! Read in the tip-loss model for EQUIL inflow
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='TLoss', VarDescr='Tip-loss model', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
-
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='TLoss', VarDescr='Tip-loss model', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
+   
    IF ( P%DynInfl ) THEN          ! Initialize these variables, though they shouldn't be used
       P%Inducedvel%TLoss = .FALSE.
       P%Inducedvel%GTech = .FALSE.
@@ -231,14 +266,15 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          CASE DEFAULT
             CALL ProgWarn( ' Error: Expecting "NONE", "PRAND", or "GTECH" tip-loss model option.')
             ErrStat = ErrID_Fatal
+            CLOSE(UnIn)
             RETURN
       END SELECT
    END IF
 
 
        ! Read in the hub-loss model for EQUIL inflow
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='HLoss', VarDescr='Hub-loss model', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='HLoss', VarDescr='Hub-loss model', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( P%DynInfl ) THEN          ! Initialize these variables, though they shouldn't be used
       P%Inducedvel%HLoss = .FALSE.
@@ -253,24 +289,34 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          CASE DEFAULT
             CALL ProgWarn( ' Error: Expecting "NONE" or "PRAND" hub-loss model option.')
             ErrStat = ErrID_Fatal
+            CLOSE(UnIn)
             RETURN
       END SELECT
    END IF
 
 
       ! Read in the wind file name
-   CALL ReadVar( UnIn, InitInp%ADFileName, InitInp%WindFileName, VarName='WindFileName', VarDescr='Name of the wind file', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, InitInp%WindFileName, VarName='WindFileName', VarDescr='Name of the wind file', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
    IF ( PathIsRelative( InitInp%WindFileName ) ) InitInp%WindFileName = TRIM(FilePath)//TRIM(InitInp%WindFileName)
 
       ! Read in the wind reference (hub) height above ground
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%Rotor%HH, VarName='RefHt', VarDescr='Wind reference height', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Rotor%HH, VarName='RefHt', VarDescr='Wind reference height', ErrStat=ErrStat, ErrMsg=ErrMess)
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
 !bjj: this is a hack job to allow both the new tower influence and the old tower wake models to be used
 !   CALL ReadStr( UnIn, InitInp%ADFileName, LINE, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat )
    CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat, ErrMsg=ErrMess )
-   IF ( ErrStat /= ErrID_None ) RETURN
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(UnIn)
+      RETURN
+   END IF
 
       ! Check if this is the "special string" to indicate the new tower influence model
    CALL Conv2UC( Line )
@@ -282,22 +328,34 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       P%TwrProps%PJM_Version = .TRUE.
 
          ! Read in the tower potential flow switch
-      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrPotent, VarName='TwrPotent', VarDescr='Tower influence model', ErrStat=ErrStat)
-      IF ( ErrStat /= ErrID_None ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrPotent, VarName='TwrPotent', VarDescr='Tower influence model', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
          ! Read in the tower shadow switch
-      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrShadow, VarName='TwrShadow', VarDescr='Tower shadow model', ErrStat=ErrStat)
-      IF ( ErrStat /= ErrID_None ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrShadow, VarName='TwrShadow', VarDescr='Tower shadow model', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
          ! Read in the tower drag file name
-      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrFile, VarName='TwrFile', VarDescr='Tower data file name', ErrStat=ErrStat)
-      IF ( ErrStat /= ErrID_None ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%TwrFile, VarName='TwrFile', VarDescr='Tower data file name', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
       IF ( PathIsRelative( P%TwrProps%TwrFile ) ) P%TwrProps%TwrFile = TRIM(FilePath)//TRIM(P%TwrProps%TwrFile)
 
          ! Read in the flag to tell AeroDyn to compute tower aerodynamics.
-      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%CalcTwrAero, VarName='CalcTwrAero', VarDescr='Flag to calculate tower aerodynamics', ErrStat=ErrStat)
-      IF ( ErrStat /= ErrID_None ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%CalcTwrAero, VarName='CalcTwrAero', VarDescr='Flag to calculate tower aerodynamics', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
    ELSE
       !----------------------------------------------------------------------------------------------
@@ -311,7 +369,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          ! Read in the tower shadow deficit
       IF ( INDEX( 'FTft', Line(:1) ) > 0 )  THEN
          CALL ProgWarn( ' Invalid numeric input. "'//TRIM( Line )//'" found when trying to read TwrShad.' )
-
+         close(unin)
          ErrStat = ErrID_Fatal
          RETURN
       ELSE
@@ -332,7 +390,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 
 
          ! Read in the tower shadow width
-      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%ShadHWid, VarName='ShadHWid', VarDescr='Tower shadow half width', ErrStat=ErrStat)
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%ShadHWid, VarName='ShadHWid', VarDescr='Tower shadow half width', ErrStat=ErrStat, ErrMsg=ErrMess)
       IF ( ErrStat /= ErrID_None ) RETURN
 
       IF ( P%TwrProps%ShadHWid <= 0.0 ) THEN
@@ -342,8 +400,11 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 
 
          ! Read in the tower shadow reference point (distance from yaw axis to hub)
-      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%T_Shad_Refpt, VarName='T_Shad_Refpt', VarDescr='Tower shadow reference point', ErrStat=ErrStat)
-      IF ( ErrStat /= ErrID_None ) RETURN
+      CALL ReadVar( UnIn, InitInp%ADFileName, P%TwrProps%T_Shad_Refpt, VarName='T_Shad_Refpt', VarDescr='Tower shadow reference point', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
          ! Constants used in tower shadow calculations
       P%TwrProps%TShadC1 = P%TwrProps%ShadHWid / SQRT ( ABS( P%TwrProps%T_Shad_Refpt ) )
@@ -353,8 +414,11 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 
 
       ! Read in the air density
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%Rho, VarName='Rho', VarDescr='Air density', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%Rho, VarName='Rho', VarDescr='Air density', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
    !bjj do we need to check the the air density is non-negative?
 
@@ -364,20 +428,30 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    ENDIF
 
       ! Read in the kinematic viscosity
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%KinVisc, 'KinVisc', 'Kinematic viscosity', ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%KinVisc, 'KinVisc', 'Kinematic viscosity', ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
       ! Aero calculation time interval
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%DtAero, 'DtAero', 'Aero calculation time step', ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%DtAero, 'DtAero', 'Aero calculation time step', ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
       ! Read the number of airfoil files
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%AirFoil%NumFoil, 'NumFoil', 'Number of airfoil files', ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%AirFoil%NumFoil, 'NumFoil', 'Number of airfoil files', ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
    IF ( P%AirFoil%NumFoil < 1 ) THEN
       CALL ProgWarn( ' Error: Number of airfoil files must be a positive integer.')
       ErrStat = ErrID_Fatal
+      close(unin)
       RETURN
    END IF
 
@@ -388,12 +462,16 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       ALLOCATE ( P%AirFoil%FoilNm( P%AirFoil%NumFoil ) , STAT=ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          CALL ProgWarn(' Error allocating space for the FoilNm array.')
+         close(unin)
          RETURN
       END IF
    END IF
 
    CALL ReadAryLines( UnIn, InitInp%ADFileName, P%AirFoil%FoilNm, P%AirFoil%NumFoil, AryName='FoilNm', AryDescr='Airfoil file names', ErrStat=ErrStat, ErrMsg=ErrMess )
-   IF ( ErrStat /= ErrID_None ) RETURN
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
    DO K=1,P%AirFoil%NumFoil
       IF ( PathIsRelative( P%AirFoil%FoilNm(K) ) ) P%AirFoil%FoilNm(K) = TRIM(FilePath)//TRIM( P%AirFoil%FoilNm(K) )
@@ -401,8 +479,11 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 
 
       ! Read in the number of blade elements
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%Element%NElm, VarName='NElm', VarDescr='Number of blade elements', ErrStat=ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL ReadVar( UnIn, InitInp%ADFileName, P%Element%NElm, VarName='NElm', VarDescr='Number of blade elements', ErrStat=ErrStat, ErrMsg=ErrMess)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
 
       !..............................................................................................
@@ -415,7 +496,10 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    O%ElOut%NumWndElOut = 0
 
    CALL ReadCom( UnIn, InitInp%ADFileName, 'Element table headers', ErrStat)
-   IF ( ErrStat /= ErrID_None ) RETURN
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(UnIn)
+         RETURN
+      END IF
 
    DO IElm = 1, p%Element%NElm
 
@@ -466,10 +550,12 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 
          CALL ProgWarn( ' Premature end of file while reading line '//TRIM(Int2Lstr(IElm))// &
                      ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
+         close(unin)
          RETURN
       ELSE
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))// &
                        ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
+         close(unin)
          RETURN
       END IF
 
@@ -480,6 +566,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.'// &
                        ' Chord length must be larger than 0.' )
          ErrStat = ErrID_Fatal
+         close(unin)
          RETURN
       ENDIF
 
@@ -487,6 +574,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.'// &
                        ' Airfoil file ID must be a number between 1 and '//TRIM(Int2Lstr(p%AirFoil%NumFoil))//'.' )
          ErrStat = ErrID_Fatal
+         close(unin)
          RETURN
       END IF
 
@@ -501,12 +589,15 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       ! Read multiple airfoil table option
       !..............................................................................................
 
-      READ(UnIn,*,IOSTAT=ErrStat) Line         !read MultiTab -- it may not exist
-      IF (ErrStat > 0 ) THEN
+      PremEOF_indicator = .FALSE.
+      READ(UnIn,*,IOSTAT=ErrStatLcl) Line         !read MultiTab -- it may not exist
+      IF (ErrStatLcl > 0 ) THEN
          CALL WrScr1 ( ' Invalid character input for file "'//TRIM( InitInp%ADFileName )//'".' )
          CALL ProgWarn ( ' The error occurred while trying to read "MultiTab".' )
+         ErrStat=ErrID_Fatal
+         close(unin)      
          RETURN
-      ELSE IF (ErrStat == 0) THEN
+      ELSE IF (ErrStatLcl == 0) THEN
          IF ( p%Echo )  THEN
             WRITE (p%UnEc, "( 15X, A, T30, ' - ', A, /, 2X, A )" )  &
                          'MultiTab', 'Multiple airfoil table option', '"'//TRIM( Line )//'"'
@@ -514,6 +605,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       ELSE
          p%MultiTab = .FALSE.
          p%Reynolds = .FALSE.
+         PremEOF_indicator = .TRUE.
       !  CALL PremEOF ( TRIM( Fil ), Variable, TrapThisError )
       END IF
 
@@ -526,19 +618,17 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    ! Read airfoil data and check for MultiTab values using LINE, which was read above
    !-------------------------------------------------------------------------------------------------
    CALL READFL(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess)                                      !
-!bjj: does this still work? with the way ErrStat is set?
    O%AirFoil%MulTabLoc = 0.0                                    ! Initialize this value
 
 
             ! Read in the type of airfoil data table in each file
-   IF ( ErrStat < 0 ) THEN             ! If we hit the end of the file without MultiTab, use only 1 airfoil table
+   IF ( PremEOF_indicator ) THEN             ! If we hit the end of the file without MultiTab, use only 1 airfoil table
       IF ( ANY( p%AirFoil%NTables(1:p%AirFoil%NumFoil) > 1 ) ) THEN
          CALL ProgWarn( ' Error reading multiple airfoil table option. Only one table for each file will be used.' )
       END IF
       p%MultiTab = .FALSE.
       p%Reynolds = .FALSE.
-      ErrStat  = ErrID_None
-   ELSE ! ErrStat = 0
+   ELSE ! PremEOF_indicator
 
       IF ( ANY( p%AirFoil%NTables(1:p%AirFoil%NumFoil) > 1 ) ) THEN
          CALL Conv2UC(LINE(1:6))
@@ -620,6 +710,13 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 
 
    RETURN
+   
+contains 
+   SUBROUTINE CleanUp()
+   
+      CLOSE(UnIn)
+   
+   END SUBROUTINE CleanUp
 
 END SUBROUTINE AD_GetInput
 !====================================================================================================
@@ -903,19 +1000,27 @@ LOGICAL                      :: ALNegPI
 CHARACTER( 40)               :: TITLE  (2)
 CHARACTER(1024)              :: LINE
 
+   INTEGER                    :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(LEN(ErrMess))    :: ErrMessLcl          ! Error message returned by called routines.
+
+
 
    ErrStat = ErrID_None
    ErrMess = ""
 
-
-NUNIT    = p%UnAirfl
-p%AirFoil%NumCL    = 0
+   CALL GetNewUnit(NUNIT, ErrStat, ErrMess) !NUNIT=p%UnAirfl
+   p%AirFoil%NumCL    = 0
 
  ! The first loop checks existence and file length to set NumCL
 DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading # of lines
-   CALL OpenFInpFile (NUNIT, TRIM(p%AirFoil%FOILNM(NFOILID)))
+   CALL OpenFInpFile (NUNIT, TRIM(p%AirFoil%FOILNM(NFOILID)), ErrStatLcL, ErrMessLcl)
+   CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(NUNIT)
+      RETURN
+   END IF
 
  ! Determine the maximum number of aerodata points in all files
 
@@ -935,17 +1040,23 @@ END DO ! NFOILID
  ! Allocate the arrays
 
 CALL AllocArrays (InitInp, P, x, xd, z, O, y, 'Aerodata')
-
+   !CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+   !IF (ErrStat >= AbortErrLev) RETURN
 
  ! The second loop reads the files
 DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading inputs
-   CALL OpenFInpFile (NUNIT, TRIM(Adjustl(p%AirFoil%FOILNM(NFOILID))) )
-
+   CALL OpenFInpFile (NUNIT, TRIM(Adjustl(p%AirFoil%FOILNM(NFOILID))), ErrStatLcL, ErrMessLcl )
+   CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(NUNIT)
+      RETURN
+   END IF
+   
  ! Set up the file to read the aerodata
-   READ(NUNIT,'( A )') TITLE(1)
-   READ(NUNIT,'( A )') TITLE(2)
+   READ(NUNIT,'( A )',IOSTAT=IOS) TITLE(1)
+   READ(NUNIT,'( A )',IOSTAT=IOS) TITLE(2)
 
  ! Read in airfoil table dimension parameters:
  !   NTables = number of airfoil data tables
@@ -958,23 +1069,60 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
  ! Allocate local arrays with NTables dimension
 
    Sttus = 0
-   IF (.NOT. ALLOCATED(CLPosPI)) ALLOCATE ( CLPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
-   IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CLPosPI array.' )
+   IF (.NOT. ALLOCATED(CLPosPI)) THEN
+      ALLOCATE ( CLPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
+      IF ( Sttus /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' Error allocating memory for CLPosPI array.', ErrStat, ErrMess, 'READFL' )
+         close(NUNIT)
+         RETURN
+      END IF
+   END IF
+   
 
-   IF (.NOT. ALLOCATED(CDPosPI)) ALLOCATE ( CDPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
-   IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDPosPI array.' )
+   IF (.NOT. ALLOCATED(CDPosPI)) THEN
+      ALLOCATE ( CDPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
+      IF ( Sttus /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' Error allocating memory for CDPosPI array.', ErrStat, ErrMess, 'READFL' )
+         close(NUNIT)
+         RETURN
+      END IF
+   END IF
 
-   IF (.NOT. ALLOCATED(CMPosPI)) ALLOCATE ( CMPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
-   IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CMPosPI array.' )
+   IF (.NOT. ALLOCATED(CMPosPI)) THEN
+      ALLOCATE ( CMPosPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
+      IF ( Sttus /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' Error allocating memory for CMPosPI array.', ErrStat, ErrMess, 'READFL' )
+         close(NUNIT)
+         RETURN
+      END IF
+   END IF
 
-   IF (.NOT. ALLOCATED(CLNegPI)) ALLOCATE ( CLNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
-   IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CLNegPI array.' )
+   IF (.NOT. ALLOCATED(CLNegPI)) THEN
+      ALLOCATE ( CLNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
+      IF ( Sttus /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' Error allocating memory for CLNegPI array.', ErrStat, ErrMess, 'READFL' )
+         close(NUNIT)
+         RETURN
+      END IF
+   END IF
 
-   IF (.NOT. ALLOCATED(CDNegPI)) ALLOCATE ( CDNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
-   IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CDNegPI array.' )
+   IF (.NOT. ALLOCATED(CDNegPI)) THEN
+      ALLOCATE ( CDNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
+      IF ( Sttus /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' Error allocating memory for CDNegPI array.', ErrStat, ErrMess, 'READFL' )
+         close(NUNIT)
+         RETURN
+      END IF
+   END IF
 
-   IF (.NOT. ALLOCATED(CMNegPI)) ALLOCATE ( CMNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
-   IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for CMNegPI array.' )
+   IF (.NOT. ALLOCATED(CMNegPI)) THEN
+      ALLOCATE ( CMNegPI(P%AirFoil%NTables(NFOILID)) , STAT=Sttus )
+      IF ( Sttus /= 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' Error allocating memory for CMNegPI array.', ErrStat, ErrMess, 'READFL' )
+         close(NUNIT)
+         RETURN
+      END IF
+   END IF
 
 
  ! Read in airfoil data table identification array
@@ -1423,6 +1571,10 @@ REAL(ReKi)                 :: SPHI
 REAL(ReKi)                 :: Vinduced
 REAL(ReKi)                 :: VN
 
+   INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+
+
 
    ! initialize TanInd variables
 O%Element%A (J,IBLADE) = 0.0
@@ -1450,15 +1602,21 @@ ELSE
 
       IF ( P%DYNINFL ) THEN
  !       USE dynamic inflow model to find A
-         CALL VINDINF( P, O, ErrStat, ErrMess, &
+         CALL VINDINF( P, O, ErrStatLcl, ErrMessLcl, &
                        J, IBlade, RLOCAL, VNW, VNB, VT, PSI ) !possibly changes VT, A, and AP
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            IF (ErrStat >= AbortErrLev) RETURN
       ELSE
  !       USE momentum balance to find A
-         CALL VIND( P, O, ErrStat, ErrMess, &
+         CALL VIND( P, O, ErrStatLcl, ErrMessLcl, &
                     J, IBlade, RLOCAL, VNROTOR2, VNW, VNB, VT )  !changes VT, A, and AP
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            IF (ErrStat >= AbortErrLev) RETURN
  !       Apply skewed-wake correction, if applicable
-         IF( O%SKEW ) CALL VNMOD( P, O, ErrStat, ErrMess,&
+         IF( O%SKEW ) CALL VNMOD( P, O, ErrStatLcl, ErrMessLcl,&
                                   J, IBlade, RLOCAL, PSI ) !changes A
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            IF (ErrStat >= AbortErrLev) RETURN
       ENDIF
    ELSE
  !    Ignore the wake calculation entirely
@@ -1494,20 +1652,26 @@ IF (P%Reynolds) O%AirFoil%MulTabLoc = ReNum
 IF ( P%DSTALL ) THEN
  ! USE Beddoes dynamic stall model
    IF (Initial) THEN ! USE static data on first pass
-      CALL BEDINIT ( P, O, ErrStat, ErrMess, &
+      CALL BEDINIT ( P, O, ErrStatLcl, ErrMessLcl, &
                      J, IBlade, O%Element%ALPHA(J,IBlade))
-      CALL CLCD( P, O, ErrStat, ErrMess, &
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            IF (ErrStat >= AbortErrLev) RETURN
+      
+      CALL CLCD( P, O, ErrStatLcl, ErrMessLcl, &
                  O%Element%ALPHA(J,IBlade), CLA, CDA, CMA, P%AirFoil%NFOIL(J) )
-      IF (ErrStat >= AbortErrLev) RETURN
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            IF (ErrStat >= AbortErrLev) RETURN
    ELSE
-      CALL BeddoesModel( P,  O,  ErrStat, ErrMess, &
+      CALL BeddoesModel( P,  O,  ErrStatLcl, ErrMessLcl, &
                         O%Element%W2(J,IBlade), J, IBlade, O%Element%ALPHA(J,IBlade), CLA, CDA, CMA)
-      IF (ErrStat >= AbortErrLev) RETURN
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
+            IF (ErrStat >= AbortErrLev) RETURN
    ENDIF
 ELSE
  ! Don't USE dynamic stall model
-   CALL CLCD( P,  O,  ErrStat, ErrMess, &
+   CALL CLCD( P,  O,  ErrStatLcl, ErrMessLcl, &
               O%Element%ALPHA(J,IBlade), CLA, CDA, CMA, P%AirFoil%NFOIL(J) )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'ELEMFRC' )
       IF (ErrStat >= AbortErrLev) RETURN
 ENDIF
 
@@ -1598,6 +1762,8 @@ END SUBROUTINE ELEMFRC
    INTEGER                       :: ICOUNT
    INTEGER                       :: MAXICOUNT
    INTEGER                       :: Sttus
+   INTEGER(IntKi)                :: ErrStatLcl
+   character(len(ErrMess))       :: ErrMessLcl
 
    ErrStat = ErrID_None
    ErrMess = ""
@@ -1653,7 +1819,7 @@ IF ( ABS( VNB ) > 100. ) THEN
    O%Element%A( J, IBLADE ) = 0.0
    CALL VINDERR( P, O, ErrStat, ErrMess, &
                  VNW, VNB, 'VNB', J, IBLADE )
-   RETURN
+   RETURN   
 ELSEIF ( ABS( VT ) > 400. ) THEN
    O%Element%A( J, IBLADE ) = 0.0
    CALL VINDERR( P, O, ErrStat, ErrMess, &
@@ -1683,9 +1849,10 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
 
    A2 = AI
 
-   CALL AXIND ( P, O, ErrStat, ErrMess,       &
+   CALL AXIND ( P, O, ErrStatLcl, ErrMessLcl,       &
                 VNW, VNB, VNA, VTA, VT, VT2_Inv, VNROTOR2, A2, A2P, &
                 J, SOLFACT, ALPHA, PHI, CLA, CDA, CMA, RLOCAL )
+      CALL SetErrStat(ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,'VIND' )
       IF (ErrStat >= AbortErrLev) RETURN
 
    DAI = A2  - AI
@@ -1699,6 +1866,8 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
                      ' iterations. AeroDyn will continue using induction factors from previous successful time step.' )
       A2  = O%Element%OLD_A_NS (J,IBLADE)
       A2P = O%Element%OLD_AP_NS(J,IBLADE)
+      !CALL SetErrStat(ErrID_Warn,ErrMessLcl,ErrStat,ErrMess,'VIND' )
+
       EXIT
    ENDIF
 
@@ -2248,9 +2417,6 @@ SUBROUTINE GetTwrSectProp ( P, O, ErrStat, ErrMess,      &
 !   of the element currently being evaluated for tower influence.
 !====================================================================================================
 
-!   USE                           Rotor,      ONLY: HH
-!   USE                           TwrProps
-
    IMPLICIT                      NONE
       ! Passed Variables:
    TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
@@ -2396,35 +2562,23 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
    !TYPE(IfW_ConstraintStateType)    :: IfW_ConstrStates
    !TYPE(IfW_ContinuousStateType)    :: IfW_ContStates
    !TYPE(IfW_DiscreteStateType)      :: IfW_DiscStates
-   TYPE(IfW_InputType)              :: IfW_Inputs  ! Position in IfW format.
    !TYPE(IfW_OtherStateType)         :: IfW_OtherStates
    !TYPE(IfW_OutputType)             :: IfW_Outputs
    !TYPE(IfW_ParameterType)          :: IfW_Params  ! IfW parameters.
    !
 
-      ! Allocate the Position array in IfW_Inputs.
-
-   CALL AllocAry( IfW_Inputs%Position, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
-      IF (ErrStat >= AbortErrLev)  RETURN
-
 
       ! Get the undisturbed velocity
 !mlb: Although IfW is capable of getting velocities for a lot of points, we will do them one at a time in this temporary release.
 
-   IfW_Inputs%Position(:,1) = InputPosition(:)
+   o%IfW_Inputs%Position(:,1) = InputPosition(:)
 
 !   InflowVel = WindInf_GetVelocity( REAL(Time, ReKi), InputPosition, Sttus)
-   CALL IfW_CalcOutput( Time, IfW_Inputs, p%IfW_Params, &
+   CALL IfW_CalcOutput( Time, o%IfW_Inputs, p%IfW_Params, &
                               x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, O%IfW_OtherStates, &   ! States -- none in this case
                               y%IfW_Outputs, TmpErrStat, TmpErrMsg )
-
-   IF (TmpErrStat /= ErrID_None) THEN
-      IF (ErrStat/=ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-      ErrMsg = TRIM(ErrMsg)//TmpErrMsg
-      ErrStat = MAX(TmpErrStat,ErrStat)
-      CALL ProgWarn( ' Error getting velocity in AeroDyn/AD_WindVelocityWithDisturbance().' )
-      IF (ErrStat >= AbortErrLev) RETURN
-   END IF
+   call SetErrStat(TmpErrStat,TmpErrMsg,ErrStat, ErrMsg,'AD_WindVelocityWithDisturbance')
+   IF (ErrStat >= AbortErrLev) RETURN
 
    AD_WindVelocityWithDisturbance(:) = y%IfW_Outputs%Velocity(:,1)
 
@@ -2513,10 +2667,11 @@ SUBROUTINE DiskVel ( Time, P, O, ErrStat, ErrMess )
    REAL(ReKi)                 :: AvgInfVel(3)
    REAL(ReKi)                 :: Position(3)
 
-Position = (/0.0, 0.0, P%Rotor%HH /)
+Position = (/0.0_ReKi, 0.0_ReKi, P%Rotor%HH /)
 !AvgInfVel(:) = WindInf_ADhack_diskVel( REAL(Time, ReKi), Position, ErrStat )
 
 AvgInfVel(:) = WindInf_ADhack_diskVel( Time,p%IfW_Params, O%IfW_OtherStates,ErrStat, ErrMess )
+IF (ErrStat >= AbortErrLev) RETURN
 
 VXY   = AvgInfVel(1) * O%Rotor%CYaw - AvgInfVel(2) * O%Rotor%SYaw
 
@@ -3107,6 +3262,10 @@ END SUBROUTINE BEDWRT
    INTEGER                    :: N
    INTEGER                    :: NP1
 
+   INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   
+   
  ! Check to see if element has multiple airfoil tables, then interpolate values
  !  of constants based on the current location.
 
@@ -3164,14 +3323,18 @@ ENDIF
 O%Beddoes%AN   = ALPHA
 VREL = SQRT( W2 )
 
-CALL ATTACH( P, O, ErrStat, ErrMess, &
-             VREL, J, IBlade, CNA1, AOL1, AE )
+CALL ATTACH( P, O, ErrStatLcl, ErrMessLcl, VREL, J, IBlade, CNA1, AOL1, AE )
+   CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'BeddoesModel' )
+   IF (ErrStat >= AbortErrLev) RETURN
 
-CALL SEPAR(  P, O, ErrStat, ErrMess, &
-             P%AirFoil%NLIFT(I), J, IBlade, I, CNA1, AOL1, CNS1, CNSL1 )
 
-CALL VORTEX( P, O, ErrStat, ErrMess, &
-             J, IBlade, AE )
+CALL SEPAR(  P, O, ErrStatLcl, ErrMessLcl, P%AirFoil%NLIFT(I), J, IBlade, I, CNA1, AOL1, CNS1, CNSL1 )
+   CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'BeddoesModel' )
+   IF (ErrStat >= AbortErrLev) RETURN
+
+CALL VORTEX( P, O, ErrStatLcl, ErrMessLcl, J, IBlade, AE )
+   CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'BeddoesModel' )
+   IF (ErrStat >= AbortErrLev) RETURN
 
 CA  = COS( O%Beddoes%AN )
 SA  = SIN( O%Beddoes%AN )
@@ -3240,15 +3403,17 @@ XM  = VREL / p%Beddoes%AS
 IF ( .NOT. O%SuperSonic .AND. XM >= 1.0 ) THEN
    XM = 0.7
    O%SuperSonic = .TRUE.
-
-   CALL ProgWarn( ' Blade #'//TRIM(Int2LStr(IBLADE))//' element #'//TRIM(Int2LStr(J))//' is supersonic! '//&
-                  ' Other elements are likely supersonic as well. Supersonic mach nos. will be set to '//&
-                  TRIM(Num2LStr(XM))//' to attempt continuation.' )
+   ErrMess = 'ATTACH: Blade #'//TRIM(Int2LStr(IBLADE))//' element #'//TRIM(Int2LStr(J))//' is supersonic! '//&
+             ' Other elements are likely supersonic as well. Supersonic mach nos. will be set to '//&
+             TRIM(Num2LStr(XM))//' to attempt continuation.' 
+   ErrStat = ErrID_Warn
 ELSEIF (O%SuperSonic .AND. XM < 1.0) THEN
    O%SuperSonic = .FALSE.
-   CALL ProgWarn( ' Supersonic condition has subsided with Blade #'// TRIM(Int2LStr(IBLADE))// &
-                  ' element #'//TRIM(Int2LStr(J))//'.')
+   ErrMess = 'ATTACH: Supersonic condition has subsided with Blade #'// TRIM(Int2LStr(IBLADE))// &
+                  ' element #'//TRIM(Int2LStr(J))//'.'
+   ErrStat = ErrID_Info
 ENDIF
+IF (ErrStat >= AbortErrLev) RETURN
 
 B2  = 1.0 - XM * XM
 O%Beddoes%DS  = 2. * o%DT * VREL/p%Blade%C(J)
@@ -3261,13 +3426,13 @@ DA  = O%Beddoes%ANE(J,IBLADE) - O%Beddoes%ANE1(J,IBLADE)
 O%Beddoes%ADOT(J,IBLADE) = DA / o%DT
 
 PRP = O%Beddoes%ADOT(J,IBLADE) * p%Blade%C(J) / VREL
-PRP = SAT( PRP, 0.03, 0.1 )
+PRP = SAT( PRP, 0.03_ReKi, 0.1_ReKi )
 O%Beddoes%ADOT(J,IBLADE) = PRP * VREL / p%Blade%C(J)
 
 O%Beddoes%DN(J,IBLADE) = O%Beddoes%OLDDN(J,IBLADE) * EXP(-X0) + &
                (O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%ADOT1(J,IBLADE)) * EXP(-.5*X0)
-CNI = 4. * CO * ( O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%DN(J,IBLADE) )
-O%Beddoes%CMI = -.25 * CNI
+CNI = 4._ReKi * CO * ( O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%DN(J,IBLADE) )
+O%Beddoes%CMI = -.25_ReKi * CNI
 
 O%Beddoes%QX(J,IBLADE) = (O%Beddoes%ADOT(J,IBLADE) - O%Beddoes%ADOT1(J,IBLADE)) * P%Blade%C(J)/VREL/o%DT
 O%Beddoes%DQ(J,IBLADE) = O%Beddoes%OLDDQ(J,IBLADE)*EXP(-X0) + &
@@ -3375,8 +3540,9 @@ CALL MPI2PI ( O%Beddoes%AFE(J,IBLADE) )
 
 IF ( ( O%Beddoes%AFE(J,IBLADE) < O%AirFoil%AL(IFOIL,1) ) .OR.  &
      ( O%Beddoes%AFE(J,IBLADE) > O%AirFoil%AL(IFOIL,p%AirFoil%NLIFT(IFOIL) ) ) ) THEN
-   CALL ProgAbort( ' Angle of attack = '//Num2LStr(REAL( O%Beddoes%AFE(J,IBLADE)*R2D, ReKi ))// &
-                   ' is outside table.' )
+   ErrMess = 'SEPAR: Angle of attack = '//Num2LStr(REAL( O%Beddoes%AFE(J,IBLADE)*R2D, ReKi ))//' is outside table.'
+   ErrStat = ErrID_Fatal
+   RETURN
 ENDIF
 
 O%Beddoes%AFE(J,IBLADE) = MIN( MAX( O%Beddoes%AFE(J,IBLADE), O%AirFoil%AL(IFOIL,1) ), O%AirFoil%AL(IFOIL,NFT) )
@@ -3684,9 +3850,9 @@ NTAB = P%AirFoil%NLIFT(I)
 
 IF ( ( ALPHA < O%AirFoil%AL(I,1) ) .OR. ( ALPHA > O%AirFoil%AL(I,NTAB) ) )   THEN
 !bjj: This error message isn't necessarially accurate:
-   CALL ProgAbort( ' Angle of attack = '//TRIM(Num2LStr(ALPHA*R2D))// &
-                   ' deg is outside data table range. '// & !Blade #'//TRIM(Int2LStr(IBLADE))//&
-                   ' Airfoil '//TRIM(Int2LStr(I))//'.' )
+  ErrMess = ' Angle of attack = '//TRIM(Num2LStr(ALPHA*R2D))// &
+            ' deg is outside data table range. '// & !Blade #'//TRIM(Int2LStr(IBLADE))//&
+            ' Airfoil '//TRIM(Int2LStr(I))//'.' 
 !                   ' element '//TRIM(Int2LStr(J))//'.' )
 
    ErrStat = ErrID_Fatal
@@ -3818,11 +3984,19 @@ END FUNCTION SAT
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
+   INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   
+   ErrStat = ErrID_None
+   ErrMess = ""
+   
       IF ( P%DYNINFL ) THEN
 
 ! INITIALIZE DYNAMIC INFLOW PARAMETERS
         IF ( O%DYNINIT .AND. ( TIME > 0.0D0 ) ) THEN
-           CALL INFINIT( P, O, ErrStat, ErrMess )
+           CALL INFINIT( P, O, ErrStatLcl, ErrMessLcl )
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'Inflow' )
+            IF (ErrStat >= AbortErrLev) RETURN
            !WRITE(*,*) 'Activating dynamic inflow calculation'
            O%DynInflow%old_Alph = 0.0
            O%DynInflow%old_Beta = 0.0
@@ -3831,11 +4005,21 @@ END FUNCTION SAT
         ENDIF
 
  ! Update the dynamic inflow parameters
-         CALL INFUPDT(P, O, ErrStat, ErrMess)
-         CALL GetPhiLq(P, O, ErrStat, ErrMess)
+         CALL INFUPDT(P, O, ErrStatLcl, ErrMessLcl)
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'Inflow' )
+            IF (ErrStat >= AbortErrLev) RETURN
+            
+         CALL GetPhiLq(P, O, ErrStatLcl, ErrMessLcl)
+            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'Inflow' )
+            IF (ErrStat >= AbortErrLev) RETURN
+            
  ! Calculate the dynamic inflow paremeters for the new time step
-         IF( TIME > 1.0D0 ) CALL INFDIST(P, O, ErrStat, ErrMess)
-
+         IF( TIME > 1.0D0 ) THEN
+            CALL INFDIST(P, O, ErrStatLcl, ErrMessLcl)
+               CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'Inflow' )
+               IF (ErrStat >= AbortErrLev) RETURN
+         END IF
+         
       ENDIF   ! DYNINFL
 
 RETURN
@@ -3856,10 +4040,7 @@ END SUBROUTINE Inflow
       ! Passed Variables:
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   INTEGER, INTENT(OUT)                   :: ErrStat
-   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-   ! Passed Variables:
    REAL(ReKi),INTENT(IN)      :: DFN
    REAL(ReKi),INTENT(IN)      :: DFT
    REAL(ReKi),INTENT(IN)      :: psi
@@ -3867,6 +4048,8 @@ END SUBROUTINE Inflow
 
    INTEGER,   INTENT(IN)      :: J
    INTEGER,   INTENT(IN)      :: IBlade
+   INTEGER, INTENT(OUT)                   :: ErrStat
+   CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    ! Local Variables:
    REAL(ReKi)                 :: fElem
@@ -3875,6 +4058,10 @@ END SUBROUTINE Inflow
    REAL(ReKi)                 :: Rzero
    REAL(ReKi)                 :: WindPsi
 
+   INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   
+   
    INTEGER                    :: mode
 
    ErrStat = ErrID_None
@@ -3896,7 +4083,9 @@ CALL WindAzimuthZero (psi,O%Wind%VrotorY,O%Wind%VrotorZ,WindPsi)
 
 ! Save values rotor loads for USE in Newtime (to accumulate rotor loads)
 DO mode = 1, P%DynInflow%MAXINFLO
-   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )
+   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'GetRM' )
+      IF (ErrStat >= AbortErrLev) RETURN
 END DO ! mode
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -3907,8 +4096,14 @@ END DO ! mode
 !END DO ! mode
 ! Shawler's method
 DO mode = p%DynInflow%MaxInflo+1, maxInfl
-   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * COS( REAL(MRvector(mode)) * WindPsi )
-   O%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode )  * SIN( REAL(MRvector(mode)) * WindPsi )
+   O%DynInflow%RMC_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )  * COS( REAL(MRvector(mode)) * WindPsi )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'GetRM' )
+      IF (ErrStat >= AbortErrLev) RETURN
+   
+   O%DynInflow%RMS_SAVE(IBLADE, J, mode) = fElem * XPHI( Rzero, mode, ErrStatLcl, ErrMessLcl )  * SIN( REAL(MRvector(mode)) * WindPsi )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'GetRM' )
+      IF (ErrStat >= AbortErrLev) RETURN
+
 END DO ! mode
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -4108,8 +4303,17 @@ O%DynInflow%xkai = TAN( .5 * ATAN( SQRT( Vplane2 ) / O%DynInflow%totalInf ) )
 !CALL LMATRIX ( o,p,xKaiC, 1 )
 !CALL LMATRIX ( o,p,xKaiS, 2 )
  ! Shawler:
-CALL LMATRIX ( o,p, 1 )
-CALL LMATRIX ( o,p, 2 )
+CALL LMATRIX ( o,p, 1, ErrStat, ErrMess )
+   IF (ErrStat /= ErrID_None) THEN
+      ErrMess='infinit:'//TRIM(ErrMess)
+      RETURN
+   END IF
+CALL LMATRIX ( o,p, 2, ErrStat, ErrMess )
+   IF (ErrStat /= ErrID_None) THEN
+      ErrMess='infinit:'//TRIM(ErrMess)
+      RETURN
+   END IF
+   
 ! CALL LMATRIX ( xkai )
  ! Here we need [L_cos] & [L_sin], not [L_***}^-1.
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -4160,8 +4364,16 @@ END DO !i
 
  ! Invert [L_cos] & [L_sin] matrices in case the XKAI is constant
  !  and the same [L]'s are used later.
-CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 1 )
-CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2 )
+CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 1, ErrStat, ErrMess )
+   IF (ErrStat /= ErrID_None) THEN
+      ErrMess='infinit:'//TRIM(ErrMess)
+      RETURN
+   END IF
+CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2, ErrStat, ErrMess )
+   IF (ErrStat /= ErrID_None) THEN
+      ErrMess='infinit:'//TRIM(ErrMess)
+      RETURN
+   END IF
 
 RETURN
 END SUBROUTINE infinit
@@ -4294,11 +4506,6 @@ END SUBROUTINE DynDebug
  !  INFDIST calculates the inflow (induced flow) distribution
  !  parameters using Generalized Dynamic Wake Theory.
  ! **********************************************************************
-!USE                           AeroTime
-!USE                           Blade
-!USE                           DynInflow
-!USE                           Rotor
-!USE                           Wind
    IMPLICIT                      NONE
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
@@ -4394,10 +4601,26 @@ ENDIF
 !ENDIF
 ! Shawler:
 !IF ( xKai /= oldKai ) THEN
-   CALL LMATRIX ( o,p, 1 )
-   CALL LMATRIX ( o,p, 2 )
-   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 1 )
-   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2 )
+   CALL LMATRIX ( o,p, 1, ErrStat, ErrMess )
+      IF (ErrStat /= ErrID_None) THEN
+         ErrMess='infdist:'//TRIM(ErrMess)
+         RETURN
+      END IF   
+   CALL LMATRIX ( o,p, 2, ErrStat, ErrMess )
+      IF (ErrStat /= ErrID_None) THEN
+         ErrMess='infdist:'//TRIM(ErrMess)
+         RETURN
+      END IF      
+   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 1, ErrStat, ErrMess )
+      IF (ErrStat /= ErrID_None) THEN
+         ErrMess='infdist:'//TRIM(ErrMess)
+         RETURN
+      END IF   
+   CALL MATINV  ( O%DynInflow%xLcos, O%DynInflow%xLsin, maxInfl, P%DynInflow%MaxInflo, 2, ErrStat, ErrMess )
+      IF (ErrStat /= ErrID_None) THEN
+         ErrMess='infdist:'//TRIM(ErrMess)
+         RETURN
+      END IF   
 !ENDIF
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -4530,6 +4753,10 @@ END SUBROUTINE infdist
    REAL(ReKi)                 :: Windpsi
 
    INTEGER                    :: mode
+   
+   INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
+   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+
 
 ErrStat = ErrID_None
 ErrMess = ""
@@ -4554,7 +4781,10 @@ O%Element%A(iRadius,iBlade) =  0.
 
 DO mode = 1, p%DynInflow%MaxInflo
    O%Element%A(iRadius,iBlade) = O%Element%A(iRadius,iBlade)  &
-                     + xphi(Rzero,mode) * O%DynInflow%xAlpha(mode)
+                     + xphi(Rzero,mode,ErrStatLcl, ErrMessLcl) * O%DynInflow%xAlpha(mode)
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'vindinf' )
+      IF (ErrStat >= AbortErrLev) RETURN
+   
 !  &  + phis(Rzero, MRvector(mode), NJvector(mode) )* xAlpha(mode)
 END DO !mode
 
@@ -4568,9 +4798,12 @@ END DO !mode
 !END DO !mode
 ! Shawler:
 DO mode = p%DynInflow%MaxInflo+1, maxInfl
-   O%Element%A(iRadius,iBlade) = O%Element%A(iRadius,iBlade) + xphi(Rzero,mode) *      &
+   O%Element%A(iRadius,iBlade) = O%Element%A(iRadius,iBlade) + xphi(Rzero,mode,ErrStatLcl, ErrMessLcl) *      &
             ( O%DynInflow%xAlpha(mode) * COS( REAL(MRvector(MODE)) * Windpsi )  &
             + O%DynInflow%xBeta (mode) * SIN( REAL(MRvector(MODE)) * Windpsi ) )
+      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'vindinf' )
+      IF (ErrStat >= AbortErrLev) RETURN
+   
 END DO !mode
  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -4643,7 +4876,7 @@ RETURN
 END SUBROUTINE ABPRECOR
 
  ! ***********************************************************************
-   SUBROUTINE LMATRIX ( o, p, matrixMode )
+   SUBROUTINE LMATRIX ( o, p, matrixMode,ErrStat, ErrMess)
  !  LMATRIX calculates the [L_***] matrix using Gamma matrix and xkai=X.
  !   matrixMode = 1 : Calculate [L_cos] matrix
  !   matrixMode = 2 : Calculate [L_sin] matrix
@@ -4656,6 +4889,10 @@ IMPLICIT                      NONE
 TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
 TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
 INTEGER   ,INTENT(IN)      :: matrixMode
+
+INTEGER(IntKi),   INTENT(OUT)  :: ErrStat      ! Error status of the operation
+CHARACTER(*),     INTENT(OUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
+
 
 REAL(ReKi)      :: X 
 
@@ -4673,7 +4910,9 @@ X = O%DynInflow%xKai
  ! Check the value of X
 IF ( ( X < -1.) .OR. ( X > 1.) ) THEN
 !   IF ( ( X < 0.) .OR. ( X > 1.) ) THEN
-   CALL ProgAbort ( 'Value of X = '//TRIM(Num2LStr(X))//' must be between -1 and 1.')
+   ErrStat = ErrID_Fatal
+   ErrMess = 'LMATRIX: Value of X = '//TRIM(Num2LStr(X))//' must be between -1 and 1.'
+   RETURN
 ENDIF
 
 SELECT CASE ( matrixMode )
@@ -4718,7 +4957,7 @@ RETURN
 END SUBROUTINE LMATRIX
 
  ! ***********************************************************************
-   SUBROUTINE MATINV( A0, A1, N, N0, invMode )
+   SUBROUTINE MATINV( A0, A1, N, N0, invMode,ErrStat,ErrMsg )
  !  Inverts the [L_cos] and [L_sin] matrices.
  !   Subroutine GAUSSJ (modified) from "Numerical Recipe" is needed.
  !   invMode = 1 : Invert [L_cos] matrix
@@ -4737,6 +4976,10 @@ INTEGER   ,INTENT(IN)      :: N0
 REAL(ReKi),INTENT(INOUT)   :: A0   (      N   ,      N    )
 REAL(ReKi),INTENT(INOUT)   :: A1   ( N0+1:N   , N0+1:N    )
 
+INTEGER(IntKi),   INTENT(OUT)  :: ErrStat      ! Error status of the operation
+CHARACTER(*),     INTENT(OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
+
+
    ! Local Variables:
 
 REAL(ReKi)                 :: DUMMY(      N-N0,      N-N0 )
@@ -4752,7 +4995,11 @@ INTEGER                    :: J
 SELECT CASE ( invMode )
 
    CASE (1)
-    CALL GAUSSJ(A0,N)
+    CALL GAUSSJ(A0,N,ErrStat,ErrMsg)
+    IF (ErrStat /= ErrID_None) THEN
+      ErrMsg = 'MATINV:'//TRIM(ErrMsg)
+      RETURN
+    END IF
 
  ! [L_sin] matrix needs a dummy array, because the index goes
  !  from MaxInflo(=N0) to maxInfl(=N),
@@ -4766,7 +5013,11 @@ SELECT CASE ( invMode )
     END DO !I
 
  ! Invert the [A1]=[L_sin] matrix by Gauss-Jordan Method.
-    CALL GAUSSJ(DUMMY,N-N0)
+    CALL GAUSSJ(DUMMY,N-N0,ErrStat,ErrMsg)
+    IF (ErrStat /= ErrID_None) THEN
+      ErrMsg = 'MATINV:'//TRIM(ErrMsg)
+      RETURN
+    END IF
 
  ! Put the dummy back into [A1]=[L_sin].
     DO I=1,N-N0
@@ -4777,6 +5028,8 @@ SELECT CASE ( invMode )
 
    CASE DEFAULT
    CALL ProgAbort( 'Value of invMode = '//TRIM(Int2LStr(invMode))//' must be 1 or 2.')
+    IF (ErrStat >= AbortErrLev) RETURN    
+   
 
 END SELECT
 
@@ -4786,7 +5039,7 @@ RETURN
 END SUBROUTINE MATINV
 
  ! ***********************************************************************
-   SUBROUTINE gaussj(a,n)
+   SUBROUTINE gaussj(a,n, ErrStat, ErrMsg)
  !  Invert a matrix by Gauss-Jordan Method. The original source code
  !   from "Numerical Recipe" was slightly modified.
  ! ***********************************************************************
@@ -4796,9 +5049,12 @@ IMPLICIT                      NONE
 
 
    ! Passed Variables:
-INTEGER   ,INTENT(IN)      :: n
+INTEGER   ,    INTENT(IN)      :: n
+REAL(ReKi),    INTENT(INOUT)   :: a(n,n)
 
-REAL(ReKi),INTENT(INOUT)   :: a(n,n)
+INTEGER(IntKi),   INTENT(OUT)  :: ErrStat      ! Error status of the operation
+CHARACTER(*),     INTENT(OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
+
 
    ! Local Variables:
 
@@ -4820,6 +5076,8 @@ INTEGER                    :: l
 INTEGER                    :: ll
 
 
+ErrStat=ErrID_None
+ErrMsg=""
 
 DO j=1,n
    ipiv(j)=0
@@ -4837,7 +5095,9 @@ DO i=1,n
                 ENDIF
 
             ELSE IF (ipiv(k) > 1) THEN
-               CALL ProgAbort( 'Singular matrix encountered.' )
+               ErrStat = ErrID_Fatal
+               ErrMsg  = "gaussj: Singular matrix encountered." 
+               RETURN
             ENDIF
          END DO !k
       ENDIF
@@ -4853,7 +5113,9 @@ DO i=1,n
    indxr(i)=irow
    indxc(i)=icol
    IF (a(icol,icol) == 0.) THEN
-      CALL ProgAbort( 'Singular matrix encountered.' )
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "gaussj: Singular matrix encountered." 
+      RETURN
    ENDIF
    pivinv=1./a(icol,icol)
    a(icol,icol)=1.
@@ -4910,7 +5172,7 @@ IF ( MOD(R+M,2) == 0 ) THEN
           / SQRT( HFUNC(M,N) * HFUNC(R,J) )   &
           / REAL( (J+N) * (J+N+2) * ((J-N)*(J-N)-1) )
 
-ELSE IF ( ABS(J-N) == 1 ) THEN  !bjj: why don't we use the pi() variable?
+ELSE IF ( ABS(J-N) == 1 ) THEN  !bjj: why don't we use the pi() variable? or PibyTwo
    FGAMMA = 3.14159265 * SIGN(1., REAL(R-M) ) * .5 &
           / SQRT( HFUNC(M,N) * HFUNC(R,J) )        &
           / SQRT( REAL( (2*N+1) * (2*J+1) ) )
@@ -5010,7 +5272,7 @@ RETURN
 END FUNCTION IDUBFACT
 
  ! ***********************************************************************
-   FUNCTION xphi( Rzero, mode )
+   FUNCTION xphi( Rzero, mode,ErrStat, ErrMsg )
  !  Set up the PHI coefficients. They are the results from Mathematica.
  !  phi(1)  = sqrt(   3.)                    ! m=0, n=1
  !  phi(2)  = 2*sqrt(7) (1.5 - 3.75 Rzero**2 ) / 3.! m=0, n=3
@@ -5029,14 +5291,23 @@ REAL(ReKi),INTENT(IN)      :: Rzero
 REAL(ReKi)                 :: xphi
 
 INTEGER   ,INTENT(IN)      :: mode
+INTEGER(IntKi),   INTENT(OUT)  :: ErrStat      ! Error status of the operation
+CHARACTER(*),     INTENT(OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
 
 
 
 
 IF ( Rzero < 0. ) THEN
-   CALL ProgAbort( 'Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be larger than 0 in xphi().')
+   ErrStat = ErrID_Fatal
+   ErrMsg  = 'Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be larger than 0 in xphi().'
+   RETURN
 ELSE IF ( Rzero > 1. ) THEN
-   CALL ProgAbort( 'Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be smaller than 1 in xphi().')
+   ErrStat = ErrID_Fatal
+   ErrMsg  = 'Value of Rzero = '//TRIM(Num2LStr(Rzero))//' must be smaller than 1 in xphi().'
+   RETURN
+ELSE
+   ErrStat = ErrID_None
+   ErrMsg  = ''   
 ENDIF
 
 SELECT CASE ( mode )
@@ -5191,10 +5462,11 @@ SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
    DRSum            = DRNodesNew(1) + HubRadius
 
    IF ( DRNodesNew(1) <= EPS )  THEN                              ! Check to see if RElm(1) > HubRad; if not, ProgAbort program
-      ErrMess = ' RElm(1) must be larger than the hub radius (HubRadius = RElm(1) - 0.5*DR(1)). '
+      ErrMess = 'CheckRComp: RElm(1) must be larger than the hub radius (HubRadius = RElm(1) - 0.5*DR(1)). '
       ErrStat = ErrID_Fatal
       RETURN
    ELSEIF ( ABS( DRNodesNew(1) - P%Blade%DR(1) ) > 0.001 )  THEN     ! Check to see if the calculated DRNodes(1) is close to the inputted DRNodes(1); if not, set flag--this will cause the program to ProgAbort later.
+      !ErrMess = ' this error message will be written at the end of the routine '
       ErrStat = ErrID_Fatal
    ENDIF
 
@@ -5205,10 +5477,11 @@ SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
 
 
       IF ( DRNodesNew(I) <= EPS )  THEN                           ! Check to see if it is possible to have compatible DR(:) with the input RElm(:); if not, abort program
-         ErrMess = 'RElm('//TRIM( Int2LStr(I) )//') produces ill-conditioned DR(:)' 
+         ErrMess = 'CheckRComp: RElm('//TRIM( Int2LStr(I) )//') produces ill-conditioned DR(:)' 
          ErrStat = ErrID_Fatal
          RETURN
       ELSEIF ( ABS( DRNodesNew(I) - P%Blade%DR(I) ) > 0.001 )  THEN  ! Check to see if the calculated DRNodes(I) is close to the inputted DRNodes(I); if not, set flag--this will cause the program to Abort later.
+         !ErrMess = ' this error message will be written at the end of the routine '
          ErrStat = ErrID_Fatal
       ENDIF
 
@@ -5231,13 +5504,14 @@ SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
          CALL WrScr( DRChange )
       ENDDO !I
 
+      ErrMess = 'CheckRComp: '//TRIM(ErrMess)
       RETURN
 
    ELSEIF ( ABS( DRSum - TipRadius ) > 0.001 )  THEN
 
          ! Abort program since SUM( DRNodes(:) ) /= ( TipRadius - HubRadius)
 
-      CALL WrScr(' TipRadius must be equal to HubRadius + SUM( P%Blade%DR(:) ). ')
+      ErrMess = 'CheckRComp: TipRadius must be equal to HubRadius + SUM( P%Blade%DR(:) ).'
       ErrStat = ErrID_Fatal
 
       RETURN
@@ -5248,5 +5522,5 @@ SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
    RETURN
 END SUBROUTINE CheckRComp
 
-
+                             
 END MODULE AeroSubs
