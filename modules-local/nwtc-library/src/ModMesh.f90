@@ -1592,6 +1592,8 @@ CONTAINS
             END DO
          END DO
       END DO
+      
+      ! maybe we should check that the RefOrientation is a DCM? (or at least non-zero?)
 
       IF ( .NOT. ALL(NodeInElement) ) THEN
          ErrStat = ErrID_Fatal

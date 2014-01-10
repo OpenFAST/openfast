@@ -7134,7 +7134,7 @@ SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
    IF ( ErrStatLcl /= ErrID_None ) THEN
    
       IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//NewLine
-      ErrMess = TRIM(RoutineName)//': '//TRIM(ErrMessLcl)         
+      ErrMess = TRIM(RoutineName)//':'//TRIM(ErrMessLcl)         
       ErrStat = MAX(ErrStat,ErrStatLcl)
       
    END IF
