@@ -184,9 +184,11 @@ REAL(DbKi)                            :: NextJacCalcTime                        
 
 REAL(ReKi)                            :: PrevClockTime                           ! Clock time at start of simulation in seconds
 REAL                                  :: UsrTime1                                ! User CPU time for simulation initialization
+REAL                                  :: UsrTime2                                ! User CPU time for simulation (without intialization)
 
 INTEGER(IntKi)                        :: J                                       ! generic loop counter
-INTEGER                               :: StrtTime (8)                            ! Start time of simulation
+INTEGER                               :: StrtTime (8)                            ! Start time of simulation (including intialization)
+INTEGER                               :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
 INTEGER(IntKi)                        :: n_TMax_m1                               ! The time step of TMax - dt (the end time of the simulation)
 INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter 
 INTEGER(IntKi)                        :: j_pc                                    ! predictor-corrector loop counter 
@@ -195,14 +197,9 @@ INTEGER(IntKi)                        :: ErrStat                                
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
 
 
-INTEGER(IntKi)                 :: HD_DebugUn                                ! Debug file unit for writing out HydroDyn Inputs/Outputs
-
    !...............................................................................................................................
    ! initialization
    !...............................................................................................................................
-
-   HD_DebugUn = -1
-
 
    y_FAST%UnSum = -1                                                    ! set the summary file unit to -1 to indicate it's not open
    y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
@@ -332,16 +329,7 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
 
       IF ( .NOT. EqualRealNos( dt_global, p_FAST%DT ) ) &
         CALL CheckError(ErrID_Fatal, "The value of DT in HydroDyn must be the same as the value of DT in FAST.")
-     
-         
-   !-----------------------------------------------------------------------------------------------------------------------------
-   !  For debug purposes, open an output file for writing the current timestep's inputs and outputs for HydroDyn
-   !
-   ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-   !
-   !   CALL HydroDyn_Open_Debug_Outputs( p_FAST%OutFileRoot, HD_DebugUn, ErrStat, ErrMsg )
-   !
-   !-----------------------------------------------------------------------------------------------------------------------------
+           
    END IF   ! CompHydro
 
    ! ........................
@@ -462,17 +450,19 @@ INTEGER(IntKi)                 :: HD_DebugUn                                ! De
    Step       = 0
    n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / dt_global ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
-      ! we initialize these because we might need them if Option 1 is called at the beginning of CalcOutputs_And_SolveForInputs:
-   ED_Output(1)%PlatformPtMesh%TranslationAcc = 0.0_ReKi
-   ED_Output(1)%PlatformPtMesh%RotationAcc    = 0.0_ReKi
+      ! we initialize these output mesh fiels because we might need them if Option 1 is called at the beginning of CalcOutputs_And_SolveForInputs:
+      ! (though these get initialized automatically in the mesh module)
+   !ED_Output(1)%PlatformPtMesh%TranslationAcc  = 0.0_ReKi
+   !ED_Output(1)%PlatformPtMesh%RotationAcc     = 0.0_ReKi
+   !ED_Output(1)%PlatformPtMesh%TranslationDisp = 0.0_ReKi
    
-   IF (y_SD%y2Mesh%committed) THEN
+   !IF (y_SD%y2Mesh%committed) THEN
       !y_SD%y2Mesh%TranslationAcc = 0.0_ReKi
       !y_SD%y2Mesh%RotationAcc    = 0.0_ReKi
-   END IF
+   !END IF
       
   
-   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, t_global, p_FAST%TMax )
+   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, p_FAST%TMax )
 
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
@@ -1090,19 +1080,19 @@ CONTAINS
             END IF
          
          DO K=1,NumBl         
-            CALL AllocMapping( ED_Output(1)%BladeLn2Mesh(K), AD_Input(1)%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping ED_L_2_AD_L_('//TRIM(Num2LStr(K))//'): '//NewLine//ErrMsg )
-            CALL AllocMapping( y_AD%OutputLoads(K), ED_Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping AD_L_2_ED_L_('//TRIM(Num2LStr(K))//'): '//NewLine//ErrMsg )         
+            CALL MeshMapCreate( ED_Output(1)%BladeLn2Mesh(K), AD_Input(1)%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_L_2_AD_L_('//TRIM(Num2LStr(K))//'): '//NewLine//ErrMsg )
+            CALL MeshMapCreate( y_AD%OutputLoads(K), ED_Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate AD_L_2_ED_L_('//TRIM(Num2LStr(K))//'): '//NewLine//ErrMsg )         
          END DO
          
          
          ! Tower mesh:
          IF ( AD_Input(1)%Twr_InputMarkers%Committed ) THEN
-            CALL AllocMapping( ED_Output(1)%TowerLn2Mesh, AD_Input(1)%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping ED_L_2_AD_L_T: '//NewLine//ErrMsg )
-            CALL AllocMapping( y_AD%Twr_OutputLoads, ED_Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from AllocMapping AD_L_2_ED_L_T: '//NewLine//ErrMsg )
+            CALL MeshMapCreate( ED_Output(1)%TowerLn2Mesh, AD_Input(1)%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_L_2_AD_L_T: '//NewLine//ErrMsg )
+            CALL MeshMapCreate( y_AD%Twr_OutputLoads, ED_Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate AD_L_2_ED_L_T: '//NewLine//ErrMsg )
          END IF
                   
       END IF
@@ -1120,29 +1110,29 @@ CONTAINS
             IF ( y_HD%WAMIT%Mesh%Committed  ) THEN
 
                   ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
-               CALL AllocMapping( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_W_P_2_ED_P: '//NewLine//ErrMsg )
-               CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_W_P: '//NewLine//ErrMsg )
+               CALL MeshMapCreate( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_W_P_2_ED_P: '//NewLine//ErrMsg )
+               CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_W_P: '//NewLine//ErrMsg )
 
             END IF            
             
             IF ( y_HD%Morison%LumpedMesh%Committed ) THEN
 
                      ! HydroDyn Morison point mesh which is associated with a WAMIT body to ElastoDyn point mesh
-                  CALL AllocMapping( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
-                     CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_ED_P: '//NewLine//ErrMsg )
-                  CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
-                     CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_P: '//NewLine//ErrMsg )
+                  CALL MeshMapCreate( y_HD%Morison%LumpedMesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_M_P_2_ED_P: '//NewLine//ErrMsg )
+                  CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%LumpedMesh,  MeshMapData%ED_P_2_HD_M_P, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_M_P: '//NewLine//ErrMsg )
 
             END IF               
                
             IF ( y_HD%Morison%DistribMesh%Committed ) THEN
                      ! HydroDyn Morison line mesh which is associated with a WAMIT body to ElastoDyn point mesh
-                  CALL AllocMapping( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
-                     CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_ED_P: '//NewLine//ErrMsg )
-                  CALL AllocMapping( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
-                     CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_HD_M_L: '//NewLine//ErrMsg )
+                  CALL MeshMapCreate( y_HD%Morison%DistribMesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_M_L_2_ED_P: '//NewLine//ErrMsg )
+                  CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Morison%DistribMesh,  MeshMapData%ED_P_2_HD_M_L, ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_M_L: '//NewLine//ErrMsg )
 
             END IF
 
@@ -1155,19 +1145,19 @@ CONTAINS
                ! HydroDyn Morison point mesh to SubDyn point mesh
             IF ( y_HD%Morison%LumpedMesh%Committed .AND. SD_Input(1)%LMesh%Committed ) THEN
             
-               CALL AllocMapping( y_HD%Morison%LumpedMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_P_2_SD_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_P_2_SD_P: '//NewLine//ErrMsg )              
-               CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_P: '//NewLine//ErrMsg )
+               CALL MeshMapCreate( y_HD%Morison%LumpedMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_P_2_SD_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_M_P_2_SD_P: '//NewLine//ErrMsg )              
+               CALL MeshMapCreate( y_SD%y2Mesh,  HD_Input(1)%Morison%LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_P_2_HD_M_P: '//NewLine//ErrMsg )
                               
             END IF
             
                ! HydroDyn Morison line mesh to SubDyn point mesh
             IF ( y_HD%Morison%DistribMesh%Committed .AND. SD_Input(1)%LMesh%Committed) THEN
-               CALL AllocMapping( y_HD%Morison%DistribMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping HD_M_L_2_SD_P: '//NewLine//ErrMsg )
-               CALL AllocMapping( y_SD%y2Mesh,  HD_Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat, ErrMsg )
-                  CALL CheckError( ErrStat, 'Message from AllocMapping SD_P_2_HD_M_L: '//NewLine//ErrMsg )
+               CALL MeshMapCreate( y_HD%Morison%DistribMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_M_L_2_SD_P: '//NewLine//ErrMsg )
+               CALL MeshMapCreate( y_SD%y2Mesh,  HD_Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_P_2_HD_M_L: '//NewLine//ErrMsg )
             END IF
 
          
@@ -1184,10 +1174,10 @@ CONTAINS
       IF ( p_FAST%CompMap ) THEN
       
             ! MAP point mesh to/from ElastoDyn point mesh
-         CALL AllocMapping( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping MAP_P_2_ED_P: '//NewLine//ErrMsg )
-         CALL AllocMapping( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_MAP_P: '//NewLine//ErrMsg )
+         CALL MeshMapCreate( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate MAP_P_2_ED_P: '//NewLine//ErrMsg )
+         CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, MAP_Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_MAP_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_MAP_P: '//NewLine//ErrMsg )
       
       END IF   ! MAP-ElastoDyn
    
@@ -1200,13 +1190,13 @@ CONTAINS
          END IF
       
       
-         ! NOTE: the AllocMapping routine returns fatal errors if either mesh is not committed
+         ! NOTE: the MeshMapCreate routine returns fatal errors if either mesh is not committed
       
             ! SubDyn transition piece point mesh to/from ElastoDyn point mesh
-         CALL AllocMapping( y_SD%Y1mesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping SD_TP_2_ED_P: '//NewLine//ErrMsg )
-         CALL AllocMapping( ED_Output(1)%PlatformPtMesh, SD_Input(1)%TPMesh,  MeshMapData%ED_P_2_SD_TP, ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from AllocMapping ED_P_2_SD_TP: '//NewLine//ErrMsg )      
+         CALL MeshMapCreate( y_SD%Y1mesh, ED_Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_TP_2_ED_P: '//NewLine//ErrMsg )
+         CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, SD_Input(1)%TPMesh,  MeshMapData%ED_P_2_SD_TP, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_SD_TP: '//NewLine//ErrMsg )      
    
       END IF ! SubDyn-ElastoDyn
       
@@ -1464,7 +1454,7 @@ CONTAINS
       !      
       !IF ( p_FAST%CompSub ) THEN
       !   
-      !   CALL SD_InputSolve( SD_Input(1), ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
+      !   CALL SD_InputSolve( SD_Input(1), y_SD, ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
       !      CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
       !                  
       !END IF          
@@ -1473,7 +1463,7 @@ CONTAINS
       ! note: HD_InputSolve, SD_InputSolve, and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
       ! note: u_ED_Without_SD_HD must have the same Position, RefOrientation, and Elements as ED_Input(1)%PlatformPtMesh [which we need to do differently if RemapFlag changes during simulation]
       
-      CALL ED_InputSolve( p_FAST, ED_Input(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), y_SD, SD_Input(1), &
+      CALL ED_InputSolve( p_FAST, ED_Input(1), ED_Output(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), y_SD, SD_Input(1), &
                              MeshMapData, u_ED_Without_SD_HD, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
 
@@ -1501,8 +1491,8 @@ CONTAINS
                                           , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
                                           , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
                CALL CheckError( ErrStat, ErrMsg  )
-            
-            
+                           
+               
          END IF      
          
       ELSEIF ( p_FAST%CompSub ) THEN
@@ -1682,17 +1672,7 @@ CONTAINS
                   
       
       ! HydroDyn
-      IF ( p_FAST%CompHydro ) THEN
-         
-   !-----------------------------------------------------------------------------------------------------------------------------
-   !  For debug purposes, close an output file for writing the current timestep's inputs and outputs for HydroDyn
-   !
-   ! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-
-        IF (HD_DebugUn > 0) CLOSE( HD_DebugUn )
-   !
-   !-----------------------------------------------------------------------------------------------------------------------------               
-         
+      IF ( p_FAST%CompHydro ) THEN                  
          CALL HydroDyn_DestroyInput( u_HD, ErrStat2, ErrMsg2 )
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
 
@@ -1798,7 +1778,7 @@ CONTAINS
       !  Write simulation times and stop
       !............................................................................................................................
 
-      CALL RunTimes( StrtTime, UsrTime1, t_global )
+      CALL RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global )
 
       CALL NormStop( )
 
@@ -1821,151 +1801,7 @@ CONTAINS
 
 
    END SUBROUTINE CheckError   
-   !...............................................................................................................................
-   
-!====================================================================================================
-SUBROUTINE HydroDyn_Open_Debug_Outputs( OutRootName, Un, ErrStat, ErrMsg )
-! This subroutine initializes the HD debug output file
-! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-!----------------------------------------------------------------------------------------------------
-
-
-
-      ! Passed variables
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
-   INTEGER,                       INTENT(   OUT ) :: Un                   ! File unit for this debug file
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-      ! Local variables
-   INTEGER                                        :: I                    ! Generic loop counter
-   INTEGER                                        :: J                    ! Generic loop counter
-   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-
-   CHARACTER(1)                                   :: Delim = TAB
-
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize local variables
-   !-------------------------------------------------------------------------------------------------
-   ErrStat = 0
-
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Open the output file, if necessary, and write the header
-   !-------------------------------------------------------------------------------------------------
-   Un = -1
-
-         ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'_HD_Debug.out'
-      CALL GetNewUnit( Un )
-
-      CALL OpenFOutFile ( Un, OutFileName, ErrStat, ErrMsg )
-      IF ( ErrStat /= 0 ) RETURN
-
-
-         ! Write the output file header
-
-     ! WRITE (p%UnOutFile,'(/,A/)', IOSTAT=ErrStat)  'These predictions were generated by '//TRIM(HydroDyn_ProgDesc%Name)//&
-     !                 ' on '//CurDate()//' at '//CurTime()//'.'
-
-         ! Write the names of the output parameters:
-      Frmt = '(A8)'
-      WRITE(Un,Frmt,ADVANCE='no')  TRIM( 'Time' )
-
-
-      Frmt = '(47(:,A,A10))'
-      WRITE( Un,Frmt, ADVANCE='no' )   Delim, 'PtfmSurge ', Delim, 'PtfmSway  ', Delim, 'PtfmHeave ', Delim, 'PtfmRoll  ', Delim, 'PtfmPitch ', Delim, 'PtfmYaw   '
-      WRITE( Un,Frmt, ADVANCE='no' )   Delim, 'PtfmVxi   ', Delim, 'PtfmVyi   ', Delim, 'PtfmVzi   ', Delim, 'PtfmVRoll ', Delim, 'PtfmVPitch', Delim, 'PtfmVYaw  '
-      WRITE( Un,Frmt, ADVANCE='no' )   Delim, 'WavesFxi  ', Delim, 'WavesFyi  ', Delim, 'WavesFzi  ', Delim, 'WavesMxi  ', Delim, 'WavesMyi  ', Delim, 'WavesMzi  '
-      WRITE( Un,Frmt, ADVANCE='no' )   Delim, 'HdrStcFxi ', Delim, 'HdrStcFyi ', Delim, 'HdrStcFzi ', Delim, 'HdrStcMxi ', Delim, 'HdrStcMyi ', Delim, 'HdrStcMzi '
-      WRITE( Un,Frmt, ADVANCE='no' )   Delim, 'RdtnFxi   ', Delim, 'RdtnFyi   ', Delim, 'RdtnFzi   ', Delim, 'RdtnMxi   ', Delim, 'RdtnMyi   ', Delim, 'RdtnMzi   '
-      WRITE( Un,Frmt, ADVANCE='no' )   Delim, 'PtfmDrgFxi', Delim, 'PtfmDrgFyi', Delim, 'PtfmDrgFzi', Delim, 'PtfmDrgMxi', Delim, 'PtfmDrgMyi', Delim, 'PtfmDrgMzi'
-      WRITE( Un,Frmt               )   Delim, 'PtfmAddFxi', Delim, 'PtfmAddFyi', Delim, 'PtfmAddFzi', Delim, 'PtfmAddMxi', Delim, 'PtfmAddMyi', Delim, 'PtfmAddMzi'
-
-
-
-
-         ! Write the units of the output parameters:
-
-
-      !Frmt = '(A8)'
-      !WRITE(Un,Frmt,ADVANCE='no')  TRIM( '(sec)' )
-      !
-      !
-      !Frmt = '(47(:,A,A10))'
-      !WRITE(Un,Frmt)   ( p%Delim, TRIM( InitOut%WAMIT%WriteOutputUnt(I)   ), I=1,p%WAMIT%NumOuts )
-
-
-
-
-   RETURN
-
-END SUBROUTINE HydroDyn_Open_Debug_Outputs
-
-
-!====================================================================================================
-! This subroutine writes to the HD debug output file
-! TODO:  All of these should be outputs in HD or FAST and the debug would not be necessary! GJH 7/12/2013
-!----------------------------------------------------------------------------------------------------
-SUBROUTINE Write_HD_Debug(Un, ZTime, u_HD, y_HD, u_ED, OtherSt_HD, MeshMapData, ErrStat, ErrMsg)
-   INTEGER,                       INTENT(IN   ) ::  Un
-   REAL(DbKi),                     INTENT(IN   ) :: ZTime                                      ! Current simulation time
-   TYPE(HydroDyn_InputType),       INTENT(IN   ) :: u_HD                            ! The inputs for the hydro dynamics module
-   TYPE(HydroDyn_OutputType),      INTENT(INOUT) :: y_HD                         ! The outputs of the hydro dynamics module
-   TYPE(ED_InputType),             INTENT(INOUT) :: u_ED                             ! The inputs of the structural dynamics module
-   TYPE(HydroDyn_OtherStateType),  INTENT(IN   ) :: OtherSt_HD                   ! Other State data type for hdro dynamics module
-   TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData              ! Data for mapping between modules
-   INTEGER,                        INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
-   CHARACTER(*),                   INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-   CHARACTER(200) :: Frmt
-   CHARACTER(1)   :: Delim = TAB
-   Real(ReKi)     :: rot(3) = 0.0
-   Real(ReKi)     :: F_Viscous(6)
-   INTEGER        :: I
-   TYPE(MeshType)               :: u_mapped    ! interpolated value of input
-
-   F_Viscous = 0.0
-   ! Compute the Viscous Drag
-   ! Need to recompute the transferred Morison element loads onto the platform reference point (this is not stored at the HydroDyn-level
-   CALL MeshCopy ( SrcMesh   = u_ED%PlatformPtMesh      &
-                     , DestMesh = u_mapped             &
-                     , CtrlCode = MESH_NEWCOPY         &
-                     , ErrStat  = ErrStat              &
-                     , ErrMess  = ErrMsg               )
-    ! Commenting this out in order to compare with HD v1.  TODO: put this back
-      ! This is viscous drag associate with the WAMIT body and/or filled/flooded forces of the WAMIT body
-
-   CALL Transfer_Point_to_Point( y_HD%Morison%LumpedMesh, u_mapped, MeshMapData%HD_M_P_2_ED_P, ErrStat, ErrMsg, u_HD%Morison%LumpedMesh )
-   ! TODO: I Think the signs are wrong on the moments after the mapping. Switch for now
-         u_mapped%Moment(1,1) = -u_mapped%Moment(1,1)
-         u_mapped%Moment(2,1) = -u_mapped%Moment(2,1)
-   F_Viscous(1:3)  = u_mapped%Force(:,1)
-   F_Viscous(4:6)  = u_mapped%Moment(:,1)
-
-   CALL Transfer_Line2_to_Point( y_HD%Morison%DistribMesh, u_mapped, MeshMapData%HD_M_L_2_ED_P, ErrStat, ErrMsg,u_HD%Morison%DistribMesh )
-   ! TODO: I Think the signs are wrong on the moments after the mapping. Switch for now
-         u_mapped%Moment(1,1) = -u_mapped%Moment(1,1)
-         u_mapped%Moment(2,1) = -u_mapped%Moment(2,1)
-   F_Viscous(1:3)  = F_Viscous(1:3) + u_mapped%Force(:,1)
-   F_Viscous(4:6)  = F_Viscous(4:6) + u_mapped%Moment(:,1)
-
-   CALL MeshDestroy ( u_mapped, ErrStat, ErrMsg           )
-
-   ! Write out this timestep's inputs and  indvidual output loads for debugging
-Frmt = '(F8.3,42(:,A,ES10.3E2))'
-
-WRITE(Un,Frmt)  ZTime, ( Delim, u_HD%WAMIT%Mesh%TranslationDisp(I,1), I=1,3), ( Delim, rot(I), I=1,3), ( Delim, u_HD%WAMIT%Mesh%TranslationVel(I,1), I=1,3), ( Delim, u_HD%WAMIT%Mesh%RotationVel(I,1), I=1,3), ( Delim, OtherSt_HD%WAMIT%F_Waves(I), I=1,6), ( Delim, OtherSt_HD%WAMIT%F_HS(I), I=1,6), ( Delim, OtherSt_HD%WAMIT%F_Rdtn(I), I=1,6), ( Delim, F_Viscous(I), I=1,6), ( Delim, OtherSt_HD%WAMIT%F_PtfmAdd(I), I=1,6)
-
-
-END SUBROUTINE Write_HD_Debug
-
-
-
-
+   !...............................................................................................................................  
 
 END PROGRAM FAST
 !=======================================================================
