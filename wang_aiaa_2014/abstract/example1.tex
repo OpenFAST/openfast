@@ -48,7 +48,7 @@ which can be found in Mayo et al.\cite{Mayo-etal:2004} as
 where $\rho = \frac{EI_2}{M_2}$. At this discretization level, BeamDyn results are virtually
 identical to those of the analytical solution.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.5\textwidth]{\directory E1Deform.eps}
 
@@ -59,7 +59,7 @@ FEs in BeamDyn.}
     \label{E1Deform}
 \end{figure}
 
-\begin{table}[tbp]
+\begin{table}[h]
 \centering \caption{Comparison of analytical and BeamDyn-calculated tip
 displacements $u_1$ and $u_3$ (in inches) of a cantilever beam subjected to a constant moment; the BeamDyn model was composed of two 5$^{th}$-order LSFEs.}
 \label{E1u} 
@@ -88,11 +88,11 @@ parameters are not continuous between elements due to the rescaling
 operation, the relative rotations are continuous in a single element as
 described in the previous section, which can be observed in
 Figure~\ref{E1Rot:Rel}.  
-\begin{figure}
+\begin{figure}[h]
     \centering
     \begin{tabular}{c}
-    \subfloat[Rotation parameter $p_2$ and rotation angle $\phi_2$]{\label{E1Rot:Rot}\includegraphics[width=3.0in]{\directory E1Rot.eps}} \qquad 
-    \subfloat[Relative rotation $r_2$]{\label{E1Rot:Rel}\includegraphics[width=3.0in]{\directory E1RelRot.eps}} 
+    \subfloat[Rotation parameter $p_2$ and rotation angle $\phi_2$]{\label{E1Rot:Rot}\includegraphics[width=3.0in]{\directory E1Rot_New.eps}} \qquad 
+    \subfloat[Relative rotation $r_2$]{\label{E1Rot:Rel}\includegraphics[width=3.0in]{\directory E1RelRot_New.eps}} 
     \end{tabular}
     \caption{(a) Wiener-Milenkovi\'c rotation parameters and rotation angles along the beam axis
 $x_1$ as calculated by BeamDyn for two tip moments; (b) relative rotations
