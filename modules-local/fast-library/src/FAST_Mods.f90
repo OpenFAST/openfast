@@ -28,19 +28,22 @@ MODULE FAST_Types
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.05.00a-bjj', '16-Jan-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.05.00b-bjj', '22-Jan-2014' ) ! The version number of this module
    
    
-   INTEGER(IntKi), PARAMETER :: Module_IfW  = 1
-   INTEGER(IntKi), PARAMETER :: Module_ED   = 2
-   INTEGER(IntKi), PARAMETER :: Module_AD   = 3 
-   INTEGER(IntKi), PARAMETER :: Module_SrvD = 4
-   INTEGER(IntKi), PARAMETER :: Module_HD   = 5
-   INTEGER(IntKi), PARAMETER :: Module_SD   = 6
-   INTEGER(IntKi), PARAMETER :: Module_MAP  = 7
-   INTEGER(IntKi), PARAMETER :: NumModules  = 7
+   INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
+   INTEGER(IntKi), PARAMETER :: Module_None    =  0
+   INTEGER(IntKi), PARAMETER :: Module_IfW     =  1
+   INTEGER(IntKi), PARAMETER :: Module_ED      =  2
+   INTEGER(IntKi), PARAMETER :: Module_AD      =  3 
+   INTEGER(IntKi), PARAMETER :: Module_SrvD    =  4
+   INTEGER(IntKi), PARAMETER :: Module_HD      =  5
+   INTEGER(IntKi), PARAMETER :: Module_SD      =  6
+   INTEGER(IntKi), PARAMETER :: Module_MAP     =  7
+   INTEGER(IntKi), PARAMETER :: Module_FEAM    =  8
+   INTEGER(IntKi), PARAMETER :: NumModules     =  8
    
-   INTEGER(IntKi), PARAMETER :: Type_Onshore            = 1
+   INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Floating  = 3
    
@@ -66,6 +69,7 @@ MODULE FAST_Types
       INTEGER(IntKi)                    :: numOuts_HD                              ! number of outputs to print from HydroDyn
       INTEGER(IntKi)                    :: numOuts_SD                              ! number of outputs to print from SubDyn
       INTEGER(IntKi)                    :: numOuts_MAP                             ! number of outputs to print from MAP (Mooring Analysis Program)
+      INTEGER(IntKi)                    :: numOuts_FEAM                            ! number of outputs to print from FEAMooring
       
       INTEGER(IntKi)                    :: UnOu    = -1                            ! I/O unit number for the tabular output file
       INTEGER(IntKi)                    :: UnSum   = -1                            ! I/O unit number for the summary file
@@ -83,6 +87,7 @@ MODULE FAST_Types
       TYPE(ProgDesc)                    :: HD_Ver                                  ! version information from HydroDyn
       TYPE(ProgDesc)                    :: SD_Ver                                  ! version information from SubDyn
       TYPE(ProgDesc)                    :: MAP_Ver                                 ! version information from MAP (Mooring Analysis Program)
+      TYPE(ProgDesc)                    :: FEAM_Ver                                ! version information from FEAMooring
 
    END TYPE  FAST_OutputType
 
@@ -105,7 +110,12 @@ MODULE FAST_Types
       TYPE(MeshMapType)                 :: ED_P_2_MAP_P                             ! Map ElastoDyn PlatformPtMesh to MAP point mesh
       TYPE(MeshMapType)                 :: MAP_P_2_ED_P                             ! Map MAP point mesh to ElastoDyn PlatformPtMesh
             
-            ! ED <-> SD
+            ! ED <-> FEAM
+      TYPE(MeshMapType)                 :: ED_P_2_FEAM_P                            ! Map ElastoDyn PlatformPtMesh to FEAM point mesh
+      TYPE(MeshMapType)                 :: FEAM_P_2_ED_P                            ! Map FEAM point mesh to ElastoDyn PlatformPtMesh
+
+      
+         ! ED <-> SD
       TYPE(MeshMapType)                 :: ED_P_2_SD_TP                             ! Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh
       TYPE(MeshMapType)                 :: SD_TP_2_ED_P                             ! Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh
                   
@@ -141,24 +151,24 @@ MODULE FAST_Types
       INTEGER(IntKi)            :: NumCrctn                                         ! Number of correction iterations
       INTEGER(IntKi)            :: KMax                                             ! Maximum number of input-output-solve iterations (KMax >= 1)
       
-         ! Feature switches:
+         ! Feature switches and flags:
 
-      LOGICAL                   :: CompAero                                         ! Compute aerodynamic forces (flag)
-      LOGICAL                   :: CompServo                                        ! Compute servodynamics (flag)
-      LOGICAL                   :: CompHydro                                        ! Compute hydrodynamics forces (flag)
-      LOGICAL                   :: CompSub                                          ! Compute sub-structural dynamics (flag)
-      LOGICAL                   :: CompMAP                                          ! Compute mooring line dynamics (flag)
+      INTEGER(IntKi)            :: CompAero                                         ! Compute aerodynamic loads (switch) {Module_None; Module_AD}
+      INTEGER(IntKi)            :: CompServo                                        ! Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}
+      INTEGER(IntKi)            :: CompHydro                                        ! Compute hydrodynamic loads (switch) {Module_None; Module_HD}
+      INTEGER(IntKi)            :: CompSub                                          ! Compute sub-structural dynamics (switch) {Module_None; Module_HD}
+      INTEGER(IntKi)            :: CompMooring                                      ! Compute mooring system (switch) {Module_None; Module_MAP, Module_FEAM}
       LOGICAL                   :: CompUserPtfmLd                                   ! Compute additional platform loading {false: none, true: user-defined from routine UserPtfmLd} (flag)
       LOGICAL                   :: CompUserTwrLd                                    ! Compute additional tower loading {false: none, true: user-defined from routine UserTwrLd} (flag)
 
          ! Input file names:
 
       CHARACTER(1024)           :: EDFile                                           ! The name of the ElastoDyn input file
-      CHARACTER(1024)           :: ADFile                                           ! The name of the AeroDyn input file
-      CHARACTER(1024)           :: SrvDFile                                         ! The name of the ServoDyn input file
-      CHARACTER(1024)           :: HDFile                                           ! The name of the HydroDyn input file
-      CHARACTER(1024)           :: SDFile                                           ! The name of the SubDyn input file
-      CHARACTER(1024)           :: MAPFile                                          ! The name of the MAP input file
+      CHARACTER(1024)           :: AeroFile                                         ! Name of file containing aerodynamic input parameters
+      CHARACTER(1024)           :: ServoFile                                        ! Name of file containing control and electrical-drive input parameters
+      CHARACTER(1024)           :: HydroFile                                        ! Name of file containing hydrodynamic input parameters
+      CHARACTER(1024)           :: SubFile                                          ! Name of file containing sub-structural input parameters
+      CHARACTER(1024)           :: MooringFile                                      ! Name of file containing mooring system input parameters
 
 
          ! Parameters for file/screen output:
@@ -189,7 +199,7 @@ MODULE FAST_Types
       REAL(ReKi)                :: UJacSclFact                                     ! Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians      
       INTEGER(IntKi)            :: SizeJac_ED_SD_HD(4)                             ! (1)=size of ED portion; (2)=size of SD portion [2 meshes]; (3)=size of HD portion; (4)=size of matrix; 
    
-      INTEGER(IntKi)            :: TurbineType                                     ! Type_Onshore, Type_Offshore_Fixed, or Type_Offshore_Floating
+      INTEGER(IntKi)            :: TurbineType                                     ! Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating
       
    END TYPE FAST_ParameterType
 
@@ -220,10 +230,17 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 ); CALL CheckError( )
       CALL MeshMapDestroy( MeshMapData%HD_M_L_2_ED_P, ErrStat2, ErrMsg2 ); CALL CheckError( )
 
+      
             ! ED <-> MAP
       CALL MeshMapDestroy( MeshMapData%ED_P_2_MAP_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
       CALL MeshMapDestroy( MeshMapData%MAP_P_2_ED_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+
+      
+            ! ED <-> FEAM
+      CALL MeshMapDestroy( MeshMapData%ED_P_2_FEAM_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%FEAM_P_2_ED_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
                   
+      
             ! ED <-> SD
       CALL MeshMapDestroy( MeshMapData%ED_P_2_SD_TP,  ErrStat2, ErrMsg2 ); CALL CheckError( )
       CALL MeshMapDestroy( MeshMapData%SD_TP_2_ED_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )                  
