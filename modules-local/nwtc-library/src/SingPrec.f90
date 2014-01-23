@@ -39,6 +39,11 @@ INTEGER, PARAMETER              :: QuKi     = SELECTED_REAL_KIND( 20, 500 )     
 INTEGER, PARAMETER              :: R8Ki     = SELECTED_REAL_KIND( 14, 300 )     ! Kind for eight-byte floating-point numbers
 INTEGER, PARAMETER              :: SiKi     = SELECTED_REAL_KIND(  6,  30 )     ! Kind for four-byte, floating-point numbers
 
+INTEGER, PARAMETER              :: BYTES_IN_SiKi =  4                           ! Number of bytes per SiKi number
+INTEGER, PARAMETER              :: BYTES_IN_R8Ki =  8                           ! Number of bytes per R8Ki number 
+INTEGER, PARAMETER              :: BYTES_IN_QuKi = 16                           ! Number of bytes per QuKi number
+
+
 
       ! The default kinds for reals and integers:
 
@@ -49,9 +54,9 @@ INTEGER, PARAMETER              :: DbKi     = R8Ki                              
 
       ! The number of bytes in the default variables
 
-INTEGER(IntKi), PARAMETER       :: BYTES_IN_INT   = 4                            ! Number of bytes per IntKi number    - use SIZEOF()
-INTEGER(IntKi), PARAMETER       :: BYTES_IN_REAL  = 4                            ! Number of bytes per ReKi number     - use SIZEOF()
-INTEGER(IntKi), PARAMETER       :: BYTES_IN_DBL   = 8                            ! Number of bytes per DbKi number     - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_INT   = 4                            ! Number of bytes per IntKi number    - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_REAL  = BYTES_IN_SiKi                ! Number of bytes per ReKi number     - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_DBL   = BYTES_IN_R8Ki                ! Number of bytes per DbKi number     - use SIZEOF()
 
 
 END MODULE Precision

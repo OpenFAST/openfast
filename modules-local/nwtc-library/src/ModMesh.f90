@@ -485,6 +485,9 @@ CONTAINS
       IF ( .NOT. IsNewSib ) THEN
          CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'MeshCreate: Position' )
          CALL AllocPAry( BlankMesh%RefOrientation, 3, 3, Nnodes, 'MeshCreate: RefOrientation' )
+            ! initialize these variables:
+            BlankMesh%Position = 0.0_ReKi
+            CALL Eye(BlankMesh%RefOrientation, ErrStat, ErrMess)
 
          ALLOCATE(BlankMesh%ElemTable(NELEMKINDS))
          DO i = 1, NELEMKINDS
@@ -605,15 +608,6 @@ CONTAINS
          ! Let's make sure that we have all the necessary fields:
          !........................
       IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
-!bjj: this can be removed with next round of mesh mapping algorighms
-         IF ( .NOT. BlankMesh%FieldMask(MASKID_Orientation) ) THEN
-            CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
-            CALL Eye(BlankMesh%Orientation, ErrStat, ErrMess)  ! set this orientation to the identity matrix
-            BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
-         !   ErrStat = ErrID_Info
-         !   ErrMess = ' MeshCreate: Meshes with motion fields must also contain the Orientation field.'
-         END IF
 
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONDISP)) THEN
             CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
@@ -1639,7 +1633,7 @@ CONTAINS
 
      IF (ErrStat /= 0) THEN
         ErrStat = ErrID_Fatal
-        ErrMess = " MeshCommit: Error allocating element list."
+        ErrMess = "MeshCommit: Error allocating element list."
         RETURN
      END IF
 
@@ -1666,9 +1660,9 @@ CONTAINS
 
         Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) )   ! = L / 2
         
-        IF ( EqualRealNos( Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
+        IF ( EqualRealNos( 2.*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
            ErrStat = ErrID_Fatal
-           ErrMess = " MeshCommit: Line2 element has 0 length."
+           ErrMess = "MeshCommit: Line2 element has 0 length."
            RETURN
         END IF
 
@@ -1715,7 +1709,13 @@ CONTAINS
 
        IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GE. Mesh%ElemTable(ELEMENT_POINT)%maxelem ) THEN
 !write(0,*)'>>>>>>>>>> bumping maxpoint',Mesh%ElemTable(ELEMENT_POINT)%maxelem
-         ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_POINT)%maxelem+BUMPUP))
+         ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_POINT)%maxelem+BUMPUP),sTAT=ErrStat)
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "MeshConstructElement_1PT: Couldn't allocate space for element table."
+            RETURN
+         END IF
+         
          IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GT. 1 ) &
            tmp(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem) = Mesh%ElemTable(ELEMENT_POINT)%Elements(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem)
          IF ( ASSOCIATED(Mesh%ElemTable(ELEMENT_POINT)%Elements) ) DEALLOCATE(Mesh%ElemTable(ELEMENT_POINT)%Elements)
@@ -1724,7 +1724,12 @@ CONTAINS
 !write(0,*)'>>>>>>>>>> bumped maxpoint',Mesh%ElemTable(ELEMENT_POINT)%maxelem
        ENDIF
 
-       ALLOCATE(Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%ElemNodes(1))
+       ALLOCATE(Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%ElemNodes(1),sTAT=ErrStat)
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "MeshConstructElement_1PT: Couldn't allocate space for element nodes."
+            RETURN
+         END IF
        Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%ElemNodes(1) = P1
        Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%Xelement = ELEMENT_POINT
      ELSE
@@ -1774,7 +1779,13 @@ CONTAINS
 
        IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GE. Mesh%ElemTable(ELEMENT_LINE2)%maxelem ) THEN
 !write(0,*)'>>>>>>>>>> bumping maxline2',Mesh%ElemTable(ELEMENT_LINE2)%maxelem
-         ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_LINE2)%maxelem+BUMPUP))
+         ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_LINE2)%maxelem+BUMPUP),Stat=ErrStat)
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "MeshConstructElement_2PT: Couldn't allocate space for element table"
+            RETURN
+         END IF
+            
          IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GT. 1 ) &
            tmp(1:Mesh%ElemTable(ELEMENT_LINE2)%maxelem) = Mesh%ElemTable(ELEMENT_LINE2)%Elements(1:Mesh%ElemTable(ELEMENT_LINE2)%maxelem)
          IF ( ASSOCIATED(Mesh%ElemTable(ELEMENT_LINE2)%Elements) ) DEALLOCATE(Mesh%ElemTable(ELEMENT_LINE2)%Elements)
@@ -1782,7 +1793,12 @@ CONTAINS
          Mesh%ElemTable(ELEMENT_LINE2)%maxelem = Mesh%ElemTable(ELEMENT_LINE2)%maxelem + BUMPUP
 !write(0,*)'>>>>>>>>>> bumped maxline2',Mesh%ElemTable(ELEMENT_LINE2)%maxelem
        ENDIF
-       ALLOCATE(Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(2))
+       ALLOCATE(Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(2),Stat=ErrStat)
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "MeshConstructElement_2PT: Couldn't allocate space for element nodes."
+            RETURN
+         END IF
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(1) = P1
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(2) = P2
        Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%Xelement = ELEMENT_LINE2
@@ -1913,6 +1929,7 @@ CONTAINS
       INTEGER,                     INTENT(IN   ) :: E1        ! number of element in Element Table
       INTEGER,                     INTENT(IN   ) :: P1        ! node number
 
+      INTEGER                                    :: p2        ! local copy of P2, in case we end up deallocating the array pointed to in the call to construct a new element
       
       IF ( mesh_debug ) print*,'Called MeshSplitElement_2PT'
       ErrStat = ErrID_None
@@ -1941,15 +1958,16 @@ CONTAINS
       ENDIF
      
       IF ( ErrStat .NE. ErrID_None ) THEN
-         CALL WrScr( TRIM(ErrMess) )
-         RETURN  !  early return on error
+         !CALL WrScr( TRIM(ErrMess) )
+         RETURN  !  early return on fatal error
       ENDIF
                
      
     ! Business
       ! E1 currently has nodes (n1,n2):
       ! Create a new element with nodes (p1,n2):
-      CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess, p1=P1, p2=Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(2))
+      p2 = Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(2)
+      CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess, p1=P1, p2=p2)
     
          ! Make element E1 now have nodes (n1,p1):
       Mesh%ElemTable(ELEMENT_LINE2)%Elements(E1)%ElemNodes(2) = P1
