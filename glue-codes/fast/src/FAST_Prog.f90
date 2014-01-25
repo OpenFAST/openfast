@@ -1212,12 +1212,12 @@ CONTAINS
             CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
       
-            IF ( y_HD%WAMIT%Mesh%Committed  ) THEN
+            IF ( y_HD%WRP_Mesh%Committed  ) THEN
 
                   ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
-               CALL MeshMapCreate( y_HD%WAMIT%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+               CALL MeshMapCreate( y_HD%WRP_Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_W_P_2_ED_P: '//NewLine//ErrMsg )
-               CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%WAMIT%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+               CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_W_P: '//NewLine//ErrMsg )
 
             END IF            
@@ -1267,9 +1267,10 @@ CONTAINS
 
          
                ! HydroDyn WAMIT mesh must not be used !BJJ: seems like this is a moot point, but we'll check anyway.
-            IF ( y_HD%WAMIT%Mesh%Committed ) THEN
-               CALL CheckError( ErrID_FATAL, "When SubDyn is used, HydroDyn cannot contain a (committed) WAMIT mesh." )
-            END IF                     
+!bjj: we can't check this anymore because WRP is always committed.
+!            IF ( y_HD%WRP_Mesh%Committed ) THEN
+!               CALL CheckError( ErrID_FATAL, "When SubDyn is used, HydroDyn cannot contain a (committed) WAMIT mesh." )
+!            END IF
          
          
          END IF ! HydroDyn-SubDyn
@@ -1361,9 +1362,10 @@ CONTAINS
              
       ! HydroDyn
       IF ( p_FAST%CompHydro == Module_HD ) THEN
-         IF (HD_Input(1)%WAMIT%Mesh%Committed) THEN
-            HD_Input(1)%WAMIT%Mesh%RemapFlag          = .FALSE.
-                   y_HD%WAMIT%Mesh%RemapFlag          = .FALSE.
+         IF (HD_Input(1)%Mesh%Committed) THEN
+             HD_Input(1)%Mesh%RemapFlag               = .FALSE.
+                    y_HD%Mesh%RemapFlag               = .FALSE. ! <- bjj: not sure we need this one 
+                y_HD%WRP_Mesh%RemapFlag               = .FALSE.
          END IF
          IF (HD_Input(1)%Morison%LumpedMesh%Committed) THEN
             HD_Input(1)%Morison%LumpedMesh%RemapFlag  = .FALSE.
