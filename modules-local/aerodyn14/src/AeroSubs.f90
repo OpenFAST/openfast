@@ -435,12 +435,24 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       END IF
 
       ! Aero calculation time interval
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%DtAero, 'DtAero', 'Aero calculation time step', ErrStat, ErrMsg=ErrMess)
+   CALL ReadVar( UnIn, InitInp%ADFileName, Line, 'DtAero', 'Aero calculation time step', ErrStat, ErrMsg=ErrMess)
       IF (ErrStat >= AbortErrLev) THEN
          CLOSE(UnIn)
          RETURN
       END IF
-
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in P%DtAero
+         READ( Line, *, IOSTAT=ErrStat) P%DtAero
+         IF ( ErrStat /= 0 ) THEN
+            CALL CheckIOS ( ErrStat, InitInp%ADFileName, "DT", NumType, .TRUE., ErrMess )
+            ErrStat = ErrID_Fatal
+            RETURN
+         ELSE
+            ErrStat = ErrID_None
+         END IF
+      END IF  
+      
+            
       ! Read the number of airfoil files
    CALL ReadVar( UnIn, InitInp%ADFileName, P%AirFoil%NumFoil, 'NumFoil', 'Number of airfoil files', ErrStat, ErrMsg=ErrMess)
       IF (ErrStat >= AbortErrLev) THEN
@@ -1770,14 +1782,14 @@ END SUBROUTINE ELEMFRC
 
  ! Allocate and initialize the local array on the first pass
 IF ( .NOT. ALLOCATED (O%Element%OLD_A_NS) ) THEN
-   ALLOCATE ( O%Element%OLD_A_NS ( P%Element%NELM, P%Blade%NB) , STAT=Sttus )
+   ALLOCATE ( O%Element%OLD_A_NS ( P%Element%NELM, P%NumBl) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLD_A_NS array.' )
    O%Element%OLD_A_NS(:,:) = 0.0
 ENDIF
 
  ! Allocate and initialize the local array on the first pass
 IF ( .NOT. ALLOCATED (O%Element%OLD_AP_NS) ) THEN
-   ALLOCATE ( O%Element%OLD_AP_NS ( P%Element%NELM, P%Blade%NB) , STAT=Sttus )
+   ALLOCATE ( O%Element%OLD_AP_NS ( P%Element%NELM, P%NumBl) , STAT=Sttus )
    IF ( Sttus /= 0 ) CALL ProgAbort ( ' Error allocating memory for OLD_AP_NS array.' )
    O%Element%OLD_AP_NS(:,:) = 0.0
 ENDIF
@@ -1802,7 +1814,7 @@ ENDIF
 IF ( RLOCAL == 0.0 ) THEN   ! Avoid div/0 in FAST2
    SOLFACT = 1.0/VNROTOR2
 ELSE
-   SOLFACT = P%Blade%NB * P%Blade%C(J) / ( TWOPI * RLOCAL * VNROTOR2)
+   SOLFACT = P%NumBl * P%Blade%C(J) / ( TWOPI * RLOCAL * VNROTOR2)
 ENDIF
 VT2_Inv = 1. / ( VT * VT )
 
@@ -4145,7 +4157,7 @@ O%DynInflow%PhiLqC = 0.
 O%DynInflow%PhiLqS = 0.
 
 DO mode = 1, maxInfl
-   DO iblad = 1, P%Blade%NB
+   DO iblad = 1, P%NumBl
       DO ielem = 1, P%Element%NELM
          O%DynInflow%PhiLqC(mode) = O%DynInflow%PhiLqC(mode) + O%DynInflow%RMC_SAVE(iblad, ielem, mode)
          IF (mode >= p%DynInflow%MaxInflo+1) &
@@ -4260,12 +4272,12 @@ v3 = - O%Wind%VrotorX / O%DynInflow%TipSpeed     !out-of-plane, normal to the ro
  !  of the induction factors(A). The A's are calculated by
  !  momentum balance during the first rotation of the trim solution.
 O%DynInflow%xLambda_M = 0.
-DO jBlade=1,P%Blade%nb
+DO jBlade=1,P%NumBl
    DO iElem =1,P%Element%nelm
       O%DynInflow%xLambda_M = O%DynInflow%xLambda_M + O%Element%a(iElem,jBlade)
    END DO !iElem
 END DO !jBlade
-O%DynInflow%xLambda_M = O%DynInflow%xLambda_M / ( P%Blade%nb * P%Element%nelm )
+O%DynInflow%xLambda_M = O%DynInflow%xLambda_M / ( P%NumBl * P%Element%nelm )
 
  ! A's are normalized by the normal wind speed, while Lambda's are
  !  mormalized by the tip speed. Make the conversion.

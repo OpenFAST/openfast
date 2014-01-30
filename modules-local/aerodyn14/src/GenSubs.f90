@@ -46,7 +46,7 @@ INTEGER(4)   :: Sttus
 
 INTEGER :: NElm, NB, MaxTable, NumCl, NumFoil, NumElOut, NumWndElOut
 
-NB          = P%Blade%NB
+NB          = P%NumBl
 Nelm        = P%Element%Nelm
 NumFoil     = P%AirFoil%NumFoil
 NumCl       = P%AirFoil%NumCl
