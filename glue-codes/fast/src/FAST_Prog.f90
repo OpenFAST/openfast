@@ -564,7 +564,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
    CALL ED_CopyConstrState ( z_ED,  z_ED_pred, MESH_NEWCOPY, Errstat, ErrMsg)
       CALL CheckError( ErrStat, 'Message from ED_CopyConstrState (init): '//NewLine//ErrMsg )   
    IF ( p_FAST%n_substeps( MODULE_ED ) > 1 ) THEN
-      CALL ED_CopyOtherState( OtherSt_ED_old, OtherSt_ED, MESH_NEWCOPY, Errstat, ErrMsg)
+      CALL ED_CopyOtherState( OtherSt_ED, OtherSt_ED_old, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from ED_CopyOtherState (init): '//NewLine//ErrMsg )   
    END IF   
       
@@ -592,7 +592,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
       CALL SrvD_CopyConstrState ( z_SrvD,  z_SrvD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from SrvD_CopyConstrState (init): '//NewLine//ErrMsg )
       IF ( p_FAST%n_substeps( MODULE_SrvD ) > 1 ) THEN
-         CALL SrvD_CopyOtherState( OtherSt_SrvD_old, OtherSt_SrvD, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL SrvD_CopyOtherState( OtherSt_SrvD, OtherSt_SrvD_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from SrvD_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF    
          
@@ -623,7 +623,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
       CALL AD_CopyConstrState ( z_AD,  z_AD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from AD_CopyConstrState (init): '//NewLine//ErrMsg )      
       IF ( p_FAST%n_substeps( MODULE_AD ) > 1 ) THEN
-         CALL AD_CopyOtherState( OtherSt_AD_old, OtherSt_AD, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL AD_CopyOtherState( OtherSt_AD, OtherSt_AD_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from AD_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF         
    END IF ! CompAero == Module_AD 
@@ -653,7 +653,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
       CALL HydroDyn_CopyConstrState ( z_HD,  z_HD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from HydroDyn_CopyConstrState (init): '//NewLine//ErrMsg )
       IF ( p_FAST%n_substeps( MODULE_HD ) > 1 ) THEN
-         CALL HydroDyn_CopyOtherState( OtherSt_HD_old, OtherSt_HD, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL HydroDyn_CopyOtherState( OtherSt_HD, OtherSt_HD_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from HydroDyn_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF          
    END IF !CompHydro
@@ -711,7 +711,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
       CALL MAP_CopyConstrState ( z_MAP,  z_MAP_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from MAP_CopyConstrState (init): '//NewLine//ErrMsg )
       IF ( p_FAST%n_substeps( MODULE_MAP ) > 1 ) THEN
-         CALL MAP_CopyOtherState( OtherSt_MAP_old, OtherSt_MAP, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL MAP_CopyOtherState( OtherSt_MAP, OtherSt_MAP_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from MAP_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF  
       
@@ -738,7 +738,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
       CALL FEAM_CopyConstrState ( z_FEAM,  z_FEAM_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from FEAM_CopyConstrState (init): '//NewLine//ErrMsg )
       IF ( p_FAST%n_substeps( MODULE_FEAM ) > 1 ) THEN
-         CALL FEAM_CopyOtherState( OtherSt_FEAM_old, OtherSt_FEAM, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL FEAM_CopyOtherState( OtherSt_FEAM, OtherSt_FEAM_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from FEAM_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF           
    END IF ! CompMooring
@@ -1349,10 +1349,10 @@ CONTAINS
             CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
       
-            IF ( y_HD%WRP_Mesh%Committed  ) THEN
+            IF ( y_HD%AllHdroOrigin%Committed  ) THEN
 
                   ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
-               CALL MeshMapCreate( y_HD%WRP_Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+               CALL MeshMapCreate( y_HD%AllHdroOrigin, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_W_P_2_ED_P: '//NewLine//ErrMsg )
                CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_W_P: '//NewLine//ErrMsg )
@@ -1381,7 +1381,7 @@ CONTAINS
          ELSE ! these get mapped to SubDyn (in ED_SD_HD coupling)
                   
             CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_Input(1)%PlatformPtMesh, SD_Input(1)%TPMesh, SD_Input(1)%LMesh, &
-                                        HD_Input(1)%Morison%LumpedMesh, HD_Input(1)%Morison%DistribMesh, ErrStat, ErrMsg)
+                                        HD_Input(1)%Morison%LumpedMesh, HD_Input(1)%Morison%DistribMesh, HD_Input(1)%Mesh, ErrStat, ErrMsg)
          
                      
                ! HydroDyn Morison point mesh to SubDyn point mesh
@@ -1403,12 +1403,16 @@ CONTAINS
             END IF
 
          
-               ! HydroDyn WAMIT mesh must not be used !BJJ: seems like this is a moot point, but we'll check anyway.
-!bjj: we can't check this anymore because WRP is always committed.
-!            IF ( y_HD%WRP_Mesh%Committed ) THEN
-!               CALL CheckError( ErrID_FATAL, "When SubDyn is used, HydroDyn cannot contain a (committed) WAMIT mesh." )
-!            END IF
-         
+               ! HydroDyn WAMIT mesh to ElastoDyn point mesh               
+            IF ( y_HD%Mesh%Committed  ) THEN
+
+                  ! HydroDyn WAMIT point mesh to ElastoDyn point mesh
+               CALL MeshMapCreate( y_HD%Mesh, ED_Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_W_P_2_ED_P: '//NewLine//ErrMsg )
+               CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_W_P: '//NewLine//ErrMsg )
+
+            END IF                                       
          
          END IF ! HydroDyn-SubDyn
     
@@ -1502,7 +1506,7 @@ CONTAINS
          IF (HD_Input(1)%Mesh%Committed) THEN
              HD_Input(1)%Mesh%RemapFlag               = .FALSE.
                     y_HD%Mesh%RemapFlag               = .FALSE. ! <- bjj: not sure we need this one 
-                y_HD%WRP_Mesh%RemapFlag               = .FALSE.
+                    y_HD%AllHdroOrigin%RemapFlag      = .FALSE.
          END IF
          IF (HD_Input(1)%Morison%LumpedMesh%Committed) THEN
             HD_Input(1)%Morison%LumpedMesh%RemapFlag  = .FALSE.
@@ -1713,22 +1717,7 @@ CONTAINS
       !   END IF
       !
       END IF
-
-      !! HydroDyn and SubDyn inputs...
-      !
-      !IF ( p_FAST%CompHydro == Module_HD ) THEN 
-      !   
-      !   CALL HD_InputSolve( p_FAST, HD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, 'Message from HD_InputSolve: '//NewLine//ErrMsg  )
-      !                  
-      !END IF
-      !      
-      !IF ( p_FAST%CompSub == Module_SD ) THEN
-      !   
-      !   CALL SD_InputSolve( SD_Input(1), y_SD, ED_Output(1), y_HD, MeshMapData, ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, 'Message from SD_InputSolve: '//NewLine//ErrMsg  )
-      !                  
-      !END IF          
+        
       
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
       ! note: HD_InputSolve, SD_InputSolve, and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
