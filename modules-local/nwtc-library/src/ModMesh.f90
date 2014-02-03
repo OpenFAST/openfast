@@ -204,8 +204,8 @@ CONTAINS
 
          IF ( ErrID /= ErrID_None ) THEN
 
-            IF ( LEN_TRIM(ErrMsg) > 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-            ErrMsg = TRIM(ErrMsg)//' '//TRIM(Msg)
+            IF ( ErrStat /= ErrID_None ) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg = TRIM(ErrMsg)//'MeshWrBin:'//TRIM(Msg)
             ErrStat = MAX(ErrStat, ErrID)
 
             !......................................................................................................................
