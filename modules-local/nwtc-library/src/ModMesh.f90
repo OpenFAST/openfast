@@ -2152,10 +2152,10 @@ CONTAINS
       END IF
 
       IF ( ALLOCATED(u1%RotationAcc) ) THEN
-         u_out%RotationVel =   u1%RotationVel &
-                             + ( t(3)**2 * ( u1%RotationVel - u2%RotationVel) &
-                               + t(2)**2 * (-u1%RotationVel + u3%RotationVel) ) * scaleFactor &
-                            + ( (t(2)-t(3))*u1%RotationVel  + t(3)*u2%RotationVel - t(2)*u3%RotationVel )*scaleFactor*t_out
+         u_out%RotationAcc =   u1%RotationAcc &
+                             + ( t(3)**2 * ( u1%RotationAcc - u2%RotationAcc) &
+                               + t(2)**2 * (-u1%RotationAcc + u3%RotationAcc) ) * scaleFactor &
+                            + ( (t(2)-t(3))*u1%RotationAcc  + t(3)*u2%RotationAcc - t(2)*u3%RotationAcc )*scaleFactor*t_out
       END IF
 
       IF ( ALLOCATED(u1%TranslationAcc) ) THEN
