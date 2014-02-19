@@ -1,8 +1,9 @@
-   SUBROUTINE BldGaussPointData(hhx,hpx,Nuuu,Nrrr,Stif0,uu0,E10,node_elem,dof_node,&
+   SUBROUTINE BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                                 &uuu,uup,E1,RR0,kapa,Stif,cet)
 
-   REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuuu(:),Nrrr(:),uu0(:),E10(:),Stif0(:,:)
-   REAL(ReKi),INTENT(OUT):: uuu(:),uup(:),E1(:),RR0(:,:),kapa(:),Stif(:,:),cet
+   REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuuu(:),Nrrr(:),uu0(:),E10(:)
+   REAL(ReKi),INTENT(OUT):: uuu(:),uup(:),E1(:),RR0(:,:),kapa(:),cet
+   REAL(ReKi),INTENT(INOUT):: Stif(:,:)
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node
 
    REAL(ReKi):: rrr(3),rrp(3),hhi,hpi,cc(3)
@@ -55,9 +56,7 @@
    ENDDO
 
    cet = 0.0D0
-   Stif = 0.0D0
-   cet = Stif0(5,5) + Stif0(6,6)
-   Stif(1:6,1:6) = Stif0(1:6,1:6)
+   cet = Stif(5,5) + Stif(6,6)
    Stif = MATMUL(tempR6,MATMUL(Stif,TRANSPOSE(tempR6)))
 
    Wrk = 0.0D0

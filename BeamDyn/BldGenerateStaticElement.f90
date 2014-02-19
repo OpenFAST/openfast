@@ -1,10 +1,11 @@
    SUBROUTINE BldGenerateStaticElement(uuN0,uuNf,Fext,Stif0,elem_total,node_elem,dof_node,ngp,StifK,RHS)
 
-   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Fext(:),Stif0(:,:)
+   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Fext(:),Stif0(:,:,:)
    INTEGER(IntKi),INTENT(IN):: elem_total,node_elem,dof_node,ngp
    REAL(ReKi),INTENT(INOUT):: StifK(:,:),RHS(:) 
 
    REAL(ReKi),ALLOCATABLE:: Nuu0(:),Nuuu(:),Next(:),Nrr0(:),Nrrr(:)
+   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:)
    REAL(ReKi),ALLOCATABLE:: elk(:,:), elf(:)
 
    INTEGER(IntKi):: dof_elem,rot_elem
@@ -32,6 +33,11 @@
 
    ALLOCATE(Next(dof_elem),STAT = allo_stat)
    IF(allo_stat /=0) GOTO 9999
+   Next = 0.0D0
+
+   ALLOCATE(NStif0(dof_node,dof_node,node_elem),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   NStif0 = 0.0D0
 
    ALLOCATE(elf(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
@@ -44,6 +50,7 @@
    DO nelem=1,elem_total
        CALL ElemNodalDispGL(uuN0,node_elem,dof_node,nelem,Nuu0)
        CALL ElemNodalDispGL(uuNf,node_elem,dof_node,nelem,Nuuu)
+       CALL ElemNodalStifGL(Stif0,node_elem,dof_node,nelem,NStif0)
 
        CALL ElemNodalDispGL(Fext,node_elem,dof_node,nelem,Next)
 
@@ -56,7 +63,7 @@
        elk = 0.0D0
        elf = 0.0D0
 !       CALL ElementMatrixGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Stif0,ngp,node_elem,dof_node,elk,elf)
-       CALL ElementMatrixLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Stif0,ngp,node_elem,dof_node,elk,elf)
+       CALL ElementMatrixLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,NStif0,ngp,node_elem,dof_node,elk,elf)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elk,StifK)
        CALL AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,elf,RHS)
@@ -67,6 +74,7 @@
    DEALLOCATE(Nrr0)
    DEALLOCATE(Nrrr)
    DEALLOCATE(Next)
+   DEALLOCATE(NStif0)
    DEALLOCATE(elf)
    DEALLOCATE(elk)
 
@@ -76,6 +84,7 @@
             IF(ALLOCATED(Nrr0)) DEALLOCATE(Nrr0)
             IF(ALLOCATED(Nrrr)) DEALLOCATE(Nrrr)
             IF(ALLOCATED(Next)) DEALLOCATE(Next)
+            IF(ALLOCATED(NStif0)) DEALLOCATE(NStif0)
             IF(ALLOCATED(elf)) DEALLOCATE(elf)
             IF(ALLOCATED(elk)) DEALLOCATE(elk)
         ENDIF

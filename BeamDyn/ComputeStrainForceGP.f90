@@ -1,7 +1,7 @@
-   SUBROUTINE ComputeStrainForceGP(Nuu0,Nuuu,Nrr0,Nrrr,Stif0,ngp,node_elem,dof_node,eeeGP,fffGP)
+   SUBROUTINE ComputeStrainForceGP(Nuu0,Nuuu,Nrr0,Nrrr,NStif0,ngp,node_elem,dof_node,eeeGP,fffGP)
 
    REAL(ReKi),INTENT(IN):: Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
-   REAL(ReKi),INTENT(IN):: Stif0(:,:)
+   REAL(ReKi),INTENT(IN):: NStif0(:,:,:)
    INTEGER(IntKi),INTENT(IN):: ngp,node_elem,dof_node
 
    REAL(ReKi),INTENT(OUT):: eeeGP(:),fffGP(:)      
@@ -51,8 +51,8 @@
    DO igp=1,ngp
        gpr = gp(igp)
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
-       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
-       CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,Stif0,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
+       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+       CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
        eee = 0.0D0
        tempS = 0.0D0
        tempK = 0.0D0
