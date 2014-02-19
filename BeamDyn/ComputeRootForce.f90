@@ -1,10 +1,11 @@
    SUBROUTINE ComputeRootForce(uuN0,uuNf,Stif0,node_elem,dof_node,ngp,RootForce)
    
-   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Stif0(:,:)
+   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Stif0(:,:,:)
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node,ngp
    REAL(ReKi),INTENT(OUT):: RootForce(:)
    
    REAL(ReKi),ALLOCATABLE:: Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
+   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:)
    REAL(ReKi),ALLOCATABLE:: eeeGP(:),fffGP(:)
    REAL(ReKi),ALLOCATABLE:: GLL_temp(:),w_temp(:),gp(:),gw(:)
    REAL(ReKi),ALLOCATABLE:: hhx(:),hpx(:)
@@ -32,6 +33,10 @@
    ALLOCATE(Nrrr(rot_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    Nrrr = 0.0D0
+   
+   ALLOCATE(NStif0(dof_node,dof_node,node_elem),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   NStif0 = 0.0D0
    
    ALLOCATE(gp(ngp), STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
@@ -68,11 +73,12 @@
    
    CALL ElemNodalDispGL(uuN0,node_elem,dof_node,1,Nuu0)
    CALL ElemNodalDispGL(uuNf,node_elem,dof_node,1,Nuuu)
+   CALL ElemNodalStifGL(Stif0,node_elem,dof_node,1,NStif0)
 
    CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
    CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
    
-   CALL ComputeStrainForceGP(Nuu0,Nuuu,Nrr0,Nrrr,Stif0,ngp,node_elem,dof_node,eeeGP,fffGP)
+   CALL ComputeStrainForceGP(Nuu0,Nuuu,Nrr0,Nrrr,NStif0,ngp,node_elem,dof_node,eeeGP,fffGP)
    
    CALL BDyn_gen_gll_LSGL(ngp-1,GLL_temp,w_temp)
    CALL BldGaussPointWeight(ngp,gp,gw)
@@ -100,6 +106,7 @@
    DEALLOCATE(Nuuu)
    DEALLOCATE(Nrr0)
    DEALLOCATE(Nrrr)
+   DEALLOCATE(NStif0)
    DEALLOCATE(eeeGP)
    DEALLOCATE(fffGP)
 
@@ -114,6 +121,7 @@
             IF(ALLOCATED(Nuuu)) DEALLOCATE(Nuuu)
             IF(ALLOCATED(Nrr0)) DEALLOCATE(Nrr0)
             IF(ALLOCATED(Nrrr)) DEALLOCATE(Nrrr)
+            IF(ALLOCATED(NStif0)) DEALLOCATE(NStif0)
             IF(ALLOCATED(eeeGP)) DEALLOCATE(eeeGP)
             IF(ALLOCATED(fffGP)) DEALLOCATE(fffGP)
         ENDIF

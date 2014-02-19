@@ -1,7 +1,7 @@
    SUBROUTINE StaticSolutionGL(uuN0,uuNf,Stif0,F_ext,bc,&
                             &node_elem,dof_node,elem_total,dof_total,node_total,ngp,niter)
 
-   REAL(ReKi),INTENT(IN):: uuN0(:),F_ext(:),Stif0(:,:),bc(:)
+   REAL(ReKi),INTENT(IN):: uuN0(:),F_ext(:),Stif0(:,:,:),bc(:)
    REAL(ReKi),INTENT(INOUT):: uuNf(:)
    INTEGER(IntKi),INTENT(IN):: niter,elem_total,node_elem,dof_node,ngp,dof_total,node_total
 

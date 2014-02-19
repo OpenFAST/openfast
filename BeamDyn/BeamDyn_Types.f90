@@ -67,7 +67,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  BDyn_ParameterType  =======
   TYPE, PUBLIC :: BDyn_ParameterType
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Stif0 
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0 
     INTEGER(IntKi)  :: elem_total 
     INTEGER(IntKi)  :: dof_node 
     INTEGER(IntKi)  :: node_total 
@@ -898,8 +898,10 @@ IF (ALLOCATED(SrcParamData%Stif0)) THEN
    i1_u = UBOUND(SrcParamData%Stif0,1)
    i2_l = LBOUND(SrcParamData%Stif0,2)
    i2_u = UBOUND(SrcParamData%Stif0,2)
+   i3_l = LBOUND(SrcParamData%Stif0,3)
+   i3_u = UBOUND(SrcParamData%Stif0,3)
    IF (.NOT.ALLOCATED(DstParamData%Stif0)) THEN 
-      ALLOCATE(DstParamData%Stif0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
+      ALLOCATE(DstParamData%Stif0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BDyn_CopyParam: Error allocating DstParamData%Stif0.'
@@ -1092,9 +1094,9 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   IF ( ALLOCATED(OutData%Stif0) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%Stif0,1),SIZE(OutData%Stif0,2))); mask2 = .TRUE.
-    OutData%Stif0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stif0))-1 ),mask2,OutData%Stif0)
-  DEALLOCATE(mask2)
+  ALLOCATE(mask3(SIZE(OutData%Stif0,1),SIZE(OutData%Stif0,2),SIZE(OutData%Stif0,3))); mask3 = .TRUE.
+    OutData%Stif0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stif0))-1 ),mask3,OutData%Stif0)
+  DEALLOCATE(mask3)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%Stif0)
   ENDIF
   OutData%elem_total = IntKiBuf ( Int_Xferred )

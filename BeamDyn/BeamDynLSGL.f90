@@ -51,6 +51,7 @@ INCLUDE 'CrvMatrixR.f90'
 INCLUDE 'CrvMatrixH.f90'
 INCLUDE 'CrvCompose.f90'
 INCLUDE 'ElemNodalDispGL.f90'
+INCLUDE 'ElemNodalStifGL.f90'
 INCLUDE 'NodalRelRotGL.f90'
 !INCLUDE 'BldSet1DGaussPointScheme.f90'
 !INCLUDE 'ShapeFunction1D.f90'
@@ -146,7 +147,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! allocate all allocatable paramete arrays
 
-      ALLOCATE( p%Stif0(p%dof_node,p%dof_node),      STAT=ErrStat )
+      ALLOCATE( p%Stif0(p%dof_node,p%dof_node,p%node_total),      STAT=ErrStat )
       p%Stif0 = 0.0D0
       ALLOCATE( p%uuN0(p%dof_total),      STAT=ErrStat )
       p%uuN0 = 0.0D0
@@ -216,12 +217,12 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !-------------------
 !This is the input used for Example 1 (bending) in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-          p%Stif0(1,1) = 1770.0D+03
-          p%Stif0(2,2) = 1770.0D+03
-          p%Stif0(3,3) = 1770.0D+03
-          p%Stif0(4,4) = 8.16D+03
-          p%Stif0(5,5) = 86.9D+03
-          p%Stif0(6,6) = 215.0D+03
+          p%Stif0(1,1,i) = 1770.0D+03
+          p%Stif0(2,2,i) = 1770.0D+03
+          p%Stif0(3,3,i) = 1770.0D+03
+          p%Stif0(4,4,i) = 8.16D+03
+          p%Stif0(5,5,i) = 86.9D+03
+          p%Stif0(6,6,i) = 215.0D+03
 !------------------
 !END input
 !------------------
