@@ -1696,13 +1696,17 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
       }
       if ( strlen(q->inival) > 0 ) {
         if ( q->ndims > 0 ) {
-          fprintf(fp," :: %s = (/%s/)\n", q->name, q->inival ) ;
+          fprintf(fp," :: %s = (/%s/)", q->name, q->inival ) ;
         } else {
-          fprintf(fp," :: %s = %s \n", q->name, q->inival ) ;
+          fprintf(fp," :: %s = %s ", q->name, q->inival ) ;
         }
       } else {
-        fprintf(fp," :: %s \n",q->name) ;
+        fprintf(fp," :: %s",q->name) ;
       }
+      if ( strcmp( q->descrip, "-" ) || strcmp( q->units, "-" ) ) /* that is, if not equal "-" */ {
+         fprintf(fp,"     ! %s [%s]", q->descrip, q->units) ;
+      }
+      fprintf(fp,"\n") ;
     }
 
 // generate each derived data type
@@ -1779,11 +1783,15 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
                 }
             }
             if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
-              fprintf(fp," :: %s = %s \n", r->name, r->inival ) ;
+              fprintf(fp," :: %s = %s ", r->name, r->inival ) ;
             } else {
-              fprintf(fp," :: %s \n",r->name) ;
+              fprintf(fp," :: %s ",r->name) ;
             }
 
+            if ( strcmp( r->descrip, "-" ) || strcmp( r->units, "-" ) ) /* that is, if not equal "-" */ {
+               fprintf(fp,"     ! %s [%s]", r->descrip, r->units) ;
+            }
+            fprintf(fp,"\n") ;
            }
           }
         }

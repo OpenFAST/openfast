@@ -23,7 +23,7 @@
 #define FIELD_TYPE      3
 #define FIELD_SYM       4
 #define FIELD_DIMS      5
-#define FIELD_INIVAL     6
+#define FIELD_INIVAL    6
 #define FIELD_CTRL      7
 #define FIELD_DESCRIP   8
 #define FIELD_UNITS     9
@@ -33,7 +33,7 @@
 #define F_TYPE     2
 #define F_SYM      3
 #define F_DIMS     4
-#define F_INIVAL    4
+#define F_INIVAL   5
 #define F_CTRL     6
 #define F_DESCRIP  7
 #define F_UNITS    8
@@ -78,7 +78,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
     /* look for an include statement */
     if (( p = index( inln , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
     if (( p = index( inln , '\r' )) != NULL  ) *p = '\0' ; /* discard carriage returns (happens on Windows)*/
-    for ( p = inln ; ( *p == ' ' || *p == '	' || *p == '\t' ) && *p != '\0' ; p++ ) ;
+    for ( p = inln ; ( *p == ' ' || *p == '\t' ) && *p != '\0' ; p++ ) ;
     p1 = make_lower_temp(p) ;
     if ( (!strncmp( p1 , "include", 7 ) || !strncmp( p1, "usefrom", 7 ))  &&  ! ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) )
     {
@@ -87,7 +87,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
       int checking_for_usefrom = !strncmp( p1, "usefrom", 7 ) ;
 //fprintf(stderr,"checking_for_usefrom %d |%s|\n",checking_for_usefrom,p1) ;
 
-      p += 7 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t' ) && *p != '\0' ; p++ ) ;
+      p += 7 ; for ( ; ( *p == ' ' ||  *p == '\t' ) && *p != '\0' ; p++ ) ;
       if ( strlen( p ) > 127 ) { fprintf(stderr,"Registry warning: invalid include file name: %s\n", p ) ; }
       else {
 /* look in a few places for valid include files */
@@ -152,11 +152,10 @@ gotit:
     }
     else if ( !strncmp( make_lower_temp(p) , "ifdef", 5 ) ) {
       char value[32] ;
-      p += 5 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t' ) && *p != '\0' ; p++ ) ;
+      p += 5 ; for ( ; ( *p == ' ' || *p == '\t' ) && *p != '\0' ; p++ ) ;
       strncpy(value, p, 31 ) ; value[31] = '\0' ;
       if ( (p=index(value,'\n')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,' ')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,'	')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,' '))  != NULL ) *p = '\0' ;
       if ( (p=index(value,'\t')) != NULL ) *p = '\0' ;
       ifdef_stack_ptr++ ;
       ifdef_stack[ifdef_stack_ptr] = ( sym_get(value) != NULL && ifdef_stack[ifdef_stack_ptr-1] ) ;
@@ -165,11 +164,10 @@ gotit:
     }
     else if ( !strncmp( make_lower_temp(p) , "ifndef", 6 ) ) {
       char value[32] ;
-      p += 6 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t') && *p != '\0' ; p++ ) ;
+      p += 6 ; for ( ; ( *p == ' ' || *p == '\t') && *p != '\0' ; p++ ) ;
       strncpy(value, p, 31 ) ; value[31] = '\0' ;
       if ( (p=index(value,'\n')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,' ')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,'	')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,' '))  != NULL ) *p = '\0' ;
       if ( (p=index(value,'\t')) != NULL ) *p = '\0' ;
       ifdef_stack_ptr++ ;
       ifdef_stack[ifdef_stack_ptr] = ( sym_get(value) == NULL && ifdef_stack[ifdef_stack_ptr-1] ) ;
@@ -183,10 +181,11 @@ gotit:
     }
     else if ( !strncmp( make_lower_temp(p) , "define", 6 ) ) {
       char value[32] ;
-      p += 6 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t') && *p != '\0' ; p++ ) ;
+      p += 6 ; for ( ; ( *p == ' ' || *p == '\t') && *p != '\0' ; p++ ) ;
       strncpy(value, p, 31 ) ; value[31] = '\0' ;
       if ( (p=index(value,'\n')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,' ')) != NULL ) *p = '\0' ; if ( (p=index(value,'	')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,' '))  != NULL ) *p = '\0' ;
+      if ( (p=index(value,'\t')) != NULL ) *p = '\0' ;
       sym_add( value ) ;
       continue ;
     }
@@ -241,13 +240,13 @@ gotit:
       if ( tokens[i][0] == '"' ) tokens[i]++ ;
       if ((pp=rindex( tokens[i], '"' )) != NULL ) *pp = '\0' ;
     }
-    for ( p = parseline_save ; ( *p == ' ' || *p == '	' || *p == '\t') && *p != '\0' ; p++ ) ;
+    for ( p = parseline_save ; ( *p == ' ' || *p == '\t') && *p != '\0' ; p++ ) ;
     strcpy(parseline_save,p) ;  // get rid of leading spaces
     if      ( !strncmp( parseline_save , "typedef", 7 ) )
     {
         char tmp[NAMELEN], *x ;
         strcpy( tmp, parseline_save ) ;
-        x = index(tmp,' ') ;
+        x = strpbrk(tmp," \t"); // find the first space or tab
         if (usefrom_sw && x ) {
           sprintf( parseline_save, "usefrom %s", x ) ;
         }
@@ -373,6 +372,13 @@ reg_parse( FILE * infile )
         param_struct->inival[0] = '\0' ;
         if ( strcmp( tokens[FIELD_INIVAL], "-" ) ) /* that is, if not equal "-" */
           { strcpy( param_struct->inival , tokens[FIELD_INIVAL] ) ; }
+        strcpy(param_struct->descrip,"-") ;
+        if ( strcmp( tokens[FIELD_DESCRIP], "-" ) ) /* that is, if not equal "-" */
+          { strcpy( param_struct->descrip , tokens[FIELD_DESCRIP] ) ; }
+        strcpy(param_struct->units,"-") ;
+        if ( strcmp( tokens[FIELD_UNITS], "-" ) ) /* that is, if not equal "-" */
+          { strcpy( param_struct->units , tokens[FIELD_UNITS] ) ; }
+
         add_node_to_end( param_struct , &(modname_struct->params) ) ;
 
       } else {
