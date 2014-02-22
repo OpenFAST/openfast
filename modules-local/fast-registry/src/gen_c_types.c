@@ -34,59 +34,67 @@ gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong
     if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
     } else {
       if ( r->ndims > 0 ) {
-      //
-        sprintf(tmp4,"%s_F2C_%s_%s", ModName->nickname,nonick,r->name ) ;
-        make_fortran_callable(tmp4) ;
-        fprintf(fp,"void %s ( %s * src, %s_t * dst ", tmp4,C_type(r->type->mapsto),addnick ) ;
-        for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
-        fprintf(fp,") {\n") ;
-        fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
-        fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
-        if ( has_deferred_dim( r, 0 ) ) {
-          fprintf(fp,"  if ( dst->%s != NULL ) free( dst->%s ) ;\n",r->name,r->name) ;
-          strcpy(tmp,"") ;
-          for ( d=1 ; d <= r->ndims ; d++ ) {
-            sprintf(tmp2," *n%d",d) ;
-            strcat(tmp,tmp2) ;
-            if ( d < r->ndims ) strcat(tmp,"*") ;
-          }
-          fprintf(fp,"  dst->%s = (%s *)malloc((%s)*sizeof(%s)) ;\n",
-                  r->name,C_type(r->type->mapsto),tmp,C_type(r->type->mapsto)) ;
-        }
-        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
-        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
-        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
-        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
-        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
-        fprintf(fp,  "  p = (%s *)dst->%s ;\n",C_type(r->type->mapsto),r->name) ;
-        for ( d=r->ndims ; d >= 1 ; d-- ) {
-          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
-        }
-        fprintf(fp,  "  {\n") ;
-        fprintf(fp,  "    *p++ = src[%s] ;\n",tmp) ;
-        fprintf(fp,  "  }\n") ;
+        sprintf(tmp4,"%s_F2C_%s_%s_C", ModName->nickname,nonick,r->name ) ;
+        //printf("CALL void %s ( %s_t *type, %s *arr, int len )\n", tmp4,addnick,C_type(r->type->mapsto) );
+        //make_fortran_callable(tmp4) ;
+
+        //fprintf(fp,"void %s ( %s * src, %s_t * dst ", tmp4,C_type(r->type->mapsto),addnick ) ;
+        fprintf(fp,"\nCALL void %s ( %s_t *type, %s *arr, int len )\n", tmp4,addnick,C_type(r->type->mapsto) );
+        // @end masciola
+        //for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
+        fprintf(fp,"{\n") ;
+        //fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
+        fprintf(fp,"  int i = 0;\n") ;
+        fprintf(fp,"  for( i=0 ; i<=len-1 ; i++ ) type->%s[i] = arr[i];\n",r->name);
+        //fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
+//        if ( has_deferred_dim( r, 0 ) ) {
+//          fprintf(fp,"  if ( dst->%s != NULL ) free( dst->%s ) ;\n",r->name,r->name) ;
+//          strcpy(tmp,"") ;
+//          for ( d=1 ; d <= r->ndims ; d++ ) {
+//            sprintf(tmp2," *n%d",d) ;
+//            strcat(tmp,tmp2) ;
+//            if ( d < r->ndims ) strcat(tmp,"*") ;
+//          }
+//          fprintf(fp,"  dst->%s = (%s *)malloc((%s)*sizeof(%s)) ;\n",
+//                  r->name,C_type(r->type->mapsto),tmp,C_type(r->type->mapsto)) ;
+//        }
+//        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
+//        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
+//        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
+//        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
+//        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
+//        fprintf(fp,  "  p = (%s *)dst->%s ;\n",C_type(r->type->mapsto),r->name) ;
+//        for ( d=r->ndims ; d >= 1 ; d-- ) {
+//          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
+//        }
+//        fprintf(fp,  "  {\n") ;
+//        fprintf(fp,  "    *p++ = src[%s] ;\n",tmp) ;
+//        fprintf(fp,  "  }\n") ;
         fprintf(fp,"}\n") ;
-      //
-        sprintf(tmp4,"%s_C2F_%s_%s", ModName->nickname,nonick,r->name ) ;
-        make_fortran_callable(tmp4) ;
-        fprintf(fp,"void %s ( %s_t * src, %s * dst ", tmp4,addnick,C_type(r->type->mapsto) ) ;
-        for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
-        fprintf(fp,") {\n") ;
-        fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
-        fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
-        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
-        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
-        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
-        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
-        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
-        fprintf(fp,  "  p = (%s *)src->%s ;\n",C_type(r->type->mapsto),r->name) ;
-        for ( d=r->ndims ; d >= 1 ; d-- ) {
-          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
-        }
-        fprintf(fp,  "  {\n") ;
-        fprintf(fp,  "    dst[%s] = *p++ ;\n",tmp) ;
-        fprintf(fp,  "  }\n") ;
-        fprintf(fp,"}\n") ;
+//      //
+//        sprintf(tmp4,"%s_C2F_%s_%s", ModName->nickname,nonick,r->name ) ;
+//        make_fortran_callable(tmp4) ;
+//        // @start masciola
+//        //fprintf(fp,"void %s ( %s_t * src, %s * dst ", tmp4,addnick,C_type(r->type->mapsto) ) ;
+//        fprintf(fp,"CALL void STDCLL %s ( %s_t * src, %s * dst ", tmp4,addnick,C_type(r->type->mapsto) ) ;
+//        // @end masciola
+//        for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
+//        fprintf(fp,") {\n") ;
+//        fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
+//        fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
+//        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
+//        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
+//        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
+//        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
+//        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
+//        fprintf(fp,  "  p = (%s *)src->%s ;\n",C_type(r->type->mapsto),r->name) ;
+//        for ( d=r->ndims ; d >= 1 ; d-- ) {
+//          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
+//        }
+//        fprintf(fp,  "  {\n") ;
+//        fprintf(fp,  "    dst[%s] = *p++ ;\n",tmp) ;
+//        fprintf(fp,  "  }\n") ;
+//        fprintf(fp,"}\n") ;
 
 
       } else {
@@ -455,30 +463,38 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
               if ( r->dims[0]->deferred ) star = '*' ;
             }
             if ( r->type->type_type == DERIVED ) {
-              if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // do not output mesh types for C code, 20130729
-                fprintf(fph,"    struct %s %c%s",r->type->mapsto,star,r->name ) ;
+              if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // do not output mesh types for C code,
+                //fprintf(fph,"    struct %s %c%s",r->type->mapsto,star,r->name ) ;
               }
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( r->ndims > 0 && r->dims[0]->deferred ) {
                 fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
-                fprintf(fph,"    int %s_Len ",r->name ) ;
+                fprintf(fph,"    int %s_Len ;",r->name ) ;
               } else {
-                fprintf(fph,"    %s %s",C_type( r->type->mapsto ),r->name ) ;
+                char *p = r->type->mapsto, buf[10];
+                while (*p) { 
+                  if (isdigit(*p)) { 
+                    long val = strtol(p, &p, 10); 
+                    snprintf(buf, 10, "%lu", val);
+                  } else { 
+                    p++;
+                  }
+                }    
+                if ( strcmp( C_type(r->type->mapsto), "char" )==0 ){ // if it's a char we need to add the array size
+                  fprintf(fph,"    %s %s[%s] ;",C_type( r->type->mapsto ),r->name,buf ) ;
+                } else { // else, it's just a double or int value
+                  fprintf(fph,"    %s %s ;",C_type( r->type->mapsto ),r->name ) ;
+                }                
               }
             }
             for ( i = 0 ; i < r->ndims ; i++ )
             {
               if ( ! r->dims[0]->deferred ) 
-                fprintf(fph,"[((%d)-(%d)+1)]",r->dims[i]->coord_end,r->dims[i]->coord_start) ;
+                fprintf(fph,"[((%d)-(%d)+1)] ;",r->dims[i]->coord_end,r->dims[i]->coord_start) ;
             }
-            if ( r->ndims == 0 ) {
-              if ( strlen(r->inival) > 0 ) {
-                fprintf(fph," = %s ",  r->inival ) ;
-              }
-            }
-            fprintf(fph,"; \n") ;
+            fprintf(fph,"\n") ;
           }
         }
         fprintf(fph,"  } %s_t ;\n", q->mapsto ) ;
@@ -498,7 +514,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
     }
     fprintf(fph,"  } %s_t ;\n", ModName->nickname ) ;
 
-    fprintf(fpc,"#define CALL __attribute__((dllexport) )\n") ;
+    fprintf(fpc,"//#define CALL __attribute__((dllexport) )\n") ;
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->usefrom == 0 ) {
@@ -515,7 +531,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
           ddtnamelong = ddtname ;
         }
 //        fprintf(fpc,"extern \"C\" %s_%s_t* CALL %s_%s_Create() { return new %s_%s_t() ; } ;\n",
-        fprintf(fpc,"%s_%s_t* CALL %s_%s_Create() { return ((%s_%s_t*) malloc( sizeof(%s_%s_t()))) ; } ;\n",
+        fprintf(fpc,"//%s_%s_t* CALL %s_%s_Create() { return ((%s_%s_t*) malloc( sizeof(%s_%s_t()))) ; } ;\n",
                         ModName->nickname,
                         ddtnamelong,
                         ModName->nickname,
@@ -524,7 +540,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
                         ddtnamelong,
                         ModName->nickname,
                         ddtnamelong ) ;
-        fprintf(fpc,"void CALL %s_%s_Delete(%s_%s_t *This) { free(This) ; } ;\n",
+        fprintf(fpc,"//void CALL %s_%s_Delete(%s_%s_t *This) { free(This) ; } ;\n",
                         ModName->nickname,
                         ddtname,
                         ModName->nickname,
