@@ -50,7 +50,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.01.03, 20-Jan-2014)";
+   thisprog_ver = "FAST Registry (v2.02.00, 21-Feb-2014)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
@@ -327,7 +327,7 @@ make_fortran_callable( char *str )     // make a generated C subroutine name cal
 {
    char *p, tmp[NAMELEN] ;
    int found = 0 ;
-   make_lower(str) ;
+   make_lower(str) ;  // make string lower case
    strcpy(tmp,sw_c2f_underscore) ;
    if ( !strcmp(sw_c2f_underscore,"__")) // f2cstyle, dbl underscore if an underscore in name, single otherwise
    {

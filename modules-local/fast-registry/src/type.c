@@ -70,26 +70,48 @@ init_type_table()
   return(0) ;
 }
 
+
+
 /* return the C equivalent of the simple Fortran types, expects the "mapsto" strings, set above  */
 char *
 C_type( char * s )
 {
-  if ( !strcmp( s, "INTEGER(IntKi)") ) return("int") ;
-  if ( !strcmp( s, "LOGICAL") )        return("bool") ;
-  if ( !strcmp( s, "REAL(ReKi)") )     return("float") ;
-  if ( !strcmp( s, "REAL(DbKi)") )     return("double") ;
-  if ( !strncmp( s, "CHARACTER",9) )   return("char *") ;
+  if ( !strcmp(  s, "INTEGER(IntKi)") ) return("int"   ) ;
+  if ( !strcmp(  s, "LOGICAL"       ) ) return("bool"  ) ;
+  if ( !strcmp(  s, "REAL(ReKi)"    ) ) return("float" ) ;
+  if ( !strcmp(  s, "REAL(DbKi)"    ) ) return("double") ;
+  if ( !strncmp( s, "CHARACTER",9   ) ) return("char"  ) ; 
   return("unknown") ;
 }
 
 char *
 c_types_binding( char *s )
 {
-  if ( !strcmp( s, "INTEGER(IntKi)") ) return("INTEGER(KIND=C_INT)") ;
-  if ( !strcmp( s, "LOGICAL") )        return("LOGICAL(KIND=C_BOOL)") ;
-  if ( !strcmp( s, "REAL(ReKi)") )     return("REAL(KIND=C_FLOAT)") ;
-  if ( !strcmp( s, "REAL(DbKi)") )     return("REAL(KIND=C_DOUBLE)") ;
-  if ( !strncmp( s, "CHARACTER",9) )   return("CHARACTER(KIND=C_CHAR,LEN=1024)") ;
+  if ( !strcmp(  s, "INTEGER(IntKi)") ) return("INTEGER(KIND=C_INT)" ) ;
+  if ( !strcmp(  s, "LOGICAL"       ) ) return("LOGICAL(KIND=C_BOOL)") ;
+  if ( !strcmp(  s, "REAL(ReKi)"    ) ) return("REAL(KIND=C_FLOAT)"  ) ;
+  if ( !strcmp(  s, "REAL(DbKi)"    ) ) return("REAL(KIND=C_DOUBLE)" ) ;
+  if ( !strncmp( s, "CHARACTER",9   ) ) { // give the C string a length identical to the fortran type
+    char *p = s, buf[10];
+    while ( *p ) { 
+      if ( isdigit(*p) ) { 
+        long val = strtol( p, &p, 10 ); 
+        snprintf( buf, 10, "%lu", val );
+      } else { 
+        p++;
+      }
+    }    
+    char *str_to_return = "CHARACTER(KIND=C_CHAR,LEN=";    
+    char* name_with_extension;
+    
+    name_with_extension = malloc(strlen(str_to_return)+2); // memory leak that I really don't care about. Any decent OS
+                                                           // should take care of this.
+    strcpy(name_with_extension, str_to_return); 
+    strcat(name_with_extension, buf); 
+    strcat(name_with_extension, ")"); 
+    
+    return name_with_extension;
+  };
   return("unknown") ;
 }
 

@@ -48,7 +48,7 @@
 
 int isNum( char c )
 {
-    if ( c < '0' || c > '9' ) return 0; 
+    if ( c < '0' || c > '9' ) return 0;
     return 1 ;
 }
 
@@ -57,7 +57,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
 {
   /* Decreased size for SOA from 8192 to 8000--double check if necessary, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE], parseline_save[PARSELINE_SIZE] ;
-  int found ; 
+  int found ;
   char *p, *q, *p1, *p2  ;
   char *tokens[MAXTOKENS], *toktmp[MAXTOKENS], newdims[NAMELEN_LONG], newdims4d[NAMELEN_LONG],newname[NAMELEN_LONG] ;
   int i, ii, ifile, len_of_tok ;
@@ -78,16 +78,16 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
     /* look for an include statement */
     if (( p = index( inln , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
     if (( p = index( inln , '\r' )) != NULL  ) *p = '\0' ; /* discard carriage returns (happens on Windows)*/
-    for ( p = inln ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+    for ( p = inln ; ( *p == ' ' || *p == '	' || *p == '\t' ) && *p != '\0' ; p++ ) ;
     p1 = make_lower_temp(p) ;
-    if ( (!strncmp( p1 , "include", 7 ) || !strncmp( p1, "usefrom", 7 ))  &&  ! ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) ) 
+    if ( (!strncmp( p1 , "include", 7 ) || !strncmp( p1, "usefrom", 7 ))  &&  ! ( ifdef_stack_ptr >= 0 && ! ifdef_stack[ifdef_stack_ptr] ) )
     {
       FILE *include_fp ;
       char include_file_name[128] ;
       int checking_for_usefrom = !strncmp( p1, "usefrom", 7 ) ;
 //fprintf(stderr,"checking_for_usefrom %d |%s|\n",checking_for_usefrom,p1) ;
 
-      p += 7 ; for ( ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+      p += 7 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t' ) && *p != '\0' ; p++ ) ;
       if ( strlen( p ) > 127 ) { fprintf(stderr,"Registry warning: invalid include file name: %s\n", p ) ; }
       else {
 /* look in a few places for valid include files */
@@ -132,7 +132,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
           }
         }
 
-gotit:  
+gotit:
         if ( foundit ) {
           fprintf(stderr,"opening %s %s\n",include_file_name,
                                            (checking_for_usefrom || usefrom_sw)?"in usefrom mode":"" ) ;
@@ -147,15 +147,17 @@ gotit:
           if ( ! checking_for_usefrom ) {
             fprintf(stderr,"Registry warning: cannot open %s . Ignoring.\n", include_file_name ) ;
           }
-        } 
+        }
       }
     }
     else if ( !strncmp( make_lower_temp(p) , "ifdef", 5 ) ) {
       char value[32] ;
-      p += 5 ; for ( ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+      p += 5 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t' ) && *p != '\0' ; p++ ) ;
       strncpy(value, p, 31 ) ; value[31] = '\0' ;
       if ( (p=index(value,'\n')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,' ')) != NULL ) *p = '\0' ; if ( (p=index(value,'	')) != NULL ) *p = '\0' ; 
+      if ( (p=index(value,' ')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,'	')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,'\t')) != NULL ) *p = '\0' ;
       ifdef_stack_ptr++ ;
       ifdef_stack[ifdef_stack_ptr] = ( sym_get(value) != NULL && ifdef_stack[ifdef_stack_ptr-1] ) ;
       if ( ifdef_stack_ptr >= 100 ) { fprintf(stderr,"Registry fatal: too many nested ifdefs\n") ; exit(1) ; }
@@ -163,26 +165,28 @@ gotit:
     }
     else if ( !strncmp( make_lower_temp(p) , "ifndef", 6 ) ) {
       char value[32] ;
-      p += 6 ; for ( ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+      p += 6 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t') && *p != '\0' ; p++ ) ;
       strncpy(value, p, 31 ) ; value[31] = '\0' ;
       if ( (p=index(value,'\n')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,' ')) != NULL ) *p = '\0' ; if ( (p=index(value,'	')) != NULL ) *p = '\0' ; 
+      if ( (p=index(value,' ')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,'	')) != NULL ) *p = '\0' ;
+      if ( (p=index(value,'\t')) != NULL ) *p = '\0' ;
       ifdef_stack_ptr++ ;
       ifdef_stack[ifdef_stack_ptr] = ( sym_get(value) == NULL && ifdef_stack[ifdef_stack_ptr-1] ) ;
       if ( ifdef_stack_ptr >= 100 ) { fprintf(stderr,"Registry fatal: too many nested ifdefs\n") ; exit(1) ; }
       continue ;
     }
     else if ( !strncmp( make_lower_temp(p) , "endif", 5 ) ) {
-      ifdef_stack_ptr-- ; 
+      ifdef_stack_ptr-- ;
       if ( ifdef_stack_ptr < 0 ) { fprintf(stderr,"Registry fatal: unmatched endif\n") ; exit(1) ; }
       continue ;
     }
     else if ( !strncmp( make_lower_temp(p) , "define", 6 ) ) {
       char value[32] ;
-      p += 6 ; for ( ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+      p += 6 ; for ( ; ( *p == ' ' || *p == '	' || *p == '\t') && *p != '\0' ; p++ ) ;
       strncpy(value, p, 31 ) ; value[31] = '\0' ;
       if ( (p=index(value,'\n')) != NULL ) *p = '\0' ;
-      if ( (p=index(value,' ')) != NULL ) *p = '\0' ; if ( (p=index(value,'	')) != NULL ) *p = '\0' ; 
+      if ( (p=index(value,' ')) != NULL ) *p = '\0' ; if ( (p=index(value,'	')) != NULL ) *p = '\0' ;
       sym_add( value ) ;
       continue ;
     }
@@ -237,7 +241,7 @@ gotit:
       if ( tokens[i][0] == '"' ) tokens[i]++ ;
       if ((pp=rindex( tokens[i], '"' )) != NULL ) *pp = '\0' ;
     }
-    for ( p = parseline_save ; ( *p == ' ' || *p == '	' ) && *p != '\0' ; p++ ) ;
+    for ( p = parseline_save ; ( *p == ' ' || *p == '	' || *p == '\t') && *p != '\0' ; p++ ) ;
     strcpy(parseline_save,p) ;  // get rid of leading spaces
     if      ( !strncmp( parseline_save , "typedef", 7 ) )
     {
@@ -263,7 +267,7 @@ reg_parse( FILE * infile )
   /* Had to increase size for SOA from 4096 to 7000, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE] ;
   char *p, *q ;
-  char *tokens[MAXTOKENS], *toktmp[MAXTOKENS],*ditto[MAXTOKENS] ; 
+  char *tokens[MAXTOKENS], *toktmp[MAXTOKENS],*ditto[MAXTOKENS] ;
   int i, ii ;
   int defining_state_field, defining_rconfig_field, defining_i1_field ;
 
@@ -276,14 +280,14 @@ reg_parse( FILE * infile )
 /* main parse loop over registry lines */
   while ( fgets ( inln , INLN_SIZE , infile ) != NULL )
   {
-    strcat( parseline , inln ) ; 
+    strcat( parseline , inln ) ;
     /* allow \ to continue the end of a line */
     if (( p = index( parseline,  '\\'  )) != NULL )
     {
       if ( *(p+1) == '\n' || *(p+1) == '\0' )
       {
-	*p = '\0' ;
-	continue ;  /* go get another line */
+   *p = '\0' ;
+   continue ;  /* go get another line */
       }
     }
 
@@ -291,10 +295,10 @@ reg_parse( FILE * infile )
     if (( p = index( parseline , '#' ))  != NULL  ) *p = '\0' ; /* discard comments (dont worry about quotes for now) */
     if (( p = index( parseline , '\n' )) != NULL  ) *p = '\0' ; /* discard newlines */
     if (( p = index( parseline , '\r' )) != NULL  ) *p = '\0' ; /* discard carriage returns (happens on Windows)*/
-    for ( i = 0 ; i < MAXTOKENS ; i++ ) tokens[i] = NULL ; 
+    for ( i = 0 ; i < MAXTOKENS ; i++ ) tokens[i] = NULL ;
     i = 0 ;
 
-    if ((tokens[i] = my_strtok(parseline)) != NULL ) i++ ; 
+    if ((tokens[i] = my_strtok(parseline)) != NULL ) i++ ;
     while (( tokens[i] = my_strtok(NULL) ) != NULL && i < MAXTOKENS ) i++ ;
     if ( i <= 0 ) continue ;
 
@@ -322,7 +326,7 @@ reg_parse( FILE * infile )
     defining_i1_field = 0 ;
 
 /* typedef, usefrom, and param entries */
-    if (  !strcmp( tokens[ TABLE ] , "typedef" ) 
+    if (  !strcmp( tokens[ TABLE ] , "typedef" )
        || !strcmp( tokens[ TABLE ] , "usefrom" )
        || !strcmp( tokens[ TABLE ] , "param"   ) )
     {
@@ -336,30 +340,30 @@ reg_parse( FILE * infile )
       strcpy(tmpstr, make_lower_temp(tokens[ FIELD_MODNAME ])) ;
       if ( (p = index(tmpstr,'/')) != NULL ) *p = '\0' ;
       modname_struct = get_modname_entry( tmpstr ) ;
-      if ( modname_struct == NULL ) 
+      if ( modname_struct == NULL )
       {
         char *p ;
         modname_struct = new_node( MODNAME ) ;
         strcpy( modname_struct->name, tokens[FIELD_MODNAME] ) ;
-        // if a shortname is indicated after a slash, record that, otherwise use full name for both 
+        // if a shortname is indicated after a slash, record that, otherwise use full name for both
         if ( (p = index(modname_struct->name,'/')) != NULL ) {
           *p = '\0' ;
           strcpy( modname_struct->nickname, p+1 ) ;
         } else {
           strcpy( modname_struct->nickname, modname_struct->name ) ;
         }
-        
+
         modname_struct->module_ddt_list = NULL ;
         modname_struct->next            = NULL ;
         add_node_to_end( modname_struct , &ModNames ) ;
       }
-      if ( !strcmp( tokens[ TABLE ] , "usefrom" ) ) 
+      if ( !strcmp( tokens[ TABLE ] , "usefrom" ) )
       {
         modname_struct->usefrom = 1 ;
       }
 
       if ( !strcmp( tokens[ TABLE ] , "param" ) ) {
-// FAST registry, construct list of params specified for the Module 
+// FAST registry, construct list of params specified for the Module
         param_struct = new_node( PARAM ) ;
         sprintf(param_struct->name,"%s",tokens[ FIELD_SYM ]) ; // name of parameter
         if ( set_state_type( tokens[FIELD_TYPE], param_struct, Type, NULL  ) ) // Only search type list, not ddts for module
@@ -373,7 +377,7 @@ reg_parse( FILE * infile )
 
       } else {
 
-// FAST registry, construct list of derived data types specified for the Module 
+// FAST registry, construct list of derived data types specified for the Module
 //  Only the FAST interface defined types should have the Module's nickname prepended
         sprintf(ddtname,"%s",tokens[ FIELD_OF ]) ;
         modname_struct->is_interface_type = 0 ;
@@ -385,8 +389,8 @@ reg_parse( FILE * infile )
         }
         sprintf(tmpstr,"%s",make_lower_temp(ddtname)) ;
         type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
-        if ( type_struct == NULL ) 
-        {  
+        if ( type_struct == NULL )
+        {
           type_struct = new_node( TYPE ) ;
           strcpy( type_struct->name, tmpstr ) ;
           strcpy(type_struct->mapsto,ddtname) ;
@@ -406,7 +410,7 @@ reg_parse( FILE * infile )
          { fprintf(stderr,"Registry warning: some problem with dimstring %s for %s\n", tokens[FIELD_DIMS],tokens[FIELD_SYM] ) ; }
         if ( set_ctrl( tokens[FIELD_CTRL], field_struct ) )
          { fprintf(stderr,"Registry warning: some problem with ctrl %s for %s\n", tokens[FIELD_CTRL],tokens[FIELD_SYM] ) ; }
-  
+
         field_struct->inival[0] = '\0' ;
         if ( strcmp( tokens[FIELD_INIVAL], "-" ) ) /* that is, if not equal "-" */
           { strcpy( field_struct->inival , tokens[FIELD_INIVAL] ) ; }
@@ -421,7 +425,7 @@ reg_parse( FILE * infile )
         if ( field_struct->type != NULL )
           if ( field_struct->type->type_type == DERIVED && field_struct->ndims > 0 )
             { fprintf(stderr,"Registry warning: type item %s of type %s can not be multi-dimensional ",
-	  		     tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
+              tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
         field_struct->usefrom   = type_struct->usefrom ;
 
@@ -450,11 +454,11 @@ reg_parse( FILE * infile )
 /* Domain is a type node with fields that are not part of any type. WRF "state" entries
    were these. They were simply fields of the data type for a domain (as opposed to
    fields within derived data types that were fields in a domain).  The FAST registry
-   does not have the concept of a Domain.  Leave the following assignment here but 
+   does not have the concept of a Domain.  Leave the following assignment here but
    put a test around it so we do not segfault if there aren't any "state" entries. */
   if ( get_type_entry( "domain" ) ) {
     Domain = *(get_type_entry( "domain" )) ;
-  } 
+  }
 
   return(0) ;
 
@@ -477,7 +481,7 @@ get_dim_entry( char *s, int sw ) // sw = 1 is used when checking an inline dimsp
     strcpy(dim_struct->dim_name,s) ;
 //    strncpy(dim_struct->dim_name,s,1) ;
     if ( set_dim_len( s, dim_struct ) )
-    { 
+    {
       fprintf(stderr,"Registry warning: get_dim_entry: problem with dimspec (%s)\n",s ) ;
     }
     else
@@ -494,12 +498,12 @@ set_state_type( char * typename, node_t * state_entry, node_t * typelist, node_t
 {
   node_t *p ;
   int retval ;
-  
+
   if ( typename == NULL ) return(1) ;
   retval = 0 ;
   if ( ( state_entry->type = get_entry( make_lower_temp(typename), ddtlist )) == NULL ) {
     if ( ( state_entry->type = get_entry( make_lower_temp(typename), typelist )) == NULL ) {
-      if ( !strncmp(make_lower_temp(typename),"character",9) ) 
+      if ( !strncmp(make_lower_temp(typename),"character",9) )
       {
         p = new_node( TYPE ) ;
         strcpy( p->name, make_lower_temp(typename) ) ;
@@ -613,10 +617,10 @@ init_parser()
   return(0) ;
 }
 
-int 
+int
 is_a_fast_interface_type( char *str )
 {
-   int retval ; 
+   int retval ;
 
    retval =  (
      !strcmp(make_lower_temp(str), "initinputtype")       ||
@@ -711,7 +715,7 @@ std_case( char *str )    // returns the name in CamelBack case or just the name 
    else if (  !strcmp(make_lower_temp(str), "partialcontstatepinputtype"))   {return("PartialConstStatePInputType");}
    else if (  !strcmp(make_lower_temp(str), "partialdiscstatepinputtype"))   {return("PartialDiscStatePInputType");}
    else if (  !strcmp(make_lower_temp(str), "partialconstrstatepinputtype")) {return("PartialConstrStatePInputType");}
-   else                                                                      {return(str);} 
+   else                                                                      {return(str);}
     // shouldn't happen
    return("") ;
 }
