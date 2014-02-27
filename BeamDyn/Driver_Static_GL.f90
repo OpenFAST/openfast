@@ -14,7 +14,10 @@
 !**********************************************************************************************************************************
 !  
 !    ADD DESCRIPTION
-!	
+!	This is the driver for the static solution.  The driver calls the StaticSolutionGL and ComputeRootForce subroutines. 
+!	The StaticSolutionGL subroutine returns the final values of the displacement for each node. ComputeRootForce, computes the forces
+!	and moments at the root.  The driver also generates the output files "BeamDyn.out" and "QiStaticDisp.out".
+!
 !    References:
 !
 !
