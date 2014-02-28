@@ -1,10 +1,10 @@
    SUBROUTINE ElementMatrixDynLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,&
-                                  &Stif0,m00,mEta0,rho0,ngp,node_elem,dof_node,elk,elf,elm,elg)
+                                  &NStif0,Nm00,NmEta0,Nrho0,ngp,node_elem,dof_node,elk,elf,elm,elg)
 
    REAL(ReKi),INTENT(IN):: Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
    REAL(ReKi),INTENT(IN):: Nvvv(:),Naaa(:)
-   REAL(ReKi),INTENT(IN):: Stif0(:,:)
-   REAL(ReKi),INTENT(IN):: m00,mEta0(:),rho0(:,:)
+   REAL(ReKi),INTENT(IN):: NStif0(:,:,:)
+   REAL(ReKi),INTENT(IN):: Nm00(:),NmEta0(:,:),Nrho0(:,:,:)
    INTEGER(IntKi),INTENT(IN):: ngp,node_elem,dof_node
 
    REAL(ReKi),INTENT(OUT):: elk(:,:),elf(:)  
@@ -16,7 +16,8 @@
    REAL(ReKi):: uu0(6),E10(3),RR0(3,3),kapa(3),E1(3),Stif(6,6),cet
    REAL(ReKi):: uuu(6),uup(3),Jacobian,gpr
    REAL(ReKi):: Fc(6),Fd(6),Oe(6,6),Pe(6,6),Qe(6,6)
-   REAL(ReKi):: vvv(6),aaa(6),mEta(3),rho(3,3)
+   REAL(ReKi):: vvv(6),aaa(6)
+   REAL(ReKi):: mmm,mEta(3),rho(3,3)
    REAL(ReKi):: Fi(6),Mi(6,6),Ki(6,6),Gi(6,6)
 
    INTEGER(IntKi)::igp,i,j,m,n,temp_id1,temp_id2
@@ -59,12 +60,12 @@
        gpr = gp(igp)
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
 !       WRITE(*,*) "Jacobian = ", Jacobian
-       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
-       CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,Stif0,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
+       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+       CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
        
-       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,mEta0,rho0,node_elem,dof_node,vvv,aaa,mEta,rho)
-       CALL InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
+       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,Nm00,NmEta0,Nrho0,node_elem,dof_node,vvv,aaa,mmm,mEta,rho)
+       CALL InertialForce(mmm,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
 
        DO i=1,node_elem
            DO j=1,node_elem

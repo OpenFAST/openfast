@@ -1,14 +1,16 @@
    SUBROUTINE BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,Fext,Stif0,m00,mEta0,rho0,&
                                        &elem_total,node_elem,dof_node,ngp,StifK,RHS,MassM,DampG)
 
-   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Fext(:),Stif0(:,:)
-   REAL(ReKi),INTENT(IN):: vvNf(:),aaNf(:),m00,mEta0(:),rho0(:,:)
+   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Fext(:),Stif0(:,:,:)
+   REAL(ReKi),INTENT(IN):: vvNf(:),aaNf(:),m00(:),mEta0(:,:),rho0(:,:,:)
    INTEGER(IntKi),INTENT(IN):: elem_total,node_elem,dof_node,ngp
    REAL(ReKi),INTENT(OUT):: StifK(:,:),RHS(:) 
    REAL(ReKi),INTENT(OUT):: MassM(:,:),DampG(:,:)
 
    REAL(ReKi),ALLOCATABLE:: Nuu0(:),Nuuu(:),Next(:),Nrr0(:),Nrrr(:)
    REAL(ReKi),ALLOCATABLE:: Nvvv(:),Naaa(:)
+   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:)
+   REAL(ReKi),ALLOCATABLE:: Nm00(:),NmEta0(:,:),Nrho0(:,:,:)
    REAL(ReKi),ALLOCATABLE:: elk(:,:),elf(:)
    REAL(ReKi),ALLOCATABLE:: elm(:,:),elg(:,:)
 
@@ -47,6 +49,22 @@
    IF(allo_stat /=0) GOTO 9999
    Next = 0.0D0
 
+   ALLOCATE(NStif0(dof_node,dof_node,node_elem),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   NStif0 = 0.0D0
+
+   ALLOCATE(Nm00(node_elem),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   Nm00 = 0.0D0
+   
+   ALLOCATE(NmEta0(3,node_elem),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   NmEta0 = 0.0D0
+   
+   ALLOCATE(Nrho0(3,3,node_elem),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   Nrho0 = 0.0D0
+   
    ALLOCATE(elf(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    elf = 0.0D0
@@ -66,6 +84,9 @@
    DO nelem=1,elem_total
        CALL ElemNodalDispGL(uuN0,node_elem,dof_node,nelem,Nuu0)
        CALL ElemNodalDispGL(uuNf,node_elem,dof_node,nelem,Nuuu)
+    
+       CALL ElemNodalStifGL(Stif0,node_elem,dof_node,nelem,NStif0) 
+       CALL ElemNodalMassGL(m00,mEta0,rho0,node_elem,dof_node,nelem,Nm00,NmEta0,Nrho0)  
 
        CALL ElemNodalDispGL(Fext,node_elem,dof_node,nelem,Next)
 
@@ -78,7 +99,7 @@
 !       CALL ElementMatrixDynGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,Stif0,m00,mEta0,rho0,&
 !                              &ngp,node_elem,dof_node,elk,elf,elm,elg)
 
-       CALL ElementMatrixDynLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,Stif0,m00,mEta0,rho0,&
+       CALL ElementMatrixDynLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,NStif0,Nm00,NmEta0,Nrho0,&
                                 &ngp,node_elem,dof_node,elk,elf,elm,elg)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elk,StifK)
@@ -94,6 +115,10 @@
    DEALLOCATE(Nvvv)
    DEALLOCATE(Naaa)
    DEALLOCATE(Next)
+   DEALLOCATE(NStif0)
+   DEALLOCATE(Nm00)
+   DEALLOCATE(NmEta0)
+   DEALLOCATE(Nrho0)
    DEALLOCATE(elf)
    DEALLOCATE(elk)
    DEALLOCATE(elm)
@@ -107,6 +132,10 @@
             IF(ALLOCATED(Nvvv)) DEALLOCATE(Nvvv)
             IF(ALLOCATED(Naaa)) DEALLOCATE(Naaa)
             IF(ALLOCATED(Next)) DEALLOCATE(Next)
+            IF(ALLOCATED(NStif0)) DEALLOCATE(NStif0)
+            IF(ALLOCATED(Nm00)) DEALLOCATE(Nm00)
+            IF(ALLOCATED(NmEta0)) DEALLOCATE(NmEta0)
+            IF(ALLOCATED(Nrho0)) DEALLOCATE(Nrho0)
             IF(ALLOCATED(elf)) DEALLOCATE(elf)
             IF(ALLOCATED(elk)) DEALLOCATE(elk)
             IF(ALLOCATED(elm)) DEALLOCATE(elm)

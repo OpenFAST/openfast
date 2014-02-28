@@ -51,6 +51,10 @@ INCLUDE 'CrvMatrixR.f90'
 INCLUDE 'CrvMatrixH.f90'
 INCLUDE 'CrvCompose.f90'
 INCLUDE 'ElemNodalDispGL.f90'
+
+INCLUDE 'ElemNodalStifGL.f90'
+INCLUDE 'ElemNodalMassGL.f90'
+
 INCLUDE 'NodalRelRotGL.f90'
 
 !INCLUDE 'BldSet1DGaussPointScheme.f90'
@@ -153,12 +157,16 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! allocate all allocatable paramete arrays
 
-      ALLOCATE( p%Stif0(p%dof_node,p%dof_node),      STAT=ErrStat )
+      ALLOCATE( p%Stif0(p%dof_node,p%dof_node,p%node_total),      STAT=ErrStat )
       p%Stif0 = 0.0D0
+      
+      ALLOCATE( p%m00(p%node_total),      STAT=ErrStat )
+      p%m00 = 0.0D0
        
-      ALLOCATE( p%mEta0(3),      STAT=ErrStat )
+      ALLOCATE( p%mEta0(3,p%node_total),      STAT=ErrStat )
       p%mEta0 = 0.0D0
-      ALLOCATE( p%rho0(3,3),      STAT=ErrStat )
+
+      ALLOCATE( p%rho0(3,3,p%node_total),      STAT=ErrStat )
       p%rho0 = 0.0D0
 
       ALLOCATE( p%uuN0(p%dof_total),      STAT=ErrStat )
@@ -220,24 +228,24 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !          p%Stif0(5,4) = 1.80D+04
 !          p%Stif0(6,4) = 3.58D+02
 !          p%Stif0(6,5) = 3.77D+02 
-          p%Stif0(1,1) = 1.3681743184D+06
+          p%Stif0(1,1,i) = 1.3681743184D+06
 !          p%Stif0(1,2) = -1.8419308227D+05
-          p%Stif0(2,2) = 8.8562207505D+04
+          p%Stif0(2,2,i) = 8.8562207505D+04
 !          p%Stif0(1,3) = -1.4369407460D+02
 !          p%Stif0(2,3) = 7.8381012488D+01
-          p%Stif0(3,3) = 3.8777942862D+04
-          p%Stif0(4,4) = 1.6959274463D+04
-          p%Stif0(4,5) = 1.7611929624D+04
-          p%Stif0(5,5) = 5.9124766881D+04
-          p%Stif0(4,6) = -3.5060243156D+02
-          p%Stif0(5,6) = -3.7045274908D+02
-          p%Stif0(6,6) =  1.4147152848D+05
+          p%Stif0(3,3,i) = 3.8777942862D+04
+          p%Stif0(4,4,i) = 1.6959274463D+04
+          p%Stif0(4,5,i) = 1.7611929624D+04
+          p%Stif0(5,5,i) = 5.9124766881D+04
+          p%Stif0(4,6,i) = -3.5060243156D+02
+          p%Stif0(5,6,i) = -3.7045274908D+02
+          p%Stif0(6,6,i) =  1.4147152848D+05
 !          p%Stif0(2,1) = p%Stif0(1,2)
 !          p%Stif0(3,1) = p%Stif0(1,3)
 !          p%Stif0(3,2) = p%Stif0(2,3)
-          p%Stif0(5,4) = p%Stif0(4,5)
-          p%Stif0(6,4) = p%Stif0(4,6)
-          p%Stif0(6,5) = p%Stif0(5,6) 
+          p%Stif0(5,4,i) = p%Stif0(4,5,i)
+          p%Stif0(6,4,i) = p%Stif0(4,6,i)
+          p%Stif0(6,5,i) = p%Stif0(5,6,i) 
       ENDDO
       DEALLOCATE(dloc)
       DEALLOCATE(GLL_temp)
@@ -253,12 +261,15 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !      p%rho0(1,1) = 2.74D-06 
 !      p%rho0(2,2) = 7.90D-07
 !      p%rho0(3,3) = 1.95D-06
-      p%m00 = 8.5380000000D-02
-      p%mEta0 = 0.0D0 
-      p%rho0(1,1) = 1.4432983835D-02 
-      p%rho0(2,2) = 4.0971535000D-03
-      p%rho0(3,3) = 1.0335830335D-02
-
+      DO i=1,p%node_total
+          p%m00(i) = 8.5380000000D-02
+          p%mEta0(1,i) = 0.0D0 
+          p%mEta0(2,i) = 0.0D0 
+          p%mEta0(3,i) = 0.0D0 
+          p%rho0(1,1,i) = 1.4432983835D-02 
+          p%rho0(2,2,i) = 4.0971535000D-03
+          p%rho0(3,3,i) = 1.0335830335D-02
+      ENDDO
       ! Define boundary conditions (0->fixed, 1->free)
       p%bc = 1.0D0
       DO i=1, p%dof_node

@@ -44,8 +44,8 @@ typedef BeamDyn/BDyn OtherStateType ReKi RootForce     {:} - - "Nodal displaceme
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef BeamDyn/BDyn ParameterType Reki Stif0 {:}{:} - "beam stiffness constants" -
-typedef   ^          ^          ^  M {:}{:} - "beam mass constants" -
+typedef BeamDyn/BDyn ParameterType Reki Stif0 {:}{:}{:}  - "beam stiffness constants" -
+typedef   ^          ^          ^  M {:}{:}{:} - "beam mass constants" -
 typedef   ^          ^        IntKi elem_total - - - "number of elements" -
 typedef   ^          ^          ^   dof_node - - - "dof per node (6)" -
 typedef   ^          ^          ^   node_total - - - "number of nodes" -
@@ -56,9 +56,9 @@ typedef   ^          ^          ^   ngp  - - - "number of Gauss points" -
 typedef   ^          ^        Reki uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^  bc {:} - - "Boundary condition vector" -
 #typedef   ^          ^         ^  F_ext {:} - - "Applied force vector" -
-typedef   ^          ^          ^  m00 - - - "Mass per unit span" -
-typedef   ^          ^          ^  mEta0 {:} - - "Mass * Section center location" -
-typedef   ^          ^          ^  rho0 {:}{:} - "Sectional tensor of inertia" -
+typedef   ^          ^          ^  m00 {:} - - "Mass per unit span" -
+typedef   ^          ^          ^  mEta0 {:}{:} - "Mass * Section center location" -
+typedef   ^          ^          ^  rho0 {:}{:}{:} "Sectional tensor of inertia" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
