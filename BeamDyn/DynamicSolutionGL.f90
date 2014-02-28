@@ -3,8 +3,8 @@
                             &node_elem,dof_node,elem_total,dof_total,node_total,coef,niter,ngp,&
                             &deltat,time)
 
-   REAL(ReKi),INTENT(IN)::uuN0(:),Stif0(:,:),bc(:)
-   REAL(ReKi),INTENT(IN)::m00,mEta0(:),rho0(:,:)
+   REAL(ReKi),INTENT(IN)::uuN0(:),Stif0(:,:,:),bc(:)
+   REAL(ReKi),INTENT(IN)::m00(:),mEta0(:,:),rho0(:,:,:)
 
    REAL(ReKi),INTENT(INOUT)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
 
