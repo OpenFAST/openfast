@@ -85,6 +85,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    Real(ReKi)              :: xl               ! left most point
    Real(ReKi)              :: xr               ! right most point
    REAL(ReKi)              :: blength          !beam length: xr - xl
+   REAL(ReKi)              :: elem_length          !beam length: xr - xl
    REAL(ReKi),ALLOCATABLE  :: dloc(:)
    REAL(ReKi),ALLOCATABLE  :: GLL_temp(:)
    REAL(ReKi),ALLOCATABLE  :: w_temp(:)
@@ -167,6 +168,8 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    ALLOCATE(w_temp(p%node_elem), STAT = ErrStat)
    w_temp = 0.0D0
    
+   elem_length = blength / p%elem_total
+
    CALL BDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
    CALL NodeLoc(dloc,xl,elem_length,GLL_temp,p%node_elem-1,p%elem_total,p%node_total,blength)
 
@@ -334,22 +337,22 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    ! Destroy the input data:
 
-   CALL BeamDyn_DestroyInput( u, ErrStat, ErrMsg )
+   CALL BDyn_DestroyInput( u, ErrStat, ErrMsg )
 
    ! Destroy the parameter data:
 
-   CALL BeamDyn_DestroyParam( p, ErrStat, ErrMsg )
+   CALL BDyn_DestroyParam( p, ErrStat, ErrMsg )
 
    ! Destroy the state data:
 
-   CALL BeamDyn_DestroyContState(   x,           ErrStat, ErrMsg )
-   CALL BeamDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-   CALL BeamDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
-   CALL BeamDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+   CALL BDyn_DestroyContState(   x,           ErrStat, ErrMsg )
+   CALL BDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+   CALL BDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
+   CALL BDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
 
    ! Destroy the output data:
 
-   CALL BeamDyn_DestroyOutput( y, ErrStat, ErrMsg )
+   CALL BDyn_DestroyOutput( y, ErrStat, ErrMsg )
 
 
    END SUBROUTINE BeamDyn_End
@@ -417,6 +420,15 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    ! assume system is aligned with x-axis
 
+   y%PointMesh%Force(1,1)   = x%q(1)
+   y%PointMesh%Force(2,1)   = x%q(2)
+   y%PointMesh%Force(3,1)   = x%q(3)
+
+   y%PointMesh%Moment(1,1)   = x%q(4)
+   y%PointMesh%Moment(2,1)   = x%q(5)
+   y%PointMesh%Moment(3,1)   = x%q(6)
+
+!   WRITE(67,*) t,  y%PointMesh%TranslationAcc(1,1)
 
    END SUBROUTINE BeamDyn_CalcOutput
 

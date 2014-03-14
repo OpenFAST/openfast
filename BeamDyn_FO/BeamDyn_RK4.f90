@@ -53,7 +53,7 @@
 
 
    ! interpolate u to find u_interp = u(t)
-   CALL BeamDyn_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
+   CALL BDyn_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
 
    ! find xdot at t
    CALL BeamDyn_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -65,7 +65,7 @@
    x_tmp%dqdt = x%dqdt + 0.5 * k1%dqdt
 
    ! interpolate u to find u_interp = u(t + dt/2)
-   CALL BeamDyn_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
+   CALL BDyn_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt/2
    CALL BeamDyn_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -86,7 +86,7 @@
    x_tmp%dqdt = x%dqdt + k3%dqdt
 
    ! interpolate u to find u_interp = u(t + dt)
-   CALL BeamDyn_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+   CALL BDyn_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt
    CALL BeamDyn_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
