@@ -93,7 +93,7 @@ PROGRAM MAIN
    t_initial = 0.0D0
    t_final   = 2.0D0
 
-   pc_max = 0  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
+   pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
                ! are available to modules that have an implicit dependence on other-module data
 
@@ -178,15 +178,15 @@ PROGRAM MAIN
       CALL BDyn_InputSolve( BDyn_Input(1), BDyn_Output(1), BDyn_Parameter, ErrStat, ErrMsg)
 
 
-      CALL BeamDyn_CalcOutput( t_global, BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
-                              BDyn_ConstraintState, &
-                              BDyn_OtherState,  BDyn_Output(1), ErrStat, ErrMsg)
+!     CALL BeamDyn_CalcOutput( t_global, BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
+!                             BDyn_ConstraintState, &
+!                             BDyn_OtherState,  BDyn_Output(1), ErrStat, ErrMsg)
 
       ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
 
       CALL BDyn_Input_ExtrapInterp(BDyn_Input, BDyn_InputTimes, u1, t_global + dt_global, ErrStat, ErrMsg)
 
-      CALL BDyn_Output_ExtrapInterp(BDyn_Output, BDyn_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
+!     CALL BDyn_Output_ExtrapInterp(BDyn_Output, BDyn_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
 
       ! Shift "window" of the Mod1_Input and Mod1_Output
 
@@ -217,7 +217,7 @@ PROGRAM MAIN
          CALL BDyn_CopyConstrState (BDyn_ConstraintState, BDyn_ConstraintState_pred, 0, Errstat, ErrMsg)
 
          CALL BDyn_CopyDiscState   (BDyn_DiscreteState,   BDyn_DiscreteState_pred,   0, Errstat, ErrMsg)
-
+         
          CALL BeamDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
                                    BDyn_ContinuousState_pred, &
                                    BDyn_DiscreteState_pred, BDyn_ConstraintState_pred, &
@@ -304,8 +304,9 @@ SUBROUTINE BDyn_InputSolve( u, y, p, ErrStat, ErrMsg)
    tmp_vector = 0.     
 
    ! Point mesh: Force 
-   u%PointMesh%Force(:,1)  = tmp_vector
-
+   u%PointMesh%TranslationDisp(:,1)  = tmp_vector
+   u%PointMesh%TranslationVel(:,1)  = tmp_vector
+   u%PointMesh%TranslationAcc(:,1)  = tmp_vector
 
 END SUBROUTINE BDyn_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
