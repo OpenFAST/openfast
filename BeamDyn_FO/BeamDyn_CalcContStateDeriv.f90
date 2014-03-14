@@ -42,4 +42,4 @@
             IF(ALLOCATED(qddot)) DEALLOCATE(qddot)
         ENDIF
 
-   END SUBROUTINE BeamDyn_CalContStateDeriv
+   END SUBROUTINE BeamDyn_CalcContStateDeriv

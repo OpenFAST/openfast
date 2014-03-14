@@ -20,8 +20,8 @@ typedef BeamDyn/BDyn InitOutputType Reki DummyInitVar - - - "A variable" -
 # ..... States
 # ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef BeamDyn/BDyn ContinuousStateType ReKi q        - - - "q - displacement of Mass 1" m
-typedef      ^              ^             ^   dqdt     - - -  "dqdt - velocity of Mass 1" m/s
+typedef BeamDyn/BDyn ContinuousStateType ReKi q        {:} - - "q - displacement of Mass 1" m
+typedef      ^              ^             ^   dqdt     {:} - -  "dqdt - velocity of Mass 1" m/s
 
 # Define discrete (nondifferentiable) states here:
 typedef BeamDyn/BDyn BDyn_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
@@ -32,8 +32,7 @@ typedef BeamDyn/BDyn ConstraintStateType ReKi DummyConstrState - - - "A variable
 # Define any data that are not considered actual states here:
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
-#typedef BeamDyn/BDyn OtherStateType BDyn_ContinuousStateType  xdot  {:} - - "previous state derivs for m-step time integrator"  -
-#typedef      ^             ^        IntKi n   - - - "tracks time step for which OtherState was updated last" -
+typedef BeamDyn/BDyn OtherStateType ReKi DummyOtherState  - - - "A variable, replace if you have Other States"
 
 # ..... Parameters
 # ................................................................................................................
@@ -55,12 +54,13 @@ typedef      ^              ^      DbKi   dt     - - -  "module dt" s
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
-#typedef BeamDyn/BDyn   InputType  MeshType  PointMesh - - - "contains force" -
+typedef BeamDyn/BDyn   InputType  MeshType  PointMesh - - - "contains motion" -
 #typedef Module1/Mod1    InputType  ReKi       fc   - - - "coupling force" N
 
 # ..... Outputs
 # ...................................................................................................................
 # Define outputs that are contained on the mesh here:
+typedef BeamDyn/BDyn   OutputType  MeshType  PointMesh - - - "contains force and moments" -
 #typedef Module1/Mod1   OutputType  MeshType  PointMesh - - - "contains displacement and velocity" -
 #typedef Module1/Mod1   OutputType ReKi   q      - - - "displacement of Mass 1" m
 #typedef     ^              ^       ^     dqdt   - - - "velocity of Mass 1" m/s

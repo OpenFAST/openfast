@@ -20,25 +20,25 @@
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
-   TYPE(Mod1_InputType),              INTENT(INOUT)  :: u(:)        ! Inputs at t
+   TYPE(BDyn_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
    REAL(DbKi),                        INTENT(IN   )  :: utimes(:)   ! times of input
-   TYPE(BeamDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BeamDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-   TYPE(BeamDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BeamDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-   TYPE(BeamDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+   TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
       
-   TYPE(BeamDyn_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
-   TYPE(BeamDyn_ContinuousStateType)                 :: k1          ! RK4 constant; see above
-   TYPE(BeamDyn_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
-   TYPE(BeamDyn_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
-   TYPE(BeamDyn_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
-   TYPE(BeamDyn_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-   TYPE(BeamDyn_InputType)                           :: u_interp    ! interpolated value of inputs 
+   TYPE(BDyn_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
+   TYPE(BDyn_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+   TYPE(BDyn_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
+   TYPE(BDyn_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
+   TYPE(BDyn_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
+   TYPE(BDyn_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+   TYPE(BDyn_InputType)                           :: u_interp    ! interpolated value of inputs 
 
    ! Initialize ErrStat
 
