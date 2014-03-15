@@ -25,6 +25,11 @@
 !**********************************************************************************************************************************
 PROGRAM FAST
 ! This program models 2- or 3-bladed turbines of a standard configuration.
+!
+! noted compilation switches:
+!   SOLVE_OPTION_1_BEFORE_2 (uses a different order for solving input-output relationships)
+!   OUTPUT_ADDEDMASS        (outputs a file called "AddedMassMatrix.out" that contains HydroDyn's added-mass matrix.
+!   
 !.................................................................................................
 
 
@@ -214,6 +219,7 @@ REAL(ReKi)                            :: PrevClockTime                          
 REAL                                  :: UsrTime1                                ! User CPU time for simulation initialization
 REAL                                  :: UsrTime2                                ! User CPU time for simulation (without intialization)
 
+
 INTEGER(IntKi)                        :: J                                       ! generic loop counter
 INTEGER                               :: StrtTime (8)                            ! Start time of simulation (including intialization)
 INTEGER                               :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
@@ -226,6 +232,7 @@ INTEGER(IntKi)                        :: Step                                   
 INTEGER(IntKi)                        :: ErrStat                                 ! Error status
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
 
+LOGICAL                               :: calcJacobian                            ! Should we calculate Jacobians in Option 1?
 
    !...............................................................................................................................
    ! initialization
@@ -245,7 +252,9 @@ CHARACTER(1024)                       :: ErrMsg                                 
 
    AbortErrLev     = ErrID_Fatal                                        ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
    t_global        = t_initial - 20.                                    ! initialize this to a number < t_initial for error message in ProgAbort
-   NextJacCalcTime = t_global  - 1.                                     ! We want to calculate the Jacobian on the first step (I just made it negative to ensure it is <= t_global
+   calcJacobian    = .TRUE.                                             ! we need to calculate the Jacobian
+   NextJacCalcTime = t_global                                           ! We want to calculate the Jacobian on the first step
+   
    
       ! ... Initialize NWTC Library (open console, set pi constants) ...
    CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
@@ -396,12 +405,12 @@ CHARACTER(1024)                       :: ErrMsg                                 
       
       CALL WrScr(NewLine) !bjj: I'm printing two blank lines here because MAP seems to be writing over the last line on the screen.
       
-      InitInData_MAP%filename     =  p_FAST%MooringFile        ! This needs to be set according to what is in the FAST input file. 
-      InitInData_MAP%gravity      =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
-      InitInData_MAP%sea_density  =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
-      InitInData_MAP%depth        =  InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
+      InitInData_MAP%filename          =  p_FAST%MooringFile        ! This needs to be set according to what is in the FAST input file. 
+      InitInData_MAP%gravity           =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
+      InitInData_MAP%sea_density       =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
+      InitInData_MAP%depth             =  InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
       
-      InitInData_MAP%C_obj%coupled_to_FAST = .TRUE.      
+      InitInData_MAP%coupled_to_FAST   = .TRUE.      
       
       CALL MAP_Init( InitInData_MAP, MAP_Input(1), p_MAP,  x_MAP, xd_MAP, z_MAP, OtherSt_MAP, y_MAP, p_FAST%dt_module( MODULE_MAP ), InitOutData_MAP, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_MAP) = .TRUE.
@@ -497,6 +506,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
    
    t_global   = t_initial
    n_t_global = -1  ! initialize here because CalcOutputs_And_SolveForInputs uses it
+   j_PC       = -1
    Step       = 0
    n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / p_FAST%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
      
@@ -505,8 +515,24 @@ CHARACTER(1024)                       :: ErrMsg                                 
 
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
+   
+#ifdef SOLVE_OPTION_1_BEFORE_2
+! used for Option 1 before Option 2:
+
+   IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompHydro == Module_HD ) THEN
+   ! Because SubDyn needs a better initial guess from ElastoDyn, we'll add an additional call to ED_CalcOutput to get them:
+   ! (we'll do the same for HydroDyn, though I'm not sure it's as critical)
+   
+      CALL ED_CalcOutput( t_global, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
       
-   CALL CalcOutputs_And_SolveForInputs( t_global &
+      CALL Transfer_ED_to_HD_SD_Mooring( p_FAST, ED_Output(1), HD_Input(1), SD_Input(1), MAP_Input(1), FEAM_Input(1), MeshMapData, ErrStat, ErrMsg )         
+         CALL CheckError( ErrStat, ErrMsg  )    
+               
+   END IF   
+#endif   
+   
+   CALL CalcOutputs_And_SolveForInputs(  t_global &
                         , x_ED  , xd_ED  , z_ED   &
                         , x_SrvD, xd_SrvD, z_SrvD &
                         , x_HD  , xd_HD  , z_HD   &
@@ -673,7 +699,8 @@ CHARACTER(1024)                       :: ErrMsg                                 
       END DO
       CALL SD_CopyInput (SD_Input(1),  u_SD,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
          CALL CheckError( ErrStat, 'Message from SD_CopyInput (u_SD): '//NewLine//ErrMsg )      
-             
+                               
+         
          ! Initialize predicted states for j_pc loop:
       CALL SD_CopyContState   ( x_SD,  x_SD_pred, MESH_NEWCOPY, Errstat, ErrMsg)
          CALL CheckError( ErrStat, 'Message from SD_CopyContState (init): '//NewLine//ErrMsg )
@@ -758,6 +785,11 @@ CHARACTER(1024)                       :: ErrMsg                                 
   
       t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = t_global + p_FAST%dt
                        
+         ! determine if the Jacobian should be calculated this time
+      IF ( calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
+         NextJacCalcTime = t_global + p_FAST%DT_UJac         
+      END IF
+      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 1.a: Extrapolate Inputs (gives predicted values at t+dt
       ! 
@@ -872,7 +904,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
          
          CALL SD_Input_ExtrapInterp(SD_Input, SD_InputTimes, u_SD, t_global_next, ErrStat, ErrMsg)
             CALL CheckError(ErrStat,'Message from SD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
-            
+                        
          !CALL SD_Output_ExtrapInterp(SD_Output, SD_OutputTimes, y_SD, t_global_next, ErrStat, ErrMsg)
          !   CALL CheckError(ErrStat,'Message from SD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
             
@@ -942,7 +974,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
         !FEAM_OutputTimes(1) = t_global_next 
          
       END IF  ! MAP/FEAM
-       
+           
       
       ! predictor-corrector loop:
       DO j_pc = 0, p_FAST%NumCrctn
@@ -1011,7 +1043,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
                n_t_module = n_t_global*p_FAST%n_substeps( MODULE_AD ) + j_ss - 1
                t_module   = n_t_module*p_FAST%dt_module( MODULE_AD )
                
-               CALL SrvD_UpdateStates( t_global, n_t_global, SrvD_Input, SrvD_InputTimes, p_SrvD, x_SrvD_pred, xd_SrvD_pred, z_SrvD_pred, OtherSt_SrvD, ErrStat, ErrMsg )
+               CALL SrvD_UpdateStates( t_module, n_t_module, SrvD_Input, SrvD_InputTimes, p_SrvD, x_SrvD_pred, xd_SrvD_pred, z_SrvD_pred, OtherSt_SrvD, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from SrvD_UpdateStates: '//NewLine//ErrMsg )
             END DO !j_ss
          END IF            
@@ -1142,7 +1174,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
             END IF
          
          END IF
-      
+                              
             
       enddo ! j_pc
       
@@ -1206,7 +1238,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
             
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! We've advanced everything to the next time step: 
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                       
       
       ! update the global time 
   
@@ -1312,6 +1344,14 @@ CONTAINS
    INTEGER   :: NumBl   ! number of blades
    
    
+      !............................................................................................................................
+      ! Create the data structures and mappings in MeshMapType 
+      !............................................................................................................................
+   
+   !-------------------------
+   !  ElastoDyn <-> AeroDyn
+   !-------------------------
+   
       IF ( p_FAST%CompAero == Module_AD ) THEN ! ED-AD
          
          ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
@@ -1339,11 +1379,14 @@ CONTAINS
                   
       END IF
    
-   
-   
+      
+      
       IF ( p_FAST%CompHydro == Module_HD ) THEN ! HydroDyn-{ElastoDyn or SubDyn}
-      
-      
+         
+         
+   !-------------------------
+   !  HydroDyn <-> ElastoDyn
+   !-------------------------            
          IF ( p_FAST%CompSub /= Module_SD ) THEN ! these get mapped to ElastoDyn
                                     
             CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat, ErrMsg )
@@ -1356,7 +1399,6 @@ CONTAINS
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_W_P_2_ED_P: '//NewLine//ErrMsg )
                CALL MeshMapCreate( ED_Output(1)%PlatformPtMesh, HD_Input(1)%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_HD_W_P: '//NewLine//ErrMsg )
-
             END IF            
             
             IF ( y_HD%Morison%LumpedMesh%Committed ) THEN
@@ -1420,6 +1462,9 @@ CONTAINS
 
       
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
+   !-------------------------
+   !  ElastoDyn <-> MAP
+   !-------------------------      
       
             ! MAP point mesh to/from ElastoDyn point mesh
          CALL MeshMapCreate( y_MAP%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%MAP_P_2_ED_P, ErrStat, ErrMsg )
@@ -1428,6 +1473,9 @@ CONTAINS
             CALL CheckError( ErrStat, 'Message from MeshMapCreate ED_P_2_MAP_P: '//NewLine//ErrMsg )
 
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
+   !-------------------------
+   !  ElastoDyn <-> FEAMooring
+   !-------------------------      
       
             ! MAP point mesh to/from ElastoDyn point mesh
          CALL MeshMapCreate( y_FEAM%PtFairleadLoad, ED_Input(1)%PlatformPtMesh,  MeshMapData%FEAM_P_2_ED_P, ErrStat, ErrMsg )
@@ -1462,8 +1510,58 @@ CONTAINS
             CALL CheckError( ErrStat, ErrMsg )
       END IF
    
-
+      !............................................................................................................................
+      ! reset the remap flags (do this before making the copies else the copies will always have remap = true)
+      !............................................................................................................................
       CALL ResetRemapFlags()      
+            
+      !............................................................................................................................
+      ! initialize the temporary input meshes (for input-output solves):
+      ! (note that we do this after ResetRemapFlags() so that the copies have remap=false)
+      !............................................................................................................................
+      IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub == Module_SD ) THEN
+                  
+            ! Temporary meshes for transfering inputs to ED, HD, and SD
+         CALL MeshCopy ( ED_Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat, ErrMsg )      
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate u_ED_PlatformPtMesh: '//NewLine//ErrMsg )
+
+         CALL MeshCopy ( ED_Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_2, MESH_NEWCOPY, ErrStat, ErrMsg )      
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate u_ED_PlatformPtMesh_2: '//NewLine//ErrMsg )
+                        
+         IF ( p_FAST%CompSub == Module_SD ) THEN
+         
+            CALL MeshCopy ( SD_Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat, ErrMsg )      
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate u_SD_TPMesh: '//NewLine//ErrMsg )
+               
+            IF ( p_FAST%CompHydro == Module_HD ) THEN
+               
+               CALL MeshCopy ( SD_Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat, ErrMsg )      
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate u_SD_LMesh: '//NewLine//ErrMsg )
+                  
+               CALL MeshCopy ( SD_Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat, ErrMsg )      
+                  CALL CheckError( ErrStat, 'Message from MeshMapCreate u_SD_LMesh_2: '//NewLine//ErrMsg )
+                              
+            END IF
+               
+         END IF
+         
+         IF ( p_FAST%CompHydro == Module_HD ) THEN
+            
+            CALL MeshCopy ( HD_Input(1)%Mesh, MeshMapData%u_HD_Mesh, MESH_NEWCOPY, ErrStat, ErrMsg )      
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate u_HD_Mesh: '//NewLine//ErrMsg )
+                  
+            CALL MeshCopy ( HD_Input(1)%Morison%LumpedMesh, MeshMapData%u_HD_M_LumpedMesh, MESH_NEWCOPY, ErrStat, ErrMsg )      
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate u_HD_M_LumpedMesh: '//NewLine//ErrMsg )
+
+            CALL MeshCopy ( HD_Input(1)%Morison%DistribMesh, MeshMapData%u_HD_M_DistribMesh, MESH_NEWCOPY, ErrStat, ErrMsg )      
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate u_HD_M_DistribMesh: '//NewLine//ErrMsg )
+                                    
+         END IF
+                              
+      END IF
+
+      !............................................................................................................................
+
       
    END SUBROUTINE InitModuleMappings
    !...............................................................................................................................
@@ -1505,7 +1603,7 @@ CONTAINS
       IF ( p_FAST%CompHydro == Module_HD ) THEN
          IF (HD_Input(1)%Mesh%Committed) THEN
              HD_Input(1)%Mesh%RemapFlag               = .FALSE.
-                    y_HD%Mesh%RemapFlag               = .FALSE. ! <- bjj: not sure we need this one 
+                    y_HD%Mesh%RemapFlag               = .FALSE.  
                     y_HD%AllHdroOrigin%RemapFlag      = .FALSE.
          END IF
          IF (HD_Input(1)%Morison%LumpedMesh%Committed) THEN
@@ -1589,8 +1687,6 @@ CONTAINS
       TYPE(FEAM_ConstraintStateType)    , intent(in   ) :: z_FEAM_this                        ! These constraint states (either actual or predicted)
                   
          ! Local variable:
-      LOGICAL                                           :: calcJacobian                       ! Should we calculate Jacobians in Option 1?
-      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
@@ -1600,9 +1696,8 @@ CONTAINS
 
       IF ( EqualRealNos( this_time, NextJacCalcTime ) .OR. NextJacCalcTime < this_time )  THEN
          calcJacobian = .TRUE.
-         NextJacCalcTime = this_time + p_FAST%DT_UJac
-      ELSE
-          calcJacobian = .FALSE.
+      ELSE         
+         calcJacobian = .FALSE.
       END IF
       
       !IF ( p_FAST%CompHydro == Module_HD ) THEN
@@ -1648,7 +1743,7 @@ CONTAINS
       !           do not have direct feedthrough.
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             
-      IF ( p_FAST%CompAero == Module_AD ) THEN
+      IF ( p_FAST%CompAero == Module_AD ) THEN !bjj: do this before calling SrvD so that SrvD can get the correct wind speed...
          CALL AD_InputSolve( AD_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from AD_InputSolve: '//NewLine//ErrMsg  )
          
