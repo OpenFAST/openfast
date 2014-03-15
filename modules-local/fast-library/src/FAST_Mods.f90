@@ -28,7 +28,7 @@ MODULE FAST_Types
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.05.01b-bjj', '29-Jan-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.05.01d-bjj', '7-Mar-2014' ) ! The version number of this module
    
    
    INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
@@ -91,7 +91,7 @@ MODULE FAST_Types
 
             ! ED <-> HD
       TYPE(MeshMapType)                 :: ED_P_2_HD_W_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point
-      TYPE(MeshMapType)                 :: HD_W_P_2_ED_P                            ! Map HydroDyn WAMIT Point to ElastoDyn PlatformPtMesh
+      TYPE(MeshMapType)                 :: HD_W_P_2_ED_P                            ! Map HydroDyn WAMIT Point (from either y%Mesh or y%AllHydroOrigin) to ElastoDyn PlatformPtMesh
       
       TYPE(MeshMapType)                 :: ED_P_2_HD_M_P                            ! Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point
       TYPE(MeshMapType)                 :: HD_M_P_2_ED_P                            ! Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh
@@ -128,9 +128,20 @@ MODULE FAST_Types
          
             
          ! Stored Jacobians:
-      REAL(ReKi),     ALLOCATABLE :: Jacobian_ED_SD_HD(:,:)                         ! Stored Jacobian in ED_HD_InputOutputSolve, ED_SD_InputOutputSolve, or ED_SD_HD_InputOutputSolve      
-      INTEGER ,       ALLOCATABLE :: Jacobian_pivot(:)                              ! Pivot array used for LU decomposition of Jacobian_ED_SD_HD
-      INTEGER ,       ALLOCATABLE :: Jac_u_indx(:,:)                                ! matrix to help fill/pack the u vector in computing the jacobian
+      REAL(ReKi),        ALLOCATABLE    :: Jacobian_ED_SD_HD(:,:)                   ! Stored Jacobian in ED_HD_InputOutputSolve, ED_SD_InputOutputSolve, or ED_SD_HD_InputOutputSolve      
+      INTEGER ,          ALLOCATABLE    :: Jacobian_pivot(:)                        ! Pivot array used for LU decomposition of Jacobian_ED_SD_HD
+      INTEGER ,          ALLOCATABLE    :: Jac_u_indx(:,:)                          ! matrix to help fill/pack the u vector in computing the jacobian
+      
+         ! Temporary copies of input meshes (stored here so we don't have to keep allocating/destroying them
+      TYPE(MeshType)                    :: u_ED_PlatformPtMesh                      ! copy of u_ED input mesh
+      TYPE(MeshType)                    :: u_ED_PlatformPtMesh_2                    ! copy of u_ED input mesh (used only for temporary storage)
+      TYPE(MeshType)                    :: u_SD_TPMesh                              ! copy of u_SD input mesh
+      TYPE(MeshType)                    :: u_SD_LMesh                               ! copy of u_SD input mesh
+      TYPE(MeshType)                    :: u_SD_LMesh_2                             ! copy of u_SD input mesh (used only for temporary storage)
+      TYPE(MeshType)                    :: u_HD_M_LumpedMesh                        ! copy of u_HD input mesh
+      TYPE(MeshType)                    :: u_HD_M_DistribMesh                       ! copy of u_HD input mesh
+      TYPE(MeshType)                    :: u_HD_Mesh                                ! copy of u_HD input mesh
+         
       
    END TYPE FAST_ModuleMapType
 
@@ -278,15 +289,22 @@ CONTAINS
       IF ( ALLOCATED(MeshMapData%Jacobian_pivot      ) ) DEALLOCATE(MeshMapData%Jacobian_pivot      ) 
       IF ( ALLOCATED(MeshMapData%Jac_u_indx          ) ) DEALLOCATE(MeshMapData%Jac_u_indx          ) 
    
+         ! Copies of input meshes:      
+      CALL MeshDestroy( MeshMapData%u_ED_PlatformPtMesh,   ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_ED_PlatformPtMesh_2, ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_SD_TPMesh,           ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_SD_LMesh,            ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_SD_LMesh_2,          ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_HD_M_LumpedMesh,     ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_HD_M_DistribMesh,    ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshDestroy( MeshMapData%u_HD_Mesh,             ErrStat2, ErrMsg2 ); CALL CheckError( )
+            
+      
    CONTAINS
    
       SUBROUTINE CheckError( )
       
-         IF ( ErrStat2 /= ErrID_None ) THEN
-            ErrStat = MAX(ErrStat, ErrStat2)           
-            IF ( LEN_TRIM(ErrMsg) > 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-            ErrMsg = TRIM(ErrMsg)//TRIM(ErrMsg2)
-         END IF
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,'Destroy_FAST_ModuleMapType' )      
             
       END SUBROUTINE CheckError
    
