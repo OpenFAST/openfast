@@ -76,8 +76,6 @@ TYPE(ED_InputType), ALLOCATABLE       :: ED_Input(:)                            
 REAL(DbKi),         ALLOCATABLE       :: ED_InputTimes(:)                        ! Array of times associated with ED_Input
 TYPE(ED_OutputType),ALLOCATABLE       :: ED_Output(:)                            ! Array of outputs associated with ED_OutputTimes = ED_InputTimes
 
-TYPE(MeshType)                        :: u_ED_Without_SD_HD                      ! For the ED coupling to SD, we save the inputs on the PlatformPtMesh that aren't contributed by SubDyn or HydroDyn
-
    ! Data for the ServoDyn module:
 TYPE(SrvD_InitInputType)              :: InitInData_SrvD                         ! Initialization input data
 TYPE(SrvD_InitOutputType)             :: InitOutData_SrvD                        ! Initialization output data
@@ -297,8 +295,8 @@ LOGICAL                               :: calcJacobian                           
 
    CALL SetModuleSubstepTime(Module_ED)
    
-   CALL MeshCopy( ED_Input(1)%PlatformPtMesh, u_ED_Without_SD_HD, MESH_NEWCOPY, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Message from MeshCopy (u_ED_Without_SD_HD): '//NewLine//ErrMsg )
+   CALL MeshCopy( ED_Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_2, MESH_NEWCOPY, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, 'Message from MeshCopy (MeshMapData%u_ED_PlatformPtMesh_2): '//NewLine//ErrMsg )
    
    ! ........................
    ! initialize ServoDyn 
@@ -1699,43 +1697,20 @@ CONTAINS
       ELSE         
          calcJacobian = .FALSE.
       END IF
+               
+      ! This is OPTION 2 before OPTION 1
       
-      !IF ( p_FAST%CompHydro == Module_HD ) THEN
-      !
-      !   IF ( p_FAST%CompSub /= Module_SD ) THEN
-      !   
-      !      CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-      !                                    , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-      !                                    , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-      !                                    , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
-      !         CALL CheckError( ErrStat, ErrMsg  )
-      !      
-      !   ELSE ! Both enabled
-      !      
-      !      CALL ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-      !                                    , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-      !                                    , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
-      !                                    , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-      !                                    , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
-      !         CALL CheckError( ErrStat, ErrMsg  )
-      !      
-      !      
-      !   END IF      
-      !   
-      !ELSEIF ( p_FAST%CompSub == Module_SD ) THEN
-      !   
-      !   CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-      !                              , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
-      !                              , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
-      !                              , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
-      !      CALL CheckError( ErrStat, ErrMsg  )
-      !
-      !ELSE ! no HD or SD coupled to ED
+      ! For cases with HydroDyn and/or SubDyn, it calls ED_CalcOuts (a time-sink) 3 times per step/correction (plus the 6 calls when calculating the Jacobian).
+      ! In cases without HydroDyn or SubDyn, it is the same as Option 1 before 2 (with 1 call to ED_CalcOuts either way).
+      
+      ! Option 1 before 2 usually requires a correction step, whereas Option 2 before Option 1 often does not. Thus we are using this option, calling ED_CalcOuts 
+      ! 3 times (option 2 before 1 with no correction step) instead of 4 times (option1 before 2 with one correction step). 
+      ! Note that this analyisis may change if/when AeroDyn (and ServoDyn?) generate different outputs on correction steps. (Currently, AeroDyn returns old
+      ! values until time advances.)
+
+      CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )  
          
-         CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
-            CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
-            
-      !END IF
                   
          
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1816,10 +1791,10 @@ CONTAINS
       
       !bjj: note ED_Input(1) may be a sibling mesh of output, but u_ED is not (routine may update something that needs to be shared between siblings)
       ! note: HD_InputSolve, SD_InputSolve, and MAP_InputSolve must be called before ED_InputSolve (so that motions are known for loads mapping)      
-      ! note: u_ED_Without_SD_HD must have the same Position, RefOrientation, and Elements as ED_Input(1)%PlatformPtMesh [which we need to do differently if RemapFlag changes during simulation]
+      ! note: MeshMapData%u_ED_PlatformPtMesh_2 must have the same Position, RefOrientation, and Elements as ED_Input(1)%PlatformPtMesh [which we need to do differently if RemapFlag changes during simulation]
       
       CALL ED_InputSolve( p_FAST, ED_Input(1), ED_Output(1), y_AD, y_SrvD, y_HD, HD_Input(1), y_MAP, MAP_Input(1), y_SD, SD_Input(1), &
-                             y_FEAM, FEAM_Input(1), MeshMapData, u_ED_Without_SD_HD, ErrStat, ErrMsg )
+                             y_FEAM, FEAM_Input(1), MeshMapData, ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_InputSolve: '//NewLine//ErrMsg  )
 
          
@@ -1835,7 +1810,7 @@ CONTAINS
             CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                           , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
                                           , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-                                          , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+                                          , MeshMapData , ErrStat, ErrMsg )         
                CALL CheckError( ErrStat, ErrMsg  )
             
          ELSE ! Both enabled
@@ -1844,7 +1819,7 @@ CONTAINS
                                           , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
                                           , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
                                           , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-                                          , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+                                          , MeshMapData , ErrStat, ErrMsg )         
                CALL CheckError( ErrStat, ErrMsg  )
                            
                
@@ -1855,7 +1830,7 @@ CONTAINS
          CALL ED_SD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
                                     , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
-                                    , u_ED_Without_SD_HD, MeshMapData , ErrStat, ErrMsg )         
+                                    , MeshMapData , ErrStat, ErrMsg )         
             CALL CheckError( ErrStat, ErrMsg  )
                   
       END IF ! HD and/or SD coupled to ElastoDyn
@@ -1956,9 +1931,7 @@ CONTAINS
       ! -------------------------------------------------------------------------
 
       CALL Destroy_FAST_ModuleMapType( MeshMapData, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-                        
-      CALL MeshDestroy(    u_ED_Without_SD_HD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      
+                              
       ! -------------------------------------------------------------------------
       ! variables for ExtrapInterp:
       ! -------------------------------------------------------------------------
