@@ -95,6 +95,13 @@
    DEALLOCATE(GLL_temp)
    DEALLOCATE(w_temp)
 
+!   j=6
+!   DO i=1,18
+!       WRITE(*,*) elm(i,j+1), elm(i,j+2),elm(i,j+3),elm(i,j+4),elm(i,j+5),elm(i,j+6)
+!       WRITE(*,*) elf(i)
+!   ENDDO
+!   STOP
+
    9999 IF(allo_stat/=0) THEN
             IF(ALLOCATED(gp))  DEALLOCATE(gp)
             IF(ALLOCATED(gw))  DEALLOCATE(gw)

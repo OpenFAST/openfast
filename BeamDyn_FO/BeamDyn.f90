@@ -111,9 +111,9 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    ! Define parameters here:
 
-   p%node_elem   = 6       ! node per element
+   p%node_elem   = 3       ! node per element
    p%dof_node    = 6       ! dof per node
-   p%elem_total  = 2       ! total number of element
+   p%elem_total  = 1       ! total number of element
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
    p%ngp = p%node_elem - 1          ! number of Gauss point
@@ -213,6 +213,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
        ErrMsg = ' Error in BeamDyn: could not allocate x%q.'
        RETURN
    END IF
+   x%q = 0.0D0
    
    ALLOCATE(x%dqdt(p%dof_total), STAT=ErrStat)
    IF (ErrStat /= 0) THEN

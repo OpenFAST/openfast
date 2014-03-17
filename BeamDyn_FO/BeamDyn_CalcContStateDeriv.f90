@@ -16,7 +16,7 @@
 
    ! local variables
    REAL(ReKi),ALLOCATABLE:: qddot(:)
-   INTEGER(IntKi):: allo_stat
+   INTEGER(IntKi):: allo_stat,j
 
    allo_stat = 0  
 
@@ -28,6 +28,11 @@
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+
+!   DO j=1,3
+!       WRITE(*,*) "elem_total", p%elem_total 
+!   ENDDO
+!   STOP
 
    CALL DynamicSolution(p%uuN0,x%q,x%dqdt,p%Stif0,p%m00,p%mEta0,p%rho0,&
                        &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
