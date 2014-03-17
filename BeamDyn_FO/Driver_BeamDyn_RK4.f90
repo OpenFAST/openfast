@@ -81,7 +81,7 @@ PROGRAM MAIN
    REAL(DbKi)                         :: rms_error_norm  ! rms error normalization
 
    Integer(IntKi)                     :: num_dof
-
+   INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
 
 
 
@@ -91,7 +91,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D0
-   t_final   = 2.0D0
+   t_final   = 4.0D0
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -126,6 +126,7 @@ PROGRAM MAIN
    !  in the modules, i.e., that both modules are called at the same glue-code  
    !  defined coupling interval.
    ! -------------------------------------------------------------------------
+    OPEN(unit = QiDisUnit, file = 'QiDisp_RK4.out', status = 'REPLACE',ACTION = 'WRITE')
 
    CALL BeamDyn_Init(BDyn_InitInput        &
                    , BDyn_Input(1)         &
@@ -226,8 +227,10 @@ PROGRAM MAIN
 
       ENDDO
 
-      WRITE(*,*) t_global, BDyn_ContinuousState%q
-
+!      WRITE(*,*) t_global, BDyn_ContinuousState%q(15)
+      WRITE(QiDisUnit,6000) t_global,BDyn_ContinuousState%q(BDyn_Parameter%dof_total-5),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-4),&
+                           &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-3),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-2),&
+                           &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-1),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-5)
 
       ! Save all final variables 
 
@@ -270,6 +273,9 @@ PROGRAM MAIN
 
    DEALLOCATE(BDyn_InputTimes)
    DEALLOCATE(BDyn_OutputTimes)
+
+   6000 FORMAT (ES12.5,6ES21.12)
+   CLOSE (QiDisUnit)
 
 
 END PROGRAM MAIN

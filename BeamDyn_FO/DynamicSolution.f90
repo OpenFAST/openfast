@@ -40,4 +40,9 @@
        qddot(j+6) = qdd_temp(j)
    ENDDO
 
+!   DO j=1,18
+!       WRITE(*,*) elm(i,j+1), elm(i,j+2),elm(i,j+3),elm(i,j+4),elm(i,j+5),elm(i,j+6)
+!       WRITE(*,*) qddot(j)
+!   ENDDO
+!   STOP
    END SUBROUTINE DynamicSolution
