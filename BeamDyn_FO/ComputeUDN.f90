@@ -1,7 +1,7 @@
    SUBROUTINE ComputeUDN(node_total,dof_node,vvN,uuN,udN)
 
    REAL(ReKi),INTENT(IN):: vvN(:),uuN(:)
-   INTEGER(IntKi),INTENT(IN):: node_total,dof_total
+   INTEGER(IntKi),INTENT(IN):: node_total,dof_node
 
    REAL(ReKi),INTENT(OUT):: udN(:)
 

@@ -16,6 +16,7 @@
 
    ! local variables
    REAL(ReKi),ALLOCATABLE:: qddot(:)
+   REAL(ReKi),ALLOCATABLE:: qdot(:)
    INTEGER(IntKi):: allo_stat,j
 
    allo_stat = 0  
@@ -23,6 +24,10 @@
    ALLOCATE(qddot(p%dof_total), STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    qddot = 0.0D0
+
+   ALLOCATE(qdot(p%dof_total), STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   qdot = 0.0D0
 
    ! Initialize ErrStat
 
@@ -38,13 +43,18 @@
                        &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                        &qddot)
 
-   xdot%q = x%dqdt
+   CALL ComputeUDN(p%node_total,p%dof_node,x%dqdt,x%q,qdot)
+
+!   xdot%q = x%dqdt
+   xdot%q = qdot
    xdot%dqdt = qddot
 
    DEALLOCATE(qddot)
+   DEALLOCATE(qdot)
 
    9999 IF(allo_stat/=0) THEN
             IF(ALLOCATED(qddot)) DEALLOCATE(qddot)
+            IF(ALLOCATED(qdot)) DEALLOCATE(qdot)
         ENDIF
 
    END SUBROUTINE BeamDyn_CalcContStateDeriv
