@@ -51,6 +51,8 @@ INCLUDE 'lubksb.f90'
 INCLUDE 'AppliedNodalLoad.f90'
 INCLUDE 'DynamicSolution.f90'
 INCLUDE 'BeamDyn_RK4.f90'
+INCLUDE 'CrvMatrixHinv.f90'
+INCLUDE 'ComputeUDN.f90'
 INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
 
@@ -111,7 +113,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    ! Define parameters here:
 
-   p%node_elem   = 3       ! node per element
+   p%node_elem   = 6       ! node per element
    p%dof_node    = 6       ! dof per node
    p%elem_total  = 1       ! total number of element
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  

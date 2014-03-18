@@ -98,7 +98,7 @@ PROGRAM MAIN
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 5.0D-04
+   dt_global = 5.0D-05
 
    n_t_final = ((t_final - t_initial) / dt_global )
 

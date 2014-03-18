@@ -111,13 +111,13 @@ PROGRAM MAIN
    WRITE(*,*) "SingleTest = ", SingleTest
 
    t_initial = 0.0D0
-   t_final = 2.0d0
+   t_final = 4.0d0
    
-   dt_global = 5.0D-03
+   dt_global = 1.0D-03
    
    n_t_final = ((t_final - t_initial) / dt_global)
    
-   rhoinf = 0.0D0
+   rhoinf = 1.0D0
    alfam = 0.0D0
    alfaf = 0.0D0
    gama = 0.0D0
