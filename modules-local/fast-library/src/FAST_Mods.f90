@@ -28,7 +28,7 @@ MODULE FAST_Types
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.05.01d-bjj', '7-Mar-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.05.02a-bjj', '18-Mar-2014' ) ! The version number of this module
    
    
    INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
