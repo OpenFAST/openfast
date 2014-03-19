@@ -13,7 +13,7 @@ MODULE AeroSubs
    USE AeroGenSubs, ONLY : MaxInfl
 
 
-    IMPLICIT                NONE
+   IMPLICIT                NONE
 
     
    INTEGER(IntKi) , PARAMETER, DIMENSION(1:6)  :: MRvector = (/ 0, 0, 1, 1, 2, 3 /)  !bjj why aren't these parameters? Now they are.
@@ -42,8 +42,8 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState  ! Initial other/optimization states
    TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
-   INTEGER, INTENT(OUT)                   :: ErrStat
-   CHARACTER(*), INTENT(OUT)              :: ErrMess
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
 
       ! Local Variables:
 
@@ -57,17 +57,22 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    LOGICAL                    :: PremEOF_indicator
    CHARACTER(1024)            :: LINE
    CHARACTER(1024)            :: FilePath             ! The path name of the AeroDyn input file (so files listed in it can be defined relative to the main input file location)
+   CHARACTER(LEN(ErrMess))    :: ErrMessLcl
 
    !bjj: error handling here needs to be fixed! (we overwrite any non-AbortErrLev errors)
    
+   ErrStat = ErrID_None
+   ErrMess = ''
+   
       ! Function definition
 
-   call GetNewUnit(UnIn, ErrStat, ErrMess)
+   call GetNewUnit(UnIn, ErrStatLcl, ErrMessLcl)
 
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
-   CALL OpenFInpFile(UnIn, TRIM(InitInp%ADFileName), ErrStat, ErrMess)
+   CALL OpenFInpFile(UnIn, TRIM(InitInp%ADFileName), ErrStatLcl, ErrMessLcl)
+   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(UnIn)
       RETURN
@@ -87,7 +92,8 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    !-------------------------------------------------------------------------------------------------
 
       ! Read in the title line
-   CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStat, ErrMsg=ErrMess)
+   CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStatLcl, ErrMsg=ErrMessLcl)
+   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(UnIn)
       RETURN
@@ -99,7 +105,8 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    p%TITLE = InitInp%TITLE
 
       ! Read in the units specifier  - REMOVE SOON!!!!!
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Units', VarDescr='Units option', ErrStat=ErrStat, ErrMsg=ErrMess)
+   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Units', VarDescr='Units option', ErrStat=ErrStatLcl, ErrMsg=ErrMessLcl)
+   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(UnIn)
       RETURN
@@ -628,7 +635,13 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    !-------------------------------------------------------------------------------------------------
    ! Read airfoil data and check for MultiTab values using LINE, which was read above
    !-------------------------------------------------------------------------------------------------
-   CALL READFL(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess)                                      !
+   CALL READFL(InitInp, P, x, xd, z, O, y, ErrStatLcl, ErrMessLcl)     
+   CALL SetErrStat(ErrStatLcl, ErrMessLcl, ErrStat, ErrMess,'AD_GetInput')   
+   IF ( ErrStat >= AbortErrLev ) THEN
+      close(unin)
+      RETURN
+   END IF
+      
    O%AirFoil%MulTabLoc = 0.0                                    ! Initialize this value
 
 
@@ -639,7 +652,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       END IF
       p%MultiTab = .FALSE.
       p%Reynolds = .FALSE.
-   ELSE ! PremEOF_indicator
+   ELSE ! not PremEOF_indicator
 
       IF ( ANY( p%AirFoil%NTables(1:p%AirFoil%NumFoil) > 1 ) ) THEN
          CALL Conv2UC(LINE(1:6))
@@ -671,7 +684,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
                p%MultiTab = .FALSE.
                p%Reynolds = .FALSE.
             CASE DEFAULT
-               CALL WrScr( ' Error: control model option must be "SINGLE" or "MULTI".' )
+               CALL WrScr( ' Error: control model option must be "USER", "RENUM" or "SINGLE".' )
          END SELECT
       ELSE
          p%MultiTab = .FALSE.
@@ -734,38 +747,35 @@ END SUBROUTINE AD_GetInput
    SUBROUTINE ADOut(InitInp, P, O, AD_Ver, FileName, ErrStat, ErrMess )
  !  used to output data to a summary file
  ! *****************************************************
-IMPLICIT                    NONE
+   IMPLICIT                    NONE
       ! Passed Variables:
-   TYPE(AD_InitInputType),       INTENT(IN)  :: InitInp
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-!   TYPE(AD_ContinuousStateType), INTENT(IN)  :: x           ! Initial continuous states
-!   TYPE(AD_DiscreteStateType),   INTENT(IN)  :: xd          ! Initial discrete states
-!   TYPE(AD_ConstraintStateType), INTENT(IN)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(IN)  :: O!therState ! Initial other/optimization states
-!   TYPE(AD_OutputType),          INTENT(IN)  :: y           ! Initial system outputs (outputs are not calculated;
-   CHARACTER(*),  INTENT(IN)                :: FileName
-   TYPE(ProgDesc), INTENT(IN)               :: AD_ver
-   INTEGER, INTENT(OUT)                     :: ErrStat
-   CHARACTER(*), INTENT(OUT)                :: ErrMess
+   TYPE(AD_InitInputType),       INTENT(IN   )  :: InitInp
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(IN   )  :: O !therState ! Initial other/optimization states
+   TYPE(ProgDesc),               INTENT(IN   )  :: AD_ver
+   INTEGER,                      INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
+   CHARACTER(*),                 INTENT(IN   )  :: FileName
 
-   INTEGER(IntKi)                         :: ErrStatLcl
-   CHARACTER(LEN(ErrMess))                :: ErrMessLcl
    
 
    ! Local Variables:
 
-INTEGER                  :: IElm
-INTEGER                  :: IFoil
-INTEGER                  :: UnOut
-INTEGER                  :: I,K
+   INTEGER                                :: IElm
+   INTEGER                                :: IFoil
+   INTEGER                                :: UnOut
+   INTEGER                                :: I,K
+   INTEGER(IntKi)                         :: ErrStatLcl
+                                          
+   CHARACTER(  2)                         :: Dst_Unit
+   CHARACTER(150)                         :: Frmt
+   CHARACTER(  4)                         :: Mass_Unit
+   CHARACTER( 35)                         :: MESAGE
+   CHARACTER(  3)                         :: Vel_Unit
+                                          
+   CHARACTER(1),PARAMETER                 :: Delim = ' '  ! bjj: made this a parameter because I don't think tabs work very well in a summary file
+   CHARACTER(LEN(ErrMess))                :: ErrMessLcl
 
-CHARACTER(  2)           :: Dst_Unit
-CHARACTER(150)           :: Frmt
-CHARACTER(  4)           :: Mass_Unit
-CHARACTER( 35)           :: MESAGE
-CHARACTER(  3)           :: Vel_Unit
-
-CHARACTER(1)             :: Delim
 
    ErrStat = ErrID_None
    ErrMess = ""
@@ -877,14 +887,14 @@ ELSE
 ENDIF
 
 
-WRITE(UnOut,Ec_StrFrmt) 'WindFile','Wind file name',InitInp%WindFileName
+WRITE(UnOut,Ec_StrFrmt) 'WindFile','Wind file name',TRIM(InitInp%WindFileName)
 WRITE(UnOut,Ec_ReFrmt) p%Rotor%HH,'HH','Wind reference (hub) height, '//TRIM(Dst_Unit)
 
 IF ( p%TwrProps%PJM_Version ) THEN
    WRITE(UnOut,Ec_LgFrmt) p%TwrProps%TwrPotent,'TwrPotent','Calculate tower potential flow [T or F]'
    WRITE(UnOut,Ec_LgFrmt) p%TwrProps%TwrShadow,'TwrShadow','Calculate tower shadow [T or F]'
    IF ( p%TwrProps%TwrPotent .OR. p%TwrProps%TwrShadow ) THEN
-      WRITE(UnOut,Ec_StrFrmt) 'TwrFile','Tower drag file name',P%TwrProps%TwrFile
+      WRITE(UnOut,Ec_StrFrmt) 'TwrFile','Tower drag file name',TRIM(P%TwrProps%TwrFile)
    ELSE
       WRITE(UnOut,Ec_Ch11Frmt) '[none]','TwrFile','No tower drag properties file'
    ENDIF
@@ -905,8 +915,6 @@ DO IFoil = 1, p%AirFoil%NUMFOIL
 END DO ! IFoil
 
 WRITE(UnOut,Ec_IntFrmt) p%Element%NELM,'BldNodes','Number of blade elements per blade'
-
-   Delim = ' ' !or Delim = TAB
 
    !-------------------------------------------------------------------------------------------------
    ! write out element information
@@ -1017,8 +1025,8 @@ END SUBROUTINE ADOut
    TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
-   INTEGER, INTENT(OUT)                   :: ErrStat
-   CHARACTER(*), INTENT(OUT)              :: ErrMess
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
 
    ! Local Variables:
 
@@ -1324,7 +1332,7 @@ END SUBROUTINE READFL
 !====================================================================================================
    IMPLICIT                      NONE
       ! Passed Variables:
-   INTEGER, INTENT(IN)                    :: UnIn
+   INTEGER,                      INTENT(IN)     :: UnIn
    TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
    TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
    TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
@@ -1604,16 +1612,16 @@ END SUBROUTINE READTwr
 
    ! Local Variables:
 
-REAL(ReKi)                 :: CDA
-REAL(ReKi)                 :: CLA
-REAL(ReKi)                 :: CMA
-REAL(ReKi)                 :: CPHI
-REAL(ReKi)                 :: PHI
-REAL(ReKi)                 :: QA
-REAL(ReKi)                 :: ReNum
-REAL(ReKi)                 :: SPHI
-REAL(ReKi)                 :: Vinduced
-REAL(ReKi)                 :: VN
+   REAL(ReKi)                 :: CDA
+   REAL(ReKi)                 :: CLA
+   REAL(ReKi)                 :: CMA
+   REAL(ReKi)                 :: CPHI
+   REAL(ReKi)                 :: PHI
+   REAL(ReKi)                 :: QA
+   REAL(ReKi)                 :: ReNum
+   REAL(ReKi)                 :: SPHI
+   REAL(ReKi)                 :: Vinduced
+   REAL(ReKi)                 :: VN
 
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
    CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
@@ -1769,19 +1777,19 @@ END SUBROUTINE ELEMFRC
  ! ***************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   INTEGER, INTENT(OUT)                   :: ErrStat
-   CHARACTER(*), INTENT(OUT)              :: ErrMess
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p            ! Parameters
+   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
 
-   REAL(ReKi),INTENT(IN)         :: RLOCAL
-   REAL(ReKi),INTENT(IN)         :: VNB
-   REAL(ReKi),INTENT(IN)         :: VNROTOR2
-   REAL(ReKi),INTENT(IN)         :: VNW
-   REAL(ReKi),INTENT(INOUT)      :: VT
-
-   INTEGER, INTENT(IN)           :: J
-   INTEGER, INTENT(IN)           :: IBlade
+   REAL(ReKi),                   INTENT(IN   )  :: RLOCAL
+   REAL(ReKi),                   INTENT(IN   )  :: VNB
+   REAL(ReKi),                   INTENT(IN   )  :: VNROTOR2
+   REAL(ReKi),                   INTENT(IN   )  :: VNW
+   REAL(ReKi),                   INTENT(INOUT)  :: VT
+                                 
+   INTEGER,                      INTENT(IN   )  :: J
+   INTEGER,                      INTENT(IN   )  :: IBlade
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
 
 
    ! Local Variables:
@@ -1994,10 +2002,6 @@ END SUBROUTINE VINDERR
  !   given values of velocities and geometry.  This routine
  !   is called by vind as part of the iteration process
  ! ******************************************************
-!USE                           Element
-!USE                           InducedVel
-!USE                           Airfoil, ONLY: NFoil
-!USE                           Switch
    IMPLICIT                      NONE
       ! Passed Variables:
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
@@ -2141,9 +2145,6 @@ END FUNCTION GetReynolds
  ! Uses the Prandtl tip loss model with a correction
  !  from Georgia Tech (2002 ASME Wind Energy Symposium)
  ! ***************************************************
-!USE                           Blade
-!USE                           Element
-!USE                           Switch
    IMPLICIT                      NONE
       ! Passed Variables:
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
@@ -2265,9 +2266,6 @@ SUBROUTINE GetTwrInfluence ( P, O, ErrStat, ErrMess,      &
 !  local velocity/direction so that all points on a horizontal slice of air can use the same
 !  deficit at each given time.  Will need the tower position, too.
 !====================================================================================================
-
-!   USE                           TwrProps
-!   USE                           Rotor,      ONLY: HH
 
    IMPLICIT                      NONE
       ! Passed Variables:
@@ -2612,13 +2610,6 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
    INTEGER                          :: TmpErrStat
    CHARACTER(LEN(ErrMsg))           :: TmpErrMsg
 
-   !TYPE(IfW_ConstraintStateType)    :: IfW_ConstrStates
-   !TYPE(IfW_ContinuousStateType)    :: IfW_ContStates
-   !TYPE(IfW_DiscreteStateType)      :: IfW_DiscStates
-   !TYPE(IfW_OtherStateType)         :: IfW_OtherStates
-   !TYPE(IfW_OutputType)             :: IfW_Outputs
-   !TYPE(IfW_ParameterType)          :: IfW_Params  ! IfW parameters.
-   !
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -3471,8 +3462,6 @@ END SUBROUTINE ATTACH
  !  PART OF THE Beddoes DYNAMIC STALL MODEL
  ! ******************************************************
 
-!USE                           Airfoil
-!USE                           Beddoes
    IMPLICIT                      NONE
       ! Passed Variables:
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
@@ -3480,7 +3469,6 @@ END SUBROUTINE ATTACH
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
-   ! Passed Variables:
    REAL(ReKi),INTENT(IN)      :: AOL1
    REAL(ReKi),INTENT(IN)      :: CNA1
    REAL(ReKi),INTENT(IN)      :: CNS1
@@ -3546,7 +3534,7 @@ CALL MPI2PI ( O%Beddoes%AFE(J,IBLADE) )
 
 IF ( ( O%Beddoes%AFE(J,IBLADE) < O%AirFoil%AL(IFOIL,1) ) .OR.  &
      ( O%Beddoes%AFE(J,IBLADE) > O%AirFoil%AL(IFOIL,p%AirFoil%NLIFT(IFOIL) ) ) ) THEN
-   ErrMess = 'SEPAR: Angle of attack = '//Num2LStr(REAL( O%Beddoes%AFE(J,IBLADE)*R2D, ReKi ))//' is outside table.'
+   ErrMess = 'SEPAR: Angle of attack = '//TRIM(Num2LStr( O%Beddoes%AFE(J,IBLADE)*R2D ))//' is outside table.'
    ErrStat = ErrID_Fatal
    RETURN
 ENDIF
@@ -4889,8 +4877,6 @@ END SUBROUTINE ABPRECOR
  !   matrixMode = 2 : Calculate [L_sin] matrix
  ! ***********************************************************************
 
-!USE                           DynInflow
-
 IMPLICIT                      NONE
    ! Passed Variables:
 TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
@@ -5405,9 +5391,6 @@ SUBROUTINE WindAzimuthZero (psi,VrotorY,VrotorZ,WindPsi)
 ! and rises with a clockwise rotation.
 
 
-!USE                           Wind
-
-
 IMPLICIT                      NONE
 
 
@@ -5428,10 +5411,6 @@ SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
                        ADFile, HubRadius, TipRadius )
 ! This routine checks to see if RElm(:) and DR(:) are compatible within a millimeter;
 !----------------------------------------------------------------------------------------------------
-
-!   USE                           Blade,      ONLY: DR
-!   USE                           Element,    ONLY: NElm, RElm
-
    IMPLICIT                      NONE
    TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
    TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states

@@ -24,7 +24,7 @@ IMPLICIT        NONE
  !  Allocates space to the phenomenal number of arrays
  !  we use in this program
  ! ****************************************************
-
+   ! Passed Variables:
    TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
    TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
    TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: xc          ! Initial continuous states
@@ -32,19 +32,17 @@ IMPLICIT        NONE
    TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
-   CHARACTER(*) :: Arg
-
-
-
-   ! Passed Variables:
-
-
+   CHARACTER(*),                 INTENT(IN   )  :: Arg
 
    ! Local Variables:
 
-INTEGER(4)   :: Sttus
+   INTEGER(4)   :: Sttus
 
-INTEGER :: NElm, NB, MaxTable, NumCl, NumFoil, NumElOut, NumWndElOut
+   INTEGER :: NElm, NB, MaxTable, NumCl, NumFoil, NumElOut, NumWndElOut
+
+
+!bjj: I really don't understand why these aren't 3 separate subroutines...
+
 
 NB          = P%NumBl
 Nelm        = P%Element%Nelm
