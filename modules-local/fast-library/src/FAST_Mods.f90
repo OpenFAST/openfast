@@ -28,9 +28,10 @@ MODULE FAST_Types
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.05.02a-bjj', '18-Mar-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.06.00a-bjj', '19-Mar-2014' ) ! The version number of this module
    
-   
+   ! the order of these modules is the order they get written to the output file; 
+   ! make sure the module IDs start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!
    INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
    INTEGER(IntKi), PARAMETER :: Module_None    =  0
    INTEGER(IntKi), PARAMETER :: Module_IfW     =  1
@@ -41,7 +42,8 @@ MODULE FAST_Types
    INTEGER(IntKi), PARAMETER :: Module_SD      =  6
    INTEGER(IntKi), PARAMETER :: Module_MAP     =  7
    INTEGER(IntKi), PARAMETER :: Module_FEAM    =  8
-   INTEGER(IntKi), PARAMETER :: NumModules     =  8
+   INTEGER(IntKi), PARAMETER :: Module_IceF    =  9
+   INTEGER(IntKi), PARAMETER :: NumModules     =  9
    
    INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
@@ -49,7 +51,6 @@ MODULE FAST_Types
    
          
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
-   INTEGER(IntKi), PARAMETER :: SizeJac_ED_SD  = 12
    
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
@@ -61,15 +62,7 @@ MODULE FAST_Types
       REAL(ReKi), ALLOCATABLE           :: AllOutData (:,:)                        ! Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step.
       INTEGER(IntKi)                    :: n_Out                                   ! Time index into the AllOutData array
       INTEGER(IntKi)                    :: NOutSteps                               ! Maximum number of output steps
-
-      INTEGER(IntKi)                    :: numOuts_IfW                             ! number of outputs to print from InflowWind
-      INTEGER(IntKi)                    :: numOuts_ED                              ! number of outputs to print from ElastoDyn
-      INTEGER(IntKi)                    :: numOuts_AD                              ! number of outputs to print from AeroDyn
-      INTEGER(IntKi)                    :: numOuts_SrvD                            ! number of outputs to print from ServoDyn
-      INTEGER(IntKi)                    :: numOuts_HD                              ! number of outputs to print from HydroDyn
-      INTEGER(IntKi)                    :: numOuts_SD                              ! number of outputs to print from SubDyn
-      INTEGER(IntKi)                    :: numOuts_MAP                             ! number of outputs to print from MAP (Mooring Analysis Program)
-      INTEGER(IntKi)                    :: numOuts_FEAM                            ! number of outputs to print from FEAMooring
+      INTEGER(IntKi)                    :: numOuts(NumModules)                     ! number of outputs to print from each module
       
       INTEGER(IntKi)                    :: UnOu    = -1                            ! I/O unit number for the tabular output file
       INTEGER(IntKi)                    :: UnSum   = -1                            ! I/O unit number for the summary file
@@ -108,7 +101,7 @@ MODULE FAST_Types
       TYPE(MeshMapType)                 :: FEAM_P_2_ED_P                            ! Map FEAM point mesh to ElastoDyn PlatformPtMesh
 
       
-         ! ED <-> SD
+            ! ED <-> SD
       TYPE(MeshMapType)                 :: ED_P_2_SD_TP                             ! Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh
       TYPE(MeshMapType)                 :: SD_TP_2_ED_P                             ! Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh
                   
@@ -119,14 +112,18 @@ MODULE FAST_Types
       TYPE(MeshMapType)                 :: SD_P_2_HD_M_L                            ! Map SubDyn y2Mesh Point to HydroDyn Morison Line2                               
       TYPE(MeshMapType)                 :: HD_M_L_2_SD_P                            ! Map HydroDyn Morison Line2 to SubDyn y2Mesh Point
       
-         ! ED <-> AD
+            ! ED <-> AD
       TYPE(MeshMapType), ALLOCATABLE    :: ED_L_2_AD_L_B(:)                         ! Map ElastoDyn BladeLn2Mesh line2 mesh to AeroDyn InputMarkers line2 mesh
       TYPE(MeshMapType), ALLOCATABLE    :: AD_L_2_ED_L_B(:)                         ! Map AeroDyn InputMarkers line2 mesh to ElastoDyn BladeLn2Mesh line2 mesh
          
       TYPE(MeshMapType)                 :: ED_L_2_AD_L_T                            ! Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn Twr_InputMarkers line2 mesh
       TYPE(MeshMapType)                 :: AD_L_2_ED_L_T                            ! Map AeroDyn Twr_InputMarkers line2 mesh to ElastoDyn TowerLn2Mesh line2 mesh
          
-            
+      
+            ! IceF <-> SD
+      TYPE(MeshMapType)                 :: IceF_P_2_SD_P                            ! Map IceFloe point mesh to SubDyn y2Mesh point mesh
+      TYPE(MeshMapType)                 :: SD_P_2_IceF_P                            ! Map SubDyn y2Mesh point mesh to IceFloe point mesh
+                        
          ! Stored Jacobians:
       REAL(ReKi),        ALLOCATABLE    :: Jacobian_ED_SD_HD(:,:)                   ! Stored Jacobian in ED_HD_InputOutputSolve, ED_SD_InputOutputSolve, or ED_SD_HD_InputOutputSolve      
       INTEGER ,          ALLOCATABLE    :: Jacobian_pivot(:)                        ! Pivot array used for LU decomposition of Jacobian_ED_SD_HD
@@ -172,6 +169,7 @@ MODULE FAST_Types
       INTEGER(IntKi)            :: CompHydro                                        ! Compute hydrodynamic loads (switch) {Module_None; Module_HD}
       INTEGER(IntKi)            :: CompSub                                          ! Compute sub-structural dynamics (switch) {Module_None; Module_HD}
       INTEGER(IntKi)            :: CompMooring                                      ! Compute mooring system (switch) {Module_None; Module_MAP, Module_FEAM}
+      INTEGER(IntKi)            :: CompIce                                          ! Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}
       LOGICAL                   :: CompUserPtfmLd                                   ! Compute additional platform loading {false: none, true: user-defined from routine UserPtfmLd} (flag)
       LOGICAL                   :: CompUserTwrLd                                    ! Compute additional tower loading {false: none, true: user-defined from routine UserTwrLd} (flag)
       
@@ -184,6 +182,7 @@ MODULE FAST_Types
       CHARACTER(1024)           :: HydroFile                                        ! Name of file containing hydrodynamic input parameters
       CHARACTER(1024)           :: SubFile                                          ! Name of file containing sub-structural input parameters
       CHARACTER(1024)           :: MooringFile                                      ! Name of file containing mooring system input parameters
+      CHARACTER(1024)           :: IceFile                                          ! Name of file containing ice loading input parameters
 
 
          ! Parameters for file/screen output:
@@ -282,6 +281,9 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%ED_L_2_AD_L_T,  ErrStat2, ErrMsg2 ); CALL CheckError( )
       CALL MeshMapDestroy( MeshMapData%AD_L_2_ED_L_T,  ErrStat2, ErrMsg2 ); CALL CheckError( )
       
+         ! IceF <-> SD      
+      CALL MeshMapDestroy( MeshMapData%IceF_P_2_SD_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
+      CALL MeshMapDestroy( MeshMapData%SD_P_2_IceF_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )                  
       
       
          ! Stored Jacobians:

@@ -85,6 +85,14 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+:IceFloe
+SET src_folder=%IceF_Loc%\..
+SET dst_folder=%depend_dir%\IceFloe
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
+
+if exist "%dst_folder%\*" DEL "%dst_folder%\*"
+for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
 :MAP
 SET src_folder=%MAP_Loc%\..
 SET dst_folder=%depend_dir%\MAP

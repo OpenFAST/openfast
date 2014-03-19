@@ -45,7 +45,8 @@
 		HydroDyn        & HydroDyn              & HD        \\
 		MAP             & MAP                   & MAP       \\
 		FEAMooring      & FEAM                  & FEAM      \\
-		InflowWind      & InfW                  & InfW      \\   
+		InflowWind      & IfW                   & IfW       \\   
+		IceFloe         & IceFloe               & IceF      \\   
 		\end{tabular}
 	\caption{Abbreviations for modules in FAST v8}
 	\label{tab:Abbrev}
@@ -80,7 +81,11 @@ inputs and outputs are neither set nor used.
 
 \State
 	\State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD}}$
-	\State $\mathit{y\_SrvD} \gets \Call{SrvD\_CalcOutput}{\mathit{p\_SrvD},\mathit{u\_SrvD},\mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}}$
+	\State $\mathit{y\_SrvD} \gets \Call{SrvD\_CalcOutput}{}( \!
+				\begin{aligned}[t]
+				                      & \mathit{p\_SrvD},\mathit{u\_SrvD}, \\
+	                            & \mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}) \\
+				\end{aligned}$
 
 \State
 	\State $\mathit{u\_ED}($not platform reference point$) \gets \Call{TransferOutputsToInputs}{y\_SrvD,y\_AD}$ %\Comment{sets all but platform reference point inputs}
@@ -91,7 +96,7 @@ inputs and outputs are neither set nor used.
 	\State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
 
 \State
-\State \Call{ED\_HD\_SD\_Mooring\_InputOutputSolve}{\null}
+\State \Call{ED\_HD\_SD\_Mooring\_Ice\_InputOutputSolve}{\null}
 \State
 \textit{
 \State If $AeroDyn$ or $ServoDyn$ had states to update, we should do this:
@@ -114,7 +119,11 @@ Instead, the $ElastoDyn$ inputs are set depending on where CalcOutputs\_And\_Sol
 
 
 %\pagebreak %break here for now so that it doesn't look so strange
-\subsection {Input-Output Solve for $HydroDyn$, $SubDyn$, $MAP$, $FEAMooring$, and the Platform Reference Point Mesh in $ElastoDyn$}
+%\subsection {Input-Output Solve for $HydroDyn$, $SubDyn$, $MAP$, \\ 
+%       $FEAMooring$, $IceFloe$, and the Platform Reference Point Mesh in $ElastoDyn$}
+\subsection {Input-Output Solve for \textit{HydroDyn}, \textit{SubDyn}, \textit{MAP}, 
+       \textit{FEAMooring}, \textit{IceFloe}, and the Platform Reference Point Mesh in \textit{ElastoDyn}}
+
 This procedure implements Solve Option 1 for the accelerations and loads in
 $HydroDyn$, $SubDyn$, $MAP$, $FEAMooring$, and $ElastoDyn$ (at its platform reference point mesh). 
 The other input-output relationships for these modules are solved using Solve Option 2.
@@ -124,10 +133,11 @@ The other input-output relationships for these modules are solved using Solve Op
 %\label{IOSolves_PlatformRef}
 \begin{algorithmic}[1]
 
-\Procedure{ED\_HD\_SD\_Mooring\_InputOutputSolve}{\null}
+\Procedure{ED\_HD\_SD\_Mooring\_Ice\_InputOutputSolve}{\null}
 	\State
 	\State $\mathit{y\_MAP}  \gets \Call{CalcOutput}{\mathit{p\_MAP},\mathit{u\_MAP},\mathit{x\_MAP},\mathit{xd\_MAP},\mathit{z\_MAP}}$ 
 	\State $\mathit{y\_FEAM} \gets \Call{CalcOutput}{\mathit{p\_FEAM},\mathit{u\_FEAM},\mathit{x\_FEAM},\mathit{xd\_FEAM},\mathit{z\_FEAM}}$
+	\State $\mathit{y\_IceF} \gets \Call{CalcOutput}{\mathit{p\_IceF},\mathit{u\_IceF},\mathit{x\_IceF},\mathit{xd\_IceF},\mathit{z\_IceF}}$
 	\State
 	\State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_SD}$, and platform reference input from $\mathit{u\_ED}$}
 	\State
@@ -142,14 +152,27 @@ The other input-output relationships for these modules are solved using Solve Op
 			\State exit loop
 		\EndIf
 		
+		\State$\mathit{u\_MAP\_tmp} \gets \Call{TransferMeshMotions}{y\_ED}$
+		\State$\mathit{u\_FEAM\_tmp} \gets \Call{TransferMeshMotions}{y\_ED}$
+		\State$\mathit{u\_IceF\_tmp} \gets \Call{TransferMeshMotions}{y\_SD}$
 		\State$\mathit{u\_HD\_tmp} \gets \Call{TransferMeshMotions}{y\_ED,y\_SD}$
 		\State$\mathit{u\_SD\_tmp} \gets \!
 				\begin{aligned}[t]
            & \Call{TransferMeshMotions}{\mathit{y\_ED}}  \\
-					 & \cup \Call{TransferMeshLoads}{\mathit{y\_HD},\mathit{u\_HD\_tmp}}
+					 & \cup \Call{TransferMeshLoads}{}(\!
+					    \begin{aligned}[t] 
+							   & \mathit{y\_HD},\mathit{u\_HD\_tmp}, \\
+					       & \mathit{y\_IceF},\mathit{u\_IceF\_tmp}) \\
+							\end{aligned}
 			\end{aligned}$
-		\State$\mathit{u\_ED\_tmp} \gets \Call{TransferMeshLoads}{\mathit{y\_HD},     \mathit{y\_SD},\mathit{y\_MAP},\mathit{y\_FEAM},
-		                                                     \mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_MAP},\mathit{u\_FEAM}}$
+		\State$\mathit{u\_ED\_tmp} \gets \Call{TransferMeshLoads}{}( \!
+				     \begin{aligned}[t]   & \mathit{y\_ED,} \\
+																  & \mathit{y\_HD},  \mathit{u\_HD\_tmp},  \\
+																  & \mathit{y\_SD},  \mathit{u\_SD\_tmp},  \\  
+																	& \mathit{y\_MAP}, \mathit{u\_MAP\_tmp}, \\ 
+																	& \mathit{y\_FEAM},\mathit{u\_FEAM\_tmp} )
+							\end{aligned}$
+
 		\State
 		\State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{\mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_ED\_tmp}}$
 		\State
@@ -187,6 +210,7 @@ The other input-output relationships for these modules are solved using Solve Op
   \State 
 	\State $\mathit{u\_MAP}  \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
 	\State $\mathit{u\_FEAM} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$
+	\State $\mathit{u\_IceF} \gets \Call{TransferMeshMotions}{\mathit{y\_SD}}$
 			
 \EndProcedure
 

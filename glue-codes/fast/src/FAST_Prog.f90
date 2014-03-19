@@ -35,13 +35,14 @@ PROGRAM FAST
 
    USE FAST_IO_Subs   ! all of the ModuleName_types modules are inherited from FAST_IO_Subs
    
-   USE ElastoDyn
-   USE ServoDyn
    USE AeroDyn
-   USE HydroDyn
-   USE SubDyn
+   USE ElastoDyn
    USE FEAMooring
+   USE HydroDyn
+   USE IceFloe
    USE MAP
+   USE ServoDyn
+   USE SubDyn
            
       
 IMPLICIT  NONE
@@ -204,6 +205,26 @@ TYPE(FEAM_InputType), ALLOCATABLE     :: FEAM_Input(:)                          
 REAL(DbKi),           ALLOCATABLE     :: FEAM_InputTimes(:)                      ! Array of times associated with FEAM_Input
 
 
+   ! Data for the IceFloe module:
+TYPE(IceFloe_InitInputType)            :: InitInData_IceF                         ! Initialization input data
+TYPE(IceFloe_InitOutputType)           :: InitOutData_IceF                        ! Initialization output data
+TYPE(IceFloe_ContinuousStateType)      :: x_IceF                                  ! Continuous states
+TYPE(IceFloe_DiscreteStateType)        :: xd_IceF                                 ! Discrete states
+TYPE(IceFloe_ConstraintStateType)      :: z_IceF                                  ! Constraint states
+TYPE(IceFloe_OtherStateType)           :: OtherSt_IceF                            ! Other/optimization states
+TYPE(IceFloe_ParameterType)            :: p_IceF                                  ! Parameters
+TYPE(IceFloe_InputType)                :: u_IceF                                  ! System inputs
+TYPE(IceFloe_OutputType)               :: y_IceF                                  ! System outputs
+
+TYPE(IceFloe_ContinuousStateType)      :: x_IceF_pred                             ! Predicted continuous states
+TYPE(IceFloe_DiscreteStateType)        :: xd_IceF_pred                            ! Predicted discrete states
+TYPE(IceFloe_ConstraintStateType)      :: z_IceF_pred                             ! Predicted constraint states
+TYPE(IceFloe_OtherStateType)           :: OtherSt_IceF_old                        ! Other/optimization states (copied for the case of subcycling)
+
+TYPE(IceFloe_InputType), ALLOCATABLE   :: IceF_Input(:)                           ! Array of inputs associated with FEAM_InputTimes
+REAL(DbKi),           ALLOCATABLE      :: IceF_InputTimes(:)                      ! Array of times associated with FEAM_Input
+
+
 
    ! Other/Misc variables
 REAL(DbKi)                            :: TiLstPrn                                ! The simulation time of the last print
@@ -288,6 +309,8 @@ LOGICAL                               :: calcJacobian                           
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating MAP_Input and MAP_InputTimes.") 
    ALLOCATE( FEAM_Input( p_FAST%InterpOrder+1 ), FEAM_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating FEAM_Input and FEAM_InputTimes.") 
+   ALLOCATE( IceF_Input( p_FAST%InterpOrder+1 ), IceF_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceF_Input and IceF_InputTimes.") 
    
                            
    ! ........................
@@ -448,13 +471,31 @@ LOGICAL                               :: calcJacobian                           
       
    END IF
 
+   ! ........................
+   ! initialize IceFloe 
+   ! ........................
+   
+   IF ( p_FAST%CompIce == Module_IceF ) THEN
+                      
+      InitInData_IceF%InputFile     = p_FAST%IceFile
+      !InitInData_IceF%RootName      = p_FAST%OutFileRoot     
+      InitInData_IceF%simLength     = p_FAST%TMax
+      
+      CALL IceFloe_Init( InitInData_IceF, IceF_Input(1), p_IceF,  x_IceF, xd_IceF, z_IceF, OtherSt_IceF, y_IceF, p_FAST%dt_module( MODULE_IceF ), InitOutData_IceF, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_IceF) = .TRUE.
+         CALL CheckError( ErrStat, 'Message from IceF_Init: '//NewLine//ErrMsg )
+
+      CALL SetModuleSubstepTime(Module_IceF)
+                        
+   END IF   
+   
 
    ! ........................
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
    ! ........................
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, &
-                         InitOutData_SD, InitOutData_MAP, InitOutData_FEAM, ErrStat, ErrMsg )
+                         InitOutData_SD, InitOutData_MAP, InitOutData_FEAM, InitOutData_IceF, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
 
 
@@ -477,27 +518,30 @@ LOGICAL                               :: calcJacobian                           
    ! Note that we're ignoring any errors here (we'll print them when we try to destroy at program exit)
    !...............................................................................................................................
 
-   CALL ED_DestroyInitInput(  InitInData_ED, ErrStat, ErrMsg )
+   CALL ED_DestroyInitInput(  InitInData_ED,  ErrStat, ErrMsg )
    CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat, ErrMsg )
 
-   CALL AD_DestroyInitInput(  InitInData_AD, ErrStat, ErrMsg )
+   CALL AD_DestroyInitInput(  InitInData_AD,  ErrStat, ErrMsg )
    CALL AD_DestroyInitOutput( InitOutData_AD, ErrStat, ErrMsg )
    
-   CALL SrvD_DestroyInitInput(  InitInData_SrvD, ErrStat, ErrMsg )
+   CALL SrvD_DestroyInitInput(  InitInData_SrvD,  ErrStat, ErrMsg )
    CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
 
-   CALL HydroDyn_DestroyInitInput(  InitInData_HD, ErrStat, ErrMsg )
+   CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat, ErrMsg )
    CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg )
 
-   CALL SD_DestroyInitInput(  InitInData_SD, ErrStat, ErrMsg )
+   CALL SD_DestroyInitInput(  InitInData_SD,  ErrStat, ErrMsg )
    CALL SD_DestroyInitOutput( InitOutData_SD, ErrStat, ErrMsg )
       
-   CALL MAP_DestroyInitInput(  InitInData_MAP, ErrStat, ErrMsg )
+   CALL MAP_DestroyInitInput(  InitInData_MAP,  ErrStat, ErrMsg )
    CALL MAP_DestroyInitOutput( InitOutData_MAP, ErrStat, ErrMsg )
    
-   CALL FEAM_DestroyInitInput(  InitInData_FEAM, ErrStat, ErrMsg )
+   CALL FEAM_DestroyInitInput(  InitInData_FEAM,  ErrStat, ErrMsg )
    CALL FEAM_DestroyInitOutput( InitOutData_FEAM, ErrStat, ErrMsg )
 
+   CALL IceFloe_DestroyInitInput(  InitInData_IceF,  ErrStat, ErrMsg )
+   CALL IceFloe_DestroyInitOutput( InitOutData_IceF, ErrStat, ErrMsg )
+   
    
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! loose coupling
@@ -545,6 +589,7 @@ LOGICAL                               :: calcJacobian                           
                         , x_MAP , xd_MAP , z_MAP  &
                         , x_AD  , xd_AD  , z_AD   &
                         , x_FEAM, xd_FEAM, z_FEAM &
+                        , x_IceF, xd_IceF, z_IceF &
                         )           
       
       IF (p_FAST%WrGraphics) THEN
@@ -657,6 +702,7 @@ LOGICAL                               :: calcJacobian                           
          CALL AD_CopyOtherState( OtherSt_AD, OtherSt_AD_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from AD_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF         
+
    END IF ! CompAero == Module_AD 
    
    
@@ -775,7 +821,37 @@ LOGICAL                               :: calcJacobian                           
       END IF           
    END IF ! CompMooring
                  
-      
+   
+   IF  (p_FAST%CompIce == Module_IceF ) THEN      
+
+         ! Copy values for interpolation/extrapolation:
+      DO j = 1, p_FAST%InterpOrder + 1
+         IceF_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !IceF_OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL IceFloe_CopyInput (IceF_Input(1),  IceF_Input(j),  MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from IceFloe_CopyInput (IceF_Input): '//NewLine//ErrMsg )
+      END DO
+      CALL IceFloe_CopyInput (IceF_Input(1),  u_IceF,  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL CheckError( ErrStat, 'Message from IceFloe_CopyInput (u_IceF): '//NewLine//ErrMsg )      
+                               
+         
+         ! Initialize predicted states for j_pc loop:
+      CALL IceFloe_CopyContState   ( x_IceF,  x_IceF_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from IceFloe_CopyContState (init): '//NewLine//ErrMsg )
+      CALL IceFloe_CopyDiscState   (xd_IceF, xd_IceF_pred, MESH_NEWCOPY, Errstat, ErrMsg)  
+         CALL CheckError( ErrStat, 'Message from IceFloe_CopyDiscState (init): '//NewLine//ErrMsg )
+      CALL IceFloe_CopyConstrState ( z_IceF,  z_IceF_pred, MESH_NEWCOPY, Errstat, ErrMsg)
+         CALL CheckError( ErrStat, 'Message from IceFloe_CopyConstrState (init): '//NewLine//ErrMsg )
+      IF ( p_FAST%n_substeps( MODULE_IceF ) > 1 ) THEN
+         CALL IceFloe_CopyOtherState( OtherSt_IceF_old, OtherSt_IceF, MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from IceFloe_CopyOtherState (init): '//NewLine//ErrMsg )   
+      END IF       
+   END IF ! CompIce            
+   
+   
       ! ServoDyn: copy current outputs to store as previous outputs for next step
       ! note that this is a violation of the framework as this is basically a state, but it's only used for the
       ! GH-Bladed DLL, which itself violates the framework....
@@ -924,7 +1000,7 @@ LOGICAL                               :: calcJacobian                           
          END DO
   
          CALL SD_CopyInput (u_SD,  SD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-         !CALL SD_CopyOutput(y_HD,  SD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
+         !CALL SD_CopyOutput(y_SD,  SD_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
          SD_InputTimes(1) = t_global_next          
          !SD_OutputTimes(1) = t_global_next 
             
@@ -980,6 +1056,32 @@ LOGICAL                               :: calcJacobian                           
          
       END IF  ! MAP/FEAM
            
+            ! IceFloe
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+         
+         CALL IceFloe_Input_ExtrapInterp(IceF_Input, IceF_InputTimes, u_IceF, t_global_next, ErrStat, ErrMsg)
+            CALL CheckError(ErrStat,'Message from IceFloe_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+                        
+         !CALL IceFloe_Output_ExtrapInterp(IceF_Output, IceF_OutputTimes, y_IceF, t_global_next, ErrStat, ErrMsg)
+         !   CALL CheckError(ErrStat,'Message from IceFloe_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+            
+         ! Shift "window" of IceF_Input and IceF_Output
+  
+         DO j = p_FAST%InterpOrder, 1, -1
+            CALL IceFloe_CopyInput (IceF_Input(j),  IceF_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+           !CALL IceFloe_CopyOutput(IceF_Output(j), IceF_Output(j+1), MESH_UPDATECOPY, Errstat, ErrMsg)
+            IceF_InputTimes(j+1) = IceF_InputTimes(j)
+            !IceF_OutputTimes(j+1) = IceF_OutputTimes(j)
+         END DO
+  
+         CALL IceFloe_CopyInput (u_IceF,  IceF_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+         !CALL IceFloe_CopyOutput(y_IceF,  IceF_Output(1), MESH_UPDATECOPY, Errstat, ErrMsg)
+         IceF_InputTimes(1) = t_global_next          
+         !IceF_OutputTimes(1) = t_global_next 
+            
+      END IF  ! IceFloe
+      
       
       ! predictor-corrector loop:
       DO j_pc = 0, p_FAST%NumCrctn
@@ -1094,7 +1196,7 @@ LOGICAL                               :: calcJacobian                           
          END IF
             
             
-         ! MAP: get predicted states
+         ! MAP/FEAM: get predicted states
          IF (p_FAST%CompMooring == Module_MAP) THEN
             CALL MAP_CopyContState   ( x_MAP,  x_MAP_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
             CALL MAP_CopyDiscState   (xd_MAP, xd_MAP_pred, MESH_UPDATECOPY, Errstat, ErrMsg)  
@@ -1131,6 +1233,27 @@ LOGICAL                               :: calcJacobian                           
                
          END IF
              
+         
+         ! IceFloe: get predicted states
+         IF ( p_FAST%CompIce == Module_IceF ) THEN
+            CALL IceFloe_CopyContState   ( x_IceF,  x_IceF_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
+            CALL IceFloe_CopyDiscState   (xd_IceF, xd_IceF_pred, MESH_UPDATECOPY, Errstat, ErrMsg)  
+            CALL IceFloe_CopyConstrState ( z_IceF,  z_IceF_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
+
+            IF ( p_FAST%n_substeps( Module_IceF ) > 1 ) THEN
+               CALL IceFloe_CopyOtherState( OtherSt_IceF, OtherSt_IceF_old, MESH_UPDATECOPY, Errstat, ErrMsg)
+            END IF
+            
+            DO j_ss = 1, p_FAST%n_substeps( Module_IceF )
+               n_t_module = n_t_global*p_FAST%n_substeps( Module_IceF ) + j_ss - 1
+               t_module   = n_t_module*p_FAST%dt_module( Module_IceF )
+               
+               CALL IceFloe_UpdateStates( t_module, n_t_module, IceF_Input, IceF_InputTimes, p_IceF, x_IceF_pred, xd_IceF_pred, z_IceF_pred, OtherSt_IceF, ErrStat, ErrMsg )
+                  CALL CheckError( ErrStat, 'Message from IceFloe_UpdateStates: '//NewLine//ErrMsg )
+            END DO !j_ss
+         END IF
+         
+         
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 1.c: Input-Output Solve      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1143,6 +1266,7 @@ LOGICAL                               :: calcJacobian                           
                       , x_MAP_pred , xd_MAP_pred , z_MAP_pred  &
                       , x_AD_pred  , xd_AD_pred  , z_AD_pred   &
                       , x_FEAM_pred, xd_FEAM_pred, z_FEAM_pred &
+                      , x_IceF_pred, xd_IceF_pred, z_IceF_pred &
                       )           
                       
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1172,12 +1296,14 @@ LOGICAL                               :: calcJacobian                           
 
             IF ( p_FAST%n_substeps( Module_MAP ) > 1 ) THEN
                CALL MAP_CopyOtherState( OtherSt_MAP_old, OtherSt_MAP, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-      
-            IF ( p_FAST%n_substeps( Module_FEAM ) > 1 ) THEN
+            ELSEIF ( p_FAST%n_substeps( Module_FEAM ) > 1 ) THEN
                CALL FEAM_CopyOtherState( OtherSt_FEAM_old, OtherSt_FEAM, MESH_UPDATECOPY, Errstat, ErrMsg)
             END IF
          
+            IF ( p_FAST%n_substeps( Module_IceF ) > 1 ) THEN
+               CALL IceFloe_CopyOtherState( OtherSt_IceF_old, OtherSt_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
+            END IF
+            
          END IF
                               
       enddo ! j_pc
@@ -1258,7 +1384,14 @@ LOGICAL                               :: calcJacobian                           
          CALL FEAM_CopyDiscState   (xd_FEAM_pred, xd_FEAM, MESH_UPDATECOPY, Errstat, ErrMsg)  
          CALL FEAM_CopyConstrState ( z_FEAM_pred,  z_FEAM, MESH_UPDATECOPY, Errstat, ErrMsg)
       END IF
-               
+             
+            ! IceFloe: copy final predictions to actual states
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+         CALL IceFloe_CopyContState   ( x_IceF_pred,  x_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
+         CALL IceFloe_CopyDiscState   (xd_IceF_pred, xd_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)  
+         CALL IceFloe_CopyConstrState ( z_IceF_pred,  z_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
+      END IF
+
             
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! We've advanced everything to the next time step: 
@@ -1518,6 +1651,22 @@ CONTAINS
       END IF   ! MAP-ElastoDyn ; FEAM-ElastoDyn
             
          
+   !-------------------------
+   !  SubDyn <-> IceFloe
+   !-------------------------      
+      
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+   
+            ! IceFloe iceMesh point mesh to SubDyn LMesh point mesh              
+         CALL MeshMapCreate( y_IceF%iceMesh, SD_Input(1)%LMesh,  MeshMapData%IceF_P_2_SD_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate IceF_P_2_SD_P: '//NewLine//ErrMsg )
+            ! SubDyn y2Mesh point mesh to IceFloe iceMesh point mesh 
+         CALL MeshMapCreate( y_SD%y2Mesh, IceF_Input(1)%iceMesh,  MeshMapData%SD_P_2_IceF_P, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_P_2_IceF_P: '//NewLine//ErrMsg )
+                        
+      END IF   ! SubDyn-IceFloe
+      
+      
       !............................................................................................................................
       ! Initialize the Jacobian structures:
       !............................................................................................................................
@@ -1526,9 +1675,6 @@ CONTAINS
          CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_Input(1)%PlatformPtMesh, SD_Input(1)%TPMesh, SD_Input(1)%LMesh, &
                                       HD_Input(1)%Morison%LumpedMesh, HD_Input(1)%Morison%DistribMesh, HD_Input(1)%Mesh, ErrStat, ErrMsg)
             CALL CheckError( ErrStat, ErrMsg )                  
-      !ELSEIF ( p_FAST%CompSub == Module_SD ) THEN
-      !   CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_SD, SizeJac_ED_SD, 'Jacobian for ED-SD coupling', ErrStat, ErrMsg )
-      !      CALL CheckError( ErrStat, ErrMsg )         
       ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
             CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
@@ -1668,7 +1814,14 @@ CONTAINS
                 y_FEAM%PtFairleadLoad%RemapFlag          = .FALSE.         
       END IF
          
-   
+      ! IceFloe
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+         IF (IceF_Input(1)%iceMesh%Committed) THEN
+            IceF_Input(1)%iceMesh%RemapFlag = .FALSE.
+                   y_IceF%iceMesh%RemapFlag = .FALSE.
+         END IF    
+      END IF
+      
    END SUBROUTINE ResetRemapFlags  
    !...............................................................................................................................
    SUBROUTINE CalcOutputs_And_SolveForInputs( this_time &
@@ -1679,6 +1832,7 @@ CONTAINS
                                             , x_MAP_this , xd_MAP_this , z_MAP_this  &
                                             , x_AD_this  , xd_AD_this  , z_AD_this   &
                                             , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
+                                            , x_IceF_this, xd_IceF_this, z_IceF_this &
                                             )
    ! This subroutine solves the input-output relations for all of the modules. It is a subroutine because it gets done twice--
    ! once at the start of the n_t_global loop and once in the j_pc loop, using different states.
@@ -1714,6 +1868,10 @@ CONTAINS
       TYPE(FEAM_ContinuousStateType)    , intent(in   ) :: x_FEAM_this                        ! These continuous states (either actual or predicted)
       TYPE(FEAM_DiscreteStateType)      , intent(in   ) :: xd_FEAM_this                       ! These discrete states (either actual or predicted)
       TYPE(FEAM_ConstraintStateType)    , intent(in   ) :: z_FEAM_this                        ! These constraint states (either actual or predicted)
+      !IceFloe:                                
+      TYPE(IceFloe_ContinuousStateType) , intent(in   ) :: x_IceF_this                        ! These continuous states (either actual or predicted)
+      TYPE(IceFloe_DiscreteStateType)   , intent(in   ) :: xd_IceF_this                       ! These discrete states (either actual or predicted)
+      TYPE(IceFloe_ConstraintStateType) , intent(in   ) :: z_IceF_this                        ! These constraint states (either actual or predicted)
                   
          ! Local variable:
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1742,6 +1900,7 @@ CONTAINS
                         , x_SD_this  , xd_SD_this  , z_SD_this   &
                         , x_MAP_this , xd_MAP_this , z_MAP_this  &
                         , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
+                        , x_IceF_this, xd_IceF_this, z_IceF_this &
                         )
       CALL SolveOption2(this_time &
                         , x_SrvD_this, xd_SrvD_this, z_SrvD_this &
@@ -1779,6 +1938,7 @@ CONTAINS
                         , x_SD_this  , xd_SD_this  , z_SD_this   &
                         , x_MAP_this , xd_MAP_this , z_MAP_this  &
                         , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
+                        , x_IceF_this, xd_IceF_this, z_IceF_this &
                         )
 
       !   ! use the ElastoDyn outputs from option1 to update the inputs for AeroDyn and ServoDyn
@@ -1809,6 +1969,7 @@ CONTAINS
                            , x_SD_this  , xd_SD_this  , z_SD_this   &
                            , x_MAP_this , xd_MAP_this , z_MAP_this  &
                            , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
+                           , x_IceF_this, xd_IceF_this, z_IceF_this &
                            )
    ! This routine implements the "option 1" solve for all inputs with direct links to HD, SD, MAP, and the ED platform reference 
    ! point
@@ -1834,12 +1995,16 @@ CONTAINS
       TYPE(FEAM_ContinuousStateType)    , intent(in   ) :: x_FEAM_this                        ! These continuous states (either actual or predicted)
       TYPE(FEAM_DiscreteStateType)      , intent(in   ) :: xd_FEAM_this                       ! These discrete states (either actual or predicted)
       TYPE(FEAM_ConstraintStateType)    , intent(in   ) :: z_FEAM_this                        ! These constraint states (either actual or predicted)
+      !IceFloe:                                
+      TYPE(IceFloe_ContinuousStateType) , intent(in   ) :: x_IceF_this                        ! These continuous states (either actual or predicted)
+      TYPE(IceFloe_DiscreteStateType)   , intent(in   ) :: xd_IceF_this                       ! These discrete states (either actual or predicted)
+      TYPE(IceFloe_ConstraintStateType) , intent(in   ) :: z_IceF_this                        ! These constraint states (either actual or predicted)
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                      
-      ! Because MAP and FEAM do not contain acceleration inputs, we do this outside the DO loop in the ED{_SD}{_HD}_InputOutput solves.       
+      ! Because MAP, FEAM, and IceFloe do not contain acceleration inputs, we do this outside the DO loop in the ED{_SD}_HD_InputOutput solves.       
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
                   
          CALL MAP_CalcOutput( this_time, MAP_Input(1), p_MAP, x_MAP_this, xd_MAP_this, z_MAP_this, OtherSt_MAP, y_MAP, ErrStat, ErrMsg )
@@ -1850,6 +2015,13 @@ CONTAINS
          CALL FEAM_CalcOutput( this_time, FEAM_Input(1), p_FEAM, x_FEAM_this, xd_FEAM_this, z_FEAM_this, OtherSt_FEAM, y_FEAM, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from FEAM_CalcOutput: '//NewLine//ErrMsg  )
                         
+      END IF
+      
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+                  
+         CALL IceFloe_CalcOutput( this_time, IceF_Input(1), p_IceF, x_IceF_this, xd_IceF_this, z_IceF_this, OtherSt_IceF, y_IceF, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from IceFloe_CalcOutput: '//NewLine//ErrMsg  )
+      
       END IF
       
       !
@@ -1874,7 +2046,9 @@ CONTAINS
                                        , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
                                        , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
                                        , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-                                       , MAP_Input(1), y_MAP, FEAM_Input(1), y_FEAM &          
+                                       , MAP_Input(1),  y_MAP  &
+                                       , FEAM_Input(1), y_FEAM &   
+                                       , IceF_Input(1), y_IceF &
                                        , MeshMapData , ErrStat, ErrMsg )         
             CALL CheckError( ErrStat, ErrMsg  )                                                   
                         
@@ -1892,12 +2066,12 @@ CONTAINS
       ELSE 
          
          CALL ED_CalcOutput( this_time, ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1), ErrStat, ErrMsg )
-         CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
+            CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
 #endif         
       END IF ! HD and/or SD coupled to ElastoDyn
                          
    !..................
-   ! Set mooring line inputs (which don't have acceleration fields)
+   ! Set mooring line and ice inputs (which don't have acceleration fields)
    !..................
    
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
@@ -1909,12 +2083,18 @@ CONTAINS
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          
          ! note: FEAM_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)      
-         CALL FEAM_InputSolve( FEAM_INPUT(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
+         CALL FEAM_InputSolve( FEAM_Input(1), ED_Output(1), MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from FEAM_InputSolve: '//NewLine//ErrMsg  )
                         
       END IF        
       
-      
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+         
+         CALL IceFloe_InputSolve(  IceF_Input(1), y_SD, MeshMapData, ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, 'Message from IceFloe_InputSolve: '//NewLine//ErrMsg  )
+                                 
+      END IF        
+                  
    END SUBROUTINE SolveOption1
    !...............................................................................................................................
    SUBROUTINE SolveOption2(this_time &
@@ -2039,6 +2219,12 @@ CONTAINS
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       END IF
       
+      IF ( p_FAST%ModuleInitialized(Module_IceF) ) THEN
+         CALL IceFloe_End(IceF_Input(1),  p_IceF,  x_IceF,  xd_IceF,  z_IceF,  OtherSt_IceF,  y_IceF,  ErrStat2, ErrMsg2)
+         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      END IF
+      
+      
       ! -------------------------------------------------------------------------
       ! Initialization input/output variables:
       !     in case we didn't get them destroyed earlier....
@@ -2064,6 +2250,9 @@ CONTAINS
       
       CALL FEAM_DestroyInitInput(  InitInData_FEAM,    ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL FEAM_DestroyInitOutput( InitOutData_FEAM,   ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      
+      CALL IceFloe_DestroyInitInput(  InitInData_IceF, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL IceFloe_DestroyInitOutput( InitOutData_IceF,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       
       ! -------------------------------------------------------------------------
       ! Deallocate/Destroy structures associated with mesh mapping
@@ -2216,6 +2405,24 @@ CONTAINS
 
       IF ( ALLOCATED(FEAM_InputTimes) ) DEALLOCATE( FEAM_InputTimes )
       
+      ! IceFloe
+      IF ( p_FAST%CompIce == Module_IceF ) THEN
+         CALL IceFloe_DestroyInput( u_IceF, ErrStat2, ErrMsg2 )
+         IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+
+         IF ( ALLOCATED(IceF_Input)      ) THEN
+            DO j = 2,p_FAST%InterpOrder+1 !note that IceF_Input(1) was destroyed in IceFloe_End
+               CALL IceFloe_DestroyInput( IceF_Input(j), ErrStat2, ErrMsg2 )
+               IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+            END DO
+            DEALLOCATE( IceF_Input )
+         END IF
+      ELSE
+         IF ( ALLOCATED(IceF_Input)      ) DEALLOCATE( IceF_Input )
+      END IF
+
+      IF ( ALLOCATED(IceF_InputTimes) ) DEALLOCATE( IceF_InputTimes )      
+      
       
       ! -------------------------------------------------------------------------
       ! predicted state variables:
@@ -2250,16 +2457,22 @@ CONTAINS
       CALL MAP_DestroyDiscState   ( xd_MAP_pred,          ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       CALL MAP_DestroyConstrState (  z_MAP_pred,          ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       CALL MAP_DestroyOtherState  (  OtherSt_MAP_old,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
-                                                          
+
+!TODO:
+!BJJ: do I have to call these other routines for MAP's c_obj stuff, like Marco indicates in his glue code?
+!CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )              
+      
       CALL FEAM_DestroyContState   (  x_FEAM_pred,        ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       CALL FEAM_DestroyDiscState   ( xd_FEAM_pred,        ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       CALL FEAM_DestroyConstrState (  z_FEAM_pred,        ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       CALL FEAM_DestroyOtherState  (  OtherSt_FEAM_old,   ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       
+      CALL IceFloe_DestroyContState   (  x_IceF_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      CALL IceFloe_DestroyDiscState   ( xd_IceF_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL IceFloe_DestroyConstrState (  z_IceF_pred,     ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
+      CALL IceFloe_DestroyOtherState  (  OtherSt_IceF_old,ErrStat2, ErrMsg2);  IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )  
       
-!TODO:
-!BJJ: do I have to call these other routines for MAP's c_obj stuff, like Marco indicates in his glue code?
-!CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
+      
       
       !............................................................................................................................
       ! Set exit error code if there was an error;
