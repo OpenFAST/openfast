@@ -36,6 +36,7 @@
    Fedge = 0.0D0
 
    CALL TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
+   CALL PrescribedMotion(uuNf,vvNf,aaNf,time)
    CALL AppliedNodalLoad(F_ext,time,dof_total)
    ai = 0.0D0
    Eref = 0.0D0

@@ -8,7 +8,7 @@
    REAL(ReKi):: rotf_temp(3), roti_temp(3), rot_temp(3)
    INTEGER(IntKi):: i, j, temp_id
 
-   DO i=1, node_total
+   DO i=2, node_total
        temp_id = (i - 1) * dof_node
        rotf_temp = 0.0D0
        roti_temp = 0.0D0
