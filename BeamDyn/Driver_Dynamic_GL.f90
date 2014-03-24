@@ -111,7 +111,7 @@ PROGRAM MAIN
    WRITE(*,*) "SingleTest = ", SingleTest
 
    t_initial = 0.0D0
-   t_final = 4.0d0
+   t_final = 12.0D0
    
    dt_global = 1.0D-03
    

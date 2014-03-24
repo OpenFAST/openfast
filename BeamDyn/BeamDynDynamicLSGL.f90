@@ -79,6 +79,7 @@ INCLUDE 'lubksb.f90'
 
 INCLUDE 'UpdateDynamic.f90'
 INCLUDE 'TiSchmPredictorStep.f90'
+INCLUDE 'PrescribedMotion.f90'
 INCLUDE 'AppliedNodalLoad.f90'
 INCLUDE 'DynamicSolutionGL.f90'
 
@@ -148,7 +149,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
       p%dof_total  = p%node_total * p%dof_node
       
-      p%niter = 200
+      p%niter = 100
 
       xl = 0.   ! left most point (on x axis)
       xr = 10.  ! right most point (on x axis)
@@ -235,10 +236,10 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !          p%Stif0(2,3) = 7.8381012488D+01
           p%Stif0(3,3,i) = 3.8777942862D+04
           p%Stif0(4,4,i) = 1.6959274463D+04
-          p%Stif0(4,5,i) = 1.7611929624D+04
+!          p%Stif0(4,5,i) = 1.7611929624D+04
           p%Stif0(5,5,i) = 5.9124766881D+04
-          p%Stif0(4,6,i) = -3.5060243156D+02
-          p%Stif0(5,6,i) = -3.7045274908D+02
+!          p%Stif0(4,6,i) = -3.5060243156D+02
+!          p%Stif0(5,6,i) = -3.7045274908D+02
           p%Stif0(6,6,i) =  1.4147152848D+05
 !          p%Stif0(2,1) = p%Stif0(1,2)
 !          p%Stif0(3,1) = p%Stif0(1,3)
