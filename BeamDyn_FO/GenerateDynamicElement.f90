@@ -1,20 +1,37 @@
    SUBROUTINE GenerateDynamicElement(uuN0,uuN,vvN,Stif0,m00,mEta0,rho0,&
                                     &elem_total,node_elem,dof_node,ngp,RHS,MassM)
 
-   REAL(ReKi),INTENT(IN):: uuN0(:),uuN(:),vvN(:),Stif0(:,:,:)
-   REAL(ReKi),INTENT(IN):: m00(:),mEta0(:,:),rho0(:,:,:)
-   INTEGER(IntKi),INTENT(IN):: elem_total,node_elem,dof_node,ngp
-   REAL(ReKi),INTENT(OUT):: MassM(:,:),RHS(:)   
+   REAL(ReKi),INTENT(IN):: uuN0(:) ! Initial position vector
+   REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
+   REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
+   REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),INTENT(IN):: m00(:) ! Mass of beam per unit span at each node
+   REAL(ReKi),INTENT(IN):: mEta0(:,:) ! Sectional m\Eta_0 at each node
+   REAL(ReKi),INTENT(IN):: rho0(:,:,:) ! Sectional tensor of inertia per unit span
+   INTEGER(IntKi),INTENT(IN):: elem_total ! Total number of elements
+   INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
+   INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
+   REAL(ReKi),INTENT(OUT):: MassM(:,:) ! Mass matrix 
+   REAL(ReKi),INTENT(OUT):: RHS(:) ! Right hand side of the equation Ax=B  
 
-   REAL(ReKi),ALLOCATABLE:: Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
-   REAL(ReKi),ALLOCATABLE:: Nvvv(:)
-   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:)
-   REAL(ReKi),ALLOCATABLE:: Nm00(:),NmEta0(:,:),Nrho0(:,:,:)
-   REAL(ReKi),ALLOCATABLE:: elf(:),elm(:,:)
+   REAL(ReKi),ALLOCATABLE:: Nuu0(:) !
+   REAL(ReKi),ALLOCATABLE:: Nuuu(:) !
+   REAL(ReKi),ALLOCATABLE:: Nrr0(:) !
+   REAL(ReKi),ALLOCATABLE:: Nrrr(:) ! 
+   REAL(ReKi),ALLOCATABLE:: Nvvv(:) !
+   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:) !
+   REAL(ReKi),ALLOCATABLE:: Nm00(:) !
+   REAL(ReKi),ALLOCATABLE:: NmEta0(:,:) !
+   REAL(ReKi),ALLOCATABLE:: Nrho0(:,:,:) !
+   REAL(ReKi),ALLOCATABLE:: elf(:) !
+   REAL(ReKi),ALLOCATABLE:: elm(:,:) !
 
-   INTEGER(IntKi):: dof_elem,rot_elem
-   INTEGER(IntKi):: nelem,j
-   INTEGER(IntKi):: allo_stat
+   INTEGER(IntKi):: dof_elem ! Degree of freedom per node
+   INTEGER(IntKi):: rot_elem ! Rotational degrees of freedom
+   INTEGER(IntKi):: nelem ! number of elements
+   INTEGER(IntKi):: j ! Index counter
+   INTEGER(IntKi):: allo_stat ! Allows for an error code return
 
    dof_elem = dof_node * node_elem
    rot_elem = (dof_node/2) * node_elem

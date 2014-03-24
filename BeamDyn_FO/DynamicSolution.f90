@@ -2,18 +2,34 @@
                              &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                              &qddot)
 
-   REAL(ReKi),INTENT(IN):: uuN0(:),Stif0(:,:,:),m00(:),mEta0(:,:),rho0(:,:,:)
-   REAL(ReKi),INTENT(IN):: uuN(:),vvN(:)
-   REAL(DbKi),INTENT(IN):: time
-   INTEGER(IntKi),INTENT(IN)::node_elem,dof_node,elem_total,dof_total,node_total,ngp
-   REAL(ReKi),INTENT(OUT):: qddot(:)
+   REAL(ReKi),INTENT(IN):: uuN0(:) ! Initial position vector
+   REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),INTENT(IN):: m00(:) ! Mass of beam per unit span at each node
+   REAL(ReKi),INTENT(IN):: mEta0(:,:) ! Sectional m\Eta_0 at each node
+   REAL(ReKi),INTENT(IN):: rho0(:,:,:) ! Sectional tensor of inertia per unit span
+   REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
+   REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
+   REAL(DbKi),INTENT(IN):: time ! Current time
+   INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
+   INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN):: elem_total ! Total number of elements
+   INTEGER(IntKi),INTENT(IN):: dof_total ! Total number of degrees of freedom
+   INTEGER(IntKi),INTENT(IN):: node_total ! Total number of nodes
+   INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
+   REAL(ReKi),INTENT(OUT):: qddot(:) ! Second time derivative of state "q"
 
-   REAL(ReKi):: MassM(dof_total,dof_total),RHS(dof_total)
-   REAL(ReKi):: MassM_LU(dof_total-6,dof_total-6),RHS_LU(dof_total-6)
-   REAL(ReKi):: F_ext(dof_total),qdd_temp(dof_total-6)
+   ! Local variables
    
-   REAL(ReKi):: d
-   INTEGER(IntKi):: indx(dof_total-6),j,k
+   REAL(ReKi):: MassM(dof_total,dof_total) !
+   REAL(ReKi):: RHS(dof_total) !
+   REAL(ReKi):: MassM_LU(dof_total-6,dof_total-6) !
+   REAL(ReKi):: RHS_LU(dof_total-6) !
+   REAL(ReKi):: F_ext(dof_total) !
+   REAL(ReKi):: qdd_temp(dof_total-6) !
+   REAL(ReKi):: d !
+   INTEGER(IntKi):: indx(dof_total-6) !
+   INTEGER(IntKi):: j ! Counter for DO loop
+   INTEGER(IntKi):: k ! Counter for DO loop
 
    CALL AppliedNodalLoad(F_ext,time,dof_total)
 
