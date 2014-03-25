@@ -368,10 +368,10 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 ! (stepsize dt assumed to be in ModName parameter)
 !..................................................................................................................................
 
-   REAL(DbKi),                         INTENT(IN   ) :: t          ! Current simulation time in seconds
-   INTEGER(IntKi),                     INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
+   REAL(DbKi),                      INTENT(IN   ) :: t          ! Current simulation time in seconds
+   INTEGER(IntKi),                  INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
    TYPE(BDyn_InputType),            INTENT(INOUT) :: u(:)       ! Inputs at utimes
-   REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
+   REAL(DbKi),                      INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
    TYPE(BDyn_ParameterType),        INTENT(IN   ) :: p          ! Parameters
    TYPE(BDyn_ContinuousStateType),  INTENT(INOUT) :: x          ! Input: Continuous states at t;
                                                                       !   Output: Continuous states at t + Interval
@@ -380,11 +380,11 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    TYPE(BDyn_ConstraintStateType),  INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
                                                                       !   Output: Constraint states at t+dt
    TYPE(BDyn_OtherStateType),       INTENT(INOUT) :: OtherState ! Other/optimization states
-   INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    ! Error status of the operation
-   CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    ! Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-
+   INTEGER(IntKi):: i
 
    ! Initialize ErrStat
 
@@ -392,6 +392,13 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    ErrMsg  = "" 
 
    CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+
+   DO i=1,3
+       x%q(i) = u%PointMesh%TranslationDisp(i,1)
+       x%q(i+3) = 0.0D0
+       x%dqdt(i) = u%PointMesh%TranslationVel(i,1)
+       x%dqdt(i+3) = 0.0D0
+   ENDDO
 
    END SUBROUTINE BeamDyn_UpdateStates
 
