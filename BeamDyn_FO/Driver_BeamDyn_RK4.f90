@@ -323,6 +323,7 @@ SUBROUTINE BDyn_InputSolve( t, dt, u, ut, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   tmp_vector = 0.0D0
    ! gather point forces and line forces
 
    ! Point mesh: Force 
