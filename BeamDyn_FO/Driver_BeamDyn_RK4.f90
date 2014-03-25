@@ -58,7 +58,7 @@ PROGRAM MAIN
    TYPE(BDyn_OtherStateType)          :: BDyn_OtherState
 
    TYPE(BDyn_InputType),ALLOCATABLE  :: BDyn_Input(:)
-   REAL(DbKi), ALLOCATABLE              :: BDyn_InputTimes(:)
+   REAL(DbKi), ALLOCATABLE           :: BDyn_InputTimes(:)
 
    TYPE(BDyn_OutputType),ALLOCATABLE  :: BDyn_Output(:)
    REAL(DbKi),ALLOCATABLE             :: BDyn_OutputTimes(:)
@@ -136,9 +136,9 @@ PROGRAM MAIN
                    , BDyn_ConstraintState  &
                    , BDyn_OtherState       &
                    , BDyn_Output(1)        &
-                   , dt_global                &
+                   , dt_global             &
                    , BDyn_InitOutput       &
-                   , ErrStat                  &
+                   , ErrStat               &
                    , ErrMsg )
 
 
@@ -195,8 +195,9 @@ PROGRAM MAIN
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BDyn_InputSolve( t_global, dt_global, BDyn_Input, BDyn_InputTimes, ErrStat, ErrMsg)
-
+      CALL BDyn_InputSolve( t_global+ dt_global,     BDyn_Input(1), BDyn_InputTimes(1), ErrStat, ErrMsg)
+      CALL BDyn_InputSolve( t_global+ 0.5*dt_global, BDyn_Input(2), BDyn_InputTimes(2), ErrStat, ErrMsg)
+      CALL BDyn_InputSolve( t_global,                BDyn_Input(3), BDyn_InputTimes(3), ErrStat, ErrMsg)
 
 
 !     CALL BDyn_Output_ExtrapInterp(BDyn_Output, BDyn_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
@@ -298,17 +299,16 @@ END PROGRAM MAIN
 
 
 !SUBROUTINE BDyn_InputSolve( u, y, p, ErrStat, ErrMsg)
-SUBROUTINE BDyn_InputSolve( t, dt, u, ut, ErrStat, ErrMsg)
+SUBROUTINE BDyn_InputSolve( t, u, ut, ErrStat, ErrMsg)
  
    USE BeamDyn
    USE BeamDyn_Types
 
    ! Module1 Derived-types variables; see Registry_Module1.txt for details
 
-   REAL(ReKi),                     INTENT(IN   ) :: t
-   REAL(ReKi),                     INTENT(IN   ) :: dt
-   TYPE(BDyn_InputType),           INTENT(INOUT) :: u(:)
-   REAL(DbKi),                     INTENT(INOUT) :: ut(:)
+   REAL(DbKi),                     INTENT(IN   ) :: t
+   TYPE(BDyn_InputType),           INTENT(INOUT) :: u
+   REAL(DbKi),                     INTENT(INOUT) :: ut
 
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
@@ -323,6 +323,7 @@ SUBROUTINE BDyn_InputSolve( t, dt, u, ut, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   tmp_vector = 0.0D0
    ! gather point forces and line forces
 
    ! Point mesh: Force 
@@ -330,29 +331,12 @@ SUBROUTINE BDyn_InputSolve( t, dt, u, ut, ErrStat, ErrMsg)
    u%PointMesh%TranslationVel(:,1)   = tmp_vector
    u%PointMesh%TranslationAcc(:,1)   = tmp_vector
 
-   u%PointMesh%TranslationDisp(3,1)  = +0.1*sin(t+dt)
-   u%PointMesh%TranslationVel(3,1)   = -0.1*cos(t+dt)
-   u%PointMesh%TranslationAcc(3,1)   = -0.1*sin(t+dt)
+   u%PointMesh%TranslationDisp(3,1)  = +0.1*sin(t)
+   u%PointMesh%TranslationVel(3,1)   = -0.1*cos(t)
+   u%PointMesh%TranslationAcc(3,1)   = -0.1*sin(t)
 
-   ut(1) = t+dt
+   ut = t
 
-   u%PointMesh%TranslationDisp(:,2)  = tmp_vector
-   u%PointMesh%TranslationVel(:,2)   = tmp_vector
-   u%PointMesh%TranslationAcc(:,2)   = tmp_vector
-
-   u%PointMesh%TranslationDisp(3,2)  = +0.1*sin(t+0.5*dt)
-   u%PointMesh%TranslationVel(3,2)   = -0.1*cos(t+0.5*dt)
-   u%PointMesh%TranslationAcc(3,2)   = -0.1*sin(t+0.5*dt)
-   ut(2) = t+0.5*dt
-
-   u%PointMesh%TranslationDisp(:,3)  = tmp_vector
-   u%PointMesh%TranslationVel(:,3)  = tmp_vector
-   u%PointMesh%TranslationAcc(:,3)  = tmp_vector
-
-   u%PointMesh%TranslationDisp(3,3)  = +0.1*sin(t)
-   u%PointMesh%TranslationVel(3,3)   = -0.1*cos(t)
-   u%PointMesh%TranslationAcc(3,3)   = -0.1*sin(t)
-   ut(3) = t
 
 END SUBROUTINE BDyn_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
