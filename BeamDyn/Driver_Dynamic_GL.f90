@@ -111,7 +111,7 @@ PROGRAM MAIN
    WRITE(*,*) "SingleTest = ", SingleTest
 
    t_initial = 0.0D0
-   t_final = 12.0D0
+   t_final = 9.0D0
    
    dt_global = 1.0D-03
    
@@ -201,6 +201,9 @@ PROGRAM MAIN
        WRITE(QiDisUnit,6000) (n_t_global+1)*dt_global,BDyn_OtherState%uuNf(j-5),BDyn_OtherState%uuNf(j-4),&
                             &BDyn_OtherState%uuNf(j-3),BDyn_OtherState%uuNf(j-2),BDyn_OtherState%uuNf(j-1),&
                             &BDyn_OtherState%uuNf(j)
+!       WRITE(QiDisUnit,6000) (n_t_global+1)*dt_global,BDyn_OtherState%uuNf(1),BDyn_OtherState%uuNf(2),&
+!                            &BDyn_OtherState%uuNf(3),BDyn_OtherState%uuNf(4),BDyn_OtherState%uuNf(5),&
+!                            &BDyn_OtherState%uuNf(6)
        WRITE(QiForUnit,6000) (n_t_global+1)*dt_global,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),&
                             &BDyn_OtherState%RootForce(3),BDyn_OtherState%RootForce(4),&
                             &BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6)
