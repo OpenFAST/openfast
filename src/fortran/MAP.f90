@@ -381,7 +381,7 @@ CONTAINS
     InitInp%C_Obj%gravity         =  InitInp%gravity
     InitInp%C_Obj%sea_density     =  InitInp%sea_density
     InitInp%C_Obj%depth           = -InitInp%depth
-    InitInp%C_obj%coupled_to_FAST = .TRUE.  
+    InitInp%C_obj%coupled_to_FAST =  InitInp%coupled_to_FAST
     
     ! Set the gravity constant, water depth, and sea density in MAP.
     ! This calls functions in MAP_FortranBinding.cpp
@@ -548,9 +548,9 @@ CONTAINS
     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                !          |
                                                                        !          |
     DO i = 1,NumNodes                                                  !          |
-       Pos(1) = u%X(i)                                                 !          |
-       Pos(2) = u%Y(i)                                                 !          |
-       Pos(3) = u%Z(i)                                                 !          |
+       Pos(1) = REAL(u%X(i), ReKi)                                          !          |
+       Pos(2) = REAL(u%Y(i), ReKi)                                          !          |
+       Pos(3) = REAL(u%Z(i), ReKi)                                          !          |
                                                                        !          |
        CALL MeshPositionNode ( u%PtFairleadDisplacement , &            !          |
                                i                        , &            !          |
@@ -637,7 +637,7 @@ CONTAINS
     i=0
     ! set the time and coupling interval to something readable by MAP (using KIND=C_INT/C_FLOAT instead
     ! of the native IntKi/DbKi format in FAST)
-    time = t
+    time = REAL( t, C_FLOAT )  ! 
     interval = n
     
     ! create space for arrays/meshes in u_interp
@@ -777,8 +777,7 @@ CONTAINS
     INTEGER(IntKi)                                  :: i ! Loop counter
 
     message_from_MAP = ""//CHAR(0)
-    time = 0
-    time = t
+    time = REAL(t,C_FLOAT) ! double to single conversion here
 
     ! Now call the _F2C_ routines for the INTENT(IN   ) C objects
     CALL MAP_F2C_CopyInput( u, ErrStat, ErrMsg ) 
@@ -865,9 +864,9 @@ CONTAINS
 
     ! Copy the MAP C output types to the native Fortran mesh output types
     DO i = 1,y%PtFairleadLoad%NNodes
-       y%PtFairleadLoad%Force(1,i) = y%FX(i) 
-       y%PtFairleadLoad%Force(2,i) = y%FY(i)
-       y%PtFairleadLoad%Force(3,i) = y%FZ(i)
+       y%PtFairleadLoad%Force(1,i) = REAL( y%FX(i), ReKi) ! conversion to ReKi for Mesh fields 
+       y%PtFairleadLoad%Force(2,i) = REAL( y%FY(i), ReKi) ! conversion to ReKi for Mesh fields
+       y%PtFairleadLoad%Force(3,i) = REAL( y%FZ(i), ReKi) ! conversion to ReKi for Mesh fields
     END DO
 
   END SUBROUTINE MAP_CalcOutput                                                                  !   -------+
