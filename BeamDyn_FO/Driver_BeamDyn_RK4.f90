@@ -176,7 +176,6 @@ PROGRAM MAIN
    !DO n_t_global = 0, 1000
 
 
-      CALL BDyn_InputSolve( BDyn_Input(1), BDyn_Output(1), BDyn_Parameter, ErrStat, ErrMsg)
 
 
 !     CALL BeamDyn_CalcOutput( t_global, BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
@@ -185,23 +184,39 @@ PROGRAM MAIN
 
       ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
 
-      CALL BDyn_Input_ExtrapInterp(BDyn_Input, BDyn_InputTimes, u1, t_global + dt_global, ErrStat, ErrMsg)
+! mas -- remove start here  (we don't need this; will give exact values instead
+!     CALL BDyn_Input_ExtrapInterp(BDyn_Input, BDyn_InputTimes, u1, t_global + dt_global, ErrStat, ErrMsg)
+! mas -- remove end here
+
+! MAS RECOMMENDATION
+!  put in a BDyn_CalcInput here, and populate the three entries of BDyn_Input at
+!  t_global, t_global + dt_global /2., t_global+dt_global
+!
+!  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
+!  step endpionts and midpoint.
+
+      CALL BDyn_InputSolve( t_global, dt_global, BDyn_Input, BDyn_InputTimes, ErrStat, ErrMsg)
+
+
 
 !     CALL BDyn_Output_ExtrapInterp(BDyn_Output, BDyn_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
 
       ! Shift "window" of the Mod1_Input and Mod1_Output
 
-      DO i = BDyn_interp_order, 1, -1
-         CALL BDyn_CopyInput (BDyn_Input(i),  BDyn_Input(i+1), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL BDyn_CopyOutput (BDyn_Output(i),  BDyn_Output(i+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-         BDyn_InputTimes(i+1) = BDyn_InputTimes(i)
-         BDyn_OutputTimes(i+1) = BDyn_OutputTimes(i)
-      ENDDO
 
-      CALL BDyn_CopyInput (u1,  BDyn_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-      CALL BDyn_CopyOutput (y1,  BDyn_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-      BDyn_InputTimes(1) = t_global + dt_global
-      BDyn_OutputTimes(1) = t_global + dt_global
+! mas -- remove start here
+!     DO i = BDyn_interp_order, 1, -1
+!        CALL BDyn_CopyInput (BDyn_Input(i),  BDyn_Input(i+1), MESH_UPDATECOPY, Errstat, ErrMsg)
+!        CALL BDyn_CopyOutput (BDyn_Output(i),  BDyn_Output(i+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+!        BDyn_InputTimes(i+1) = BDyn_InputTimes(i)
+!        BDyn_OutputTimes(i+1) = BDyn_OutputTimes(i)
+!     ENDDO
+
+!     CALL BDyn_CopyInput (u1,  BDyn_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+!     CALL BDyn_CopyOutput (y1,  BDyn_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+!     BDyn_InputTimes(1) = t_global + dt_global
+!     BDyn_OutputTimes(1) = t_global + dt_global
+! mas -- remove end here
 
       ! Shift "window" of the Mod1_Input and Mod1_Output
 
@@ -230,7 +245,7 @@ PROGRAM MAIN
 !      WRITE(*,*) t_global, BDyn_ContinuousState%q(15)
       WRITE(QiDisUnit,6000) t_global,BDyn_ContinuousState%q(BDyn_Parameter%dof_total-5),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-4),&
                            &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-3),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-2),&
-                           &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-1),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-5)
+                           &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-1),BDyn_ContinuousState%q(BDyn_Parameter%dof_total)
 
       ! Save all final variables 
 
@@ -282,16 +297,18 @@ END PROGRAM MAIN
 
 
 
-SUBROUTINE BDyn_InputSolve( u, y, p, ErrStat, ErrMsg)
+!SUBROUTINE BDyn_InputSolve( u, y, p, ErrStat, ErrMsg)
+SUBROUTINE BDyn_InputSolve( t, dt, u, ut, ErrStat, ErrMsg)
  
    USE BeamDyn
    USE BeamDyn_Types
 
    ! Module1 Derived-types variables; see Registry_Module1.txt for details
 
-   TYPE(BDyn_InputType),           INTENT(INOUT) :: u
-   TYPE(BDyn_OutputType),          INTENT(IN   ) :: y
-   TYPE(BDyn_ParameterType),       INTENT(IN   ) :: p
+   REAL(ReKi),                     INTENT(IN   ) :: t
+   REAL(ReKi),                     INTENT(IN   ) :: dt
+   TYPE(BDyn_InputType),           INTENT(INOUT) :: u(:)
+   REAL(DbKi),                     INTENT(INOUT) :: ut(:)
 
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
@@ -307,12 +324,35 @@ SUBROUTINE BDyn_InputSolve( u, y, p, ErrStat, ErrMsg)
    ErrMsg  = ''
 
    ! gather point forces and line forces
-   tmp_vector = 0.     
 
    ! Point mesh: Force 
    u%PointMesh%TranslationDisp(:,1)  = tmp_vector
-   u%PointMesh%TranslationVel(:,1)  = tmp_vector
-   u%PointMesh%TranslationAcc(:,1)  = tmp_vector
+   u%PointMesh%TranslationVel(:,1)   = tmp_vector
+   u%PointMesh%TranslationAcc(:,1)   = tmp_vector
+
+   u%PointMesh%TranslationDisp(3,1)  = +0.1*sin(t+dt)
+   u%PointMesh%TranslationVel(3,1)   = -0.1*cos(t+dt)
+   u%PointMesh%TranslationAcc(3,1)   = -0.1*sin(t+dt)
+
+   ut(1) = t+dt
+
+   u%PointMesh%TranslationDisp(:,2)  = tmp_vector
+   u%PointMesh%TranslationVel(:,2)   = tmp_vector
+   u%PointMesh%TranslationAcc(:,2)   = tmp_vector
+
+   u%PointMesh%TranslationDisp(3,2)  = +0.1*sin(t+0.5*dt)
+   u%PointMesh%TranslationVel(3,2)   = -0.1*cos(t+0.5*dt)
+   u%PointMesh%TranslationAcc(3,2)   = -0.1*sin(t+0.5*dt)
+   ut(2) = t+0.5*dt
+
+   u%PointMesh%TranslationDisp(:,3)  = tmp_vector
+   u%PointMesh%TranslationVel(:,3)  = tmp_vector
+   u%PointMesh%TranslationAcc(:,3)  = tmp_vector
+
+   u%PointMesh%TranslationDisp(3,3)  = +0.1*sin(t)
+   u%PointMesh%TranslationVel(3,3)   = -0.1*cos(t)
+   u%PointMesh%TranslationAcc(3,3)   = -0.1*sin(t)
+   ut(3) = t
 
 END SUBROUTINE BDyn_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
