@@ -1,12 +1,11 @@
 !*********************************************************************************************************************************
-! 	This subroutine is called 3 times by GenerateDynamicElement. It creates an array "Nu" which are nodal values for each element
-!	for uuN0, uuN, and F_ext (initial nodal configuration, nodal displacements, and velocity of mass) these values 
-!	are then passed back to GenerateDynamicElement.  
-!
+!   This subroutine is called 3 times by GenerateDynamicElement. It creates an array "Nu" which are nodal values for each element
+!   for uuN0, uuN, and vvn (initial nodal configuration, nodal displacements, and velocity of mass) these values 
+!   are then passed back to GenerateDynamicElement.  
 !**********************************************************************************************************************************
    SUBROUTINE ElemNodalDispGL(uu,node_elem,dof_node,nelem,Nu)
 
-   REAL(ReKi),INTENT(IN):: uu(:) ! Initial position vector
+   REAL(ReKi),INTENT(IN):: uu(:) ! Initial position vector, nodal displacements, and velocity of mass
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),INTENT(IN):: nelem ! Number of elements, being looped from 1, elem_total

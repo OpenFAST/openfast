@@ -1,8 +1,14 @@
+!**********************************************************************************************************************************
+!   This subroutine calculates the rotation parameters for each element using the Wiener-Milenkovic method.  
+!   This method is detailed in the paper: Bauchau, O.A., 2008, "Interpolation of finite rotations in flexible 
+!   multi-body dynamics simulations", IMechE, Equation (9). 
+!**********************************************************************************************************************************
    SUBROUTINE CrvCompose(rr,pp,qq,flag)
 
-   REAL(ReKi),INTENT(IN):: pp(:), qq(:)
-   INTEGER(IntKi),INTENT(IN):: flag
-   REAL(ReKi),INTENT(OUT):: rr(:)
+   REAL(ReKi),INTENT(IN):: pp(:) ! Rotational degrees of freedom for various inputs depending on which program calls CrvCompose
+   REAL(ReKi),INTENT(IN):: qq(:) ! Rotational degrees of freedom for various inputs depending on which program calls CrvCompose
+   INTEGER(IntKi),INTENT(IN):: flag ! Integer value to determine which loop to enter
+   REAL(ReKi),INTENT(OUT):: rr(:) ! Rotation parameter returned to program
 
    REAL(ReKi):: pp0,pp1,pp2,pp3,qq0,qq1,qq2,qq3,tr1,tr2,dd1,dd2
 
