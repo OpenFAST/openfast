@@ -13,9 +13,9 @@
    ENDDO
 
    DO i=1,3
-       x%q(i) = u%PointMesh%TranslationDisp(i)
+       x%q(i) = u%PointMesh%TranslationDisp(i,1)
        x%q(i+3) = 0.0D0
-       x%dqdt(i) = u%PointMesh%TranslationVel(i)
+       x%dqdt(i) = u%PointMesh%TranslationVel(i,1)
        x%dqdt(i+3) = 0.0D0
    ENDDO
 

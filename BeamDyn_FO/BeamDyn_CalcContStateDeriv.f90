@@ -6,7 +6,7 @@
    REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
+   TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
    TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
    TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
    TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
@@ -19,7 +19,10 @@
    REAL(ReKi),ALLOCATABLE:: qdot(:)
    INTEGER(IntKi):: allo_stat,j
 
+   TYPE(BDyn_ContinuousStateType) :: xtemp           ! Continuous states at t
+
    allo_stat = 0  
+
 
    ALLOCATE(qddot(p%dof_total), STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
@@ -39,18 +42,21 @@
 !   ENDDO
 !   STOP
 
-   CALL PrescribedRootMotion(u,x,p)
+   xtemp = x
 
-   CALL DynamicSolution(p%uuN0,x%q,x%dqdt,p%Stif0,p%m00,p%mEta0,p%rho0,&
+
+   CALL PrescribedRootMotion(u,xtemp,p)
+
+   CALL DynamicSolution(p%uuN0,xtemp%q,xtemp%dqdt,p%Stif0,p%m00,p%mEta0,p%rho0,&
                        &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                        &qddot)
 
    DO j=1,3
-       qddot(j) = u%PointMesh%TranslationAcc(j)
-       qddot(j+3) = u%PointMesh%RotationAcc(j)
+       qddot(j) = u%PointMesh%TranslationAcc(j,1)
+       qddot(j+3) = u%PointMesh%RotationAcc(j,1)
    ENDDO
 
-   CALL ComputeUDN(p%node_total,p%dof_node,x%dqdt,x%q,qdot)
+   CALL ComputeUDN(p%node_total,p%dof_node,xtemp%dqdt,xtemp%q,qdot)
 
 !   xdot%q = x%dqdt
    xdot%q = qdot
