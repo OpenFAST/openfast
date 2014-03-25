@@ -247,6 +247,9 @@ PROGRAM MAIN
       WRITE(QiDisUnit,6000) t_global,BDyn_ContinuousState%q(BDyn_Parameter%dof_total-5),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-4),&
                            &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-3),BDyn_ContinuousState%q(BDyn_Parameter%dof_total-2),&
                            &BDyn_ContinuousState%q(BDyn_Parameter%dof_total-1),BDyn_ContinuousState%q(BDyn_Parameter%dof_total)
+!      WRITE(QiDisUnit,6000) t_global,BDyn_ContinuousState%q(1),BDyn_ContinuousState%q(2),&
+!                           &BDyn_ContinuousState%q(3),BDyn_ContinuousState%q(4),&
+!                           &BDyn_ContinuousState%q(5),BDyn_ContinuousState%q(6)
 
       ! Save all final variables 
 

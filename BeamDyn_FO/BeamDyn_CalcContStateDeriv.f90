@@ -46,7 +46,8 @@
    xtemp = x
 
 
-   CALL PrescribedRootMotion(u,xtemp,p)
+!   CALL PrescribedRootMotion(u,xtemp,p)
+   CALL PrescribedRootMotion(t,xtemp,p)
 
    CALL DynamicSolution(p%uuN0,xtemp%q,xtemp%dqdt,p%Stif0,p%m00,p%mEta0,p%rho0,&
                        &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
