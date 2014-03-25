@@ -100,7 +100,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    ErrMsg  = "" 
 
    xl = 0.0D0
-   xr = 10.0D0
+   xr = 10.0D0  !mas
    blength = xr - xl
 
    ! Initialize the NWTC Subroutine Library
