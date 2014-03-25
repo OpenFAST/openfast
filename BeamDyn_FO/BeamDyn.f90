@@ -386,6 +386,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    ! local variables
    INTEGER(IntKi):: i
    INTEGER(IntKi):: temp_id
+   REAL(ReKi):: temp
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -409,7 +410,8 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    DO i=2,p%node_total
        temp_id = (i-1)*6
        IF(ABS(x%q(temp_id+5)) .GT. 4.0D0) THEN
-           x%q(temp_id+5) = -4.0D0*TAN((4.0D0*ATAN(x%q(temp_id+5))/4.0D0+2.0D0*3.1415926D0)/4.0D0)
+           temp = -4.0D0*ATAN(x%q(temp_id+5)/4.0D0)
+           x%q(temp_id+5) = -4.0D0*TAN((temp+2.0D0*3.1415926D0)/4.0D0)
        ENDIF
    ENDDO
 
