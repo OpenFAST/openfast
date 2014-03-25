@@ -1,5 +1,6 @@
-! This is the subroutine where the external force !
-! is input.                                       !
+!*********************************************************************************************************************************
+! This is the subroutine where the external force is input.
+!**********************************************************************************************************************************
 
   SUBROUTINE AppliedNodalLoad(F_ext,time,dof_total)
 
