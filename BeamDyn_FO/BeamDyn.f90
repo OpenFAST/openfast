@@ -182,10 +182,10 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
        p%Stif0(2,2,i) = 8.8562207505D+04
        p%Stif0(3,3,i) = 3.8777942862D+04
        p%Stif0(4,4,i) = 1.6959274463D+04
-       p%Stif0(4,5,i) = 1.7611929624D+04
+!       p%Stif0(4,5,i) = 1.7611929624D+04
        p%Stif0(5,5,i) = 5.9124766881D+04
-       p%Stif0(4,6,i) = -3.5060243156D+02
-       p%Stif0(5,6,i) = -3.7045274908D+02
+!       p%Stif0(4,6,i) = -3.5060243156D+02
+!       p%Stif0(5,6,i) = -3.7045274908D+02
        p%Stif0(6,6,i) =  1.4147152848D+05
        p%Stif0(5,4,i) = p%Stif0(4,5,i)
        p%Stif0(6,4,i) = p%Stif0(4,6,i)
@@ -385,7 +385,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    ! local variables
    INTEGER(IntKi):: i
-
+   INTEGER(IntKi):: temp_id
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -393,11 +393,24 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
-   DO i=1,3
-       x%q(i) = u(1)%PointMesh%TranslationDisp(i,1)
-       x%q(i+3) = 0.0D0
-       x%dqdt(i) = u(1)%PointMesh%TranslationVel(i,1)
-       x%dqdt(i+3) = 0.0D0
+!   DO i=1,3
+!       x%q(i) = u(1)%PointMesh%TranslationDisp(i,1)
+!       x%q(i+3) = 0.0D0
+!       x%dqdt(i) = u(1)%PointMesh%TranslationVel(i,1)
+!       x%dqdt(i+3) = 0.0D0
+!   ENDDO
+
+   x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
+   IF(ABS(x%q(5)) .GT. 4.0D0) THEN
+       x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
+   ENDIF
+   x%dqdt(5) = -3.1415926D0/3.0D0
+
+   DO i=2,p%node_total
+       temp_id = (i-1)*6
+       IF(ABS(x%q(temp_id+5)) .GT. 4.0D0) THEN
+           x%q(temp_id+5) = -4.0D0*TAN((4.0D0*ATAN(x%q(temp_id+5))/4.0D0+2.0D0*3.1415926D0)/4.0D0)
+       ENDIF
    ENDDO
 
    END SUBROUTINE BeamDyn_UpdateStates
