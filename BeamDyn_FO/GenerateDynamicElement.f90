@@ -17,13 +17,13 @@
 
    REAL(ReKi),ALLOCATABLE:: Nuu0(:) ! Nodal initial position for each element
    REAL(ReKi),ALLOCATABLE:: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),ALLOCATABLE:: Nrr0(:) !
-   REAL(ReKi),ALLOCATABLE:: Nrrr(:) ! 
-   REAL(ReKi),ALLOCATABLE:: Nvvv(:) !
+   REAL(ReKi),ALLOCATABLE:: Nrr0(:) ! Nodal rotation parameters for initial position 
+   REAL(ReKi),ALLOCATABLE:: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),ALLOCATABLE:: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),ALLOCATABLE:: Nm00(:) !
-   REAL(ReKi),ALLOCATABLE:: NmEta0(:,:) !
-   REAL(ReKi),ALLOCATABLE:: Nrho0(:,:,:) !
+   REAL(ReKi),ALLOCATABLE:: Nm00(:) ! Nodal mass of beam per unit span for each element
+   REAL(ReKi),ALLOCATABLE:: NmEta0(:,:) ! Nodal sectional m\Eta_0 for each element
+   REAL(ReKi),ALLOCATABLE:: Nrho0(:,:,:) ! Nodal sectional tensor of inertia per unit span for each element
    REAL(ReKi),ALLOCATABLE:: elf(:) !
    REAL(ReKi),ALLOCATABLE:: elm(:,:) !
 
