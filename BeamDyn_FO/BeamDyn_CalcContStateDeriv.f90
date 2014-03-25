@@ -15,10 +15,11 @@
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   REAL(ReKi),ALLOCATABLE:: qddot(:)
-   REAL(ReKi),ALLOCATABLE:: qdot(:)
-   INTEGER(IntKi):: allo_stat,j
-
+   REAL(ReKi),ALLOCATABLE:: qddot(:) ! Second time derivative of state q
+   REAL(ReKi),ALLOCATABLE:: qdot(:) ! First time derivative of state q
+   INTEGER(IntKi):: allo_stat ! Allows for an error code return
+   INTEGER(IntKi):: j ! Index counter
+ 
    TYPE(BDyn_ContinuousStateType) :: xtemp           ! Continuous states at t
 
    allo_stat = 0  
