@@ -394,9 +394,9 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
    DO i=1,3
-       x%q(i) = u%PointMesh%TranslationDisp(i,1)
+       x%q(i) = u(1)%PointMesh%TranslationDisp(i,1)
        x%q(i+3) = 0.0D0
-       x%dqdt(i) = u%PointMesh%TranslationVel(i,1)
+       x%dqdt(i) = u(1)%PointMesh%TranslationVel(i,1)
        x%dqdt(i+3) = 0.0D0
    ENDDO
 
