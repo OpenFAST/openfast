@@ -15,12 +15,12 @@
    REAL(ReKi),INTENT(OUT):: MassM(:,:) ! Mass matrix 
    REAL(ReKi),INTENT(OUT):: RHS(:) ! Right hand side of the equation Ax=B  
 
-   REAL(ReKi),ALLOCATABLE:: Nuu0(:) !
-   REAL(ReKi),ALLOCATABLE:: Nuuu(:) !
+   REAL(ReKi),ALLOCATABLE:: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),ALLOCATABLE:: Nuuu(:) ! Nodal displacement of Mass 1 for each element
    REAL(ReKi),ALLOCATABLE:: Nrr0(:) !
    REAL(ReKi),ALLOCATABLE:: Nrrr(:) ! 
    REAL(ReKi),ALLOCATABLE:: Nvvv(:) !
-   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:) !
+   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),ALLOCATABLE:: Nm00(:) !
    REAL(ReKi),ALLOCATABLE:: NmEta0(:,:) !
    REAL(ReKi),ALLOCATABLE:: Nrho0(:,:,:) !
