@@ -1,10 +1,10 @@
    SUBROUTINE BldComputeJacobianLSGL(rr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,jacobian)
-!---------------------------------------------------------------------------------------------------
-! This subroutine 1) computes the jacobian of a element;
-!                 2) adjusts derivative of shape functions.
-! For details, see
-! Bauchau, O.A., "Flexible Multibody Dynamics", Springer, pp. 643
-!---------------------------------------------------------------------------------------------------
+   !_------------------------------------------------------------------------------------------------
+   ! This subroutine 1) computes the jacobian of a element;
+   !                 2) adjusts derivative of shape functions.
+   ! For details, see
+   ! Bauchau, O.A., "Flexible Multibody Dynamics", Springer, pp. 643
+   !-------------------------------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN)::  rr            ! rrth Gauss point location 
    REAL(ReKi),    INTENT(IN)::  Nuu0(:)       ! Element nodal initial position
    REAL(ReKi),    INTENT(IN)::  gp(:)         ! Gauss point location
@@ -18,7 +18,7 @@
    INTEGER(IntKi),INTENT(IN)::  igp           ! ith Gauss point
 
 
-! local variables
+   ! Local variables
    REAL(ReKi)::Gup0(3)
    INTEGER(IntKi)::inode
    INTEGER(IntKi)::temp_id
