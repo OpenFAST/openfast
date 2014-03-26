@@ -1,26 +1,56 @@
    SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,NStif0,Nm00,NmEta0,Nrho0,&
                            &ngp,node_elem,dof_node,elf,elm)
 
-   REAL(ReKi),INTENT(IN):: Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:)
-   REAL(ReKi),INTENT(IN):: Nvvv(:)
-   REAL(ReKi),INTENT(IN):: NStif0(:,:,:)
-   REAL(ReKi),INTENT(IN):: Nm00(:),NmEta0(:,:),Nrho0(:,:,:)
-   INTEGER(IntKi),INTENT(IN):: ngp,node_elem,dof_node
+   REAL(ReKi),INTENT(IN):: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),INTENT(IN):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
+   REAL(ReKi),INTENT(IN):: Nrr0(:) ! Nodal rotation parameters for initial position
+   REAL(ReKi),INTENT(IN):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),INTENT(IN):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(ReKi),INTENT(IN):: NStif0(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(IN):: Nm00(:) ! Nodal mass of beam per unit span for each element
+   REAL(ReKi),INTENT(IN):: NmEta0(:,:) ! Nodal sectional m\Eta_0 for each element
+   REAL(ReKi),INTENT(IN):: Nrho0(:,:,:) ! Nodal sectional tensor of inertia per unit span for each element
+   INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
+   INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
+   INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
 
-   REAL(ReKi),INTENT(OUT):: elf(:)  
-   REAL(ReKi),INTENT(OUT):: elm(:,:)    
+   REAL(ReKi),INTENT(OUT):: elf(:)  !
+   REAL(ReKi),INTENT(OUT):: elm(:,:) !
 
-   REAL(ReKi),ALLOCATABLE:: gp(:),gw(:),hhx(:),hpx(:)
-   REAL(ReKi),ALLOCATABLE:: GLL_temp(:),w_temp(:)
+   REAL(ReKi),ALLOCATABLE:: gp(:)
+   REAL(ReKi),ALLOCATABLE:: gw(:)
+   REAL(ReKi),ALLOCATABLE:: hhx(:)
+   REAL(ReKi),ALLOCATABLE:: hpx(:)
+   REAL(ReKi),ALLOCATABLE:: GLL_temp(:)
+   REAL(ReKi),ALLOCATABLE:: w_temp(:)
    
-   REAL(ReKi):: uu0(6),E10(3),RR0(3,3),kapa(3),E1(3),Stif(6,6),cet
-   REAL(ReKi):: uuu(6),uup(3),Jacobian,gpr
-   REAL(ReKi):: Fc(6),Fd(6)
+   REAL(ReKi):: uu0(6)
+   REAL(ReKi):: E10(3)
+   REAL(ReKi):: RR0(3,3)
+   REAL(ReKi):: kapa(3)
+   REAL(ReKi):: E1(3)
+   REAL(ReKi):: Stif(6,6)
+   REAL(ReKi):: cet
+   REAL(ReKi):: uuu(6)
+   REAL(ReKi):: uup(3)
+   REAL(ReKi):: Jacobian
+   REAL(ReKi):: gpr
+   REAL(ReKi):: Fc(6)
+   REAL(ReKi):: Fd(6)
    REAL(ReKi):: vvv(6)
-   REAL(ReKi):: mmm,mEta(3),rho(3,3)
-   REAL(ReKi):: Fb(6),Mi(6,6)
+   REAL(ReKi):: mmm
+   REAL(ReKi):: mEta(3)
+   REAL(ReKi):: rho(3,3)
+   REAL(ReKi):: Fb(6)
+   REAL(ReKi):: Mi(6,6)
 
-   INTEGER(IntKi)::igp,i,j,m,n,temp_id1,temp_id2
+   INTEGER(IntKi)::igp
+   INTEGER(IntKi)::i
+   INTEGER(IntKi)::j
+   INTEGER(IntKi)::m
+   INTEGER(IntKi)::n
+   INTEGER(IntKi)::temp_id1
+   INTEGER(IntKi)::temp_id2
    INTEGER(IntKi)::allo_stat
 
    ALLOCATE(gp(ngp), STAT = allo_stat)

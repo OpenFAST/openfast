@@ -1,12 +1,18 @@
    SUBROUTINE ComputeUDN(node_total,dof_node,vvN,uuN,udN)
 
-   REAL(ReKi),INTENT(IN):: vvN(:),uuN(:)
-   INTEGER(IntKi),INTENT(IN):: node_total,dof_node
+   REAL(ReKi),INTENT(IN):: vvN(:)
+   REAL(ReKi),INTENT(IN):: uuN(:)
+   INTEGER(IntKi),INTENT(IN):: node_total
+   INTEGER(IntKi),INTENT(IN):: dof_node
 
    REAL(ReKi),INTENT(OUT):: udN(:)
 
-   REAL(ReKi):: ome(3),cc(3),Hinv_temp(3,3)
-   INTEGER:: i,j,temp_id
+   REAL(ReKi):: ome(3)
+   REAL(ReKi):: cc(3)
+   REAL(ReKi):: Hinv_temp(3,3)
+   INTEGER:: i
+   INTEGER:: j
+   INTEGER:: temp_id
 
    udN = 0.0D0
    DO i=1,node_total
