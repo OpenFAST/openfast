@@ -3,12 +3,23 @@
 ! generates the n-point gauss-legendre quadrature points and weights
 
       integer(IntKi),INTENT(IN):: n
-      REAL(ReKi),INTENT(OUT):: x(:),w(:)
+      REAL(ReKi),INTENT(OUT):: x(:)
+      REAL(ReKi),INTENT(OUT):: w(:)
       
-      REAL(ReKi):: x1,x2
+      REAL(ReKi):: x1
+      REAL(ReKi):: x2
       REAL(ReKi),PARAMETER:: eps = 3.d-14
-      integer(IntKi):: i,j,m
-      REAL(ReKi):: p1,p2,p3,pp,xl,xm,z,z1
+      integer(IntKi):: i
+      integer(IntKi):: j
+      integer(IntKi):: m
+      REAL(ReKi):: p1
+      REAL(ReKi):: p2
+      REAL(ReKi):: p3
+      REAL(ReKi):: pp
+      REAL(ReKi):: xl
+      REAL(ReKi):: xm
+      REAL(ReKi):: z
+      REAL(ReKi):: z1
       m=(n+1)/2
 
       x1 = -1.d0

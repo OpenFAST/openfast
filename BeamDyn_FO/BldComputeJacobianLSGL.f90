@@ -1,12 +1,20 @@
    SUBROUTINE BldComputeJacobianLSGL(rr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,jacobian)
-   REAL(ReKi),INTENT(IN):: rr,Nuu0(:),gp(:),GLL_temp(:)
+   REAL(ReKi),INTENT(IN):: rr ! Counter, gpr in ElementMatrix function
+   REAL(ReKi),INTENT(IN):: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),INTENT(IN):: gp(:)
+   REAL(ReKi),INTENT(IN):: GLL_temp(:)
    REAL(ReKi),INTENT(OUT):: jacobian
-   REAL(ReKi),INTENT(OUT):: hhx(:),hpx(:)
-   INTEGER(IntKi),INTENT(IN):: node_elem,dof_node
-   INTEGER(IntKi),INTENT(IN):: ngp,igp
+   REAL(ReKi),INTENT(OUT):: hhx(:)
+   REAL(ReKi),INTENT(OUT):: hpx(:)
+   INTEGER(IntKi),INTENT(IN):: node_elem
+   INTEGER(IntKi),INTENT(IN):: dof_node
+   INTEGER(IntKi),INTENT(IN):: ngp
+   INTEGER(IntKi),INTENT(IN):: igp
 
    REAL(ReKi)::Gup0(3)
-   INTEGER(IntKi)::inode,temp_id,i
+   INTEGER(IntKi)::inode
+   INTEGER(IntKi)::temp_id
+   INTEGER(IntKi)::i
 
    hhx = 0.0D0
    hpx = 0.0D0
