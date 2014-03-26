@@ -1,12 +1,16 @@
    SUBROUTINE ComputeUDN(node_total,dof_node,vvN,uuN,udN)
+   !-----------------------------------------------------
+   ! This subroutine computes time derivatives of 
+   ! 1) nodal displacements;
+   ! 2) nodal rotation parameters.
+   !-----------------------------------------------------
+   REAL(ReKi),    INTENT(IN)::  vvN(:)      ! Nodal velocities
+   REAL(ReKi),    INTENT(IN)::  uuN(:)      ! Nodal displacements
+   INTEGER(IntKi),INTENT(IN)::  node_total  ! Total number of nodes
+   INTEGER(IntKi),INTENT(IN)::  dof_node    ! Number of DoF per node (=6)
+   REAL(ReKi),    INTENT(OUT):: udN(:)      ! Time derivatives of nodal displacements and rotation parameters
 
-   REAL(ReKi),INTENT(IN):: vvN(:)
-   REAL(ReKi),INTENT(IN):: uuN(:)
-   INTEGER(IntKi),INTENT(IN):: node_total
-   INTEGER(IntKi),INTENT(IN):: dof_node
-
-   REAL(ReKi),INTENT(OUT):: udN(:)
-
+   ! Local variables
    REAL(ReKi):: ome(3)
    REAL(ReKi):: cc(3)
    REAL(ReKi):: Hinv_temp(3,3)
