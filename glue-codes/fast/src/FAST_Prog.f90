@@ -433,7 +433,7 @@ LOGICAL                               :: calcJacobian                           
       CALL WrScr(NewLine) !bjj: I'm printing two blank lines here because MAP seems to be writing over the last line on the screen.
       
       InitInData_MAP%filename          =  p_FAST%MooringFile        ! This needs to be set according to what is in the FAST input file. 
-      !InitInData_MAP%summary_filename  =  p_FAST%OutFileRoot        ! Output file name 
+      InitInData_MAP%rootname          =  p_FAST%OutFileRoot        ! Output file name 
       InitInData_MAP%gravity           =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
       InitInData_MAP%sea_density       =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
       InitInData_MAP%depth             =  InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
