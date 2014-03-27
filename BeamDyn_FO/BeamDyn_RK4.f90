@@ -20,13 +20,13 @@
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
-   TYPE(BDyn_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
+   TYPE(BDyn_InputType),              INTENT(INOUT)  :: u(:)        ! Inputs at t
    REAL(DbKi),                        INTENT(IN   )  :: utimes(:)   ! times of input
-   TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-   TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BDyn_ParameterType),          INTENT(IN   )  :: p           ! Parameters
+   TYPE(BDyn_ContinuousStateType),    INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+   TYPE(BDyn_DiscreteStateType),      INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BDyn_ConstraintStateType),    INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+   TYPE(BDyn_OtherStateType),         INTENT(INOUT)  :: OtherState  ! Other/optimization states
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
