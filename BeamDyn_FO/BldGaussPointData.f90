@@ -1,6 +1,9 @@
    SUBROUTINE BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                                 &uuu,uup,E1,RR0,kapa,Stif,cet)
-
+   !--------------------------------------------------------------------------
+   ! This subroutine computes Gauss point values: 1) uuu, 2) uup, 3) E1
+   ! 4) RR0, 5) kapa, 6) Stif, and 7) cet
+   !--------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN)::    hhx(:)      ! Shape function
    REAL(ReKi),    INTENT(IN)::    hpx(:)      ! Derivative of shape function
    REAL(ReKi),    INTENT(IN)::    Nuuu(:)     ! Element nodal displacement array
