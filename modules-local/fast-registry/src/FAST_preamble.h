@@ -4,7 +4,7 @@ static char *FAST_preamble[] = {
 "!.................................................................................................................................\n",
 "! This file is part of %s.\n",
 "!\n",
-"! Copyright (C) 2012, 2013 National Renewable Energy Laboratory\n",
+"! Copyright (C) 2012-2014 National Renewable Energy Laboratory\n",
 "!\n",
 "! Licensed under the Apache License, Version 2.0 (the \"License\");\n",
 "! you may not use this file except in compliance with the License.\n",
