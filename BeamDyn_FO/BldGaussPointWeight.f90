@@ -29,7 +29,7 @@
    xm=0.5d0*(x2+x1)
    xl=0.5d0*(x2-x1)
    DO 12 i=1,m
-       z=cos(3.141592654d0*(i-.25d0)/(n+.5d0))
+       z=COS(3.141592654d0*(i-.25d0)/(n+.5d0))
 1      CONTINUE
        p1=1.d0
        p2=0.d0
@@ -41,7 +41,7 @@
            pp=n*(z*p1-p2)/(z*z-1.d0)
            z1=z
            z=z1-p1/pp
-           IF(abs(z-z1).GT.eps) GOTO 1
+           IF(ABS(z-z1).GT.eps) GOTO 1
            x(i)=xm-xl*z
            x(n+1-i)=xm+xl*z
            w(i)=2.d0*xl/((1.d0-z*z)*pp*pp)
