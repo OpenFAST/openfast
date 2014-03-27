@@ -1650,7 +1650,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
     if ( sw_ccode ) {
 // Generate a container object for the Fortran code to carry around a pointer to the CPP object(s)
       fprintf(fp,"USE %s_C_Types\n",ModName->nickname) ;
-      fprintf(fp,"USE, INTRINSIC :: ISO_C_Binding\n") ;
+      fprintf(fp,"!USE, INTRINSIC :: ISO_C_Binding\n") ; // this is inherited from NickName_C_Types.f90, and older versions of gfortran complain about ambiguous data when we use this (it thinks it's declared twicel; see http://gcc.gnu.org/ml/fortran/2013-04/msg00166.html )
     }
 
 // if this is the NWTC Library, we're not going to print "USE NWTC_Library"
