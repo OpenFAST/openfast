@@ -1480,7 +1480,7 @@ CONTAINS
                ! Generate glue-code output file
 
                CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, ED_Output(1)%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
-                              y_SD%WriteOutput, y_MAP%WriteOutput, y_FEAM%WriteOutput, ErrStat, ErrMsg )
+                              y_SD%WriteOutput, y_MAP%WriteOutput, y_FEAM%WriteOutput, y_IceF%WriteOutput, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
                               
          END IF
