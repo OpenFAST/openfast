@@ -90,8 +90,8 @@ PROGRAM MAIN
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
 
-   t_initial = 0.0D0
-   t_final   = 8.0D0
+   t_initial = 0.0D+00
+   t_final   = 1.2D+01
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
