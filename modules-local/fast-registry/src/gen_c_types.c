@@ -433,15 +433,64 @@ fprintf(fp,"}\n") ;
 return(0) ;
 }
 
+int
+gen_c_module_intf( FILE * fpIntf , node_t * ModName )
+{
+//Marco put these in a template file (Template_c_Types.c) and created interfaces; 
+// I'm putting them here:
+gen_c_module_subs(fpIntf, ModName, "InitInput",  "InitInput",  "Create");
+gen_c_module_subs(fpIntf, ModName, "InitInput",  "InitInput",  "Delete");
+gen_c_module_subs(fpIntf, ModName, "InitOutput", "InitOutput", "Create");
+gen_c_module_subs(fpIntf, ModName, "InitOutput", "InitOutput", "Delete");
+gen_c_module_subs(fpIntf, ModName, "Input",      "Input",      "Create");
+gen_c_module_subs(fpIntf, ModName, "Input",      "Input",      "Delete");
+gen_c_module_subs(fpIntf, ModName, "Parameter",  "Param",      "Create");
+gen_c_module_subs(fpIntf, ModName, "Parameter",  "Param",      "Delete");
+gen_c_module_subs(fpIntf, ModName, "Continuous", "ContState",  "Create");
+gen_c_module_subs(fpIntf, ModName, "Continuous", "ContState",  "Delete");
+gen_c_module_subs(fpIntf, ModName, "Discrete",   "DiscState",  "Create");
+gen_c_module_subs(fpIntf, ModName, "Discrete",   "DiscState",  "Delete");
+gen_c_module_subs(fpIntf, ModName, "Constraint", "ConstrState","Create");
+gen_c_module_subs(fpIntf, ModName, "Constraint", "ConstrState","Delete");
+gen_c_module_subs(fpIntf, ModName, "Other",      "OtherState", "Create");
+gen_c_module_subs(fpIntf, ModName, "Other",      "OtherState", "Delete");
+gen_c_module_subs(fpIntf, ModName, "Output",     "Output",     "Create");
+gen_c_module_subs(fpIntf, ModName, "Output",     "Output",     "Delete");
+//note: these should really be updated to use code instead of Marco's template.
+}
+
+
+int
+gen_c_module_subs( FILE * fpIntf, node_t * ModName, char typeNamelong[], char typeName[], char CreateDestroy[] )
+{
+                   
+   fprintf(fpIntf,"FUNCTION C_%s_%s_%s( ) RESULT( this ) BIND(C,name='%s_%s_%s') \n",
+         CreateDestroy     ,   
+         ModName->nickname ,
+         typeNamelong      ,
+         ModName->nickname ,
+         typeName          ,
+         CreateDestroy     );
+   fprintf(fpIntf,"!DEC$ ATTRIBUTES DLLEXPORT:: C_%s_%s_%s\n", CreateDestroy,ModName->nickname ,typeNamelong   );
+   fprintf(fpIntf,"       USE , INTRINSIC :: ISO_C_Binding\n");
+   fprintf(fpIntf,"       IMPLICIT NONE\n");
+   fprintf(fpIntf,"!GCC$ ATTRIBUTES DLLEXPORT ::C_%s_%s_%s\n", CreateDestroy,ModName->nickname ,typeNamelong   );
+   fprintf(fpIntf,"        TYPE(C_ptr) :: this\n"       );
+   fprintf(fpIntf,"END FUNCTION C_%s_%s_%s\n", CreateDestroy, ModName->nickname ,typeNamelong  );
+}
+
+
 #include "Template_c_Types.c"
 #include "Template_c2f_helpers.c"
 
 int
-gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
+gen_c_module( FILE * fpc , FILE * fph, node_t * ModName, FILE * fpIntf )
 {
   node_t * p, * q, * r ;
   int i ;
   char nonick[NAMELEN], star ;
+
+  gen_c_module_intf( fpIntf , ModName );
 
   if ( strlen(ModName->nickname) > 0 ) {
 // generate each derived data type
