@@ -29,8 +29,6 @@
    INTEGER(IntKi)::         dof_elem
    INTEGER(IntKi)::         rot_elem 
    INTEGER(IntKi)::         allo_stat
-   INTEGER(IntKi)::         ErrStat
-   CHARACTER(*)::           ErrMsg
 
 
    dof_elem = dof_node*node_elem
@@ -62,7 +60,7 @@
 
    ALLOCATE(hhp(node_elem,node_elem),STAT = allo_stat) 
    IF(allo_stat/=0) GOTO 9999
-   node_elem = 0.0D0
+   hhp = 0.0D0
 
    i = 1
    ! Get Nodal Displacement Vector Nuu0 from Global Vector uuN0 at t=0    
@@ -84,8 +82,8 @@
    Qe = 0.0D0
    Stif = 0.0D0
    cet = 0.0D0
-   CALL BDyn_gen_gll(node_elem-1,GLL_temp,w,ErrStat,ErrMsg)
-   CALL BDyn_gen_deriv(node_elem-1,GLL_temp,hhp,ErrStat,ErrMsg)
+   CALL BDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BDyn_gen_deriv_LSGL(node_elem-1,GLL_temp,hhp)
    CALL NewNodalDataAt0(node_elem,dof_node,i,hhp,Nuu0,Jac,E10)
    CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,Jac,&
                   &node_elem,1,dof_node,&
