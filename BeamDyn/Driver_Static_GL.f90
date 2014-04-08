@@ -147,9 +147,13 @@ PROGRAM MAIN
                       &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
                       &BDyn_Parameter%ngp,BDyn_Parameter%niter)   
 
-   CALL ComputeRootForce(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
+!   CALL ComputeRootForce(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
+!                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
+!                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
+
+   CALL ComputeRootForceNodal(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
                  &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
-                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
+                 &BDyn_OtherState%RootForce)
 
    WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
    WRITE(OutUnit,*) '=========================================='
