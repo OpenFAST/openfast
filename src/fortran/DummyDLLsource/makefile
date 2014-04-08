@@ -44,7 +44,7 @@ LDFLAGS = -shared -O2 -m$(BITS) -fbacktrace $(LAPACK_LINK)
 
    # Destination and RootName for executable
 
-OUTPUT_NAME = MAP_dll
+OUTPUT_NAME = MAP
 DEST_DIR    = .
 
 PREC = SingPrec
@@ -59,7 +59,7 @@ PREC = SingPrec
 ifeq ($(OS),Windows_NT)
       # Windows
    DEL_CMD   = del
-   EXE_EXT   = _gwin$(BITS).exe
+   EXE_EXT   = _gwin$(BITS).dll
    INTER_DIR = Obj_win$(BITS)
    MD_CMD    = @mkdir
    OBJ_EXT   = .obj
@@ -68,7 +68,7 @@ ifeq ($(OS),Windows_NT)
 else
       # Linux
    DEL_CMD   = rm -f
-   EXE_EXT   = _glin$(BITS)
+   EXE_EXT   = _glin$(BITS).so
    INTER_DIR = Obj_lin$(BITS)
    MD_CMD    = @mkdir -p
    OBJ_EXT   = .o
@@ -107,21 +107,21 @@ LIB_SOURCES =           \
 
 
 vpath %.f90 $(NWTC_Lib_DIR) $(MAP_DIR) $(NETLIB_DIR) $(DLL_DIR)
+vpath %.f   $(NETLIB_DIR)
 vpath %.mod $(INTER_DIR)
 vpath %.obj $(INTER_DIR)
 
 
-ALL_SOURCES = $(LIB_SOURCES) $(NetLib_SOURCES) $(DLL_SOURCES)
+ALL_SOURCES = $(LIB_SOURCES) $(NETLIB_SOURCES) $(DLL_SOURCES)
 tmp_objs1   = $(ALL_SOURCES:.f90=.obj)
 ALL_OBJS    = $(tmp_objs1:.f=.obj)
 
 
-
-ALL_OBJS      = $(DLL_SOURCES:.f90=.obj)
-
    # Rule to do everything.
 
 all:     default
+#all:     ; $(info $$ALL_OBJS is [${ALL_OBJS}]) echo debugging
+
 default:  $(INTER_DIR) $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT)
 
    # General rules for compliling the files.
