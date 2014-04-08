@@ -146,7 +146,7 @@ ModMesh_Mapping.obj:     ModMesh.obj NWTC_LAPACK.obj
 NWTC_Library.obj:        ModMesh.obj  ModMesh_Mapping.obj
 
 NWTC_LAPACK.obj:         NWTC_Base.obj
-NWTC_ScaLAPACK.obj:      NWTC_Base.obj DLASRT2.obj SLASRT2.obj
+NWTC_ScaLAPACK.obj:      NWTC_Base.obj dlasrt2.obj slasrt2.obj
 
 # MAP dependency rules:
 MAP_C_Types.obj:         NWTC_Library.obj
