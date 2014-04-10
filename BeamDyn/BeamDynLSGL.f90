@@ -251,6 +251,24 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 !------------------
 !END input
 !------------------
+!-------------------
+!This is the input used for Siemens test case #1a
+!-------------------
+!		p%Stif0(1,1,i)	=	2.6932D+09
+!		p%Stif0(2,2,i)	=	1.2805D+08
+!		p%Stif0(2,3,i)	=	-5.9042D+05
+!		p%Stif0(2,4,i)	=	-3.2928D+06
+!		p%Stif0(3,2,i)	=	p%Stif0(2,3,i)
+!		p%Stif0(3,3,i)	=	4.1380D+07
+!		p%Stif0(3,4,i)	=	-1.0936D+07
+!		p%Stif0(4,2,i)	=	p%Stif0(2,4,i)
+!		p%Stif0(4,3,i)	=	p%Stif0(3,4,i)
+!		p%Stif0(4,4,i)	=	2.2697D+07
+!		p%Stif0(5,5,i)	=	1.6101D+08
+!		p%Stif0(6,6,i)	=	6.8600D+08
+!------------------
+!END input
+!------------------        
       ENDDO
       DEALLOCATE(dloc)
       DEALLOCATE(GLL_temp)
