@@ -1,10 +1,10 @@
    SUBROUTINE StaticSolutionGL(uuN0,uuNf,Stif0,F_ext,bc,&
-                            &node_elem,dof_node,elem_total,dof_total,node_total,ngp,niter)
+                            &node_elem,dof_node,elem_total,dof_total,node_total,ngp,niter,piter)
 
    REAL(ReKi),INTENT(IN):: uuN0(:),F_ext(:),Stif0(:,:,:),bc(:)
    REAL(ReKi),INTENT(INOUT):: uuNf(:)
    INTEGER(IntKi),INTENT(IN):: niter,elem_total,node_elem,dof_node,ngp,dof_total,node_total
-
+   INTEGER(IntKi),INTENT(INOUT):: piter !! ADDED piter AS OUTPUT
    REAL(ReKi):: StifK(dof_total,dof_total),RHS(dof_total)
 
    REAL(ReKi):: StifK_LU(dof_total-6,dof_total-6),RHS_LU(dof_total-6)
@@ -18,7 +18,10 @@
    INTEGER(IntKi):: i,j
    INTEGER(IntKi):: temp_id,k !For Debug
 
-   ui = 0.0D0
+   !ui = 0.0D0
+      DO i=1,dof_total !ADDED LOOP FOR INITIAL GUESS
+          ui(i)=uuNf(i)
+	  END DO
    Eref = 0.0D0
 
    DO i=1,niter
@@ -55,6 +58,7 @@
 !       DO j=1,dof_total-6
 !           ui_temp(j) = ui(j+6)
 !       ENDDO
+       piter=i !! ADDED BY NJ 3/18/14
        IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
@@ -72,7 +76,7 @@
 !       ENDDO
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
-           STOP
+           EXIT !! USE EXIT INSTEAD OF STOP, NJ 3/18/2014
        ENDIF
    ENDDO
    
