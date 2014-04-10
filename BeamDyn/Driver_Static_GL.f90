@@ -46,7 +46,7 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: pc               ! counter for pc iterations
 
    INTEGER(IntKi)                     :: BDyn_interp_order     ! order of interpolation/extrapolation
-
+   REAL(Reki), ALLOCATABLE  		  :: F_total(:)		  !Dummy variable for large load loop NJ 3/18/14
    INTEGER(IntKi),PARAMETER:: OutUnit = 10
    INTEGER(IntKi),PARAMETER:: OutQiUnit = 20
 
@@ -116,7 +116,8 @@ PROGRAM MAIN
                    , ErrStat               &
                    , ErrMsg )
 
-
+    ALLOCATE( F_total(BDyn_Parameter%dof_total),      STAT=ErrStat ) !Allocate dummy variable NJ 3/18/14
+    F_total = 0.0D0
 !------------------------------------------------
 ! start - playground
 !------------------------------------------------
@@ -140,12 +141,55 @@ PROGRAM MAIN
    ! write initial condition for q1
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
 
-
-   CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
+DO j=1,1	!ADDED LOOP TO RUN THROUGH ALL LOAD STEP SCENARIOS, NJ 3/18/2014
+	CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
                       &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
                       &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
                       &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
-                      &BDyn_Parameter%ngp,BDyn_Parameter%niter)   
+                      &BDyn_Parameter%ngp,BDyn_Parameter%niter,BDyn_Parameter%piter)  	  
+	IF (BDyn_Parameter%piter .EQ. BDyn_Parameter%niter) THEN	!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014
+		BDyn_OtherState%uuNf=0
+		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 2 steps"
+	END IF
+ 
+	IF (BDyn_Parameter%piter .NE. BDyn_Parameter%niter) EXIT !EXIT OVERALL LOOP IF NUMBER OF NR ITERATION HAS NOT BEEN REACHED, NJ 3/18/2014 
+
+!IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 2 STEPS
+	F_total = BDyn_Parameter%F_ext	!DEFINES DUMMY VARIABLE TO CUT LOAD IN HALF, NJ 3/18/2014
+	DO i =1,2 
+		BDyn_Parameter%F_ext=F_total/2*i
+		CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
+                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
+                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
+                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
+                      &BDyn_Parameter%ngp,BDyn_Parameter%niter,BDyn_Parameter%piter) 
+	END DO
+	IF (BDyn_Parameter%piter .EQ. BDyn_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
+		BDyn_OtherState%uuNf=0
+		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 3 steps"
+	END IF
+
+!IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 3 STEPS
+	IF (BDyn_Parameter%piter .NE. BDyn_Parameter%niter) EXIT
+	DO i =1,3
+		BDyn_Parameter%F_ext=F_total/3*i
+		CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
+                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
+                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
+                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
+                      &BDyn_Parameter%ngp,BDyn_Parameter%niter,BDyn_Parameter%piter) 
+	END DO
+	IF (BDyn_Parameter%piter .EQ. BDyn_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED EXIT PROGRAM, NJ 3/18/2014
+		WRITE(*,*) "Solution failed to converge after reducing load into 3 steps: end simulation"
+		STOP
+	END IF
+END DO
+   
+!   CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
+!                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
+!                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
+!                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
+!                      &BDyn_Parameter%ngp,BDyn_Parameter%niter)   
 
 !   CALL ComputeRootForce(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
 !                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
