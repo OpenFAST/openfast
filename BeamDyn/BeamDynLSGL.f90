@@ -145,6 +145,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       p%node_total = p%elem_total * (p%node_elem-1)  + 1
       p%dof_total  = p%node_total * p%dof_node
       p%niter = 100
+      p%piter = 0 !ADDED NEW VARIABLE TO TRACK NUMBER OF ITERATIONS FOR CONDITIONAL STATEMENTS, NJ 3/18/2014
 
       xl = 0.   ! left most point (on x axis)
       xr = 10.  ! right most point (on x axis)
