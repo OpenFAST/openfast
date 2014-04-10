@@ -45,6 +45,7 @@ typedef   ^          ^          ^   dof_total  - - - "total dof" -
 typedef   ^          ^          ^   node_elem  - - - "total dof" -
 typedef   ^          ^          ^   niter  - - - "total dof" -
 typedef   ^          ^          ^   ngp  - - - "total dof" -
+typedef   ^          ^          ^   piter - - - "dummy for iteration count" -
 typedef   ^          ^         ReKi  uuN0 {:} - - "reference position vector" -
 typedef   ^          ^          ^    bc {:} - - "Boundary condition vector" -
 typedef   ^          ^          ^    F_ext {:} - - "Applied force vector" -
