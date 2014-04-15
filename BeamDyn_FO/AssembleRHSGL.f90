@@ -1,4 +1,7 @@
    SUBROUTINE AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS)
+   !-------------------------------------------------------------------------------
+   ! This subroutine assembles global force vector.
+   !-------------------------------------------------------------------------------
 
    REAL(ReKi),INTENT(IN)::ElemRHS(:) ! Total element force (Fc, Fd, Fb)
    INTEGER(IntKi),INTENT(IN)::nelem ! Number of elements
