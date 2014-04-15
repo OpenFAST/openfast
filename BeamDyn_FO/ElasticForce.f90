@@ -1,8 +1,15 @@
    SUBROUTINE ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
-
-   REAL(ReKi),INTENT(IN)::E1(:),RR0(:,:),kapa(:)
-   REAL(ReKi),INTENT(IN)::Stif(:,:),cet
-   REAL(ReKi),INTENT(OUT)::Fc(:),Fd(:)    
+!----------------------------------------------------------------------------------------
+! This subroutine computes Elastic Forces Fc and Fd.  Equation 37 from Dymore user manual 
+!----------------------------------------------------------------------------------------
+   
+   REAL(ReKi),INTENT(IN)::E1(:) ! E1 = x_0^\prime + u^\prime at Gauss point
+   REAL(ReKi),INTENT(IN)::RR0(:,:) ! Rotation tensor at Gauss point
+   REAL(ReKi),INTENT(IN)::kapa(:) ! Curvature starin vector at Gauss point
+   REAL(ReKi),INTENT(IN)::Stif(:,:) ! C/S stiffness matrix resolved in inertial frame at Gauss point
+   REAL(ReKi),INTENT(IN)::cet ! Extension-torsion coefficient at Gauss point
+   REAL(ReKi),INTENT(OUT)::Fc(:) ! Elastic Force (N,M)
+   REAL(ReKi),INTENT(OUT)::Fd(:) ! Elastic Force (E1,N)
  
    REAL(ReKi)::eee(6),fff(6)
    REAL(ReKi)::tempS(3),tempK(3)
