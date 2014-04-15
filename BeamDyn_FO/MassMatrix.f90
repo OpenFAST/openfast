@@ -1,8 +1,13 @@
    SUBROUTINE MassMatrix(m00,mEta,rho,uuu,Mi)
+!----------------------------------------------------------------------------------------
+! This subroutine computes the mass matrix. 
+!----------------------------------------------------------------------------------------
 
-   REAL(ReKi),INTENT(IN):: m00,mEta(:),rho(:,:)
-   REAL(ReKi),INTENT(IN):: uuu(:)
-   REAL(ReKi),INTENT(OUT)::Mi(6,6)
+   REAL(ReKi),INTENT(IN):: m00 ! Mass density at Gauss point
+   REAL(ReKi),INTENT(IN):: mEta(:) ! m\Eta resolved in inertia frame at Gauss point
+   REAL(ReKi),INTENT(IN):: rho(:,:) ! Tensor of inertia resolved in inertia frame at Gauss point
+   REAL(ReKi),INTENT(IN):: uuu(:) ! Displacement(and rotation)  arrary at Gauss point
+   REAL(ReKi),INTENT(OUT)::Mi(6,6) ! Mass matrix
 
    REAL(ReKi)::cc(3),H(3,3)
    INTEGER(IntKi)::i

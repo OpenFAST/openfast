@@ -1,6 +1,6 @@
    SUBROUTINE ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
 !----------------------------------------------------------------------------------------
-! This subroutine computes Elastic Forces Fc and Fd.  Equation 37 from Dymore user manual 
+! This subroutine computes Elastic Forces Fc and Fd.  
 !----------------------------------------------------------------------------------------
    
    REAL(ReKi),INTENT(IN)::E1(:) ! E1 = x_0^\prime + u^\prime at Gauss point

@@ -1,9 +1,13 @@
    SUBROUTINE GyroForce(mEta,rho,uuu,vvv,Fb)
-
-   REAL(ReKi),INTENT(IN):: mEta(:),rho(:,:)
-   REAL(ReKi),INTENT(IN):: uuu(:),vvv(:)
+!----------------------------------------------------------------------------------------
+! This subroutine computes gyroscopic forces 
+!----------------------------------------------------------------------------------------
+   REAL(ReKi),INTENT(IN):: mEta(:) ! m\Eta resolved in inertia frame at Gauss point
+   REAL(ReKi),INTENT(IN):: rho(:,:) ! Tensor of inertia resolved in inertia frame at Gauss point
+   REAL(ReKi),INTENT(IN):: uuu(:) ! Displacement(and rotation)  array at Gauss point
+   REAL(ReKi),INTENT(IN):: vvv(:) ! Velocities at Gauss point (including linear and angular velocities)
    
-   REAL(ReKi),INTENT(OUT):: Fb(:) 
+   REAL(ReKi),INTENT(OUT):: Fb(:) ! Gyroscopic forces
 
    INTEGER(IntKi):: i,j
 !   REAL(ReKi):: H(3,3),Hinv(3,3),HD(3,3)
