@@ -1,6 +1,8 @@
    SUBROUTINE GenerateDynamicElement(uuN0,uuN,vvN,Stif0,m00,mEta0,rho0,&
                                     &elem_total,node_elem,dof_node,ngp,RHS,MassM)
-
+   !----------------------------------------------------------------------------------------
+   ! This subroutine computes Global mass matrix and force vector for the beam.
+   !----------------------------------------------------------------------------------------
    REAL(ReKi),INTENT(IN):: uuN0(:) ! Initial position vector
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
