@@ -1,5 +1,9 @@
    SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,NStif0,Nm00,NmEta0,Nrho0,&
                            &ngp,node_elem,dof_node,elf,elm)
+                           
+   !-------------------------------------------------------------------------------
+   ! This subroutine total element forces and mass matrices
+   !-------------------------------------------------------------------------------
 
    REAL(ReKi),INTENT(IN):: Nuu0(:) ! Nodal initial position for each element
    REAL(ReKi),INTENT(IN):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
@@ -14,15 +18,15 @@
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
 
-   REAL(ReKi),INTENT(OUT):: elf(:)  !
-   REAL(ReKi),INTENT(OUT):: elm(:,:) !
+   REAL(ReKi),INTENT(OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
+   REAL(ReKi),INTENT(OUT):: elm(:,:) ! Total element mass matrix
 
-   REAL(ReKi),ALLOCATABLE:: gp(:)
-   REAL(ReKi),ALLOCATABLE:: gw(:)
-   REAL(ReKi),ALLOCATABLE:: hhx(:)
-   REAL(ReKi),ALLOCATABLE:: hpx(:)
-   REAL(ReKi),ALLOCATABLE:: GLL_temp(:)
-   REAL(ReKi),ALLOCATABLE:: w_temp(:)
+   REAL(ReKi),ALLOCATABLE:: gp(:) ! Gauss points
+   REAL(ReKi),ALLOCATABLE:: gw(:) ! Gauss point weights
+   REAL(ReKi),ALLOCATABLE:: hhx(:) ! Shape function
+   REAL(ReKi),ALLOCATABLE:: hpx(:) ! Derivative of shape function
+   REAL(ReKi),ALLOCATABLE:: GLL_temp(:) ! Temp Gauss-Lobatto-Legendre points
+   REAL(ReKi),ALLOCATABLE:: w_temp(:) ! Temp GLL weights
    
    REAL(ReKi):: uu0(6)
    REAL(ReKi):: E10(3)
