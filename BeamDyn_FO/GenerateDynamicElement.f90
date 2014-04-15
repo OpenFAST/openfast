@@ -24,8 +24,8 @@
    REAL(ReKi),ALLOCATABLE:: Nm00(:) ! Nodal mass of beam per unit span for each element
    REAL(ReKi),ALLOCATABLE:: NmEta0(:,:) ! Nodal sectional m\Eta_0 for each element
    REAL(ReKi),ALLOCATABLE:: Nrho0(:,:,:) ! Nodal sectional tensor of inertia per unit span for each element
-   REAL(ReKi),ALLOCATABLE:: elf(:) !
-   REAL(ReKi),ALLOCATABLE:: elm(:,:) !
+   REAL(ReKi),ALLOCATABLE:: elf(:) ! Total element force (Fc, Fd, Fb)
+   REAL(ReKi),ALLOCATABLE:: elm(:,:) ! Element mass matrix
 
    INTEGER(IntKi):: dof_elem ! Degree of freedom per node
    INTEGER(IntKi):: rot_elem ! Rotational degrees of freedom
