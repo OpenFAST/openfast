@@ -1,7 +1,11 @@
    SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,m00,mEta0,rho0,time,&
                              &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                              &qddot)
-
+   !***************************************************************************************
+   ! This subroutine calls other subroutines to apply the force, build the beam element 
+   ! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
+   ! is the second time derivative of state "q".   
+   !***************************************************************************************
    REAL(ReKi),INTENT(IN):: uuN0(:) ! Initial position vector
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: m00(:) ! Mass of beam per unit span at each node
@@ -20,16 +24,16 @@
 
    ! Local variables
    
-   REAL(ReKi):: MassM(dof_total,dof_total) !
-   REAL(ReKi):: RHS(dof_total) !
-   REAL(ReKi):: MassM_LU(dof_total-6,dof_total-6) !
-   REAL(ReKi):: RHS_LU(dof_total-6) !
-   REAL(ReKi):: F_ext(dof_total) !
-   REAL(ReKi):: qdd_temp(dof_total-6) !
-   REAL(ReKi):: d !
-   INTEGER(IntKi):: indx(dof_total-6) !
-   INTEGER(IntKi):: j ! Counter for DO loop
-   INTEGER(IntKi):: k ! Counter for DO loop
+   REAL(ReKi):: MassM(dof_total,dof_total) 
+   REAL(ReKi):: RHS(dof_total) 
+   REAL(ReKi):: MassM_LU(dof_total-6,dof_total-6) 
+   REAL(ReKi):: RHS_LU(dof_total-6) 
+   REAL(ReKi):: F_ext(dof_total) 
+   REAL(ReKi):: qdd_temp(dof_total-6) 
+   REAL(ReKi):: d 
+   INTEGER(IntKi):: indx(dof_total-6) 
+   INTEGER(IntKi):: j 
+   INTEGER(IntKi):: k 
 
    CALL AppliedNodalLoad(F_ext,time,dof_total)
 

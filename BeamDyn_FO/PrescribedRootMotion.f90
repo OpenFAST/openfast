@@ -1,9 +1,11 @@
    SUBROUTINE PrescribedRootMotion(time,x,p)
-
+   !-----------------------------------------------------
+   ! This subroutine computes the motion of the blade
+   !-----------------------------------------------------
 !   TYPE(BDyn_InputType),INTENT(IN):: u
-   REAL(DbKi),INTENT(IN):: time 
-   TYPE(BDyn_ContinuousStateType),INTENT(INOUT):: x
-   TYPE(BDyn_ParameterType),INTENT(IN):: p
+   REAL(DbKi),INTENT(IN):: time ! Time
+   TYPE(BDyn_ContinuousStateType),INTENT(INOUT):: x ! States: q and first time derivative of q
+   TYPE(BDyn_ParameterType),INTENT(IN):: p ! DOF per node
 
    INTEGER(IntKi):: i
 
