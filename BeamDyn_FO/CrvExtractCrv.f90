@@ -4,8 +4,8 @@
    ! the components of the rotation matrix
    !--------------------------------------------------
 
-   REAL(ReKi), INTENT(IN):: Rr(:,:)       ! Rotation Matrix
-   REAL(ReKi), INTENT(OUT):: cc(:)        ! Crv paramteres
+   REAL(ReKi), INTENT(IN   ):: Rr(:,:)       ! Rotation Matrix
+   REAL(ReKi), INTENT(  OUT):: cc(:)         ! Crv paramteres
 
    !Local variables
    REAL(ReKi):: pivot
