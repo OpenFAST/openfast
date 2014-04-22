@@ -664,33 +664,6 @@ CONTAINS
       IF ( ALLOCATED(Mesh%Scalars)        ) DEALLOCATE(Mesh%Scalars)
       
 
-
-!#if 0
-     !IF (ASSOCIATED(Mesh%element_point))     NULLIFY(Mesh%element_point)
-     !IF (ASSOCIATED(Mesh%element_line2))     NULLIFY(Mesh%element_line2)
-     !IF (ASSOCIATED(Mesh%element_line3))     NULLIFY(Mesh%element_line3)
-     !IF (ASSOCIATED(Mesh%element_tri3))      NULLIFY(Mesh%element_tri3)
-     !IF (ASSOCIATED(Mesh%element_tri6))      NULLIFY(Mesh%element_tri6)
-     !IF (ASSOCIATED(Mesh%element_quad4))     NULLIFY(Mesh%element_quad4)
-     !IF (ASSOCIATED(Mesh%element_quad8))     NULLIFY(Mesh%element_quad8)
-     !IF (ASSOCIATED(Mesh%element_tet4))      NULLIFY(Mesh%element_tet4)
-     !IF (ASSOCIATED(Mesh%element_tet10))     NULLIFY(Mesh%element_tet10)
-     !IF (ASSOCIATED(Mesh%element_hex8))      NULLIFY(Mesh%element_hex8)
-     !IF (ASSOCIATED(Mesh%element_hex20))     NULLIFY(Mesh%element_hex20)
-     !IF (ASSOCIATED(Mesh%element_wedge6))    NULLIFY(Mesh%element_wedge6)
-     !IF (ASSOCIATED(Mesh%element_wedge15))   NULLIFY(Mesh%element_wedge15)
-     !IF (ASSOCIATED(Mesh%Position))          NULLIFY(Mesh%Position)
-     !IF (ASSOCIATED(Mesh%Force))             NULLIFY(Mesh%Force)
-     !IF (ASSOCIATED(Mesh%Moment))            NULLIFY(Mesh%Moment)
-     !IF (ASSOCIATED(Mesh%Orientation))       NULLIFY(Mesh%Orientation)
-     !IF (ASSOCIATED(Mesh%TranslationDisp))   NULLIFY(Mesh%TranslationDisp)
-     !IF (ASSOCIATED(Mesh%RotationVel))       NULLIFY(Mesh%RotationVel)
-     !IF (ASSOCIATED(Mesh%TranslationVel))    NULLIFY(Mesh%TranslationVel)
-     !IF (ASSOCIATED(Mesh%RotationAcc))       NULLIFY(Mesh%RotationAcc)
-     !IF (ASSOCIATED(Mesh%TranslationAcc))    NULLIFY(Mesh%TranslationAcc)
-     !IF (ASSOCIATED(Mesh%Scalars))           NULLIFY(Mesh%Scalars)
-!#endif
-
 !bjj: if we keep the sibling, deleting this table is going to be a problem
 
       IgSib = .FALSE.
@@ -1363,17 +1336,23 @@ CONTAINS
          ENDDO
 
       ELSE IF ( CtrlCode .EQ. MESH_UPDATECOPY ) THEN
+         
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
             ErrMess = "MeshCopy: MESH_UPDATECOPY of meshes with different numbers of nodes."
-         ELSE
-
-            ! bjj: should we update positions?
-            !DestMesh%RemapFlag = SrcMesh%RemapFlag
-            !DestMesh%nextelem  = SrcMesh%nextelem
-
          ENDIF
+                  
+      ELSE IF ( CtrlCode .EQ. MESH_UPDATEREFERENCE ) THEN
 
+         IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "MeshCopy:MESH_UPDATEREFERENCE of meshes with different numbers of nodes."
+         ENDIF         ! if we have a different number of nodes or different element connectivity, we'll have to redo this
+         
+         DestMesh%Position       = SrcMesh%Position
+         DestMesh%RefOrientation = SrcMesh%RefOrientation
+         DestMesh%RemapFlag      = SrcMesh%RemapFlag            
+                        
       ELSE
          ErrStat = ErrID_Fatal
          ErrMess  = 'MeshCopy: Invalid CtrlCode.'
@@ -1957,20 +1936,23 @@ CONTAINS
    !
    !...............................................................................................................................
 
-    TYPE(MeshType),      INTENT(IN)     :: u1            ! Inputs at t1 > t2
-    TYPE(MeshType),      INTENT(IN)     :: u2            ! Inputs at t2
-    REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
-    TYPE(MeshType),      INTENT(INOUT)  :: u_out         ! Inputs at tin_out
-    REAL(DbKi),          INTENT(IN   )  :: tin_out       ! time to be extrap/interp'd to
-    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat       ! Error status of the operation
-    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-      ! local variables
-    REAL(DbKi)                          :: t(SIZE(tin))  ! Times associated with the inputs
-    REAL(DbKi)                          :: t_out         ! Time to which to be extrap/interpd
-    INTEGER(IntKi), parameter           :: order = 1     ! order of polynomial fit (max 2)
-
-    REAL(DbKi)                          :: scaleFactor   ! temporary for extrapolation/interpolation
+    TYPE(MeshType),      INTENT(IN)     :: u1                        ! Inputs at t1 > t2
+    TYPE(MeshType),      INTENT(IN)     :: u2                        ! Inputs at t2
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)                    ! Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out                     ! Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out                   ! time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat                   ! Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+                                                                     
+      ! local variables                                              
+    REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+    REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+    INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
+    INTEGER(IntKi)                      :: node                      ! node counter
+                                                                     
+    REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+    REAL(ReKi)                          :: SmllRotAngs(3,order+1)    ! for extrapolation of orientations: small rotational angles of the DCMs for each mesh
+    REAL(ReKi)                          :: SmllRotAngs_out(3)        ! for extrapolation of orientations: extrapolated small rotational angles of the DCMs
 
        ! Initialize ErrStat
        ErrStat = ErrID_None
@@ -2034,11 +2016,25 @@ CONTAINS
          !ErrStat=ErrID_Info
          !ErrMsg='Orientations not implemented in MeshExtrapInterp1; using nearest neighbor approach instead.'
 
-         IF (scaleFactor < 0.5) THEN
-            u_out%Orientation = u1%Orientation
-         ELSE
-            u_out%Orientation = u2%Orientation
-         END IF
+         !IF ( t_out < t(2)*0.5) THEN !it's closer to t(1)
+         !   u_out%Orientation = u1%Orientation
+         !ELSEIF ( t_out <= t(2) ) THEN
+         !   u_out%Orientation = u2%Orientation
+         !ELSE                        
+            DO node=1,u_out%Nnodes
+
+               SmllRotAngs(:,1) = GetSmllRotAngs ( u1%Orientation(:,:,node), ErrStat, ErrMsg )               
+               SmllRotAngs(:,2) = GetSmllRotAngs ( u2%Orientation(:,:,node), ErrStat, ErrMsg )               
+                                             
+               SmllRotAngs_out  = SmllRotAngs(:,1) + (SmllRotAngs(:,2) - SmllRotAngs(:,1)) * scaleFactor                
+! u_out%Orientation(:,:,node) =                
+               CALL SmllRotTrans( 'Mesh Orientation Extrapolation', SmllRotAngs_out(1), SmllRotAngs_out(2), SmllRotAngs_out(3), u_out%Orientation(:,:,node), ' ', ErrStat, ErrMsg )
+               
+            END DO
+            ErrStat = ErrID_None
+            ErrMsg  = ""
+
+         !END IF
       END IF
 
    END SUBROUTINE MeshExtrapInterp1
@@ -2060,22 +2056,27 @@ CONTAINS
    !
    !...............................................................................................................................
 
-    TYPE(MeshType),      INTENT(IN)     :: u1            ! Inputs at t1 > t2 > t3
-    TYPE(MeshType),      INTENT(IN)     :: u2            ! Inputs at t2 > t3
-    TYPE(MeshType),      INTENT(IN)     :: u3            ! Inputs at t3
-    REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
-    TYPE(MeshType),      INTENT(INOUT)  :: u_out         ! Inputs at tin_out
-    REAL(DbKi),          INTENT(IN   )  :: tin_out       ! time to be extrap/interp'd to
-    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat       ! Error status of the operation
-    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-      ! local variables
-    REAL(DbKi)                          :: t(SIZE(tin))  ! Times associated with the inputs
-    REAL(DbKi)                          :: t_out         ! Time to which to be extrap/interpd
-    INTEGER(IntKi), parameter           :: order = 2     ! order of polynomial fit (max 2)
-
-    REAL(DbKi)                          :: scaleFactor   ! temporary for extrapolation/interpolation
-
+    TYPE(MeshType),      INTENT(IN)     :: u1                        ! Inputs at t1 > t2 > t3
+    TYPE(MeshType),      INTENT(IN)     :: u2                        ! Inputs at t2 > t3
+    TYPE(MeshType),      INTENT(IN)     :: u3                        ! Inputs at t3
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)                    ! Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out                     ! Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out                   ! time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat                   ! Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+                                                                     
+      ! local variables                                              
+    REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+    REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+    INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
+    INTEGER(IntKi)                      :: node                      ! node counter
+                                                                     
+    REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+    REAL(ReKi)                          :: SmllRotAngs(3,order+1)    ! for extrapolation of orientations: small rotational angles of the DCMs for each mesh
+    REAL(ReKi)                          :: SmllRotAngs_out(3)        ! for extrapolation of orientations: extrapolated small rotational angles of the DCMs
+    
+    
+    
          ! Initialize ErrStat
        ErrStat = ErrID_None
        ErrMsg  = ""
@@ -2175,13 +2176,31 @@ CONTAINS
          !ErrStat=ErrID_Info
          !ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
 
-         IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
-            u_out%Orientation = u1%Orientation
-         ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
-            u_out%Orientation = u2%Orientation
-         ELSE
-            u_out%Orientation = u3%Orientation
-         END IF
+         !IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
+         !   u_out%Orientation = u1%Orientation
+         !ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
+         !   u_out%Orientation = u2%Orientation
+         !ELSEIF ( t_out <= t(3) ) THEN
+         !   u_out%Orientation = u3%Orientation
+         !ELSE
+            
+            DO node=1,u_out%Nnodes
+               SmllRotAngs(:,1) = GetSmllRotAngs ( u1%Orientation(:,:,node), ErrStat, ErrMsg )               
+               SmllRotAngs(:,2) = GetSmllRotAngs ( u2%Orientation(:,:,node), ErrStat, ErrMsg )               
+               SmllRotAngs(:,3) = GetSmllRotAngs ( u3%Orientation(:,:,node), ErrStat, ErrMsg )            
+                                              
+               SmllRotAngs_out =   SmllRotAngs(:,1) &
+                               + ( t(3)**2 * (SmllRotAngs(:,1) - SmllRotAngs(:,2)) + t(2)**2*(-SmllRotAngs(:,1) + SmllRotAngs(:,3)) )*scaleFactor &
+                               + ( (t(2)-t(3))*SmllRotAngs(:,1) + t(3)*SmllRotAngs(:,2) - t(2)*SmllRotAngs(:,3) )*scaleFactor * t_out
+               
+! u_out%Orientation(:,:,node) =                
+               CALL SmllRotTrans( 'Mesh Orientation Extrapolation', SmllRotAngs_out(1), SmllRotAngs_out(2), SmllRotAngs_out(3), u_out%Orientation(:,:,node), ' ', ErrStat, ErrMsg )
+               
+            END DO
+            ErrStat = ErrID_None
+            ErrMsg  = ""
+                                    
+         !END IF
       END IF
 
    END SUBROUTINE MeshExtrapInterp2

@@ -1202,7 +1202,9 @@ CONTAINS
    FUNCTION GetSmllRotAngs ( DCMat, ErrStat, ErrMsg )
 
       ! This subroutine computes the angles that make up the input direction cosine matrix, DCMat
-
+      ! It is the inverse of SmllRotTrans()
+      
+      
       ! passed variables
 
    REAL(ReKi), INTENT(IN )            :: DCMat          (3,3)
@@ -2564,11 +2566,11 @@ CONTAINS
 
 #ifdef FPE_TRAP_ENABLED
       USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented
-#endif      
-
+#else      
          ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
       REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
       REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
+#endif      
 
 
          ! Constants based upon Pi:
@@ -2655,7 +2657,7 @@ CONTAINS
       !   below, was derived symbolically by J. Jonkman by computing U*V^T
       !   by hand with verification in Mathematica.
 
-
+      ! This routine is the inverse of GetSmllRotAngs()
 
       ! Passed Variables:
 

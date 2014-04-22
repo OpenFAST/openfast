@@ -79,8 +79,8 @@ MODULE NWTC_IO
 
       ! Parameters for writing to echo files (in this module only)
 
-   INTEGER(IntKi), PARAMETER, PRIVATE :: MaxAryLen = 100 ! the maximum length of arrays that can be printed with the array formats below (used to make sure we don't crash when trying to write too many):
-   ! >>> Note that the following array formats use 100, the value of MaxAryLen above. Please keep the two numbers consistant!
+   INTEGER(IntKi), PARAMETER :: NWTC_MaxAryLen = 100 ! the maximum length of arrays that can be printed with the array formats below (used to make sure we don't crash when trying to write too many):
+   ! >>> Note that the following array formats use 100, the value of NWTC_MaxAryLen above. Please keep the two numbers consistant!
    CHARACTER(*),PARAMETER :: Ec_StrAryFrmt =              "(15X,A,T30,' - ',A,/,2X,100('""',A,'""',:,1X))"   ! Output format for array of string parameters.
    CHARACTER(*),PARAMETER :: Ec_StrFrmt    =              "(15X,A,T30,' - ',A,/,2X, A )"                     ! Output format for string parameters
    CHARACTER(*),PARAMETER :: Ec_ReAryFrmt  =              "(15X,A,T30,' - ',A,/,100(2X,ES11.4e2,:))"         ! Output format for array of real parameters.
@@ -90,7 +90,7 @@ MODULE NWTC_IO
    CHARACTER(*),PARAMETER :: Ec_IntAryFrmt =              "(15X,A,T30,' - ',A,/,100(2X,I11,:))"              ! Output format for array of integer parameters.
    CHARACTER(*),PARAMETER :: Ec_IntFrmt    =      "( 2X, I11,2X,A,T30,' - ',A )"                             ! Output format for integer parameters
    CHARACTER(*),PARAMETER :: Ec_Ch11Frmt   =      "( 2X, A11,2X,A,T30,' - ',A )"                             ! Output format for 11-character string parameters
-   ! <<< End of arrays that use number defined in MaxAryLen
+   ! <<< End of arrays that use number defined in NWTC_MaxAryLen
 
 !=======================================================================
 
@@ -205,7 +205,13 @@ MODULE NWTC_IO
       MODULE PROCEDURE DispNVD2        ! Two arguments of TYPE character
    END INTERFACE
 
-
+      ! Create interface for writing matrix and array values (useful for debugging)
+   INTERFACE WrMatrix
+      MODULE PROCEDURE WrMatrix1       ! Single dimension matrix (Ary) or ReKi
+      MODULE PROCEDURE WrMatrix2       ! Two dimension matrix of ReKi
+   END INTERFACE
+   
+   
 CONTAINS
 
    ! It contains the following routines:
@@ -1279,7 +1285,6 @@ CONTAINS
       ! Local declarations.
 
    INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
 
 
 
@@ -1325,7 +1330,6 @@ CONTAINS
       ! Local declarations.
 
    INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
 
 
 
@@ -1373,7 +1377,6 @@ CONTAINS
       ! Local declarations.
 
    INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
 
 
 
@@ -4310,7 +4313,7 @@ CONTAINS
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) &
-         WRITE (UnEc,Ec_StrAryFrmt)  TRIM( AryName ), AryDescr, ( TRIM( CharAry(Ind) ), Ind=1,MIN(AryLen,MaxAryLen) )
+         WRITE (UnEc,Ec_StrAryFrmt)  TRIM( AryName ), AryDescr, ( TRIM( CharAry(Ind) ), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
    END IF
 
    END IF
@@ -5029,7 +5032,7 @@ CONTAINS
 
    IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) THEN
-            WRITE( UnEc, Ec_IntAryFrmt ) TRIM( AryName ), AryDescr, IntAry(1:MIN(AryLen,MaxAryLen))
+            WRITE( UnEc, Ec_IntAryFrmt ) TRIM( AryName ), AryDescr, IntAry(1:MIN(AryLen,NWTC_MaxAryLen))
          END IF
       END IF !present(unec)
 
@@ -5152,7 +5155,7 @@ CONTAINS
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) THEN
-            WRITE( UnEc, Ec_LgAryFrmt ) TRIM( AryName ), AryDescr, LogAry(1:MIN(AryLen,MaxAryLen))
+            WRITE( UnEc, Ec_LgAryFrmt ) TRIM( AryName ), AryDescr, LogAry(1:MIN(AryLen,NWTC_MaxAryLen))
          END IF
       END IF !present(unec)
 
@@ -5472,7 +5475,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) THEN
-            WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, RealAry(1:MIN(AryLen,MaxAryLen))
+            WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, RealAry(1:MIN(AryLen,NWTC_MaxAryLen))
          END IF
       END IF
 
@@ -5522,7 +5525,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) THEN
-            WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, RealAry(1:MIN(AryLen,MaxAryLen))
+            WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, RealAry(1:MIN(AryLen,NWTC_MaxAryLen))
          END IF
       END IF
 
@@ -5572,7 +5575,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) THEN
-            WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, RealAry(1:MIN(AryLen,MaxAryLen))
+            WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, RealAry(1:MIN(AryLen,NWTC_MaxAryLen))
          END IF
       END IF
 
@@ -6724,8 +6727,31 @@ END SUBROUTINE WrBinFAST
 
    RETURN
    END SUBROUTINE WrFileNR ! ( Unit, Str )
+!=======================================================================  
+   SUBROUTINE WrMatrix1( A, Un, ReFmt )
+      REAL(ReKi),        INTENT(IN) :: A(:)
+      INTEGER,           INTENT(IN) :: Un
+      CHARACTER(*),      INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      
+      INTEGER        :: ErrStat
+      INTEGER        :: nr  ! size (rows and columns) of A
+      CHARACTER(256) :: Fmt
+   
+   
+      nr = SIZE(A,1)
+
+      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"   
+   
+      WRITE( Un, Fmt, IOSTAT=ErrStat ) A(:)
+      IF (ErrStat /= 0) THEN
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix().')
+         RETURN
+      END IF
+
+   RETURN
+   END SUBROUTINE WrMatrix1
 !=======================================================================
-   SUBROUTINE WrMatrix( A, Un, ReFmt )
+   SUBROUTINE WrMatrix2( A, Un, ReFmt )
       REAL(ReKi),     INTENT(IN) :: A(:,:)
       INTEGER,        INTENT(IN) :: Un
       CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
@@ -6752,7 +6778,7 @@ END SUBROUTINE WrBinFAST
       END DO
 
    RETURN
-   END SUBROUTINE WrMatrix
+   END SUBROUTINE WrMatrix2
 !=======================================================================  
    SUBROUTINE WrML ( Str )
 
