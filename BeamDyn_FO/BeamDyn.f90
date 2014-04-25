@@ -64,14 +64,14 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 ! The initial states and initial guess for the input are defined.
 !.....................................................................................................................
 
-   TYPE(BDyn_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(BDyn_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(BDyn_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(BDyn_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(BDyn_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(BDyn_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(BDyn_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
+   TYPE(BD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
+   TYPE(BD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
+   TYPE(BD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
+   TYPE(BD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
+   TYPE(BD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
+   TYPE(BD_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                     !    only the output mesh is initialized)
    REAL(DbKi),                        INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
                                                                     !   (1) Mod1_UpdateStates() is called in loose coupling &
@@ -79,7 +79,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
                                                                     !   Input is the suggested time from the glue code;
                                                                     !   Output is the actual coupling interval that will be used
                                                                     !   by the glue code.
-   TYPE(BDyn_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
+   TYPE(BD_InitOutputType),           INTENT(  OUT)  :: InitOut     ! Output for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -173,7 +173,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    
    elem_length = blength / p%elem_total
 
-   CALL BDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
+   CALL BD_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
    CALL NodeLoc(dloc,xl,elem_length,GLL_temp,p%node_elem-1,p%elem_total,p%node_total,blength)
 
    DO i=1,p%node_total
@@ -320,13 +320,13 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    ! This routine is called at the end of the simulation.
    !..................................................................................................................................
 
-   TYPE(BDyn_InputType),           INTENT(INOUT)  :: u           ! System inputs
-   TYPE(BDyn_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-   TYPE(BDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-   TYPE(BDyn_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BDyn_OutputType),          INTENT(INOUT)  :: y           ! System outputs
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! System inputs
+   TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
+   TYPE(BD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
+   TYPE(BD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -341,22 +341,22 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    ! Destroy the input data:
 
-   CALL BDyn_DestroyInput( u, ErrStat, ErrMsg )
+   CALL BD_DestroyInput( u, ErrStat, ErrMsg )
 
    ! Destroy the parameter data:
 
-   CALL BDyn_DestroyParam( p, ErrStat, ErrMsg )
+   CALL BD_DestroyParam( p, ErrStat, ErrMsg )
 
    ! Destroy the state data:
 
-   CALL BDyn_DestroyContState(   x,           ErrStat, ErrMsg )
-   CALL BDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-   CALL BDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
-   CALL BDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+   CALL BD_DestroyContState(   x,           ErrStat, ErrMsg )
+   CALL BD_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+   CALL BD_DestroyConstrState( z,           ErrStat, ErrMsg )
+   CALL BD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
 
    ! Destroy the output data:
 
-   CALL BDyn_DestroyOutput( y, ErrStat, ErrMsg )
+   CALL BD_DestroyOutput( y, ErrStat, ErrMsg )
 
 
    END SUBROUTINE BeamDyn_End
@@ -370,16 +370,16 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    REAL(DbKi),                      INTENT(IN   ) :: t          ! Current simulation time in seconds
    INTEGER(IntKi),                  INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-   TYPE(BDyn_InputType),            INTENT(INOUT) :: u(:)       ! Inputs at utimes
+   TYPE(BD_InputType),            INTENT(INOUT) :: u(:)       ! Inputs at utimes
    REAL(DbKi),                      INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-   TYPE(BDyn_ParameterType),        INTENT(IN   ) :: p          ! Parameters
-   TYPE(BDyn_ContinuousStateType),  INTENT(INOUT) :: x          ! Input: Continuous states at t;
+   TYPE(BD_ParameterType),        INTENT(IN   ) :: p          ! Parameters
+   TYPE(BD_ContinuousStateType),  INTENT(INOUT) :: x          ! Input: Continuous states at t;
                                                                       !   Output: Continuous states at t + Interval
-   TYPE(BDyn_DiscreteStateType),    INTENT(INOUT) :: xd         ! Input: Discrete states at t;
+   TYPE(BD_DiscreteStateType),    INTENT(INOUT) :: xd         ! Input: Discrete states at t;
                                                                       !   Output: Discrete states at t  + Interval
-   TYPE(BDyn_ConstraintStateType),  INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
+   TYPE(BD_ConstraintStateType),  INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
                                                                       !   Output: Constraint states at t+dt
-   TYPE(BDyn_OtherStateType),       INTENT(INOUT) :: OtherState ! Other/optimization states
+   TYPE(BD_OtherStateType),       INTENT(INOUT) :: OtherState ! Other/optimization states
    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
@@ -424,13 +424,13 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    !..................................................................................................................................
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BDyn_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
                                                                     !   nectivity information does not have to be recalculated)
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -466,13 +466,13 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-   TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
                                                                     !   Output: Discrete states at t + Interval
-   TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -493,13 +493,13 @@ END SUBROUTINE BeamDyn_UpdateDiscState
    !..................................................................................................................................
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BDyn_ConstraintStateType), INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state equations using
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_ConstraintStateType), INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state equations using
                                                                     !     the input values described above
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -518,7 +518,7 @@ END SUBROUTINE BeamDyn_UpdateDiscState
    END SUBROUTINE BeamDyn_CalcConstrStateResidual
 
    !----------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE BDyn_gen_gll_LSGL(N, x, w)
+   SUBROUTINE BD_gen_gll_LSGL(N, x, w)
    !
    ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
    !
@@ -594,7 +594,7 @@ END SUBROUTINE BeamDyn_UpdateDiscState
 
    ENDDO
 
-   END SUBROUTINE BDyn_gen_gll_LSGL
+   END SUBROUTINE BD_gen_gll_LSGL
 
 
 END MODULE BeamDyn

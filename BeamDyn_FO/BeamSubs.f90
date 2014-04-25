@@ -1,32 +1,31 @@
-MODULE BeamSubs
-
-   USE NWTC_Library
-   USE BeamDyn_Types
-
-
-   IMPLICIT NONE
-
-   CONTAINS
-
-   SUBROUTINE BD_GetInput(InitInp,p,ErrStat,ErrMsg)
+   SUBROUTINE BD_ReadInput(InputFileName,BladeFileName,InputFileData,ErrStat,ErrMsg)
 
    ! Passed Variables:
-   TYPE(BD_InitInputType),       INTENT(INOUT)  :: InitInp
-   TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg
+   CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
+   CHARACTER(*),                 INTENT(IN   )  :: BladeFileName    ! File that contains the blade properties information
+
+   TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! The error status code
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! The error message, if an error occurred
 
 
    ! Local variables:
    INTEGER(4)         :: allo_stat
    CHARACTER(1024)    :: FilePath
    LOGICAL            :: Echo
-   INTEGER(IntKi)     :: UnIn
-   INTEGER(IntKi)     :: UnEc
+   
+   INTEGER(IntKi)                               :: UnIn
+   INTEGER(IntKi)                               :: UnEcho
+   INTEGER(IntKi)                               :: ErrStat2
+   CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
+   CHARACTER(1024)                              :: BldFile(MaxBl)
 
    INTEGER(IntKi)     :: i
 
-   UnEc = -1
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   CALL ReadPrimaryFile
    !-------------------------------------------------------------------------------------------------
    ! Open the BeamDyn input file
    !-------------------------------------------------------------------------------------------------
@@ -136,7 +135,6 @@ MODULE BeamSubs
    ENDDO
 
    
-   END SUBROUTINE BD_GetInput
+   END SUBROUTINE BD_ReadInput
 
 
-END MODULE BeamSubs
