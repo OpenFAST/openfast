@@ -64,3 +64,9 @@ typedef BeamDyn/BD   OutputType  MeshType  PointMesh - - - "contains force and m
 #typedef Module1/Mod1   OutputType  MeshType  PointMesh - - - "contains displacement and velocity" -
 #typedef Module1/Mod1   OutputType ReKi   q      - - - "displacement of Mass 1" m
 #typedef     ^              ^       ^     dqdt   - - - "velocity of Mass 1" m/s
+# ..... Input file data..............................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data......................................................................
+typedef BeamDyn/BD    BD_InputFile    IntKi    member_total    - - - "Total number of members" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate    {:}{:} - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     initial_twist    {:} - - "Key point coordinates array" -
