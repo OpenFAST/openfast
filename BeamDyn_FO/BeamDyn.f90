@@ -56,6 +56,9 @@ INCLUDE 'CrvMatrixHinv.f90'
 INCLUDE 'ComputeUDN.f90'
 INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
+INCLUDE 'ReadPrimaryFile.f90'
+INCLUDE 'BeamDyn_ReadInput.f90'
+
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -84,6 +87,7 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
+   TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
    INTEGER(IntKi)          :: i,j                ! do-loop counter
    Real(ReKi)              :: xl               ! left most point
    Real(ReKi)              :: xr               ! right most point
@@ -112,6 +116,11 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
    CALL DispNVD( BeamDyn_Ver )
 
+   CALL BeamDyn_ReadInput(InitInp%InputFile,&
+!                         &BladeFileName,
+                         &InputFileData,ErrStat,ErrMsg)
+
+   STOP
    ! Define parameters here:
 
    p%node_elem   = 6       ! node per element
