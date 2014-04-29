@@ -20,25 +20,25 @@
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
-   TYPE(BDyn_InputType),              INTENT(INOUT)  :: u(:)        ! Inputs at t
+   TYPE(BD_InputType),              INTENT(INOUT)  :: u(:)        ! Inputs at t
    REAL(DbKi),                        INTENT(IN   )  :: utimes(:)   ! times of input
-   TYPE(BDyn_ParameterType),          INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType),    INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-   TYPE(BDyn_DiscreteStateType),      INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BDyn_ConstraintStateType),    INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-   TYPE(BDyn_OtherStateType),         INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_ParameterType),          INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType),    INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+   TYPE(BD_DiscreteStateType),      INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType),    INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+   TYPE(BD_OtherStateType),         INTENT(INOUT)  :: OtherState  ! Other/optimization states
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
       
-   TYPE(BDyn_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
-   TYPE(BDyn_ContinuousStateType)                 :: k1          ! RK4 constant; see above
-   TYPE(BDyn_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
-   TYPE(BDyn_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
-   TYPE(BDyn_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
-   TYPE(BDyn_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-   TYPE(BDyn_InputType)                           :: u_interp    ! interpolated value of inputs 
+   TYPE(BD_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
+   TYPE(BD_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+   TYPE(BD_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
+   TYPE(BD_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
+   TYPE(BD_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
+   TYPE(BD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+   TYPE(BD_InputType)                           :: u_interp    ! interpolated value of inputs 
 
    ! Initialize ErrStat
 
@@ -53,7 +53,7 @@
 
 
    ! interpolate u to find u_interp = u(t)
-   CALL BDyn_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
+   CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
 
    ! find xdot at t
    CALL BeamDyn_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -65,7 +65,7 @@
    x_tmp%dqdt = x%dqdt + 0.5 * k1%dqdt
 
    ! interpolate u to find u_interp = u(t + dt/2)
-   CALL BDyn_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
+   CALL BD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt/2
    CALL BeamDyn_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -86,7 +86,7 @@
    x_tmp%dqdt = x%dqdt + k3%dqdt
 
    ! interpolate u to find u_interp = u(t + dt)
-   CALL BDyn_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+   CALL BD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt
    CALL BeamDyn_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )

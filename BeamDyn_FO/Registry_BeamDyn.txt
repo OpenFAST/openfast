@@ -24,7 +24,7 @@ typedef BeamDyn/BD ContinuousStateType ReKi q        {:} - - "q - displacement o
 typedef      ^              ^             ^   dqdt     {:} - -  "dqdt - velocity of Mass 1" m/s
 
 # Define discrete (nondifferentiable) states here:
-typedef BeamDyn/BD BDyn_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
+typedef BeamDyn/BD BD_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
 
 # Define constraint states here:
 typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
