@@ -2,10 +2,10 @@
    !-----------------------------------------------------
    ! This subroutine computes the motion of the blade
    !-----------------------------------------------------
-!   TYPE(BDyn_InputType),INTENT(IN):: u
+!   TYPE(BD_InputType),INTENT(IN):: u
    REAL(DbKi),INTENT(IN):: time ! Time
-   TYPE(BDyn_ContinuousStateType),INTENT(INOUT):: x ! States: q and first time derivative of q
-   TYPE(BDyn_ParameterType),INTENT(IN):: p ! DOF per node
+   TYPE(BD_ContinuousStateType),INTENT(INOUT):: x ! States: q and first time derivative of q
+   TYPE(BD_ParameterType),INTENT(IN):: p ! DOF per node
 
    INTEGER(IntKi):: i
 

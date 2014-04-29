@@ -4,13 +4,13 @@
 !........................................................................................................................
 
    REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BDyn_ContinuousStateType), INTENT(  OUT)  :: xdot        ! Continuous state derivatives at t
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_ContinuousStateType), INTENT(  OUT)  :: xdot        ! Continuous state derivatives at t
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -20,7 +20,7 @@
    INTEGER(IntKi):: allo_stat        
    INTEGER(IntKi):: j 
  
-   TYPE(BDyn_ContinuousStateType) :: xtemp           ! Continuous states at t
+   TYPE(BD_ContinuousStateType) :: xtemp           ! Continuous states at t
 
    allo_stat = 0  
 

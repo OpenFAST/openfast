@@ -119,7 +119,12 @@ INCLUDE 'BeamDyn_ReadInput.f90'
    CALL BeamDyn_ReadInput(InitInp%InputFile,&
 !                         &BladeFileName,
                          &InputFileData,ErrStat,ErrMsg)
-
+   WRITE(*,*) "Finished Read Input"
+   WRITE(*,*) "member_total = ", InputFileData%member_total
+   DO i=1,InputFileData%member_total*2+1
+!       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(:,i)
+       WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
+   ENDDO
    STOP
    ! Define parameters here:
 

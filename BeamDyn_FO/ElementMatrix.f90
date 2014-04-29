@@ -85,7 +85,7 @@
    elm = 0.0D0
 
 
-   CALL BDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BD_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
    CALL BldGaussPointWeight(ngp,gp,gw)
 
    DO igp=1,ngp
