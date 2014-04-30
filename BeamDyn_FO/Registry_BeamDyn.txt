@@ -44,6 +44,8 @@ typedef      ^              ^       ^     Stif0     {:}{:}{:}  - -  "Sectional S
 typedef      ^              ^       ^     m00       {:} - -  "Sectional Mass density per unit span at each node" -
 typedef      ^              ^       ^     mEta0     {:}{:} - -  "Sectional m\Eta_0 at each node" -
 typedef      ^              ^       ^     rho0      {:}{:}{:}  - -  "Sectional tensor of inertia per unit span" -
+typedef      ^              ^       ^     member_length    {:} - -  "Array stored length of each member" -
+typedef      ^              ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^              ^     IntKi   node_elem - - -  "Node per element" -
 typedef      ^              ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^              ^       ^     elem_total  - - -  "Total number of elements" -
@@ -68,5 +70,6 @@ typedef BeamDyn/BD   OutputType  MeshType  PointMesh - - - "contains force and m
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
 typedef BeamDyn/BD    BD_InputFile    IntKi    member_total    - - - "Total number of members" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem    - - - "Order of interpolation (basis) function" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate    {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     initial_twist    {:} - - "Key point coordinates array" -

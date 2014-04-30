@@ -9,3 +9,5 @@ False         Echo        - Echo input data to "<RootName>.ech" (flag)
 0.0    0.0    10.0    0.0      - Key point coordinates and initial twist (-)
 -2.93  0.0    17.07    270.0    - Key point coordinates and initial twist (-)
 -10.0  0.0    20.00    0.0      - Key point coordinates and initial twist (-)
+---------------------- MESH PARAMETER ------------------------------------------
+2    order_elem    - Order of interpolation (basis) function (-)

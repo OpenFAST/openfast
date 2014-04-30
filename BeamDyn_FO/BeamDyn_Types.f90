@@ -70,6 +70,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m00 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: mEta0 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rho0 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: member_length 
+    REAL(ReKi)  :: blade_length 
     INTEGER(IntKi)  :: node_elem 
     INTEGER(IntKi)  :: dof_node 
     INTEGER(IntKi)  :: elem_total 
@@ -92,6 +94,7 @@ IMPLICIT NONE
 ! =========  BD_InputFile  =======
   TYPE, PUBLIC :: BD_InputFile
     INTEGER(IntKi)  :: member_total 
+    INTEGER(IntKi)  :: order_elem 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: initial_twist 
   END TYPE BD_InputFile
@@ -876,6 +879,20 @@ IF (ALLOCATED(SrcParamData%rho0)) THEN
    END IF
    DstParamData%rho0 = SrcParamData%rho0
 ENDIF
+IF (ALLOCATED(SrcParamData%member_length)) THEN
+   i1_l = LBOUND(SrcParamData%member_length,1)
+   i1_u = UBOUND(SrcParamData%member_length,1)
+   IF (.NOT.ALLOCATED(DstParamData%member_length)) THEN 
+      ALLOCATE(DstParamData%member_length(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%member_length.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%member_length = SrcParamData%member_length
+ENDIF
+   DstParamData%blade_length = SrcParamData%blade_length
    DstParamData%node_elem = SrcParamData%node_elem
    DstParamData%dof_node = SrcParamData%dof_node
    DstParamData%elem_total = SrcParamData%elem_total
@@ -907,6 +924,9 @@ IF (ALLOCATED(ParamData%mEta0)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%rho0)) THEN
    DEALLOCATE(ParamData%rho0)
+ENDIF
+IF (ALLOCATED(ParamData%member_length)) THEN
+   DEALLOCATE(ParamData%member_length)
 ENDIF
  END SUBROUTINE BD_DestroyParam
 
@@ -949,6 +969,8 @@ ENDIF
   Re_BufSz    = Re_BufSz    + SIZE( InData%m00 )  ! m00 
   Re_BufSz    = Re_BufSz    + SIZE( InData%mEta0 )  ! mEta0 
   Re_BufSz    = Re_BufSz    + SIZE( InData%rho0 )  ! rho0 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%member_length )  ! member_length 
+  Re_BufSz   = Re_BufSz   + 1  ! blade_length
   Int_BufSz  = Int_BufSz  + 1  ! node_elem
   Int_BufSz  = Int_BufSz  + 1  ! dof_node
   Int_BufSz  = Int_BufSz  + 1  ! elem_total
@@ -979,6 +1001,12 @@ ENDIF
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%rho0))-1 ) =  PACK(InData%rho0 ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%rho0)
   ENDIF
+  IF ( ALLOCATED(InData%member_length) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%member_length))-1 ) =  PACK(InData%member_length ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%member_length)
+  ENDIF
+  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%blade_length )
+  Re_Xferred   = Re_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%node_elem )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%dof_node )
@@ -1058,6 +1086,14 @@ ENDIF
   DEALLOCATE(mask3)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%rho0)
   ENDIF
+  IF ( ALLOCATED(OutData%member_length) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%member_length,1))); mask1 = .TRUE.
+    OutData%member_length = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%member_length))-1 ),mask1,OutData%member_length)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%member_length)
+  ENDIF
+  OutData%blade_length = ReKiBuf ( Re_Xferred )
+  Re_Xferred   = Re_Xferred   + 1
   OutData%node_elem = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%dof_node = IntKiBuf ( Int_Xferred )
@@ -1395,6 +1431,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
    DstinputfileData%member_total = SrcinputfileData%member_total
+   DstinputfileData%order_elem = SrcinputfileData%order_elem
 IF (ALLOCATED(SrcinputfileData%kp_coordinate)) THEN
    i1_l = LBOUND(SrcinputfileData%kp_coordinate,1)
    i1_u = UBOUND(SrcinputfileData%kp_coordinate,1)
@@ -1476,12 +1513,15 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Int_BufSz  = Int_BufSz  + 1  ! member_total
+  Int_BufSz  = Int_BufSz  + 1  ! order_elem
   Re_BufSz    = Re_BufSz    + SIZE( InData%kp_coordinate )  ! kp_coordinate 
   Re_BufSz    = Re_BufSz    + SIZE( InData%initial_twist )  ! initial_twist 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%member_total )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%order_elem )
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(InData%kp_coordinate) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%kp_coordinate))-1 ) =  PACK(InData%kp_coordinate ,.TRUE.)
@@ -1527,6 +1567,8 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   OutData%member_total = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  OutData%order_elem = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(OutData%kp_coordinate) ) THEN
   ALLOCATE(mask2(SIZE(OutData%kp_coordinate,1),SIZE(OutData%kp_coordinate,2))); mask2 = .TRUE.
