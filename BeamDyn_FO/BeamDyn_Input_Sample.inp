@@ -1,0 +1,11 @@
+--------- BEAMDYN V1.01.* INPUT FILE -------------------------------------------
+Sample
+---------------------- SIMULATION CONTROL --------------------------------------
+False         Echo        - Echo input data to "<RootName>.ech" (flag)
+---------------------- GEOMETRY PARAMETER --------------------------------------
+2    member_total    - Total number of member (-)
+0.0    0.0    0.0     0.0      - Key point coordinates and initial twist (-)
+0.0    0.0    5.0     270.0    - Key point coordinates and initial twist (-)
+0.0    0.0    10.0    0.0      - Key point coordinates and initial twist (-)
+-2.93  0.0    17.07    270.0    - Key point coordinates and initial twist (-)
+-10.0  0.0    20.00    0.0      - Key point coordinates and initial twist (-)
