@@ -52,17 +52,11 @@
    temp_int = 2*InputFileData%member_total+1
    CALL AllocAry(InputFileData%kp_coordinate,temp_int,3,'Key point coordinates input array',ErrStat2,ErrMsg2)
    CALL AllocAry(InputFileData%initial_twist,temp_int,'Key point initial twist array',ErrStat2,ErrMsg2)
-   WRITE(*,*) SIZE(InputFileData%kp_coordinate,1),SIZE(InputFileData%kp_coordinate,2),SIZE(InputFileData%initial_twist)
    InputFileData%kp_coordinate(:,:) = 0.0D0
    InputFileData%initial_twist(:)   = 0.0D0
    DO i=1,temp_int
-       READ(UnIn,*) InputFileData%kp_coordinate(2,i),InputFileData%kp_coordinate(3,i),&
-                    InputFileData%kp_coordinate(1,i),InputFileData%initial_twist(i)
-!       InputFileData%kp_coordinate(3,i) = 0.0D0
-!       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(:,i)
-       WRITE(*,*) "i = ",i
-       WRITE(*,*) InputFileData%kp_coordinate(2,i),InputFileData%kp_coordinate(3,i),&
-                  InputFileData%kp_coordinate(1,i),InputFileData%initial_twist(i)
+       READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
+                    InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(i)
        IF(MOD(i,2)==0) THEN
            IF(InputFileData%initial_twist(i)/=270.0) THEN
                WRITE(*,*) "Incorrect initial twist angle at mid point:",i
@@ -70,6 +64,10 @@
        ENDIF
    ENDDO
 
+   !---------------------- MESH PARAMETER -- --------------------------------------
+   CALL ReadCom(UnIn,InputFile,'Section Header: Mesh Parameter',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,InputFile,InputFileData%order_elem,"order_elem","Order of basis function",&
+                ErrStat2,ErrMsg2,UnEc)
 
 
    END SUBROUTINE ReadPrimaryFile

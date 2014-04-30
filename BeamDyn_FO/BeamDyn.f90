@@ -58,6 +58,8 @@ INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
 INCLUDE 'ReadPrimaryFile.f90'
 INCLUDE 'BeamDyn_ReadInput.f90'
+INCLUDE 'MemberArcLength.f90'
+INCLUDE 'BldComputeMemberLength.f90'
 
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
@@ -96,6 +98,8 @@ INCLUDE 'BeamDyn_ReadInput.f90'
    REAL(ReKi),ALLOCATABLE  :: dloc(:)
    REAL(ReKi),ALLOCATABLE  :: GLL_temp(:)
    REAL(ReKi),ALLOCATABLE  :: w_temp(:)
+   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
+   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
 
    REAL(ReKi)             :: TmpPos(3)
 
@@ -119,16 +123,29 @@ INCLUDE 'BeamDyn_ReadInput.f90'
    CALL BeamDyn_ReadInput(InitInp%InputFile,&
 !                         &BladeFileName,
                          &InputFileData,ErrStat,ErrMsg)
+
+   CALL AllocAry(p%member_length,InputFileData%member_total,'member length array',ErrStat2,ErrMsg2)
+   p%member_length(:) = 0.0D0
+   p%blade_length = 0.0D0
+
+   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_coordinate,p%member_length,p%blade_length)
+
+   p%node_elem   = InputFileData%order_elem + 1       ! node per element
+
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
    DO i=1,InputFileData%member_total*2+1
-!       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(:,i)
+       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
        WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
    ENDDO
+   DO i=1,InputFiledata%member_total
+       WRITE(*,*) "ith_member_length",i,p%member_length(i)
+   ENDDO
+   WRITE(*,*) "Blade Length: ", p%blade_length
+   WRITE(*,*) "node_elem: ", p%node_elem
    STOP
    ! Define parameters here:
 
-   p%node_elem   = 6       ! node per element
    p%dof_node    = 6       ! dof per node
    p%elem_total  = 1       ! total number of element
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
