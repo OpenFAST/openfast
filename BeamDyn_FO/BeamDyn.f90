@@ -60,6 +60,11 @@ INCLUDE 'ReadPrimaryFile.f90'
 INCLUDE 'BeamDyn_ReadInput.f90'
 INCLUDE 'MemberArcLength.f90'
 INCLUDE 'BldComputeMemberLength.f90'
+INCLUDE 'ComputeIniNodalPosition.f90'
+INCLUDE 'Norm.f90'
+INCLUDE 'CrossProduct.f90'
+INCLUDE 'CrvExtractCrv.f90'
+INCLUDE 'ComputeIniNodalCrv.f90'
 
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
@@ -91,15 +96,26 @@ INCLUDE 'BldComputeMemberLength.f90'
    ! local variables
    TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
    INTEGER(IntKi)          :: i,j                ! do-loop counter
+   INTEGER(IntKi)          :: temp_int
+   INTEGER(IntKi)          :: temp_id
+   INTEGER(IntKi)          :: temp_id2
+   REAL(ReKi)              :: temp_EP1(3)
+   REAL(ReKi)              :: temp_EP2(3)
+   REAL(ReKi)              :: temp_MID(3)
+   REAL(ReKi)              :: temp_twist(3)
+   REAL(ReKi)              :: temp_phi
+   REAL(ReKi)              :: temp_POS(3)
+   REAL(ReKi)              :: temp_CRV(3)
+   REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_w(:)
+   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
+   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
+
    Real(ReKi)              :: xl               ! left most point
    Real(ReKi)              :: xr               ! right most point
    REAL(ReKi)              :: blength          !beam length: xr - xl
    REAL(ReKi)              :: elem_length          !beam length: xr - xl
    REAL(ReKi),ALLOCATABLE  :: dloc(:)
-   REAL(ReKi),ALLOCATABLE  :: GLL_temp(:)
-   REAL(ReKi),ALLOCATABLE  :: w_temp(:)
-   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
-   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
 
    REAL(ReKi)             :: TmpPos(3)
 
@@ -129,8 +145,43 @@ INCLUDE 'BldComputeMemberLength.f90'
    p%blade_length = 0.0D0
 
    CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_coordinate,p%member_length,p%blade_length)
+   p%elem_total = InputFileData%member_total
+   p%node_elem  = InputFileData%order_elem + 1       ! node per element
+   p%dof_node   = 6
+   temp_int     = p%node_elem * p%dof_node
 
-   p%node_elem   = InputFileData%order_elem + 1       ! node per element
+   CALL AllocAry(p%uuN0,temp_int,InputFileData%member_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
+   p%uuN0(:,:) = 0.0D0
+
+   CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
+   temp_GLL = 0.0D0
+   CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
+   temp_w = 0.0D0
+   CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
+   DO i=1,InputFileData%member_total
+       temp_id = (i-1)*2
+       temp_EP1(1:3) = InputFileData%kp_coordinate(temp_id+1,1:3)
+       temp_MID(1:3) = InputFileData%kp_coordinate(temp_id+2,1:3)
+       temp_EP2(1:3) = InputFileData%kp_coordinate(temp_id+3,1:3)
+       temp_twist(1) = InputFileData%initial_twist(temp_id+1)
+       temp_twist(2) = InputFileData%initial_twist(temp_id+2)
+       temp_twist(3) = InputFileData%initial_twist(temp_id+3)
+       DO j=1,p%node_elem
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS)
+           temp_phi = temp_twist(1) + (temp_twist(3)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+           CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
+           temp_id2 = (j-1)*p%dof_node 
+           p%uuN0(temp_id2+1,i) = temp_POS(1)
+           p%uuN0(temp_id2+2,i) = temp_POS(2)
+           p%uuN0(temp_id2+3,i) = temp_POS(3)
+           p%uuN0(temp_id2+4,i) = temp_CRV(1)
+           p%uuN0(temp_id2+5,i) = temp_CRV(2)
+           p%uuN0(temp_id2+6,i) = temp_CRV(3)
+       ENDDO
+   ENDDO
+   DEALLOCATE(temp_GLL)
+   DEALLOCATE(temp_w)
+
 
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
@@ -140,26 +191,22 @@ INCLUDE 'BldComputeMemberLength.f90'
    ENDDO
    DO i=1,InputFiledata%member_total
        WRITE(*,*) "ith_member_length",i,p%member_length(i)
+       DO j=1,p%node_elem
+           WRITE(*,*) "Nodal Position:",j
+           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
+           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
+       ENDDO
    ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
    WRITE(*,*) "node_elem: ", p%node_elem
    STOP
    ! Define parameters here:
 
-   p%dof_node    = 6       ! dof per node
-   p%elem_total  = 1       ! total number of element
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
    p%ngp = p%node_elem - 1          ! number of Gauss point
    p%dt = Interval
 
-   ALLOCATE(p%uuN0(p%dof_total),STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate p%uuN0.'
-       RETURN
-   END IF
-   p%uuN0 = 0.0D0
 
    ALLOCATE(p%Stif0(p%dof_node,p%dof_node,p%node_total), STAT=ErrStat)
    IF (ErrStat /= 0) THEN
@@ -193,22 +240,8 @@ INCLUDE 'BldComputeMemberLength.f90'
    END IF
    p%rho0 = 0.0D0
 
-   ALLOCATE(dloc(p%node_total), STAT = ErrStat)
-   dloc = 0.0D0
-
-   ALLOCATE(GLL_temp(p%node_elem), STAT = ErrStat)
-   GLL_temp = 0.0D0
-
-   ALLOCATE(w_temp(p%node_elem), STAT = ErrStat)
-   w_temp = 0.0D0
-   
-   elem_length = blength / p%elem_total
-
-   CALL BD_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
-   CALL NodeLoc(dloc,xl,elem_length,GLL_temp,p%node_elem-1,p%elem_total,p%node_total,blength)
 
    DO i=1,p%node_total
-       p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
        p%Stif0(1,1,i) = 1.3681743184D+06
        p%Stif0(2,2,i) = 8.8562207505D+04
        p%Stif0(3,3,i) = 3.8777942862D+04
@@ -222,9 +255,6 @@ INCLUDE 'BldComputeMemberLength.f90'
        p%Stif0(6,4,i) = p%Stif0(4,6,i)
        p%Stif0(6,5,i) = p%Stif0(5,6,i)
    ENDDO
-   DEALLOCATE(dloc)
-   DEALLOCATE(GLL_temp)
-   DEALLOCATE(w_temp)
 
    DO i=1,p%node_total
        p%m00(i) = 8.5380000000D-02

@@ -39,7 +39,7 @@ typedef BeamDyn/BD OtherStateType ReKi DummyOtherState  - - - "A variable, repla
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
-typedef BeamDyn/BD ParameterType ReKi   uuN0      {:} - -  "Initial Postion Vector" -
+typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
 typedef      ^              ^       ^     Stif0     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef      ^              ^       ^     m00       {:} - -  "Sectional Mass density per unit span at each node" -
 typedef      ^              ^       ^     mEta0     {:}{:} - -  "Sectional m\Eta_0 at each node" -

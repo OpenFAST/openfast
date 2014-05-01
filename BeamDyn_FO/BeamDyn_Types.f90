@@ -65,7 +65,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uuN0 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: uuN0 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m00 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: mEta0 
@@ -807,8 +807,10 @@ ENDIF
 IF (ALLOCATED(SrcParamData%uuN0)) THEN
    i1_l = LBOUND(SrcParamData%uuN0,1)
    i1_u = UBOUND(SrcParamData%uuN0,1)
+   i2_l = LBOUND(SrcParamData%uuN0,2)
+   i2_u = UBOUND(SrcParamData%uuN0,2)
    IF (.NOT.ALLOCATED(DstParamData%uuN0)) THEN 
-      ALLOCATE(DstParamData%uuN0(i1_l:i1_u),STAT=ErrStat)
+      ALLOCATE(DstParamData%uuN0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BD_CopyParam: Error allocating DstParamData%uuN0.'
@@ -1057,9 +1059,9 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   IF ( ALLOCATED(OutData%uuN0) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%uuN0,1))); mask1 = .TRUE.
-    OutData%uuN0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuN0))-1 ),mask1,OutData%uuN0)
-  DEALLOCATE(mask1)
+  ALLOCATE(mask2(SIZE(OutData%uuN0,1),SIZE(OutData%uuN0,2))); mask2 = .TRUE.
+    OutData%uuN0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuN0))-1 ),mask2,OutData%uuN0)
+  DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%uuN0)
   ENDIF
   IF ( ALLOCATED(OutData%Stif0) ) THEN
