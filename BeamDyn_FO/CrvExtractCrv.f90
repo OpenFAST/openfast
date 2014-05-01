@@ -14,6 +14,7 @@
    REAL(ReKi):: sm2
    REAL(ReKi):: sm3
    REAL(ReKi):: em
+   REAL(ReKi):: temp
    INTEGER(IntKi):: ipivot
 
    cc = 0.0D0
@@ -43,7 +44,7 @@
        ELSE
            temp = ABS(2.0D0*SQRT(sm0))
        ENDIF
-       em0 = sm0 + temp
+       em = sm0 + temp
    ELSEIF(ipivot .EQ. 1) THEN
        sm0 = Rr(3,2) - Rr(2,3)
        sm1 = 1.0D0 + Rr(1,1) - Rr(2,2) - Rr(3,3)
@@ -54,7 +55,7 @@
        ELSE
            temp = ABS(2.0D0*SQRT(sm1))
        ENDIF
-       em0 = sm0 + temp
+       em = sm0 + temp
    ELSEIF(ipivot .EQ. 2) THEN
        sm0 = Rr(1,3) - Rr(3,1)
        sm1 = Rr(1,2) + Rr(2,1)
@@ -65,7 +66,7 @@
        ELSE
            temp = ABS(2.0D0*SQRT(sm2))
        ENDIF
-       em0 = sm0 + temp
+       em = sm0 + temp
    ELSE
        sm0 = Rr(2,1) - Rr(1,2)
        sm1 = Rr(1,3) + Rr(3,1)
@@ -76,7 +77,7 @@
        ELSE
            temp = ABS(2.0D0*SQRT(sm3))
        ENDIF
-       em0 = sm0 + temp
+       em = sm0 + temp
    ENDIF
 
    em = 4.0D0/em

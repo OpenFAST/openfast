@@ -6,7 +6,7 @@
    ! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
    ! is the second time derivative of state "q".   
    !***************************************************************************************
-   REAL(ReKi),INTENT(IN):: uuN0(:) ! Initial position vector
+   REAL(ReKi),INTENT(IN):: uuN0(:,:) ! Initial position vector
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: m00(:) ! Mass of beam per unit span at each node
    REAL(ReKi),INTENT(IN):: mEta0(:,:) ! Sectional m\Eta_0 at each node

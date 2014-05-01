@@ -3,7 +3,7 @@
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
    !----------------------------------------------------------------------------------------
-   REAL(ReKi),INTENT(IN):: uuN0(:) ! Initial position vector
+   REAL(ReKi),INTENT(IN):: uuN0(:,:) ! Initial position vector
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
@@ -83,7 +83,8 @@
    elm = 0.0D0
 
    DO nelem=1,elem_total
-       CALL ElemNodalDispGL(uuN0,node_elem,dof_node,nelem,Nuu0)
+!       CALL ElemNodalDispGL(uuN0,node_elem,dof_node,nelem,Nuu0)
+       Nuu0(:) = uuN0(:,nelem)
        CALL ElemNodalDispGL(uuN,node_elem,dof_node,nelem,Nuuu)
        CALL ElemNodalStifGL(Stif0,node_elem,dof_node,nelem,NStif0) 
        CALL ElemNodalMassGL(m00,mEta0,rho0,node_elem,dof_node,nelem,Nm00,NmEta0,Nrho0)

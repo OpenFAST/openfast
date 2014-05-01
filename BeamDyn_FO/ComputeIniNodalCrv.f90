@@ -1,4 +1,4 @@
-   SUBROUTINE ComputeIniNodalCrv(EndP1,EndP2,MidP,eta,cc)
+   SUBROUTINE ComputeIniNodalCrv(EndP1,EndP2,MidP,phi,eta,cc)
    !-----------------------------------------------------
    ! This subroutine computes initial CRV parameters
    ! given geometry information
@@ -55,7 +55,7 @@
    DO i=1,3
        Rr(i,3) = e3(i)
    ENDDO
-   
+
    CALL CrvExtractCrv(Rr,cc)
 
    END SUBROUTINE ComputeIniNodalCrv
