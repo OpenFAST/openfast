@@ -29,7 +29,7 @@ PROGRAM FAST
 ! noted compilation switches:
 !   SOLVE_OPTION_1_BEFORE_2 (uses a different order for solving input-output relationships)
 !   OUTPUT_ADDEDMASS        (outputs a file called "AddedMassMatrix.out" that contains HydroDyn's added-mass matrix.
-!   
+!   FPE_TRAP_ENABLED        (uses IEEE_ARITHMETIC for setting NaN and Inf in NWTC_Library; not compatible with gfortran)
 !.................................................................................................
 
 
@@ -412,7 +412,7 @@ LOGICAL                               :: calcJacobian                           
       InitInData_SD%SDInputFile   = p_FAST%SubFile
       InitInData_SD%RootName      = p_FAST%OutFileRoot
       InitInData_SD%TP_RefPoint   = ED_Output(1)%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
-      InitInData_SD%SubRotateZ    = 0.0                                ! bjj: not sure what this is supposed to be 
+      InitInData_SD%SubRotateZ    = 0.0                                        ! bjj: not sure what this is supposed to be 
       
             
       CALL SD_Init( InitInData_SD, SD_Input(1), p_SD,  x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, p_FAST%dt_module( MODULE_SD ), InitOutData_SD, ErrStat, ErrMsg )
