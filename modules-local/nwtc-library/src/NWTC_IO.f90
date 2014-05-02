@@ -1447,21 +1447,8 @@ CONTAINS
 
          IF ( Arg(1:1) == SwChar )  THEN
 
-            CALL WrScr ( NewLine//' Syntax is:' )
-            IF ( LEN_TRIM( InputFile ) == 0 )  THEN
-               CALL WrScr ( NewLine//'    '//TRIM( ProgName )//' ['//SwChar//'h] <InputFile>' )
-               CALL WrScr ( NewLine//' where:' )
-               CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-               CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
-            ELSE
-               CALL WrScr ( NewLine//'    '//TRIM( ProgName )//' ['//SwChar//'h] [<InputFile>]' )
-               CALL WrScr ( NewLine//' where:' )
-               CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-               CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
-                             //TRIM( InputFile )//'".' )
-            END IF
-            CALL WrScr    ( ' ')
-
+            CALL NWTC_DisplaySyntax( InputFile, ProgName )
+            
             IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
                IF ( PRESENT(ErrStat) ) THEN
                   ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
@@ -1488,7 +1475,33 @@ CONTAINS
    IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
 
    RETURN
+      
    END SUBROUTINE CheckArgs ! ( InputFile [, ErrStat] )
+!=======================================================================
+   SUBROUTINE NWTC_DisplaySyntax( DefaultInputFile, ThisProgName )
+   
+      CHARACTER(*),  INTENT(IN)  :: DefaultInputFile
+      CHARACTER(*),  INTENT(IN)  :: ThisProgName
+      
+               
+      CALL WrScr ( NewLine//' Syntax is:' )
+      IF ( LEN_TRIM( DefaultInputFile ) == 0 )  THEN
+         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
+         CALL WrScr ( NewLine//' where:' )
+         CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
+         CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+      ELSE
+         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
+         CALL WrScr ( NewLine//' where:' )
+         CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
+         CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
+                        //TRIM( DefaultInputFile )//'".' )
+      END IF
+      CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
+      CALL WrScr    ( ' ')
+                     
+   END SUBROUTINE NWTC_DisplaySyntax
+
 !=======================================================================
    SUBROUTINE ChkParseData ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )
 

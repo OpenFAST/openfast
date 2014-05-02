@@ -1559,7 +1559,7 @@ CONTAINS
 
         Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) )   ! = L / 2
         
-        IF ( EqualRealNos( 2.*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
+        IF ( EqualRealNos( 2.0_ReKi*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
            ErrStat = ErrID_Fatal
            ErrMess = "MeshCommit: Line2 element has 0 length."
            RETURN
