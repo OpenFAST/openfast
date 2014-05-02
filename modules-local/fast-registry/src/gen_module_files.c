@@ -99,7 +99,7 @@ gen_f2c_interface( FILE         *fp        , // *.f90 file we are writting to
                 fprintf(fp,"       %s(KIND=%s), DIMENSION(*) :: arr\n" , var_type, c_var_type                 );
                 fprintf(fp,"       INTEGER(KIND=C_INT), VALUE :: len\n"                                       );
                 fprintf(fp,"     END SUBROUTINE %s_F2C_%s_%s\n"        , ModName->nickname, nonick,r->name    );
-                fprintf(fp,"  END INTERFACE\n"                                                                );
+                fprintf(fp,"  END INTERFACE\n"                                                                 );
 
 
                 // bjj: duplicate this in a fortran file (for dummy .f90 file)
@@ -112,7 +112,7 @@ gen_f2c_interface( FILE         *fp        , // *.f90 file we are writting to
                         r->name           );
                 fprintf(fpIntf,"!DEC$ ATTRIBUTES DLLEXPORT:: %s_F2C_%s_%s\n", ModName->nickname ,nonick,r->name   );
                 fprintf(fpIntf,"       USE MAP_Types, only : %s_%sType_C\n", ModName->nickname, modified_mod_name );
-                fprintf(fpIntf,"       USE , INTRINSIC :: ISO_C_Binding\n"   );                
+                fprintf(fpIntf,"       USE , INTRINSIC :: ISO_C_Binding\n"   );
                 fprintf(fpIntf,"       IMPLICIT NONE\n");
                 fprintf(fpIntf,"!GCC$ ATTRIBUTES DLLEXPORT ::%s_F2C_%s_%s\n", ModName->nickname ,nonick,r->name   );
                 fprintf(fpIntf,"       TYPE( %s_%sType_C ) Object\n"       , ModName->nickname, modified_mod_name );
@@ -214,7 +214,7 @@ fprintf(stderr,"> %s\n",r->type->name,r->type->mapsto) ;
               strcpy(tmp,"") ;
               strcpy(tmp4,"") ;
               fprintf(fp,"\n    ! -- %s %s Data fields\n",r->name,nonick) ;
-              fprintf(fp,"    IF ( ALLOCATED( %sData%%%s ) ) THEN\n",nonick,r->name) ;
+              fprintf(fp,"    IF ( %s( %sData%%%s ) ) THEN\n",assoc_or_allocated(r),nonick,r->name) ;
 
               if ( sw == 0 ) { // generate the code to perform the F-to-C conversion (i.e., let the C code know that data
                 // was modified by the Fortran dirver)
@@ -231,7 +231,8 @@ fprintf(stderr,"> %s\n",r->type->name,r->type->mapsto) ;
                 fprintf(fp,"       END DO\n"                                                                                                                                       ) ;
                 fprintf(fp,"       CALL %s_F2C_%s_%s( %sData%%C_obj, c_%s_value, %sData%%C_obj%%%s_Len )\n", ModName->nickname, nonick, r->name, nonick , var_type, nonick,r->name ) ;
                 fprintf(fp,"       DEALLOCATE( c_%s_value )\n"                                             , var_type                                                              );
-              } else {  //Now do the opposite, and create the source to let the Fortran driver know that variables where
+// bjj: I think this would be sufficient:                fprintf(fp,"       CALL C_F_POINTER(  %sData%%C_obj%%%s, %sData%%%s, (/%sData%%C_obj%%%s_Len/) )\n", nonick, r->name, , nonick, r->name, , nonick, r->name );
+              } else {  //Now do the opposite, and create the source to let the Fortran driver know that variables were
                 //modified in the C portion.
                 char arrayname[NAMELEN];
                 char tmp2[NAMELEN];
@@ -322,7 +323,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
 // check if this is an allocatable array:
         if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
-  fprintf(fp,"IF (ALLOCATED(Src%sData%%%s)) THEN\n",nonick,r->name) ;
+  fprintf(fp,"IF (%s(Src%sData%%%s)) THEN\n",assoc_or_allocated(r),nonick,r->name) ;
            if ( sw_norealloc_lsh ) {
              char tmp2[14] ;
              strcpy(tmp,"") ;
@@ -333,7 +334,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
                 strcat(tmp,tmp2) ;
              }
 //fprintf(fp," nonick=%s\n", nonick    );
-  fprintf(fp,"   IF (.NOT.ALLOCATED(Dst%sData%%%s)) THEN \n",nonick,r->name) ;
+  fprintf(fp,"   IF (.NOT. %s(Dst%sData%%%s)) THEN \n",assoc_or_allocated(r),nonick,r->name) ;
   fprintf(fp,"      ALLOCATE(Dst%sData%%%s(%s),STAT=ErrStat)\n",nonick,r->name,(char*)&(tmp[1])) ;
   fprintf(fp,"      IF (ErrStat /= 0) THEN \n") ;
   fprintf(fp,"         ErrStat = ErrID_Fatal \n") ;
@@ -643,7 +644,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
            !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-  fprintf(fp,"  IF ( ALLOCATED(InData%%%s) ) THEN\n", r->name ) ;
+  fprintf(fp,"  IF ( %s(InData%%%s) ) THEN\n", assoc_or_allocated(r),r->name ) ;
           indent = "  " ;
         }
         if      ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
@@ -842,7 +843,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            !strcmp( r->type->mapsto, "REAL(DbKi)") ||
            !strcmp( r->type->mapsto, "INTEGER(IntKi)") ) {
         if ( r->ndims > 0 && has_deferred_dim( r, 0 )) {
-  fprintf(fp,"  IF ( ALLOCATED(OutData%%%s) ) THEN\n", r->name ) ;
+  fprintf(fp,"  IF ( %s(OutData%%%s) ) THEN\n", assoc_or_allocated(r),r->name ) ;
           indent = "  " ;
         }
         if      ( !strcmp( r->type->mapsto, "REAL(ReKi)")  ||
@@ -966,7 +967,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
       } else {
 
   if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
-  fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
+  fprintf(fp,"IF (%s(%sData%%%s)) THEN\n",assoc_or_allocated(r),nonick,r->name) ;
   }
         if ( !strcmp( r->type->name, "meshtype" ) ) {
           for ( d = r->ndims ; d >= 1 ; d-- ) {
@@ -983,7 +984,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
           for ( d = r->ndims ; d >= 1 ; d-- ) {
 //  if (r->dims[0]->deferred) {
-//  fprintf(fp,"IF (ALLOCATED(%sData%%%s)) THEN\n",nonick,r->name) ;
+//  fprintf(fp,"IF (%s(%sData%%%s)) THEN\n",assoc_or_allocated(r),nonick,r->name) ;
 //  }
   fprintf(fp,"DO i%d = LBOUND(%sData%%%s,%d), UBOUND(%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
           }
@@ -1010,6 +1011,9 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         }
   if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
   fprintf(fp,"   DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
+  if ( is_pointer(r) ) {
+  fprintf(fp,"   %sData%%%s => NULL()\n",nonick,r->name) ;
+  }
   fprintf(fp,"ENDIF\n") ;
   }
       }
@@ -1036,7 +1040,8 @@ void gen_extint_order( FILE *fp, const node_t *ModName, const int order, node_t 
 
 // check if this is an allocatable array:
      if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
-  fprintf(fp,"IF (ALLOCATED(u_out%s%%%s) .AND. ALLOCATED(u(1)%s%%%s)) THEN\n",deref,r->name,deref,r->name) ;
+  fprintf(fp,"IF (%s(u_out%s%%%s) .AND. %s(u(1)%s%%%s)) THEN\n",assoc_or_allocated(r),deref,r->name,
+                                                                assoc_or_allocated(r),deref,r->name) ;
      }
      if ( r->type->type_type == DERIVED ) {
        if (( q = get_entry( make_lower_temp(r->type->name),ModName->module_ddt_list ) ) != NULL ) {
@@ -1767,7 +1772,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
               }
            } else { // ipass /= 0
             if ( r->type->type_type == DERIVED ) {
-              fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
+               fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
@@ -1778,7 +1783,11 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
                 }
 
               }
-              fprintf(fp,"    %s ",r->type->mapsto ) ;
+               if ( is_pointer(r) ) {
+                  fprintf(fp,"    %s ",c_types_binding(r->type->mapsto) ) ;
+               } else {
+                  fprintf(fp,"    %s ",r->type->mapsto ) ;
+               }
             }
 
             if ( r->ndims > 0 )
@@ -1791,7 +1800,12 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
                     fprintf(fp,":") ;
                     if ( i < r->ndims-1 ) fprintf(fp,",") ;
                   }
+                  if ( is_pointer(r) ) {
+                  fprintf(fp,"), POINTER ") ;
+                  } else {
                   fprintf(fp,"), ALLOCATABLE ") ;
+                  }
+
                 } else {
                   fprintf(fp,", DIMENSION(") ;
                   for ( i = 0 ; i < r->ndims ; i++ )
@@ -1802,7 +1816,11 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
                   fprintf(fp,") ") ;
                 }
             }
-            if ( r->ndims == 0 && strlen(r->inival) > 0 ) {
+
+
+            if ( is_pointer( r ) ) {
+              fprintf(fp," :: %s => NULL() ",r->name) ;
+            } else if  ( r->ndims == 0 && strlen(r->inival) > 0 ) {
               fprintf(fp," :: %s = %s ", r->name, r->inival ) ;
             } else {
               fprintf(fp," :: %s ",r->name) ;

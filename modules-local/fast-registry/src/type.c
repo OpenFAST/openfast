@@ -23,7 +23,7 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "intki" )           ;
                                                 strcpy( p->mapsto, "INTEGER(IntKi)")  ;
                                                 add_node_to_end ( p , &Type )         ;
-  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "b4ki" )           ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "b4ki" )           ; // this won't necesarially work as intended!
                                                 strcpy( p->mapsto, "INTEGER(IntKi)")  ;
                                                 add_node_to_end ( p , &Type )         ;
 
@@ -114,6 +114,35 @@ c_types_binding( char *s )
   };
   return("unknown") ;
 }
+
+char *
+assoc_or_allocated( node_t  * r )
+{
+
+   if ( is_pointer(r) ){
+      return("ASSOCIATED");
+   } else {
+      return("ALLOCATED");
+  }
+
+}
+
+int
+is_pointer( node_t * r )
+{
+
+   if ( sw_ccode && r->ndims > 0  && r->dims[0]->deferred ){
+      if ( !strncmp( make_lower_temp(r-> name), "writeoutput", 11) ) { // this covers WriteOutput, WriteOutputHdr, and WriteOutputUnt
+         return( 0 ); // we're going to use these in the glue code, so these will be a special case
+      } else {
+         return( 1 );
+      }
+   } else {
+      return( 0 );
+  }
+
+}
+
 
 int
 set_state_dims ( char * dims , node_t * node )
