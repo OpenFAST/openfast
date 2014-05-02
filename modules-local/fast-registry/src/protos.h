@@ -159,6 +159,7 @@ char * std_case( char * )  ;
 char * dimstr( int ) ;
 
 char * C_type ( char * ) ;
+char * assoc_or_allocated( node_t  * r );
 
 #define PROTOS_H
 #endif
