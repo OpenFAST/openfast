@@ -18,7 +18,7 @@
    INTEGER(IntKi)                               :: UnEcho
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
-!   CHARACTER(1024)                              :: BldFile(MaxBl)
+   CHARACTER(1024)                        :: BldFile ! File that contains the blade information (specified in the primary input file)
 
    INTEGER(IntKi)     :: i
 
@@ -26,9 +26,10 @@
    ErrMsg = ''
 
    CALL ReadPrimaryFile(InputFileName,InputFileData,&
-!                       &BldFile,
+                       &BldFile,
                        &UnEcho,ErrStat2,ErrMsg2)
 
+   CALL ReadBladeInput
    
    END SUBROUTINE BeamDyn_ReadInput
 

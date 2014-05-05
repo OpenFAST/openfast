@@ -1,5 +1,5 @@
    SUBROUTINE ReadPrimaryFile(InputFile,InputFileData,&
-!             &BldFile,
+             &BldFile,
              &UnEc,ErrStat,ErrMsg)
    !------------------------------------------------------------------------------------
    ! This routine reads in the primary BeamDyn input file and places the values it reads
@@ -15,7 +15,7 @@
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat
    CHARACTER(*),                 INTENT(IN   ) :: InputFile
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg
-!   CHARACTER(*),                 INTENT(  OUT) :: BldFile(MaxBl)
+   CHARACTER(*),                 INTENT(  OUT) :: BldFile
 
    TYPE(BD_InputFile),           INTENT(INOUT) :: InputFileData
   
@@ -47,6 +47,8 @@
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadCom(UnIn,InputFile,'key point x,y,z locations and initial twist angles',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadCom(UnIn,InputFile,'key point and initial twist units',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)
 
    temp_int = 2*InputFileData%member_total+1
@@ -64,10 +66,14 @@
        ENDIF
    ENDDO
 
-   !---------------------- MESH PARAMETER -- --------------------------------------
+   !---------------------- MESH PARAMETER -----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Mesh Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,InputFileData%order_elem,"order_elem","Order of basis function",&
                 ErrStat2,ErrMsg2,UnEc)
+   
+   !---------------------- BLADE PARAMETER ----------------------------------------
+   CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar ( UnIn, InputFile, BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )
 
 
    END SUBROUTINE ReadPrimaryFile
