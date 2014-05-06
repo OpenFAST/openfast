@@ -3,7 +3,7 @@
    INTEGER(IntKi),INTENT(IN   ):: member_total
    REAL(ReKi),    INTENT(IN   ):: kp_coordinate(:,:)
 
-   REAL(ReKi),    INTENT(  OUT):: member_length(:)
+   REAL(ReKi),    INTENT(  OUT):: member_length(:,:)
    REAL(ReKi),    INTENT(  OUT):: total_length
 
    INTEGER(IntKi)              :: i
@@ -45,11 +45,16 @@
        z3 = kp_coordinate(temp_id+2,3)
        temp_area = ABS(x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2))
        IF(temp_area <= eps) THEN
-           member_length(i) = SQRT((x1-x3)**2+(y1-y3)**2+(z1-z3)**2)
+           member_length(i,1) = SQRT((x1-x3)**2+(y1-y3)**2+(z1-z3)**2)
        ELSE
-           member_length(i) = MemberArcLength(x1,x2,x3,y1,y2,y3,z1,z2,z3)
+           member_length(i,1) = MemberArcLength(x1,x2,x3,y1,y2,y3,z1,z2,z3)
        ENDIF
-       total_length = total_length + member_length(i)
+       total_length = total_length + member_length(i,1)
+   ENDDO
+
+
+   DO i=1,member_total
+       member_length(i,2) = member_length(i,1)/total_length
    ENDDO
 
 

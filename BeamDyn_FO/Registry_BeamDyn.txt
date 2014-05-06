@@ -44,7 +44,7 @@ typedef      ^              ^       ^     Stif0     {:}{:}{:}  - -  "Sectional S
 typedef      ^              ^       ^     m00       {:} - -  "Sectional Mass density per unit span at each node" -
 typedef      ^              ^       ^     mEta0     {:}{:} - -  "Sectional m\Eta_0 at each node" -
 typedef      ^              ^       ^     rho0      {:}{:}{:}  - -  "Sectional tensor of inertia per unit span" -
-typedef      ^              ^       ^     member_length    {:} - -  "Array stored length of each member" -
+typedef      ^              ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^              ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^              ^     IntKi   node_elem - - -  "Node per element" -
 typedef      ^              ^       ^     dof_node  - - -  "dof per node" -
@@ -66,6 +66,12 @@ typedef BeamDyn/BD   OutputType  MeshType  PointMesh - - - "contains force and m
 #typedef Module1/Mod1   OutputType  MeshType  PointMesh - - - "contains displacement and velocity" -
 #typedef Module1/Mod1   OutputType ReKi   q      - - - "displacement of Mass 1" m
 #typedef     ^              ^       ^     dqdt   - - - "velocity of Mass 1" m/s
+# ..... Blade Input file data........................................................................
+typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
+typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
+typedef BeamDyn/BD    BladeInputData    ReKi     station_eta     {:}    -     -    "Station location in eta [0,1]"
+typedef BeamDyn/BD    BladeInputData    ReKi     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"   
+typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"   
 # ..... Input file data..............................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
@@ -73,3 +79,5 @@ typedef BeamDyn/BD    BD_InputFile    IntKi    member_total    - - - "Total numb
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem    - - - "Order of interpolation (basis) function" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate    {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     initial_twist    {:} - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl    -  - - "Input data for individual blades"   "see BladeInputData Type" 
+typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   -  -  -  "Name of blade input file"

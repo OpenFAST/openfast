@@ -1,11 +1,7 @@
-   SUBROUTINE BeamDyn_ReadInput(InputFileName,&
-!             &BladeFileName,
-             &InputFileData,ErrStat,ErrMsg)
+   SUBROUTINE BeamDyn_ReadInput(InputFileName,InputFileData,ErrStat,ErrMsg)
 
    ! Passed Variables:
    CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
-!   CHARACTER(*),                 INTENT(IN   )  :: BladeFileName    ! File that contains the blade properties information
-
    TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! The error message, if an error occurred
@@ -25,11 +21,9 @@
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   CALL ReadPrimaryFile(InputFileName,InputFileData,&
-                       &BldFile,
-                       &UnEcho,ErrStat2,ErrMsg2)
+   CALL ReadPrimaryFile(InputFileName,InputFileData,UnEcho,ErrStat2,ErrMsg2)
 
-   CALL ReadBladeInput
+   CALL ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
    
    END SUBROUTINE BeamDyn_ReadInput
 

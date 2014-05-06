@@ -1,5 +1,4 @@
    SUBROUTINE ReadPrimaryFile(InputFile,InputFileData,&
-             &BldFile,
              &UnEc,ErrStat,ErrMsg)
    !------------------------------------------------------------------------------------
    ! This routine reads in the primary BeamDyn input file and places the values it reads
@@ -15,7 +14,6 @@
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat
    CHARACTER(*),                 INTENT(IN   ) :: InputFile
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg
-   CHARACTER(*),                 INTENT(  OUT) :: BldFile
 
    TYPE(BD_InputFile),           INTENT(INOUT) :: InputFileData
   
@@ -26,6 +24,7 @@
    CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
    CHARACTER(1024)              :: FTitle              ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(1024)              :: BldFile
 
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: temp_int 
@@ -47,9 +46,9 @@
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)
    CALL ReadCom(UnIn,InputFile,'key point x,y,z locations and initial twist angles',ErrStat2,ErrMsg2,UnEc)
    CALL ReadCom(UnIn,InputFile,'key point and initial twist units',ErrStat2,ErrMsg2,UnEc)
-   CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)
 
    temp_int = 2*InputFileData%member_total+1
    CALL AllocAry(InputFileData%kp_coordinate,temp_int,3,'Key point coordinates input array',ErrStat2,ErrMsg2)
@@ -73,7 +72,7 @@
    
    !---------------------- BLADE PARAMETER ----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
-   CALL ReadVar ( UnIn, InputFile, BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )
 
 
    END SUBROUTINE ReadPrimaryFile

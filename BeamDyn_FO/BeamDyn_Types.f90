@@ -70,7 +70,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m00 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: mEta0 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rho0 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: member_length 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: member_length 
     REAL(ReKi)  :: blade_length 
     INTEGER(IntKi)  :: node_elem 
     INTEGER(IntKi)  :: dof_node 
@@ -91,12 +91,23 @@ IMPLICIT NONE
     TYPE(MeshType)  :: PointMesh 
   END TYPE BD_OutputType
 ! =======================
+! =========  BladeInputData  =======
+  TYPE, PUBLIC :: BladeInputData
+    INTEGER(IntKi)  :: station_total 
+    INTEGER(IntKi)  :: format_index 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: station_eta 
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: stiff0 
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: mass0 
+  END TYPE BladeInputData
+! =======================
 ! =========  BD_InputFile  =======
   TYPE, PUBLIC :: BD_InputFile
     INTEGER(IntKi)  :: member_total 
     INTEGER(IntKi)  :: order_elem 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: initial_twist 
+    TYPE(BladeInputData)  :: InpBl 
+    CHARACTER(1024)  :: BldFile 
   END TYPE BD_InputFile
 ! =======================
 CONTAINS
@@ -884,8 +895,10 @@ ENDIF
 IF (ALLOCATED(SrcParamData%member_length)) THEN
    i1_l = LBOUND(SrcParamData%member_length,1)
    i1_u = UBOUND(SrcParamData%member_length,1)
+   i2_l = LBOUND(SrcParamData%member_length,2)
+   i2_u = UBOUND(SrcParamData%member_length,2)
    IF (.NOT.ALLOCATED(DstParamData%member_length)) THEN 
-      ALLOCATE(DstParamData%member_length(i1_l:i1_u),STAT=ErrStat)
+      ALLOCATE(DstParamData%member_length(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
          ErrMsg = 'BD_CopyParam: Error allocating DstParamData%member_length.'
@@ -1089,9 +1102,9 @@ ENDIF
     Re_Xferred   = Re_Xferred   + SIZE(OutData%rho0)
   ENDIF
   IF ( ALLOCATED(OutData%member_length) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%member_length,1))); mask1 = .TRUE.
-    OutData%member_length = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%member_length))-1 ),mask1,OutData%member_length)
-  DEALLOCATE(mask1)
+  ALLOCATE(mask2(SIZE(OutData%member_length,1),SIZE(OutData%member_length,2))); mask2 = .TRUE.
+    OutData%member_length = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%member_length))-1 ),mask2,OutData%member_length)
+  DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%member_length)
   ENDIF
   OutData%blade_length = ReKiBuf ( Re_Xferred )
@@ -1419,6 +1432,209 @@ ENDIF
   Int_Xferred  = Int_Xferred-1
  END SUBROUTINE BD_UnPackOutput
 
+ SUBROUTINE BD_Copybladeinputdata( SrcbladeinputdataData, DstbladeinputdataData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(bladeinputdata), INTENT(INOUT) :: SrcbladeinputdataData
+   TYPE(bladeinputdata), INTENT(INOUT) :: DstbladeinputdataData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
+   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
+   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   DstbladeinputdataData%station_total = SrcbladeinputdataData%station_total
+   DstbladeinputdataData%format_index = SrcbladeinputdataData%format_index
+IF (ALLOCATED(SrcbladeinputdataData%station_eta)) THEN
+   i1_l = LBOUND(SrcbladeinputdataData%station_eta,1)
+   i1_u = UBOUND(SrcbladeinputdataData%station_eta,1)
+   IF (.NOT.ALLOCATED(DstbladeinputdataData%station_eta)) THEN 
+      ALLOCATE(DstbladeinputdataData%station_eta(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copybladeinputdata: Error allocating DstbladeinputdataData%station_eta.'
+         RETURN
+      END IF
+   END IF
+   DstbladeinputdataData%station_eta = SrcbladeinputdataData%station_eta
+ENDIF
+IF (ALLOCATED(SrcbladeinputdataData%stiff0)) THEN
+   i1_l = LBOUND(SrcbladeinputdataData%stiff0,1)
+   i1_u = UBOUND(SrcbladeinputdataData%stiff0,1)
+   i2_l = LBOUND(SrcbladeinputdataData%stiff0,2)
+   i2_u = UBOUND(SrcbladeinputdataData%stiff0,2)
+   i3_l = LBOUND(SrcbladeinputdataData%stiff0,3)
+   i3_u = UBOUND(SrcbladeinputdataData%stiff0,3)
+   IF (.NOT.ALLOCATED(DstbladeinputdataData%stiff0)) THEN 
+      ALLOCATE(DstbladeinputdataData%stiff0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copybladeinputdata: Error allocating DstbladeinputdataData%stiff0.'
+         RETURN
+      END IF
+   END IF
+   DstbladeinputdataData%stiff0 = SrcbladeinputdataData%stiff0
+ENDIF
+IF (ALLOCATED(SrcbladeinputdataData%mass0)) THEN
+   i1_l = LBOUND(SrcbladeinputdataData%mass0,1)
+   i1_u = UBOUND(SrcbladeinputdataData%mass0,1)
+   i2_l = LBOUND(SrcbladeinputdataData%mass0,2)
+   i2_u = UBOUND(SrcbladeinputdataData%mass0,2)
+   i3_l = LBOUND(SrcbladeinputdataData%mass0,3)
+   i3_u = UBOUND(SrcbladeinputdataData%mass0,3)
+   IF (.NOT.ALLOCATED(DstbladeinputdataData%mass0)) THEN 
+      ALLOCATE(DstbladeinputdataData%mass0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copybladeinputdata: Error allocating DstbladeinputdataData%mass0.'
+         RETURN
+      END IF
+   END IF
+   DstbladeinputdataData%mass0 = SrcbladeinputdataData%mass0
+ENDIF
+ END SUBROUTINE BD_Copybladeinputdata
+
+ SUBROUTINE BD_Destroybladeinputdata( bladeinputdataData, ErrStat, ErrMsg )
+  TYPE(bladeinputdata), INTENT(INOUT) :: bladeinputdataData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+IF (ALLOCATED(bladeinputdataData%station_eta)) THEN
+   DEALLOCATE(bladeinputdataData%station_eta)
+ENDIF
+IF (ALLOCATED(bladeinputdataData%stiff0)) THEN
+   DEALLOCATE(bladeinputdataData%stiff0)
+ENDIF
+IF (ALLOCATED(bladeinputdataData%mass0)) THEN
+   DEALLOCATE(bladeinputdataData%mass0)
+ENDIF
+ END SUBROUTINE BD_Destroybladeinputdata
+
+ SUBROUTINE BD_Packbladeinputdata( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(bladeinputdata),  INTENT(INOUT) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Re_CurrSz
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Db_CurrSz
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: Int_CurrSz
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+ ! buffers to store meshes, if any
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  Int_BufSz  = Int_BufSz  + 1  ! station_total
+  Int_BufSz  = Int_BufSz  + 1  ! format_index
+  Re_BufSz    = Re_BufSz    + SIZE( InData%station_eta )  ! station_eta 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%stiff0 )  ! stiff0 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%mass0 )  ! mass0 
+  IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
+  IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
+  IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%station_total )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%format_index )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(InData%station_eta) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%station_eta))-1 ) =  PACK(InData%station_eta ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%station_eta)
+  ENDIF
+  IF ( ALLOCATED(InData%stiff0) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%stiff0))-1 ) =  PACK(InData%stiff0 ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%stiff0)
+  ENDIF
+  IF ( ALLOCATED(InData%mass0) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%mass0))-1 ) =  PACK(InData%mass0 ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%mass0)
+  ENDIF
+ END SUBROUTINE BD_Packbladeinputdata
+
+ SUBROUTINE BD_UnPackbladeinputdata( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(bladeinputdata), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Re_CurrSz
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Db_CurrSz
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: Int_CurrSz
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5
+  LOGICAL, ALLOCATABLE           :: mask1(:)
+  LOGICAL, ALLOCATABLE           :: mask2(:,:)
+  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+ ! buffers to store meshes, if any
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  OutData%station_total = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  OutData%format_index = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(OutData%station_eta) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%station_eta,1))); mask1 = .TRUE.
+    OutData%station_eta = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%station_eta))-1 ),mask1,OutData%station_eta)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%station_eta)
+  ENDIF
+  IF ( ALLOCATED(OutData%stiff0) ) THEN
+  ALLOCATE(mask3(SIZE(OutData%stiff0,1),SIZE(OutData%stiff0,2),SIZE(OutData%stiff0,3))); mask3 = .TRUE.
+    OutData%stiff0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%stiff0))-1 ),mask3,OutData%stiff0)
+  DEALLOCATE(mask3)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%stiff0)
+  ENDIF
+  IF ( ALLOCATED(OutData%mass0) ) THEN
+  ALLOCATE(mask3(SIZE(OutData%mass0,1),SIZE(OutData%mass0,2),SIZE(OutData%mass0,3))); mask3 = .TRUE.
+    OutData%mass0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%mass0))-1 ),mask3,OutData%mass0)
+  DEALLOCATE(mask3)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%mass0)
+  ENDIF
+  Re_Xferred   = Re_Xferred-1
+  Db_Xferred   = Db_Xferred-1
+  Int_Xferred  = Int_Xferred-1
+ END SUBROUTINE BD_UnPackbladeinputdata
+
  SUBROUTINE BD_Copyinputfile( SrcinputfileData, DstinputfileData, CtrlCode, ErrStat, ErrMsg )
    TYPE(bd_inputfile), INTENT(INOUT) :: SrcinputfileData
    TYPE(bd_inputfile), INTENT(INOUT) :: DstinputfileData
@@ -1462,6 +1678,8 @@ IF (ALLOCATED(SrcinputfileData%initial_twist)) THEN
    END IF
    DstinputfileData%initial_twist = SrcinputfileData%initial_twist
 ENDIF
+      CALL BD_Copybladeinputdata( SrcinputfileData%InpBl, DstinputfileData%InpBl, CtrlCode, ErrStat, ErrMsg )
+   DstinputfileData%BldFile = SrcinputfileData%BldFile
  END SUBROUTINE BD_Copyinputfile
 
  SUBROUTINE BD_Destroyinputfile( inputfileData, ErrStat, ErrMsg )
@@ -1478,6 +1696,7 @@ ENDIF
 IF (ALLOCATED(inputfileData%initial_twist)) THEN
    DEALLOCATE(inputfileData%initial_twist)
 ENDIF
+  CALL BD_Destroybladeinputdata( inputfileData%InpBl, ErrStat, ErrMsg )
  END SUBROUTINE BD_Destroyinputfile
 
  SUBROUTINE BD_Packinputfile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1501,6 +1720,9 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
  ! buffers to store meshes, if any
+  REAL(ReKi),     ALLOCATABLE :: Re_InpBl_Buf(:)
+  REAL(DbKi),     ALLOCATABLE :: Db_InpBl_Buf(:)
+  INTEGER(IntKi), ALLOCATABLE :: Int_InpBl_Buf(:)
   OnlySize = .FALSE.
   IF ( PRESENT(SizeOnly) ) THEN
     OnlySize = SizeOnly
@@ -1518,6 +1740,13 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! order_elem
   Re_BufSz    = Re_BufSz    + SIZE( InData%kp_coordinate )  ! kp_coordinate 
   Re_BufSz    = Re_BufSz    + SIZE( InData%initial_twist )  ! initial_twist 
+  CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
+  IF(ALLOCATED(Re_InpBl_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_InpBl_Buf  ) ! InpBl
+  IF(ALLOCATED(Db_InpBl_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_InpBl_Buf  ) ! InpBl
+  IF(ALLOCATED(Int_InpBl_Buf))Int_BufSz = Int_BufSz + SIZE( Int_InpBl_Buf ) ! InpBl
+  IF(ALLOCATED(Re_InpBl_Buf))  DEALLOCATE(Re_InpBl_Buf)
+  IF(ALLOCATED(Db_InpBl_Buf))  DEALLOCATE(Db_InpBl_Buf)
+  IF(ALLOCATED(Int_InpBl_Buf)) DEALLOCATE(Int_InpBl_Buf)
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1533,6 +1762,22 @@ ENDIF
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%initial_twist))-1 ) =  PACK(InData%initial_twist ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%initial_twist)
   ENDIF
+  CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, OnlySize ) ! InpBl 
+  IF(ALLOCATED(Re_InpBl_Buf)) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_InpBl_Buf)-1 ) = Re_InpBl_Buf
+    Re_Xferred = Re_Xferred + SIZE(Re_InpBl_Buf)
+  ENDIF
+  IF(ALLOCATED(Db_InpBl_Buf)) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_InpBl_Buf)-1 ) = Db_InpBl_Buf
+    Db_Xferred = Db_Xferred + SIZE(Db_InpBl_Buf)
+  ENDIF
+  IF(ALLOCATED(Int_InpBl_Buf)) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_InpBl_Buf)-1 ) = Int_InpBl_Buf
+    Int_Xferred = Int_Xferred + SIZE(Int_InpBl_Buf)
+  ENDIF
+  IF( ALLOCATED(Re_InpBl_Buf) )  DEALLOCATE(Re_InpBl_Buf)
+  IF( ALLOCATED(Db_InpBl_Buf) )  DEALLOCATE(Db_InpBl_Buf)
+  IF( ALLOCATED(Int_InpBl_Buf) ) DEALLOCATE(Int_InpBl_Buf)
  END SUBROUTINE BD_Packinputfile
 
  SUBROUTINE BD_UnPackinputfile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1559,6 +1804,9 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
  ! buffers to store meshes, if any
+  REAL(ReKi),    ALLOCATABLE :: Re_InpBl_Buf(:)
+  REAL(DbKi),    ALLOCATABLE :: Db_InpBl_Buf(:)
+  INTEGER(IntKi),    ALLOCATABLE :: Int_InpBl_Buf(:)
     !
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -1584,6 +1832,21 @@ ENDIF
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%initial_twist)
   ENDIF
+ ! first call BD_Packbladeinputdata to get correctly sized buffers for unpacking
+  CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, OutData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
+  IF(ALLOCATED(Re_InpBl_Buf)) THEN
+    Re_InpBl_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_InpBl_Buf)-1 )
+    Re_Xferred = Re_Xferred + SIZE(Re_InpBl_Buf)
+  ENDIF
+  IF(ALLOCATED(Db_InpBl_Buf)) THEN
+    Db_InpBl_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_InpBl_Buf)-1 )
+    Db_Xferred = Db_Xferred + SIZE(Db_InpBl_Buf)
+  ENDIF
+  IF(ALLOCATED(Int_InpBl_Buf)) THEN
+    Int_InpBl_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_InpBl_Buf)-1 )
+    Int_Xferred = Int_Xferred + SIZE(Int_InpBl_Buf)
+  ENDIF
+  CALL BD_UnPackbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, OutData%InpBl, ErrStat, ErrMsg ) ! InpBl 
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
