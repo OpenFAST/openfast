@@ -57,6 +57,7 @@ INCLUDE 'ComputeUDN.f90'
 INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
 INCLUDE 'ReadPrimaryFile.f90'
+INCLUDE 'ReadBladeFile.f90'
 INCLUDE 'BeamDyn_ReadInput.f90'
 INCLUDE 'MemberArcLength.f90'
 INCLUDE 'BldComputeMemberLength.f90'
@@ -108,6 +109,7 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    REAL(ReKi)              :: temp_CRV(3)
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_w(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
 
@@ -136,12 +138,10 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 
    CALL DispNVD( BeamDyn_Ver )
 
-   CALL BeamDyn_ReadInput(InitInp%InputFile,&
-!                         &BladeFileName,
-                         &InputFileData,ErrStat,ErrMsg)
+   CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,ErrStat,ErrMsg)
 
-   CALL AllocAry(p%member_length,InputFileData%member_total,'member length array',ErrStat2,ErrMsg2)
-   p%member_length(:) = 0.0D0
+   CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
+   p%member_length(:,:) = 0.0D0
    p%blade_length = 0.0D0
 
    CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_coordinate,p%member_length,p%blade_length)
@@ -182,15 +182,46 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
 
+   CALL AllocAry(temp_ratio,p%node_elem-1,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2) 
+   temp_ratio(:,:) = 0.0D0
+   CALL AllocAry(temp_GLL,p%node_elem-1,'temp_GL',ErrStat2,ErrMsg2) 
+   temp_GLL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%node_elem-1,'temp_weight_GL',ErrStat2,ErrMsg2) 
+   temp_w(:) = 0.0D0
+
+   CALL BldGaussPointWeight(p%node_elem-1,temp_GLL,temp_w)
+
+   DO i=1,p%node_elem-1
+       temp_GLL(i) = (temp_GLL(i) + 1.0D0)/2.0D0
+   ENDDO
+
+   DO i=1,p%elem_total
+       IF(i .EQ. 1) THEN
+           DO j=1,p%node_elem-1
+               temp_ratio(j,i) = temp_GLL(j)*p%member_length(i,2)
+           ENDDO
+       ELSE
+           DO j=1,i-1
+               temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
+           ENDDO
+           DO j=1,p%node_elem-1
+               temp_ratio(j,i) = temp_ratio(j,i) + temp_GLL(j)*p%member_length(i,2)
+           ENDDO
+       ENDIF
+   ENDDO
+
+
 
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
+   WRITE(*,*) "temp_GL: ", temp_GLL(:)
    DO i=1,InputFileData%member_total*2+1
        WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
        WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
    ENDDO
    DO i=1,InputFiledata%member_total
-       WRITE(*,*) "ith_member_length",i,p%member_length(i)
+       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
+       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
        DO j=1,p%node_elem
            WRITE(*,*) "Nodal Position:",j
            WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
@@ -199,6 +230,9 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
    WRITE(*,*) "node_elem: ", p%node_elem
+!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
+!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
+!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
    STOP
    ! Define parameters here:
 
