@@ -217,9 +217,57 @@ The other input-output relationships for these modules are solved using Solve Op
 \end{algorithmic}
 %\end{algorithm}
 
+\subsection {Implementation of line2-to-line2 loads mapping}
+The inverse-lumping of loads is computed by a block matrix solve for the distributed forces and moments, 
+using the following equation:
 
+\begin{equation}
+\label{EqLump}
+	\begin{bmatrix}
+	F^{DL} \\
+	M^{DL} \\
+	\end{bmatrix}
+=
+	\begin{bmatrix}
+		A & 0 \\
+		B & A \\	
+	\end{bmatrix}
+	\begin{bmatrix}
+	F^{D} \\
+	M^{D} \\
+	\end{bmatrix}
+\end{equation}
 
+Because the forces do not depend on the moments, we first solve for the distributed forces, $F^D$:
+\begin{equation}
+\label{EqLumpF}
+	\begin{bmatrix}	F^{DL} \\	\end{bmatrix}
+=
+	\left[		A    \right]
+	\left[	F^{D}  \right]
+\end{equation}
 
-
+We then use the known values to solve for the distributed moments, $M^D$:
+\begin{equation}
+\label{EqLumpM1}
+	\left[	M^{DL} \right]
+=
+	\begin{bmatrix} B & A \\	\end{bmatrix}
+	\begin{bmatrix}
+	F^{D} \\
+	M^{D} \\
+	\end{bmatrix}
+= \left[	B \right] \left[	F^D \right] + \left[	A \right] \left[	M^D \right] 
+\end{equation}
+or
+\begin{equation}
+\label{EqLumpM2}
+\left[	M^{DL} \right] - \left[	B \right] \left[	F^D \right] = \left[	A \right] \left[	M^D \right]
+\end{equation}
+Rather than store the matrix $B$, we directly perform the cross products that the matrix $B$ represents.
+This makes the left-hand side of Equation \ref{EqLumpM2} known, leaving us with one matrix solve. This 
+solve uses the same matrix $A$ used to obtain the distributed forces in Equation \ref{EqLumpF}; $A$ depends 
+only on element connectivity \textbf{\textit{(bjj: check that this is true)}}. We use 
+the $LU$ factorization of matrix $A$ so that the second solve does not introduce much additional overhead.
 
 \end{document}
