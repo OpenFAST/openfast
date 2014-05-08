@@ -28,22 +28,24 @@ MODULE FAST_Types
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.06.00a-bjj', '19-Mar-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.07.00a-bjj', '7-May-2014' ) ! The version number of this module
    
    ! the order of these modules is the order they get written to the output file; 
    ! make sure the module IDs start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!
    INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
    INTEGER(IntKi), PARAMETER :: Module_None    =  0
-   INTEGER(IntKi), PARAMETER :: Module_IfW     =  1
-   INTEGER(IntKi), PARAMETER :: Module_ED      =  2
-   INTEGER(IntKi), PARAMETER :: Module_AD      =  3 
-   INTEGER(IntKi), PARAMETER :: Module_SrvD    =  4
-   INTEGER(IntKi), PARAMETER :: Module_HD      =  5
-   INTEGER(IntKi), PARAMETER :: Module_SD      =  6
-   INTEGER(IntKi), PARAMETER :: Module_MAP     =  7
-   INTEGER(IntKi), PARAMETER :: Module_FEAM    =  8
-   INTEGER(IntKi), PARAMETER :: Module_IceF    =  9
-   INTEGER(IntKi), PARAMETER :: NumModules     =  9
+   INTEGER(IntKi), PARAMETER :: Module_IfW     =  1  ! InflowWind
+   INTEGER(IntKi), PARAMETER :: Module_ED      =  2  ! ElastoDyn
+   INTEGER(IntKi), PARAMETER :: Module_AD      =  3  ! AeroDyn
+   INTEGER(IntKi), PARAMETER :: Module_SrvD    =  4  ! ServoDyn
+   INTEGER(IntKi), PARAMETER :: Module_HD      =  5  ! HydroDyn
+   INTEGER(IntKi), PARAMETER :: Module_SD      =  6  ! SubDyn
+   INTEGER(IntKi), PARAMETER :: Module_MAP     =  7  ! MAP
+   INTEGER(IntKi), PARAMETER :: Module_FEAM    =  8  ! FEA Mooring
+   INTEGER(IntKi), PARAMETER :: Module_IceF    =  9  ! IceFloe
+   INTEGER(IntKi), PARAMETER :: Module_IceD    = 10  ! IceDyn 
+   INTEGER(IntKi), PARAMETER :: Module_BD      = 11  ! BeamDyn
+   INTEGER(IntKi), PARAMETER :: NumModules     = 11
    
    INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
@@ -51,6 +53,7 @@ MODULE FAST_Types
    
          
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
+   INTEGER(IntKi), PARAMETER :: MaxNBlades     = 3
    
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
@@ -164,6 +167,7 @@ MODULE FAST_Types
       
          ! Feature switches and flags:
 
+      INTEGER(IntKi)            :: CompElast                                        ! Compute blade loads (switch) {Module_ED; Module_BD}
       INTEGER(IntKi)            :: CompAero                                         ! Compute aerodynamic loads (switch) {Module_None; Module_AD}
       INTEGER(IntKi)            :: CompServo                                        ! Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}
       INTEGER(IntKi)            :: CompHydro                                        ! Compute hydrodynamic loads (switch) {Module_None; Module_HD}
@@ -177,6 +181,7 @@ MODULE FAST_Types
          ! Input file names:
 
       CHARACTER(1024)           :: EDFile                                           ! The name of the ElastoDyn input file
+      CHARACTER(1024)           :: BDBldFile(MaxNBlades)                            ! Name of files containing BeamDyn inputs for each blade
       CHARACTER(1024)           :: AeroFile                                         ! Name of file containing aerodynamic input parameters
       CHARACTER(1024)           :: ServoFile                                        ! Name of file containing control and electrical-drive input parameters
       CHARACTER(1024)           :: HydroFile                                        ! Name of file containing hydrodynamic input parameters

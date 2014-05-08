@@ -320,6 +320,7 @@ LOGICAL                               :: calcJacobian                           
    InitInData_ED%InputFile     = p_FAST%EDFile
    InitInData_ED%ADInputFile   = p_FAST%AeroFile
    InitInData_ED%RootName      = p_FAST%OutFileRoot
+   InitInData_ED%CompElast     = p_FAST%CompElast == Module_ED
 
    CALL ED_Init( InitInData_ED, ED_Input(1), p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, ED_Output(1), p_FAST%dt_module( MODULE_ED ), InitOutData_ED, ErrStat, ErrMsg )
    p_FAST%ModuleInitialized(Module_ED) = .TRUE.

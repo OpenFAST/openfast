@@ -24,6 +24,7 @@ Source\dependencies\HydroDyn\*
 Source\dependencies\SubDyn\*
 Source\dependencies\MAP\*
 Source\dependencies\FEAMooring\*
+Source\dependencies\IceFloe\*
 Source\dependencies\FAST_dependencies.xlsx
 
 OutListParameters.xlsx
@@ -43,20 +44,25 @@ Utilities\SimulationToolbox\FAST_Model_Conversion_MATLAB_Toolbox.pdf
 Utilities\SimulationToolbox\ConvertFASTVersions\CalculateYawAndPitchRates.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST7to8.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_0to3.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_3to5.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertHDto2_00_03.m
+
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\AD_Primary.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Blade.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Furling.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Tower.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\OutListParameters.xlsx
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\ED_Primary_v1.01.x.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\FAST_Primary_v8.03.x.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\FAST_Primary_v8.05.x.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.03.x\SrvD_Primary_v1.01.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\ED_Primary_v1.01.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.03.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.07.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SrvD_Primary_v1.01.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.00.03.dat
 
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_00.m
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_01.m
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_SrvD_v1_01.m
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_FAST_v8_05.m
+Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_HD_v2_00_05.m
 
 Utilities\SimulationToolbox\FAST2Matlab\AeroDyn2Matlab.m
 Utilities\SimulationToolbox\FAST2Matlab\Fast2Matlab.m
@@ -106,6 +112,7 @@ CertTest\5MW_Baseline\Wind\90m_12mps.bts
 CertTest\5MW_Baseline\Wind\90m_12mps_twr.bts
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn.ipt
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_DT_OC4.ipt
 
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Blade.dat
@@ -141,6 +148,11 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_HydroDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Monopile_RF_SubDyn.dat
 
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4Jacket_ElastoDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4Jacket_ElastoDyn_Tower.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4Jacket_ServoDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4Jacket_HydroDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4Jacket_SubDyn.dat
 
 
 CertTest\AOC\AeroData\S814_1.dat
@@ -342,6 +354,9 @@ CertTest\Test18.cru
 CertTest\Test19.fst
 CertTest\Test19.cru
 
+CertTest\Test21.fst
+CertTest\Test21.cru
+
 CertTest\Test22.fst
 CertTest\Test22.cru
 
@@ -414,8 +429,12 @@ CertTest\TstFiles\Test18.sts
 
 CertTest\TstFiles\Test19.sum
 CertTest\TstFiles\Test19.sts
+CertTest\TstFiles\Test19.HD.sum
 
-
+CertTest\TstFiles\Test21.sum
+CertTest\TstFiles\Test21.sts
+CertTest\TstFiles\Test21.HD.sum
+CertTest\TstFiles\Test21.SD.sum
 
 CertTest\TstFiles\Test22.sum
 CertTest\TstFiles\Test22.sts
