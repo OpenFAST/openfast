@@ -28,24 +28,26 @@ MODULE FAST_Types
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.07.00a-bjj', '7-May-2014' ) ! The version number of this module
-   
+                                ProgDesc( 'FAST', 'v8.07.00a-bjj', '9-May-2014' ) ! The version number of this module
+   !..................................................................
+   ! NOTE WELL:
    ! the order of these modules is the order they get written to the output file; 
-   ! make sure the module IDs start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!
+   ! make sure the module identifiers start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!
    INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
    INTEGER(IntKi), PARAMETER :: Module_None    =  0
    INTEGER(IntKi), PARAMETER :: Module_IfW     =  1  ! InflowWind
    INTEGER(IntKi), PARAMETER :: Module_ED      =  2  ! ElastoDyn
-   INTEGER(IntKi), PARAMETER :: Module_AD      =  3  ! AeroDyn
-   INTEGER(IntKi), PARAMETER :: Module_SrvD    =  4  ! ServoDyn
-   INTEGER(IntKi), PARAMETER :: Module_HD      =  5  ! HydroDyn
-   INTEGER(IntKi), PARAMETER :: Module_SD      =  6  ! SubDyn
-   INTEGER(IntKi), PARAMETER :: Module_MAP     =  7  ! MAP
-   INTEGER(IntKi), PARAMETER :: Module_FEAM    =  8  ! FEA Mooring
-   INTEGER(IntKi), PARAMETER :: Module_IceF    =  9  ! IceFloe
-   INTEGER(IntKi), PARAMETER :: Module_IceD    = 10  ! IceDyn 
-   INTEGER(IntKi), PARAMETER :: Module_BD      = 11  ! BeamDyn
+   INTEGER(IntKi), PARAMETER :: Module_BD      =  3  ! BeamDyn
+   INTEGER(IntKi), PARAMETER :: Module_AD      =  4  ! AeroDyn
+   INTEGER(IntKi), PARAMETER :: Module_SrvD    =  5  ! ServoDyn
+   INTEGER(IntKi), PARAMETER :: Module_HD      =  6  ! HydroDyn
+   INTEGER(IntKi), PARAMETER :: Module_SD      =  7  ! SubDyn
+   INTEGER(IntKi), PARAMETER :: Module_MAP     =  8  ! MAP
+   INTEGER(IntKi), PARAMETER :: Module_FEAM    =  9  ! FEA Mooring
+   INTEGER(IntKi), PARAMETER :: Module_IceF    = 10  ! IceFloe
+   INTEGER(IntKi), PARAMETER :: Module_IceD    = 11  ! IceDyn 
    INTEGER(IntKi), PARAMETER :: NumModules     = 11
+   !..................................................................
    
    INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
