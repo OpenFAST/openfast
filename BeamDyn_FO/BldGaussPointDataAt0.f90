@@ -1,4 +1,4 @@
-   SUBROUTINE BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+   SUBROUTINE BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes initial Gauss point values: uu0, E10, and Stif
    !----------------------------------------------------------------------------------------
@@ -6,10 +6,8 @@
    REAL(ReKi),    INTENT(IN):: hpx(:)         ! Derivative of shape function
    REAL(ReKi),    INTENT(IN):: Nuu0(:)        ! Element initial nodal position array
    REAL(ReKi),    INTENT(IN):: Nrr0(:)        ! Element initial nodal relative rotation array
-   REAL(ReKi),    INTENT(IN):: NStif0(:,:,:)  ! Element initial nodal c/s stiffness matrix
    REAL(ReKi), INTENT(INOUT):: uu0(:)         ! Initial position array at Gauss point
    REAL(ReKi), INTENT(INOUT):: E10(:)         ! E10 = x_0^\prime at Gauss point
-   REAL(ReKi), INTENT(INOUT):: Stif(:,:)      ! C/S stifness matrix at Gauss point
    INTEGER(IntKi),INTENT(IN):: node_elem      ! Number of node in one element
    INTEGER(IntKi),INTENT(IN):: dof_node       ! DoF per node (=6)
 
@@ -19,7 +17,6 @@
    
    uu0 = 0.0D0
    E10 = 0.0D0
-   Stif = 0.0D0
    DO inode=1,node_elem
        hhi = hhx(inode)
        hpi = hpx(inode)
@@ -29,11 +26,6 @@
            uu0(i) = uu0(i) + hhi*Nuu0(temp_id+i)
            uu0(i+3) = uu0(i+3) + hhi*Nrr0(temp_id2+i)
            E10(i) = E10(i) + hpi*Nuu0(temp_id+i)
-       ENDDO
-       DO i=1,6
-           DO j=1,6
-               Stif(i,j) = Stif(i,j) + hhi*NStif0(i,j,inode)
-           ENDDO
        ENDDO
    ENDDO   
 

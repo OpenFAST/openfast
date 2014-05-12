@@ -96,7 +96,9 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 
    ! local variables
    TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
-   INTEGER(IntKi)          :: i,j                ! do-loop counter
+   INTEGER(IntKi)          :: i                ! do-loop counter
+   INTEGER(IntKi)          :: j                ! do-loop counter
+   INTEGER(IntKi)          :: k                ! do-loop counter
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
@@ -147,16 +149,17 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_coordinate,p%member_length,p%blade_length)
    p%elem_total = InputFileData%member_total
    p%node_elem  = InputFileData%order_elem + 1       ! node per element
+   p%ngp        = p%node_elem - 1
    p%dof_node   = 6
    temp_int     = p%node_elem * p%dof_node
 
-   CALL AllocAry(p%uuN0,temp_int,InputFileData%member_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
+   CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
    p%uuN0(:,:) = 0.0D0
 
    CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
-   temp_GLL = 0.0D0
+   temp_GLL(:) = 0.0D0
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
-   temp_w = 0.0D0
+   temp_w(:) = 0.0D0
    CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
    DO i=1,InputFileData%member_total
        temp_id = (i-1)*2
@@ -182,35 +185,61 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
 
-   CALL AllocAry(temp_ratio,p%node_elem-1,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2) 
+   CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2) 
    temp_ratio(:,:) = 0.0D0
-   CALL AllocAry(temp_GLL,p%node_elem-1,'temp_GL',ErrStat2,ErrMsg2) 
+   CALL AllocAry(temp_GLL,p%ngp,'temp_GL',ErrStat2,ErrMsg2) 
    temp_GLL(:) = 0.0D0
-   CALL AllocAry(temp_w,p%node_elem-1,'temp_weight_GL',ErrStat2,ErrMsg2) 
+   CALL AllocAry(temp_w,p%ngp,'temp_weight_GL',ErrStat2,ErrMsg2) 
    temp_w(:) = 0.0D0
 
-   CALL BldGaussPointWeight(p%node_elem-1,temp_GLL,temp_w)
+   CALL BldGaussPointWeight(p%ngp,temp_GLL,temp_w)
 
-   DO i=1,p%node_elem-1
+   DO i=1,p%ngp
        temp_GLL(i) = (temp_GLL(i) + 1.0D0)/2.0D0
    ENDDO
 
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
-           DO j=1,p%node_elem-1
+           DO j=1,p%ngp
                temp_ratio(j,i) = temp_GLL(j)*p%member_length(i,2)
            ENDDO
        ELSE
            DO j=1,i-1
                temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
            ENDDO
-           DO j=1,p%node_elem-1
+           DO j=1,p%ngp
                temp_ratio(j,i) = temp_ratio(j,i) + temp_GLL(j)*p%member_length(i,2)
            ENDDO
        ENDIF
    ENDDO
 
+   CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2) 
+   p%Stif0_GL(:,:,:) = 0.0D0
+   CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2) 
+   p%Mass0_GL(:,:,:) = 0.0D0
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem-1
+           temp_id = (i-1)*p%ngp+j
+           DO k=1,InputFileData%InpBl%station_total
+               IF(temp_ratio(j,i) <= InputFileData%InpBl%station_eta(k)) THEN
+                   IF(temp_ratio(j,i) == InputFileData%InpBl%station_eta(k)) THEN
+                       p%Stif0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%stiff0(1:6,1:6,k)
+                       p%Mass0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%mass0(1:6,1:6,k)
+                   ELSE 
+                       p%Stif0_GL(1:6,1:6,temp_id) = 0.5D0*(InputFileData%InpBl%stiff0(1:6,1:6,k-1)+&
+                                                            InputFileData%InpBl%stiff0(1:6,1:6,k))
+                       p%Mass0_GL(1:6,1:6,temp_id) = 0.5D0*(InputFileData%InpBl%mass0(1:6,1:6,k-1)+&
+                                                            InputFileData%InpBl%mass0(1:6,1:6,k))
+                   ENDIF
+                   EXIT
+               ENDIF
+           ENDDO
+       ENDDO
+   ENDDO
 
+   DEALLOCATE(temp_GLL)
+   DEALLOCATE(temp_w)
+   DEALLOCATE(temp_ratio)
 
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
@@ -221,7 +250,7 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    ENDDO
    DO i=1,InputFiledata%member_total
        WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
-       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
+!       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
        DO j=1,p%node_elem
            WRITE(*,*) "Nodal Position:",j
            WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
@@ -233,92 +262,26 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
-   STOP
+
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,2)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
+!   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
-   p%ngp = p%node_elem - 1          ! number of Gauss point
    p%dt = Interval
-
-
-   ALLOCATE(p%Stif0(p%dof_node,p%dof_node,p%node_total), STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate p%Stif0.'
-       RETURN
-   END IF
-   p%Stif0 = 0.0D0
-
-   ALLOCATE(p%m00(p%node_total), STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate p%m00.'
-       RETURN
-   END IF
-   p%m00 = 0.0D0
-
-   ALLOCATE(p%mEta0(3,p%node_total), STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate p%mEta0.'
-       RETURN
-   END IF
-   p%mEta0 = 0.0D0
-
-   ALLOCATE(p%rho0(3,3,p%node_total), STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate p%rho0.'
-       RETURN
-   END IF
-   p%rho0 = 0.0D0
-
-
-   DO i=1,p%node_total
-       p%Stif0(1,1,i) = 1.3681743184D+06
-       p%Stif0(2,2,i) = 8.8562207505D+04
-       p%Stif0(3,3,i) = 3.8777942862D+04
-       p%Stif0(4,4,i) = 1.6959274463D+04
-!       p%Stif0(4,5,i) = 1.7611929624D+04
-       p%Stif0(5,5,i) = 5.9124766881D+04
-!       p%Stif0(4,6,i) = -3.5060243156D+02
-!       p%Stif0(5,6,i) = -3.7045274908D+02
-       p%Stif0(6,6,i) =  1.4147152848D+05
-       p%Stif0(5,4,i) = p%Stif0(4,5,i)
-       p%Stif0(6,4,i) = p%Stif0(4,6,i)
-       p%Stif0(6,5,i) = p%Stif0(5,6,i)
-   ENDDO
-
-   DO i=1,p%node_total
-       p%m00(i) = 8.5380000000D-02
-       p%mEta0(1,i) = 0.0D0
-       p%mEta0(2,i) = 0.0D0
-       p%mEta0(3,i) = 0.0D0
-       p%rho0(1,1,i) = 1.4432983835D-02
-       p%rho0(2,2,i) = 4.0971535000D-03
-       p%rho0(3,3,i) = 1.0335830335D-02
-   ENDDO
 
    ! Allocate OtherState if using multi-step method; initialize n
 
 
    ! Allocate continuous states and define initial system states here:
 
-   ALLOCATE(x%q(p%dof_total), STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate x%q.'
-       RETURN
-   END IF
+   CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
    x%q = 0.0D0
-   
-   ALLOCATE(x%dqdt(p%dof_total), STAT=ErrStat)
-   IF (ErrStat /= 0) THEN
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in BeamDyn: could not allocate x%dqdt.'
-       RETURN
-   END IF
+   CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
    x%dqdt = 0.0D0
 
    ! Define system output initializations (set up mesh) here:
@@ -480,8 +443,12 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 
    ! local variables
    INTEGER(IntKi):: i
+   INTEGER(IntKi):: j
    INTEGER(IntKi):: temp_id
    REAL(ReKi):: temp
+   REAL(ReKi):: temp_pp(3)
+   REAL(ReKi):: temp_qq(3)
+   REAL(ReKi):: temp_rr(3)
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -496,18 +463,38 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 !       x%dqdt(i+3) = 0.0D0
 !   ENDDO
 
+   temp_pp(:) = 0.0D0
+   temp_qq(:) = 0.0D0
+   temp_rr(:) = 0.0D0
    x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
-   IF(ABS(x%q(5)) .GT. 4.0D0) THEN
-       x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
-   ENDIF
+   DO i=1,3
+       temp_pp(i) = x%q(i+3)
+   ENDDO
+   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+   DO i=1,3
+       x%q(i+3) = temp_rr(i)
+   ENDDO
+!   IF(ABS(x%q(5)) .GT. 4.0D0) THEN
+!       x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
+!   ENDIF
    x%dqdt(5) = -3.1415926D0/3.0D0
 
    DO i=2,p%node_total
        temp_id = (i-1)*6
-       IF(ABS(x%q(temp_id+5)) .GT. 4.0D0) THEN
-           temp = -4.0D0*ATAN(x%q(temp_id+5)/4.0D0)
-           x%q(temp_id+5) = -4.0D0*TAN((temp+2.0D0*3.1415926D0)/4.0D0)
-       ENDIF
+       temp_pp(:) = 0.0D0
+       temp_qq(:) = 0.0D0
+       temp_rr(:) = 0.0D0
+       DO j=1,3
+           temp_pp(j) = x%q(temp_id+3+j)
+       ENDDO
+       CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+       DO j=1,3
+           x%q(temp_id+3+j) = temp_rr(j)
+       ENDDO
+!       IF(ABS(x%q(temp_id+5)) .GT. 4.0D0) THEN
+!           temp = -4.0D0*ATAN(x%q(temp_id+5)/4.0D0)
+!           x%q(temp_id+5) = -4.0D0*TAN((temp+2.0D0*3.1415926D0)/4.0D0)
+!       ENDIF
    ENDDO
 
    END SUBROUTINE BeamDyn_UpdateStates
