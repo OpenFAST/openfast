@@ -479,7 +479,7 @@ LOGICAL                               :: calcJacobian                           
    IF ( p_FAST%CompIce == Module_IceF ) THEN
                       
       InitInData_IceF%InputFile     = p_FAST%IceFile
-      !InitInData_IceF%RootName      = p_FAST%OutFileRoot     
+      InitInData_IceF%RootName      = p_FAST%OutFileRoot     
       InitInData_IceF%simLength     = p_FAST%TMax
       
       CALL IceFloe_Init( InitInData_IceF, IceF_Input(1), p_IceF,  x_IceF, xd_IceF, z_IceF, OtherSt_IceF, y_IceF, p_FAST%dt_module( MODULE_IceF ), InitOutData_IceF, ErrStat, ErrMsg )
