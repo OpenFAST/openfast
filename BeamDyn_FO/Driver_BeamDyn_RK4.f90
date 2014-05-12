@@ -98,7 +98,7 @@ PROGRAM MAIN
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 15.0D-05
+   dt_global = 5.0D-05
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -129,6 +129,7 @@ PROGRAM MAIN
     OPEN(unit = QiDisUnit, file = 'QiDisp_RK4.out', status = 'REPLACE',ACTION = 'WRITE')
 
    BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
+   BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
 
    CALL BeamDyn_Init(BD_InitInput        &
                    , BD_Input(1)         &

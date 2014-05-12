@@ -1,4 +1,4 @@
-   SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,m00,mEta0,rho0,time,&
+   SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,Mass0,time,&
                              &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                              &qddot)
    !***************************************************************************************
@@ -8,9 +8,7 @@
    !***************************************************************************************
    REAL(ReKi),INTENT(IN):: uuN0(:,:) ! Initial position vector
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),INTENT(IN):: m00(:) ! Mass of beam per unit span at each node
-   REAL(ReKi),INTENT(IN):: mEta0(:,:) ! Sectional m\Eta_0 at each node
-   REAL(ReKi),INTENT(IN):: rho0(:,:,:) ! Sectional tensor of inertia per unit span
+   REAL(ReKi),INTENT(IN):: Mass0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(DbKi),INTENT(IN):: time ! Current time
@@ -40,7 +38,7 @@
    RHS = 0.0D0
    MassM = 0.0D0
 
-   CALL GenerateDynamicElement(uuN0,uuN,vvN,Stif0,m00,mEta0,rho0,&
+   CALL GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,&
                               &elem_total,node_elem,dof_node,ngp,RHS,MassM)
 
    RHS = RHS + F_ext

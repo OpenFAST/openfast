@@ -35,6 +35,7 @@ IMPLICIT NONE
 ! =========  BD_InitInputType  =======
   TYPE, PUBLIC :: BD_InitInputType
     CHARACTER(1024)  :: InputFile 
+    CHARACTER(1024)  :: RootName 
   END TYPE BD_InitInputType
 ! =======================
 ! =========  BD_InitOutputType  =======
@@ -66,10 +67,8 @@ IMPLICIT NONE
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: uuN0 
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m00 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: mEta0 
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rho0 
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_GL 
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_GL 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: member_length 
     REAL(ReKi)  :: blade_length 
     INTEGER(IntKi)  :: node_elem 
@@ -125,6 +124,7 @@ CONTAINS
    ErrStat = ErrID_None
    ErrMsg  = ""
    DstInitInputData%InputFile = SrcInitInputData%InputFile
+   DstInitInputData%RootName = SrcInitInputData%RootName
  END SUBROUTINE BD_CopyInitInput
 
  SUBROUTINE BD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -830,67 +830,39 @@ IF (ALLOCATED(SrcParamData%uuN0)) THEN
    END IF
    DstParamData%uuN0 = SrcParamData%uuN0
 ENDIF
-IF (ALLOCATED(SrcParamData%Stif0)) THEN
-   i1_l = LBOUND(SrcParamData%Stif0,1)
-   i1_u = UBOUND(SrcParamData%Stif0,1)
-   i2_l = LBOUND(SrcParamData%Stif0,2)
-   i2_u = UBOUND(SrcParamData%Stif0,2)
-   i3_l = LBOUND(SrcParamData%Stif0,3)
-   i3_u = UBOUND(SrcParamData%Stif0,3)
-   IF (.NOT.ALLOCATED(DstParamData%Stif0)) THEN 
-      ALLOCATE(DstParamData%Stif0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
+IF (ALLOCATED(SrcParamData%Stif0_GL)) THEN
+   i1_l = LBOUND(SrcParamData%Stif0_GL,1)
+   i1_u = UBOUND(SrcParamData%Stif0_GL,1)
+   i2_l = LBOUND(SrcParamData%Stif0_GL,2)
+   i2_u = UBOUND(SrcParamData%Stif0_GL,2)
+   i3_l = LBOUND(SrcParamData%Stif0_GL,3)
+   i3_u = UBOUND(SrcParamData%Stif0_GL,3)
+   IF (.NOT.ALLOCATED(DstParamData%Stif0_GL)) THEN 
+      ALLOCATE(DstParamData%Stif0_GL(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%Stif0.'
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%Stif0_GL.'
          RETURN
       END IF
    END IF
-   DstParamData%Stif0 = SrcParamData%Stif0
+   DstParamData%Stif0_GL = SrcParamData%Stif0_GL
 ENDIF
-IF (ALLOCATED(SrcParamData%m00)) THEN
-   i1_l = LBOUND(SrcParamData%m00,1)
-   i1_u = UBOUND(SrcParamData%m00,1)
-   IF (.NOT.ALLOCATED(DstParamData%m00)) THEN 
-      ALLOCATE(DstParamData%m00(i1_l:i1_u),STAT=ErrStat)
+IF (ALLOCATED(SrcParamData%Mass0_GL)) THEN
+   i1_l = LBOUND(SrcParamData%Mass0_GL,1)
+   i1_u = UBOUND(SrcParamData%Mass0_GL,1)
+   i2_l = LBOUND(SrcParamData%Mass0_GL,2)
+   i2_u = UBOUND(SrcParamData%Mass0_GL,2)
+   i3_l = LBOUND(SrcParamData%Mass0_GL,3)
+   i3_u = UBOUND(SrcParamData%Mass0_GL,3)
+   IF (.NOT.ALLOCATED(DstParamData%Mass0_GL)) THEN 
+      ALLOCATE(DstParamData%Mass0_GL(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
       IF (ErrStat /= 0) THEN 
          ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%m00.'
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%Mass0_GL.'
          RETURN
       END IF
    END IF
-   DstParamData%m00 = SrcParamData%m00
-ENDIF
-IF (ALLOCATED(SrcParamData%mEta0)) THEN
-   i1_l = LBOUND(SrcParamData%mEta0,1)
-   i1_u = UBOUND(SrcParamData%mEta0,1)
-   i2_l = LBOUND(SrcParamData%mEta0,2)
-   i2_u = UBOUND(SrcParamData%mEta0,2)
-   IF (.NOT.ALLOCATED(DstParamData%mEta0)) THEN 
-      ALLOCATE(DstParamData%mEta0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%mEta0.'
-         RETURN
-      END IF
-   END IF
-   DstParamData%mEta0 = SrcParamData%mEta0
-ENDIF
-IF (ALLOCATED(SrcParamData%rho0)) THEN
-   i1_l = LBOUND(SrcParamData%rho0,1)
-   i1_u = UBOUND(SrcParamData%rho0,1)
-   i2_l = LBOUND(SrcParamData%rho0,2)
-   i2_u = UBOUND(SrcParamData%rho0,2)
-   i3_l = LBOUND(SrcParamData%rho0,3)
-   i3_u = UBOUND(SrcParamData%rho0,3)
-   IF (.NOT.ALLOCATED(DstParamData%rho0)) THEN 
-      ALLOCATE(DstParamData%rho0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%rho0.'
-         RETURN
-      END IF
-   END IF
-   DstParamData%rho0 = SrcParamData%rho0
+   DstParamData%Mass0_GL = SrcParamData%Mass0_GL
 ENDIF
 IF (ALLOCATED(SrcParamData%member_length)) THEN
    i1_l = LBOUND(SrcParamData%member_length,1)
@@ -928,17 +900,11 @@ ENDIF
 IF (ALLOCATED(ParamData%uuN0)) THEN
    DEALLOCATE(ParamData%uuN0)
 ENDIF
-IF (ALLOCATED(ParamData%Stif0)) THEN
-   DEALLOCATE(ParamData%Stif0)
+IF (ALLOCATED(ParamData%Stif0_GL)) THEN
+   DEALLOCATE(ParamData%Stif0_GL)
 ENDIF
-IF (ALLOCATED(ParamData%m00)) THEN
-   DEALLOCATE(ParamData%m00)
-ENDIF
-IF (ALLOCATED(ParamData%mEta0)) THEN
-   DEALLOCATE(ParamData%mEta0)
-ENDIF
-IF (ALLOCATED(ParamData%rho0)) THEN
-   DEALLOCATE(ParamData%rho0)
+IF (ALLOCATED(ParamData%Mass0_GL)) THEN
+   DEALLOCATE(ParamData%Mass0_GL)
 ENDIF
 IF (ALLOCATED(ParamData%member_length)) THEN
    DEALLOCATE(ParamData%member_length)
@@ -980,10 +946,8 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Re_BufSz    = Re_BufSz    + SIZE( InData%uuN0 )  ! uuN0 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%Stif0 )  ! Stif0 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%m00 )  ! m00 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%mEta0 )  ! mEta0 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%rho0 )  ! rho0 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%Stif0_GL )  ! Stif0_GL 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%Mass0_GL )  ! Mass0_GL 
   Re_BufSz    = Re_BufSz    + SIZE( InData%member_length )  ! member_length 
   Re_BufSz   = Re_BufSz   + 1  ! blade_length
   Int_BufSz  = Int_BufSz  + 1  ! node_elem
@@ -1000,21 +964,13 @@ ENDIF
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuN0))-1 ) =  PACK(InData%uuN0 ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%uuN0)
   ENDIF
-  IF ( ALLOCATED(InData%Stif0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Stif0))-1 ) =  PACK(InData%Stif0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%Stif0)
+  IF ( ALLOCATED(InData%Stif0_GL) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Stif0_GL))-1 ) =  PACK(InData%Stif0_GL ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%Stif0_GL)
   ENDIF
-  IF ( ALLOCATED(InData%m00) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%m00))-1 ) =  PACK(InData%m00 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%m00)
-  ENDIF
-  IF ( ALLOCATED(InData%mEta0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%mEta0))-1 ) =  PACK(InData%mEta0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%mEta0)
-  ENDIF
-  IF ( ALLOCATED(InData%rho0) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%rho0))-1 ) =  PACK(InData%rho0 ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%rho0)
+  IF ( ALLOCATED(InData%Mass0_GL) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Mass0_GL))-1 ) =  PACK(InData%Mass0_GL ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%Mass0_GL)
   ENDIF
   IF ( ALLOCATED(InData%member_length) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%member_length))-1 ) =  PACK(InData%member_length ,.TRUE.)
@@ -1077,29 +1033,17 @@ ENDIF
   DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%uuN0)
   ENDIF
-  IF ( ALLOCATED(OutData%Stif0) ) THEN
-  ALLOCATE(mask3(SIZE(OutData%Stif0,1),SIZE(OutData%Stif0,2),SIZE(OutData%Stif0,3))); mask3 = .TRUE.
-    OutData%Stif0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stif0))-1 ),mask3,OutData%Stif0)
+  IF ( ALLOCATED(OutData%Stif0_GL) ) THEN
+  ALLOCATE(mask3(SIZE(OutData%Stif0_GL,1),SIZE(OutData%Stif0_GL,2),SIZE(OutData%Stif0_GL,3))); mask3 = .TRUE.
+    OutData%Stif0_GL = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Stif0_GL))-1 ),mask3,OutData%Stif0_GL)
   DEALLOCATE(mask3)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%Stif0)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%Stif0_GL)
   ENDIF
-  IF ( ALLOCATED(OutData%m00) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%m00,1))); mask1 = .TRUE.
-    OutData%m00 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%m00))-1 ),mask1,OutData%m00)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%m00)
-  ENDIF
-  IF ( ALLOCATED(OutData%mEta0) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%mEta0,1),SIZE(OutData%mEta0,2))); mask2 = .TRUE.
-    OutData%mEta0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%mEta0))-1 ),mask2,OutData%mEta0)
-  DEALLOCATE(mask2)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%mEta0)
-  ENDIF
-  IF ( ALLOCATED(OutData%rho0) ) THEN
-  ALLOCATE(mask3(SIZE(OutData%rho0,1),SIZE(OutData%rho0,2),SIZE(OutData%rho0,3))); mask3 = .TRUE.
-    OutData%rho0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%rho0))-1 ),mask3,OutData%rho0)
+  IF ( ALLOCATED(OutData%Mass0_GL) ) THEN
+  ALLOCATE(mask3(SIZE(OutData%Mass0_GL,1),SIZE(OutData%Mass0_GL,2),SIZE(OutData%Mass0_GL,3))); mask3 = .TRUE.
+    OutData%Mass0_GL = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Mass0_GL))-1 ),mask3,OutData%Mass0_GL)
   DEALLOCATE(mask3)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%rho0)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%Mass0_GL)
   ENDIF
   IF ( ALLOCATED(OutData%member_length) ) THEN
   ALLOCATE(mask2(SIZE(OutData%member_length,1),SIZE(OutData%member_length,2))); mask2 = .TRUE.

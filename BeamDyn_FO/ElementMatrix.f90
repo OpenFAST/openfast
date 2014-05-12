@@ -1,4 +1,4 @@
-   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,NStif0,Nm00,NmEta0,Nrho0,&
+   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,&
                            &ngp,node_elem,dof_node,elf,elm)
                            
    !-------------------------------------------------------------------------------
@@ -10,10 +10,8 @@
    REAL(ReKi),INTENT(IN):: Nrr0(:) ! Nodal rotation parameters for initial position
    REAL(ReKi),INTENT(IN):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),INTENT(IN):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
-   REAL(ReKi),INTENT(IN):: NStif0(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),INTENT(IN):: Nm00(:) ! Nodal mass of beam per unit span for each element
-   REAL(ReKi),INTENT(IN):: NmEta0(:,:) ! Nodal sectional m\Eta_0 for each element
-   REAL(ReKi),INTENT(IN):: Nrho0(:,:,:) ! Nodal sectional tensor of inertia per unit span for each element
+   REAL(ReKi),INTENT(IN):: EStif0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(IN):: EMass0_GL(:,:,:) ! Nodal material properties for each element
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
@@ -85,16 +83,26 @@
    elm = 0.0D0
 
 
-   CALL BD_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BD_gen_gll_LSGL(ngp,GLL_temp,w_temp)
    CALL BldGaussPointWeight(ngp,gp,gw)
 
    DO igp=1,ngp
        gpr=gp(igp)
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
 
-       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
+       Stif(:,:) = 0.0D0
+       Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)       
-       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,Nm00,NmEta0,Nrho0,node_elem,dof_node,vvv,mmm,mEta,rho)
+       mmm  = 0.0D0
+       mEta = 0.0D0
+       rho  = 0.0D0
+       mmm          = EMass0_GL(1,1,igp)
+       mEta(2)      = -EMass0_GL(1,6,igp)
+       mEta(3)      =  EMass0_GL(1,5,igp)
+       rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
+       
+       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
 
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
        CALL MassMatrix(mmm,mEta,rho,uuu,Mi)
