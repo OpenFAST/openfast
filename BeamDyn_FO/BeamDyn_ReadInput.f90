@@ -1,8 +1,9 @@
-   SUBROUTINE BeamDyn_ReadInput(InputFileName,InputFileData,ErrStat,ErrMsg)
+   SUBROUTINE BeamDyn_ReadInput(InputFileName,InputFileData,OutFileRoot,ErrStat,ErrMsg)
 
    ! Passed Variables:
    CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
    TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
+   CHARACTER(*),                 INTENT(IN   )  :: OutFileRoot     ! Name of the input file
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! The error message, if an error occurred
 
@@ -10,7 +11,7 @@
    ! Local variables:
 !   INTEGER(4)         :: allo_stat
 !   CHARACTER(1024)    :: FilePath
-   LOGICAL            :: Echo
+   LOGICAL                                      :: Echo
    INTEGER(IntKi)                               :: UnEcho
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
@@ -21,7 +22,7 @@
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   CALL ReadPrimaryFile(InputFileName,InputFileData,UnEcho,ErrStat2,ErrMsg2)
+   CALL ReadPrimaryFile(InputFileName,InputFileData,OutFileRoot,UnEcho,ErrStat2,ErrMsg2)
 
    CALL ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
    
