@@ -1,5 +1,5 @@
    SUBROUTINE ReadPrimaryFile(InputFile,InputFileData,&
-             &UnEc,ErrStat,ErrMsg)
+              OutFileRoot,UnEc,ErrStat,ErrMsg)
    !------------------------------------------------------------------------------------
    ! This routine reads in the primary BeamDyn input file and places the values it reads
    ! in the InputFileData structure.
@@ -13,6 +13,7 @@
    INTEGER(IntKi),               INTENT(  OUT) :: UnEc
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat
    CHARACTER(*),                 INTENT(IN   ) :: InputFile
+   CHARACTER(*),                 INTENT(IN   ) :: OutFileRoot
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg
 
    TYPE(BD_InputFile),           INTENT(INOUT) :: InputFileData
@@ -43,6 +44,11 @@
    !---------------------- SIMULATION CONTROL --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,Echo,'Echo','Echo switch',ErrStat2,ErrMsg2,UnEc)
+   IF(Echo) THEN
+       CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
+   ENDIF
+   IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
+!'Data from BeamDyn primary input file "'//TRIM( InputFile)//'":'
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
@@ -58,10 +64,15 @@
    DO i=1,temp_int
        READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
                     InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(i)
-       IF(MOD(i,2)==0) THEN
-           IF(InputFileData%initial_twist(i)/=270.0) THEN
-               WRITE(*,*) "Incorrect initial twist angle at mid point:",i
-           ENDIF
+!       IF(MOD(i,2)==0) THEN
+!           IF(InputFileData%initial_twist(i)/=270.0) THEN
+!               WRITE(*,*) "Incorrect initial twist angle at mid point:",i
+!           ENDIF
+!       ENDIF
+       IF(UnEc>0) THEN
+           IF(i==1) WRITE(UnEc,'(/,A,/)') 'Key points coordinates and initial twist angle'
+           WRITE(UnEc,'(/,A,/)') InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
+                                 InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(i)
        ENDIF
    ENDDO
 

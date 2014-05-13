@@ -140,8 +140,9 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 
    CALL DispNVD( BeamDyn_Ver )
 
-   CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,ErrStat,ErrMsg)
+   CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
 
+!   STOP
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
    p%member_length(:,:) = 0.0D0
    p%blade_length = 0.0D0
@@ -505,7 +506,7 @@ INCLUDE 'ComputeIniNodalCrv.f90'
    ! Routine for computing outputs, used in both loose and tight coupling.
    !..................................................................................................................................
 
-   REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
