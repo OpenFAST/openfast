@@ -18,10 +18,10 @@
    INTEGER(IntKi):: i,j
    INTEGER(IntKi):: temp_id,k !For Debug
 
-   !ui = 0.0D0
+   ! ui = 0.0D0
       DO i=1,dof_total !ADDED LOOP FOR INITIAL GUESS
           ui(i)=uuNf(i)
-	  END DO
+      END DO
    Eref = 0.0D0
 
    DO i=1,niter
