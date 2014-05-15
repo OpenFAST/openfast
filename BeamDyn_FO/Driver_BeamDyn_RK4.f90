@@ -324,22 +324,36 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
 
    INTEGER(IntKi)          :: i                ! do-loop counter
 
-   REAL(ReKi)              :: tmp_vector(3)
+   REAL(ReKi)              :: temp_vector(3)
+   REAL(ReKi)              :: temp_rr(3)
+   REAL(ReKi)              :: temp_pp(3)
+   REAL(ReKi)              :: temp_qq(3)
+   REAL(ReKi)              :: temp_R(3,3)
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   tmp_vector = 0.0D0
+   temp_rr(:)     = 0.0D0
+   temp_pp(:)     = 0.0D0
+   temp_qq(:)     = 0.0D0
+   temp_R(:,:)    = 0.0D0
    ! gather point forces and line forces
 
    ! Point mesh: Force 
-   u%PointMesh%TranslationDisp(:,1)  = tmp_vector
-   u%PointMesh%TranslationVel(:,1)   = tmp_vector
-   u%PointMesh%TranslationAcc(:,1)   = tmp_vector
+   u%PointMesh%TranslationDisp(:,:)  = 0.0D0
+   u%PointMesh%TranslationVel(:,:)   = 0.0D0
+   u%PointMesh%TranslationAcc(:,:)   = 0.0D0
 
-   u%PointMesh%TranslationDisp(3,1)  = +0.1*sin(t)
-   u%PointMesh%TranslationVel(3,1)   = -0.1*cos(t)
-   u%PointMesh%TranslationAcc(3,1)   = -0.1*sin(t)
+   u%PointMesh%Orientation(:,:,:) = 0.0D0
+   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
+   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+   CALL CrvMatrixR(temp_rr,temp_R)
+   u%PointMesh%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
+
+   u%PointMesh%RotationVel(:,:) = 0.0D0
+   u%PointMesh%RotationVel(2,1) = -3.1415926D0/3.0D0
+
+   u%PointMesh%RotationAcc(:,:) = 0.0D0
 
    ut = t
 

@@ -56,6 +56,7 @@
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
 
    ! find xdot at t
+   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
    k1%q    = p%dt * xdot%q
@@ -68,6 +69,7 @@
    CALL BD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt/2
+   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
    k2%q    = p%dt * xdot%q
@@ -89,6 +91,7 @@
    CALL BD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt
+   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
    k4%q    = p%dt * xdot%q
@@ -96,6 +99,7 @@
 
    x%q    = x%q    +  ( k1%q    + 2. * k2%q    + 2. * k3%q    + k4%q    ) / 6.      
    x%dqdt = x%dqdt +  ( k1%dqdt + 2. * k2%dqdt + 2. * k3%dqdt + k4%dqdt ) / 6.      
+   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
 
    CALL MeshDestroy ( u_interp%PointMesh       &
                     , ErrStat  = ErrStat         &

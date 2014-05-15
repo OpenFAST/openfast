@@ -3,7 +3,7 @@
 ! Routine for computing derivatives of continuous states.
 !........................................................................................................................
 
-   REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
@@ -20,7 +20,7 @@
    INTEGER(IntKi):: allo_stat        
    INTEGER(IntKi):: j 
  
-   TYPE(BD_ContinuousStateType) :: xtemp           ! Continuous states at t
+!   TYPE(BD_ContinuousStateType) :: xtemp           ! Continuous states at t
 
    allo_stat = 0  
 
@@ -38,18 +38,7 @@
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-!   DO j=1,3
-!       WRITE(*,*) "elem_total", p%elem_total 
-!   ENDDO
-!   STOP
-
-   xtemp = x
-
-
-!   CALL PrescribedRootMotion(u,xtemp,p)
-   CALL PrescribedRootMotion(t,xtemp,p)
-
-   CALL DynamicSolution(p%uuN0,xtemp%q,xtemp%dqdt,p%Stif0_GL,p%Mass0_GL,&
+   CALL DynamicSolution(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,&
                        &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                        &qddot)
 
@@ -58,7 +47,7 @@
        qddot(j+3) = u%PointMesh%RotationAcc(j,1)
    ENDDO
 
-   CALL ComputeUDN(p%node_total,p%dof_node,xtemp%dqdt,xtemp%q,qdot)
+   CALL ComputeUDN(p%node_total,p%dof_node,x%dqdt,x%q,qdot)
 
 !   xdot%q = x%dqdt
    xdot%q = qdot

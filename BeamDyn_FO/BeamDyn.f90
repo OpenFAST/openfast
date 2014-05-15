@@ -66,7 +66,7 @@ INCLUDE 'Norm.f90'
 INCLUDE 'CrossProduct.f90'
 INCLUDE 'CrvExtractCrv.f90'
 INCLUDE 'ComputeIniNodalCrv.f90'
-
+INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -464,21 +464,21 @@ INCLUDE 'ComputeIniNodalCrv.f90'
 !       x%dqdt(i+3) = 0.0D0
 !   ENDDO
 
-   temp_pp(:) = 0.0D0
-   temp_qq(:) = 0.0D0
-   temp_rr(:) = 0.0D0
-   x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
-   DO i=1,3
-       temp_pp(i) = x%q(i+3)
-   ENDDO
-   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
-   DO i=1,3
-       x%q(i+3) = temp_rr(i)
-   ENDDO
+!   temp_pp(:) = 0.0D0
+!   temp_qq(:) = 0.0D0
+!   temp_rr(:) = 0.0D0
+!   x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
+!   DO i=1,3
+!       temp_pp(i) = x%q(i+3)
+!   ENDDO
+!   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+!   DO i=1,3
+!       x%q(i+3) = temp_rr(i)
+!   ENDDO
 !   IF(ABS(x%q(5)) .GT. 4.0D0) THEN
 !       x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
 !   ENDIF
-   x%dqdt(5) = -3.1415926D0/3.0D0
+!   x%dqdt(5) = -3.1415926D0/3.0D0
 
    DO i=2,p%node_total
        temp_id = (i-1)*6
