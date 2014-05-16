@@ -345,13 +345,13 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    u%PointMesh%TranslationAcc(:,:)   = 0.0D0
 
    u%PointMesh%Orientation(:,:,:) = 0.0D0
-   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
+   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*2.0D0/3.0D0)/4.0D0)
    CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
    CALL CrvMatrixR(temp_rr,temp_R)
    u%PointMesh%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
 
    u%PointMesh%RotationVel(:,:) = 0.0D0
-   u%PointMesh%RotationVel(2,1) = -3.1415926D0/3.0D0
+   u%PointMesh%RotationVel(2,1) = -3.1415926D+00*2.0D0/3.0D0
 
    u%PointMesh%RotationAcc(:,:) = 0.0D0
 
