@@ -54,14 +54,13 @@
 
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
-
    ! find xdot at t
    CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
    k1%q    = p%dt * xdot%q
    k1%dqdt = p%dt * xdot%dqdt
-  
+
    x_tmp%q    = x%q    + 0.5 * k1%q
    x_tmp%dqdt = x%dqdt + 0.5 * k1%dqdt
 
@@ -92,6 +91,8 @@
 
    ! find xdot at t + dt
    CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+!   WRITE(*,*) "x%q(1:6): ", x%q(1:6)
+   
    CALL BeamDyn_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
    k4%q    = p%dt * xdot%q
@@ -99,6 +100,7 @@
 
    x%q    = x%q    +  ( k1%q    + 2. * k2%q    + 2. * k3%q    + k4%q    ) / 6.      
    x%dqdt = x%dqdt +  ( k1%dqdt + 2. * k2%dqdt + 2. * k3%dqdt + k4%dqdt ) / 6.      
+
    CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
 
    CALL MeshDestroy ( u_interp%PointMesh       &

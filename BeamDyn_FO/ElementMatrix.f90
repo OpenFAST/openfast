@@ -91,6 +91,8 @@
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
 
        CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
+!       WRITE(*,*) 'E10'
+!       WRITE(*,*) E10
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)       
@@ -103,8 +105,11 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
-
+!WRITE(*,*) 'cet'
+!WRITE(*,*) cet
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
+!WRITE(*,*) 'Fc'
+!WRITE(*,*) Fc
        CALL MassMatrix(mmm,mEta,rho,uuu,Mi)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
 

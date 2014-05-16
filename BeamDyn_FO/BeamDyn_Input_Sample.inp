@@ -3,13 +3,11 @@ Sample
 ---------------------- SIMULATION CONTROL --------------------------------------
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
 ---------------------- GEOMETRY PARAMETER --------------------------------------
-2    member_total    - Total number of member (-)
+1    member_total    - Total number of member (-)
  x      y      z    initial_twist
 (m)    (m)    (m)     (deg)
 0.0    0.0    0.0     0.0      - Key point coordinates and initial twist (-)
-0.0    0.0    2.5     0.0      - Key point coordinates and initial twist (-)
 0.0    0.0    5.0     0.0      - Key point coordinates and initial twist (-)
-0.0    0.0    7.5     0.0      - Key point coordinates and initial twist (-)
 0.0    0.0    10.0    0.0      - Key point coordinates and initial twist (-) 
 ---------------------- MESH PARAMETER ------------------------------------------
 5    order_elem    - Order of interpolation (basis) function (-)
