@@ -21,6 +21,8 @@ MODULE BeamDyn
    PUBLIC :: BeamDyn_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: BeamDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BeamDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvMatrixR                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvCompose                ! Tight coupling routine for updating discrete states
 
 CONTAINS
 

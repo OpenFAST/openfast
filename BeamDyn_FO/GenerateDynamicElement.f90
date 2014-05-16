@@ -88,6 +88,8 @@
 
        CALL ElemNodalDispGL(vvN,node_elem,dof_node,nelem,Nvvv)
 
+!       WRITE(*,*) 'EStif0_GL1'
+!       WRITE(*,*) EStif0_GL(:,:,1)
        CALL ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,&
                          &ngp,node_elem,dof_node,elf,elm)
 

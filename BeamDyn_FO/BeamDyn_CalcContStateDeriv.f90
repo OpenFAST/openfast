@@ -20,7 +20,6 @@
    INTEGER(IntKi):: allo_stat        
    INTEGER(IntKi):: j 
  
-!   TYPE(BD_ContinuousStateType) :: xtemp           ! Continuous states at t
 
    allo_stat = 0  
 
@@ -49,7 +48,6 @@
 
    CALL ComputeUDN(p%node_total,p%dof_node,x%dqdt,x%q,qdot)
 
-!   xdot%q = x%dqdt
    xdot%q = qdot
    xdot%dqdt = qddot
 
