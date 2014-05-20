@@ -14,6 +14,10 @@
    INTEGER(IntKi)             :: temp_int
    REAL(ReKi)                 :: temp_xm2
    REAL(ReKi)                 :: temp_xm3
+   REAL(ReKi)                 :: temp_xc2
+   REAL(ReKi)                 :: temp_xc3
+   REAL(ReKi)                 :: temp_xs2
+   REAL(ReKi)                 :: temp_xs3
    INTEGER(IntKi)             :: i
    INTEGER(IntKi)             :: j
 
@@ -64,14 +68,21 @@
            READ(UnIn,*) BladeInputFileData%stiff0(4,4,temp_int)
            READ(UnIn,*) BladeInputFileData%stiff0(2,2,temp_int),BladeInputFileData%stiff0(3,3,temp_int),&
                         BladeInputFileData%stiff0(2,3,temp_int)
+           temp_xc2 = 0.0D0
+           temp_xc3 = 0.0D0
+           READ(UnIn,*) temp_xc2,temp_xc3
+           temp_xs2 = 0.0D0
+           temp_xs3 = 0.0D0
+           READ(UnIn,*) temp_xs2,temp_xs3
            BladeInputFileData%stiff0(6,5,temp_int) = BladeInputFileData%stiff0(5,6,temp_int)
            BladeInputFileData%stiff0(3,2,temp_int) = BladeInputFileData%stiff0(2,3,temp_int)
+WRITE(*,*) BladeInputFileData%stiff0(4,4,temp_int)
            READ(UnIn,*) BladeInputFileData%mass0(1,1,temp_int)
            READ(UnIn,*) BladeInputFileData%mass0(4,4,temp_int),BladeInputFileData%mass0(5,5,temp_int),&
                         BladeInputFileData%mass0(6,6,temp_int)
-WRITE(*,*) BladeInputFileData%mass0(6,6,temp_int)
+           temp_xm2 = 0.0D0
+           temp_xm3 = 0.0D0
            READ(UnIn,*) temp_xm2,temp_xm3
-WRITE(*,*) temp_xm2,temp_xm3
            BladeInputFileData%mass0(2,2,temp_int) = BladeInputFileData%mass0(1,1,temp_int)
            BladeInputFileData%mass0(3,3,temp_int) = BladeInputFileData%mass0(1,1,temp_int)
            BladeInputFileData%mass0(1,5,temp_int) = BladeInputFileData%mass0(1,1,temp_int)*temp_xm3
@@ -84,8 +95,5 @@ WRITE(*,*) temp_xm2,temp_xm3
            BladeInputFileData%mass0(4,3,temp_int) = BladeInputFileData%mass0(3,4,temp_int)
        ENDDO
    ENDIF
-
-
-
 
    END SUBROUTINE ReadBladeFile
