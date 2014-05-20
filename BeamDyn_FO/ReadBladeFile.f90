@@ -69,7 +69,9 @@
            READ(UnIn,*) BladeInputFileData%mass0(1,1,temp_int)
            READ(UnIn,*) BladeInputFileData%mass0(4,4,temp_int),BladeInputFileData%mass0(5,5,temp_int),&
                         BladeInputFileData%mass0(6,6,temp_int)
+WRITE(*,*) BladeInputFileData%mass0(6,6,temp_int)
            READ(UnIn,*) temp_xm2,temp_xm3
+WRITE(*,*) temp_xm2,temp_xm3
            BladeInputFileData%mass0(2,2,temp_int) = BladeInputFileData%mass0(1,1,temp_int)
            BladeInputFileData%mass0(3,3,temp_int) = BladeInputFileData%mass0(1,1,temp_int)
            BladeInputFileData%mass0(1,5,temp_int) = BladeInputFileData%mass0(1,1,temp_int)*temp_xm3
