@@ -11,7 +11,6 @@
    INTEGER(IntKi)             :: UnIn                                            ! Unit number for reading file
    INTEGER(IntKi)             :: ErrStat2                                        ! Temporary Error status
    CHARACTER(LEN(ErrMsg))     :: ErrMsg2                                         ! Temporary Err msg   
-   INTEGER(IntKi)             :: temp_int
    REAL(ReKi)                 :: temp_xm2
    REAL(ReKi)                 :: temp_xm3
    REAL(ReKi)                 :: temp_xc2
@@ -49,50 +48,44 @@
 
    IF(BladeInputFileData%format_index .EQ. 1) THEN
        DO i=1,BladeInputFileData%station_total
-           READ(UnIn,*) temp_int,BladeInputFileData%station_eta(temp_int)
+           READ(UnIn,*) BladeInputFileData%station_eta(i)
            DO j=1,6
-               CALL ReadAry(UnIn,BldFile,BladeInputFileData%stiff0(j,:,temp_int),6,'siffness_matrix',&
+               CALL ReadAry(UnIn,BldFile,BladeInputFileData%stiff0(j,:,i),6,'siffness_matrix',&
                        'Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
            ENDDO
            DO j=1,6
-               CALL ReadAry(UnIn,BldFile,BladeInputFileData%mass0(j,:,temp_int),6,'siffness_matrix',&
+               CALL ReadAry(UnIn,BldFile,BladeInputFileData%mass0(j,:,i),6,'siffness_matrix',&
                        'Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
            ENDDO
        ENDDO
    ELSEIF(BladeInputFileData%format_index .EQ. 2) THEN
        DO i=1,BladeInputFileData%station_total
-           READ(UnIn,*) temp_int,BladeInputFileData%station_eta(temp_int)
-           READ(UnIn,*) BladeInputFileData%stiff0(1,1,temp_int)
-           READ(UnIn,*) BladeInputFileData%stiff0(5,5,temp_int),BladeInputFileData%stiff0(6,6,temp_int),&
-                        BladeInputFileData%stiff0(5,6,temp_int)
-           READ(UnIn,*) BladeInputFileData%stiff0(4,4,temp_int)
-           READ(UnIn,*) BladeInputFileData%stiff0(2,2,temp_int),BladeInputFileData%stiff0(3,3,temp_int),&
-                        BladeInputFileData%stiff0(2,3,temp_int)
-           temp_xc2 = 0.0D0
-           temp_xc3 = 0.0D0
-           READ(UnIn,*) temp_xc2,temp_xc3
-           temp_xs2 = 0.0D0
-           temp_xs3 = 0.0D0
-           READ(UnIn,*) temp_xs2,temp_xs3
-           BladeInputFileData%stiff0(6,5,temp_int) = BladeInputFileData%stiff0(5,6,temp_int)
-           BladeInputFileData%stiff0(3,2,temp_int) = BladeInputFileData%stiff0(2,3,temp_int)
-WRITE(*,*) BladeInputFileData%stiff0(4,4,temp_int)
-           READ(UnIn,*) BladeInputFileData%mass0(1,1,temp_int)
-           READ(UnIn,*) BladeInputFileData%mass0(4,4,temp_int),BladeInputFileData%mass0(5,5,temp_int),&
-                        BladeInputFileData%mass0(6,6,temp_int)
+           READ(UnIn,*) BladeInputFileData%station_eta(i)
+           READ(UnIn,*) BladeInputFileData%stiff0(1,1,i)
+           READ(UnIn,*) BladeInputFileData%stiff0(5,5,i),BladeInputFileData%stiff0(6,6,i),&
+                        BladeInputFileData%stiff0(5,6,i)
+           READ(UnIn,*) BladeInputFileData%stiff0(4,4,i)
+           READ(UnIn,*) BladeInputFileData%stiff0(2,2,i),BladeInputFileData%stiff0(3,3,i),&
+                        BladeInputFileData%stiff0(2,3,i)
+           BladeInputFileData%stiff0(6,5,i) = BladeInputFileData%stiff0(5,6,i)
+           BladeInputFileData%stiff0(3,2,i) = BladeInputFileData%stiff0(2,3,i)
+
+           READ(UnIn,*) BladeInputFileData%mass0(1,1,i)
+           READ(UnIn,*) BladeInputFileData%mass0(4,4,i),BladeInputFileData%mass0(5,5,i),&
+                        BladeInputFileData%mass0(6,6,i)
            temp_xm2 = 0.0D0
            temp_xm3 = 0.0D0
            READ(UnIn,*) temp_xm2,temp_xm3
-           BladeInputFileData%mass0(2,2,temp_int) = BladeInputFileData%mass0(1,1,temp_int)
-           BladeInputFileData%mass0(3,3,temp_int) = BladeInputFileData%mass0(1,1,temp_int)
-           BladeInputFileData%mass0(1,5,temp_int) = BladeInputFileData%mass0(1,1,temp_int)*temp_xm3
-           BladeInputFileData%mass0(1,6,temp_int) =-BladeInputFileData%mass0(1,1,temp_int)*temp_xm2
-           BladeInputFileData%mass0(2,4,temp_int) =-BladeInputFileData%mass0(1,1,temp_int)*temp_xm3
-           BladeInputFileData%mass0(3,4,temp_int) = BladeInputFileData%mass0(1,1,temp_int)*temp_xm2
-           BladeInputFileData%mass0(5,1,temp_int) = BladeInputFileData%mass0(1,5,temp_int)
-           BladeInputFileData%mass0(6,1,temp_int) = BladeInputFileData%mass0(1,6,temp_int)
-           BladeInputFileData%mass0(4,2,temp_int) = BladeInputFileData%mass0(2,4,temp_int)
-           BladeInputFileData%mass0(4,3,temp_int) = BladeInputFileData%mass0(3,4,temp_int)
+           BladeInputFileData%mass0(2,2,i) = BladeInputFileData%mass0(1,1,i)
+           BladeInputFileData%mass0(3,3,i) = BladeInputFileData%mass0(1,1,i)
+           BladeInputFileData%mass0(1,5,i) = BladeInputFileData%mass0(1,1,i)*temp_xm3
+           BladeInputFileData%mass0(1,6,i) =-BladeInputFileData%mass0(1,1,i)*temp_xm2
+           BladeInputFileData%mass0(2,4,i) =-BladeInputFileData%mass0(1,1,i)*temp_xm3
+           BladeInputFileData%mass0(3,4,i) = BladeInputFileData%mass0(1,1,i)*temp_xm2
+           BladeInputFileData%mass0(5,1,i) = BladeInputFileData%mass0(1,5,i)
+           BladeInputFileData%mass0(6,1,i) = BladeInputFileData%mass0(1,6,i)
+           BladeInputFileData%mass0(4,2,i) = BladeInputFileData%mass0(2,4,i)
+           BladeInputFileData%mass0(4,3,i) = BladeInputFileData%mass0(3,4,i)
        ENDDO
    ENDIF
 
