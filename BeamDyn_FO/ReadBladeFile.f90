@@ -71,8 +71,8 @@
            BladeInputFileData%stiff0(3,2,i) = BladeInputFileData%stiff0(2,3,i)
 
            READ(UnIn,*) BladeInputFileData%mass0(1,1,i)
-           READ(UnIn,*) BladeInputFileData%mass0(4,4,i),BladeInputFileData%mass0(5,5,i),&
-                        BladeInputFileData%mass0(6,6,i)
+           READ(UnIn,*) BladeInputFileData%mass0(5,5,i),BladeInputFileData%mass0(6,6,i),&
+                        BladeInputFileData%mass0(5,6,i)
            temp_xm2 = 0.0D0
            temp_xm3 = 0.0D0
            READ(UnIn,*) temp_xm2,temp_xm3
@@ -86,6 +86,8 @@
            BladeInputFileData%mass0(6,1,i) = BladeInputFileData%mass0(1,6,i)
            BladeInputFileData%mass0(4,2,i) = BladeInputFileData%mass0(2,4,i)
            BladeInputFileData%mass0(4,3,i) = BladeInputFileData%mass0(3,4,i)
+           BladeInputFileData%mass0(4,4,i) = BladeInputFileData%mass0(5,5,i) + BladeInputFileData%mass0(6,6,i)
+           BladeInputFileData%mass0(6,5,i) = BladeInputFileData%mass0(5,6,i)
        ENDDO
    ENDIF
 
