@@ -28,6 +28,7 @@
    CHARACTER(1024)              :: BldFile
 
    INTEGER(IntKi)               :: i
+   INTEGER(IntKi)               :: j
    INTEGER(IntKi)               :: temp_int 
 
    Echo = .FALSE.
@@ -58,12 +59,20 @@
 
    temp_int = 2*InputFileData%member_total+1
    CALL AllocAry(InputFileData%kp_coordinate,temp_int,3,'Key point coordinates input array',ErrStat2,ErrMsg2)
-   CALL AllocAry(InputFileData%initial_twist,temp_int,'Key point initial twist array',ErrStat2,ErrMsg2)
+   CALL AllocAry(InputFileData%initial_twist,InputFileData%member_total+1,'Key point initial twist array',ErrStat2,ErrMsg2)
    InputFileData%kp_coordinate(:,:) = 0.0D0
    InputFileData%initial_twist(:)   = 0.0D0
+
+   j = 0
    DO i=1,temp_int
-       READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                    InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(i)
+       IF(MOD(i,2) .NE. 0) THEN
+           j = j + 1
+           READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
+                        InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(j)
+       ELSE
+           READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
+                        InputFileData%kp_coordinate(i,1)
+       ENDIF
 !       IF(MOD(i,2)==0) THEN
 !           IF(InputFileData%initial_twist(i)/=270.0) THEN
 !               WRITE(*,*) "Incorrect initial twist angle at mid point:",i

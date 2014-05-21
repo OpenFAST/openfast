@@ -107,7 +107,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    REAL(ReKi)              :: temp_EP1(3)
    REAL(ReKi)              :: temp_EP2(3)
    REAL(ReKi)              :: temp_MID(3)
-   REAL(ReKi)              :: temp_twist(3)
+   REAL(ReKi)              :: temp_twist(2)
    REAL(ReKi)              :: temp_phi
    REAL(ReKi)              :: temp_POS(3)
    REAL(ReKi)              :: temp_CRV(3)
@@ -169,12 +169,11 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
        temp_EP1(1:3) = InputFileData%kp_coordinate(temp_id+1,1:3)
        temp_MID(1:3) = InputFileData%kp_coordinate(temp_id+2,1:3)
        temp_EP2(1:3) = InputFileData%kp_coordinate(temp_id+3,1:3)
-       temp_twist(1) = InputFileData%initial_twist(temp_id+1)
-       temp_twist(2) = InputFileData%initial_twist(temp_id+2)
-       temp_twist(3) = InputFileData%initial_twist(temp_id+3)
+       temp_twist(1) = InputFileData%initial_twist(i)
+       temp_twist(2) = InputFileData%initial_twist(i+1)
        DO j=1,p%node_elem
            CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS)
-           temp_phi = temp_twist(1) + (temp_twist(3)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
            CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
            temp_id2 = (j-1)*p%dof_node 
            p%uuN0(temp_id2+1,i) = temp_POS(1)
@@ -249,6 +248,8 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    WRITE(*,*) "temp_GL: ", temp_GLL(:)
    DO i=1,InputFileData%member_total*2+1
        WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
+   ENDDO
+   DO i=1,InputFileData%member_total+1
        WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
    ENDDO
    DO i=1,InputFiledata%member_total
@@ -266,11 +267,11 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,2)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,2)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
-!   STOP
+   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
