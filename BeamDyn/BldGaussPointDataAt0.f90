@@ -1,6 +1,6 @@
-   SUBROUTINE BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+   SUBROUTINE BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,EStif0_GL,node_elem,dof_node,uu0,E10,Stif)
 
-   REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuu0(:),Nrr0(:),NStif0(:,:,:)
+   REAL(ReKi),INTENT(IN):: hhx(:),hpx(:),Nuu0(:),Nrr0(:),EStif0_GL(:,:,:)
    REAL(ReKi),INTENT(INOUT):: uu0(:),E10(:),Stif(:,:)
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node 
 
@@ -20,11 +20,11 @@
            uu0(i+3) = uu0(i+3) + hhi*Nrr0(temp_id2+i)
            E10(i) = E10(i) + hpi*Nuu0(temp_id+i)
        ENDDO
-       DO i=1,6
-           DO j=1,6
-               Stif(i,j) = Stif(i,j) + hhi*NStif0(i,j,inode)
-           ENDDO
-       ENDDO
+!       DO i=1,6
+!           DO j=1,6
+!               Stif(i,j) = Stif(i,j) + hhi*NStif0(i,j,inode)
+!           ENDDO
+!       ENDDO
    ENDDO   
 
    rot0_temp = 0.0D0

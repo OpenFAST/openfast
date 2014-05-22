@@ -3,7 +3,7 @@
                         &E1,RR0,kapa,Stif,cet)
  
    REAL(ReKi),INTENT(IN)::Nuuu(:),Nrrr(:),Nuu0(:),Nrr0(:)
-   REAL(ReKi),INTENT(IN)::E10(:),hhp(:,:),Stif0(:,:,:),Jac
+   REAL(ReKi),INTENT(IN)::E10(:),hhp(:,:),Stif0(:,:),Jac
    INTEGER(IntKi),INTENT(IN)::node_elem,nnode,dof_node
 
    REAL(ReKi),INTENT(INOUT)::E1(:),RR0(:,:),kapa(:)
@@ -61,7 +61,7 @@
        ENDDO
    ENDDO
 
-   Stif(1:6,1:6) = Stif0(1:6,1:6,nnode)
+   Stif(1:6,1:6) = Stif0(1:6,1:6)
    cet = Stif(5,5) + Stif(6,6)
    Stif = MATMUL(tempR6,MATMUL(Stif,TRANSPOSE(tempR6)))
 
