@@ -1,8 +1,8 @@
    SUBROUTINE ComputeRootForceNodal(uuN0,uuNf,Stif0,node_elem,dof_node,Fc)
 
-   REAL(ReKi),    INTENT(IN   ):: uuN0(:)
+   REAL(ReKi),    INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),    INTENT(IN   ):: uuNf(:)
-   REAL(ReKi),    INTENT(IN   ):: Stif0(:,:,:)
+   REAL(ReKi),    INTENT(IN   ):: Stif0(:,:)
    INTEGER(IntKi),INTENT(IN   ):: node_elem
    INTEGER(IntKi),INTENT(IN   ):: dof_node
    REAL(ReKi),    INTENT(  OUT):: Fc(:)
@@ -64,7 +64,8 @@
 
    i = 1
    ! Get Nodal Displacement Vector Nuu0 from Global Vector uuN0 at t=0    
-   CALL ElemNodalDispGL(uuN0,node_elem,dof_node,i,Nuu0)
+!   CALL ElemNodalDispGL(uuN0,node_elem,dof_node,i,Nuu0)
+   Nuu0(:) = uuN0(:,i)
    ! Get Nodal Displacement Vector Nuuu from Global Vector uuNf
    CALL ElemNodalDispGL(uuNf,node_elem,dof_node,i,Nuuu)
    ! Compute Nodal Relative Rotation Vector Nrr0 
@@ -82,7 +83,7 @@
    Qe = 0.0D0
    Stif = 0.0D0
    cet = 0.0D0
-   CALL BDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BeamDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
    CALL BDyn_gen_deriv_LSGL(node_elem-1,GLL_temp,hhp)
    CALL NewNodalDataAt0(node_elem,dof_node,i,hhp,Nuu0,Jac,E10)
    CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,Jac,&

@@ -1,7 +1,7 @@
-   SUBROUTINE ElementMatrixLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,NStif0,ngp,node_elem,dof_node,elk,elf)
+   SUBROUTINE ElementMatrixLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,EStif0_GL,ngp,node_elem,dof_node,elk,elf)
 
    REAL(ReKi),INTENT(IN):: Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
-   REAL(ReKi),INTENT(IN):: NStif0(:,:,:)
+   REAL(ReKi),INTENT(IN):: EStif0_GL(:,:,:)
    INTEGER(IntKi),INTENT(IN):: ngp,node_elem,dof_node
 
    REAL(ReKi),INTENT(INOUT):: elk(:,:),elf(:)      
@@ -44,13 +44,14 @@
 
    elk = 0.0D0
    elf = 0.0D0
-   CALL BDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BeamDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
 !   CALL BldSet1DGaussPointScheme(ngp,gp,gw)
    CALL BldGaussPointWeight(ngp,gp,gw)
    DO igp=1,ngp
        gpr = gp(igp)
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
-       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,EStif0_GL,node_elem,dof_node,uu0,E10,Stif)
+       Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)

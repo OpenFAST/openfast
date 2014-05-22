@@ -24,7 +24,6 @@
 !**********************************************************************************************************************************
 PROGRAM MAIN
 
-!   USE BeamDynGL
    USE BeamDynLSGL
    USE BeamDyn_Types
 
@@ -45,31 +44,32 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: pc_max           ! 1:explicit loose; 2:pc loose
    INTEGER(IntKi)                     :: pc               ! counter for pc iterations
 
-   INTEGER(IntKi)                     :: BDyn_interp_order     ! order of interpolation/extrapolation
+   INTEGER(IntKi)                     :: BD_interp_order     ! order of interpolation/extrapolation
    REAL(Reki), ALLOCATABLE  		  :: F_total(:)		  !Dummy variable for large load loop NJ 3/18/14
    INTEGER(IntKi),PARAMETER:: OutUnit = 10
    INTEGER(IntKi),PARAMETER:: OutQiUnit = 20
 
    ! BeamDyn Derived-types variables; see Registry_BeamDyn.txt for details
 
-   TYPE(BDyn_InitInputType)           :: BDyn_InitInput
-   TYPE(BDyn_ParameterType)           :: BDyn_Parameter
-   TYPE(BDyn_ContinuousStateType)     :: BDyn_ContinuousState
-   TYPE(BDyn_ContinuousStateType)     :: BDyn_ContinuousStateDeriv
-   TYPE(BDyn_InitOutputType)          :: BDyn_InitOutput
-   TYPE(BDyn_DiscreteStateType)       :: BDyn_DiscreteState
-   TYPE(BDyn_ConstraintStateType)     :: BDyn_ConstraintState
-   TYPE(BDyn_OtherStateType)          :: BDyn_OtherState
+   TYPE(BD_InitInputType)           :: BD_InitInput
+   TYPE(BD_ParameterType)           :: BD_Parameter
+   TYPE(BD_ContinuousStateType)     :: BD_ContinuousState
+   TYPE(BD_ContinuousStateType)     :: BD_ContinuousStateDeriv
+   TYPE(BD_InitOutputType)          :: BD_InitOutput
+   TYPE(BD_DiscreteStateType)       :: BD_DiscreteState
+   TYPE(BD_ConstraintStateType)     :: BD_ConstraintState
+   TYPE(BD_OtherStateType)          :: BD_OtherState
 
-   TYPE(BDyn_InputType),Dimension(:),Allocatable  :: BDyn_Input
-   REAL(DbKi) , DIMENSION(:), ALLOCATABLE           :: BDyn_InputTimes
+   TYPE(BD_InputType),Dimension(:),Allocatable  :: BD_Input
+   REAL(DbKi) , DIMENSION(:), ALLOCATABLE           :: BD_InputTimes
 
-   TYPE(BDyn_OutputType),Dimension(:),Allocatable  :: BDyn_Output
-   REAL(DbKi) , DIMENSION(:), ALLOCATABLE          :: BDyn_OutputTimes
+   TYPE(BD_OutputType),Dimension(:),Allocatable  :: BD_Output
+   REAL(DbKi) , DIMENSION(:), ALLOCATABLE          :: BD_OutputTimes
 
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
+   Integer(IntKi)                     :: k               ! counter for various loops
 
 
    OPEN(unit = OutUnit, file = 'BeamDyn.out', status = 'REPLACE',ACTION = 'WRITE')
@@ -96,27 +96,29 @@ PROGRAM MAIN
 !   BDyn_InitInput%order    = 12  ! order of spectral elements
 
    !Simple_Cant_Beam: allocate Input and Output arrays; used for interpolation and extrapolation
-   Allocate(BDyn_Input(1))
-   Allocate(BDyn_InputTimes(1))
+   Allocate(BD_Input(1))
+   Allocate(BD_InputTimes(1))
 
-   Allocate(BDyn_Output(1))
-   Allocate(BDyn_OutputTimes(1))
+   Allocate(BD_Output(1))
+   Allocate(BD_OutputTimes(1))
 
+   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
+   BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
 
-   CALL BDyn_Init( BDyn_InitInput        &
-                   , BDyn_Input(1)         &
-                   , BDyn_Parameter        &
-                   , BDyn_ContinuousState  &
-                   , BDyn_DiscreteState    &
-                   , BDyn_ConstraintState  &
-                   , BDyn_OtherState       &
-                   , BDyn_Output(1)        &
+   CALL BeamDyn_Init( BD_InitInput        &
+                   , BD_Input(1)         &
+                   , BD_Parameter        &
+                   , BD_ContinuousState  &
+                   , BD_DiscreteState    &
+                   , BD_ConstraintState  &
+                   , BD_OtherState       &
+                   , BD_Output(1)        &
                    , dt_global_dummy       &
-                   , BDyn_InitOutput       &
+                   , BD_InitOutput       &
                    , ErrStat               &
                    , ErrMsg )
 
-    ALLOCATE( F_total(BDyn_Parameter%dof_total),      STAT=ErrStat ) !Allocate dummy variable NJ 3/18/14
+    ALLOCATE( F_total(BD_Parameter%dof_total),      STAT=ErrStat ) !Allocate dummy variable NJ 3/18/14
     F_total = 0.0D0
 !------------------------------------------------
 ! start - playground
@@ -142,44 +144,44 @@ PROGRAM MAIN
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
 
 DO j=1,1	!ADDED LOOP TO RUN THROUGH ALL LOAD STEP SCENARIOS, NJ 3/18/2014
-	CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
-                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
-                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
-                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
-                      &BDyn_Parameter%ngp,BDyn_Parameter%niter,BDyn_Parameter%piter)  	  
-	IF (BDyn_Parameter%piter .EQ. BDyn_Parameter%niter) THEN	!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014
-		BDyn_OtherState%uuNf=0
+	CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
+                      &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
+                      &BD_Parameter%node_elem, BD_Parameter%dof_node,&
+                      &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
+                      &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter)  	  
+	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN	!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014
+		BD_OtherState%uuNf=0
 		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 2 steps"
 	END IF
  
-	IF (BDyn_Parameter%piter .NE. BDyn_Parameter%niter) EXIT !EXIT OVERALL LOOP IF NUMBER OF NR ITERATION HAS NOT BEEN REACHED, NJ 3/18/2014 
+	IF (BD_Parameter%piter .NE. BD_Parameter%niter) EXIT !EXIT OVERALL LOOP IF NUMBER OF NR ITERATION HAS NOT BEEN REACHED, NJ 3/18/2014 
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 2 STEPS
-	F_total = BDyn_Parameter%F_ext	!DEFINES DUMMY VARIABLE TO CUT LOAD IN HALF, NJ 3/18/2014
+	F_total = BD_Parameter%F_ext	!DEFINES DUMMY VARIABLE TO CUT LOAD IN HALF, NJ 3/18/2014
 	DO i =1,2 
-		BDyn_Parameter%F_ext=F_total/2*i
-		CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
-                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
-                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
-                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
-                      &BDyn_Parameter%ngp,BDyn_Parameter%niter,BDyn_Parameter%piter) 
+		BD_Parameter%F_ext=F_total/2*i
+		CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
+                      &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
+                      &BD_Parameter%node_elem, BD_Parameter%dof_node,&
+                      &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
+                      &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
 	END DO
-	IF (BDyn_Parameter%piter .EQ. BDyn_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
-		BDyn_OtherState%uuNf=0
+	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
+		BD_OtherState%uuNf=0
 		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 3 steps"
 	END IF
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 3 STEPS
-	IF (BDyn_Parameter%piter .NE. BDyn_Parameter%niter) EXIT
+	IF (BD_Parameter%piter .NE. BD_Parameter%niter) EXIT
 	DO i =1,3
-		BDyn_Parameter%F_ext=F_total/3*i
-		CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
-                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
-                      &BDyn_Parameter%node_elem, BDyn_Parameter%dof_node,&
-                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
-                      &BDyn_Parameter%ngp,BDyn_Parameter%niter,BDyn_Parameter%piter) 
+		BD_Parameter%F_ext=F_total/3*i
+		CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
+                      &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
+                      &BD_Parameter%node_elem, BD_Parameter%dof_node,&
+                      &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
+                      &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
 	END DO
-	IF (BDyn_Parameter%piter .EQ. BDyn_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED EXIT PROGRAM, NJ 3/18/2014
+	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED EXIT PROGRAM, NJ 3/18/2014
 		WRITE(*,*) "Solution failed to converge after reducing load into 3 steps: end simulation"
 		STOP
 	END IF
@@ -195,39 +197,43 @@ END DO
 !                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
 !                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
 
-   CALL ComputeRootForceNodal(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
-                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
-                 &BDyn_OtherState%RootForce)
+   CALL ComputeRootForceNodal(BD_Parameter%uuN0,BD_OtherState%uuNf,&
+                 &BD_Parameter%Stif0_N1,BD_Parameter%node_elem,BD_Parameter%dof_node,&
+                 &BD_OtherState%RootForce)
 
    WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
    WRITE(OutUnit,*) '=========================================='
-   DO i=1,BDyn_Parameter%node_total
-       j = (i - 1) * BDyn_Parameter%dof_node
-       WRITE(OutUnit,1000) i,BDyn_Parameter%uuN0(j+1),BDyn_Parameter%uuN0(j+2),BDyn_Parameter%uuN0(j+3),&
-                          &BDyn_Parameter%uuN0(j+4),BDyn_Parameter%uuN0(j+5),BDyn_Parameter%uuN0(j+6)
+   DO i=1,BD_Parameter%elem_total
+       WRITE(OutUnit,*) 'Member #: ',i
+       DO j=1,BD_Parameter%node_elem
+           k = (j - 1) * BD_Parameter%dof_node
+           WRITE(OutUnit,3000) BD_Parameter%uuN0(k+1,i),BD_Parameter%uuN0(k+2,i),BD_Parameter%uuN0(k+3,i),&
+                              &BD_Parameter%uuN0(k+4,i),BD_Parameter%uuN0(k+5,i),BD_Parameter%uuN0(k+6,i)
+       ENDDO
    ENDDO
   
    WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
    WRITE(OutUnit,*) '=========================================='
-   DO i=1,BDyn_Parameter%node_total
-       j = (i - 1) * BDyn_Parameter%dof_node
-       WRITE(OutUnit,1000) i,BDyn_OtherState%uuNf(j+1),BDyn_OtherState%uuNf(j+2),BDyn_OtherState%uuNf(j+3),&
-                          &BDyn_OtherState%uuNf(j+4),BDyn_OtherState%uuNf(j+5),BDyn_OtherState%uuNf(j+6)
+   DO i=1,BD_Parameter%node_total
+       j = (i - 1) * BD_Parameter%dof_node
+       WRITE(OutUnit,1000) i,BD_OtherState%uuNf(j+1),BD_OtherState%uuNf(j+2),BD_OtherState%uuNf(j+3),&
+                          &BD_OtherState%uuNf(j+4),BD_OtherState%uuNf(j+5),BD_OtherState%uuNf(j+6)
    ENDDO
    WRITE(OutUnit,*) 'Root Forces'
    WRITE(OutUnit,*) '=========================================='
-   WRITE(OutUnit,1000) 1,BDyn_OtherState%RootForce(1),BDyn_OtherState%RootForce(2),BDyn_OtherState%RootForce(3),&
-                          &BDyn_OtherState%RootForce(4),BDyn_OtherState%RootForce(5),BDyn_OtherState%RootForce(6)
+   WRITE(OutUnit,1000) 1,BD_OtherState%RootForce(1),BD_OtherState%RootForce(2),BD_OtherState%RootForce(3),&
+                          &BD_OtherState%RootForce(4),BD_OtherState%RootForce(5),BD_OtherState%RootForce(6)
 
-   DO i=1,BDyn_Parameter%node_total
-       j = (i-1) * BDyn_Parameter%dof_node
-       WRITE(OutQiUnit,2000) BDyn_Parameter%uuN0(j+1),BDyn_OtherState%uuNf(j+1),BDyn_OtherState%uuNf(j+2),&
-                            &BDyn_OtherState%uuNf(j+3),BDyn_OtherState%uuNf(j+4),BDyn_OtherState%uuNf(j+5),&
-                            &BDyn_OtherState%uuNf(j+6)
+   DO i=1,BD_Parameter%node_total
+       j = (i-1) * BD_Parameter%dof_node
+       WRITE(OutQiUnit,2000) BD_OtherState%uuNf(j+1),BD_OtherState%uuNf(j+2),&
+                            &BD_OtherState%uuNf(j+3),BD_OtherState%uuNf(j+4),BD_OtherState%uuNf(j+5),&
+                            &BD_OtherState%uuNf(j+6)
    ENDDO
 
    1000 FORMAT (' ',I5.2,6ES21.12)
    2000 FORMAT (' ',7ES21.12)
+   3000 FORMAT (' ',6ES21.12)
    CLOSE (OutUnit)
    CLOSE (OutQiUnit)
 !         CALL BDyn_UpdateStates( t_global, n_t_global, BDyn_Input, BDyn_InputTimes, BDyn_Parameter, &
@@ -264,18 +270,18 @@ END DO
    ! -------------------------------------------------------------------------
    
 
-   CALL BDyn_End( BDyn_Input(1), BDyn_Parameter, BDyn_ContinuousState, BDyn_DiscreteState, &
-                    BDyn_ConstraintState, BDyn_OtherState, BDyn_Output(1), ErrStat, ErrMsg )
+   CALL BeamDyn_End( BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                    BD_ConstraintState, BD_OtherState, BD_Output(1), ErrStat, ErrMsg )
 
-   do i = 2, BDyn_interp_order+1
-      CALL BDyn_DestroyInput(BDyn_Input(i), ErrStat, ErrMsg )
-      CALL BDyn_DestroyOutput(BDyn_Output(i), ErrStat, ErrMsg )
+   do i = 2, BD_interp_order+1
+      CALL BD_DestroyInput(BD_Input(i), ErrStat, ErrMsg )
+      CALL BD_DestroyOutput(BD_Output(i), ErrStat, ErrMsg )
    enddo
 
-   DEALLOCATE(BDyn_Input)
-   DEALLOCATE(BDyn_Output)
-   DEALLOCATE(BDyn_InputTimes)
-   DEALLOCATE(BDyn_OutputTimes)
+   DEALLOCATE(BD_Input)
+   DEALLOCATE(BD_Output)
+   DEALLOCATE(BD_InputTimes)
+   DEALLOCATE(BD_OutputTimes)
 
 
 END PROGRAM MAIN
