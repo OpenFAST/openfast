@@ -387,6 +387,7 @@ LOGICAL                               :: calcJacobian                           
       InitInData_HD%InputFile     = p_FAST%HydroFile
       InitInData_HD%OutRootName   = p_FAST%OutFileRoot
       InitInData_HD%TMax          = p_FAST%TMax
+      InitInData_HD%hasIce        = p_FAST%CompIce /= Module_None
 
       CALL HydroDyn_Init( InitInData_HD, HD_Input(1), p_HD,  x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, p_FAST%dt_module( MODULE_HD ), InitOutData_HD, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
@@ -481,6 +482,8 @@ LOGICAL                               :: calcJacobian                           
       InitInData_IceF%InputFile     = p_FAST%IceFile
       InitInData_IceF%RootName      = p_FAST%OutFileRoot     
       InitInData_IceF%simLength     = p_FAST%TMax
+      InitInData_IceF%MSL2SWL       = InitOutData_HD%MSL2SWL
+      InitInData_IceF%gravity       = InitOutData_ED%Gravity
       
       CALL IceFloe_Init( InitInData_IceF, IceF_Input(1), p_IceF,  x_IceF, xd_IceF, z_IceF, OtherSt_IceF, y_IceF, p_FAST%dt_module( MODULE_IceF ), InitOutData_IceF, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_IceF) = .TRUE.
@@ -2095,6 +2098,28 @@ CONTAINS
             CALL CheckError( ErrStat, 'Message from IceFloe_InputSolve: '//NewLine//ErrMsg  )
                                  
       END IF        
+      
+#ifdef DEBUG_MESH_TRANSFER_ICE
+         CALL WrScr('********************************************************')
+         CALL WrScr('****   IceF to SD point-to-point                   *****')
+         CALL WrScr('********************************************************')
+         CALL WriteMappingTransferToFile(SD_Input(1)%LMesh, y_SD%Y2Mesh, IceF_Input(1)%iceMesh, y_IceF%iceMesh,&
+               MeshMapData%SD_P_2_IceF_P, MeshMapData%IceF_P_2_SD_P, &
+               'SD_y2_IceF_Meshes_t'//TRIM(Num2LStr(0))//'.PI.bin' )
+
+         
+         CALL WriteMappingTransferToFile(SD_Input(1)%LMesh, y_SD%Y2Mesh, HD_Input(1)%Morison%LumpedMesh, y_HD%Morison%LumpedMesh,&
+               MeshMapData%SD_P_2_HD_M_P, MeshMapData%HD_M_P_2_SD_P, &
+               'SD_y2_HD_M_L_Meshes_t'//TRIM(Num2LStr(0))//'.PHL.bin' )
+         
+         CALL WriteMappingTransferToFile(SD_Input(1)%LMesh, y_SD%Y2Mesh, HD_Input(1)%Morison%DistribMesh, y_HD%Morison%DistribMesh,&
+               MeshMapData%SD_P_2_HD_M_L, MeshMapData%HD_M_L_2_SD_P, &
+               'SD_y2_HD_M_D_Meshes_t'//TRIM(Num2LStr(0))//'.PHD.bin' )
+         
+         
+         !print *
+         !pause         
+#endif         
                   
    END SUBROUTINE SolveOption1
    !...............................................................................................................................

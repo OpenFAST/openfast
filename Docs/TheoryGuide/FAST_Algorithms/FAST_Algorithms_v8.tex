@@ -161,12 +161,13 @@ The other input-output relationships for these modules are solved using Solve Op
            & \Call{TransferMeshMotions}{\mathit{y\_ED}}  \\
 					 & \cup \Call{TransferMeshLoads}{}(\!
 					    \begin{aligned}[t] 
+							   & \mathit{y\_SD}, \\
 							   & \mathit{y\_HD},\mathit{u\_HD\_tmp}, \\
 					       & \mathit{y\_IceF},\mathit{u\_IceF\_tmp}) \\
 							\end{aligned}
 			\end{aligned}$
 		\State$\mathit{u\_ED\_tmp} \gets \Call{TransferMeshLoads}{}( \!
-				     \begin{aligned}[t]   & \mathit{y\_ED,} \\
+				     \begin{aligned}[t]   & \mathit{y\_ED}, \\
 																  & \mathit{y\_HD},  \mathit{u\_HD\_tmp},  \\
 																  & \mathit{y\_SD},  \mathit{u\_SD\_tmp},  \\  
 																	& \mathit{y\_MAP}, \mathit{u\_MAP\_tmp}, \\ 
@@ -189,14 +190,14 @@ The other input-output relationships for these modules are solved using Solve Op
 		%\State Compare new $u$ with $U\_Residual$
 		%\State}
 
-		\State Solve  $\frac{\partial U}{\partial u} \delta u = - \mathit{U\_Residual}$ for $\delta u$
+		\State Solve  $\frac{\partial U}{\partial u} \Delta u = - \mathit{U\_Residual}$ for $\Delta u$
 
 		\State    
-		\If{$\lVert \delta u \rVert_2 < $ tolerance } \Comment{To be implemented later}
+		\If{$\lVert \Delta u \rVert_2 < $ tolerance } \Comment{To be implemented later}
 			\State exit loop
 		\EndIf
 		\State
-		\State $u \gets u + \delta u$
+		\State $u \gets u + \Delta u$
 		\State Transfer $u$ to $\mathit{u\_HD}$, $\mathit{u\_SD}$, and $\mathit{u\_ED}$\Comment{loads and accelerations only}
 		\State $k=k+1$
 		
