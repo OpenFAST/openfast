@@ -1,0 +1,29 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{authblk}
+\usepackage{psfrag}
+\usepackage{fouridx}
+%\usepackage{natbib}
+\usepackage{cite}
+
+
+
+\begin{document}
+
+Wind power installations in the U.S. have exceeded 60 GW, and have become an increasingly important part of the overall energy portfolio. Over recent years the size of wind turbines has also increased in the quest for economies of scale.  Larger wind turbine blades result in structures that are highly flexible.  To ensure the performance and reliability of wind turbines it is crucial to make use of computer aided engineering (CAE) tools that are capable of analyzing wind turbine blades in an accurate and efficient manner.  Modern supercomputers make full 3D computational analysis an option, but these simulations are computationally expensive, thus it is preferable to have an efficient high fidelity alternative.  
+
+Beam models are widely used to analyze structures that have one of its dimension much larger than the other two.  Many engineering structures are modeled as beams: bridges, joists, and helicopter rotor blades. Similarly, beam models are ideal to analyze wind turbine blades, towers, and shafts.  Most wind turbine blades are constructed of composite materials, and analysis of composite beams is more complicated than isotropic beams due to the elastic coupling effects.  The geometrically exact beam theory (GEBT), first proposed by Reissner\cite{Ressiner1973} is a beam analysis method capable of efficiently analyzing composite structures.  GEBT that has demonstrated its efficacy in helicopter rotor analysis. Simo\cite{Simo1985} and Vu-Quoc\cite{Simo1986} extended Reissner's initial work to include 3D dynamic problems. Jeleni\'c and Crisfield\cite{Crisfield1999} derived a finite-element (FE) method that interpolates the rotation field thereby preserving the geometric exactness of this theory. Betsch and Steinmann\cite{Betsch2002} circumvented the interpolation of rotation by introducing a re-parameterization of the weak form corresponding to the equations of motion. It is noted that Ibrahimbegovi\'c and his colleagues implemented this theory for static\cite{Ibrahim1995} and dynamic\cite{Ibrahim1998} analysis. Readers are referred to Hodges\cite{HodgesBeamBook}, where comprehensive derivations and discussions on nonlinear composite-beam theories can be found.  
+
+FAST is a CAE tool developed by the National Renewable Energy Laboratory (NREL) for the purposes of wind turbine analysis for both land-based and offshore wind turbines using realistic operating conditions.  The current beam model in FAST is not capable of analyzing composite or highly flexible wind turbine blades. In this paper, a first order, three-dimensional displacement-based implementation of the geometrically exact beam theory using the Runge-Kutta (RK4) method is presented. A state-space formulation will be shown for the purposes of integrating with the FAST framework, thereby replacing the current beam model with GEBT. This work builds on previous efforts that showed the implementation GEBT and Spatial discretization executed using Legendre spectral finite elements (LSFEs)\cite{Wang:GEBT2014} for analysis of composite wind turbine blades. 
+
+The paper is organized as follows.  First, The theoretical foundation of the first-order geometrically exact beam theory along with the RK4 integration scheme is introduced. Then coupling to the FAST framework is discussed. Finally, verification examples are provided to show the accuracy and efficiency of the present model for composite wind turbine blades.  
+
+
+\bibliographystyle{intro}
+\bibliography{references}
+
+\end{document}
