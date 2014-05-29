@@ -23,7 +23,7 @@
 !
 !**********************************************************************************************************************************
 PROGRAM MAIN
-
+ 
    USE BeamDynLSGL
    USE BeamDyn_Types
 
@@ -70,7 +70,7 @@ PROGRAM MAIN
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
    Integer(IntKi)                     :: k               ! counter for various loops
-
+   Integer(IntKi)                     :: n               ! counter load reduction
 
    OPEN(unit = OutUnit, file = 'BeamDyn.out', status = 'REPLACE',ACTION = 'WRITE')
    OPEN(unit = OutQiUnit, file = 'QiStaticDisp.out', status = 'REPLACE',ACTION = 'WRITE')
@@ -142,50 +142,65 @@ PROGRAM MAIN
 
    ! write initial condition for q1
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
+   
+n=1
 
-DO j=1,1	!ADDED LOOP TO RUN THROUGH ALL LOAD STEP SCENARIOS, NJ 3/18/2014
-	CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
-                      &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
-                      &BD_Parameter%node_elem, BD_Parameter%dof_node,&
-                      &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
-                      &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter)  	  
-	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN	!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014
-		BD_OtherState%uuNf=0
-		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 2 steps"
-	END IF
- 
-	IF (BD_Parameter%piter .NE. BD_Parameter%niter) EXIT !EXIT OVERALL LOOP IF NUMBER OF NR ITERATION HAS NOT BEEN REACHED, NJ 3/18/2014 
+!DO j=1,1	!ADDED LOOP TO RUN THROUGH ALL LOAD STEP SCENARIOS, NJ 3/18/2014
+!	CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
+ !                     &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
+ !                     &BD_Parameter%node_elem, BD_Parameter%dof_node,&
+ !                     &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
+ !                     &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter)  	  
+!	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN	!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014
+!		BD_OtherState%uuNf=0
+!		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 2 steps"
+	!END IF
+
+   
+    
+	!IF (BD_Parameter%piter .NE. BD_Parameter%niter) EXIT !EXIT OVERALL LOOP IF NUMBER OF NR ITERATION HAS NOT BEEN REACHED, NJ 3/18/2014 
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 2 STEPS
 	F_total = BD_Parameter%F_ext	!DEFINES DUMMY VARIABLE TO CUT LOAD IN HALF, NJ 3/18/2014
-	DO i =1,2 
-		BD_Parameter%F_ext=F_total/2*i
-		CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
+	DO WHILE (n .NE. 0)  
+    k=n
+		DO i=1,k
+          BD_Parameter%F_ext=F_total/n*i
+		   CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
                       &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
                       &BD_Parameter%node_elem, BD_Parameter%dof_node,&
                       &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
                       &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
+        
+        IF (BD_Parameter%piter .LT. BD_Parameter%niter) THEN
+          n=0  
+          EXIT
+        ELSE
+            n=n+1
+            WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with addition steps"
+            WRITE(*,*) "n=",n
+            BD_OtherState%uuNf=0
+        ENDIF!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
+		     
+        ENDDO
 	END DO
-	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
-		BD_OtherState%uuNf=0
-		WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with 3 steps"
-	END IF
+	
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 3 STEPS
-	IF (BD_Parameter%piter .NE. BD_Parameter%niter) EXIT
-	DO i =1,3
-		BD_Parameter%F_ext=F_total/3*i
-		CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
-                      &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
-                      &BD_Parameter%node_elem, BD_Parameter%dof_node,&
-                      &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
-                      &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
-	END DO
-	IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED EXIT PROGRAM, NJ 3/18/2014
-		WRITE(*,*) "Solution failed to converge after reducing load into 3 steps: end simulation"
-		STOP
-	END IF
-END DO
+!	IF (BD_Parameter%piter .NE. BD_Parameter%niter) EXIT
+!	DO i =1,3
+!		BD_Parameter%F_ext=F_total/3*i
+!		CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
+ !                     &BD_Parameter%Stif0_GL, BD_Parameter%F_ext,BD_Parameter%bc,&
+  !                    &BD_Parameter%node_elem, BD_Parameter%dof_node,&
+   !                   &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
+    !                  &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
+	!END DO
+	!IF (BD_Parameter%piter .EQ. BD_Parameter%niter) THEN !CONDITION IF NR ITERATIONS HAVE BEEN REACHED EXIT PROGRAM, NJ 3/18/2014
+	!	WRITE(*,*) "Solution failed to converge after reducing load into 3 steps: end simulation"
+	!	STOP
+	!END IF
+!END DO
    
 !   CALL StaticSolutionGL(BDyn_Parameter%uuN0, BDyn_OtherState%uuNf,&
 !                      &BDyn_Parameter%Stif0, BDyn_Parameter%F_ext,BDyn_Parameter%bc,&
