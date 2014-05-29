@@ -1,0 +1,279 @@
+% useful definitions
+
+\def\text#1{\mbox{#1}}
+\def\const{\mbox{const}}
+\def\half{\frac{1}{2}}
+
+\def\be{\begin{equation}}
+\def\ee{\end{equation}}
+\def\ba{\begin{array}}
+\def\ea{\end{array}}
+\def\bea{\begin{eqnarray}}
+\def\eea{\end{eqnarray}}
+\def\nn{\nonumber}
+\def\bt{\begin{tabular}}
+\def\et{\end{tabular}}
+\def\bc{\begin{center}}
+\def\ec{\end{center}}
+\def\lb{\label}
+\def\nth#1{${#1}^{\text{\ssrm th}}$}
+\def\sgn{\text{sgn}}
+\def\adhoc{{\em ad hoc} }
+\def\viz{{\em viz.}}
+\def\Fmatrix#1{\left \{ {\matrix{#1}} \right \}}
+%\def\Bmatrix#1{\left [ {\matrix{#1}} \right]}
+\def\doubleunderline#1{{\underline{\underline{#1}}}}
+
+\def\bracket#1{\left [ {#1} \right ] }
+\def\fbracket#1{\left \{ {#1} \right \} }
+\def\braced#1{\left ( {#1} \right ) }
+\def\angbracket#1{\left< {#1} \right> }
+
+\def\midl#1{{ \left \langle {#1} \right \rangle}}
+\newcommand{\abs}[1]{{\left|{#1}\right|}}
+\newcommand{\norm}[1]{{\left\|{#1}\right\|}}
+\def\diff#1#2{{\partial {#1} \over \partial {#2}}}
+\def\bdiff#1{{\partial \over \partial{#1}}}
+
+\def\slashdiff#1#2{{\partial{#1}/\!\partial {#2}}}
+\def\diffTwo#1#2{{\partial^2 {#1} \over \partial {#2}^2}}
+\def\fdiff#1#2{{d{#1}\over d{#2}}}
+\def\fdiffTWo#1#2{{d^2{#1}\over d{#2}^2}}
+\def\slashfdiff#1#2{{d{#1}/\!d{#2}}}
+\def\conv{{\bf:}}
+\newcommand{\vect}[1]{{\mbox{\boldmath$#1$}}}%%vector%LaTeX209
+%\newcommand{\vect}[1]{{\mbox{$\mathbf #1$}}}%%vector%LaTeX2e
+
+
+%Citation macros
+
+\def\lcite#1{\cite[#1]{#1}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% For pictures %%%%%%%
+
+\def\illustration #1 by #2 (#3){
+  \vbox to #2{
+    \hrule width #1 height 0pt depth 0pt
+    \vfill
+    \special{illustration #3}}}
+
+\def\scaledillustration #1 by #2 (#3 scaled #4){{
+  \dimen0=#1 \dimen1=#2
+  \divide\dimen0 by 1000 \multiply\dimen0 by #4
+  \divide\dimen1 by 1000 \multiply\dimen1 by #4
+  \illustration \dimen0 by \dimen1 (#3 scaled #4)}}
+
+%\def\picture #1 by #2 (#3){
+%  \vbox to #2{
+%    \hrule width #1 height 0pt depth 0pt
+%    \vfill
+%    \special{picture #3} % this is the low-level interface
+%    }
+%  }
+
+\def\scaledpicture #1 by #2 (#3 scaled #4){{
+  \dimen0=#1 \dimen1=#2
+  \divide\dimen0 by 1000 \multiply\dimen0 by #4
+  \divide\dimen1 by 1000 \multiply\dimen1 by #4
+  \picture \dimen0 by \dimen1 (#3 scaled #4)}
+  }
+
+
+\def\WidthBoarder{0pt}
+
+\def\picture #1 by #2 (#3){
+\vrule width \WidthBoarder height #2 depth 0pt
+  \vbox to #2{
+    \hrule width #1 height \WidthBoarder depth 0pt
+    \vfill
+    \special{picture #3} % this is the low-level interface
+\hrule width #1 height \WidthBoarder depth 0pt
+             }
+\vrule width \WidthBoarder height #2 depth 0pt
+                          }
+
+%%%%%% #1 - Caption, #2 - Label-Name, #3#4 - Size, #5 Scale
+
+%%%%%  \PICT{Caption}{Label-Name}{Width}{Height}{Scale}
+%%%%%  \EPSF{Caption}{Label-Name}{Width}{Height}{Scale}
+\def\draft{0}
+
+\def\PICT#1#2#3#4#5{
+\begin{figure}
+$$
+\scaledpicture #3 by #4 (#2 scaled #5)
+$$
+\caption{#1}
+\label{#2}
+\end{figure}
+}
+
+\def\EPSF#1#2#3#4#5{
+%\begin{figure}
+\begin{figure}[p]
+\vskip 0pt plus 0.5in
+$$
+\scaledillustration #3 by #4 (#2.epsf scaled #5)
+$$
+\if\draft1\caption{#1 (File: #2)}%Temporaraly for debuging purpose (draft)
+\else
+\caption{#1}
+\fi
+\vspace{0pt plus 0.5in}
+\label{#2}
+\end{figure}
+}
+
+%%commented by WenbinYU
+
+\input BoxedEPS.tex
+
+%\SetEPSFDirectory{EPSF}
+\SetTexturesEPSFSpecial
+\HideDisplacementBoxes
+
+\newcommand{\PICTBOX}[4]{
+$$\BoxedEPSF{#1.eps scaled #4}$$}
+
+\def\EPS#1#2#3{
+\begin{figure}
+\vskip 0pt plus 0.5in
+$$
+\BoxedEPSF{#2.eps scaled #3}
+$$
+\if\draft1\caption{#1 (File: #2)}%Temporaraly for debuging purpose (draft)
+\else
+\caption{#1}
+\fi
+\vspace{0pt plus 0.5in}
+\label{#2}
+\end{figure}
+}
+%%%%%%%% End for pictures %%%%%%%
+
+
+\def\emptycleardoublepage{
+\newpage
+\pagestyle{empty}
+\cleardoublepage
+\pagestyle{headings}
+}
+
+
+%   Indented boxes by paragragh indentation width
+\def\ihbox#1{\hbox{\indent \vbox{#1}}}
+\def\iihbox#1{\hbox{\hskip 2\parindent \vbox{#1}}}
+\def\iiihbox#1{\hbox{\hskip 3\parindent \vbox{#1}}}
+\def\iiiihbox#1{\hbox{\hskip 4\parindent \vbox{#1}}}
+
+%   using roman font text within mathmode
+\def \text#1{\hbox{\rm #1}}
+
+%   Common abreviations
+\def\ie{{\it i.e.}}
+\def\eg{{\it e.g.}}
+\def\etal{{\it et al.}}
+\def\nd{\noindent}
+\def\ndv{\vskip-0.12in\noindent}
+\def\delpsi{\overline{\delta\psi}}
+\def\delq{\overline{\delta q}}
+\def\delf{\overline{\delta F}}
+\def\delm{\overline{\delta M}}
+\def\delp{\overline{\delta P}}
+\def\delh{\overline{\delta H}}
+\def\tns#1{\text{\hb #1}}
+\def\bit#1{\text{\tbi #1}\thinspace}
+\def\uvct#1{\breve{\bf #1}}
+\def\vct#1{{\bf #1}}
+
+%   Positioning macros
+\def \lft#1{#1\hfill}
+\def \rt#1{\hfill#1}
+\def \ctr#1{\hfill#1\hfill}
+\let \rjustline=\rightline
+\def \ctrline#1{\hbox to \hsize{\hfil#1\hfil}}  % Uses \hfil instead of \hss
+                            % so errors will be reported
+%   Sizing macros
+\def \tsize #1{{\textstyle #1}}
+\def \dsize #1{{\displaystyle #1}}
+\def \ssize #1{{\scriptstyle #1}}
+\def \sssize #1{{\scriptscriptstyle #1}}
+
+%   Spacing macro
+\def \newpage{\par \vfill \eject}
+
+%   macro to put space at top of page since TEX "eats" undelimited space there
+%     e.g. "\topspace 1in" puts an inch of space at the top of a page
+\def \topspace{{\hrule height 0pt}\vskip}
+
+
+%   macros to use today's date  (See pg.406, "The TeXBook")
+%\def \today{\ifcase\month\or
+%           January\or February\or March\or April\or May\or June\or
+%           July\or August\or September\or October\or November\or December\fi
+%           \space\number\day, \number\year}
+%\def \mildate{\number\day\space \ifcase\month\or
+%             January\or February\or March\or April\or May\or June\or
+%             July\or August\or September\or October\or November\or December\fi
+%             \space\number\year}
+
+
+% Macro to put a box around an equation  (See exercise 21.3, "The TeXBook")
+\def \boxit#1{\vbox{\hrule \hbox{\vrule \hskip 3pt
+                                 \vbox{\vskip 3pt #1\vskip 3pt}
+                                 \hskip 3pt \vrule}
+                    \hrule }}
+
+
+%   Alignment macro--array used with in-line mathmode
+\def\smallarray#1\\#2\endsmallarray
+    {{\def\\{\cr}
+      \def\c{$\hfill\scriptstyle{####}\hfill$}
+      \def\r{$\hfill\scriptstyle{####}$}
+      \def\l{$\scriptstyle{####}\hfill$}
+      \xdef\rowspecs{#1}
+   \vcenter{\baselineskip 8pt\lineskip1pt
+       \halign{\tabskip 0pt\rowspecs\cr#2\cr}}}}
+
+%   Alignment macro--used to make a single column matrix
+%     Use of \cpile can be replaced by \matrix
+\def\lpile#1{\vcenter{\halign{$## $\hfill\cr#1}}}
+\def\rpile#1{\vcenter{\halign{\hfill$## $\cr#1}}}
+\def\cpile#1{\vcenter{\halign{\hfill$## $\hfill\cr#1}}}
+
+
+
+%                        ===== Special Symbols =====
+% The following macros redefine some basic TEX   math mode  control
+% sequences so  that  they will  work  either  within  math mode or
+% outside of it,   with no special mode change required.
+%                       Save the TEX macro definitions
+%\let \Mbullet=\bullet
+%\let \Mcirc=\circ
+%\let \RSLASH=\rslash
+%\let \Underline=\underline
+%                       Define them to work anywhere
+%\def \bullet{\ifmmode \Mbullet \else $\Mbullet$\fi}
+%\def \circ{\ifmmode \Mcirc \else $\Mcirc$\fi}
+%\def \rslash{\ifmmode \RSLASH \else $\RSLASH$\fi}
+
+%   Integrals
+\def \twoint{\hskip -10pt\mathop{\hskip 10pt\int\!\!\int}}
+\def \threeint{\hskip -15pt\mathop{\hskip 15pt\int\!\!\int\!\!\int}}
+\def \fourint{\hskip -20pt\mathop{\hskip 20pt\int\!\!\int\!\!\int\!\!\int}}
+\def \multint{\hskip -20pt\mathop{\hskip 20pt\int\char'401\,\char'401\,
+              \char'401\,\int}}
+
+%   Alternate names for special symbols in math mode
+\def \ldotss{\ldots\,}
+\def \neqv{\not\equiv}
+\def \all{\char'470 }
+\def \exists{\char'471 }
+
+%   Plain TeX-like equation alignment command
+\def\eqalign#1{\null\,\vcenter{\openup\jot
+  \ialign{\strut\hfil$\displaystyle{##}$&$
+  \displaystyle{{}##}$\hfil \crcr#1\crcr}}\,}
+\def\inner#1{\left< #1 \right>}

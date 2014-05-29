@@ -71,6 +71,7 @@ PROGRAM MAIN
    Integer(IntKi)                     :: j               ! counter for various loops
    Integer(IntKi)                     :: k               ! counter for various loops
    Integer(IntKi)                     :: n               ! counter load reduction
+   Integer(IntKi)                     :: m               ! counter load reduction
 
    OPEN(unit = OutUnit, file = 'BeamDyn.out', status = 'REPLACE',ACTION = 'WRITE')
    OPEN(unit = OutQiUnit, file = 'QiStaticDisp.out', status = 'REPLACE',ACTION = 'WRITE')
@@ -143,7 +144,7 @@ PROGRAM MAIN
    ! write initial condition for q1
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( BDyn_ContinuousState%q)//'  '//Num2LStr(BDyn_ContinuousState%q))   
    
-n=1
+n=2
 
 !DO j=1,1	!ADDED LOOP TO RUN THROUGH ALL LOAD STEP SCENARIOS, NJ 3/18/2014
 !	CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&
@@ -162,7 +163,7 @@ n=1
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 2 STEPS
 	F_total = BD_Parameter%F_ext	!DEFINES DUMMY VARIABLE TO CUT LOAD IN HALF, NJ 3/18/2014
-	DO WHILE (n .NE. 0)  
+!	DO WHILE (n .NE. 0)  
     k=n
 		DO i=1,k
           BD_Parameter%F_ext=F_total/n*i
@@ -172,18 +173,25 @@ n=1
                       &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
                       &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
         
-        IF (BD_Parameter%piter .LT. BD_Parameter%niter) THEN
-          n=0  
-          EXIT
-        ELSE
-            n=n+1
-            WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with addition steps"
-            WRITE(*,*) "n=",n
-            BD_OtherState%uuNf=0
-        ENDIF!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
+!        IF (BD_Parameter%piter .LT. BD_Parameter%niter) THEN
+!          n=0  
+!          EXIT
+!        ELSE
+!            n=n+1
+!            WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with addition steps"
+!            WRITE(*,*) "n=",n
+!            BD_OtherState%uuNf=0
+!        ENDIF!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
+   WRITE(OutUnit,*) 'Nodal Displacements (uuNf):'
+   WRITE(OutUnit,*) '=========================================='
+   DO m=1,BD_Parameter%node_total
+       j = (m - 1) * BD_Parameter%dof_node
+       WRITE(OutUnit,1000) i,BD_OtherState%uuNf(j+1),BD_OtherState%uuNf(j+2),BD_OtherState%uuNf(j+3),&
+                          &BD_OtherState%uuNf(j+4),BD_OtherState%uuNf(j+5),BD_OtherState%uuNf(j+6)
+   ENDDO
 		     
         ENDDO
-	END DO
+!	END DO
 	
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 3 STEPS

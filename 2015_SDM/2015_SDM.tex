@@ -1,0 +1,296 @@
+\documentclass{aiaa-tc}
+
+\usepackage{color}
+\usepackage{amsmath}
+%\usepackage{overcite}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{authblk}
+\usepackage{amsfonts}
+
+\input basic.ltx
+\def\directory{EPSF/}
+
+%------------------------------------------------------------------------------
+% MAS Additions
+\newcommand{\mas}[1]{\textcolor{magenta}{#1}}
+\newcommand{\qw}[1]{\textcolor{blue}{#1}}
+%useful for showing deleted text
+\renewcommand{\kill}[1]{\textcolor{red}{\sout{#1}}}                             
+
+\usepackage[normalem]{ulem}  % mas addition
+\newcommand{\uvec}[1]{\bar{#1}}
+\newcommand{\tens}[1]{\underline{\underline{#1}}}
+\renewcommand{\vec}[1]{\underline{#1}}
+\renewcommand{\skew}[1]{\widetilde{#1}}
+%------------------------------------------------------------------------------
+
+\title{BeamDyn: an efficient high-fidelity beam solver in FAST modularization framework}
+
+\author[1]{Qi Wang  \thanks{Research Engineer, National Wind Technology Center, AIAA Senior Member. Email: Qi.Wang2@nrel.gov}}
+\author[2]{Nick Johnson\thanks{Graduate Research Assistant, Department of
+Mechanical Engineering.}}
+ \author[1]{Michael A. Sprague \thanks{Senior Research Scientist, Scientific Computing Center.}}
+ \author[1]{Jason Jonkman \thanks{Senior Engineer, National Wind Technology Center.}}
+ \affil[1]{National Renewable Energy Laboratory, Golden, CO 80401}
+ \affil[2]{Colorado School of Mines, Golden, CO 80401}
+ 
+ \renewcommand\Authands{ and }
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+{ BeamDyn, a finite element implementation of geometrically exact beam theory (GEBT), is developed to meet the design challenges associated with highly flexible composite wind turbine blades. The governing equations of GEBT are reformulated into the state-space form. Different time integration schemes, including Runge-Kutta method and multistep methods, are implemented and examined for wind turbine analysis. Numerical examples and discussions on the efficiency and accuracy of time and space discretization will be presented in the final paper.}     
+\end{abstract}
+
+\section{Introduction}
+Wind power installations in the U.S. have exceeded 60 GW, and have become an increasingly important part of the overall energy portfolio. Over recent years the size of wind turbines has also increased in the quest for economies of scale.  Larger wind turbine blades result in structures that are highly flexible.  To ensure the performance and reliability of wind turbines it is crucial to make use of computer aided engineering (CAE) tools that are capable of analyzing wind turbine blades in an accurate and efficient manner.  Modern supercomputers make full 3D computational analysis an option, but these simulations are computationally expensive, thus it is preferable to have an efficient high fidelity alternative.  
+
+Beam models are widely used to analyze structures that have one of its dimension much larger than the other two.  Many engineering structures are modeled as beams: bridges, joists, and helicopter rotor blades. Similarly, beam models are ideal to analyze wind turbine blades, towers, and shafts.  Most wind turbine blades are constructed of composite materials, and analysis of composite beams is more complicated than isotropic beams due to the elastic coupling effects.  The geometrically exact beam theory (GEBT), first proposed by Reissner\cite{Ressiner1973} is a beam analysis method capable of efficiently analyzing composite structures.  GEBT that has demonstrated its efficacy in helicopter rotor analysis. Simo\cite{Simo1985} and Vu-Quoc\cite{Simo1986} extended Reissner's initial work to include 3D dynamic problems. Jeleni\'c and Crisfield\cite{Crisfield1999} derived a finite-element (FE) method that interpolates the rotation field thereby preserving the geometric exactness of this theory. It is noted that Ibrahimbegovi\'c and his colleagues implemented this theory for static\cite{Ibrahim1995} and dynamic\cite{Ibrahim1998} analysis. Readers are referred to Hodges\cite{HodgesBeamBook}, where comprehensive derivations and discussions on nonlinear composite-beam theories can be found. Recently, a mixed formulation of GEBT along with the numerical implementation was presented by Yu and Blair\cite{YuGEBT}.  
+
+FAST is a CAE tool developed by the National Renewable Energy Laboratory (NREL) for the purposes of wind turbine analysis for both land-based and offshore wind turbines using realistic operating conditions.  The current beam model in FAST is not capable of analyzing composite or highly flexible wind turbine blades. In this paper, a first-order, three-dimensional displacement-based implementation of the geometrically exact beam theory using the various time integration schemes is presented. A state-space formulation will be shown for the purposes of integrating with the FAST framework, thereby replacing the current beam model with newly developed module called BeamDyn. This work builds on previous efforts that showed the implementation GEBT and Spatial discretization executed using Legendre spectral finite elements (LSFEs)\cite{Wang:GEBT2013,Wang:SFE2013,Wang:GEBT2014} for analysis of composite wind turbine blades. 
+
+The paper is organized as follows.  First, The theoretical foundation of the geometrically exact beam theory along with the reformation of the governing equations into state-space form is introduced. Then coupling to the FAST framework is discussed. Finally, verification examples are provided to show the accuracy and efficiency of the present model for composite wind turbine blades. 
+
+
+\section{Geometrically Exact Beam Theory}
+This section reviews the geometric exact beam theory for completeness of this paper. The content of this section can be found in many other papers and textbooks.
+Figure~\ref{Kinematics} shows a beam in its initial undeformed
+and deformed states. A reference frame $\mathbf{b}_i$ is introduced along the
+beam axis for the undeformed state; a frame $\mathbf{B}_i$ is introduced
+along each point of the deformed beam axis. Curvilinear coordinate $x_1$ defines the intrinsic parameterization of the reference line.
+\begin{figure}
+\centering
+\includegraphics[width=5.0in]{\directory Kinematics.eps}
+\caption{Schematic of beam deformation} \label{Kinematics}
+\end{figure}
+In this paper, we use matrix notation to denote vectorial or vectorial-like quantities. For example, we use a underline to denote a vector $\underline{u}$, a bar to denote unit vector $\bar{n}$, and double underline to denote a tensor $\underline{\underline{\Delta}}$. Note that sometimes the underlines only denote the dimension of the corresponding matrix. The governing equations of motion for geometric exact beam theory can be written as \cite{Bauchau:2010}
+\begin{align}
+	\label{GovernGEBT-1}
+	\dot{\underline{h}} - \underline{F}^\prime &= \underline{f} \\
+	\label{GovernGEBT-2}
+	\dot{\underline{g}} + \dot{\tilde{u}} \underline{h} - \underline{M}^\prime - (\tilde{x}_0^\prime + \tilde{u}^\prime) \underline{F} &= \underline{m}
+\end{align}
+where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are the beam's sectional forces and moments, respectively; $\vec{u}$ is the 1D displacement of the reference line; $\vec{x}_0$ is the position vector of a point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the distributed force and moment applied to the beam structure.  Notation $(\bullet)^\prime$ indicates a derivative with respect to the beam axis $x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The tilde operator $(\skew{\bullet})$ defines a second-order, skew-symmetric tensor corresponding to the given vector. In the literature, it is also termed as "cross-product matrix". For example,
+\[
+	\skew{n} = 
+	     		\begin{bmatrix}
+			0 & -n_3 & n_2 \\
+			n_3 & 0 & -n_1 \\
+			-n_2 & n_1 & 0\\
+			\end{bmatrix}	
+\]
+The constitutive equations relate the velocities to the momenta and the one-dimensional strain measures to the sectional resultants as
+\begin{align}
+	\label{ConstitutiveMass}
+	\begin{Bmatrix}
+	\underline{h} \\
+	\underline{g}
+	\end{Bmatrix}
+	= \underline{\underline{\mathcal{M}}} \begin{Bmatrix}
+	\dot{\underline{u}} \\
+	\underline{\omega}
+	\end{Bmatrix} \\
+	\label{ConstitutiveStiff}
+	\begin{Bmatrix}
+	\underline{F} \\
+	\underline{M}
+	\end{Bmatrix}
+	= \underline{\underline{\mathcal{C}}} \begin{Bmatrix}
+	\underline{\epsilon} \\
+	\underline{\kappa}
+	\end{Bmatrix}
+\end{align}
+where $\underline{\underline{\mathcal{M}}}$ and $\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass and stiffness matrices,respectively, note that they are not really tensors; $\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and curvatures, respectively. $\underline{\omega}$ is the angular velocity vector that is defined by the rotation tensor $\underline{\underline{R}}$ as $\underline{\omega} = axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$. The 1D strain measures are defined as
+\begin{equation}
+    \label{1DStrain}
+    \begin{Bmatrix}
+        \vec{\epsilon} \\
+        \vec{\kappa}
+    \end{Bmatrix}
+    =
+    \begin{Bmatrix}
+        \vec{x}^\prime_0 + \vec{u}^\prime - (\tens{R} ~\tens{R}_0) \bar{\imath}_1 \\
+        \vec{k} + \tens{R}~ \vec{k}_i
+    \end{Bmatrix}
+\end{equation}
+where $\vec{k} = \text{axial} (\tens{R}^\prime \tens{R}^T)$ is the sectional curvature vector resolved in the inertial basis, $\vec{k}_i$ is the corresponding initial curvature vector, and $\bar{\imath}_1$ is the unit vector along $x_1$ direction in the inertial basis. It is noted that the three sets of equations, including equations of motion Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2}, constitutive equations Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, and kinematical equations Eq.~\eqref{1DStrain}, provided a fully mathematical description of elasticity problems. 
+
+For a displacement-based finite element implementation, there are six
+degree-of-freedoms at each node: three displacement components and three
+rotation components. Here we use $\vec{q}$ to denote the elemental
+displacement array as $\underline{q}^T=\left[
+\underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the
+displacement and $\vec{p}$ is the rotation-parameter vector. The
+acceleration array can thus be defined as $\underline{a}^T=\left[
+\ddot{\underline{u}}^T~~ \dot{\underline{\omega}}^T \right]$. For nonlinear
+finite-element analysis, the discretized form of
+displacement, velocity, and acceleration are written as
+\begin{align}
+	\label{DiscretizedDisp}
+	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\underline{q}^T = \left[ \underline{u}^T~~\underline{p}^T \right] \\
+	\label{DiscretizedVel}
+	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\underline{v}^T = \left[\underline{\dot{u}}^T~~\underline{\omega}^T \right] \\
+	\label{DiscretizedAcc}
+	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\underline{a}^T = \left[ \ddot{\underline{u}}^T~~\dot{\underline{\omega}}^T \right]	
+\end{align}
+where $\tens{N}$ is the shape function matrix and $(\hat{\cdot})$ denotes a
+column matrix of nodal values.
+
+To accommodate to the FAST modularization framework, the governing equations in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} needs to be reformulated into the state-space form. Firstly we recast these equations in compact form as
+\begin{equation}
+    \label{CompactGovernGEBT}
+    \underline{\mathcal{F}}^I - \underline{\mathcal{F}}^{C\prime} + \underline{\mathcal{F}}^D = \underline{\mathcal{F}}^{ext}
+\end{equation}
+where $\underline{\mathcal{F}}^I, \underline{\mathcal{F}}^C$ and $\underline{\mathcal{F}}^D$, and $\underline{\mathcal{F}}^{ext}$ are the inertial forces, elastic force, and externally applied forces, respectively; their definitions are
+\begin{align}
+    \label{InertialForce}
+    \underline{\mathcal{F}}^I &= \begin{Bmatrix}
+    \dot{\underline{h}} \\
+    \dot{\underline{g}}
+    \end{Bmatrix}
+    + \begin{bmatrix}
+    \underline{\underline{0}} & \underline{\underline{0}} \\
+    \dot{\tilde{u}}  &  \underline{\underline{0}}
+    \end{bmatrix}
+    \begin{Bmatrix}
+    \dot{\underline{h}} \\
+    \dot{\underline{g}}
+    \end{Bmatrix} \\
+    \label{ElasticForceFc}
+     \underline{\mathcal{F}}^C &= \begin{Bmatrix}
+    \underline{F} \\
+    \underline{M}
+    \end{Bmatrix} \\
+    \label{ElasticForceFd}
+    \underline{\mathcal{F}}^D &= \begin{Bmatrix}
+    \underline{0} \\
+    (\tilde{x}^\prime_0 + \tilde{u}^\prime)^T \underline{F}
+    \end{Bmatrix} \\
+    \label{AppliedForce}
+    \underline{\mathcal{F}}^{ext} &= \begin{Bmatrix}
+    \underline{f} \\
+    \underline{m}
+    \end{Bmatrix}
+\end{align}   
+Along with the constitutive equations in Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, the inertial force $\underline{\mathcal{F}}^I$ can be written explicitly as
+\begin{align}
+    \underline{\mathcal{F}}^I &= \begin{Bmatrix}
+    m \ddot{\underline{u}} + ( \dot{\tilde{\omega}} + \tilde{\omega} \tilde{\omega} ) m \underline{\eta} \\
+    m \tilde{\eta} \ddot{\underline{u}} + \underline{\underline{\varrho}} \dot{\underline{\omega}} + \tilde{\omega}  \underline{\underline{\varrho}} \underline{\omega} 
+    \end{Bmatrix} \nonumber \\
+    \label{InertialForce2}
+    &= \begin{bmatrix}
+    m \underline{\underline{I}} & m \tilde{\eta}^T \\
+    m \tilde{\eta} & \underline{\underline{\varrho}}
+    \end{bmatrix}
+    \begin{Bmatrix}
+    \ddot{\underline{u}} \\
+    \dot{\underline{\omega}}
+    \end{Bmatrix} + 
+    \begin{bmatrix}
+    \underline{\underline{0}} & m \tilde{\omega} \tilde{\eta}^T \\
+    \underline{\underline{0}} & \tilde{\omega}  \underline{\underline{\varrho}}
+    \end{bmatrix}
+    \begin{Bmatrix}
+    \dot{\underline{u}} \\
+    \underline{\omega}
+    \end{Bmatrix} \\
+    &  \equiv \underline{\underline{\mathfrak{M}}} \underline{a} + \underline{\underline{\mathcal{G}}} \underline{v}  \nonumber     
+\end{align}
+where $m$ is the mass density per unit span; $\underline{\eta}$ is the center of mass location;  $\underline{\underline{\varrho}}$ is the moment of inertia; $\tens{I}$ is the identity matrix. The definitions of acceleration vector $\underline{a}$ and velocity vector $\underline{v}$ can be found in Eq.~\eqref{DiscretizedAcc} and \eqref{DiscretizedVel}, respectively. By the newly introduced matrices, the compact form of equations of motion can be rewritten as
+\begin{equation}
+    \label{CompactForm2}
+    \underline{\underline{\mathfrak{M}}}~ \underline{a} + f(\underline{q},\underline{v},t) = 0
+\end{equation}
+where
+\begin{equation}
+    \label{CompactForm3}
+    f(\underline{q},\underline{v},t) = \underline{\mathcal{F}}^F - \underline{\mathcal{F}}^{C\prime} + \underline{\mathcal{F}}^D - \underline{\mathcal{F}}^{ext}
+\end{equation}
+\begin{align}
+    \underline{\mathcal{F}}^F &= \underline{\underline{\mathcal{G}}} \underline{v}  \nonumber \\
+    \label{CompactForm4}
+    &= \begin{bmatrix}
+    \underline{\underline{0}} & m \tilde{\omega} \tilde{\eta}^T \\
+    \underline{\underline{0}} & \tilde{\omega}  \underline{\underline{\varrho}}
+    \end{bmatrix}
+    \begin{Bmatrix}
+    \dot{\underline{u}} \\
+    \underline{\omega}
+    \end{Bmatrix} 
+\end{align}
+
+A weighted residual formulation will be used to enforce the the dynamic equilibrium conditions in Eq.~\eqref{CompactForm2}
+\begin{equation}
+    \label{FEM-1}
+    \int_0^l \tens{N}^T (\tens{\mathfrak{M}} \vec{a} + \vec{\mathcal{F}}^F - \vec{\mathcal{F}}^{C\prime} + \vec{\mathcal{F}}^D - \vec{\mathcal{F}}^{ext}) d x_1=0
+\end{equation}
+The above equation can be recast as
+\begin{equation}
+    \label{FEM-2}
+    \tens{M} \hat{a} = F(\vec{q},\vec{v},t)
+\end{equation}
+where
+\begin{align}
+    \label{FEM-3}
+    \tens{M} &= \int_0^l \tens{N}^T \tens{\mathfrak{M}}~ \tens{N}~dx_1 \\
+    \label{FEM-4}
+    \vec{F}(\vec{q},\vec{v},t) &= \int_0^l \tens{N}^T (-\vec{\mathcal{F}}^F + \vec{\mathcal{F}}^{C\prime} - \vec{\mathcal{F}}^D + \vec{\mathcal{F}}^{ext}) d x_1
+\end{align}
+
+To derive the state-space form of the governing equations, a new depend variable $\vec{x}(t)$ is introduced
+\begin{equation}
+    \label{StateSpaceX}
+    \mathbf{x}(t) \equiv \begin{Bmatrix}
+    \vec{q}(t) \\
+    \vec{v}(t)
+    \end{Bmatrix} 
+\end{equation}
+It is noted that the second component of $\mathbf{x}(t)$ is not $\vec{\dot{q}}$ but $\vec{v}$ in that the angular velocity $\vec{\omega}$ cannot be calculated as time derivative of the rotation parameter $\vec{p}$. Substituting the discretized quantities in Eqs.~\eqref{DiscretizedDisp} to \eqref{DiscretizedAcc} into Eq.~\eqref{StateSpaceX} and using the relation
+\begin{equation}
+    \label{AccVel}
+    \vec{a} = \vec{\dot{v}} = \begin{Bmatrix}
+    \vec{\ddot{u}} \\
+    \vec{\dot{\omega}}
+    \end{Bmatrix}
+\end{equation}
+The star-space form can be obtained as
+\begin{align}
+    \label{StateSpaceGov-1}
+    \dot{\hat{\mathbf{x}}}(t) &= \mathfrak{f}(\hat{\mathbf{x}}(t),t) \\
+    \label{StateSpaceGov-2}
+    \hat{\mathbf{x}}(0) &= \hat{\mathbf{x}}_0
+\end{align}
+where
+\begin{align}
+    \label{StateSpaceGov-3}
+    \mathfrak{f}(\hat{\mathbf{x}}(t),t) &= \mathbf{A}^{-1} (\hat{\mathbf{x}}(t)) \mathbf{b}(\hat{\mathbf{x}}(t),t) \\
+    \label{StateSpaceGov-4}
+    \mathbf{A} (\hat{\mathbf{x}}(t)) &= \begin{bmatrix}
+    \tens{I} & \tens{0} \\
+    \tens{0} & \tens{M}
+    \end{bmatrix}  \\
+    \label{StateSpaceGov-5}
+    \mathbf{b}(\hat{\mathbf{x}}(t),t) &= \begin{Bmatrix}
+    \dot{\hat{\vec{q}}} \\
+    \vec{F}(\hat{\mathbf{x}}(t),t)
+    \end{Bmatrix} \\
+    \label{StateSpaceGov-6}
+    \hat{\mathbf{x}}_0 &= \begin{Bmatrix}
+    \hat{\vec{q}}_0 \\
+    \hat{\vec{v}}_0
+    \end{Bmatrix}
+\end{align}
+ 
+ \section{Content of Full Paper}
+In the full paper, we will provide more details of the theoretical
+derivations along with various numerical examples. Different time integration schemes, including Runge-Kutta methods and multistep methods, will be implemented and examined in the numerical studies. Moreover, we will briefly introduce the format of the current code, which is in accordance to the FAST modularization framework. An example of analysis of a realistic wind turbine blade will be presented.
+
+
+\bibliographystyle{aiaa}
+\bibliography{references}
+
+\end{document}
