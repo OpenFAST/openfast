@@ -294,7 +294,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    x%dqdt = 0.0D0
 
    ! Define system output initializations (set up mesh) here:
-   CALL MeshCreate( BlankMesh        = u%PointMesh            &
+   CALL MeshCreate( BlankMesh        = u%RootMotion            &
                    ,IOS              = COMPONENT_INPUT        &
                    ,NNodes           = 1                      &
                    , TranslationDisp = .TRUE. &
@@ -307,7 +307,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                    ,ErrStat         = ErrStat               &
                    ,ErrMess         = ErrMsg                )
 
-   CALL MeshConstructElement ( Mesh = u%PointMesh            &
+   CALL MeshConstructElement ( Mesh = u%RootMotion            &
                              , Xelement = ELEMENT_POINT      &
                              , P1       = 1                  &
                              , ErrStat  = ErrStat            &
@@ -318,18 +318,18 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    TmpPos(2) = 0.
    TmpPos(3) = 0.
 
-   CALL MeshPositionNode ( Mesh = u%PointMesh          &
+   CALL MeshPositionNode ( Mesh = u%RootMotion          &
                          , INode = 1                &
                          , Pos = TmpPos             &
                          , ErrStat   = ErrStat      &
                          , ErrMess   = ErrMsg       )
 
-   CALL MeshCommit ( Mesh    = u%PointMesh     &
+   CALL MeshCommit ( Mesh    = u%RootMotion     &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
 
-   CALL MeshCopy ( SrcMesh  = u%PointMesh      &
-                 , DestMesh = y%PointMesh      &
+   CALL MeshCopy ( SrcMesh  = u%RootMotion      &
+                 , DestMesh = y%RootForce      &
                  , CtrlCode = MESH_SIBLING     &
                  , Force           = .TRUE.    &
                  , Moment          = .TRUE.    &
@@ -338,45 +338,45 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    ! Define initialization-routine input here:
 
-   u%PointMesh%TranslationDisp(1,1) = 0.
-   u%PointMesh%TranslationDisp(2,1) = 0.
-   u%PointMesh%TranslationDisp(3,1) = 0.
+   u%RootMotion%TranslationDisp(1,1) = 0.
+   u%RootMotion%TranslationDisp(2,1) = 0.
+   u%RootMotion%TranslationDisp(3,1) = 0.
 
-   u%PointMesh%TranslationVel(1,1) = 0.
-   u%PointMesh%TranslationVel(2,1) = 0.
-   u%PointMesh%TranslationVel(3,1) = 0.
+   u%RootMotion%TranslationVel(1,1) = 0.
+   u%RootMotion%TranslationVel(2,1) = 0.
+   u%RootMotion%TranslationVel(3,1) = 0.
 
-   u%PointMesh%TranslationAcc(1,1) = 0.
-   u%PointMesh%TranslationAcc(2,1) = 0.
-   u%PointMesh%TranslationAcc(3,1) = 0.
+   u%RootMotion%TranslationAcc(1,1) = 0.
+   u%RootMotion%TranslationAcc(2,1) = 0.
+   u%RootMotion%TranslationAcc(3,1) = 0.
 
-   u%PointMesh%Orientation = 0.
-   u%PointMesh%Orientation(1,1,1) = 1.
-   u%PointMesh%Orientation(2,2,1) = 1.
-   u%PointMesh%Orientation(3,3,1) = 1.
+   u%RootMotion%Orientation = 0.
+   u%RootMotion%Orientation(1,1,1) = 1.
+   u%RootMotion%Orientation(2,2,1) = 1.
+   u%RootMotion%Orientation(3,3,1) = 1.
 
-   u%PointMesh%RotationVel(1,1) = 0.
-   u%PointMesh%RotationVel(2,1) = 0.
-   u%PointMesh%RotationVel(3,1) = 0.
+   u%RootMotion%RotationVel(1,1) = 0.
+   u%RootMotion%RotationVel(2,1) = 0.
+   u%RootMotion%RotationVel(3,1) = 0.
 
-   u%PointMesh%RotationAcc(1,1) = 0.
-   u%PointMesh%RotationAcc(2,1) = 0.
-   u%PointMesh%RotationAcc(3,1) = 0.
+   u%RootMotion%RotationAcc(1,1) = 0.
+   u%RootMotion%RotationAcc(2,1) = 0.
+   u%RootMotion%RotationAcc(3,1) = 0.
 
    ! Define initial guess for the system outputs here:
 
-   y%PointMesh%Force(1,1)   = 0.
-   y%PointMesh%Force(2,1)   = 0.
-   y%PointMesh%Force(3,1)   = 0.
+   y%RootForce%Force(1,1)   = 0.
+   y%RootForce%Force(2,1)   = 0.
+   y%RootForce%Force(3,1)   = 0.
 
-   y%PointMesh%Moment(1,1)   = 0.
-   y%PointMesh%Moment(2,1)   = 0.
-   y%PointMesh%Moment(3,1)   = 0.
+   y%RootForce%Moment(1,1)   = 0.
+   y%RootForce%Moment(2,1)   = 0.
+   y%RootForce%Moment(3,1)   = 0.
 
 
    ! set remap flags to true
-   y%PointMesh%RemapFlag = .True.
-   u%PointMesh%RemapFlag = .True.
+   y%RootForce%RemapFlag = .True.
+   u%RootMotion%RemapFlag = .True.
 
 
    END SUBROUTINE BeamDyn_Init
@@ -537,13 +537,13 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    ! assume system is aligned with x-axis
 
-   y%PointMesh%Force(1,1)   = x%q(1)
-   y%PointMesh%Force(2,1)   = x%q(2)
-   y%PointMesh%Force(3,1)   = x%q(3)
+   y%RootForce%Force(1,1)   = x%q(1)
+   y%RootForce%Force(2,1)   = x%q(2)
+   y%RootForce%Force(3,1)   = x%q(3)
 
-   y%PointMesh%Moment(1,1)   = x%q(4)
-   y%PointMesh%Moment(2,1)   = x%q(5)
-   y%PointMesh%Moment(3,1)   = x%q(6)
+   y%RootForce%Moment(1,1)   = x%q(4)
+   y%RootForce%Moment(2,1)   = x%q(5)
+   y%RootForce%Moment(3,1)   = x%q(6)
 
 !   WRITE(67,*) t,  y%PointMesh%TranslationAcc(1,1)
 

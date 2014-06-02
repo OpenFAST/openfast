@@ -83,12 +83,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_InputType  =======
   TYPE, PUBLIC :: BD_InputType
-    TYPE(MeshType)  :: PointMesh 
+    TYPE(MeshType)  :: RootMotion 
   END TYPE BD_InputType
 ! =======================
 ! =========  BD_OutputType  =======
   TYPE, PUBLIC :: BD_OutputType
-    TYPE(MeshType)  :: PointMesh 
+    TYPE(MeshType)  :: RootForce 
   END TYPE BD_OutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -1114,7 +1114,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-     CALL MeshCopy( SrcInputData%PointMesh, DstInputData%PointMesh, CtrlCode, ErrStat, ErrMsg )
+     CALL MeshCopy( SrcInputData%RootMotion, DstInputData%RootMotion, CtrlCode, ErrStat, ErrMsg )
  END SUBROUTINE BD_CopyInput
 
  SUBROUTINE BD_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -1125,7 +1125,7 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( InputData%PointMesh, ErrStat, ErrMsg )
+  CALL MeshDestroy( InputData%RootMotion, ErrStat, ErrMsg )
  END SUBROUTINE BD_DestroyInput
 
  SUBROUTINE BD_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1149,9 +1149,9 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
  ! buffers to store meshes, if any
-  REAL(ReKi),     ALLOCATABLE :: Re_PointMesh_Buf(:)
-  REAL(DbKi),     ALLOCATABLE :: Db_PointMesh_Buf(:)
-  INTEGER(IntKi), ALLOCATABLE :: Int_PointMesh_Buf(:)
+  REAL(ReKi),     ALLOCATABLE :: Re_RootMotion_Buf(:)
+  REAL(DbKi),     ALLOCATABLE :: Db_RootMotion_Buf(:)
+  INTEGER(IntKi), ALLOCATABLE :: Int_RootMotion_Buf(:)
   OnlySize = .FALSE.
   IF ( PRESENT(SizeOnly) ) THEN
     OnlySize = SizeOnly
@@ -1166,32 +1166,32 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! Allocate mesh buffers, if any (we'll also get sizes from these) 
-  CALL MeshPack( InData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg, .TRUE. ) ! PointMesh 
-  IF(ALLOCATED(Re_PointMesh_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_PointMesh_Buf  ) ! PointMesh
-  IF(ALLOCATED(Db_PointMesh_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_PointMesh_Buf  ) ! PointMesh
-  IF(ALLOCATED(Int_PointMesh_Buf))Int_BufSz = Int_BufSz + SIZE( Int_PointMesh_Buf ) ! PointMesh
-  IF(ALLOCATED(Re_PointMesh_Buf))  DEALLOCATE(Re_PointMesh_Buf)
-  IF(ALLOCATED(Db_PointMesh_Buf))  DEALLOCATE(Db_PointMesh_Buf)
-  IF(ALLOCATED(Int_PointMesh_Buf)) DEALLOCATE(Int_PointMesh_Buf)
+  CALL MeshPack( InData%RootMotion, Re_RootMotion_Buf, Db_RootMotion_Buf, Int_RootMotion_Buf, ErrStat, ErrMsg, .TRUE. ) ! RootMotion 
+  IF(ALLOCATED(Re_RootMotion_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_RootMotion_Buf  ) ! RootMotion
+  IF(ALLOCATED(Db_RootMotion_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_RootMotion_Buf  ) ! RootMotion
+  IF(ALLOCATED(Int_RootMotion_Buf))Int_BufSz = Int_BufSz + SIZE( Int_RootMotion_Buf ) ! RootMotion
+  IF(ALLOCATED(Re_RootMotion_Buf))  DEALLOCATE(Re_RootMotion_Buf)
+  IF(ALLOCATED(Db_RootMotion_Buf))  DEALLOCATE(Db_RootMotion_Buf)
+  IF(ALLOCATED(Int_RootMotion_Buf)) DEALLOCATE(Int_RootMotion_Buf)
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  CALL MeshPack( InData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg, OnlySize ) ! PointMesh 
-  IF(ALLOCATED(Re_PointMesh_Buf)) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PointMesh_Buf)-1 ) = Re_PointMesh_Buf
-    Re_Xferred = Re_Xferred + SIZE(Re_PointMesh_Buf)
+  CALL MeshPack( InData%RootMotion, Re_RootMotion_Buf, Db_RootMotion_Buf, Int_RootMotion_Buf, ErrStat, ErrMsg, OnlySize ) ! RootMotion 
+  IF(ALLOCATED(Re_RootMotion_Buf)) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_RootMotion_Buf)-1 ) = Re_RootMotion_Buf
+    Re_Xferred = Re_Xferred + SIZE(Re_RootMotion_Buf)
   ENDIF
-  IF(ALLOCATED(Db_PointMesh_Buf)) THEN
-    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_PointMesh_Buf)-1 ) = Db_PointMesh_Buf
-    Db_Xferred = Db_Xferred + SIZE(Db_PointMesh_Buf)
+  IF(ALLOCATED(Db_RootMotion_Buf)) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_RootMotion_Buf)-1 ) = Db_RootMotion_Buf
+    Db_Xferred = Db_Xferred + SIZE(Db_RootMotion_Buf)
   ENDIF
-  IF(ALLOCATED(Int_PointMesh_Buf)) THEN
-    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_PointMesh_Buf)-1 ) = Int_PointMesh_Buf
-    Int_Xferred = Int_Xferred + SIZE(Int_PointMesh_Buf)
+  IF(ALLOCATED(Int_RootMotion_Buf)) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_RootMotion_Buf)-1 ) = Int_RootMotion_Buf
+    Int_Xferred = Int_Xferred + SIZE(Int_RootMotion_Buf)
   ENDIF
-  IF( ALLOCATED(Re_PointMesh_Buf) )  DEALLOCATE(Re_PointMesh_Buf)
-  IF( ALLOCATED(Db_PointMesh_Buf) )  DEALLOCATE(Db_PointMesh_Buf)
-  IF( ALLOCATED(Int_PointMesh_Buf) ) DEALLOCATE(Int_PointMesh_Buf)
+  IF( ALLOCATED(Re_RootMotion_Buf) )  DEALLOCATE(Re_RootMotion_Buf)
+  IF( ALLOCATED(Db_RootMotion_Buf) )  DEALLOCATE(Db_RootMotion_Buf)
+  IF( ALLOCATED(Int_RootMotion_Buf) ) DEALLOCATE(Int_RootMotion_Buf)
  END SUBROUTINE BD_PackInput
 
  SUBROUTINE BD_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1218,9 +1218,9 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
  ! buffers to store meshes, if any
-  REAL(ReKi),    ALLOCATABLE :: Re_PointMesh_Buf(:)
-  REAL(DbKi),    ALLOCATABLE :: Db_PointMesh_Buf(:)
-  INTEGER(IntKi),    ALLOCATABLE :: Int_PointMesh_Buf(:)
+  REAL(ReKi),    ALLOCATABLE :: Re_RootMotion_Buf(:)
+  REAL(DbKi),    ALLOCATABLE :: Db_RootMotion_Buf(:)
+  INTEGER(IntKi),    ALLOCATABLE :: Int_RootMotion_Buf(:)
     !
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -1231,23 +1231,23 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! first call MeshPack to get correctly sized buffers for unpacking
-  CALL MeshPack( OutData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg , .TRUE. ) ! PointMesh 
-  IF(ALLOCATED(Re_PointMesh_Buf)) THEN
-    Re_PointMesh_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PointMesh_Buf)-1 )
-    Re_Xferred = Re_Xferred + SIZE(Re_PointMesh_Buf)
+  CALL MeshPack( OutData%RootMotion, Re_RootMotion_Buf, Db_RootMotion_Buf, Int_RootMotion_Buf, ErrStat, ErrMsg , .TRUE. ) ! RootMotion 
+  IF(ALLOCATED(Re_RootMotion_Buf)) THEN
+    Re_RootMotion_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_RootMotion_Buf)-1 )
+    Re_Xferred = Re_Xferred + SIZE(Re_RootMotion_Buf)
   ENDIF
-  IF(ALLOCATED(Db_PointMesh_Buf)) THEN
-    Db_PointMesh_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_PointMesh_Buf)-1 )
-    Db_Xferred = Db_Xferred + SIZE(Db_PointMesh_Buf)
+  IF(ALLOCATED(Db_RootMotion_Buf)) THEN
+    Db_RootMotion_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_RootMotion_Buf)-1 )
+    Db_Xferred = Db_Xferred + SIZE(Db_RootMotion_Buf)
   ENDIF
-  IF(ALLOCATED(Int_PointMesh_Buf)) THEN
-    Int_PointMesh_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_PointMesh_Buf)-1 )
-    Int_Xferred = Int_Xferred + SIZE(Int_PointMesh_Buf)
+  IF(ALLOCATED(Int_RootMotion_Buf)) THEN
+    Int_RootMotion_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_RootMotion_Buf)-1 )
+    Int_Xferred = Int_Xferred + SIZE(Int_RootMotion_Buf)
   ENDIF
-  CALL MeshUnPack( OutData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg ) ! PointMesh 
-  IF( ALLOCATED(Re_PointMesh_Buf) )  DEALLOCATE(Re_PointMesh_Buf)
-  IF( ALLOCATED(Db_PointMesh_Buf) )  DEALLOCATE(Db_PointMesh_Buf)
-  IF( ALLOCATED(Int_PointMesh_Buf) ) DEALLOCATE(Int_PointMesh_Buf)
+  CALL MeshUnPack( OutData%RootMotion, Re_RootMotion_Buf, Db_RootMotion_Buf, Int_RootMotion_Buf, ErrStat, ErrMsg ) ! RootMotion 
+  IF( ALLOCATED(Re_RootMotion_Buf) )  DEALLOCATE(Re_RootMotion_Buf)
+  IF( ALLOCATED(Db_RootMotion_Buf) )  DEALLOCATE(Db_RootMotion_Buf)
+  IF( ALLOCATED(Int_RootMotion_Buf) ) DEALLOCATE(Int_RootMotion_Buf)
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -1266,7 +1266,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-     CALL MeshCopy( SrcOutputData%PointMesh, DstOutputData%PointMesh, CtrlCode, ErrStat, ErrMsg )
+     CALL MeshCopy( SrcOutputData%RootForce, DstOutputData%RootForce, CtrlCode, ErrStat, ErrMsg )
  END SUBROUTINE BD_CopyOutput
 
  SUBROUTINE BD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -1277,7 +1277,7 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( OutputData%PointMesh, ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%RootForce, ErrStat, ErrMsg )
  END SUBROUTINE BD_DestroyOutput
 
  SUBROUTINE BD_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1301,9 +1301,9 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
  ! buffers to store meshes, if any
-  REAL(ReKi),     ALLOCATABLE :: Re_PointMesh_Buf(:)
-  REAL(DbKi),     ALLOCATABLE :: Db_PointMesh_Buf(:)
-  INTEGER(IntKi), ALLOCATABLE :: Int_PointMesh_Buf(:)
+  REAL(ReKi),     ALLOCATABLE :: Re_RootForce_Buf(:)
+  REAL(DbKi),     ALLOCATABLE :: Db_RootForce_Buf(:)
+  INTEGER(IntKi), ALLOCATABLE :: Int_RootForce_Buf(:)
   OnlySize = .FALSE.
   IF ( PRESENT(SizeOnly) ) THEN
     OnlySize = SizeOnly
@@ -1318,32 +1318,32 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! Allocate mesh buffers, if any (we'll also get sizes from these) 
-  CALL MeshPack( InData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg, .TRUE. ) ! PointMesh 
-  IF(ALLOCATED(Re_PointMesh_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_PointMesh_Buf  ) ! PointMesh
-  IF(ALLOCATED(Db_PointMesh_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_PointMesh_Buf  ) ! PointMesh
-  IF(ALLOCATED(Int_PointMesh_Buf))Int_BufSz = Int_BufSz + SIZE( Int_PointMesh_Buf ) ! PointMesh
-  IF(ALLOCATED(Re_PointMesh_Buf))  DEALLOCATE(Re_PointMesh_Buf)
-  IF(ALLOCATED(Db_PointMesh_Buf))  DEALLOCATE(Db_PointMesh_Buf)
-  IF(ALLOCATED(Int_PointMesh_Buf)) DEALLOCATE(Int_PointMesh_Buf)
+  CALL MeshPack( InData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg, .TRUE. ) ! RootForce 
+  IF(ALLOCATED(Re_RootForce_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_RootForce_Buf  ) ! RootForce
+  IF(ALLOCATED(Db_RootForce_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_RootForce_Buf  ) ! RootForce
+  IF(ALLOCATED(Int_RootForce_Buf))Int_BufSz = Int_BufSz + SIZE( Int_RootForce_Buf ) ! RootForce
+  IF(ALLOCATED(Re_RootForce_Buf))  DEALLOCATE(Re_RootForce_Buf)
+  IF(ALLOCATED(Db_RootForce_Buf))  DEALLOCATE(Db_RootForce_Buf)
+  IF(ALLOCATED(Int_RootForce_Buf)) DEALLOCATE(Int_RootForce_Buf)
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  CALL MeshPack( InData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg, OnlySize ) ! PointMesh 
-  IF(ALLOCATED(Re_PointMesh_Buf)) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PointMesh_Buf)-1 ) = Re_PointMesh_Buf
-    Re_Xferred = Re_Xferred + SIZE(Re_PointMesh_Buf)
+  CALL MeshPack( InData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg, OnlySize ) ! RootForce 
+  IF(ALLOCATED(Re_RootForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_RootForce_Buf)-1 ) = Re_RootForce_Buf
+    Re_Xferred = Re_Xferred + SIZE(Re_RootForce_Buf)
   ENDIF
-  IF(ALLOCATED(Db_PointMesh_Buf)) THEN
-    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_PointMesh_Buf)-1 ) = Db_PointMesh_Buf
-    Db_Xferred = Db_Xferred + SIZE(Db_PointMesh_Buf)
+  IF(ALLOCATED(Db_RootForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_RootForce_Buf)-1 ) = Db_RootForce_Buf
+    Db_Xferred = Db_Xferred + SIZE(Db_RootForce_Buf)
   ENDIF
-  IF(ALLOCATED(Int_PointMesh_Buf)) THEN
-    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_PointMesh_Buf)-1 ) = Int_PointMesh_Buf
-    Int_Xferred = Int_Xferred + SIZE(Int_PointMesh_Buf)
+  IF(ALLOCATED(Int_RootForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_RootForce_Buf)-1 ) = Int_RootForce_Buf
+    Int_Xferred = Int_Xferred + SIZE(Int_RootForce_Buf)
   ENDIF
-  IF( ALLOCATED(Re_PointMesh_Buf) )  DEALLOCATE(Re_PointMesh_Buf)
-  IF( ALLOCATED(Db_PointMesh_Buf) )  DEALLOCATE(Db_PointMesh_Buf)
-  IF( ALLOCATED(Int_PointMesh_Buf) ) DEALLOCATE(Int_PointMesh_Buf)
+  IF( ALLOCATED(Re_RootForce_Buf) )  DEALLOCATE(Re_RootForce_Buf)
+  IF( ALLOCATED(Db_RootForce_Buf) )  DEALLOCATE(Db_RootForce_Buf)
+  IF( ALLOCATED(Int_RootForce_Buf) ) DEALLOCATE(Int_RootForce_Buf)
  END SUBROUTINE BD_PackOutput
 
  SUBROUTINE BD_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1370,9 +1370,9 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
  ! buffers to store meshes, if any
-  REAL(ReKi),    ALLOCATABLE :: Re_PointMesh_Buf(:)
-  REAL(DbKi),    ALLOCATABLE :: Db_PointMesh_Buf(:)
-  INTEGER(IntKi),    ALLOCATABLE :: Int_PointMesh_Buf(:)
+  REAL(ReKi),    ALLOCATABLE :: Re_RootForce_Buf(:)
+  REAL(DbKi),    ALLOCATABLE :: Db_RootForce_Buf(:)
+  INTEGER(IntKi),    ALLOCATABLE :: Int_RootForce_Buf(:)
     !
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -1383,23 +1383,23 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! first call MeshPack to get correctly sized buffers for unpacking
-  CALL MeshPack( OutData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg , .TRUE. ) ! PointMesh 
-  IF(ALLOCATED(Re_PointMesh_Buf)) THEN
-    Re_PointMesh_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_PointMesh_Buf)-1 )
-    Re_Xferred = Re_Xferred + SIZE(Re_PointMesh_Buf)
+  CALL MeshPack( OutData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg , .TRUE. ) ! RootForce 
+  IF(ALLOCATED(Re_RootForce_Buf)) THEN
+    Re_RootForce_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_RootForce_Buf)-1 )
+    Re_Xferred = Re_Xferred + SIZE(Re_RootForce_Buf)
   ENDIF
-  IF(ALLOCATED(Db_PointMesh_Buf)) THEN
-    Db_PointMesh_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_PointMesh_Buf)-1 )
-    Db_Xferred = Db_Xferred + SIZE(Db_PointMesh_Buf)
+  IF(ALLOCATED(Db_RootForce_Buf)) THEN
+    Db_RootForce_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_RootForce_Buf)-1 )
+    Db_Xferred = Db_Xferred + SIZE(Db_RootForce_Buf)
   ENDIF
-  IF(ALLOCATED(Int_PointMesh_Buf)) THEN
-    Int_PointMesh_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_PointMesh_Buf)-1 )
-    Int_Xferred = Int_Xferred + SIZE(Int_PointMesh_Buf)
+  IF(ALLOCATED(Int_RootForce_Buf)) THEN
+    Int_RootForce_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_RootForce_Buf)-1 )
+    Int_Xferred = Int_Xferred + SIZE(Int_RootForce_Buf)
   ENDIF
-  CALL MeshUnPack( OutData%PointMesh, Re_PointMesh_Buf, Db_PointMesh_Buf, Int_PointMesh_Buf, ErrStat, ErrMsg ) ! PointMesh 
-  IF( ALLOCATED(Re_PointMesh_Buf) )  DEALLOCATE(Re_PointMesh_Buf)
-  IF( ALLOCATED(Db_PointMesh_Buf) )  DEALLOCATE(Db_PointMesh_Buf)
-  IF( ALLOCATED(Int_PointMesh_Buf) ) DEALLOCATE(Int_PointMesh_Buf)
+  CALL MeshUnPack( OutData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg ) ! RootForce 
+  IF( ALLOCATED(Re_RootForce_Buf) )  DEALLOCATE(Re_RootForce_Buf)
+  IF( ALLOCATED(Db_RootForce_Buf) )  DEALLOCATE(Db_RootForce_Buf)
+  IF( ALLOCATED(Int_RootForce_Buf) ) DEALLOCATE(Int_RootForce_Buf)
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -2467,14 +2467,14 @@ ENDIF
  endif
  order = SIZE(u) - 1
  IF ( order .eq. 0 ) THEN
-  CALL MeshCopy(u(1)%PointMesh, u_out%PointMesh, MESH_UPDATECOPY, ErrStat, ErrMsg )
+  CALL MeshCopy(u(1)%RootMotion, u_out%RootMotion, MESH_UPDATECOPY, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
     ErrMsg  = ' Error in BD_Input_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
     RETURN
   END IF
-  CALL MeshExtrapInterp1(u(1)%PointMesh, u(2)%PointMesh, tin, u_out%PointMesh, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp1(u(1)%RootMotion, u(2)%RootMotion, tin, u_out%RootMotion, tin_out, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 2 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -2491,7 +2491,7 @@ ENDIF
     ErrMsg  = ' Error in BD_Input_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
     RETURN
   END IF
-  CALL MeshExtrapInterp2(u(1)%PointMesh, u(2)%PointMesh, u(3)%PointMesh, tin, u_out%PointMesh, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp2(u(1)%RootMotion, u(2)%RootMotion, u(3)%RootMotion, tin, u_out%RootMotion, tin_out, ErrStat, ErrMsg )
  ELSE 
    ErrStat = ErrID_Fatal
    ErrMsg = ' order must be less than 3 in BD_Input_ExtrapInterp '
@@ -2608,14 +2608,14 @@ ENDIF
  endif
  order = SIZE(u) - 1
  IF ( order .eq. 0 ) THEN
-  CALL MeshCopy(u(1)%PointMesh, u_out%PointMesh, MESH_UPDATECOPY, ErrStat, ErrMsg )
+  CALL MeshCopy(u(1)%RootForce, u_out%RootForce, MESH_UPDATECOPY, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
     ErrMsg  = ' Error in BD_Output_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
     RETURN
   END IF
-  CALL MeshExtrapInterp1(u(1)%PointMesh, u(2)%PointMesh, tin, u_out%PointMesh, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp1(u(1)%RootForce, u(2)%RootForce, tin, u_out%RootForce, tin_out, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 2 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -2632,7 +2632,7 @@ ENDIF
     ErrMsg  = ' Error in BD_Output_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
     RETURN
   END IF
-  CALL MeshExtrapInterp2(u(1)%PointMesh, u(2)%PointMesh, u(3)%PointMesh, tin, u_out%PointMesh, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp2(u(1)%RootForce, u(2)%RootForce, u(3)%RootForce, tin, u_out%RootForce, tin_out, ErrStat, ErrMsg )
  ELSE 
    ErrStat = ErrID_Fatal
    ErrMsg = ' order must be less than 3 in BD_Output_ExtrapInterp '

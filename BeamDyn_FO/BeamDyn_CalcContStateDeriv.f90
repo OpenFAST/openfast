@@ -42,8 +42,8 @@
                        &qddot)
 
    DO j=1,3
-       qddot(j) = u%PointMesh%TranslationAcc(j,1)
-       qddot(j+3) = u%PointMesh%RotationAcc(j,1)
+       qddot(j) = u%RootMotion%TranslationAcc(j,1)
+       qddot(j+3) = u%RootMotion%RotationAcc(j,1)
    ENDDO
 
    CALL ComputeUDN(p%node_total,p%dof_node,x%dqdt,x%q,qdot)
