@@ -45,8 +45,8 @@
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   CALL MeshCopy ( SrcMesh  = u(1)%PointMesh      &
-                 , DestMesh = u_interp%PointMesh  &
+   CALL MeshCopy ( SrcMesh  = u(1)%RootMotion      &
+                 , DestMesh = u_interp%RootMotion  &
                  , CtrlCode = MESH_NEWCOPY        &
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
@@ -103,7 +103,7 @@
 
    CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
 
-   CALL MeshDestroy ( u_interp%PointMesh       &
+   CALL MeshDestroy ( u_interp%RootMotion       &
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
 
