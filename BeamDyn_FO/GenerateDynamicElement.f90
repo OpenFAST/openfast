@@ -1,4 +1,4 @@
-   SUBROUTINE GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,&
+   SUBROUTINE GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,gravity,&
                                     &elem_total,node_elem,dof_node,ngp,RHS,MassM)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -8,6 +8,7 @@
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: Mass0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),INTENT(IN):: gravity(:) ! Velocity of Mass 1: m/s
    INTEGER(IntKi),INTENT(IN):: elem_total ! Total number of elements
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
@@ -90,7 +91,7 @@
 
 !       WRITE(*,*) 'EStif0_GL1'
 !       WRITE(*,*) EStif0_GL(:,:,1)
-       CALL ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,&
+       CALL ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,&
                          &ngp,node_elem,dof_node,elf,elm)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)
