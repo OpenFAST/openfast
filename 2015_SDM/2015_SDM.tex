@@ -25,9 +25,7 @@
 \renewcommand{\skew}[1]{\widetilde{#1}}
 %------------------------------------------------------------------------------
 
-\title{\kill{BeamDyn: an Efficient High-Fidelity Beam Solver in the FAST
-Modularization Framework}
-BeamDyn: A High-Fidelity Wind Turbine Blade Solver in the FAST
+\title{BeamDyn: A High-Fidelity Wind Turbine Blade Solver in the FAST
 Modular Framework}
 
 
@@ -52,9 +50,9 @@ exact beam theory (GEBT), is developed to meet the design challenges
 associated with highly flexible composite wind turbine blades. In this
 paper, the governing equations of GEBT are reformulated into a nonlinear
 state-space form to support its coupling within the
-\kill{modularization}\mas{modular} framework of the FAST wind turbine
-computer-aided\mas{-}engineering (CAE) tool. Different time integration
-schemes \mas{(implicit and explicit)} are implemented and examined for wind
+modular framework of the FAST wind turbine
+computer-aided-engineering (CAE) tool. Different time integration
+schemes (implicit and explicit) are implemented and examined for wind
 turbine analysis.  Numerical examples and discussion on the efficiency and
 accuracy of time and space discretization will be presented in the final
 paper. A validation example of a realistic wind turbine blade will also be
@@ -69,52 +67,49 @@ structures that are highly flexible.  To ensure the performance and
 reliability of wind turbines, it is crucial to make use of
 computer-aided-engineering (CAE) tools that are capable of analyzing wind
 turbine blades in an accurate and efficient manner. Although modern
-computers \kill{make fully} \mas{enable} three-dimensional (3D) analysis
-\mas{of a fully resolved blade}, \mas{such analyses are too
+computers enable three-dimensional (3D) analysis
+of a fully resolved blade, such analyses are too
 expensive for iterative design. More importantly, modern composite wind
 turbine blades are very well suited to nonlinear beam models, which can
 capture with high-fidelity the deformation response under realistic
 operating conditions, and in a small fraction of the time required by a
-fully resolved 3D simulation.} \kill{consuming to be used for effective
-design-space exploration. Therefore it is preferable to have an efficient
-yet accurate alternative.}
+fully resolved 3D simulation. 
 
 Beam models are widely used to analyze structures that have one of its
-dimensions \mas{being} much larger than the other two.  Many engineering
+dimensions being much larger than the other two.  Many engineering
 structures are modeled as beams, e.g.,  bridges, joists, and helicopter
-rotor blades.  Similarly, beam models are \kill{ideal} \mas{well suited} to
-analyze, \mas{with high fidelity},  wind turbine blades, towers, and shafts.
-Most wind turbine blades are constructed of composite materials, and
-analysis of composite beams is more complicated than isotropic beams due to
-the elastic coupling effects.  The geometrically exact beam theory (GEBT),
-first proposed by Reissner\cite{Ressiner1973}, is a \kill{beam analysis
-method} \mas{beam-deformation model} capable of \mas{enabling} efficient
-analysis of highly flexible composite structures.  GEBT has demonstrated its
-efficacy in helicopter rotor analysis.  Simo\cite{Simo1985} and Simo and
-Vu-Quoc\cite{Simo1986} extended Reissner's initial work to include 3D
-dynamic problems. Jeleni\'c and Crisfield\cite{Crisfield1999} derived a
-finite-element (FE) method that interpolates the rotation field thereby
-preserving the geometric exactness of this theory. It is noted that
-Ibrahimbegovi\'c and his colleagues implemented this theory for
-static\cite{Ibrahim1995} and dynamic\cite{Ibrahim1998} analysis. Readers are
-referred to Hodges\cite{HodgesBeamBook}, where comprehensive derivations and
-discussions on nonlinear composite-beam theories can be found. Recently, a
-mixed formulation of GEBT along with the numerical implementation was
-presented by Yu and Blair\cite{YuGEBT}.  
+rotor blades.  Similarly, beam models are well suited to analyze, with high
+fidelity,  wind turbine blades, towers, and shafts.  Most wind turbine
+blades are constructed of composite materials, and analysis of composite
+beams is more complicated than isotropic beams due to the elastic coupling
+effects.  The geometrically exact beam theory (GEBT), first proposed by
+Reissner\cite{Ressiner1973}, is a beam-deformation model capable of
+enabling efficient analysis of highly flexible composite structures.
+GEBT has demonstrated its efficacy in helicopter rotor analysis.
+Simo\cite{Simo1985} and Simo and Vu-Quoc\cite{Simo1986} extended Reissner's
+initial work to include 3D dynamic problems. Jeleni\'c and
+Crisfield\cite{Crisfield1999} derived a finite-element (FE) method that
+interpolates the rotation field thereby preserving the geometric exactness
+of this theory. It is noted that Ibrahimbegovi\'c and his colleagues
+implemented this theory for static\cite{Ibrahim1995} and
+dynamic\cite{Ibrahim1998} analysis. Readers are referred to
+Hodges\cite{HodgesBeamBook}, where comprehensive derivations and discussions
+on nonlinear composite-beam theories can be found. Recently, a mixed
+formulation of GEBT along with the numerical implementation was presented by
+Yu and Blair\cite{YuGEBT}.  
 
 FAST is a CAE tool developed by the National Renewable Energy Laboratory
 (NREL) for the purposes of wind turbine analysis for both land-based and
 offshore wind turbines using realistic operating conditions.  The current
-beam model in FAST is not capable of \kill{analyzing composite or highly
-flexible wind turbine blades.} \mas{predictive analysis of highly flexible
-composite wind turbine blades.}
+beam model in FAST is not capable of predictive analysis of highly flexible
+composite wind turbine blades.
 Recently, FAST has been reformulated under a
 new modularized framework that provides a rigorous means by which various
 mathematical systems are implemented in distinct modules and are interconnected
 to solve for the global, coupled, dynamic response of wind turbines and wind
 plants \cite{Jonkman:2013,website:FASTModularizationFramework}.
 
-In this paper, \kill{a first-order,} a three-dimensional displacement-based
+In this paper, a three-dimensional displacement-based
 implementation of the geometrically exact beam theory using Legendre
 spectral finite elements is presented. The theory is reformulated in a
 nonlinear state-space form for the purpose of integrating with the FAST
@@ -127,7 +122,7 @@ analysis of composite wind turbine blades. The paper is organized as
 follows.  First, the theoretical foundation of the geometrically exact beam
 theory along with the reformulation of the governing equations into a
 state-space form is introduced. Coupling to the FAST framework is then
-discussed. Finally, \kill{verification} \mas{validation} examples are
+discussed. Finally, validation examples are
 provided to show the accuracy and efficiency of the present model for
 composite wind turbine blades. 
 
@@ -210,7 +205,7 @@ vector along $x_1$ direction in the inertial basis. It is noted that the
 three sets of equations, including equations of motion
 Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2}, constitutive equations
 Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, and kinematical
-equations Eq.~\eqref{1DStrain}, provided a \kill{fully} \mas{full} mathematical description of elasticity problems. 
+equations Eq.~\eqref{1DStrain}, provided a full mathematical description of elasticity problems. 
 
 For a displacement-based finite element implementation, there are six
 degree-of-freedoms at each node: three displacement components and three
@@ -340,8 +335,7 @@ where
     \vec{F}(\vec{q},\vec{v},t) &= \int_0^l \tens{N}^T (-\vec{\mathcal{F}}^F + \vec{\mathcal{F}}^{C\prime} - \vec{\mathcal{F}}^D + \vec{\mathcal{F}}^{ext}) d x_1
 \end{align}
 
-To derive the state-space form of the governing equations, \kill{a new
-first-order variable} $\vec{x}(t)$ is introduced as
+To derive the state-space form of the governing equations,  $\vec{x}(t)$ is introduced as
 \begin{equation}
     \label{StateSpaceX}
     \vec{x}(t) \equiv \begin{Bmatrix}
@@ -395,9 +389,9 @@ details of the theoretical derivations along with various numerical
 examples. Different time integration schemes, including explicit and
 implicit methods, will be implemented and examined in the numerical studies.
 Moreover, we will briefly introduce the format of the current code, which is
-in accordance to the FAST modularization framework. \mas{Finally,  BeamDyn
+in accordance to the FAST modularization framework. Finally,  BeamDyn
 will be validated against experimental data for a realistic wind turbine
-blade.}
+blade.
 
 
 \bibliographystyle{aiaa}
