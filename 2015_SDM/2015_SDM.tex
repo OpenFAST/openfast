@@ -25,13 +25,18 @@
 \renewcommand{\skew}[1]{\widetilde{#1}}
 %------------------------------------------------------------------------------
 
-\title{BeamDyn: an Efficient High-Fidelity Beam Solver in the FAST Modularization Framework}
+\title{\kill{BeamDyn: an Efficient High-Fidelity Beam Solver in the FAST
+Modularization Framework}
+BeamDyn: A High-Fidelity Wind Turbine Blade Solver in the FAST
+Modular Framework}
 
-\author[1]{Qi Wang  \thanks{Research Engineer, National Wind Technology Center, AIAA Senior Member. Email: Qi.Wang2@nrel.gov}}
+
+\author[1]{Qi Wang\thanks{Research Engineer, National Wind Technology Center, AIAA Senior Member. Email: Qi.Wang2@nrel.gov}}
 \author[2]{Nick Johnson\thanks{Graduate Research Assistant, Department of
 Mechanical Engineering.}}
- \author[1]{Michael A. Sprague \thanks{Senior Research Scientist, Scientific Computing Center.}}
- \author[1]{Jason Jonkman \thanks{Senior Engineer, National Wind Technology Center.}}
+ \author[1]{Michael A. Sprague\thanks{Senior Research Scientist, 
+Computational Science Center.}}
+ \author[1]{Jason Jonkman\thanks{Senior Engineer, National Wind Technology Center.}}
  \affil[1]{National Renewable Energy Laboratory, Golden, CO 80401}
  \affil[2]{Colorado School of Mines, Golden, CO 80401}
  
@@ -42,20 +47,94 @@ Mechanical Engineering.}}
 \maketitle
 
 \begin{abstract}
-{ BeamDyn, a finite element implementation of geometrically exact beam theory (GEBT), is developed to meet the design challenges associated with highly flexible composite wind turbine blades. In this paper, the governing equations of GEBT are reformulated into a state-space form to support its coupling within the modularization framework of the FAST wind turbine computer-aided engineering (CAE) tool. Different time integration schemes are implemented and examined for wind turbine analysis. Numerical examples and discussion on the efficiency and accuracy of time and space discretization will be presented in the final paper. A validation example of a realistic wind turbine blade will also be presented.}     
+{BeamDyn, a Legendre-spectral-finite-element implementation of geometrically
+exact beam theory (GEBT), is developed to meet the design challenges
+associated with highly flexible composite wind turbine blades. In this
+paper, the governing equations of GEBT are reformulated into a nonlinear
+state-space form to support its coupling within the
+\kill{modularization}\mas{modular} framework of the FAST wind turbine
+computer-aided\mas{-}engineering (CAE) tool. Different time integration
+schemes \mas{(implicit and explicit)} are implemented and examined for wind
+turbine analysis.  Numerical examples and discussion on the efficiency and
+accuracy of time and space discretization will be presented in the final
+paper. A validation example of a realistic wind turbine blade will also be
+presented.}     
 \end{abstract}
 
-\section{Introduction}
-Wind power installations in the U.S. have exceeded 60 GW, and have become an increasingly important part of the overall energy portfolio. In recent years, the size of wind turbines has also increased in the quest for economies of scale.  Larger wind turbine blades result in structures that are highly flexible.  To ensure the performance and reliability of wind turbines, it is crucial to make use of computer aided engineering (CAE) tools that are capable of analyzing wind turbine blades in an accurate and efficient manner. Although modern computers make it possible, the full three-dimensional (3D) analysis is too time-consuming to be used for effective design space exploration. Therefore it is preferable to have an efficient yet accurate alternative.  
+\section{Introduction} Wind power installations in the U.S. have exceeded 60
+GW, and have become an increasingly important part of the overall energy
+portfolio. In recent years, the size of wind turbines has also increased in
+the quest for economies of scale.  Larger wind turbine blades result in
+structures that are highly flexible.  To ensure the performance and
+reliability of wind turbines, it is crucial to make use of
+computer-aided-engineering (CAE) tools that are capable of analyzing wind
+turbine blades in an accurate and efficient manner. Although modern
+computers \kill{make fully} \mas{enable} three-dimensional (3D) analysis
+\mas{of a fully resolved blade}, \mas{such analyses are too
+expensive for iterative design. More importantly, modern composite wind
+turbine blades are very well suited to nonlinear beam models, which can
+capture with high-fidelity the deformation response under realistic
+operating conditions, and in a small fraction of the time required by a
+fully resolved 3D simulation.} \kill{consuming to be used for effective
+design-space exploration. Therefore it is preferable to have an efficient
+yet accurate alternative.}
 
-Beam models are widely used to analyze structures that have one of its dimension much larger than the other two.  Many engineering structures are modeled as beams: bridges, joists, and helicopter rotor blades. Similarly, beam models are ideal to analyze wind turbine blades, towers, and shafts.  Most wind turbine blades are constructed of composite materials, and analysis of composite beams is more complicated than isotropic beams due to the elastic coupling effects.  The geometrically exact beam theory (GEBT), first proposed by Reissner\cite{Ressiner1973} is a beam analysis method capable of efficiently analyzing highly flexible composite structures.  GEBT has demonstrated its efficacy in helicopter rotor analysis. Simo\cite{Simo1985} and Vu-Quoc\cite{Simo1986} extended Reissner's initial work to include 3D dynamic problems. Jeleni\'c and Crisfield\cite{Crisfield1999} derived a finite-element (FE) method that interpolates the rotation field thereby preserving the geometric exactness of this theory. It is noted that Ibrahimbegovi\'c and his colleagues implemented this theory for static\cite{Ibrahim1995} and dynamic\cite{Ibrahim1998} analysis. Readers are referred to Hodges\cite{HodgesBeamBook}, where comprehensive derivations and discussions on nonlinear composite-beam theories can be found. Recently, a mixed formulation of GEBT along with the numerical implementation was presented by Yu and Blair\cite{YuGEBT}.  
+Beam models are widely used to analyze structures that have one of its
+dimensions \mas{being} much larger than the other two.  Many engineering
+structures are modeled as beams, e.g.,  bridges, joists, and helicopter
+rotor blades.  Similarly, beam models are \kill{ideal} \mas{well suited} to
+analyze, \mas{with high fidelity},  wind turbine blades, towers, and shafts.
+Most wind turbine blades are constructed of composite materials, and
+analysis of composite beams is more complicated than isotropic beams due to
+the elastic coupling effects.  The geometrically exact beam theory (GEBT),
+first proposed by Reissner\cite{Ressiner1973}, is a \kill{beam analysis
+method} \mas{beam-deformation model} capable of \mas{enabling} efficient
+analysis of highly flexible composite structures.  GEBT has demonstrated its
+efficacy in helicopter rotor analysis.  Simo\cite{Simo1985} and Simo and
+Vu-Quoc\cite{Simo1986} extended Reissner's initial work to include 3D
+dynamic problems. Jeleni\'c and Crisfield\cite{Crisfield1999} derived a
+finite-element (FE) method that interpolates the rotation field thereby
+preserving the geometric exactness of this theory. It is noted that
+Ibrahimbegovi\'c and his colleagues implemented this theory for
+static\cite{Ibrahim1995} and dynamic\cite{Ibrahim1998} analysis. Readers are
+referred to Hodges\cite{HodgesBeamBook}, where comprehensive derivations and
+discussions on nonlinear composite-beam theories can be found. Recently, a
+mixed formulation of GEBT along with the numerical implementation was
+presented by Yu and Blair\cite{YuGEBT}.  
 
-FAST is a CAE tool developed by the National Renewable Energy Laboratory (NREL) for the purposes of wind turbine analysis for both land-based and offshore wind turbines using realistic operating conditions.  The current beam model in FAST is not capable of analyzing composite or highly flexible wind turbine blades. Recently, FAST has been reformulated under a new modularization framework that provides a rigorous means by which various mathematical systems are implemented in distinct modules and interconnected to solve for the global, coupled, dynamic response of wind turbines and wind plants \cite{Jonkman:2013,website:FASTModularizationFramework}.
+FAST is a CAE tool developed by the National Renewable Energy Laboratory
+(NREL) for the purposes of wind turbine analysis for both land-based and
+offshore wind turbines using realistic operating conditions.  The current
+beam model in FAST is not capable of \kill{analyzing composite or highly
+flexible wind turbine blades.} \mas{predictive analysis of highly flexible
+composite wind turbine blades.}
+Recently, FAST has been reformulated under a
+new modularized framework that provides a rigorous means by which various
+mathematical systems are implemented in distinct modules and are interconnected
+to solve for the global, coupled, dynamic response of wind turbines and wind
+plants \cite{Jonkman:2013,website:FASTModularizationFramework}.
 
-In this paper, a first-order, three-dimensional displacement-based implementation of the geometrically exact beam theory using Legendre spectral finite elements is presented. The theory is reformulated in a state-space form for the purposes of integrating with the FAST framework, thereby introducing an optional high-fidelity beam model as an alternative to the current beam model. This work builds on previous efforts that showed the implementation GEBT and spatial discretization executed using Legendre spectral finite elements (LSFEs)\cite{Wang:GEBT2013,Wang:SFE2013,Wang:GEBT2014,Sprague:FAST2014} for analysis of composite wind turbine blades. The paper is organized as follows.  First, The theoretical foundation of the geometrically exact beam theory along with the reformation of the governing equations into state-space form is introduced. Then coupling to the FAST framework is discussed. Finally, verification examples are provided to show the accuracy and efficiency of the present model for composite wind turbine blades. 
+In this paper, \kill{a first-order,} a three-dimensional displacement-based
+implementation of the geometrically exact beam theory using Legendre
+spectral finite elements is presented. The theory is reformulated in a
+nonlinear state-space form for the purpose of integrating with the FAST
+framework, thereby introducing an optional high-fidelity beam model as an
+alternative to the current beam model. This work builds on previous efforts
+that showed the implementation GEBT and spatial discretization executed
+using Legendre spectral finite elements
+(LSFEs)\cite{Wang:GEBT2013,Wang:SFE2013,Wang:GEBT2014,Sprague:FAST2014} for
+analysis of composite wind turbine blades. The paper is organized as
+follows.  First, the theoretical foundation of the geometrically exact beam
+theory along with the reformulation of the governing equations into a
+state-space form is introduced. Coupling to the FAST framework is then
+discussed. Finally, \kill{verification} \mas{validation} examples are
+provided to show the accuracy and efficiency of the present model for
+composite wind turbine blades. 
 
+~
 
 \section{Geometrically Exact Beam Theory}
+
 This section reviews the geometric exact beam theory for completeness of this paper. The content of this section can be found in many other papers and textbooks.
 Figure~\ref{Kinematics} shows a beam in its initial undeformed
 and deformed states. A reference frame $\mathbf{b}_i$ is introduced along the
@@ -103,7 +182,15 @@ The constitutive equations relate the velocities to the momenta and the one-dime
 	\underline{\kappa}
 	\end{Bmatrix}
 \end{align}
-where $\underline{\underline{\mathcal{M}}}$ and $\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass and stiffness matrices,respectively, note that they are not really tensors; $\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and curvatures, respectively. $\underline{\omega}$ is the angular velocity vector that is defined by the rotation tensor $\underline{\underline{R}}$ as $\underline{\omega} = axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$. The 1D strain measures are defined as
+where $\underline{\underline{\mathcal{M}}}$ and
+$\underline{\underline{\mathcal{C}}}$ are the $6 \times 6$ sectional mass
+and stiffness matrices, respectively (note that they are not really tensors);
+$\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and
+curvatures, respectively. $\underline{\omega}$ is the angular velocity
+vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
+$\underline{\omega} =
+axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$. The 1D
+strain measures are defined as
 \begin{equation}
     \label{1DStrain}
     \begin{Bmatrix}
@@ -116,11 +203,18 @@ where $\underline{\underline{\mathcal{M}}}$ and $\underline{\underline{\mathcal{
         \vec{k} + \tens{R}~ \vec{k}_i
     \end{Bmatrix}
 \end{equation}
-where $\vec{k} = \text{axial} (\tens{R}^\prime \tens{R}^T)$ is the sectional curvature vector resolved in the inertial basis, $\vec{k}_i$ is the corresponding initial curvature vector, and $\bar{\imath}_1$ is the unit vector along $x_1$ direction in the inertial basis. It is noted that the three sets of equations, including equations of motion Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2}, constitutive equations Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, and kinematical equations Eq.~\eqref{1DStrain}, provided a fully mathematical description of elasticity problems. 
+where $\vec{k} = \text{axial} (\tens{R}^\prime \tens{R}^T)$ is the sectional
+curvature vector resolved in the inertial basis, $\vec{k}_i$ is the
+corresponding initial curvature vector, and $\bar{\imath}_1$ is the unit
+vector along $x_1$ direction in the inertial basis. It is noted that the
+three sets of equations, including equations of motion
+Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2}, constitutive equations
+Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, and kinematical
+equations Eq.~\eqref{1DStrain}, provided a \kill{fully} \mas{full} mathematical description of elasticity problems. 
 
 For a displacement-based finite element implementation, there are six
 degree-of-freedoms at each node: three displacement components and three
-rotation components. Here we use $\vec{q}$ to denote the elemental
+rotation components. Here, we use $\vec{q}$ to denote the elemental
 displacement array as $\underline{q}^T=\left[
 \underline{u}^T~~\underline{p}^T\right]$ where $\vec{u}$ is the
 displacement and $\vec{p}$ is the rotation-parameter vector. The
@@ -139,7 +233,10 @@ displacement, velocity, and acceleration are written as
 where $\tens{N}$ is the shape function matrix and $(\hat{\cdot})$ denotes a
 column matrix of nodal values.
 
-To accommodate the FAST modularization framework, the governing equations in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} need to be reformulated into a state-space form. Firstly we recast these equations in compact form as
+To accommodate the FAST modular framework, the governing equations 
+\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} need to be reformulated
+into a state-space form. Firstly we recast these equations in compact form
+as
 \begin{equation}
     \label{CompactGovernGEBT}
     \underline{\mathcal{F}}^I - \underline{\mathcal{F}}^{C\prime} + \underline{\mathcal{F}}^D = \underline{\mathcal{F}}^{ext}
@@ -175,7 +272,7 @@ where $\underline{\mathcal{F}}^I, \underline{\mathcal{F}}^C$ and $\underline{\ma
     \underline{m}
     \end{Bmatrix}
 \end{align}   
-Along with the constitutive equations in Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, the inertial force $\underline{\mathcal{F}}^I$ can be written explicitly as
+Along with the constitutive equations \eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, the inertial force $\underline{\mathcal{F}}^I$ can be written explicitly as
 \begin{align}
     \underline{\mathcal{F}}^I &= \begin{Bmatrix}
     m \ddot{\underline{u}} + ( \dot{\tilde{\omega}} + \tilde{\omega} \tilde{\omega} ) m \underline{\eta} \\
@@ -200,7 +297,9 @@ Along with the constitutive equations in Eq.~\eqref{ConstitutiveMass} and \eqref
     \end{Bmatrix} \\
     &  \equiv \underline{\underline{\mathfrak{M}}} \underline{a} + \underline{\underline{\mathcal{G}}} \underline{v}  \nonumber     
 \end{align}
-where $m$ is the mass density per unit span; $\underline{\eta}$ is the center of mass location;  $\underline{\underline{\varrho}}$ is the moment of inertia; $\tens{I}$ is the identity matrix. The definitions of acceleration vector $\underline{a}$ and velocity vector $\underline{v}$ can be found in Eq.~\eqref{DiscretizedAcc} and \eqref{DiscretizedVel}, respectively. By the newly introduced matrices, the compact form of equations of motion can be rewritten as
+where $m$ is the mass density per unit span; $\underline{\eta}$ is the
+center of mass location;  $\underline{\underline{\varrho}}$ is the moment of
+inertia; $\tens{I}$ is the identity matrix. The definitions of the acceleration vector $\underline{a}$ and velocity vector $\underline{v}$ can be found in Eq.~\eqref{DiscretizedAcc} and \eqref{DiscretizedVel}, respectively. By the newly introduced matrices, the compact form of equations of motion can be rewritten as
 \begin{equation}
     \label{CompactForm2}
     \underline{\underline{\mathfrak{M}}}~ \underline{a} + f(\underline{q},\underline{v},t) = 0
@@ -241,7 +340,8 @@ where
     \vec{F}(\vec{q},\vec{v},t) &= \int_0^l \tens{N}^T (-\vec{\mathcal{F}}^F + \vec{\mathcal{F}}^{C\prime} - \vec{\mathcal{F}}^D + \vec{\mathcal{F}}^{ext}) d x_1
 \end{align}
 
-To derive the state-space form of the governing equations, a new first-order variable $\vec{x}(t)$ is introduced
+To derive the state-space form of the governing equations, \kill{a new
+first-order variable} $\vec{x}(t)$ is introduced as
 \begin{equation}
     \label{StateSpaceX}
     \vec{x}(t) \equiv \begin{Bmatrix}
@@ -284,12 +384,20 @@ where
     \hat{\vec{v}}_0
     \end{Bmatrix}
 \end{align}
-It is noted that the first-order state-space form, in Eq.~\eqref{StateSpaceGov-1} and \eqref{StateSpaceGov-2}, can be solved with any number of first-order ordinary differential equations (ODE) integrators. 
+It is noted that the state-space form, in
+Eq.~\eqref{StateSpaceGov-1} and \eqref{StateSpaceGov-2}, can be solved with
+any number of first-order ordinary differential equations (ODE) integrators
+for first-order-in-time systems. 
 
  
- \section{Content of Full Paper}
-In the full paper, we will provide more details of the theoretical
-derivations along with various numerical examples. Different time integration schemes, including Runge-Kutta methods and multistep methods, will be implemented and examined in the numerical studies. Moreover, we will briefly introduce the format of the current code, which is in accordance to the FAST modularization framework. An example of analysis of a realistic wind turbine blade will be presented.
+ \section{Content of Full Paper} In the full paper, we will provide more
+details of the theoretical derivations along with various numerical
+examples. Different time integration schemes, including explicit and
+implicit methods, will be implemented and examined in the numerical studies.
+Moreover, we will briefly introduce the format of the current code, which is
+in accordance to the FAST modularization framework. \mas{Finally,  BeamDyn
+will be validated against experimental data for a realistic wind turbine
+blade.}
 
 
 \bibliographystyle{aiaa}
