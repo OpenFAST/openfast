@@ -1,4 +1,4 @@
-   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,&
+   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,&
                            &ngp,node_elem,dof_node,elf,elm)
                            
    !-------------------------------------------------------------------------------
@@ -12,6 +12,7 @@
    REAL(ReKi),INTENT(IN):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),INTENT(IN):: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN):: EMass0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(IN):: gravity(:) ! 
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
@@ -39,6 +40,7 @@
    REAL(ReKi):: gpr
    REAL(ReKi):: Fc(6)
    REAL(ReKi):: Fd(6)
+   REAL(ReKi):: Fg(6)
    REAL(ReKi):: vvv(6)
    REAL(ReKi):: mmm
    REAL(ReKi):: mEta(3)
@@ -112,6 +114,8 @@
 !WRITE(*,*) Fc
        CALL MassMatrix(mmm,mEta,rho,uuu,Mi)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
+       CALL GravityLoads(mmm,mEta,gravity,Fg)
+       Fd(:) = Fd(:) - Fg(:)
 
        DO i=1,node_elem
            DO j=1,node_elem

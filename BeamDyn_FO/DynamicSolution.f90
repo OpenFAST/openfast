@@ -1,4 +1,4 @@
-   SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,Mass0,time,&
+   SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,Mass0,gravity,time,&
                              &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                              &qddot)
    !***************************************************************************************
@@ -9,6 +9,7 @@
    REAL(ReKi),INTENT(IN):: uuN0(:,:) ! Initial position vector
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: Mass0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),INTENT(IN):: gravity(:) ! 
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(DbKi),INTENT(IN):: time ! Current time
@@ -38,7 +39,7 @@
    RHS = 0.0D0
    MassM = 0.0D0
 
-   CALL GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,&
+   CALL GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,gravity,&
                               &elem_total,node_elem,dof_node,ngp,RHS,MassM)
 
    RHS = RHS + F_ext

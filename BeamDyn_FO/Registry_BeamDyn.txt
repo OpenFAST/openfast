@@ -43,6 +43,7 @@ typedef BeamDyn/BD OtherStateType ReKi DummyOtherState  - - - "A variable, repla
 typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
 typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
+typedef BeamDyn/BD ParameterType ReKi   gravity   {:} - -  "Gravitational acceleration" m/s^2 
 #typedef      ^            ^       ^     m00       {:} - -  "Sectional Mass density per unit span at each node" -
 #typedef      ^            ^       ^     mEta0     {:}{:} - -  "Sectional m\Eta_0 at each node" -
 #typedef      ^            ^       ^     rho0      {:}{:}{:}  - -  "Sectional tensor of inertia per unit span" -
@@ -77,6 +78,7 @@ typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     - 
 # ..... Input file data..............................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
+typedef BeamDyn/BD    BD_InputFile    ReKi     gravity    {:} - - "Gravitational acceleration" m/s^2
 typedef BeamDyn/BD    BD_InputFile    IntKi    member_total    - - - "Total number of members" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem    - - - "Order of interpolation (basis) function" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate    {:}{:} - - "Key point coordinates array" -

@@ -44,6 +44,7 @@ INCLUDE 'ElasticForce.f90'
 INCLUDE 'BldGaussPointDataMass.f90'
 INCLUDE 'MassMatrix.f90'
 INCLUDE 'GyroForce.f90'
+INCLUDE 'GravityLoads.f90'
 INCLUDE 'ElementMatrix.f90'
 INCLUDE 'AssembleStiffKGL.f90'
 INCLUDE 'AssembleRHSGL.f90'
@@ -144,6 +145,9 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
 
+   CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
+   p%gravity = 0.0D0
+   p%gravity = InputFileData%gravity
 !   STOP
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
    p%member_length(:,:) = 0.0D0
@@ -245,6 +249,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
+   WRITE(*,*) "gravity = ", p%gravity
    WRITE(*,*) "temp_GL: ", temp_GLL(:)
    DO i=1,InputFileData%member_total*2+1
        WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
@@ -271,7 +276,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,2)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
-   STOP
+!   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
