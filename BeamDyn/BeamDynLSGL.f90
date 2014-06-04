@@ -209,6 +209,11 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
        temp_GLL(i) = (temp_GLL(i) + 1.0D0)/2.0D0
    ENDDO
 
+   DO i=1,p%ngp
+       WRITE(*,*) "temp_GLL",i,temp_GLL(i)
+   ENDDO
+!   STOP
+
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
            DO j=1,p%ngp
@@ -279,8 +284,11 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,2)
+   DO i=1,p%elem_total
+       DO j=1,p%ngp
+           WRITE(*,*) "Stiff0_GL at: ",(i-1)*p%ngp+j,p%Stif0_GL(4,:,(i-1)*p%ngp+j)
+       ENDDO
+   ENDDO
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
 !   STOP
