@@ -291,7 +291,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 
       ! Define parameters here:
 
-      p%niter = 100
+      p%niter = 50
       p%piter = 0 !ADDED NEW VARIABLE TO TRACK NUMBER OF ITERATIONS FOR CONDITIONAL STATEMENTS, NJ 3/18/2014
 
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
@@ -311,14 +311,14 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !-------------------
 !This is the input (bending) used for Example 1 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-      p%F_ext(p%dof_total-1) = -0.8D0*27300.4D0
+!      p%F_ext(p%dof_total-1) = -0.8D0*27300.4D0
 !------------------
 !END input
 !------------------
 !-------------------
 !This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-!      p%F_ext(p%dof_total-3) = 1.5D+02
+      p%F_ext(p%dof_total-3) = -3.00E04
 !------------------
 !END input
 !------------------
