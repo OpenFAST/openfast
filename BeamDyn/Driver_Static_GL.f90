@@ -213,8 +213,8 @@ n=1
 !                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
 
    CALL ComputeRootForceNodal(BD_Parameter%uuN0,BD_OtherState%uuNf,&
-                 &BD_Parameter%Stif0_N1,BD_Parameter%node_elem,BD_Parameter%dof_node,&
-                 &BD_OtherState%RootForce)
+                    &BD_Parameter%Stif0_N1,BD_Parameter%node_elem,BD_Parameter%dof_node,&
+                    &BD_OtherState%RootForce)
 
    WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
    WRITE(OutUnit,*) '=========================================='
