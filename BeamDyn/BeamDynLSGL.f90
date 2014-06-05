@@ -326,7 +326,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !-------------------
 !This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-      p%F_ext(p%dof_total-3) = -3.00E04
+      p%F_ext(p%dof_total-3) = -1.0E+05
 !------------------
 !END input
 !------------------
