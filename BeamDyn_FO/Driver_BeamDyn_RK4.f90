@@ -198,9 +198,9 @@ PROGRAM MAIN
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BD_InputSolve( t_global     ,     BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global+ 0.5*dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global+ dt_global,     BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 
 
 !     CALL BD_Output_ExtrapInterp(BD_Output, BD_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
