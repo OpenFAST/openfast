@@ -29,6 +29,7 @@ PROGRAM FAST
 ! noted compilation switches:
 !   SOLVE_OPTION_1_BEFORE_2 (uses a different order for solving input-output relationships)
 !   OUTPUT_ADDEDMASS        (outputs a file called "AddedMassMatrix.out" that contains HydroDyn's added-mass matrix.
+!   OUTPUT_JACOBIAN
 !   FPE_TRAP_ENABLED        (uses IEEE_ARITHMETIC for setting NaN and Inf in NWTC_Library; not compatible with gfortran)
 !.................................................................................................
 
@@ -327,6 +328,14 @@ LOGICAL                               :: calcJacobian                           
       CALL CheckError( ErrStat, 'Message from ED_Init: '//NewLine//ErrMsg )
 
    CALL SetModuleSubstepTime(Module_ED)
+   
+      ! bjj: added this check per jmj; perhaps it would be better in ElastoDyn, but I'll leave it here for now:
+   IF ( p_FAST%TurbineType == Type_Offshore_Floating ) THEN
+      IF ( ED_Input(1)%PlatformPtMesh%Position(3,1) < 0.0_ReKi .AND. .NOT. EqualRealNos( ED_Input(1)%PlatformPtMesh%Position(3,1), 0.0_ReKi ) ) THEN
+         CALL CheckError(ErrID_Fatal,"ElastoDyn PtfmRefzt must not be negative for floating offshore systems.")
+      END IF      
+   END IF
+   
       
    ! ........................
    ! initialize ServoDyn 
