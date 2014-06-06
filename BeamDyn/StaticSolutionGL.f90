@@ -26,11 +26,15 @@
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #:", i
-!       IF(i==2) STOP
+       IF(i==2) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        CALL BldGenerateStaticElement(uuN0,uuNf,F_ext,Stif0,elem_total,node_elem,dof_node,ngp,StifK,RHS)
        
+       DO j=1,18
+          WRITE(*,*) "elf",j,RHS(j)
+       ENDDO
+
        RHS = RHS + F_ext
        
        feqv = 0.0D0
@@ -69,11 +73,11 @@
        ENDIF
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
-!       DO j=1,node_total
-!           DO k=1,dof_node
-!               WRITE(*,*) "uuNf",k," = ", uuNf((j-1)*dof_node+k)
-!           ENDDO
-!       ENDDO
+       DO j=1,node_total
+           DO k=1,dof_node
+               WRITE(*,*) "uuNf",k," = ", uuNf((j-1)*dof_node+k)
+           ENDDO
+       ENDDO
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            EXIT !! USE EXIT INSTEAD OF STOP, NJ 3/18/2014

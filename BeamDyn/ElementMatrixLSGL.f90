@@ -50,11 +50,16 @@
    DO igp=1,ngp
        gpr = gp(igp)
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
+!       WRITE(*,*) "gpr = ",gpr
+!       WRITE(*,*) "jacobian = ",Jacobian
        CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,EStif0_GL,node_elem,dof_node,uu0,E10,Stif)
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
+!       DO i=1,6
+!       WRITE(*,*) "Fd = ",i,Fd(i)
+!       ENDDO
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -71,9 +76,14 @@
            ENDDO
        ENDDO 
 
+   
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
+!               WRITE(*,*) "hhj",i,hhx(i)
+!               WRITE(*,*) "hpj",i,hpx(i)
+               WRITE(*,*) "Fd",j,- hhx(i)*Fd(j)*Jacobian*gw(igp)
+               WRITE(*,*) "Fc",j,- hpx(i)*Fc(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
            ENDDO

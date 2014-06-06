@@ -23,6 +23,9 @@
    ENDDO
    fff = 0.0D0 
    fff = MATMUL(Stif,eee)
+!   DO i=1,6
+!       WRITE(*,*) "eee = ",i,eee(i)
+!   ENDDO
 
 !   DO i=1,6
 !      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
