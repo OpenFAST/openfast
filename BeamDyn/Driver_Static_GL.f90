@@ -102,7 +102,7 @@ PROGRAM MAIN
    Allocate(BD_Output(1))
    Allocate(BD_OutputTimes(1))
 
-   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
 
    CALL BeamDyn_Init( BD_InitInput        &
@@ -171,19 +171,19 @@ n=1
                       &BD_Parameter%node_elem, BD_Parameter%dof_node,&
                       &BD_Parameter%elem_total, BD_Parameter%dof_total,BD_Parameter%node_total,&
                       &BD_Parameter%ngp,BD_Parameter%niter,BD_Parameter%piter) 
+                END DO
         
         IF (BD_Parameter%piter .LT. BD_Parameter%niter) THEN
           n=0  
-          EXIT
+!          EXIT
         ELSE
             n=n+1
             WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with addition steps"
             WRITE(*,*) "n=",n
-            !BD_OtherState%uuNf=0
+            BD_OtherState%uuNf=0
         ENDIF!CONDITION IF NR ITERATIONS HAVE BEEN REACHED ZERO OUT uunF, NJ 3/18/2014 
 		     
         ENDDO
-	END DO
 	
 
 !IF SOUTION IS NOT YET CONVERGED TRY TAKING LOAD IN 3 STEPS

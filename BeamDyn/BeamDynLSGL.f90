@@ -188,11 +188,14 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
            p%uuN0(temp_id2+1,i) = temp_POS(1)
            p%uuN0(temp_id2+2,i) = temp_POS(2)
            p%uuN0(temp_id2+3,i) = temp_POS(3)
-           p%uuN0(temp_id2+4,i) = temp_CRV(1)
-           p%uuN0(temp_id2+5,i) = temp_CRV(2)
-           p%uuN0(temp_id2+6,i) = temp_CRV(3)
+!           p%uuN0(temp_id2+4,i) = temp_CRV(1)
+!           p%uuN0(temp_id2+5,i) = temp_CRV(2)
+!           p%uuN0(temp_id2+6,i) = temp_CRV(3)
        ENDDO
    ENDDO
+   p%uuN0(6,1) = 1.64039390858428802
+   p%uuN0(12,1)= 1.21338673221741544
+   p%uuN0(18,1)= 0.81028671777792349
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
 
@@ -212,7 +215,6 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    DO i=1,p%ngp
        WRITE(*,*) "temp_GLL",i,temp_GLL(i)
    ENDDO
-!   STOP
 
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
@@ -284,11 +286,11 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-   DO i=1,p%elem_total
-       DO j=1,p%ngp
-           WRITE(*,*) "Stiff0_GL at: ",(i-1)*p%ngp+j,p%Stif0_GL(4,:,(i-1)*p%ngp+j)
-       ENDDO
-   ENDDO
+!   DO i=1,p%elem_total
+!       DO j=1,p%ngp
+!           WRITE(*,*) "Stiff0_GL at: ",(i-1)*p%ngp+j,p%Stif0_GL(4,:,(i-1)*p%ngp+j)
+!       ENDDO
+!   ENDDO
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
 !   STOP
@@ -326,7 +328,8 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !-------------------
 !This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
-      p%F_ext(p%dof_total-3) = -1.0E+05
+!      p%F_ext(p%dof_total-3) = -1.0E+05
+      p%F_ext(p%dof_total-3) = 6.0E+02
 !------------------
 !END input
 !------------------
