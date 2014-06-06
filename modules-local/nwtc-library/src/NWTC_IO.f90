@@ -136,6 +136,7 @@ MODULE NWTC_IO
       ! Create interface for a generic ParseVar that actually uses specific routines.
 
    INTERFACE ParseVar                                                         ! Parse a single number from a string.
+      MODULE PROCEDURE ParseChVar                                             ! Parses a character string from a string.
       MODULE PROCEDURE ParseDbVar                                             ! Parses a double-precision REAL from a string.
       MODULE PROCEDURE ParseInVar                                             ! Parses an INTEGER from a string.
       MODULE PROCEDURE ParseLoVar                                             ! Parses an LOGICAL from a string.
@@ -272,15 +273,16 @@ CONTAINS
    !     SUBROUTINE OpenUInBEFile ( Un, InFile, RecLen [, ErrStat] )
    !     SUBROUTINE OpenUInfile   ( Un, InFile [, ErrStat] )
    !     SUBROUTINE OpenUOutfile  ( Un, OutFile [, ErrStat] )
-   !     SUBROUTINE ParseDbAry    ( FileInfo, LineNum, AryName   , DbAry, AryLen , ErrStat, ErrMsg )                       ! Parses a double-precision REAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseDbVar    ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg )                                ! Parses a double-precision REAL from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseInAry    ( FileInfo, LineNum, AryName   , InAry, AryLen , ErrStat, ErrMsg )                       ! Parses a whole-number array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseChVar    ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )                          ! Parses a CHARACTER from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseDbAry    ( FileInfo, LineNum, AryName   , DbAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a double-precision REAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseDbVar    ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg, UnEc )                                ! Parses a double-precision REAL from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseInAry    ( FileInfo, LineNum, AryName   , InAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a whole-number array from a string. USE ParseAry instead.
    !     SUBROUTINE ParseInclInfo ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )                              ! Parse the information in "@" include statements.
-   !     SUBROUTINE ParseInVar    ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg )                                ! Parses a whole-number from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseLoAry    ( FileInfo, LineNum, AryName   , LoAry, AryLen , ErrStat, ErrMsg )                       ! Parses a LOGICAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseLoVar    ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg )                                ! Parses a LOGICAL value from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseSiAry    ( FileInfo, LineNum, AryName   , SiAry, AryLen , ErrStat, ErrMsg )                       ! Parses a single-precision REAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseSiVar    ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg )                                ! Parses a single-precision REAL from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseInVar    ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )                                ! Parses a whole-number from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseLoAry    ( FileInfo, LineNum, AryName   , LoAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a LOGICAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseLoVar    ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )                                ! Parses a LOGICAL value from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseSiAry    ( FileInfo, LineNum, AryName   , SiAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a single-precision REAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseSiVar    ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )                                ! Parses a single-precision REAL from a string. USE ParseVar instead.
    !     FUNCTION   PathIsRelative( GivenFil )
    !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] [, ErrMsg] )
    !     SUBROUTINE ProcessComFile( TopFileName, FileInfo, ErrStat, ErrMsg )                                               ! Call ScanComFile and ReadComFile to fully process commented and possibly nested input files.
@@ -1048,7 +1050,7 @@ CONTAINS
          ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF      
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1088,7 +1090,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_R8Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-         
+
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1129,7 +1131,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_QuKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-         
+
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1170,7 +1172,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1212,7 +1214,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1254,7 +1256,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_QuKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1297,11 +1299,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF      
+   END IF
 
 
 
@@ -1342,11 +1344,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF      
+   END IF
 
 
 
@@ -1389,11 +1391,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF     
+   END IF
 
 
 
@@ -3008,7 +3010,108 @@ CONTAINS
    RETURN
    END SUBROUTINE OpenUOutfile ! ( Un, InFile [,ErrStat] )
 !=======================================================================
-   SUBROUTINE ParseDbAry ( FileInfo, LineNum, AryName, DbAry, AryLen, ErrStat, ErrMsg )
+   SUBROUTINE ParseChVar ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )
+
+      ! This subroutine parses the specified line of text for two words.  One should be a
+      ! the name of a character variable and the other a string.
+      ! Generate an error message if the value is the wrong type or if only one "word" is found.
+
+      ! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters.
+
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      CHARACTER(*),   INTENT(OUT)            :: ChVar                         ! The CHARACTER variable to receive the input value.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType)                    :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+
+
+
+      CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
+      IF ( Words(2) == '' )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "' &
+                   //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
+                   ' >> The variable "'//TRIM( ExpVarName )//'" was not assigned valid string value on line #' &
+                   //TRIM( Num2LStr( LineNum ) )//'.' )
+         RETURN
+      ENDIF
+
+      CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
+                        , FileInfo%FileLine(LineNum), NameIndx, ErrStatLcl, ErrMsg )
+      IF ( ErrStatLcl /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+         RETURN
+      ENDIF
+
+      ChVar = Words(3-NameIndx)
+      IF ( ErrStatLcl /= 0 )  THEN
+         CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "' &
+                   //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
+                   ' >> The variable "'//TRIM( ExpVarName )//'" was not assigned valid REAL value on line #' &
+                   //TRIM( Num2LStr( LineNum ) )//'.' )
+         RETURN
+      ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+      END IF
+
+      LineNum = LineNum + 1
+
+      CALL ExitThisRoutine ( ErrID_None, ' ' )
+
+      RETURN
+
+   !=======================================================================
+   CONTAINS
+   !=======================================================================
+      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+
+         ! This subroutine cleans up the parent routine before exiting.
+
+
+            ! Argument declarations.
+
+         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
+
+         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
+
+
+            ! Local declarations.
+
+         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
+
+
+            ! Set error status/message
+
+         ErrStat = ErrID
+         ErrMsg  = TRIM( Msg )//NewLine//' >> The text being parsed was :'//NewLine//'    "'//TRIM( FileInfo%Lines(LineNum) )//'"'
+
+
+
+         RETURN
+
+      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+
+   END SUBROUTINE ParseChVar ! ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )
+!=======================================================================
+   SUBROUTINE ParseDbAry ( FileInfo, LineNum, AryName, DbAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for AryLen REAL values.
       ! Generate an error message if the value is the wrong type.
@@ -3022,6 +3125,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(In)             :: AryName                       ! The array name we are trying to fill.
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
@@ -3053,6 +3158,10 @@ CONTAINS
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"' )
          RETURN
       ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
+      END IF
 
       LineNum = LineNum + 1
 
@@ -3095,9 +3204,9 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseDbAry ! ( FileInfo, LineNum, AryName, DbAry, AryLen, ErrStat, ErrMsg )
+   END SUBROUTINE ParseDbAry ! ( FileInfo, LineNum, AryName, DbAry, AryLen, ErrStat, ErrMsg, UnEc )
 !=======================================================================
-   SUBROUTINE ParseDbVar ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg )
+   SUBROUTINE ParseDbVar ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for two words.  One should be a
       ! the name of a double-precision variable and the other a REAL value.
@@ -3110,6 +3219,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
@@ -3143,6 +3254,10 @@ CONTAINS
                    //TRIM( Num2LStr( LineNum ) )//'.' )
          RETURN
       ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+      END IF
 
       LineNum = LineNum + 1
 
@@ -3183,7 +3298,7 @@ CONTAINS
 
    END SUBROUTINE ParseDbVar ! ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg )
 !=======================================================================
-   SUBROUTINE ParseInAry ( FileInfo, LineNum, AryName, InAry, AryLen, ErrStat, ErrMsg )
+   SUBROUTINE ParseInAry ( FileInfo, LineNum, AryName, InAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for AryLen whole numbers.
       ! Generate an error message if the value is the wrong type.
@@ -3197,6 +3312,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(In)             :: AryName                       ! The array name we are trying to fill.
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
@@ -3228,6 +3345,10 @@ CONTAINS
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"' )
          RETURN
       ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
+      END IF
 
       LineNum = LineNum + 1
 
@@ -3270,7 +3391,7 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseInAry ! ( FileInfo, LineNum, AryName, InAry, AryLen, ErrStat, ErrMsg )
+   END SUBROUTINE ParseInAry ! ( FileInfo, LineNum, AryName, InAry, AryLen, ErrStat, ErrMsg, UnEc )
 !=======================================================================
    SUBROUTINE ParseInclInfo ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )
 
@@ -3417,7 +3538,7 @@ CONTAINS
 
    END SUBROUTINE ParseInclInfo ! ( InclInfo, FileName, RangeBeg, RangeEnd, FromFile, ErrStat, ErrMsg )
 !=======================================================================
-   SUBROUTINE ParseInVar ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg )
+   SUBROUTINE ParseInVar ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for two words.  One should be a
       ! variable name and the other an INTEGER value.
@@ -3430,6 +3551,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
@@ -3464,6 +3587,10 @@ CONTAINS
          RETURN
       ENDIF
 
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+      END IF
+
       LineNum = LineNum + 1
 
       CALL ExitThisRoutine ( ErrID_None, '' )
@@ -3497,9 +3624,9 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseInVar ! ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg )
+   END SUBROUTINE ParseInVar ! ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )
 !=======================================================================
-   SUBROUTINE ParseLoAry ( FileInfo, LineNum, AryName, LoAry, AryLen, ErrStat, ErrMsg )
+   SUBROUTINE ParseLoAry ( FileInfo, LineNum, AryName, LoAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for AryLen LOGICAL values.
       ! Generate an error message if the value is the wrong type.
@@ -3511,6 +3638,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       LOGICAL, INTENT(OUT)                   :: LoAry       (AryLen)          ! The LOGICAL array to receive the input values.
 
@@ -3544,6 +3673,10 @@ CONTAINS
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"' )
          RETURN
       ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
+      END IF
 
       LineNum = LineNum + 1
 
@@ -3586,9 +3719,9 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseLoAry ! ( FileInfo, LineNum, AryName, LoAry, AryLen, ErrStat, ErrMsg )
+   END SUBROUTINE ParseLoAry ! ( FileInfo, LineNum, AryName, LoAry, AryLen, ErrStat, ErrMsg, UnEc )
 !=======================================================================
-   SUBROUTINE ParseLoVar ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg )
+   SUBROUTINE ParseLoVar ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for two words.  One should be a
       ! variable name and the other a LOGICAL value.
@@ -3601,6 +3734,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
@@ -3636,6 +3771,10 @@ CONTAINS
          RETURN
       ENDIF
 
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+      END IF
+
       LineNum = LineNum + 1
 
       CALL ExitThisRoutine ( ErrID_None, ' ' )
@@ -3672,9 +3811,9 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseLoVar ! ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg )
+   END SUBROUTINE ParseLoVar ! ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )
 !=======================================================================
-   SUBROUTINE ParseSiAry ( FileInfo, LineNum, AryName, SiAry, AryLen, ErrStat, ErrMsg )
+   SUBROUTINE ParseSiAry ( FileInfo, LineNum, AryName, SiAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for two words.  One should be a
       ! variable name and the other a single-precision REAL value.
@@ -3689,6 +3828,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(In)             :: AryName                       ! The array name we are trying to fill.
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
@@ -3720,6 +3861,10 @@ CONTAINS
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"' )
          RETURN
       ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
+      END IF
 
       LineNum = LineNum + 1
 
@@ -3762,9 +3907,9 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseSiAry ! ( FileInfo, LineNum, AryName, SiAry, AryLen, ErrStat, ErrMsg )
+   END SUBROUTINE ParseSiAry ! ( FileInfo, LineNum, AryName, SiAry, AryLen, ErrStat, ErrMsg, UnEc )
 !=======================================================================
-   SUBROUTINE ParseSiVar ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg )
+   SUBROUTINE ParseSiVar ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for two words.  One should be a
       ! the name of a single-precision variable and the other a REAL value.
@@ -3777,6 +3922,8 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
@@ -3810,6 +3957,10 @@ CONTAINS
                    //TRIM( Num2LStr( LineNum ) )//'.' )
          RETURN
       ENDIF
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+      END IF
 
       LineNum = LineNum + 1
 
@@ -3848,7 +3999,7 @@ CONTAINS
 
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
-   END SUBROUTINE ParseSiVar ! ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg )
+   END SUBROUTINE ParseSiVar ! ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )
 !=======================================================================
    FUNCTION PathIsRelative ( GivenFil )
 
@@ -4000,6 +4151,7 @@ CONTAINS
          ! This MUST be done before calling ReadComFile.
 
       CurrFile => FirstFile
+      File     =  0
       DO
          IF ( .NOT. ASSOCIATED( CurrFile ) )  EXIT
          File = File + 1
@@ -4032,6 +4184,7 @@ CONTAINS
 
          ! Read the file and save all but the comments.
 
+      AryInd = 0
       CALL ReadComFile ( FileInfo, FileIndx, AryInd, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg )
       IF ( ErrStatLcl /= 0 )  THEN
          CALL ExitThisRoutine( ErrID_Fatal, ErrMsg )
@@ -4444,11 +4597,11 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER(IntKi), INTENT(INOUT)                :: AryInd                     ! The current index into the FileInfo arrays.
+   INTEGER(IntKi), INTENT(INOUT)             :: AryInd                        ! The current index into the FileInfo arrays.
    INTEGER(IntKi), INTENT(OUT)               :: ErrStat                       ! Error status.
-   INTEGER(IntKi), INTENT(IN)                   :: FileIndx                   ! The pointer to file name in the list of files.
-   INTEGER(IntKi), INTENT(IN)                   :: LastLine                   ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
-   INTEGER(IntKi), INTENT(IN)                   :: StartLine                  ! The line at which to start processing this file.  Includes blank and comment lines.
+   INTEGER(IntKi), INTENT(IN)                :: FileIndx                      ! The pointer to file name in the list of files.
+   INTEGER(IntKi), INTENT(IN)                :: LastLine                      ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
+   INTEGER(IntKi), INTENT(IN)                :: StartLine                     ! The line at which to start processing this file.  Includes blank and comment lines.
 
    CHARACTER(*), INTENT(OUT)                 :: ErrMsg                        ! Error message.
 
@@ -4457,19 +4610,19 @@ CONTAINS
 
       ! Local declarations.
 
-   INTEGER(IntKi)                               :: ErrStatLcl                 ! Error status local to this routine.
+   INTEGER(IntKi)                            :: ErrStatLcl                    ! Error status local to this routine.
 
-   INTEGER                                      :: File                       ! The index into the FileList array.
-   INTEGER                                    :: FileLine                     ! The current line of the input file.
-   INTEGER                                    :: LineLen                      ! The length of the line returned from ReadLine().
-   INTEGER                                      :: NewIndx                    ! The index into the FileList array that applied to the next file to be processed.
-   INTEGER                                      :: RangeBeg                   ! The first line in a range of lines to be included from a file.
-   INTEGER                                      :: RangeEnd                   ! The last line in a range of lines to be included from a file.
-   INTEGER                                    :: UnIn                         ! The unit number used for the input file.
+   INTEGER                                   :: File                          ! The index into the FileList array.
+   INTEGER                                   :: FileLine                      ! The current line of the input file.
+   INTEGER                                   :: LineLen                       ! The length of the line returned from ReadLine().
+   INTEGER                                   :: NewIndx                       ! The index into the FileList array that applied to the next file to be processed.
+   INTEGER                                   :: RangeBeg                      ! The first line in a range of lines to be included from a file.
+   INTEGER                                   :: RangeEnd                      ! The last line in a range of lines to be included from a file.
+   INTEGER                                   :: UnIn                          ! The unit number used for the input file.
                                                                               ! Should the comment characters be passed to this routine instead of being hard coded? -mlb
-   CHARACTER(3), PARAMETER                    :: CommChars = '!#%'            ! Comment characters that mark the end of useful input.
-   CHARACTER(1024)                              :: IncFileName                ! The name of a file that this one includes.
-   CHARACTER(512)                             :: Line                         ! The contents of a line returned from ReadLine() with comment removed.
+   CHARACTER(3), PARAMETER                   :: CommChars = '!#%'             ! Comment characters that mark the end of useful input.
+   CHARACTER(1024)                           :: IncFileName                   ! The name of a file that this one includes.
+   CHARACTER(512)                            :: Line                          ! The contents of a line returned from ReadLine() with comment removed.
 
 
       ! Open the input file.
@@ -4532,8 +4685,8 @@ CONTAINS
             IF ( ErrStatLcl /= 0 )  THEN
                CALL ExitThisRoutine( ErrID_Fatal, ' >> The fatal error occurred in ReadComFile when processing line #'// &
                                    TRIM( Num2LStr( FileLine ) )//' of "'//TRIM( FileInfo%FileList(FileIndx) )//'".' )
-      RETURN
-   ENDIF
+               RETURN
+            ENDIF
 
 
                ! Which file in the prestored list is the new one?
@@ -4559,10 +4712,10 @@ CONTAINS
 
                ! Not a file name.  Add this line to stack.
 
-         AryInd                    = AryInd + 1
-         FileInfo%FileLine(AryInd) = FileLine
+            AryInd                    = AryInd + 1
+            FileInfo%FileLine(AryInd) = FileLine
             FileInfo%FileIndx(AryInd) = FileIndx
-         FileInfo%Lines   (AryInd) = Line
+            FileInfo%Lines   (AryInd) = Line
 
          ENDIF ! ( Line(1:1) == '@' )
 
@@ -6463,7 +6616,7 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    !...............................................................................................................................
 !BJJ: This scaling has issues if the channel contains NaN.
 
-   
+
    ColMin(:) = AllOutData(:,1_IntKi)         ! Initialize the Min values for each channel
    ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
 
@@ -6767,18 +6920,18 @@ END SUBROUTINE WrBinFAST
    SUBROUTINE WrMatrix2( A, Un, ReFmt )
       REAL(ReKi),     INTENT(IN) :: A(:,:)
       INTEGER,        INTENT(IN) :: Un
-      CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers
 
       INTEGER        :: ErrStat
       INTEGER        :: nr, nc  ! size (rows and columns) of A
       INTEGER        :: i       ! indices into A
       CHARACTER(256) :: Fmt
-   
-   
+
+
       nr = SIZE(A,1)
       nc = SIZE(A,2)
 
-      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"
 
       DO i=1,nr
          WRITE( Un, Fmt, IOSTAT=ErrStat ) A(i,:)
@@ -6786,13 +6939,13 @@ END SUBROUTINE WrBinFAST
             CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix().')
             RETURN
          END IF
-         
-         
+
+
       END DO
 
    RETURN
    END SUBROUTINE WrMatrix2
-!=======================================================================  
+!=======================================================================
    SUBROUTINE WrML ( Str )
 
 
@@ -7066,9 +7219,9 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE IntAry2Str
 !=======================================================================
    SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
-   
+
       ! This routine packs the DLL_Type data into an integer buffer.
-   
+
       TYPE(DLL_Type),                INTENT(IN   ) :: InData
       REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
       REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
@@ -7076,47 +7229,47 @@ END SUBROUTINE WrBinFAST
       INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
       CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
       LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly
-      
+
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
-      
+
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
-      
+
       ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
       IF (ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
          RETURN
       END IF
-            
+
       IF ( PRESENT(SizeOnly) ) THEN
          IF ( SizeOnly ) RETURN
-      ENDIF      
-      
+      ENDIF
+
          ! Put an ascii representation of the strings in the integer array
       CALL Str2IntAry( InData%FileName, IntKiBuf, ErrStat, ErrMsg )
       CALL Str2IntAry( InData%ProcName, IntKiBuf((LEN(InData%FileName)+1):) , ErrStat, ErrMsg )
-      
+
    END SUBROUTINE DLLTypePack
-   
+
 !=======================================================================
    SUBROUTINE DLLTypeUnPack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
-   
+
       ! This routine unpacks the DLL_Type data from an integer buffer.
-   
+
       REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
       REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
       INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
       TYPE(DLL_Type),                INTENT(  OUT) :: InData
       INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
       CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
-      
+
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
-      
+
       ErrStat = ErrID_None
       ErrMsg  = ""
 
@@ -7124,9 +7277,9 @@ END SUBROUTINE WrBinFAST
          ErrStat = ErrID_Fatal
          ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
       END IF
-      
+
       Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
-               
+
          ! Get an ascii representation of the strings from the integer array
       Int_BufSz = LEN(InData%FileName)
       CALL IntAry2Str( IntKiBuf(1:Int_BufSz), InData%FileName, ErrStat, ErrMsg )
@@ -7138,24 +7291,24 @@ END SUBROUTINE WrBinFAST
       IF ( LEN_TRIM(InData%FileName) > 0 .AND. LEN_TRIM(InData%ProcName) > 0 ) THEN
          CALL LoadDynamicLib( InData, ErrStat, ErrMsg )
       END IF
-      
+
    END SUBROUTINE DLLTypeUnPack
-   
-!=======================================================================   
+
+!=======================================================================
 SUBROUTINE RemoveNullChar( Str )
 
    ! This routine removes trailing C_NULL characters, which can be present when
    ! passing strings between C and Fortran
-   
+
    CHARACTER(*), INTENT(INOUT) :: Str
 
    INTEGER(IntKi)  :: I
 
-      I = INDEX( Str, C_NULL_CHAR ) - 1 
-      IF ( I > 0 ) Str = Str(1:I) 
+      I = INDEX( Str, C_NULL_CHAR ) - 1
+      IF ( I > 0 ) Str = Str(1:I)
 
 END SUBROUTINE RemoveNullChar
-   
+
 !=======================================================================
 SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
 
@@ -7163,22 +7316,22 @@ SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
 
    INTEGER(IntKi),                    INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
    CHARACTER(*),                      INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None
-                                                                     
+
    INTEGER(IntKi),                    INTENT(INOUT)  :: ErrStat      ! Error status of the operation
    CHARACTER(*),                      INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
 
    CHARACTER(*),                      INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
-   
+
 
    IF ( ErrStatLcl /= ErrID_None ) THEN
-   
+
       IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//NewLine
-      ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)         
+      ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)
       ErrStat = MAX(ErrStat,ErrStatLcl)
-      
+
    END IF
-      
-END SUBROUTINE SetErrStat    
+
+END SUBROUTINE SetErrStat
 
 
 END MODULE NWTC_IO
