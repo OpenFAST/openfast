@@ -38,6 +38,7 @@ MODULE SysSubs
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
+   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
    !     SUBROUTINE  UsrAlarm
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
@@ -268,6 +269,26 @@ CONTAINS
 
    END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
+   SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+   
+      USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
+   
+      REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
+      REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+
+      REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
+      REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+   
+      
+      NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+      Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+   
+      NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+      Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
+   
+   
+   END SUBROUTINE Set_IEEE_Constants  
+!=======================================================================
    SUBROUTINE UsrAlarm
 
 
@@ -442,5 +463,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    RETURN
 END SUBROUTINE FreeDynamicLib
 !==================================================================================================================================
+
+
 
 END MODULE SysSubs

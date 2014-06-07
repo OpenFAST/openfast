@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.00d-bjj', '22-Jan-2014')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.01a-bjj', '7-June-2014')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -208,8 +208,10 @@ MODULE NWTC_IO
 
       ! Create interface for writing matrix and array values (useful for debugging)
    INTERFACE WrMatrix
-      MODULE PROCEDURE WrMatrix1       ! Single dimension matrix (Ary) or ReKi
-      MODULE PROCEDURE WrMatrix2       ! Two dimension matrix of ReKi
+      MODULE PROCEDURE WrMatrix1R4     ! Single dimension matrix (Ary) of SiKi
+      MODULE PROCEDURE WrMatrix2R4     ! Two dimension matrix of SiKi
+      MODULE PROCEDURE WrMatrix1R8     ! Single dimension matrix (Ary) of R8Ki
+      MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE
    
    
@@ -316,11 +318,13 @@ CONTAINS
    !     SUBROUTINE ReadR16Var    ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 16-byte real number from an input file. USE ReadVar instead.
    !     SUBROUTINE ReadStr       ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a string (up to 200 characters--until end-of-line) from an input file.
    !     SUBROUTINE ReadVar       ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] [, UnEc] )                 ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadR*Var.
+   !     SUBROUTINE RemoveNullChar( Str )
    !     SUBROUTINE ScanComFile   ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )        ! Recursive routine to scan commented input files.
    !     SUBROUTINE WaitTime      ( WaitSecs )
    !     SUBROUTINE WrBinFAST     ( FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg )
    !     SUBROUTINE WrFileNR      ( Unit, Str )
    !     SUBROUTINE WrML          ( Str )
+   !     SUBROUTINE WrMatrix      ( A, Un, ReFmt, MatName ) ! generic interface to write 1- or 2- dimensional real 4 or 8 values to unit Un
    !     SUBROUTINE WrPr          ( Str )
    !     SUBROUTINE WrScr         ( Str )
 
@@ -1050,7 +1054,7 @@ CONTAINS
          ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF      
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1090,7 +1094,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_R8Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-
+         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1131,7 +1135,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_QuKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-
+         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1172,7 +1176,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1214,7 +1218,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1256,7 +1260,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_QuKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1299,11 +1303,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF
+   END IF      
 
 
 
@@ -1344,11 +1348,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF
+   END IF      
 
 
 
@@ -1391,11 +1395,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF
+      END IF         
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF
+   END IF     
 
 
 
@@ -4597,11 +4601,11 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER(IntKi), INTENT(INOUT)             :: AryInd                        ! The current index into the FileInfo arrays.
+   INTEGER(IntKi), INTENT(INOUT)                :: AryInd                     ! The current index into the FileInfo arrays.
    INTEGER(IntKi), INTENT(OUT)               :: ErrStat                       ! Error status.
-   INTEGER(IntKi), INTENT(IN)                :: FileIndx                      ! The pointer to file name in the list of files.
-   INTEGER(IntKi), INTENT(IN)                :: LastLine                      ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
-   INTEGER(IntKi), INTENT(IN)                :: StartLine                     ! The line at which to start processing this file.  Includes blank and comment lines.
+   INTEGER(IntKi), INTENT(IN)                   :: FileIndx                   ! The pointer to file name in the list of files.
+   INTEGER(IntKi), INTENT(IN)                   :: LastLine                   ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
+   INTEGER(IntKi), INTENT(IN)                   :: StartLine                  ! The line at which to start processing this file.  Includes blank and comment lines.
 
    CHARACTER(*), INTENT(OUT)                 :: ErrMsg                        ! Error message.
 
@@ -4610,19 +4614,19 @@ CONTAINS
 
       ! Local declarations.
 
-   INTEGER(IntKi)                            :: ErrStatLcl                    ! Error status local to this routine.
+   INTEGER(IntKi)                               :: ErrStatLcl                 ! Error status local to this routine.
 
-   INTEGER                                   :: File                          ! The index into the FileList array.
-   INTEGER                                   :: FileLine                      ! The current line of the input file.
-   INTEGER                                   :: LineLen                       ! The length of the line returned from ReadLine().
-   INTEGER                                   :: NewIndx                       ! The index into the FileList array that applied to the next file to be processed.
-   INTEGER                                   :: RangeBeg                      ! The first line in a range of lines to be included from a file.
-   INTEGER                                   :: RangeEnd                      ! The last line in a range of lines to be included from a file.
-   INTEGER                                   :: UnIn                          ! The unit number used for the input file.
+   INTEGER                                      :: File                       ! The index into the FileList array.
+   INTEGER                                    :: FileLine                     ! The current line of the input file.
+   INTEGER                                    :: LineLen                      ! The length of the line returned from ReadLine().
+   INTEGER                                      :: NewIndx                    ! The index into the FileList array that applied to the next file to be processed.
+   INTEGER                                      :: RangeBeg                   ! The first line in a range of lines to be included from a file.
+   INTEGER                                      :: RangeEnd                   ! The last line in a range of lines to be included from a file.
+   INTEGER                                    :: UnIn                         ! The unit number used for the input file.
                                                                               ! Should the comment characters be passed to this routine instead of being hard coded? -mlb
-   CHARACTER(3), PARAMETER                   :: CommChars = '!#%'             ! Comment characters that mark the end of useful input.
-   CHARACTER(1024)                           :: IncFileName                   ! The name of a file that this one includes.
-   CHARACTER(512)                            :: Line                          ! The contents of a line returned from ReadLine() with comment removed.
+   CHARACTER(3), PARAMETER                    :: CommChars = '!#%'            ! Comment characters that mark the end of useful input.
+   CHARACTER(1024)                              :: IncFileName                ! The name of a file that this one includes.
+   CHARACTER(512)                             :: Line                         ! The contents of a line returned from ReadLine() with comment removed.
 
 
       ! Open the input file.
@@ -4685,8 +4689,8 @@ CONTAINS
             IF ( ErrStatLcl /= 0 )  THEN
                CALL ExitThisRoutine( ErrID_Fatal, ' >> The fatal error occurred in ReadComFile when processing line #'// &
                                    TRIM( Num2LStr( FileLine ) )//' of "'//TRIM( FileInfo%FileList(FileIndx) )//'".' )
-               RETURN
-            ENDIF
+      RETURN
+   ENDIF
 
 
                ! Which file in the prestored list is the new one?
@@ -4712,10 +4716,10 @@ CONTAINS
 
                ! Not a file name.  Add this line to stack.
 
-            AryInd                    = AryInd + 1
-            FileInfo%FileLine(AryInd) = FileLine
+         AryInd                    = AryInd + 1
+         FileInfo%FileLine(AryInd) = FileLine
             FileInfo%FileIndx(AryInd) = FileIndx
-            FileInfo%Lines   (AryInd) = Line
+         FileInfo%Lines   (AryInd) = Line
 
          ENDIF ! ( Line(1:1) == '@' )
 
@@ -6616,7 +6620,7 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    !...............................................................................................................................
 !BJJ: This scaling has issues if the channel contains NaN.
 
-
+   
    ColMin(:) = AllOutData(:,1_IntKi)         ! Initialize the Min values for each channel
    ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
 
@@ -6894,58 +6898,130 @@ END SUBROUTINE WrBinFAST
    RETURN
    END SUBROUTINE WrFileNR ! ( Unit, Str )
 !=======================================================================  
-   SUBROUTINE WrMatrix1( A, Un, ReFmt )
-      REAL(ReKi),        INTENT(IN) :: A(:)
-      INTEGER,           INTENT(IN) :: Un
-      CHARACTER(*),      INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+   SUBROUTINE WrMatrix1R4( A, Un, ReFmt, MatName )
+      REAL(SiKi),             INTENT(IN) :: A(:)
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt     ! Format for printing ReKi numbers  
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
       
-      INTEGER        :: ErrStat
-      INTEGER        :: nr  ! size (rows and columns) of A
-      CHARACTER(256) :: Fmt
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nr        ! size (rows and columns) of A
+      CHARACTER(256)                     :: Fmt
    
-   
+            
       nr = SIZE(A,1)
 
-      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"   
+      IF ( PRESENT(MatName) ) THEN
+         WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), "1"
+      END IF      
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"               
    
       WRITE( Un, Fmt, IOSTAT=ErrStat ) A(:)
       IF (ErrStat /= 0) THEN
-         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix().')
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix1R4().')
          RETURN
       END IF
 
    RETURN
-   END SUBROUTINE WrMatrix1
+   END SUBROUTINE WrMatrix1R4
+!=======================================================================  
+   SUBROUTINE WrMatrix1R8( A, Un, ReFmt, MatName )
+      REAL(R8Ki),             INTENT(IN) :: A(:)
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
+      
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nr  ! size (rows and columns) of A
+      CHARACTER(256)                     :: Fmt
+   
+   
+      nr = SIZE(A,1)
+
+      IF ( PRESENT(MatName) ) THEN
+         WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), "1"
+      END IF
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"   
+   
+      WRITE( Un, Fmt, IOSTAT=ErrStat ) A(:)
+      IF (ErrStat /= 0) THEN
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix1R8().')
+         RETURN
+      END IF
+
+   RETURN
+   END SUBROUTINE WrMatrix1R8
 !=======================================================================
-   SUBROUTINE WrMatrix2( A, Un, ReFmt )
-      REAL(ReKi),     INTENT(IN) :: A(:,:)
-      INTEGER,        INTENT(IN) :: Un
-      CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers
+   SUBROUTINE WrMatrix2R4( A, Un, ReFmt, MatName )
+      REAL(SiKi),             INTENT(IN) :: A(:,:)
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
 
-      INTEGER        :: ErrStat
-      INTEGER        :: nr, nc  ! size (rows and columns) of A
-      INTEGER        :: i       ! indices into A
-      CHARACTER(256) :: Fmt
-
-
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nr, nc  ! size (rows and columns) of A
+      INTEGER                            :: i       ! indices into A
+      CHARACTER(256)                     :: Fmt
+   
+   
       nr = SIZE(A,1)
       nc = SIZE(A,2)
 
-      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"
+      IF ( PRESENT(MatName) ) THEN
+         WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), TRIM(Num2LStr(nc))
+      END IF
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
 
       DO i=1,nr
          WRITE( Un, Fmt, IOSTAT=ErrStat ) A(i,:)
          IF (ErrStat /= 0) THEN
-            CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix().')
+            CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix2R4().')
             RETURN
          END IF
-
-
+         
+         
       END DO
 
    RETURN
-   END SUBROUTINE WrMatrix2
+   END SUBROUTINE WrMatrix2R4
 !=======================================================================
+   SUBROUTINE WrMatrix2R8( A, Un, ReFmt, MatName )
+      REAL(R8Ki),             INTENT(IN) :: A(:,:)
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
+
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nr, nc  ! size (rows and columns) of A
+      INTEGER                            :: i       ! indices into A
+      CHARACTER(256)                     :: Fmt
+   
+   
+      nr = SIZE(A,1)
+      nc = SIZE(A,2)
+
+      IF ( PRESENT(MatName) ) THEN
+         WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), TRIM(Num2LStr(nc))
+      END IF
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
+
+      DO i=1,nr
+         WRITE( Un, Fmt, IOSTAT=ErrStat ) A(i,:)
+         IF (ErrStat /= 0) THEN
+            CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix2R8().')
+            RETURN
+         END IF
+         
+         
+      END DO
+
+   RETURN
+   END SUBROUTINE WrMatrix2R8
+!=======================================================================  
    SUBROUTINE WrML ( Str )
 
 
@@ -7219,9 +7295,9 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE IntAry2Str
 !=======================================================================
    SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
-
+   
       ! This routine packs the DLL_Type data into an integer buffer.
-
+   
       TYPE(DLL_Type),                INTENT(IN   ) :: InData
       REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
       REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
@@ -7229,47 +7305,47 @@ END SUBROUTINE WrBinFAST
       INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
       CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
       LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly
-
+      
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
-
+      
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
-
+      
       ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
       IF (ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
          RETURN
       END IF
-
+            
       IF ( PRESENT(SizeOnly) ) THEN
          IF ( SizeOnly ) RETURN
-      ENDIF
-
+      ENDIF      
+      
          ! Put an ascii representation of the strings in the integer array
       CALL Str2IntAry( InData%FileName, IntKiBuf, ErrStat, ErrMsg )
       CALL Str2IntAry( InData%ProcName, IntKiBuf((LEN(InData%FileName)+1):) , ErrStat, ErrMsg )
-
+      
    END SUBROUTINE DLLTypePack
-
+   
 !=======================================================================
    SUBROUTINE DLLTypeUnPack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
-
+   
       ! This routine unpacks the DLL_Type data from an integer buffer.
-
+   
       REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
       REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
       INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
       TYPE(DLL_Type),                INTENT(  OUT) :: InData
       INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
       CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
-
+      
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
-
+      
       ErrStat = ErrID_None
       ErrMsg  = ""
 
@@ -7277,9 +7353,9 @@ END SUBROUTINE WrBinFAST
          ErrStat = ErrID_Fatal
          ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
       END IF
-
+      
       Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
-
+               
          ! Get an ascii representation of the strings from the integer array
       Int_BufSz = LEN(InData%FileName)
       CALL IntAry2Str( IntKiBuf(1:Int_BufSz), InData%FileName, ErrStat, ErrMsg )
@@ -7291,24 +7367,24 @@ END SUBROUTINE WrBinFAST
       IF ( LEN_TRIM(InData%FileName) > 0 .AND. LEN_TRIM(InData%ProcName) > 0 ) THEN
          CALL LoadDynamicLib( InData, ErrStat, ErrMsg )
       END IF
-
+      
    END SUBROUTINE DLLTypeUnPack
-
-!=======================================================================
+   
+!=======================================================================   
 SUBROUTINE RemoveNullChar( Str )
 
    ! This routine removes trailing C_NULL characters, which can be present when
    ! passing strings between C and Fortran
-
+   
    CHARACTER(*), INTENT(INOUT) :: Str
 
    INTEGER(IntKi)  :: I
 
-      I = INDEX( Str, C_NULL_CHAR ) - 1
-      IF ( I > 0 ) Str = Str(1:I)
+      I = INDEX( Str, C_NULL_CHAR ) - 1 
+      IF ( I > 0 ) Str = Str(1:I) 
 
 END SUBROUTINE RemoveNullChar
-
+   
 !=======================================================================
 SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
 
@@ -7316,22 +7392,22 @@ SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
 
    INTEGER(IntKi),                    INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
    CHARACTER(*),                      INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None
-
+                                                                     
    INTEGER(IntKi),                    INTENT(INOUT)  :: ErrStat      ! Error status of the operation
    CHARACTER(*),                      INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
 
    CHARACTER(*),                      INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
-
+   
 
    IF ( ErrStatLcl /= ErrID_None ) THEN
-
+   
       IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//NewLine
-      ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)
+      ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)         
       ErrStat = MAX(ErrStat,ErrStatLcl)
-
+      
    END IF
-
-END SUBROUTINE SetErrStat
+      
+END SUBROUTINE SetErrStat    
 
 
 END MODULE NWTC_IO

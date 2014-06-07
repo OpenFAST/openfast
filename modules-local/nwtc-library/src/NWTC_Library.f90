@@ -66,8 +66,12 @@ MODULE NWTC_Library
 
    USE NWTC_Num
 
+#ifdef NO_MODMESH   
+   USE NWTC_Num
+#else
    USE ModMesh_Mapping  !contains PRIVATE statement so we must also include ModMesh
    USE ModMesh
+#endif
 
    IMPLICIT  NONE
 

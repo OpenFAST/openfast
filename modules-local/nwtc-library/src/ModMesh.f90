@@ -228,10 +228,7 @@ CONTAINS
      INTEGER, OPTIONAL,INTENT(IN   )       ::      N  ! Number to print, default 5
     ! Local
      INTEGER isz,i,j,nn,CtrlCode,Ielement,Xelement
-     INTEGER                    :: ErrStat
-     CHARACTER(256)             :: ErrMess
 
-     ErrStat = ErrID_None
      nn = M%Nnodes !5
      IF (PRESENT(N)) nn = min(nn,N)
 

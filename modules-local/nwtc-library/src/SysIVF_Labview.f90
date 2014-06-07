@@ -40,6 +40,7 @@ MODULE SysSubs
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
+   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
    !     SUBROUTINE  UsrAlarm
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
@@ -266,6 +267,35 @@ CONTAINS
 
 
    END SUBROUTINE ProgExit ! ( StatCode )
+!=======================================================================
+   SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+   
+      REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
+      REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+
+      REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
+      REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+   
+         ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
+      REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
+      REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
+   
+      
+         ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
+      Neg   = -1.0_ReKi
+      Neg_D = -1.0_DbKi
+
+         ! if compiling with floating-point-exception traps, this will not work, so we've added a compiler directive.
+         !  note that anything that refers to NaN or Inf will be incorrect in that case.
+#ifndef FPE_TRAP_ENABLED      
+      NaN_D = SQRT ( Neg_D )
+      Inf_D = Pi_D / 0.0_DbKi
+
+      NaN   = SQRT ( Neg )
+      Inf   = Pi / 0.0_ReKi
+#endif 
+
+   END SUBROUTINE Set_IEEE_Constants  
 !=======================================================================
    SUBROUTINE UsrAlarm
 

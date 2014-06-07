@@ -2592,15 +2592,6 @@ CONTAINS
 
          ! This routine computes numeric constants stored in the NWTC Library
 
-#ifdef FPE_TRAP_ENABLED
-      USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented
-#else      
-         ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
-      REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
-      REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
-#endif      
-
-
          ! Constants based upon Pi:
 
       Pi_D      = ACOS( -1.0_DbKi )
@@ -2625,25 +2616,8 @@ CONTAINS
 
 
          ! IEEE constants:
-#ifdef FPE_TRAP_ENABLED
-      NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
-      Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
-   
-      NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
-      Inf   = ieee_value(0.0_DbKi, ieee_positive_inf)
-#else
-! #ifndef FPE_TRAP_ENABLED
-         ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
-      Neg   = -1.0_ReKi
-      Neg_D = -1.0_DbKi
-
-      NaN_D = SQRT ( Neg_D )
-      Inf_D = Pi_D / 0.0_DbKi
-
-      NaN   = SQRT ( Neg )
-      Inf   = Pi / 0.0_ReKi
-#endif
-
+      CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )
+      
 
    RETURN
    END SUBROUTINE SetConstants
