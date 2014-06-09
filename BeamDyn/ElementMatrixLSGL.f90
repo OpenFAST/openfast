@@ -82,8 +82,8 @@
                temp_id1 = (i-1) * dof_node+j
 !               WRITE(*,*) "hhj",i,hhx(i)
 !               WRITE(*,*) "hpj",i,hpx(i)
-               WRITE(*,*) "Fd",j,- hhx(i)*Fd(j)*Jacobian*gw(igp)
-               WRITE(*,*) "Fc",j,- hpx(i)*Fc(j)*Jacobian*gw(igp)
+!               WRITE(*,*) "Fd",j,- hhx(i)*Fd(j)*Jacobian*gw(igp)
+!               WRITE(*,*) "Fc",j,- hpx(i)*Fc(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
            ENDDO

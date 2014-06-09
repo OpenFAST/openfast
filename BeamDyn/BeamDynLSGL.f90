@@ -188,20 +188,17 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
            p%uuN0(temp_id2+1,i) = temp_POS(1)
            p%uuN0(temp_id2+2,i) = temp_POS(2)
            p%uuN0(temp_id2+3,i) = temp_POS(3)
-<<<<<<< HEAD
-!           p%uuN0(temp_id2+4,i) = temp_CRV(1)
-!           p%uuN0(temp_id2+5,i) = temp_CRV(2)
-!           p%uuN0(temp_id2+6,i) = temp_CRV(3)
-=======
-           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
-           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
-           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
->>>>>>> aa323ffdceacd5e9de7cda0d1b72ea9554df79e6
+           p%uuN0(temp_id2+4,i) = temp_CRV(1)
+           p%uuN0(temp_id2+5,i) = temp_CRV(2)
+           p%uuN0(temp_id2+6,i) = temp_CRV(3)
+!           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
+!           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
+!           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
        ENDDO
    ENDDO
-   p%uuN0(6,1) = 1.64039390858428802
-   p%uuN0(12,1)= 1.21338673221741544
-   p%uuN0(18,1)= 0.81028671777792349
+   !p%uuN0(6,1) = 1.64039390858428802
+   !p%uuN0(12,1)= 1.21338673221741544
+   !p%uuN0(18,1)= 0.81028671777792349
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
 
@@ -307,7 +304,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 
       ! Define parameters here:
 
-      p%niter = 50
+      p%niter = 10
       p%piter = 0 !ADDED NEW VARIABLE TO TRACK NUMBER OF ITERATIONS FOR CONDITIONAL STATEMENTS, NJ 3/18/2014
 
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
