@@ -21,6 +21,9 @@ typedef    ^            ^                ^                  InitLoc         -   
 typedef    ^            ^                ^                  t0		    -    -    -    "Ice load starting time" s
 typedef    ^            ^                ^                  rhow	    -    -    -    "Water mass density" kg/m^3
 typedef    ^            ^                ^                  rhoi	    -    -    -    "Ice mass density" kg/m^3
+
+typedef    ^            ^                ^                  Seed1   	    -    -    -    "Random seed 1" -
+typedef    ^            ^                ^                  Seed2   	    -    -    -    "Random seed 2" -
 # ..... Ice Model 1 ...............................................................................................................
 typedef    IceDyn/ID	^                ReKi               Ikm             -    -    -    "Indentation factor" -
 typedef    ^            ^                ^                  Ag   	    -    -    -    "Ice crystal type factor" MPa^-3s^-1
@@ -29,17 +32,17 @@ typedef    ^            ^                ^                  Rg   	    -    -    
 typedef    ^            ^                ^                  Tice    	    -    -    -    "Ice temperature" K
 typedef    ^            ^                ^                  nu   	    -    -    -    "Poison ratio of ice" -
 typedef    ^            ^                ^                  phi   	    -    -    -    "Ice wedge angle" degree
-typedef    ^            ^                ^                  SigN   	    -    -    -    "Nominal ice strength" MPa
+typedef    ^            ^                ^                  SigNm   	    -    -    -    "Nominal ice strength" MPa
 typedef    ^            ^                ^                  Eice   	    -    -    -    "Elastic modulus of ice" GPa
 # ..... Ice Model 2 ...............................................................................................................
 typedef    IceDyn/ID	^                ReKi               IceStr2         -    -    -    "Ice tooth brittle strength" MPa
 typedef    ^            ^                ^                  Delmax2         -    -    -    "Ice tooth maximum elastic deformation for model 2" m
-typedef    ^            ^                ^                  Pitch           -    -    -    "Distance between sequential ice teeth" m
+typedef    ^            ^                ^                  Pitch           -    -    -    "Distance between sequential ice teeth for model 2" m
 # ..... Ice Model 3 ...............................................................................................................
 typedef    ^            ^                ^                  miuh   	    -    -    -    "Mean value of random ice thickness" m
-typedef    ^            ^                ^                  varh   	    -    -    -    "Variance of random ice thickness " m^2
+typedef    ^            ^                ^                  varh   	    -    -    -    "Variance of random ice thicknesss" m^2
 typedef    ^            ^                ^                  miuv   	    -    -    -    "Mean value of random ice velocity" m/s
-typedef    ^            ^                ^                  varv   	    -    -    -    "Variance of random ice velocity " m^2/s^2
+typedef    ^            ^                ^                  varv   	    -    -    -    "Variance of random ice velocity" m^2/s^2
 typedef    ^            ^                ^                  miut   	    -    -    -    "Mean value of ice loading event duration time" s
 typedef    ^            ^                ^                  miubr   	    -    -    -    "Mean value of random ice brittle strength" MPa
 typedef    ^            ^                ^                  varbr   	    -    -    -    "Variance of random ice brittle strength" MPa^2
@@ -47,49 +50,6 @@ typedef    ^            ^                ^                  miuDelm   	    -    
 typedef    ^            ^                ^                  varDelm   	    -    -    -    "Variance of random random maximum ice tooth tip displacement" MPa^2
 typedef    ^            ^                ^                  miuP   	    -    -    -    "Mean value of random distance between sequential ice teeth" m
 typedef    ^            ^                ^                  varP   	    -    -    -    "Variance of random distance between sequential ice teeth" m^2
-# ..... Ice Model 4 ...............................................................................................................
-typedef    IceDyn/ID	^                IntKi              Zn1             -    -    -    "Number of failure zones along contact width" -
-typedef    ^            ^                ^                  Zn2             -    -    -    "Number of failure zones along contact height/thickness" -
-typedef    ^            ^                ReKi               ZonePitch       -    -    -    "Distance between sequential ice teeth" m
-typedef    ^            ^                ^                  PrflMean        -    -    -    "Ice structure contact profile mean value" m
-typedef    ^            ^                ^                  PrflSig         -    -    -    "Ice structure contact profile standard deviation" m
-typedef    ^            ^                ^                  IceStr          -    -    -    "Ice failure strength" MPa
-typedef    ^            ^                ^                  Delmax          -    -    -    "Ice teeth maximum elastic deformation" m
-
-# ..... Ice Model 5 ...............................................................................................................
-
-typedef    ^            ^                ^                  alpha           -    -    -    "slope angle of the cone" degree
-
-typedef    ^            ^                ^                  Dwl             -    -    -    "cone waterline diameter" m
-
-typedef    ^            ^                ^                  Dtp             -    -    -    "cone top diameter" m
-
-typedef    ^            ^                ^                  hr              -    -    -    "ride-up ice thickness" m
-
-typedef    ^            ^                ^                  mu              -    -    -    "friction coefficient between structure and ice" -
-
-typedef    ^            ^                ^                  sigf            -    -    -    "flexural strength of ice" MPa
-
-typedef    ^            ^                ^                  StrLim          -    -    -    "limit strain" -
-
-typedef    ^            ^                ^                  StrRtLim        -    -    -    "limit strain rate" s^-1
-
-typedef    ^            ^                IntKi              UorD            -    -    -    "flag that indicates upward or downward breaking cone: 0,upward, 1,downward." -
-# ..... Ice Model 6 ...............................................................................................................
-
-typedef    ^            ^                ReKi               Ll   	    -    -    -    "Ice floe length" m
-
-typedef    ^            ^                ^                  Lw   	    -    -    -    "Ice floe width" m
-
-typedef    ^            ^                ^                  Cpa   	    -    -    -    "ice crushing strength pressure-area relation constant" -
-
-typedef    ^            ^                ^                  dpa   	    -    -    -    "ice crushing strength pressure-area relation order" -
-
-typedef    ^            ^                ^                  Fdr             -    -    -    "Constant external driving force" MN
-
-typedef    ^            ^                ^                  Kic             -    -    -    "Fracture toughness of ice" kNm^(-3/2)
-
-typedef    ^            ^                ^                  FspN            -    -    -    "Non-dimensional splitting load" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -108,29 +68,7 @@ typedef    IceDyn/ID    ContinuousStateType  ReKi           q                -  
 typedef      ^          ^                    ^              dqdt             -   -    -    "dqdt - velocity of ice mass" m/s
 
 # Define discrete (nondifferentiable) states here:
-typedef	   IceDyn/ID	DiscreteStateType    ReKi	    IceTthNo2        -   -    -    "Ice tooth number of the current ice tooth" -
-typedef    IceDyn/ID    DiscreteStateType    ReKi           IceTthNo        {:}  -    -    "IceTthNo - the current numbers of ice teeth of each zone" -
-typedef    ^            ^                    ^              Nc               -   -    -    "Number of the current loading event/Ice tooths" -
-typedef    ^            ^                    ^              hn               -   -    -    "Ice thickness of the current event/ice tooth" m
-typedef    ^            ^                    ^              sign             -   -    -    "Ice strength of the current event" Pa
-typedef    ^            ^                    ^              vn               -   -    -    "Ice velocity of the current event" m/s
-typedef    ^            ^                    ^              t0n              -   -    -    "Starting time of the current event" s
-typedef    ^            ^                    ^              tmn              -   -    -    "Time when the maximum force is reached for the current event" s
-typedef    ^            ^                    ^              ten              -   -    -    "End time of the current event" s
-typedef    ^            ^                    ^              Fmaxn            -   -    -    "Maximum ice force of the current event" N
-typedef    ^            ^                    ^              Dmaxn            -   -    -    "Maximum ice tooth tip displacement of the current ice tooth" m
-typedef    ^            ^                    ^              Pchn             -   -    -    "Distance between the current ice tooth and the next one " m
-typedef    ^            ^                    ^              Kn               -   -    -    "Equivalent elastic stiffness of the current ice tooth" N/m
-typedef    ^            ^                    ^              signext          -   -    -    "Ice strength of the next ice tooth" Pa
-typedef    ^            ^                    ^              Dmaxnext         -   -    -    "Maximum ice tooth tip displacement of the next ice tooth" m
-typedef    ^            ^                    ^              Pchnext          -   -    -    "Distance between the next ice tooth and the one after it" m
-typedef    ^            ^                    ^              Knext            -   -    -    "Equivalent elastic stiffness of the next ice tooth" N/m
-typedef    ^            ^                    ^              Psum             -   -    -    "The sum of pitches of all broken ice teeth" m
-typedef    ^            ^                    ^              dxc              -   -    -    "crushed depth of ice" m
-typedef    ^            ^                    IntKi          Splitf           -   -    -    "flag to indicate if the ice floe has splitted (0 not splitted, 1 splitted)" -
-typedef    ^            ^                    ReKi           Beta             -   -    -    "angel between broken ice sheet and level waterline" rad
-
-typedef    ^            ^                    DbKi           Tinit            -    -    -   "Initial time of the current load cycle" s
+typedef    IceDyn/ID    DiscreteStateType    ReKi           DummyDiscState   -   -    -    "A variable, Replace if you have discrete states" -
 
 # Define constraint states here:
 typedef    IceDyn/ID    ConstraintStateType  ReKi           DummyConstrState -   -    -    "A variable, Replace if you have constraint states" -
@@ -138,30 +76,39 @@ typedef    IceDyn/ID    ConstraintStateType  ReKi           DummyConstrState -  
 # Define any data that are not considered actual states here:
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
-typedef	   IceDyn/ID    OtherStateType       ID_ContinuousStateType xdot   {:}   -    -    "previous state deriv for multi-step" m
-typedef    ^             ^                   IntKi                  n       -    -    -    "tracks time step for which OtherState was updated" -
+typedef	   IceDyn/ID    OtherStateType       ID_ContinuousStateType xdot    {:}   -    -    "previous state deriv for multi-step" m
+typedef    ^            ^                    IntKi          n                -    -    -    "tracks time step for which OtherState was updated" -
+typedef	   ^    	^                    IntKi	    IceTthNo2        -    -    -    "Ice tooth number of the current ice tooth, for model 2" -
+# ..... Ice Model 3 ...............................................................................................................
+
+typedef    ^            ^                    IntKi          Nc              {:}    -    -    "Number of the current ice tooths number (time series)" -
+typedef    ^            ^                    ^              Psum            {:}    -    -    "The sum of pitches of all broken ice teeth (time series)" m
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
-# ..... General input parameters ..................................................................................................
+# ..... General parameters ........................................................................................................
 typedef    IceDyn/ID    ParameterType        ReKi            h              -    -    -    "Ice thickness" m
 typedef    ^            ^                    ^               v              -    -    -    "Ice velocity" m/s
 typedef    ^            ^            	     ^               t0		    -    -    -    "Ice load starting time" s
 typedef    ^            ^            	     ^               StrWd          -    -    -    "The width of the structure" m
-typedef	   ^	        ^                    ^	             dt		    -    -    -    "Time interval for integration within the module" s
+typedef	   ^	        ^                    ^	             dt	            -    -    -    "Time interval for integration within the module" s
 typedef    ^            ^                    ^               InitLoc        -    -    -    "Ice sheet initial location" m
+typedef    ^            ^                    ^               tolerance      -    -    -    "Tolerance when calculating ice breaking force, etc." -
+typedef    ^            ^                    ^               Tmax           -    -    -    "Total simulation time" s
 typedef    ^            ^                    IntKi           verif          -    -    -    "flag to indicate if verification is being peformed" -
 typedef    ^            ^                    ^               ModNo          -    -    -    "The current ice model number" - 
 typedef    ^            ^                    ^               SubModNo       -    -    -    "The current ice sub-model number" - 
 typedef    ^            ^                    ^               NumOuts	    -    -    -    "The number of output channels" -
 typedef    ^            ^                    ^               method         -    -    -    "integration method: 1-RK4, 2-AB4, 3-ABM4" -
-typedef	   ^	        ^	     	     CHARACTER(10)   OutName	   {:}	 -    -	   "Names of all requested output parameters" -
-typedef	   ^	        ^	     	     ^               OutUnit	   {:}	 -    -	   "Units of all requested output parameters" -
+typedef    ^            ^                    ^               TmStep         -    -    -    "Total time step" -
+typedef	   ^	        ^	     	     CHARACTER(10)   OutName       {:}	 -    -	   "Names of all requested output parameters" -
+typedef	   ^	        ^	     	     ^               OutUnit       {:}	 -    -	   "Units of all requested output parameters" -
 typedef	   ^            ^                    CHARACTER(1024) RootName       -    -    -    "Rootname" -
 # ..... Ice Model 1 ...............................................................................................................
-typedef    IceDyn/ID    ParameterType        ReKi            tm1a           -    -    -    "Time for the maximum force to be reached for model 1a " s
+typedef    IceDyn/ID    ParameterType        ReKi            tm1a           -    -    -    "Time for the maximum force to be reached for model 1a" s
 typedef    ^		^		     ^		     tm1b	    -    -    -    "Time for the maximum force to be reached for model 1b" s
-typedef    ^		^		     ^		     tm1c	    -    -    -    "Time for the maximum force to be reached for model 1c" s
+typedef    ^            ^		     ^		     tm1c	    -    -    -    "Time for the maximum force to be reached for model 1c" s
 typedef    ^		^		     ^		     Fmax1a	    -    -    -    "Maximum ice force of model 1a" N
 typedef    ^		^		     ^		     Fmax1b	    -    -    -    "Maximum ice force of model 1b" N
 typedef    ^		^		     ^		     Fmax1c	    -    -    -    "Maximum ice force of model 1c" N
@@ -173,69 +120,21 @@ typedef    IceDyn/ID    ParameterType        ReKi            Delmax2        -   
 typedef    ^            ^                    ^               Pitch          -    -    -    "Distance between sequential ice teeth" m
 typedef	   ^		^		     ^		     Kice2	    -    -    -    "Stiffness of ice teeth for model 2" N/m
 # ..... Ice Model 3 ...............................................................................................................
-typedef    ^            ^                    ^               miuh   	    -    -    -    "Mean value of random ice thickness" m
-typedef    ^            ^                    ^               varh   	    -    -    -    "Variance of random ice thickness " m^2
-typedef    ^            ^                    ^               miuv   	    -    -    -    "Mean value of random ice velocity" m/s
-typedef    ^            ^                    ^               varv   	    -    -    -    "Variance of random ice velocity " m^2/s^2
-typedef    ^            ^                    ^               miut   	    -    -    -    "Mean value of ice loading event duration time" s
-typedef    ^            ^                    ^               miubr   	    -    -    -    "Mean value of random ice brittle strength" MPa
-typedef    ^            ^                    ^               varbr   	    -    -    -    "Variance of random ice brittle strength" MPa^2
-typedef    ^            ^                    ^               miuDelm   	    -    -    -    "Mean value of random maximum ice tooth tip displacement" m
-typedef    ^            ^                    ^               varDelm   	    -    -    -    "Variance of random maximum ice tooth tip displacement" m^2
-typedef    ^            ^                    ^               miuP   	    -    -    -    "Mean value of random distance between sequential ice teeth" m
-typedef    ^            ^                    ^               varP   	    -    -    -    "Variance of random distance between sequential ice teeth" m^2
-# ..... Ice Model 4 ...............................................................................................................
-typedef    ^            ^                    ReKi            ZonePitch      -    -    -    "Distance between sequential ice teeth" m
-typedef    ^            ^                    ^               Kice           -    -    -    "Stiffness of ice teeth" N/m
-typedef    ^            ^                    ^               Delmax         -    -    -    "Ice teeth maximum elastic deformation" m
-typedef    ^            ^                    ^               Y0            {:}   -    -    "Ice structure contact profile initial location" m
-typedef    ^            ^                    ^               ContPrfl      {:}   -    -    "Ice structure contact profile" m
-typedef    ^            ^                    IntKi           Zn             -    -    -    "Number of failure zones" -
-# ..... Ice Model 5 ...............................................................................................................
-
-typedef    ^            ^                    ReKi            rhoi           -    -    -    "Ice mass density " kg/m^3
-
-typedef    ^            ^                    ^               rhow           -    -    -    "Water mass density" kg/m^3
-
-typedef    ^            ^                    ^               alphaR         -    -    -    "Slope angle of the cone" rad
-
-typedef    ^            ^                    ^               Dwl            -    -    -    "Cone waterline diameter " m
-
-typedef    ^            ^                    ^               Zr             -    -    -    "Ice ride-up height" m
-
-typedef    ^            ^                    ^               RHbr           -    -    -    "Horizontal breaking force" N
-
-typedef    ^            ^                    ^               RVbr           -    -    -    "Vertical breaking force" N
-
-typedef    ^            ^                    ^               Lbr            -    -    -    "Ice sheet breaking length" m
-
-typedef    ^            ^                    ^               LovR           -    -    -    "Ratio of ice breaking length over cone radius" -
-
-typedef    ^            ^                    ^               mu             -    -    -    "Friction coefficient between structure and ice" -
-
-typedef    ^            ^                    ^               Wri            -    -    -    "Initial ride-up ice weight " kg
-
-typedef    ^            ^                    ^               WL             -    -    -    "Broken ice piece weight" kg
-
-# ..... Ice Model 6 ...............................................................................................................
-
-typedef    ^            ^                    ReKi            Cpa   	    -    -    -    "ice crushing strength pressure-area relation constant" -
-
-typedef    ^            ^                    ^               dpa   	    -    -    -    "ice crushing strength pressure-area relation order" -
-
-typedef    ^            ^                    ^               FdrN           -    -    -    "Constant external driving force" N
-
-typedef    ^            ^                    ^               Mice           -    -    -    "Ice floe mass" kg
-
-typedef    ^            ^                    ^               Fsp            -    -    -    "Ice floe splitting force" N
+typedef    ^            ^                    ^               rdmFm   	   {:}   -    -    "Random maximum ice force time series" m
+typedef    ^            ^                    ^               rdmt0   	   {:}   -    -    "Random ice loading event starting time" s
+typedef    ^            ^                    ^               rdmtm   	   {:}   -    -    "Random time when the maximum force is reached" m
+typedef    ^            ^                    ^               rdmDm   	   {:}   -    -    "Random maximum ice tooth tip displacement time series" m
+typedef    ^            ^                    ^               rdmP   	   {:}   -    -    "Random distance between sequential ice teeth" m
+typedef    ^            ^                    ^               rdmKi         {:}   -    -    "Random ice teeth stiffness" N/m
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
 typedef    IceDyn/ID    InputType            ReKi            q              -    -    -    "displacement of Mass 1" m
 typedef    ^            ^                    ^               dqdt           -    -    -    "velocity of Mass 1" m/s
+typedef    ^            ^                    MeshType        PointMesh      -    -    -    "contains displacement, velocity, acceleration" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef    IceDyn/ID    OutputType           ReKi            fice           -    -    -    "Ice force" N
 
- 
+typedef    ^            ^                    MeshType        PointMesh      -    -    -    "contains force" -
