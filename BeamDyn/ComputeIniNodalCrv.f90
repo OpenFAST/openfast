@@ -31,6 +31,7 @@
    e1 = 0.0D0
    DO i=1,3
        e1(i) = hpx(1)*EndP1(i) + hpx(2)* MidP(i) + hpx(3)*EndP2(i) 
+   WRITE(*,*) "e1 =",i,e1(i)
    ENDDO
    CALL Norm(3,e1,temp)
    e1 = e1/temp
