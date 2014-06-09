@@ -422,8 +422,6 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       ErrMsg  = ""
       
       nt = INT( t / p%dt ) + 1
-      Nc = OtherState%Nc (nt)
-      Psumc = OtherState%Psum (nt)
 
       ! Update Other states here
       
@@ -443,6 +441,8 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       ! Update Other states here
      
       IF (p%ModNo == 3) THEN
+         Nc = OtherState%Nc (nt)
+         Psumc = OtherState%Psum (nt)
       
          IF (p%SubModNo == 3) THEN
       
@@ -1634,16 +1634,21 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
 
     ! Deallocate local variables 
    
-   DEALLOCATE(TmpIceSeeds, STAT=ErrStat)
-   IF (ErrStat /= ErrID_None ) THEN
-      CALL ProgWarn( ' Error deallocating space for TmpIceSeeds array.' )
-      ErrStat = ErrID_Warn
+   IF ( ALLOCATED(TmpIceSeeds) )THEN
+      DEALLOCATE(TmpIceSeeds, STAT=ErrStat)
+      IF (ErrStat /= ErrID_None ) THEN
+         CALL ProgWarn( ' Error deallocating space for TmpIceSeeds array.' )
+         ErrStat = ErrID_Warn
+      END IF
    END IF
    
-   DEALLOCATE(TmpIceSeeds, STAT=ErrStat)
-   IF (ErrStat /= ErrID_None ) THEN
-      CALL ProgWarn( ' Error deallocating space for TmpIceSeeds array.' )
-      ErrStat = ErrID_Warn
+   
+   IF ( ALLOCATED(TmpIceSeeds) )THEN
+      DEALLOCATE(TmpIceSeeds, STAT=ErrStat)
+      IF (ErrStat /= ErrID_None ) THEN
+         CALL ProgWarn( ' Error deallocating space for TmpIceSeeds array.' )
+         ErrStat = ErrID_Warn
+      END IF
    END IF
    
 

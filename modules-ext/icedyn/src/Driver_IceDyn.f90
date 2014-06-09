@@ -129,7 +129,7 @@ PROGRAM MAIN
    !  defined coupling interval.
    ! -------------------------------------------------------------------------
 
-   ID_InitInput%InputFile = 'IceDyn_Input.dat'
+   ID_InitInput%InputFile = 'IceDyn_Input.txt'
    ID_InitInput%RootName = 'IceDyn_Test'
    
    CALL ID_Init( ID_InitInput          &
@@ -146,7 +146,8 @@ PROGRAM MAIN
                    , ErrStat               &
                    , ErrMsg )
 
-
+   IF (ErrStat /= ErrID_None) CALL WrScr('After ID_Init: '//TRIM(ErrMsg))
+   
    CALL ID_CopyInput(  ID_Input(1), u1, MESH_NEWCOPY, ErrStat, ErrMsg )
    CALL ID_CopyOutput( ID_Output(1), y1, MESH_NEWCOPY, ErrStat, ErrMsg )
 
