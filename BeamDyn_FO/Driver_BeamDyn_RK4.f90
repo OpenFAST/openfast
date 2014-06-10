@@ -179,8 +179,6 @@ PROGRAM MAIN
    !DO n_t_global = 0, 1000
 
 
-
-
 !     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
 !                             BD_ConstraintState, &
 !                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
@@ -237,7 +235,6 @@ PROGRAM MAIN
          CALL BD_CopyConstrState (BD_ConstraintState, BD_ConstraintState_pred, 0, Errstat, ErrMsg)
 
          CALL BD_CopyDiscState   (BD_DiscreteState,   BD_DiscreteState_pred,   0, Errstat, ErrMsg)
-         
          CALL BeamDyn_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
                                    BD_ContinuousState_pred, &
                                    BD_DiscreteState_pred, BD_ConstraintState_pred, &
@@ -339,7 +336,7 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    temp_R(:,:)    = 0.0D0
    ! gather point forces and line forces
 
-   ! Point mesh: Force 
+   ! Point mesh: RootMotion 
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%TranslationVel(:,:)   = 0.0D0
    u%RootMotion%TranslationAcc(:,:)   = 0.0D0
@@ -354,6 +351,14 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    u%RootMotion%RotationVel(2,1) = -3.1415926D+00*2.0D0/3.0D0
 
    u%RootMotion%RotationAcc(:,:) = 0.0D0
+
+   ! Point mesh: PointLoad
+   u%PointLoad%Force(:,:)  = 0.0D0
+   u%PointLoad%Moment(:,:) = 0.0D0
+
+   ! LINE2 mesh: DistrLoad
+   u%DistrLoad%Force(:,:)  = 0.0D0
+   u%DistrLoad%Moment(:,:) = 0.0D0
 
    ut = t
 

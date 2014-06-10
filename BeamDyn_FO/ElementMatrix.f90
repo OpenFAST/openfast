@@ -1,4 +1,4 @@
-   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,&
+   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                            &ngp,node_elem,dof_node,elf,elm)
                            
    !-------------------------------------------------------------------------------
@@ -13,6 +13,7 @@
    REAL(ReKi),INTENT(IN):: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN):: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN):: gravity(:) ! 
+   REAL(ReKi),INTENT(IN):: DistrLoad_GL(:,:) ! Nodal material properties for each element
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
@@ -107,15 +108,11 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
-!WRITE(*,*) 'cet'
-!WRITE(*,*) cet
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
-!WRITE(*,*) 'Fc'
-!WRITE(*,*) Fc
        CALL MassMatrix(mmm,mEta,rho,uuu,Mi)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
-       Fd(:) = Fd(:) - Fg(:)
+       Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
 
        DO i=1,node_elem
            DO j=1,node_elem
