@@ -60,6 +60,8 @@ typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
 typedef BeamDyn/BD   InputType  MeshType  RootMotion - - - "contains motion" -
+typedef BeamDyn/BD   InputType  MeshType  PointLoad - - - "Applied point forces along beam axis" -
+typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed forces along beam axis" -
 #typedef Module1/Mod1    InputType  ReKi       fc   - - - "coupling force" N
 
 # ..... Outputs

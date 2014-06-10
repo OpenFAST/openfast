@@ -113,8 +113,10 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    REAL(ReKi)              :: temp_POS(3)
    REAL(ReKi)              :: temp_CRV(3)
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_w(:)
    REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
+   REAL(ReKi),ALLOCATABLE  :: temp_L2(:,:)
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
 
@@ -168,6 +170,17 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
    temp_w(:) = 0.0D0
    CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
+   DEALLOCATE(temp_w)
+
+   CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2) 
+   temp_L2(:,:) = 0.0D0
+   CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2) 
+   temp_GL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
+   temp_w(:) = 0.0D0
+   CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
+   DEALLOCATE(temp_w)
+
    DO i=1,InputFileData%member_total
        temp_id = (i-1)*2
        temp_EP1(1:3) = InputFileData%kp_coordinate(temp_id+1,1:3)
@@ -187,34 +200,35 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
            p%uuN0(temp_id2+5,i) = temp_CRV(2)
            p%uuN0(temp_id2+6,i) = temp_CRV(3)
        ENDDO
+      DO j=1,p%ngp
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GL(j),temp_POS)
+           temp_id2 = (i-1)*p%ngp+j+1
+           temp_L2(1:3,temp_id2) = temp_POS(1:3)
+       ENDDO
    ENDDO
+   temp_L2(1:3,1) = p%uuN0(1:3,1)
+   temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
+
    DEALLOCATE(temp_GLL)
-   DEALLOCATE(temp_w)
 
    CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2) 
    temp_ratio(:,:) = 0.0D0
-   CALL AllocAry(temp_GLL,p%ngp,'temp_GL',ErrStat2,ErrMsg2) 
-   temp_GLL(:) = 0.0D0
-   CALL AllocAry(temp_w,p%ngp,'temp_weight_GL',ErrStat2,ErrMsg2) 
-   temp_w(:) = 0.0D0
-
-   CALL BldGaussPointWeight(p%ngp,temp_GLL,temp_w)
 
    DO i=1,p%ngp
-       temp_GLL(i) = (temp_GLL(i) + 1.0D0)/2.0D0
+       temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
    ENDDO
 
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
            DO j=1,p%ngp
-               temp_ratio(j,i) = temp_GLL(j)*p%member_length(i,2)
+               temp_ratio(j,i) = temp_GL(j)*p%member_length(i,2)
            ENDDO
        ELSE
            DO j=1,i-1
                temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
            ENDDO
            DO j=1,p%ngp
-               temp_ratio(j,i) = temp_ratio(j,i) + temp_GLL(j)*p%member_length(i,2)
+               temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
            ENDDO
        ENDIF
    ENDDO
@@ -243,8 +257,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
        ENDDO
    ENDDO
 
-   DEALLOCATE(temp_GLL)
-   DEALLOCATE(temp_w)
+   DEALLOCATE(temp_GL)
    DEALLOCATE(temp_ratio)
 
    WRITE(*,*) "Finished Read Input"
@@ -309,12 +322,47 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                    ,ErrStat         = ErrStat               &
                    ,ErrMess         = ErrMsg                )
 
+   CALL MeshCreate( BlankMesh        = u%PointLoad            &
+                   ,IOS              = COMPONENT_INPUT        &
+                   ,NNodes           = p%node_total           &
+                   ,Force            = .TRUE. &
+                   ,Moment           = .TRUE. &
+                   ,nScalars        = 0                      &
+                   ,ErrStat         = ErrStat               &
+                   ,ErrMess         = ErrMsg                )
+
+   temp_int = p%ngp * p%elem_total + 2
+   CALL MeshCreate( BlankMesh        = u%DistrLoad            &
+                   ,IOS              = COMPONENT_INPUT        &
+                   ,NNodes           = temp_int               &
+                   ,Force            = .TRUE. &
+                   ,Moment           = .TRUE. &
+                   ,nScalars        = 0                      &
+                   ,ErrStat         = ErrStat               &
+                   ,ErrMess         = ErrMsg                )
+
    CALL MeshConstructElement ( Mesh = u%RootMotion            &
                              , Xelement = ELEMENT_POINT      &
                              , P1       = 1                  &
                              , ErrStat  = ErrStat            &
                              , ErrMess  = ErrMsg             )
 
+   DO i=1,p%node_total
+       CALL MeshConstructElement( Mesh     = u%PointLoad      &
+                                 ,Xelement = ELEMENT_POINT    &
+                                 ,P1       = i                &
+                                 ,ErrStat  = ErrStat          &
+                                 ,ErrMess  = ErrMsg           )
+   ENDDO
+
+   DO i=1,temp_int-1
+       CALL MeshConstructElement( Mesh     = u%DistrLoad      &
+                                 ,Xelement = ELEMENT_LINE2    &
+                                 ,P1       = i                &
+                                 ,P2       = i+1              &
+                                 ,ErrStat  = ErrStat          &
+                                 ,ErrMess  = ErrMsg           )
+   ENDDO
    ! place single node at origin; position affects mapping/coupling with other modules
    TmpPos(1) = 0.
    TmpPos(2) = 0.
@@ -326,7 +374,33 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                          , ErrStat   = ErrStat      &
                          , ErrMess   = ErrMsg       )
 
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (j-1) * p%dof_node
+           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+           CALL MeshPositionNode ( Mesh    = u%PointLoad  &
+                                  ,INode   = i            &
+                                  ,Pos     = TmpPos       &
+                                  ,ErrStat = ErrStat      &
+                                  ,ErrMess = ErrMsg       )
+       ENDDO
+   ENDDO
+
+   DO i=1,p%ngp*p%elem_total+2
+       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                              ,INode   = i            &
+                              ,Pos     = temp_L2(:,i) &
+                              ,ErrStat = ErrStat      &
+                              ,ErrMess = ErrMsg       )
+   ENDDO
+
    CALL MeshCommit ( Mesh    = u%RootMotion     &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+   CALL MeshCommit ( Mesh    = u%PointLoad     &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+   CALL MeshCommit ( Mesh    = u%DistrLoad     &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
 
@@ -364,6 +438,21 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    u%RootMotion%RotationAcc(1,1) = 0.
    u%RootMotion%RotationAcc(2,1) = 0.
    u%RootMotion%RotationAcc(3,1) = 0.
+
+   DO i=1,u%PointLoad%ElemTable(ELEMENT_POINT)%nelem
+       j = u%PointLoad%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
+       u%PointLoad%Force(:,j)  = 0.0D0
+       u%PointLoad%Moment(:,j) = 0.0D0
+   ENDDO
+
+   DO i = 1, u%DistrLoad%ElemTable(ELEMENT_LINE2)%nelem
+          j = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+          k = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+          u%DistrLoad%Force(:,j)  = 0.0D0
+          u%DistrLoad%Force(:,k)  = 0.0D0
+          u%DistrLoad%Moment(:,j) = 0.0D0
+          u%DistrLoad%Moment(:,k) = 0.0D0
+   ENDDO
 
    ! Define initial guess for the system outputs here:
 

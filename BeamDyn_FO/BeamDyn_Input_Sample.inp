@@ -14,7 +14,7 @@ kp_xb kp_yb   kp_zb    initial_twist
 ---------------------- MESH PARAMETER ------------------------------------------
 5    order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
-"Test_Blade_3.inp"    BldFile - Name of file containing properties for blade 
+"Test_Blade_1.inp"    BldFile - Name of file containing properties for blade 
 
 
 

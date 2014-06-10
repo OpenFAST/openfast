@@ -1,4 +1,4 @@
-   SUBROUTINE GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,gravity,&
+   SUBROUTINE GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                     &elem_total,node_elem,dof_node,ngp,RHS,MassM)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -9,6 +9,7 @@
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: Mass0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: gravity(:) ! Velocity of Mass 1: m/s
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    INTEGER(IntKi),INTENT(IN):: elem_total ! Total number of elements
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
@@ -23,6 +24,7 @@
    REAL(ReKi),ALLOCATABLE:: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),ALLOCATABLE:: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),ALLOCATABLE:: EMass0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),ALLOCATABLE:: DistrLoad_GL(:,:) ! Nodal material properties for each element
    REAL(ReKi),ALLOCATABLE:: elf(:) ! Total element force (Fc, Fd, Fb)
    REAL(ReKi),ALLOCATABLE:: elm(:,:) ! Element mass matrix
 
@@ -64,6 +66,10 @@
    IF(allo_stat/=0) GOTO 9999
    EMass0_GL = 0.0D0
 
+   ALLOCATE(DistrLoad_GL(dof_node,node_elem-1),STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   DistrLoad_GL = 0.0D0
+
    ALLOCATE(elf(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    elf = 0.0D0
@@ -80,6 +86,8 @@
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
+           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
        ENDDO
 !       CALL ElemNodalStifGL(Stif0,node_elem,dof_node,nelem,NStif0) 
 !       CALL ElemNodalMassGL(m00,mEta0,rho0,node_elem,dof_node,nelem,Nm00,NmEta0,Nrho0)
@@ -91,7 +99,7 @@
 
 !       WRITE(*,*) 'EStif0_GL1'
 !       WRITE(*,*) EStif0_GL(:,:,1)
-       CALL ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,&
+       CALL ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                          &ngp,node_elem,dof_node,elf,elm)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)
@@ -106,6 +114,7 @@
    DEALLOCATE(Nvvv)
    DEALLOCATE(EStif0_GL)
    DEALLOCATE(EMass0_GL)
+   DEALLOCATE(DistrLoad_GL)
    DEALLOCATE(elf)
    DEALLOCATE(elm)
 
@@ -117,6 +126,7 @@
             IF(ALLOCATED(Nvvv)) DEALLOCATE(Nvvv)
             IF(ALLOCATED(EStif0_GL)) DEALLOCATE(EStif0_GL)
             IF(ALLOCATED(EMass0_GL)) DEALLOCATE(EMass0_GL)
+            IF(ALLOCATED(DistrLoad_GL)) DEALLOCATE(DistrLoad_GL)
             IF(ALLOCATED(elf)) DEALLOCATE(elf)
             IF(ALLOCATED(elm)) DEALLOCATE(elm)
         ENDIF

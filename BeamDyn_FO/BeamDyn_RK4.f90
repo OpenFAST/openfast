@@ -50,6 +50,16 @@
                  , CtrlCode = MESH_NEWCOPY        &
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
+   CALL MeshCopy ( SrcMesh  = u(1)%PointLoad      &
+                 , DestMesh = u_interp%PointLoad  &
+                 , CtrlCode = MESH_NEWCOPY        &
+                 , ErrStat  = ErrStat             &
+                 , ErrMess  = ErrMsg               )
+   CALL MeshCopy ( SrcMesh  = u(1)%DistrLoad      &
+                 , DestMesh = u_interp%DistrLoad  &
+                 , CtrlCode = MESH_NEWCOPY        &
+                 , ErrStat  = ErrStat             &
+                 , ErrMess  = ErrMsg               )
 
 
    ! interpolate u to find u_interp = u(t)

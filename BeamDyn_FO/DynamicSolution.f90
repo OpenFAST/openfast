@@ -1,4 +1,4 @@
-   SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,Mass0,gravity,time,&
+   SUBROUTINE DynamicSolution(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,time,&
                              &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                              &qddot)
    !***************************************************************************************
@@ -10,6 +10,7 @@
    REAL(ReKi),INTENT(IN):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: Mass0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),INTENT(IN):: gravity(:) ! 
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(DbKi),INTENT(IN):: time ! Current time
@@ -27,23 +28,26 @@
    REAL(ReKi):: RHS(dof_total) 
    REAL(ReKi):: MassM_LU(dof_total-6,dof_total-6) 
    REAL(ReKi):: RHS_LU(dof_total-6) 
-   REAL(ReKi):: F_ext(dof_total) 
+   REAL(ReKi):: F_PointLoad(dof_total) 
    REAL(ReKi):: qdd_temp(dof_total-6) 
    REAL(ReKi):: d 
    INTEGER(IntKi):: indx(dof_total-6) 
    INTEGER(IntKi):: j 
    INTEGER(IntKi):: k 
+   INTEGER(IntKi):: temp_id
 
-   CALL AppliedNodalLoad(F_ext,time,dof_total)
 
    RHS = 0.0D0
    MassM = 0.0D0
 
-   CALL GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,gravity,&
+   CALL GenerateDynamicElement(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                               &elem_total,node_elem,dof_node,ngp,RHS,MassM)
-
-   RHS = RHS + F_ext
-
+   DO j=1,node_total
+       temp_id = (j-1)*dof_node
+       F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
+       F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
+   ENDDO
+   RHS = RHS + F_PointLoad
    DO j=1,dof_total-6
        RHS_LU(j) = RHS(j+6)
        DO k=1,dof_total-6
