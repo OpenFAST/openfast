@@ -36,6 +36,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BD_InitInputType
     CHARACTER(1024)  :: InputFile 
     CHARACTER(1024)  :: RootName 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: gravity 
   END TYPE BD_InitInputType
 ! =======================
 ! =========  BD_InitOutputType  =======
@@ -104,7 +105,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_InputFile  =======
   TYPE, PUBLIC :: BD_InputFile
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: gravity 
     INTEGER(IntKi)  :: member_total 
     INTEGER(IntKi)  :: order_elem 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate 
@@ -129,6 +129,19 @@ CONTAINS
    ErrMsg  = ""
    DstInitInputData%InputFile = SrcInitInputData%InputFile
    DstInitInputData%RootName = SrcInitInputData%RootName
+IF (ALLOCATED(SrcInitInputData%gravity)) THEN
+   i1_l = LBOUND(SrcInitInputData%gravity,1)
+   i1_u = UBOUND(SrcInitInputData%gravity,1)
+   IF (.NOT.ALLOCATED(DstInitInputData%gravity)) THEN 
+      ALLOCATE(DstInitInputData%gravity(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyInitInput: Error allocating DstInitInputData%gravity.'
+         RETURN
+      END IF
+   END IF
+   DstInitInputData%gravity = SrcInitInputData%gravity
+ENDIF
  END SUBROUTINE BD_CopyInitInput
 
  SUBROUTINE BD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -139,6 +152,9 @@ CONTAINS
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InitInputData%gravity)) THEN
+   DEALLOCATE(InitInputData%gravity)
+ENDIF
  END SUBROUTINE BD_DestroyInitInput
 
  SUBROUTINE BD_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -175,9 +191,14 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Re_BufSz    = Re_BufSz    + SIZE( InData%gravity )  ! gravity 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
+  IF ( ALLOCATED(InData%gravity) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%gravity))-1 ) =  PACK(InData%gravity ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%gravity)
+  ENDIF
  END SUBROUTINE BD_PackInitInput
 
  SUBROUTINE BD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -213,6 +234,12 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  IF ( ALLOCATED(OutData%gravity) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%gravity,1))); mask1 = .TRUE.
+    OutData%gravity = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%gravity))-1 ),mask1,OutData%gravity)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%gravity)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -1719,19 +1746,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcinputfileData%gravity)) THEN
-   i1_l = LBOUND(SrcinputfileData%gravity,1)
-   i1_u = UBOUND(SrcinputfileData%gravity,1)
-   IF (.NOT.ALLOCATED(DstinputfileData%gravity)) THEN 
-      ALLOCATE(DstinputfileData%gravity(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_Copyinputfile: Error allocating DstinputfileData%gravity.'
-         RETURN
-      END IF
-   END IF
-   DstinputfileData%gravity = SrcinputfileData%gravity
-ENDIF
    DstinputfileData%member_total = SrcinputfileData%member_total
    DstinputfileData%order_elem = SrcinputfileData%order_elem
 IF (ALLOCATED(SrcinputfileData%kp_coordinate)) THEN
@@ -1774,9 +1788,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(inputfileData%gravity)) THEN
-   DEALLOCATE(inputfileData%gravity)
-ENDIF
 IF (ALLOCATED(inputfileData%kp_coordinate)) THEN
    DEALLOCATE(inputfileData%kp_coordinate)
 ENDIF
@@ -1823,7 +1834,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Re_BufSz    = Re_BufSz    + SIZE( InData%gravity )  ! gravity 
   Int_BufSz  = Int_BufSz  + 1  ! member_total
   Int_BufSz  = Int_BufSz  + 1  ! order_elem
   Re_BufSz    = Re_BufSz    + SIZE( InData%kp_coordinate )  ! kp_coordinate 
@@ -1838,10 +1848,6 @@ ENDIF
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  IF ( ALLOCATED(InData%gravity) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%gravity))-1 ) =  PACK(InData%gravity ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%gravity)
-  ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%member_total )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%order_elem )
@@ -1908,12 +1914,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  IF ( ALLOCATED(OutData%gravity) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%gravity,1))); mask1 = .TRUE.
-    OutData%gravity = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%gravity))-1 ),mask1,OutData%gravity)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%gravity)
-  ENDIF
   OutData%member_total = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%order_elem = IntKiBuf ( Int_Xferred )

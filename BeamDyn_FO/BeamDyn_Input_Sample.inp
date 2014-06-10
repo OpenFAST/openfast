@@ -2,8 +2,6 @@
 Sample
 ---------------------- SIMULATION CONTROL --------------------------------------
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
----------------------- ENVIRONMENTAL CONDITION ---------------------------------
--9.80665    0.0    0.0   Gravity     - Gravitational acceleration (m/s^2)
 ---------------------- GEOMETRY PARAMETER --------------------------------------
 1    member_total    - Total number of member (-)
 kp_xb kp_yb   kp_zb    initial_twist
