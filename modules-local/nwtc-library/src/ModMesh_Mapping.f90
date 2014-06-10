@@ -2056,8 +2056,8 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
       
       ! After following call, LoadLn2_F contains the distributed forces:
       
-      CALL LAPACK_getrs(TRANS='N',N=n,NRHS=1,A=MeshMap%LoadLn2_A_Mat,LDA=n,IPIV=MeshMap%LoadLn2_A_Mat_piv, &
-                        B=MeshMap%LoadLn2_F, LDB=n, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, &
+                        B=MeshMap%LoadLn2_F, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       
       ! Transfer forces to the mesh fields
    
@@ -2103,8 +2103,8 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
       
       ! After following call, LoadLn2_M contains the distributed moments:
       
-      CALL LAPACK_getrs(TRANS='N',N=n,NRHS=1,A=MeshMap%LoadLn2_A_Mat,LDA=n,IPIV=MeshMap%LoadLn2_A_Mat_piv, &
-                        B=MeshMap%LoadLn2_M, LDB=n, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, &
+                        B=MeshMap%LoadLn2_M, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
             
       ! Transfer moments to the mesh fields
    
@@ -2643,7 +2643,7 @@ SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
       enddo !icomp
    enddo !i
       
-   CALL LAPACK_getrf(n,n,MeshMap%LoadLn2_A_Mat,n, MeshMap%LoadLn2_A_Mat_piv, ErrStat, ErrMsg)      
+   CALL LAPACK_getrf(n,n,MeshMap%LoadLn2_A_Mat,MeshMap%LoadLn2_A_Mat_piv, ErrStat, ErrMsg)      
            
 !........................................................................................................   
 CONTAINS

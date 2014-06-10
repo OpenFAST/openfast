@@ -283,21 +283,27 @@ CONTAINS
       REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
    
       
-         ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
-      Neg   = -1.0_ReKi
-      Neg_D = -1.0_DbKi
-
          ! if compiling with floating-point-exception traps, this will not work, so we've added a compiler directive.
          !  note that anything that refers to NaN or Inf will be incorrect in that case.
+         
 #ifndef FPE_TRAP_ENABLED      
-      NaN_D = SQRT ( Neg_D )
-      Inf_D = Pi_D / 0.0_DbKi
+         ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
+      Neg_D = -1.0_DbKi
+      Neg   = -1.0_ReKi
 
+      NaN_D = SQRT ( Neg_D )
       NaN   = SQRT ( Neg )
-      Inf   = Pi / 0.0_ReKi
-#endif    
+
+         ! set variables to zero to calculate Infs (using division by zero)
+      Neg_D = 0.0_DbKi
+      Neg   = 0.0_ReKi
+      
+      Inf_D = 1.0_DbKi / Neg_D
+      Inf   = 1.0_ReKi / Neg
+#endif 
    
    END SUBROUTINE Set_IEEE_Constants  
+
 !=======================================================================
    SUBROUTINE UsrAlarm
 

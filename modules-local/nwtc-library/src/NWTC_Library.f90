@@ -32,7 +32,9 @@ MODULE NWTC_Library
          !     NWTC_Num.f90
          !     ModMesh.f90
          !     ModMesh_Types.f90
-         !     ModMesh_Mapping.f90
+         
+         ! If you are not compiling with -DNO_MESHMAPPING, your project must include this file:
+         !     ModMesh_Mapping.f90  (not necessary if compiling with -DNO_MESHMAPPING)
 
          ! Your project must include one, but not both, of the following files:
          !     DoubPrec.f90 - for double-precision arithmetic for floating-points variables.  You may have to set a compiler option to have constants use double precision.
@@ -56,7 +58,7 @@ MODULE NWTC_Library
          !     NWTC_Num.f90
          !     ModMesh_Types.f90
          !     ModMesh.f90
-         !     ModMesh_Mapping.f90
+         !     ModMesh_Mapping.f90  (remove if compiling with -DNO_MESHMAPPING)
          !     NWTC_Library.f90
 
          ! Invoking programs should call NWTC_Init() to initialize data important to the use of the library.  Currently,
@@ -64,14 +66,14 @@ MODULE NWTC_Library
 
 
 
-   USE NWTC_Num
-
-#ifdef NO_MODMESH   
-   USE NWTC_Num
-#else
-   USE ModMesh_Mapping  !contains PRIVATE statement so we must also include ModMesh
+   USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
    USE ModMesh
+#ifndef NO_MESHMAPPING
+      ! Note that ModMesh_Mapping also includes LAPACK routines
+   USE ModMesh_Mapping  !contains PRIVATE statement so we must also include ModMesh
 #endif
+
+   
 
    IMPLICIT  NONE
 

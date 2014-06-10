@@ -5,6 +5,7 @@ Notice.txt
 
 SourceFiles.txt
 
-Source\NWTC_Lib_Make.txt
+source\NWTC_Lib_Make.txt
+source\dependencies\lapack\NWTC_LAPACK.f90
 
 Documentation\NWTC_Library_Description.pdf
