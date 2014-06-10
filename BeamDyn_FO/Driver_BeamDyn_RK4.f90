@@ -130,6 +130,10 @@ PROGRAM MAIN
 
    BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
+   ALLOCATE(BD_InitInput%gravity(3)) 
+   BD_InitInput%gravity(1) = -9.80665
+   BD_InitInput%gravity(2) = 0.0D0 
+   BD_InitInput%gravity(3) = 0.0D0 
 
    CALL BeamDyn_Init(BD_InitInput        &
                    , BD_Input(1)         &

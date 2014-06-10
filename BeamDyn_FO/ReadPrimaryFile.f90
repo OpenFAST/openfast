@@ -49,13 +49,6 @@
        CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
    ENDIF
    IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
-!'Data from BeamDyn primary input file "'//TRIM( InputFile)//'":'
-   !---------------------- ENVIRONMENTAL CONDITION----------------------------------
-   CALL ReadCom(UnIn,InputFile,'Section Header: Environmental condition',ErrStat2,ErrMsg2,UnEc)
-   CALL AllocAry(InputFileData%gravity,3,'gravity vector',ErrStat2,ErrMsg2)
-   InputFileData%gravity(:) = 0.0D0
-   READ(UnIn,*) InputFileData%gravity(2),InputFileData%gravity(3),InputFileData%gravity(1)
-
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)

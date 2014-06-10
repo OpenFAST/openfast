@@ -149,7 +149,9 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
    p%gravity = 0.0D0
-   p%gravity = InputFileData%gravity
+   p%gravity(1) = InitInp%gravity(3)
+   p%gravity(2) = InitInp%gravity(1)
+   p%gravity(3) = InitInp%gravity(2)
 !   STOP
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
    p%member_length(:,:) = 0.0D0
