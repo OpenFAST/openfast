@@ -92,6 +92,7 @@ IMPLICIT NONE
 ! =========  BD_OutputType  =======
   TYPE, PUBLIC :: BD_OutputType
     TYPE(MeshType)  :: RootForce 
+    TYPE(MeshType)  :: BldMotion 
   END TYPE BD_OutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -1392,6 +1393,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
      CALL MeshCopy( SrcOutputData%RootForce, DstOutputData%RootForce, CtrlCode, ErrStat, ErrMsg )
+     CALL MeshCopy( SrcOutputData%BldMotion, DstOutputData%BldMotion, CtrlCode, ErrStat, ErrMsg )
  END SUBROUTINE BD_CopyOutput
 
  SUBROUTINE BD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -1403,6 +1405,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL MeshDestroy( OutputData%RootForce, ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%BldMotion, ErrStat, ErrMsg )
  END SUBROUTINE BD_DestroyOutput
 
  SUBROUTINE BD_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1429,6 +1432,9 @@ ENDIF
   REAL(ReKi),     ALLOCATABLE :: Re_RootForce_Buf(:)
   REAL(DbKi),     ALLOCATABLE :: Db_RootForce_Buf(:)
   INTEGER(IntKi), ALLOCATABLE :: Int_RootForce_Buf(:)
+  REAL(ReKi),     ALLOCATABLE :: Re_BldMotion_Buf(:)
+  REAL(DbKi),     ALLOCATABLE :: Db_BldMotion_Buf(:)
+  INTEGER(IntKi), ALLOCATABLE :: Int_BldMotion_Buf(:)
   OnlySize = .FALSE.
   IF ( PRESENT(SizeOnly) ) THEN
     OnlySize = SizeOnly
@@ -1450,6 +1456,13 @@ ENDIF
   IF(ALLOCATED(Re_RootForce_Buf))  DEALLOCATE(Re_RootForce_Buf)
   IF(ALLOCATED(Db_RootForce_Buf))  DEALLOCATE(Db_RootForce_Buf)
   IF(ALLOCATED(Int_RootForce_Buf)) DEALLOCATE(Int_RootForce_Buf)
+  CALL MeshPack( InData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg, .TRUE. ) ! BldMotion 
+  IF(ALLOCATED(Re_BldMotion_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_BldMotion_Buf  ) ! BldMotion
+  IF(ALLOCATED(Db_BldMotion_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_BldMotion_Buf  ) ! BldMotion
+  IF(ALLOCATED(Int_BldMotion_Buf))Int_BufSz = Int_BufSz + SIZE( Int_BldMotion_Buf ) ! BldMotion
+  IF(ALLOCATED(Re_BldMotion_Buf))  DEALLOCATE(Re_BldMotion_Buf)
+  IF(ALLOCATED(Db_BldMotion_Buf))  DEALLOCATE(Db_BldMotion_Buf)
+  IF(ALLOCATED(Int_BldMotion_Buf)) DEALLOCATE(Int_BldMotion_Buf)
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1469,6 +1482,22 @@ ENDIF
   IF( ALLOCATED(Re_RootForce_Buf) )  DEALLOCATE(Re_RootForce_Buf)
   IF( ALLOCATED(Db_RootForce_Buf) )  DEALLOCATE(Db_RootForce_Buf)
   IF( ALLOCATED(Int_RootForce_Buf) ) DEALLOCATE(Int_RootForce_Buf)
+  CALL MeshPack( InData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg, OnlySize ) ! BldMotion 
+  IF(ALLOCATED(Re_BldMotion_Buf)) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldMotion_Buf)-1 ) = Re_BldMotion_Buf
+    Re_Xferred = Re_Xferred + SIZE(Re_BldMotion_Buf)
+  ENDIF
+  IF(ALLOCATED(Db_BldMotion_Buf)) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_BldMotion_Buf)-1 ) = Db_BldMotion_Buf
+    Db_Xferred = Db_Xferred + SIZE(Db_BldMotion_Buf)
+  ENDIF
+  IF(ALLOCATED(Int_BldMotion_Buf)) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_BldMotion_Buf)-1 ) = Int_BldMotion_Buf
+    Int_Xferred = Int_Xferred + SIZE(Int_BldMotion_Buf)
+  ENDIF
+  IF( ALLOCATED(Re_BldMotion_Buf) )  DEALLOCATE(Re_BldMotion_Buf)
+  IF( ALLOCATED(Db_BldMotion_Buf) )  DEALLOCATE(Db_BldMotion_Buf)
+  IF( ALLOCATED(Int_BldMotion_Buf) ) DEALLOCATE(Int_BldMotion_Buf)
  END SUBROUTINE BD_PackOutput
 
  SUBROUTINE BD_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1498,6 +1527,9 @@ ENDIF
   REAL(ReKi),    ALLOCATABLE :: Re_RootForce_Buf(:)
   REAL(DbKi),    ALLOCATABLE :: Db_RootForce_Buf(:)
   INTEGER(IntKi),    ALLOCATABLE :: Int_RootForce_Buf(:)
+  REAL(ReKi),    ALLOCATABLE :: Re_BldMotion_Buf(:)
+  REAL(DbKi),    ALLOCATABLE :: Db_BldMotion_Buf(:)
+  INTEGER(IntKi),    ALLOCATABLE :: Int_BldMotion_Buf(:)
     !
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -1525,6 +1557,23 @@ ENDIF
   IF( ALLOCATED(Re_RootForce_Buf) )  DEALLOCATE(Re_RootForce_Buf)
   IF( ALLOCATED(Db_RootForce_Buf) )  DEALLOCATE(Db_RootForce_Buf)
   IF( ALLOCATED(Int_RootForce_Buf) ) DEALLOCATE(Int_RootForce_Buf)
+  CALL MeshPack( OutData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg , .TRUE. ) ! BldMotion 
+  IF(ALLOCATED(Re_BldMotion_Buf)) THEN
+    Re_BldMotion_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldMotion_Buf)-1 )
+    Re_Xferred = Re_Xferred + SIZE(Re_BldMotion_Buf)
+  ENDIF
+  IF(ALLOCATED(Db_BldMotion_Buf)) THEN
+    Db_BldMotion_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_BldMotion_Buf)-1 )
+    Db_Xferred = Db_Xferred + SIZE(Db_BldMotion_Buf)
+  ENDIF
+  IF(ALLOCATED(Int_BldMotion_Buf)) THEN
+    Int_BldMotion_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_BldMotion_Buf)-1 )
+    Int_Xferred = Int_Xferred + SIZE(Int_BldMotion_Buf)
+  ENDIF
+  CALL MeshUnPack( OutData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg ) ! BldMotion 
+  IF( ALLOCATED(Re_BldMotion_Buf) )  DEALLOCATE(Re_BldMotion_Buf)
+  IF( ALLOCATED(Db_BldMotion_Buf) )  DEALLOCATE(Db_BldMotion_Buf)
+  IF( ALLOCATED(Int_BldMotion_Buf) ) DEALLOCATE(Int_BldMotion_Buf)
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -2713,6 +2762,7 @@ ENDIF
  order = SIZE(u) - 1
  IF ( order .eq. 0 ) THEN
   CALL MeshCopy(u(1)%RootForce, u_out%RootForce, MESH_UPDATECOPY, ErrStat, ErrMsg )
+  CALL MeshCopy(u(1)%BldMotion, u_out%BldMotion, MESH_UPDATECOPY, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -2720,6 +2770,7 @@ ENDIF
     RETURN
   END IF
   CALL MeshExtrapInterp1(u(1)%RootForce, u(2)%RootForce, tin, u_out%RootForce, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp1(u(1)%BldMotion, u(2)%BldMotion, tin, u_out%BldMotion, tin_out, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 2 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
     ErrStat = ErrID_Fatal
@@ -2737,6 +2788,7 @@ ENDIF
     RETURN
   END IF
   CALL MeshExtrapInterp2(u(1)%RootForce, u(2)%RootForce, u(3)%RootForce, tin, u_out%RootForce, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp2(u(1)%BldMotion, u(2)%BldMotion, u(3)%BldMotion, tin, u_out%BldMotion, tin_out, ErrStat, ErrMsg )
  ELSE 
    ErrStat = ErrID_Fatal
    ErrMsg = ' order must be less than 3 in BD_Output_ExtrapInterp '
