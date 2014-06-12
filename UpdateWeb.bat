@@ -16,12 +16,13 @@ set LOC=Y:\Wind\WindWeb\designcodes\miscellaneous\NWTC_Library
 @GOTO Done
 
 :CopyFiles
-copy ChangeLog.txt                        %LOC%\ChangeLog.txt
-copy Archive\NWTC_Lib_v%1.exe             %LOC%\NWTC_Lib_v%1.exe
-copy Archive\NWTC_Lib_v%1.tar.gz          %LOC%\NWTC_Lib_v%1.tar.gz
+copy ChangeLog.txt                            %LOC%\ChangeLog.txt
+copy Documentation\NWTC_Library_Routines.txt  %LOC%\NWTC_Library_Routines.txt
+copy Archive\NWTC_Lib_v%1.exe                 %LOC%\NWTC_Lib_v%1.exe
+copy Archive\NWTC_Lib_v%1.tar.gz              %LOC%\NWTC_Lib_v%1.tar.gz
 
 :UpdateWeb
-copy CreatePage.pl                        %LOC%\CreatePage.pl
+copy CreatePage.pl                            %LOC%\CreatePage.pl
 perl %LOC%\CreatePage.pl
 
 :Done
