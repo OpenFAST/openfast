@@ -69,6 +69,7 @@ typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed f
 # ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef BeamDyn/BD   OutputType  MeshType  RootForce - - - "contains force and moments" -
+typedef BeamDyn/BD   OutputType  MeshType  BldMotion - - - "Motion (disp,rot,vel) along beam axis" -
 #typedef Module1/Mod1   OutputType  MeshType  PointMesh - - - "contains displacement and velocity" -
 #typedef Module1/Mod1   OutputType ReKi   q      - - - "displacement of Mass 1" m
 #typedef     ^              ^       ^     dqdt   - - - "velocity of Mass 1" m/s

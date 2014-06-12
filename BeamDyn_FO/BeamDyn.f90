@@ -343,6 +343,17 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                    ,ErrStat         = ErrStat               &
                    ,ErrMess         = ErrMsg                )
 
+   CALL MeshCreate( BlankMesh        = y%BldMotion        &
+                   ,IOS              = COMPONENT_OUTPUT   &
+                   ,NNodes           = p%node_total       &
+                   ,TranslationDisp  = .TRUE.             &
+                   ,Orientation      = .TRUE.             &
+                   ,TranslationVel   = .TRUE.             &
+                   ,RotationVel      = .TRUE.             &
+                   ,nScalars         = 0                  &
+                   ,ErrStat          = ErrStat            &
+                   ,ErrMess          = ErrMsg             )
+
    CALL MeshConstructElement ( Mesh = u%RootMotion            &
                              , Xelement = ELEMENT_POINT      &
                              , P1       = 1                  &
@@ -359,6 +370,15 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    DO i=1,temp_int-1
        CALL MeshConstructElement( Mesh     = u%DistrLoad      &
+                                 ,Xelement = ELEMENT_LINE2    &
+                                 ,P1       = i                &
+                                 ,P2       = i+1              &
+                                 ,ErrStat  = ErrStat          &
+                                 ,ErrMess  = ErrMsg           )
+   ENDDO
+
+   DO i=1,p%node_total-1
+       CALL MeshConstructElement( Mesh     = y%BldMotion      &
                                  ,Xelement = ELEMENT_LINE2    &
                                  ,P1       = i                &
                                  ,P2       = i+1              &
@@ -385,6 +405,11 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat      &
                                   ,ErrMess = ErrMsg       )
+           CALL MeshPositionNode ( Mesh    = y%BldMotion  &
+                                  ,INode   = i            &
+                                  ,Pos     = TmpPos       &
+                                  ,ErrStat = ErrStat      &
+                                  ,ErrMess = ErrMsg       )
        ENDDO
    ENDDO
 
@@ -396,7 +421,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                               ,ErrMess = ErrMsg       )
    ENDDO
 
-   CALL MeshCommit ( Mesh    = u%RootMotion     &
+   CALL MeshCommit ( Mesh    = u%RootMotion    &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
    CALL MeshCommit ( Mesh    = u%PointLoad     &
@@ -413,33 +438,21 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                  , Moment          = .TRUE.    &
                  , ErrStat  = ErrStat          &
                  , ErrMess  = ErrMsg           )
+   CALL MeshCommit ( Mesh    = y%BldMotion     &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
 
    ! Define initialization-routine input here:
 
-   u%RootMotion%TranslationDisp(1,1) = 0.
-   u%RootMotion%TranslationDisp(2,1) = 0.
-   u%RootMotion%TranslationDisp(3,1) = 0.
-
-   u%RootMotion%TranslationVel(1,1) = 0.
-   u%RootMotion%TranslationVel(2,1) = 0.
-   u%RootMotion%TranslationVel(3,1) = 0.
-
-   u%RootMotion%TranslationAcc(1,1) = 0.
-   u%RootMotion%TranslationAcc(2,1) = 0.
-   u%RootMotion%TranslationAcc(3,1) = 0.
-
-   u%RootMotion%Orientation = 0.
-   u%RootMotion%Orientation(1,1,1) = 1.
-   u%RootMotion%Orientation(2,2,1) = 1.
-   u%RootMotion%Orientation(3,3,1) = 1.
-
-   u%RootMotion%RotationVel(1,1) = 0.
-   u%RootMotion%RotationVel(2,1) = 0.
-   u%RootMotion%RotationVel(3,1) = 0.
-
-   u%RootMotion%RotationAcc(1,1) = 0.
-   u%RootMotion%RotationAcc(2,1) = 0.
-   u%RootMotion%RotationAcc(3,1) = 0.
+   u%RootMotion%TranslationDisp(:,:) = 0.0D0
+   u%RootMotion%TranslationVel(:,:)  = 0.0D0
+   u%RootMotion%TranslationAcc(:,:)  = 0.0D0
+   u%RootMotion%Orientation(:,:,:) = 0.0D0
+   u%RootMotion%Orientation(1,1,:) = 1.0D0
+   u%RootMotion%Orientation(2,2,:) = 1.0D0
+   u%RootMotion%Orientation(3,3,:) = 1.0D0
+   u%RootMotion%RotationVel(:,:)   = 0.0D0
+   u%RootMotion%RotationAcc(:,:)   = 0.0D0
 
    DO i=1,u%PointLoad%ElemTable(ELEMENT_POINT)%nelem
        j = u%PointLoad%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
@@ -458,17 +471,17 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    ! Define initial guess for the system outputs here:
 
-   y%RootForce%Force(1,1)   = 0.
-   y%RootForce%Force(2,1)   = 0.
-   y%RootForce%Force(3,1)   = 0.
+   y%RootForce%Force(:,:)    = 0.0D0
+   y%RootForce%Moment(:,:)   = 0.0D0
 
-   y%RootForce%Moment(1,1)   = 0.
-   y%RootForce%Moment(2,1)   = 0.
-   y%RootForce%Moment(3,1)   = 0.
-
+   y%BldMotion%TranslationDisp(:,:) = 0.0D0
+   y%BldMotion%Orientation(:,:,:)   = 0.0D0
+   y%BldMotion%TranslationVel(:,:)  = 0.0D0
+   y%BldMotion%RotationVel(:,:)     = 0.0D0
 
    ! set remap flags to true
    y%RootForce%RemapFlag = .True.
+   y%BldMotion%RemapFlag = .True.
    u%RootMotion%RemapFlag = .True.
 
 
@@ -619,6 +632,10 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+   INTEGER(IntKi):: i
+   INTEGER(IntKi):: temp_id
+   REAL(ReKi):: cc(3)
+   REAL(ReKi):: temp_R(3,3)
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -629,16 +646,16 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    !y%dqdt = x%dqdt
 
    ! assume system is aligned with x-axis
+   DO i=1,p%node_total
+       temp_id = (i-1)*p%dof_node
+       y%BldMotion%TranslationDisp(1:3,i) = x%q(temp_id+1:temp_id+3)
+       y%BldMotion%TranslationVel(1:3,i) = x%dqdt(temp_id+1:temp_id+3)
+       y%BldMotion%RotationVel(1:3,i) = x%dqdt(temp_id+4:temp_id+6)
+       cc(1:3) = x%q(temp_id+4:temp_id+6)
+       CALL CrvMatrixR(cc,temp_R)
+       y%BldMotion%Orientation(1:3,1:3,i) = temp_R(1:3,1:3)
+   ENDDO
 
-   y%RootForce%Force(1,1)   = x%q(1)
-   y%RootForce%Force(2,1)   = x%q(2)
-   y%RootForce%Force(3,1)   = x%q(3)
-
-   y%RootForce%Moment(1,1)   = x%q(4)
-   y%RootForce%Moment(2,1)   = x%q(5)
-   y%RootForce%Moment(3,1)   = x%q(6)
-
-!   WRITE(67,*) t,  y%PointMesh%TranslationAcc(1,1)
 
    END SUBROUTINE BeamDyn_CalcOutput
 
