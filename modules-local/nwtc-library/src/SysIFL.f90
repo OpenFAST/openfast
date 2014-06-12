@@ -45,6 +45,8 @@ MODULE SysSubs
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
    !     SUBROUTINE  WriteScr ( Str, Frm )
+   !     SUBROUTINE LoadDynamicLib( DLL, ErrStat, ErrMsg )
+   !     SUBROUTINE FreeDynamicLib( DLL, ErrStat, ErrMsg )
 
 
 
@@ -66,7 +68,7 @@ MODULE SysSubs
    CHARACTER(10), PARAMETER      :: Endian      = 'BIG_ENDIAN'                      ! The internal format of numbers.
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Fortran for Linux'         ! Description of the language/OS
-   CHARACTER( 1), PARAMETER      :: PathSep     = '/'                               ! The path separater.
+   CHARACTER( 1), PARAMETER      :: PathSep     = '/'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
    CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
@@ -281,6 +283,12 @@ CONTAINS
 !=======================================================================
    SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
    
+      ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
+      ! values for not-a-number and infinity in sindle and double 
+      ! precision) This uses standard F03 intrinsic routines,  
+      ! however Gnu has not yet implemented it, so we've placed this
+      ! routine in the system-specific code.
+   
       USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
          
       REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
@@ -380,7 +388,7 @@ CONTAINS
 !==================================================================================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
-      ! This SUBROUTINE is used to load the DLL.
+      ! This SUBROUTINE is used to dynamically load a DLL.
 
       ! Passed Variables:
 
@@ -400,7 +408,7 @@ END SUBROUTINE LoadDynamicLib
 !==================================================================================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
-      ! This SUBROUTINE is used to free the DLL.
+      ! This SUBROUTINE is used to free a dynamically loaded DLL (loaded in LoadDynamicLib).
 
       ! Passed Variables:
 

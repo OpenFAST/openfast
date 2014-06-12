@@ -23,6 +23,22 @@
 !**********************************************************************************************************************************
 MODULE ModMesh
 
+ ! The modules ModMesh and ModMesh_Types provide data structures and subroutines for representing and manipulating meshes
+ ! and meshed data in the FAST modular framework. 
+ !
+ ! A mesh is comprised of a set of “nodes” (simple points in space) together with information specifying how they are connected 
+ ! to form “elements”  representing spatial boundaries between components. ModMesh and ModMesh_Types define point, line, surface, 
+ ! and volume elements in a standard isoparametric mapping from finite element analysis. Currently only points and straight line 
+ ! (line2) elements are implemented.
+ ! Associated with a mesh are one or more “fields” that represent the values of variables or “degrees of freedom” at each node. 
+ ! A mesh always has a named “Position” that specifies the location in three-dimensional space as an Xi,Yi,Zi triplet of each node 
+ ! and a field named “RefOrientation” that specifies the orientation (as a direction cosine matrix) of the node. 
+ ! The ModMesh_Types module predefines a number of other fields of triples representing velocities, forces, and moments as well as
+ ! a field of nine values representing a direction cosine matrix. 
+ ! The operations on meshes defined in the ModMesh module are creation, spatio-location of nodes, construction, committing the 
+ ! mesh definition, initialization of fields, accessing field data, updating field data, copying, deallocating, and destroying meshes. 
+ ! See https://wind.nrel.gov/designcodes/simulators/developers/docs/ProgrammingHandbook_Mod20130326.pdf
+
 !======================================================================================================================
 ! WARNING:  Because this code uses some preprocessor directives to comment out code
 !           and because some lines go beyond column 132, you must specify the following compiler options:
@@ -51,12 +67,12 @@ CONTAINS
 
    !-------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
-   !...............................................................................................................................
-   ! This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
-   ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
-   !...............................................................................................................................
+      ! This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
+      ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
+
+      
       INTEGER, INTENT(INOUT)                ::  UnIn     ! fortran output unit
-      TYPE(MeshType),INTENT(IN)          ::      M    ! mesh to be reported on
+      TYPE(MeshType),  INTENT(IN)           ::  M        ! mesh to be reported on
 
       INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   ! Indicates whether an error occurred (see NWTC_Library)
       CHARACTER(*),    INTENT(OUT)          :: ErrMsg    ! Error message associated with the ErrStat
@@ -223,11 +239,15 @@ CONTAINS
 
 
    SUBROUTINE MeshPrintInfo ( U, M, N)
+   
+      ! This routine writes mesh information in text form. If is used for debugging.
+   
+   
      INTEGER, INTENT(IN   )                ::      U  ! fortran output unit
      TYPE(MeshType),INTENT(IN   )          ::      M  ! mesh to be reported on
      INTEGER, OPTIONAL,INTENT(IN   )       ::      N  ! Number to print, default 5
     ! Local
-     INTEGER isz,i,j,nn,CtrlCode,Ielement,Xelement
+     INTEGER isz,i,j,nn,Ielement,Xelement
 
      nn = M%Nnodes !5
      IF (PRESENT(N)) nn = min(nn,N)
@@ -422,6 +442,12 @@ CONTAINS
                           ,IsNewSibling                                                    &
                          )
 
+   
+      ! Takes a blank, uninitialized instance of Type(MeshType) and defines the number of nodes in the mesh. Optional 
+      ! arguments indicate the fields that will be allocated and associated with the nodes of the mesh. The fields that may 
+      ! be associated with the mesh nodes are Force, Moment, Orientation, Rotation, TranslationDisp, RotationVel, TranslationVel, 
+      ! RotationAcc, TranslationAcc, and an arbitrary number of Scalars. See the definition of ModMeshType for descriptions of these fields.  
+   
       TYPE(MeshType), INTENT(INOUT)   :: BlankMesh ! Mesh to be created
       INTEGER,INTENT(IN)         :: IOS                  ! input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
       INTEGER,INTENT(IN)         :: Nnodes               ! Number of nodes in mesh
@@ -622,6 +648,11 @@ CONTAINS
    END SUBROUTINE MeshCreate
 
    RECURSIVE SUBROUTINE MeshDestroy ( Mesh, ErrStat, ErrMess, IgnoreSibling )
+    ! Destroy the given mesh and deallocate all of its data. If the optional IgnoreSibling argument 
+    ! is set to TRUE, destroying a sibling in a set has no effect on the other siblings other than 
+    ! to remove the victim from the list of siblings. If IgnoreSibling is omitted or is set to FALSE, 
+    ! all of the other siblings in the set will be destroyed as well.
+
      TYPE(MeshType),  INTENT(INOUT) :: Mesh            ! Mesh to be vaporized
      INTEGER(IntKi),  INTENT(OUT)   :: ErrStat         ! Error status/code
      CHARACTER(*),    INTENT(OUT)   :: ErrMess         ! Error message
@@ -636,7 +667,7 @@ CONTAINS
 
     ! Local
       LOGICAL IgSib
-      INTEGER i, j, k
+      INTEGER i, j
 
       ErrStat = ErrID_None
 
@@ -749,7 +780,6 @@ CONTAINS
 
    END SUBROUTINE MeshDestroy
 
-
 ! Format of the Int buffer
 !   word
 !     1        Total size of Int buffer in bytes
@@ -762,6 +792,15 @@ CONTAINS
 !     7+$7     Table Entries                       $5 * SIZE(ElemRecType)
 !
    SUBROUTINE MeshPack ( Mesh, ReBuf, DbBuf, IntBuf , ErrStat, ErrMess, SizeOnly )
+      ! Given a mesh and allocatable buffers of type INTEGER(IntKi), REAL(ReKi), and REAL(DbKi), 
+      ! return the mesh information compacted into consecutive elements of the corresponding buffers. 
+      ! This would be done to allow subsequent writing of the buffers to a file for restarting later. 
+      ! The sense of the name is “pack the data from the mesh into buffers”. IMPORTANT: MeshPack 
+      ! allocates the three buffers. It is incumbent upon the calling program to deallocate the 
+      ! buffers when they are no longer needed. For sibling meshes, MeshPack should be called 
+      ! separately for each sibling, because the fields allocated with the siblings are separate 
+      ! and unique to each sibling.
+   
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being packed
      REAL(ReKi),     ALLOCATABLE, INTENT(  OUT) :: ReBuf(:)  ! Real buffer
      REAL(DbKi),     ALLOCATABLE, INTENT(  OUT) :: DbBuf(:)  ! Double buffer
@@ -770,7 +809,7 @@ CONTAINS
      CHARACTER(*),                INTENT(  OUT) :: ErrMess
      LOGICAL,OPTIONAL,            INTENT(IN   ) :: SizeOnly
    ! Local
-     INTEGER i,ic,nelem,n_int,n_re,n_db,l,ii,jj,CtrlCode,x
+     INTEGER i,ic,nelem,n_int,n_re,n_db,ii,jj,CtrlCode,x
      INTEGER Ielement, Xelement
      TYPE(ElemRecType), POINTER :: ElemRec
      LOGICAL SzOnly
@@ -955,6 +994,16 @@ CONTAINS
    END SUBROUTINE MeshPack
 
    SUBROUTINE MeshUnpack( Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat, ErrMess )
+      ! Given a blank, uncreated mesh and buffers of type INTEGER(IntKi), REAL(ReKi), and 
+      ! REAL(DbKi), unpack the mesh information from the buffers. This would be done to 
+      ! recreate a mesh after reading in the buffers on a restart of the program. The sense 
+      ! of the name is “unpack the mesh from buffers.” The resulting mesh will be returned 
+      ! in the exact state as when the data in the buffers was packed using MeshPack. 
+      
+      ! bjj: not implemented yet:  
+      ! If the mesh has an already recreated sibling mesh from a previous call to MeshUnpack, specify 
+      ! the existing sibling as an optional argument so that the sibling relationship is also recreated.
+   
      TYPE(MeshType),              INTENT(INOUT) :: Mesh
      REAL(ReKi),     ALLOCATABLE, INTENT(IN   ) :: Re_Buf(:)
      REAL(DbKi),     ALLOCATABLE, INTENT(IN   ) :: Db_Buf(:)
@@ -965,8 +1014,8 @@ CONTAINS
    ! Local
      LOGICAL Force, Moment, Orientation, TranslationDisp, TranslationVel, RotationVel, TranslationAcc, RotationAcc
      INTEGER nScalars
-     INTEGER i,ic,nelem,n_int,n_re,n_db,l,ii,jj,CtrlCode,x,nelemnodes
-     INTEGER Ielement, Xelement
+     INTEGER i,ic,ii,jj,nelemnodes
+     INTEGER Xelement
      !TYPE(ElemRecType), POINTER :: ElemRec
 
      Force = .FALSE.
@@ -1156,6 +1205,29 @@ CONTAINS
    SUBROUTINE MeshCopy( SrcMesh, DestMesh, CtrlCode, ErrStat , ErrMess   &
                       ,IOS, Force, Moment, Orientation, TranslationDisp, TranslationVel &
                       ,RotationVel, TranslationAcc, RotationAcc, nScalars )
+   
+   ! Given an existing mesh and a destination mesh, create a completely new copy, a sibling, or 
+   !   update the fields of a second existing mesh from the first mesh. When CtrlCode is 
+   !   MESH_NEWCOPY or MESH_SIBLING, the destination mesh must be a blank, uncreated mesh.
+   ! 
+   ! If CtrlCode is MESH_NEWCOPY, an entirely new copy of the mesh is created, including all fields, 
+   !   with the same data values as the original, but as an entirely separate copy in memory. The new 
+   !   copy is in the same state as the original—if the original has not been committed, neither is 
+   !   the copy; in this case, an all-new copy of the mesh must be committed separately.
+   !
+   ! If CtrlCode is MESH_SIBLING, the destination mesh is created with the same mesh and position/reference 
+   !   orientation information of the source mesh, and this new sibling is added to the end of the list for 
+   !   the set of siblings. Siblings may have different fields (other than Position and RefOrientation). 
+   !   Therefore, for a sibling, it is necessary, as with MeshCreate, to indicate the fields the sibling 
+   !   will have using optional arguments. Sibling meshes should not be created unless the original mesh 
+   !   has been committed first.
+   !
+   ! If CtrlCode is MESH_UPDATECOPY, all of the allocatable fields of the destination mesh are updated 
+   !   with the values of the fields in the source. (The underlying mesh is untouched.) The mesh and field 
+   !   definitions of the source and destination meshes must match and both must have been already committed. 
+   !   The destination mesh may be an entirely different copy or it may be a sibling of the source mesh.
+   
+   
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: SrcMesh  ! Mesh being copied
      TYPE(MeshType), TARGET,      INTENT(INOUT) :: DestMesh ! Copy of mesh
      INTEGER(IntKi),              INTENT(IN)    :: CtrlCode ! MESH_NEWCOPY, MESH_SIBLING, or
@@ -1172,7 +1244,7 @@ CONTAINS
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationVel       ! If present and true, allocate RotationVel field
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationAcc    ! If present and true, allocate TranslationAcc field
      LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationAcc       ! If present and true, allocate RotationAcc field
-     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          ! If present and > 0 , alloc n Scalars
+     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          ! If present and > 0 , alloc n Scalars               
     ! Local
      INTEGER(IntKi)                             :: IOS_l               ! IOS of new sibling
      LOGICAL                                    :: Force_l           & ! If true, allocate Force field
@@ -1187,6 +1259,8 @@ CONTAINS
      INTEGER i, j, k
 
 
+     
+     
       ErrStat = ErrID_None
       ErrMess = ""
 
@@ -1377,13 +1451,19 @@ CONTAINS
 
 ! added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshPositionNode( Mesh, Inode, Pos, ErrStat, ErrMess, Orient )
+
+   ! For a given node in a mesh, assign the coordinates of the node in the global coordinate space. 
+   ! If an Orient argument is included, the node will also be assigned the specified orientation 
+   ! (orientation is assumed to be the identity matrix if omitted). Returns a non-zero value in  
+   ! ErrStat if Inode is outside the range 1..Nnodes.     
+   
      TYPE(MeshType),              INTENT(INOUT) :: Mesh         ! Mesh being spatio-located
      INTEGER(IntKi),              INTENT(IN   ) :: Inode        ! Number of node being located
      REAL(ReKi),                  INTENT(IN   ) :: Pos(3)       ! Xi,Yi,Zi, coordinates of node
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      ! Error code
      CHARACTER(*),                INTENT(  OUT) :: ErrMess      ! Error message
      REAL(ReKi), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  ! Orientation (direction cosine matrix) of node; identity by default
-
+     
      ErrStat = ErrID_None
      ErrMess = ""
     ! Safety first
@@ -1441,6 +1521,13 @@ CONTAINS
    END SUBROUTINE MeshPositionNode
 
    SUBROUTINE MeshCommit( Mesh, ErrStat, ErrMess )
+     
+    ! Given a mesh that has been created, spatio-located, and constructed, 
+    ! commit the definition of the mesh, making it ready for initialization 
+    ! and use. Explicitly committing a mesh provides the opportunity to precompute 
+    ! traversal information, neighbor lists and other information about the mesh. 
+    ! Returns non-zero in value of ErrStat on error.     
+    
      TYPE(MeshType),              INTENT(INOUT) :: Mesh ! Mesh being committed
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess ! Error message
@@ -1572,6 +1659,11 @@ CONTAINS
 
 ! added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_1PT( Mesh, Xelement, ErrStat, ErrMess, P1 )
+     
+   ! Given a mesh and an element name, construct an point element whose vertex is the 
+   ! node index listed as the remaining argument of the call to MeshConstructElement.
+   ! Returns a non-zero value on error.     
+     
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
@@ -1638,6 +1730,12 @@ CONTAINS
    END SUBROUTINE MeshConstructElement_1PT
 
    SUBROUTINE MeshConstructElement_2PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2 )
+     
+      ! Given a mesh and an element name, construct 2-point line (line2) element whose 
+      ! vertices are the node indices listed as the remaining arguments of the call to 
+      ! MeshConstructElement. The adjacency of elements is implied when elements are 
+      ! created that share some of the same nodes. Returns a non-zero value on error.     
+      
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
@@ -1818,6 +1916,9 @@ CONTAINS
 
 !................................................................                                                                                                                                                      
    SUBROUTINE MeshSplitElement_2PT( Mesh, Xelement, ErrStat, ErrMess, E1, P1  )
+      ! routine splits a line2 element into two separate elements, using p1 as
+      ! the new node connecting the two new elements formed from E1
+      
       TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
       INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
       INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
@@ -1874,6 +1975,14 @@ CONTAINS
 !................................................................                                                                           
                                                                            
    SUBROUTINE MeshNextElement ( Mesh, CtrlCode, ErrStat, ErrMess, Ielement, Xelement, ElemRec )
+   
+      ! Given a control code and a mesh that has been committed, retrieve the next element in the mesh. 
+      !   Used to traverse mesh element by element. On entry, the CtrlCode argument contains a control code: 
+      !   zero indicates start from the beginning, an integer between 1 and Mesh%Nelemlist returns that element,
+      !   and MESH_NEXT means return the next element in traversal. On exit, CtrlCode contains the status of the 
+      !   traversal in (zero or MESH_NOMOREELEMS). The routine optionally outputs the index of the element in the
+      !   mesh’s element list, the name of the element (see “Element Names”), and a pointer to the element.    
+   
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(INOUT) :: CtrlCode  ! CtrlCode
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
@@ -1918,21 +2027,10 @@ CONTAINS
 
    !...............................................................................................................................
     SUBROUTINE MeshExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
-   !
+   
    ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
-   ! values of u (which has values associated with times in t).  Order of the interpolation is 1
-   !
-   !  expressions below based on either
-   !
-   !  f(t) = a
-   !  f(t) = a + b * t, or
-   !  f(t) = a + b * t + c * t**2
-   !
-   !  where a, b and c are determined as the solution to
-   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-   !
-   !...............................................................................................................................
-
+   ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
+   
     TYPE(MeshType),      INTENT(IN)     :: u1                        ! Inputs at t1 > t2
     TYPE(MeshType),      INTENT(IN)     :: u2                        ! Inputs at t2
     REAL(DbKi),          INTENT(IN   )  :: tin(:)                    ! Times associated with the inputs
@@ -2038,20 +2136,10 @@ CONTAINS
 
    !...............................................................................................................................
     SUBROUTINE MeshExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
-   !
+   
    ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
    ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
-   !
-   !  expressions below based on either
-   !
-   !  f(t) = a
-   !  f(t) = a + b * t, or
-   !  f(t) = a + b * t + c * t**2
-   !
-   !  where a, b and c are determined as the solution to
-   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-   !
-   !...............................................................................................................................
+      
 
     TYPE(MeshType),      INTENT(IN)     :: u1                        ! Inputs at t1 > t2 > t3
     TYPE(MeshType),      INTENT(IN)     :: u2                        ! Inputs at t2 > t3
@@ -2204,7 +2292,7 @@ CONTAINS
 
    !...............................................................................................................................
     SUBROUTINE MeshExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )
-   !
+   
    ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
    ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
    !
@@ -2216,8 +2304,7 @@ CONTAINS
    !
    !  where a, b and c are determined as the solution to
    !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-   !
-   !...............................................................................................................................
+
 
     TYPE(MeshType),      INTENT(INOUT)  :: u(:)          ! Inputs at t1 > t2 > t3
     REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs

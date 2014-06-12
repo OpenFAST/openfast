@@ -45,6 +45,8 @@ MODULE SysSubs
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
    !     SUBROUTINE  WriteScr ( Str, Frm )
+   !     SUBROUTINE LoadDynamicLib( DLL, ErrStat, ErrMsg )
+   !     SUBROUTINE FreeDynamicLib( DLL, ErrStat, ErrMsg )
 
 
 
@@ -66,7 +68,7 @@ MODULE SysSubs
    CHARACTER(10), PARAMETER      :: Endian      = 'BIG_ENDIAN'                      ! The internal format of numbers.
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows/LabVIEW' ! Description of the language/OS
-   CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separater.
+   CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.
    CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
@@ -270,7 +272,13 @@ CONTAINS
 !=======================================================================
    SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
          
-   
+      ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
+      ! values for not-a-number and infinity in sindle and double 
+      ! precision) F03 has standard intrinsic routines to do this,  
+      ! but older compilers have not implemented it. This code will  
+      ! fail if  the compiler checks for floating-point-error, hence  
+      ! the compiler directive FPE_TRAP_ENABLED.
+
       REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
       REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
 
@@ -382,7 +390,7 @@ CONTAINS
 !==================================================================================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
-      ! This SUBROUTINE is used to load a DLL.
+      ! This SUBROUTINE is used to dynamically load a DLL.
 
       ! Passed Variables:
 
@@ -402,7 +410,7 @@ END SUBROUTINE LoadDynamicLib
 !==================================================================================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
-      ! This SUBROUTINE is used to free a DLL.
+      ! This SUBROUTINE is used to free a dynamically loaded DLL (loaded in LoadDynamicLib).
 
       ! Passed Variables:
 

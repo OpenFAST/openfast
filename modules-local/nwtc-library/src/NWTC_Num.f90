@@ -40,14 +40,15 @@ MODULE NWTC_Num
    !  SUBROUTINE Eye                   ( A, ErrStat, ErrMsg )                                         ! sets A equal to the identity matrix (A can have 2 or 3 dimensions)
    !  SUBROUTINE GaussElim             ( AugMat, NumEq, x, ErrStat, ErrMsg )                          ! Performs Gauss-Jordan elimination to solve Ax=b for x; AugMat = [A b]
    !  SUBROUTINE GetOffsetReg          ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )              ! Determine index of the point in Ary just below Val and the fractional distance to the next point in the array.
+   !  FUNCTION   GetSmllRotAngs        ( DCMat, ErrStat, ErrMsg )
    !  SUBROUTINE GL_Pts                ( IPt, NPts, Loc, Wt [, ErrStat] )
    !  FUNCTION   IndexCharAry          ( CVal, CAry )
    !  FUNCTION   InterpBin             ( XVal, XAry, YAry, ILo, AryLen )                              ! Generic interface for InterpBinComp and InterpBinReal.
-   !  FUNCTION   InterpBinComp         ( XVal, XAry, YAry, ILo, AryLen )
-   !  FUNCTION   InterpBinReal         ( XVal, XAry, YAry, ILo, AryLen )
+   !     FUNCTION   InterpBinComp      ( XVal, XAry, YAry, ILo, AryLen )
+   !     FUNCTION   InterpBinReal      ( XVal, XAry, YAry, ILo, AryLen )
    !  FUNCTION   InterpStp             ( XVal, XAry, YAry, ILo, AryLen )                              ! Generic interface for InterpStpComp and InterpStpReal.
-   !  FUNCTION   InterpStpComp         ( XVal, XAry, YAry, Ind, AryLen )
-   !  FUNCTION   InterpStpReal         ( XVal, XAry, YAry, Ind, AryLen )
+   !     FUNCTION   InterpStpComp      ( XVal, XAry, YAry, Ind, AryLen )
+   !     FUNCTION   InterpStpReal      ( XVal, XAry, YAry, Ind, AryLen )
    !  FUNCTION   IsSymmetric           ( A )                                                          ! Function to determine if A(:,:) is symmetric
    !  SUBROUTINE LocateBin             ( XVal, XAry, Ind, AryLen )
    !  SUBROUTINE LocateStp             ( XVal, XAry, Ind, AryLen )
@@ -63,8 +64,8 @@ MODULE NWTC_Num
    !  SUBROUTINE SmllRotTrans          ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
    !  SUBROUTINE SortUnion             ( Ary1, N1, Ary2, N2, Ary, N )
    !  FUNCTION   StdDevFn              ( Ary, AryLen, Mean )                                          ! Function to calculate the standard deviation of a vector array.
-
-
+   !  SUBROUTINE Zero2TwoPi            ( Angle )
+   
    USE                                          NWTC_IO
 
    IMPLICIT NONE
@@ -99,7 +100,6 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoByPi                       ! 2/Pi
    REAL(ReKi)                                :: TwoPi                         ! 2*Pi
 
-   INTEGER, ALLOCATABLE                      :: IntIndx  (:,:)                ! The array of indices holding that last index used for interpolation in IntBlade()
 
    TYPE, PUBLIC               :: CubSplineType                                ! This derived type is used to hold data for performing cubic splines.
       INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
@@ -217,7 +217,7 @@ CONTAINS
    SUBROUTINE BSortReal ( RealAry, NumPts )
 
 
-      ! This routine sorts a list of real numbers.  It uses the buble sort algorithm,
+      ! This routine sorts a list of real numbers.  It uses the bubble sort algorithm,
       ! which is only suitable for short lists.
 
 
@@ -1896,11 +1896,9 @@ CONTAINS
 !=======================================================================
    FUNCTION Mean ( Ary, AryLen )
 
-
-   !NOTE: We should make AryLen an optional argument and use SIZE( Ary ) if it is not present.
-
       ! This routine calculates the mean value of an array.
 
+   !NOTE: We should make AryLen an optional argument and use SIZE( Ary ) if it is not present.
 
       ! Function declaration.
 
@@ -1936,10 +1934,9 @@ CONTAINS
 !=======================================================================
    SUBROUTINE MPi2Pi ( Angle )
 
-
-      ! This routine ensures that Angle lies between -pi and pi.
-
-
+      ! This routine is used to convert Angle to an equivalent value
+      !  between -pi and pi.
+                 
       ! Argument declarations:
 
    REAL(ReKi), INTENT(INOUT)    :: Angle
@@ -1960,33 +1957,6 @@ CONTAINS
 
    RETURN
    END SUBROUTINE MPi2Pi
-!=======================================================================
-   SUBROUTINE Zero2TwoPi ( Angle )
-
-
-      ! This routine ensures that Angle lies between 0 and 2*pi.
-
-
-      ! Argument declarations:
-
-   REAL(ReKi), INTENT(INOUT)    :: Angle
-
-
-
-      ! Get the angle between 0 and 2Pi.
-
-   Angle = MODULO( Angle, TwoPi )   
-
-
-      ! Check numerical case where Angle == 2Pi.
-
-   IF ( Angle == TwoPi )  THEN
-      Angle = 0.0_ReKi
-   END IF
-
-
-   RETURN
-   END SUBROUTINE Zero2TwoPi   
 !=======================================================================
    SUBROUTINE RegCubicSplineInit ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 
@@ -2637,7 +2607,7 @@ CONTAINS
       !      {x1}   [TransMat(Theta1, ] {X1}
       !      {x2} = [         Theta2, ]*{X2}
       !      {x3}   [         Theta3 )] {X3}
-
+      !
       ! The transformation matrix, TransMat, is the closest orthonormal
       !   matrix to the nonorthonormal, but skew-symmetric, Bernoulli-Euler
       !   matrix:
@@ -2654,11 +2624,11 @@ CONTAINS
       !   (SVD) of A = U*S*V^T where S is a diagonal matrix containing the
       !   singular values of A, which are SQRT( eigenvalues of A*A^T ) =
       !   SQRT( eigenvalues of A^T*A ).
-
+      !
       ! The algebraic form of the transformation matrix, as implemented
       !   below, was derived symbolically by J. Jonkman by computing U*V^T
       !   by hand with verification in Mathematica.
-
+      !
       ! This routine is the inverse of GetSmllRotAngs()
 
       ! Passed Variables:
@@ -2859,6 +2829,33 @@ CONTAINS
 
    RETURN
    END FUNCTION StdDevFn ! ( Ary, AryLen, Mean )
+!=======================================================================
+   SUBROUTINE Zero2TwoPi ( Angle )
+
+      ! This routine is used to convert Angle to an equivalent value
+      !  between 0 and 2*pi.
+      
+
+      ! Argument declarations:
+
+   REAL(ReKi), INTENT(INOUT)    :: Angle
+
+
+
+      ! Get the angle between 0 and 2Pi.
+
+   Angle = MODULO( Angle, TwoPi )   
+
+
+      ! Check numerical case where Angle == 2Pi.
+
+   IF ( Angle == TwoPi )  THEN
+      Angle = 0.0_ReKi
+   END IF
+
+
+   RETURN
+   END SUBROUTINE Zero2TwoPi   
 !=======================================================================
 
 END MODULE NWTC_Num

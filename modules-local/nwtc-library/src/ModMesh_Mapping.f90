@@ -23,8 +23,8 @@
 !**********************************************************************************************************************************
 ! This code implements the spatial mapping algorithms described in 
 !    Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Wind Turbine CAE Tool: Nonmatching Spatial and  
-!    Temporal Meshes." Proceedings of the 52nd Aerospace Sciences Meeting, 2014, also published in tech, report NREL/CP-
-!    National Renewable Energy Laboratory, Golden, CO.
+!    Temporal Meshes." Proceedings of the 52nd Aerospace Sciences Meeting, 2014, also published in tech report NREL/CP-2C00-60742
+!    National Renewable Energy Laboratory, Golden, CO. http://www.nrel.gov/docs/fy14osti/60742.pdf
 !**********************************************************************************************************************************
 MODULE ModMesh_Mapping
 

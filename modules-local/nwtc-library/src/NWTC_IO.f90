@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.02a-bjj', '10-June-2014')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.03.02a-bjj', '12-June-2014')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -73,7 +73,7 @@ MODULE NWTC_IO
    LOGICAL                       :: Beep     = .TRUE.                            ! Flag that specifies whether or not to beep for error messages and program terminations.
 
    CHARACTER(20)                 :: ProgName = ' '                               ! The name of the calling program. DO NOT USE THIS IN NEW PROGRAMS
-   CHARACTER(99)                 :: ProgVer                                      ! The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
+   CHARACTER(99)                 :: ProgVer  = ' '                               ! The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         ! The tab character.
 
 
@@ -217,122 +217,132 @@ MODULE NWTC_IO
    
 CONTAINS
 
-   ! It contains the following routines:
-
-   !     SUBROUTINE AdjRealStr    ( NumStr )                                                                         ! Removes leading spaces and trailing zeros from strings created by real numbers.
-   !     SUBROUTINE AllocAry      ( )                                                                                ! Generic interface for the All*Ary* routines.
-   !     SUBROUTINE AllCAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D CHARACTER array.
-   !     SUBROUTINE AllCAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D CHARACTER array.
-   !     SUBROUTINE AllCAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D CHARACTER array.
-   !     SUBROUTINE AllI1BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 1-Byte INTEGER array.
-   !     SUBROUTINE AllI2BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 2-Byte INTEGER array.
-   !     SUBROUTINE AllI4BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte INTEGER array.
-   !     SUBROUTINE AllIAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D INTEGER array.
-   !     SUBROUTINE AllIAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D INTEGER array.
-   !     SUBROUTINE AllLAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D LOGICAL array.
-   !     SUBROUTINE AllLAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D LOGICAL array.
-   !     SUBROUTINE AllLAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D LOGICAL array.
-   !     SUBROUTINE AllR4Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte REAL array.
-   !     SUBROUTINE AllR8Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 8-Byte REAL array.
-   !     SUBROUTINE AllR16Ary1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 16-Byte REAL array.
-   !     SUBROUTINE AllR4Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 4-Byte REAL array.
-   !     SUBROUTINE AllR8Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 8-Byte REAL array.
-   !     SUBROUTINE AllR16Ary2    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 16-Byte REAL array.
-   !     SUBROUTINE AllRAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D REAL array.
-   !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )          ! Allocate a 4-D REAL array.
-   !     SUBROUTINE AllRAry5      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] ) ! Allocate a 5-D REAL array.
-   !     SUBROUTINE CheckArgs     ( InputFile [, ErrStat] )
-   !     SUBROUTINE CheckIOS      ( IOS, Fil, Variable, VarType [, TrapErrors, ErrMsg] )
-   !     SUBROUTINE ChkParseData  ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )                  ! Checks data to be parsed to ensure it has the right variable name and a value to go with it.
-   !     SUBROUTINE ChkRealFmtStr ( RealFmt, RealFmtVar, ErrStat, ErrMsg )                            ! Test to see if a specified string is a valid format for real numbers.
-   !     SUBROUTINE Conv2UC       ( Str )
-   !     FUNCTION   CountWords    ( Line )
-   !     FUNCTION   CurDate       ( )
-   !     FUNCTION   CurTime       ( )
-   !     SUBROUTINE DispNVD       ( )                                                                        ! Generic interface for DispNVD0, DispNVD1, DispNVD2.
-   !     SUBROUTINE DispNVD0      ( )                                                                        ! Used when DispNVD() has no agruments.
-   !     SUBROUTINE DispNVD1      ( ProgInfo )                                                               ! Used when DispNVD() is called with an argument of ProgDesc type.
-   !     SUBROUTINE DispNVD2      ( Name, Ver )                                                              ! Used when DispNVD() is called with name and version.
-   !     SUBROUTINE FindLine      ( Str , MaxLen , StrEnd )
-   !     SUBROUTINE GetNewUnit    ( UnIn [, ErrStat] [, ErrMsg] )
-   !     FUNCTION   GetNVD        ( ProgDesc )
-   !     FUNCTION   GetErrStr     ( ErrID )
-   !     SUBROUTINE GetPath       ( GivenFil, PathName )
-   !     SUBROUTINE GetRoot       ( GivenFil, RootName )
-   !     SUBROUTINE GetTokens     ( Line, NumTok, Tokens, Error )
-   !     SUBROUTINE GetWords      ( Line, Words, NumWords )
-   !     SUBROUTINE InitInpErrs   ( InputErrors, MaxErrs, ErrStat, ErrMsg )                                                ! Initializes the InputErrors structure.
-   !     FUNCTION   Int2LStr      ( Intgr )
-   !     SUBROUTINE NameOFile     ( InArg, OutExten, OutFile [, ErrStat] )
-   !     SUBROUTINE NormStop      ( )
-   !     FUNCTION   Num2LStr      ( Num )                                                                    ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
-   !     SUBROUTINE OpenBInpFile  ( Un, InFile [, ErrStat] )
-   !     SUBROUTINE OpenBOutFile  ( Un, OutFile, ErrStat, ErrMsg )
-   !     SUBROUTINE OpenEcho      ( Un, InFile [, ErrStat] [, ErrMsg] [, ProgVer] )
-   !     SUBROUTINE OpenFInpFile  ( Un, InFile [, ErrStat] [, ErrMsg] )
-   !     SUBROUTINE OpenFOutFile  ( Un, OutFile [, ErrStat] [, ErrMsg] )
-   !     SUBROUTINE OpenFUnkFile  ( Un, OutFile, FailAbt, Failed, Exists [, ErrStat] )
-   !     SUBROUTINE OpenUInBEFile ( Un, InFile, RecLen [, ErrStat] )
-   !     SUBROUTINE OpenUInfile   ( Un, InFile [, ErrStat] )
-   !     SUBROUTINE OpenUOutfile  ( Un, OutFile [, ErrStat] )
-   !     SUBROUTINE ParseChVar    ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )                          ! Parses a CHARACTER from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseDbAry    ( FileInfo, LineNum, AryName   , DbAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a double-precision REAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseDbVar    ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg, UnEc )                                ! Parses a double-precision REAL from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseInAry    ( FileInfo, LineNum, AryName   , InAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a whole-number array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseInclInfo ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )                              ! Parse the information in "@" include statements.
-   !     SUBROUTINE ParseInVar    ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )                                ! Parses a whole-number from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseLoAry    ( FileInfo, LineNum, AryName   , LoAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a LOGICAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseLoVar    ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )                                ! Parses a LOGICAL value from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseSiAry    ( FileInfo, LineNum, AryName   , SiAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a single-precision REAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseSiVar    ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )                                ! Parses a single-precision REAL from a string. USE ParseVar instead.
-   !     FUNCTION   PathIsRelative( GivenFil )
-   !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] [, ErrMsg] )
-   !     SUBROUTINE ProcessComFile( TopFileName, FileInfo, ErrStat, ErrMsg )                                               ! Call ScanComFile and ReadComFile to fully process commented and possibly nested input files.
-   !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
-   !     SUBROUTINE ProgPause                                                                                ! Pause output so the user has to hit <Enter> to continue.
-   !     SUBROUTINE ProgWarn      ( Message )
-   !     FUNCTION   R2LStr4       ( FltNum )                                                                 ! Convert  4-byte REALs to left-justified strings. USE Num2LStr() instead.
-   !     FUNCTION   R2LStr8       ( FltNum )                                                                 ! Convert  8-byte REALs to left-justified strings. USE Num2LStr() instead.
-   !     FUNCTION   R2LStr16      ( FltNum )                                                                 ! Convert 16-byte REALs to left-justified strings. USE Num2LStr() instead.
-   !     SUBROUTINE ReadAry       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAry, ReadIAry, ReadLAry, ReadR4Ary, ReadR8Ary and ReadR16Ary.
-   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
-   !     SUBROUTINE ReadCAry      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadCAryLines ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadCom       ( UnIn, Fil, ComName [, ErrStat] [, ErrMsg] [, UnEc] )                     ! Reads a comment line from an input file. (variable not returned)
-   !     SUBROUTINE ReadComFile   ( FileInfo, FileIndx, StartLine, LastLine, ErrStat, ErrMsg )                             ! Recursive routine to read a formatted file (and files it includes) and strips out the comments, copying the remainder in a structure.
-   !     SUBROUTINE ReadCVar      ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadFASTbin   ( UnIn, FASTdata [, ErrLev, ErrMsg] )                                      ! Read a FAST binary output file.
-   !     SUBROUTINE ReadIAry      ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadIVar      ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadLAry      ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadLine      ( UnIn, CommChars, Line, LineLen, ErrStat )                                 ! Reads a line from the specified input unit and returns the non-comment portion of the line.
-   !     SUBROUTINE ReadLVar      ( UnIn, Fil, LogVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadNum       ( UnIn, Fil, Word, VarName, [, ErrStat] [, ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadOutputList( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadR4Ary     ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadR8Ary     ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadR16Ary    ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )     ! Generic interface for ReadCAryLines, ReadR4AryLines, ReadR8AryLines, and ReadR16AryLines
-   !     SUBROUTINE ReadR4Var     ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 4-byte real number from an input file. USE ReadVar instead.
-   !     SUBROUTINE ReadR8Var     ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 8-byte real number from an input file. USE ReadVar instead.
-   !     SUBROUTINE ReadR16Var    ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 16-byte real number from an input file. USE ReadVar instead.
-   !     SUBROUTINE ReadStr       ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a string (up to 200 characters--until end-of-line) from an input file.
-   !     SUBROUTINE ReadVar       ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] [, UnEc] )                 ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadR*Var.
-   !     SUBROUTINE RemoveNullChar( Str )
-   !     SUBROUTINE ScanComFile   ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )        ! Recursive routine to scan commented input files.
-   !     SUBROUTINE WaitTime      ( WaitSecs )
-   !     SUBROUTINE WrBinFAST     ( FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg )
-   !     SUBROUTINE WrFileNR      ( Unit, Str )
-   !     SUBROUTINE WrML          ( Str )
-   !     SUBROUTINE WrMatrix      ( A, Un, ReFmt, MatName ) ! generic interface to write 1- or 2- dimensional real 4 or 8 values to unit Un
-   !     SUBROUTINE WrPr          ( Str )
-   !     SUBROUTINE WrScr         ( Str )
-
+   ! It contains the following routines:  
+   
+   !     SUBROUTINE AdjRealStr         ( NumStr )                                                                         ! Removes leading spaces and trailing zeros from strings created by real numbers.
+   !     SUBROUTINE AllocAry           ( )                                                                                ! Generic interface for the All*Ary* routines (allocatable arrays).
+   !     SUBROUTINE AllocPAry          ( )                                                                                ! Generic interface for the All*PAry* routines (pointer arrays).
+   !     SUBROUTINE AllCAry1           ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D CHARACTER array.
+   !     SUBROUTINE AllCAry2           ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D CHARACTER array.
+   !     SUBROUTINE AllCAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D CHARACTER array.
+   !     SUBROUTINE AllI1BAry1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 1-Byte INTEGER array.
+   !     SUBROUTINE AllI2BAry1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 2-Byte INTEGER array.
+   !     SUBROUTINE AllI4BAry1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte INTEGER array.
+   !     SUBROUTINE AllIAry2           ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D INTEGER array.
+   !     SUBROUTINE AllIAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D INTEGER array.
+   !     SUBROUTINE AllLAry1           ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D LOGICAL array.
+   !     SUBROUTINE AllLAry2           ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D LOGICAL array.
+   !     SUBROUTINE AllLAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D LOGICAL array.
+   !     SUBROUTINE AllR4Ary1          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary1          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 16-Byte REAL array.
+   !     SUBROUTINE AllR4Ary2          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary2          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary2         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 16-Byte REAL array.
+   !     SUBROUTINE AllRAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D REAL array.
+   !     SUBROUTINE AllRAry4           ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )          ! Allocate a 4-D REAL array.
+   !     SUBROUTINE AllRAry5           ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] ) ! Allocate a 5-D REAL array.
+   !     SUBROUTINE CheckArgs          ( InputFile [, ErrStat] )
+   !     SUBROUTINE CheckIOS           ( IOS, Fil, Variable, VarType [, TrapErrors, ErrMsg] )
+   !     SUBROUTINE ChkParseData       ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )                  ! Checks data to be parsed to ensure it has the right variable name and a value to go with it.
+   !     SUBROUTINE ChkRealFmtStr      ( RealFmt, RealFmtVar, ErrStat, ErrMsg )                            ! Test to see if a specified string is a valid format for real numbers.
+   !     SUBROUTINE Conv2UC            ( Str )
+   !     FUNCTION   CountWords         ( Line )
+   !     FUNCTION   CurDate            ( )
+   !     FUNCTION   CurTime            ( )
+   !     SUBROUTINE DispNVD            ( )                                                                        ! Generic interface for DispNVD0, DispNVD1, DispNVD2.
+   !     SUBROUTINE DispNVD0           ( )                                                                        ! Used when DispNVD() has no agruments.
+   !     SUBROUTINE DispNVD1           ( ProgInfo )                                                               ! Used when DispNVD() is called with an argument of ProgDesc type.
+   !     SUBROUTINE DispNVD2           ( Name, Ver )                                                              ! Used when DispNVD() is called with name and version.
+   !     SUBROUTINE DispCopyrightLicense( ProgInfo )
+   !     SUBROUTINE DLLTypePack        ( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
+   !     SUBROUTINE DLLTypeUnPack      ( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
+   !     SUBROUTINE FindLine           ( Str , MaxLen , StrEnd )
+   !     FUNCTION   GetErrStr          ( ErrID )
+   !     SUBROUTINE GetNewUnit         ( UnIn [, ErrStat] [, ErrMsg] )
+   !     FUNCTION   GetNVD             ( ProgDesc )
+   !     FUNCTION   GetErrStr          ( ErrID )
+   !     SUBROUTINE GetPath            ( GivenFil, PathName )
+   !     SUBROUTINE GetRoot            ( GivenFil, RootName )
+   !     SUBROUTINE GetTokens          ( Line, NumTok, Tokens, Error )
+   !     SUBROUTINE GetWords           ( Line, Words, NumWords )      
+   !     SUBROUTINE InitInpErrs        ( InputErrors, MaxErrs, ErrStat, ErrMsg )                                                ! Initializes the InputErrors structure.
+   !     FUNCTION   Int2LStr           ( Intgr )
+   !     SUBROUTINE IntAry2Str         ( IntAry, Str, ErrStat, ErrMsg )
+   !     SUBROUTINE NameOFile          ( InArg, OutExten, OutFile [, ErrStat] )
+   !     SUBROUTINE NormStop           ( )
+   !     FUNCTION   Num2LStr           ( Num )                                                                    ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
+   !     SUBROUTINE NWTC_DisplaySyntax ( DefaultInputFile, ThisProgName )
+   !     SUBROUTINE OpenBInpFile       ( Un, InFile [, ErrStat] )
+   !     SUBROUTINE OpenBOutFile       ( Un, OutFile, ErrStat, ErrMsg )
+   !     SUBROUTINE OpenEcho           ( Un, InFile [, ErrStat] [, ErrMsg] [, ProgVer] )
+   !     SUBROUTINE OpenFInpFile       ( Un, InFile [, ErrStat] [, ErrMsg] )
+   !     SUBROUTINE OpenFOutFile       ( Un, OutFile [, ErrStat] [, ErrMsg] )
+   !     SUBROUTINE OpenFUnkFile       ( Un, OutFile, FailAbt, Failed, Exists [, ErrStat] )
+   !     SUBROUTINE OpenUInBEFile      ( Un, InFile, RecLen [, ErrStat] )
+   !     SUBROUTINE OpenUInfile        ( Un, InFile [, ErrStat] )
+   !     SUBROUTINE OpenUOutfile       ( Un, OutFile [, ErrStat] )  
+   !     SUBROUTINE ParseAry                                                                                                    ! generic interface for parsing arrays
+   !     SUBROUTINE ParseChVar         ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )                          ! Parses a CHARACTER from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseDbAry         ( FileInfo, LineNum, AryName   , DbAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a double-precision REAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseDbVar         ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg, UnEc )                                ! Parses a double-precision REAL from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseInAry         ( FileInfo, LineNum, AryName   , InAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a whole-number array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseInclInfo      ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )                              ! Parse the information in "@" include statements.
+   !     SUBROUTINE ParseInVar         ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )                                ! Parses a whole-number from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseLoAry         ( FileInfo, LineNum, AryName   , LoAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a LOGICAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseLoVar         ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )                                ! Parses a LOGICAL value from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseSiAry         ( FileInfo, LineNum, AryName   , SiAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a single-precision REAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseSiVar         ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )                                ! Parses a single-precision REAL from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseVar                                                                                                    ! generic interface for parsing variables   
+   !     FUNCTION   PathIsRelative     ( GivenFil )
+   !     SUBROUTINE PremEOF            ( Fil , Variable [, TrapErrors] [, ErrMsg] )
+   !     SUBROUTINE ProcessComFile     ( TopFileName, FileInfo, ErrStat, ErrMsg )                                               ! Call ScanComFile and ReadComFile to fully process commented and possibly nested input files.
+   !     SUBROUTINE ProgAbort          ( Message [, TrapErrors] )
+   !     SUBROUTINE ProgPause                                                                                     ! Pause output so the user has to hit <Enter> to continue.
+   !     SUBROUTINE ProgWarn           ( Message )
+   !     FUNCTION   R2LStr4            ( FltNum )                                                                 ! Convert  4-byte REALs to left-justified strings. USE Num2LStr() instead.
+   !     FUNCTION   R2LStr8            ( FltNum )                                                                 ! Convert  8-byte REALs to left-justified strings. USE Num2LStr() instead.
+   !     FUNCTION   R2LStr16           ( FltNum )                                                                 ! Convert 16-byte REALs to left-justified strings. USE Num2LStr() instead.
+   !     SUBROUTINE ReadAry            ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAry, ReadIAry, ReadLAry, ReadR4Ary, ReadR8Ary and ReadR16Ary.
+   !     SUBROUTINE ReadAryLines       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
+   !     SUBROUTINE ReadCAry           ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadCAryLines      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadCom            ( UnIn, Fil, ComName [, ErrStat] [, ErrMsg] [, UnEc] )                     ! Reads a comment line from an input file. (variable not returned)
+   !     SUBROUTINE ReadComFile        ( FileInfo, FileIndx, StartLine, LastLine, ErrStat, ErrMsg )                             ! Recursive routine to read a formatted file (and files it includes) and strips out the comments, copying the remainder in a structure.
+   !     SUBROUTINE ReadCVar           ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadFASTbin        ( UnIn, FASTdata [, ErrLev, ErrMsg] )                                      ! Read a FAST binary output file.
+   !     SUBROUTINE ReadIAry           ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadIVar           ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadLAry           ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadLine           ( UnIn, CommChars, Line, LineLen, ErrStat )                                 ! Reads a line from the specified input unit and returns the non-comment portion of the line.
+   !     SUBROUTINE ReadLVar           ( UnIn, Fil, LogVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadNum            ( UnIn, Fil, Word, VarName, [, ErrStat] [, ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadOutputList     ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadR4Ary          ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadR8Ary          ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadR16Ary         ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadAryLines       ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )     ! Generic interface for ReadCAryLines, ReadR4AryLines, ReadR8AryLines, and ReadR16AryLines
+   !     SUBROUTINE ReadR4Var          ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 4-byte real number from an input file. USE ReadVar instead.
+   !     SUBROUTINE ReadR8Var          ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 8-byte real number from an input file. USE ReadVar instead.
+   !     SUBROUTINE ReadR16Var         ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 16-byte real number from an input file. USE ReadVar instead.
+   !     SUBROUTINE ReadStr            ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a string (up to 200 characters--until end-of-line) from an input file.
+   !     SUBROUTINE ReadVar            ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] [, UnEc] )                 ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadR*Var.
+   !     SUBROUTINE RemoveNullChar     ( Str )
+   !     SUBROUTINE ScanComFile        ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )        ! Recursive routine to scan commented input files.
+   !     SUBROUTINE SetErrStat         ( ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName )
+   !     SUBROUTINE Str2IntAry         ( Str, IntAry, ErrStat, ErrMsg )
+   !     SUBROUTINE WaitTime           ( WaitSecs )
+   !     SUBROUTINE WrBinFAST          ( FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg )
+   !     SUBROUTINE WrFileNR           ( Unit, Str )
+   !     SUBROUTINE WrML               ( Str )
+   !     SUBROUTINE WrMatrix           ( A, Un, ReFmt, MatName )                                                  ! generic interface to write 1- or 2- dimensional real 4 or 8 values to unit Un
+   !     SUBROUTINE WrPr               ( Str )
+   !     SUBROUTINE WrReAryFileNR      ( Unit, Ary, Fmt, ErrStat, ErrMsg )
+   !     SUBROUTINE WrScr              ( Str )
+      
    ! DEPRECATED ROUTINES: Do not use them in new code
-   !     SUBROUTINE WrScr1        ( Str )                                                 DEPRECATED ROUTINE  use ----> WrScr( NewLine//Str )
-
-
-
+   !     SUBROUTINE WrScr1             ( Str )                                                 DEPRECATED ROUTINE  use ----> WrScr( NewLine//Str )
+     
 !=======================================================================
    SUBROUTINE AdjRealStr( NumStr )
 
@@ -1484,31 +1494,6 @@ CONTAINS
       
    END SUBROUTINE CheckArgs ! ( InputFile [, ErrStat] )
 !=======================================================================
-   SUBROUTINE NWTC_DisplaySyntax( DefaultInputFile, ThisProgName )
-   
-      CHARACTER(*),  INTENT(IN)  :: DefaultInputFile
-      CHARACTER(*),  INTENT(IN)  :: ThisProgName
-      
-               
-      CALL WrScr ( NewLine//' Syntax is:' )
-      IF ( LEN_TRIM( DefaultInputFile ) == 0 )  THEN
-         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
-         CALL WrScr ( NewLine//' where:' )
-         CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
-      ELSE
-         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
-         CALL WrScr ( NewLine//' where:' )
-         CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
-                        //TRIM( DefaultInputFile )//'".' )
-      END IF
-      CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
-      CALL WrScr    ( ' ')
-                     
-   END SUBROUTINE NWTC_DisplaySyntax
-
-!=======================================================================
    SUBROUTINE ChkParseData ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )
 
 
@@ -1951,6 +1936,84 @@ CONTAINS
 
 
    END SUBROUTINE DispCopyrightLicense
+!=======================================================================
+   SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
+   
+      ! This routine packs the DLL_Type data into an integer buffer.
+      ! It is required for the FAST Registry.
+   
+      TYPE(DLL_Type),                INTENT(IN   ) :: InData
+      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
+      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly
+      
+         ! Local variable
+      INTEGER(IntKi)                               :: Int_BufSz
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
+      
+      ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
+      IF (ErrStat /= 0 ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
+         RETURN
+      END IF
+            
+      IF ( PRESENT(SizeOnly) ) THEN
+         IF ( SizeOnly ) RETURN
+      ENDIF      
+      
+         ! Put an ascii representation of the strings in the integer array
+      CALL Str2IntAry( InData%FileName, IntKiBuf, ErrStat, ErrMsg )
+      CALL Str2IntAry( InData%ProcName, IntKiBuf((LEN(InData%FileName)+1):) , ErrStat, ErrMsg )
+      
+   END SUBROUTINE DLLTypePack
+   
+!=======================================================================
+   SUBROUTINE DLLTypeUnPack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
+   
+      ! This routine unpacks the DLL_Type data from an integer buffer.
+      ! It is required for the FAST Registry.
+   
+      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+      TYPE(DLL_Type),                INTENT(  OUT) :: InData
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
+      
+         ! Local variable
+      INTEGER(IntKi)                               :: Int_BufSz
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      IF (.NOT. ALLOCATED(IntKiBuf) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
+      END IF
+      
+      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
+               
+         ! Get an ascii representation of the strings from the integer array
+      Int_BufSz = LEN(InData%FileName)
+      CALL IntAry2Str( IntKiBuf(1:Int_BufSz), InData%FileName, ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
+      Int_BufSz = Int_BufSz + 1
+      CALL IntAry2Str( IntKiBuf(Int_BufSz: ), InData%ProcName, ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
+
+      IF ( LEN_TRIM(InData%FileName) > 0 .AND. LEN_TRIM(InData%ProcName) > 0 ) THEN
+         CALL LoadDynamicLib( InData, ErrStat, ErrMsg )
+      END IF
+      
+   END SUBROUTINE DLLTypeUnPack   
 !=======================================================================
    SUBROUTINE DispNVD0
 
@@ -2469,6 +2532,51 @@ CONTAINS
 
    END SUBROUTINE InitInpErrs ! ( InputErrors, ErrStat, ErrMsg )
 !=======================================================================
+   SUBROUTINE IntAry2Str( IntAry, Str, ErrStat, ErrMsg )
+   
+      ! This routine converts an ASCII array of integers into an
+      ! equivalent string (character array).
+      ! This routine is the inverse of the Str2IntAry() routine.
+
+
+         ! Argument declarations:
+      INTEGER(IntKi), INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
+      CHARACTER(*),   INTENT(OUT)   :: Str                                          ! The string representation of IntAry
+
+      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
+      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
+
+         ! Argument declarations:
+      INTEGER(IntKi)                :: I                                            ! generic loop counter
+      INTEGER(IntKi)                :: LStr                                         ! length of the string
+      INTEGER(IntKi)                :: LAry                                         ! length of the integer array
+
+
+         ! Get the size of the arrays:
+      LStr = LEN(Str)
+      LAry = SIZE(IntAry)
+
+
+      Str = ''
+
+         ! Determine if the string will fit in the integer array:
+      IF ( LAry > LStr ) THEN
+         ErrStat = ErrID_Warn
+         ErrMsg  = 'Array exceeds string size in Int2Char().'
+         LAry    = LStr  ! we'll only convert the string values up to the array length
+      ELSE
+         ErrStat = ErrID_None
+         ErrMsg  = ''
+      END IF
+
+
+         ! Convert the ASCII array to a string:
+      DO I=1,LAry
+         Str(I:I) = CHAR(IntAry(I))
+      END DO
+
+   END SUBROUTINE IntAry2Str   
+!=======================================================================
    FUNCTION Int2LStr ( Intgr )
 
 
@@ -2554,6 +2662,33 @@ CONTAINS
 
 
    END SUBROUTINE NormStop
+!=======================================================================
+   SUBROUTINE NWTC_DisplaySyntax( DefaultInputFile, ThisProgName )
+   
+      ! This routine displays the expected command-line syntax for 
+      !  most software developed at the NWTC.
+   
+      CHARACTER(*),  INTENT(IN)  :: DefaultInputFile
+      CHARACTER(*),  INTENT(IN)  :: ThisProgName
+      
+               
+      CALL WrScr ( NewLine//' Syntax is:' )
+      IF ( LEN_TRIM( DefaultInputFile ) == 0 )  THEN
+         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
+         CALL WrScr ( NewLine//' where:' )
+         CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
+         CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+      ELSE
+         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
+         CALL WrScr ( NewLine//' where:' )
+         CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
+         CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
+                        //TRIM( DefaultInputFile )//'".' )
+      END IF
+      CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
+      CALL WrScr    ( ' ')
+                     
+   END SUBROUTINE NWTC_DisplaySyntax
 !=======================================================================
    SUBROUTINE OpenBInpFile ( Un, InFile, ErrStat, ErrMsg )
 
@@ -6181,6 +6316,20 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
    RETURN
    END SUBROUTINE ReadStr ! ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )
+!=======================================================================   
+   SUBROUTINE RemoveNullChar( Str )
+   
+      ! This routine removes trailing C_NULL characters, which can be present when
+      ! passing strings between C and Fortran
+      
+      CHARACTER(*), INTENT(INOUT) :: Str
+   
+      INTEGER(IntKi)  :: I
+   
+         I = INDEX( Str, C_NULL_CHAR ) - 1 
+         IF ( I > 0 ) Str = Str(1:I) 
+   
+   END SUBROUTINE RemoveNullChar   
 !=============================================================================
    RECURSIVE SUBROUTINE ScanComFile ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )
 
@@ -6412,6 +6561,75 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
    END SUBROUTINE ScanComFile ! ( FileName, NumLines, NumFiles, ErrStat, ErrMsg )
 !=======================================================================
+   SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName )
+   
+      ! This routine sets the error status and error message for a routine      
+      !  that may set non-AbortErrLev errors. It concatenates error messages
+      !  and has the ability to provide a sort of traceback message of called
+      !  routines (if this is called consistently).
+      !  Modules in the FAST framework are recommend to use it.
+   
+      INTEGER(IntKi),                    INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
+      CHARACTER(*),                      INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None
+                                                                        
+      INTEGER(IntKi),                    INTENT(INOUT)  :: ErrStat      ! Error status of the operation
+      CHARACTER(*),                      INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
+   
+      CHARACTER(*),                      INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
+      
+   
+      IF ( ErrStatLcl /= ErrID_None ) THEN
+      
+         IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//NewLine
+         ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)         
+         ErrStat = MAX(ErrStat,ErrStatLcl)
+         
+      END IF
+         
+   END SUBROUTINE SetErrStat    
+!=======================================================================
+   SUBROUTINE Str2IntAry( Str, IntAry, ErrStat, ErrMsg )
+   
+      ! This routine converts a string (character array) into an 
+      ! equivalent ASCII array of integers.
+      ! This routine is the inverse of the IntAry2Str() routine.
+
+         ! Argument declarations:
+      CHARACTER(*),   INTENT(IN)    :: Str                                          ! The string to convert
+      INTEGER(IntKi),  INTENT(OUT)  :: IntAry(:)                                    ! ASCII representation of Str
+
+      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
+      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
+
+         ! Argument declarations:
+      INTEGER(IntKi)                :: I                                            ! generic loop counter
+      INTEGER(IntKi)                :: LStr                                         ! length of the string
+      INTEGER(IntKi)                :: LAry                                         ! length of the integer array
+
+
+         ! Get the size of the arrays:
+      LStr = LEN_TRIM(Str)
+      LAry = SIZE(IntAry)
+
+
+         ! Determine if the string will fit in the integer array:
+      IF ( LStr > LAry ) THEN
+         ErrStat = ErrID_Warn
+         ErrMsg  = 'String exceeds array size in Char2Int().'
+         LStr    = LAry  ! we'll only convert the string values up to the array length
+      ELSE
+         ErrStat = ErrID_None
+         ErrMsg  = ''
+      END IF
+
+
+         ! Convert the string to an ASCII array:
+      DO I=1,LStr
+         IntAry(I) = ICHAR(Str(I:I), B1Ki)
+      END DO
+
+   END SUBROUTINE Str2IntAry   
+!=======================================================================
    SUBROUTINE WaitTime ( WaitSecs )
 
 
@@ -6450,12 +6668,14 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
    END SUBROUTINE WaitTime ! ( Seconds )
 !=======================================================================
 SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg)
-! This subroutine opens a binary file named FileName, and writes a the AllOutData Matrix to a 16-bit packed binary file. A text
-! DescStr is written to the file as well as the text in the ChanName and ChanUnit arrays. The file is closed at the end of this
-! subroutine call (and on error).
-! NOTE: Developers may wish to inquire if the file can be opened at the start of a simulation to ensure that it's available before
-!       running the simulation (i.e., don't run for a long time only to find out that the file cannot be opened for writing).
-!..................................................................................................................................
+
+   ! This subroutine opens a binary file named FileName, and writes a the AllOutData Matrix to a 16-bit packed 
+   ! binary file. A text DescStr is written to the file as well as the text in the ChanName and ChanUnit arrays.
+   !  The file is closed at the end of this subroutine call (and on error).
+   ! NOTE: Developers may wish to inquire if the file can be opened at the start of a simulation to ensure that 
+   !       it's available before running the simulation (i.e., don't run a code for a long time only to find out 
+   !       that the file cannot be opened for writing).
+
 
    IMPLICIT                     NONE
 
@@ -6899,6 +7119,13 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE WrFileNR ! ( Unit, Str )
 !=======================================================================  
    SUBROUTINE WrMatrix1R4( A, Un, ReFmt, MatName )
+   
+      ! This routine writes all the values of a 1-dimensional matrix, A, 
+      ! of 4-byte real numbers to unit Un, using ReFmt for each individual value
+      ! in the array. If MatName is present, it also preceeds the matrix
+      ! with "MatName" and the number of rows (length of A) and columns (1).
+      ! Useful for debugging and/or writing summary files.
+      
       REAL(SiKi),             INTENT(IN) :: A(:)
       INTEGER,                INTENT(IN) :: Un
       CHARACTER(*),           INTENT(IN) :: ReFmt     ! Format for printing ReKi numbers  
@@ -6927,6 +7154,13 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE WrMatrix1R4
 !=======================================================================  
    SUBROUTINE WrMatrix1R8( A, Un, ReFmt, MatName )
+   
+      ! This routine writes all the values of a 1-dimensional matrix, A, 
+      ! of 8-byte real numbers to unit Un, using ReFmt for each individual value
+      ! in the array. If MatName is present, it also preceeds the matrix
+      ! with "MatName" and the number of rows (length of A) and columns (1).
+      ! Useful for debugging and/or writing summary files.
+   
       REAL(R8Ki),             INTENT(IN) :: A(:)
       INTEGER,                INTENT(IN) :: Un
       CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
@@ -6955,6 +7189,13 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE WrMatrix1R8
 !=======================================================================
    SUBROUTINE WrMatrix2R4( A, Un, ReFmt, MatName )
+   
+      ! This routine writes all the values of a 2-dimensional matrix, A, 
+      ! of 4-byte real numbers to unit Un, using ReFmt for each individual value
+      ! in the array. If MatName is present, it also preceeds the matrix
+      ! with "MatName" and the number of rows and columns in A.
+      ! Useful for debugging and/or writing summary files.
+   
       REAL(SiKi),             INTENT(IN) :: A(:,:)
       INTEGER,                INTENT(IN) :: Un
       CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
@@ -6989,6 +7230,13 @@ END SUBROUTINE WrBinFAST
    END SUBROUTINE WrMatrix2R4
 !=======================================================================
    SUBROUTINE WrMatrix2R8( A, Un, ReFmt, MatName )
+   
+      ! This routine writes all the values of a 2-dimensional matrix, A, 
+      ! of 8-byte real numbers to unit Un, using ReFmt for each individual value
+      ! in the array. If MatName is present, it also preceeds the matrix
+      ! with "MatName" and the number of rows and columns in A.
+      ! Useful for debugging and/or writing summary files.
+   
       REAL(R8Ki),             INTENT(IN) :: A(:,:)
       INTEGER,                INTENT(IN) :: Un
       CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
@@ -7208,206 +7456,7 @@ END SUBROUTINE WrBinFAST
 
    RETURN
    END SUBROUTINE WrScr1 ! ( Str )
-!=======================================================================
-   SUBROUTINE Str2IntAry( Str, IntAry, ErrStat, ErrMsg )
-      ! Routine converts a string (character array) into an equivalent
-      ! ASCII array of integers.
-      ! This routine is the inverse of the IntAry2Str() routine.
 
-         ! Argument declarations:
-      CHARACTER(*),   INTENT(IN)    :: Str                                          ! The string to convert
-      INTEGER(IntKi),  INTENT(OUT)  :: IntAry(:)                                    ! ASCII representation of Str
-
-      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
-      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
-
-         ! Argument declarations:
-      INTEGER(IntKi)                :: I                                            ! generic loop counter
-      INTEGER(IntKi)                :: LStr                                         ! length of the string
-      INTEGER(IntKi)                :: LAry                                         ! length of the integer array
-
-
-         ! Get the size of the arrays:
-      LStr = LEN_TRIM(Str)
-      LAry = SIZE(IntAry)
-
-
-         ! Determine if the string will fit in the integer array:
-      IF ( LStr > LAry ) THEN
-         ErrStat = ErrID_Warn
-         ErrMsg  = 'String exceeds array size in Char2Int().'
-         LStr    = LAry  ! we'll only convert the string values up to the array length
-      ELSE
-         ErrStat = ErrID_None
-         ErrMsg  = ''
-      END IF
-
-
-         ! Convert the string to an ASCII array:
-      DO I=1,LStr
-         IntAry(I) = ICHAR(Str(I:I), B1Ki)
-      END DO
-
-   END SUBROUTINE Str2IntAry
-!=======================================================================
-   SUBROUTINE IntAry2Str( IntAry, Str, ErrStat, ErrMsg )
-      ! Routine converts an ASCII array of integers into an
-      ! equivalent string (character array).
-      ! This routine is the inverse of the Str2IntAry() routine.
-
-
-         ! Argument declarations:
-      INTEGER(IntKi), INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
-      CHARACTER(*),   INTENT(OUT)   :: Str                                          ! The string representation of IntAry
-
-      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
-      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
-
-         ! Argument declarations:
-      INTEGER(IntKi)                :: I                                            ! generic loop counter
-      INTEGER(IntKi)                :: LStr                                         ! length of the string
-      INTEGER(IntKi)                :: LAry                                         ! length of the integer array
-
-
-         ! Get the size of the arrays:
-      LStr = LEN(Str)
-      LAry = SIZE(IntAry)
-
-
-      Str = ''
-
-         ! Determine if the string will fit in the integer array:
-      IF ( LAry > LStr ) THEN
-         ErrStat = ErrID_Warn
-         ErrMsg  = 'Array exceeds string size in Int2Char().'
-         LAry    = LStr  ! we'll only convert the string values up to the array length
-      ELSE
-         ErrStat = ErrID_None
-         ErrMsg  = ''
-      END IF
-
-
-         ! Convert the ASCII array to a string:
-      DO I=1,LAry
-         Str(I:I) = CHAR(IntAry(I))
-      END DO
-
-   END SUBROUTINE IntAry2Str
-!=======================================================================
-   SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
-   
-      ! This routine packs the DLL_Type data into an integer buffer.
-   
-      TYPE(DLL_Type),                INTENT(IN   ) :: InData
-      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
-      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly
-      
-         ! Local variable
-      INTEGER(IntKi)                               :: Int_BufSz
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
-      
-      ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
-      IF (ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
-         RETURN
-      END IF
-            
-      IF ( PRESENT(SizeOnly) ) THEN
-         IF ( SizeOnly ) RETURN
-      ENDIF      
-      
-         ! Put an ascii representation of the strings in the integer array
-      CALL Str2IntAry( InData%FileName, IntKiBuf, ErrStat, ErrMsg )
-      CALL Str2IntAry( InData%ProcName, IntKiBuf((LEN(InData%FileName)+1):) , ErrStat, ErrMsg )
-      
-   END SUBROUTINE DLLTypePack
-   
-!=======================================================================
-   SUBROUTINE DLLTypeUnPack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
-   
-      ! This routine unpacks the DLL_Type data from an integer buffer.
-   
-      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-      TYPE(DLL_Type),                INTENT(  OUT) :: InData
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
-      
-         ! Local variable
-      INTEGER(IntKi)                               :: Int_BufSz
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-      IF (.NOT. ALLOCATED(IntKiBuf) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
-      END IF
-      
-      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName)
-               
-         ! Get an ascii representation of the strings from the integer array
-      Int_BufSz = LEN(InData%FileName)
-      CALL IntAry2Str( IntKiBuf(1:Int_BufSz), InData%FileName, ErrStat, ErrMsg )
-      IF (ErrStat >= AbortErrLev) RETURN
-      Int_BufSz = Int_BufSz + 1
-      CALL IntAry2Str( IntKiBuf(Int_BufSz: ), InData%ProcName, ErrStat, ErrMsg )
-      IF (ErrStat >= AbortErrLev) RETURN
-
-      IF ( LEN_TRIM(InData%FileName) > 0 .AND. LEN_TRIM(InData%ProcName) > 0 ) THEN
-         CALL LoadDynamicLib( InData, ErrStat, ErrMsg )
-      END IF
-      
-   END SUBROUTINE DLLTypeUnPack
-   
 !=======================================================================   
-SUBROUTINE RemoveNullChar( Str )
-
-   ! This routine removes trailing C_NULL characters, which can be present when
-   ! passing strings between C and Fortran
-   
-   CHARACTER(*), INTENT(INOUT) :: Str
-
-   INTEGER(IntKi)  :: I
-
-      I = INDEX( Str, C_NULL_CHAR ) - 1 
-      IF ( I > 0 ) Str = Str(1:I) 
-
-END SUBROUTINE RemoveNullChar
-   
-!=======================================================================
-SUBROUTINE SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-
-   ! This routine sets the error status
-
-   INTEGER(IntKi),                    INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
-   CHARACTER(*),                      INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None
-                                                                     
-   INTEGER(IntKi),                    INTENT(INOUT)  :: ErrStat      ! Error status of the operation
-   CHARACTER(*),                      INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
-
-   CHARACTER(*),                      INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
-   
-
-   IF ( ErrStatLcl /= ErrID_None ) THEN
-   
-      IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//NewLine
-      ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)         
-      ErrStat = MAX(ErrStat,ErrStatLcl)
-      
-   END IF
-      
-END SUBROUTINE SetErrStat    
-
 
 END MODULE NWTC_IO
