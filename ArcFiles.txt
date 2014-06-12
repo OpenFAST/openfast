@@ -8,4 +8,4 @@ SourceFiles.txt
 source\NWTC_Lib_Make.txt
 source\dependencies\lapack\NWTC_LAPACK.f90
 
-Documentation\NWTC_Library_Description.pdf
+Documentation\NWTC_Library_Routines.txt
