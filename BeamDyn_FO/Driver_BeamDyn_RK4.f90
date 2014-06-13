@@ -91,7 +91,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D+00
-   t_final   = 1.2D+01
+   t_final   = 0.6D+01
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -183,9 +183,9 @@ PROGRAM MAIN
    !DO n_t_global = 0, 1000
 
 
-!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-!                             BD_ConstraintState, &
-!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
+     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                             BD_ConstraintState, &
+                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
       ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
 
@@ -247,10 +247,13 @@ PROGRAM MAIN
 
       ENDDO
 
-!      WRITE(*,*) t_global, BD_ContinuousState%q(15)
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+!      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+      
+      WRITE(QiDisUnit,6000) t_global,BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+!                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
+                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(1),BD_ContinuousState%q(2),&
 !                           &BD_ContinuousState%q(3),BD_ContinuousState%q(4),&
 !                           &BD_ContinuousState%q(5),BD_ContinuousState%q(6)
