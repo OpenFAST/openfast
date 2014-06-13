@@ -2,7 +2,7 @@
 ! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2014  National Renewable Energy Laboratory
 !
 !    This file is part of FAST.
 !
@@ -40,13 +40,32 @@ PROGRAM FAST
    USE ElastoDyn
    USE FEAMooring
    USE HydroDyn
+   USE IceDyn
    USE IceFloe
    USE MAP
    USE ServoDyn
    USE SubDyn
-           
-      
+                    
 IMPLICIT  NONE
+
+TYPE :: IceDyn_Data !bjj: eventually, I'll put this in the Registry (and copy this for all modules)   
+   TYPE(ID_ContinuousStateType)        :: x                                       ! Continuous states
+   TYPE(ID_DiscreteStateType)          :: xd                                      ! Discrete states
+   TYPE(ID_ConstraintStateType)        :: z                                       ! Constraint states
+   TYPE(ID_OtherStateType)             :: OtherSt                                 ! Other/optimization states
+   TYPE(ID_ParameterType)              :: p                                       ! Parameters
+   TYPE(ID_InputType)                  :: u                                       ! System inputs
+   TYPE(ID_OutputType)                 :: y                                       ! System outputs
+                                                                                      
+   TYPE(ID_ContinuousStateType)        :: x_pred                                  ! Predicted continuous states
+   TYPE(ID_DiscreteStateType)          :: xd_pred                                 ! Predicted discrete states
+   TYPE(ID_ConstraintStateType)        :: z_pred                                  ! Predicted constraint states
+   TYPE(ID_OtherStateType)             :: OtherSt_old                             ! Other/optimization states (copied for the case of subcycling)
+                                                                                  
+   TYPE(id_InputType),     ALLOCATABLE :: Input(:)                                ! Array of inputs associated with FEAM_InputTimes
+   REAL(DbKi),             ALLOCATABLE :: InputTimes(:)                           ! Array of times associated with FEAM_Input   
+END TYPE                                                                          
+   
 
 
    ! Local variables:
@@ -222,10 +241,16 @@ TYPE(IceFloe_DiscreteStateType)        :: xd_IceF_pred                          
 TYPE(IceFloe_ConstraintStateType)      :: z_IceF_pred                             ! Predicted constraint states
 TYPE(IceFloe_OtherStateType)           :: OtherSt_IceF_old                        ! Other/optimization states (copied for the case of subcycling)
 
-TYPE(IceFloe_InputType), ALLOCATABLE   :: IceF_Input(:)                           ! Array of inputs associated with FEAM_InputTimes
-REAL(DbKi),           ALLOCATABLE      :: IceF_InputTimes(:)                      ! Array of times associated with FEAM_Input
+TYPE(IceFloe_InputType), ALLOCATABLE   :: IceF_Input(:)                           ! Array of inputs associated with IceF_InputTimes
+REAL(DbKi),              ALLOCATABLE   :: IceF_InputTimes(:)                      ! Array of times associated with IceF_Input
 
 
+   ! Data for the IceDyn module:
+TYPE(ID_InitInputType)                 :: InitInData_IceD                         ! Initialization input data
+TYPE(ID_InitOutputType)                :: InitOutData_IceD                        ! Initialization output data
+                                                                                  
+TYPE(IceDyn_Data), ALLOCATABLE         :: IceD(:)                                 ! There is one instance of this module for each leg of the fixed-bottom offshore structure at the ice level
+INTEGER, PARAMETER                     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling ID_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
 
    ! Other/Misc variables
 REAL(DbKi)                            :: TiLstPrn                                ! The simulation time of the last print
@@ -294,29 +319,13 @@ LOGICAL                               :: calcJacobian                           
       CALL CheckError( ErrStat, 'Message from FAST_Init: '//NewLine//ErrMsg )
          
    p_FAST%dt_module = p_FAST%dt ! initialize time steps for each module
-   
-      ! Allocate the input/inputTimes arrays based on p_FAST%InterpOrder (from FAST_Init)
-   ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), ED_Output( p_FAST%InterpOrder+1 ),STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input, ED_Output, and ED_InputTimes.") 
-   ALLOCATE( AD_Input( p_FAST%InterpOrder+1 ), AD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating AD_Input and AD_InputTimes.") 
-   ALLOCATE( SrvD_Input( p_FAST%InterpOrder+1 ), SrvD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SrvD_Input and SrvD_InputTimes.") 
-   ALLOCATE( HD_Input( p_FAST%InterpOrder+1 ), HD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating HD_Input and HD_InputTimes.") 
-   ALLOCATE( SD_Input( p_FAST%InterpOrder+1 ), SD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SD_Input and SD_InputTimes.") 
-   ALLOCATE( MAP_Input( p_FAST%InterpOrder+1 ), MAP_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating MAP_Input and MAP_InputTimes.") 
-   ALLOCATE( FEAM_Input( p_FAST%InterpOrder+1 ), FEAM_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating FEAM_Input and FEAM_InputTimes.") 
-   ALLOCATE( IceF_Input( p_FAST%InterpOrder+1 ), IceF_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceF_Input and IceF_InputTimes.") 
-   
-                           
+                                 
    ! ........................
    ! initialize ElastoDyn (must be done first)
    ! ........................
+   
+   ALLOCATE( ED_Input( p_FAST%InterpOrder+1 ), ED_InputTimes( p_FAST%InterpOrder+1 ), ED_Output( p_FAST%InterpOrder+1 ),STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED_Input, ED_Output, and ED_InputTimes.") 
    
    InitInData_ED%InputFile     = p_FAST%EDFile
    InitInData_ED%ADInputFile   = p_FAST%AeroFile
@@ -340,6 +349,8 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
    ! initialize ServoDyn 
    ! ........................
+   ALLOCATE( SrvD_Input( p_FAST%InterpOrder+1 ), SrvD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SrvD_Input and SrvD_InputTimes.") 
    
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       InitInData_SrvD%InputFile     = p_FAST%ServoFile
@@ -368,6 +379,8 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
    ! initialize AeroDyn 
    ! ........................
+   ALLOCATE( AD_Input( p_FAST%InterpOrder+1 ), AD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating AD_Input and AD_InputTimes.")    
    
    IF ( p_FAST%CompAero == Module_AD ) THEN
       CALL AD_SetInitInput(InitInData_AD, InitOutData_ED, ED_Output(1), p_FAST, ErrStat, ErrMsg)            ! set the values in InitInData_AD
@@ -388,6 +401,8 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
    ! initialize HydroDyn 
    ! ........................
+   ALLOCATE( HD_Input( p_FAST%InterpOrder+1 ), HD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating HD_Input and HD_InputTimes.") 
 
    IF ( p_FAST%CompHydro == Module_HD ) THEN
 
@@ -409,6 +424,8 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
    ! initialize SubDyn 
    ! ........................
+   ALLOCATE( SD_Input( p_FAST%InterpOrder+1 ), SD_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SD_Input and SD_InputTimes.") 
 
    IF ( p_FAST%CompSub == Module_SD ) THEN
           
@@ -437,6 +454,10 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
    ! initialize MAP 
    ! ........................
+   ALLOCATE( MAP_Input( p_FAST%InterpOrder+1 ), MAP_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating MAP_Input and MAP_InputTimes.") 
+   ALLOCATE( FEAM_Input( p_FAST%InterpOrder+1 ), FEAM_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating FEAM_Input and FEAM_InputTimes.") 
    
    IF (p_FAST%CompMooring == Module_MAP) THEN
       !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
@@ -485,6 +506,17 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
    ! initialize IceFloe 
    ! ........................
+
+   ALLOCATE( IceD( IceD_MaxLegs ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD data structure.") 
+      
+   DO j = 1, IceD_MaxLegs
+      ALLOCATE( IceD(j)%Input( p_FAST%InterpOrder+1 ), IceD(j)%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+         IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD%Input and IceD%InputTimes for leg "//TRIM(num2LStr(IceD_MaxLegs))) 
+   END DO
+                  
+   ALLOCATE( IceF_Input( p_FAST%InterpOrder+1 ), IceF_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceF_Input and IceF_InputTimes.") 
    
    IF ( p_FAST%CompIce == Module_IceF ) THEN
                       
@@ -500,6 +532,7 @@ LOGICAL                               :: calcJacobian                           
 
       CALL SetModuleSubstepTime(Module_IceF)
                         
+   ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN      
    END IF   
    
 

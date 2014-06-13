@@ -13,6 +13,7 @@ set depend_dir=.\Source\dependencies
 
 
 :BinDir
+ECHO Binaries
 COPY "%REG_Loc%\registry.exe"        "%bin_dir%\Registry_win32.exe"
 COPY "%MAP_DLL%"                     "%bin_dir%"
 COPY "%CRUNCH%"                      "%bin_dir%"
@@ -101,6 +102,17 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+:IceDyn
+ECHO IceDyn
+SET src_folder=%IceD_Loc%\..
+SET dst_folder=%depend_dir%\IceDyn
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
+
+if exist "%dst_folder%\*" DEL "%dst_folder%\*"
+for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+
 
 :MAP
 ECHO MAP
