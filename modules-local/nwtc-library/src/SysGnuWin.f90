@@ -35,7 +35,8 @@ MODULE SysSubs
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     SUBROUTINE  FlushOut ( Unit )
    !     SUBROUTINE  GET_CWD( DirName, Status )
-   !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead (not yet implemented in gfortran)
+   !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
+   !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
    ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
    !     SUBROUTINE  OpenCon                                                  ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
@@ -54,7 +55,13 @@ MODULE SysSubs
 
    IMPLICIT                        NONE
 
+   INTERFACE NWTC_gamma ! Returns the gamma value of its argument
+      MODULE PROCEDURE NWTC_gammaR4
+      MODULE PROCEDURE NWTC_gammaR8
+      MODULE PROCEDURE NWTC_gammaR16
+   END INTERFACE
 
+   
 !=======================================================================
 
 
@@ -178,6 +185,45 @@ CONTAINS
 
    RETURN
    END FUNCTION Is_NaN ! ( DblNum )
+!=======================================================================
+   FUNCTION NWTC_GammaR4( x )
+   
+      ! Returns the gamma value of its argument. The result has a value equal  
+      ! to a processor-dependent approximation to the gamma function of x. 
+
+      REAL(SiKi), INTENT(IN)     :: x             ! input 
+      REAL(SiKi)                 :: NWTC_GammaR4  ! result
+      
+      
+      NWTC_GammaR4 = gamma( x )
+   
+   END FUNCTION NWTC_GammaR4
+!=======================================================================
+   FUNCTION NWTC_GammaR8( x )
+   
+      ! Returns the gamma value of its argument. The result has a value equal  
+      ! to a processor-dependent approximation to the gamma function of x. 
+
+      REAL(R8Ki), INTENT(IN)     :: x             ! input 
+      REAL(R8Ki)                 :: NWTC_GammaR8  ! result
+      
+      
+      NWTC_GammaR8 = gamma( x )
+   
+   END FUNCTION NWTC_GammaR8
+!=======================================================================
+   FUNCTION NWTC_GammaR16( x )
+   
+      ! Returns the gamma value of its argument. The result has a value equal  
+      ! to a processor-dependent approximation to the gamma function of x. 
+
+      REAL(QuKi), INTENT(IN)     :: x             ! input 
+      REAL(QuKi)                 :: NWTC_GammaR16  ! result
+      
+      
+      NWTC_GammaR16 = gamma( x )
+   
+   END FUNCTION NWTC_GammaR16
 !=======================================================================
  SUBROUTINE OpenCon
 
