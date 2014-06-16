@@ -1,20 +1,26 @@
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2014  National Renewable Energy Laboratory
 !
 !    This file is part of module IceDyn.
 !
-!    IceDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
 !
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!     http://www.apache.org/licenses/LICENSE-2.0
 !
-!    You should have received a copy of the GNU General Public License along with IceDyn.
-!    If not, see <http://www.gnu.org/licenses/>.
-!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
 !**********************************************************************************************************************************
-!    IcdDyn is a module describing ice load on offshore wind turbine supporting structures.
+!    IceDyn is a module describing ice load on offshore wind turbine supporting structures.
 !
 !    The module is given the module name ModuleName = IceDyn and the abbreviated name ModName = ID. The mathematical
 !    formulation of this module is a subset of the most general form permitted by the FAST modularization framework in tight
@@ -44,7 +50,7 @@ MODULE IceDyn
    PUBLIC :: ID_End                            ! Ending routine (includes clean up)
 
    PUBLIC :: ID_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
-                                                 !   continuous states, and updating discrete states
+                                               !   continuous states, and updating discrete states
    PUBLIC :: ID_CalcOutput                     ! Routine for computing outputs
 
    PUBLIC :: ID_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
@@ -53,7 +59,7 @@ MODULE IceDyn
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Tmax, InitOut, ErrStat, ErrMsg )
+SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
@@ -74,7 +80,6 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Tmax, Init
                                                                !   Input is the suggested time from the glue code;
                                                                !   Output is the actual coupling interval that will be used
                                                                !   by the glue code.
-   REAL(DbKi),                   INTENT(IN   )  :: Tmax        ! Total simulation time 
    TYPE(ID_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -118,7 +123,7 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Tmax, Init
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat2, ErrMsg2 )
+   CALL ID_SetParameters( InputFileData, p, Interval, InitInp%Tmax, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -526,7 +531,6 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       REAL(ReKi)                        :: Rh                       ! Horizontal force, for model5
       REAL(ReKi)                        :: Rv                       ! Vertical force, for model5
       REAL(ReKi)                        :: Wr                       ! Ride-up ice weight, for model5 
-      REAL(ReKi)                        :: gamma
 
       ! Initialize ErrStat
 
@@ -1892,7 +1896,7 @@ SUBROUTINE ID_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrSta
          REAL :: u
 
          k = wbpar (mean, var)
-         lambda = mean / gamma(1+1/k)
+         lambda = mean / NWTC_gamma(1+1/k)
 
          CALL RANDOM_NUMBER(u)
          fn_val = lambda * (-log(1-u)) ** (1/k)
@@ -1918,11 +1922,11 @@ SUBROUTINE ID_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrSta
 
          DO i = 1,10000
 
-            F1 = (gamma(1+1/k))**2 / gamma(1+2/k) - mean**2/(mean**2+var);
+            F1 = (NWTC_gamma(1+1/k))**2 / NWTC_gamma(1+2/k) - mean**2/(mean**2+var);
 
             IF (abs(F1) < error) EXIT
 
-            dFdk = 2* (gamma(1+1/k))**2 * (-1/k**2) / gamma(1+2/k) * (digamma(1+1/k) -digamma(1+2/k));
+            dFdk = 2* (NWTC_gamma(1+1/k))**2 * (-1/k**2) / NWTC_gamma(1+2/k) * (digamma(1+1/k) -digamma(1+2/k));
             k = k - F1/dFdk;
 
             END DO

@@ -131,8 +131,14 @@ PROGRAM MAIN
 
    ID_InitInput%InputFile = 'IceDyn_Input.txt'
    ID_InitInput%RootName = 'IceDyn_Test'
+   ID_InitInput%TMax     = t_final
+   ID_InitInput%MSL2SWL  = 0.0_ReKi      
+   ID_InitInput%WtrDens  = 1000      
+   ID_InitInput%LegNum    = 1
    
-   CALL ID_Init( ID_InitInput          &
+   
+   
+   CALL ID_Init( ID_InitInput            &
                    , ID_Input(1)         &
                    , ID_Parameter        &
                    , ID_ContinuousState  &
@@ -140,10 +146,9 @@ PROGRAM MAIN
                    , ID_ConstraintState  &
                    , ID_OtherState       &
                    , ID_Output(1)        &
-                   , dt_global             &
-                   , t_final             &
+                   , dt_global           &
                    , ID_InitOutput       &
-                   , ErrStat               &
+                   , ErrStat             &
                    , ErrMsg )
 
    IF (ErrStat /= ErrID_None) CALL WrScr('After ID_Init: '//TRIM(ErrMsg))
