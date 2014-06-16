@@ -94,7 +94,7 @@ typedef     ^            ^                    IntKi                  IceTthNo2  
 # ..... Ice Model 3 ...............................................................................................................
 
 typedef    ^            ^                    IntKi                   Nc              {:}    -    -    "Number of the current ice tooths number (time series)" -
-typedef    ^            ^                    ^                       Psum            {:}    -    -    "The sum of pitches of all broken ice teeth (time series)" m
+typedef    ^            ^                    ReKi                    Psum            {:}    -    -    "The sum of pitches of all broken ice teeth (time series)" m
 
 
 # ..... Parameters ................................................................................................................

@@ -419,14 +419,16 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       
       INTEGER(IntKi)                                    :: nt            ! Current time step
       INTEGER(IntKi)                                    :: Nc            ! Current ice tooth number
-      REAL(ReKi)                                        :: Psumc         ! Current sum of pitch of broken ice teeth
-      
+      REAL(ReKi)                                        :: Psumc         ! Current sum of pitch of broken ice teeth (m)
+      REAL(ReKi)                                        :: Dmc           ! Delmax of the current tooth (m)
+      REAL(ReKi)                                        :: Pc            ! Pitch of the current tooth (m)
+      REAL(ReKi)                                        :: Pnxt          ! Pitch of the next ice tooth (m)
        ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
       
-      nt = INT( t / p%dt ) + 1
+      nt = INT( t / p%dt ) + 1  !bjj: should be the same as n+1, no?
 
       ! Update Other states here
       
@@ -448,16 +450,19 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       IF (p%ModNo == 3) THEN
          Nc = OtherState%Nc (nt)
          Psumc = OtherState%Psum (nt)
+         Pc = p%rdmP (Nc)
       
          IF (p%SubModNo == 3) THEN
       
             Del2 = p%InitLoc + p%v * t - OtherState%Psum (nt) - u(1)%q ! Deflection of the current ice tooth
-               
+            Dmc  = p%RdmDm ( OtherState%Nc(nt) )
+            
             IF ( Del2 >= ( p%RdmDm ( OtherState%Nc(nt) ) - p%tolerance) ) THEN ! Current ice tooth breaks
-         
+                
                 DO I= nt+1 , p%TmStep
                    OtherState%Nc (I) = Nc + 1
-                   OtherState%Psum (I) = OtherState%Psum (I) + Psumc
+                   OtherState%Psum (I) = Psumc + Pc
+                   Pnxt = OtherState%Psum (I)
                 ENDDO
          
             ENDIF 
@@ -531,6 +536,7 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       REAL(ReKi)                        :: Rh                       ! Horizontal force, for model5
       REAL(ReKi)                        :: Rv                       ! Vertical force, for model5
       REAL(ReKi)                        :: Wr                       ! Ride-up ice weight, for model5 
+      REAL(ReKi)                        :: CrntT0
 
       ! Initialize ErrStat
 
@@ -546,43 +552,43 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
           IF (p%SubModNo == 1) THEN
 
-              IF (t <= p%t0) THEN
+              IF (t < p%t0 + p%tolerance) THEN
 
                   y%fice = 0
 
-              ELSEIF (t<= p%t0 + p%tm1a) THEN
+              ELSEIF (t< p%t0 + p%tm1a + p%tolerance) THEN
 
                   y%fice = (t-p%t0) / p%tm1a * p%Fmax1a
 
               ELSE
-
+                  
                   y%fice = p%Fmax1a
 
               ENDIF
 
           ELSEIF (p%SubModNo == 2) THEN
 
-              IF (t <= p%t0) THEN
+              IF (t < p%t0 + p%tolerance) THEN
 
                   y%fice = 0
 
-              ELSEIF (t<= p%t0 + p%tm1b) THEN
+              ELSEIF (t< p%t0 + p%tm1b + p%tolerance) THEN
 
                   y%fice = (t-p%t0) / p%tm1b * p%Fmax1b
 
               ELSE
-
+                  
                   y%fice = 0
 
               ENDIF
 
           ELSEIF (p%SubModNo == 3) THEN
 
-              IF (t <= p%t0) THEN
+              IF (t < p%t0 + p%tolerance) THEN
 
                   y%fice = 0
 
-              ELSEIF (t<= p%t0 + p%tm1c) THEN
+              ELSEIF (t< p%t0 + p%tm1c + p%tolerance) THEN
 
                   y%fice = (t-p%t0) / p%tm1c * p%Fmax1c
 
@@ -652,9 +658,9 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
                   y%fice = 0
 
-              ELSEIF (t <= p%rdmtm (nt)) THEN
+              ELSEIF (t <= p%rdmt0 (nt) + p%rdmtm (nt)) THEN
 
-                  y%fice = (t-p%rdmt0 (nt)) / ( p%rdmtm(nt) - p%rdmt0(nt) ) * p%rdmFm (nt)
+                  y%fice = (t-p%rdmt0 (nt)) /  p%rdmtm(nt) * p%rdmFm (nt)
 
               ELSE
 
@@ -663,14 +669,16 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
               ENDIF
 
           ELSEIF (p%SubModNo == 2) THEN
+              
+              CrntT0 = p%rdmt0 (nt)
 
               IF (t <= p%rdmt0 (nt)) THEN
 
                   y%fice = 0
 
-              ELSEIF (t <= p%rdmtm (nt)) THEN
+              ELSEIF (t <= p%rdmt0 (nt) + p%rdmtm (nt)) THEN
 
-                  y%fice = (t-p%rdmt0 (nt)) / ( p%rdmtm(nt) - p%rdmt0(nt) ) * p%rdmFm (nt)
+                  y%fice = (t-p%rdmt0 (nt)) / p%rdmtm(nt) * p%rdmFm (nt)
 
               ELSE
 
@@ -1431,6 +1439,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
    REAL(ReKi)                               :: s_dmmy                       ! Dummy random number for sig (Pa)
    REAL(ReKi)                               :: Dm_dmmy                      ! Dummy random number for Dmax (m)
    REAL(ReKi)                               :: P_dmmy                       ! Dummy random number for P (m)
+   REAL(ReKi)                               :: CrntT0
 
     ! Initialize error data
    ErrStat = ErrID_None
@@ -1488,7 +1497,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
    ! Ice Model 1c
 
    p%Fmax1c     = p%StrWd * p%h * InputFileData%SigNm *1e6
-   p%tm1c       = InputFileData%SigNm / p%EiPa / StrRt
+   p%tm1c       = InputFileData%SigNm *1e6 / p%EiPa / StrRt
 
    ! Ice Model 2 -------------------------------------------------------------------------
 
@@ -1597,7 +1606,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
               p%rdmFm(J)    = InputFileData%Ikm * p%StrWd * rdmh(J) * rdmScrp
               p%rdmtm(J)    = InputFileData%Ikm * rdmScrp / p%EiPa / ( rdmv(J) / 4.0 / p%StrWd )              
           ENDIF
-   
+          
        END DO
        
     ELSEIF (p%SubModNo == 2) THEN
@@ -1619,12 +1628,12 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
               p%rdmt0(J)    = p%rdmt0(J-1)
               p%rdmtm(J)    = p%rdmtm(J-1)
           ELSE              
-              p%rdmt0       = p%rdmt0 (J-1) + rdmte (J-1)
+              p%rdmt0(J)   = p%rdmt0 (J-1) + rdmte (J-1)
               CALL ID_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), rdmsig(J), Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
               p%rdmFm(J)    = p%StrWd * rdmh(J) * rdmsig(J)
               p%rdmtm(J)    = rdmsig(J) / p%EiPa / ( rdmv(J) / 4.0 / p%StrWd )              
           ENDIF
-   
+              CrntT0 = p%rdmt0 (J) !bjj: doesn't appear to be used...
        END DO
        
     ELSEIF (p%SubModNo == 3) THEN
@@ -1675,6 +1684,8 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
       p%OutUnit (1) = '(s)'
       p%OutUnit (2) = '(m)'
       p%OutUnit (3) = '(kN)'
+      
+      ! Test parameter assignments
       
 END SUBROUTINE ID_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------

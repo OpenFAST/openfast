@@ -100,7 +100,7 @@ PROGRAM MAIN
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 0.37
+   dt_global = 0.0125
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -136,9 +136,7 @@ PROGRAM MAIN
    ID_InitInput%WtrDens  = 1000      
    ID_InitInput%LegNum    = 1
    
-   
-   
-   CALL ID_Init( ID_InitInput            &
+   CALL ID_Init( ID_InitInput          &
                    , ID_Input(1)         &
                    , ID_Parameter        &
                    , ID_ContinuousState  &
@@ -214,6 +212,14 @@ PROGRAM MAIN
       CALL ID_CalcOutput( t_global, ID_Input(1), ID_Parameter, ID_ContinuousState, ID_DiscreteState, &
                               ID_ConstraintState, &
                               ID_OtherState,  ID_Output(1), ErrStat, ErrMsg)
+      
+      Frmt = '(/ F8.3)'
+      WRITE (Un, Frmt, ADVANCE = 'no') t_global
+   
+      Frmt = '(A,F10.4,A,F10.4,A,E10.3E2)'
+      WRITE (Un, Frmt, ADVANCE = 'no') Dlim, ID_Input(1)%PointMesh%TranslationDisp(1,1), &
+                                       Dlim, ID_ContinuousState%q, & 
+                                       Dlim, ID_Output(1)%PointMesh%Force(1,1)
 
       ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
 
@@ -289,13 +295,7 @@ PROGRAM MAIN
 
       t_global = REAL(n_t_global+1,DbKi) * dt_global + t_initial
        
-      Frmt = '(/ F8.3)'
-      WRITE (Un, Frmt, ADVANCE = 'no') t_global
-   
-      Frmt = '(A,F10.4,A,F10.4,A,E10.3E2)'
-      WRITE (Un, Frmt, ADVANCE = 'no') Dlim, ID_Input(1)%PointMesh%TranslationDisp(:,1), &
-                                       Dlim, ID_ContinuousState%q, & 
-                                       Dlim, ID_Output(1)%PointMesh%Force(1,1)
+      
 
       ! the following is exact solution for q_1(t) for baseline parameters in Gasmi et al. (2013)
 
