@@ -97,7 +97,7 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-
+   
 
       ! Initialize the NWTC Subroutine Library
 
@@ -196,35 +196,28 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       ! Define initial guess for the system inputs and output (set up meshes) here:
       !............................................................................................
 
-
-    ! Define initial guess for the system inputs here:
-
-      u%q    = 0.
-      u%dqdt = 0.
-      
-      y%fice = 0.
+      ! set up meshes for inputs and outputs:      
       
       ! Define system output initializations (set up mesh) here:
-       CALL MeshCreate( BlankMesh       = u%PointMesh            &
+       CALL MeshCreate( BlankMesh      = u%PointMesh            &
                       ,IOS             = COMPONENT_INPUT        &
                       ,NNodes          = 1                      &
                       ,TranslationDisp = .TRUE.                 &
                       ,TranslationVel  = .TRUE.                 &
-                      ,TranslationAcc  = .TRUE.                 &
                       ,nScalars        = 0                      &
                       ,ErrStat         = ErrStat                &
                       ,ErrMess         = ErrMsg                 )
 
-       CALL MeshConstructElement ( Mesh = u%PointMesh            &
+       CALL MeshConstructElement ( Mesh = u%PointMesh           &
                                 , Xelement = ELEMENT_POINT      &
                                 , P1       = 1                  &
                                 , ErrStat  = ErrStat            &
                                 , ErrMess  = ErrMsg             )
 
-      ! place single node at origin; position affects mapping/coupling with other modules
-      TmpPos(1) = 0.
-      TmpPos(2) = 0.
-      TmpPos(3) = 0.
+      ! place single node at water level; position affects mapping/coupling with other modules
+      TmpPos(1) = 0.  !bjj todo: these need to be set from the input file, based on legNum
+      TmpPos(2) = 0.  !bjj todo: these need to be set from the input file, based on legNum
+      TmpPos(3) = InitInp%MSL2SWL
 
       CALL MeshPositionNode ( Mesh  = u%PointMesh   &
                             , INode = 1             &
@@ -243,28 +236,18 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                     , ErrStat  = ErrStat          &
                     , ErrMess  = ErrMsg           )
 
-      ! Define initial guess for the system inputs here:
+      ! Define initial guess for the system inputs here:      
+      u%PointMesh%TranslationDisp = 0.0_ReKi    ! initialize all components of all (1) points
+      u%PointMesh%TranslationVel = 0.0_ReKi     ! initialize all components of all (1) points  [bjj: does not appear to be used...]
 
-      y%PointMesh%Force(1,1)   = 0.
-      y%PointMesh%Force(2,1)   = 0.
-      y%PointMesh%Force(3,1)   = 0.
-
-      u%PointMesh%TranslationDisp(1,1) = 0.
-      u%PointMesh%TranslationDisp(2,1) = 0.
-      u%PointMesh%TranslationDisp(3,1) = 0.
-
-      u%PointMesh%TranslationVel(1,1) = 0.
-      u%PointMesh%TranslationVel(2,1) = 0.
-      u%PointMesh%TranslationVel(3,1) = 0.
-
-      u%PointMesh%TranslationAcc(1,1) = 0.
-      u%PointMesh%TranslationAcc(2,1) = 0.
-      u%PointMesh%TranslationAcc(3,1) = 0.
+      y%PointMesh%Force = 0.0_ReKi              ! initialize all components of all (1) points
+      
+      
 
       ! set remap flags to true
       y%PointMesh%RemapFlag = .True.
       u%PointMesh%RemapFlag = .True.
-
+      
 
 
       !............................................................................................
@@ -277,15 +260,38 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
+   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+            
+      
    InitOut%WriteOutputHdr = p%OutName
    InitOut%WriteOutputUnt = p%OutUnit
 
+   InitOut%Ver     = ID_Ver
+   InitOut%numLegs = 1  ! bjj todo: this needs to come from the input file
+   
+   !bjj todo: check that water density is the same
+   
+   IF ( .NOT. EqualRealNos( InputFileData%rhow, InitInp%WtrDens ) ) THEN
+      CALL CheckError( ErrID_Warn, 'ID_Init: water density from IceDyn input file ('//trim(num2Lstr(InputFileData%rhow))//& 
+                                ' kg/m^3) differs from water density in glue code ('//trim(num2Lstr(InitInp%WtrDens))//' kg/m^3).')
+   END IF
+      
+   IF ( .NOT. EqualRealNos( 9.81_ReKi, InitInp%gravity ) ) THEN
+      CALL CheckError( ErrID_Warn, 'ID_Init: gravity hard-coded in IceDyn ('//trim(num2Lstr(9.81))//& 
+                                       ' m/s^2) differs from gravity in glue code ('//trim(num2Lstr(InitInp%gravity))//' m/s^2).')
+   END IF
+   
+   
       !............................................................................................
       ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
       !   this module must be called here:
       !............................................................................................
 
   ! Interval = p%DT
+  
+  
 
 
   !     ! Print the summary file if requested:
@@ -409,7 +415,7 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
 
       ! local variables
 
-      !TYPE(ID_InputType)                               :: u_interp      ! input interpolated from given u at utimes
+      TYPE(ID_InputType)                               :: u_interp      ! input interpolated from given u at utimes
       !TYPE(ID_ContinuousStateType)                     :: xdot          ! continuous state time derivative
       INTEGER(IntKi)                                    :: I             ! Loop count
       REAL(ReKi)                                        :: Del2          ! Deflection of the current ice tooth, for model 2,3
@@ -423,18 +429,40 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       REAL(ReKi)                                        :: Dmc           ! Delmax of the current tooth (m)
       REAL(ReKi)                                        :: Pc            ! Pitch of the current tooth (m)
       REAL(ReKi)                                        :: Pnxt          ! Pitch of the next ice tooth (m)
+      
+      INTEGER(IntKi)                                    :: ErrStat2
+      CHARACTER(1024)                                   :: ErrMsg2
+      
        ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
       
-      nt = INT( t / p%dt ) + 1  !bjj: should be the same as n+1, no?
+      
+      CALL ID_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, 'ID_UpdateStates')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+                     
+      ! interpolate u to find u_interp = u(t)
+      CALL ID_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, 'ID_UpdateStates')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      
+      
+      
+      nt = n+1   !bjj: was this: INT( t / p%dt ) + 1
 
       ! Update Other states here
       
       IF (p%ModNo == 2) THEN
 
-        Del2 = p%InitLoc + p%v * t - p%Pitch * (OtherState%IceTthNo2 -1) - u(1)%q
+        Del2 = p%InitLoc + p%v * t - p%Pitch * (OtherState%IceTthNo2 -1) - u_interp%PointMesh%TranslationDisp(1,1)
 
             IF ( Del2 >= (p%Delmax2 - p%tolerance) ) THEN
 
@@ -454,7 +482,7 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       
          IF (p%SubModNo == 3) THEN
       
-            Del2 = p%InitLoc + p%v * t - OtherState%Psum (nt) - u(1)%q ! Deflection of the current ice tooth
+            Del2 = p%InitLoc + p%v * t - OtherState%Psum (nt) - u_interp%PointMesh%TranslationDisp(1,1) ! Deflection of the current ice tooth
             Dmc  = p%RdmDm ( OtherState%Nc(nt) )
             
             IF ( Del2 >= ( p%RdmDm ( OtherState%Nc(nt) ) - p%tolerance) ) THEN ! Current ice tooth breaks
@@ -500,7 +528,15 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
            
 
       IF ( ErrStat >= AbortErrLev ) RETURN
+      
+      RETURN
+CONTAINS      
+   SUBROUTINE Cleanup()
+   
+   CALL ID_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
 
+   END SUBROUTINE Cleanup
+      
 END SUBROUTINE ID_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
@@ -554,15 +590,15 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
               IF (t < p%t0 + p%tolerance) THEN
 
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0
 
               ELSEIF (t< p%t0 + p%tm1a + p%tolerance) THEN
 
-                  y%fice = (t-p%t0) / p%tm1a * p%Fmax1a
+                  y%PointMesh%Force(1,1) = (t-p%t0) / p%tm1a * p%Fmax1a
 
               ELSE
                   
-                  y%fice = p%Fmax1a
+                  y%PointMesh%Force(1,1) = p%Fmax1a
 
               ENDIF
 
@@ -570,15 +606,15 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
               IF (t < p%t0 + p%tolerance) THEN
 
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0.0_ReKi
 
               ELSEIF (t< p%t0 + p%tm1b + p%tolerance) THEN
 
-                  y%fice = (t-p%t0) / p%tm1b * p%Fmax1b
+                  y%PointMesh%Force(1,1) = (t-p%t0) / p%tm1b * p%Fmax1b
 
               ELSE
                   
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0.0_ReKi
 
               ENDIF
 
@@ -586,15 +622,15 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
               IF (t < p%t0 + p%tolerance) THEN
 
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0.0_ReKi
 
               ELSEIF (t< p%t0 + p%tm1c + p%tolerance) THEN
 
-                  y%fice = (t-p%t0) / p%tm1c * p%Fmax1c
+                  y%PointMesh%Force(1,1) = (t-p%t0) / p%tm1c * p%Fmax1c
 
               ELSE
 
-                  y%fice = p%Fmax1c
+                  y%PointMesh%Force(1,1) = p%Fmax1c
 
               ENDIF
 
@@ -606,17 +642,17 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       IF (p%ModNo == 2) THEN
 
-          Del2  = p%InitLoc + p%v * t - p%Pitch * (OtherState%IceTthNo2 -1) - u%q
+          Del2  = p%InitLoc + p%v * t - p%Pitch * (OtherState%IceTthNo2 -1) - u%PointMesh%TranslationDisp(1,1)
 
             IF (p%Delmax2 <= p%Pitch) THEN !Sub-model 1 
             
                 IF ( Del2 <= 0) THEN
 
-                    y%fice = 0.0
+                    y%PointMesh%Force(1,1) = 0.0_ReKi
 
                 ELSEIF (Del2 < p%Delmax2 + p%tolerance) THEN
 
-                    y%fice = Del2 * p%Kice2
+                    y%PointMesh%Force(1,1) = Del2 * p%Kice2
 
                 ELSE
 
@@ -629,15 +665,15 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             
                 IF ( Del2 <= 0) THEN
 
-                    y%fice = 0.0
+                    y%PointMesh%Force(1,1) = 0.0_ReKi
 
                 ELSEIF (Del2 < p%Pitch) THEN
 
-                    y%fice = Del2 * p%Kice2
+                    y%PointMesh%Force(1,1) = Del2 * p%Kice2
 
                 ELSEIF (Del2 < p%Delmax2 + p%tolerance) THEN 
                 
-                    y%fice = Del2 * p%Kice2 + (Del2 - p%Pitch) * p%Kice2
+                    y%PointMesh%Force(1,1) = Del2 * p%Kice2 + (Del2 - p%Pitch) * p%Kice2
                 
                 ELSE
 
@@ -656,15 +692,15 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
               IF ( t <= p%rdmt0 (nt) ) THEN
 
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0.0_ReKi
 
               ELSEIF (t <= p%rdmt0 (nt) + p%rdmtm (nt)) THEN
 
-                  y%fice = (t-p%rdmt0 (nt)) /  p%rdmtm(nt) * p%rdmFm (nt)
+                  y%PointMesh%Force(1,1) = (t-p%rdmt0 (nt)) /  p%rdmtm(nt) * p%rdmFm (nt)
 
               ELSE
 
-                  y%fice = p%rdmFm (nt)
+                  y%PointMesh%Force(1,1) = p%rdmFm (nt)
 
               ENDIF
 
@@ -674,21 +710,21 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
               IF (t <= p%rdmt0 (nt)) THEN
 
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0.0_ReKi
 
               ELSEIF (t <= p%rdmt0 (nt) + p%rdmtm (nt)) THEN
 
-                  y%fice = (t-p%rdmt0 (nt)) / p%rdmtm(nt) * p%rdmFm (nt)
+                  y%PointMesh%Force(1,1) = (t-p%rdmt0 (nt)) / p%rdmtm(nt) * p%rdmFm (nt)
 
               ELSE
 
-                  y%fice = 0
+                  y%PointMesh%Force(1,1) = 0.0_ReKi
 
               ENDIF
 
           ELSEIF (p%SubModNo == 3) THEN
 
-              Del2  = p%InitLoc + p%v * t - OtherState%Psum (nt) - u%q     ! Determine the contact state between ice sheet and the tower
+              Del2  = p%InitLoc + p%v * t - OtherState%Psum (nt) - u%PointMesh%TranslationDisp(1,1)     ! Determine the contact state between ice sheet and the tower
 
                 !IF (Del2 >= xd%Dmaxn) THEN
                 !    ErrStat = ErrID_Fatal
@@ -697,15 +733,15 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
               IF (Del2 <= 0) THEN
 
-                y%fice = 0
+                y%PointMesh%Force(1,1) = 0.0_ReKi
 
                 ELSE IF (Del2 > 0 .AND. Del2 <= p%rdmP (OtherState%Nc(nt)) ) THEN
 
-                   y%fice = p%rdmKi(OtherState%Nc(nt))  * Del2
+                   y%PointMesh%Force(1,1) = p%rdmKi(OtherState%Nc(nt))  * Del2
 
                 ELSE
 
-                   y%fice = p%rdmKi(OtherState%Nc(nt)) * Del2 + p%rdmKi(OtherState%Nc(nt+1)) * (Del2-p%rdmP (OtherState%Nc(nt))) ! Two teeth in contact
+                   y%PointMesh%Force(1,1) = p%rdmKi(OtherState%Nc(nt)) * Del2 + p%rdmKi(OtherState%Nc(nt+1)) * (Del2-p%rdmP (OtherState%Nc(nt))) ! Two teeth in contact
 
                 ENDIF
 
@@ -713,10 +749,16 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
           
       ENDIF
       
-      y%PointMesh%Force(1,1) = y%fice
-      y%PointMesh%Force(2,1) = 0.
-      y%PointMesh%Force(3,1) = 0.
+      !y%PointMesh%Force(1,1) = y%fice
+      !y%PointMesh%Force(2,1) = 0.
+      !y%PointMesh%Force(3,1) = 0.
             
+      
+      ! values to write to a file:
+      y%WriteOutput(1) = x%q                     ! IceDisp  !bjj: do we need to recalculate this???
+      y%WriteOutput(2) = y%PointMesh%Force(1,1)  ! IceForce
+      
+      
 END SUBROUTINE ID_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ID_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -1489,8 +1531,8 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
    ! Ice Model 1b
 
    Bf          = p%EiPa * p%h**3 / 12.0 / (1.0-InputFileData%nu**2.0)
-   kappa       = ( InputFileData%rhow * 9.81 / 4.0 / Bf ) ** 0.25
-   PhiR        = InputFileData%phi / 180.0 * 3.1415927
+   kappa       = ( InputFileData%rhow * 9.81 / 4.0 / Bf ) ** 0.25 !bjj: can you use the gravitational constant defined in FAST? now stored in InitInput%gravity
+   PhiR        = InputFileData%phi / 180.0 * 3.1415927  !bjj todo: you can use "D2R" from NWTC_Library to convert degrees to radians
    p%Fmax1b    = 5.3 * Bf * kappa * ( kappa * p%StrWd + 2 * tan(PhiR/2.0) )
    p%tm1b      = p%Fmax1b / p%StrWd / p%h / p%EiPa / StrRt
 
@@ -1669,21 +1711,21 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
    ! Calculate Output variables:
    !...............................................................................................................................
 
-   p%NumOuts    = 3
+   p%NumOuts    = 2
 
       CALL AllocAry( p%OutName, p%NumOuts, 'OutName', ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
 
-      p%OutName (1) = 'Time'
-      p%OutName (2) = 'IceDisp'
-      p%OutName (3) = 'IceForce'
+      !p%OutName (1) = 'Time'
+      p%OutName (1) = 'IceDisp'
+      p%OutName (2) = 'IceForce'
 
       CALL AllocAry( p%OutUnit, p%NumOuts, 'OutUnit', ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
 
-      p%OutUnit (1) = '(s)'
-      p%OutUnit (2) = '(m)'
-      p%OutUnit (3) = '(kN)'
+      !p%OutUnit (1) = '(s)'
+      p%OutUnit (1) = '(m)'
+      p%OutUnit (2) = '(N)'
       
       ! Test parameter assignments
       
@@ -1757,7 +1799,7 @@ SUBROUTINE ID_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrSta
    REAL(ReKi)                                   :: MiuLogh           ! miu_log(h), mean value of log(h)
    REAL(ReKi)                                   :: VelSig            ! parameter for a Rayleigh distribution
    REAL(ReKi)                                   :: TeLamb            ! parameter for a exponential distribution
-   REAL, PARAMETER                              :: Pi = 3.1415927
+   !REAL, PARAMETER                              :: Pi = 3.1415927 !bjj: comes from NWTC_Library
 
       ! Initialize error data
    ErrStat = ErrID_None

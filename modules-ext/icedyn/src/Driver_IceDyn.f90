@@ -87,6 +87,7 @@ PROGRAM MAIN
    CHARACTER(1)                       :: Dlim = TAB
 
 
+   call NWTC_Init()
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
@@ -134,6 +135,7 @@ PROGRAM MAIN
    ID_InitInput%TMax     = t_final
    ID_InitInput%MSL2SWL  = 0.0_ReKi      
    ID_InitInput%WtrDens  = 1000      
+   ID_InitInput%gravity  = 9.81
    ID_InitInput%LegNum    = 1
    
    CALL ID_Init( ID_InitInput          &
@@ -197,9 +199,9 @@ PROGRAM MAIN
    WRITE (Un, Frmt, ADVANCE = 'no') t_global
    
    Frmt = '(A,F10.4,A,F10.4,A,E10.3E2)'
-   WRITE (Un, Frmt, ADVANCE = 'no') Dlim, ID_Input(1)%q, &
+   WRITE (Un, Frmt, ADVANCE = 'no') Dlim, ID_Input(1)%PointMesh%TranslationDisp(1,1), &
                                     Dlim, ID_ContinuousState%q, & 
-                                    Dlim, ID_Output(1)%fice
+                                    Dlim, ID_Output(1)%PointMesh%Force(1,1)
    
    
    DO n_t_global = 0, n_t_final

@@ -62,6 +62,7 @@ typedef    IceDyn/ID    InitInputType    CHARACTER(1024)    InputFile       -   
 typedef     ^          ^                 ^                  RootName        -    -    -    "Root name of the output file" -
 typedef     ^          ^                 ReKi               MSL2SWL         -    -    -    "Offset between still-water level and mean sea level" m
 typedef     ^          ^                 ReKi               WtrDens         -    -    -    "Density of water" kg/m^3
+typedef     ^          ^                 ReKi               gravity         -    -    -    "Gravitational acceleration" m/s^2
 typedef     ^          ^                 IntKi              LegNum          -    -    -    "Which number of legs on the turbine this is being initialized for" m
 typedef     ^          ^                 DbKi               TMax            -    -    -    "Total simulation time" s
 
@@ -141,11 +142,10 @@ typedef    ^            ^                    ^                       rdmKi      
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
-typedef    IceDyn/ID    InputType            ReKi                   q              -    -    -    "displacement of Mass 1" m    #bjj <<< remove this!
-typedef    ^            ^                    ^                      dqdt           -    -    -    "velocity of Mass 1" m/s      #bjj <<< remove this!
-typedef    ^            ^                    MeshType               PointMesh      -    -    -    "contains displacement, velocity, acceleration" -
+typedef    IceDyn/ID    InputType            MeshType               PointMesh      -    -    -    "contains displacement and velocity of structure" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef    IceDyn/ID    OutputType           ReKi                  fice           -    -    -    "Ice force" N  #bjj <<< remove this!
-typedef    ^            ^                    MeshType              PointMesh      -    -    -    "contains force" -
+typedef    IceDyn/ID    OutputType           MeshType              PointMesh      -    -    -    "contains Ice force" N
+typedef    ^            ^                    ReKi                  WriteOutput   {:}   -    -    "Data to be written to an output file: see WriteOutputHdr for names of each variable"  "see WriteOutputUnt"
+
