@@ -2152,6 +2152,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
    REAL(ReKi)                                     :: denom, elem_position
    REAL(ReKi), PARAMETER                          :: TOL = sqrt(epsilon(elem_position))  ! we're not using EqualRealNos here because we don't want elements of zero length (EqualRealNos produces elements of zero length)
+   REAL(ReKi)                                     :: L         ! length of newly created element(s)
    
    TYPE(MeshType)                                 :: Temp_Ln2_Src                   ! A temporary mesh
    INTEGER, allocatable                           :: Original_Src_Element(:)
@@ -2273,61 +2274,91 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                
                elem_position = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom
                
+!bjj: todo: we need to set this TOL based on actual distances, not relative values (0,1) on an element....                 
+!  for now, I've calculated the element length inside this tolerance and reserve the right to reject new nodes that create 0-length elements.
+               
                ! if 0 < elem_position < 1, we create a new node and split this element
                IF ( elem_position > TOL .AND. elem_position < (1.0_ReKi - TOL)  ) THEN
                   
-                     ! add a node
+                  
+                     ! Add a node:
                   Aug_Nnodes = Aug_Nnodes + 1
-                  Aug_NElem  = Aug_NElem + 1 
-                  CALL MeshSplitElement_2PT( Temp_Ln2_Src, ELEMENT_LINE2, ErrStat2, ErrMsg2, iElem, Aug_Nnodes  )                      
-                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
-                     IF (ErrStat >= AbortErrLev) THEN
-                        CALL CleanUp()
-                        RETURN      
-                     END IF
-                  Original_Src_Element( Aug_NElem ) = Original_Src_Element(iElem)  ! this node can now be mapped to original source mesh element
-                     
+
                      ! calculate the position and orientation relative to the *original* source element:
-                  n1=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(Aug_NElem))%ElemNodes(1)
-                  n2=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(Aug_NElem))%ElemNodes(2)
+                  n1=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(iElem))%ElemNodes(1)
+                  n2=Src%ElemTable(ELEMENT_LINE2)%Elements(Original_Src_Element(iElem))%ElemNodes(2)
                      
                                           
                   p_eS  = Src%Position(:, n2) - Src%Position(:, n1)
                   denom = DOT_PRODUCT( p_eD , p_eS )   ! we don't need to check that this is zero because it's just a shorter version of the temp Temp_Ln2_Src element
                   n1S_nD_vector =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(jNode)) &
-                                    - Src%Position(:, n1 )
+                                   - Src%Position(:, n1 )
                   shape_fn2(Aug_Nnodes) = DOT_PRODUCT( p_eD, n1S_nD_vector ) / denom       ! save this for later, when we need to map the mesh fields...
-                                          
-                     
-                  ! interpolate position on the original souce element:                     
+                  
+                     ! interpolate position on the original souce element:                     
                      
                   position = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * Src%Position(:, n1) &
                                        + shape_fn2(Aug_Nnodes)  * Src%Position(:, n2) 
-                     
-                  ! set the RefOrientation based on proximity to original element's nodes:
-                     
-                  IF ( NINT( shape_fn2(Aug_Nnodes) ) .EQ. 0 ) THEN
-                     n = n1
+                  
+                  ! let's just verify that this new node (n1) doesn't give us zero-length elements:
+                  ! (note we use the NEW (not original) source element, which may have been split)
+                  p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1) )                                    
+                  L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
+                                    
+                  IF ( L < TOL ) THEN ! this element is basically zero length
+                        ! for numerical reasons, we really didn't want this node....
+                        Aug_Nnodes = Aug_Nnodes - 1
                   ELSE
-                     n = n2                        
-                  END IF
-                                                               
-                  CALL MeshPositionNode ( Mesh       = Temp_Ln2_Src                      &
-                                          ,INode     = Aug_Nnodes                        &
-                                          ,Pos       = position                          & 
-                                          ,Orient    = Src%RefOrientation(:, :, n)       &
-                                          ,ErrStat   = ErrStat2                          &
-                                          ,ErrMess   = ErrMsg2                           )
-                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
-                     IF (ErrStat >= AbortErrLev) THEN
-                        CALL CleanUp()
-                        RETURN      
-                     END IF
                      
-                  ! if we have to check a second node, we need to first recalculate p_eS and denom on Temp_Ln2_Src:            
-                  IF ( jNode < NumNodes( Dest_TYPE )) THEN
-                     j = jNode+1 ! start on the next node
-                     CYCLE Src_Elements 
+                     ! let's verify the other node (n2) of this element doesn't give zero-length:
+                     p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2))                                    
+                     L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
+                     IF ( L < TOL ) THEN ! this element is basically zero length
+                        ! for numerical reasons, we really didn't want this node....
+                        Aug_Nnodes = Aug_Nnodes - 1
+                     ELSE   
+   
+                           ! we can add the node (and an element)
+                        Aug_NElem  = Aug_NElem + 1 
+                        CALL MeshSplitElement_2PT( Temp_Ln2_Src, ELEMENT_LINE2, ErrStat2, ErrMsg2, iElem, Aug_Nnodes  )                      
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
+                           IF (ErrStat >= AbortErrLev) THEN
+                              CALL CleanUp()
+                              RETURN      
+                           END IF
+                       
+                        Original_Src_Element( Aug_NElem ) = Original_Src_Element(iElem)  ! this node can now be mapped to original source mesh element               
+                       
+                        
+                        ! set the RefOrientation based on proximity to original element's nodes:
+                     
+                        IF ( NINT( shape_fn2(Aug_Nnodes) ) .EQ. 0 ) THEN
+                           n = n1
+                        ELSE
+                           n = n2                        
+                        END IF
+                                                               
+                        CALL MeshPositionNode ( Mesh       = Temp_Ln2_Src                      &
+                                                ,INode     = Aug_Nnodes                        &
+                                                ,Pos       = position                          & 
+                                                ,Orient    = Src%RefOrientation(:, :, n)       &
+                                                ,ErrStat   = ErrStat2                          &
+                                                ,ErrMess   = ErrMsg2                           )
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
+                           IF (ErrStat >= AbortErrLev) THEN
+                              CALL CleanUp()
+                              RETURN      
+                           END IF
+                     
+                        ! if we have to check a second node, we need to first recalculate p_eS and denom on Temp_Ln2_Src:            
+                        IF ( jNode < NumNodes( Dest_TYPE )) THEN
+                           j = jNode+1 ! start on the next node
+                           CYCLE Src_Elements 
+                        END IF
+                        
+                     END IF ! doesn't cause zero-length element
+                     
+                     
                   END IF
                   
                END IF ! New node/element

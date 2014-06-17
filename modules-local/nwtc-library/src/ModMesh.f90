@@ -1638,19 +1638,24 @@ CONTAINS
 
      DO j = 1,Mesh%ElemTable(ELEMENT_LINE2)%nelem
 
-        n1_n2_vector = Mesh%Position(:,Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(2)) &
-                     - Mesh%Position(:,Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(1))
+        n2 = Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(2)
+        n1 = Mesh%ElemTable(ELEMENT_LINE2)%Elements(j)%ElemNodes(1)
+        n1_n2_vector = Mesh%Position(:,n2) &
+                     - Mesh%Position(:,n1)
 
         Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac  = 0.5_ReKi * SQRT( DOT_PRODUCT(n1_n2_vector,n1_n2_vector) )   ! = L / 2
         
         IF ( EqualRealNos( 2.0_ReKi*Mesh%ElemTable(ELEMENT_LINE2)%Elements(J)%det_jac, 0.0_Reki ) ) THEN
            ErrStat = ErrID_Fatal
-           ErrMess = "MeshCommit: Line2 element has 0 length."
+           ErrMess = trim(ErrMess)//"MeshCommit: Line2 element "//TRIM(Num2Lstr(j))//" has 0 length."//NewLine// &
+                     "   n2 = n("//TRIM(Num2Lstr(n2))//") = ("//TRIM(Num2Lstr(Mesh%Position(1,n2)))//','//TRIM(Num2Lstr(mesh%position(2,n2)))//','//TRIM(Num2Lstr(mesh%position(3,n2))) //')'//NewLine// &
+                     "   n1 = n("//TRIM(Num2Lstr(n1))//") = ("//TRIM(Num2Lstr(Mesh%Position(1,n1)))//','//TRIM(Num2Lstr(mesh%position(2,n1)))//','//TRIM(Num2Lstr(mesh%position(3,n1))) //')'//NewLine
            RETURN
         END IF
 
      END DO
 
+   
      ! we're finished:
 
       Mesh%Committed = .TRUE.
