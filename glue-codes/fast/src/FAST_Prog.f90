@@ -49,21 +49,23 @@ PROGRAM FAST
 IMPLICIT  NONE
 
 TYPE :: IceDyn_Data !bjj: eventually, I'll put this in the Registry (and copy this for all modules)   
-   TYPE(ID_ContinuousStateType)        :: x                                       ! Continuous states
-   TYPE(ID_DiscreteStateType)          :: xd                                      ! Discrete states
-   TYPE(ID_ConstraintStateType)        :: z                                       ! Constraint states
-   TYPE(ID_OtherStateType)             :: OtherSt                                 ! Other/optimization states
-   TYPE(ID_ParameterType)              :: p                                       ! Parameters
-   TYPE(ID_InputType)                  :: u                                       ! System inputs
-   TYPE(ID_OutputType)                 :: y                                       ! System outputs
-                                                                                      
-   TYPE(ID_ContinuousStateType)        :: x_pred                                  ! Predicted continuous states
-   TYPE(ID_DiscreteStateType)          :: xd_pred                                 ! Predicted discrete states
-   TYPE(ID_ConstraintStateType)        :: z_pred                                  ! Predicted constraint states
-   TYPE(ID_OtherStateType)             :: OtherSt_old                             ! Other/optimization states (copied for the case of subcycling)
-                                                                                  
-   TYPE(id_InputType),     ALLOCATABLE :: Input(:)                                ! Array of inputs associated with FEAM_InputTimes
-   REAL(DbKi),             ALLOCATABLE :: InputTimes(:)                           ! Array of times associated with FEAM_Input   
+   ! [ the last dimension of each allocatable array is for the instance of IceDyn being used ]
+   ! note that I'm making the allocatable-for-instance-used part INSIDE the data type (as opposed to an array of IceDyn_Data types) because I want to pass arrays of x, xd, z, x_pred, etc)
+   TYPE(ID_ContinuousStateType),ALLOCATABLE :: x(:)                                    ! Continuous states
+   TYPE(ID_DiscreteStateType)  ,ALLOCATABLE :: xd(:)                                   ! Discrete states
+   TYPE(ID_ConstraintStateType),ALLOCATABLE :: z(:)                                    ! Constraint states
+   TYPE(ID_OtherStateType)     ,ALLOCATABLE :: OtherSt(:)                              ! Other/optimization states
+   TYPE(ID_ParameterType)                   :: p                                       ! Parameters
+   TYPE(ID_InputType)          ,ALLOCATABLE :: u(:)                                    ! System inputs
+   TYPE(ID_OutputType)         ,ALLOCATABLE :: y(:)                                    ! System outputs
+                                                                                
+   TYPE(ID_ContinuousStateType),ALLOCATABLE :: x_pred(:)                               ! Predicted continuous states
+   TYPE(ID_DiscreteStateType)  ,ALLOCATABLE :: xd_pred(:)                              ! Predicted discrete states
+   TYPE(ID_ConstraintStateType),ALLOCATABLE :: z_pred(:)                               ! Predicted constraint states
+   TYPE(ID_OtherStateType)     ,ALLOCATABLE :: OtherSt_old(:)                          ! Other/optimization states (copied for the case of subcycling)
+                                                                            
+   TYPE(id_InputType)          ,ALLOCATABLE :: Input(:,:)                              ! Array of inputs associated with FEAM_InputTimes
+   REAL(DbKi)                  ,ALLOCATABLE :: InputTimes(:,:)                         ! Array of times associated with FEAM_Input   
 END TYPE                                                                          
    
 
@@ -246,11 +248,12 @@ REAL(DbKi),              ALLOCATABLE   :: IceF_InputTimes(:)                    
 
 
    ! Data for the IceDyn module:
-TYPE(ID_InitInputType)                 :: InitInData_IceD                         ! Initialization input data
-TYPE(ID_InitOutputType)                :: InitOutData_IceD                        ! Initialization output data
-                                                                                  
-TYPE(IceDyn_Data), ALLOCATABLE         :: IceD(:)                                 ! There is one instance of this module for each leg of the fixed-bottom offshore structure at the ice level
 INTEGER, PARAMETER                     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling ID_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
+TYPE(ID_InitInputType)                 :: InitInData_IceD                         ! Initialization input data
+TYPE(ID_InitOutputType)                :: InitOutData_IceD                        ! Initialization output data (each instance will have the same output channels)
+                                                                                  
+TYPE(IceDyn_Data)                      :: IceD                                    ! All the IceDyn data used in time-step loop
+REAL(DbKi)                             :: dt_IceD                                 ! tmp dt variable to ensure IceDyn doesn't specify different dt values for different legs (IceDyn instances)
 
    ! Other/Misc variables
 REAL(DbKi)                            :: TiLstPrn                                ! The simulation time of the last print
@@ -266,7 +269,8 @@ REAL                                  :: UsrTime2                               
 REAL                                  :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
 
 
-INTEGER(IntKi)                        :: J                                       ! generic loop counter
+INTEGER(IntKi)                        :: I,J                                     ! generic loop counter
+INTEGER(IntKi)                        :: IceDim                                  ! dimension we're pre-allocating for number of IceDyn legs/instances
 INTEGER                               :: StrtTime (8)                            ! Start time of simulation (including intialization)
 INTEGER                               :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
 INTEGER(IntKi)                        :: n_TMax_m1                               ! The time step of TMax - dt (the end time of the simulation)
@@ -391,7 +395,14 @@ LOGICAL                               :: calcJacobian                           
          CALL CheckError( ErrStat, 'Message from AD_Init: '//NewLine//ErrMsg )
             
       CALL SetModuleSubstepTime(Module_AD)
-                  
+      
+         ! bjj: this really shouldn't be in the FAST glue code, but I'm going to put this check here so people don't use an invalid model 
+         !    and send me emails to debug numerical issues in their results.
+      IF ( p_AD%TwrProps%PJM_Version .AND. p_FAST%TurbineType == Type_Offshore_Floating ) THEN
+         CALL CheckError( ErrID_Fatal, 'AeroDyn tower influence model "NEWTOWER" is invalid for models of floating offshore turbines.' )
+      END IF         
+
+      
    ELSE
    !   p_ED%AirDens = 0
       IfW_WriteOutput = 0.0
@@ -451,14 +462,17 @@ LOGICAL                               :: calcJacobian                           
                         
    END IF
 
-   ! ........................
-   ! initialize MAP 
-   ! ........................
+   ! ------------------------------
+   ! initialize CompMooring modules 
+   ! ------------------------------
    ALLOCATE( MAP_Input( p_FAST%InterpOrder+1 ), MAP_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating MAP_Input and MAP_InputTimes.") 
    ALLOCATE( FEAM_Input( p_FAST%InterpOrder+1 ), FEAM_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
       IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating FEAM_Input and FEAM_InputTimes.") 
    
+   ! ........................
+   ! initialize MAP 
+   ! ........................
    IF (p_FAST%CompMooring == Module_MAP) THEN
       !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
       
@@ -477,8 +491,7 @@ LOGICAL                               :: calcJacobian                           
          CALL CheckError( ErrStat, 'Message from MAP_Init: '//NewLine//ErrMsg )
 
       CALL SetModuleSubstepTime(Module_MAP)
-             
-      
+                   
    ! ........................
    ! initialize FEAM 
    ! ........................
@@ -503,26 +516,48 @@ LOGICAL                               :: calcJacobian                           
       
    END IF
 
+   ! ------------------------------
+   ! initialize CompIce modules 
+   ! ------------------------------
+   ALLOCATE( IceF_Input( p_FAST%InterpOrder+1 ), IceF_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceF_Input and IceF_InputTimes.") 
+
+      ! We need this to be allocated (else we have issues passing nonallocated arrays and using the first index of Input(),
+      !   but we don't need the space of IceD_MaxLegs if we're not using it. 
+   IF ( p_FAST%CompIce == Module_IceD ) THEN   
+      IceDim = 1
+   ELSE
+      IceDim = IceD_MaxLegs
+   END IF
+      
+      ! because there may be multiple instances of IceDyn, we'll allocate arrays for that here
+      ! we could allocate these after 
+   ALLOCATE( IceD%Input( p_FAST%InterpOrder+1, IceDim ), IceD%InputTimes( p_FAST%InterpOrder+1, IceDim ), STAT = ErrStat )
+         IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD%Input and IceD%InputTimes")
+        
+     ALLOCATE( IceD%x(           IceDim), &
+               IceD%xd(          IceDim), &
+               IceD%z(           IceDim), &
+               IceD%OtherSt(     IceDim), &
+               IceD%u(           IceDim), &
+               IceD%y(           IceDim), &
+               IceD%x_pred(      IceDim), &
+               IceD%xd_pred(     IceDim), &
+               IceD%z_pred(      IceDim), &
+               IceD%OtherSt_old( IceDim), &
+                                             STAT = ErrStat )                                                  
+      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD state, input, and output data.")
+      
+         
+         
    ! ........................
    ! initialize IceFloe 
    ! ........................
-
-   ALLOCATE( IceD( IceD_MaxLegs ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD data structure.") 
-      
-   DO j = 1, IceD_MaxLegs
-      ALLOCATE( IceD(j)%Input( p_FAST%InterpOrder+1 ), IceD(j)%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-         IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD%Input and IceD%InputTimes for leg "//TRIM(num2LStr(IceD_MaxLegs))) 
-   END DO
-                  
-   ALLOCATE( IceF_Input( p_FAST%InterpOrder+1 ), IceF_InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceF_Input and IceF_InputTimes.") 
-   
    IF ( p_FAST%CompIce == Module_IceF ) THEN
                       
       InitInData_IceF%InputFile     = p_FAST%IceFile
       InitInData_IceF%RootName      = p_FAST%OutFileRoot     
-      InitInData_IceF%simLength     = p_FAST%TMax
+      InitInData_IceF%simLength     = p_FAST%TMax  !bjj: IceFloe stores this as single-precision (ReKi) TMax is DbKi
       InitInData_IceF%MSL2SWL       = InitOutData_HD%MSL2SWL
       InitInData_IceF%gravity       = InitOutData_ED%Gravity
       
@@ -532,7 +567,45 @@ LOGICAL                               :: calcJacobian                           
 
       CALL SetModuleSubstepTime(Module_IceF)
                         
-   ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN      
+   ! ........................
+   ! initialize IceDyn 
+   ! ........................
+   ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN  
+      
+      InitInData_IceD%InputFile     = p_FAST%IceFile
+      InitInData_IceD%RootName      = p_FAST%OutFileRoot     
+      InitInData_IceD%MSL2SWL       = InitOutData_HD%MSL2SWL      
+      InitInData_IceD%WtrDens       = InitOutData_HD%WtrDens    
+      InitInData_IceD%gravity       = InitOutData_ED%Gravity
+      InitInData_IceD%TMax          = p_FAST%TMax
+      InitInData_IceD%LegNum        = 1
+      
+      CALL ID_Init( InitInData_IceD, IceD%Input(1,1), IceD%p,  IceD%x(1), IceD%xd(1), IceD%z(1), IceD%OtherSt(1), IceD%y(1), p_FAST%dt_module( MODULE_IceD ), InitOutData_IceD, ErrStat, ErrMsg )
+      p_FAST%ModuleInitialized(Module_IceD) = .TRUE.
+         CALL CheckError( ErrStat, 'Message from IceD_Init: '//NewLine//ErrMsg )
+
+         CALL SetModuleSubstepTime(Module_IceD)         
+         
+         ! now initialize IceD for additional legs (if necessary)
+      dt_IceD           = p_FAST%dt_module( MODULE_IceD )
+      p_FAST%numIceLegs = InitOutData_IceD%numLegs     
+      
+      IF (p_FAST%numIceLegs > IceD_MaxLegs) THEN
+         CALL CheckError( ErrID_Fatal, 'IceDyn-FAST coupling is supported for up to '//TRIM(Num2LStr(IceD_MaxLegs))//' legs, but '//TRIM(Num2LStr(p_FAST%numIceLegs))//' legs were specified.' )
+      END IF
+                  
+
+      DO i=2,p_FAST%numIceLegs  ! basically, we just need IceDyn to set up its meshes for inputs/outputs and possibly initial values for states
+         InitInData_IceD%LegNum = i
+         
+         CALL ID_Init( InitInData_IceD, IceD%Input(1,i), IceD%p,  IceD%x(i), IceD%xd(i), IceD%z(i), IceD%OtherSt(i), IceD%y(i), dt_IceD, InitOutData_IceD, ErrStat, ErrMsg )
+         
+         !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n IceD modules with n timesteps.
+         IF (.NOT. EqualRealNos( p_FAST%dt_module( MODULE_IceD ),dt_IceD )) THEN
+            CALL CheckError( ErrID_Fatal, "All instances of IceDyn (one per support-structure leg) must be the same" )
+         END IF
+      END DO
+            
    END IF   
    
 
@@ -541,7 +614,7 @@ LOGICAL                               :: calcJacobian                           
    ! ........................
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, &
-                         InitOutData_SD, InitOutData_MAP, InitOutData_FEAM, InitOutData_IceF, ErrStat, ErrMsg )
+                         InitOutData_SD, InitOutData_MAP, InitOutData_FEAM, InitOutData_IceF, InitOutData_IceD, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
 
 
@@ -588,6 +661,8 @@ LOGICAL                               :: calcJacobian                           
    CALL IceFloe_DestroyInitInput(  InitInData_IceF,  ErrStat, ErrMsg )
    CALL IceFloe_DestroyInitOutput( InitOutData_IceF, ErrStat, ErrMsg )
    
+   CALL ID_DestroyInitInput(  InitInData_IceD,  ErrStat, ErrMsg )
+   CALL ID_DestroyInitOutput( InitOutData_IceD, ErrStat, ErrMsg )
    
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! loose coupling
@@ -636,6 +711,7 @@ LOGICAL                               :: calcJacobian                           
                         , x_AD  , xd_AD  , z_AD   &
                         , x_FEAM, xd_FEAM, z_FEAM &
                         , x_IceF, xd_IceF, z_IceF &
+                        , IceD%x, IceD%xd, IceD%z &
                         )           
       
       IF (p_FAST%WrGraphics) THEN
@@ -895,6 +971,39 @@ LOGICAL                               :: calcJacobian                           
          CALL IceFloe_CopyOtherState( OtherSt_IceF_old, OtherSt_IceF, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from IceFloe_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF       
+      
+   ELSEIF  (p_FAST%CompIce == Module_IceD ) THEN      
+
+      DO i = 1,p_FAST%numIceLegs
+         
+            ! Copy values for interpolation/extrapolation:
+         DO j = 1, p_FAST%InterpOrder + 1
+            IceD%InputTimes(j,i) = t_initial - (j - 1) * p_FAST%dt
+            !IceD%OutputTimes(j,i) = t_initial - (j - 1) * dt
+         END DO
+
+         DO j = 2, p_FAST%InterpOrder + 1
+            CALL ID_CopyInput (IceD%Input(1,i),  IceD%Input(j,i),  MESH_NEWCOPY, Errstat, ErrMsg)
+               CALL CheckError( ErrStat, 'Message from ID_CopyInput (IceD%Input): '//NewLine//ErrMsg )
+         END DO
+         CALL ID_CopyInput (IceD%Input(1,i),  IceD%u(i),  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+            CALL CheckError( ErrStat, 'Message from ID_CopyInput (IceD%u): '//NewLine//ErrMsg )      
+                               
+         
+            ! Initialize predicted states for j_pc loop:
+         CALL ID_CopyContState   ( IceD%x(i),  IceD%x_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from ID_CopyContState (init): '//NewLine//ErrMsg )
+         CALL ID_CopyDiscState   (IceD%xd(i), IceD%xd_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)  
+            CALL CheckError( ErrStat, 'Message from ID_CopyDiscState (init): '//NewLine//ErrMsg )
+         CALL ID_CopyConstrState ( IceD%z(i),  IceD%z_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from ID_CopyConstrState (init): '//NewLine//ErrMsg )
+         IF ( p_FAST%n_substeps( MODULE_IceD ) > 1 ) THEN
+            CALL ID_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_NEWCOPY, Errstat, ErrMsg)
+               CALL CheckError( ErrStat, 'Message from ID_CopyOtherState (init): '//NewLine//ErrMsg )   
+         END IF       
+         
+      END DO ! numIceLegs
+      
    END IF ! CompIce            
    
    
@@ -1053,6 +1162,7 @@ LOGICAL                               :: calcJacobian                           
       END IF  ! SubDyn
       
       
+      ! Mooring (MAP or FEAM)
       ! MAP
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
@@ -1077,6 +1187,7 @@ LOGICAL                               :: calcJacobian                           
          MAP_InputTimes(1) = t_global_next          
          !MAP_OutputTimes(1) = t_global_next 
             
+      ! FEAM
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          
          CALL FEAM_Input_ExtrapInterp(FEAM_Input, FEAM_InputTimes, u_FEAM, t_global_next, ErrStat, ErrMsg)
@@ -1102,7 +1213,9 @@ LOGICAL                               :: calcJacobian                           
          
       END IF  ! MAP/FEAM
            
-            ! IceFloe
+            
+      ! Ice (IceFloe or IceDyn)
+      ! IceFloe
       IF ( p_FAST%CompIce == Module_IceF ) THEN
          
          CALL IceFloe_Input_ExtrapInterp(IceF_Input, IceF_InputTimes, u_IceF, t_global_next, ErrStat, ErrMsg)
@@ -1126,8 +1239,36 @@ LOGICAL                               :: calcJacobian                           
          IceF_InputTimes(1) = t_global_next          
          !IceF_OutputTimes(1) = t_global_next 
             
-      END IF  ! IceFloe
+      ! IceDyn
+      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+         
+         DO i = 1,p_FAST%numIceLegs
+         
+            CALL ID_Input_ExtrapInterp(IceD%Input(:,i), IceD%InputTimes(:,i), IceD%u(i), t_global_next, ErrStat, ErrMsg)
+               CALL CheckError(ErrStat,'Message from ID_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+                        
+            !CALL ID_Output_ExtrapInterp(IceD%Output(:,i), IceD%OutputTimes(:,i), IceD%y(i), t_global_next, ErrStat, ErrMsg)
+            !   CALL CheckError(ErrStat,'Message from ID_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            
+            
+            ! Shift "window" of IceD%Input and IceD%Output
+  
+            DO j = p_FAST%InterpOrder, 1, -1
+               CALL ID_CopyInput (IceD%Input(j,i),  IceD%Input(j+1,i),  MESH_UPDATECOPY, Errstat, ErrMsg)
+              !CALL ID_CopyOutput(IceD%Output(j,i), IceD%Output(j+1,i), MESH_UPDATECOPY, Errstat, ErrMsg)
+               IceD%InputTimes(j+1,i) = IceD%InputTimes(j,i)
+               !IceD%OutputTimes(j+1,i) = IceD%OutputTimes(j,i)
+            END DO
+  
+            CALL ID_CopyInput (IceD%u(i),  IceD%Input(1,i),  MESH_UPDATECOPY, Errstat, ErrMsg)
+            !CALL ID_CopyOutput(IceD%y(i),  IceD%Output(1,i), MESH_UPDATECOPY, Errstat, ErrMsg)
+            IceD%InputTimes(1,1) = t_global_next          
+            !IceD%OutputTimes(1,1) = t_global_next 
+            
+         END DO ! numIceLegs
+         
       
+      END IF  ! IceFloe/IceDyn
       
       ! predictor-corrector loop:
       DO j_pc = 0, p_FAST%NumCrctn
@@ -1280,7 +1421,7 @@ LOGICAL                               :: calcJacobian                           
          END IF
              
          
-         ! IceFloe: get predicted states
+         ! IceFloe/IceDyn: get predicted states
          IF ( p_FAST%CompIce == Module_IceF ) THEN
             CALL IceFloe_CopyContState   ( x_IceF,  x_IceF_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
             CALL IceFloe_CopyDiscState   (xd_IceF, xd_IceF_pred, MESH_UPDATECOPY, Errstat, ErrMsg)  
@@ -1297,6 +1438,27 @@ LOGICAL                               :: calcJacobian                           
                CALL IceFloe_UpdateStates( t_module, n_t_module, IceF_Input, IceF_InputTimes, p_IceF, x_IceF_pred, xd_IceF_pred, z_IceF_pred, OtherSt_IceF, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from IceFloe_UpdateStates: '//NewLine//ErrMsg )
             END DO !j_ss
+         ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+            
+            DO i=1,p_FAST%numIceLegs
+            
+               CALL ID_CopyContState   (IceD%x( i),IceD%x_pred( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+               CALL ID_CopyDiscState   (IceD%xd(i),IceD%xd_pred(i), MESH_UPDATECOPY, Errstat, ErrMsg)  
+               CALL ID_CopyConstrState (IceD%z( i),IceD%z_pred( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+
+               IF ( p_FAST%n_substeps( Module_IceD ) > 1 ) THEN
+                  CALL ID_CopyOtherState( IceD%OtherSt(i), IceD%OtherSt_old(I), MESH_UPDATECOPY, Errstat, ErrMsg)
+               END IF
+            
+               DO j_ss = 1, p_FAST%n_substeps( Module_IceD )
+                  n_t_module = n_t_global*p_FAST%n_substeps( Module_IceD ) + j_ss - 1
+                  t_module   = n_t_module*p_FAST%dt_module( Module_IceD )
+               
+                  CALL ID_UpdateStates( t_module, n_t_module, IceD%Input(:,i), IceD%InputTimes(:,i), IceD%p, IceD%x_pred(i), IceD%xd_pred(i), IceD%z_pred(i), IceD%OtherSt(i), ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from ID_UpdateStates: '//NewLine//ErrMsg )
+               END DO !j_ss
+            END DO
+         
          END IF
          
          
@@ -1313,6 +1475,7 @@ LOGICAL                               :: calcJacobian                           
                       , x_AD_pred  , xd_AD_pred  , z_AD_pred   &
                       , x_FEAM_pred, xd_FEAM_pred, z_FEAM_pred &
                       , x_IceF_pred, xd_IceF_pred, z_IceF_pred &
+                      , IceD%x_pred, IceD%xd_pred, IceD%z_pred &
                       )           
                       
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1348,31 +1511,15 @@ LOGICAL                               :: calcJacobian                           
          
             IF ( p_FAST%n_substeps( Module_IceF ) > 1 ) THEN
                CALL IceFloe_CopyOtherState( OtherSt_IceF_old, OtherSt_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
+            ELSEIF ( p_FAST%n_substeps( Module_IceD ) > 1 ) THEN
+               DO i=1,p_FAST%numIceLegs
+                  CALL ID_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_UPDATECOPY, Errstat, ErrMsg)
+               END DO
             END IF
             
          END IF
                               
       enddo ! j_pc
-
-!#ifndef CHECK_SOLVE_OPTIONS      
-!      ! write out the input values
-!call WrFileNR( debug_unit,num2lstr(t_global)//' '//num2lstr(t_global_next)//' ' )
-!
-!CALL WrReAryFileNR ( debug_unit, ED_Input(1)%PlatformPtMesh%fORCE(:,1),   '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, ED_Input(1)%PlatformPtMesh%moment(:,1),  '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%TranslationDisp(:,1), '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%TranslationVel(:,1),  '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%RotationVel(:,1),     '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%TranslationAcc(:,1),  '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%RotationAcc(:,1),     '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%Orientation(:,1,1),   '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%Orientation(:,2,1),   '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!CALL WrReAryFileNR ( debug_unit, SD_Input(1)%TPMesh%Orientation(:,3,1),   '1x,'//p_FAST%OutFmt  , ErrStat, ErrMsg )      
-!
-!
-!WRITE (debug_unit,'()')
-!#endif       
       
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 3: Save all final variables (advance to next time)
@@ -1436,6 +1583,12 @@ LOGICAL                               :: calcJacobian                           
          CALL IceFloe_CopyContState   ( x_IceF_pred,  x_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
          CALL IceFloe_CopyDiscState   (xd_IceF_pred, xd_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)  
          CALL IceFloe_CopyConstrState ( z_IceF_pred,  z_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
+      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+         DO i=1,p_FAST%numIceLegs
+            CALL ID_CopyContState   (IceD%x_pred( i), IceD%x( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+            CALL ID_CopyDiscState   (IceD%xd_pred(i), IceD%xd(i), MESH_UPDATECOPY, Errstat, ErrMsg)  
+            CALL ID_CopyConstrState (IceD%z_pred( i), IceD%z( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+         END DO
       END IF
 
             
@@ -1526,7 +1679,7 @@ CONTAINS
                ! Generate glue-code output file
 
                CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW_WriteOutput, ED_Output(1)%WriteOutput, y_SrvD%WriteOutput, y_HD%WriteOutput, &
-                              y_SD%WriteOutput, y_MAP%WriteOutput, y_FEAM%WriteOutput, y_IceF%WriteOutput, ErrStat, ErrMsg )
+                              y_SD%WriteOutput, y_MAP%WriteOutput, y_FEAM%WriteOutput, y_IceF%WriteOutput, IceD%y, ErrStat, ErrMsg )
                CALL CheckError( ErrStat, ErrMsg )
                               
          END IF
@@ -1543,7 +1696,7 @@ CONTAINS
    ! This routine initializes all of the mapping data structures needed between the various modules.
    !...............................................................................................................................
    
-   INTEGER   :: K       ! loop counter
+   INTEGER   :: K, i    ! loop counters
    INTEGER   :: NumBl   ! number of blades
    
    
@@ -1644,10 +1797,12 @@ CONTAINS
             
                ! HydroDyn Morison line mesh to SubDyn point mesh
             IF ( y_HD%Morison%DistribMesh%Committed ) THEN
+               
                CALL MeshMapCreate( y_HD%Morison%DistribMesh, SD_Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate HD_M_L_2_SD_P: '//NewLine//ErrMsg )
                CALL MeshMapCreate( y_SD%y2Mesh,  HD_Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_P_2_HD_M_L: '//NewLine//ErrMsg )
+                  
             END IF
 
          
@@ -1709,8 +1864,32 @@ CONTAINS
             ! SubDyn y2Mesh point mesh to IceFloe iceMesh point mesh 
          CALL MeshMapCreate( y_SD%y2Mesh, IceF_Input(1)%iceMesh,  MeshMapData%SD_P_2_IceF_P, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_P_2_IceF_P: '//NewLine//ErrMsg )
+                              
+   !-------------------------
+   !  SubDyn <-> IceDyn
+   !-------------------------      
+      
+      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+   
+         ALLOCATE( MeshMapData%IceD_P_2_SD_P( p_FAST%numIceLegs )  , & 
+                   MeshMapData%SD_P_2_IceD_P( p_FAST%numIceLegs )  , Stat=ErrStat )
+         IF (ErrStat /= 0 ) CALL CheckError( ErrID_Fatal, 'MeshMapCreate:Unable to allocate IceD_P_2_SD_P and SD_P_2_IceD_P.' )
+         
+         
+         DO i = 1,p_FAST%numIceLegs
+            
+               ! IceDyn PointMesh point mesh to SubDyn LMesh point mesh              
+            CALL MeshMapCreate( IceD%y(i)%PointMesh, SD_Input(1)%LMesh,  MeshMapData%IceD_P_2_SD_P(i), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate IceD_P_2_SD_P('//TRIM(num2LStr(i))//'): '//NewLine//ErrMsg )
+               ! SubDyn y2Mesh point mesh to IceDyn PointMesh point mesh 
+            CALL MeshMapCreate( y_SD%y2Mesh, IceD%Input(1,i)%PointMesh,  MeshMapData%SD_P_2_IceD_P(i), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from MeshMapCreate SD_P_2_IceD_P('//TRIM(num2LStr(i))//'): '//NewLine//ErrMsg )
+               
+         END DO
                         
       END IF   ! SubDyn-IceFloe
+      
+      
       
       
       !............................................................................................................................
@@ -1860,12 +2039,19 @@ CONTAINS
                 y_FEAM%PtFairleadLoad%RemapFlag          = .FALSE.         
       END IF
          
-      ! IceFloe
+      ! IceFloe, IceDyn
       IF ( p_FAST%CompIce == Module_IceF ) THEN
          IF (IceF_Input(1)%iceMesh%Committed) THEN
             IceF_Input(1)%iceMesh%RemapFlag = .FALSE.
                    y_IceF%iceMesh%RemapFlag = .FALSE.
          END IF    
+      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+         DO i=1,p_FAST%numIceLegs
+            IF (IceD%Input(1,i)%PointMesh%Committed) THEN
+                IceD%Input(1,i)%PointMesh%RemapFlag = .FALSE.
+                      IceD%y(i)%PointMesh%RemapFlag = .FALSE.
+            END IF    
+         END DO         
       END IF
       
    END SUBROUTINE ResetRemapFlags  
@@ -1879,6 +2065,7 @@ CONTAINS
                                             , x_AD_this  , xd_AD_this  , z_AD_this   &
                                             , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
                                             , x_IceF_this, xd_IceF_this, z_IceF_this &
+                                            , x_IceD_this, xd_IceD_this, z_IceD_this &
                                             )
    ! This subroutine solves the input-output relations for all of the modules. It is a subroutine because it gets done twice--
    ! once at the start of the n_t_global loop and once in the j_pc loop, using different states.
@@ -1918,6 +2105,10 @@ CONTAINS
       TYPE(IceFloe_ContinuousStateType) , intent(in   ) :: x_IceF_this                        ! These continuous states (either actual or predicted)
       TYPE(IceFloe_DiscreteStateType)   , intent(in   ) :: xd_IceF_this                       ! These discrete states (either actual or predicted)
       TYPE(IceFloe_ConstraintStateType) , intent(in   ) :: z_IceF_this                        ! These constraint states (either actual or predicted)
+      !IceDyn:                                
+      TYPE(ID_ContinuousStateType)      , intent(in   ) :: x_IceD_this(:)                     ! These continuous states (either actual or predicted)
+      TYPE(ID_DiscreteStateType)        , intent(in   ) :: xd_IceD_this(:)                    ! These discrete states (either actual or predicted)
+      TYPE(ID_ConstraintStateType)      , intent(in   ) :: z_IceD_this(:)                     ! These constraint states (either actual or predicted)
                   
          ! Local variable:
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1947,6 +2138,7 @@ CONTAINS
                         , x_MAP_this , xd_MAP_this , z_MAP_this  &
                         , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
                         , x_IceF_this, xd_IceF_this, z_IceF_this &
+                        , x_IceD_this, xd_IceD_this, z_IceD_this &
                         )
       CALL SolveOption2(this_time &
                         , x_SrvD_this, xd_SrvD_this, z_SrvD_this &
@@ -1985,6 +2177,7 @@ CONTAINS
                         , x_MAP_this , xd_MAP_this , z_MAP_this  &
                         , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
                         , x_IceF_this, xd_IceF_this, z_IceF_this &
+                        , x_IceD_this, xd_IceD_this, z_IceD_this &
                         )
 
       !   ! use the ElastoDyn outputs from option1 to update the inputs for AeroDyn and ServoDyn
@@ -2016,6 +2209,7 @@ CONTAINS
                            , x_MAP_this , xd_MAP_this , z_MAP_this  &
                            , x_FEAM_this, xd_FEAM_this, z_FEAM_this &
                            , x_IceF_this, xd_IceF_this, z_IceF_this &
+                           , x_IceD_this, xd_IceD_this, z_IceD_this &
                            )
    ! This routine implements the "option 1" solve for all inputs with direct links to HD, SD, MAP, and the ED platform reference 
    ! point
@@ -2045,6 +2239,10 @@ CONTAINS
       TYPE(IceFloe_ContinuousStateType) , intent(in   ) :: x_IceF_this                        ! These continuous states (either actual or predicted)
       TYPE(IceFloe_DiscreteStateType)   , intent(in   ) :: xd_IceF_this                       ! These discrete states (either actual or predicted)
       TYPE(IceFloe_ConstraintStateType) , intent(in   ) :: z_IceF_this                        ! These constraint states (either actual or predicted)
+      !IceDyn:                                
+      TYPE(ID_ContinuousStateType)      , intent(in   ) :: x_IceD_this(:)                     ! These continuous states (either actual or predicted)
+      TYPE(ID_DiscreteStateType)        , intent(in   ) :: xd_IceD_this(:)                    ! These discrete states (either actual or predicted)
+      TYPE(ID_ConstraintStateType)      , intent(in   ) :: z_IceD_this(:)                     ! These constraint states (either actual or predicted)
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
@@ -2068,6 +2266,13 @@ CONTAINS
          CALL IceFloe_CalcOutput( this_time, IceF_Input(1), p_IceF, x_IceF_this, xd_IceF_this, z_IceF_this, OtherSt_IceF, y_IceF, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from IceFloe_CalcOutput: '//NewLine//ErrMsg  )
       
+      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+         
+         DO i=1,p_FAST%numIceLegs                  
+            CALL ID_CalcOutput( this_time, IceD%Input(1,i), IceD%p, x_IceD_this(i), xd_IceD_this(i), z_IceD_this(i), IceD%OtherSt(i), IceD%y(i), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from ID_CalcOutput: '//NewLine//ErrMsg  )
+         END DO
+         
       END IF
       
       !
@@ -2092,9 +2297,10 @@ CONTAINS
                                        , ED_Input(1), p_ED, x_ED_this, xd_ED_this, z_ED_this, OtherSt_ED, ED_Output(1) &
                                        , SD_Input(1), p_SD, x_SD_this, xd_SD_this, z_SD_this, OtherSt_SD, y_SD & 
                                        , HD_Input(1), p_HD, x_HD_this, xd_HD_this, z_HD_this, OtherSt_HD, y_HD & 
-                                       , MAP_Input(1),  y_MAP  &
-                                       , FEAM_Input(1), y_FEAM &   
-                                       , IceF_Input(1), y_IceF &
+                                       , MAP_Input(1),    y_MAP  &
+                                       , FEAM_Input(1),   y_FEAM &   
+                                       , IceF_Input(1),   y_IceF &
+                                       , IceD%Input(1,:), IceD%y &    ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure?...
                                        , MeshMapData , ErrStat, ErrMsg )         
             CALL CheckError( ErrStat, ErrMsg  )                                                   
                         
@@ -2139,6 +2345,15 @@ CONTAINS
          CALL IceFloe_InputSolve(  IceF_Input(1), y_SD, MeshMapData, ErrStat, ErrMsg )
             CALL CheckError( ErrStat, 'Message from IceFloe_InputSolve: '//NewLine//ErrMsg  )
                                  
+      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+         
+         DO i=1,p_FAST%numIceLegs
+            
+            CALL ID_InputSolve(  IceD%Input(1,i), y_SD, MeshMapData, i, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from ID_InputSolve: '//NewLine//ErrMsg  )
+               
+         END DO
+         
       END IF        
       
 #ifdef DEBUG_MESH_TRANSFER_ICE
@@ -2290,6 +2505,14 @@ CONTAINS
       IF ( p_FAST%ModuleInitialized(Module_IceF) ) THEN
          CALL IceFloe_End(IceF_Input(1),  p_IceF,  x_IceF,  xd_IceF,  z_IceF,  OtherSt_IceF,  y_IceF,  ErrStat2, ErrMsg2)
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+      ELSEIF ( p_FAST%ModuleInitialized(Module_IceD) ) THEN
+         
+         !bjj: todo: ADD PARAMETERS TO ICEDYN LEG ARRAYS.... i.e., IceD%p(i); what if an output file unit is specified???? or if we deallocate arrays in the first call, but need them in subsequent calls for other legs:
+         DO i=1,p_FAST%numIceLegs                     
+            CALL ID_End(IceD%Input(1,i),  IceD%p,  IceD%x(i),  IceD%xd(i),  IceD%z(i),  IceD%OtherSt(i),  IceD%y(i),  ErrStat2, ErrMsg2)
+            IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )            
+         END DO
+         
       END IF
       
       
@@ -2321,6 +2544,10 @@ CONTAINS
       
       CALL IceFloe_DestroyInitInput(  InitInData_IceF, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL IceFloe_DestroyInitOutput( InitOutData_IceF,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+
+      CALL ID_DestroyInitInput(       InitInData_IceD, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL ID_DestroyInitOutput(      InitOutData_IceD,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      
       
       ! -------------------------------------------------------------------------
       ! Deallocate/Destroy structures associated with mesh mapping
@@ -2492,6 +2719,47 @@ CONTAINS
       IF ( ALLOCATED(IceF_InputTimes) ) DEALLOCATE( IceF_InputTimes )      
       
       
+      ! IceDyn
+      IF ( p_FAST%CompIce == Module_IceD ) THEN
+                                          
+         IF ( ALLOCATED(IceD%Input)  ) THEN
+            DO i=1,p_FAST%numIceLegs
+               DO j = 2,p_FAST%InterpOrder+1 !note that IceD%Input(1,:) was destroyed in ID_End
+                  CALL ID_DestroyInput( IceD%Input(j,i), ErrStat2, ErrMsg2 );   IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               END DO
+            END DO
+         END IF
+                              
+         IF ( ALLOCATED(IceD%OtherSt_old) ) THEN  ! and all the others that need to be allocated...
+            DO i=1,p_FAST%numIceLegs
+               CALL ID_DestroyContState(  IceD%x(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyDiscState(  IceD%xd(         i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyConstrState(IceD%z(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyOtherState( IceD%OtherSt(    i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyInput(      IceD%u(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyOutput(     IceD%y(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                              
+               CALL ID_DestroyContState(  IceD%x_pred(     i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyDiscState(  IceD%xd_pred(    i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyConstrState(IceD%z_pred(     i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL ID_DestroyOtherState( IceD%OtherSt_old(i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                              
+            END DO                        
+         END IF         
+         
+      END IF 
+      
+      IF ( ALLOCATED(IceD%Input      ) ) DEALLOCATE( IceD%Input      )      
+      IF ( ALLOCATED(IceD%InputTimes ) ) DEALLOCATE( IceD%InputTimes )      
+      IF ( ALLOCATED(IceD%x          ) ) DEALLOCATE( IceD%x          )      
+      IF ( ALLOCATED(IceD%xd         ) ) DEALLOCATE( IceD%xd         )      
+      IF ( ALLOCATED(IceD%z          ) ) DEALLOCATE( IceD%z          )      
+      IF ( ALLOCATED(IceD%OtherSt    ) ) DEALLOCATE( IceD%OtherSt    )      
+      IF ( ALLOCATED(IceD%u          ) ) DEALLOCATE( IceD%u          )      
+      IF ( ALLOCATED(IceD%y          ) ) DEALLOCATE( IceD%y          )      
+      IF ( ALLOCATED(IceD%x_pred     ) ) DEALLOCATE( IceD%x_pred     )      
+      IF ( ALLOCATED(IceD%xd_pred    ) ) DEALLOCATE( IceD%xd_pred    )      
+      IF ( ALLOCATED(IceD%z_pred     ) ) DEALLOCATE( IceD%z_pred     )      
+      IF ( ALLOCATED(IceD%OtherSt_old) ) DEALLOCATE( IceD%OtherSt_old)      
+                        
       ! -------------------------------------------------------------------------
       ! predicted state variables:
       ! -------------------------------------------------------------------------

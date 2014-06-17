@@ -128,7 +128,13 @@ MODULE FAST_Types
             ! IceF <-> SD
       TYPE(MeshMapType)                 :: IceF_P_2_SD_P                            ! Map IceFloe point mesh to SubDyn y2Mesh point mesh
       TYPE(MeshMapType)                 :: SD_P_2_IceF_P                            ! Map SubDyn y2Mesh point mesh to IceFloe point mesh
-                        
+
+      
+            ! IceD <-> SD
+      TYPE(MeshMapType), ALLOCATABLE    :: IceD_P_2_SD_P(:)                         ! Map IceDyn point mesh to SubDyn y2Mesh point mesh
+      TYPE(MeshMapType), ALLOCATABLE    :: SD_P_2_IceD_P(:)                         ! Map SubDyn y2Mesh point mesh to IceDyn point mesh
+      
+      
          ! Stored Jacobians:
       REAL(ReKi),        ALLOCATABLE    :: Jacobian_ED_SD_HD(:,:)                   ! Stored Jacobian in ED_HD_InputOutputSolve, ED_SD_InputOutputSolve, or ED_SD_HD_InputOutputSolve      
       INTEGER ,          ALLOCATABLE    :: Jacobian_pivot(:)                        ! Pivot array used for LU decomposition of Jacobian_ED_SD_HD
@@ -159,6 +165,7 @@ MODULE FAST_Types
       INTEGER(IntKi)            :: InterpOrder                                      ! Interpolation order {0,1,2} (-)
       INTEGER(IntKi)            :: NumCrctn                                         ! Number of correction iterations
       INTEGER(IntKi)            :: KMax                                             ! Maximum number of input-output-solve iterations (KMax >= 1)
+      INTEGER(IntKi)            :: numIceLegs                                       ! number of suport-structure legs in contact with ice (IceDyn coupling)
       LOGICAL                   :: ModuleInitialized(NumModules)                    ! An array determining if the module has been initialized
       
          ! Data for Jacobians:
@@ -227,7 +234,7 @@ CONTAINS
    CHARACTER(*),                   INTENT(OUT  )  :: ErrMsg                    ! Message associated with errro status
    
    ! local variables
-   INTEGER(IntKi)                                 :: k                         ! loop counter  
+   INTEGER(IntKi)                                 :: k , I                     ! loop counters  
    INTEGER(IntKi)                                 :: ErrStat2                  ! Temporary Error status
    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                   ! Temporary Error message
                                     
@@ -292,6 +299,22 @@ CONTAINS
       CALL MeshMapDestroy( MeshMapData%IceF_P_2_SD_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )
       CALL MeshMapDestroy( MeshMapData%SD_P_2_IceF_P,  ErrStat2, ErrMsg2 ); CALL CheckError( )                  
       
+      
+         ! IceD <-> SD      
+      IF (ALLOCATED(MeshMapData%IceD_P_2_SD_P)) THEN
+         DO i=1,SIZE(MeshMapData%IceD_P_2_SD_P)   
+            CALL MeshMapDestroy( MeshMapData%IceD_P_2_SD_P(i),  ErrStat2, ErrMsg2 ); CALL CheckError( )
+         END DO
+         DEALLOCATE( MeshMapData%IceD_P_2_SD_P )
+      END IF
+
+      IF (ALLOCATED(MeshMapData%SD_P_2_IceD_P)) THEN
+         DO i=1,SIZE(MeshMapData%SD_P_2_IceD_P)   
+            CALL MeshMapDestroy( MeshMapData%SD_P_2_IceD_P(i),  ErrStat2, ErrMsg2 ); CALL CheckError( )                           
+         END DO
+         DEALLOCATE( MeshMapData%SD_P_2_IceD_P )
+      END IF
+                     
       
          ! Stored Jacobians:
       IF ( ALLOCATED(MeshMapData%Jacobian_ED_SD_HD   ) ) DEALLOCATE(MeshMapData%Jacobian_ED_SD_HD   ) 
