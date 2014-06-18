@@ -13,10 +13,12 @@
    CHARACTER(LEN(ErrMsg))     :: ErrMsg2                                         ! Temporary Err msg   
    REAL(ReKi)                 :: temp_xm2
    REAL(ReKi)                 :: temp_xm3
-   REAL(ReKi)                 :: temp_xc2
-   REAL(ReKi)                 :: temp_xc3
-   REAL(ReKi)                 :: temp_xs2
-   REAL(ReKi)                 :: temp_xs3
+   REAL(ReKi)                 :: temp_mass(5)
+   REAL(ReKi)                 :: temp_bend(6)
+   REAL(ReKi)                 :: temp_sher(6)
+   REAL(ReKi)                 :: temp_edg
+   REAL(ReKi)                 :: temp_flp
+   REAL(ReKi)                 :: temp_crs
    INTEGER(IntKi)             :: i
    INTEGER(IntKi)             :: j
 
@@ -73,7 +75,7 @@
                         BladeInputFileData%stiff0(5,5,i),BladeInputFileData%stiff0(6,6,i),BladeInputFileData%stiff0(5,6,i),&
                         BladeInputFileData%stiff0(4,4,i),&
                         BladeInputFileData%stiff0(2,2,i),BladeInputFileData%stiff0(3,3,i),BladeInputFileData%stiff0(2,3,i)               
-           BladeInputFileData%stiff0(6,5,i) = BladeInputFileData%stiff0(5,6,i)
+           BladeInputFileData%stiff0(5,6,i) =-BladeInputFileData%stiff0(5,6,i)
            BladeInputFileData%stiff0(3,2,i) = BladeInputFileData%stiff0(2,3,i)
 
            BladeInputFileData%mass0(2,2,i) = BladeInputFileData%mass0(1,1,i)
@@ -88,6 +90,45 @@
            BladeInputFileData%mass0(4,3,i) = BladeInputFileData%mass0(3,4,i)
            BladeInputFileData%mass0(4,4,i) = BladeInputFileData%mass0(5,5,i) + BladeInputFileData%mass0(6,6,i)
            BladeInputFileData%mass0(6,5,i) = BladeInputFileData%mass0(5,6,i)
+       ENDDO
+   ELSEIF(BladeInputFileData%format_index .EQ. 3) THEN
+       CALL ReadCom(UnIn,BldFile,'Distributed properties',ErrStat2,ErrMsg2,UnEc)
+       CALL ReadCom(UnIn,BldFile,'Distributed properties',ErrStat2,ErrMsg2,UnEc)
+       CALL ReadCom(UnIn,BldFile,'Distributed properties',ErrStat2,ErrMsg2,UnEc)
+       DO i=1,BladeInputFileData%station_total
+           temp_mass(:) = 0.0D0
+           temp_bend(:) = 0.0D0
+           temp_sher(:) = 0.0D0
+           READ(UnIn,*) BladeInputFileData%station_eta(i),&
+                        BladeInputFileData%mass0(1,1,i),&
+                        temp_mass(1),temp_mass(2),temp_mass(3),temp_mass(4),temp_mass(5),&
+                        temp_bend(1),temp_bend(2),temp_bend(3),temp_bend(4),temp_bend(5),temp_bend(6),&
+                        temp_sher(1),temp_sher(2),temp_sher(3),temp_sher(4),temp_sher(5),temp_sher(6)
+           CALL ComputeSectionalProperty(temp_mass(2),temp_mass(1),temp_mass(3),temp_flp,temp_edg,temp_crs)
+           temp_xm2 = temp_mass(4)
+           temp_xm3 = temp_mass(5)
+           BladeInputFileData%mass0(2,2,i) = BladeInputFileData%mass0(1,1,i)
+           BladeInputFileData%mass0(3,3,i) = BladeInputFileData%mass0(1,1,i)
+           BladeInputFileData%mass0(1,5,i) = BladeInputFileData%mass0(1,1,i)*temp_xm3
+           BladeInputFileData%mass0(1,6,i) =-BladeInputFileData%mass0(1,1,i)*temp_xm2
+           BladeInputFileData%mass0(2,4,i) =-BladeInputFileData%mass0(1,1,i)*temp_xm3
+           BladeInputFileData%mass0(3,4,i) = BladeInputFileData%mass0(1,1,i)*temp_xm2
+           BladeInputFileData%mass0(5,1,i) = BladeInputFileData%mass0(1,5,i)
+           BladeInputFileData%mass0(6,1,i) = BladeInputFileData%mass0(1,6,i)
+           BladeInputFileData%mass0(4,2,i) = BladeInputFileData%mass0(2,4,i)
+           BladeInputFileData%mass0(4,3,i) = BladeInputFileData%mass0(3,4,i)
+           BladeInputFileData%mass0(5,5,i) = temp_edg+BladeInputFileData%mass0(1,1,i)*temp_xm3*temp_xm3
+           BladeInputFileData%mass0(6,6,i) = temp_flp+BladeInputFileData%mass0(1,1,i)*temp_xm2*temp_xm2
+           BladeInputFileData%mass0(5,6,i) =-(temp_crs+BladeInputFileData%mass0(1,1,i)*temp_xm3*temp_xm2)
+           BladeInputFileData%mass0(4,4,i) = BladeInputFileData%mass0(5,5,i) + BladeInputFileData%mass0(6,6,i)
+           BladeInputFileData%mass0(6,5,i) = BladeInputFileData%mass0(5,6,i)
+
+           CALL ComputeSectionalProperty(temp_bend(2),temp_bend(1),temp_bend(3),temp_flp,temp_edg,temp_crs)
+           temp_xm2 = temp_bend(5)
+           temp_xm3 = temp_bend(6)
+           BladeInputFileData%stiff0(1,1,i) = temp_bend(1)
+           BladeInputFileData%stiff0(1,5,i) = BladeInputFileData%stiff0(1,1,i)*temp_xm3
+           BladeInputFileData%stiff0(1,6,i) =-BladeInputFileData%stiff0(1,1,i)*temp_xm2
        ENDDO
    ENDIF
 
