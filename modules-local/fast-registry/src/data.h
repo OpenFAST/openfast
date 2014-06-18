@@ -109,7 +109,7 @@ EXTERN node_t * ModNames ;
 EXTERN node_t Domain ;
 
 EXTERN char t1[NAMELEN], t2[NAMELEN], t3[NAMELEN], t4[NAMELEN], t5[NAMELEN], t6[NAMELEN] ;
-EXTERN char thiscom[4*NAMELEN] ;
+EXTERN char thiscom[8*NAMELEN] ;
 
 EXTERN int max_time_level  ;  /* Maximum number of time levels of any state variable */
 

@@ -855,7 +855,12 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
             gen_mask_alloc(fp, r->ndims, arrayname ) ;
 
             if      ( !strcmp( r->type->mapsto, "REAL(ReKi)") ) {
+               if ( is_pointer(r) ) { // bjj: this isn't very generic, but it's quick and will work for all current cases
+  fprintf(fp,"  %sOutData%%%s = REAL( UNPACK(ReKiBuf( %s ),mask%d,REAL(OutData%%%s,ReKi)), C_FLOAT)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+               }
+               else {
   fprintf(fp,"  %sOutData%%%s = UNPACK(ReKiBuf( %s ),mask%d,OutData%%%s)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+               }
             }
             else if ( !strcmp( r->type->mapsto, "REAL(SiKi)") )
                {
@@ -874,7 +879,12 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
           if ( r->ndims > 0 ) {
             gen_mask_alloc(fp, r->ndims, arrayname ) ;
+            if ( is_pointer(r) ) { // bjj: this isn't very generic, but it's quick and will work for all current cases
+  fprintf(fp,"  %sOutData%%%s = REAL( UNPACK(DbKiBuf( %s ),mask%d,REAL(OutData%%%s,DbKi)), C_DOUBLE)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+            }
+            else {
   fprintf(fp,"  %sOutData%%%s = UNPACK(DbKiBuf( %s ),mask%d,OutData%%%s)\n",indent,r->name,tmp4,r->ndims,r->name) ;
+            }
   fprintf(fp,"  DEALLOCATE(mask%d)\n",r->ndims) ;
           } else {
   fprintf(fp,"  %sOutData%%%s%s = DbKiBuf ( %s )\n",indent,r->name,tmp3,tmp4) ;
