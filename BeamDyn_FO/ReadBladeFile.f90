@@ -129,6 +129,17 @@
            BladeInputFileData%stiff0(1,1,i) = temp_bend(1)
            BladeInputFileData%stiff0(1,5,i) = BladeInputFileData%stiff0(1,1,i)*temp_xm3
            BladeInputFileData%stiff0(1,6,i) =-BladeInputFileData%stiff0(1,1,i)*temp_xm2
+           BladeInputFileData%stiff0(5,5,i) = temp_edg+BladeInputFileData%stiff0(1,1,i)*temp_xm3*temp_xm3
+           BladeInputFileData%stiff0(5,6,i) =-(temp_crs+BladeInputFileData%stiff0(1,1,i)*temp_xm2*temp_xm3)
+           BladeInputFileData%stiff0(6,6,i) = temp_flp+BladeInputFileData%stiff0(1,1,i)*temp_xm2*temp_xm2
+           BladeInputFileData%stiff0(5,1,i) = BladeInputFileData%stiff0(1,5,i)
+           BladeInputFileData%stiff0(6,1,i) = BladeInputFileData%stiff0(1,6,i)
+           BladeInputFileData%stiff0(6,5,i) = BladeInputFileData%stiff0(5,6,i)
+
+           CALL ComputeSectionalProperty(temp_sher(2),temp_sher(1),temp_sher(3),temp_flp,temp_edg,temp_crs)
+           temp_xm2 = temp_sher(5)
+           temp_xm3 = temp_sher(6)
+           BladeInputFileData%stiff0(4,4,i) = 
        ENDDO
    ENDIF
 
