@@ -1,5 +1,5 @@
 #ifndef REGISTRY_H
-#define NAMELEN 512
+#define NAMELEN 512        
 #define NAMELEN_LONG 12500 /*changed from 8192 to 12500 by PNNL on 12/22/2010*/
 #define MAXDIMS 21
 #define MAX_DYNCORES 50   /* ha ha, just kidding */
