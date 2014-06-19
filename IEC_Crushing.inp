@@ -1,0 +1,51 @@
+! Test input parameters for IceFloe
+!
+!  Model selection and general inputs
+!
+timeStep           0.1
+duration           60.0
+randomSeed         123
+rampTime           10.0
+!
+!  General ice property inputs
+!
+iceThickness       1.0
+iceVelocity        0.20
+iceDirection       0.0
+refIceStrength     2200000.0
+!
+!  Tower configuration inputs
+!
+towerDiameter      1.2
+numLegs            4.0
+towerFrequency     0.28
+!
+legX1               4.5
+legY1               4.5
+shelterFactor_ks1   1.0
+loadPhase1          0.0
+!
+legX2             -4.5
+legY2              4.5
+shelterFactor_ks2  1.0
+loadPhase2         45.0
+!
+legX3              4.5
+legY3             -4.5
+shelterFactor_ks3  1.0
+loadPhase3        135.0
+!
+legX4             -4.5
+legY4             -4.5
+shelterFactor_ks4  1.0
+loadPhase4         290.0
+!
+singleLoad         0
+legAutoFactor      0
+multiLegFactor_kn  1
+!
+!  Inputs for lock-in crushing
+!
+iceType            4
+shapeFactor_k1     0.900000
+contactFactor_k2   0.500000
