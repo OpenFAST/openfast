@@ -21,6 +21,16 @@ COPY "%CRUNCH%"                      "%bin_dir%"
 
 :dependencies
 
+:Registry
+ECHO FAST Registry
+SET src_folder=%REG_Loc%
+SET dst_folder=%depend_dir%\Registry
+SET list_of_files=%src_folder%\SourceFiles.txt
+
+if exist "%dst_folder%\*" DEL  "%dst_folder%\*"
+for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+
 :NWTC_Library
 ECHO NWTC_Library
 SET src_folder=%NWTC_Lib_Loc%\..
@@ -105,7 +115,7 @@ for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
 :IceDyn
 ECHO IceDyn
-SET src_folder=%ID_Loc%\..
+SET src_folder=%IceD_Loc%\..
 SET dst_folder=%depend_dir%\IceDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 

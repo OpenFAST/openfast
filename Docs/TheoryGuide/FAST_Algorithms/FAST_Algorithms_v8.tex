@@ -47,7 +47,7 @@
 		FEAMooring      & FEAM                  & FEAM      \\
 		InflowWind      & IfW                   & IfW       \\   
 		IceFloe         & IceFloe               & IceF      \\   
-		IceDyn          & ID                    & IceD      \\   
+		IceDyn          & IceD                  & IceD      \\   
 		\end{tabular}
 	\caption{Abbreviations for modules in FAST v8}
 	\label{tab:Abbrev}
@@ -139,7 +139,7 @@ The other input-output relationships for these modules are solved using Solve Op
 	\State $\mathit{y\_MAP}  \gets \Call{CalcOutput}{\mathit{p\_MAP},\mathit{u\_MAP},\mathit{x\_MAP},\mathit{xd\_MAP},\mathit{z\_MAP}}$ 
 	\State $\mathit{y\_FEAM} \gets \Call{CalcOutput}{\mathit{p\_FEAM},\mathit{u\_FEAM},\mathit{x\_FEAM},\mathit{xd\_FEAM},\mathit{z\_FEAM}}$
 	\State $\mathit{y\_IceF} \gets \Call{CalcOutput}{\mathit{p\_IceF},\mathit{u\_IceF},\mathit{x\_IceF},\mathit{xd\_IceF},\mathit{z\_IceF}}$
-	\State $\mathit{y\_IceD(:)} \gets \Call{CalcOutput}{\mathit{p\_IceD},\mathit{u\_IceD(:)},\mathit{x\_IceD(:)},\mathit{xd\_IceD(:)},\mathit{z\_IceD(:)}}$
+	\State $\mathit{y\_IceD(:)} \gets \Call{CalcOutput}{\mathit{p\_IceD(:)},\mathit{u\_IceD(:)},\mathit{x\_IceD(:)},\mathit{xd\_IceD(:)},\mathit{z\_IceD(:)}}$
 	\State
 	\State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_SD}$, and platform reference input from $\mathit{u\_ED}$}
 	\State

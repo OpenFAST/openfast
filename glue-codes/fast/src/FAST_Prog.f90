@@ -51,21 +51,21 @@ IMPLICIT  NONE
 TYPE :: IceDyn_Data !bjj: eventually, I'll put this in the Registry (and copy this for all modules)   
    ! [ the last dimension of each allocatable array is for the instance of IceDyn being used ]
    ! note that I'm making the allocatable-for-instance-used part INSIDE the data type (as opposed to an array of IceDyn_Data types) because I want to pass arrays of x, xd, z, x_pred, etc)
-   TYPE(ID_ContinuousStateType),ALLOCATABLE :: x(:)                                    ! Continuous states
-   TYPE(ID_DiscreteStateType)  ,ALLOCATABLE :: xd(:)                                   ! Discrete states
-   TYPE(ID_ConstraintStateType),ALLOCATABLE :: z(:)                                    ! Constraint states
-   TYPE(ID_OtherStateType)     ,ALLOCATABLE :: OtherSt(:)                              ! Other/optimization states
-   TYPE(ID_ParameterType)                   :: p                                       ! Parameters
-   TYPE(ID_InputType)          ,ALLOCATABLE :: u(:)                                    ! System inputs
-   TYPE(ID_OutputType)         ,ALLOCATABLE :: y(:)                                    ! System outputs
+   TYPE(IceD_ContinuousStateType),ALLOCATABLE :: x(:)                                    ! Continuous states
+   TYPE(IceD_DiscreteStateType)  ,ALLOCATABLE :: xd(:)                                   ! Discrete states
+   TYPE(IceD_ConstraintStateType),ALLOCATABLE :: z(:)                                    ! Constraint states
+   TYPE(IceD_OtherStateType)     ,ALLOCATABLE :: OtherSt(:)                              ! Other/optimization states
+   TYPE(IceD_ParameterType)      ,ALLOCATABLE :: p(:)                                    ! Parameters
+   TYPE(IceD_InputType)          ,ALLOCATABLE :: u(:)                                    ! System inputs
+   TYPE(IceD_OutputType)         ,ALLOCATABLE :: y(:)                                    ! System outputs
                                                                                 
-   TYPE(ID_ContinuousStateType),ALLOCATABLE :: x_pred(:)                               ! Predicted continuous states
-   TYPE(ID_DiscreteStateType)  ,ALLOCATABLE :: xd_pred(:)                              ! Predicted discrete states
-   TYPE(ID_ConstraintStateType),ALLOCATABLE :: z_pred(:)                               ! Predicted constraint states
-   TYPE(ID_OtherStateType)     ,ALLOCATABLE :: OtherSt_old(:)                          ! Other/optimization states (copied for the case of subcycling)
+   TYPE(IceD_ContinuousStateType),ALLOCATABLE :: x_pred(:)                               ! Predicted continuous states
+   TYPE(IceD_DiscreteStateType)  ,ALLOCATABLE :: xd_pred(:)                              ! Predicted discrete states
+   TYPE(IceD_ConstraintStateType),ALLOCATABLE :: z_pred(:)                               ! Predicted constraint states
+   TYPE(IceD_OtherStateType)     ,ALLOCATABLE :: OtherSt_old(:)                          ! Other/optimization states (copied for the case of subcycling)
                                                                             
-   TYPE(id_InputType)          ,ALLOCATABLE :: Input(:,:)                              ! Array of inputs associated with FEAM_InputTimes
-   REAL(DbKi)                  ,ALLOCATABLE :: InputTimes(:,:)                         ! Array of times associated with FEAM_Input   
+   TYPE(IceD_InputType)          ,ALLOCATABLE :: Input(:,:)                              ! Array of inputs associated with FEAM_InputTimes
+   REAL(DbKi)                    ,ALLOCATABLE :: InputTimes(:,:)                         ! Array of times associated with FEAM_Input   
 END TYPE                                                                          
    
 
@@ -248,9 +248,9 @@ REAL(DbKi),              ALLOCATABLE   :: IceF_InputTimes(:)                    
 
 
    ! Data for the IceDyn module:
-INTEGER, PARAMETER                     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling ID_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
-TYPE(ID_InitInputType)                 :: InitInData_IceD                         ! Initialization input data
-TYPE(ID_InitOutputType)                :: InitOutData_IceD                        ! Initialization output data (each instance will have the same output channels)
+INTEGER, PARAMETER                     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
+TYPE(IceD_InitInputType)               :: InitInData_IceD                         ! Initialization input data
+TYPE(IceD_InitOutputType)              :: InitOutData_IceD                        ! Initialization output data (each instance will have the same output channels)
                                                                                   
 TYPE(IceDyn_Data)                      :: IceD                                    ! All the IceDyn data used in time-step loop
 REAL(DbKi)                             :: dt_IceD                                 ! tmp dt variable to ensure IceDyn doesn't specify different dt values for different legs (IceDyn instances)
@@ -524,7 +524,7 @@ LOGICAL                               :: calcJacobian                           
 
       ! We need this to be allocated (else we have issues passing nonallocated arrays and using the first index of Input(),
       !   but we don't need the space of IceD_MaxLegs if we're not using it. 
-   IF ( p_FAST%CompIce == Module_IceD ) THEN   
+   IF ( p_FAST%CompIce /= Module_IceD ) THEN   
       IceDim = 1
    ELSE
       IceDim = IceD_MaxLegs
@@ -539,6 +539,7 @@ LOGICAL                               :: calcJacobian                           
                IceD%xd(          IceDim), &
                IceD%z(           IceDim), &
                IceD%OtherSt(     IceDim), &
+               IceD%p(           IceDim), &
                IceD%u(           IceDim), &
                IceD%y(           IceDim), &
                IceD%x_pred(      IceDim), &
@@ -580,7 +581,7 @@ LOGICAL                               :: calcJacobian                           
       InitInData_IceD%TMax          = p_FAST%TMax
       InitInData_IceD%LegNum        = 1
       
-      CALL ID_Init( InitInData_IceD, IceD%Input(1,1), IceD%p,  IceD%x(1), IceD%xd(1), IceD%z(1), IceD%OtherSt(1), IceD%y(1), p_FAST%dt_module( MODULE_IceD ), InitOutData_IceD, ErrStat, ErrMsg )
+      CALL IceD_Init( InitInData_IceD, IceD%Input(1,1), IceD%p(1),  IceD%x(1), IceD%xd(1), IceD%z(1), IceD%OtherSt(1), IceD%y(1), p_FAST%dt_module( MODULE_IceD ), InitOutData_IceD, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_IceD) = .TRUE.
          CALL CheckError( ErrStat, 'Message from IceD_Init: '//NewLine//ErrMsg )
 
@@ -598,7 +599,7 @@ LOGICAL                               :: calcJacobian                           
       DO i=2,p_FAST%numIceLegs  ! basically, we just need IceDyn to set up its meshes for inputs/outputs and possibly initial values for states
          InitInData_IceD%LegNum = i
          
-         CALL ID_Init( InitInData_IceD, IceD%Input(1,i), IceD%p,  IceD%x(i), IceD%xd(i), IceD%z(i), IceD%OtherSt(i), IceD%y(i), dt_IceD, InitOutData_IceD, ErrStat, ErrMsg )
+         CALL IceD_Init( InitInData_IceD, IceD%Input(1,i), IceD%p(i),  IceD%x(i), IceD%xd(i), IceD%z(i), IceD%OtherSt(i), IceD%y(i), dt_IceD, InitOutData_IceD, ErrStat, ErrMsg )
          
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n IceD modules with n timesteps.
          IF (.NOT. EqualRealNos( p_FAST%dt_module( MODULE_IceD ),dt_IceD )) THEN
@@ -661,8 +662,8 @@ LOGICAL                               :: calcJacobian                           
    CALL IceFloe_DestroyInitInput(  InitInData_IceF,  ErrStat, ErrMsg )
    CALL IceFloe_DestroyInitOutput( InitOutData_IceF, ErrStat, ErrMsg )
    
-   CALL ID_DestroyInitInput(  InitInData_IceD,  ErrStat, ErrMsg )
-   CALL ID_DestroyInitOutput( InitOutData_IceD, ErrStat, ErrMsg )
+   CALL IceD_DestroyInitInput(  InitInData_IceD,  ErrStat, ErrMsg )
+   CALL IceD_DestroyInitOutput( InitOutData_IceD, ErrStat, ErrMsg )
    
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! loose coupling
@@ -983,23 +984,23 @@ LOGICAL                               :: calcJacobian                           
          END DO
 
          DO j = 2, p_FAST%InterpOrder + 1
-            CALL ID_CopyInput (IceD%Input(1,i),  IceD%Input(j,i),  MESH_NEWCOPY, Errstat, ErrMsg)
-               CALL CheckError( ErrStat, 'Message from ID_CopyInput (IceD%Input): '//NewLine//ErrMsg )
+            CALL IceD_CopyInput (IceD%Input(1,i),  IceD%Input(j,i),  MESH_NEWCOPY, Errstat, ErrMsg)
+               CALL CheckError( ErrStat, 'Message from IceD_CopyInput (IceD%Input): '//NewLine//ErrMsg )
          END DO
-         CALL ID_CopyInput (IceD%Input(1,i),  IceD%u(i),  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-            CALL CheckError( ErrStat, 'Message from ID_CopyInput (IceD%u): '//NewLine//ErrMsg )      
+         CALL IceD_CopyInput (IceD%Input(1,i),  IceD%u(i),  MESH_NEWCOPY, Errstat, ErrMsg) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+            CALL CheckError( ErrStat, 'Message from IceD_CopyInput (IceD%u): '//NewLine//ErrMsg )      
                                
          
             ! Initialize predicted states for j_pc loop:
-         CALL ID_CopyContState   ( IceD%x(i),  IceD%x_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from ID_CopyContState (init): '//NewLine//ErrMsg )
-         CALL ID_CopyDiscState   (IceD%xd(i), IceD%xd_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)  
-            CALL CheckError( ErrStat, 'Message from ID_CopyDiscState (init): '//NewLine//ErrMsg )
-         CALL ID_CopyConstrState ( IceD%z(i),  IceD%z_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)
-            CALL CheckError( ErrStat, 'Message from ID_CopyConstrState (init): '//NewLine//ErrMsg )
+         CALL IceD_CopyContState   ( IceD%x(i),  IceD%x_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from IceD_CopyContState (init): '//NewLine//ErrMsg )
+         CALL IceD_CopyDiscState   (IceD%xd(i), IceD%xd_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)  
+            CALL CheckError( ErrStat, 'Message from IceD_CopyDiscState (init): '//NewLine//ErrMsg )
+         CALL IceD_CopyConstrState ( IceD%z(i),  IceD%z_pred(i), MESH_NEWCOPY, Errstat, ErrMsg)
+            CALL CheckError( ErrStat, 'Message from IceD_CopyConstrState (init): '//NewLine//ErrMsg )
          IF ( p_FAST%n_substeps( MODULE_IceD ) > 1 ) THEN
-            CALL ID_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_NEWCOPY, Errstat, ErrMsg)
-               CALL CheckError( ErrStat, 'Message from ID_CopyOtherState (init): '//NewLine//ErrMsg )   
+            CALL IceD_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_NEWCOPY, Errstat, ErrMsg)
+               CALL CheckError( ErrStat, 'Message from IceD_CopyOtherState (init): '//NewLine//ErrMsg )   
          END IF       
          
       END DO ! numIceLegs
@@ -1244,26 +1245,26 @@ LOGICAL                               :: calcJacobian                           
          
          DO i = 1,p_FAST%numIceLegs
          
-            CALL ID_Input_ExtrapInterp(IceD%Input(:,i), IceD%InputTimes(:,i), IceD%u(i), t_global_next, ErrStat, ErrMsg)
-               CALL CheckError(ErrStat,'Message from ID_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            CALL IceD_Input_ExtrapInterp(IceD%Input(:,i), IceD%InputTimes(:,i), IceD%u(i), t_global_next, ErrStat, ErrMsg)
+               CALL CheckError(ErrStat,'Message from IceD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
                         
-            !CALL ID_Output_ExtrapInterp(IceD%Output(:,i), IceD%OutputTimes(:,i), IceD%y(i), t_global_next, ErrStat, ErrMsg)
-            !   CALL CheckError(ErrStat,'Message from ID_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
+            !CALL IceD_Output_ExtrapInterp(IceD%Output(:,i), IceD%OutputTimes(:,i), IceD%y(i), t_global_next, ErrStat, ErrMsg)
+            !   CALL CheckError(ErrStat,'Message from IceD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
             
             
             ! Shift "window" of IceD%Input and IceD%Output
   
             DO j = p_FAST%InterpOrder, 1, -1
-               CALL ID_CopyInput (IceD%Input(j,i),  IceD%Input(j+1,i),  MESH_UPDATECOPY, Errstat, ErrMsg)
-              !CALL ID_CopyOutput(IceD%Output(j,i), IceD%Output(j+1,i), MESH_UPDATECOPY, Errstat, ErrMsg)
+               CALL IceD_CopyInput (IceD%Input(j,i),  IceD%Input(j+1,i),  MESH_UPDATECOPY, Errstat, ErrMsg)
+              !CALL IceD_CopyOutput(IceD%Output(j,i), IceD%Output(j+1,i), MESH_UPDATECOPY, Errstat, ErrMsg)
                IceD%InputTimes(j+1,i) = IceD%InputTimes(j,i)
                !IceD%OutputTimes(j+1,i) = IceD%OutputTimes(j,i)
             END DO
   
-            CALL ID_CopyInput (IceD%u(i),  IceD%Input(1,i),  MESH_UPDATECOPY, Errstat, ErrMsg)
-            !CALL ID_CopyOutput(IceD%y(i),  IceD%Output(1,i), MESH_UPDATECOPY, Errstat, ErrMsg)
-            IceD%InputTimes(1,1) = t_global_next          
-            !IceD%OutputTimes(1,1) = t_global_next 
+            CALL IceD_CopyInput (IceD%u(i),  IceD%Input(1,i),  MESH_UPDATECOPY, Errstat, ErrMsg)
+            !CALL IceD_CopyOutput(IceD%y(i),  IceD%Output(1,i), MESH_UPDATECOPY, Errstat, ErrMsg)
+            IceD%InputTimes(1,i) = t_global_next          
+            !IceD%OutputTimes(1,i) = t_global_next 
             
          END DO ! numIceLegs
          
@@ -1442,20 +1443,20 @@ LOGICAL                               :: calcJacobian                           
             
             DO i=1,p_FAST%numIceLegs
             
-               CALL ID_CopyContState   (IceD%x( i),IceD%x_pred( i), MESH_UPDATECOPY, Errstat, ErrMsg)
-               CALL ID_CopyDiscState   (IceD%xd(i),IceD%xd_pred(i), MESH_UPDATECOPY, Errstat, ErrMsg)  
-               CALL ID_CopyConstrState (IceD%z( i),IceD%z_pred( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+               CALL IceD_CopyContState   (IceD%x( i),IceD%x_pred( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+               CALL IceD_CopyDiscState   (IceD%xd(i),IceD%xd_pred(i), MESH_UPDATECOPY, Errstat, ErrMsg)  
+               CALL IceD_CopyConstrState (IceD%z( i),IceD%z_pred( i), MESH_UPDATECOPY, Errstat, ErrMsg)
 
                IF ( p_FAST%n_substeps( Module_IceD ) > 1 ) THEN
-                  CALL ID_CopyOtherState( IceD%OtherSt(i), IceD%OtherSt_old(I), MESH_UPDATECOPY, Errstat, ErrMsg)
+                  CALL IceD_CopyOtherState( IceD%OtherSt(i), IceD%OtherSt_old(I), MESH_UPDATECOPY, Errstat, ErrMsg)
                END IF
             
                DO j_ss = 1, p_FAST%n_substeps( Module_IceD )
                   n_t_module = n_t_global*p_FAST%n_substeps( Module_IceD ) + j_ss - 1
                   t_module   = n_t_module*p_FAST%dt_module( Module_IceD )
                
-                  CALL ID_UpdateStates( t_module, n_t_module, IceD%Input(:,i), IceD%InputTimes(:,i), IceD%p, IceD%x_pred(i), IceD%xd_pred(i), IceD%z_pred(i), IceD%OtherSt(i), ErrStat, ErrMsg )
-                     CALL CheckError( ErrStat, 'Message from ID_UpdateStates: '//NewLine//ErrMsg )
+                  CALL IceD_UpdateStates( t_module, n_t_module, IceD%Input(:,i), IceD%InputTimes(:,i), IceD%p(i), IceD%x_pred(i), IceD%xd_pred(i), IceD%z_pred(i), IceD%OtherSt(i), ErrStat, ErrMsg )
+                     CALL CheckError( ErrStat, 'Message from IceD_UpdateStates: '//NewLine//ErrMsg )
                END DO !j_ss
             END DO
          
@@ -1513,7 +1514,7 @@ LOGICAL                               :: calcJacobian                           
                CALL IceFloe_CopyOtherState( OtherSt_IceF_old, OtherSt_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
             ELSEIF ( p_FAST%n_substeps( Module_IceD ) > 1 ) THEN
                DO i=1,p_FAST%numIceLegs
-                  CALL ID_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_UPDATECOPY, Errstat, ErrMsg)
+                  CALL IceD_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_UPDATECOPY, Errstat, ErrMsg)
                END DO
             END IF
             
@@ -1585,9 +1586,9 @@ LOGICAL                               :: calcJacobian                           
          CALL IceFloe_CopyConstrState ( z_IceF_pred,  z_IceF, MESH_UPDATECOPY, Errstat, ErrMsg)
       ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
          DO i=1,p_FAST%numIceLegs
-            CALL ID_CopyContState   (IceD%x_pred( i), IceD%x( i), MESH_UPDATECOPY, Errstat, ErrMsg)
-            CALL ID_CopyDiscState   (IceD%xd_pred(i), IceD%xd(i), MESH_UPDATECOPY, Errstat, ErrMsg)  
-            CALL ID_CopyConstrState (IceD%z_pred( i), IceD%z( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+            CALL IceD_CopyContState   (IceD%x_pred( i), IceD%x( i), MESH_UPDATECOPY, Errstat, ErrMsg)
+            CALL IceD_CopyDiscState   (IceD%xd_pred(i), IceD%xd(i), MESH_UPDATECOPY, Errstat, ErrMsg)  
+            CALL IceD_CopyConstrState (IceD%z_pred( i), IceD%z( i), MESH_UPDATECOPY, Errstat, ErrMsg)
          END DO
       END IF
 
@@ -2106,9 +2107,9 @@ CONTAINS
       TYPE(IceFloe_DiscreteStateType)   , intent(in   ) :: xd_IceF_this                       ! These discrete states (either actual or predicted)
       TYPE(IceFloe_ConstraintStateType) , intent(in   ) :: z_IceF_this                        ! These constraint states (either actual or predicted)
       !IceDyn:                                
-      TYPE(ID_ContinuousStateType)      , intent(in   ) :: x_IceD_this(:)                     ! These continuous states (either actual or predicted)
-      TYPE(ID_DiscreteStateType)        , intent(in   ) :: xd_IceD_this(:)                    ! These discrete states (either actual or predicted)
-      TYPE(ID_ConstraintStateType)      , intent(in   ) :: z_IceD_this(:)                     ! These constraint states (either actual or predicted)
+      TYPE(IceD_ContinuousStateType)    , intent(in   ) :: x_IceD_this(:)                     ! These continuous states (either actual or predicted)
+      TYPE(IceD_DiscreteStateType)      , intent(in   ) :: xd_IceD_this(:)                    ! These discrete states (either actual or predicted)
+      TYPE(IceD_ConstraintStateType)    , intent(in   ) :: z_IceD_this(:)                     ! These constraint states (either actual or predicted)
                   
          ! Local variable:
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2240,9 +2241,9 @@ CONTAINS
       TYPE(IceFloe_DiscreteStateType)   , intent(in   ) :: xd_IceF_this                       ! These discrete states (either actual or predicted)
       TYPE(IceFloe_ConstraintStateType) , intent(in   ) :: z_IceF_this                        ! These constraint states (either actual or predicted)
       !IceDyn:                                
-      TYPE(ID_ContinuousStateType)      , intent(in   ) :: x_IceD_this(:)                     ! These continuous states (either actual or predicted)
-      TYPE(ID_DiscreteStateType)        , intent(in   ) :: xd_IceD_this(:)                    ! These discrete states (either actual or predicted)
-      TYPE(ID_ConstraintStateType)      , intent(in   ) :: z_IceD_this(:)                     ! These constraint states (either actual or predicted)
+      TYPE(IceD_ContinuousStateType)    , intent(in   ) :: x_IceD_this(:)                     ! These continuous states (either actual or predicted)
+      TYPE(IceD_DiscreteStateType)      , intent(in   ) :: xd_IceD_this(:)                    ! These discrete states (either actual or predicted)
+      TYPE(IceD_ConstraintStateType)    , intent(in   ) :: z_IceD_this(:)                     ! These constraint states (either actual or predicted)
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
       !           modules coupled together
@@ -2269,8 +2270,8 @@ CONTAINS
       ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
          
          DO i=1,p_FAST%numIceLegs                  
-            CALL ID_CalcOutput( this_time, IceD%Input(1,i), IceD%p, x_IceD_this(i), xd_IceD_this(i), z_IceD_this(i), IceD%OtherSt(i), IceD%y(i), ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from ID_CalcOutput: '//NewLine//ErrMsg  )
+            CALL IceD_CalcOutput( this_time, IceD%Input(1,i), IceD%p(i), x_IceD_this(i), xd_IceD_this(i), z_IceD_this(i), IceD%OtherSt(i), IceD%y(i), ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from IceD_CalcOutput: '//NewLine//ErrMsg  )
          END DO
          
       END IF
@@ -2349,8 +2350,8 @@ CONTAINS
          
          DO i=1,p_FAST%numIceLegs
             
-            CALL ID_InputSolve(  IceD%Input(1,i), y_SD, MeshMapData, i, ErrStat, ErrMsg )
-               CALL CheckError( ErrStat, 'Message from ID_InputSolve: '//NewLine//ErrMsg  )
+            CALL IceD_InputSolve(  IceD%Input(1,i), y_SD, MeshMapData, i, ErrStat, ErrMsg )
+               CALL CheckError( ErrStat, 'Message from IceD_InputSolve: '//NewLine//ErrMsg  )
                
          END DO
          
@@ -2507,9 +2508,8 @@ CONTAINS
          IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
       ELSEIF ( p_FAST%ModuleInitialized(Module_IceD) ) THEN
          
-         !bjj: todo: ADD PARAMETERS TO ICEDYN LEG ARRAYS.... i.e., IceD%p(i); what if an output file unit is specified???? or if we deallocate arrays in the first call, but need them in subsequent calls for other legs:
          DO i=1,p_FAST%numIceLegs                     
-            CALL ID_End(IceD%Input(1,i),  IceD%p,  IceD%x(i),  IceD%xd(i),  IceD%z(i),  IceD%OtherSt(i),  IceD%y(i),  ErrStat2, ErrMsg2)
+            CALL IceD_End(IceD%Input(1,i),  IceD%p(i),  IceD%x(i),  IceD%xd(i),  IceD%z(i),  IceD%OtherSt(i),  IceD%y(i),  ErrStat2, ErrMsg2)
             IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )            
          END DO
          
@@ -2545,8 +2545,8 @@ CONTAINS
       CALL IceFloe_DestroyInitInput(  InitInData_IceF, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       CALL IceFloe_DestroyInitOutput( InitOutData_IceF,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
 
-      CALL ID_DestroyInitInput(       InitInData_IceD, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL ID_DestroyInitOutput(      InitOutData_IceD,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL IceD_DestroyInitInput(     InitInData_IceD, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
+      CALL IceD_DestroyInitOutput(    InitOutData_IceD,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
       
       
       ! -------------------------------------------------------------------------
@@ -2725,23 +2725,24 @@ CONTAINS
          IF ( ALLOCATED(IceD%Input)  ) THEN
             DO i=1,p_FAST%numIceLegs
                DO j = 2,p_FAST%InterpOrder+1 !note that IceD%Input(1,:) was destroyed in ID_End
-                  CALL ID_DestroyInput( IceD%Input(j,i), ErrStat2, ErrMsg2 );   IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+                  CALL IceD_DestroyInput( IceD%Input(j,i), ErrStat2, ErrMsg2 );   IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
                END DO
             END DO
          END IF
                               
          IF ( ALLOCATED(IceD%OtherSt_old) ) THEN  ! and all the others that need to be allocated...
             DO i=1,p_FAST%numIceLegs
-               CALL ID_DestroyContState(  IceD%x(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyDiscState(  IceD%xd(         i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyConstrState(IceD%z(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyOtherState( IceD%OtherSt(    i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyInput(      IceD%u(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyOutput(     IceD%y(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                              
-               CALL ID_DestroyContState(  IceD%x_pred(     i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyDiscState(  IceD%xd_pred(    i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyConstrState(IceD%z_pred(     i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
-               CALL ID_DestroyOtherState( IceD%OtherSt_old(i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                              
+               CALL IceD_DestroyContState(  IceD%x(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyDiscState(  IceD%xd(         i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyConstrState(IceD%z(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyOtherState( IceD%OtherSt(    i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyParam(      IceD%p(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyInput(      IceD%u(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyOutput(     IceD%y(          i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                              
+               CALL IceD_DestroyContState(  IceD%x_pred(     i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyDiscState(  IceD%xd_pred(    i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyConstrState(IceD%z_pred(     i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )
+               CALL IceD_DestroyOtherState( IceD%OtherSt_old(i), ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr( TRIM(ErrMsg2) )                              
             END DO                        
          END IF         
          
@@ -2753,6 +2754,7 @@ CONTAINS
       IF ( ALLOCATED(IceD%xd         ) ) DEALLOCATE( IceD%xd         )      
       IF ( ALLOCATED(IceD%z          ) ) DEALLOCATE( IceD%z          )      
       IF ( ALLOCATED(IceD%OtherSt    ) ) DEALLOCATE( IceD%OtherSt    )      
+      IF ( ALLOCATED(IceD%p          ) ) DEALLOCATE( IceD%p          )      
       IF ( ALLOCATED(IceD%u          ) ) DEALLOCATE( IceD%u          )      
       IF ( ALLOCATED(IceD%y          ) ) DEALLOCATE( IceD%y          )      
       IF ( ALLOCATED(IceD%x_pred     ) ) DEALLOCATE( IceD%x_pred     )      
