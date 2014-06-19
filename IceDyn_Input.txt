@@ -1,13 +1,16 @@
---------------------------------------------------------------------------------
 ---------------------- FAST ICE FILE -------------------------------------------
 Freshwater Ice of Great Lakes input properties.
+---------------------- STRUCTURE PROPERTIES ------------------------------------
+ 1       NumLegs     - number of support-structure legs in contact with ice
+ 0       LegPosX     - array of size NumLegs: global X position of legs 1-NumLegs (m)
+ 0       LegPosY     - array of size NumLegs: global Y position of legs 1-NumLegs (m)
+4.0      StWidth 	   - Width of the structure in contact with the ice, or diameter for cylindrical structures (m)
 ---------------------- Ice MODELS ----------------------------------------------
  1	IceModel	-Number that represents different ice models. 1 for quasi-static load. 2 for dynamic ice-structure interaction. 3 for random ice load. 4 for non-simultaneous ice failure. 5 for sloping structure. 6 for large ice floe impact.
  1 	IceSubModel 	-Number that represents different ice sub models. 
 ---------------------- Ice PROPERTIES -General ---------------------------------
 0.2	IceVel		-Velocity of ice sheet movement (m/s)
 0.65 	IceThks 	-Thickness of the ice sheet (m)
-4.0 	StWidth 	-Width of the structure in contact with the ice, or diameter for cylindrical structures (m)
 1000	WtDen		-Mass density of water (kg/m3)
 900	IceDen		-Mass density of ice (kg/m3)
 0	InitLoc		-Ice sheet initial location (m)	

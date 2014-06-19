@@ -42,55 +42,55 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: ID_Ver = ProgDesc( 'IceDyn', 'v1.00.01', '27-Oct-2013' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.00.01', '20-Jun-2014' )
 
    ! ..... Public Subroutines ...................................................................................................
 
-   PUBLIC :: ID_Init                           ! Initialization routine
-   PUBLIC :: ID_End                            ! Ending routine (includes clean up)
+   PUBLIC :: IceD_Init                           ! Initialization routine
+   PUBLIC :: IceD_End                            ! Ending routine (includes clean up)
 
-   PUBLIC :: ID_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
+   PUBLIC :: IceD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
                                                !   continuous states, and updating discrete states
-   PUBLIC :: ID_CalcOutput                     ! Routine for computing outputs
+   PUBLIC :: IceD_CalcOutput                     ! Routine for computing outputs
 
-   PUBLIC :: ID_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: ID_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: ID_UpdateDiscState                ! Tight coupling routine for updating discrete states
+   PUBLIC :: IceD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+   PUBLIC :: IceD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
+   PUBLIC :: IceD_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
 !..................................................................................................................................
 
-   TYPE(ID_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(ID_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(ID_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-   TYPE(ID_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(ID_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(ID_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(ID_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(ID_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                               !   only the output mesh is initialized)
-   REAL(DbKi),                   INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
-                                                               !   (1) ID_UpdateStates() is called in loose coupling &
-                                                               !   (2) ID_UpdateDiscState() is called in tight coupling.
-                                                               !   Input is the suggested time from the glue code;
-                                                               !   Output is the actual coupling interval that will be used
-                                                               !   by the glue code.
-   TYPE(ID_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(IceD_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
+   TYPE(IceD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
+   TYPE(IceD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
+   TYPE(IceD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
+   TYPE(IceD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
+   TYPE(IceD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
+   TYPE(IceD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
+   TYPE(IceD_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
+                                                                 !   only the output mesh is initialized)
+   REAL(DbKi),                     INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
+                                                                 !   (1) IceD_UpdateStates() is called in loose coupling &
+                                                                 !   (2) IceD_UpdateDiscState() is called in tight coupling.
+                                                                 !   Input is the suggested time from the glue code;
+                                                                 !   Output is the actual coupling interval that will be used
+                                                                 !   by the glue code.
+   TYPE(IceD_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
 
-   TYPE(ID_InputFile)                           :: InputFileData           ! Data stored in the module's input file
-   INTEGER(IntKi)                               :: ErrStat2                ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                       :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
-   REAL(ReKi)                                   :: TmpPos(3)
+   TYPE(IceD_InputFile)                           :: InputFileData           ! Data stored in the module's input file
+   INTEGER(IntKi)                                 :: ErrStat2                ! temporary Error status of the operation
+   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                                     :: TmpPos(3)
 
 
       ! Initialize variables for this routine
@@ -103,38 +103,40 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL NWTC_Init( EchoLibVer=.FALSE. )
 
+   
       ! Display the module information
 
-   CALL DispNVD( ID_Ver )
+   IF (InitInp%LegNum == 1) CALL DispNVD( IceD_Ver )  ! We don't need to see the version info more than one time
 
       !............................................................................................
       ! Read the input file and validate the data
       !............................................................................................
-   p%RootName = TRIM(InitInp%RootName)//'.ID' ! all of the output file names from this module will end with '.ID'
+   p%RootName = TRIM(InitInp%RootName)//'.IceD' ! all of the output file names from this module will end with '.IceD'
 
-   CALL ID_ReadInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
+   CALL IceD_ReadInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-   ! CALL ID_ValidateInput( InputFileData, ErrStat2, ErrMsg2 )
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF (ErrStat >= AbortErrLev) RETURN
-
-      !............................................................................................
-      ! Define parameters here:
-      !............................................................................................
-   CALL ID_SetParameters( InputFileData, p, Interval, InitInp%Tmax, ErrStat2, ErrMsg2 )
+    CALL IceD_ValidateInput( InputFileData, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-      p%verif = 1
-      p%method = 1
-      p%dt = Interval
-      p%tolerance = 1e-6
+      ! make sure the InitInp%LegNum makes sense:
+   IF ( InputFileData%NumLegs < InitInp%LegNum .OR. InitInp%LegNum < 1 ) THEN
+      CALL CheckError( ErrID_Fatal, 'IceDyn input file specified '//trim(num2lstr(InputFileData%NumLegs))// &
+                        ' legs. The glue/driver code requested data for leg '//trim(num2lstr(InitInp%LegNum))//'.')
+      RETURN
+   END IF
+   
+   
+      !............................................................................................
+      ! Define parameters here:
+      !............................................................................................
+   CALL IceD_SetParameters( InputFileData, p, Interval, InitInp%Tmax, InitInp%LegNum, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+
       
-
-   !p%DT  = Interval !bjj: this is set in ID_SetParameters
-
 
       !............................................................................................
       ! Define initial system states here:
@@ -161,41 +163,22 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
     ENDIF
 
       ! initialize the discrete states:
-   !CALL ID_Init_DiscrtStates( xd, p, InputFileData, ErrStat2, ErrMsg2 )     ! initialize the continuous states
+   !CALL IceD_Init_DiscrtStates( xd, p, InputFileData, ErrStat2, ErrMsg2 )     ! initialize the continuous states
    !   CALL CheckError( ErrStat2, ErrMsg2 )
    !   IF (ErrStat >= AbortErrLev) RETURN
    
    xd%DummyDiscState      = 0
 
       ! Initialize other states:
-    CALL ID_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat2, ErrMsg2 )    ! initialize the other states
+    CALL IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat2, ErrMsg2 )    ! initialize the other states
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
-      if ( p%method .eq. 2) then
-
-         Allocate( OtherState%xdot(4), STAT=ErrStat )
-         IF (ErrStat /= 0) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' Error in IceDyn: could not allocate OtherStat%xdot.'
-            RETURN
-         END IF
-
-      elseif ( p%method .eq. 3) then
-
-         Allocate( OtherState%xdot(4), STAT=ErrStat )
-         IF (ErrStat /= 0) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' Error in IceDyn: could not allocate OtherStat%xdot.'
-            RETURN
-         END IF
-
-      endif
 
       !............................................................................................
       ! Define initial guess for the system inputs and output (set up meshes) here:
       !............................................................................................
-
+      
       ! set up meshes for inputs and outputs:      
       
       ! Define system output initializations (set up mesh) here:
@@ -215,8 +198,8 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                                 , ErrMess  = ErrMsg             )
 
       ! place single node at water level; position affects mapping/coupling with other modules
-      TmpPos(1) = 0.  !bjj todo: these need to be set from the input file, based on legNum
-      TmpPos(2) = 0.  !bjj todo: these need to be set from the input file, based on legNum
+      TmpPos(1) = InputFileData%LegPosX( InitInp%LegNum )  
+      TmpPos(2) = InputFileData%LegPosY( InitInp%LegNum )  
       TmpPos(3) = InitInp%MSL2SWL
 
       CALL MeshPositionNode ( Mesh  = u%PointMesh   &
@@ -238,7 +221,7 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
       ! Define initial guess for the system inputs here:      
       u%PointMesh%TranslationDisp = 0.0_ReKi    ! initialize all components of all (1) points
-      u%PointMesh%TranslationVel = 0.0_ReKi     ! initialize all components of all (1) points  [bjj: does not appear to be used...]
+      u%PointMesh%TranslationVel  = 0.0_ReKi    ! initialize all components of all (1) points  [bjj: does not appear to be used...]
 
       y%PointMesh%Force = 0.0_ReKi              ! initialize all components of all (1) points
       
@@ -268,42 +251,33 @@ SUBROUTINE ID_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    InitOut%WriteOutputHdr = p%OutName
    InitOut%WriteOutputUnt = p%OutUnit
 
-   InitOut%Ver     = ID_Ver
-   InitOut%numLegs = 1  ! bjj todo: this needs to come from the input file
+   InitOut%Ver     = IceD_Ver
+   InitOut%numLegs = InputFileData%NumLegs
    
    !bjj todo: check that water density is the same
    
    IF ( .NOT. EqualRealNos( InputFileData%rhow, InitInp%WtrDens ) ) THEN
-      CALL CheckError( ErrID_Warn, 'ID_Init: water density from IceDyn input file ('//trim(num2Lstr(InputFileData%rhow))//& 
+      CALL CheckError( ErrID_Warn, 'IceD_Init: water density from IceDyn input file ('//trim(num2Lstr(InputFileData%rhow))//& 
                                 ' kg/m^3) differs from water density in glue code ('//trim(num2Lstr(InitInp%WtrDens))//' kg/m^3).')
    END IF
       
    IF ( .NOT. EqualRealNos( 9.81_ReKi, InitInp%gravity ) ) THEN
-      CALL CheckError( ErrID_Warn, 'ID_Init: gravity hard-coded in IceDyn ('//trim(num2Lstr(9.81))//& 
+      CALL CheckError( ErrID_Warn, 'IceD_Init: gravity hard-coded in IceDyn ('//trim(num2Lstr(9.81))//& 
                                        ' m/s^2) differs from gravity in glue code ('//trim(num2Lstr(InitInp%gravity))//' m/s^2).')
    END IF
    
-   
-      !............................................................................................
-      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-      !   this module must be called here:
-      !............................................................................................
-
-  ! Interval = p%DT
-  
-  
-
+       
 
   !     ! Print the summary file if requested:
   ! IF (InputFileData%SumPrint) THEN
-  !    CALL ID_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
+  !    CALL IceD_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
   !       CALL CheckError( ErrStat2, ErrMsg2 )
   !       IF (ErrStat >= AbortErrLev) RETURN
   ! END IF
 
        ! Destroy the InputFileData structure (deallocate arrays)
 
-   CALL ID_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
+   CALL IceD_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -334,7 +308,7 @@ CONTAINS
          ! Clean up if we're going to return on error: close files, deallocate local arrays
          !.........................................................................................................................
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL ID_DestroyInputFile(InputFileData, ErrStat3, ErrMsg3 )
+            CALL IceD_DestroyInputFile(InputFileData, ErrStat3, ErrMsg3 )
          END IF
 
       END IF
@@ -342,23 +316,23 @@ CONTAINS
 
    END SUBROUTINE CheckError
 
-END SUBROUTINE ID_Init
+END SUBROUTINE IceD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+SUBROUTINE IceD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 !
 ! This routine is called at the end of the simulation.
 !..................................................................................................................................
 
-      TYPE(ID_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(ID_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(ID_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(ID_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(ID_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(ID_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u           ! System inputs
+      TYPE(IceD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
+      TYPE(IceD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
+      TYPE(IceD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! Initialize ErrStat
 
@@ -371,27 +345,27 @@ SUBROUTINE ID_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! Destroy the input data:
 
-      CALL ID_DestroyInput( u, ErrStat, ErrMsg )
+      CALL IceD_DestroyInput( u, ErrStat, ErrMsg )
 
       ! Destroy the parameter data:
 
-      CALL ID_DestroyParam( p, ErrStat, ErrMsg )
+      CALL IceD_DestroyParam( p, ErrStat, ErrMsg )
 
       ! Destroy the state data:
 
-      CALL ID_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL ID_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL ID_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL ID_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+      CALL IceD_DestroyContState(   x,           ErrStat, ErrMsg )
+      CALL IceD_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+      CALL IceD_DestroyConstrState( z,           ErrStat, ErrMsg )
+      CALL IceD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
 
       ! Destroy the output data:
 
-      CALL ID_DestroyOutput( y, ErrStat, ErrMsg )
+      CALL IceD_DestroyOutput( y, ErrStat, ErrMsg )
 
 
-END SUBROUTINE ID_End
+END SUBROUTINE IceD_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! Routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Constraint states are solved for input t; Continuous and discrete states are updated for t + p%dt
@@ -400,23 +374,23 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
 
       REAL(DbKi),                         INTENT(IN   ) :: t          ! Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-      TYPE(ID_InputType),                 INTENT(INOUT) :: u(:)       ! Inputs at utimes
+      TYPE(IceD_InputType),               INTENT(INOUT) :: u(:)       ! Inputs at utimes
       REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-      TYPE(ID_ParameterType),             INTENT(IN   ) :: p          ! Parameters
-      TYPE(ID_ContinuousStateType),       INTENT(INOUT) :: x          ! Input: Continuous states at t;
+      TYPE(IceD_ParameterType),           INTENT(IN   ) :: p          ! Parameters
+      TYPE(IceD_ContinuousStateType),     INTENT(INOUT) :: x          ! Input: Continuous states at t;
                                                                       !   Output: Continuous states at t + Interval
-      TYPE(ID_DiscreteStateType),         INTENT(INOUT) :: xd         ! Input: Discrete states at t;
+      TYPE(IceD_DiscreteStateType),       INTENT(INOUT) :: xd         ! Input: Discrete states at t;
                                                                       !   Output: Discrete states at t  + Interval
-      TYPE(ID_ConstraintStateType),       INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
+      TYPE(IceD_ConstraintStateType),     INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
                                                                       !   Output: Constraint states at t+dt
-      TYPE(ID_OtherStateType),            INTENT(INOUT) :: OtherState ! Other/optimization states
+      TYPE(IceD_OtherStateType),          INTENT(INOUT) :: OtherState ! Other/optimization states
       INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    ! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
       ! local variables
 
-      TYPE(ID_InputType)                               :: u_interp      ! input interpolated from given u at utimes
-      !TYPE(ID_ContinuousStateType)                     :: xdot          ! continuous state time derivative
+      TYPE(IceD_InputType)                              :: u_interp      ! input interpolated from given u at utimes
+      !TYPE(IceD_ContinuousStateType)                   :: xdot          ! continuous state time derivative
       INTEGER(IntKi)                                    :: I             ! Loop count
       REAL(ReKi)                                        :: Del2          ! Deflection of the current ice tooth, for model 2,3
 !      REAL(ReKi)                                       :: Del(p%Zn)     ! Deflection of ice tooth in each zone, for model 4
@@ -439,16 +413,16 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       ErrMsg  = ""
       
       
-      CALL ID_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, 'ID_UpdateStates')
+      CALL IceD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, 'IceD_UpdateStates')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
          END IF
                      
       ! interpolate u to find u_interp = u(t)
-      CALL ID_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, 'ID_UpdateStates')
+      CALL IceD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, 'IceD_UpdateStates')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -506,20 +480,20 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
 
            if (p%method .eq. 1) then
 
-               CALL ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+               CALL IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
             elseif (p%method .eq. 2) then
 
-               CALL ID_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+               CALL IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
             elseif (p%method .eq. 3) then
 
-               CALL ID_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+               CALL IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
             else
 
                ErrStat = ErrID_Fatal
-               ErrMsg  = ' Error in ID_UpdateStates: p%method must be 1 (RK4), 2 (AB4), or 3 (ABM4)'
+               ErrMsg  = ' Error in IceD_UpdateStates: p%method must be 1 (RK4), 2 (AB4), or 3 (ABM4)'
                RETURN
 
             endif
@@ -533,28 +507,28 @@ SUBROUTINE ID_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
 CONTAINS      
    SUBROUTINE Cleanup()
    
-   CALL ID_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
+   CALL IceD_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
 
    END SUBROUTINE Cleanup
       
-END SUBROUTINE ID_UpdateStates
+END SUBROUTINE IceD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 !
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..................................................................................................................................
 
-      REAL(DbKi),                    INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(ID_InputType),            INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(ID_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(ID_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ID_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(ID_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(ID_OutputType),           INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
+      REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
+      TYPE(IceD_InputType),            INTENT(IN   )  :: u           ! Inputs at t
+      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
+      TYPE(IceD_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
+      TYPE(IceD_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_OutputType),           INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
                                                                     !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
       INTEGER(IntKi)                    :: I                        ! Loop count
@@ -755,27 +729,27 @@ SUBROUTINE ID_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             
       
       ! values to write to a file:
-      y%WriteOutput(1) = x%q                     ! IceDisp  !bjj: do we need to recalculate this???
+      y%WriteOutput(1) = x%q                     ! IceDisp  !bjj: todo: do we need to recalculate this???
       y%WriteOutput(2) = y%PointMesh%Force(1,1)  ! IceForce
       
       
-END SUBROUTINE ID_CalcOutput
+END SUBROUTINE IceD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 !
 ! Routine for computing derivatives of continuous states.
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(ID_InputType),             INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(ID_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),   INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(ID_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ID_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(ID_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(ID_ContinuousStateType),   INTENT(  OUT)  :: xdot        ! Continuous state derivatives at t
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
+      TYPE(IceD_InputType),             INTENT(IN   )  :: u           ! Inputs at t
+      TYPE(IceD_ParameterType),         INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType),   INTENT(IN   )  :: x           ! Continuous states at t
+      TYPE(IceD_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(IceD_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t
+      TYPE(IceD_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_ContinuousStateType),   INTENT(  OUT)  :: xdot        ! Continuous state derivatives at t
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
       ! REAL(ReKi) :: mass    ! Mass of ice feature (kg)
@@ -789,24 +763,24 @@ SUBROUTINE ID_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, 
 
       
 
-END SUBROUTINE ID_CalcContStateDeriv
+END SUBROUTINE IceD_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+SUBROUTINE IceD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! Routine for updating discrete states
 !..................................................................................................................................
 
-      REAL(DbKi),                    INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(ID_InputType),            INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(ID_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(ID_DiscreteStateType),    INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
+      REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
+      INTEGER(IntKi),                  INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
+      TYPE(IceD_InputType),            INTENT(IN   )  :: u           ! Inputs at t
+      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
+      TYPE(IceD_DiscreteStateType),    INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
                                                                     !   Output: Discrete states at t + Interval
-      TYPE(ID_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(ID_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
+      TYPE(IceD_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -818,24 +792,24 @@ SUBROUTINE ID_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
       ! Update discrete states here:
             xd%DummyDiscState = 0.0
 
-END SUBROUTINE ID_UpdateDiscState
+END SUBROUTINE IceD_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
+SUBROUTINE IceD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
 !
 ! Routine for solving for the residual of the constraint state functions
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(ID_InputType),            INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(ID_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(ID_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ID_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ID_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(ID_ConstraintStateType),  INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state functions using
+      REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
+      TYPE(IceD_InputType),            INTENT(IN   )  :: u           ! Inputs at t
+      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
+      TYPE(IceD_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(IceD_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_ConstraintStateType),  INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state functions using
                                                                     !     the input values described above
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
       ! Initialize ErrStat
@@ -848,9 +822,9 @@ SUBROUTINE ID_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual
 
       Z_residual%DummyConstrState = 0
 
-END SUBROUTINE ID_CalcConstrStateResidual
+END SUBROUTINE IceD_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for IceDyn from the file whose name is an
 !     input parameter.
 !----------------------------------------------------------------------------------------------------
@@ -858,8 +832,8 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! Passed variables
 
-   TYPE(ID_InitInputType),        INTENT( IN    )   :: InitInp              ! the IceDyn initial input data
-   TYPE(ID_InputFile),            INTENT(   OUT )   :: InputFileData        ! Data stored in the IceDyn's input file
+   TYPE(IceD_InitInputType),      INTENT( IN    )   :: InitInp              ! the IceDyn initial input data
+   TYPE(IceD_InputFile),          INTENT(   OUT )   :: InputFileData        ! Data stored in the IceDyn's input file
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -868,6 +842,9 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    INTEGER                                          :: UnIn                 ! Unit number for the input file
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
+   
+   INTEGER                                          :: UnEc                 ! Unit number for the echo file
+   LOGICAL, PARAMETER                               :: Echo = .FALSE.       ! echo file for debugging
 
 
 
@@ -875,95 +852,172 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-
+   UnEc    = -1
+   UnIn    = -1
 
    !-------------------------------------------------------------------------------------------------
    ! Open the file
    !-------------------------------------------------------------------------------------------------
+   IF ( Echo ) THEN
+      CALL GetNewUnit( UnEc, ErrStat, ErrMsg )      
+      CALL OpenFOutFile( UnEc, TRIM(InitInp%RootName)//'.IceD.ech', ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) THEN
+         CALL WrScr( ' Error opening echo file: "'//TRIM(ErrMsg)//'". Simulation will continue with no IceDyn echo file.' )
+         CLOSE( UnEc )
+         UnEc = -1
+      END IF
+   END IF   
+   
+   
+   
    FileName = TRIM(InitInp%InputFile)
 
-   CALL GetNewUnit( UnIn )
-   CALL OpenFInpFile( UnIn, FileName, ErrStat )
+   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
+   CALL OpenFInpFile( UnIn, FileName, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to open IceDyn input file: '//FileName
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
 
-   !CALL WrScr( 'Opening HydroDyn input file:  '//FileName )
+   !CALL WrScr( 'Opening IceDyn input file:  '//FileName )
 
 
    !-------------------------------------------------------------------------------------------------
    ! File header
    !-------------------------------------------------------------------------------------------------
 
-   CALL ReadCom( UnIn, FileName, 'IceDyn input file header line 1', ErrStat )
+   CALL ReadCom( UnIn, FileName, 'IceDyn input file header line 1', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read HydroDyn input file header line 1.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
-
-   CALL ReadCom( UnIn, FileName, 'IceDyn input file header line 2', ErrStat )
+   CALL ReadCom( UnIn, FileName, 'IceDyn input file header line 2', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read HydroDyn input file header line 2.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
-   CALL ReadCom( UnIn, FileName, 'IceDyn input file header line 3', ErrStat )
+   !-------------------------------------------------------------------------------------------------
+   ! Structure properties
+   !-------------------------------------------------------------------------------------------------
+
+   CALL ReadCom( UnIn, FileName, 'IceDyn structure properties header line', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read HydroDyn input file header line 3.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+      ! NumLegs - Number of support-structure legs in contact with ice
+
+   CALL ReadVar ( UnIn, FileName, InputFileData%NumLegs, 'NumLegs', 'Number of support-structure legs in contact with ice', ErrStat, ErrMsg, UnEc )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
       RETURN
    END IF
 
+   IF ( InputFileData%NumLegs < 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'IceD_ReadInput: NumLegs must be a positive number.'
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   CALL AllocAry( InputFileData%LegPosX,  InputFileData%NumLegs, 'LegPosX', ErrStat, ErrMsg ) 
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   CALL AllocAry( InputFileData%LegPosY,  InputFileData%NumLegs, 'LegPosY', ErrStat, ErrMsg ) 
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   CALL AllocAry( InputFileData%StrWd,  InputFileData%NumLegs, 'StrWd', ErrStat, ErrMsg ) 
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   
+   ! LegPosX  - Global X position of legs 1-NumLegs (m)
+   
+   CALL ReadAry ( UnIn, FileName, InputFileData%LegPosX, InputFileData%NumLegs, 'LegPosX', 'Global X position of legs, 1-NumLegs (m)', ErrStat, ErrMsg, UnEc )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   ! LegPosY  - Global Y position of legs 1-NumLegs (m)
+   
+   CALL ReadAry ( UnIn, FileName, InputFileData%LegPosY, InputFileData%NumLegs, 'LegPosY', 'Global Y position of legs, 1-NumLegs (m)', ErrStat, ErrMsg, UnEc )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   
+   ! StWidth  - Width of the structure in contact with the ice (m)
+
+   CALL ReadAry ( UnIn, FileName, InputFileData%StrWd, InputFileData%NumLegs, 'StWidth', 'Width of the structure in contact with the ice (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   
    !-------------------------------------------------------------------------------------------------
    ! Ice Model Number
    !-------------------------------------------------------------------------------------------------
 
       ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice Models header', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice Models header', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line - Ice Models'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
 
       ! IceModel - Number that represents different ice models.
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%IceModel, 'IceModel', 'Number that represents different ice models', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%IceModel, 'IceModel', 'Number that represents different ice models', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read IceModel parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
 
     ! IceSubModel - Number that represents different ice sub models.
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%IceSubModel, 'IceSubModel', 'Number that represents different ice sub-models', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%IceSubModel, 'IceSubModel', 'Number that represents different ice sub-models', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read IceSubModel parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
@@ -973,111 +1027,93 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice properties - General header', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice properties - General header', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice properties - General header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
      ! IceVel - Velocity of ice sheet movement (m/s)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%v, 'IceVel', 'Velocity of ice sheet movement', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%v, 'IceVel', 'Velocity of ice sheet movement', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read IceVel parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! IceThks  - Thickness of the ice sheet (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%h, 'IceThks', 'Thickness of the ice sheet (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%h, 'IceThks', 'Thickness of the ice sheet (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read IceThks parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
-   ! StWidth  - Width of the structure in contact with the ice (m)
-
-   CALL ReadVar ( UnIn, FileName, InputFileData%StrWd, 'StWidth', 'Width of the structure in contact with the ice (m)', ErrStat, ErrMsg )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read StWidth parameter.'
-      ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
-      RETURN
-   END IF
 
       ! WtDen     - Mass density of water (kg/m3)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%rhow, 'WtDen', 'Mass density of water (kg/m3)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%rhow, 'WtDen', 'Mass density of water (kg/m3)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
       ErrMsg  = ' Failed to read WtDen parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
       ! IceDen  - Mass density of ice (kg/m3)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%rhoi, 'IceDen', 'Mass density of ice (kg/m3)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%rhoi, 'IceDen', 'Mass density of ice (kg/m3)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read IceDen parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
           ! InitLoc - Ice sheet initial location (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%InitLoc, 'InitLoc', 'Ice sheet initial location (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%InitLoc, 'InitLoc', 'Ice sheet initial location (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read InitLoc parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
           ! InitTm - Ice load starting time (s)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%t0, 'InitTm', 'Ice load starting time (s)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%t0, 'InitTm', 'Ice load starting time (s)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read InitTm parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
    
           ! Seed1 - Random seed 1
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Seed1, 'Seed1', 'Random seed 1', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Seed1, 'Seed1', 'Random seed 1', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Seed1 parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
    
            ! Seed2 - Random seed 2
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Seed2, 'Seed2', 'Random seed 2', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Seed2, 'Seed2', 'Random seed 2', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Seed2 parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
@@ -1087,134 +1123,122 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
         ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 1 SubModel 1', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 1 SubModel 1', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice properties - Ice Model 1 SubModel 1 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Ikm - Indentation factor
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Ikm, 'Ikm', 'Indentation factor', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Ikm, 'Ikm', 'Indentation factor', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ikm parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Ag - Constant depends only on ice crystal type, used in calculating uniaxial stress (MPa-3s-1)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Ag, 'Ag', 'Constant depends only on ice crystal type, used in calculating uniaxial stress (MPa-3s-1)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Ag, 'Ag', 'Constant depends only on ice crystal type, used in calculating uniaxial stress (MPa-3s-1)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ag parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Qg - Activation Energy (kJmol^-1)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Qg, 'Qg', 'Activation Energy (kJmol^-1)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Qg, 'Qg', 'Activation Energy (kJmol^-1)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Qg parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Rg - Universal gas constant (Jmol-1K-1)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Rg, 'Rg', 'Universal gas constant (Jmol-1K-1)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Rg, 'Rg', 'Universal gas constant (Jmol-1K-1)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Rg parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Tice - Ice temperature (K)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Tice, 'Tice', 'Ice temperature (K)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Tice, 'Tice', 'Ice temperature (K)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Tice parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
 
     ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 1 SubModel 2', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 1 SubModel 2', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice properties - Ice Model 1 SubModel 2 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Poisson  - Poisson's ratio of ice
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%nu, 'Poisson', 'Poisson ratio of ice', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%nu, 'Poisson', 'Poisson ratio of ice', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Poisson parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! WgAngle - Wedge Angel, degree. Default 45 Degrees.
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%phi, 'WgAngle', ' Wedge Angel, degree. Default 45 Degrees', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%phi, 'WgAngle', ' Wedge Angel, degree. Default 45 Degrees', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WgAngle parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! EIce - Young's modulus of ice (GPa)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Eice, 'EIce', 'Youngs modulus of ice (GPa)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Eice, 'EIce', 'Youngs modulus of ice (GPa)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read EIce parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 1 SubModel 3', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 1 SubModel 3', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice properties - Ice Model 1 SubModel 3 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! SigN - Nominal ice stress (MPa)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%SigNm, 'SigNm', 'Nominal ice stress (MPa)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%SigNm, 'SigNm', 'Nominal ice stress (MPa)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read SigN parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
@@ -1224,45 +1248,41 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 2 SubModel 1,2', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 2 SubModel 1,2', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice properties - Ice Model 2 SubModel 1,2 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Pitch - Distance between sequential ice teeth (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Pitch, 'Pitch', 'Distance between sequential ice teeth (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Pitch, 'Pitch', 'Distance between sequential ice teeth (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Pitch parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! IceStr2 - Ice failure stress (MPa)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%IceStr2, 'IceStr2', 'Ice failure stress (MPa)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%IceStr2, 'IceStr2', 'Ice failure stress (MPa)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read IceStr2 parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Delmax2 - Ice tooth maximum elastic deformation (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%Delmax2, 'Delmax2', 'Ice tooth maximum elastic deformation (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%Delmax2, 'Delmax2', 'Ice tooth maximum elastic deformation (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Delmax2 parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
@@ -1272,155 +1292,141 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
      ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice PROPERTIES -Ice Model 3, SubModel 1,2', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice PROPERTIES -Ice Model 3, SubModel 1,2', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice PROPERTIES -Ice Model 3, SubModel 1,2 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! ThkMean - Mean value of ice thickness (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%miuh, 'ThkMean', 'Mean value of ice thickness (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%miuh, 'ThkMean', 'Mean value of ice thickness (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read ThkMean parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! ThkVar - Variance of ice thickness (m^2)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%varh, 'ThkVar', 'Variance of ice thickness (m^2)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%varh, 'ThkVar', 'Variance of ice thickness (m^2)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read ThkVar parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! VelMean - Mean value of ice velocity (m/s)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%miuv, 'VelMean', 'Mean value of ice velocity (m/s)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%miuv, 'VelMean', 'Mean value of ice velocity (m/s)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read VelMean parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! VelVar - Variance of ice velocity (m^2/s^2)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%varv, 'VelVar', 'Variance of ice velocity (m^2/s^2)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%varv, 'VelVar', 'Variance of ice velocity (m^2/s^2)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read VelVar parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! TeMean - Mean value of ice loading event duration (s)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%miut, 'TeMean', 'Mean value of ice loading event duration (s)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%miut, 'TeMean', 'Mean value of ice loading event duration (s)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read TeMean parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
     ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice PROPERTIES -Ice Model 3, SubModel 2,3', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice PROPERTIES -Ice Model 3, SubModel 2,3', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice PROPERTIES -Ice Model 3, SubModel 2,3 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! StrMean - Mean value of ice thickness (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%miubr, 'StrMean', 'Mean value of ice strength (MPa)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%miubr, 'StrMean', 'Mean value of ice strength (MPa)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read StrMean parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! StrVar - Variance of ice thickness (m^2)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%varbr, 'StrVar', 'Variance of ice strength (MPa)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%varbr, 'StrVar', 'Variance of ice strength (MPa)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read StrVar parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! Header
 
-   CALL ReadCom( UnIn, FileName, 'Ice PROPERTIES -Ice Model 3, SubModel 3', ErrStat, ErrMsg)
+   CALL ReadCom( UnIn, FileName, 'Ice PROPERTIES -Ice Model 3, SubModel 3', ErrStat, ErrMsg, UnEc)
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Ice PROPERTIES -Ice Model 3, SubModel 3 header comment line.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! DelMean - Mean value of maximum ice tooth tip displacement (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%miuDelm, 'DelMean', 'Mean value of maximum ice tooth tip displacement (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%miuDelm, 'DelMean', 'Mean value of maximum ice tooth tip displacement (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read DelMean parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! DelVar - Variance of maximum ice tooth tip displacement (m^2)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%varDelm, 'DelVar', 'Variance of maximum ice tooth tip displacement (m^2)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%varDelm, 'DelVar', 'Variance of maximum ice tooth tip displacement (m^2)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read DelVar parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! PMean - Mean value of the distance between sequential ice teeth (m)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%miuP, 'PMean', 'Mean value of the distance between sequential ice teeth (m)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%miuP, 'PMean', 'Mean value of the distance between sequential ice teeth (m)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read PMean parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
    ! PVar - Variance of the distance between sequential ice teeth (m^2)
 
-   CALL ReadVar ( UnIn, FileName, InputFileData%varP, 'PVar', 'Variance of the distance between sequential ice teeth (m^2)', ErrStat, ErrMsg )
+   CALL ReadVar ( UnIn, FileName, InputFileData%varP, 'PVar', 'Variance of the distance between sequential ice teeth (m^2)', ErrStat, ErrMsg, UnEc )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read PVar parameter.'
       ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
+      CALL Cleanup()
       RETURN
    END IF
 
@@ -1428,15 +1434,37 @@ SUBROUTINE ID_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! This is the end of the input file
    !-------------------------------------------------------------------------------------------------
-   CLOSE ( UnIn )
+   CALL Cleanup()
 
 
    RETURN
+CONTAINS
+   SUBROUTINE Cleanup()
+   
+      CLOSE( UnIn )
+      IF (UnEc > 0) CLOSE(UnEc)
+      
+   END SUBROUTINE
 
-
-END SUBROUTINE ID_ReadInput
+END SUBROUTINE IceD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  )
+SUBROUTINE IceD_ValidateInput( InputFileData, ErrStat, ErrMsg )
+   TYPE(IceD_InputFile),     INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   IF ( InputFileData%IceModel < 1 .OR. InputFileData%IceModel > 6 ) CALL SetErrStat( ErrID_Fatal, 'IceModel must be a number 1-6.',   ErrStat, ErrMsg, 'IceD_ValidateInput')
+   IF ( InputFileData%IceSubModel < 1  )                             CALL SetErrStat( ErrID_Fatal, 'Invalid IceSubModel value', ErrStat, ErrMsg, 'IceD_ValidateInput')
+   
+   
+   
+END SUBROUTINE IceD_ValidateInput
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat, ErrMsg  )
 ! This takes the primary input file data and sets the corresponding parameters.
 !..................................................................................................................................
 
@@ -1445,10 +1473,11 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
 
       ! Passed variables
 
-   TYPE(ID_ParameterType),   INTENT(INOUT)  :: p                            ! Parameters of the IceDyn module
-   TYPE(ID_InputFile),       INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
+   TYPE(IceD_ParameterType), INTENT(INOUT)  :: p                            ! Parameters of the IceDyn module
+   TYPE(IceD_InputFile),     INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
    REAL(DbKi),               INTENT(IN)     :: Interval                     ! Coupling interval in seconds
    REAL(DbKi),               INTENT(IN   )  :: Tmax                         ! Total simulation time 
+   INTEGER(IntKi),           INTENT(IN   )  :: LegNum                       ! Leg number of this IceDyn instance
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
 
@@ -1487,6 +1516,13 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   
+   p%verif     = 1
+   p%method    = 1            ! integration method (RK4)
+   p%dt        = Interval
+   p%tolerance = 1e-6      
+   
+   
    !...............................................................................................................................
    ! Direct copy of variables:
    !...............................................................................................................................
@@ -1496,8 +1532,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
    p%h         = InputFileData%h
    p%InitLoc   = InputFileData%InitLoc
    p%t0        = InputFileData%t0
-   p%StrWd     = InputFileData%StrWd
-   p%dt        = Interval
+   p%StrWd     = InputFileData%StrWd( LegNum )
    p%Tmax      = Tmax   
 
     ! Ice Model 1
@@ -1629,7 +1664,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
           t = J*Interval
           IF( J == 1 ) THEN
               p%rdmt0(J)    = 0
-              CALL ID_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), s_dmmy, Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
+              CALL IceD_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), s_dmmy, Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
               rdmScrp       = p%Cstr * ( rdmv(J) / 4.0 / p%StrWd )**(1.0/3.0)
               p%rdmFm(J)    = InputFileData%Ikm * p%StrWd * rdmh(J) * rdmScrp
               p%rdmtm(J)    = InputFileData%Ikm * rdmScrp / p%EiPa / ( rdmv(J) / 4.0 / p%StrWd )               
@@ -1643,7 +1678,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
               p%rdmtm(J)      = p%rdmtm(J-1)
           ELSE              
               p%rdmt0(J)    = p%rdmt0 (J-1) + rdmte (J-1)
-              CALL ID_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), s_dmmy, Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
+              CALL IceD_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), s_dmmy, Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
               rdmScrp       = p%Cstr * ( rdmv(J) / 4.0 / p%StrWd )**(1.0/3.0)
               p%rdmFm(J)    = InputFileData%Ikm * p%StrWd * rdmh(J) * rdmScrp
               p%rdmtm(J)    = InputFileData%Ikm * rdmScrp / p%EiPa / ( rdmv(J) / 4.0 / p%StrWd )              
@@ -1658,7 +1693,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
           t = J*Interval
           IF( J == 1 ) THEN
               p%rdmt0(J)       = 0
-              CALL ID_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), rdmsig(J), Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
+              CALL IceD_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), rdmsig(J), Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
               p%rdmFm(J)    = p%StrWd * rdmh(J) * rdmsig(J)
               p%rdmtm(J)    = rdmsig(J) / p%EiPa / ( rdmv(J) / 4.0 / p%StrWd )               
           ELSEIF ( t < p%rdmt0 (J-1) + rdmte (J-1) ) THEN
@@ -1671,7 +1706,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
               p%rdmtm(J)    = p%rdmtm(J-1)
           ELSE              
               p%rdmt0(J)   = p%rdmt0 (J-1) + rdmte (J-1)
-              CALL ID_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), rdmsig(J), Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
+              CALL IceD_Generate_RandomNum ( rdmh(J), rdmv(J), rdmte(J), rdmsig(J), Dm_dmmy, P_dmmy, p, InputFileData, ErrStat, ErrMsg)
               p%rdmFm(J)    = p%StrWd * rdmh(J) * rdmsig(J)
               p%rdmtm(J)    = rdmsig(J) / p%EiPa / ( rdmv(J) / 4.0 / p%StrWd )              
           ENDIF
@@ -1681,7 +1716,7 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
     ELSEIF (p%SubModNo == 3) THEN
     
         DO J = 1, Nthmax        
-            CALL ID_Generate_RandomNum ( h_dmmy, v_dmmy, t_dmmy, rdmsig(J), p%rdmDm(J), p%rdmP(J), p, InputFileData, ErrStat, ErrMsg)
+            CALL IceD_Generate_RandomNum ( h_dmmy, v_dmmy, t_dmmy, rdmsig(J), p%rdmDm(J), p%rdmP(J), p, InputFileData, ErrStat, ErrMsg)
             p%rdmKi(J) = rdmsig(J) * p%StrWd * p%h / p%rdmDm(J)
         END DO
         
@@ -1729,25 +1764,25 @@ SUBROUTINE ID_SetParameters( InputFileData, p, Interval, Tmax, ErrStat, ErrMsg  
       
       ! Test parameter assignments
       
-END SUBROUTINE ID_SetParameters
+END SUBROUTINE IceD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
+SUBROUTINE IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
 ! This routine initializes the other states of the module.
 ! It assumes the parameters are set and that InputFileData contains initial conditions for the other states.
 !..................................................................................................................................
    IMPLICIT                        NONE
 
-   TYPE(ID_OtherStateType),      INTENT(  OUT)  :: OtherState        ! Initial other states
-   TYPE(ID_ParameterType),       INTENT(IN)     :: p                 ! Parameters of the IceDyn module
-   TYPE(ID_ContinuousStateType), INTENT(IN   )  :: x                 ! Initial continuous states
-   TYPE(ID_InputFile),           INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat           ! Error status
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg            ! Error message
+   TYPE(IceD_OtherStateType),      INTENT(  OUT)  :: OtherState        ! Initial other states
+   TYPE(IceD_ParameterType),       INTENT(IN)     :: p                 ! Parameters of the IceDyn module
+   TYPE(IceD_ContinuousStateType), INTENT(IN   )  :: x                 ! Initial continuous states
+   TYPE(IceD_InputFile),           INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat           ! Error status
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg            ! Error message
 
       ! local variables
-   INTEGER(IntKi)                               :: I                 ! loop counter
-   REAL(ReKi)                                   :: StrRt             ! Strain rate (s^-1)
-   REAL(ReKi)                                   :: SigCrp            ! Creep stress (Pa)
+   INTEGER(IntKi)                                 :: I                 ! loop counter
+   REAL(ReKi)                                     :: StrRt             ! Strain rate (s^-1)
+   REAL(ReKi)                                     :: SigCrp            ! Creep stress (Pa)
       ! Initialize error data
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1756,9 +1791,7 @@ SUBROUTINE ID_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg
 
        OtherState%IceTthNo2 = 1 ! Initialize first ice tooth number
 
-   ENDIF
-   
-   IF  ( p%ModNo == 3 ) THEN
+   ELSEIF ( p%ModNo == 3 ) THEN
 
        CALL AllocAry( OtherState%Nc, p%TmStep, 'OtherState%Nc', ErrStat, ErrMsg )
        IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1774,9 +1807,31 @@ SUBROUTINE ID_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg
    ENDIF
 
    
-END SUBROUTINE ID_Init_OtherStates
+   if ( p%method .eq. 2) then  !integration methods
+
+      Allocate( OtherState%xdot(4), STAT=ErrStat )
+      IF (ErrStat /= 0) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' Error in IceDyn: could not allocate OtherStat%xdot.'
+         RETURN
+      END IF
+
+   elseif ( p%method .eq. 3) then
+
+      Allocate( OtherState%xdot(4), STAT=ErrStat )
+      IF (ErrStat /= 0) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' Error in IceDyn: could not allocate OtherStat%xdot.'
+         RETURN
+      END IF
+
+   endif
+   
+   
+   
+END SUBROUTINE IceD_Init_OtherStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrStat, ErrMsg)
+SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrStat, ErrMsg)
 ! This routine generate random numbers for the module.
 ! It assumes the parameters are set and that InputFileData contains input for generating random numbers.
 !..................................................................................................................................
@@ -1788,8 +1843,8 @@ SUBROUTINE ID_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrSta
    REAL(ReKi),                   INTENT(OUT)    :: s                 ! Random ice strength (Pa)
    REAL(ReKi),                   INTENT(OUT)    :: Dm                ! Random ice tooth maximum displacement (m)
    REAL(ReKi),                   INTENT(OUT)    :: Pch               ! Random ice tooth spacing (m)
-   TYPE(ID_ParameterType),       INTENT(IN)     :: p                 ! Parameters of the IceDyn module
-   TYPE(ID_InputFile),           INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
+   TYPE(IceD_ParameterType),     INTENT(IN)     :: p                 ! Parameters of the IceDyn module
+   TYPE(IceD_InputFile),         INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           ! Error status
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            ! Error message   
 
@@ -2005,9 +2060,9 @@ SUBROUTINE ID_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrSta
 
       END FUNCTION digamma
 
-END SUBROUTINE ID_Generate_RandomNum
+END SUBROUTINE IceD_Generate_RandomNum
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
 !
@@ -2029,25 +2084,25 @@ SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
       INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(ID_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
       REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(ID_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(ID_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ID_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ID_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
 
-      TYPE(ID_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states
-      TYPE(ID_ContinuousStateType)                 :: k1          ! RK4 constant; see above
-      TYPE(ID_ContinuousStateType)                 :: k2          ! RK4 constant; see above
-      TYPE(ID_ContinuousStateType)                 :: k3          ! RK4 constant; see above
-      TYPE(ID_ContinuousStateType)                 :: k4          ! RK4 constant; see above
-      TYPE(ID_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-      TYPE(ID_InputType)                           :: u_interp    ! interpolated value of inputs
+      TYPE(IceD_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states
+      TYPE(IceD_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+      TYPE(IceD_ContinuousStateType)                 :: k2          ! RK4 constant; see above
+      TYPE(IceD_ContinuousStateType)                 :: k3          ! RK4 constant; see above
+      TYPE(IceD_ContinuousStateType)                 :: k4          ! RK4 constant; see above
+      TYPE(IceD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+      TYPE(IceD_InputType)                           :: u_interp    ! interpolated value of inputs
 
       ! Initialize ErrStat
 
@@ -2056,10 +2111,10 @@ SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
 
       ! interpolate u to find u_interp = u(t)
-      CALL ID_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
+      CALL IceD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
 
       ! find xdot at t
-      CALL ID_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
       k1%q    = p%dt * xdot%q
       k1%dqdt = p%dt * xdot%dqdt
@@ -2068,10 +2123,10 @@ SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x_tmp%dqdt = x%dqdt + 0.5 * k1%dqdt
 
       ! interpolate u to find u_interp = u(t + dt/2)
-      CALL ID_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
+      CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
 
       ! find xdot at t + dt/2
-      CALL ID_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
       k2%q    = p%dt * xdot%q
       k2%dqdt = p%dt * xdot%dqdt
@@ -2080,7 +2135,7 @@ SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x_tmp%dqdt = x%dqdt + 0.5 * k2%dqdt
 
       ! find xdot at t + dt/2
-      CALL ID_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
       k3%q    = p%dt * xdot%q
       k3%dqdt = p%dt * xdot%dqdt
@@ -2089,10 +2144,10 @@ SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x_tmp%dqdt = x%dqdt + k3%dqdt
 
       ! interpolate u to find u_interp = u(t + dt)
-      CALL ID_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+      CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
       ! find xdot at t + dt
-      CALL ID_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
       k4%q    = p%dt * xdot%q
       k4%dqdt = p%dt * xdot%dqdt
@@ -2100,9 +2155,9 @@ SUBROUTINE ID_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x%q    = x%q    +  ( k1%q    + 2. * k2%q    + 2. * k3%q    + k4%q    ) / 6.
       x%dqdt = x%dqdt +  ( k1%dqdt + 2. * k2%dqdt + 2. * k3%dqdt + k4%dqdt ) / 6.
 
-END SUBROUTINE ID_RK4
+END SUBROUTINE IceD_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential
 ! equations:
@@ -2122,20 +2177,20 @@ SUBROUTINE ID_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
       INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(ID_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
       REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(ID_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(ID_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ID_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ID_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
       ! local variables
-      TYPE(ID_ContinuousStateType) :: xdot       ! Continuous state derivs at t
-      TYPE(ID_InputType)           :: u_interp
+      TYPE(IceD_ContinuousStateType)                 :: xdot       ! Continuous state derivs at t
+      TYPE(IceD_InputType)                           :: u_interp
 
 
       ! Initialize ErrStat
@@ -2144,8 +2199,8 @@ SUBROUTINE ID_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       ErrMsg  = ""
 
       ! need xdot at t
-      CALL ID_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
-      CALL ID_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
+      CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
       if (n .le. 2) then
 
@@ -2153,7 +2208,7 @@ SUBROUTINE ID_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
          OtherState%xdot ( 3 - n ) = xdot
 
-         CALL ID_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL IceD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       else
 
@@ -2182,9 +2237,9 @@ SUBROUTINE ID_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       endif
 
-END SUBROUTINE ID_AB4
+END SUBROUTINE IceD_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ID_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary
 ! differential equations:
@@ -2208,36 +2263,36 @@ SUBROUTINE ID_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
       INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(ID_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
       REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(ID_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(ID_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(ID_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ID_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ID_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
 
-      TYPE(ID_InputType)            :: u_interp        ! Continuous states at t
-      TYPE(ID_ContinuousStateType)  :: x_pred          ! Continuous states at t
-      TYPE(ID_ContinuousStateType)  :: xdot_pred       ! Continuous states at t
+      TYPE(IceD_InputType)                           :: u_interp        ! Continuous states at t
+      TYPE(IceD_ContinuousStateType)                 :: x_pred          ! Continuous states at t
+      TYPE(IceD_ContinuousStateType)                 :: xdot_pred       ! Continuous states at t
 
       ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      CALL ID_CopyContState(x, x_pred, 0, ErrStat, ErrMsg)
+      CALL IceD_CopyContState(x, x_pred, 0, ErrStat, ErrMsg)
 
-      CALL ID_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL IceD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat, ErrMsg )
 
       if (n .gt. 2) then
 
-         CALL ID_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
+         CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
-         CALL ID_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat, ErrMsg )
+         CALL IceD_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat, ErrMsg )
 
          x%q    = x%q    + (p%dt / 24.) * ( 9. * xdot_pred%q +  19. * OtherState%xdot(1)%q - 5. * OtherState%xdot(2)%q &
                                           + 1. * OtherState%xdot(3)%q )
@@ -2252,7 +2307,7 @@ SUBROUTINE ID_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
        endif
 
-END SUBROUTINE ID_ABM4
+END SUBROUTINE IceD_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

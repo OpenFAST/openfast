@@ -48,29 +48,29 @@ PROGRAM MAIN
 
    ! IceDyn Derived-types variables; see Registry_IceDyn.txt for details
 
-   TYPE(ID_InitInputType)           :: ID_InitInput
-   TYPE(ID_ParameterType)           :: ID_Parameter
-   TYPE(ID_ContinuousStateType)     :: ID_ContinuousState
-   TYPE(ID_ContinuousStateType)     :: ID_ContinuousStateDeriv
-   TYPE(ID_InitOutputType)          :: ID_InitOutput
-   TYPE(ID_DiscreteStateType)       :: ID_DiscreteState
-   TYPE(ID_ConstraintStateType)     :: ID_ConstraintState
-   TYPE(ID_OtherStateType)          :: ID_OtherState
+   TYPE(IceD_InitInputType)           :: ID_InitInput
+   TYPE(IceD_ParameterType)           :: ID_Parameter
+   TYPE(IceD_ContinuousStateType)     :: ID_ContinuousState
+   TYPE(IceD_ContinuousStateType)     :: ID_ContinuousStateDeriv
+   TYPE(IceD_InitOutputType)          :: ID_InitOutput
+   TYPE(IceD_DiscreteStateType)       :: ID_DiscreteState
+   TYPE(IceD_ConstraintStateType)     :: ID_ConstraintState
+   TYPE(IceD_OtherStateType)          :: ID_OtherState
 
-   TYPE(ID_InputType),Dimension(:),Allocatable  :: ID_Input
-   REAL(DbKi) , DIMENSION(:), ALLOCATABLE           :: ID_InputTimes
+   TYPE(IceD_InputType),Dimension(:),Allocatable  :: ID_Input
+   REAL(DbKi) , DIMENSION(:), ALLOCATABLE       :: ID_InputTimes
 
-   TYPE(ID_OutputType),Dimension(:),Allocatable  :: ID_Output
-   REAL(DbKi) , DIMENSION(:), ALLOCATABLE          :: ID_OutputTimes
+   TYPE(IceD_OutputType),Dimension(:),Allocatable  :: ID_Output
+   REAL(DbKi) , DIMENSION(:), ALLOCATABLE        :: ID_OutputTimes
 
-   TYPE(ID_InputType)   :: u1    ! local variable for extrapolated inputs
-   TYPE(ID_OutputType)  :: y1    ! local variable for extrapolated outputs
+   TYPE(IceD_InputType)   :: u1    ! local variable for extrapolated inputs
+   TYPE(IceD_OutputType)  :: y1    ! local variable for extrapolated outputs
 
    ! IceDyn derived data typed needed in pc-coupling; predicted states
 
-   TYPE(ID_ContinuousStateType)     :: ID_ContinuousState_pred
-   TYPE(ID_DiscreteStateType)       :: ID_DiscreteState_pred
-   TYPE(ID_ConstraintStateType)     :: ID_ConstraintState_pred
+   TYPE(IceD_ContinuousStateType)     :: ID_ContinuousState_pred
+   TYPE(IceD_DiscreteStateType)       :: ID_DiscreteState_pred
+   TYPE(IceD_ConstraintStateType)     :: ID_ConstraintState_pred
 
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
@@ -138,7 +138,7 @@ PROGRAM MAIN
    ID_InitInput%gravity  = 9.81
    ID_InitInput%LegNum    = 1
    
-   CALL ID_Init( ID_InitInput          &
+   CALL IceD_Init( ID_InitInput          &
                    , ID_Input(1)         &
                    , ID_Parameter        &
                    , ID_ContinuousState  &
@@ -151,10 +151,10 @@ PROGRAM MAIN
                    , ErrStat             &
                    , ErrMsg )
 
-   IF (ErrStat /= ErrID_None) CALL WrScr('After ID_Init: '//TRIM(ErrMsg))
+   IF (ErrStat /= ErrID_None) CALL ProgAbort('After ID_Init: '//TRIM(ErrMsg), TimeWait=10._ReKi)
    
-   CALL ID_CopyInput(  ID_Input(1), u1, MESH_NEWCOPY, ErrStat, ErrMsg )
-   CALL ID_CopyOutput( ID_Output(1), y1, MESH_NEWCOPY, ErrStat, ErrMsg )
+   CALL IceD_CopyInput(  ID_Input(1), u1, MESH_NEWCOPY, ErrStat, ErrMsg )
+   CALL IceD_CopyOutput( ID_Output(1), y1, MESH_NEWCOPY, ErrStat, ErrMsg )
 
    ! We fill ID_InputTimes with negative times, but the ID_Input values are identical for each of those times; this allows 
    ! us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation 
@@ -166,8 +166,8 @@ PROGRAM MAIN
    enddo
 
    do i = 1, ID_interp_order
-      Call ID_CopyInput (ID_Input(i),  ID_Input(i+1),  MESH_NEWCOPY, Errstat, ErrMsg)
-      Call ID_CopyOutput (ID_Output(i),  ID_Output(i+1),  MESH_NEWCOPY, Errstat, ErrMsg)
+      Call IceD_CopyInput (ID_Input(i),  ID_Input(i+1),  MESH_NEWCOPY, Errstat, ErrMsg)
+      Call IceD_CopyOutput (ID_Output(i),  ID_Output(i+1),  MESH_NEWCOPY, Errstat, ErrMsg)
    enddo
 
    ! -------------------------------------------------------------------------
@@ -211,7 +211,7 @@ PROGRAM MAIN
       CALL ID_InputSolve( ID_Input(1), ID_Output(1), ID_Parameter, ErrStat, ErrMsg)
 
 
-      CALL ID_CalcOutput( t_global, ID_Input(1), ID_Parameter, ID_ContinuousState, ID_DiscreteState, &
+      CALL IceD_CalcOutput( t_global, ID_Input(1), ID_Parameter, ID_ContinuousState, ID_DiscreteState, &
                               ID_ConstraintState, &
                               ID_OtherState,  ID_Output(1), ErrStat, ErrMsg)
       
@@ -225,21 +225,21 @@ PROGRAM MAIN
 
       ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
 
-      CALL ID_Input_ExtrapInterp(ID_Input, ID_InputTimes, u1, t_global + dt_global, ErrStat, ErrMsg)
+      CALL IceD_Input_ExtrapInterp(ID_Input, ID_InputTimes, u1, t_global + dt_global, ErrStat, ErrMsg)
 
-      CALL ID_Output_ExtrapInterp(ID_Output, ID_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
+      CALL IceD_Output_ExtrapInterp(ID_Output, ID_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
 
       ! Shift "window" of the ID_Input and ID_Output
 
       do i = ID_interp_order, 1, -1
-         Call ID_CopyInput (ID_Input(i),  ID_Input(i+1), MESH_UPDATECOPY, Errstat, ErrMsg)
-         Call ID_CopyOutput (ID_Output(i),  ID_Output(i+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+         Call IceD_CopyInput (ID_Input(i),  ID_Input(i+1), MESH_UPDATECOPY, Errstat, ErrMsg)
+         Call IceD_CopyOutput (ID_Output(i),  ID_Output(i+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
          ID_InputTimes(i+1) = ID_InputTimes(i)
          ID_OutputTimes(i+1) = ID_OutputTimes(i)
       enddo
 
-      Call ID_CopyInput (u1,  ID_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-      Call ID_CopyOutput (y1,  ID_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+      Call IceD_CopyInput (u1,  ID_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
+      Call IceD_CopyOutput (y1,  ID_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
       ID_InputTimes(1) = t_global + dt_global
       ID_OutputTimes(1) = t_global + dt_global
 
@@ -253,13 +253,13 @@ PROGRAM MAIN
 
          ! copy ContinuousState to ContinuousState_pred; don't modify ContinuousState until completion of PC iterations
 
-         Call ID_CopyContState   (ID_ContinuousState, ID_ContinuousState_pred, 0, Errstat, ErrMsg)
+         Call IceD_CopyContState   (ID_ContinuousState, ID_ContinuousState_pred, 0, Errstat, ErrMsg)
 
-         Call ID_CopyConstrState (ID_ConstraintState, ID_ConstraintState_pred, 0, Errstat, ErrMsg)
+         Call IceD_CopyConstrState (ID_ConstraintState, ID_ConstraintState_pred, 0, Errstat, ErrMsg)
 
-         Call ID_CopyDiscState   (ID_DiscreteState,   ID_DiscreteState_pred,   0, Errstat, ErrMsg)
+         Call IceD_CopyDiscState   (ID_DiscreteState,   ID_DiscreteState_pred,   0, Errstat, ErrMsg)
 
-         CALL ID_UpdateStates( t_global, n_t_global, ID_Input, ID_InputTimes, ID_Parameter, &
+         CALL IceD_UpdateStates( t_global, n_t_global, ID_Input, ID_InputTimes, ID_Parameter, &
                                    ID_ContinuousState_pred, &
                                    ID_DiscreteState_pred, ID_ConstraintState_pred, &
                                    ID_OtherState, ErrStat, ErrMsg )
@@ -289,9 +289,9 @@ PROGRAM MAIN
 
       ! Save all final variables 
 
-      Call ID_CopyContState   (ID_ContinuousState_pred,  ID_ContinuousState, 0, Errstat, ErrMsg)
-      Call ID_CopyConstrState (ID_ConstraintState_pred,  ID_ConstraintState, 0, Errstat, ErrMsg)
-      Call ID_CopyDiscState   (ID_DiscreteState_pred,    ID_DiscreteState,   0, Errstat, ErrMsg)
+      Call IceD_CopyContState   (ID_ContinuousState_pred,  ID_ContinuousState, 0, Errstat, ErrMsg)
+      Call IceD_CopyConstrState (ID_ConstraintState_pred,  ID_ConstraintState, 0, Errstat, ErrMsg)
+      Call IceD_CopyDiscState   (ID_DiscreteState_pred,    ID_DiscreteState,   0, Errstat, ErrMsg)
 
       ! update the global time
 
@@ -341,12 +341,12 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
    
 
-   CALL ID_End( ID_Input(1), ID_Parameter, ID_ContinuousState, ID_DiscreteState, &
+   CALL IceD_End( ID_Input(1), ID_Parameter, ID_ContinuousState, ID_DiscreteState, &
                     ID_ConstraintState, ID_OtherState, ID_Output(1), ErrStat, ErrMsg )
 
    do i = 2, ID_interp_order+1
-      CALL ID_DestroyInput(ID_Input(i), ErrStat, ErrMsg )
-      CALL ID_DestroyOutput(ID_Output(i), ErrStat, ErrMsg )
+      CALL IceD_DestroyInput(ID_Input(i), ErrStat, ErrMsg )
+      CALL IceD_DestroyOutput(ID_Output(i), ErrStat, ErrMsg )
    enddo
 
    DEALLOCATE(ID_InputTimes)
@@ -404,9 +404,9 @@ SUBROUTINE ID_InputSolve( u, y, p, ErrStat, ErrMsg)
 
    ! IceDyn Derived-types variables; see Registry_IceDyn.txt for details
 
-   TYPE(ID_InputType),           INTENT(INOUT) :: u
-   TYPE(ID_OutputType),          INTENT(IN   ) :: y
-   TYPE(ID_ParameterType),       INTENT(IN   ) :: p
+   TYPE(IceD_InputType),           INTENT(INOUT) :: u
+   TYPE(IceD_OutputType),          INTENT(IN   ) :: y
+   TYPE(IceD_ParameterType),       INTENT(IN   ) :: p
 
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
