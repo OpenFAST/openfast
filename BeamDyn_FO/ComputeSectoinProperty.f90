@@ -1,4 +1,4 @@
-   SUBROUTINE ComputeSectionalProperty(flp,edg,ang,qflp,qedg,qcrs)
+   SUBROUTINE ComputeSectionProperty(flp,edg,ang,qflp,qedg,qcrs)
 
    REAL(ReKi),INTENT(IN   ) ::flp
    REAL(ReKi),INTENT(IN   ) ::edg
@@ -15,8 +15,8 @@
    qcrs = 0.0D0  
 
    temp = SIN(2.0D0*ang*ACOS(-1.0D0)/180.0D0)
-   qedg = 0.5D0*(flp+Sqrt((1.0D0-temp*temp)*(flp-edg)*(flp-edg))+edg)
-   qflp = 0.5D0*(flp-Sqrt((1.0D0-temp*temp)*(flp-edg)*(flp-edg))+edg)
+   qedg = 0.5D0*(flp+SQRT((1.0D0-temp*temp)*(flp-edg)*(flp-edg))+edg)
+   qflp = 0.5D0*(flp-SQRT((1.0D0-temp*temp)*(flp-edg)*(flp-edg))+edg)
    qcrs = 0.5D0*temp*(edg-flp)
 
-   END SUBROUTINE ComputeSectionalPorperty
+   END SUBROUTINE ComputeSectionPorperty

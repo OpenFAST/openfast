@@ -88,3 +88,5 @@ typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate    {:}{:} - - "Key 
 typedef BeamDyn/BD    BD_InputFile    ReKi     initial_twist    {:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl    -  - - "Input data for individual blades"   "see BladeInputData Type" 
 typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   -  -  -  "Name of blade input file"
+typedef BeamDyn/BD    BD_InputFile    Logical  Echo   -  -  -  "Name of blade input file"
+typedef BeamDyn/BD    BD_InputFile    Logical  ini_curv   -  -  -  "Name of blade input file"

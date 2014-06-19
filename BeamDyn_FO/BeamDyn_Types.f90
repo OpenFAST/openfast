@@ -112,6 +112,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: initial_twist 
     TYPE(BladeInputData)  :: InpBl 
     CHARACTER(1024)  :: BldFile 
+    LOGICAL  :: Echo 
+    LOGICAL  :: ini_curv 
   END TYPE BD_InputFile
 ! =======================
 CONTAINS
@@ -1827,6 +1829,8 @@ IF (ALLOCATED(SrcinputfileData%initial_twist)) THEN
 ENDIF
       CALL BD_Copybladeinputdata( SrcinputfileData%InpBl, DstinputfileData%InpBl, CtrlCode, ErrStat, ErrMsg )
    DstinputfileData%BldFile = SrcinputfileData%BldFile
+   DstinputfileData%Echo = SrcinputfileData%Echo
+   DstinputfileData%ini_curv = SrcinputfileData%ini_curv
  END SUBROUTINE BD_Copyinputfile
 
  SUBROUTINE BD_Destroyinputfile( inputfileData, ErrStat, ErrMsg )

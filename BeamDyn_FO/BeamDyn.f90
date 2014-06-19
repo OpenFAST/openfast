@@ -60,6 +60,7 @@ INCLUDE 'ComputeUDN.f90'
 INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
 
 INCLUDE 'ReadPrimaryFile.f90'
+INCLUDE 'ComputeSectionProperty.f90'
 INCLUDE 'ReadBladeFile.f90'
 INCLUDE 'BeamDyn_ReadInput.f90'
 INCLUDE 'MemberArcLength.f90'
@@ -193,7 +194,11 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
        DO j=1,p%node_elem
            CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS)
            temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-           CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
+           IF(InputFileData%ini_curv) THEN
+               CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
+           ELSE
+               temp_CRV = 0.0D0
+           ENDIF
            temp_id2 = (j-1)*p%dof_node 
            p%uuN0(temp_id2+1,i) = temp_POS(1)
            p%uuN0(temp_id2+2,i) = temp_POS(2)
