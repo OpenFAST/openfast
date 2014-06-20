@@ -19,4 +19,4 @@
    qflp = 0.5D0*(flp-SQRT((1.0D0-temp*temp)*(flp-edg)*(flp-edg))+edg)
    qcrs = 0.5D0*temp*(edg-flp)
 
-   END SUBROUTINE ComputeSectionPorperty
+   END SUBROUTINE ComputeSectionProperty

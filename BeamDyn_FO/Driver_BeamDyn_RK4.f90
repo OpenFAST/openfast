@@ -91,7 +91,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D+00
-   t_final   = 0.6D+01
+   t_final   = 1.2D+01
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -349,13 +349,13 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    u%RootMotion%TranslationAcc(:,:)   = 0.0D0
 
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*2.0D0/3.0D0)/4.0D0)
+   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
    CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
    CALL CrvMatrixR(temp_rr,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
 
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*2.0D0/3.0D0
+   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
 
    u%RootMotion%RotationAcc(:,:) = 0.0D0
 
