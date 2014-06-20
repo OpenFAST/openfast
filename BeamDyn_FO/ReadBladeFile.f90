@@ -104,7 +104,7 @@
                         temp_mass(1),temp_mass(2),temp_mass(3),temp_mass(4),temp_mass(5),&
                         temp_bend(1),temp_bend(2),temp_bend(3),temp_bend(4),temp_bend(5),temp_bend(6),&
                         temp_sher(1),temp_sher(2),temp_sher(3),temp_sher(4),temp_sher(5),temp_sher(6)
-           CALL ComputeSectionalProperty(temp_mass(2),temp_mass(1),temp_mass(3),temp_flp,temp_edg,temp_crs)
+           CALL ComputeSectionProperty(temp_mass(2),temp_mass(1),temp_mass(3),temp_flp,temp_edg,temp_crs)
            temp_xm2 = temp_mass(4)
            temp_xm3 = temp_mass(5)
            BladeInputFileData%mass0(2,2,i) = BladeInputFileData%mass0(1,1,i)
@@ -123,7 +123,7 @@
            BladeInputFileData%mass0(4,4,i) = BladeInputFileData%mass0(5,5,i) + BladeInputFileData%mass0(6,6,i)
            BladeInputFileData%mass0(6,5,i) = BladeInputFileData%mass0(5,6,i)
 
-           CALL ComputeSectionalProperty(temp_bend(3),temp_bend(2),temp_bend(4),temp_flp,temp_edg,temp_crs)
+           CALL ComputeSectionProperty(temp_bend(3),temp_bend(2),temp_bend(4),temp_flp,temp_edg,temp_crs)
            temp_xm2 = temp_bend(5)
            temp_xm3 = temp_bend(6)
            BladeInputFileData%stiff0(1,1,i) = temp_bend(1)
@@ -136,7 +136,7 @@
            BladeInputFileData%stiff0(6,1,i) = BladeInputFileData%stiff0(1,6,i)
            BladeInputFileData%stiff0(6,5,i) = BladeInputFileData%stiff0(5,6,i)
 
-           CALL ComputeSectionalProperty(temp_sher(3),temp_sher(2),temp_sher(4),temp_flp,temp_edg,temp_crs)
+           CALL ComputeSectionProperty(temp_sher(3),temp_sher(2),temp_sher(4),temp_flp,temp_edg,temp_crs)
            temp_xm2 = temp_sher(5)
            temp_xm3 = temp_sher(6)
            BladeInputFileData%stiff0(4,4,i) = temp_sher(1)+temp_xm2*temp_xm2*temp_edg+&
