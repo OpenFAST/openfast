@@ -355,6 +355,8 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                    ,Orientation      = .TRUE.             &
                    ,TranslationVel   = .TRUE.             &
                    ,RotationVel      = .TRUE.             &
+                   ,TranslationAcc   = .TRUE.             &
+                   ,RotationAcc      = .TRUE.             &
                    ,nScalars         = 0                  &
                    ,ErrStat          = ErrStat            &
                    ,ErrMess          = ErrMsg             )
@@ -483,6 +485,8 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    y%BldMotion%Orientation(:,:,:)   = 0.0D0
    y%BldMotion%TranslationVel(:,:)  = 0.0D0
    y%BldMotion%RotationVel(:,:)     = 0.0D0
+   y%BldMotion%TranslationAcc(:,:)  = 0.0D0
+   y%BldMotion%RotationAcc(:,:)     = 0.0D0
 
    ! set remap flags to true
    y%RootForce%RemapFlag = .True.
@@ -637,6 +641,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+   TYPE(BD_ContinuousStateType):: xdot
    INTEGER(IntKi):: i
    INTEGER(IntKi):: temp_id
    REAL(ReKi):: cc(3)
@@ -661,6 +666,12 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
        y%BldMotion%Orientation(1:3,1:3,i) = temp_R(1:3,1:3)
    ENDDO
 
+   CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg)
+   DO i=1,p%node_total
+       temp_id = (i-1)*p%dof_node
+       y%BldMotion%TranslationAcc(1:3,i) = xdot%dqdt(temp_id+1:temp_id+3)
+       y%BldMotion%RotationAcc(1:3,i) = xdot%dqdt(temp_id+4:temp_id+6)
+   ENDDO
 
    END SUBROUTINE BeamDyn_CalcOutput
 

@@ -131,7 +131,7 @@ PROGRAM MAIN
    BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
-   BD_InitInput%gravity(1) = -9.80665
+   BD_InitInput%gravity(1) = 0.0D0 !-9.80665
    BD_InitInput%gravity(2) = 0.0D0 
    BD_InitInput%gravity(3) = 0.0D0 
 
@@ -180,23 +180,8 @@ PROGRAM MAIN
 
    
    DO n_t_global = 0, n_t_final
-   !DO n_t_global = 0, 1000
 
 
-     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-                             BD_ConstraintState, &
-                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
-
-      ! extrapolate inputs and outputs to t + dt; will only be used by modules with an implicit dependence on input data.
-
-! mas -- remove start here  (we don't need this; will give exact values instead
-!     CALL BD_Input_ExtrapInterp(BD_Input, BD_InputTimes, u1, t_global + dt_global, ErrStat, ErrMsg)
-! mas -- remove end here
-
-! MAS RECOMMENDATION
-!  put in a BD_CalcInput here, and populate the three entries of BD_Input at
-!  t_global, t_global + dt_global /2., t_global+dt_global
-!
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
@@ -205,26 +190,11 @@ PROGRAM MAIN
       CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 
 
-!     CALL BD_Output_ExtrapInterp(BD_Output, BD_OutputTimes, y1, t_global + dt_global, ErrStat, ErrMsg)
+     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                             BD_ConstraintState, &
+                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
-      ! Shift "window" of the Mod1_Input and Mod1_Output
 
-
-! mas -- remove start here
-!     DO i = BD_interp_order, 1, -1
-!        CALL BD_CopyInput (BD_Input(i),  BD_Input(i+1), MESH_UPDATECOPY, Errstat, ErrMsg)
-!        CALL BD_CopyOutput (BD_Output(i),  BD_Output(i+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-!        BD_InputTimes(i+1) = BD_InputTimes(i)
-!        BD_OutputTimes(i+1) = BD_OutputTimes(i)
-!     ENDDO
-
-!     CALL BD_CopyInput (u1,  BD_Input(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-!     CALL BD_CopyOutput (y1,  BD_Output(1),  MESH_UPDATECOPY, Errstat, ErrMsg)
-!     BD_InputTimes(1) = t_global + dt_global
-!     BD_OutputTimes(1) = t_global + dt_global
-! mas -- remove end here
-
-      ! Shift "window" of the Mod1_Input and Mod1_Output
 
       DO pc = 1, pc_max
 
@@ -253,7 +223,9 @@ PROGRAM MAIN
       
       WRITE(QiDisUnit,6000) t_global,BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
-                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
+                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_total)
 !      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(1),BD_ContinuousState%q(2),&
 !                           &BD_ContinuousState%q(3),BD_ContinuousState%q(4),&
 !                           &BD_ContinuousState%q(5),BD_ContinuousState%q(6)
