@@ -3967,6 +3967,122 @@ FAST v8.03.02b-bjj 3-Oct-2013 B. Jonkman
   I reorganized the files in the CertTest folder by turbine.
   We distribute under the Apache 2.0 license.
 
+====================================================================================================================================
+FAST v8.08.00c-bjj 30-June-2014 B. Jonkman
 
-FAST v8.04.00a-bjj 10-Oct-2013 B. Jonkman
-  I added the coupling ED-HD-SD coupling so that HD and SD can be used together.
+--------------------------------------------
+Changes to FAST source code:
+--------------------------------------------
++ Added the coupling ED-HD-SD coupling so that HD and SD can be used together.
++ Cleaned up input-output solve, so that extrap order actually does something.
+  - added compiler directives for doing input-output solve option 1 before option 2 (may be a better option later, when ServoDyn
+    and/or AeroDyn deal with output and states properly)
+  - added compiler directives to output the added-mass matrix and the jacobian
++ Modified logic to ensure Jacobian gets recalculated on correction steps
++ Added option for subcycling (it currently copies OtherStates, and we have no need to use subcycles in our models)
++ Added ability to compile in double or single precision
++ Added new modules to FAST: IceFloe, FEAMooring, and IceDyn.
++ Feature flags changed to feature switches in the FAST primary input file.
++ Renamed some variables for the file name input in the FAST primary input file.
++ Standardized output file names for FAST modules. The new convention is <RootName>{.<ModName>}.<ext>, with extensions of
+  [sum | out | outb | ech]
++ Simulation status is now displayed at t=0.
++ Modified time ratio to include only the CPU time after initialization
++ Changed warning/error message when no input file was specified on line
++ Added information about Jacobian size to FAST summary file
++ Added FAST (glue-code) time step to summary file
++ Renamed "onshore" to "land-based" in the FAST summary file
++ Added option to input "default" as requested dt in AeroDyn, ServoDyn, ElastoDyn, & SubDyn
++ Updated some error handling
++ Added check so that PJM's NEWTOWER influence model cannot be used with offshore floating turbines.
++ Replaced GaussElim with an LU decomposition, using LAPACK routines SGETRF and SGETRS which means the solve takes n^2 instead of
+    n^3/3 operations. This significantly speeds up the models that use SubDyn.
++ added check that ElastoDyn's PtfmRefzt value must not be negative for floating offshore systems.
+  (FAST isn't the most ideal place for this check, but that's where it is now.)
+
+--------------------------------------------
+Changes to ElastoDyn source code:
+--------------------------------------------
++ modified ElastoDyn's BladeLn2Mesh (input and output) so that it is now an array of Meshes instead of one big mesh.
+  (This is to correspond with AeroDyn's method of separate meshes.)
++ modified linear teeter-damper moment in ED, based on bug reported here: https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=1073
++ changed Mod to Modulo in the GeAz output (and input) to avoid rare instances when Azimuth was output as negative
++ Fixed bug in ED's implementation of AM4, which incorrectly initialized the state history if corrections were made.
++ fixed error message when NacYaw is outside range: https://wind-dev.nrel.gov/bugzilla/show_bug.cgi?id=520
+
+--------------------------------------------
+Changes to CertTest:
+--------------------------------------------
+   + modified tests that used extrap order 0, which is no longer allowed
+
+  *** 5 MW models (Tests 18-25) ***
+     - all of these models use a new FF wind file.
+     - The DISCON*_win32.dll files used in ServoDyn have been compiled with /libs:static instead of /libs:dll to avoid issues
+       when if users didn't have IVF installed.
+     - added limit to pitch angles coming out of DISCON*.DLLs (previously could have gone outside range if pitch rate was max or min
+       rate for extended period of time)
+
+     - Test 18 (land-based 5MW, "Onshore"):
+       + We fixed the AeroDyn tower input file's NTwrRe value, which was set incorrectly.
+       + We updated the wind file so that it contains points on the tower. Previously, it assumed they were all 0. (because
+         InflowWind didn't trap the error properly)
+       + We increased the time step to be the same as FAST v7.
+
+    *** Models of fixed-bottom offshore turbines ***
+     - Test 19 (OC3 Monopile):
+       + This test was previously called Monopile_RF, but has been renamed OC3Monopile.
+       + added HydroDyn
+       + we increased the integration time step
+       + we reduced number of SD modes to 0
+       + we added 1% damping to heave in HydroDyn
+     - Test 20 (OC3 Tripod):
+       + this is a newly released model
+     - Test 21 (OC4 Jacket):
+       + this is a newly released model
+
+    *** Models of floating offshore turbines ***
+    - I modified the time steps of the floating offshore cases to be 0.0125, as they were in FAST v7. Earlier issues related to
+      frequencies seem to have been solved with extrapolation.
+
+     - Test 24 (OC3 Hywind):
+       + This test was previously called "Floating_OC3Hywind", but now is just "OC3Hywind".
+       + the CB input parameter in the MAP input file was changed to 1e-5. (it should actually be zero, but is now set to a small
+         number to get around MAP division-by-zero error)
+
+--------------------------------------------
+Changes to utility files:
+--------------------------------------------
++ added Matlab script to convert FAST/HydroDyn input files from FAST v8.3 to versions in this release
++ added getPSD.m functionality to PlotFASToutput.m [I'm not sure I'm going to distribute this, though.]
++ modified template FAST file so that InterpOrder isn't 0, which isn't allowed
++ updated newInputs_FAST_v8_05.m so that InterpOrder is changed to 2 if it was 0 before
++ updated FAST2Matlab and Matlab2FAST to work be able to read/write AeroDyn v13/14 files; also prevented "Inf" from being read as a
+  number[(as in "InfModel" was = oldValue(Inf) + label("Model")]
++ added Matlab DrawMesh() function to draw FAST meshes, which were written with MeshWrMin() in the Fortran code.
++ I updated ReadFASTbinary.m to use a faster method of reading the file, based on feedback from the forum.
+  + Matlab script to read matrices from SubDyn's summary file
+  + PlotFASToutput.m, new Matlab function to plot FAST-style output files
++ added Registry source files and gcc makefile so Registry can be compiled on non-Windows systems
++ added makefile and source files to create an empty MAP dll, so that FAST can be compiled and run on other systems (except for
+  floating models that use MAP)
+
+
+--------------------------------------------
+Changes in compiling scripts:
+--------------------------------------------
++ modified Compile_DISCON_DLL.bat to use /libs:static instead of /libs:dll
++ added makefile, which uses LAPACK and BLAS libraries
++ Added compiling options:
+  -- Large Address Aware switch
+  -- increased stack reserve size
++ The MAP dll no longer depends on python
+
+
+  + added 64-bit version of FAST, MAP (dummy), and 5MW Offshore controller. This is useful for fixed-bottom and land-based turbines only. 64-bit MAP is unavailable.
+
+
+
+
+
+
+also look at changes in AeroDyn, SubDyn, HydroDyn, NWTC_Library commit logs

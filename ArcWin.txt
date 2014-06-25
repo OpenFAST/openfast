@@ -8,8 +8,6 @@ bin\MAP_x64.dll
 bin\Registry_win32.exe
 bin\crunch_win32.exe
 
-Compiling\VisualStudio\FAST_Solution.sln
-
 CertTest\DateTime.exe
 CertTest\Update.bat
 
