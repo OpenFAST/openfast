@@ -4044,10 +4044,14 @@ Changes to CertTest:
     - I modified the time steps of the floating offshore cases to be 0.0125, as they were in FAST v7. Earlier issues related to
       frequencies seem to have been solved with extrapolation.
 
+     - Test 23 (MIT-NREL TLP):
+       + This test was previously called "Floating_TLP", but has been renamed "MIT_NREL_TLP"
      - Test 24 (OC3 Hywind):
        + This test was previously called "Floating_OC3Hywind", but now is just "OC3Hywind".
-       + the CB input parameter in the MAP input file was changed to 1e-5. (it should actually be zero, but is now set to a small
+       + the CB input parameter in the MAP input file was changed to 1e-3. (it should actually be zero, but is now set to a small
          number to get around MAP division-by-zero error)
+     - Test 25 (OC4 DeepCwind Semi):
+       + this is a newly released model
 
 --------------------------------------------
 Changes to utility files:
