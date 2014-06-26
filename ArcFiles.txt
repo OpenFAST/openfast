@@ -173,6 +173,14 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_HydroDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_MAP.dat
 
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_ElastoDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_ElastoDyn_Tower.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_ServoDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_HydroDyn.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_MAP.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_AeroDyn.dat
+
+
 
 CertTest\Test21_withIce.fst
 CertTest\5MW_Baseline\IceFloe_IEC_Crushing.dat
@@ -397,6 +405,8 @@ CertTest\Test23.cru
 CertTest\Test24.fst
 CertTest\Test24.cru
 
+CertTest\Test25.fst
+CertTest\Test25.cru
 
 
 CertTest\TstFiles\Test01.sts
@@ -480,6 +490,12 @@ CertTest\TstFiles\Test19.AD.sum
 CertTest\TstFiles\Test19.sts
 CertTest\TstFiles\Test19.HD.sum
 
+CertTest\TstFiles\Test20.sum
+CertTest\TstFiles\Test20.AD.sum
+CertTest\TstFiles\Test20.sts
+CertTest\TstFiles\Test20.HD.sum
+CertTest\TstFiles\Test20.SD.sum
+
 CertTest\TstFiles\Test21.sum
 CertTest\TstFiles\Test21.AD.sum
 CertTest\TstFiles\Test21.sts
@@ -497,3 +513,7 @@ CertTest\TstFiles\Test23.sts
 CertTest\TstFiles\Test24.sum
 CertTest\TstFiles\Test24.AD.sum
 CertTest\TstFiles\Test24.sts
+
+CertTest\TstFiles\Test25.sum
+CertTest\TstFiles\Test25.AD.sum
+CertTest\TstFiles\Test25.sts

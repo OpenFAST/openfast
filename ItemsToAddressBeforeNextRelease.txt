@@ -7,6 +7,7 @@ FAST Release Date: Monday, June 30, 2014
 *** check that AddedMassMatrix isn't output
 *** verify compiler directives are the ones I want on
 
+check SD input files in SD driver certtest folders (do they work with latest version?)
 
 This is a list of things that we need to do before our next release. Please update as necessary.
 -------------------------------------------------
