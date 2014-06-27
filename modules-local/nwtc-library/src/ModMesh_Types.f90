@@ -87,6 +87,7 @@ MODULE ModMesh_Types
 
 
    TYPE, PUBLIC :: ElemRecType ! a particular element
+      ! note: any fields added to this type must be copied in Mesh_MoveAlloc_ElemRecType()
      INTEGER                        :: Xelement      ! which kind of element
      INTEGER                        :: Nneighbors    ! how many neighbors
      REAL(ReKi)                     :: det_jac       ! determinant of the Jacobian (e.g., 1/2 the length of a line-2 element)
@@ -223,4 +224,14 @@ CONTAINS
 
    END FUNCTION HasLoadFields
 
+   SUBROUTINE Mesh_MoveAlloc_ElemRecType( Src, Dest )
+      TYPE(ElemRecType), INTENT(INOUT) :: Src
+      TYPE(ElemRecType), INTENT(INOUT) :: Dest
+   
+      Dest%Xelement   = Src%Xelement
+      Dest%Nneighbors = Src%Nneighbors
+      Dest%det_jac    = Src%det_jac
+      CALL Move_Alloc( Src%ElemNodes,  Dest%ElemNodes )
+             
+   END SUBROUTINE Mesh_MoveAlloc_ElemRecType
 END MODULE ModMesh_Types
