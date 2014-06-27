@@ -1676,6 +1676,7 @@ CONTAINS
      INTEGER,                     INTENT(IN   ) :: P1
     ! Local
      TYPE(ElemRecType), POINTER :: tmp(:)
+     INTEGER                    :: i 
 
      IF ( mesh_debug ) print*,'Called MeshConstructElement_1PT'
      ErrStat = ErrID_None
@@ -1709,8 +1710,14 @@ CONTAINS
             RETURN
          END IF
          
-         IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GT. 1 ) &
-           tmp(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem) = Mesh%ElemTable(ELEMENT_POINT)%Elements(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem)
+         IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GT. 1 ) THEN  ! we added 1 earlier, so we don't need to check if > 0
+
+               ! tmp(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem) = Mesh%ElemTable(ELEMENT_POINT)%Elements(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem)
+            DO i=1,Mesh%ElemTable(ELEMENT_POINT)%maxelem
+               CALL Mesh_MoveAlloc_ElemRecType( Mesh%ElemTable(ELEMENT_POINT)%Elements(i), tmp(i) )
+            END DO
+               
+         END IF
          IF ( ASSOCIATED(Mesh%ElemTable(ELEMENT_POINT)%Elements) ) DEALLOCATE(Mesh%ElemTable(ELEMENT_POINT)%Elements)
          Mesh%ElemTable(ELEMENT_POINT)%Elements => tmp
          Mesh%ElemTable(ELEMENT_POINT)%maxelem = Mesh%ElemTable(ELEMENT_POINT)%maxelem + BUMPUP
@@ -1748,7 +1755,8 @@ CONTAINS
      INTEGER,                     INTENT(IN   ) :: P1,  P2
     ! Local
      TYPE(ElemRecType), POINTER :: tmp(:)
-
+     INTEGER                    :: i
+     
      IF ( mesh_debug ) print*,'Called MeshConstructElement_2PT'
      ErrStat = ErrID_None
      ErrMess = ""
@@ -1784,9 +1792,16 @@ CONTAINS
             ErrMess = "MeshConstructElement_2PT: Couldn't allocate space for element table"
             RETURN
          END IF
-            
-         IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GT. 1 ) &
-           tmp(1:Mesh%ElemTable(ELEMENT_LINE2)%maxelem) = Mesh%ElemTable(ELEMENT_LINE2)%Elements(1:Mesh%ElemTable(ELEMENT_LINE2)%maxelem)
+                     
+         IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GT. 1 ) THEN  ! we added 1 earlier, so we don't need to check if > 0
+
+               ! tmp(1:Mesh%ElemTable(ELEMENT_LINE2)%maxelem) = Mesh%ElemTable(ELEMENT_LINE2)%Elements(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem)
+            DO i=1,Mesh%ElemTable(ELEMENT_LINE2)%maxelem
+               CALL Mesh_MoveAlloc_ElemRecType( Mesh%ElemTable(ELEMENT_LINE2)%Elements(i), tmp(i) )
+            END DO
+               
+         END IF
+         
          IF ( ASSOCIATED(Mesh%ElemTable(ELEMENT_LINE2)%Elements) ) DEALLOCATE(Mesh%ElemTable(ELEMENT_LINE2)%Elements)
          Mesh%ElemTable(ELEMENT_LINE2)%Elements => tmp
          Mesh%ElemTable(ELEMENT_LINE2)%maxelem = Mesh%ElemTable(ELEMENT_LINE2)%maxelem + BUMPUP
