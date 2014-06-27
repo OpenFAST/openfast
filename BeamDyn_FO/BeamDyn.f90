@@ -72,6 +72,10 @@ INCLUDE 'CrvExtractCrv.f90'
 INCLUDE 'ComputeIniNodalCrv.f90'
 INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
+INCLUDE 'ElementMatrix_Force.f90'
+INCLUDE 'GenerateDynamicElement_Force.f90'
+INCLUDE 'DynamicSolution_Force.f90'
+
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
@@ -438,8 +442,8 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
 
-   CALL MeshCopy ( SrcMesh  = u%RootMotion      &
-                 , DestMesh = y%RootForce      &
+   CALL MeshCopy ( SrcMesh  = u%PointLoad      &
+                 , DestMesh = y%BldForce       &
                  , CtrlCode = MESH_SIBLING     &
                  , Force           = .TRUE.    &
                  , Moment          = .TRUE.    &
@@ -478,8 +482,8 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
 
    ! Define initial guess for the system outputs here:
 
-   y%RootForce%Force(:,:)    = 0.0D0
-   y%RootForce%Moment(:,:)   = 0.0D0
+   y%BldForce%Force(:,:)    = 0.0D0
+   y%BldForce%Moment(:,:)   = 0.0D0
 
    y%BldMotion%TranslationDisp(:,:) = 0.0D0
    y%BldMotion%Orientation(:,:,:)   = 0.0D0
@@ -489,7 +493,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    y%BldMotion%RotationAcc(:,:)     = 0.0D0
 
    ! set remap flags to true
-   y%RootForce%RemapFlag = .True.
+   y%BldForce%RemapFlag = .True.
    y%BldMotion%RemapFlag = .True.
    u%RootMotion%RemapFlag = .True.
 
@@ -646,6 +650,7 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
    INTEGER(IntKi):: temp_id
    REAL(ReKi):: cc(3)
    REAL(ReKi):: temp_R(3,3)
+   REAL(ReKi):: temp_Force(p%dof_total)
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -671,6 +676,15 @@ INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
        temp_id = (i-1)*p%dof_node
        y%BldMotion%TranslationAcc(1:3,i) = xdot%dqdt(temp_id+1:temp_id+3)
        y%BldMotion%RotationAcc(1:3,i) = xdot%dqdt(temp_id+4:temp_id+6)
+   ENDDO
+
+   CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                             &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                             &xdot%dqdt,temp_Force)
+   DO i=1,p%node_total
+       temp_id = (i-1)*p%dof_node
+       y%BldForce%Force(1:3,i) = temp_Force(temp_id+1:temp_id+3)
+       y%BldForce%Moment(1:3,i) = temp_Force(temp_id+4:temp_id+6)
    ENDDO
 
    END SUBROUTINE BeamDyn_CalcOutput

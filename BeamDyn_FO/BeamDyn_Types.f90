@@ -91,7 +91,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_OutputType  =======
   TYPE, PUBLIC :: BD_OutputType
-    TYPE(MeshType)  :: RootForce 
+    TYPE(MeshType)  :: BldForce 
     TYPE(MeshType)  :: BldMotion 
   END TYPE BD_OutputType
 ! =======================
@@ -1394,7 +1394,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-     CALL MeshCopy( SrcOutputData%RootForce, DstOutputData%RootForce, CtrlCode, ErrStat, ErrMsg )
+     CALL MeshCopy( SrcOutputData%BldForce, DstOutputData%BldForce, CtrlCode, ErrStat, ErrMsg )
      CALL MeshCopy( SrcOutputData%BldMotion, DstOutputData%BldMotion, CtrlCode, ErrStat, ErrMsg )
  END SUBROUTINE BD_CopyOutput
 
@@ -1406,7 +1406,7 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( OutputData%RootForce, ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%BldForce, ErrStat, ErrMsg )
   CALL MeshDestroy( OutputData%BldMotion, ErrStat, ErrMsg )
  END SUBROUTINE BD_DestroyOutput
 
@@ -1431,9 +1431,9 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
  ! buffers to store meshes, if any
-  REAL(ReKi),     ALLOCATABLE :: Re_RootForce_Buf(:)
-  REAL(DbKi),     ALLOCATABLE :: Db_RootForce_Buf(:)
-  INTEGER(IntKi), ALLOCATABLE :: Int_RootForce_Buf(:)
+  REAL(ReKi),     ALLOCATABLE :: Re_BldForce_Buf(:)
+  REAL(DbKi),     ALLOCATABLE :: Db_BldForce_Buf(:)
+  INTEGER(IntKi), ALLOCATABLE :: Int_BldForce_Buf(:)
   REAL(ReKi),     ALLOCATABLE :: Re_BldMotion_Buf(:)
   REAL(DbKi),     ALLOCATABLE :: Db_BldMotion_Buf(:)
   INTEGER(IntKi), ALLOCATABLE :: Int_BldMotion_Buf(:)
@@ -1451,13 +1451,13 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! Allocate mesh buffers, if any (we'll also get sizes from these) 
-  CALL MeshPack( InData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg, .TRUE. ) ! RootForce 
-  IF(ALLOCATED(Re_RootForce_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_RootForce_Buf  ) ! RootForce
-  IF(ALLOCATED(Db_RootForce_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_RootForce_Buf  ) ! RootForce
-  IF(ALLOCATED(Int_RootForce_Buf))Int_BufSz = Int_BufSz + SIZE( Int_RootForce_Buf ) ! RootForce
-  IF(ALLOCATED(Re_RootForce_Buf))  DEALLOCATE(Re_RootForce_Buf)
-  IF(ALLOCATED(Db_RootForce_Buf))  DEALLOCATE(Db_RootForce_Buf)
-  IF(ALLOCATED(Int_RootForce_Buf)) DEALLOCATE(Int_RootForce_Buf)
+  CALL MeshPack( InData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg, .TRUE. ) ! BldForce 
+  IF(ALLOCATED(Re_BldForce_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_BldForce_Buf  ) ! BldForce
+  IF(ALLOCATED(Db_BldForce_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_BldForce_Buf  ) ! BldForce
+  IF(ALLOCATED(Int_BldForce_Buf))Int_BufSz = Int_BufSz + SIZE( Int_BldForce_Buf ) ! BldForce
+  IF(ALLOCATED(Re_BldForce_Buf))  DEALLOCATE(Re_BldForce_Buf)
+  IF(ALLOCATED(Db_BldForce_Buf))  DEALLOCATE(Db_BldForce_Buf)
+  IF(ALLOCATED(Int_BldForce_Buf)) DEALLOCATE(Int_BldForce_Buf)
   CALL MeshPack( InData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg, .TRUE. ) ! BldMotion 
   IF(ALLOCATED(Re_BldMotion_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_BldMotion_Buf  ) ! BldMotion
   IF(ALLOCATED(Db_BldMotion_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_BldMotion_Buf  ) ! BldMotion
@@ -1468,22 +1468,22 @@ ENDIF
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
-  CALL MeshPack( InData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg, OnlySize ) ! RootForce 
-  IF(ALLOCATED(Re_RootForce_Buf)) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_RootForce_Buf)-1 ) = Re_RootForce_Buf
-    Re_Xferred = Re_Xferred + SIZE(Re_RootForce_Buf)
+  CALL MeshPack( InData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg, OnlySize ) ! BldForce 
+  IF(ALLOCATED(Re_BldForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldForce_Buf)-1 ) = Re_BldForce_Buf
+    Re_Xferred = Re_Xferred + SIZE(Re_BldForce_Buf)
   ENDIF
-  IF(ALLOCATED(Db_RootForce_Buf)) THEN
-    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_RootForce_Buf)-1 ) = Db_RootForce_Buf
-    Db_Xferred = Db_Xferred + SIZE(Db_RootForce_Buf)
+  IF(ALLOCATED(Db_BldForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_BldForce_Buf)-1 ) = Db_BldForce_Buf
+    Db_Xferred = Db_Xferred + SIZE(Db_BldForce_Buf)
   ENDIF
-  IF(ALLOCATED(Int_RootForce_Buf)) THEN
-    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_RootForce_Buf)-1 ) = Int_RootForce_Buf
-    Int_Xferred = Int_Xferred + SIZE(Int_RootForce_Buf)
+  IF(ALLOCATED(Int_BldForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_BldForce_Buf)-1 ) = Int_BldForce_Buf
+    Int_Xferred = Int_Xferred + SIZE(Int_BldForce_Buf)
   ENDIF
-  IF( ALLOCATED(Re_RootForce_Buf) )  DEALLOCATE(Re_RootForce_Buf)
-  IF( ALLOCATED(Db_RootForce_Buf) )  DEALLOCATE(Db_RootForce_Buf)
-  IF( ALLOCATED(Int_RootForce_Buf) ) DEALLOCATE(Int_RootForce_Buf)
+  IF( ALLOCATED(Re_BldForce_Buf) )  DEALLOCATE(Re_BldForce_Buf)
+  IF( ALLOCATED(Db_BldForce_Buf) )  DEALLOCATE(Db_BldForce_Buf)
+  IF( ALLOCATED(Int_BldForce_Buf) ) DEALLOCATE(Int_BldForce_Buf)
   CALL MeshPack( InData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg, OnlySize ) ! BldMotion 
   IF(ALLOCATED(Re_BldMotion_Buf)) THEN
     IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldMotion_Buf)-1 ) = Re_BldMotion_Buf
@@ -1526,9 +1526,9 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
  ! buffers to store meshes, if any
-  REAL(ReKi),    ALLOCATABLE :: Re_RootForce_Buf(:)
-  REAL(DbKi),    ALLOCATABLE :: Db_RootForce_Buf(:)
-  INTEGER(IntKi),    ALLOCATABLE :: Int_RootForce_Buf(:)
+  REAL(ReKi),    ALLOCATABLE :: Re_BldForce_Buf(:)
+  REAL(DbKi),    ALLOCATABLE :: Db_BldForce_Buf(:)
+  INTEGER(IntKi),    ALLOCATABLE :: Int_BldForce_Buf(:)
   REAL(ReKi),    ALLOCATABLE :: Re_BldMotion_Buf(:)
   REAL(DbKi),    ALLOCATABLE :: Db_BldMotion_Buf(:)
   INTEGER(IntKi),    ALLOCATABLE :: Int_BldMotion_Buf(:)
@@ -1542,23 +1542,23 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! first call MeshPack to get correctly sized buffers for unpacking
-  CALL MeshPack( OutData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg , .TRUE. ) ! RootForce 
-  IF(ALLOCATED(Re_RootForce_Buf)) THEN
-    Re_RootForce_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_RootForce_Buf)-1 )
-    Re_Xferred = Re_Xferred + SIZE(Re_RootForce_Buf)
+  CALL MeshPack( OutData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg , .TRUE. ) ! BldForce 
+  IF(ALLOCATED(Re_BldForce_Buf)) THEN
+    Re_BldForce_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldForce_Buf)-1 )
+    Re_Xferred = Re_Xferred + SIZE(Re_BldForce_Buf)
   ENDIF
-  IF(ALLOCATED(Db_RootForce_Buf)) THEN
-    Db_RootForce_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_RootForce_Buf)-1 )
-    Db_Xferred = Db_Xferred + SIZE(Db_RootForce_Buf)
+  IF(ALLOCATED(Db_BldForce_Buf)) THEN
+    Db_BldForce_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_BldForce_Buf)-1 )
+    Db_Xferred = Db_Xferred + SIZE(Db_BldForce_Buf)
   ENDIF
-  IF(ALLOCATED(Int_RootForce_Buf)) THEN
-    Int_RootForce_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_RootForce_Buf)-1 )
-    Int_Xferred = Int_Xferred + SIZE(Int_RootForce_Buf)
+  IF(ALLOCATED(Int_BldForce_Buf)) THEN
+    Int_BldForce_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_BldForce_Buf)-1 )
+    Int_Xferred = Int_Xferred + SIZE(Int_BldForce_Buf)
   ENDIF
-  CALL MeshUnPack( OutData%RootForce, Re_RootForce_Buf, Db_RootForce_Buf, Int_RootForce_Buf, ErrStat, ErrMsg ) ! RootForce 
-  IF( ALLOCATED(Re_RootForce_Buf) )  DEALLOCATE(Re_RootForce_Buf)
-  IF( ALLOCATED(Db_RootForce_Buf) )  DEALLOCATE(Db_RootForce_Buf)
-  IF( ALLOCATED(Int_RootForce_Buf) ) DEALLOCATE(Int_RootForce_Buf)
+  CALL MeshUnPack( OutData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg ) ! BldForce 
+  IF( ALLOCATED(Re_BldForce_Buf) )  DEALLOCATE(Re_BldForce_Buf)
+  IF( ALLOCATED(Db_BldForce_Buf) )  DEALLOCATE(Db_BldForce_Buf)
+  IF( ALLOCATED(Int_BldForce_Buf) ) DEALLOCATE(Int_BldForce_Buf)
   CALL MeshPack( OutData%BldMotion, Re_BldMotion_Buf, Db_BldMotion_Buf, Int_BldMotion_Buf, ErrStat, ErrMsg , .TRUE. ) ! BldMotion 
   IF(ALLOCATED(Re_BldMotion_Buf)) THEN
     Re_BldMotion_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldMotion_Buf)-1 )
@@ -2765,7 +2765,7 @@ ENDIF
  endif
  order = SIZE(u) - 1
  IF ( order .eq. 0 ) THEN
-  CALL MeshCopy(u(1)%RootForce, u_out%RootForce, MESH_UPDATECOPY, ErrStat, ErrMsg )
+  CALL MeshCopy(u(1)%BldForce, u_out%BldForce, MESH_UPDATECOPY, ErrStat, ErrMsg )
   CALL MeshCopy(u(1)%BldMotion, u_out%BldMotion, MESH_UPDATECOPY, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 1 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
@@ -2773,7 +2773,7 @@ ENDIF
     ErrMsg  = ' Error in BD_Output_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
     RETURN
   END IF
-  CALL MeshExtrapInterp1(u(1)%RootForce, u(2)%RootForce, tin, u_out%RootForce, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp1(u(1)%BldForce, u(2)%BldForce, tin, u_out%BldForce, tin_out, ErrStat, ErrMsg )
   CALL MeshExtrapInterp1(u(1)%BldMotion, u(2)%BldMotion, tin, u_out%BldMotion, tin_out, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 2 ) THEN
   IF ( EqualRealNos( t(1), t(2) ) ) THEN
@@ -2791,7 +2791,7 @@ ENDIF
     ErrMsg  = ' Error in BD_Output_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
     RETURN
   END IF
-  CALL MeshExtrapInterp2(u(1)%RootForce, u(2)%RootForce, u(3)%RootForce, tin, u_out%RootForce, tin_out, ErrStat, ErrMsg )
+  CALL MeshExtrapInterp2(u(1)%BldForce, u(2)%BldForce, u(3)%BldForce, tin, u_out%BldForce, tin_out, ErrStat, ErrMsg )
   CALL MeshExtrapInterp2(u(1)%BldMotion, u(2)%BldMotion, u(3)%BldMotion, tin, u_out%BldMotion, tin_out, ErrStat, ErrMsg )
  ELSE 
    ErrStat = ErrID_Fatal
