@@ -32,6 +32,7 @@ Source\dependencies\Registry\*
 
 OutListParameters.xlsx
 
+Compiling\CompilingInstructions_FASTv8.pdf
 Compiling\Compile_FAST.bat
 Compiling\makefile
 Compiling\Compile_DISCON_DLL.bat

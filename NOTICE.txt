@@ -1,7 +1,30 @@
 FAST
-
-Copyright (c) 2013  National Renewable Energy Laboratory
+Copyright (c) 2013-2014  National Renewable Energy Laboratory
 
 This product indludes software developed at
 National Renewable Energy Laboratory (http://www.nrel.gov, wind.nrel.gov)
+
+
+
+
+Third Party Content
+FAST includes content from several 3rd party sources:
+
+Linear Algebra PACKage (LAPACK) (http://www.netlib.org/lapack/index.html)
+The authors of LAPACK are E. Anderson, Z. Bai, C. Bischof, S. Blackford, J. Demmel, J. Dongarra, J. Du Croz, A. Greenbaum, S. Hammarling, A. McKenney, and D. Sorensen.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Basic Linear Algebra Subprograms (BLAS), which is used indirectly in LAPACK routines (http://www.netlib.org/blas/index.html)
+
+Scalable LAPACK (ScaLAPACK) (http://www.netlib.org/scalapack/index.html)
+The authors of ScaLAPACK are L. S. Blackford, J. Choi, A. Cleary, E. D'Azevedo, J. Demmel, I. Dhillon, J. Dongarra, S. Hammarling, G. Henry, A. Petitet, K. Stanley, D. Walker, and R. C. Whaley.
+
+FFTPACK (http://www.netlib.org/fftpack/)
+The author of FFTPACK is Paul N. Swarztrauber
 

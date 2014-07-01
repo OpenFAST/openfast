@@ -831,7 +831,6 @@ LOGICAL                               :: calcJacobian                           
    
    IF ( p_FAST%CompHydro == Module_HD ) THEN      
          ! Copy values for interpolation/extrapolation:
-
       DO j = 1, p_FAST%InterpOrder + 1
          HD_InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
          !HD_OutputTimes(i) = t_initial - (j - 1) * dt
@@ -856,6 +855,7 @@ LOGICAL                               :: calcJacobian                           
          CALL HydroDyn_CopyOtherState( OtherSt_HD, OtherSt_HD_old, MESH_NEWCOPY, Errstat, ErrMsg)
             CALL CheckError( ErrStat, 'Message from HydroDyn_CopyOtherState (init): '//NewLine//ErrMsg )   
       END IF          
+      
    END IF !CompHydro
          
    
@@ -1111,13 +1111,12 @@ LOGICAL                               :: calcJacobian                           
       
       ! HydroDyn
       IF ( p_FAST%CompHydro == Module_HD ) THEN
-         
+        
          CALL HydroDyn_Input_ExtrapInterp(HD_Input, HD_InputTimes, u_HD, t_global_next, ErrStat, ErrMsg)
             CALL CheckError(ErrStat,'Message from HD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
             
          !CALL HydroDyn_Output_ExtrapInterp(HD_Output, HD_OutputTimes, y_HD, t_global_next, ErrStat, ErrMsg)
          !   CALL CheckError(ErrStat,'Message from HD_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )
-            
             
          ! Shift "window" of HD_Input and HD_Output
   
@@ -1361,6 +1360,7 @@ LOGICAL                               :: calcJacobian                           
                CALL HydroDyn_UpdateStates( t_module, n_t_module, HD_Input, HD_InputTimes, p_HD, x_HD_pred, xd_HD_pred, z_HD_pred, OtherSt_HD, ErrStat, ErrMsg )
                   CALL CheckError( ErrStat, 'Message from HydroDyn_UpdateStates: '//NewLine//ErrMsg )
             END DO !j_ss
+            
          END IF
             
          
@@ -1553,7 +1553,7 @@ LOGICAL                               :: calcJacobian                           
       
       
       ! HydroDyn: copy final predictions to actual states
-      IF ( p_FAST%CompHydro == Module_HD ) THEN
+      IF ( p_FAST%CompHydro == Module_HD ) THEN         
          CALL HydroDyn_CopyContState   ( x_HD_pred,  x_HD, MESH_UPDATECOPY, Errstat, ErrMsg)
          CALL HydroDyn_CopyDiscState   (xd_HD_pred, xd_HD, MESH_UPDATECOPY, Errstat, ErrMsg)  
          CALL HydroDyn_CopyConstrState ( z_HD_pred,  z_HD, MESH_UPDATECOPY, Errstat, ErrMsg)

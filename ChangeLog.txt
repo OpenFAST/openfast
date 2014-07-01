@@ -3984,7 +3984,7 @@ Changes to FAST source code:
 + Added new modules to FAST: IceFloe, FEAMooring, and IceDyn.
 + Feature flags changed to feature switches in the FAST primary input file.
 + Renamed some variables for the file name input in the FAST primary input file.
-+ Standardized output file names for FAST modules. The new convention is <RootName>{.<ModName>}.<ext>, with extensions of
++ Standardized output file names for FAST modules. The new convention is <RootName>[.<ModName>].<ext>, with extensions of
   [sum | out | outb | ech]
 + Simulation status is now displayed at t=0.
 + Modified time ratio to include only the CPU time after initialization
