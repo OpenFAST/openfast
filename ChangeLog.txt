@@ -757,27 +757,46 @@ v12.58  28-Jun-2005  M. Hand
 -------------------------------------------------------------------------------
 
 v13.00.00a-bjj 31-Mar-2010  B. and J. Jonkman
- We added Disclaimer.txt to the archive and added two new files to the 
-   SAMPLES folder (for new tower influence features).  
+ We added Disclaimer.txt to the archive and added two new files to the
+   SAMPLES folder (for new tower influence features).
  We renumbered the archive with the new numbering scheme: X.XX.XX
 
 
 v13.00.00a-bjj was added to the NWTC Subversion (SVN) server.
  SVN Revision 2 removed all change comments and was renamed v13.00.00.
- 
-v13.00.01a-bjj 16-Feb-2012 B. Jonkman 
+
+v13.00.01a-bjj 16-Feb-2012 B. Jonkman
  See DevelopLog.txt
- 
-v13.00.01b-bjj, 28-Aug-2012 B. Jonkman   
+
+v13.00.01b-bjj, 28-Aug-2012 B. Jonkman
  Modifications for NWTC Library v1.05.00.
  I removed InflowWind from the AeroDyn archive. InflowWind is now a module
    on its own.
 
-v13.00.01c-bjj, 7-Dec-2012 B. Jonkman   
+v13.00.01c-bjj, 7-Dec-2012 B. Jonkman
  Modifications for NWTC Library v1.06.00
 
 v13.00.02a-bjj, 20-Feb-2013, B. Jonkman
   Cleaned up for release; added user's guide addendum to the archive.
+
+-------------------------------------------------------------------------------
+--------------------------- AeroDyn v14. --------------------------------------
+----- PLEASE NOTE THAT THIS VERSION (14.00.00) IS NOT BACKWARD COMPATIBLE! ----
+-------------------------------------------------------------------------------
++ Modified AeroDyn to use the FAST framework.
+
+MLB added tower aerodynamics
+See SVN for list of changes.
+
+v14.02.01c-bjj   30-Jun-2014   B. Jonkman
++ Fixed error handling.
++ found/fixed uninitialized local variable that was causing the code to crash with certain compile options.
++ modified reading of MulTabLoc to hopefully mimic FAST v7.02 behavior (not tested, but definitely was a problem in previous release)
++ renamed output files <RootName>.elm is now <RootName>.AD.out and <RootName>.opt is now <RootName>.AD.sum
+
+
+
+
 
 -------------------------------------------------------------------------------
 To do:

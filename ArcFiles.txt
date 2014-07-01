@@ -1,4 +1,4 @@
-AlphaChangeLog.txt
+ChangeLog.txt
 Disclaimer.txt
 
 Samples/AeroDyn_Tower.dat
