@@ -2343,7 +2343,7 @@ SUBROUTINE GetTwrInfluence ( P, O, ErrStat, ErrMess,      &
    IF ( Distance < 1.0 ) THEN    ! potentially inside the tower            !bjj: only if we're not ABOVE the tower, though....
 
       IF (ZGrnd < 0.0) THEN      !bjj added this condition.... check that it's correct
-
+!bjj: what does this exactly mean? "temporarily disabled?"
          IF( .NOT. O%AFLAGTwrInflu) THEN
             CALL ProgWarn( ' Tower model temporarily disabled due to possible tower strike.'// &
                            ' This message will not be repeated though the condition may persist.' )
