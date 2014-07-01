@@ -135,7 +135,7 @@ MODULE NWTC_IO
 
       ! Create interface for a generic ParseVar that actually uses specific routines.
 
-   INTERFACE ParseVar                                                         ! Parse a single number from a string.
+   INTERFACE ParseVar                                                         ! Parses a character variable name and value from a string.
       MODULE PROCEDURE ParseChVar                                             ! Parses a character string from a string.
       MODULE PROCEDURE ParseDbVar                                             ! Parses a double-precision REAL from a string.
       MODULE PROCEDURE ParseInVar                                             ! Parses an INTEGER from a string.
@@ -213,136 +213,136 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix1R8     ! Single dimension matrix (Ary) of R8Ki
       MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE
-   
-   
+
+
 CONTAINS
 
-   ! It contains the following routines:  
-   
-   !     SUBROUTINE AdjRealStr         ( NumStr )                                                                         ! Removes leading spaces and trailing zeros from strings created by real numbers.
+   ! It contains the following routines:
+
+   !     SUBROUTINE AdjRealStr    ( NumStr )                                                                         ! Removes leading spaces and trailing zeros from strings created by real numbers.
    !     SUBROUTINE AllocAry           ( )                                                                                ! Generic interface for the All*Ary* routines (allocatable arrays).
    !     SUBROUTINE AllocPAry          ( )                                                                                ! Generic interface for the All*PAry* routines (pointer arrays).
-   !     SUBROUTINE AllCAry1           ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D CHARACTER array.
-   !     SUBROUTINE AllCAry2           ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D CHARACTER array.
-   !     SUBROUTINE AllCAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D CHARACTER array.
-   !     SUBROUTINE AllI1BAry1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 1-Byte INTEGER array.
-   !     SUBROUTINE AllI2BAry1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 2-Byte INTEGER array.
-   !     SUBROUTINE AllI4BAry1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte INTEGER array.
-   !     SUBROUTINE AllIAry2           ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D INTEGER array.
-   !     SUBROUTINE AllIAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D INTEGER array.
-   !     SUBROUTINE AllLAry1           ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D LOGICAL array.
-   !     SUBROUTINE AllLAry2           ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D LOGICAL array.
-   !     SUBROUTINE AllLAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D LOGICAL array.
-   !     SUBROUTINE AllR4Ary1          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte REAL array.
-   !     SUBROUTINE AllR8Ary1          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 8-Byte REAL array.
-   !     SUBROUTINE AllR16Ary1         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 16-Byte REAL array.
-   !     SUBROUTINE AllR4Ary2          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 4-Byte REAL array.
-   !     SUBROUTINE AllR8Ary2          ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 8-Byte REAL array.
-   !     SUBROUTINE AllR16Ary2         ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 16-Byte REAL array.
-   !     SUBROUTINE AllRAry3           ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D REAL array.
-   !     SUBROUTINE AllRAry4           ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )          ! Allocate a 4-D REAL array.
-   !     SUBROUTINE AllRAry5           ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] ) ! Allocate a 5-D REAL array.
-   !     SUBROUTINE CheckArgs          ( InputFile [, ErrStat] )
-   !     SUBROUTINE CheckIOS           ( IOS, Fil, Variable, VarType [, TrapErrors, ErrMsg] )
-   !     SUBROUTINE ChkParseData       ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )                  ! Checks data to be parsed to ensure it has the right variable name and a value to go with it.
-   !     SUBROUTINE ChkRealFmtStr      ( RealFmt, RealFmtVar, ErrStat, ErrMsg )                            ! Test to see if a specified string is a valid format for real numbers.
-   !     SUBROUTINE Conv2UC            ( Str )
-   !     FUNCTION   CountWords         ( Line )
-   !     FUNCTION   CurDate            ( )
-   !     FUNCTION   CurTime            ( )
-   !     SUBROUTINE DispNVD            ( )                                                                        ! Generic interface for DispNVD0, DispNVD1, DispNVD2.
-   !     SUBROUTINE DispNVD0           ( )                                                                        ! Used when DispNVD() has no agruments.
-   !     SUBROUTINE DispNVD1           ( ProgInfo )                                                               ! Used when DispNVD() is called with an argument of ProgDesc type.
-   !     SUBROUTINE DispNVD2           ( Name, Ver )                                                              ! Used when DispNVD() is called with name and version.
+   !     SUBROUTINE AllCAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D CHARACTER array.
+   !     SUBROUTINE AllCAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D CHARACTER array.
+   !     SUBROUTINE AllCAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D CHARACTER array.
+   !     SUBROUTINE AllI1BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 1-Byte INTEGER array.
+   !     SUBROUTINE AllI2BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 2-Byte INTEGER array.
+   !     SUBROUTINE AllI4BAry1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte INTEGER array.
+   !     SUBROUTINE AllIAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D INTEGER array.
+   !     SUBROUTINE AllIAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D INTEGER array.
+   !     SUBROUTINE AllLAry1      ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )                                      ! Allocate a 1-D LOGICAL array.
+   !     SUBROUTINE AllLAry2      ( Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )                            ! Allocate a 2-D LOGICAL array.
+   !     SUBROUTINE AllLAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D LOGICAL array.
+   !     SUBROUTINE AllR4Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary1     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary1    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 1-D 16-Byte REAL array.
+   !     SUBROUTINE AllR4Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary2    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 16-Byte REAL array.
+   !     SUBROUTINE AllRAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )                   ! Allocate a 3-D REAL array.
+   !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )          ! Allocate a 4-D REAL array.
+   !     SUBROUTINE AllRAry5      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] ) ! Allocate a 5-D REAL array.
+   !     SUBROUTINE CheckArgs     ( InputFile [, ErrStat] )
+   !     SUBROUTINE CheckIOS      ( IOS, Fil, Variable, VarType [, TrapErrors, ErrMsg] )
+   !     SUBROUTINE ChkParseData  ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )                  ! Checks data to be parsed to ensure it has the right variable name and a value to go with it.
+   !     SUBROUTINE ChkRealFmtStr ( RealFmt, RealFmtVar, ErrStat, ErrMsg )                            ! Test to see if a specified string is a valid format for real numbers.
+   !     SUBROUTINE Conv2UC       ( Str )
+   !     FUNCTION   CountWords    ( Line )
+   !     FUNCTION   CurDate       ( )
+   !     FUNCTION   CurTime       ( )
+   !     SUBROUTINE DispNVD       ( )                                                                        ! Generic interface for DispNVD0, DispNVD1, DispNVD2.
+   !     SUBROUTINE DispNVD0      ( )                                                                        ! Used when DispNVD() has no agruments.
+   !     SUBROUTINE DispNVD1      ( ProgInfo )                                                               ! Used when DispNVD() is called with an argument of ProgDesc type.
+   !     SUBROUTINE DispNVD2      ( Name, Ver )                                                              ! Used when DispNVD() is called with name and version.
    !     SUBROUTINE DispCopyrightLicense( ProgInfo )
    !     SUBROUTINE DLLTypePack        ( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
    !     SUBROUTINE DLLTypeUnPack      ( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
-   !     SUBROUTINE FindLine           ( Str , MaxLen , StrEnd )
+   !     SUBROUTINE FindLine      ( Str , MaxLen , StrEnd )
    !     FUNCTION   GetErrStr          ( ErrID )
-   !     SUBROUTINE GetNewUnit         ( UnIn [, ErrStat] [, ErrMsg] )
-   !     FUNCTION   GetNVD             ( ProgDesc )
-   !     FUNCTION   GetErrStr          ( ErrID )
-   !     SUBROUTINE GetPath            ( GivenFil, PathName )
-   !     SUBROUTINE GetRoot            ( GivenFil, RootName )
-   !     SUBROUTINE GetTokens          ( Line, NumTok, Tokens, Error )
-   !     SUBROUTINE GetWords           ( Line, Words, NumWords )      
-   !     SUBROUTINE InitInpErrs        ( InputErrors, MaxErrs, ErrStat, ErrMsg )                                                ! Initializes the InputErrors structure.
-   !     FUNCTION   Int2LStr           ( Intgr )
+   !     SUBROUTINE GetNewUnit    ( UnIn [, ErrStat] [, ErrMsg] )
+   !     FUNCTION   GetNVD        ( ProgDesc )
+   !     FUNCTION   GetErrStr     ( ErrID )
+   !     SUBROUTINE GetPath       ( GivenFil, PathName )
+   !     SUBROUTINE GetRoot       ( GivenFil, RootName )
+   !     SUBROUTINE GetTokens     ( Line, NumTok, Tokens, Error )
+   !     SUBROUTINE GetWords      ( Line, Words, NumWords )
+   !     SUBROUTINE InitInpErrs   ( InputErrors, MaxErrs, ErrStat, ErrMsg )                                                ! Initializes the InputErrors structure.
+   !     FUNCTION   Int2LStr      ( Intgr )
    !     SUBROUTINE IntAry2Str         ( IntAry, Str, ErrStat, ErrMsg )
-   !     SUBROUTINE NameOFile          ( InArg, OutExten, OutFile [, ErrStat] )
-   !     SUBROUTINE NormStop           ( )
-   !     FUNCTION   Num2LStr           ( Num )                                                                    ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
+   !     SUBROUTINE NameOFile     ( InArg, OutExten, OutFile [, ErrStat] )
+   !     SUBROUTINE NormStop      ( )
+   !     FUNCTION   Num2LStr      ( Num )                                                                    ! Generic interface for Int2LStr, R2LStr4, R2LStr8, R2LStr16
    !     SUBROUTINE NWTC_DisplaySyntax ( DefaultInputFile, ThisProgName )
-   !     SUBROUTINE OpenBInpFile       ( Un, InFile [, ErrStat] )
-   !     SUBROUTINE OpenBOutFile       ( Un, OutFile, ErrStat, ErrMsg )
-   !     SUBROUTINE OpenEcho           ( Un, InFile [, ErrStat] [, ErrMsg] [, ProgVer] )
-   !     SUBROUTINE OpenFInpFile       ( Un, InFile [, ErrStat] [, ErrMsg] )
-   !     SUBROUTINE OpenFOutFile       ( Un, OutFile [, ErrStat] [, ErrMsg] )
-   !     SUBROUTINE OpenFUnkFile       ( Un, OutFile, FailAbt, Failed, Exists [, ErrStat] )
-   !     SUBROUTINE OpenUInBEFile      ( Un, InFile, RecLen [, ErrStat] )
-   !     SUBROUTINE OpenUInfile        ( Un, InFile [, ErrStat] )
-   !     SUBROUTINE OpenUOutfile       ( Un, OutFile [, ErrStat] )  
+   !     SUBROUTINE OpenBInpFile  ( Un, InFile [, ErrStat] )
+   !     SUBROUTINE OpenBOutFile  ( Un, OutFile, ErrStat, ErrMsg )
+   !     SUBROUTINE OpenEcho      ( Un, InFile [, ErrStat] [, ErrMsg] [, ProgVer] )
+   !     SUBROUTINE OpenFInpFile  ( Un, InFile [, ErrStat] [, ErrMsg] )
+   !     SUBROUTINE OpenFOutFile  ( Un, OutFile [, ErrStat] [, ErrMsg] )
+   !     SUBROUTINE OpenFUnkFile  ( Un, OutFile, FailAbt, Failed, Exists [, ErrStat] )
+   !     SUBROUTINE OpenUInBEFile ( Un, InFile, RecLen [, ErrStat] )
+   !     SUBROUTINE OpenUInfile   ( Un, InFile [, ErrStat] )
+   !     SUBROUTINE OpenUOutfile  ( Un, OutFile [, ErrStat] )
    !     SUBROUTINE ParseAry                                                                                                    ! generic interface for parsing arrays
-   !     SUBROUTINE ParseChVar         ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )                          ! Parses a CHARACTER from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseDbAry         ( FileInfo, LineNum, AryName   , DbAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a double-precision REAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseDbVar         ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg, UnEc )                                ! Parses a double-precision REAL from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseInAry         ( FileInfo, LineNum, AryName   , InAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a whole-number array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseInclInfo      ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )                              ! Parse the information in "@" include statements.
-   !     SUBROUTINE ParseInVar         ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )                                ! Parses a whole-number from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseLoAry         ( FileInfo, LineNum, AryName   , LoAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a LOGICAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseLoVar         ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )                                ! Parses a LOGICAL value from a string. USE ParseVar instead.
-   !     SUBROUTINE ParseSiAry         ( FileInfo, LineNum, AryName   , SiAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a single-precision REAL array from a string. USE ParseAry instead.
-   !     SUBROUTINE ParseSiVar         ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )                                ! Parses a single-precision REAL from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseChVar    ( FileInfo, LineNum, ExpVarName, ChVar, ErrStat, ErrMsg, UnEc )                          ! Parses a CHARACTER from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseDbAry    ( FileInfo, LineNum, AryName   , DbAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a double-precision REAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseDbVar    ( FileInfo, LineNum, ExpVarName, DbVar, ErrStat, ErrMsg, UnEc )                                ! Parses a double-precision REAL from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseInAry    ( FileInfo, LineNum, AryName   , InAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a whole-number array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseInclInfo ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )                              ! Parse the information in "@" include statements.
+   !     SUBROUTINE ParseInVar    ( FileInfo, LineNum, ExpVarName, InVar, ErrStat, ErrMsg, UnEc )                                ! Parses a whole-number from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseLoAry    ( FileInfo, LineNum, AryName   , LoAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a LOGICAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseLoVar    ( FileInfo, LineNum, ExpVarName, LoVar, ErrStat, ErrMsg, UnEc )                                ! Parses a LOGICAL value from a string. USE ParseVar instead.
+   !     SUBROUTINE ParseSiAry    ( FileInfo, LineNum, AryName   , SiAry, AryLen , ErrStat, ErrMsg, UnEc )                       ! Parses a single-precision REAL array from a string. USE ParseAry instead.
+   !     SUBROUTINE ParseSiVar    ( FileInfo, LineNum, ExpVarName, SiVar, ErrStat, ErrMsg, UnEc )                                ! Parses a single-precision REAL from a string. USE ParseVar instead.
    !     SUBROUTINE ParseVar                                                                                                    ! generic interface for parsing variables   
-   !     FUNCTION   PathIsRelative     ( GivenFil )
-   !     SUBROUTINE PremEOF            ( Fil , Variable [, TrapErrors] [, ErrMsg] )
-   !     SUBROUTINE ProcessComFile     ( TopFileName, FileInfo, ErrStat, ErrMsg )                                               ! Call ScanComFile and ReadComFile to fully process commented and possibly nested input files.
-   !     SUBROUTINE ProgAbort          ( Message [, TrapErrors] )
-   !     SUBROUTINE ProgPause                                                                                     ! Pause output so the user has to hit <Enter> to continue.
-   !     SUBROUTINE ProgWarn           ( Message )
-   !     FUNCTION   R2LStr4            ( FltNum )                                                                 ! Convert  4-byte REALs to left-justified strings. USE Num2LStr() instead.
-   !     FUNCTION   R2LStr8            ( FltNum )                                                                 ! Convert  8-byte REALs to left-justified strings. USE Num2LStr() instead.
-   !     FUNCTION   R2LStr16           ( FltNum )                                                                 ! Convert 16-byte REALs to left-justified strings. USE Num2LStr() instead.
-   !     SUBROUTINE ReadAry            ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAry, ReadIAry, ReadLAry, ReadR4Ary, ReadR8Ary and ReadR16Ary.
-   !     SUBROUTINE ReadAryLines       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
-   !     SUBROUTINE ReadCAry           ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadCAryLines      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadCom            ( UnIn, Fil, ComName [, ErrStat] [, ErrMsg] [, UnEc] )                     ! Reads a comment line from an input file. (variable not returned)
-   !     SUBROUTINE ReadComFile        ( FileInfo, FileIndx, StartLine, LastLine, ErrStat, ErrMsg )                             ! Recursive routine to read a formatted file (and files it includes) and strips out the comments, copying the remainder in a structure.
-   !     SUBROUTINE ReadCVar           ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadFASTbin        ( UnIn, FASTdata [, ErrLev, ErrMsg] )                                      ! Read a FAST binary output file.
-   !     SUBROUTINE ReadIAry           ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadIVar           ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadLAry           ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
-   !     SUBROUTINE ReadLine           ( UnIn, CommChars, Line, LineLen, ErrStat )                                 ! Reads a line from the specified input unit and returns the non-comment portion of the line.
-   !     SUBROUTINE ReadLVar           ( UnIn, Fil, LogVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadNum            ( UnIn, Fil, Word, VarName, [, ErrStat] [, ErrMsg] [, UnEc] )
-   !     SUBROUTINE ReadOutputList     ( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadR4Ary          ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadR8Ary          ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadR16Ary         ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   !     SUBROUTINE ReadAryLines       ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )     ! Generic interface for ReadCAryLines, ReadR4AryLines, ReadR8AryLines, and ReadR16AryLines
-   !     SUBROUTINE ReadR4Var          ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 4-byte real number from an input file. USE ReadVar instead.
-   !     SUBROUTINE ReadR8Var          ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 8-byte real number from an input file. USE ReadVar instead.
-   !     SUBROUTINE ReadR16Var         ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 16-byte real number from an input file. USE ReadVar instead.
-   !     SUBROUTINE ReadStr            ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a string (up to 200 characters--until end-of-line) from an input file.
-   !     SUBROUTINE ReadVar            ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] [, UnEc] )                 ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadR*Var.
+   !     FUNCTION   PathIsRelative( GivenFil )
+   !     SUBROUTINE PremEOF       ( Fil , Variable [, TrapErrors] [, ErrMsg] )
+   !     SUBROUTINE ProcessComFile( TopFileName, FileInfo, ErrStat, ErrMsg )                                               ! Call ScanComFile and ReadComFile to fully process commented and possibly nested input files.
+   !     SUBROUTINE ProgAbort     ( Message [, TrapErrors] )
+   !     SUBROUTINE ProgPause                                                                                ! Pause output so the user has to hit <Enter> to continue.
+   !     SUBROUTINE ProgWarn      ( Message )
+   !     FUNCTION   R2LStr4       ( FltNum )                                                                 ! Convert  4-byte REALs to left-justified strings. USE Num2LStr() instead.
+   !     FUNCTION   R2LStr8       ( FltNum )                                                                 ! Convert  8-byte REALs to left-justified strings. USE Num2LStr() instead.
+   !     FUNCTION   R2LStr16      ( FltNum )                                                                 ! Convert 16-byte REALs to left-justified strings. USE Num2LStr() instead.
+   !     SUBROUTINE ReadAry       ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAry, ReadIAry, ReadLAry, ReadR4Ary, ReadR8Ary and ReadR16Ary.
+   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, Ary, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )         ! Generic interface for ReadCAryLines, ReadRAryLines4, ReadRAryLines8, and ReadRAryLines16.
+   !     SUBROUTINE ReadCAry      ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadCAryLines ( UnIn, Fil, CharAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadCom       ( UnIn, Fil, ComName [, ErrStat] [, ErrMsg] [, UnEc] )                     ! Reads a comment line from an input file. (variable not returned)
+   !     SUBROUTINE ReadComFile   ( FileInfo, FileIndx, StartLine, LastLine, ErrStat, ErrMsg )                             ! Recursive routine to read a formatted file (and files it includes) and strips out the comments, copying the remainder in a structure.
+   !     SUBROUTINE ReadCVar      ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadFASTbin   ( UnIn, FASTdata [, ErrLev, ErrMsg] )                                      ! Read a FAST binary output file.
+   !     SUBROUTINE ReadIAry      ( UnIn, Fil, IntAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadIVar      ( UnIn, Fil, IntVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadLAry      ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
+   !     SUBROUTINE ReadLine      ( UnIn, CommChars, Line, LineLen, ErrStat )                                 ! Reads a line from the specified input unit and returns the non-comment portion of the line.
+   !     SUBROUTINE ReadLVar      ( UnIn, Fil, LogVar, VarName, VarDescr [, ErrStat] [,ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadNum       ( UnIn, Fil, Word, VarName, [, ErrStat] [, ErrMsg] [, UnEc] )
+   !     SUBROUTINE ReadOutputList( UnIn, Fil, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadR4Ary     ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadR8Ary     ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadR16Ary    ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   !     SUBROUTINE ReadAryLines  ( UnIn, Fil, RealAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )     ! Generic interface for ReadCAryLines, ReadR4AryLines, ReadR8AryLines, and ReadR16AryLines
+   !     SUBROUTINE ReadR4Var     ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 4-byte real number from an input file. USE ReadVar instead.
+   !     SUBROUTINE ReadR8Var     ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 8-byte real number from an input file. USE ReadVar instead.
+   !     SUBROUTINE ReadR16Var    ( UnIn, Fil, RealVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a 16-byte real number from an input file. USE ReadVar instead.
+   !     SUBROUTINE ReadStr       ( UnIn, Fil, CharVar, VarName, VarDescr [, ErrStat] [, ErrMsg] [, UnEc] )  ! Reads a string (up to 200 characters--until end-of-line) from an input file.
+   !     SUBROUTINE ReadVar       ( UnIn, Fil, Var, VarName, VarDescr [, ErrStat] [, UnEc] )                 ! Generic interface for ReadCVar, ReadIVar, ReadLVar, and ReadR*Var.
    !     SUBROUTINE RemoveNullChar     ( Str )
-   !     SUBROUTINE ScanComFile        ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )        ! Recursive routine to scan commented input files.
+   !     SUBROUTINE ScanComFile   ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )        ! Recursive routine to scan commented input files.
    !     SUBROUTINE SetErrStat         ( ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName )
    !     SUBROUTINE Str2IntAry         ( Str, IntAry, ErrStat, ErrMsg )
-   !     SUBROUTINE WaitTime           ( WaitSecs )
-   !     SUBROUTINE WrBinFAST          ( FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg )
-   !     SUBROUTINE WrFileNR           ( Unit, Str )
-   !     SUBROUTINE WrML               ( Str )
+   !     SUBROUTINE WaitTime      ( WaitSecs )
+   !     SUBROUTINE WrBinFAST     ( FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg )
+   !     SUBROUTINE WrFileNR      ( Unit, Str )
+   !     SUBROUTINE WrML          ( Str )
    !     SUBROUTINE WrMatrix           ( A, Un, ReFmt, MatName )                                                  ! generic interface to write 1- or 2- dimensional real 4 or 8 values to unit Un
-   !     SUBROUTINE WrPr               ( Str )
+   !     SUBROUTINE WrPr          ( Str )
    !     SUBROUTINE WrReAryFileNR      ( Unit, Ary, Fmt, ErrStat, ErrMsg )
-   !     SUBROUTINE WrScr              ( Str )
-      
+   !     SUBROUTINE WrScr         ( Str )
+
    ! DEPRECATED ROUTINES: Do not use them in new code
-   !     SUBROUTINE WrScr1             ( Str )                                                 DEPRECATED ROUTINE  use ----> WrScr( NewLine//Str )
-     
+   !     SUBROUTINE WrScr1        ( Str )                                                 DEPRECATED ROUTINE  use ----> WrScr( NewLine//Str )
+
 !=======================================================================
    SUBROUTINE AdjRealStr( NumStr )
 
@@ -1064,7 +1064,7 @@ CONTAINS
          ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF      
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1104,7 +1104,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_R8Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-         
+
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1145,7 +1145,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_QuKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-         
+
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1186,7 +1186,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1228,7 +1228,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1270,7 +1270,7 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_QuKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
@@ -1313,11 +1313,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF      
+   END IF
 
 
 
@@ -1358,11 +1358,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF      
+   END IF
 
 
 
@@ -1405,11 +1405,11 @@ CONTAINS
       ELSE
          ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
-      END IF         
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
-   END IF     
+   END IF
 
 
 
@@ -1464,7 +1464,7 @@ CONTAINS
          IF ( Arg(1:1) == SwChar )  THEN
 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
-            
+
             IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
                IF ( PRESENT(ErrStat) ) THEN
                   ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
@@ -1491,7 +1491,7 @@ CONTAINS
    IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
 
    RETURN
-      
+
    END SUBROUTINE CheckArgs ! ( InputFile [, ErrStat] )
 !=======================================================================
    SUBROUTINE ChkParseData ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )
@@ -4736,11 +4736,11 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER(IntKi), INTENT(INOUT)                :: AryInd                     ! The current index into the FileInfo arrays.
+   INTEGER(IntKi), INTENT(INOUT)             :: AryInd                        ! The current index into the FileInfo arrays.
    INTEGER(IntKi), INTENT(OUT)               :: ErrStat                       ! Error status.
-   INTEGER(IntKi), INTENT(IN)                   :: FileIndx                   ! The pointer to file name in the list of files.
-   INTEGER(IntKi), INTENT(IN)                   :: LastLine                   ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
-   INTEGER(IntKi), INTENT(IN)                   :: StartLine                  ! The line at which to start processing this file.  Includes blank and comment lines.
+   INTEGER(IntKi), INTENT(IN)                :: FileIndx                      ! The pointer to file name in the list of files.
+   INTEGER(IntKi), INTENT(IN)                :: LastLine                      ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
+   INTEGER(IntKi), INTENT(IN)                :: StartLine                     ! The line at which to start processing this file.  Includes blank and comment lines.
 
    CHARACTER(*), INTENT(OUT)                 :: ErrMsg                        ! Error message.
 
@@ -4749,19 +4749,19 @@ CONTAINS
 
       ! Local declarations.
 
-   INTEGER(IntKi)                               :: ErrStatLcl                 ! Error status local to this routine.
+   INTEGER(IntKi)                            :: ErrStatLcl                    ! Error status local to this routine.
 
-   INTEGER                                      :: File                       ! The index into the FileList array.
-   INTEGER                                    :: FileLine                     ! The current line of the input file.
-   INTEGER                                    :: LineLen                      ! The length of the line returned from ReadLine().
-   INTEGER                                      :: NewIndx                    ! The index into the FileList array that applied to the next file to be processed.
-   INTEGER                                      :: RangeBeg                   ! The first line in a range of lines to be included from a file.
-   INTEGER                                      :: RangeEnd                   ! The last line in a range of lines to be included from a file.
-   INTEGER                                    :: UnIn                         ! The unit number used for the input file.
+   INTEGER                                   :: File                          ! The index into the FileList array.
+   INTEGER                                   :: FileLine                      ! The current line of the input file.
+   INTEGER                                   :: LineLen                       ! The length of the line returned from ReadLine().
+   INTEGER                                   :: NewIndx                       ! The index into the FileList array that applied to the next file to be processed.
+   INTEGER                                   :: RangeBeg                      ! The first line in a range of lines to be included from a file.
+   INTEGER                                   :: RangeEnd                      ! The last line in a range of lines to be included from a file.
+   INTEGER                                   :: UnIn                          ! The unit number used for the input file.
                                                                               ! Should the comment characters be passed to this routine instead of being hard coded? -mlb
-   CHARACTER(3), PARAMETER                    :: CommChars = '!#%'            ! Comment characters that mark the end of useful input.
-   CHARACTER(1024)                              :: IncFileName                ! The name of a file that this one includes.
-   CHARACTER(512)                             :: Line                         ! The contents of a line returned from ReadLine() with comment removed.
+   CHARACTER(3), PARAMETER                   :: CommChars = '!#%'             ! Comment characters that mark the end of useful input.
+   CHARACTER(1024)                           :: IncFileName                   ! The name of a file that this one includes.
+   CHARACTER(512)                            :: Line                          ! The contents of a line returned from ReadLine() with comment removed.
 
 
       ! Open the input file.
@@ -4824,8 +4824,8 @@ CONTAINS
             IF ( ErrStatLcl /= 0 )  THEN
                CALL ExitThisRoutine( ErrID_Fatal, ' >> The fatal error occurred in ReadComFile when processing line #'// &
                                    TRIM( Num2LStr( FileLine ) )//' of "'//TRIM( FileInfo%FileList(FileIndx) )//'".' )
-      RETURN
-   ENDIF
+               RETURN
+            ENDIF
 
 
                ! Which file in the prestored list is the new one?
@@ -4851,10 +4851,10 @@ CONTAINS
 
                ! Not a file name.  Add this line to stack.
 
-         AryInd                    = AryInd + 1
-         FileInfo%FileLine(AryInd) = FileLine
+            AryInd                    = AryInd + 1
+            FileInfo%FileLine(AryInd) = FileLine
             FileInfo%FileIndx(AryInd) = FileIndx
-         FileInfo%Lines   (AryInd) = Line
+            FileInfo%Lines   (AryInd) = Line
 
          ENDIF ! ( Line(1:1) == '@' )
 
@@ -6840,7 +6840,7 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    !...............................................................................................................................
 !BJJ: This scaling has issues if the channel contains NaN.
 
-   
+
    ColMin(:) = AllOutData(:,1_IntKi)         ! Initialize the Min values for each channel
    ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
 
@@ -7117,7 +7117,7 @@ END SUBROUTINE WrBinFAST
 
    RETURN
    END SUBROUTINE WrFileNR ! ( Unit, Str )
-!=======================================================================  
+!=======================================================================
    SUBROUTINE WrMatrix1R4( A, Un, ReFmt, MatName )
    
       ! This routine writes all the values of a 1-dimensional matrix, A, 
@@ -7127,23 +7127,23 @@ END SUBROUTINE WrBinFAST
       ! Useful for debugging and/or writing summary files.
       
       REAL(SiKi),             INTENT(IN) :: A(:)
-      INTEGER,                INTENT(IN) :: Un
+      INTEGER,           INTENT(IN) :: Un
       CHARACTER(*),           INTENT(IN) :: ReFmt     ! Format for printing ReKi numbers  
       CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
-      
-      INTEGER                            :: ErrStat
-      INTEGER                            :: nr        ! size (rows and columns) of A
-      CHARACTER(256)                     :: Fmt
-   
-            
+
+      INTEGER        :: ErrStat
+      INTEGER        :: nr  ! size (rows and columns) of A
+      CHARACTER(256) :: Fmt
+
+
       nr = SIZE(A,1)
 
       IF ( PRESENT(MatName) ) THEN
          WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), "1"
       END IF      
       
-      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"               
-   
+      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"
+
       WRITE( Un, Fmt, IOSTAT=ErrStat ) A(:)
       IF (ErrStat /= 0) THEN
          CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix1R4().')
@@ -7152,7 +7152,7 @@ END SUBROUTINE WrBinFAST
 
    RETURN
    END SUBROUTINE WrMatrix1R4
-!=======================================================================  
+!=======================================================================
    SUBROUTINE WrMatrix1R8( A, Un, ReFmt, MatName )
    
       ! This routine writes all the values of a 1-dimensional matrix, A, 
@@ -7162,11 +7162,11 @@ END SUBROUTINE WrBinFAST
       ! Useful for debugging and/or writing summary files.
    
       REAL(R8Ki),             INTENT(IN) :: A(:)
-      INTEGER,                INTENT(IN) :: Un
-      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      INTEGER,        INTENT(IN) :: Un
+      CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers
       CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
-      
-      INTEGER                            :: ErrStat
+
+      INTEGER        :: ErrStat
       INTEGER                            :: nr  ! size (rows and columns) of A
       CHARACTER(256)                     :: Fmt
    
@@ -7202,11 +7202,11 @@ END SUBROUTINE WrBinFAST
       CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
 
       INTEGER                            :: ErrStat
-      INTEGER                            :: nr, nc  ! size (rows and columns) of A
-      INTEGER                            :: i       ! indices into A
-      CHARACTER(256)                     :: Fmt
-   
-   
+      INTEGER        :: nr, nc  ! size (rows and columns) of A
+      INTEGER        :: i       ! indices into A
+      CHARACTER(256) :: Fmt
+
+
       nr = SIZE(A,1)
       nc = SIZE(A,2)
 
@@ -7214,7 +7214,7 @@ END SUBROUTINE WrBinFAST
          WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), TRIM(Num2LStr(nc))
       END IF
       
-      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"
 
       DO i=1,nr
          WRITE( Un, Fmt, IOSTAT=ErrStat ) A(i,:)
@@ -7222,8 +7222,8 @@ END SUBROUTINE WrBinFAST
             CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix2R4().')
             RETURN
          END IF
-         
-         
+
+
       END DO
 
    RETURN
@@ -7457,6 +7457,6 @@ END SUBROUTINE WrBinFAST
    RETURN
    END SUBROUTINE WrScr1 ! ( Str )
 
-!=======================================================================   
+!=======================================================================
 
 END MODULE NWTC_IO
