@@ -561,7 +561,7 @@ o new ParseVar() routines added to NWTC_IO.f90.
 o also added Echo capability to the Parse routines in NWTC_IO.f90
 o made MaxAryLen a public parameter (renamed NWTC_MaxAryLen) so it could be used in SubDyn's echo file
 o added routine SetErrStat(): sets an error status and message, basically concatenating error messages and getting the max error
-  status. Primarially in FAST framework.
+  status. Used primarially in FAST framework.
 o added some parameters to the precision module and for usein error messages on the allocation routines, saying how many bytes were
   trying to be allocated
 o ModMesh_Mapping.f90 has been updated with new algorithms, described in 2014 AIAA paper. It is now dependent on NWTC_LAPACK.obj

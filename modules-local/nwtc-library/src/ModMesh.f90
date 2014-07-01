@@ -1674,9 +1674,6 @@ CONTAINS
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
      INTEGER,                     INTENT(IN   ) :: P1
-    ! Local
-     TYPE(ElemRecType), POINTER :: tmp(:)
-     INTEGER                    :: i 
 
      IF ( mesh_debug ) print*,'Called MeshConstructElement_1PT'
      ErrStat = ErrID_None
@@ -1701,28 +1698,8 @@ CONTAINS
        Mesh%ElemTable(ELEMENT_POINT)%nelem = Mesh%ElemTable(ELEMENT_POINT)%nelem + 1
        Mesh%ElemTable(ELEMENT_POINT)%XElement = ELEMENT_POINT
 
-       IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GE. Mesh%ElemTable(ELEMENT_POINT)%maxelem ) THEN
-!write(0,*)'>>>>>>>>>> bumping maxpoint',Mesh%ElemTable(ELEMENT_POINT)%maxelem
-         ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_POINT)%maxelem+BUMPUP),sTAT=ErrStat)
-         IF (ErrStat /= 0) THEN
-            ErrStat = ErrID_Fatal
-            ErrMess = "MeshConstructElement_1PT: Couldn't allocate space for element table."
-            RETURN
-         END IF
-         
-         IF ( Mesh%ElemTable(ELEMENT_POINT)%nelem .GT. 1 ) THEN  ! we added 1 earlier, so we don't need to check if > 0
-
-               ! tmp(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem) = Mesh%ElemTable(ELEMENT_POINT)%Elements(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem)
-            DO i=1,Mesh%ElemTable(ELEMENT_POINT)%maxelem
-               CALL Mesh_MoveAlloc_ElemRecType( Mesh%ElemTable(ELEMENT_POINT)%Elements(i), tmp(i) )
-            END DO
-               
-         END IF
-         IF ( ASSOCIATED(Mesh%ElemTable(ELEMENT_POINT)%Elements) ) DEALLOCATE(Mesh%ElemTable(ELEMENT_POINT)%Elements)
-         Mesh%ElemTable(ELEMENT_POINT)%Elements => tmp
-         Mesh%ElemTable(ELEMENT_POINT)%maxelem = Mesh%ElemTable(ELEMENT_POINT)%maxelem + BUMPUP
-!write(0,*)'>>>>>>>>>> bumped maxpoint',Mesh%ElemTable(ELEMENT_POINT)%maxelem
-       ENDIF
+       CALL BumpupElementTable( Mesh, Xelement, ErrStat, ErrMess )
+       IF (ErrStat >= AbortErrLev ) RETURN
 
        ALLOCATE(Mesh%ElemTable(ELEMENT_POINT)%Elements(Mesh%ElemTable(ELEMENT_POINT)%nelem)%ElemNodes(1),sTAT=ErrStat)
          IF (ErrStat /= 0) THEN
@@ -1741,6 +1718,114 @@ CONTAINS
 
    END SUBROUTINE MeshConstructElement_1PT
 
+   SUBROUTINE BumpupElementTable_New( Mesh, Xelement, ErrStat, ErrMess )
+   ! bjj: I am getting weird errors with some models using gfortran (ivf is fine),
+   ! so I am implementing this method which does not just set a pointer, pointing to
+   ! a local variable. It actually copies the data twice, but allocates the pointer 
+   ! in the dataype.
+   
+      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
+      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
+      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
+      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
+   
+         ! Local
+      TYPE(ElemRecType),             ALLOCATABLE :: tmp(:)
+      INTEGER                                    :: i 
+
+      ErrStat = ErrID_None
+      ErrMess = ""
+      
+   
+       IF ( Mesh%ElemTable(Xelement)%nelem .GE. Mesh%ElemTable(Xelement)%maxelem ) THEN
+!write(0,*)'>>>>>>>>>> bumping maxpoint',Mesh%ElemTable(Xelement)%maxelem
+         
+         IF (Mesh%ElemTable(Xelement)%maxelem .GT. 0 ) THEN 
+            
+               ! copy data in pointer to temp copy:
+            ALLOCATE ( tmp(Mesh%ElemTable(Xelement)%maxelem), STAT=ErrStat )
+            IF (ErrStat /= 0) THEN
+               ErrStat = ErrID_Fatal
+               ErrMess = "BumpupElementTable: Couldn't allocate space for element table copy."
+               RETURN
+            END IF
+            
+            DO i=1,Mesh%ElemTable(Xelement)%maxelem
+               CALL Mesh_MoveAlloc_ElemRecType( Mesh%ElemTable(Xelement)%Elements(i), tmp(i) )
+            END DO
+            
+         END IF
+         
+            ! deallocate the pointer, then reallocate to a larger size:
+         IF ( ASSOCIATED(Mesh%ElemTable(Xelement)%Elements) ) DEALLOCATE(Mesh%ElemTable(Xelement)%Elements)
+         
+         ALLOCATE( Mesh%ElemTable(Xelement)%Elements( Mesh%ElemTable(Xelement)%maxelem + BUMPUP ),STAT=ErrStat )   
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "BumpupElementTable: Couldn't allocate space for element table."
+            IF ( ALLOCATED(tmp) ) DEALLOCATE(tmp)
+            RETURN
+         END IF
+         
+            ! copy old data to the table pointer:         
+         DO i=1,Mesh%ElemTable(Xelement)%maxelem
+            CALL Mesh_MoveAlloc_ElemRecType( tmp(i), Mesh%ElemTable(Xelement)%Elements(i) )
+         END DO
+               
+         IF ( ALLOCATED(tmp) ) DEALLOCATE(tmp)
+         
+            ! set the new size of the element table:
+         Mesh%ElemTable(Xelement)%maxelem = Mesh%ElemTable(Xelement)%maxelem + BUMPUP  
+!write(0,*)'>>>>>>>>>> bumped maxpoint',Mesh%ElemTable(Xelement)%maxelem                  
+      END IF
+     
+   END SUBROUTINE BumpupElementTable_New
+   
+   SUBROUTINE BumpupElementTable( Mesh, Xelement, ErrStat, ErrMess )
+   ! This subroutine increases the allocated space for Mesh%ElemTable(Xelement)%Elements
+   ! if adding a new element will exceed the pre-allocated space.
+
+   ! bjj: this is the old method of increasing the element table size.
+   ! it was duplicated in MeshConstructElement_1PT and MeshConstructElement_2PT
+   ! I have made it a subroutine so we don't have to duplicate it anymore.
+   
+      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
+      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
+      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
+      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
+   
+    ! Local
+     TYPE(ElemRecType),             POINTER      :: tmp(:)
+     INTEGER                                     :: i
+
+      ErrStat = ErrID_None
+      ErrMess = ""
+                     
+       IF ( Mesh%ElemTable(Xelement)%nelem .GE. Mesh%ElemTable(Xelement)%maxelem ) THEN
+!write(0,*)'>>>>>>>>>> bumping maxline2',Mesh%ElemTable(Xelement)%maxelem
+         ALLOCATE(tmp(Mesh%ElemTable(Xelement)%maxelem+BUMPUP),Stat=ErrStat)
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMess = "BumpupElementTableOld: Couldn't allocate space for element table"
+            RETURN
+         END IF
+                     
+         !IF (Mesh%ElemTable(Xelement)%maxelem .GT. 0 ) &
+               ! tmp(1:Mesh%ElemTable(Xelement)%maxelem) = Mesh%ElemTable(Xelement)%Elements(1:Mesh%ElemTable(Xelement)%maxelem)
+         DO i=1,Mesh%ElemTable(Xelement)%maxelem
+            CALL Mesh_MoveAlloc_ElemRecType( Mesh%ElemTable(Xelement)%Elements(i), tmp(i) )
+         END DO
+                        
+         IF ( ASSOCIATED(Mesh%ElemTable(Xelement)%Elements) ) DEALLOCATE(Mesh%ElemTable(Xelement)%Elements)
+         Mesh%ElemTable(Xelement)%Elements => tmp
+         Mesh%ElemTable(Xelement)%maxelem = Mesh%ElemTable(Xelement)%maxelem + BUMPUP
+!write(0,*)'>>>>>>>>>> bumped maxline2',Mesh%ElemTable(Xelement)%maxelem
+       ENDIF       
+       
+       
+   END SUBROUTINE BumpupElementTable
+   
+   
    SUBROUTINE MeshConstructElement_2PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2 )
      
       ! Given a mesh and an element name, construct 2-point line (line2) element whose 
@@ -1753,9 +1838,6 @@ CONTAINS
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
      INTEGER,                     INTENT(IN   ) :: P1,  P2
-    ! Local
-     TYPE(ElemRecType), POINTER :: tmp(:)
-     INTEGER                    :: i
      
      IF ( mesh_debug ) print*,'Called MeshConstructElement_2PT'
      ErrStat = ErrID_None
@@ -1784,29 +1866,9 @@ CONTAINS
        Mesh%ElemTable(ELEMENT_LINE2)%nelem = Mesh%ElemTable(ELEMENT_LINE2)%nelem + 1
        Mesh%ElemTable(ELEMENT_LINE2)%XElement = ELEMENT_LINE2
 
-       IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GE. Mesh%ElemTable(ELEMENT_LINE2)%maxelem ) THEN
-!write(0,*)'>>>>>>>>>> bumping maxline2',Mesh%ElemTable(ELEMENT_LINE2)%maxelem
-         ALLOCATE(tmp(Mesh%ElemTable(ELEMENT_LINE2)%maxelem+BUMPUP),Stat=ErrStat)
-         IF (ErrStat /= 0) THEN
-            ErrStat = ErrID_Fatal
-            ErrMess = "MeshConstructElement_2PT: Couldn't allocate space for element table"
-            RETURN
-         END IF
-                     
-         IF ( Mesh%ElemTable(ELEMENT_LINE2)%nelem .GT. 1 ) THEN  ! we added 1 earlier, so we don't need to check if > 0
+      CALL BumpupElementTable( Mesh, Xelement, ErrStat, ErrMess )
+      IF (ErrStat >= AbortErrLev) RETURN
 
-               ! tmp(1:Mesh%ElemTable(ELEMENT_LINE2)%maxelem) = Mesh%ElemTable(ELEMENT_LINE2)%Elements(1:Mesh%ElemTable(ELEMENT_POINT)%maxelem)
-            DO i=1,Mesh%ElemTable(ELEMENT_LINE2)%maxelem
-               CALL Mesh_MoveAlloc_ElemRecType( Mesh%ElemTable(ELEMENT_LINE2)%Elements(i), tmp(i) )
-            END DO
-               
-         END IF
-         
-         IF ( ASSOCIATED(Mesh%ElemTable(ELEMENT_LINE2)%Elements) ) DEALLOCATE(Mesh%ElemTable(ELEMENT_LINE2)%Elements)
-         Mesh%ElemTable(ELEMENT_LINE2)%Elements => tmp
-         Mesh%ElemTable(ELEMENT_LINE2)%maxelem = Mesh%ElemTable(ELEMENT_LINE2)%maxelem + BUMPUP
-!write(0,*)'>>>>>>>>>> bumped maxline2',Mesh%ElemTable(ELEMENT_LINE2)%maxelem
-       ENDIF
        ALLOCATE(Mesh%ElemTable(ELEMENT_LINE2)%Elements(Mesh%ElemTable(ELEMENT_LINE2)%nelem)%ElemNodes(2),Stat=ErrStat)
          IF (ErrStat /= 0) THEN
             ErrStat = ErrID_Fatal
