@@ -26,13 +26,13 @@ MODULE ModMesh
  ! The modules ModMesh and ModMesh_Types provide data structures and subroutines for representing and manipulating meshes
  ! and meshed data in the FAST modular framework. 
  !
- ! A mesh is comprised of a set of “nodes” (simple points in space) together with information specifying how they are connected 
- ! to form “elements”  representing spatial boundaries between components. ModMesh and ModMesh_Types define point, line, surface, 
+ ! A mesh is comprised of a set of "nodes" (simple points in space) together with information specifying how they are connected 
+ ! to form "elements"  representing spatial boundaries between components. ModMesh and ModMesh_Types define point, line, surface, 
  ! and volume elements in a standard isoparametric mapping from finite element analysis. Currently only points and straight line 
  ! (line2) elements are implemented.
- ! Associated with a mesh are one or more “fields” that represent the values of variables or “degrees of freedom” at each node. 
- ! A mesh always has a named “Position” that specifies the location in three-dimensional space as an Xi,Yi,Zi triplet of each node 
- ! and a field named “RefOrientation” that specifies the orientation (as a direction cosine matrix) of the node. 
+ ! Associated with a mesh are one or more "fields" that represent the values of variables or "degrees of freedom" at each node. 
+ ! A mesh always has a named "Position" that specifies the location in three-dimensional space as an Xi,Yi,Zi triplet of each node 
+ ! and a field named "RefOrientation" that specifies the orientation (as a direction cosine matrix) of the node. 
  ! The ModMesh_Types module predefines a number of other fields of triples representing velocities, forces, and moments as well as
  ! a field of nine values representing a direction cosine matrix. 
  ! The operations on meshes defined in the ModMesh module are creation, spatio-location of nodes, construction, committing the 
@@ -795,7 +795,7 @@ CONTAINS
       ! Given a mesh and allocatable buffers of type INTEGER(IntKi), REAL(ReKi), and REAL(DbKi), 
       ! return the mesh information compacted into consecutive elements of the corresponding buffers. 
       ! This would be done to allow subsequent writing of the buffers to a file for restarting later. 
-      ! The sense of the name is “pack the data from the mesh into buffers”. IMPORTANT: MeshPack 
+      ! The sense of the name is "pack the data from the mesh into buffers". IMPORTANT: MeshPack 
       ! allocates the three buffers. It is incumbent upon the calling program to deallocate the 
       ! buffers when they are no longer needed. For sibling meshes, MeshPack should be called 
       ! separately for each sibling, because the fields allocated with the siblings are separate 
@@ -997,7 +997,7 @@ CONTAINS
       ! Given a blank, uncreated mesh and buffers of type INTEGER(IntKi), REAL(ReKi), and 
       ! REAL(DbKi), unpack the mesh information from the buffers. This would be done to 
       ! recreate a mesh after reading in the buffers on a restart of the program. The sense 
-      ! of the name is “unpack the mesh from buffers.” The resulting mesh will be returned 
+      ! of the name is "unpack the mesh from buffers." The resulting mesh will be returned 
       ! in the exact state as when the data in the buffers was packed using MeshPack. 
       
       ! bjj: not implemented yet:  
@@ -1212,7 +1212,7 @@ CONTAINS
    ! 
    ! If CtrlCode is MESH_NEWCOPY, an entirely new copy of the mesh is created, including all fields, 
    !   with the same data values as the original, but as an entirely separate copy in memory. The new 
-   !   copy is in the same state as the original—if the original has not been committed, neither is 
+   !   copy is in the same state as the original--if the original has not been committed, neither is 
    !   the copy; in this case, an all-new copy of the mesh must be committed separately.
    !
    ! If CtrlCode is MESH_SIBLING, the destination mesh is created with the same mesh and position/reference 
@@ -2063,7 +2063,7 @@ CONTAINS
       !   zero indicates start from the beginning, an integer between 1 and Mesh%Nelemlist returns that element,
       !   and MESH_NEXT means return the next element in traversal. On exit, CtrlCode contains the status of the 
       !   traversal in (zero or MESH_NOMOREELEMS). The routine optionally outputs the index of the element in the
-      !   mesh’s element list, the name of the element (see “Element Names”), and a pointer to the element.    
+      !   mesh's element list, the name of the element (see "Element Names"), and a pointer to the element.    
    
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(INOUT) :: CtrlCode  ! CtrlCode
