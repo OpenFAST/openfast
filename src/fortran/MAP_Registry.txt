@@ -1,0 +1,153 @@
+##################	Registry	for	SubDyn	###############										
+#	column	1	<keyword>                                                                                              											
+#	column	2	ModuleName/ModName or ^ to use the value from the previous line (SD is nickname for ModuleName)   											
+#	column	3	Derived data type (without "ModName_" prefix)                                                          											
+#	column	4	Derived data types's Field type                                                                        											
+#	column	5	Variable name                                                                                          											
+#	column	6	Dimension of variable {:} for allocatable                                                              											
+#	column	7	Variable's initial value (if set in the data type)                                                     											
+#	column	8	I think this is a switch for mixed-language programming; it's mostly unused                            											
+#	column	9	Description                                                                                            											
+#	column	10	Units                                                                                                  											
+# Keyword	ModuleName/ModName	Derived data type	Field type	Variable name	   variable dimension	Initial value	for mix language, not used	Description	Units					
+
+include Registry_NWTC_Library.txt
+
+														
+# ============================== Define input types here: ============================================================================================================================================				
+typedef	 	MAP		        InitInputType	        DbKi		gravity	            -	                 -999.9	           -                            "gravity constant" "[m/s^2]"	
+typedef	 	^			^		     	DbKi		sea_density	    -		         -999.9	           - 				"sea density" 	   "[kg/m^3]"
+typedef	 	^			^		     	DbKi		depth		    -			 -999.9		   -				"depth of water"   "[m]"	
+typedef         ^                       ^                       LOGICAL         coupled_to_FAST     -                    ""                -                            "Let MAP know if FAST will write the output strings"		
+typedef	 	^			^		     	CHARACTER(255)	filename	    -			 ""		   -  				"MAP input file"			
+typedef	 	^			^		     	CHARACTER(255)	rootname    -			 ""		   -  				"rootname of the MAP output files"			
+typedef	 	^			^		     	CHARACTER(255)	cable_library_data  -			 ""		   -				"cable library string information (from input file)"	
+typedef	 	^			^		     	CHARACTER(255)	node_data	    -			 ""		   -				"node string information (from input file)"	
+typedef	 	^			^		     	CHARACTER(255)	element_data	    -			 ""		   -			 	"element library string information (from input file)"	
+typedef	 	^			^		     	CHARACTER(255)	solver_data	    -			 ""		   -				"solver options library string information (from input file)"	
+
+# ============================== Define Initialization outputs here: ================================================================================================================================
+# Define outputs from the initialization routine here:                                                                   
+typedef	 	^			InitOutputType		CHARACTER(99)	MAP_name	    -			 ""		   -  				"MAP input file"			
+typedef	 	^			^		     	CHARACTER(99)	MAP_version         -			 ""		   -				"cable library string information (from input file)"	
+typedef 	^			^		     	CHARACTER(24)	MAP_date	    -			 ""		   -				"node string information (from input file)"	
+typedef         ^                       ^                       CHARACTER(10)   WriteOutputHdr     {:}                   ""                -                            "Line 1: output header. Line 2: units"
+typedef         ^                       ^                       CHARACTER(10)   WriteOutputUnt     {:}                   ""                -                            "Line 1: output header. Line 2: units"
+typedef         ^                       ^                       ProgDesc        Ver                 -                    ""                -                            "his module's name, version, and date"
+
+# ============================== Define Continuous states here: =====================================================================================================================================
+# Define continuous (differentiable) states here:
+typedef 	^              		ContinuousStateType   	DbKI           	dummy		    -			 -		   -  "Remove this variable if you have continuous states" -
+
+# ============================== Define Discrete states here: =====================================================================================================================================
+# Define discrete (nondifferentiable) states here:
+typedef   	^             		DiscreteStateType    	DbKi		dummy		    -			 -		   -  "Remove this variable if you have discrete states" -
+
+# ============================== Define Other states here: =====================================================================================================================================
+# Define other (nondifferentiable) states here:
+typedef		^	        	OtherStateType		DbKi		FX		     {:}		 -		   -  "Connect node X force"         "[N]"					
+typedef	 	^			^			DbKi		FY		     {:}		 -		   -  "Connect node Y force"         "[N]"					
+typedef	 	^			^			DbKi		FZ		     {:}		 -		   -  "Connect node Z force"         "[N]"		
+typedef 	^			^			IntKi           u_index	             {:}		 -		   - "input index set"						
+typedef 	^			^			IntKi           p_index	             {:}		 -		   - "parameter index set"						
+typedef 	^			^			IntKi           x_index	             {:}		 -		   - "continuous state index set"						
+typedef 	^			^			IntKi           xd_index             {:}		 -		   - "discete state index set"						
+typedef 	^			^			IntKi           z_index	             {:}		 -		   - "constraint state index set"						
+typedef 	^			^			IntKi           y_index	             {:}		 -		   - "output index set"						
+typedef 	^			^			IntKi           o_index	             {:}		 -		   - "other state (self) index set"						
+
+
+# ============================== Define constraint states here: =====================================================================================================================================
+# Define constraint states here:
+typedef	 	^	    		ConstraintStateType  	DbKi		X		    {:}			 -		   -  "Connect node X position"    "[m]"							
+typedef	 	^			^		     	DbKi		Y		    {:}			 -		   -  "Connect node Y position"    "[m]"						
+typedef	 	^			^		     	DbKi		Z		    {:}			 -		   -  "Connect node Z position"    "[m]"							
+typedef	 	^			^		     	DbKi		H		    {:}			 -		   -  "Fairlead horizontal force"  "[N]"
+typedef	 	^			^		     	DbKi		V		    {:}			 -		   -  "Fairlead vertical force"    "[N]"			
+
+# ============================== Parameters ============================================================================================================================================
+# Define parameters here:
+typedef  	^			ParameterType		DbKi	       	Diam	     	     {:}		 -		   -  "cable diameter"                             "[m]"
+typedef	 	^			^			DbKi		MassDenInAir	     {:}		 -		   -  "cable mass density in air"    		   "[kg/m]"					
+typedef	 	^			^			DbKi		EA		     {:}		 -		   -  "cable axial stiffness"         		   "[N]"	
+typedef	 	^			^			DbKi		CB		     {:}		 -		   -  "cable/seabed frcition coeff"   		   "[]"		
+typedef	 	^			^			DbKi		Lu		     {:}		 -		   -  "unstretched cable length"                   "[m]"			
+typedef	 	^			^			DbKi		X		     {:}		 -		   -  "Fix node X position"                        "[m]"			
+typedef	 	^			^			DbKi		Y		     {:}		 -		   -  "Fix node Y position"                        "[m]"			
+typedef	 	^			^			DbKi		Z		     {:}		 -		   -  "Fix node X position"                        "[m]"			
+typedef	 	^			^			DbKi		FX		     {:}		 -		   -  "Fix node sum forced in X (constant)"        "[N]"			
+typedef	 	^			^			DbKi		FY		     {:}		 -		   -  "Fix node sum forced in Y (constant)"        "[N]"			
+typedef	 	^			^			DbKi		FZ		     {:}		 -		   -  "Fix node sum forced in Z (constant)"        "[N]"			
+typedef	 	^			^			DbKi		M		     {:}		 -		   -  "Point mass at node"                         "[kg]"			
+typedef	 	^			^			DbKi		B		     {:}		 -		   -  "Buoyancy module (displacement) at node"     "[m^3]"			
+typedef	 	^			^			DbKi		dt		     -  		 -		   -  "delta t -- time step"                       "[s]"			
+
+# ============================== Inputs ============================================================================================================================================	
+# Define inputs that are contained on the mesh here:							
+typedef	 	^              		InputType		DbKi		X		     {:}		 -		   -  "fairlead X displacement"  "[m]"					
+typedef	 	^			^			DbKi		Y		     {:}		 -		   -  "fairlead Y displacement"  "[m]"					
+typedef	 	^			^			DbKi		Z		     {:}		 -		   -  "fairlead Z displacement"  "[m]"					
+typedef	 	^			^			MeshType	PtFairleadDisplacement -                  -                 -  "Position of each fairlead in X,Y,Z"  "[m]"		
+
+# ============================== Outputs ============================================================================================================================================
+# Define outputs that are contained on the mesh here:
+typedef		^	        	OutputType		DbKi		FX		     {:}		 -		   -  "fairlead X force"         "[N]"					
+typedef	 	^			^			DbKi		FY		     {:}		 -		   -  "fairlead Y force"         "[N]"					
+typedef	 	^			^			DbKi		FZ		     {:}		 -		   -  "fairlead Z force"         "[N]"		
+typedef	 	^			^			MeshType	PtFairleadLoad	      -                  -                 -  "point mesh for forces in X,Y,Z"         "[N]"
+typedef	 	^			^			ReKi		writeOutput	     {:}		 -		   -  "Buoyancy module (displacement) at node"     "[m^3]"			
+
+#####################################################################################################################################
+## These are not necessary to define in the Registry, but are here to generate blank types until we do actually implement the
+## Jacobians in the FAST framework. In the final implementation, they will probably not contain subtypes, but instead be
+## square matrices of type ReKi or DbKi.
+#####################################################################################################################################
+## ..... Jacobians .................................................................................................................
+## Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
+#typedef   ^               SD_PartialOutputPInputType            SD_InputType            DummyOutput        -     -     -  "If you have output equations and input data, update this variable" -
+#
+## Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
+#typedef   ^               SD_PartialContStatePInputType         SD_InputType            DummyContState     -     -     -  "If you have continuous state equations and input data, update this variable" -
+#
+##Define the Jacobian of the discrete state equations (Xd) with respect to the inputs (u), dXd/du (or Partial Xd / Partial u):
+#typedef   ^               SD_PartialDiscStatePInputType         SD_InputType            DummyDiscState     -     -     -  "If you have discrete state equations and input data, update this variable" -
+#
+## Define the Jacobian of the constraint state equations (Z) with respect to the inputs (u), dZ/du (or Partial Z / Partial u):
+#typedef   ^               SD_PartialConstrStatePInputType       SD_InputType            DummyConstrState   -     -     -  "If you have constraint state equations and input data, update this variable" -
+#
+## Define the Jacobian of the output equations (Y) with respect to the continuous states (x), dY/dx (or Partial Y / Partial x):
+#typedef   ^               SD_PartialOutputPContStateType        SD_ContinuousStateType  DummyOutput        -     -     -  "If you have output equations and continuous states, update this variable" -
+#
+## Define the Jacobian of the continuous state equations (X) with respect to the continuous states (x), dX/dx (or Partial X / Partial x):
+#typedef   ^               SD_PartialContStatePContStateType     SD_ContinuousStateType  DummyContState     -     -     -  "If you have continuous state equations and continuous states, update this variable" -
+#
+## Define the Jacobian of the discrete state equations (Xd) with respect to the continuous states (x), dXd/dx (or Partial Xd / Partial x):
+#typedef   ^               SD_PartialDiscStatePContStateType     SD_ContinuousStateType  DummyDiscState     -     -     -  "If you have discrete state equations and continuous states, update this variable" -
+#
+## Define the Jacobian of the constraint state equations (Z) with respect to the continuous states (x), dZ/dx (or Partial Z / Partial x):
+#typedef   ^               SD_PartialConstrStatePContStateType   SD_ContinuousStateType  DummyConstrState   -     -     -  "If you have constraint state equations and continuous states, update this variable" -
+#
+## Define the Jacobian of the output equations (Y) with respect to the discrete states (xd), dY/dxd (or Partial Y / Partial xd):
+#typedef   ^               SD_PartialOutputPDiscStateType        SD_DiscreteStateType    DummyOutput        -     -     -  "If you have output equations and discrete states, update this variable" -
+#
+## Define the Jacobian of the continuous state equations (X) with respect to the discrete states (xd), dX/dxd (or Partial X / Partial xd):
+#typedef   ^               SD_PartialContStatePDiscStateType     SD_DiscreteStateType    DummyContState     -     -     -  "If you have continuous state equations and discrete states, update this variable" -
+#
+## Define the Jacobian of the discrete state equations (Xd) with respect to the discrete states (xd), dXd/dxd (or Partial Xd / Partial xd):
+#typedef   ^               SD_PartialDiscStatePDiscStateType     SD_DiscreteStateType    DummyDiscState     -     -     -  "If you have discrete state equations and discrete states, update this variable" -
+#
+## Define the Jacobian of the constraint state equations (Z) with respect to the discrete states (xd), dZ/dxd (or Partial Z / Partial xd):
+#typedef   ^               SD_PartialConstrStatePDiscStateType   SD_DiscreteStateType    DummyConstrState   -     -     -  "If you have constraint state equations and discrete states, update this variable" -
+#
+## Define the Jacobian of the output equations (Y) with respect to the constraint states (z), dY/dz (or Partial Y / Partial z):
+#typedef   ^               SD_PartialOutputPConstrStateType      SD_ConstraintStateType  DummyOutput        -     -     -  "If you have output equations and constraint states, update this variable" -
+#
+## Define the Jacobian of the continuous state equations (X) with respect to the constraint states (z), dX/dz (or Partial X / Partial z):
+#typedef   ^               SD_PartialContStatePConstrStateType   SD_ConstraintStateType  DummyContState     -     -     -  "If you have continuous state equations and constraint states, update this variable" -
+#
+## Define the Jacobian of the discrete state equations (Xd) with respect to the constraint states (z), dXd/dz (or Partial Xd / Partial z):
+#typedef   ^               SD_PartialDiscStatePConstrStateType   SD_ConstraintStateType  DummyDiscState     -     -     -  "If you have discrete state equations and constraint states, update this variable" -
+#
+## Define the Jacobian of the constraint state equations (Z) with respect to the constraint states (z), dZ/dz (or Partial Z / Partial z):
+#typedef   ^               SD_PartialConstrStatePConstrStateType SD_ConstraintStateType  DummyConstrState   -     -     -  "If you have constraint state equations and constraint states, update this variable" -
+
