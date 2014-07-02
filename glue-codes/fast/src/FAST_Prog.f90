@@ -344,8 +344,8 @@ LOGICAL                               :: calcJacobian                           
    
       ! bjj: added this check per jmj; perhaps it would be better in ElastoDyn, but I'll leave it here for now:
    IF ( p_FAST%TurbineType == Type_Offshore_Floating ) THEN
-      IF ( ED_Input(1)%PlatformPtMesh%Position(3,1) < 0.0_ReKi .AND. .NOT. EqualRealNos( ED_Input(1)%PlatformPtMesh%Position(3,1), 0.0_ReKi ) ) THEN
-         CALL CheckError(ErrID_Fatal,"ElastoDyn PtfmRefzt must not be negative for floating offshore systems.")
+      IF ( p_ED%TowerBsHt < 0.0_ReKi .AND. .NOT. EqualRealNos( p_ED%TowerBsHt, 0.0_ReKi ) ) THEN
+         CALL CheckError(ErrID_Fatal, "ElastoDyn TowerBsHt must not be negative for floating offshore systems.") 
       END IF      
    END IF
    
