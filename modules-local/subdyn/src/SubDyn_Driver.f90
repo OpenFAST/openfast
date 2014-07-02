@@ -2,7 +2,7 @@
 ! SubDyn_DriverCode: This code tests the SubDyn modules
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2014  National Renewable Energy Laboratory
 !
 !    This file is part of SubDyn.
 !
@@ -60,7 +60,7 @@ PROGRAM TestSubDyn
 
    TYPE(SD_ContinuousStateType)                       :: x                    ! Continuous states
    TYPE(SD_DiscreteStateType)                         :: xd                   ! Discrete states
-   TYPE(SD_ConstraintStateType)                       :: z, z_next                    ! Constraint states
+   TYPE(SD_ConstraintStateType)                       :: z                    ! Constraint states
    TYPE(SD_ConstraintStateType)                       :: Z_residual           ! Residual of the constraint state functions (Z)
    TYPE(SD_OtherStateType)                            :: OtherState           ! Other/optimization states
 
@@ -153,7 +153,6 @@ PROGRAM TestSubDyn
    
    IF ( command_argument_count() > 1 ) CALL print_help()
 
-  
       ! Parse the driver input file and run the simulation based on that file
       
    IF ( command_argument_count() == 1 ) THEN
@@ -264,7 +263,7 @@ PROGRAM TestSubDyn
    !u(1)%UFL(3) = -0.001821207  !-0.001821235   !This is for testbeam.txt
    ! u(1)%UFL(3)=-12.958  !this is for testbeam3
     
-  
+   call wrscr('')
    DO n = 0,drvrInitInp%NSteps
 
       Time = n*TimeInterval
@@ -296,7 +295,7 @@ PROGRAM TestSubDyn
             IF ( abs(SDin(n,6)) > maxAngle ) maxAngle = abs(SDin(n,6))
             IF ( abs(SDin(n,7)) > maxAngle ) maxAngle = abs(SDin(n,7))
             
-            CALL SmllRotTrans( 'InputRotation', REAL(SDin(n,5)), REAL(SDin(n,6)), REAL(SDin(n,7)), dcm, 'Junk', ErrStat, ErrMsg )            
+            CALL SmllRotTrans( 'InputRotation', REAL(SDin(n,5),reki), REAL(SDin(n,6),reki), REAL(SDin(n,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
             u(1)%TPMesh%Orientation(:,:,1)     = dcm 
             
             
@@ -309,7 +308,7 @@ PROGRAM TestSubDyn
             
             
                ! Compute direction cosine matrix from the rotation angles
-            CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uTPInSteady(4)), REAL(drvrInitInp%uTPInSteady(5)), REAL(drvrInitInp%uTPInSteady(6)), dcm, 'Junk', ErrStat, ErrMsg )            
+            CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uTPInSteady(4),reki), REAL(drvrInitInp%uTPInSteady(5),reki), REAL(drvrInitInp%uTPInSteady(6),reki), dcm, 'Junk', ErrStat, ErrMsg )            
             u(1)%TPMesh%Orientation(:,:,1)     = dcm
             
             u(1)%TPMesh%TranslationVel(:,1)    = drvrInitInp%uDotTPInSteady(1:3)  
@@ -462,11 +461,11 @@ PROGRAM TestSubDyn
    !...............................................................................................................................
    ! Routines to pack data (to restart later)
    !...............................................................................................................................  
-   CALL SD_Pack(Re_SaveAry, Db_SaveAry, Int_SaveAry, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg) 
-     
-   IF ( ErrStat /= ErrID_None ) THEN
-      CALL WrScr( ErrMsg )
-   END IF
+   !CALL SD_Pack(Re_SaveAry, Db_SaveAry, Int_SaveAry, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg) 
+   !  
+   !IF ( ErrStat /= ErrID_None ) THEN
+   !   CALL WrScr( ErrMsg )
+   !END IF
 
 
    !...............................................................................................................................
@@ -584,7 +583,7 @@ CONTAINS
    SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    !
    !...............................................................................................................................
-      CHARACTER(1024),               INTENT( IN    )   :: inputFile
+      CHARACTER(*),                  INTENT( IN    )   :: inputFile
       TYPE(SD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
       INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
       CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -602,6 +601,7 @@ CONTAINS
       CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
       CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
       CHARACTER(1024)                                  :: FileName             ! Name of SubDyn input file  
+      CHARACTER(1024)                                  :: FilePath             ! Path Name of SubDyn input file  
    
       UnEChoLocal=-1
    
@@ -780,7 +780,10 @@ CONTAINS
          CLOSE( UnIn )
          RETURN
       END IF 
-   
+      IF ( PathIsRelative( InitInp%SDInputFile ) ) then
+         CALL GetPath( FileName, FilePath )
+         InitInp%SDInputFile = TRIM(FilePath)//TRIM(InitInp%SDInputFile)
+      END IF
    
          ! OutRootName
    

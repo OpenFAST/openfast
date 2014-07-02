@@ -1,6 +1,6 @@
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2014  National Renewable Energy Laboratory
 !
 !    This file is part of SubDyn.
 !
@@ -2003,18 +2003,18 @@ MODULE SubDyn_Output
 
   ! Reactions:
 
-   INTEGER(IntKi), PARAMETER      :: ReactXss  = 1945
-   INTEGER(IntKi), PARAMETER      :: ReactYss  = 1946
-   INTEGER(IntKi), PARAMETER      :: ReactZss  = 1947
-   INTEGER(IntKi), PARAMETER      :: ReactMXss = 1948
-   INTEGER(IntKi), PARAMETER      :: ReactMYss = 1949
-   INTEGER(IntKi), PARAMETER      :: ReactMZss = 1950
-   INTEGER(IntKi), PARAMETER      :: IntfXss   = 1951
-   INTEGER(IntKi), PARAMETER      :: IntfYss   = 1952
-   INTEGER(IntKi), PARAMETER      :: IntfZss   = 1953
-   INTEGER(IntKi), PARAMETER      :: IntfMXss  = 1954
-   INTEGER(IntKi), PARAMETER      :: IntfMYss  = 1955
-   INTEGER(IntKi), PARAMETER      :: IntfMZss  = 1956
+   INTEGER(IntKi), PARAMETER      :: ReactFXss  = 1945
+   INTEGER(IntKi), PARAMETER      :: ReactFYss  = 1946
+   INTEGER(IntKi), PARAMETER      :: ReactFZss  = 1947
+   INTEGER(IntKi), PARAMETER      :: ReactMXss  = 1948
+   INTEGER(IntKi), PARAMETER      :: ReactMYss  = 1949
+   INTEGER(IntKi), PARAMETER      :: ReactMZss  = 1950
+   INTEGER(IntKi), PARAMETER      :: IntfFXss   = 1951
+   INTEGER(IntKi), PARAMETER      :: IntfFYss   = 1952
+   INTEGER(IntKi), PARAMETER      :: IntfFZss   = 1953
+   INTEGER(IntKi), PARAMETER      :: IntfMXss   = 1954
+   INTEGER(IntKi), PARAMETER      :: IntfMYss   = 1955
+   INTEGER(IntKi), PARAMETER      :: IntfMZss   = 1956
 
 
   ! Interface Deflections:
@@ -2756,10 +2756,10 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
                                                                     M9N8TAxe,M9N8TAye,M9N8TAze,M9N8RAxe,M9N8RAye,M9N8RAze,  &
                                                                     M9N9TAxe,M9N9TAye,M9N9TAze,M9N9RAxe,M9N9RAye,M9N9RAze/), (/6,9,9/))
    
-      INTEGER, PARAMETER             :: ReactSS(6) =    (/ReactXss,   ReactYss,   ReactZss   , &
+      INTEGER, PARAMETER             :: ReactSS(6) =    (/ReactFXss,   ReactFYss,   ReactFZss   , &
                                                           ReactMXss,  ReactMYss,  ReactMZss/)
 
-      INTEGER, PARAMETER             :: IntfSS(6) =    (/IntfXss,   IntfYss,   IntfZss   , &
+      INTEGER, PARAMETER             :: IntfSS(6) =    (/IntfFXss,   IntfFYss,   IntfFZss   , &
                                                          IntfMXss,  IntfMYss,  IntfMZss/)
 
 
@@ -2775,10 +2775,10 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
   
 
  
-     CHARACTER(10), PARAMETER  :: ValidParamAry(2265) =  (/ &                         ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "INTFMXSS ","INTFMYSS ","INTFMZSS ","INTFRAXSS","INTFRAYSS","INTFRAZSS","INTFRDXSS", &
-                               "INTFRDYSS","INTFRDZSS","INTFTAXSS","INTFTAYSS","INTFTAZSS","INTFTDXSS","INTFTDYSS", &
-                               "INTFTDZSS","INTFXSS  ","INTFYSS  ","INTFZSS  ","M1N1FKXE ","M1N1FKYE ","M1N1FKZE ", &
+   CHARACTER(10), PARAMETER  :: ValidParamAry(2265) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "INTFFXSS ","INTFFYSS ","INTFFZSS ","INTFMXSS ","INTFMYSS ","INTFMZSS ","INTFRAXSS", &
+                               "INTFRAYSS","INTFRAZSS","INTFRDXSS","INTFRDYSS","INTFRDZSS","INTFTAXSS","INTFTAYSS", &
+                               "INTFTAZSS","INTFTDXSS","INTFTDYSS","INTFTDZSS","M1N1FKXE ","M1N1FKYE ","M1N1FKZE ", &
                                "M1N1FMXE ","M1N1FMYE ","M1N1FMZE ","M1N1MKXE ","M1N1MKYE ","M1N1MKZE ","M1N1MMXE ", &
                                "M1N1MMYE ","M1N1MMZE ","M1N1RAXE ","M1N1RAYE ","M1N1RAZE ","M1N1RDXE ","M1N1RDYE ", &
                                "M1N1RDZE ","M1N1TAXE ","M1N1TAYE ","M1N1TAZE ","M1N1TDXSS","M1N1TDYSS","M1N1TDZSS", &
@@ -3056,8 +3056,8 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
                                "M9N9FKYE ","M9N9FKZE ","M9N9FMXE ","M9N9FMYE ","M9N9FMZE ","M9N9MKXE ","M9N9MKYE ", &
                                "M9N9MKZE ","M9N9MMXE ","M9N9MMYE ","M9N9MMZE ","M9N9RAXE ","M9N9RAYE ","M9N9RAZE ", &
                                "M9N9RDXE ","M9N9RDYE ","M9N9RDZE ","M9N9TAXE ","M9N9TAYE ","M9N9TAZE ","M9N9TDXSS", &
-                               "M9N9TDYSS","M9N9TDZSS","REACTMXSS","REACTMYSS","REACTMZSS","REACTXSS ","REACTYSS ", &
-                               "REACTZSS ","SSQM01   ","SSQM02   ","SSQM03   ","SSQM04   ","SSQM05   ","SSQM06   ", &
+                               "M9N9TDYSS","M9N9TDZSS","REACTFXSS","REACTFYSS","REACTFZSS","REACTMXSS","REACTMYSS", &
+                               "REACTMZSS","SSQM01   ","SSQM02   ","SSQM03   ","SSQM04   ","SSQM05   ","SSQM06   ", &
                                "SSQM07   ","SSQM08   ","SSQM09   ","SSQM10   ","SSQM11   ","SSQM12   ","SSQM13   ", &
                                "SSQM14   ","SSQM15   ","SSQM16   ","SSQM17   ","SSQM18   ","SSQM19   ","SSQM20   ", &
                                "SSQM21   ","SSQM22   ","SSQM23   ","SSQM24   ","SSQM25   ","SSQM26   ","SSQM27   ", &
@@ -3100,11 +3100,10 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
                                "SSQMDD82 ","SSQMDD83 ","SSQMDD84 ","SSQMDD85 ","SSQMDD86 ","SSQMDD87 ","SSQMDD88 ", &
                                "SSQMDD89 ","SSQMDD90 ","SSQMDD91 ","SSQMDD92 ","SSQMDD93 ","SSQMDD94 ","SSQMDD95 ", &
                                "SSQMDD96 ","SSQMDD97 ","SSQMDD98 ","SSQMDD99 "/)
- 
- INTEGER(IntKi), PARAMETER :: ParamIndxAry(2265) =  (/ &                          ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                 IntfMXss ,  IntfMYss ,  IntfMZss , IntfRAXss , IntfRAYss , IntfRAZss , IntfRDXss , &
-                                IntfRDYss , IntfRDZss , IntfTAXss , IntfTAYss , IntfTAZss , IntfTDXss , IntfTDYss , &
-                                IntfTDZss ,   IntfXss ,   IntfYss ,   IntfZss ,  M1N1FKxe ,  M1N1FKye ,  M1N1FKze , &
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(2265) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                 IntfFXss ,  IntfFYss ,  IntfFZss ,  IntfMXss ,  IntfMYss ,  IntfMZss , IntfRAXss , &
+                                IntfRAYss , IntfRAZss , IntfRDXss , IntfRDYss , IntfRDZss , IntfTAXss , IntfTAYss , &
+                                IntfTAZss , IntfTDXss , IntfTDYss , IntfTDZss ,  M1N1FKxe ,  M1N1FKye ,  M1N1FKze , &
                                  M1N1FMxe ,  M1N1FMye ,  M1N1FMze ,  M1N1MKxe ,  M1N1MKye ,  M1N1MKze ,  M1N1MMxe , &
                                  M1N1MMye ,  M1N1MMze ,  M1N1RAxe ,  M1N1RAye ,  M1N1RAze ,  M1N1RDxe ,  M1N1RDye , &
                                  M1N1RDze ,  M1N1TAxe ,  M1N1TAye ,  M1N1TAze , M1N1TDxss , M1N1TDyss , M1N1TDzss , &
@@ -3382,8 +3381,8 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
                                  M9N9FKye ,  M9N9FKze ,  M9N9FMxe ,  M9N9FMye ,  M9N9FMze ,  M9N9MKxe ,  M9N9MKye , &
                                  M9N9MKze ,  M9N9MMxe ,  M9N9MMye ,  M9N9MMze ,  M9N9RAxe ,  M9N9RAye ,  M9N9RAze , &
                                  M9N9RDxe ,  M9N9RDye ,  M9N9RDze ,  M9N9TAxe ,  M9N9TAye ,  M9N9TAze , M9N9TDxss , &
-                                M9N9TDyss , M9N9TDzss , ReactMXss , ReactMYss , ReactMZss ,  ReactXss ,  ReactYss , &
-                                 ReactZss ,    SSqm01 ,    SSqm02 ,    SSqm03 ,    SSqm04 ,    SSqm05 ,    SSqm06 , &
+                                M9N9TDyss , M9N9TDzss , ReactFXss , ReactFYss , ReactFZss , ReactMXss , ReactMYss , &
+                                ReactMZss ,    SSqm01 ,    SSqm02 ,    SSqm03 ,    SSqm04 ,    SSqm05 ,    SSqm06 , &
                                    SSqm07 ,    SSqm08 ,    SSqm09 ,    SSqm10 ,    SSqm11 ,    SSqm12 ,    SSqm13 , &
                                    SSqm14 ,    SSqm15 ,    SSqm16 ,    SSqm17 ,    SSqm18 ,    SSqm19 ,    SSqm20 , &
                                    SSqm21 ,    SSqm22 ,    SSqm23 ,    SSqm24 ,    SSqm25 ,    SSqm26 ,    SSqm27 , &
@@ -3426,33 +3425,8 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
                                  SSqmdd82 ,  SSqmdd83 ,  SSqmdd84 ,  SSqmdd85 ,  SSqmdd86 ,  SSqmdd87 ,  SSqmdd88 , &
                                  SSqmdd89 ,  SSqmdd90 ,  SSqmdd91 ,  SSqmdd92 ,  SSqmdd93 ,  SSqmdd94 ,  SSqmdd95 , &
                                  SSqmdd96 ,  SSqmdd97 ,  SSqmdd98 ,  SSqmdd99 /)
-  
-  CHARACTER(10), PARAMETER :: ParamUnitsAry(2265) =  (/ &                         ! This lists the units corresponding to the allowed parameters
-                               "(Nm)      ","(Nm)      ","(Nm)      ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ", &
-                               "(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ", &
-                               "(m)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
-                               "(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ", &
-                               "(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ", &
-                               "(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ", &
-                               "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ", &
-                               "(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m)       ","(m)       ","(m)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
-                               "(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ","(N)       ", &
-                               "(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ", &
-                               "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ", &
-                               "(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ", &
-                               "(m)       ","(m)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
-                               "(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ","(N)       ","(N)       ", &
-                               "(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ", &
-                               "(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ", &
-                               "(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ", &
-                               "(m)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ", &
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(2265) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+                               "(N)       ","(N)       ","(N)       ","(Nm)      ","(Nm)      ","(Nm)      ","(rad/s^2) ", &
                                "(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ", &
                                "(m/s^2)   ","(m)       ","(m)       ","(m)       ","(N)       ","(N)       ","(N)       ", &
                                "(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
@@ -3708,8 +3682,32 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
                                "(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ", &
                                "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ", &
                                "(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ", &
-                               "(m)       ","(m)       ","(Nm)      ","(Nm)      ","(Nm)      ","(N)       ","(N)       ", &
-                               "(N)       ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ", &
+                               "(m)       ","(m)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
+                               "(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
+                               "(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ", &
+                               "(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ","(N)       ","(N)       ", &
+                               "(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ", &
+                               "(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ", &
+                               "(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ", &
+                               "(m)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
+                               "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ", &
+                               "(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ", &
+                               "(m/s^2)   ","(m)       ","(m)       ","(m)       ","(N)       ","(N)       ","(N)       ", &
+                               "(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
+                               "(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ", &
+                               "(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ", &
+                               "(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ", &
+                               "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ", &
+                               "(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
+                               "(m)       ","(m)       ","(m)       ","(N)       ","(N)       ","(N)       ","(N)       ", &
+                               "(N)       ","(N)       ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ", &
+                               "(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(rad)     ","(rad)     ","(rad)     ", &
+                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ","(N)       ", &
+                               "(N)       ","(N)       ","(N)       ","(N)       ","(N)       ","(N*m)     ","(N*m)     ", &
+                               "(N*m)     ","(N*m)     ","(N*m)     ","(N*m)     ","(rad/s^2) ","(rad/s^2) ","(rad/s^2) ", &
+                               "(rad)     ","(rad)     ","(rad)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ", &
+                               "(m)       ","(m)       ","(N)       ","(N)       ","(N)       ","(Nm)      ","(Nm)      ", &
+                               "(Nm)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ", &
                                "(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ", &
                                "(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ", &
                                "(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ","(--)      ", &
@@ -3770,12 +3768,11 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
    PUBLIC :: SDOut_WriteOutputUnits
    PUBLIC :: SDOut_WriteOutputs
    PUBLIC :: SDOut_Init
-   PUBLIC :: SDOut_DestroyParam
 
 CONTAINS
 
 
-SUBROUTINE SDOut_Init( Init, y,  p, OtherState, InitOut, ErrStat, ErrMsg )
+SUBROUTINE SDOut_Init( Init, y,  p, OtherState, InitOut, WtrDpth, ErrStat, ErrMsg )
 ! This subroutine initializes the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 !----------------------------------------------------------------------------------------------------
@@ -3783,11 +3780,12 @@ SUBROUTINE SDOut_Init( Init, y,  p, OtherState, InitOut, ErrStat, ErrMsg )
 
 ! Passed variables
 
- TYPE(SD_InitInputType ),  INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
+ TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
  TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
  TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! SubDyn module paramters
  TYPE(SD_OtherStateType),  INTENT( INOUT ) :: OtherState           ! SubDyn other states
  TYPE(SD_InitOutputType ), INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
+ REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
  INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
  CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -3796,7 +3794,6 @@ SUBROUTINE SDOut_Init( Init, y,  p, OtherState, InitOut, ErrStat, ErrMsg )
  INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
  INTEGER(IntKi)                                   :: Junk  !Temporary Holders
  INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
- CHARACTER(10)                                    :: cstr !string
 !-------------------------------------------------------------------------------------------------      
 ! Initialize local variables
 !-------------------------------------------------------------------------------------------------      
@@ -3810,42 +3807,40 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
 !-------------------------------------------------------------------------------------------------      
 
 !   SDOut_Data%NumOuts = HDO_InitData%NumOuts   
-  CALL SDOut_ChkOutLst( InitOut%SSOutList(1:p%NumOuts), y, p,  ErrStat, ErrMsg )
+  CALL SDOut_ChkOutLst( Init%SSOutList, p,  ErrStat, ErrMsg )
   IF ( ErrStat /= 0 ) RETURN
 
 !-------------------------------------------------------------------------------------------------      
 ! INITIALIZE FAST-TYPE OUTPUT  (y)
 !-------------------------------------------------------------------------------------------------      
-  !ALLOCATE( y%Y1(p%TPdofL), STAT = ErrStat )
+  !ALLOCATE( y%Y1(TPdofL), STAT = ErrStat )
   !IF ( ErrStat/= 0 ) THEN
   !    ErrStat = ErrID_Fatal
   !    ErrMsg  = 'Error allocating output Y1 array in SDOut_Init'
   !    RETURN
   !END IF
-  ALLOCATE( OtherState%Y2(p%Y2L), STAT = ErrStat )
-  IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating output Y2 array in SDOut_Init'
-      RETURN
-  END IF
 
 !-------------------------------------------------------------------------------------------------      
 ! Open the output file, if necessary, and write the header
 !-------------------------------------------------------------------------------------------------      
 
- IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested           
+  IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested           
 
-  !Allocate array of accelrations though it is used only if forces are requested
-  ALLOCATE( OtherState%Udotdot(p%UdotdotL), STAT = ErrStat )
-  IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating output Udotdot array in SDOut_Init'
-      RETURN
-  END IF 
     
+   ! Allocate SDWrOuput which is used to store a time step's worth of output channels, prior to writing to a file.
+   ALLOCATE( OtherState%SDWrOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
+   IF ( ErrStat /= ErrID_None ) THEN
+    ErrMsg  = ' Error allocating space for SDWrOutput array.'
+    ErrStat = ErrID_Fatal
+    RETURN
+   END IF
+   OtherState%SDWrOutput  = 0.0_ReKi
+   OtherState%LastOutTime = 0.0_DbKi
+   OtherState%Decimat     = 0
+   
    !Allocate WriteOuput  
    ALLOCATE( y%WriteOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
-   IF ( ErrStat /= ErrID_None ) THEN
+   IF ( ErrStat /= 0 ) THEN
     ErrMsg  = ' Error allocating space for WriteOutput array.'
     ErrStat = ErrID_Fatal
     RETURN
@@ -4015,17 +4010,15 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
  ENDIF
  
  !_____________________________________REACTIONS_____________________________________________
- Junk=0
- DO I=1,p%NumOuts  !This should be vectorizable, in matlab i can do in 1 line
-      cstr=InitOut%SSOutList(I)
-      IF ( cstr(1:5) .EQ. "React" ) THEN 
-       Junk=1
-       EXIT
-      ENDIF
- ENDDO
+p%OutReact = .FALSE.
+DO I=1,p%NumOuts
+   if ( ANY( p%OutParam(I)%Indx == ReactSS) ) THEN ! bjj: removed check of first 5 characters being "React" because (1) cases matter and (2) we can also ask for "-React*" or "mREACT"
+      p%OutReact   =.TRUE.  
+      EXIT
+   ENDIF
+ENDDO
  
- IF (Junk .EQ. 1) THEN  !I need to store all constrained forces and moments; WE do not allow more than one member to be connected at a constrained joint for the time being
-    p%OutReact=.TRUE. !store for other routines
+ IF (p%OutReact) THEN  !I need to store all constrained forces and moments; WE do not allow more than one member to be connected at a constrained joint for the time being
     
     ALLOCATE ( p%MOutLst3(p%NReact), STAT = ErrStat )     !this list contains different arrays for each of its elements
     IF ( ErrStat /= ErrID_None ) THEN
@@ -4048,7 +4041,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
       ! END IF
       ! 
       !p%MOutLst3(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
-       !Now I need to find out which elements are attached to those nodes and still belong to the member I
+      !Now I need to find out which elements are attached to those nodes and still belong to the member I
       !ElmID2s could contain the same element twice if Ndiv=1
       !p%MOutLst3(I)%ElmID2s=0  !Initialize to 0
       
@@ -4115,7 +4108,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
     ENDDO
 
     !Store the matrix that will let me calculate single point reaction at the base of structure
-    CALL ReactMatx(Init, p, ErrStat, ErrMsg)
+    CALL ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
  ENDIF
 
  
@@ -4143,19 +4136,19 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
     InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
    END DO  
    
-  
- 
+    
 RETURN
 
 END SUBROUTINE SDOut_Init
 
 !------------------------------------------------------------------------------------------------------
-SUBROUTINE ReactMatx(Init, p, ErrStat, ErrMsg)
+SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
 !This subroutine allocates and calculated TIreact, Matrix to go from local reactions at constrained nodes to single point reactions
-   TYPE(SD_InitInputType), INTENT(  IN)  :: Init         ! Input data for initialization routine
+   TYPE(SD_InitType),      INTENT(  IN)  :: Init         ! Input data for initialization routine
    TYPE(SD_ParameterType), INTENT(  INOUT)  :: p         ! Parameter data
+   REAL(ReKi),                   INTENT(IN)     :: WtrDpth
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(1024),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
    INTEGER                             :: I !counter
@@ -4168,7 +4161,7 @@ SUBROUTINE ReactMatx(Init, p, ErrStat, ErrMsg)
    ErrStat=ErrID_None
    ErrMsg=""
    
-   DOFC = p%NReact*6  !Total DOFs at the base of structure 
+   DOFC = p%NReact*6 ! bjj, this is p%DOFC    !Total DOFs at the base of structure 
    
    ALLOCATE ( p%TIreact(6,DOFC), STAT = ErrStat )
    IF ( ErrStat /= ErrID_None ) THEN
@@ -4190,7 +4183,7 @@ SUBROUTINE ReactMatx(Init, p, ErrStat, ErrMsg)
       
       x = Init%Nodes(n, 2)
       y = Init%Nodes(n, 3)
-      z = Init%Nodes(n, 4) + Init%WtrDpth  !+ Wdepth here to be added- RRD TODO: 7/19/13
+      z = Init%Nodes(n, 4) + WtrDpth
       
       rmndr = MOD(I, 6)  !It gives me the column index among the 6 different kinds
       SELECT CASE (rmndr)
@@ -4228,6 +4221,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by SD_CalcOutput() at each time step.
 ! This routine does fill Allouts
+! note that this routine assumes OtherState%u_TP and OtherState%udotdot_TP have been set before calling 
+!     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
 !---------------------------------------------------------------------------------------------------- 
    REAL(DbKi),                    INTENT( IN    )  :: CurrentTime          ! Current simulation time in seconds
    TYPE(SD_InputType),            INTENT( IN )     :: u                    ! SubDyn module's input data
@@ -4235,35 +4230,35 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
    TYPE(SD_OutputType),           INTENT( INOUT )  :: y                    ! SubDyn module's output data
    TYPE(SD_ParameterType),        INTENT( IN    )  :: p                    ! SubDyn module's parameter data
    TYPE(SD_OtherStateType),       INTENT( INOUT )  :: OtherState           ! Other/optimization states
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(0:p%MaxOutPts+p%OutAllInt*p%OutAllDims) ! Array of output data for all possible outputs
+   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims) ! Array of output data for all possible outputs
    INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat              ! Error status of the operation
    CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
    !locals
-   INTEGER(IntKi)                               ::I,J,K,K2,L,L2      ! Counters
-   INTEGER(IntKi), DIMENSION(2)                 ::K3    ! It stores Node IDs for element under consideration (may not be consecutive numbers)
-   INTEGER(IntKi)                               :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%Nmodes
-   REAL(ReKi), DIMENSION (6)                 :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
-   REAL(ReKi), DIMENSION (6)                 :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
+   INTEGER(IntKi)                           ::I,J,K,K2,L,L2      ! Counters
+   INTEGER(IntKi), DIMENSION(2)             ::K3    ! It stores Node IDs for element under consideration (may not be consecutive numbers)
+   INTEGER(IntKi)                           :: maxOutModes  ! maximum modes to output, the minimum of 99 or p%Nmodes
+   REAL(ReKi), DIMENSION (6)                :: FM_elm, FK_elm, junk  !output static and dynamic forces and moments
+   REAL(ReKi), DIMENSION (6)                :: FM_elm2, FK_elm2  !output static and dynamic forces and moments
    Real(ReKi), DIMENSION (3,3)              :: DIRCOS    !direction cosice matrix (global to local) (3x3)
    Real(ReKi), ALLOCATABLE                  :: ReactNs(:)    !6*Nreact reactions
+   REAL(ReKi)                               :: Tmp_Udotdot(12), Tmp_y2(12) !temporary storage for calls to CALC_LOCAL
    
-   Real(reKi), DIMENSION(p%Y2L/2+6*p%Nreact)          :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
-   Real(ReKi),  DIMENSION(p%UdotdotL+6*p%Nreact)      ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
+   Real(reKi), DIMENSION( p%URbarL+p%DOFL+6*p%Nreact)      :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
+   Real(ReKi),  DIMENSION(p%URbarL+p%DOFL+6*p%Nreact)      ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
    Integer(IntKi)                              ::sgn !+1/-1 for node force calculations
-   REAL(ReKi)                                   :: rotations(3)
-   REAL(ReKi)                                   :: u_TP(6),  udotdot_TP(6)
    ErrStat = ErrID_None   
    ErrMsg  = ""
    
    !Create a variable that lists Y2 and adds removed constrained nodes' dofs; we will be using it to carry out other calculations with a special indexing array
-   yout =0 !Initialize and populate with Y2 data
-   yout(1 : p%UrbarL+p%DOFL) = OtherState%Y2(1 : p%UrbarL+p%DOFL)  
-   
+   yout =0 !Initialize and populate with Y2 data  
+   yout(1:         p%UrbarL       ) = OtherState%UR_bar
+   yout(p%URbarL+1:p%URbarL+p%DOFL) = OtherState%UL
   
    !Same for a variable that deals with Udotdot
    uddout =0 !Initialize and populate with Udotdot data
-   uddout(1 : p%UdotdotL) = OtherState%Udotdot
+   uddout(1          : p%URbarL         ) = OtherState%UR_bar_dotdot
+   uddout(p%URbarL+1 : p%URbarL+p%DOFL  ) = OtherState%UL_dotdot
          
       ! Only generate member-based outputs for the number of user-requested member outputs
       !Now store and identify needed output as requested by user
@@ -4292,8 +4287,16 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
              !I need to find the Udotdot() for the two nodes of the element of interest 
              !I need to move the displacements to the local ref system
              
-             CALL CALC_LOCAL( DIRCOS,p%MOutLst(I)%Me(:,:,J,1),p%MOutLst(I)%Ke(:,:,J,1),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                             (/yout( L : L+5 ),       yout( L2 : L2+5 )/),p%MoutLst(I)%Fg(:,J,1), K2,FM_elm,FK_elm) 
+               ! bjj: added these temporary storage variables so that the CALC_LOCAL call doesn't created
+               !      new temporary *every time* it's called
+             Tmp_Udotdot(1: 6) = uddout( L : L+5  )
+             Tmp_Udotdot(7:12) = uddout( L2 : L2+5 )
+             
+             Tmp_y2(1: 6)      = yout( L : L+5 )
+             Tmp_y2(7:12)      = yout( L2 : L2+5 )
+
+             CALL CALC_LOCAL( DIRCOS,p%MOutLst(I)%Me(:,:,J,1),p%MOutLst(I)%Ke(:,:,J,1),Tmp_Udotdot, &
+                              Tmp_y2,p%MoutLst(I)%Fg(:,J,1), K2,FM_elm,FK_elm) 
              
              FM_elm2=sgn*FM_elm
              FK_elm2=sgn*FK_elm
@@ -4362,7 +4365,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
                ! FK_elm2=sgn*FK_elm
           
                  !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts
-                 L=p%MaxOutPts+(I-1)*24+(J-1)*12+1!start index
+                 L=MaxOutPts+(I-1)*24+(J-1)*12+1!start index
                  L2=L+11
                 AllOuts( L:L2 ) =sgn* (/FK_elm,FM_elm/)
                 
@@ -4373,22 +4376,23 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
    
   
   !Assign interface forces and moments 
-   AllOuts(IntfSS(1:P%TPdofL))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
-  ! AllOuts(IntfSS(1:P%TPdofL))=- (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
-  !Assign interface translations and rotations at the TP ref point
+   AllOuts(IntfSS(1:TPdofL))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+   
+  !Assign interface translations and rotations at the TP ref point  
+  AllOuts(IntfTRss(1:TPdofL))=OtherState%u_TP 
   
-   rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat, Errmsg)
-   u_TP       = (/u%TPMesh%TranslationDisp(:,1), rotations/)
-   udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
-   AllOuts(IntfTRss(1:P%TPdofL))=u_TP !u%UFL(1:P%TPdofL) !TODO need to add these back in!!! GJH 6/6/13
   !Assign interface translations and rotations accelerations
-   AllOuts(IntfTRAss(1:P%TPdofL))= udotdot_TP !u%UFL(2*P%TPdofL+1:3*P%TPdofL)  !TODO need to add these back in!!! GJH 6/6/13
+  AllOuts(IntfTRAss(1:TPdofL))= OtherState%udotdot_TP 
+  
   ! Assign all SSqm, SSqmdot, SSqmdotdot
    ! We only have space for the first 99 values
   maxOutModes = min(p%Nmodes,99)
-  Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
-  Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
-  Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = x%qmdotdot(1:maxOutModes)
+   IF ( maxOutModes > 0 ) THEN 
+      !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
+      Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
+      Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
+      Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = OtherState%qmdotdot(1:maxOutModes)
+   END IF
    
   !Need to Calculate Reaction Forces Now, but only if requested
   IF (p%OutReact) THEN 
@@ -4404,8 +4408,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
        
        DO I=1,p%NReact   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
           
-          FK_elm2=0 !Initialize
-          FM_elm2=0 !Initialize
+          FK_elm2=0. !Initialize
+          FM_elm2=0. !Initialize
        
           !Find the joint forces
              DO J=1,SIZE(p%MOutLst3(I)%ElmIDs(1,:))  !for all the elements connected (normally 1)
@@ -4413,16 +4417,10 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
                 K=p%MOutLst3(I)%ElmIDs(1,J)  !element number
                 K2=p%MOutLst3(I)%ElmNds(1,J)  !first or second node of the element to be considered
                 
-                !Assign the sign depending on whether it is the 1st or second node
-                ! TODO: I do not believe we need to compute the sgn term because the local load is in the local coordinate system regardless of whether it is node 1 or 2, and then the direction cosine 
-                !       matrix transforms it into global which is what we need for the reaction load.  Also, I changed the sign of the reaction computation to simply sum not subtract the global force values.
-                !       Again, this seems to make sense.  GJH 5/6/13   --I believe this is correct, RRD 5/20/13
-                !sgn = 1
-                !IF (K2 .EQ. 2) sgn= -1
-                
+                !Assign the sign depending on whether it is the 1st or second node                
                 K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
                 
-                L=p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
+                L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
                 L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
                 
                 DIRCOS=tranSpose(p%elemprops(K)%DirCos)! global to local
@@ -4430,7 +4428,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
                 CALL CALC_LOCAL( DIRCOS,p%MOutLst3(I)%Me(:,:,1,J),p%MOutLst3(I)%Ke(:,:,1,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
                                  (/yout( L : L+5 ),       yout( L2 : L2+5 )/),  p%MoutLst3(I)%Fg(:,1,J),   K2,FM_elm,FK_elm) 
                 
-                !transform back to global, need to do 3 at a time since cosince matrix is 3x3
+                !transform back to global, need to do 3 at a time since cosine matrix is 3x3
                 DO L=1,2  
                    FM_elm2((L-1)*3+1:L*3) = FM_elm2((L-1)*3+1:L*3) + matmul(p%elemprops(K)%DirCos,FM_elm((L-1)*3+1:L*3))  !sum forces at joint in GLOBAL REF
                    FK_elm2((L-1)*3+1:L*3) = FK_elm2((L-1)*3+1:L*3) + matmul(p%elemprops(K)%DirCos,FK_elm((L-1)*3+1:L*3))  !signs may be wrong, we will fix that later;  
@@ -4451,7 +4449,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
        
           !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts
                 
-               AllOuts( ReactSS(1:P%TPdofL) ) = matmul(p%TIreact,ReactNs)
+      AllOuts( ReactSS(1:TPdofL) ) = matmul(p%TIreact,ReactNs)
   ENDIF
 
    if (allocated(ReactNs)) deallocate(ReactNs)
@@ -4475,14 +4473,10 @@ END SUBROUTINE SDOut_MapOutputs
         REAL(DbKi), DIMENSION(12)                    ::Junk,Junk1,Junk3,Junk4      ! temporary storage for output stuff
            
         Junk=matmul(Me,Udotdot)     !GLOBAL REFERENCE
-        ! TODO: Need to look at whether the following gravity component should be +Fg or -Fg.  Since the calculation is in global coordinates, gravity
-        !       acts in negative Z, but if the user has code uses gravity as -9.8 then this would already be negative.  If the code uses gravity as positive
-        !       then you would need to apply -Fg.
-        !       As a note, HydroDyn expects the gravity variable to be >= 0.  So we would use -Fg in that case.
         Junk1=matmul(Ke,Y2) !GLOBAL REFERENCE 
         Junk1=Junk1- Fg     !GLOBAL REFERENCE  
         DO L=1,4  
-            Junk3((L-1)*3+1:L*3)=   matmul(DIRCOS, Junk( (L-1)*3+1:L*3 ) )
+            Junk3((L-1)*3+1:L*3)=  matmul(DIRCOS, Junk(  (L-1)*3+1:L*3 ) )
             Junk4((L-1)*3+1:L*3) = matmul(DIRCOS, Junk1( (L-1)*3+1:L*3 ) ) 
         ENDDO
         
@@ -4505,37 +4499,34 @@ SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
   
 
       ! Local variables
-   LOGICAL                                :: Err                                       ! determines if an error exists      
+   INTEGER                                     :: Stat                 ! status from I/) operation 
 
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
    ErrMsg  = ""
    
-   Err = .FALSE.
-
       ! Write any closing information in the summary file
       
    IF ( UnSum > 0 ) THEN
       
-      WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat)  'This summary file was closed on '//CurDate()//' at '//CurTime()//'.'
-      IF (ErrStat /= 0) THEN
-         Err = .TRUE.
-         ErrMsg  = 'Problem writing to summary file'
+      WRITE (UnSum,'(/,A/)', IOSTAT=Stat)  'This summary file was closed on '//CurDate()//' at '//CurTime()//'.'
+      IF (Stat /= 0) THEN
+         ErrStat = ErrID_FATAL
+         ErrMsg  = ' Problem writing to summary file.'
       END IF
    
       ! Close the file
    
-   CLOSE( UnSum, IOSTAT=ErrStat )
-   IF (ErrStat /= 0) THEN
-      Err = .TRUE.
-      ErrMsg  = 'Problem closing summary file'
-   END IF
+      CLOSE( UnSum, IOSTAT=Stat )
+      IF (Stat /= 0) THEN
+         ErrStat = ErrID_FATAL
+         ErrMsg  = TRIM(ErrMsg)//' Problem closing summary file.'
+      END IF
    
-   IF ( Err ) ErrStat = ErrID_Fatal
+      IF ( ErrStat /= ErrID_None ) ErrMsg = 'SDOut_CloseSum'//TRIM(ErrMsg)
       
-   END IF   
-                      
+   END IF                      
                       
 END SUBROUTINE SDOut_CloseSum            
 
@@ -4551,7 +4542,7 @@ SUBROUTINE SDOut_OpenSum( UnSum, SummaryName, SD_Prog, ErrStat, ErrMsg )
    INTEGER,                 INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),            INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
            
-
+   integer                                    :: ErrStat2
        ! Initialize ErrStat
          
    ErrStat = ErrID_None         
@@ -4559,24 +4550,22 @@ SUBROUTINE SDOut_OpenSum( UnSum, SummaryName, SD_Prog, ErrStat, ErrMsg )
       
 
    CALL GetNewUnit( UnSum )
-
-   CALL OpenFOutFile ( UnSum, SummaryName, ErrStat ) 
-   IF ( ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Failed to open summary file.'
+   CALL OpenFOutFile ( UnSum, SummaryName, ErrStat, ErrMsg ) 
+   IF ( ErrStat >= AbortErrLev ) THEN
+      ErrMsg  = 'Failed to open SubDyn summary file: '//TRIM(ErrMsg)
       RETURN
    END IF
       
       
          ! Write the summary file header
       
-   WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat)  'This summary file was generated by '//TRIM( SD_Prog%Name )//&
+   WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat2)  'This summary file was generated by '//TRIM( SD_Prog%Name )//&
                      ' '//TRIM( SD_Prog%Ver )//' on '//CurDate()//' at '//CurTime()//'.'
                       
 END SUBROUTINE SDOut_OpenSum 
 
 !====================================================================================================
-SUBROUTINE SDOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrMsg )
+SUBROUTINE SDOut_OpenOutput( ProgVer, OutRootName,  p, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 !----------------------------------------------------------------------------------------------------
@@ -4585,27 +4574,25 @@ SUBROUTINE SDOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrMsg
 
       ! Passed variables
 
-   CHARACTER(24),                 INTENT( IN    ) :: ProgName
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
-   TYPE(SD_ParameterType),   INTENT( INOUT ) :: p   
-   TYPE(SD_InitOutPutType ), INTENT( IN    ) :: InitOut              !
+   TYPE(ProgDesc),                INTENT( IN    ) :: ProgVer
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
+   TYPE(SD_ParameterType),        INTENT( INOUT ) :: p   
+   TYPE(SD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
-   INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
    CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-                 
+   INTEGER                                        :: ErrStat2              
+   
    !-------------------------------------------------------------------------------------------------      
    ! Initialize local variables
    !-------------------------------------------------------------------------------------------------      
-   ErrStat = 0      
-      
-   !TODO Finish error handling
-   
+   ErrStat = ErrID_None  
+   ErrMsg  = ""
+         
    !-------------------------------------------------------------------------------------------------      
    ! Open the output file, if necessary, and write the header
    !-------------------------------------------------------------------------------------------------      
@@ -4613,42 +4600,33 @@ SUBROUTINE SDOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrMsg
    IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
       
          ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'_SD.out'
+      OutFileName = TRIM(OutRootName)//'.out'
       CALL GetNewUnit( p%UnJckF )
    
-      CALL OpenFOutFile ( p%UnJckF, OutFileName, ErrStat ) 
-      IF ( ErrStat /= 0 ) THEN
-         ErrMsg = ' Error opening SubDyn-level output file.'
+      CALL OpenFOutFile ( p%UnJckF, OutFileName, ErrStat, ErrMsg ) 
+      IF ( ErrStat >= AbortErrLev ) THEN
+         ErrMsg = ' Error opening SubDyn-level output file: '//TRIM(ErrMsg)
          RETURN
       END IF
       
        
          ! Write the output file header
       
-      WRITE (p%UnJckF,'(/,A/)', IOSTAT=ErrStat)  'These predictions were generated by '//TRIM(ProgName)//&
+      WRITE (p%UnJckF,'(/,A/)', IOSTAT=ErrStat2)  'These predictions were generated by '//TRIM(GETNVD(ProgVer))//&
                       ' on '//CurDate()//' at '//CurTime()//'.'
-   
+      
+      WRITE(p%UnJckF, '(//)') ! add 3 lines to make file format consistant with FAST v8 (headers on line 7; units on line 8) [this allows easier post-processing]
+      
          ! Write the names of the output parameters:
       
       Frmt = '(A8,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutSFmt )//'))'
    
-      WRITE(p%UnJckF,Frmt)  TRIM( 'Time' ), ( p%Delim, TRIM( InitOut%WriteOutputHdr(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
+      WRITE(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( InitOut%WriteOutputHdr(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
+                        
       
-      
-      
-      WRITE (p%UnJckF,'()', IOSTAT=ErrStat)          ! write the line return
-      
-      
-         ! Write the units of the output parameters:
-         
-     
-   
-      WRITE(p%UnJckF,Frmt)  TRIM( 's'), ( p%Delim, TRIM( InitOut%WriteOutputUnt(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
-      
-      
-      WRITE (p%UnJckF,'()', IOSTAT=ErrStat)          ! write the line return                               
-      
-      
+         ! Write the units of the output parameters:                 
+      WRITE(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 's'), ( p%Delim, TRIM( InitOut%WriteOutputUnt(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
+                     
    
       
    END IF   ! there are any requested outputs   
@@ -4745,16 +4723,16 @@ SUBROUTINE SDOut_WriteOutputUnits( UnJckF, p, ErrStat, ErrMsg )
 END SUBROUTINE SDOut_WriteOutputUnits
 
 !====================================================================================================
-SUBROUTINE SDOut_WriteOutputs( UnJckF, Time, y, p, ErrStat, ErrMsg )
+SUBROUTINE SDOut_WriteOutputs( UnJckF, Time, SDWrOutput, p, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in WriteOutputs (and indexed in OutParam) to the file
 ! opened in SDOut_Init()
 !---------------------------------------------------------------------------------------------------- 
 
       ! Passed variables   
-   INTEGER,                      INTENT( IN    ) :: UnJckF            ! file unit for the output file
+   INTEGER,                      INTENT( IN    ) :: UnJckF               ! file unit for the output file
    REAL(DbKi),                   INTENT( IN    ) :: Time                 ! Time for this output
-   TYPE(SD_OutputType),      INTENT( IN    ) :: y                    ! SubDyn module's output data
-   TYPE(SD_ParameterType),   INTENT( IN    ) :: p                    ! SubDyn module's parameter data
+   REAL(ReKi),                   INTENT( IN    ) :: SDWrOutput(:)        ! SubDyn module's output data
+   TYPE(SD_ParameterType),       INTENT( IN    ) :: p                    ! SubDyn module's parameter data
    INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -4768,20 +4746,20 @@ SUBROUTINE SDOut_WriteOutputs( UnJckF, Time, y, p, ErrStat, ErrMsg )
       ! Initialize ErrStat and determine if it makes any sense to write output
       
    IF ( .NOT. ALLOCATED( p%OutParam ) .OR. UnJckF < 0 )  THEN
-      ErrStat = -1
+      ErrStat = ErrID_Fatal
       ErrMsg  = ' To write outputs for SubDyn there must be a valid file ID and OutParam must be allocated.'
       RETURN
    ELSE
-      ErrStat = 0
+      ErrStat = ErrID_None
    END IF
 
 
       ! Write the output parameters to the file
       
-   Frmt = '(F8.3,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutFmt )//'))'
-   !Frmt = '('//TRIM( p%OutFmt )//','//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
+   Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutFmt )//'))'
+   
 
-   WRITE(UnJckF,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
+   WRITE(UnJckF,Frmt)  Time, ( p%Delim, SDWrOutput(I), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
 
    
    RETURN
@@ -4793,7 +4771,7 @@ END SUBROUTINE SDOut_WriteOutputs
 
 
 !====================================================================================================
-SUBROUTINE SDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
+SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
 ! This routine checks the names of inputted output channels, checks to see if any of them are ill-
 ! conditioned (returning an error if so), and assigns the OutputDataType settings (i.e, the index,  
 ! name, and units of the output channels). 
@@ -4804,22 +4782,21 @@ SUBROUTINE SDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
       ! Passed variables
       
-   TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module output data
    TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! SubDyn module parameter data
-   CHARACTER(10),                 INTENT( IN    ) :: OutList (:)          ! An array holding the names of the requested output channels.         
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ChanLen),       INTENT( IN    ) :: OutList (:)          ! An array holding the names of the requested output channels.         
+   INTEGER,                  INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
+   CHARACTER(*),             INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables.
    
-   INTEGER                                :: I,J,K                                         ! Generic loop-counting index.
-   INTEGER                                :: INDX                                      ! Index for valid arrays
+   INTEGER                                   :: I,J,K                                         ! Generic loop-counting index.
+   INTEGER                                   :: INDX                                      ! Index for valid arrays
    
-   CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
-   CHARACTER(28), PARAMETER               :: OutPFmt    = "( I4, 3X,A 10,1 X, A10 )"   ! Output format parameter output list.
-   CHARACTER(10), DIMENSION(24)           :: ToTUnits,ToTNames,ToTNames0
+   CHARACTER(ChanLen)                        :: OutListTmp                                ! A string to temporarily hold OutList(I).
+   !CHARACTER(28), PARAMETER               :: OutPFmt    = "( I4, 3X,A 10,1 X, A10 )"   ! Output format parameter output list.
+   CHARACTER(ChanLen), DIMENSION(24)         :: ToTUnits,ToTNames,ToTNames0
    
-   LOGICAL                  :: InvalidOutput(0:p%MaxOutPts)                        ! This array determines if the output channel is valid for this configuration
+   LOGICAL                  :: InvalidOutput(0:MaxOutPts)                        ! This array determines if the output channel is valid for this configuration
 
    LOGICAL                  :: CheckOutListAgain
    
@@ -4909,63 +4886,17 @@ SUBROUTINE SDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
              TotNames(J+(K-1)*12)=TRIM("M"//Int2Lstr(I))//TRIM("J"//Int2Lstr(K))//TRIM(TotNames0(J))
             ENDDO  
            ENDDO
-           p%OutParam(p%NumOuts+(I-1)*12*2+1:p%NumOuts+I*12*2)%Name =   ToTNames
-           p%OutParam(p%NumOuts+(I-1)*12*2+1:p%NumOuts+I*12*2)%Units =  ToTUnits
+           p%OutParam(p%NumOuts+(I-1)*12*2+1:p%NumOuts+I*12*2)%Name  = ToTNames
+           p%OutParam(p%NumOuts+(I-1)*12*2+1:p%NumOuts+I*12*2)%Units = ToTUnits
        ENDDO
        p%OutParam(p%NumOuts+1:p%NumOuts+p%OutAllDims)%SignM = 1
-       p%OutParam(p%NumOuts+1:p%NumOuts+p%OutAllDims)%Indx= p%MaxOutPts+(/(J, J=1, p%OutAllDims)/) 
+       p%OutParam(p%NumOuts+1:p%NumOuts+p%OutAllDims)%Indx= MaxOutPts+(/(J, J=1, p%OutAllDims)/) 
    ENDIF
 
    RETURN
 END SUBROUTINE SDOut_ChkOutLst
 
 
-!====================================================================================================
-SUBROUTINE SDOut_DestroyParam ( p, ErrStat, ErrMsg )
-! This function cleans up after running the SubDyn output module. It closes the output file,
-! releases memory, and resets the number of outputs requested to 0.
-!----------------------------------------------------------------------------------------------------
-
-         ! Passed variables
-
-   TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! data for this instance of the floating platform module        
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-!      ! Internal variables
-   LOGICAL                               :: Err
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize error information
-   !-------------------------------------------------------------------------------------------------
-   ErrStat = 0
-   ErrMsg  = ""
-   
-   Err     = .FALSE.
-
-  
-
-   !-------------------------------------------------------------------------------------------------
-   ! Deallocate arrays
-   !-------------------------------------------------------------------------------------------------
-   IF ( ALLOCATED( p%OutParam ) ) DEALLOCATE ( p%OutParam, STAT=ErrStat )
-   IF ( ErrStat /= 0 ) Err = .TRUE.
-     
-   !-------------------------------------------------------------------------------------------------
-   ! Reset number of outputs
-   !-------------------------------------------------------------------------------------------------
-   p%NumOuts   =  0
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Make sure ErrStat is non-zero if an error occurred
-   !-------------------------------------------------------------------------------------------------
-   IF ( Err ) ErrStat = ErrID_Fatal
-   
-   RETURN
-
-END SUBROUTINE SDOut_DestroyParam
 !====================================================================================================
 
 

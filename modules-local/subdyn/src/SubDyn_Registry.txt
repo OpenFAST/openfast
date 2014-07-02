@@ -1,251 +1,227 @@
-##################	Registry	for	SubDyn	###############
-# File last committed: $Date$
+##################### Registry for SubDyn ##################
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed $Date$
 # (File) Revision #: $Rev$
 # URL: $HeadURL$
 ###################################################################################################################################
-#	column	1	<keyword>
-#	column	2	ModuleName/ModName or ^ to use the value from the previous line (SD is nickname for ModuleName)
-#	column	3	Derived data type (without "ModName_" prefix)
-#	column	4	Derived data types's Field type
-#	column	5	Variable name
-#	column	6	Dimension of variable {:} for allocatable
-#	column	7	Variable's initial value (if set in the data type)
-#	column	8	I think this is a switch for mixed-language programming; it's mostly unused
-#	column	9	Description
-#	column	10	Units
-
-# ...... Include files (definition of ProgDesc from NWTC Library) ............................................................................
-# make sure that the file name does not have any trailing white spaces!
+# ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
 
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+# Keyword	ModuleName/ModName	Derived data type	Field type	Variable name	Dimemsion of the variable	Initial value	not used	Description	Units
 
-# Keyword	ModuleName/ModName	Derived data type	Field type       Variable name          Dimemsion of the variable	Initial value	for mix language, not used	Description	Units
-typedef	SubDyn/SD        MeshAuxDataType        INTEGER          MemberID               -	                    -	-	Member ID for Output
-typedef	  ^                           ^         INTEGER          NOutCnt                -	                    -	-	Number of Nodes for the output member
-typedef	  ^                           ^         INTEGER          NodeCnt                {:}	                    -	-	Node ordinal numbers for the output member
-typedef	  ^                           ^         INTEGER          NodeIDs                {:}	                    -	-	Node IDs associated with ordinal numbers for the output member
-typedef	  ^                           ^         INTEGER          ElmIDs                 {:}{:}	                    -	-	Element IDs connected to each NodeIDs; max 10 elements
-typedef	  ^                           ^         INTEGER          ElmNds                 {:}{:}	                    -	-	Flag to indicate 1st or 2nd node of element for each ElmIDs
-typedef	  ^                           ^         INTEGER          ElmID2s                {2}	                    -	-	Element IDs connected to each joint node
-typedef	  ^                           ^         INTEGER          ElmNd2s                {2}	                    -	-	Flag to indicate 1st or 2nd node of element which is attached to member joint (for outAll)
-typedef	  ^                           ^         ReKi             Me                     {:}{:}{:}{:}	          -	-	Mass matrix connected to each joint element for outAll output
-typedef	  ^                           ^         ReKi             Ke                     {:}{:}{:}{:}	          -	-	Mass matrix connected to each joint element for outAll output
-typedef	  ^                           ^         ReKi             Fg                     {:}{:}{:}	                    -	-	Gravity load vector connected to each joint element for requested member output
-typedef	  ^                           ^         ReKi             Me2                    {12}{12}{2}	          -	-	Mass matrix connected to each joint element for outAll output
-typedef	  ^                           ^         ReKi             Ke2                    {12}{12}{2}	          -	-	Mass matrix connected to each joint element for outAll output
-typedef	  ^                           ^         ReKi             Fg2                    {12}{2}	                    -	-	Gravity load vector connected to each joint element for outAll output
-#
-typedef	  ^              ElemPropType           ReKi	       Area	          -	                    -	-	Area of an element
-typedef	  ^                           ^	ReKi	       Length	          -	                    -	-	Length of an element
-typedef	  ^                           ^	ReKi	       Ixx	          -	                    -	-	Moment of inertia of an element
-typedef	  ^                           ^	ReKi	       Iyy	          -	                    -	-	Moment of inertia of an element
-typedef	  ^                           ^	ReKi	       Jzz	          -	                    -	-	Moment of inertia of an element
-typedef	  ^                           ^	LOGICAL	       Shear	          -	                    -	-	Use timoshenko (true) E-B (false)
-typedef	  ^                           ^	ReKi	       Kappa	          -	                    -	-	Shear coefficient
-typedef	  ^                           ^	ReKi	       YoungE	          -	                    -	-	Young's modulus
-typedef	  ^                           ^	ReKi	       ShearG	          -	                    -	-	Shear modulus
-typedef	  ^                           ^	ReKi	       Rho	          -	                    -	-	Density
-typedef	  ^                           ^	ReKi	       DirCos	          {3}{3}	                    -	-	Element direction cosine matrix
-#
-# ============================== Define input types here: ============================================================================================================================================
-#--------------------------	arrays and variables from the input file --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#	 integer
-typedef	SubDyn/SD	InitInputType	CHARACTER(1024)	SDInputFile	-	-	-	Name of the input file
-typedef	^	^	ReKi	        g	        -	-	-	Gravity acceleration
-typedef	^	^	ReKi	        WtrDpth     - - - Water Depth (positive valued)    
-typedef	^	^	ReKi	        TP_RefPoint 	{3} 	-	-	Gravity acceleration
-typedef	^	^	ReKi          SubRotateZ  - - - Rotation angle in degrees about global Z
-typedef	^	^	CHARACTER(1024)	SubDynSum	-	-	-	SubDyn summary and elem files
-typedef	^	^	CHARACTER(1024)	RootName	-	-	-	SubDyn rootname
-typedef	^	^       DbKi		DT	        -	-	-	Time step from Glue Code	seconds
-typedef	^	^	INTEGER	ErrStat	-	-	-	Error status
-typedef	^	^	INTEGER	NJoints	-	-	-	Number of joints of the sub structure
-typedef	^	^	INTEGER	JointsCol	-	4	-	Number of columns in Joints
-typedef	^	^	INTEGER	MembersCol	-	5	-	Number of columns in Members
-typedef	^	^	INTEGER	NPropSets	-	-	-	Number of property sets
-typedef	^	^	INTEGER	PropSetsCol	-	6	-	Number of columns in PropSets
-typedef	^	^	INTEGER	NXPropSets	-	-	-	Number of extended property sets
-typedef	^	^	INTEGER	XPropSetsCol	-	10	-	Number of columns in XPropSets
-typedef	^	^	INTEGER	ReactCol	-	7	-	Number of columns in reaction dof array
-typedef	^	^	INTEGER	NInterf	-	-	-	Number of joints attached to transition piece
-typedef	^	^	INTEGER	InterfCol	-	7	-	Number of columns in interf matrix
-typedef	^	^	INTEGER	NCMass	-	-	-	Number of joints with concentrated mass
-typedef	^	^	INTEGER	CMassCol	-	5	-	Number of columns in CMass
-typedef	^	^	INTEGER	NCOSMs	-	-	-	Number of independent cosine matrices
-typedef	^	^	INTEGER	COSMsCol	-	10	-	Number of columns in COSMs
-typedef	^	^	INTEGER	FEMMod	-	-	-	FEM switch: element model in the FEM
-typedef	^	^	INTEGER	NDiv	-	-	-	Number of divisions for each member
-typedef	^	^	LOGICAL	CBMod	-	-	-	Perform C-B flag
-#	 real allocatable
-typedef	^	^	ReKi	Joints	{:}{:}	-	-	Joints number and coordinate values
-typedef	^	^	ReKi	PropSets	{:}{:}	-	-	Property sets number and values
-typedef	^	^	ReKi	XPropSets	{:}{:}	-	-	Extended property sets
-typedef	^	^	ReKi	COSMs	{:}{:}	-	-	Independent direction cosine matrices
-typedef	^	^	ReKi	CMass	{:}{:}	-	-	Concentrated mass information
-typedef	^	^	ReKi	JDampings	{:}	-	-	Damping coefficients for internal modes
-#	 integer allocatable
-typedef	^	^	INTEGER	Members	{:}{:}	-	-	Member joints connection
-typedef	^	^	INTEGER	Interf	{:}{:}	-	-	Interface degree of freedoms
-#--------------------------	 arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#	 integer
-typedef	^	^	INTEGER	NNode	-	-	-	Total number of nodes
-typedef	^	^	INTEGER	NElem	-	-	-	Total number of elements
-typedef	^	^	INTEGER	NProp	-	-	-	Total number of property sets
-typedef	^	^	INTEGER	TDOF	-	-	-	Total degree of freedom
-# typedef	^	^	INTEGER	NNZ	-	-	-	Total number of non-zero elements in system matrices
-typedef	^	^	INTEGER	MaxMemJnt	-	10	-	Maximum number of members at one joint
-#	 Real allocatable
-typedef	^	^	ReKi	Nodes	{:}{:}	-	-	Nodes number and coordinates
-typedef	^	^	ReKi	Props	{:}{:}	-	-	Property sets and values
-typedef	^	^	ReKi	K	{:}{:}	-	-	System stiffness matrix
-typedef	^	^	ReKi	M	{:}{:}	-	-	System mass matrix
-typedef	^	^	ReKi	F	{:}	-	-	System force vector	N
-typedef	^	^	ReKi	FG	{:}	-	-	Gravity force vector	N
-typedef	^	^	ReKi	ElemProps	{:}{:}	-	-	Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )
-#	 Integer allocatable
-typedef	^	^	INTEGER	BCs	{:}{:}	-	-	Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0)
-typedef	^	^	INTEGER	IntFc	{:}{:}	-	-	Interface constraint degree of freedoms
-# typedef	^	^	INTEGER	IA	{:}	-	-	Row index for system K and M in conpressed row storage
-# typedef	^	^	INTEGER	JA	{:}	-	-	Column indes for system K and M in compressed row storage
-typedef	^	^	INTEGER	MemberNodes	{:}{:}	-	-	Member number and nodes in the member
-typedef	^	^	INTEGER	NodesConnN	{:}{:}	-	-	Nodes that connect to a common node
-typedef	^	^	INTEGER	NodesConnE	{:}{:}	-	-	Elements that connect to a common node
-typedef	  ^			^	                            LOGICAL	                 SSSum	-	-	-	SubDyn Summary File Flag
-typedef   ^     ^                             INTEGER                  UnSum  -          -          -         "File unit for the SubDyn summary file [-1 = no summary file]"    -
-
+# ============================== Define Initialization Inputs (from glue code) here: ============================================================================================================================================
+typedef	SubDyn/SD	InitInputType	CHARACTER(1024)	SDInputFile	-	-	-	"Name of the input file"
+typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"SubDyn rootname"
+typedef	^	InitInputType	ReKi	g	-	-	-	"Gravity acceleration"
+typedef	^	InitInputType	ReKi	WtrDpth 	-	-	-	"Water Depth (positive valued)"
+typedef	^	InitInputType	ReKi	TP_RefPoint 	{3} 	-	-	"global position of transition piece reference point (could also be defined in SubDyn itself)"
+typedef	^	InitInputType	ReKi	SubRotateZ	-	-	-	"Rotation angle in degrees about global Z"
 
 # ============================== Define Initialization outputs here: ============================================================================================================================================
-# Define outputs from the initialization routine here:
-typedef   ^               InitOutputType        CHARACTER(10) WriteOutputHdr   {:} 	- 	-   "Names of the output-to-file channels" -
-typedef   ^               InitOutputType        CHARACTER(10) WriteOutputUnt   {:} 	- 	-   "Units of the output-to-file channels" -
-typedef	 ^	              InitOutputType	      ProgDesc	     Ver	-	-	-	"This module's name, version, and date"	-
-typedef	  ^			^		INTEGER		MaxOutChs	-	2000	-	Max number of Output Channels to be read in
-typedef	  ^		        ^	        LOGICAL	        TabDelim	-	-	-	Generate a tab-delimited output file in OutJckF-Flag
-#	logical
-typedef	^			^	LOGICAL	OutCOSM	-	-	-	Output Cos-matrices Flag
-#	character
-typedef	^			^	CHARACTER(10)	SSOutList	{:}	-	-	List of Output Channels
+typedef	^	InitOutputType	CHARACTER(10)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
+typedef	^	InitOutputType	CHARACTER(10)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
+typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+
+# ============================== Define Internal data types here: ============================================================================================================================================
+typedef	SubDyn/SD	MeshAuxDataType	INTEGER	MemberID	-	-	-	"Member ID for Output"
+typedef	^	MeshAuxDataType	INTEGER	NOutCnt 	-	-	-	"Number of Nodes for the output member"
+typedef	^	MeshAuxDataType	INTEGER	NodeCnt 	{:}	-	-	"Node ordinal numbers for the output member"
+typedef	^	MeshAuxDataType	INTEGER	NodeIDs 	{:}	-	-	"Node IDs associated with ordinal numbers for the output member"
+typedef	^	MeshAuxDataType	INTEGER	ElmIDs  	{:}{:}	-	-	"Element IDs connected to each NodeIDs; max 10 elements"
+typedef	^	MeshAuxDataType	INTEGER	ElmNds  	{:}{:}	-	-	"Flag to indicate 1st or 2nd node of element for each ElmIDs"
+typedef	^	MeshAuxDataType	INTEGER	ElmID2s 	{2}	-	-	"Element IDs connected to each joint node"
+typedef	^	MeshAuxDataType	INTEGER	ElmNd2s 	{2}	-	-	Flag to indicate 1st or 2nd node of element which is attached to "member joint (for outAll)"
+typedef	^	MeshAuxDataType	ReKi   	Me      	{:}{:}{:}{:}	-	-	"Mass matrix connected to each joint element for outAll output"
+typedef	^	MeshAuxDataType	ReKi   	Ke      	{:}{:}{:}{:}	-	-	"Mass matrix connected to each joint element for outAll output"
+typedef	^	MeshAuxDataType	ReKi   	Fg      	{:}{:}{:}	-	-	"Gravity load vector connected to each joint element for requested member output"
+typedef	^	MeshAuxDataType	ReKi   	Me2     	{12}{12}{2}	-	-	"Mass matrix connected to each joint element for outAll output"
+typedef	^	MeshAuxDataType	ReKi   	Ke2     	{12}{12}{2}	-	-	"Mass matrix connected to each joint element for outAll output"
+typedef	^	MeshAuxDataType	ReKi   	Fg2     	{12}{2}	-	-	"Gravity load vector connected to each joint element for outAll output"
+# CB_MatArrays: Matrices and arrays for CB summary
+typedef	SubDyn/SD	CB_MatArrays	INTEGER	DOFM	-	-	-	"retained degrees of freedom (modes)"
+typedef	^	CB_MatArrays	ReKi   	TI2	{:}{:}	-	-	"TI2 matrix to refer to total mass to (0,0,0)"
+typedef	^	CB_MatArrays	ReKi   	MBB	{:}{:}	-	-	"FULL MBB ( no constraints applied)"
+typedef	^	CB_MatArrays	ReKi   	MBM	{:}{:}	-	-	"FULL MBM ( no constraints applied)"
+typedef	^	CB_MatArrays	ReKi   	KBB	{:}{:}	-	-	"FULL KBB ( no constraints applied)"
+typedef	^	CB_MatArrays	ReKi   	PhiL	{:}{:}	-	-	"Retained CB modes, possibly allPhiL(DOFL,DOFL), or PhiL(DOFL,DOFM)"
+typedef	^	CB_MatArrays	ReKi   	PhiR	{:}{:}	-	-	"FULL PhiR ( no constraints applied)"
+typedef	^	CB_MatArrays	ReKi   	OmegaL	{:}	-	-	"Eigenvalues of retained CB modes, possibly all (DOFL or DOFM)"
+# FEM_MatArrays: Matrices and arrays for FEM summary
+typedef	SubDyn/SD	FEM_MatArrays	ReKi   	Omega	{:}	-	-	"Eigenvalues of full FEM model,  we calculate them all"
+typedef	^	FEM_MatArrays	INTEGER	NOmega	-	-	-	"Number of full FEM Eigenvalues (for now TDOF-6*Nreact)"
+typedef	^	FEM_MatArrays	ReKi   	Modes	{:}{:}	-	-	"Eigenmodes of full FEM model,  we calculate them all"
+
+#
+typedef	^	ElemPropType 	ReKi	Area	-	-	-	"Area of an element"
+typedef	^	^	ReKi	Length	-	-	-	"Length of an element"
+typedef	^	^	ReKi	Ixx	-	-	-	"Moment of inertia of an element"
+typedef	^	^	ReKi	Iyy	-	-	-	"Moment of inertia of an element"
+typedef	^	^	ReKi	Jzz	-	-	-	"Moment of inertia of an element"
+typedef	^	^	LOGICAL	Shear	-	-	-	"Use timoshenko (true) E-B (false)"
+typedef	^	^	ReKi	Kappa	-	-	-	"Shear coefficient"
+typedef	^	^	ReKi	YoungE	-	-	-	"Young's modulus"
+typedef	^	^	ReKi	ShearG	-	-	-	"Shear modulus"
+typedef	^	^	ReKi	Rho	-	-	-	"Density"
+typedef	^	^	ReKi	DirCos	{3}{3}	-	-	"Element direction cosine matrix"
+# ============================== Define initialization data (not from glue code) here: ============================================================================================================================================
+#--------------------------arrays and variables from the input file ---------------------------------------------------------------------------------------------------------------------------------
+typedef	SubDyn/SD	SD_InitType	CHARACTER(1024)	RootName	-	-	-	"SubDyn rootname"
+typedef	^	^	ReKi	TP_RefPoint 	{3} 	-	-	"global position of transition piece reference point (could also be defined in SubDyn itself)"
+typedef	^	^	ReKi	SubRotateZ	-	-	-	"Rotation angle in degrees about global Z"
+typedef	^	^	ReKi	g	-	-	-	"Gravity acceleration"
+typedef	^	^	DbKi	DT	-	-	-	"Time step from Glue Code"	seconds
+typedef	^	^	INTEGER	NJoints	-	-	-	"Number of joints of the sub structure"
+typedef	^	^	INTEGER	NPropSets	-	-	-	"Number of property sets"
+typedef	^	^	INTEGER	NXPropSets	-	-	-	"Number of extended property sets"
+typedef	^	^	INTEGER	NInterf	-	-	-	"Number of joints attached to transition piece"
+typedef	^	^	INTEGER	NCMass	-	-	-	"Number of joints with concentrated mass"
+typedef	^	^	INTEGER	NCOSMs	-	-	-	"Number of independent cosine matrices"
+typedef	^	^	INTEGER	FEMMod	-	-	-	"FEM switch: element model in the FEM"
+typedef	^	^	INTEGER	NDiv	-	-	-	"Number of divisions for each member"
+typedef	^	^	LOGICAL	CBMod	-	-	-	"Perform C-B flag"
+typedef	^	^	ReKi	Joints	{:}{:}	-	-	"Joints number and coordinate values"
+typedef	^	^	ReKi	PropSets	{:}{:}	-	-	"Property sets number and values"
+typedef	^	^	ReKi	XPropSets	{:}{:}	-	-	"Extended property sets"
+typedef	^	^	ReKi	COSMs	{:}{:}	-	-	"Independent direction cosine matrices"
+typedef	^	^	ReKi	CMass	{:}{:}	-	-	"Concentrated mass information"
+typedef	^	^	ReKi	JDampings	{:}	-	-	"Damping coefficients for internal modes"
+typedef	^	^	INTEGER	Members	{:}{:}	-	-	"Member joints connection"
+typedef	^	^	INTEGER	Interf	{:}{:}	-	-	"Interface degree of freedoms"
+typedef	^	^	CHARACTER(10)	SSOutList	{:}	-	-	"List of Output Channels"
+typedef	^	^	LOGICAL	OutCOSM	-	-	-	"Output Cos-matrices Flag"
+typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJckF-Flag"
+#-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+typedef	^	^	INTEGER	NNode	-	-	-	"Total number of nodes"
+typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"
+typedef	^	^	INTEGER	NProp	-	-	-	"Total number of property sets"
+typedef	^	^	INTEGER	TDOF	-	-	-	"Total degree of freedom"
+typedef	^	^	ReKi	Nodes	{:}{:}	-	-	"Nodes number and coordinates"
+typedef	^	^	ReKi	Props	{:}{:}	-	-	"Property sets and values"
+typedef	^	^	ReKi	K	{:}{:}	-	-	"System stiffness matrix"
+typedef	^	^	ReKi	M	{:}{:}	-	-	"System mass matrix"
+typedef	^	^	ReKi	F	{:}	-	-	"System force vector"	N
+typedef	^	^	ReKi	FG	{:}	-	-	"Gravity force vector"	N
+typedef	^	^	ReKi	ElemProps	{:}{:}	-	-	"Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )"
+typedef	^	^	INTEGER	BCs	{:}{:}	-	-	"Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0)"
+typedef	^	^	INTEGER	IntFc	{:}{:}	-	-	"Interface constraint degree of freedoms"
+typedef	^	^	INTEGER	MemberNodes	{:}{:}	-	-	"Member number and nodes in the member"
+typedef	^	^	INTEGER	NodesConnN	{:}{:}	-	-	"Nodes that connect to a common node"
+typedef	^	^	INTEGER	NodesConnE	{:}{:}	-	-	"Elements that connect to a common node"
+typedef	^	^	LOGICAL	SSSum	-	-	-	"SubDyn Summary File Flag"
+
 # ============================== States ============================================================================================================================================
 # Define continuous (differentiable) states here:
-typedef    ^              ContinuousStateType ReKi     DummyContState -     -   -  "Remove this variable if you have continuous states" -
-typedef    ^                       ^          ReKi     qm             {:}   -   -  Virtual states, Nmod elements
-typedef    ^                       ^          ReKi     qmdot          {:}   -   -  Derivative of states, Nmod elements
-typedef    ^                       ^          ReKi     qmdotdot       {:}   -   -  2nd Derivative of states, used only for output-file purposes
+typedef	^	ContinuousStateType	ReKi	qm	{:}	-	-	"Virtual states, Nmod elements"
+typedef	^	ContinuousStateType	ReKi	qmdot	{:}	-	-	"Derivative of states, Nmod elements"
 # Define discrete (nondifferentiable) states here:
-typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Remove this variable if you have discrete states" -
+typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"
 # Define constraint states here:
-typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
+typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"
 # Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
-#   at a given time, etc.)
-typedef SubDyn/SD OtherStateType SD_ContinuousStateType  xdot  {:} - - "previous state derivs for m-step time integrator"  -
-typedef      ^             ^        IntKi                  n     - - - "tracks time step for which OtherState was updated last" -
-typedef   ^                 ^                 ReKi     Udotdot     {:} - -   Structure accelerations
-typedef   ^                 ^                 ReKi     Y2          {:} - -   Structure Deflections and velocities
-# ============================== SD_OutVar_Type (not OutputType) ============================================================================================================================================
-# Define the structure for outparam here:
-typedef     ^                SD_OutVar_Type      IntKi          Indx          -        -        -   Index into WriteOutput output array
-typedef     ^                      ^             IntKi          SignM         -        -        -   Sign (output multiplier).
-typedef     ^                      ^           CHARACTER(10)    Units         -        -        -   Units corresponding to the output parameter.array
-typedef     ^                      ^           CHARACTER(10)    Name          -        -        -   Name of the output parameter.
+typedef	SubDyn/SD	OtherStateType	SD_ContinuousStateType	xdot	{:}	-	-	"previous state derivs for m-step time integrator"
+typedef	^	^	IntKi	n	-	-	-	"tracks time step for which OtherState was updated last"
+typedef	^	^	ReKi	SDWrOutput	{:}	-	-	"Data from previous step to be written to a SubDyn output file"
+typedef	^	^	DbKi	LastOutTime	-	-	-	"The time of the most recent stored output data"	"s"
+typedef	^	^	IntKi	Decimat	-	-	-	"Current output decimation counter"	"-"
+
+# Miscellaneous variables (optimization/temp storage)
+typedef	^	^	ReKi	qmdotdot	{:}	-	-	"2nd Derivative of states, used only for output-file purposes"
+typedef	^	^	ReKi	u_TP	6	-	-
+typedef	^	^	ReKi	udot_TP	6	-	-
+typedef	^	^	ReKi	udotdot_TP	6	-	-
+typedef	^	^	ReKi	UFL	{:}	-	-
+typedef	^	^	ReKi	UR_bar	{:}	-	-
+typedef	^	^	ReKi	UR_bar_dot	{:}	-	-
+typedef	^	^	ReKi	UR_bar_dotdot	{:}	-	-
+typedef	^	^	ReKi	UL	{:}	-	-
+typedef	^	^	ReKi	UL_dot	{:}	-	-
+typedef	^	^	ReKi	UL_dotdot	{:}	-	-
+
+
+
 # ============================== Parameters ============================================================================================================================================
-# Define parameters here:
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef	 ^	                ParameterType    ReKi	    	A_21          {:}{:}	-	-	Coefficient of x in X
-typedef	 ^	                 ^               ReKi	    	A_22          {:}{:}	-	-	Coefficient of x in X
-typedef	 ^	                 ^               ReKi	    	B_23          {:}{:}	-	-	Coefficient of u in X
-typedef	 ^	                 ^               ReKi	    	B_24          {:}{:}	-	-	Coefficient of u in X
-typedef	 ^	                 ^               ReKi	    	FX            {:}	-	-	Load components in X
-typedef	 ^	                 ^               ReKi	    	C1_11         {:}{:}	-	-	Coefficient of x in Y1
-typedef	 ^	                 ^               ReKi	    	C1_12         {:}{:}	-	-	Coefficient of x in Y1
-typedef	 ^	                 ^               ReKi	    	D1_11         {:}{:}	-	-	Coefficient of u in Y1
-typedef	 ^	                 ^               ReKi	    	D1_13         {:}{:}	-	-	Coefficient of u in Y1
-typedef	 ^	                 ^               ReKi	    	D1_14         {:}{:}	-	-	Coefficient of u in Y1
-typedef	 ^	                 ^               ReKi	    	FY            {:}	-	-	Load Components in  Y1
-typedef	 ^	                 ^               ReKi	    	C2_21         {:}{:}	-	-	Coefficient of x in Y2
-typedef	 ^	                 ^               ReKi	    	C2_42         {:}{:}	-	-	Coefficient of x in Y2
-typedef	 ^	                 ^               ReKi	    	D2_11         {:}{:}	-	-	Coefficient of u in Y2
-typedef	 ^	                 ^               ReKi	    	D2_21         {:}{:}	-	-	Coefficient of u in Y2
-typedef	 ^	                 ^               ReKi	    	D2_32         {:}{:}	-	-	Coefficient of u in Y2
-typedef	 ^	                 ^               ReKi	    	D2_42         {:}{:}	-	-	Coefficient of u in Y2
-typedef	 ^	                 ^               ReKi	    	Cbar_21         {:}{:}	-	-	Coefficient of x in URdotdot ULdotdot
-typedef	 ^	                 ^               ReKi	    	Cbar_22         {:}{:}	-	-	Coefficient of x in URdotdot ULdotdot
-typedef	 ^	                 ^               ReKi	    	Dbar_13         {:}{:}	-	-	Coefficient of u in URdotdot ULdotdot
-typedef	 ^	                 ^               ReKi	    	Dbar_23         {:}{:}	-	-	Coefficient of u in URdotdot ULdotdot
-typedef	 ^	                 ^               ReKi	    	Dbar_24         {:}{:}	-	-	Coefficient of u in URdotdot ULdotdot
-typedef	 ^	                 ^               ReKi	    	Fbar_21         {:}	-	-	Load Component in URdotdot ULdotdot
-typedef	 ^	                 ^               ReKi	    	MBB         {:}{:}	-	-	Matrix after C-B reduction
-typedef	 ^	                 ^               ReKi	    	KBB         {:}{:}	-	-	Matrix after C-B reduction
-typedef	 ^	                 ^               ReKi	    	MBM         {:}{:}	-	-	Matrix after C-B reduction
-typedef	 ^	                 ^               ReKi	    	PHI_R         {:}{:}	-	-	Matrix after C-B reduction
-typedef	 ^	                 ^               ReKi	    	PHI_M         {:}{:}	-	-	Matrix after C-B reduction
-typedef	 ^	                 ^               ReKi	    	AM2InvJac    {:}{:}	-	-	Inverse Jacobian for Adams-Boulton 2nd order Integration
-typedef	 ^	                 ^               ReKi	    	TI           {:}{:}	-	-	Matrix to calculate TP reference point reaction at top of structure
-typedef	 ^	                 ^               ReKi	    	TIreact      {:}{:}	-	-	Matrix to calculate single point reaction at base of structure
-typedef	 ^			 ^	         IntKi	        NModes	       -	-	-	Number of modes to retain in C-B method
-typedef	 ^	                 ^	         IntKi   	Elems	      {:}{:}	-	-	Element nodes connections
-typedef	 ^	                 ^               IntKi	    	qmL           	-	-	-       Length of state array
-typedef	 ^	                 ^               IntKi	    	uL           	-	-	-       Length of input array
-typedef	 ^	                 ^               IntKi	    	DofL            -	-       -       Internal nodes # of DOFs
-typedef	 ^	                 ^               IntKi	    	NNodes_I        -	-       -       Number of Interface nodes
-typedef	 ^	                 ^               IntKi	    	NNodes_L        -	-       -       Number ofInternal nodes
-typedef	 ^	                 ^               IntKi	    	NNodes_RbarL    -	-       -       Number of Interface + Internal nodes
-typedef	 ^	                 ^               IntKi	    	DofI            -	-       -       Interface nodes # of DOFs
-typedef	 ^	                 ^               IntKi	    	DofR            -	-       -       Interface and restrained nodes # of DOFs
-typedef	 ^	                 ^               IntKi	    	DofRbarL        -	-       -       Interface + internal nodes # of DOFs
-typedef	 ^	                 ^               IntKi	    	DofC            -	-       -       Contrained nodes # of DOFs
-typedef  ^	                 ^	         IntKi	        NReact	        -	-	-	Number of joints with reactions
-typedef	 ^	                 ^	         IntKi	        Reacts	      {:}{:}	-	-	React degree of freedoms
-typedef	 ^		         ^		 IntKi		Nmembers	-	-	-	Number of members of the sub structure
-typedef	 ^	                 ^               IntKi	    	TPdofL          -	6	-       Length of u subarray (UTP)
-typedef	 ^	                 ^               IntKi	    	URbarL          -	-	-       Length of URbar, subarray of y2 array (DOFRb)
-typedef	 ^	                 ^               IntKi	    	URdotdotL       -	-	-       Length of URdotdot
-typedef	 ^	                 ^               IntKi	    	UdotdotL        -	-	-       Length of {URdotdot^bar ULdotdot^bar)
-typedef	 ^	                 ^               IntKi	    	Y2L             -	-	-       Length of y2 array
-typedef	 ^	                 ^               IntKi	    	IntMethod       -	-	-       INtegration Method (1/2/3)Length of y2 array
-typedef	 ^	                 ^               IntKi	    	NAvgEls         -	2	-       Max number of elements that should be averaged when calculating outputs at nodes
-typedef	 ^	                 ^               IntKi	    	IDI           {:}	-	-	 Index array of the interface(nodes connect to TP) dofs
-typedef	 ^	                 ^               IntKi	    	IDR           {:}	-	-	 Index array of the interface and restraint dofs
-typedef	 ^	                 ^               IntKi	    	IDL           {:}	-	-	 Index array of the internal dofs
-typedef	 ^	                 ^               IntKi	    	IDC           {:}	-	-	 Index array of the contraint dofs
-typedef	 ^	                 ^               IntKi	    	IDY           {:}	-	-	 Index array of the all dofs in Y2
-typedef	 ^	                 ^	         IntKi	        NMOutputs       -  	- 	-       Number of members whose output is written
-typedef	 ^			 ^		 IntKi		NumOuts		-	-	-	Number of output channels read from input file
-typedef	 ^			 ^               DbKi		SDDeltaT	-	-	-	Time step	seconds
-typedef	 ^			 ^		 IntKi		OutSwtch	-	-	-	Output Requested Channels to local or global output file [1/2/3]
-typedef	 ^	                 ^	         IntKi      	UnJckF  	-	-	-	Unit of SD ouput file
-typedef	 ^			 ^	         CHARACTER(1)	Delim	        -	-	-	"Column delimiter for output text files"
-typedef  ^	                 ^	     CHARACTER(20)	OutFmt	        -	-	-	Format for Output
-typedef	 ^	                 ^	     CHARACTER(20)	OutSFmt	        -	-	-	Format for Output Headers
-typedef	 ^	                 ^	     CHARACTER(1024)	OutJckF  	-	-	-	Name of the SD ouput file
-#typedef	 ^	                 ^	     CHARACTER(1024)	JEchoFile  	-	-	-	Name of the SD echo file
-typedef	 ^	                 ^	     MeshAuxDataType	MoutLst	       {:}  	-	-	List of user requested members and nodes
-typedef	 ^	                 ^	     MeshAuxDataType	MoutLst2       {:}  	-	-	List of all member joint nodes and elements for output
-typedef	 ^	                 ^	     MeshAuxDataType	MoutLst3       {:}  	-	-	List of all member joint nodes and elements for output
-typedef	 ^	                 ^	     ElemPropType             ElemProps      {:}  	-	-	List of element properties
-typedef	 ^	                 ^	     SD_OutVar_Type     OutParam       {:}  	-	-	An array holding names, units, and indices of all of the selected output channels. # logical
-typedef	 ^			 ^	        LOGICAL	        OutAll	        -	-	-	Flag to output or not all joint forces
-typedef	 ^			 ^	        LOGICAL	        OutReact	-	-	-	Flag to check whether reactions are requested
-typedef	 ^			 ^	        IntKi	        OutAllInt	-	-	-	Integer version of OutAll
-typedef	 ^			 ^	        IntKi	        OutAllDims	-	-	-	Integer version of OutAll
-typedef	 ^                       ^		IntKi		OutDec		-	-	-	Output Decimation for Requested Channels
-typedef	 ^			 ^	        IntKi	        MaxOUtPts	-	-	-	Max number of channels
+typedef	^	ParameterType	DbKi	SDDeltaT	-	-	-	"Time step (for integration of continuous states)"	seconds
+typedef	^	ParameterType	Logical	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"
+typedef	^	ParameterType	ReKi	NOmegaM2	{:}	-	-	"Coefficient of x in X (negative omegaM squared)"
+typedef	^	ParameterType	ReKi	N2OmegaMJDamp	{:}	-	-	"Coefficient of x in X (negative 2 omegaM * JDamping)"
+typedef	^	ParameterType	ReKi	MMB	{:}{:}	-	-	"Matrix after C-B reduction (transpose of MBM"
+typedef	^	ParameterType	ReKi	PhiM_T	{:}{:}	-	-	"Coefficient of u in X (transpose of phiM)"
+typedef	^	ParameterType	ReKi	FX	{:}	-	-	"Load components in X"
+typedef	^	ParameterType	ReKi	C1_11	{:}{:}	-	-	"Coefficient of x in Y1"
+typedef	^	ParameterType	ReKi	C1_12	{:}{:}	-	-	"Coefficient of x in Y1"
+typedef	^	ParameterType	ReKi	D1_13	{:}{:}	-	-	"Coefficient of u in Y1"
+typedef	^	ParameterType	ReKi	D1_14	{:}{:}	-	-	"Coefficient of u in Y1"
+typedef	^	ParameterType	ReKi	FY	{:}	-	-	"Load Components in  Y1"
+typedef	^	ParameterType	ReKi	PhiM	{:}{:}	-	-	"Coefficient of x in Y2"
+typedef	^	ParameterType	ReKi	C2_61	{:}{:}	-	-	"Coefficient of x in Y2 (URdotdot ULdotdot)"
+typedef	^	ParameterType	ReKi	C2_62	{:}{:}	-	-	"Coefficient of x in Y2 (URdotdot ULdotdot)"
+typedef	^	ParameterType	ReKi	PhiRb_TI	{:}{:}	-	-	"Coefficient of u in Y2 (Phi_R bar * TI)"
+typedef	^	ParameterType	ReKi	D2_63	{:}{:}	-	-	"Coefficient of u in Y2 (URdotdot ULdotdot)"
+typedef	^	ParameterType	ReKi	D2_64	{:}{:}	-	-	"Coefficient of u in Y2 (URdotdot ULdotdot)"
+typedef	^	ParameterType	ReKi	F2_61	{:}	-	-	"Load Component in Y2"
+typedef	^	ParameterType	ReKi	MBB	{:}{:}	-	-	"Matrix after C-B reduction"
+typedef	^	ParameterType	ReKi	KBB	{:}{:}	-	-	"Matrix after C-B reduction"
+typedef	^	ParameterType	ReKi	MBM	{:}{:}	-	-	"Matrix after C-B reduction"
+typedef	^	ParameterType	ReKi	PhiL_T	{:}{:}	-	-	"Transpose of Matrix of C-B  modes"
+typedef	^	ParameterType	ReKi	PhiLInvOmgL2	{:}{:}	-	-	"Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1)"
+typedef	^	ParameterType	ReKi	FGL	{:}	-	-	"Internal node DOFL, gravity loads"
+typedef	^	ParameterType	ReKi	AM2Jac	{:}{:}	-	-	"Jacobian (factored) for Adams-Boulton 2nd order Integration"
+typedef	^	ParameterType	IntKi	AM2JacPiv	{:}	-	-	"Pivot array for Jacobian factorization (for Adams-Boulton 2nd order Integration)"
+typedef	^	ParameterType	ReKi	TI	{:}{:}	-	-	"Matrix to calculate TP reference point reaction at top of structure"
+typedef	^	ParameterType	ReKi	TIreact	{:}{:}	-	-	"Matrix to calculate single point reaction at base of structure"
+typedef	^	ParameterType	IntKi	NModes	-	-	-	"Number of modes to retain in C-B method"
+typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
+typedef	^	ParameterType	IntKi	qmL	-	-	-	"Length of state array"
+typedef	^	ParameterType	IntKi	DofL	-	-	-	"Internal nodes # of DOFs"
+typedef	^	ParameterType	IntKi	NNodes_I	-	-	-	"Number of Interface nodes"
+typedef	^	ParameterType	IntKi	NNodes_L	-	-	-	"Number of Internal nodes"
+typedef	^	ParameterType	IntKi	NNodes_RbarL	-	-	-	"Number of Interface + Internal nodes"
+typedef	^	ParameterType	IntKi	DofI	-	-	-	"Interface nodes # of DOFs"
+typedef	^	ParameterType	IntKi	DofR	-	-	-	"Interface and restrained nodes # of DOFs"
+typedef	^	ParameterType	IntKi	DofC	-	-	-	"Contrained nodes # of DOFs"
+typedef	^	ParameterType	IntKi	NReact	-	-	-	"Number of joints with reactions"
+typedef	^	ParameterType	IntKi	Reacts	{:}{:}	-	-	"React degree of freedoms"
+typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub structure"
+typedef	^	ParameterType	IntKi	URbarL	-	-	-	"Length of URbar, subarray of y2 array (DOFRb)"
+typedef	^	ParameterType	IntKi	IntMethod	-	-	-	"INtegration Method (1/2/3)Length of y2 array"
+typedef	^	ParameterType	IntKi	NAvgEls	-	2	-	"Max number of elements that should be averaged when calculating outputs at nodes"
+typedef	^	ParameterType	IntKi	IDI	{:}	-	-	"Index array of the interface(nodes connect to TP) dofs"
+typedef	^	ParameterType	IntKi	IDR	{:}	-	-	"Index array of the interface and restraint dofs"
+typedef	^	ParameterType	IntKi	IDL	{:}	-	-	"Index array of the internal dofs"
+typedef	^	ParameterType	IntKi	IDC	{:}	-	-	"Index array of the contraint dofs"
+typedef	^	ParameterType	IntKi	IDY	{:}	-	-	"Index array of the all dofs in Y2"
+typedef	^	ParameterType	IntKi	NMOutputs	-	- 	-	"Number of members whose output is written"
+typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of output channels read from input file"
+typedef	^	ParameterType	IntKi	OutSwtch	-	-	-	"Output Requested Channels to local or global output file [1/2/3]"
+typedef	^	ParameterType	IntKi	UnJckF	-	-	-	"Unit of SD ouput file"
+typedef	^	ParameterType	CHARACTER(1)	Delim	-	-	-	"Column delimiter for output text files"
+typedef	^	ParameterType	CHARACTER(20)	OutFmt	-	-	-	"Format for Output"
+typedef	^	ParameterType	CHARACTER(20)	OutSFmt	-	-	-	"Format for Output Headers"
+typedef	^	ParameterType	MeshAuxDataType	MoutLst	{:}	-	-	"List of user requested members and nodes"
+typedef	^	ParameterType	MeshAuxDataType	MoutLst2	{:}	-	-	"List of all member joint nodes and elements for output"
+typedef	^	ParameterType	MeshAuxDataType	MoutLst3	{:}	-	-	"List of all member joint nodes and elements for output"
+typedef	^	ParameterType	ElemPropType	ElemProps	{:}	-	-	"List of element properties"
+typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"An array holding names, units, and indices of all of the selected output channels. # logical"
+typedef	^	ParameterType	LOGICAL	OutAll	-	-	-	"Flag to output or not all joint forces"
+typedef	^	ParameterType	LOGICAL	OutReact	-	-	-	"Flag to check whether reactions are requested"
+typedef	^	ParameterType	IntKi	OutAllInt	-	-	-	"Integer version of OutAll"
+typedef	^	ParameterType	IntKi	OutAllDims	-	-	-	"Integer version of OutAll"
+typedef	^	ParameterType	IntKi	OutDec	-	-	-	"Output Decimation for Requested Channels"
+
 # ============================== Inputs ============================================================================================================================================
-# Define inputs that are contained on the mesh here:
-typedef   ^               InputType          MeshType  TPMesh - - -     "Transition piece inputs on a point mesh" -
-typedef   ^               InputType          MeshType  LMesh - - -     "Point mesh for interior node inputs" -
-# Define inputs that are not on this mesh here:
-#typedef   ^               InputType           ReKi     UFL  {:}  -      -      Input Array UTP,UdotTP,UdotdotTP,FL
+typedef	^	InputType	MeshType	TPMesh	-	-	-	"Transition piece inputs on a point mesh"
+typedef	^	InputType	MeshType	LMesh	-	-	-	"Point mesh for interior node inputs"
+
 # ============================== Outputs ============================================================================================================================================
-# Define outputs that are contained on the mesh here:
-#typedef ModuleName SD_OutputType         MeshType MeshedOutput - - -    "Meshed data" -
-typedef   ^               OutputType          MeshType  Y1Mesh - - -     "Transition piece outputs on a point mesh" -
-typedef   ^               OutputType          MeshType  Y2Mesh - - -     "Interior+Interface nodes outputs on a point mesh" -
-# Define outputs that are not on this mesh here:
-typedef   ^               OutputType          ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
-#typedef   ^                 ^                 ReKi     Y1          {:} - -   TP reaction Forces
-#typedef   ^                 ^                 ReKi     FM_elm      {6} - -   Element Inertial Forces
-#typedef   ^                 ^                 ReKi     FK_elm      {6} - -   Element Static Forces
+typedef	^	OutputType	MeshType	Y1Mesh	-	-	-	"Transition piece outputs on a point mesh"
+typedef	^	OutputType	MeshType	Y2Mesh	-	-	-	"Interior+Interface nodes outputs on a point mesh"
+typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file"
+
+
 ####################################################################################################################################
 # These are not necessary to define in the Registry, but are here to generate blank types until we do actually implement the
 # Jacobians in the FAST framework. In the final implementation, they will probably not contain subtypes, but instead be
@@ -299,4 +275,3 @@ typedef   ^               SD_PartialDiscStatePConstrStateType   SD_ConstraintSta
 
 # Define the Jacobian of the constraint state equations (Z) with respect to the constraint states (z), dZ/dz (or Partial Z / Partial z):
 typedef   ^               SD_PartialConstrStatePConstrStateType SD_ConstraintStateType  DummyConstrState   -     -     -  "If you have constraint state equations and constraint states, update this variable" -
-
