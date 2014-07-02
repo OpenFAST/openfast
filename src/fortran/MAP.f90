@@ -13,6 +13,17 @@ MODULE MAP
   PUBLIC :: MAP_End
 
 
+!  ! ==========   MAP_GetVersionNumber   ======     <--------------------------------------------------------+
+!  INTERFACE                                                                                      !          | 
+!     FUNCTION MAP_GetVersionNumber( ) BIND(c, name='MAPCALL_GetVersionNumber')                   !          | 
+!       IMPORT                                                                                    !          | 
+!       IMPLICIT NONE                                                                             !          | 
+!       CHARACTER(KIND=C_CHAR) :: MAP_GetVersionNumber                                            !          | 
+!     END FUNCTION MAP_GetVersionNumber                                                           !          | 
+!  END INTERFACE                                                                                  !   -------+
+!  !==========================================================================================================
+
+
   ! ==========   MAP_NumberOfHeaders   ======     <---------------------------------------------------------+
   !                                                                                              !          |
   ! Get the number of outputs MAP is providing the FAST glue code. This is used to allocate      !          |
@@ -60,6 +71,21 @@ MODULE MAP
   !==========================================================================================================
 
 
+  ! ==========   MAP_SetRootname   ======     <-------------------------------------------------------------+
+  !                                                                                              !          |
+  ! Calls C function "MAPCALL_SetRootname(MAP_InitInputType)" in MAP_FortranBinding.cpp.         !          |
+  ! The idea a simulation rootname as defined by FAST, rather than inputing                      !          |
+  !   something indenpendent of it.                                                              !          |
+  INTERFACE                                                                                      !          |
+     SUBROUTINE MAP_SetRootname( interf ) bind(C,name='MAPCALL_SetRootname')                     !          |
+       IMPORT                                                                                    !          |
+       IMPLICIT NONE                                                                             !          |
+       TYPE( MAP_InitInputType_C ) interf                                                        !          |
+     END SUBROUTINE MAP_SetRootname                                                              !          |
+  END INTERFACE                                                                                  !   -------+
+  !==========================================================================================================
+  
+  
   ! ==========   MAP_SetGravity   ======     <--------------------------------------------------------------+
   !                                                                                              !          |
   ! Calls C function "MAPCALL_SetGravity(MAP_InitInputType)" in MAP_FortranBinding.cpp.          !          |
@@ -378,6 +404,7 @@ CONTAINS
     !   gravity         = the acceleration due to gravity [N] -or- [kg*m/s^2]
     !   sea_density     = density of sea water [kg/m^3]
     !   coupled_to_FAST = flag letting MAP know it is coupled to FAST. MAP won't create the output file when .TRUE.
+    InitInp%C_Obj%rootname        =  InitInp%rootname
     InitInp%C_Obj%gravity         =  InitInp%gravity
     InitInp%C_Obj%sea_density     =  InitInp%sea_density
     InitInp%C_Obj%depth           = -InitInp%depth
@@ -385,6 +412,7 @@ CONTAINS
     
     ! Set the gravity constant, water depth, and sea density in MAP.
     ! This calls functions in MAP_FortranBinding.cpp
+    CALL MAP_SETRootname        ( InitInp%C_obj )
     CALL MAP_SetGravity         ( InitInp%C_obj )
     CALL MAP_SetDepth           ( InitInp%C_obj )
     CALL MAP_SetDensity         ( InitInp%C_obj )
@@ -397,7 +425,7 @@ CONTAINS
        CALL MAP_CheckError("MAP ERROR: cannot read the MAP input file.",ErrMSg)
        RETURN
     END IF
-    
+
     ! This binds MSQS_Init function in C++ with Fortran
     CALL MSQS_Init( InitInp%C_obj   , &
                     u%C_obj         , &
@@ -423,8 +451,6 @@ CONTAINS
           RETURN
        END IF
     END IF
-
-
     !==========   MAP_InitInpInputType   ======     <--------------------------+
     ! get header information for the FAST output file               !          | 
     numHeaderStr = MAP_NumberOfHeaders( O%C_obj )                   !          | 

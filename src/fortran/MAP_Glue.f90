@@ -64,6 +64,7 @@ PROGRAM Main
     
   ! set the MAP input file name and other environment terms.
   MAP_InitInput%filename    = "NRELOffshrBsline5MW_Platform_ITIBarge4.map"  ! @bonnie : This needs to be set according to what is in the FAST input file. 
+  MAP_InitInput%rootname    = "NRELOffshrBsline5MW_Platform_ITIBarge4"
   MAP_InitInput%gravity     = 9.81          ! @bonnie : This need to be according to g used in FAST
   MAP_InitInput%sea_density = 1025          ! @bonnie : This needs to be set according to seawater density in FAST
   MAP_InitInput%depth       = 150           ! @bonnie : This need to be set according to the water depth in FAST
@@ -106,10 +107,10 @@ PROGRAM Main
   !    Can we call MAP_InitInput_Destroy from MAP_DestroyInitInput?
   ! 3) Same as (2) for MAP_InitOutput_Destroy.
   !................
-!  CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
+  CALL MAP_InitInput_Destroy ( MAP_InitInput%C_obj%object )  
   CALL MAP_DestroyInitInput  ( MAP_InitInput , ErrStat, ErrMsg )
 
-!  CALL MAP_InitOutput_Destroy( MAP_InitOutput%C_obj%object )  
+  CALL MAP_InitOutput_Destroy( MAP_InitOutput%C_obj%object )  
   CALL MAP_DestroyInitOutput ( MAP_InitOutput , ErrStat, ErrMsg )
 
   ! @bonnie : don't we need to initialize the messhes once?
@@ -149,11 +150,11 @@ PROGRAM Main
      ! @bonnie : I am assuming this MAP_InputTimes{:} and MAP_Input{:} 
      !           will be assigned by the glue code   
 
-     !MAP_InputTimes(1) = t_global + dt_global
+!     MAP_InputTimes(1) = t_global + dt_global
      !MAP_InputTimes(2) = MAP_InputTimes(1) - dt_global 
      !MAP_InputTimes(3) = MAP_InputTimes(2) - dt_global
 
-     !MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
+!     MAP_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
      !MAP_Input(2)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
      !MAP_Input(3)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
      !===========================================================================
