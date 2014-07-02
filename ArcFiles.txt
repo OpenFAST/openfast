@@ -3,6 +3,7 @@ Disclaimer.txt
 license.txt
 
 FAST_SourceFiles.txt
+Source/makefile
 
 SampleCase/README.txt
 SampleCase/Sample1.bin
@@ -23,3 +24,5 @@ Source/InflowWind_Driver_Subs.f90
 Source/InflowWind_Driver_Types.f90
 Source/Testing/IfW_FFWind_Test.f90
 Source/Testing/IfW_HHWind_Test.f90
+Source/Testing/makefile
+

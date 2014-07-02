@@ -76,12 +76,16 @@ v2.00.00b-adp, 17-Sept-2013, A. Platt
      framework in July of 2013
   - Bug fix for how allocation of position arrays was handled in the driver routines.
 
-v2.00.01b-bjj, 25-June-2014, B. Jonkman
+v2.00.01b-bjj, 30-June-2014, B. Jonkman
 
-+ I fixed a problem that made "HEIGHT OFFSET" a non-optional line in the FF Wind summary files. This happened when I added the PERIODIC line, which is also optional. This bug was transferred from the trunk a while ago.
++ I fixed a problem that made "HEIGHT OFFSET" a non-optional line in the FF Wind summary files.
+  This happened when I added the PERIODIC line, which is also optional. This bug was transferred
+  from the trunk a while ago.
 + I updated the error handling in IfW_FFWind.f90 and InflowWind.f90 (now calls routine in NWTC Library).
-+ Fixed problems with error handling after calling CalcOutput for HH and FF wind files. (Errors didn't get passed on to the glue code.)
-+ I call WrScr instead of passing a message about reading the wind files (we do this because it may take a while, and this allows people to know what's going on)
++ Fixed problems with error handling after calling CalcOutput for HH and FF wind files. (Errors didn't
+  get passed on to the glue code.)
++ I call WrScr instead of passing a message about reading the wind files (we do this because it may
+  take a while, and this allows people to know what's going on)
 + made WriteOutputUnt for HH files consistent with FF files.
 + updated types files with latest Registry executable.
 
