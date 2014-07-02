@@ -1,6 +1,6 @@
 @ECHO OFF
 
-set LOC=Y:\Wind\WindWeb\designcodes\simulators\fast\alpha
+set LOC=Y:\Wind\WindWeb\designcodes\simulators\FAST8
 
 @IF /I "%1"=="-NOFILES" GOTO UpdateWeb
 @IF NOT "%1"=="" GOTO CopyFiles
