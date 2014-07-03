@@ -26,7 +26,7 @@
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #:", i
-       IF(i==2) STOP
+!       IF(i==2) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        CALL BldGenerateStaticElement(uuN0,uuNf,F_ext,Stif0,elem_total,node_elem,dof_node,ngp,StifK,RHS)
