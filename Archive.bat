@@ -44,7 +44,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
 @IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
 
-CALL CopyFilesForRelease.bat
+rem CALL CopyFilesForRelease.bat
 
 :DoIt
 @ECHO.
