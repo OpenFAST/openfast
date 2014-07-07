@@ -22,8 +22,8 @@
 ! See the License for the specific language governing permissions and
 !    
 !**********************************************************************************************************************************
-! File last committed: $Date: 2013-10-03 21:39:29 -0600 (Thu, 03 Oct 2013) $
-! (File) Revision #: $Rev: 266 $
+! File last committed: $Date: 2014-06-27 09:46:36 -0600 (Fri, 27 Jun 2014) $
+! (File) Revision #: $Rev: 463 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/SS_Radiation.f90 $
 !**********************************************************************************************************************************
 MODULE SS_Radiation
@@ -35,8 +35,7 @@ MODULE SS_Radiation
    
    PRIVATE
 
-!   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in SS_Rad_Pack)
-   TYPE(ProgDesc), PARAMETER            :: SS_Rad_ProgDesc = ProgDesc( 'SS_Radiation', '(v1.00.01, 19-October-2012)', '05-Mar-2013' )
+   TYPE(ProgDesc), PARAMETER            :: SS_Rad_ProgDesc = ProgDesc( 'SS_Radiation', 'v1.00.02', '27-May-2013' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -63,11 +62,7 @@ MODULE SS_Radiation
 !   PUBLIC :: SS_Rad_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
                                                     !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
                                                     !   states (z)
-   !PUBLIC :: Solver
    
-! Note that the following routines will be updated with new definitions of arrays returned (no longer one-byte arrays)
-   !PUBLIC :: SS_Rad_Pack                           ! Routine to pack (save) data into one array of bytes 
-   !PUBLIC :: SS_Rad_Unpack                         ! Routine to unpack an array of bytes into data structures usable by the module
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -109,32 +104,48 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
     INTEGER                                :: DOFs                                 ! Number of DOFS  
     INTEGER                                :: N                                    ! Number of states
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
-    INTEGER                                :: UnSS       = 34                      ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
+    INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ss file
-    CHARACTER                              :: Line                                 ! Temp line of file
+    !CHARACTER                              :: Line                                 ! Temp line of file
+    
+    integer                                :: ErrStat2
+    character(1024)                        :: ErrMsg2
     
     ! Initialize ErrStat   
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
+    UnSS  = -1
+    N     =  0
+      
     ! Open the .ss input file!
-    CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ss', Sttus )  ! Open file.
-    IF (Sttus==1) THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = 'Unable to open the input file .ss' 
-    END IF        
+    CALL GetNewUnit( UnSS )
+    CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ss', ErrStat2, ErrMsg2 )  ! Open file.
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
     ! Determine the number of states and size of the matrices
     Nlines = 1
     
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header',ErrStat  )! Reads the first entire line (Title header)
-    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', xx(1,:), 6, 'xx', 'xx vector containing the enabled dofs',ErrStat, ErrMsg) ! Reads in the second line, containing the active dofs vector
-    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ss', N, 'N', 'Number of Dofs',ErrStat, ErrMsg) ! Reads in the third line, containing the number of states
-    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', spdof(1,:), 6, 'spdof', 'spdof vector containing the number of states per dofs',ErrStat, ErrMsg) ! Reads in the forth line, containing the state per dofs vector
-
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header',ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')    
+    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', xx(1,:), 6, 'xx', 'xx vector containing the enabled dofs',ErrStat2, ErrMsg2) ! Reads in the second line, containing the active dofs vector
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ss', N, 'N', 'Number of Dofs',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', spdof(1,:), 6, 'spdof', 'spdof vector containing the number of states per dofs',ErrStat2, ErrMsg2) ! Reads in the forth line, containing the state per dofs vector
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+      
     DO !Loop through all the lines of the file
-        CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header',Sttus,ErrMsg  )! Reads the first entire line (Title header)
-        IF ( Sttus == 0 )  THEN ! .TRUE. when data is read in successfully                    
+        CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header',Sttus,ErrMsg2  )! Reads the first entire line (Title header)
+        IF ( Sttus == ErrID_None )  THEN ! .TRUE. when data is read in successfully                    
             Nlines=Nlines+1                    
         ELSE !We must have reach the end of the file
             EXIT
@@ -146,68 +157,66 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
     
     !Verifications on the input file
     IF ( ( Nlines - 6 ) / 2 /= N) THEN
-        ErrStat = ErrID_Severe 
-        ErrMsg  = 'Error in the input file .ss: The size of the matrices does not correspond to the number of states!' 
+      CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Rad_Init')
     END IF
     
     IF ( N /= SUM(spdof)) THEN
-        ErrStat = ErrID_Severe 
-        ErrMsg  = 'Error in the input file .ss: The size of the matrices does not correspond to the number of states!' 
+      CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Rad_Init')
     END IF        
     
     !Verify if the DOFs active in the input file correspond to the ones active by FAST in this run
     DO I=1,6 !Loop through all 6 DOFs           
         IF ( InitInp%DOFs (1,I) == 1)  THEN !  True when the current DOF is active in FAST                   
             IF ( xx (1,I) /= 1) THEN ! True if a DOF enabled by FAST is not available in the INPUT File
-                ErrStat = ErrID_Severe 
-                ErrMsg  = 'Error in the input file .ss: The enabled DOFs in the current FAST Simulation don`t match the ones on the input file .ss!' 
+               CALL SetErrStat(ErrID_Severe,'Error in the input file .ss: The enabled DOFs in the current FAST Simulation don`t match the ones on the input file .ss!',ErrStat,ErrMsg,'SS_Rad_Init')
             END IF           
         END IF
     END DO
     
     DOFs = SUM (xx) !Number of DOFS in the input file
     
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+    
     ! Now we can allocate the temporary matrices A, B and C
     
-    ALLOCATE (Rad_A  (N,N) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the Rad_A array.'
-    END IF
+    CALL AllocAry( Rad_A, N,    N,    'Rad_A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_B, N,    DOFs, 'Rad_B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( Rad_C, DOFs, N,    'Rad_C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     
-    ALLOCATE ( Rad_B (N,DOFs) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the Rad_B array.'
-    END IF
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
     
-    ALLOCATE ( Rad_C  (DOFs,N) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the Rad_C array.'
-    END IF   
-    
+        
     REWIND (UNIT=UnSS)   ! REWIND the file so we can read it in a second time.
 
-    ! Skip the first 4 lines:
+    ! Skip the first 4 lines:  (NOTE: no error handling here because we would have caught it the first time through)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header'  )! Reads the first entire line (Title header)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Enabled dofs'  )! Reads the first entire line (Title header)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N'  )! Reads the first entire line (Title header)
     CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N per dofs'  )! Reads the first entire line (Title header)   
     
     DO I = 1,N !Read A MatriX
-        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', Rad_A(I,:), N, 'Rad_A', 'A_Matrix',ErrStat, ErrMsg)   
+        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', Rad_A(I,:), N, 'Rad_A', 'A_Matrix',ErrStat2, ErrMsg2)
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     END DO
     
     DO I = 1,N !Read B Matrix
-        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_B(I,:), 6, 'Rad_B', 'B_Matrix',ErrStat, ErrMsg)     
+        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_B(I,:), 6, 'Rad_B', 'B_Matrix',ErrStat2, ErrMsg2) 
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     END DO
     
     DO I = 1,6 !Read C Matrix
-        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_C(I,:), N, 'Rad_C', 'C_Matrix',ErrStat, ErrMsg)
+        CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ss', Rad_C(I,:), N, 'Rad_C', 'C_Matrix',ErrStat2, ErrMsg2)
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
     END DO
     
     CLOSE ( UnSS ) !Close .ss input file
+    UnSS = -1        ! Indicate the file is closed
     
     !Now we are ready to reduce the matrices to the correspondent active dofs in FAST
     p%N=0
@@ -220,28 +229,18 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
     CALL WrScr1 ( 'Using SS_Radiation Module, with '//TRIM( Num2LStr(p%N ))//' of '//TRIM( Num2LStr(N ))// ' radiation states' )
     
     !Now we can allocate the final size of the SS matrices
-    ALLOCATE (p%A  (p%N,p%N) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the A array.'
-    END IF
+    CALL AllocAry( p%A, p%N, p%N,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( p%B, p%N, 6,      'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+    CALL AllocAry( p%c, 6,   p%N,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+      
+    ! if these arrays weren't allocated, return before a seg fault occurs:      
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
     
-    ALLOCATE ( p%B (p%N,6) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the B array.'
-    END IF
-    
-    ALLOCATE ( p%C  (6,p%N) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the C array.'
-    END IF   
-            
+                    
     !Finaly we write the ss matrices, based on the ones on the input file and on the active dofs
-        p%A = 0
-        p%B = 0
-        p%C = 0
         
     IF ( p%N == N ) THEN !The matrices are the same
         
@@ -250,6 +249,12 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
         p%C = Rad_C
             
     ELSE !We need to cut some of the lines and columns
+       
+        p%A = 0
+        p%B = 0
+        p%C = 0
+       
+       
         N=1 !Use as number of active states introduced
         
         DO I=1,6 !For each dof...
@@ -269,27 +274,22 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       p%DT  = Interval
        
     ! Define initial system states here:
+    CALL AllocAry( x%x, p%N, 1,    'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')      
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
-    ALLOCATE ( x%x  (p%N,1) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the State vector.'
-    END IF         
-      
       x%x = 0
      
       xd%DummyDiscState          = 0 !TD: SS doesn't have disc states
       z%DummyConstrState         = 0 !TD: SS doesn't have constr states
       
-    ! Define other States:    
-    ALLOCATE ( OtherState%dxdt  (p%N,4) , STAT=Sttus )
-    IF ( Sttus /= 0 )  THEN
-        ErrStat = ErrID_Fatal
-        ErrMsg  = ' Error allocating memory for the OtherState%dxdt array.'
-    END IF
-     OtherState%dxdt = 0   
-     OtherState%Step = 0
-     OtherState%LastTime = 0    ! Define initial guess for the system inputs here:
+    ! Define other States: 
+      DO I=1,SIZE(OtherState%xdot)
+         CALL SS_Rad_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+      END DO
+      OtherState%n = -1
 
      !Inputs     
       u%dq = 0 !6 DoF's velocities
@@ -303,13 +303,26 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Define initialization-routine output here:
          
       InitOut%WriteOutputHdr = (/ 'Time', 'F1  ' , 'F2  ' , 'F3  ' , 'F4  ' , 'F5  ' , 'F6  ' /)
-      InitOut%WriteOutputUnt = (/ '(s) ',  '(N) '   ,  '(N) '   ,  '(N) '   ,  '(Nm)'   ,  '(Nm)',  '(Nm)'        /)     
+      InitOut%WriteOutputUnt = (/ '(s) ', '(N) ' , '(N) ' , '(N) ' , '(Nm)' , '(Nm)' , '(Nm)' /)     
       
          ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
          !   this module must be called here:
          
        !p%DT=Interval
+       
+   CALL CleanUp() ! deallocate local arrays
 
+CONTAINS
+   SUBROUTINE CleanUp()
+   
+      IF (UnSS > 0 ) CLOSE ( UnSS )
+      
+      IF ( ALLOCATED( Rad_A ) ) DEALLOCATE( Rad_A )
+      IF ( ALLOCATED( Rad_B ) ) DEALLOCATE( Rad_B )
+      IF ( ALLOCATED( Rad_C ) ) DEALLOCATE( Rad_C )
+   
+   END SUBROUTINE CleanUp
+       
 END SUBROUTINE SS_Rad_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SS_Rad_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
@@ -369,80 +382,44 @@ SUBROUTINE SS_Rad_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherStat
 
       REAL(DbKi),                         INTENT(IN   ) :: t               ! Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   ) :: n               ! Current step of the simulation: t = n*Interval
-      TYPE(SS_Rad_InputType),            INTENT(INOUT   ) :: Inputs(:)       ! Inputs at InputTimes
+      TYPE(SS_Rad_InputType),             INTENT(INOUT) :: Inputs(:)       ! Inputs at InputTimes
       REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   ! Times in seconds associated with Inputs
-      TYPE(SS_Rad_ParameterType),        INTENT(IN   ) :: p               ! Parameters
-      TYPE(SS_Rad_ContinuousStateType),  INTENT(INOUT) :: x               ! Input: Continuous states at t;
+      TYPE(SS_Rad_ParameterType),         INTENT(IN   ) :: p               ! Parameters
+      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT) :: x               ! Input: Continuous states at t;
                                                                            !   Output: Continuous states at t + Interval
-      TYPE(SS_Rad_DiscreteStateType),    INTENT(INOUT) :: xd              ! Input: Discrete states at t;
+      TYPE(SS_Rad_DiscreteStateType),     INTENT(INOUT) :: xd              ! Input: Discrete states at t;
                                                                            !   Output: Discrete states at t + Interval
-      TYPE(SS_Rad_ConstraintStateType),  INTENT(INOUT) :: z               ! Input: Constraint states at t;
+      TYPE(SS_Rad_ConstraintStateType),   INTENT(INOUT) :: z               ! Input: Constraint states at t;
                                                                            !   Output: Constraint states at t + Interval
-      TYPE(SS_Rad_OtherStateType),       INTENT(INOUT) :: OtherState      ! Other/optimization states
+      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT) :: OtherState      ! Other/optimization states
       INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         ! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
 
-         
-         ! Local variables     
-      TYPE(SS_Rad_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
-      TYPE(SS_Rad_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations 
-      TYPE(SS_Rad_InputType)                          :: u               ! Instantaneous inputs
-      INTEGER(IntKi)                                   :: I           ! loop indice
-      INTEGER(IntKi)                                   :: ErrStat2    ! Error status of the operation (occurs after initial error)
-      CHARACTER(LEN(ErrMsg))                           :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
-                        
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""             
+      INTEGER, PARAMETER :: IntegrationMethod = 3   
       
-      
-       ! Get the inputs at time t, based on the array of values sent by the glue code:
+                                   
+      SELECT CASE ( IntegrationMethod )
          
-      CALL SS_Rad_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat, ErrMsg )  
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      CASE (1) ! RK4
       
-    ! Integrate (update) continuous states (x) here
-    
-    !TD First order solver:
-    ! Get first time derivatives of continuous states (dxdt): 
-    
-    CALL SS_Rad_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-    IF ( ErrStat >= AbortErrLev ) THEN        
-         CALL SS_Rad_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
+         CALL SS_Rad_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         
+      CASE (2) ! AB4
+      
+         CALL SS_Rad_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      
+      CASE (3) ! ABM4
+      
+         CALL SS_Rad_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         
+      CASE DEFAULT  !bjj: we already checked this at initialization, but for completeness:
+         
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in SS_Rad_UpdateStates: method must be 1 (RK4), 2 (AB4), or 3 (ABM4)'
          RETURN
-    END IF         
-     !x%x  = x%x + dxdt%x * p%DT
          
-     ! 4th order solver
+      END SELECT
       
-     !IF ( EqualRealNos(OtherState%LastTime + p%DT,Time)) THEN !Time must have been reduced TD: Function EqualRealNos only works for Single!
-     IF ( OtherState%LastTime + p%DT/=t) THEN !Time must have been reduced
-         
-         OtherState%dxdt = 0 ! Remove previous history and start from zero with a
-                              ! runge-Kutta method
-         OtherState%Step = 0
-     END IF
-     
-    !Update time step
-     OtherState%Step = OtherState%Step + 1 
-    !Update the OtherStates matrices, with the previous dXdt Values
-        OtherState%dxdt (:,4) = OtherState%dxdt (:,3)
-        OtherState%dxdt (:,3) = OtherState%dxdt (:,2)
-        OtherState%dxdt (:,2) = OtherState%dxdt (:,1)
-        OtherState%dxdt (:,1) = dxdt%x (:,1)
-    
-    Call Solver (t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg)
-       
-     !Update LastTime
-     OtherState%LastTime = t
-        
-    !Destroy dxdt because it is not necessary for the rest of the subroutine
-      CALL SS_Rad_DestroyContState( dxdt, ErrStat, ErrMsg)
-      
-   
-      IF ( ErrStat >= AbortErrLev ) RETURN      
      
 END SUBROUTINE SS_Rad_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -484,13 +461,13 @@ SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
 !..................................................................................................................................
    
       REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(SS_Rad_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(SS_Rad_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
+      TYPE(SS_Rad_InputType),            INTENT(IN   )  :: u           ! Inputs at Time                    
+      TYPE(SS_Rad_ParameterType),        INTENT(IN   )  :: p           ! Parameters                             
+      TYPE(SS_Rad_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(SS_Rad_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(SS_Rad_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(SS_Rad_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
+      TYPE(SS_Rad_ContinuousStateType),  INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    
@@ -499,14 +476,10 @@ SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
-      ALLOCATE ( dxdt%x  (p%N,1) , STAT=ErrStat )
-      IF ( ErrStat /= 0 )  THEN
-          ErrStat = ErrID_Fatal
-          ErrMsg  = ' Error allocating memory for the State vector.'
-      END IF         
       
-      dxdt%x = 0
-      
+      CALL AllocAry( dxdt%x, p%N, 1, 'SS_Rad_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
+      IF ( ErrStat >= AbortErrLev) RETURN
+            
       ! Compute the first time derivatives of the continuous states here:
       
       !Calc dxdt of a state space system
@@ -846,173 +819,467 @@ END SUBROUTINE SS_Rad_CalcConstrStateResidual
 !
 !END SUBROUTINE SS_Rad_JacobianPConstrState
 !----------------------------------------------------------------------------------------------------------------------------------
-!     
-SUBROUTINE Solver(Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-    ! Solver solves the equations of motion by marching in time using a
-    !   predictor-corrector scheme.  Fourth order Runge-Kutta is used to
-    !   get the first 4 points from the initial degrees of freedom and
-    !   velocities.
+   
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!
+! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!
+!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!   Define constants k1, k2, k3, and k4 as 
+!        k1 = dt * f(t        , x_t        )
+!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!        k4 = dt * f(t + dt   , x_t + k3   ).
+!   Then the continuous states at t = t + dt are
+!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!
+! For details, see:
+! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
+!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!   Cambridge University Press, pp. 704-716, 1992.
+!
+!..................................................................................................................................
 
-IMPLICIT                        NONE
+      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
+      INTEGER(IntKi),                   INTENT(IN   )  :: n           ! time step number
+      TYPE(SS_Rad_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                       INTENT(IN   )  :: utimes(:)   ! times of input
+      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      REAL(DbKi),                        INTENT(IN   ) :: Time        ! Current simulation time in seconds
-      TYPE(SS_Rad_InputType),            INTENT(IN   ) :: u           ! Inputs at Time                    
-      TYPE(SS_Rad_ParameterType),        INTENT(IN   ) :: p           ! Parameters                              
-      TYPE(SS_Rad_ContinuousStateType),  INTENT(INOUT) :: x           ! Input: Continuous states at Time; 
-                                                                      !   Output: Continuous states at Time + Interval
-      TYPE(SS_Rad_DiscreteStateType),    INTENT(INOUT) :: xd          ! Input: Discrete states at Time; 
-                                                                      !   Output: Discrete states at Time  + Interval
-      TYPE(SS_Rad_ConstraintStateType),  INTENT(INOUT) :: z           ! Input: Initial guess of constraint states at Time;
-                                                                      !   Output: Constraint states at Time
-      TYPE(SS_Rad_OtherStateType),       INTENT(INOUT) :: OtherState  ! Other/optimization states
-      TYPE(SS_Rad_ContinuousStateType),  INTENT(INOUT) :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-        
-        
-        ! Local variables       
-        INTEGER(IntKi)                          :: I                  ! Loops through all DOFs
-        INTEGER(IntKi)                          :: Sttus              ! Status returned from an attempt to allocate an array.
-        REAL(DbKi), ALLOCATABLE                 ::    ZK1 (:)         ! Temporary values of dq                
-        REAL(DbKi), ALLOCATABLE                 ::    ZK2 (:)         ! Temporary values of dq                
-        REAL(DbKi), ALLOCATABLE                 ::    ZK3 (:)         ! Temporary values of dq                
-        REAL(DbKi), ALLOCATABLE                 ::    ZK4 (:)         ! Temporary values of dq                
-        INTEGER(IntKi)                          :: ErrStat2           ! Error status of the operation (occurs after initial error)
-        CHARACTER(LEN(ErrMsg))                  :: ErrMsg2            ! Error message if ErrStat2 /= ErrID_None
-        TYPE(SS_Rad_ContinuousStateType)        :: xt        ! Dummy Continuous states at Time+1, created by predictor
-       
+      ! local variables
+         
+      TYPE(SS_Rad_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
+      TYPE(SS_Rad_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+      TYPE(SS_Rad_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
+      TYPE(SS_Rad_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
+      TYPE(SS_Rad_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
+      TYPE(SS_Rad_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+      TYPE(SS_Rad_InputType)                           :: u_interp    ! interpolated value of inputs 
+
+      INTEGER(IntKi)                                   :: ErrStat2    ! local error status
+      CHARACTER(LEN(ErrMsg))                           :: ErrMsg2     ! local error message (ErrMsg)
+      
+      ! Initialize ErrStat
+
       ErrStat = ErrID_None
-      ErrMsg  = ''
-        
-IF ( OtherState%Step < 3 )  THEN   ! Use Runge-Kutta integration at the the start of the simulation (first 3 steps).
+      ErrMsg  = "" 
+
+      CALL SS_Rad_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+      CALL SS_Rad_CopyContState( x, k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+      CALL SS_Rad_CopyContState( x, k3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+      CALL SS_Rad_CopyContState( x, k4,    MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+      CALL SS_Rad_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-   ! Allocate arrays that vary with the number of DOFs..
-   Sttus = 0
+      CALL SS_Rad_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+                     
+      ! interpolate u to find u_interp = u(t)
+      CALL SS_Rad_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
-   IF (.NOT. ALLOCATED(ZK1)) ALLOCATE ( ZK1(p%N) , STAT=Sttus )
-   IF ( Sttus /= 0 )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error allocating memory for the ZK1 array.'
-   END IF
+      ! find xdot at t
+      CALL SS_Rad_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
-   IF (.NOT. ALLOCATED(ZK2)) ALLOCATE ( ZK2(p%N) , STAT=Sttus )
-   IF ( Sttus /= 0 )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error allocating memory for the ZK2 array.'
-   END IF
+      k1%x     = p%dt * xdot%x  
+      x_tmp%x  = x%x  + 0.5 * k1%x
 
-   IF (.NOT. ALLOCATED(ZK3)) ALLOCATE ( ZK3(p%N) , STAT=Sttus )
-   IF ( Sttus /= 0 )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error allocating memory for the ZK3 array.'
-   END IF
+      ! interpolate u to find u_interp = u(t + dt/2)
+      CALL SS_Rad_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat2, ErrMsg2)
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
-   IF (.NOT. ALLOCATED(ZK4)) ALLOCATE ( ZK4(p%N) , STAT=Sttus )
-   IF ( Sttus /= 0 )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error allocating memory for the ZK4 array.'
-   END IF
+      ! find xdot at t + dt/2
+      CALL SS_Rad_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+      k2%x     = p%dt * xdot%x
+      x_tmp%x  = x%x  + 0.5 * k2%x
+
+      ! find xdot at t + dt/2
+      CALL SS_Rad_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+      k3%x     = p%dt * xdot%x 
+      x_tmp%x  = x%x  + k3%x
+
+      ! interpolate u to find u_interp = u(t + dt)
+      CALL SS_Rad_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+      ! find xdot at t + dt
+      CALL SS_Rad_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+      k4%x  = p%dt * xdot%x
+      x%x   = x%x  +  ( k1%x  + 2. * k2%x  + 2. * k3%x  + k4%x  ) / 6.      
+
+         ! clean up local variables:
+      CALL ExitThisRoutine(  )
+         
+CONTAINS      
+   !...............................................................................................................................
+   SUBROUTINE ExitThisRoutine()
+   ! This subroutine destroys all the local variables
+   !...............................................................................................................................
+
+         ! local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
    
-   ! First call to dynamics routine:
-   CALL SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL SS_Rad_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN
-      END IF  
+   
+      CALL SS_Rad_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyContState( k1,       ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyContState( k2,       ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyContState( k3,       ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyContState( k4,       ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
+
+      CALL SS_Rad_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
+         
+   END SUBROUTINE ExitThisRoutine      
+   !...............................................................................................................................
+   SUBROUTINE CheckError(ErrID,Msg)
+   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
+   !...............................................................................................................................
+
+         ! Passed arguments
+      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+         ! local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(LEN(Msg))        :: ErrMsg3     ! The error message (ErrMsg)
+
+      !............................................................................................................................
+      ! Set error status/message;
+      !............................................................................................................................
+
+      IF ( ErrID /= ErrID_None ) THEN
+
+         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
+         ErrMsg = TRIM(ErrMsg)//'SS_Rad_RK4:'//TRIM(Msg)         
+         ErrStat = MAX(ErrStat,ErrID)
+         
+         !.........................................................................................................................
+         ! Clean up if we're going to return on error: close files, deallocate local arrays
+         !.........................................................................................................................
+         
+         IF ( ErrStat >= AbortErrLev ) CALL ExitThisRoutine( )                  
+                  
+         
+      END IF
+
+   END SUBROUTINE CheckError                    
       
-   ! Compute intermediate functions to estimate next Q and QD.
-   DO I = 1,p%N  ! Loop through all DOFs
-      ZK1 (I) = p%DT * dxdt%x(I,1)   
-   END DO          ! I - All DOFs
+END SUBROUTINE SS_Rad_RK4
+!-----------------------------------------------------------------------------
+SUBROUTINE SS_Rad_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!
+! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
+! equations:
+!
+!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!
+!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!
+!  See, e.g.,
+!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!
+!  or
+!
+!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+!
+!..................................................................................................................................
 
-   ! Get first time derivatives of continuous states (dxdt):  
-   CALL SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL SS_Rad_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN
-      END IF  
+      REAL(DbKi),                         INTENT(IN   )  :: t           ! Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   )  :: n           ! time step number
+      TYPE(SS_Rad_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   ! times of input
+      TYPE(SS_Rad_ParameterType),         INTENT(IN   )  :: p           ! Parameters
+      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+      TYPE(SS_Rad_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(SS_Rad_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   ! Repeat above steps for each ZK, ZKD:
-   DO I = 1,p%N  ! Loop through all DOFs
-      ZK2 (I) = p%DT * dxdt%x(I,1)   
-   END DO          ! I - All DOFs
 
-   ! Get first time derivatives of continuous states (dxdt):  
-      CALL SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL SS_Rad_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN
-      END IF  
+      ! local variables
+      TYPE(SS_Rad_InputType)                             :: u_interp
+         
+      INTEGER(IntKi)                                     :: ErrStat2    ! local error status
+      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2     ! local error message (ErrMsg)
 
-   DO I = 1,p%N  ! Loop through all DOFs
-      ZK3 (I) = p%DT * dxdt%x(I,1)   
-   END DO          ! I - All DOFs
+      
+      ! Initialize ErrStat
 
-   ! Get first time derivatives of continuous states (dxdt):     
-      CALL SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL SS_Rad_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN
-      END IF  
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
+      
+      
+      if (OtherState%n .lt. n) then
 
-   ! Compute best estimate for Q, QD at next time step using
-   !   the intermediate functions (Runge-Kutta).
-   ! IC(NMX) locates the i + 1 value of Q, QD.
-   DO I = 1,p%N  ! Loop through all DOFs
-      ZK4 (I) = p%DT*dxdt%x(I,1)
-      x%x  (I,1) = x%x  (I,1) + ( ZK1 (I) + 2.0*ZK2 (I) + 2.0*ZK3 (I) + ZK4 (I) ) / 6.0
-   END DO          ! I - All DOFs
-
-   IF (ALLOCATED(ZK1) ) DEALLOCATE ( ZK1  )
-   IF (ALLOCATED(ZK2) ) DEALLOCATE ( ZK2  )
-   IF (ALLOCATED(ZK3) ) DEALLOCATE ( ZK3  )
-   IF (ALLOCATED(ZK4) ) DEALLOCATE ( ZK4  )
-   
-ELSE ! Use Adams-Bashforth predictor and Adams-Moulton corrector integration scheme for all other time steps.
-
-    ! Allocate size to XT
-      IF (SIZE(xt%x) /= SIZE( x%x)) THEN
-        ALLOCATE ( xt%x  (size(x%x),1) , STAT=ErrStat )
-        IF ( ErrStat /= 0 )  THEN
-              ErrStat = ErrID_Fatal
-              ErrMsg  = ' Error allocating memory for the ZK1 array.'
-        END IF
-    END IF
-
+         OtherState%n = n
+                    
+         CALL SS_Rad_CopyContState( OtherState%xdot ( 3 ), OtherState%xdot ( 4 ), MESH_UPDATECOPY, ErrStat2, ErrMsg )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+         CALL SS_Rad_CopyContState( OtherState%xdot ( 2 ), OtherState%xdot ( 3 ), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+         CALL SS_Rad_CopyContState( OtherState%xdot ( 1 ), OtherState%xdot ( 2 ), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+         
+         
+            
+      elseif (OtherState%n .gt. n) then
  
-   ! PREDICTOR (Adams-Bashforth)
-   ! Compute predictor from current (IC(1)) and 3 previous values of
-   !   Q, QD.  OtherState%dxdt (I,1) = i, ...,2) = i-1, ...,3) = i-2 etc... 
-
-   DO I = 1,p%N  ! Loop through all DOFs
-      xt%x(I,1) = x%x(I,1) + p%DT/24*( 55.0*OtherState%dxdt (I,1) - 59.0*OtherState%dxdt (I,2) + 37.0*OtherState%dxdt (I,3) - 9.0*OtherState%dxdt (I,4) )
-   END DO          ! I - All DOFs
-
-   ! Get first time derivatives of continuous states (dxdt):
-      
-      CALL SS_Rad_CalcContStateDeriv( Time, u, p, xt, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL SS_Rad_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
+         CALL CheckError( ErrID_Fatal, ' Backing up in time is not supported with a multistep method.')
          RETURN
-      END IF  
 
-   ! CORRECTOR (Adams-Moulton)
-   ! Compute corrector from predictor value of Q, QD and 3
-   !   previous values of Q, QD.  OtherState%dxdt (I,1) = i, IC(2) = i-1,
-   !   IC(3) = i-2 etc...
+      endif        
+      
+      
+      ! Allocate the input arrays
+      CALL SS_Rad_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
-   DO I = 1,p%N  ! Loop through all DOFs
-      x%x(I,1) = x%x(I,1) + p%DT/24*( 9.0*dxdt%x (I,1) + 19.0*OtherState%dxdt (I,1) - 5.0*OtherState%dxdt (I,2) + OtherState%dxdt (I,3) )
-   END DO          ! I - All DOFs
-END IF
+      
+      ! need xdot at t
+      CALL SS_Rad_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat2, ErrMsg2)
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+         
+      CALL SS_Rad_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, OtherState%xdot ( 1 ), ErrStat2, ErrMsg2 ) ! initializes OtherState%xdot ( 1 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
 
-END SUBROUTINE Solver
+                                                    
+      if (n .le. 2) then
+                                               
+         CALL SS_Rad_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+      else
+
+         x%x  = x%x  + p%DT/24.0  * ( 55.*OtherState%xdot(1)%x  - 59.*OtherState%xdot(2)%x   &
+                                    + 37.*OtherState%xdot(3)%x   - 9.*OtherState%xdot(4)%x )
+
+
+      endif
+            
+      
+         ! clean up local variables:
+      CALL ExitThisRoutine()
+      
+CONTAINS      
+   !...............................................................................................................................
+   SUBROUTINE ExitThisRoutine()
+   ! This subroutine destroys all the local variables
+   !...............................................................................................................................
+
+         ! local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
    
+   
+      CALL SS_Rad_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
+         
+   END SUBROUTINE ExitThisRoutine    
+   !...............................................................................................................................
+   SUBROUTINE CheckError(ErrID,Msg)
+   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
+   !...............................................................................................................................
+
+         ! Passed arguments
+      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+         ! local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(LEN(Msg))        :: ErrMsg3     ! The error message (ErrMsg)
+
+      !............................................................................................................................
+      ! Set error status/message;
+      !............................................................................................................................
+
+      IF ( ErrID /= ErrID_None ) THEN
+
+         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
+         ErrMsg = TRIM(ErrMsg)//'SS_Rad_AB4:'//TRIM(Msg)
+         ErrStat = MAX(ErrStat, ErrID)
+
+         !.........................................................................................................................
+         ! Clean up if we're going to return on error: close files, deallocate local arrays
+         !.........................................................................................................................
+         
+         IF ( ErrStat >= AbortErrLev ) CALL ExitThisRoutine( )                  
+         
+      END IF
+
+   END SUBROUTINE CheckError            
+         
+END SUBROUTINE SS_Rad_AB4
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SS_Rad_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!
+! This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
+! differential equations:
+!
+!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!
+!   Adams-Bashforth Predictor:
+!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!
+!   Adams-Moulton Corrector:
+!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!
+!  See, e.g.,
+!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!
+!  or
+!
+!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+!
+!..................................................................................................................................
+
+      REAL(DbKi),                         INTENT(IN   )  :: t           ! Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   )  :: n           ! time step number
+      TYPE(SS_Rad_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   ! times of input
+      TYPE(SS_Rad_ParameterType),         INTENT(IN   )  :: p           ! Parameters
+      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
+      TYPE(SS_Rad_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
+      TYPE(SS_Rad_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+
+      TYPE(SS_Rad_InputType)                             :: u_interp    ! Inputs at t
+      TYPE(SS_Rad_ContinuousStateType)                   :: x_pred      ! Continuous states at t
+      TYPE(SS_Rad_ContinuousStateType)                   :: xdot_pred   ! Derivative of continuous states at t
+
+      INTEGER(IntKi)                                     :: ErrStat2    ! local error status
+      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2     ! local error message (ErrMsg)
+      
+      
+      ! Initialize ErrStat
+
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
+
+      CALL SS_Rad_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+      CALL SS_Rad_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+      if (n .gt. 2_IntKi) then
+            ! allocate the arrays in u_interp
+         CALL SS_Rad_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+         
+         CALL SS_Rad_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+         CALL SS_Rad_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+         x%x  = x%x  + p%DT/24. * ( 9. * xdot_pred%x +  19. * OtherState%xdot(1)%x &
+                                                       - 5. * OtherState%xdot(2)%x &
+                                                       + 1. * OtherState%xdot(3)%x )
+                                
+      else
+
+         x%x  = x_pred%x
+
+      endif
+      
+      
+         ! clean up local variables:
+      CALL ExitThisRoutine()
+      
+CONTAINS      
+   !...............................................................................................................................
+   SUBROUTINE ExitThisRoutine()
+   ! This subroutine destroys all the local variables
+   !...............................................................................................................................
+
+         ! local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+   
+   
+      CALL SS_Rad_DestroyContState( xdot_pred,  ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyContState( x_pred,     ErrStat3, ErrMsg3 )
+      CALL SS_Rad_DestroyInput(     u_interp,   ErrStat3, ErrMsg3 )               
+      
+   END SUBROUTINE ExitThisRoutine    
+   !...............................................................................................................................
+   SUBROUTINE CheckError(ErrID,Msg)
+   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
+   !...............................................................................................................................
+
+         ! Passed arguments
+      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+         ! local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(LEN(Msg))        :: ErrMsg3     ! The error message (ErrMsg)
+
+      !............................................................................................................................
+      ! Set error status/message;
+      !............................................................................................................................
+
+      IF ( ErrID /= ErrID_None ) THEN
+
+         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
+         ErrMsg = TRIM(ErrMsg)//'SS_Rad_ABM4:'//TRIM(Msg)
+         ErrStat = MAX(ErrStat, ErrID)
+
+         !.........................................................................................................................
+         ! Clean up if we're going to return on error: close files, deallocate local arrays
+         !.........................................................................................................................
+         IF ( ErrStat >= AbortErrLev ) CALL ExitThisRoutine( )                  
+         
+      END IF
+
+   END SUBROUTINE CheckError                 
+
+END SUBROUTINE SS_Rad_ABM4
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE SS_Radiation
 !**********************************************************************************************************************************

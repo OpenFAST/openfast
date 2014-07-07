@@ -42,6 +42,16 @@ PROGRAM HydroDynDriver
       REAL(ReKi)      :: uWAMITInSteady(6)
       REAL(ReKi)      :: uDotWAMITInSteady(6)
       REAL(ReKi)      :: uDotDotWAMITInSteady(6)
+      INTEGER         :: MorisonInputsMod
+      CHARACTER(1024) :: MorisonInputsFile
+      REAL(ReKi)      :: uMorisonInSteady(6)
+      REAL(ReKi)      :: uDotMorisonInSteady(6)
+      REAL(ReKi)      :: uDotDotMorisonInSteady(6)
+      LOGICAL                 :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
+      REAL(ReKi)              :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
+      REAL(ReKi)              :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
+      INTEGER(IntKi)          :: WaveElevNX              !< Number of points in the X direction for the wave elevation series (-)
+      INTEGER(IntKi)          :: WaveElevNY              !< Number of points in the X direction for the wave elevation series (-)
    END TYPE HD_Drvr_InitInput
    
 ! -----------------------------------------------------------------------------------   
@@ -58,7 +68,7 @@ PROGRAM HydroDynDriver
    REAL(DbKi)                                          :: Time                 ! Variable for storing time, in seconds
   
    REAL(DbKi)                                          :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
-   
+   REAL(DbKi)                                          :: Interval             ! HD module requested time interval
    INTEGER(B1Ki), ALLOCATABLE                          :: SaveAry(:)           ! Array to store packed data structure
 
    TYPE(HydroDyn_InitInputType)                        :: InitInData           ! Input data for initialization
@@ -81,8 +91,11 @@ PROGRAM HydroDynDriver
 
 
    INTEGER(IntKi)                                     :: UnWAMITInp            ! WAMIT Inputs file identifier
+   INTEGER(IntKi)                                     :: UnMorisonInp          ! Morison Inputs file identifier
    INTEGER(IntKi)                                     :: UnHD_Out              ! Output file identifier
    REAL(ReKi), ALLOCATABLE                            :: WAMITin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for WAMIT
+   REAL(ReKi), ALLOCATABLE                            :: Morisonin(:,:)        ! Variable for storing time, forces, and body velocities, in m/s or rad/s for Morison elements
+   
    INTEGER(IntKi)                                     :: I                    ! Generic loop counter
    INTEGER(IntKi)                                     :: J                    ! Generic loop counter
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
@@ -96,7 +109,8 @@ PROGRAM HydroDynDriver
    LOGICAL                                            :: DoTight = .FALSE.
    REAL(DbKi)                                         :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
    CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
-   
+   INTEGER                                            :: UnMeshDebug
+   CHARACTER(50)                                      :: MeshDebugFile
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
@@ -142,11 +156,11 @@ PROGRAM HydroDynDriver
       InitInData%UseInputFile = .TRUE. 
       InitInData%InputFile    = drvrInitInp%HDInputFile
       InitInData%OutRootName  = drvrInitInp%OutRootName
-      
+      InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
    END IF
   
- 
-
+ !BJJ: added this for IceFloe/IceDyn
+   InitInData%hasIce = .FALSE.
 
 
   
@@ -164,14 +178,14 @@ PROGRAM HydroDynDriver
       CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat   )  ! Open WAMIT inputs file.
       
       IF ( ErrStat /= 0 ) THEN
-         ErrMsg = 'HydroDyn Driver file not found'
+         ErrMsg = '  WAMIT Input time-series file not found'
          CALL WrScr( ErrMsg )
          STOP
       END IF
       
       ALLOCATE ( WAMITin(drvrInitInp%NSteps, 19), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating space for WAMITin array.'
+         ErrMsg  = '  Error allocating space for WAMITin array.'
          CALL WrScr( ErrMsg )
          CLOSE( UnWAMITInp )
          STOP
@@ -181,7 +195,7 @@ PROGRAM HydroDynDriver
          READ (UnWAMITInp,*,IOSTAT=ErrStat) (WAMITin (n,J), J=1,19)
             
             IF ( ErrStat /= 0 ) THEN
-               ErrMsg = 'File not found'
+               ErrMsg = '  Error reading the WAMIT input time-series file. '
                CALL WrScr( ErrMsg )
                STOP
             END IF 
@@ -191,15 +205,74 @@ PROGRAM HydroDynDriver
       CLOSE ( UnWAMITInp ) 
    END IF
    
-     
-   
-         ! Initialize the module
+    IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
+      
+         ! Open the Morison inputs data file
+      CALL GetNewUnit( UnMorisonInp ) 
+      CALL OpenFInpFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat   )  ! Open Morison inputs file.
+      
+      IF ( ErrStat /= 0 ) THEN
+         ErrMsg = '  Morison Input time-series file not found'
+         CALL WrScr( ErrMsg )
+         STOP
+      END IF
+      
+      ALLOCATE ( MorisonIn(drvrInitInp%NSteps, 19), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = '  Error allocating space for MorisonIn array.'
+         CALL WrScr( ErrMsg )
+         CLOSE( UnMorisonInp )
+         STOP
+      END IF 
+      
+      DO n = 1,drvrInitInp%NSteps
+         READ (UnMorisonInp,*,IOSTAT=ErrStat) (MorisonIn (n,J), J=1,19)
+            
+            IF ( ErrStat /= 0 ) THEN
+               ErrMsg = '  Error reading the Morison input time-series file. '
+               CALL WrScr( ErrMsg )
+               STOP
+            END IF 
+      END DO  
+      
+         ! Close the inputs file 
+      CLOSE ( UnMorisonInp ) 
+   END IF  
+  
 
-   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, drvrInitInp%TimeInterval, InitOutData, ErrStat, ErrMsg )
-   
+      ! Setup the arrays for the wave elevation timeseries if requested by the driver input file
+   IF ( drvrInitInp%WaveElevSeriesFlag ) THEN
+      ALLOCATE ( InitInData%WaveElevXY(2,drvrInitInp%WaveElevNX*drvrInitInp%WaveElevNY), STAT=ErrStat )
+      IF ( ErrStat >= ErrID_Fatal ) THEN
+         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL WrScr( ErrMsg )     
+         END IF
+         STOP
+      END IF
+
+         ! Set the values
+      n  = 0         ! Dummy counter we are using to get the current point number
+      DO I  = 0,drvrInitInp%WaveElevNX-1
+         DO J  = 0, drvrInitInp%WaveElevNY-1
+            n  =  n+1
+               ! X dimension
+            InitInData%WaveElevXY(1,n) = drvrInitInp%WaveElevDX*(I - 0.5*(drvrInitInp%WaveElevNX-1))
+               ! Y dimension
+            InitInData%WaveElevXY(2,n) = drvrInitInp%WaveElevDY*(J - 0.5*(drvrInitInp%WaveElevNY-1))
+         ENDDO
+      ENDDO
+   ENDIF
+
+
+
+         ! Initialize the module
+   Interval = drvrInitInp%TimeInterval
+   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, Interval, InitOutData, ErrStat, ErrMsg )
+ 
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( ErrMsg )
-      IF ( ErrStat > ErrID_Warn ) THEN
+      IF ( ErrStat >= ErrID_Fatal ) THEN
          CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN
             CALL WrScr( ErrMsg )     
@@ -208,30 +281,121 @@ PROGRAM HydroDynDriver
       END IF
    END IF
 
+   IF ( Interval /= drvrInitInp%TimeInterval) THEN
+      CALL WrScr('The HydroDyn Module attempted to change timestep interval, but this is not allowed.  The HydroDyn Module must use the Driver Interval.')
+      CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )  
+      STOP
+   END IF
+
+
+      ! Write the gridded wave elevation data to a file
+
+   IF ( drvrInitInp%WaveElevSeriesFlag )     CALL WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
+   IF ( ErrStat /= ErrID_None ) THEN 
+      CALL WrScr( ErrMsg )
+      IF ( ErrStat >= ErrID_Fatal ) THEN
+         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL WrScr( ErrMsg )     
+         END IF
+         STOP
+      END IF
+   END IF
+
+   
       ! Destroy initialization data
 
    CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
+   
+      ! Set any steady-state inputs, once before the time-stepping loop
+      
+   IF ( u(1)%Mesh%Initialized ) THEN 
+         
+      IF ( drvrInitInp%WAMITInputsMod /= 2 ) THEN
+      
+            
+         u(1)%Mesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
+            
+            
+            ! Compute direction cosine matrix from the rotation angles
+         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4)), REAL(drvrInitInp%uWAMITInSteady(5)), REAL(drvrInitInp%uWAMITInSteady(6)), dcm, 'Junk', ErrStat, ErrMsg )            
+         u(1)%Mesh%Orientation(:,:,1)     = dcm
+            
+         u(1)%Mesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
+         u(1)%Mesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
+         u(1)%Mesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
+         u(1)%Mesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
+            
+      END IF
+   END IF
+   
+   
+   IF ( drvrInitInp%MorisonInputsMod /= 2 ) THEN
+      IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
+         u(1)%Morison%DistribMesh%TranslationDisp(1,:)   = drvrInitInp%uMorisonInSteady(1) 
+         u(1)%Morison%DistribMesh%TranslationDisp(2,:)   = drvrInitInp%uMorisonInSteady(2) 
+         u(1)%Morison%DistribMesh%TranslationDisp(3,:)   = drvrInitInp%uMorisonInSteady(3) 
+                      
+            ! Compute direction cosine matrix from the rotation angles
+         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uMorisonInSteady(4)), REAL(drvrInitInp%uMorisonInSteady(5)), REAL(drvrInitInp%uMorisonInSteady(6)), dcm, 'Junk', ErrStat, ErrMsg )            
+         DO I = 1, u(1)%Morison%DistribMesh%nNodes
+            u(1)%Morison%DistribMesh%Orientation(:,:,I)  = dcm 
+         END DO
+         
+         u(1)%Morison%DistribMesh%TranslationVel(1,:)    = drvrInitInp%uDotMorisonInSteady(1)
+         u(1)%Morison%DistribMesh%TranslationVel(2,:)    = drvrInitInp%uDotMorisonInSteady(2)
+         u(1)%Morison%DistribMesh%TranslationVel(3,:)    = drvrInitInp%uDotMorisonInSteady(3)
+         u(1)%Morison%DistribMesh%RotationVel(1,:)       = drvrInitInp%uDotMorisonInSteady(4) 
+         u(1)%Morison%DistribMesh%RotationVel(2,:)       = drvrInitInp%uDotMorisonInSteady(5) 
+         u(1)%Morison%DistribMesh%RotationVel(3,:)       = drvrInitInp%uDotMorisonInSteady(6) 
+         u(1)%Morison%DistribMesh%TranslationAcc(1,:)    = drvrInitInp%uDotDotMorisonInSteady(1)
+         u(1)%Morison%DistribMesh%TranslationAcc(2,:)    = drvrInitInp%uDotDotMorisonInSteady(2)
+         u(1)%Morison%DistribMesh%TranslationAcc(3,:)    = drvrInitInp%uDotDotMorisonInSteady(3)
+         u(1)%Morison%DistribMesh%RotationAcc(1,:)       = drvrInitInp%uDotDotMorisonInSteady(4) 
+         u(1)%Morison%DistribMesh%RotationAcc(2,:)       = drvrInitInp%uDotDotMorisonInSteady(5) 
+         u(1)%Morison%DistribMesh%RotationAcc(3,:)       = drvrInitInp%uDotDotMorisonInSteady(6) 
+      END IF
+      IF ( u(1)%Morison%LumpedMesh%Initialized ) THEN
+         DO I = 1, u(1)%Morison%LumpedMesh%nNodes
+            u(1)%Morison%LumpedMesh%Orientation(:,:,I)   = dcm 
+         END DO
+         u(1)%Morison%LumpedMesh%TranslationVel(1,:)    = drvrInitInp%uDotMorisonInSteady(1)
+         u(1)%Morison%LumpedMesh%TranslationVel(2,:)    = drvrInitInp%uDotMorisonInSteady(2)
+         u(1)%Morison%LumpedMesh%TranslationVel(3,:)    = drvrInitInp%uDotMorisonInSteady(3)
+         u(1)%Morison%LumpedMesh%RotationVel(1,:)       = drvrInitInp%uDotMorisonInSteady(4) 
+         u(1)%Morison%LumpedMesh%RotationVel(2,:)       = drvrInitInp%uDotMorisonInSteady(5) 
+         u(1)%Morison%LumpedMesh%RotationVel(3,:)       = drvrInitInp%uDotMorisonInSteady(6) 
+         u(1)%Morison%LumpedMesh%TranslationAcc(1,:)    = drvrInitInp%uDotDotMorisonInSteady(1)
+         u(1)%Morison%LumpedMesh%TranslationAcc(2,:)    = drvrInitInp%uDotDotMorisonInSteady(2)
+         u(1)%Morison%LumpedMesh%TranslationAcc(3,:)    = drvrInitInp%uDotDotMorisonInSteady(3)
+         u(1)%Morison%LumpedMesh%RotationAcc(1,:)       = drvrInitInp%uDotDotMorisonInSteady(4) 
+         u(1)%Morison%LumpedMesh%RotationAcc(2,:)       = drvrInitInp%uDotDotMorisonInSteady(5) 
+         u(1)%Morison%LumpedMesh%RotationAcc(3,:)       = drvrInitInp%uDotDotMorisonInSteady(6) 
+         
+      END IF
+   END IF
+   
+      
    !...............................................................................................................................
    ! Routines called in loose coupling -- the glue code may implement this in various ways
    !...............................................................................................................................
 
 
-   DO n = 1,drvrInitInp%NSteps
+   DO n = 1, drvrInitInp%NSteps
 
       Time = (n-1) * drvrInitInp%TimeInterval
       InputTime(1) = Time
       
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
          
-      IF ( u(1)%WAMIT%Mesh%Initialized ) THEN 
+      IF ( u(1)%Mesh%Initialized ) THEN 
          
          IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
+                        
             
-            
-            
-            u(1)%WAMIT%Mesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
+            u(1)%Mesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
             
             
                ! Compute direction cosine matrix from the rotation angles
@@ -241,50 +405,33 @@ PROGRAM HydroDynDriver
             IF ( abs(WAMITin(n,7)) > maxAngle ) maxAngle = abs(WAMITin(n,7))
             
             CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5)), REAL(WAMITin(n,6)), REAL(WAMITin(n,7)), dcm, 'Junk', ErrStat, ErrMsg )            
-            u(1)%WAMIT%Mesh%Orientation(:,:,1)     = dcm 
+            u(1)%Mesh%Orientation(:,:,1)     = dcm 
             
             
-            u(1)%WAMIT%Mesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
-            u(1)%WAMIT%Mesh%RotationVel(:,1)       = WAMITin(n,11:13) 
-            u(1)%WAMIT%Mesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
-            u(1)%WAMIT%Mesh%RotationAcc(:,1)       = WAMITin(n,17:19) 
-            
-         ELSE
-            
-            u(1)%WAMIT%Mesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
-            
-            
-               ! Compute direction cosine matrix from the rotation angles
-            CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4)), REAL(drvrInitInp%uWAMITInSteady(5)), REAL(drvrInitInp%uWAMITInSteady(6)), dcm, 'Junk', ErrStat, ErrMsg )            
-            u(1)%WAMIT%Mesh%Orientation(:,:,1)     = dcm
-            
-            u(1)%WAMIT%Mesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
-            u(1)%WAMIT%Mesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
-            u(1)%WAMIT%Mesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
-            u(1)%WAMIT%Mesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
+            u(1)%Mesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
+            u(1)%Mesh%RotationVel(:,1)       = WAMITin(n,11:13) 
+            u(1)%Mesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
+            u(1)%Mesh%RotationAcc(:,1)       = WAMITin(n,17:19) 
             
          END IF
          
       END IF
       
-      !IF ( u(1)%Morison%LumpedMesh%Initialized ) THEN   
-      !u(1)%Morison%LumpedMesh%TranslationVel(:,J) = l_ud_in(n,J,1:3)
-      !u(1)%Morison%LumpedMesh%RotationVel(:,J) = l_ud_in(n,J,4:6)
-      !END IF
-      !IF ( u(1)%Morison%DistribMesh%Initialized ) THEN  
-      !u(1)%Morison%DistribMesh%TranslationVel(:,J) = d_ud_in(n,J,1:3)
-      !u(1)%Morison%DistribMesh%RotationVel(:,J) = d_ud_in(n,J,4:6)
-      !END IF
+          
+      IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
+         IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
+               ! Set the Morison Inputs from a time series input file
+         END IF
+                  
+      END IF
       
       
-     
-
          ! Calculate outputs at n
 
       CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
-         IF ( ErrStat > ErrID_Warn ) THEN
+         IF ( ErrStat >= ErrID_Fatal ) THEN
             CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             IF ( ErrStat /= ErrID_None ) THEN
                CALL WrScr( ErrMsg )      
@@ -300,7 +447,7 @@ PROGRAM HydroDynDriver
       CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
-         IF ( ErrStat > ErrID_Warn ) THEN
+         IF ( ErrStat >= ErrID_Fatal ) THEN
             CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             IF ( ErrStat /= ErrID_None ) THEN
                CALL WrScr( ErrMsg )      
@@ -309,7 +456,17 @@ PROGRAM HydroDynDriver
          END IF
       END IF     
       
-      
+      !-----------------------------------------------------------------------------
+      ! DEBUG - Print Mesh Information
+      !WRITE(MeshDebugFile,'("HD_MeshInfo_",I2,".txt")' )  n
+      !CALL GetNewUnit( UnMeshDebug ) 
+      !CALL OpenFOutFile ( UnMeshDebug, TRIM(MeshDebugFile), ErrStat   )  ! Open WAMIT inputs file.
+      !WRITE(UnMeshDebug,'("u(1)%Morison%DistribMesh")')
+      !CALL MeshPrintInfo ( UnMeshDebug, u(1)%Morison%DistribMesh,100)
+      !WRITE(UnMeshDebug,'("y%Morison%DistribMesh")')
+      !CALL MeshPrintInfo ( UnMeshDebug, y%Morison%DistribMesh,100)
+      !CLOSE(UnMeshDebug)
+      !-----------------------------------------------------------------------------
       
 
       ! Write output to a file which is managed by the driver program and not the individual modules
@@ -324,7 +481,7 @@ PROGRAM HydroDynDriver
    CALL HydroDyn_DestroyDiscState( xd_new, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( ErrMsg )
-      IF ( ErrStat > ErrID_Warn ) THEN
+      IF ( ErrStat >= ErrID_Fatal ) THEN
          CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN
             CALL WrScr( ErrMsg )      
@@ -336,7 +493,7 @@ PROGRAM HydroDynDriver
    CALL HydroDyn_DestroyContState( x_new, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( ErrMsg )
-      IF ( ErrStat > ErrID_Warn ) THEN
+      IF ( ErrStat >= ErrID_Fatal ) THEN
          CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN
             CALL WrScr( ErrMsg )      
@@ -402,6 +559,10 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file  
+
+   REAL(ReKi)                                       :: TmpRealVar2(2)       !< Temporary real    array size 2
+   INTEGER(IntKi)                                   :: TmpIntVar2(2)        !< Temporary integer array size 2
+
    
    
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
@@ -465,7 +626,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
    IF ( InitInp%Echo ) THEN
       
-      EchoFile = TRIM(FileName)//'.echo'
+      EchoFile = TRIM(FileName)//'.ech'
       CALL GetNewUnit( UnEchoLocal )   
       CALL OpenEcho ( UnEchoLocal, EchoFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
@@ -677,7 +838,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
    
-   IF ( InitInp%WAMITInputsMod == 1 ) THEN
+   
    
          ! uWAMITInSteady
          
@@ -720,17 +881,281 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
       
-   ELSE
+   IF ( InitInp%WAMITInputsMod /= 1 ) THEN
       InitInp%uWAMITInSteady       = 0.0
       InitInp%uDotWAMITInSteady    = 0.0
       InitInp%uDotDotWAMITInSteady = 0.0
    END IF
    
    
+   !-------------------------------------------------------------------------------------------------
+   ! Morison INPUTS section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Header
+      
+   CALL ReadCom( UnIn, FileName, 'Morison INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
+   
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Comment line.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   
+   
+      ! MorisonInputsMod      
+       
+   CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsMod, 'MorisonInputsMod', &
+                                    'Model for the Morison inputs', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read MorisonInputsMod parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF   
+   
+   
+      ! MorisonInputsFile      
+       
+   CALL ReadVar ( UnIn, FileName, InitInp%MorisonInputsFile, 'MorisonInputsFile', &
+                                    'Filename for the HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read MorisonInputsFile parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF   
+   
+   
+   !-------------------------------------------------------------------------------------------------
+   ! Morison STEADY STATE INPUTS section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Header
+      
+   CALL ReadCom( UnIn, FileName, 'Morison STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
+   
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Comment line.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+   
+         ! uMorisonInSteady
+         
+      CALL ReadAry ( UnIn, FileName, InitInp%uMorisonInSteady, 6, 'uMorisonInSteady', &
+                           'Morison Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
+       
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Failed to read uMorisonInSteady parameter.'
+         ErrStat = ErrID_Fatal
+         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+         CLOSE( UnIn )
+         RETURN
+      END IF
+   
+   
+         ! uDotMorisonInSteady
+         
+      CALL ReadAry ( UnIn, FileName, InitInp%uDotMorisonInSteady, 6, 'uDotMorisonInSteady', &
+                           'Morison Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
+       
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Failed to read uDotMorisonInSteady parameter.'
+         ErrStat = ErrID_Fatal
+         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+         CLOSE( UnIn )
+         RETURN
+      END IF
+      
+      
+         ! uDotDotMorisonInSteady
+         
+      CALL ReadAry ( UnIn, FileName, InitInp%uDotDotMorisonInSteady, 6, 'uDotDotMorisonInSteady', &
+                           'Morison Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
+       
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Failed to read uDotDotMorisonInSteady parameter.'
+         ErrStat = ErrID_Fatal
+         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+         CLOSE( UnIn )
+         RETURN
+      END IF
+      
+   IF ( InitInp%MorisonInputsMod /= 1 ) THEN
+      InitInp%uMorisonInSteady       = 0.0
+      InitInp%uDotMorisonInSteady    = 0.0
+      InitInp%uDotDotMorisonInSteady = 0.0
+   END IF
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> ### Waves elevation series section
+   !-------------------------------------------------------------------------------------------------
+
+      !> Header
+
+CALL ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Comment line.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      !> WaveElevSeriesFlag   -- are we doing multipoint wave elevation output?
+   CALL ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WaveElevSeries parameter.'
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+
+      !> WaveElevDX and WaveElevNY  -- point spacing (m)
+   CALL ReadAry ( UnIn, FileName, TmpRealVar2, 2, 'WaveElevDX WaveElevDY', &
+                        'WaveElevSeries spacing -- WaveElevDX WaveElevDY', ErrStat, ErrMsg, UnEchoLocal)
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      CALL SetErrStat( ErrID_Fatal,'Failed to read WaveElevDX and WaveElevDY parameters.',ErrStat,ErrMsg,'ReadDriverInputFile')
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+   InitInp%WaveElevDX   = TmpRealVar2(1)
+   InitInp%WaveElevDY   = TmpRealVar2(2)
+
+
+
+      !> WaveElevNX and WaveElevNY  -- point spacing (m)
+   CALL ReadAry ( UnIn, FileName, TmpIntVar2, 2, 'WaveElevNX WaveElevNY', &
+                        'WaveElevSeries points -- WaveElevNX WaveElevNY', ErrStat, ErrMsg, UnEchoLocal)
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      CALL SetErrStat( ErrID_Fatal,' Failed to read WaveElevNX and WaveElevNY parameters.',ErrStat,ErrMsg,'ReadDriverInputFile')
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+
+   IF (MOD(TmpIntVar2(1),2) == 0) THEN
+      TmpIntVar2(1) = TmpIntVar2(1)+1
+      CALL SetErrStat( ErrID_Warn, "Changing WaveElevNX to an odd number ("//TRIM(Num2LStr(TmpIntVar2(1)))// &
+                                 ") so that there is a point at the origin.",ErrStat,ErrMsg,'ReadDriverInputFile' )
+   ENDIF
+   IF (MOD(TmpIntVar2(2),2) == 0) THEN
+      TmpIntVar2(2) = TmpIntVar2(2)+1
+      CALL SetErrStat( ErrID_Warn, "Changing WaveElevNX to an odd number ("//TRIM(Num2LStr(TmpIntVar2(2)))// &
+                                 ") so that there is a point at the origin.",ErrStat,ErrMsg,'ReadDriverInputFile' )
+   ENDIF
+   InitInp%WaveElevNX   = TmpIntVar2(1)
+   InitInp%WaveElevNY   = TmpIntVar2(2)
+
+
+      !> if the flag was false, set the spacing and number of points to 0
+   IF ( .NOT. InitInp%WaveElevSeriesFlag ) THEN
+      InitInp%WaveElevDX   =  0.0_ReKi
+      InitInp%WaveElevDY   =  0.0_ReKi
+      InitInp%WaveElevNX   =  0_IntKi
+      InitInp%WaveElevNY   =  0_IntKi
+   ENDIF
+
+
+
+
    CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
    CLOSE( UnIn )
    
 END SUBROUTINE ReadDriverInputFile
+
+SUBROUTINE WaveElevGrid_Output (drvrInitInp, HDynInitInp, HDynInitOut, HDyn_p, ErrStat, ErrMsg)
+
+   TYPE(HD_drvr_InitInput),       INTENT( IN    )   :: drvrInitInp
+   TYPE(HydroDyn_InitInputType),  INTENT( IN    )   :: HDynInitInp
+   TYPE(HydroDyn_InitOutputType), INTENT( IN    )   :: HDynInitOut          ! Output data from initialization
+   TYPE(HydroDyn_ParameterType),  INTENT( IN    )   :: HDyn_p               ! Output data from initialization
+   INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+
+         ! Temporary local variables
+   INTEGER(IntKi)                                   :: ErrStatTmp           !< Temporary variable for the status of error message
+   CHARACTER(1024)                                  :: ErrMsgTmp            !< Temporary variable for the error message
+
+   INTEGER(IntKi)                                   :: WaveElevFileUn       !< Number for the output file for the wave elevation series
+   CHARACTER(1024)                                  :: WaveElevFileName     !< Name for the output file for the wave elevation series
+   CHARACTER(128)                                   :: WaveElevFmt          !< Format specifier for the output file for wave elevation series
+ 
+
+   WaveElevFmt = "(F14.7,3x,F14.7,3x,F14.7)"
+
+   ErrMsg      = ""
+   ErrStat     = ErrID_None
+   ErrMsgTmp   = ""
+   ErrStatTmp  = ErrID_None
+
+
+      ! If we calculated the wave elevation at a set of coordinates for use with making movies, put it into an output file
+   WaveElevFileName  =  TRIM(drvrInitInp%OutRootName)//".WaveElev.out"
+   CALL GetNewUnit( WaveElevFileUn )
+
+   CALL OpenFOutFile( WaveElevFileUn, WaveElevFileName, ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None) THEN 
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+      ! Write some useful header information
+!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file was generated by '//TRIM(GetNVD(HDyn_Drv_ProgDesc))// &
+!         ' on '//CurDate()//' at '//CurTime()//'.'
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file was generated on '//CurDate()//' at '//CurTime()//'.'
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file contains the wave elevations at a series of points '// &
+         'through the entire timeseries.'
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Elevation at each timestep'
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(HDyn_p%WaveTime(HDyn_P%NStepWave)))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(HDyn_p%NStepWave))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridXPoints =  '//TRIM(Num2LStr(drvrInitInp%WaveElevNX))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridYPoints =  '//TRIM(Num2LStr(drvrInitInp%WaveElevNY))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDX      =  '//TRIM(Num2LStr(drvrInitInp%WaveElevDX))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDY      =  '//TRIM(Num2LStr(drvrInitInp%WaveElevDY))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# MaxWaveElev =  '//TRIM(Num2LStr(MAXVAL(HDynInitOut%WaveElevSeries)))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# MinWaveElev =  '//TRIM(Num2LStr(MINVAL(HDynInitOut%WaveElevSeries)))
+   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
+
+      ! Timestep looping
+   DO I = 0,HDyn_p%NStepWave
+      WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
+      WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
+         ! Now output the X,Y, Elev info for this timestep
+      DO J=1,SIZE(HDynInitInp%WaveElevXY,DIM=2)
+         WRITE (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) HDynInitInp%WaveElevXY(1,J),&
+                  HDynInitInp%WaveElevXY(2,J),HDynInitOut%WaveElevSeries(I,J)
+      ENDDO
+
+   ENDDO
+
+      ! Done.  Close the file
+   CLOSE (WaveElevFileUn) 
+
+END SUBROUTINE WaveElevGrid_Output
+ 
+
 
 subroutine print_help()
     print '(a)', 'usage: '

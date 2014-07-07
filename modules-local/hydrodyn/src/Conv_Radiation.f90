@@ -23,8 +23,8 @@
 ! limitations under the License.
 !    
 !**********************************************************************************************************************************
-! File last committed: $Date: 2013-10-01 10:10:48 -0600 (Tue, 01 Oct 2013) $
-! (File) Revision #: $Rev: 242 $
+! File last committed: $Date: 2014-05-27 15:11:50 -0600 (Tue, 27 May 2014) $
+! (File) Revision #: $Rev: 399 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/Conv_Radiation.f90 $
 !**********************************************************************************************************************************
 MODULE Conv_Radiation
@@ -41,7 +41,7 @@ MODULE Conv_Radiation
 
 
 !   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in Conv_Rdtn_Pack)
-   TYPE(ProgDesc), PARAMETER            :: Conv_Rdtn_ProgDesc = ProgDesc( 'Conv_Radiation', '(v1.00.00, 06-December-2012)', '05-Mar-2013' )
+   TYPE(ProgDesc), PARAMETER            :: Conv_Rdtn_ProgDesc = ProgDesc( 'Conv_Radiation', 'v1.00.00', '05-Mar-2013' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -75,7 +75,7 @@ CONTAINS
 SUBROUTINE ShiftValuesLeft(XDHistory, NSteps)
 ! This routine shifts every entry in XDHistory such that XDHistory(K+1,I) is now stored in XDHistory(K,I)
 !
-      REAL(ReKi),      INTENT(INOUT)  :: XDHistory (:,:)                        ! The time history of the 3 components of the translational velocity        (in m/s)        of the platform reference and the 3 components of the rotational (angular) velocity  (in rad/s)        of the platform relative to the inertial frame
+      REAL(ReKi),      INTENT(INOUT)  :: XDHistory (:,:)                        ! The time history of the 3 components of the translational velocity        (in m/s)        of the WAMIT reference and the 3 components of the rotational (angular) velocity  (in rad/s)        of the platform relative to the inertial frame
       INTEGER(IntKi),  INTENT(IN   )  :: NSteps                                 ! Number of elements in the array
       
       INTEGER(IntKi)                  :: I
@@ -168,6 +168,11 @@ RdtnFrmAM = .FALSE.
       END IF
       
       
+      
+
+      u%Velocity = 0.0 !this is an initial guess;  
+      
+   
          ! Perform some initialization computations including calculating the total
          !   number of frequency components = total number of time steps in the wave,
          !   radiation kernel, calculating the frequency step, and ALLOCATing the
@@ -379,23 +384,23 @@ RdtnFrmAM = .FALSE.
 
       END IF
      
-      IF ( InitInp%UnSum > 0 ) THEN
-      
-         ! Write the header for this section
-      WRITE( InitInp%UnSum,  '(//)' ) 
-      WRITE( InitInp%UnSum,  '(A)' ) 'Radiation memory effect kernel'
-      WRITE( InitInp%UnSum,  '(//)' ) 
-      WRITE( InitInp%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
-      WRITE( InitInp%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
-
-         ! Write the data
-      DO I = 0,p%NStepRdtn-1
-   
-               WRITE( InitInp%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%RdtnDT, p%RdtnKrnl(I,1,1), p%RdtnKrnl(I,1,2), p%RdtnKrnl(I,1,3), p%RdtnKrnl(I,1,4), p%RdtnKrnl(I,1,5), p%RdtnKrnl(I,1,6), p%RdtnKrnl(I,2,2), p%RdtnKrnl(I,2,3), p%RdtnKrnl(I,2,4), p%RdtnKrnl(I,2,5), p%RdtnKrnl(I,2,6), p%RdtnKrnl(I,3,3), p%RdtnKrnl(I,3,4), p%RdtnKrnl(I,3,5), p%RdtnKrnl(I,3,6), p%RdtnKrnl(I,4,4), p%RdtnKrnl(I,4,5), p%RdtnKrnl(I,4,6), p%RdtnKrnl(I,5,5), p%RdtnKrnl(I,5,6), p%RdtnKrnl(I,6,6)
-      
-      END DO
-
-   END IF
+   !   IF ( InitInp%UnSum > 0 ) THEN
+   !   
+   !      ! Write the header for this section
+   !   WRITE( InitInp%UnSum,  '(//)' ) 
+   !   WRITE( InitInp%UnSum,  '(A)' ) 'Radiation memory effect kernel'
+   !   WRITE( InitInp%UnSum,  '(//)' ) 
+   !   WRITE( InitInp%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
+   !   WRITE( InitInp%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
+   !
+   !      ! Write the data
+   !   DO I = 0,p%NStepRdtn-1
+   !
+   !            WRITE( InitInp%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%RdtnDT, p%RdtnKrnl(I,1,1), p%RdtnKrnl(I,1,2), p%RdtnKrnl(I,1,3), p%RdtnKrnl(I,1,4), p%RdtnKrnl(I,1,5), p%RdtnKrnl(I,1,6), p%RdtnKrnl(I,2,2), p%RdtnKrnl(I,2,3), p%RdtnKrnl(I,2,4), p%RdtnKrnl(I,2,5), p%RdtnKrnl(I,2,6), p%RdtnKrnl(I,3,3), p%RdtnKrnl(I,3,4), p%RdtnKrnl(I,3,5), p%RdtnKrnl(I,3,6), p%RdtnKrnl(I,4,4), p%RdtnKrnl(I,4,5), p%RdtnKrnl(I,4,6), p%RdtnKrnl(I,5,5), p%RdtnKrnl(I,5,6), p%RdtnKrnl(I,6,6)
+   !   
+   !   END DO
+   !
+   !END IF
                 
                                                   
       IF ( ALLOCATED( RdtnTime     ) ) DEALLOCATE( RdtnTime     )
@@ -405,16 +410,13 @@ RdtnFrmAM = .FALSE.
          ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
          !   this module must be called here:
          
-      Interval = p%RdtnDT                                              
+   Interval = p%RdtnDT                                              
 
-!bjj: initialized these    >>>>>   
-   u%Velocity = 0.0 !this is an initial guess;   
-   
    OtherState%LastIndRdtn = 0
    OtherState%LastIndRdtn2 = 0
    OtherState%IndRdtn = 0
    
-   ! these don't matter, but I don't like seeing the compilation warning in IVF:
+      ! these don't matter, but I don't like seeing the compilation warning in IVF:
    x%DummyContState = 0.0
    z%DummyConstrState = 0.0
    y%F_Rdtn = 0.0  
@@ -748,7 +750,7 @@ SUBROUTINE Conv_Rdtn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt,
       
          ! Compute the first time derivatives of the continuous states here:
       
-      dxdt%DummyContState = 0
+      dxdt%DummyContState = 0.0
          
 
 END SUBROUTINE Conv_Rdtn_CalcContStateDeriv
@@ -794,7 +796,7 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrSt
       RdtnRmndr    = Time - ( OtherState%IndRdtn*p%RdtnDT ) ! = Time - RdtnTime(IndRdtn); however, RdtnTime(:) has a maximum index of NStepRdtn-1
 
          ! This subroutine can only be called at integer multiples of p%RdtnDT, if RdtnRmdr > 0, then this requirement has been violated!
-      IF (RdtnRmndr > EPSILON(0.0) ) THEN
+      IF (RdtnRmndr > EPSILON(0.0_ReKi) ) THEN
          ErrStat = ErrID_FATAL         
          ErrMsg  = "Conv_Rdtn_UpdateDiscState() must be called at integer multiples of the radiation timestep."
          RETURN
@@ -1008,7 +1010,7 @@ END SUBROUTINE Conv_Rdtn_CalcConstrStateResidual
 !
 !         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
 !
-!         dYdx%DummyOutput%DummyContState = 0
+!         dYdx%DummyOutput%DummyContState = 0.0
 !
 !      END IF
 !      
@@ -1016,7 +1018,7 @@ END SUBROUTINE Conv_Rdtn_CalcConstrStateResidual
 !      
 !         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
 !      
-!         dXdx%DummyContState%DummyContState = 0
+!         dXdx%DummyContState%DummyContState = 0.0
 !
 !      END IF
 !      
@@ -1024,7 +1026,7 @@ END SUBROUTINE Conv_Rdtn_CalcConstrStateResidual
 !
 !         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
 !
-!         dXddx%DummyDiscState%DummyContState = 0
+!         dXddx%DummyDiscState%DummyContState = 0.0
 !         
 !      END IF
 !      
@@ -1033,7 +1035,7 @@ END SUBROUTINE Conv_Rdtn_CalcConstrStateResidual
 !
 !         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
 !      
-!         dZdx%DummyConstrState%DummyContState = 0
+!         dZdx%DummyConstrState%DummyContState = 0.0
 !
 !      END IF
 !      

@@ -10,8 +10,8 @@
 # column  9: Description
 # column 10: Units
 ###################################################################################################################################
-# File last committed: $Date: 2013-09-21 22:50:10 -0600 (Sat, 21 Sep 2013) $
-# (File) Revision #: $Rev: 198 $
+# File last committed: $Date: 2014-05-27 21:42:13 -0600 (Tue, 27 May 2014) $
+# (File) Revision #: $Rev: 400 $
 # URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/SS_Radiation.txt $
 ###################################################################################################################################
 
@@ -22,7 +22,6 @@ typedef   ^              InitOutputType CHARACTER(10)    WriteOutputHdr  {7} - -
 typedef   ^              InitOutputType CHARACTER(10)    WriteOutputUnt  {7} - -  "Units of the output" -
 
 typedef   ^              ContinuousStateType ReKi     x             {:}{:} - -  "Continuous States" -
-typedef   ^              ContinuousStateType ReKi     DummyContState   - - -  "Dummy constant" -
 
 
 typedef   ^              DiscreteStateType   ReKi     DummyDiscState - - -  "" -
@@ -33,9 +32,8 @@ typedef   ^              ConstraintStateType ReKi     DummyConstrState - - - "" 
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes
 #   at a given time, etc.)
-typedef   ^              OtherStateType      IntKi    Step - - - "Current Time step" -
-typedef   ^              ^                   DbKi   LastTime - - - "Last Time step" -
-typedef   ^              ^                   ReKi   dxdt {:}{:} - - "Old Values of dxdt to used by the solver" -
+typedef   ^              OtherStateType           IntKi                        n     -  - - "Current Time step" -
+typedef   ^              ^                        SS_Rad_ContinuousStateType   xdot {4} - - "Old Values of dxdt to used by the solver (multistep method)" -
 
 # ..... Parameters .........................
 # Define parameters here:
@@ -50,7 +48,6 @@ typedef   ^               ^            INTEGER  N       -     - - "Number of sta
 # ..... Inputs .............................
 # Define inputs that are contained on the mesh here:
 typedef   ^             InputType      ReKi dq {6}{1} - -   "Body velocities" -
-typedef   ^             ^              ReKi DummyInput - - -   "Dummy" -
 
 
 # ..... Outputs ............................

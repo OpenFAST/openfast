@@ -23,8 +23,8 @@
 ! limitations under the License.
 !    
 !**********************************************************************************************************************************
-! File last committed: $Date: 2013-09-25 10:41:32 -0600 (Wed, 25 Sep 2013) $
-! (File) Revision #: $Rev: 209 $
+! File last committed: $Date: 2014-06-25 13:38:20 -0600 (Wed, 25 Jun 2014) $
+! (File) Revision #: $Rev: 451 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/Waves.f90 $
 !**********************************************************************************************************************************
 MODULE Waves
@@ -38,7 +38,7 @@ MODULE Waves
    PRIVATE
 
 !   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in Waves_Pack)
-   TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', '(v1.00.01, 19-October-2012)', '05-Mar-2013' )
+   TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', 'v1.00.02', '22-Jun-2014' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -66,11 +66,12 @@ MODULE Waves
    !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
    !                                                 !   states (z)
    
+   PUBLIC :: InterpWrappedStpReal
    
    PRIVATE:: WheelerStretching                    ! This FUNCTION applies the principle of Wheeler stretching to (1-Forward) find the elevation where the wave kinematics are to be applied using Wheeler stretching or (2-Backword)   
    PRIVATE:: BoxMuller
    PRIVATE:: JONSWAP
-   PRIVATE:: WaveNumber
+   PUBLIC :: WaveNumber
    PRIVATE:: UserWaveSpctrm   
    PRIVATE:: StillWaterWaves_Init
    PRIVATE:: VariousWaves_Init
@@ -78,6 +79,53 @@ MODULE Waves
   ! PRIVATE:: WhiteNoiseWaves_Init
 
 CONTAINS
+
+  !=======================================================================
+   FUNCTION InterpWrappedStpReal( XValIn, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
+      ! It is assumed that XAry is sorted in ascending order.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is REAL.
+
+
+      ! Function declaration.
+
+   REAL(ReKi)                   :: InterpWrappedStpReal                                   ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+   REAL(ReKi)                   :: XVal                                           ! X value to be interpolated.
+   
+   
+   
+      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
+   XVal = MOD(XValIn, XAry(AryLen))
+
+      ! Set the Ind to the first index if we are at the beginning of XAry
+   IF ( XVal <= XAry(2) )  THEN  
+      Ind           = 1
+   END IF
+   
+   InterpWrappedStpReal = InterpStpReal( XVal, XAry, YAry, Ind, AryLen )
+   
+   
+   END FUNCTION InterpWrappedStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
+!=======================================================================
 
    FUNCTION WavePkShpDefault ( Hs, Tp )
 
@@ -474,8 +522,8 @@ CONTAINS
 
          ! Compute the hyperbolic numerator over denominator:
 
-!bjj: should this be compared with epsilon instead of 0.0 to avoid numerical instability?
-      IF (     k   == 0.0  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
+
+      IF (   k  < EPSILON(0.0_ReKi)  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
 
          COSHNumOvrSINHDen = HUGE( k )
 
@@ -579,6 +627,10 @@ CONTAINS
       
       
       
+
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !SUBROUTINE WhiteNoiseWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )    
 !! This routine initializes the waves data for WaveMod = 5 , or white noise waves option
@@ -609,10 +661,12 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
       ! Local Variables
    INTEGER                      :: J                                               ! Generic index
+   INTEGER(IntKi)                :: ErrStatTmp                    ! Temporary error status
    
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
+   ErrStatTmp  =  ErrID_None
    ErrMsg  = "" 
    
    
@@ -621,51 +675,28 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%NStepWave  = 2                ! We must have at least two elements in order to interpolate later on
       InitOut%NStepWave2 = 1
 
-      ALLOCATE ( InitOut%WaveTime      (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg =' Error allocating memory for the WaveTime array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+      ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveElevC0    (2, 0:InitOut%NStepWave2                  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg =' Error allocating memory for the WaveElevC0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF   
+      ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveElev      (0:InitOut%NStepWave-1,InitInp%NWaveElev  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg =' Error allocating memory for the WaveElev array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+      ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NWaveElev  ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveDynP0     (0:InitOut%NStepWave-1,InitInp%NWaveKin0  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg =' Error allocating memory for the WaveDynP0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+      ALLOCATE ( InitOut%WaveDynP0  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,'StillWaterWaves_Init')
 
+      ALLOCATE ( InitOut%WaveVel0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveVel0      (0:InitOut%NStepWave-1,InitInp%NWaveKin0,3) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg =' Error allocating memory for the WaveVel0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+      ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveAcc0      (0:InitOut%NStepWave-1,InitInp%NWaveKin0,3) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg =' Error allocating memory for the WaveAcc0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+      IF ( ErrStat >= AbortErrLev ) RETURN 
 
       InitOut%WaveDOmega = 0.0
-      InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi /)   ! We must have at least two different time steps in the interpolation
+      InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
       InitOut%WaveElevC0(1,0) = 0.0
       InitOut%WaveElevC0(2,0) = 0.0
       InitOut%WaveElev   = 0.0
@@ -699,21 +730,24 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
    
    ! Local Variables
-   COMPLEX(ReKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                         ! The imaginary number, SQRT(-1.0)
+   COMPLEX(ReKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                            ! The imaginary number, SQRT(-1.0)
    COMPLEX(ReKi)                :: ImagOmega                                       ! = ImagNmbr*Omega (rad/s)
-   REAL(ReKi), ALLOCATABLE      :: WaveElev0  (:)                            ! Instantaneous elevation of incident waves at the platform reference point (meters)
-      
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0HPz0 (:)                              ! Partial derivative of WaveAccC0H (:) with respect to zi at zi = 0 (1/s^2) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:)                              ! Partial derivative of WaveAccC0V (:) with respect to zi at zi = 0 (1/s^2) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveDynPC0BPz0(:)                              ! Partial derivative of WaveDynPC0B(:) with respect to zi at zi = 0 (N/m  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0HPz0 (:)                              ! Partial derivative of WaveVelC0H (:) with respect to zi at zi = 0 (1/s  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0VPz0 (:)                              ! Partial derivative of WaveVelC0V (:) with respect to zi at zi = 0 (1/s  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0H(:,:)                                 ! Discrete Fourier transform of the instantaneous horizontal acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveDynPC0(:,:)                                 ! Discrete Fourier transform of the instantaneous dynamic pressure        of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+   REAL(ReKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2) 
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2) 
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2) 
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveDynPC0BPz0(:)                              ! Partial derivative of WaveDynPC0B (:) with respect to zi at zi = 0 (N/m  ) 
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0HxiPz0 (:)                            ! Partial derivative of WaveVelC0Hxi(:) with respect to zi at zi = 0 (1/s  ) 
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0HyiPz0 (:)                            ! Partial derivative of WaveVelC0Hyi(:) with respect to zi at zi = 0 (1/s  ) 
+   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0VPz0 (:)                              ! Partial derivative of WaveVelC0V  (:) with respect to zi at zi = 0 (1/s  ) 
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveDynPC0(:,:)                                 ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
    COMPLEX(ReKi), ALLOCATABLE   :: WaveElevC (:,:)                                 ! Discrete Fourier transform of the instantaneous elevation of incident waves (meters)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0H(:,:)                                 ! Discrete Fourier transform of the instantaneous horizontal velocity     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   velocity     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
    COMPLEX(ReKi)                :: WGNC                                            ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
    REAL(ReKi)                   :: CurrVxi                                         ! xi-component of the current velocity at the instantaneous elevation (m/s)
    REAL(ReKi)                   :: CurrVyi                                         ! yi-component of the current velocity at the instantaneous elevation (m/s)
@@ -721,41 +755,47 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(ReKi)                   :: CurrVyi0                                        ! yi-component of the current velocity at zi =  0.0 meters            (m/s)
    REAL(ReKi)                   :: CurrVxiS                                        ! xi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
    REAL(ReKi)                   :: CurrVyiS                                        ! yi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
-   REAL(ReKi)                   :: CWaveDir                                        ! COS( WaveDir )
+   REAL(ReKi), ALLOCATABLE      :: CosWaveDir(:)                                   ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
    REAL(ReKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
    REAL(ReKi), ALLOCATABLE      :: GHWaveDynP(:  )                                 ! Instantaneous dynamic pressure of incident waves                                                            at each of the GHNWvDpth vertical locations in GH Bladed wave data files (N/m^2)
    REAL(ReKi)                   :: GHWaveTime                                      ! Instantaneous simulation times in GH Bladed wave data files (sec)
    REAL(ReKi), ALLOCATABLE      :: GHWaveVel (:,:)                                 ! Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s  )
    REAL(ReKi), ALLOCATABLE      :: GHWvDpth  (:)                                   ! Vertical locations in GH Bladed wave data files.
-   !REAL(ReKi), PARAMETER        :: n_Massel = 3.0                                  ! Factor used to the scale the peak spectral frequency in order to find the cut-off frequency based on the suggestion in: Massel, S. R., Ocean Surface Waves: Their Physics and Prediction, Advanced Series on Ocean Engineering - Vol. 11, World Scientific Publishing, Singapore - New Jersey - London - Hong Kong, 1996.  This reference recommends n_Massel > 3.0 (higher for higher-order wave kinemetics); the ">" designation is accounted for by checking if ( Omega > OmegaCutOff ).
+!UNUSED:   !REAL(ReKi), PARAMETER        :: n_Massel = 3.0                                  ! Factor used to the scale the peak spectral frequency in order to find the cut-off frequency based on the suggestion in: Massel, S. R., Ocean Surface Waves: Their Physics and Prediction, Advanced Series on Ocean Engineering - Vol. 11, World Scientific Publishing, Singapore - New Jersey - London - Hong Kong, 1996.  This reference recommends n_Massel > 3.0 (higher for higher-order wave kinemetics); the ">" designation is accounted for by checking if ( Omega > OmegaCutOff ).
    REAL(ReKi)                   :: Omega                                           ! Wave frequency (rad/s)
-   !REAL(ReKi)                   :: OmegaCutOff                                     ! Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s)
+!UNUSED:   !REAL(ReKi)                   :: OmegaCutOff                                     ! Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s)
    REAL(ReKi)                   :: PCurrVxiPz0                                     ! Partial derivative of CurrVxi        with respect to zi at zi = 0 (1/s  )
    REAL(ReKi)                   :: PCurrVyiPz0                                     ! Partial derivative of CurrVyi        with respect to zi at zi = 0 (1/s  )
-   REAL(ReKi), ALLOCATABLE      :: PWaveAcc0HPz0  (:)                              ! Partial derivative of WaveAcc0H  (:) with respect to zi at zi = 0 (1/s^2)
+   REAL(ReKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
+   REAL(ReKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
    REAL(ReKi), ALLOCATABLE      :: PWaveAcc0VPz0  (:)                              ! Partial derivative of WaveAcc0V  (:) with respect to zi at zi = 0 (1/s^2)
    REAL(ReKi), ALLOCATABLE      :: PWaveDynP0BPz0 (:)                              ! Partial derivative of WaveDynP0B (:) with respect to zi at zi = 0 (N/m  ) 
-   REAL(ReKi), ALLOCATABLE      :: PWaveVel0HPz0  (:)                              ! Partial derivative of WaveVel0H  (:) with respect to zi at zi = 0 (1/s  )
    REAL(ReKi), ALLOCATABLE      :: PWaveVel0HxiPz0(:)                              ! Partial derivative of WaveVel0Hxi(:) with respect to zi at zi = 0 (1/s  )
    REAL(ReKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
    REAL(ReKi), ALLOCATABLE      :: PWaveVel0VPz0  (:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
    REAL(ReKi)                   :: Slope                                           ! Miscellanous slope used in an interpolation (-)
    REAL(ReKi), PARAMETER        :: SmllNmbr  = 9.999E-4                            ! A small number representing epsilon for taking numerical derivatives.
    REAL(ReKi)                   :: SQRTNStepWave2                                  ! SQRT( NStepWave/2 )
-   REAL(ReKi)                   :: SWaveDir                                        ! SIN( WaveDir )
-   REAL(ReKi), ALLOCATABLE      :: WaveAcc0H (:,:)                                 ! Instantaneous horizontal acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   REAL(ReKi)                   :: WaveAcc0HExtrap                                 ! Temporary value extrapolated from the WaveAcc0H  (:,:) array (m/s^2)
-   REAL(ReKi)                   :: WaveAcc0HInterp                                 ! Temporary value interpolated from the WaveAcc0H  (:,:) array (m/s^2)
+   REAL(ReKi), ALLOCATABLE      :: SinWaveDir     (:)                              ! SIN( WaveDirArr(I) )
+   REAL(ReKi), ALLOCATABLE      :: WaveAcc0Hxi (:,:)                               ! Instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(ReKi), ALLOCATABLE      :: WaveAcc0Hyi (:,:)                               ! Instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+!UNUSED:  for future wave stretching
+!   REAL(ReKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
+!   REAL(ReKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
+!   REAL(ReKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
+!   REAL(ReKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
    REAL(ReKi), ALLOCATABLE      :: WaveAcc0V (:,:)                                 ! Instantaneous vertical   acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   REAL(ReKi)                   :: WaveAcc0VExtrap                                 ! Temporary value extrapolated from the WaveAcc0V  (:,:) array (m/s^2)
-   REAL(ReKi)                   :: WaveAcc0VInterp                                 ! Temporary value interpolated from the WaveAcc0V  (:,:) array (m/s^2)
+!UNUSED:  for future wave stretching
+!   REAL(ReKi)                   :: WaveAcc0VExtrap                                 ! Temporary value extrapolated from the WaveAcc0V  (:,:) array (m/s^2)
+!   REAL(ReKi)                   :: WaveAcc0VInterp                                 ! Temporary value interpolated from the WaveAcc0V  (:,:) array (m/s^2)
    REAL(ReKi), ALLOCATABLE      :: WaveDynP0B(:,:)                                 ! Instantaneous dynamic pressure        of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
-   REAL(ReKi)                   :: WaveDynP0BExtrap                                ! Temporary value extrapolated from the WaveDynP0B (:,:) array (N/m^2)
-   REAL(ReKi)                   :: WaveDynP0BInterp                                ! Temporary value interpolated from the WaveDynP0B (:,:) array (N/m^2)
+!UNUSED:  for future wave stretching
+!   REAL(ReKi)                   :: WaveDynP0BExtrap                                ! Temporary value extrapolated from the WaveDynP0B (:,:) array (N/m^2)
+!   REAL(ReKi)                   :: WaveDynP0BInterp                                ! Temporary value interpolated from the WaveDynP0B (:,:) array (N/m^2)
    REAL(ReKi)                   :: WaveElev_Max                                    ! Maximum expected value of the instantaneous elevation of incident waves (meters)
    REAL(ReKi)                   :: WaveElev_Min                                    ! Minimum expected value of the instantaneous elevation of incident waves (meters)
    REAL(ReKi), ALLOCATABLE      :: WaveElevxiPrime(:)                              ! Locations along the wave heading direction for points where the incident wave elevations can be output (meters)
-   REAL(ReKi)                   :: WaveElevxiPrime0
+   COMPLEX(ReKi)                :: WaveElevxiPrime0
    REAL(ReKi), ALLOCATABLE      :: WaveKinzi0Prime(:)                              ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
    INTEGER   , ALLOCATABLE      :: WaveKinPrimeMap(:)
    REAL(ReKi), ALLOCATABLE      :: WaveKinzi0St   (:)                              ! Array of elevations found by stretching the elevations in the WaveKinzi0Prime(:) array using the instantaneous wave elevation; these are relative to the mean see level (meters)
@@ -763,16 +803,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(ReKi)                   :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    REAL(ReKi)                   :: WaveS2Sdd                                       ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    REAL(DbKi)                   :: WaveTMax                                        ! Analysis time for incident wave calculations (sec)
-   REAL(ReKi), ALLOCATABLE      :: WaveVel0H (:,:)                                 ! Instantaneous horizontal   velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
    REAL(ReKi), ALLOCATABLE      :: WaveVel0Hxi    (:,:)                            ! Instantaneous xi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
-   REAL(ReKi)                   :: WaveVel0HxiExtrap                               ! Temporary value extrapolated from the WaveVel0Hxi(:,:) array (m/s  )
-   REAL(ReKi)                   :: WaveVel0HxiInterp                               ! Temporary value interpolated from the WaveVel0Hxi(:,:) array (m/s  )
+!UNUSED:  for future wave stretching
+!   REAL(ReKi)                   :: WaveVel0HxiExtrap                               ! Temporary value extrapolated from the WaveVel0Hxi(:,:) array (m/s  )
+!   REAL(ReKi)                   :: WaveVel0HxiInterp                               ! Temporary value interpolated from the WaveVel0Hxi(:,:) array (m/s  )
    REAL(ReKi), ALLOCATABLE      :: WaveVel0Hyi    (:,:)                            ! Instantaneous yi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
-   REAL(ReKi)                   :: WaveVel0HyiExtrap                               ! Temporary value extrapolated from the WaveVel0Hyi(:,:) array (m/s  )
-   REAL(ReKi)                   :: WaveVel0HyiInterp                               ! Temporary value interpolated from the WaveVel0Hyi(:,:) array (m/s  )
+!UNUSED:  for future wave stretching
+!   REAL(ReKi)                   :: WaveVel0HyiExtrap                               ! Temporary value extrapolated from the WaveVel0Hyi(:,:) array (m/s  )
+!   REAL(ReKi)                   :: WaveVel0HyiInterp                               ! Temporary value interpolated from the WaveVel0Hyi(:,:) array (m/s  )
    REAL(ReKi), ALLOCATABLE      :: WaveVel0V (:,:)                                 ! Instantaneous vertical     velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
-   REAL(ReKi)                   :: WaveVel0VExtrap                                 ! Temporary value extrapolated from the WaveVel0V  (:,:) array (m/s  )
-   REAL(ReKi)                   :: WaveVel0VInterp                                 ! Temporary value interpolated from the WaveVel0V  (:,:) array (m/s  )
+!UNUSED:  for future wave stretching
+!   REAL(ReKi)                   :: WaveVel0VExtrap                                 ! Temporary value extrapolated from the WaveVel0V  (:,:) array (m/s  )
+!   REAL(ReKi)                   :: WaveVel0VInterp                                 ! Temporary value interpolated from the WaveVel0V  (:,:) array (m/s  )
    REAL(ReKi)                   :: zi_Max                                          ! Maximum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
    REAL(ReKi)                   :: zi_Min                                          ! Minimum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
    REAL(ReKi)                   :: ziPrime_Max                                     ! Maximum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
@@ -792,17 +834,50 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER                      :: NWaveKin0Prime                                  ! Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
    INTEGER,    ALLOCATABLE      :: TmpWaveSeeds   (:)                              ! A temporary array used for portability. IVF/CVF use a random number generator initialized with 2 seeds; other platforms can use different implementations (e.g. gfortran needs 8 or 12 seeds)
    COMPLEX(ReKi)                :: tmpComplex                                      ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
-   COMPLEX(ReKi),ALLOCATABLE    ::tmpComplexArr(:)
+   COMPLEX(ReKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use. 
    TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
 
+      ! Variables for mult-direction waves
+   INTEGER(IntKi)               :: WaveNDirMax                                     !< Maximum value we can change WaveNDir to (relative to original value passed in). Used in finding new WaveNDir value.
+   INTEGER(IntKi)               :: WvSpreadNDir                                    !< Number of wave spreading directions for intermediate calculations.  Set later to be MAX(15*InitOut%WaveNDir,1000)
+   INTEGER(IntKi)               :: WvSpreadFreqPerDir                              !< Number of wave frequencies per direction
+   REAL(ReKi),    ALLOCATABLE   :: WvSpreadCos2SArr(:)                             !< Wave spreading function results array.  Used in equal energy wave spreading function.
+   REAL(ReKi)                   :: WvSpreadCos2SConst                              !< Normalization constant for wave spreading function.
+   REAL(ReKi),    ALLOCATABLE   :: WvSpreadIntegral(:)                             !< Cumulative integral of the wave spreading function.  Used in finding equal energy wave directions.
+   REAL(ReKi)                   :: WvSpreadDTheta                                  !< Wave direction step size for intermediate calculations.  Used in finding equal energy wave directions.
+   REAL(ReKi),    ALLOCATABLE   :: WvSpreadThetas(:)                               !< Wave direction used in calculations and interpolations
+   REAL(ReKi),    ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions 
+   REAL(ReKi),    ALLOCATABLE   :: WvTheta(:)                                      !< Final set of wave directions (degrees)
+   REAL(ReKi)                   :: WvSpreadIntegralTmp                             !< Temporary variable for the interpolation
+
    
+      ! Variables for error handling
+   INTEGER(IntKi)               :: ErrStatTmp                                      !< Temporary error status
+   CHARACTER(1024)              :: ErrMsgTmp                                       !< Temporary error message
+   CHARACTER(1024)              :: ErrMsgTmp2                                      !< Another temporary error message
+
+
+
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
+   ErrStatTmp  = ErrID_None
    ErrMsg  = "" 
+   ErrMsgTmp   =  ""
    
+      !  Set the WaveNDir information (number of wave directions).
+      !     -> Since this must be adjusted later, put it in InitOut first and adjust that later in the code.
+   InitOut%WaveNDir  = InitInp%WaveNDir
+   InitOut%WaveDir   = InitInp%WaveDir                         ! We may want this value later (I had a nasty surprise when this wasn't set)
+   WaveNDirMax       = CEILING(InitOut%WaveNDir*1.25_ReKi)     ! Value we allow WaveNDir to reach before aborting
+
    
+
+!FIXME: what does this comment go to now?  It appears to have gotten separated from its source code.
    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, or user-defined spectrum (irregular) wave.
+
+
+
 
          ! Tell our nice users what is about to happen that may take a while:
 
@@ -810,29 +885,24 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
 
-      ! Calculate the locations of the points along the wave heading direction
-      !   where the incident wave elevations can be output:
 
-      CWaveDir  = COS( D2R*InitInp%WaveDir )
-      SWaveDir  = SIN( D2R*InitInp%WaveDir )
+
      ! IF ( InitInp%NWaveElev > 0 ) THEN
-         ALLOCATE ( WaveElevxiPrime (InitInp%NWaveElev) , STAT=ErrStat )
-         IF ( ErrStat /= ErrID_None )  THEN
-            ErrMsg  = ' Error allocating memory for the WaveElevxiPrime array.'
-            ErrStat = ErrID_Fatal
+         ALLOCATE ( WaveElevxiPrime (InitInp%NWaveElev) , STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevxiPrime.',ErrStat,ErrMsg,'VariousWaves_Init')
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
             RETURN
          END IF
 
-         DO J = 1,InitInp%NWaveElev   ! Loop through all points where the incident wave elevations can be output
-            WaveElevxiPrime(J) = InitInp%WaveElevxi(J)*CWaveDir + InitInp%WaveElevyi(J)*SWaveDir
-         END DO                ! J - All points where the incident wave elevations can be output
+
       !END IF
 
 
 
       ! Determine the number of, NWaveKin0Prime, and the zi-coordinates for,
-      !   WaveKinzi0Prime(:), points along a vertical line passing through the
-      !   platform reference point where the incident wave kinematics will be
+      !   WaveKinzi0Prime(:), points where the incident wave kinematics will be
       !   computed before applying stretching to the instantaneous free surface.
       !   The locations are relative to the mean see level.  Also determine J_Min,
       !   which is the minimum value of index J such that WaveKinzi0(J) >=
@@ -866,19 +936,17 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! ALLOCATE the WaveKinzi0Prime(:) array and compute its elements here:
 
-         ALLOCATE ( WaveKinzi0Prime(NWaveKin0Prime) , STAT=ErrStat )
-         IF ( ErrStat /= ErrID_None )  THEN
-            ErrMsg  = ' Error allocating memory for the WaveKinzi0Prime array.'
-            ErrStat = ErrID_Fatal
+         ALLOCATE ( WaveKinzi0Prime(NWaveKin0Prime) , STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinzi0Prime.',ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ALLOCATE ( WaveKinPrimeMap(NWaveKin0Prime) , STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinPrimeMap.',ErrStat,ErrMsg,'VariousWaves_Init')
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
             RETURN
          END IF
          
-         ALLOCATE ( WaveKinPrimeMap(NWaveKin0Prime) , STAT=ErrStat )
-         IF ( ErrStat /= ErrID_None )  THEN
-            ErrMsg  = ' Error allocating memory for the WaveKinPrimeMap array.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
          
          I = 1
          
@@ -992,15 +1060,16 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       CALL RANDOM_SEED ( SIZE = nSeeds )
       
       IF ( nSeeds /= 2 ) THEN
-         CALL ProgWarn( ' The random number generator in use differs from the original code provided by NREL. This pRNG uses ' &
-                                  //TRIM(Int2LStr(nSeeds))//' seeds instead of the 2 in the HydroDyn input file.')
-         ErrStat = ErrID_Warn
+         ErrMsgTmp   = ' The random number generator in use differs from the original code provided by NREL. This pRNG uses ' &
+                                  //TRIM(Int2LStr(nSeeds))//' seeds instead of the 2 in the HydroDyn input file.'
+         ErrStatTmp  = ErrID_Warn
+         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
       END IF
 
-      ALLOCATE ( TmpWaveSeeds ( nSeeds ), STAT=ErrStat )
-      IF (ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating space for TmpWaveSeeds array.'
-         ErrStat = ErrID_Fatal
+      ALLOCATE ( TmpWaveSeeds ( nSeeds ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpWaveSeeds.',ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
          RETURN
       END IF   
 
@@ -1014,276 +1083,457 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                      
                   
       CALL RANDOM_SEED ( PUT=TmpWaveSeeds )
-      DEALLOCATE(TmpWaveSeeds, STAT=ErrStat)
-      IF (ErrStat /= ErrID_None ) THEN
-         CALL ProgWarn( ' Error deallocating space for TmpWaveSeeds array.' )
-         ErrStat = ErrID_Warn
+      DEALLOCATE(TmpWaveSeeds, STAT=ErrStatTmp)
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array TmpWaveSeeds.',ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
       END IF            
                   
-      InitOut%NStepWave  = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )                        ! Set NStepWave to an even integer
+
+         ! Set new value for NStepWave so that the FFT algorithms are efficient.  Note that if this method is changed, the method
+         ! used to calculate the number of multidirectional wave directions (WaveNDir) may need to be updated.
+
+      InitOut%NStepWave  = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )                       ! Set NStepWave to an even integer
       IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1        !   larger or equal to WaveTMax/WaveDT.
       InitOut%NStepWave2 = MAX( InitOut%NStepWave/2, 1 )                                     ! Make sure that NStepWave is an even product of small factors (PSF) that is
       InitOut%NStepWave  = 2*PSF ( InitOut%NStepWave2, 9 )                                   !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
 
       InitOut%NStepWave2 = InitOut%NStepWave/2                                               ! Update the value of NStepWave2 based on the value needed for NStepWave.
-      !TODO: Check if we need to store the new WaveTMax to the InitOut or p data structures!!
-      WaveTMax           = InitOut%NStepWave*InitInp%WaveDT                           ! Update the value of WaveTMax   based on the value needed for NStepWave.
+      WaveTMax           = InitOut%NStepWave*InitInp%WaveDT                                  ! Update the value of WaveTMax   based on the value needed for NStepWave.
+      InitOut%WaveTMax   = WaveTMax                                                          ! Update the value of WaveTMax in the output.  Needed by glue code later.
       SQRTNStepWave2 = SQRT( REAL( InitOut%NStepWave2, ReKi ) )                              ! Compute SQRT( NStepWave/2 ).
       InitOut%WaveDOmega = TwoPi/WaveTMax                                                    ! Compute the frequency step for incident wave calculations.
-      I_WaveTp           = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )         ! Compute the index of the frequency component nearest to WaveTp.
-      
-     ! The calculation below is from HD v1, but is now replaced by the user input WvLowCOff and WvHiCOff.  GJH 7/22/13
-     ! IF ( InitInp%WaveMod == 2 )  OmegaCutOff = n_Massel*TwoPi/InitInp%WaveTp        ! Compute the cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  The TwoPi/WaveTp is the peak spectral frequency in rad/s; the cut-off frequency is a factor of N_Massel above this value based on the suggestion in: Massel, S. R., Ocean Surface Waves: Their Physics and Prediction, Advanced Series on Ocean Engineering - Vol. 11, World Scientific Publishing, Singapore - New Jersey - London - Hong Kong, 1996.
-
-      ALLOCATE ( InitOut%WaveTime  (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveTime array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2                  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveElevC0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-      
-      ALLOCATE ( tmpComplexArr(0:InitOut%NStepWave2                  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the tmpComplexArr array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+      I_WaveTp           = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )                ! Compute the index of the frequency component nearest to WaveTp.
       
 
-      ALLOCATE ( WaveElevC         (0:InitOut%NStepWave2 ,InitInp%NWaveElev  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveElevC array.'
-         ErrStat = ErrID_Fatal
+
+         ! Allocate all the arrays we need.
+
+      ALLOCATE ( InitOut%WaveTime  (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2                ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( tmpComplexArr(0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array tmpComplexArr.',     ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveElevC         (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC.',         ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveDynPC0        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynPC0.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveVelC0Hxi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVelC0Hxi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveVelC0Hyi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVelC0Hyi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveVelC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVelC0V.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveAccC0Hxi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0Hxi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveAccC0Hyi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0Hyi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveAccC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0V.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynPC0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveVelC0HxiPz0  (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveVelC0HyiPz0  (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveAccC0HxiPz0  (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveAccC0HyiPz0  (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2                   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveElev0 (0:InitOut%NStepWave-1                          ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( InitOut%WaveElev  (0:InitOut%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveDynP0B        (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP0B.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveVel0Hxi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0Hxi.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveVel0Hyi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0Hyi.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveVel0V         (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0V.',         ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveAcc0Hxi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0Hxi.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveAcc0Hyi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0Hyi.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( WaveAcc0V         (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0V.',         ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynP0BPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0Pz0.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveAcc0HxiPz0   (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveAcc0HyiPz0   (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( InitOut%WaveDynP0 (0:InitOut%NStepWave,InitInp%NWaveKin0  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( InitOut%WaveVel0  (0:InitOut%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( InitOut%WaveAcc0  (0:InitOut%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ! Wave direction associated with each frequency
+      ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ! Arrays for the Sin and Cos of the wave direction for each frequency.  Used in calculating wave elevation, velocity, acceleration etc.
+      ALLOCATE ( CosWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array CosWaveDir.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+      ALLOCATE ( SinWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array SinWaveDir.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+
+         ! Now check if all the allocations worked properly
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
          RETURN
       END IF
 
-      ALLOCATE ( WaveDynPC0        (0:InitOut%NStepWave2 ,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveDynPC0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
 
-      ALLOCATE ( WaveVelC0H        (0:InitOut%NStepWave2 ,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVelC0H array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
+         ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
+         ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
+         ! is created with the first index corresponding to the timestep, and second index corresponding to the second
+         ! index of the WaveElevXY array.
+      IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
+         ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) THEN
+            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+      ENDIF
 
-      ALLOCATE ( WaveVelC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVelC0V array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveAccC0H        (0:InitOut%NStepWave2 ,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveAccC0H array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveAccC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveAccC0V array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2                     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveDynPC0BPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveVelC0HPz0    (0:InitOut%NStepWave2                     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveVelC0HPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2                     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveVelC0VPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveAccC0HPz0    (0:InitOut%NStepWave2                     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveAccC0HPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2                     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveAccC0VPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveElev0 (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveElev0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( InitOut%WaveElev  (0:InitOut%NStepWave-1,InitInp%NWaveElev  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveElev array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
       
-      ALLOCATE ( WaveDynP0B        (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveDynP0B array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveVel0H         (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVel0H array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveVel0Hxi       (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVel0Hxi array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveVel0Hyi       (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVel0Hyi array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveVel0V         (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVel0V array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveAcc0H         (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveAcc0H array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( WaveAcc0V         (0:InitOut%NStepWave-1,NWaveKin0Prime     ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveAcc0V array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-      
-      ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveDynP0BPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveVel0HPz0     (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveVel0HPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveVel0HxiPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveVel0HyiPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveVel0VPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveAcc0HPz0     (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveAcc0HPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the PWaveAcc0VPz0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( InitOut%WaveDynP0 (0:InitOut%NStepWave-1,InitInp%NWaveKin0  ) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveDynP0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( InitOut%WaveVel0  (0:InitOut%NStepWave-1,InitInp%NWaveKin0,3) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveVel0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ALLOCATE ( InitOut%WaveAcc0  (0:InitOut%NStepWave-1,InitInp%NWaveKin0,3) , STAT=ErrStat )
-      IF ( ErrStat /= ErrID_None )  THEN
-         ErrMsg  =' Error allocating memory for the WaveAcc0 array.'
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      ! Calculate the factors needed by the discrete time inverse Fourier
+!FIXME: Is this piece still needed?  If so, why is it commented out?
+     ! Calculate the factors needed by the discrete time inverse Fourier
       !   transform in the calculations of the White Gaussian Noise (WGN) and
       !   the two-sided power spectral density of the wave spectrum per unit time:
 
-    !  WGNC_Fact = SQRT( Pi/(InitOut%WaveDOmega*InitInp%WaveDT) )   ! This factor is needed by the discrete time inverse Fourier transform to ensure that the time series WGN process has unit variance
+         ! This factor is needed by the discrete time inverse Fourier transform to ensure that the time series WGN
+         ! process has unit variance
+    !  WGNC_Fact = SQRT( Pi/(InitOut%WaveDOmega*InitInp%WaveDT) )
+
+
+
+
+
+      !--------------------------------------------------------------------------------
+      !> #  Multi Directional Waves
+      !> ## Adjust WaveNDir
+      !!
+      !! If multi-directional waves will be used, the value of WaveNDir may need to be adjusted.  The reason is that
+      !! for the equal energy approach used here, the following condition must be met:
+      !!
+      !!       CONDITION:  (NStepWave2) / WaveNDir    must be an integer
+      !!
+      !! If this is true, then an equal number of frequencies is assigned to each of the WaveNDir directions which
+      !! gives the proper wave direction distribution function.  Otherwise, the energy distribution by direction
+      !! will not be correct.
+      !!
+      !! _WaveNDir_ could not be adjusted before _NStepWave2_ was finalized above.
+      !!
+      !! @note    Use the value of WaveNDir stored in InitOut since InitInp cannot be changed.
+      !!
+      !! @note    Originally, the criteria had been that (NStepWave2 - 1) / WaveNDir is an integer.  This criteria
+      !!          was relaxed by setting the direction for Omega = 0 (which has no amplitude) since it was found that
+      !!          (NStepWave2 - 1) is often a prime number due to how NStepWave is calculated above to be a product
+      !!          of smallish numbers.
+      
+      IF ( InitInp%WaveMultiDir ) THEN    ! Multi-directional waves in use
+
+            ! Check that the number of wave directions is a positive odd number.  In theory this has been
+            ! done before the Waves module was called.  We repeat it here in the event that the Waves module
+            ! gets used in some other code.
+            !  -> If it is less than 0, error out.
+            !  -> If it is even, we will increment it by 1.
+         IF ( InitOut%WaveNDir <= 0_IntKi ) THEN
+            ErrMsgTmp   = 'WaveNDir must be an odd number greater than 0.'
+            ErrStatTmp  = ErrID_Fatal
+            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+            RETURN
+         END IF
+
+         IF ( MODULO( InitOut%WaveNDir, 2_IntKi) == 0_IntKi ) THEN
+            InitOut%WaveNDir  = InitOut%WaveNDir + 1
+            ErrMsgTmp = 'WaveNDir must be odd.  Changing the value to '//TRIM(Num2LStr(InitOut%WaveNDir))
+            CALL SetErrStat(ErrID_Warn,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+         END IF
+
+            ! Now adjust WaveNDir as necessary so that (NStepWave2) / WaveNDir is integer
+         IF ( .NOT. EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
+                                     ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
+            DO WHILE ( InitOut%WaveNDir <= WaveNDirMax )
+
+               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_ReKi
+               IF ( EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
+                                     ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
+                  ErrMsgTmp   =  'Changed WaveNDir from '//TRIM(Num2LStr(InitInp%WaveNDir))//' to '//  &
+                                 TRIM(Num2LStr(InitOut%WaveNDir))//' so that an equal number of frequencies are assigned to '// &
+                                 'each direction.'
+                  CALL SetErrStat(ErrID_Warn,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+                  EXIT
+               END IF
+            END DO
+         END IF
+
+            ! If we exited because we hit a limit (in which case the condition is not satisfied), then we cannot continue.
+            ! We warn the user that a value for WaveNDir was not found, and that they should try a different value, or try
+            ! a different value for WaveTMax.  The reason for suggesting the latter is that NStepWave is derived from
+            ! WaveTMax and adjusted until it is a product of smallish numbers (most likely even, but not necessarily so).
+            ! So, there is a very small possibility then that NStepWave2 is a prime number, in which case we won't find a
+            ! value for WaveNDir, so we suggest that the user change WaveTMax.  To make this a little easier for the user,
+            ! we will report the first 5 possible values for WaveNDir between their requested value and 1/4 of NStepWave2,
+            ! if there are any.
+         IF ( .NOT.  EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
+                                      ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
+            ErrMsgTmp   = 'Could not find value for WaveNDir between '//TRIM(Num2LStr(InitInp%WaveNDir))//' and '// &
+                           TRIM(Num2LStr(WaveNDirMax))//' such that an equal number of frequencies are assigned to each '// &
+                           'direction.'
+            ErrStatTmp  = ErrID_Fatal
+
+            ! Now check for the possible values of WaveNDir so that we can tell the user about it.  The variable 'I' contains
+            ! the count of the number of values of WaveNDir found.
+            I = 0
+            ErrMsgTmp2 = 'The next values of WaveNDir that work with the selected values for WaveTMax and WaveDT:'
+            DO WHILE ( InitOut%WaveNDir <= INT(InitOut%NStepWave2/4.0) )
+               IF ( EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
+                                     ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
+                  ErrMsgTmp2  = TRIM(ErrMsgTmp2)//"  "//TRIM(Num2LStr(InitOut%WaveNDir))
+                  I = I + 1
+               END IF
+
+               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_ReKi
+
+               IF ( I >= 5 ) EXIT
+
+            END DO
+ 
+            ! If there were no additional values for WaveNDir found, I will be 0, so we rewrite the error message.
+            IF ( I == 0 ) THEN
+               ErrMsgTmp2  =  'There are no values for WaveNDir between '//TRIM(Num2LStr(WaveNDirMax))//' and '// &
+                              TRIM(Num2LStr(INT(InitOut%NStepWave2/4.0)))//' (4 frequencies per wave direction)'// &
+                              ' that will work with the selected values for WaveTMax ('//TRIM(Num2Lstr(InitOut%WaveTMax))// &
+                              ') and WaveDT ('//TRIM(Num2LStr(InitInp%WaveDT))//').  Change either'// &
+                              ' WaveTMax or WaveDT.'
+            ELSE
+               ErrMsgTmp2  = TRIM(ErrMsgTmp2)//'.'
+            ENDIF
+            
+            ! Append the message about the possible values for WaveNDir (if any were found) and set the error status before
+            ! returning to the calling program.
+            ErrMsgTmp   =  TRIM(ErrMsgTmp)//NewLine//' '//TRIM(ErrMsgTmp2)
+
+            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+            RETURN
+         END IF
+
+            ! Save the number of frequencies per direction so that we can use it later in assigning the directios.
+         WvSpreadFreqPerDir   =  (InitOut%NStepWave2)/InitOut%WaveNDir
+
+
+         !> ## Calculate the wave directions based on an equal energy approach.
+         !!
+         !! All the angles are supplied in degrees and are converted as needed.  For the cosine function,
+         !! we could convert degrees to radians, but the conversion constant cancels out.
+         !!
+         !! |  Variable          |  Fortran Name         |  Location |  Units       |   Description                                          |
+         !! | :----------------: | :-------------------: | :-------: | :--------:   | :----------------------------------------------------- |
+         !! | \f$\bar\theta\f$   | _WaveDir_             | _InitInp_ |  (degrees)   |  Mean direction heading (_WaveDir_)                    |
+         !! | \f$\Theta\f$       | _WaveNDir_            | _InitOut_ |  (-)         |  Number of wave directions                             |
+         !! | \f$\delta\theta\f$ | _WaveDirRange_        | _InitInp_ |  (degrees)   |  Full range of spreading function                      |
+         !! | \f$S\f$            | _WaveDirSpread_       | _InitInp_ |  (-)         |  The spreading coefficient                             |
+         !! |                    | _WvSpreadNDir_        |  local    |  (-)         |  Number of angles discretizing the spreading function  |
+         !! | \f$C\f$            | _WvSpreadCos2SConst_  |  local    |  (1/degrees) |  The normalization coefficient                         |
+         !! |                    | _WvTheta_             |  local    |  (degrees)   |  The interpolated wave directions to assign to         |
+         !! | \f$\theta_i\f$     | _WvSpreadThetas_      |  local    |  (degrees)   |  Array of wave directions associated with _WvSpreadIntegral_ |
+         !! |                    | _D2R_                 |  global   | (rad/degree) |  Constant from library to convert degrees to radians   |
+         !!
+         !! The equal energy approach is used to set the wave directions such that each direction has the same
+         !! number of frequencies.  To ensure that direction spreading function (Cosine^2S in this case) has
+         !! the correct overal energy distribution shape, the wave directions are adjusted.  The spacing between
+         !! directions is closer near the central direction than in the tails of the spreading function.  The
+         !! method distributes the wave directions so that the energy integral between wave directions is kept
+         !! constant.  The following steps are taken:
+         !!
+         !! 1. Discretize the spreading function over the range _InitInp%WaveDirRange_ into _WvSpreadNDir_.
+         !!
+         !! 2. Calculate the spreading function, _WvSpreadCos2SArr_, in the range.\n
+         !!          \f$ D(\theta) = C \left| \cos\left(\frac{\pi (\theta-\bar\theta)}{\delta\theta}\right)\right|^{2S} \f$\n
+         !!       where\n
+         !!          \f$ C = \frac{\sqrt{\pi} \: \Gamma(S+1)}{\delta\theta \: \Gamma(S+1/2)} \f$,
+         !!       and
+         !!          \f$ \Gamma \f$ is the gamma function.
+         !!
+         !! 3. Calculate the integral of WvSpreadCos2SArr up to the current angle, and save it as
+         !!       WvSpreadIntegral. The integral can be written as:\n
+         !!          \f$P(\theta) = \int\limits^{\theta}_{\bar\theta - \delta\theta/2} D(\theta') \: \mathrm{d}\theta'\f$
+         !!
+         !! 4. Do a sanity check on the result of \f$P(\theta)\f$ over the range.
+         !!
+         !! 5. Divide the integrated area of _WvSpreadCos2SArr_ into _InitOut%WaveNDir_ directions (the final number
+         !!       of wave directions that was solved for above).  To do this, simply find the _1/WaveNDir_ values
+         !!       of the integral and interpolate to find the values of the _WvSpreadThetas_ that match.  These are the
+         !!       new wave directions to use.  These results are stored in the array _WvTheta_.
+         !!
+         !! 6. Cleanup
+         !!
+
+         !> ### Code Implimentation order
+         !! 1. Discretize the spreading function range and calculate the values of the wave spreading function
+
+            ! Now that we have the value for _WaveNDir_ found above, we set the value of _WvSpreadNDir_ to be 15x as
+            ! large, or 1000 (whichever is larger).  WvSpreadNDir is used only in discretization for later
+            ! interpolation of actual wave directions.
+         WvSpreadNDir   = MAX(15*InitOut%WaveNDir,1000)
+         WvSpreadDTheta = InitInp%WaveDirRange/REAL(WvSpreadNDir,ReKi)
+
+            ! Calculate the normalization constant for the wave spreading.
+         WvSpreadCos2SConst   = sqrt(Pi)* (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_ReKi))/               &
+                                (InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_ReKi))
+
+            ! Allocate arrays to use for storing the intermediate values
+         ALLOCATE( WvSpreadCos2SArr(0:WvSpreadNDir),  STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadCos2SArr.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ALLOCATE( WvSpreadIntegral(0:WvSpreadNDir),  STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadIntegral.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         ALLOCATE( WvSpreadThetas(0:WvSpreadNDir),    STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadThetas.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ALLOCATE( WvTheta(1:InitOut%WaveNDir),       STAT=ErrStatTmp )    ! Dealocate this at very end of routine.
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvTheta.',           ErrStat,ErrMsg,'VariousWaves_Init')
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+            !> 2. Calculate the spreading function as a function of angle.  Step through all _WvSpreadNDir_ steps.
+         DO I=0,WvSpreadNDir
+               ! The current angle as we step through the range
+            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_ReKi)
+
+               ! Calculate the wave spreading for the current value of WvSpreadThetas
+            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-InitInp%WaveDir)/InitInp%WaveDirRange) ) &
+                                                            **(2*InitInp%WaveDirSpread)
+
+            !> 3. Calculate the integral of the spreading function up to the current angle and save it.
+            !     Remember that the first element can't refer to one before it.
+            IF (I == 0) THEN
+               WvSpreadIntegral(I)  =  WvSpreadCos2SArr(I) * WvSpreadDTheta
+            ELSE
+               WvSpreadIntegral(I)  =  WvSpreadCos2SArr(I) * WvSpreadDTheta + WvSpreadIntegral(I-1)
+            END IF
+         ENDDO
+
+      
+            !> 4. Perform a quick sanity check.  The last value of the integral table should be 1.0 exactly.
+            !!    We will allow for a 1% deviation.  If for some reason an error occurs, it may be due to the
+            !!    GAMMA function calculation for the normalization constant, _WvSpreadCos2SConst_.
+         IF ( WvSpreadIntegral(WvSpreadNDir) < 0.99_ReKi .OR. WvSpreadIntegral(WvSpreadNDir) > 1.01_ReKi ) THEN
+            CALL SetErrStat(ErrID_Fatal,' Something went wrong in evaluating the multidirectional wave spreading function.  '// &
+                           'Integral is '//TRIM(Num2LStr(WvSpreadIntegral(WvSpreadNDir))),ErrStat,ErrMsg,'VariousWaves_Init')
+            RETURN
+         END IF
+
+
+            !> 5. Set the wave directions using the results from the integral.
+            !  We will use the variable LastInd as a simple index for figuring out where in the array we are.  First set to 0
+         LastInd  =  0_IntKi
+         DO I=1,InitOut%WaveNDir
+            WvSpreadIntegralTmp  = (REAL(I)-0.5_ReKi)/REAL(InitOut%WaveNDir)
+            WvTheta(I)    =  InterpStp( WvSpreadIntegralTmp, WvSpreadIntegral, WvSpreadThetas, LastInd, WvSpreadNDir )
+         ENDDO       ! I=1,InitOut%WaveNDir
+
+            ! Store the minimum and maximum wave directions
+         InitOut%WaveDirMin   = MINVAL(WvTheta)
+         InitOut%WaveDirMax   = MAXVAL(WvTheta)
+
+            !> 6. Done with equal energy wavedirection calculations.  Deallocate the arrays used during calculations.
+         IF(ALLOCATED( WvSpreadCos2SArr ))      DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array WvSpreadCos2SArr.',  ErrStat,ErrMsg,'VariousWaves_Init')
+         IF(ALLOCATED( WvSpreadIntegral ))      DEALLOCATE( WvSpreadIntegral, STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array WvSpreadIntegral.',  ErrStat,ErrMsg,'VariousWaves_Init')
+         IF(ALLOCATED( WvSpreadThetas   ))      DEALLOCATE( WvSpreadThetas,   STAT=ErrStatTmp   )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array WvSpreadThetas.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+      ELSE     ! Multi-directional waves not used
+      
+         InitOut%WaveDirMin   = InitInp%WaveDir
+         InitOut%WaveDirMax   = InitInp%WaveDir
+
+      ENDIF    ! Multi-directional waves in use (InitInp%WaveMultiDir == .TRUE.)
+
+
+
+
+
+
       
 
-!JASON: IMPLEMENT EQUATIONS (2.12 - 2.13) IN MY DISSERTATION SO THAT ONE CAN READ IN EXTERNAL WAVE DATA?<--BETTER YET, IMPLEMENT WaveElevC0 = DFT(WaveElev) WHERE WaveElev CAN BE READ IN AS GH BLADED WAVE DATA.  THAT IS, ADD AN OPTION TO READ IN WAVE DATA FOR FLOATERS!
+      ! JASON: IMPLEMENT EQUATIONS (2.12 - 2.13) IN MY DISSERTATION SO THAT ONE CAN READ IN EXTERNAL WAVE
+      !        DATA?<--BETTER YET, IMPLEMENT WaveElevC0 = DFT(WaveElev) WHERE WaveElev CAN BE READ IN AS
+      !        GH BLADED WAVE DATA.  THAT IS, ADD AN OPTION TO READ IN WAVE DATA FOR FLOATERS!
 
       ! Compute the positive-frequency components (including zero) of the discrete
       !   Fourier transforms of the wave kinematics:
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Dump the X_Diffrctn variable to a file for debugging
-! Open and write header info to the HydroDyn Output File
-!CALL OpenFOutFile ( 66, 'C:\Dev\NREL_SVN\HydroDyn\branches\HydroDyn_Modularization\Samples\NRELOffshrBsline5MW_OC3Hywind\Waves_HD.txt', ErrStat   )  ! Open motion file.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
 
 
@@ -1296,6 +1546,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! Compute the discrete Fourier transform of the realization of a White
       !   Gaussian Noise (WGN) time series process with unit variance:
+      !
       ! NOTE: For the time series process to be real with zero mean, the values at
       !       Omega == 0.0 and Omega == NStepWave2*WaveDOmega (= WaveOmegaMax)
       !       must be zero.
@@ -1304,8 +1555,22 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             WGNC = (0.0,0.0)
          ELSEIF ( InitInp%WaveMod == 10 )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
             WGNC = BoxMuller ( InitInp%WaveNDAmp, InitInp%WavePhase )
+               ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
+               ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
+               ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
+               !
+               ! NOTE: the denominator here will never equal zero since U1 cannot equal 1.0, and thus, C1 cannot be
+               !       0.0 in the Box-Muller method.
+            IF (  ( I == I_WaveTp ) )  WGNC = WGNC*( SQRT(2.0)/ABS(WGNC) )
          ELSE                                               ! All other Omega
-            WGNC = BoxMuller ( InitInp%WaveNDAmp            )
+            WGNC = BoxMuller ( InitInp%WaveNDAmp                    )
+               ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
+               ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
+               ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
+               !
+               ! NOTE: the denominator here will never equal zero since U1 cannot equal 1.0, and thus, C1 cannot be
+               !       0.0 in the Box-Muller method.
+            IF ( ( InitInp%WaveMod == 1 ) .AND. ( I == I_WaveTp ) )  WGNC = WGNC*( SQRT(2.0)/ABS(WGNC) )
          END IF
 
 
@@ -1322,8 +1587,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             END IF
 
          CASE ( 2 )              ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
+               !  Zero-out the wave spectrum above the cut-off frequency.  We must cut-off the frequency in order to
+               !  void nonphysical wave forces.  Waves that have wavelengths much smaller than the platform diameter
+               !  (high frequency) do not contribute to the net force because regions of positive and negative
+               !  velocity/acceleration are experienced by the platform at the same time and cancel out.
+               !
+               !  JASON: OTHER FREQUENCY CUT-OFF CONDITIONS ARE USED THROUGHOUT THE INDUSTRY.  SHOULD YOU USE ONE OF
+               !         THEM INSTEAD?  SEE, FOR EXAMPLE, MY E-MAIL EXCHANGES WITH PAUL SCLAVOUNOS DATED 5/26/2006 OR:
+               !         "GH Bladed Thoery Manual" OR: Trumars, Jenny M. V.; Tarp-Johansen, Niels Jacob; Krogh, Thomas;
+               !         "The Effect of Wave Modelling on Offshore Wind Turbine Fatigue Loads," 2005 Copenhagen Offshore
+               !         Wind Conference and Exhibition, 26-28 October 2005, Copenhagen, Denmark [CD-ROM].
             IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN ! .TRUE. if Omega is above or below the cut-off frequency
-               WaveS1Sdd = 0.0  ! Zero-out the wave spectrum above the cut-off frequency.  We must cut-off the frequency in order to avoid nonphysical wave forces.  Waves that have wavelengths much smaller than the platform diameter (high frequency) do not contribute to the net force because regions of positive and negative velocity/acceleration are experienced by the platform at the same time and cancel out.  !JASON: OTHER FREQUENCY CUT-OFF CONDITIONS ARE USED THROUGHOUT THE INDUSTRY.  SHOULD YOU USE ONE OF THEM INSTEAD?  SEE, FOR EXAMPLE, MY E-MAIL EXCHANGES WITH PAUL SCLAVOUNOS DATED 5/26/2006 OR: "GH Bladed Thoery Manual" OR: Trumars, Jenny M. V.; Tarp-Johansen, Niels Jacob; Krogh, Thomas; "The Effect of Wave Modelling on Offshore Wind Turbine Fatigue Loads," 2005 Copenhagen Offshore Wind Conference and Exhibition, 26-28 October 2005, Copenhagen, Denmark [CD-ROM].
+               WaveS1Sdd = 0.0
             ELSE                             ! All other Omega
                WaveS1Sdd = JONSWAP ( Omega, InitInp%WaveHs, InitInp%WaveTp, InitInp%WavePkShp )
             END IF
@@ -1343,124 +1618,173 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          ENDSELECT
 
 
-
       ! Compute the two-sided power spectral density of the wave spectrum per unit
       !   time:
 
          WaveS2Sdd  = 0.5*WaveS1Sdd
 
 
+      ! Compute the discrete Fourier transform of the instantaneous elevation of
+      !   incident waves at the WAMIT reference point:
+         tmpComplex                   = SQRTNStepWave2*WGNC*SQRT( TwoPi*WaveS2Sdd/REAL(InitInp%WaveDT,ReKi) )
+         InitOut%WaveElevC0     (1,I) = REAL( tmpComplex)
+         InitOut%WaveElevC0     (2,I) = AIMAG(tmpComplex)
+
+      END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
+
+
+
+      !--------------------------------------------------------------------------------
+      !=== Multi-Directional Waves ===
+      !> ## Assign Wave directions
+      !!  For the equal energy approach to the multi-directional waves, we need to use the random number generator to
+      !!  select which direction each wave frequency is assigned to.  We also require that the phase and amplitudes
+      !!  assigned to each frequency are the same regardless of whether or not multiple directions are used, we must
+      !!  first finish assigning all the amplitudes and phases before using the random number generator again.  For this
+      !!  reason, the above do loop is completed, the multiple wave directions are computed, and then we run through the
+      !!  all wave frequencies again to set up the remaining pieces.  If we did not do this, we would change the seed
+      !!  used by the random number generator before selecting the next amplitude and phase pair.
+      !!
+      !!  The wave directions are assigned in groups of _WaveNDir_ frequencies such that each frequency is assigned to
+      !!  one of the _WaveNDir_ unique wave directions.  Each wave direction is used only once within each group of
+      !!  frequencies.
+      !!
+      !!  When complete, we deallocate the _WvSpreadThetas_ array that was used to store the assigned directions.
+
+      IF ( InitInp%WaveMultiDir )   THEN     ! Multi-directional waves in use
+
+
+            ! Allocate the index array for each group of frequencies.  This array is used to randomize the directions
+            ! within each WaveNDir sized group of frequencies.  This is a REAL array used to hold the random numbers.
+         ALLOCATE( WvSpreadThetaIdx(1:InitOut%WaveNDir), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadThetaIdx while assigning '//  &
+                                                          'wave directions.',ErrStat,ErrMsg,'VariousWaves_Init')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+
+            ! Reset the K so that we can use it to count the frequency index.
+            ! It should be exactly NStepWave2 when done assigning directions. The the Omega = 0 has
+            ! no amplitude, but gets a direction anyhow (to simplify the calculation of WaveNDir).
+         K  = 0
+
+
+            ! Work through the frequencies in groups of directions.
+         DO I = 1,WvSpreadFreqPerDir
+
+               ! Populate the array with random numbers
+            CALL RANDOM_NUMBER(WvSpreadThetaIdx)
+
+            DO J = 1, InitOut%WaveNDir
+
+                  ! Find the index lowest value in the WvSpreadThetaIdx array.  This is the index to
+                  ! use for this wave direction.
+               LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
+
+                  ! Assign the direction for this frequency piece to the LastInd value.
+               InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
+
+                  ! Now make that element in the WvSpreadThetaIdx really big so we don't pick it again
+               WvSpreadThetaIdx( LastInd )   = HUGE(1.0)
+
+               K  = K + 1     ! Increment the frequency index
+
+            ENDDO
+         ENDDO
+
+
+            ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
+            ! K = NStepWave2 (K is incrimented afterwards).
+         IF ( K /= (InitOut%NStepWave2 ) )    CALL SetErrStat(ErrID_Fatal,  &
+                     'Something went wrong while assigning wave directions.',ErrStat,ErrMsg,'VariousWaves_Init')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+            !  We are done with the indexing array, so deallocate it
+         IF(ALLOCATED( WvSpreadThetaIdx ))   DEALLOCATE( WvSpreadThetaIdx )
+
+            !  This had been allocated above (calculation section of equal energy portion of multidirectional waves).
+            !  Deallocate it here after we have completed all the calculations involving it.
+         IF(ALLOCATED( WvTheta ))            DEALLOCATE( WvTheta )
+
+      ELSE     ! Not multi-directional waves
+
+            ! Since we do not have multi-directional waves, we must set the wave direction array to the single wave heading.
+         InitOut%WaveDirArr   = InitInp%WaveDir
+      ENDIF    ! Multi-directional waves in use.
+
+
+         ! Set the CosWaveDir and SinWaveDir arrays
+      CosWaveDir=COS(D2R*InitOut%WaveDirArr)
+      SinWaveDir=SIN(D2R*InitOut%WaveDirArr)
+
+
+      !--------------------------------------------------------------------------------
+      !> ## Compute IFFTs
+      !> Compute the discrete Fourier transform of the instantaneous elevation of
+      !!   incident waves at each desired point on the still water level plane
+      !!   where it can be output:
+
+      DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+
+      
+            ! Set tmpComplex to the Ith element of the WAveElevC0 array
+
+         tmpComplex  = CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))
+         
+
+      ! Compute the frequency of this component and its imaginary value:
+
+             Omega = I*       InitOut%WaveDOmega
+         ImagOmega = ImagNmbr*Omega
+
       ! Compute the wavenumber:  
 
          WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
-
-
-      ! Compute the discrete Fourier transform of the instantaneous elevation of
-      !   incident waves at the platform reference point:
-         tmpComplex                   = SQRTNStepWave2*WGNC*SQRT( TwoPi*WaveS2Sdd/InitInp%WaveDT )
-         InitOut%WaveElevC0     (1,I) = REAL( tmpComplex)
-         InitOut%WaveElevC0     (2,I) = AIMAG(tmpComplex)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   WRITE ( 66, '(9(e20.9))', IOSTAT = ErrStat) REAL(I), SQRTNStepWave2, REAL(InitOut%WaveElevC0(I)), IMAG(InitOut%WaveElevC0(I)),REAL(WGNC),IMAG(WGNC), TwoPi, WaveS2Sdd, InitInp%WaveDT
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-      ! Compute the discrete Fourier transform of the instantaneous elevation of
-      !   incident waves at each desired point on the still water level plane
-      !   where it can be output:
-      
          
-         
-         DO J = 1,InitInp%NWaveElev   ! Loop through all points where the incident wave elevations can be output           
-            WaveElevC  (I,J) =  tmpComplex*EXP( -ImagNmbr*WaveNmbr*WaveElevxiPrime(J) )
-         END DO                ! J - All points where the incident wave elevations can be output
 
       ! Compute the discrete Fourier transform of the incident wave kinematics
-      !   before applying stretching at the zi-coordinates for points along a
-      !   vertical line passing through the platform reference point:
+      !   before applying stretching at the zi-coordinates for the WAMIT reference point, and all
+      !   points where are Morison loads will be calculated.
+
 
          DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
 
-            WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*(InitInp%WaveKinxi0(WaveKinPrimeMap(J))*CWaveDir + InitInp%WaveKinyi0(WaveKinPrimeMap(J))*SWaveDir))
-            WaveDynPC0 (I,J) = InitOut%RhoXg*tmpComplex*WaveElevxiPrime0 * &
-                                       COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )       
-            WaveVelC0H (I,J) =     Omega*tmpComplex* WaveElevxiPrime0 * &
-                                       COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
-            WaveVelC0V (I,J) = ImagOmega*tmpComplex* WaveElevxiPrime0 * &
-                                       SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
-            WaveAccC0H (I,J) = ImagOmega*        WaveVelC0H   (I,J)
-            WaveAccC0V (I,J) = ImagOmega*        WaveVelC0V   (I,J)
+            WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinxi0(WaveKinPrimeMap(J))*CosWaveDir(I) + &
+                                                         InitInp%WaveKinyi0(WaveKinPrimeMap(J))*SinWaveDir(I) ))
+            WaveDynPC0 (I,J)     = InitOut%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )       
+            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*Omega*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*Omega*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0V (I,J)     =           ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveAccC0Hxi (I,J)   = ImagOmega*        WaveVelC0Hxi (I,J)
+            WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
+            WaveAccC0V (I,J)     = ImagOmega*        WaveVelC0V   (I,J)
 
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
-         PWaveDynPC0BPz0(I ) = InitOut%RhoXg*tmpComplex*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
-         PWaveVelC0HPz0(I  ) =          Omega*tmpComplex*WaveNmbr
-         PWaveVelC0VPz0(I  ) =      ImagOmega*tmpComplex*WaveNmbr*COTH ( WaveNmbr*InitInp%WtrDpth )
-         PWaveAccC0HPz0(I  ) =      ImagOmega*       PWaveVelC0HPz0(I  )
-         PWaveAccC0VPz0(I  ) =      ImagOmega*       PWaveVelC0VPz0(I  )
+         PWaveDynPC0BPz0(I )  = InitOut%RhoXg*tmpComplex*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
+         PWaveVelC0HxiPz0(I ) = CosWaveDir(I)*Omega*tmpComplex*WaveNmbr
+         PWaveVelC0HyiPz0(I ) = SinWaveDir(I)*Omega*tmpComplex*WaveNmbr
+         PWaveVelC0VPz0(I )   =           ImagOmega*tmpComplex*WaveNmbr*COTH ( WaveNmbr*InitInp%WtrDpth )
+         PWaveAccC0HxiPz0(I ) =      ImagOmega*       PWaveVelC0HxiPz0(I  )
+         PWaveAccC0HyiPz0(I ) =      ImagOmega*       PWaveVelC0HyiPz0(I  )
+         PWaveAccC0VPz0(I )   =      ImagOmega*       PWaveVelC0VPz0(I  )
 
 
       END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
       
-      !
-      !
-      ! TODO: GJH 9/10/13. Original code for comparison.  Remove this from final release version
-      !
-      !
-      !DO J = 1,NWaveKin0Prime ! Loop through all points along a vertical line passing through the platform reference point where the incident wave kinematics will be computed without stretching
-      !
-      !      WaveDynPC0 (I,J) = WaveDat%RhoXg*WaveDat%WaveElevC0   (I  )* &
-      !                                 COSHNumOvrCOSHDen ( WaveNmbr, WaveDat%WtrDpth, WaveKinzi0Prime(J) )            
-      !      WaveVelC0H (I,J) =     Omega*WaveDat%WaveElevC0   (I  )* &
-      !                                 COSHNumOvrSINHDen ( WaveNmbr, WaveDat%WtrDpth, WaveKinzi0Prime(J) )
-      !      WaveVelC0V (I,J) = ImagOmega*WaveDat%WaveElevC0   (I  )* &
-      !                                 SINHNumOvrSINHDen ( WaveNmbr, WaveDat%WtrDpth, WaveKinzi0Prime(J) )
-      !      WaveAccC0H (I,J) = ImagOmega*        WaveVelC0H   (I,J)
-      !      WaveAccC0V (I,J) = ImagOmega*        WaveVelC0V   (I,J)
-      !
-      !   ENDDO                   ! J - All points along a vertical line passing through the platform reference point where the incident wave kinematics will be computed without stretching
-      !
-      !   PWaveDynPC0BPz0(I  ) = WaveDat%RhoXg*WaveDat%WaveElevC0   (I  )*WaveNmbr*TANH ( WaveNmbr*WaveDat%WtrDpth )
-      !   PWaveVelC0HPz0(I  ) =          Omega*WaveDat%WaveElevC0   (I  )*WaveNmbr
-      !   PWaveVelC0VPz0(I  ) =      ImagOmega*WaveDat%WaveElevC0   (I  )*WaveNmbr*COTH ( WaveNmbr*WaveDat%WtrDpth )
-      !   PWaveAccC0HPz0(I  ) =      ImagOmega*       PWaveVelC0HPz0(I  )
-      !   PWaveAccC0VPz0(I  ) =      ImagOmega*       PWaveVelC0VPz0(I  )
-      !
-      !
-      !
-      
-      
-      
-      
-      
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!CLOSE ( 66 )
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   IF ( InitInp%UnSum > 0 ) THEN
-      
-         ! Write the header for this section
-      WRITE( InitInp%UnSum,  '(//)' )         
-      WRITE( InitInp%UnSum, '(1X,A10,2X,A14,2X,A14,2X,A22,2X,A22)' ) '    m   ', '    k    ', '   Omega[m]  ', 'REAL(DFT{WaveElev}[m])','IMAG(DFT{WaveElev}[m])'
-      WRITE( InitInp%UnSum, '(1X,A10,2X,A14,2X,A14,2X,A22,2X,A22)' ) '   (-)  ', '  (1/m)  ', '   (rad/s)   ', '         (m)          ','         (m)          '
-
-         ! Write the data
-      DO I = -1*InitOut%NStepWave2+1,InitOut%NStepWave2
-         WaveNmbr   = WaveNumber ( I*InitOut%WaveDOmega, InitInp%Gravity, InitInp%WtrDpth )
-         WRITE( InitInp%UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,4X,ES14.5,10X,ES14.5)' ) I, WaveNmbr, I*InitOut%WaveDOmega, &
-                         InitOut%WaveElevC0( 1,ABS(I ) ) ,   InitOut%WaveElevC0( 2, ABS(I ) )*SIGN(1,I) 
-      END DO
-
-   END IF
-
 
 
       ! Calculate the array of simulation times at which the instantaneous
       !   elevation of, velocity of, acceleration of, and loads associated with
       !   the incident waves are to be determined:
 
-      DO I = 0,InitOut%NStepWave-1 ! Loop through all time steps
-         InitOut%WaveTime(I) = I*InitInp%WaveDT
-         
+      DO I = 0,InitOut%NStepWave ! Loop through all time steps
+         InitOut%WaveTime(I) = I*REAL(InitInp%WaveDT,ReKi)
       END DO                ! I - All time steps
 
       DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
@@ -1470,71 +1794,142 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ! Compute the inverse discrete Fourier transforms to find the time-domain
       !   representations of the wave kinematics without stretcing:
 
-      CALL InitFFT ( InitOut%NStepWave, FFT_Data, .TRUE., ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
-
-      CALL    ApplyFFT_cx (  WaveElev0    (:  ),  tmpComplexArr    (:  ), FFT_Data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
+      CALL InitFFT ( InitOut%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
+      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+      
+         ! We'll need the following for wave stretching once we implement it.
+      CALL    ApplyFFT_cx (  WaveElev0    (:),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+      CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
       DO J = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations can be output
-         CALL ApplyFFT_cx (  InitOut%WaveElev     (:,J),          WaveElevC     (:,J), FFT_Data, ErrStat )
-         IF ( ErrStat /= ErrID_None ) RETURN
+               ! This subroutine call applies the FFT at the correct location.
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(J), InitInp%WaveElevyi(J), InitOut%WaveElev(:,J), ErrStatTmp, ErrMsgTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
       END DO                   ! J - All points where the incident wave elevations can be output
-      DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
-         CALL ApplyFFT_cx (          WaveDynP0B   (:,J),          WaveDynPC0    (:,J), FFT_Data, ErrStat )
-         IF ( ErrStat /= ErrID_None ) RETURN
-         CALL ApplyFFT_cx (          WaveVel0H    (:,J),          WaveVelC0H    (:,J), FFT_Data, ErrStat )
-         IF ( ErrStat /= ErrID_None ) RETURN
-         CALL ApplyFFT_cx (          WaveVel0V    (:,J),          WaveVelC0V    (:,J), FFT_Data, ErrStat )
-         IF ( ErrStat /= ErrID_None ) RETURN
-         CALL ApplyFFT_cx (          WaveAcc0H    (:,J),          WaveAccC0H    (:,J), FFT_Data, ErrStat )
-         IF ( ErrStat /= ErrID_None ) RETURN
-         CALL ApplyFFT_cx (          WaveAcc0V    (:,J),          WaveAccC0V    (:,J), FFT_Data, ErrStat )
-         IF ( ErrStat /= ErrID_None ) RETURN
-      END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
-! DEBUG: TODO: Remove this for release version GJH 9/10/13
-! Write out the frequency and time-series dynamic press for a point
-!CALL OpenUOutfile ( 42, 'C:\Dev\NREL_SVN\HydroDyn\branches\HydroDyn_Modularization\CertTest\WaveDynPC0.dat', ErrStat, ErrMsg )
-!WRITE(42) WaveDynPC0(:,1)
-!CLOSE(42)
-!CALL OpenUOutfile ( 42, 'C:\Dev\NREL_SVN\HydroDyn\branches\HydroDyn_Modularization\CertTest\WaveDynP0B.dat', ErrStat, ErrMsg )
-!WRITE(42) WaveDynP0B(:,1)
-!CLOSE(42)
-      CALL    ApplyFFT_cx (         PWaveDynP0BPz0(:  ),         PWaveDynPC0BPz0(:  ), FFT_Data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL    ApplyFFT_cx (         PWaveVel0HPz0 (:  ),         PWaveVelC0HPz0( :  ), FFT_Data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL    ApplyFFT_cx (         PWaveVel0VPz0 (:  ),         PWaveVelC0VPz0 (:  ), FFT_Data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL    ApplyFFT_cx (         PWaveAcc0HPz0 (:  ),         PWaveAccC0HPz0 (:  ), FFT_Data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL    ApplyFFT_cx (         PWaveAcc0VPz0 (:  ),         PWaveAccC0VPz0( :  ), FFT_Data, ErrStat )
-      IF ( ErrStat /= ErrID_None ) RETURN
 
-      CALL ExitFFT(FFT_Data, ErrStat)
-      IF ( ErrStat /= ErrID_None ) RETURN
+
+         ! Calculate the wave elevation at all points requested in the array WaveElevXY
+      IF ( ALLOCATED(InitInp%WaveElevXY) ) THEN
+         DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
+               ! This subroutine call applies the FFT at the correct location.
+            CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevXY(1,J),  InitInp%WaveElevXY(2,J),   InitOut%WaveElevSeries(0:InitOut%NStepWave,J), ErrStatTmp, ErrMsgTmp )
+            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
+         ENDDO
+      ENDIF
+
+      
+         ! User requested data points -- Do all the FFT calls first, then return if something failed.
+      DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
+         CALL ApplyFFT_cx (          WaveDynP0B   (:,J),          WaveDynPC0    (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveDynP0B.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+         CALL ApplyFFT_cx (          WaveVel0Hxi  (:,J),          WaveVelC0Hxi  (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveVel0Hxi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+         CALL ApplyFFT_cx (          WaveVel0Hyi  (:,J),          WaveVelC0Hyi  (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveVel0Hyi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+         CALL ApplyFFT_cx (          WaveVel0V    (:,J),          WaveVelC0V    (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveVel0V.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+         CALL ApplyFFT_cx (          WaveAcc0Hxi  (:,J),          WaveAccC0Hxi  (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0Hxi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+         CALL ApplyFFT_cx (          WaveAcc0Hyi  (:,J),          WaveAccC0Hyi  (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0Hyi.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+         CALL ApplyFFT_cx (          WaveAcc0V    (:,J),          WaveAccC0V    (:,J), FFT_Data, ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0V.',        ErrStat,ErrMsg,'VariousWaves_Init')
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+      END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+
+         ! FFT's of the partial derivatives
+      CALL  ApplyFFT_cx (         PWaveDynP0BPz0(:  ),         PWaveDynPC0BPz0(:  ), FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveDynP0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+
+      CALL  ApplyFFT_cx (         PWaveVel0HxiPz0 (:  ),       PWaveVelC0HxiPz0( : ),FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      CALL  ApplyFFT_cx (         PWaveVel0HyiPz0 (:  ),       PWaveVelC0HyiPz0( : ),FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      CALL  ApplyFFT_cx (         PWaveVel0VPz0 (:  ),         PWaveVelC0VPz0 (:  ), FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+      CALL  ApplyFFT_cx (         PWaveAcc0HxiPz0 (:  ),       PWaveAccC0HxiPz0(:  ),FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      CALL  ApplyFFT_cx (         PWaveAcc0HyiPz0 (:  ),       PWaveAccC0HyiPz0(:  ),FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+
+      CALL  ApplyFFT_cx (         PWaveAcc0VPz0 (:  ),         PWaveAccC0VPz0( :  ), FFT_Data, ErrStatTmp )
+      CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      CALL  ExitFFT(FFT_Data, ErrStatTmp)
+      CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
 
 
       ! Add the current velocities to the wave velocities:
       ! NOTE: Both the horizontal velocities and the partial derivative of the
       !       horizontal velocities with respect to zi at zi = 0 are found here.
-
-      DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
-
-         WaveVel0Hxi (:,J) =  WaveVel0H   (:,J)*CWaveDir +  InitInp%CurrVxi(J)     ! xi-direction
-         WaveVel0Hyi (:,J) =  WaveVel0H   (:,J)*SWaveDir +  InitInp%CurrVyi(J)     ! yi-direction
-
-      END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+      !
+      ! NOTE:  The current module must be called prior to the waves module.  If that was not done, then we 
+      !        don't have a current to add to the wave velocity.  So, check if the current velocity components
+      !        exist.
 
 
-      PWaveVel0HxiPz0(:  ) = PWaveVel0HPz0(:  )*CWaveDir + InitInp%PCurrVxiPz0  ! xi-direction
-      PWaveVel0HyiPz0(:  ) = PWaveVel0HPz0(:  )*SWaveDir + InitInp%PCurrVyiPz0  ! yi-direction
+      ! If there is a current, we need to add that (the current module was called prior to calling this module
+
+      IF(ALLOCATED(InitInp%CurrVxi)) THEN
+
+         DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
+
+            WaveVel0Hxi (:,J) =  WaveVel0Hxi (:,J) +  InitInp%CurrVxi(WaveKinPrimeMap(J))     ! xi-direction
+            WaveVel0Hyi (:,J) =  WaveVel0Hyi (:,J) +  InitInp%CurrVyi(WaveKinPrimeMap(J))     ! yi-direction
+
+         END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+
+         PWaveVel0HxiPz0(:  ) =  PWaveVel0HxiPz0(:  ) + InitInp%PCurrVxiPz0  ! xi-direction
+         PWaveVel0HyiPz0(:  ) =  PWaveVel0HyiPz0(:  ) + InitInp%PCurrVyiPz0  ! yi-direction
+
+      ENDIF
+
 
       ! Apply stretching to obtain the wave kinematics, WaveDynP0, WaveVel0, and
       !   WaveAcc0, at the desired locations from the wave kinematics at
       !   alternative locations, WaveDynP0B, WaveVel0Hxi, WaveVel0Hyi, WaveVel0V,
-      !   WaveAcc0H, WaveAcc0V, if the elevation of the point defined by
+      !   WaveAcc0Hxi, WaveAcc0Hyi, WaveAcc0V, if the elevation of the point defined by
       !   WaveKinzi0(J) lies between the seabed and the instantaneous free
       !   surface, else set WaveDynP0, WaveVel0, and WaveAcc0 to zero.  This
       !   depends on which incident wave kinematics stretching method is being
@@ -1565,8 +1960,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                   InitOut%WaveVel0 (I,J,1)  = WaveVel0Hxi(I,K     )
                   InitOut%WaveVel0 (I,J,2)  = WaveVel0Hyi(I,K     )
                   InitOut%WaveVel0 (I,J,3)  = WaveVel0V  (I,K     )
-                  InitOut%WaveAcc0 (I,J,1)  = WaveAcc0H  (I,K     )*CWaveDir
-                  InitOut%WaveAcc0 (I,J,2)  = WaveAcc0H  (I,K     )*SWaveDir
+                  InitOut%WaveAcc0 (I,J,1)  = WaveAcc0Hxi(I,K     )
+                  InitOut%WaveAcc0 (I,J,2)  = WaveAcc0Hyi(I,K     )
                   InitOut%WaveAcc0 (I,J,3)  = WaveAcc0V  (I,K     )
                   K = K + 1
                END IF
@@ -1623,6 +2018,101 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ENDSELECT
 
+      ! Set the ending timestep to the same as the first timestep
+      InitOut%WaveDynP0(InitOut%NStepWave,:  )  = InitOut%WaveDynP0(0,:  )
+      InitOut%WaveVel0 (InitOut%NStepWave,:,:)  = InitOut%WaveVel0 (0,:,:)
+      InitOut%WaveAcc0 (InitOut%NStepWave,:,:)  = InitOut%WaveAcc0 (0,:,:)
+
+
+
+
+   CALL CleanUp ( )
+   
+
+CONTAINS
+
+
+   SUBROUTINE WaveElevTimeSeriesAtXY(Xcoord,Ycoord, WaveElevSeriesAtXY, ErrStatLcl, ErrMsgLcl )
+
+      REAL(ReKi),       INTENT(IN   )                 :: Xcoord
+      REAL(ReKi),       INTENT(IN   )                 :: Ycoord
+      REAL(ReKi),       INTENT(  OUT)                 :: WaveElevSeriesAtXY(0:InitOut%NStepWave)
+      INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
+      INTEGER(IntKi)                                  :: ErrStatLcl2
+      CHARACTER(1024),  INTENT(  OUT)                 :: ErrMsgLcl
+
+      ! This is probably poor programming practice, but we will use I, Omega, WaveNmbr, and tmpComplexArr from the calling routine here.
+
+      ErrStatLcl  = ErrID_None
+
+      DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+
+         Omega             = I*       InitOut%WaveDOmega
+         WaveNmbr          = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+         tmpComplexArr(I)  =  CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))   *          &
+                  EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
+                                             Ycoord*SinWaveDir(I) )   )
+      ENDDO
+
+      CALL ApplyFFT_cx (   WaveElevSeriesAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
+      CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT to InitOut%WaveElevSeries.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
+
+         ! Append first datpoint as the last as aid for repeated wave data
+      WaveElevSeriesAtXY(InitOut%NStepWave) = WaveElevSeriesAtXY(0)
+
+   END SUBROUTINE WaveElevTimeSeriesAtXY
+
+
+
+   SUBROUTINE CleanUp( )
+
+      IF (ALLOCATED( WaveElevxiPrime ))   DEALLOCATE( WaveElevxiPrime,  STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveKinPrimeMap ))   DEALLOCATE( WaveKinPrimeMap,  STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveKinzi0Prime ))   DEALLOCATE( WaveKinzi0Prime,  STAT=ErrStatTmp)
+      IF (ALLOCATED( WvSpreadCos2SArr ))  DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp)
+      IF (ALLOCATED( WvSpreadIntegral ))  DEALLOCATE( WvSpreadIntegral, STAT=ErrStatTmp)
+      IF (ALLOCATED( WvSpreadThetas ))    DEALLOCATE( WvSpreadThetas,   STAT=ErrStatTmp)
+      IF (ALLOCATED( TmpWaveSeeds ))      DEALLOCATE( TmpWaveSeeds,     STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWaveAcc ))         DEALLOCATE( GHWaveAcc,        STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWaveDynP ))        DEALLOCATE( GHWaveDynP,       STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWaveVel ))         DEALLOCATE( GHWaveVel,        STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWvDpth ))          DEALLOCATE( GHWvDpth,         STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0HxiPz0 ))   DEALLOCATE( PWaveAcc0HxiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0HyiPz0 ))   DEALLOCATE( PWaveAcc0HyiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0VPz0 ))     DEALLOCATE( PWaveAcc0VPz0,    STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0HxiPz0 ))  DEALLOCATE( PWaveAccC0HxiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0HyiPz0 ))  DEALLOCATE( PWaveAccC0HyiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0VPz0 ))    DEALLOCATE( PWaveAccC0VPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveDynP0BPz0 ))    DEALLOCATE( PWaveDynP0BPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveDynPC0BPz0 ))   DEALLOCATE( PWaveDynPC0BPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVel0HxiPz0 ))   DEALLOCATE( PWaveVel0HxiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVel0HyiPz0 ))   DEALLOCATE( PWaveVel0HyiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVel0VPz0 ))     DEALLOCATE( PWaveVel0VPz0,    STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVelC0HxiPz0 ))  DEALLOCATE( PWaveVelC0HxiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVelC0HyiPz0 ))  DEALLOCATE( PWaveVelC0HyiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVelC0VPz0 ))    DEALLOCATE( PWaveVelC0VPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAcc0Hxi ))       DEALLOCATE( WaveAcc0Hxi,      STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAcc0Hyi ))       DEALLOCATE( WaveAcc0Hyi,      STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAcc0V ))         DEALLOCATE( WaveAcc0V,        STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAccC0Hxi ))      DEALLOCATE( WaveAccC0Hxi,     STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAccC0Hyi ))      DEALLOCATE( WaveAccC0Hyi,     STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAccC0V ))        DEALLOCATE( WaveAccC0V,       STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveDynP0B ))        DEALLOCATE( WaveDynP0B,       STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveDynPC0 ))        DEALLOCATE( WaveDynPC0,       STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveElevC ))         DEALLOCATE( WaveElevC,        STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveVel0Hxi ))       DEALLOCATE( WaveVel0Hxi,      STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveVel0Hyi ))       DEALLOCATE( WaveVel0Hyi,      STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveVel0V ))         DEALLOCATE( WaveVel0V,        STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveVelC0Hxi ))      DEALLOCATE( WaveVelC0Hxi,     STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveVelC0Hyi ))      DEALLOCATE( WaveVelC0Hyi,     STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveVelC0V ))        DEALLOCATE( WaveVelC0V,       STAT=ErrStatTmp)
+      IF (ALLOCATED( WvSpreadThetaIdx ))  DEALLOCATE( WvSpreadThetaIdx, STAT=ErrStatTmp)
+      IF (ALLOCATED( tmpComplexArr ))     DEALLOCATE( tmpComplexArr,    STAT=ErrStatTmp)
+      RETURN
+
+   END SUBROUTINE CleanUp
+
 
 END SUBROUTINE VariousWaves_Init
 
@@ -1636,11 +2126,11 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! GH Bladed wave data.
-   REAL(ReKi), ALLOCATABLE      :: WaveElev0  (:)                            ! Instantaneous elevation of incident waves at the platform reference point (meters)
+   REAL(ReKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the WAMIT reference point (meters)
    
-   INTEGER                      :: UnFA     = 31                                   ! I/O unit number for the file needed for the GH Bladed wave data by FAST.
-   INTEGER                      :: UnKi     = 32                                   ! I/O unit number for the GH Bladed wave data file containing wave particle kinematics time history.
-   INTEGER                      :: UnSu     = 33                                   ! I/O unit number for the GH Bladed wave data file containing surface elevation time history.
+   INTEGER                       :: UnFA                          ! I/O unit number for the file needed for the GH Bladed wave data by FAST.
+   INTEGER                       :: UnKi                          ! I/O unit number for the GH Bladed wave data file containing wave particle kinematics time history.
+   INTEGER                       :: UnSu                          ! I/O unit number for the GH Bladed wave data file containing surface elevation time history.
    REAL(ReKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
    REAL(ReKi), ALLOCATABLE      :: GHWaveDynP(:  )                                 ! Instantaneous dynamic pressure of incident waves                                                            at each of the GHNWvDpth vertical locations in GH Bladed wave data files (N/m^2)
    REAL(ReKi)                   :: GHWaveTime                                      ! Instantaneous simulation times in GH Bladed wave data files (sec)
@@ -1656,7 +2146,11 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
    LOGICAL                      :: Reading                                        ! Flag to say whether or not we are still reading from the GH Bladed wave data files (files not exhausted).
 
+      ! Temporary error handling variables
+   INTEGER(IntKi)                :: ErrStatTmp                    ! Temporarary error status for procesing
+   CHARACTER(1024)               :: ErrMsgTmp                     ! Temporary error message for processing
    
+
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
@@ -1679,52 +2173,30 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1              !   larger or equal to WaveTMax/WaveDT.
    InitOut%NStepWave2 = InitOut%NStepWave/2
 
-   ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveTime array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
 
-   ALLOCATE ( InitOut%WaveElevC0 (2,0:InitOut%NStepWave2                   ) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveElevC0 array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   ALLOCATE ( InitOut%WaveElevC0 (2,0:InitOut%NStepWave2                 ) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
 
-   ALLOCATE ( WaveElev0  (0:InitOut%NStepWave-1                    ) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveElev0 array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   ALLOCATE ( WaveElev0          (0:InitOut%NStepWave-1                  ) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'GH_BladedWaves_Init')
 
-   ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave-1,InitInp%NWaveElev  ) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveElev array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NWaveElev  ) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
 
-   ALLOCATE ( InitOut%WaveDynP0  (0:InitOut%NStepWave-1,InitInp%NWaveKin0  ) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveDynP0 array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   ALLOCATE ( InitOut%WaveDynP0  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,'GH_BladedWaves_Init')
 
-   ALLOCATE ( InitOut%WaveVel0   (0:InitOut%NStepWave-1,InitInp%NWaveKin0,3) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveVel0 array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   ALLOCATE ( InitOut%WaveVel0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
 
-   ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave-1,InitInp%NWaveKin0,3) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the WaveAcc0 array.'
-      ErrStat = ErrID_Fatal
+   ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+
+      ! Now check if all the allocations worked properly
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL CleanUp()
       RETURN
    END IF
 
@@ -1738,8 +2210,13 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! Open the file needed for the GH Bladed wave data by FAST, read in the
    !   input parameters, then close it again:
 
-   CALL OpenFInpFile ( UnFA, TRIM(InitInp%GHWvFile)//'_FAST.txt', ErrStat ) ! Open file.
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL  GetNewUnit( UnFA )
+   CALL  OpenFInpFile ( UnFA, TRIM(InitInp%GHWvFile)//'_FAST.txt', ErrStatTmp, ErrMsgTmp ) ! Open file.
+   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL CleanUp()
+      RETURN
+   END IF
 
 
 
@@ -1748,73 +2225,71 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    READ (UnFA,*)  GHNWvDpth
 
    IF ( GHNWvDpth <= 0 )  THEN
-      ErrMsg = ' GHNWvDpth must be greater than zero.'
-      ErrStat = ErrID_Fatal
+      CALL  SetErrStat(ErrID_Fatal,'GHNWvDpth must be greater than zero.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+      CLOSE ( UnFA ) 
       RETURN
    END IF
 
    ! GHWvDpth - Vertical locations in GH Bladed wave data files.
 
-   ALLOCATE ( GHWvDpth(GHNWvDpth) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the GHWvDpth array.'
-      ErrStat = ErrID_Fatal
+   ALLOCATE ( GHWvDpth(GHNWvDpth) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWvDpth.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+      CALL CleanUp()
+      CLOSE ( UnFA ) 
       RETURN
    END IF
 
    DO J = 1,GHNWvDpth   ! Loop through all vertical locations in the GH Bladed wave data files
-      READ (unFA,*)  GHWvDpth(J)
+      READ (UnFA,*)  GHWvDpth(J)
    END DO                ! J - All vertical locations in the GH Bladed wave data files
 
    IF ( GHWvDpth(1) /= -InitInp%WtrDpth )  THEN  !TODO: Verify this check is valid if MSL2SWL is /= 0  GJH 9/6/13
-      ErrMsg  = ' GHWvDpth(1) must be set to -WtrDpth when WaveMod is set to 5.'
-      ErrStat = ErrID_Fatal
+      CALL SetErrStat(ErrID_Fatal,'GHWvDpth(1) must be set to -WtrDpth when WaveMod is set to 5.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+      CALL CleanUp()
+      CLOSE ( UnFA ) 
       RETURN
    END IF
 
    CLOSE ( UnFA )                                        ! Close file.
 
-!BJJ CHECK THAT UnFA gets closed when it's supposed to, even with error!!!!
 
 
    ! ALLOCATE arrays associated with the GH Bladed wave data:
 
-   ALLOCATE ( GHWaveDynP(GHNWvDpth) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the GHWaveDynP array.'
-      ErrStat = ErrID_Fatal
+   ALLOCATE ( GHWaveDynP(GHNWvDpth) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveDynP.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+
+   ALLOCATE ( GHWaveVel(GHNWvDpth,3) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveVel.',   ErrStat,ErrMsg,'GH_BladedWaves_Init')
+
+   ALLOCATE ( GHWaveAcc(GHNWvDpth,3) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveAcc.',   ErrStat,ErrMsg,'GH_BladedWaves_Init')
+
+      ! Now check if all the allocations worked properly
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL CleanUp()
       RETURN
    END IF
 
-   ALLOCATE ( GHWaveVel(GHNWvDpth,3) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the GHWaveVel array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
-
-   ALLOCATE ( GHWaveAcc(GHNWvDpth,3) , STAT=ErrStat )
-   IF ( ErrStat /= ErrID_None )  THEN
-      ErrMsg  =' Error allocating memory for the GHWaveAcc array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
 
 
 
    ! Open the GH Bladed wave data files:
 
-   CALL OpenFInpFile ( UnKi, TRIM(InitInp%GHWvFile)//'_kinematics.txt', ErrStat )
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = 'Error opening input file '//TRIM(InitInp%GHWvFile)//'_kinematics.txt'
-      ErrStat = ErrID_Fatal
+   CALL  GetNewUnit( UnKi )
+   CALL  OpenFInpFile ( UnKi, TRIM(InitInp%GHWvFile)//'_kinematics.txt', ErrStatTmp, ErrMsgTmp )
+   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL CleanUp()
       RETURN
    END IF
 
-   CALL OpenFInpFile ( UnSu, TRIM(InitInp%GHWvFile)//'_surface.txt',ErrStat )
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = 'Error opening input file '//TRIM(InitInp%GHWvFile)//'_surface.txt'
-      ErrStat = ErrID_Fatal
+   CALL  GetNewUnit( UnSu )
+   CALL  OpenFInpFile ( UnSu, TRIM(InitInp%GHWvFile)//'_surface.txt',ErrStatTmp, ErrMsgTmp )
+   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL CleanUp()
       RETURN
    END IF
 
@@ -1826,14 +2301,14 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    ! Process data for all the time steps:
 
-   DO I = 0,InitOut%NStepWave-1 ! Loop through all time steps
+   DO I = 0,InitOut%NStepWave ! Loop through all time steps
 
 
    ! Calculate the array of simulation times at which the instantaneous
    !   elevation of, velocity of, acceleration of, and loads associated with
    !   the incident waves are to be determined:
 
-      InitOut%WaveTime(I) = I*InitInp%WaveDT
+      InitOut%WaveTime(I) = I*REAL(InitInp%WaveDT,ReKi)
 
 
       IF ( Reading )  THEN       ! .TRUE. if we are still reading from the GH Bladed wave data files.
@@ -1841,14 +2316,14 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    ! Let's read in data for this time step:
 
-         READ (UnSu,*,IOSTAT=ErrStat)  GHWaveTime, WaveElev0(I)
+         READ (UnSu,*,IOSTAT=ErrStatTmp)  GHWaveTime, WaveElev0(I)
 
-         IF ( ErrStat == 0 )  THEN ! .TRUE. if there was no error reading in the line of data
+         IF ( ErrStatTmp == 0 )  THEN ! .TRUE. if there was no error reading in the line of data
 
             IF ( NINT( GHWaveTime/InitInp%WaveDT ) /= I )  THEN ! This is the same as: IF ( GHWaveTime /= WaveTime(I) ), but works better numerically
-               ErrMsg  = ' The input value of WaveDT is not consistent with the'// &
+               ErrMsgTmp  = ' The input value of WaveDT is not consistent with the'// &
                               ' time step inherent in the GH Bladed wave data files.'
-               ErrStat = ErrID_Fatal
+               CALL  SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
                RETURN
             END IF
 
@@ -1924,6 +2399,18 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveElev (:,J) = WaveElev0(:)
    END DO                ! J - All points where the incident wave elevations can be output
 
+
+CONTAINS
+   SUBROUTINE CleanUp( )
+
+      IF (ALLOCATED( GHWaveAcc ))         DEALLOCATE( GHWaveAcc,        STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWaveDynP ))        DEALLOCATE( GHWaveDynP,       STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWaveVel ))         DEALLOCATE( GHWaveVel,        STAT=ErrStatTmp)
+      IF (ALLOCATED( GHWvDpth ))          DEALLOCATE( GHWvDpth,         STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
+      RETURN
+   END SUBROUTINE CleanUp
+
 END SUBROUTINE GH_BladedWaves_Init
 
 
@@ -1956,6 +2443,8 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
       
       
          ! Local Variables:
+      INTEGER(IntKi)                                  :: ErrStatTmp  ! Temporary error status for processing
+      CHARACTER(1024)                                 :: ErrMsgTmp   ! Temporary error message for procesing
 
      
 !      TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
@@ -1965,13 +2454,14 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
+      ErrStatTmp  = ErrID_None
       ErrMsg  = ""               
+      ErrMsgTmp   = ""
       
       
          ! Initialize the NWTC Subroutine Library
          
       CALL NWTC_Init(  )
-
 
   
       
@@ -1983,7 +2473,13 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
 
       InitOut%RhoXg         = InitInp%WtrDens*InitInp%Gravity
       
+
+         ! Set the minimum and maximum wave directions to WaveDir.  These are reset in the 
+         ! subroutine calls as necessary.
+      InitOut%WaveDirMin   = InitInp%WaveDir
+      InitOut%WaveDirMax   = InitInp%WaveDir
       
+
             ! Initialize the variables associated with the incident wave:
 
       SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
@@ -1991,34 +2487,40 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
 
       CASE ( 0 )              ! None=still water.
 
-         CALL StillWaterWaves_Init( InitInp, InitOut, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None )  RETURN
+         CALL StillWaterWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN
             
       
       !CASE ( 3 )                 ! White-noise
       !   
-      !   CALL WhiteNoiseWaves_Init( InitInp, InitOut, ErrStat, ErrMsg )
-      !   IF ( ErrStat /= ErrID_None )  RETURN
+      !   CALL WhiteNoiseWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+      !   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+      !   IF ( ErrStat >= AbortErrLev ) RETURN
          
       CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
       
-         CALL VariousWaves_Init( InitInp, InitOut, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None )  RETURN
+         CALL VariousWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
         
       CASE ( 5 )              ! GH Bladed wave data.   
          
-         CALL GH_BladedWaves_Init( InitInp, InitOut, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None )  RETURN
-         
+         CALL GH_BladedWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
       ENDSELECT
    
       
    u%DummyInput = 0.0
    p%DT = Interval
+   p%WaveMultiDir = InitOut%WaveMultiDir     ! Flag to indicate multidirectional waves
    x%DummyContState = 0.0
    xd%DummyDiscState = 0.0
    z%DummyConstrState = 0.0
-   OtherState%DummyOtherState = 0.0
+   OtherState%DummyOtherState = 0
    y%DummyOutput = 0.0
       
       
@@ -2041,12 +2543,17 @@ SUBROUTINE Waves_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+         ! Local error handling variables
+      INTEGER(IntKi)                                  :: ErrStatTmp
+      CHARACTER(1024)                                 :: ErrMsgTmp
 
 
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
+      ErrStatTmp  = ErrID_None
       ErrMsg  = ""               
+      ErrMsgTmp   = ""
       
       
          ! Place any last minute operations or calculations here:
@@ -2058,25 +2565,32 @@ SUBROUTINE Waves_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
          ! Destroy the input data:
          
-      CALL Waves_DestroyInput( u, ErrStat, ErrMsg )
+      CALL Waves_DestroyInput( u, ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
 
 
          ! Destroy the parameter data:
          
-      CALL Waves_DestroyParam( p, ErrStat, ErrMsg )
+      CALL Waves_DestroyParam( p, ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
 
 
          ! Destroy the state data:
          
-      CALL Waves_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL Waves_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL Waves_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL Waves_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+      CALL Waves_DestroyContState(   x,           ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL Waves_DestroyDiscState(   xd,          ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL Waves_DestroyConstrState( z,           ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL Waves_DestroyOtherState(  OtherState,  ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
          
 
          ! Destroy the output data:
          
-      CALL Waves_DestroyOutput( y, ErrStat, ErrMsg )
+      CALL Waves_DestroyOutput( y, ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
 
 
       
@@ -2106,14 +2620,16 @@ SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
       TYPE(Waves_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
       TYPE(Waves_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
          
-      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
-      CHARACTER(LEN(ErrMsg))                            :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      INTEGER(IntKi)                                  :: ErrStatTmp  ! Temporary Error status  for calls
+      CHARACTER(1024)                                 :: ErrMsgTmp   ! Temporary Error message for calls
                         
          ! Initialize ErrStat
          
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
+      ErrStat     = ErrID_None         
+      ErrMsg      = ""               
       
+      ErrStatTmp  = ErrID_None         
+      ErrMsgTmp   = ""               
            
       
          ! Solve for the constraint states (z) here:
@@ -2121,10 +2637,11 @@ SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
          ! Check if the z guess is correct and update z with a new guess.
          ! Iterate until the value is within a given tolerance. 
                                     
-      CALL Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Waves_DestroyConstrState( z_Residual, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
+      CALL Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Waves_DestroyConstrState( z_Residual, ErrStatTmp, ErrMsgTmp)
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
          RETURN      
       END IF
          
@@ -2132,10 +2649,11 @@ SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
       !
       !  z = 
       !
-      !  CALL Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStat, ErrMsg )
+      !  CALL Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStatTmp, ErrMsgTmp )
+      !  CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
       !  IF ( ErrStat >= AbortErrLev ) THEN      
-      !     CALL Waves_DestroyConstrState( z_Residual, ErrStat2, ErrMsg2)
-      !     ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
+      !     CALL Waves_DestroyConstrState( z_Residual, ErrStatTmp, ErrMsgTmp)
+      !     CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
       !     RETURN      
       !  END IF
       !           
@@ -2144,17 +2662,19 @@ SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
       
          ! Destroy z_Residual because it is not necessary for the rest of the subroutine:
             
-      CALL Waves_DestroyConstrState( z_Residual, ErrStat, ErrMsg)
+      CALL Waves_DestroyConstrState( z_Residual, ErrStatTmp, ErrMsgTmp)
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
       IF ( ErrStat >= AbortErrLev ) RETURN      
          
          
          
          ! Get first time derivatives of continuous states (dxdt):
       
-      CALL Waves_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
+      CALL Waves_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
       IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Waves_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
+         CALL Waves_DestroyContState( dxdt, ErrStatTmp, ErrMsgTmp)
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates')
          RETURN
       END IF
                
@@ -2163,10 +2683,11 @@ SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
          !   Note that xd [discrete state] is changed in Waves_UpdateDiscState(), so Waves_CalcOutput(),  
          !   Waves_CalcContStateDeriv(), and Waves_CalcConstrStates() must be called first (see above).
       
-      CALL Waves_UpdateDiscState(Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
+      CALL Waves_UpdateDiscState(Time, u, p, x, xd, z, OtherState, ErrStatTmp, ErrMsgTmp )   
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
       IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Waves_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
+         CALL Waves_DestroyContState( dxdt, ErrStatTmp, ErrMsgTmp)
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
          RETURN      
       END IF
          
@@ -2178,7 +2699,8 @@ SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
 
          ! Destroy dxdt because it is not necessary for the rest of the subroutine
             
-      CALL Waves_DestroyContState( dxdt, ErrStat, ErrMsg)
+      CALL Waves_DestroyContState( dxdt, ErrStatTmp, ErrMsgTmp)
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
       IF ( ErrStat >= AbortErrLev ) RETURN      
      
    
@@ -2240,7 +2762,7 @@ SUBROUTINE Waves_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Err
       
          ! Compute the first time derivatives of the continuous states here:
       
-      dxdt%DummyContState = 0
+      dxdt%DummyContState = 0.0_ReKi
          
 
 END SUBROUTINE Waves_CalcContStateDeriv
@@ -2298,7 +2820,7 @@ SUBROUTINE Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_re
       
          ! Solve for the constraint states here:
       
-      z_residual%DummyConstrState = 0
+      z_residual%DummyConstrState = 0.0_ReKi
 
 END SUBROUTINE Waves_CalcConstrStateResidual
 !!----------------------------------------------------------------------------------------------------------------------------------

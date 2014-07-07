@@ -9,8 +9,8 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed: $Date: 2013-10-01 19:35:07 -0600 (Tue, 01 Oct 2013) $
-# (File) Revision #: $Rev: 247 $
+# File last committed: $Date: 2014-05-27 09:53:59 -0600 (Tue, 27 May 2014) $
+# (File) Revision #: $Rev: 395 $
 # URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/Morison.txt $
 ###################################################################################################################################
 
@@ -19,11 +19,11 @@
 include   Registry_NWTC_Library.txt
 #
 #
-param     Morison/Morison              unused                        INTEGER          MaxOutputs               -       2736        -         ""    -
+param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs               -       4032    -         ""    -
 typedef   Morison/Morison              Morison_JointType             INTEGER          JointID                  -          -        -         ""    -
 typedef   ^                            ^                             ReKi             JointPos                 {3}        -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointHvID                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointHvIDIndx                -          -        -         ""    -
+typedef   ^                            ^                             INTEGER          JointAxID                -          -        -         ""    -
+typedef   ^                            ^                             INTEGER          JointAxIDIndx                -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          NConnections             -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         ""    -
@@ -40,9 +40,16 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             DpthCdMG                 -          -        -         ""    -
 typedef   ^                            ^                             ReKi             DpthCa                   -          -        -         ""    -
 typedef   ^                            ^                             ReKi             DpthCaMG                 -          -        -         ""    -
-typedef   Morison/Morison              Morison_HeaveCoefType         INTEGER          HvCoefID                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             HvCd                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             HvCa                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             DpthCp                   -          -        -         ""    -
+typedef   ^                            ^                             ReKi             DpthCpMG                 -          -        -         ""    -
+typedef   ^                            ^                             ReKi             DpthAxCa                 -          -        -         ""    -
+typedef   ^                            ^                             ReKi             DpthAxCaMG               -          -        -         ""    -
+typedef   ^                            ^                             ReKi             DpthAxCp                 -          -        -         ""    -
+typedef   ^                            ^                             ReKi             DpthAxCpMG               -          -        -         ""    -
+typedef   Morison/Morison              Morison_AxialCoefType         INTEGER          AxCoefID                 -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCd                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCa                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCp                     -          -        -         ""    -
 typedef   Morison/Morison              Morison_MemberInputType       INTEGER          MemberID                 -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          MJointID1                -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          MJointID2                -          -        -         ""    -
@@ -66,7 +73,7 @@ typedef   Morison/Morison              Morison_NodeType              INTEGER    
 typedef   ^                            ^                             INTEGER          JointIndx                -          -        -         ""    -
 typedef   ^                            ^                             ReKi             JointPos                 {3}        -        -         ""    -
 typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointHvIDIndx            -          -        -         ""    -
+typedef   ^                            ^                             INTEGER          JointAxIDIndx            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          NConnections             -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         ""    -
 typedef   ^                            ^                             INTEGER          NConnectPreSplit         -          -        -         ""    -
@@ -74,8 +81,15 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             CdMG                     -          -        -         ""    -
 typedef   ^                            ^                             ReKi             Ca                       -          -        -         ""    -
 typedef   ^                            ^                             ReKi             CaMG                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             HvCd                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             HvCa                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             Cp                       -          -        -         ""    -
+typedef   ^                            ^                             ReKi             CpMG                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             JAxCd                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             JAxCa                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             JAxCp                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCa                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCp                     -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCaMG                   -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCpMG                   -          -        -         ""    -
 typedef   ^                            ^                             ReKi             R                        -          -        -         ""    -
 typedef   ^                            ^                             ReKi             t                        -          -        -         ""    -
 typedef   ^                            ^                             ReKi             tMG                      -          -        -         ""    -
@@ -98,17 +112,29 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             CdMG1                    -          -        -         ""    -
 typedef   ^                            ^                             ReKi             Ca1                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi             CaMG1                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             Cp1                      -          -        -         ""    -
+typedef   ^                            ^                             ReKi             CpMG1                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCa1                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCaMG1                  -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCp1                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCpMG1                  -          -        -         ""    -
 typedef   ^                            ^                             ReKi             Cd2                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi             CdMG2                    -          -        -         ""    -
 typedef   ^                            ^                             ReKi             Ca2                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi             CaMG2                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             Cp2                      -          -        -         ""    -
+typedef   ^                            ^                             ReKi             CpMG2                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCa2                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCaMG2                  -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCp2                    -          -        -         ""    -
+typedef   ^                            ^                             ReKi             AxCpMG2                  -          -        -         ""    -
 typedef   ^                            ^                             ReKi             InpMbrDist1              -          -        -         ""    -
 typedef   ^                            ^                             ReKi             InpMbrDist2              -          -        -         ""    -
 typedef   ^                            ^                             ReKi             InpMbrLen                -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          InpMbrIndx               -          -        -         ""    -
 typedef   ^                            ^                             ReKi             R_LToG                   {3}{3}     -        -         ""    -
-#typedef   ^                            ^                             INTEGER          MGSplitState             -          -        -         ""    -
-#typedef   ^                            ^                             INTEGER          WtrSplitState            -          -        -         ""    -
+#typedef   ^                            ^                            INTEGER          MGSplitState             -          -        -         ""    -
+#typedef   ^                            ^                            INTEGER          WtrSplitState            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          NumSplits                -          -        -         ""    -
 typedef   ^                            ^                             ReKi             Splits                   {5}        -        -         ""    -
 typedef   ^                            ^                             ReKi             MGvolume                 -          -        -         ""    -
@@ -130,6 +156,18 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             MemberCa2                -          -        -         ""    -
 typedef   ^                            ^                             ReKi             MemberCaMG1              -          -        -         ""    -
 typedef   ^                            ^                             ReKi             MemberCaMG2              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberCp1                -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberCp2                -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberCpMG1              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberCpMG2              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCa1              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCa2              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCaMG1            -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCaMG2            -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCp1              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCp2              -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCpMG1            -          -        -         ""    -
+typedef   ^                            ^                             ReKi             MemberAxCpMG2            -          -        -         ""    -
 typedef   Morison/Morison              Morison_MGDepthsType          ReKi             MGDpth                   -          -        -         ""    -
 typedef   ^                            ^                             ReKi             MGThck                   -          -        -         ""    -
 typedef   ^                            ^                             ReKi             MGDens                   -          -        -         ""    -
@@ -159,14 +197,20 @@ typedef   ^                            ^                             Morison_Joi
 typedef   ^                            ^                             Morison_NodeType         Nodes                            {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NElements                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_MemberType       Elements                         {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NHvCoefs                          -          -        -         ""    -
-typedef   ^                            ^                             Morison_HeaveCoefType    HeaveCoefs                       {:}        -        -         ""    -
+typedef   ^                            ^                             INTEGER                  NAxCoefs                          -          -        -         ""    -
+typedef   ^                            ^                             Morison_AxialCoefType    AxialCoefs                       {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NPropSets                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_MemberPropType   MPropSets                        {:}        -        -         ""    -
 typedef   ^                            ^                             ReKi                     SimplCd                          -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     SimplCdMG                        -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     SimplCa                          -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     SimplCaMG                        -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     SimplCp                          -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     SimplCpMG                        -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     SimplAxCa                        -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NCoefMembers                     -          -        -         ""    -
@@ -183,7 +227,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_MOutput          MOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NJOutputs                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)            OutList                          {2736}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
+typedef   ^                            ^                             CHARACTER(10)            OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
 typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  OutSwtch                         -          -        -         ""    -
@@ -236,6 +280,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     D_FA                            {:}{:}         -         -         "Fluid acceleration at line element node"   -
 typedef   ^                            ^                             ReKi                     D_FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node"   -
 typedef   ^                            ^                             ReKi                     L_F_D                           {:}{:}         -         -         "Lumped viscous drag loads"   -
+typedef   ^                            ^                             ReKi                     L_F_I                           {:}{:}         -         -         "Lumped intertia loads"   -
 typedef   ^                            ^                             ReKi                     L_F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads"   -
 typedef   ^                            ^                             ReKi                     L_F_AM                          {:}{:}         -         -         "Lumped added mass loads"   -
 typedef   ^                            ^                             ReKi                     L_FV                            {:}{:}         -         -         "Fluid velocity at point element node"   -
@@ -261,6 +306,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     D_dragConst                     {:}        -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_An                            {:}{:}     -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_F_B                           {:}{:}     -         -         ""        -
+typedef   ^                            ^                             ReKi                     L_F_I                           {:}{:}{:}  -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_F_DP                          {:}{:}{:}  -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_F_BF                          {:}{:}     -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_AM_M                          {:}{:}{:}  -         -         ""        -

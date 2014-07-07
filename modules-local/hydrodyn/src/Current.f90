@@ -23,8 +23,8 @@
 ! limitations under the License.
 !    
 !**********************************************************************************************************************************
-! File last committed: $Date: 2013-09-21 23:01:53 -0600 (Sat, 21 Sep 2013) $
-! (File) Revision #: $Rev: 199 $
+! File last committed: $Date: 2014-06-18 12:55:01 -0600 (Wed, 18 Jun 2014) $
+! (File) Revision #: $Rev: 426 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/Current.f90 $
 !**********************************************************************************************************************************
 MODULE Current
@@ -118,7 +118,7 @@ SUBROUTINE Calc_Current( InitInp, z, h , DirRoot, CurrVxi, CurrVyi )
       REAL(ReKi),              INTENT(OUT) :: CurrVxi         ! xi-component of the current velocity at elevation z (m/s)
       REAL(ReKi),              INTENT(OUT) :: CurrVyi         ! yi-component of the current velocity at elevation z (m/s)
 
-      REAL(ReKi),              INTENT(IN ) :: h               ! Water depth (meters)
+      REAL(ReKi),              INTENT(IN ) :: h               ! Water depth (meters)  This quantity must be positive-valued
       REAL(ReKi),              INTENT(IN ) :: z               ! Elevation relative to the mean sea level (meters)
       CHARACTER(1024),         INTENT(IN ) :: DirRoot         ! The name of the root file including the full path to the current working directory.  
                                                               ! This may be useful if you want this routine to write a permanent record of what it does 
@@ -159,7 +159,7 @@ SUBROUTINE Calc_Current( InitInp, z, h , DirRoot, CurrVxi, CurrVyi )
          CASE ( 1 )              ! Standard (using inputs from PtfmFile).
 
             CurrSSV =      InitInp%CurrSSV0*( ( z + h                      )/h                      )**(1.0/7.0)
-            CurrNSV = MAX( InitInp%CurrNSV0*( ( z + InitInp%CurrNSRef )/InitInp%CurrNSRef )           , 0.0 )
+            CurrNSV = MAX( InitInp%CurrNSV0*( ( z + InitInp%CurrNSRef )/InitInp%CurrNSRef )           , 0.0_ReKi )
 
             CurrVxi = InitInp%CurrDIV*COS( D2R*InitInp%CurrDIDir ) + CurrSSV*COS( D2R*InitInp%CurrSSDir ) + &
                                    CurrNSV*COS( D2R*InitInp%CurrNSDir )
@@ -269,7 +269,7 @@ SUBROUTINE Current_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    END IF   
       
 
-      ! Compute the partial dirivative for wave stretching
+      ! Compute the partial derivative for wave stretching
    CALL    Calc_Current( InitInp,  0.0_ReKi, InitInp%WtrDpth, InitInp%DirRoot, CurrVxi0, CurrVyi0 )
    CALL    Calc_Current( InitInp, -SmllNmbr, InitInp%WtrDpth, InitInp%DirRoot, CurrVxiS, CurrVyiS )
 
@@ -502,7 +502,7 @@ SUBROUTINE Current_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, E
       
          ! Compute the first time derivatives of the continuous states here:
       
-      dxdt%DummyContState = 0
+      dxdt%DummyContState = 0.0
          
 
 END SUBROUTINE Current_CalcContStateDeriv

@@ -9,8 +9,8 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed: $Date: 2013-09-21 22:50:10 -0600 (Sat, 21 Sep 2013) $
-# (File) Revision #: $Rev: 198 $
+# File last committed: $Date: 2014-02-03 14:36:15 -0700 (Mon, 03 Feb 2014) $
+# (File) Revision #: $Rev: 330 $
 # URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/Conv_Radiation.txt $
 ###################################################################################################################################
 
@@ -23,8 +23,9 @@ include   Registry_NWTC_Library.txt
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
 typedef   Conv_Radiation/Conv_Rdtn     InitInputType                 DbKi             RdtnDT                   -          -        -         ""    -
+typedef   ^                            ^                             CHARACTER(80)    RdtnDTChr
 typedef   ^                            ^                             ReKi             HighFreq                 -          -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)    WAMITFile                -          -        -         ""    -
+typedef   ^                            ^                             CHARACTER(1024)  WAMITFile                -          -        -         ""    -
 typedef   ^                            ^                             ReKi             HdroAddMs                {:}{:}     -        -         ""    -
 typedef   ^                            ^                             ReKi             HdroFreq                 {:}        -        -         ""    -
 typedef   ^                            ^                             ReKi             HdroDmpng                {:}{:}     -        -         ""    -
