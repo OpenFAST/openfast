@@ -1,11 +1,73 @@
+v2.01 (June 2014)
+•	Enabled the MSL2SWL parameter
+•	Combined dynamic pressure loads into interial loads
+•	New output channels and modified channel names
+•	Revised summary file: includes WAMIT buoyancy table, reworked the node and element tables
+•	Multi-directional waves
+•	The platform added mass loads are now part of the platform radiation loads (RdtnFxi, RdtnFyi, etc.)
+•	Updated the primary input file for multi-direction waves, 2nd order waves, 2nd order floating platform force, axial coeficients, consolidated output channels under a single section of the input file
+•	Additional error handling when parsing input file 
+•	Fixed solver bug in SS_Radiation module [code]
+•	Added lumped interial loads
+•	Fixed variable initialization issues [code]
+•	Added ability to output grid of wave elevations
+•	Fixed bug for regular waves with phase [code]
+•	Fixed bug in computation of wave kinematics for current cases [code]
+•	Altered lumped added mass equation
+•	Altered distributed inertial load equation
+•	Fixed bug which could prevent filled buoyancy from being computed [code]
+•	Fixed bug where a model using WAMIT could still report marine growth volume in the summary file 
+•	Fixed bug with transverse drag calculation: wasn’t including all components of relative velocity [code]
+•	Added support for steady-state Morison inputs to driver program
+•	Added Cp coefficients
+•	Modified file naming convention to match FAST convention
+•	Fixed bug with computation of lumped added mass matrix [code]
+•	Added support for RdtnDT to be set to “DEFAULT” to match driver code time step
+•	Restructured the calculation of loads due to additional stiffness, damping so they work when HasWAMIT = FALSE
+•	Wave elevations can now be output when HasWAMIT=FALSE
+•	Now mapping HD loads to WRP without motions for use by ElastoDyn [code]
+•	Fixed bug where dynamic pressure load terms, and buoyancy, and drag might not be calculated even when PropWAMIT=FALSE [code]
+•	Fixed bug with reported units of output channels
+•	Fixed type of WaveElevxiPrime0 to COMPLEX [code]
+•	Fixed bug with added mass calculation which was always grabbing acceleration of first node instead of the jth node [code]
+•	Altered fluid-domain checks for when to compute hydrodynamic loads
+•	Changed terminology from platform reference point to WAMIT reference point
+•	Waves now repeat every WaveTMax
+•	WAMIT-related calculations now account for PtfmCOBxt and PtfmCOByt 
+•	Fixed bug when user to set WaveNDAmp = TRUE when WaveMod=1 [code]
+
+v2.00.01 (October 2013)
+•	Disabled GH Bladed wave model
+•	Added support for WAMIT acceleration inputs in driver file
+•	Added axial coefficients for use in load calculations
+•	Flipped signs on distributed buoyancy moments [code]
+•	Removed center of buoyancy calculations from the summary file
+•	Changed integration point for terms in summary file to WRP (0,0,0)
+•	Enabled added mass load calculations within HydroDyn
+•	Fixed bug with element centroid calculation [code]
+•	Fixed bug where generated nodes were not receiving the proper DCM, marine growth, and fill properties [code]
+•	Fixed bug in calling parameters to LumpFloodedBuoyancy() [code]
+•	Warning issued for invalid output channels, but they are now removed from output channel list 
+•	Updated licensing information [code]
+•	Fixed bug where lumped added mass was calculated for PropWAMIT=TRUE members [code]
+•	Added support for additional preload, stiffness, and damping
+•	Fixed bug with dRdz calculation for elements with marine growth [code]
+•	Fixed bug with interpolation of joint properties [code]
+•	Fixed bug with horizontal member splitting [code]
+•	Fixed bug with dynamic pressure calculation: missing complex component [code]
+•	Added support for joint outputs
+•	Fixed sign error for distributed marine growth weight loads [code]
+•	Fixed filled buoyancy calculation [code]
+•	Fixed bug with Calc_Current() calling parameters [code]
+•	Fixed bug with distributed added mass due to marine growth equation [code]
+•	Added WvLowCOff and WvHiCOff parameters
+•	Added support for white-noise waves
+•	Fixed several memory leaks [code]
+•	Fixed bug where MDivSize was an integer but should have been a ReKi [code]
+•	Fixed bug which could use PropWAMIT from the incorrect node [code]
+
 HydroDyn v2.00.00a-gjh  03-Apr-2013
 
 -Complete rewrite of HydroDyn
 
-HydroDyn v2.00.01a-gjh 03-Oct-2013
--many bug fixes
--added heave coefficients and calculations
--added user-supplied preload, stiffness, and damping
--new WvLowCOff and WvHiCOff inputs
--added mass load calculation within hydrodyn
--many additions to the summary file
+

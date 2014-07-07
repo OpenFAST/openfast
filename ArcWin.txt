@@ -1,2 +1,5 @@
 bin\HydroDynDriver_win32.exe
 bin\Registry_win32.exe
+Compiling\Visual Studio\HydroDynDriver.vfproj
+Compiling\Visual Studio\RunRegistry.bat
+Compiling\Visual Studio\README.txt

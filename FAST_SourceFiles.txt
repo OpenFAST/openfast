@@ -14,6 +14,7 @@ Source\Morison_Types.f90
 Source\SS_Radiation.f90
 Source\SS_Radiation_Types.f90
 Source\WAMIT.f90
+Source\WAMIT_Interp.f90
 Source\WAMIT_Output.f90
 Source\WAMIT_Types.f90
 Source\Waves.f90
@@ -21,8 +22,10 @@ Source\Waves_Types.f90
 
 Source\RegistryFiles\Current.txt
 Source\RegistryFiles\Waves.txt
+Source\RegistryFiles\Waves2.txt
 Source\RegistryFiles\SS_Radiation.txt
 Source\RegistryFiles\Conv_Radiation.txt
 Source\RegistryFiles\WAMIT.txt
+Source\RegistryFiles\WAMIT2.txt
 Source\RegistryFiles\Morison.txt
 Source\RegistryFiles\HydroDyn.txt
