@@ -1950,7 +1950,7 @@ ENDDO
             READ(Line,*,IOSTAT=ErrStat) p%MOutLst(I)%MemberID, p%MOutLst(I)%NOutCnt
             
             
-            IF ( p%MOutLst(I)%NOutCnt < 1 .OR. p%MOutLst(I)%NOutCnt > 9 .OR. p%MOutLst(I)%NOutCnt > Init%Ndiv+1) THEN
+            IF ( ErrStat /= 0 .OR. p%MOutLst(I)%NOutCnt < 1 .OR. p%MOutLst(I)%NOutCnt > 9 .OR. p%MOutLst(I)%NOutCnt > Init%Ndiv+1) THEN
                ErrMsg = ' Error in file "'//TRIM(SDInputFile)//'": NOutCnt must be >= 1 and <= minimim(Ndiv+1,9)'
                ErrStat = ErrID_Fatal
                CALL CleanUp()
@@ -1960,7 +1960,7 @@ ENDDO
             
             ALLOCATE ( p%MOutLst(I)%NodeCnt( p%MOutLst(I)%NOutCnt ), STAT = ErrStat )
             
-            IF ( ErrStat /= ErrID_None ) THEN
+            IF ( ErrStat /= 0 ) THEN
               ErrMsg = ' Error in file "'//TRIM(SDInputFile)//': Error allocating NodeCnt arrays'
                ErrStat = ErrID_Fatal
                CALL CleanUp()
@@ -1970,7 +1970,7 @@ ENDDO
             READ(Line,*,IOSTAT=ErrStat) p%MOutLst(I)%MemberID,  p%MOutLst(I)%NOutCnt,  &
                                         p%MOutLst(I)%NodeCnt
              
-            IF ( ErrStat /= ErrID_None ) THEN
+            IF ( ErrStat /= 0 ) THEN
                ErrMsg = ' Error in file "'//TRIM(SDInputFile)//': Error  Failed to read member output list properties.'
                ErrStat = ErrID_Fatal
                CALL CleanUp()
