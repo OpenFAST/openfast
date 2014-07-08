@@ -1,9 +1,8 @@
-   SUBROUTINE Norm(dof_total,vector,norm_value)
+   FUNCTION Norm(vector)
    
-   INTEGER(IntKi),INTENT(IN)::dof_total
-   REAL(ReKi),INTENT(IN)::vector(:)
-   REAL(ReKi),INTENT(OUT)::norm_value
+   REAL(ReKi),INTENT(IN):: vector(:)
+   REAL(ReKi)           :: Norm
    
-   norm_value = SQRT(DOT_PRODUCT(vector,vector))
+   Norm = SQRT(DOT_PRODUCT(vector,vector))
    
-   END SUBROUTINE Norm
+   END FUNCTION Norm
