@@ -116,6 +116,7 @@ INCLUDE 'DynamicSolution_Force.f90'
    REAL(ReKi)              :: temp_twist(2)
    REAL(ReKi)              :: temp_phi
    REAL(ReKi)              :: temp_POS(3)
+   REAL(ReKi)              :: temp_e1(3)
    REAL(ReKi)              :: temp_CRV(3)
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
@@ -196,12 +197,12 @@ INCLUDE 'DynamicSolution_Force.f90'
        temp_twist(1) = InputFileData%initial_twist(i)
        temp_twist(2) = InputFileData%initial_twist(i+1)
        DO j=1,p%node_elem
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS)
-           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1)
            IF(InputFileData%ini_curv) THEN
-               CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
+               temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+               CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV)
            ELSE
-               temp_CRV = 0.0D0
+               temp_CRV(:) = 0.0D0
            ENDIF
            temp_id2 = (j-1)*p%dof_node 
            p%uuN0(temp_id2+1,i) = temp_POS(1)
@@ -212,7 +213,7 @@ INCLUDE 'DynamicSolution_Force.f90'
            p%uuN0(temp_id2+6,i) = temp_CRV(3)
        ENDDO
       DO j=1,p%ngp
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GL(j),temp_POS)
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GL(j),temp_POS,temp_e1)
            temp_id2 = (i-1)*p%ngp+j+1
            temp_L2(1:3,temp_id2) = temp_POS(1:3)
        ENDDO
