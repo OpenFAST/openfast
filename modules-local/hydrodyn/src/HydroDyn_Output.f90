@@ -264,7 +264,7 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, y, NWaveElev, WaveElev, F_Add, F_Hydro
 END SUBROUTINE HDOut_MapOutputs
 
 !====================================================================================================
-SUBROUTINE HDOut_WriteOutputs( Time, y, p, ErrStat, ErrMsg )
+SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in WriteOutputs (and indexed in OutParam) to the file
 ! opened in HDOut_Init()
 !---------------------------------------------------------------------------------------------------- 
@@ -273,6 +273,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, ErrStat, ErrMsg )
    REAL(DbKi),                   INTENT( IN    ) :: Time
    TYPE(HydroDyn_OutputType),    INTENT( INOUT ) :: y                    ! HydroDyn's output data
    TYPE(HydroDyn_ParameterType), INTENT( IN    ) :: p                    ! HydroDyn parameter data
+   INTEGER,                      INTENT( INOUT ) :: Decimate             ! Output decimatation counter
    INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -284,7 +285,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, ErrStat, ErrMsg )
   IF (p%UnOutFile < 0 ) RETURN
   
       ! Initialize ErrStat and determine if it makes any sense to write output
-      
+!TODO: We should not have this check here, once per timestep!  This should be resolved during initialization. GJH 7/7/2014    
    IF ( ( (.NOT. ALLOCATED( p%OutParam )) .AND. (.NOT. ALLOCATED( p%WAMIT%OutParam ) ) .AND. ( .NOT. ALLOCATED( p%Morison%OutParam ) ) ) )  THEN
       ErrStat = ErrID_Warn
       ErrMsg  = ' Cannot write output to file because there are not a valid output list.'
@@ -302,38 +303,52 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, ErrStat, ErrMsg )
    
    !WRITE(p%UnOutFile,Frmt) Time, ( p%Delim, y%WAMIT%WriteOutput(I), I=1,p%WAMIT%NumOuts), ( p%Delim, y%Morison%WriteOutput(I), I=1,p%Morison%NumOuts)
    
-   Frmt = '(F10.4)'
+   IF ((Decimate .EQ. p%OutDec) .OR. (Decimate .EQ. 0))  THEN
+      
+      Decimate = 1  !reset counter  
+            
+      Frmt = '(F10.4)'
    
-   WRITE(p%UnOutFile,Frmt,ADVANCE='no')  Time
+      WRITE(p%UnOutFile,Frmt,ADVANCE='no')  Time
       
-      ! HydroDyn Outputs
-   IF (ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0) THEN
-      Frmt = '('//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumOuts )   
-   END IF
+      IF ( p%NumTotalOuts > 0 ) THEN
+         Frmt = '('//TRIM(Int2LStr(p%NumTotalOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
+         WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumTotalOuts )   
+      END IF
+      
+      !   ! HydroDyn Outputs
+      !IF (ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0) THEN
+      !!IF (p%DoOutput) THEN
+      !   Frmt = '('//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
+      !   WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumOuts )   
+      !END IF
+      !
+      !   ! WAMIT Outputs
+      !IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
+      !!IF (p%WAMIT%DoOutput) THEN
+      !   Frmt = '('//TRIM(Int2LStr(p%WAMIT%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
+      !   WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WAMIT%WriteOutput(I)  , I=1,p%WAMIT%NumOuts )
+      !END IF
+      !
+      !   ! Morison Outputs
+      !IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
+      !!IF (p%Morison%DoOutput) THEN
+      !   Frmt = '('//TRIM(Int2LStr(p%Morison%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
+      !   WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%Morison%WriteOutput(I), I=1,p%Morison%NumOuts )
+      !END IF
+          
+      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
    
-      ! WAMIT Outputs
-   IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
-      Frmt = '('//TRIM(Int2LStr(p%WAMIT%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WAMIT%WriteOutput(I)  , I=1,p%WAMIT%NumOuts )
-   END IF
-      
-      ! Morison Outputs
-   IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
-      Frmt = '('//TRIM(Int2LStr(p%Morison%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%Morison%WriteOutput(I), I=1,p%Morison%NumOuts )
-   END IF
-      
-      
-   WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
+   ELSE      
+      Decimate = Decimate + 1
+   ENDIF
    
    RETURN
-
-
+   
 END SUBROUTINE HDOut_WriteOutputs
 
 !====================================================================================================
-SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, InitOut, ErrStat, ErrMsg )
+SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 ! NOTE: This routine must be called only after any sub-modules OUT_Init() subroutines have been called.
@@ -347,6 +362,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, InitOut, ErrStat, ErrM
    TYPE(HydroDyn_InitInputType ), INTENT( IN    ) :: InitInp              ! data needed to initialize the output module     
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p 
+   TYPE(HydroDyn_OtherStateType), INTENT( INOUT ) :: OtherState
    TYPE(HydroDyn_InitOutputType), INTENT( INOUT ) :: InitOut
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -355,11 +371,11 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, InitOut, ErrStat, ErrM
    INTEGER                                        :: I                    ! Generic loop counter      
    INTEGER                                        :: J                    ! Generic loop counter      
    INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
+   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    LOGICAL                                        :: hasWAMITOuts         ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasMorisonOuts       ! Are there any Morison-related outputs
-   INTEGER                                        :: numHydroOuts         ! total number of WAMIT and Morison outputs
+   
    
    
    
@@ -424,40 +440,44 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, InitOut, ErrStat, ErrM
          
          hasWAMITOuts   = .FALSE.
          hasMorisonOuts = .FALSE.
-         numHydroOuts   = p%NumOuts
+         p%NumTotalOuts   = p%NumOuts
+         OtherState%LastOutTime = 0.0_DbKi
+         OtherState%Decimate    = 0
+         p%OutDec               = 1             !TODO: Remove this once the parameter has been added to the HD input file GJH 7/8/2014
          
          IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
             hasWAMITOuts = .TRUE.
-            numHydroOuts = numHydroOuts + p%WAMIT%NumOuts       
+            p%NumTotalOuts = p%NumTotalOuts + p%WAMIT%NumOuts       
          END IF
          IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
             hasMorisonOuts = .TRUE.
-            numHydroOuts = numHydroOuts + p%Morison%NumOuts       
+            p%NumTotalOuts = p%NumTotalOuts + p%Morison%NumOuts       
          END IF
       
             ! Allocate the aggregate arrays
          
-         ALLOCATE ( InitOut%WriteOutputHdr ( numHydroOuts ) , STAT=ErrStat )
+         ALLOCATE ( InitOut%WriteOutputHdr ( p%NumTotalOuts ) , STAT=ErrStat )
          IF ( ErrStat /= 0 )  THEN
             ErrMsg  = ' Error allocating memory for the WriteOutputHdr array.'
             ErrStat = ErrID_Fatal
             RETURN
          END IF
          
-         ALLOCATE ( InitOut%WriteOutputUnt ( numHydroOuts ) , STAT=ErrStat )
+         ALLOCATE ( InitOut%WriteOutputUnt ( p%NumTotalOuts ) , STAT=ErrStat )
          IF ( ErrStat /= 0 )  THEN
             ErrMsg  = ' Error allocating memory for the WriteOutputUnt array.'
             ErrStat = ErrID_Fatal
             RETURN
          END IF
          
-         ALLOCATE ( y%WriteOutput         ( numHydroOuts ) , STAT=ErrStat )
+         ALLOCATE ( y%WriteOutput         ( p%NumTotalOuts ) , STAT=ErrStat )
          IF ( ErrStat /= 0 )  THEN
             ErrMsg  = ' Error allocating memory for the WriteOutput array.'
             ErrStat = ErrID_Fatal
             RETURN
          END IF
          
+                  
             ! Initialize the HD-level Hdr and Unt elements
          DO I = 1,p%NumOuts
          

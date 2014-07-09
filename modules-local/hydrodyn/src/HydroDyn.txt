@@ -123,6 +123,9 @@ typedef   ^                            ^                             MeshType   
 typedef   ^                            ^                             MeshType                 MrsnLumpedMesh_position         -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 MrsnDistribMesh_position        -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap
+typedef   ^                            ^                             INTEGER                  Decimate                        -          -          -         "The output decimation counter" -
+typedef   ^                            ^                             DbKi                     LastOutTime                     -          -          -         "Last time step which was written to the output file (sec)"    -
+#typedef   ^                            ^                             ReKi                     WriteOutput                    {:}         -          -         "Write output buffer; used to prevent writing of multiples of the same time step."  -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -140,12 +143,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     AddBQuad                    {6}{6}         -          -         "Additional quadratic damping (drag) matrix"    -
 typedef   ^                            ^                             DbKi                     DT                              -          -          -         "Time step in seconds for integration of continuous states (if a fixed-step integrator is used) and update of discrete states"        -
 typedef   ^                            ^                             OutParmType              OutParam                       {:}         -          -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOuts                         -          -          -         ""        -
+typedef   ^                            ^                             INTEGER                  NumOuts                         -          -          -         "Number of HydroDyn module-level outputs (not the total number including sub-modules"        -
+typedef   ^                            ^                             INTEGER                  NumTotalOuts                    -          -          -         "Number of all requested outputs including sub-modules"        -
 typedef   ^                            ^                             INTEGER                  OutSwtch                        -          -          -         "Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -          -         "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -          -         "Output format for header strings"    -
 typedef   ^                            ^                             CHARACTER(10)            Delim                           -          -          -         "Delimiter string for outputs, defaults to tab-delimiters"        -
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -          -         "File unit for the HydroDyn outputs"        -
+typedef   ^                            ^                             INTEGER                  OutDec                          -          -          -         "Write every OutDec time steps"  -
 #
 #
 # ..... Inputs ....................................................................................................................

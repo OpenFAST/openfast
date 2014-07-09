@@ -41,7 +41,7 @@ MODULE HydroDyn
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.01.01c-gjh', '30-Jun-2014' )
+   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.01.02a-gjh', '08-Jul-2014' )
 
     
    
@@ -742,7 +742,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       p%OutFmt        = InitLocal%OutFmt
       p%OutSFmt       = InitLocal%OutSFmt
       p%NumOuts       = InitLocal%NumOuts
-      CALL HDOUT_Init( HydroDyn_ProgDesc, InitLocal, y,  p, InitOut, ErrStat2, ErrMsg2 )
+      
+      CALL HDOUT_Init( HydroDyn_ProgDesc, InitLocal, y,  p, OtherState, InitOut, ErrStat2, ErrMsg2 )
       
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -856,9 +857,16 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          ! Place any last minute operations or calculations here:
 
 
-         ! Close files here:     
-                  
-          CALL HDOut_CloseOutput( p, ErrStat, ErrMsg )           
+            
+         ! Write the HydroDyn-level output file data if the user requested module-level output
+         ! and the current time has advanced since the last stored time step.
+         
+      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN               
+         CALL HDOut_WriteOutputs( OtherState%LastOutTime, y, p, OtherState%Decimate, ErrStat, ErrMsg )         
+      END IF          
+      
+         ! Close files here:  
+      CALL HDOut_CloseOutput( p, ErrStat, ErrMsg )           
           
 
          ! Destroy the input data:
@@ -1083,25 +1091,27 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
       END DO
       
       
+          
+      
+         ! Write the HydroDyn-level output file data if the user requested module-level output
+         ! and the current time has advanced since the last stored time step.
+         
+      IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > OtherState%LastOutTime ) ) THEN               
+         CALL HDOut_WriteOutputs( OtherState%LastOutTime, y, p, OtherState%Decimate, ErrStat, ErrMsg )         
+      END IF
+      
+      
          ! Map calculated results into the AllOuts Array
          
       CALL HDOut_MapOutputs( Time, y, p%NWaveElev, WaveElev, OtherState%F_PtfmAdd, OtherState%F_Hydro, q, qdot, qdotdot, AllOuts, ErrStat, ErrMsg )
       
       DO I = 1,p%NumOuts
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      END DO        
+      END DO    
       
-         ! Write the HydroDyn-level output file data if the user requested module-level output
+         ! Aggregate the sub-module outputs 
          
-      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN   
-            
-         CALL HDOut_WriteOutputs( Time, y, p, ErrStat, ErrMsg )         
-      END IF
-      
-      
-         ! Aggregate the sub-module outputs for the glue code
-         
-      IF ( p%OutSwtch == 2 .OR. p%OutSwtch == 3 ) THEN
+      IF ( p%OutSwtch > 0) THEN
          
          J = p%NumOuts + 1        
          
@@ -1120,6 +1130,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          END IF
          
       END IF
+      
+      OtherState%LastOutTime   = Time
       
 END SUBROUTINE HydroDyn_CalcOutput
 
