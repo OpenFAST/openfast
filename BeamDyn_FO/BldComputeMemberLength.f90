@@ -44,7 +44,7 @@
        IF(temp_area <= eps) THEN
            member_length(i,1) = SQRT((EndP1(1)-EndP2(1))**2+(EndP1(2)-EndP2(2))**2+(EndP1(3)-EndP2(3))**2)
        ELSE
-           member_length(i,1) = MemberArcLength(x1,x2,x3,y1,y2,y3,z1,z2,z3)
+           member_length(i,1) = MemberArcLength(EndP1,MidP,EndP2)
        ENDIF
        total_length = total_length + member_length(i,1)
    ENDDO

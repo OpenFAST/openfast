@@ -1,89 +1,51 @@
-   FUNCTION MemberArcLength(x1,x2,x3,y1,y2,y3,z1,z2,z3)
+   FUNCTION MemberArcLength(EndP1,MidP,EndP2)
 
-   REAL(ReKi),    INTENT(IN):: x1
-   REAL(ReKi),    INTENT(IN):: x2
-   REAL(ReKi),    INTENT(IN):: x3
-   REAL(ReKi),    INTENT(IN):: y1
-   REAL(ReKi),    INTENT(IN):: y2
-   REAL(ReKi),    INTENT(IN):: y3
-   REAL(ReKi),    INTENT(IN):: z1
-   REAL(ReKi),    INTENT(IN):: z2
-   REAL(ReKi),    INTENT(IN):: z3
+   REAL(ReKi),    INTENT(IN):: EndP1(:)
+   REAL(ReKi),    INTENT(IN):: MidP(:)
+   REAL(ReKi),    INTENT(IN):: EndP2(:)
    REAL(ReKi)               :: MemberArcLength
 
-   REAL(ReKi)               :: xi
-   REAL(ReKi)               :: arca
-   REAL(ReKi)               :: arcb
+   REAL(ReKi)               :: temp_a
+   REAL(ReKi)               :: temp_b
+   REAL(ReKi)               :: temp_c
+   REAL(ReKi)               :: temp_radius
+   REAL(ReKi)               :: temp_center
+   REAL(ReKi)               :: temp_angle
+   REAL(ReKi)               :: temp_v1(3)
+   REAL(ReKi)               :: temp_v2(3)
+   REAL(ReKi)               :: temp_v3(3)
+   REAL(ReKi)               :: temp_v4(3)
 
 
-   xi = -1.0D0
-   arca = ((SQRT(x1**2*(1 - 2*xi)**2 + 16*x2**2*xi**2 - 8*x2*x3*xi*(1 + 2*xi) + (x3 + 2*x3*xi)**2 +    &
-               2*x1*(-1 + 2*xi)*(x3 - 4*x2*xi + 2*x3*xi) + y1**2 - 4*xi*y1**2 + 4*xi**2*y1**2 + 8*xi*y1*y2 -    &
-               16*xi**2*y1*y2 + 16*xi**2*y2**2 - 2*y1*y3 + 8*xi**2*y1*y3 - 8*xi*y2*y3 - 16*xi**2*y2*y3 + y3**2 +    &
-               4*xi*y3**2 + 4*xi**2*y3**2 + z1**2 - 4*xi*z1**2 + 4*xi**2*z1**2 + 8*xi*z1*z2 - 16*xi**2*z1*z2 +    &
-               16*xi**2*z2**2 - 2*z1*z3 + 8*xi**2*z1*z3 - 8*xi*z2*z3 - 16*xi**2*z2*z3 + z3**2 + 4*xi*z3**2 +    &
-               4*xi**2*z3**2)*(2*xi + (-x1**2 + 2*x1*x2 - 2*x2*x3 + x3**2 - y1**2 + 2*y1*y2 - 2*y2*y3 + y3**2 - z1**2 +    &
-                  2*z1*z2 - 2*z2*z3 + z3**2)/   &
-                (x1**2 - 4*x1*x2 + 4*x2**2 + 2*x1*x3 - 4*x2*x3 + x3**2 + y1**2 - 4*y1*y2 + 4*y2**2 + 2*y1*y3 -    &
-                  4*y2*y3 + y3**2 + z1**2 - 4*z1*z2 + 4*z2**2 + 2*z1*z3 - 4*z2*z3 + z3**2)))/4. +    &
-          ((x1**2*y2**2 - 2*x1**2*y2*y3 + x1**2*y3**2 + y2**2*z1**2 - 2*y2*y3*z1**2 + y3**2*z1**2 +    &
-               x3**2*(y1**2 - 2*y1*y2 + y2**2 + (z1 - z2)**2) - 2*y1*y2*z1*z2 + 2*y1*y3*z1*z2 + 2*y2*y3*z1*z2 -    &
-               2*y3**2*z1*z2 + x1**2*z2**2 + y1**2*z2**2 - 2*y1*y3*z2**2 + y3**2*z2**2 +    &
-               x2**2*(y1**2 - 2*y1*y3 + y3**2 + (z1 - z3)**2) -    &
-               2*x1*x3*(y2**2 - y2*y3 + y1*(-y2 + y3) - (z1 - z2)*(z2 - z3)) + 2*y1*y2*z1*z3 - 2*y2**2*z1*z3 -    &
-               2*y1*y3*z1*z3 + 2*y2*y3*z1*z3 - 2*x1**2*z2*z3 - 2*y1**2*z2*z3 + 2*y1*y2*z2*z3 + 2*y1*y3*z2*z3 -    &
-               2*y2*y3*z2*z3 + x1**2*z3**2 + y1**2*z3**2 - 2*y1*y2*z3**2 + y2**2*z3**2 -    &
-               2*x2*(x3*(y1**2 + y2*y3 - y1*(y2 + y3) + (z1 - z2)*(z1 - z3)) +    &
-                  x1*(y1*(y2 - y3) - y2*y3 + y3**2 + z1*z2 - z1*z3 - z2*z3 + z3**2)))*   &
-             LOG(-x1**2 + 2*x1*x2 - 2*x2*x3 + x3**2 + 2*x1**2*xi - 8*x1*x2*xi + 8*x2**2*xi + 4*x1*x3*xi - 8*x2*x3*xi +    &
-               2*x3**2*xi - y1**2 + 2*xi*y1**2 + 2*y1*y2 - 8*xi*y1*y2 + 8*xi*y2**2 + 4*xi*y1*y3 - 2*y2*y3 -    &
-               8*xi*y2*y3 + y3**2 + 2*xi*y3**2 - z1**2 + 2*xi*z1**2 + 2*z1*z2 - 8*xi*z1*z2 + 8*xi*z2**2 + 4*xi*z1*z3 -    &
-               2*z2*z3 - 8*xi*z2*z3 + z3**2 + 2*xi*z3**2 +    &
-               SQRT(x1**2 - 4*x1*x2 + 4*x2**2 + 2*x1*x3 - 4*x2*x3 + x3**2 + y1**2 - 4*y1*y2 + 4*y2**2 + 2*y1*y3 -    &
-                  4*y2*y3 + y3**2 + z1**2 - 4*z1*z2 + 4*z2**2 + 2*z1*z3 - 4*z2*z3 + z3**2)*   &
-                SQRT(x1**2*(1 - 2*xi)**2 + 16*x2**2*xi**2 - 8*x2*x3*xi*(1 + 2*xi) + (x3 + 2*x3*xi)**2 +    &
-                  2*x1*(-1 + 2*xi)*(x3 - 4*x2*xi + 2*x3*xi) + y1**2 - 4*xi*y1**2 + 4*xi**2*y1**2 + 8*xi*y1*y2 -    &
-                  16*xi**2*y1*y2 + 16*xi**2*y2**2 - 2*y1*y3 + 8*xi**2*y1*y3 - 8*xi*y2*y3 - 16*xi**2*y2*y3 + y3**2 +    &
-                  4*xi*y3**2 + 4*xi**2*y3**2 + z1**2 - 4*xi*z1**2 + 4*xi**2*z1**2 + 8*xi*z1*z2 - 16*xi**2*z1*z2 +    &
-                  16*xi**2*z2**2 - 2*z1*z3 + 8*xi**2*z1*z3 - 8*xi*z2*z3 - 16*xi**2*z2*z3 + z3**2 + 4*xi*z3**2 +    &
-                  4*xi**2*z3**2)))/   &
-           (x1**2 - 4*x1*x2 + 4*x2**2 + 2*x1*x3 - 4*x2*x3 + x3**2 + y1**2 - 4*y1*y2 + 4*y2**2 + 2*y1*y3 - 4*y2*y3 +    &
-              y3**2 + z1**2 - 4*z1*z2 + 4*z2**2 + 2*z1*z3 - 4*z2*z3 + z3**2)**1.5)/2.
+   temp_a = Norm(EndP1-MidP)
+   temp_b = Norm(MidP-EndP2)
+   temp_c = Norm(EndP2-EndP1)
+   temp_a = temp_a*temp_b*temp_c
+   temp_v1(:) = EndP1(:) - MidP(:)
+   temp_v2(:) = MidP(:) - EndP2(:)
+   temp_v3(:) = CrossProduct(temp_v1,temp_v2)
+   temp_b = 2.0D0*Norm(temp_v3)
+   temp_radius = temp_a/temp_b
 
-   xi = 1.0D0
-   arcb = ((Sqrt(x1**2*(1 - 2*xi)**2 + 16*x2**2*xi**2 - 8*x2*x3*xi*(1 + 2*xi) + (x3 + 2*x3*xi)**2 +    &
-               2*x1*(-1 + 2*xi)*(x3 - 4*x2*xi + 2*x3*xi) + y1**2 - 4*xi*y1**2 + 4*xi**2*y1**2 + 8*xi*y1*y2 -    &
-               16*xi**2*y1*y2 + 16*xi**2*y2**2 - 2*y1*y3 + 8*xi**2*y1*y3 - 8*xi*y2*y3 - 16*xi**2*y2*y3 + y3**2 +    &
-               4*xi*y3**2 + 4*xi**2*y3**2 + z1**2 - 4*xi*z1**2 + 4*xi**2*z1**2 + 8*xi*z1*z2 - 16*xi**2*z1*z2 +    &
-               16*xi**2*z2**2 - 2*z1*z3 + 8*xi**2*z1*z3 - 8*xi*z2*z3 - 16*xi**2*z2*z3 + z3**2 + 4*xi*z3**2 +    &
-               4*xi**2*z3**2)*(2*xi + (-x1**2 + 2*x1*x2 - 2*x2*x3 + x3**2 - y1**2 + 2*y1*y2 - 2*y2*y3 + y3**2 - z1**2 +    &
-                  2*z1*z2 - 2*z2*z3 + z3**2)/   &
-                (x1**2 - 4*x1*x2 + 4*x2**2 + 2*x1*x3 - 4*x2*x3 + x3**2 + y1**2 - 4*y1*y2 + 4*y2**2 + 2*y1*y3 -    &
-                  4*y2*y3 + y3**2 + z1**2 - 4*z1*z2 + 4*z2**2 + 2*z1*z3 - 4*z2*z3 + z3**2)))/4. +    &
-          ((x1**2*y2**2 - 2*x1**2*y2*y3 + x1**2*y3**2 + y2**2*z1**2 - 2*y2*y3*z1**2 + y3**2*z1**2 +    &
-               x3**2*(y1**2 - 2*y1*y2 + y2**2 + (z1 - z2)**2) - 2*y1*y2*z1*z2 + 2*y1*y3*z1*z2 + 2*y2*y3*z1*z2 -    &
-               2*y3**2*z1*z2 + x1**2*z2**2 + y1**2*z2**2 - 2*y1*y3*z2**2 + y3**2*z2**2 +    &
-               x2**2*(y1**2 - 2*y1*y3 + y3**2 + (z1 - z3)**2) -    &
-               2*x1*x3*(y2**2 - y2*y3 + y1*(-y2 + y3) - (z1 - z2)*(z2 - z3)) + 2*y1*y2*z1*z3 - 2*y2**2*z1*z3 -    &
-               2*y1*y3*z1*z3 + 2*y2*y3*z1*z3 - 2*x1**2*z2*z3 - 2*y1**2*z2*z3 + 2*y1*y2*z2*z3 + 2*y1*y3*z2*z3 -    &
-               2*y2*y3*z2*z3 + x1**2*z3**2 + y1**2*z3**2 - 2*y1*y2*z3**2 + y2**2*z3**2 -    &
-               2*x2*(x3*(y1**2 + y2*y3 - y1*(y2 + y3) + (z1 - z2)*(z1 - z3)) +    &
-                  x1*(y1*(y2 - y3) - y2*y3 + y3**2 + z1*z2 - z1*z3 - z2*z3 + z3**2)))*   &
-             Log(-x1**2 + 2*x1*x2 - 2*x2*x3 + x3**2 + 2*x1**2*xi - 8*x1*x2*xi + 8*x2**2*xi + 4*x1*x3*xi - 8*x2*x3*xi +    &
-               2*x3**2*xi - y1**2 + 2*xi*y1**2 + 2*y1*y2 - 8*xi*y1*y2 + 8*xi*y2**2 + 4*xi*y1*y3 - 2*y2*y3 -    &
-               8*xi*y2*y3 + y3**2 + 2*xi*y3**2 - z1**2 + 2*xi*z1**2 + 2*z1*z2 - 8*xi*z1*z2 + 8*xi*z2**2 + 4*xi*z1*z3 -    &
-               2*z2*z3 - 8*xi*z2*z3 + z3**2 + 2*xi*z3**2 +    &
-               Sqrt(x1**2 - 4*x1*x2 + 4*x2**2 + 2*x1*x3 - 4*x2*x3 + x3**2 + y1**2 - 4*y1*y2 + 4*y2**2 + 2*y1*y3 -    &
-                  4*y2*y3 + y3**2 + z1**2 - 4*z1*z2 + 4*z2**2 + 2*z1*z3 - 4*z2*z3 + z3**2)*   &
-                Sqrt(x1**2*(1 - 2*xi)**2 + 16*x2**2*xi**2 - 8*x2*x3*xi*(1 + 2*xi) + (x3 + 2*x3*xi)**2 +    &
-                  2*x1*(-1 + 2*xi)*(x3 - 4*x2*xi + 2*x3*xi) + y1**2 - 4*xi*y1**2 + 4*xi**2*y1**2 + 8*xi*y1*y2 -    &
-                  16*xi**2*y1*y2 + 16*xi**2*y2**2 - 2*y1*y3 + 8*xi**2*y1*y3 - 8*xi*y2*y3 - 16*xi**2*y2*y3 + y3**2 +    &
-                  4*xi*y3**2 + 4*xi**2*y3**2 + z1**2 - 4*xi*z1**2 + 4*xi**2*z1**2 + 8*xi*z1*z2 - 16*xi**2*z1*z2 +    &
-                  16*xi**2*z2**2 - 2*z1*z3 + 8*xi**2*z1*z3 - 8*xi*z2*z3 - 16*xi**2*z2*z3 + z3**2 + 4*xi*z3**2 +    &
-                  4*xi**2*z3**2)))/   &
-           (x1**2 - 4*x1*x2 + 4*x2**2 + 2*x1*x3 - 4*x2*x3 + x3**2 + y1**2 - 4*y1*y2 + 4*y2**2 + 2*y1*y3 - 4*y2*y3 +    &
-              y3**2 + z1**2 - 4*z1*z2 + 4*z2**2 + 2*z1*z3 - 4*z2*z3 + z3**2)**1.5)/2.
+   temp_v1(:) = EndP1(:) - MidP(:)
+   temp_v2(:) = MidP(:) - EndP2(:)
+   temp_v3(:) = EndP1(:) - EndP2(:)
+   temp_v4(:) = CrossProduct(temp_v1,temp_v2)
+   temp1 = 2.0D0*Norm(temp_v4)*Norm(temp_v4)
+   temp2 = Norm(temp_v2)*Norm(temp_v2)
+   temp_a = temp2*DOT_PRODUCT(temp_v1,temp_v3)/temp1
+   temp2 = Norm(temp_v3)*Norm(temp_v3)
+   temp_b = temp2*DOT_PRODUCT(-temp_v1,temp_v2)/temp1
+   temp2 = Norm(temp_v1)*Norm(temp_v1)
+   temp_c = temp2*DOT_PRODUCT(-temp_v3,-temp_v2)/temp1
+   temp_center(:) = temp_a*EndP1(:) + temp_b*MidP(:) + temp_c*EndP2(:)
 
-   MemberArcLength = arcb - arca
+   temp_v1(:) = EndP1(:) - temp_center(:)
+   temp_v1(:) = temp_v1(:)/Norm(temp_v1)
+   temp_v2(:) = EndP2(:) - temp_center(:)
+   temp_v2(:) = temp_v2(:)/Norm(temp_v2)
+   temp_angle = ACOS(DOT_PRODUCT(temp_v1,temp_v2))
+
+   MemberArcLength = temp_angle*temp_radius
 
    END FUNCTION MemberArcLength

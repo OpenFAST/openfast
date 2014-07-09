@@ -191,14 +191,15 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
            p%uuN0(temp_id2+4,i) = temp_CRV(1)
            p%uuN0(temp_id2+5,i) = temp_CRV(2)
            p%uuN0(temp_id2+6,i) = temp_CRV(3)
-!           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
-!           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
-!           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
+           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
+           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
+           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
        ENDDO
    ENDDO
-   p%uuN0(6,1) = 1.64039390858428802
-   p%uuN0(12,1)= 1.21338673221741544
-   p%uuN0(18,1)= 0.81028671777792349
+!   p%uuN0(6,1) = 1.64039390858428802
+!   p%uuN0(12,1)= 1.21338673221741544
+!   p%uuN0(18,1)= 0.81028671777792349
+!   p%uuN0(24,1)= 0.81028671777792349
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
 
