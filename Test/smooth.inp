@@ -1,5 +1,5 @@
-TurbSim Input File. Valid for TurbSim v1.06.00, 21-Sep-2012; for Certification Test #5 (SMOOTH Spectrum, formatted FF files, Coherent Structures).
-
+TurbSim Input File. Valid for TurbSim v1.07.00;
+for Certification Test #5 (SMOOTH Spectrum, formatted FF files, Coherent Structures).
 ---------Runtime Options-----------------------------------
 4433456          RandSeed1       - First random seed  (-2147483648 to 2147483647)
 "RanLux"         RandSeed2       - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
@@ -19,7 +19,7 @@ False            Clockwise       - Clockwise rotation looking downwind? (used on
 5                NumGrid_Y       - Horizontal grid-point matrix dimension
 0.05             TimeStep        - Time step [seconds]
 600.0            AnalysisTime    - Length of analysis time series [seconds] (program will add time if necessary: AnalysisTime = MAX(AnalysisTime, UsableTime+GridWidth/MeanHHWS) )
-100.0            UsableTime      - Usable length of output time series [seconds] (program will add GridWidth/MeanHHWS seconds)
+"ALL"            UsableTime      - Usable length of output time series [seconds] (program will add GridWidth/MeanHHWS seconds)
 84.00            HubHt           - Hub height [m] (should be > 0.5*GridHeight)
 70.00            GridHeight      - Grid height [m]
 70.00            GridWidth       - Grid width [m] (should be >= 2*(RotorRadius+ShaftLength))

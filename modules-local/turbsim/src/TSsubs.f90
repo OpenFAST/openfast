@@ -1,6 +1,10 @@
+! Module TSSubs is part of the TurbSim program.
+!
+!**************************************************************************************************************
 MODULE TSSubs
 
-   USE                     NWTC_Library
+   USE                     NWTC_Library   
+   USE                     ModifiedvKrm_mod   
    USE                     ModifiedvKrm_mod
    IMPLICIT                NONE
 
@@ -1937,7 +1941,7 @@ IMPLICIT             NONE
 
    ! Local variables
 
-REAL(ReKi)        :: InCVar     (2)                           ! Contains the coherence parameters (used for input)
+REAL(ReKi)        :: InCVar     (2)  ! Contains the coherence parameters (used for input)
 REAL(ReKi)        :: RefHt           ! Height for reference wind speed.
 REAL(ReKi)        :: tmp             ! variable for estimating Ustar
 REAL(ReKi)        :: TmpUary (3)     !Temporary vector to store windSpeed(z) values
@@ -1991,7 +1995,7 @@ CALL ReadCom( UI, InFile, "Runtime Options Heading" )
 
    ! ---------- Read Random seed 1 -----------------------
 
-CALL ReadIVar( UI, InFile, RandSeed(1), "RandSeed(1)", "Random seed #1")
+CALL ReadVar( UI, InFile, RandSeed(1), "RandSeed(1)", "Random seed #1")
 
 FormStr = "( I10 , 2X , 'Random seed #1' )"
 WRITE (US,FormStr)  RandSeed(1)
@@ -2000,7 +2004,7 @@ RandSeedTmp = RandSeed(1)
 
    ! ---------- Read Random seed 2 -----------------------
 
-CALL ReadCVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
+CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
 
    ! Check if alternate random number generator is to be used
 
@@ -2041,7 +2045,7 @@ CALL RndInit()
 
    ! --------- Read the flag for writing the binary HH (GenPro) turbulence parameters. -------------
 
-CALL ReadLVar( UI, InFile, WrBHHTP, "the flag for writing the binary HH turbulence parameters", &
+CALL ReadVar( UI, InFile, WrBHHTP, "the flag for writing the binary HH turbulence parameters", &
                                     "Output binary HH turbulence parameters?")
 
 FormStr = "( L10 , 2X , 'Output binary HH turbulence parameters?' )"
@@ -2050,7 +2054,7 @@ WRITE (US,FormStr)  WrBHHTP
 
    ! --------- Read the flag for writing the formatted turbulence parameters. ----------------------
 
-CALL ReadLVar( UI, InFile, WrFHHTP, "the flag for writing the formatted turbulence parameters", &
+CALL ReadVar( UI, InFile, WrFHHTP, "the flag for writing the formatted turbulence parameters", &
                                     "Output formatted turbulence parameters?")
 
 FormStr = "( L10 , 2X , 'Output formatted turbulence parameters?' )"
@@ -2059,21 +2063,21 @@ WRITE (US,FormStr)  WrFHHTP
 
    ! ---------- Read the flag for writing the AeroDyn HH files. -------------------------------------
 
-CALL ReadLVar( UI, InFile, WrADHH, "the flag for writing AeroDyn HH files", "Output AeroDyn HH files?")
+CALL ReadVar( UI, InFile, WrADHH, "the flag for writing AeroDyn HH files", "Output AeroDyn HH files?")
 
 FormStr = "( L10 , 2X , 'Output AeroDyn HH files?' )"
 WRITE (US,FormStr)  WrADHH
 
    ! ---------- Read the flag for writing the AeroDyn FF files. ---------------------------------------
 
-CALL ReadLVar( UI, InFile, WrADFF, "the flag for writing AeroDyn FF files", "Output AeroDyn FF files?")
+CALL ReadVar( UI, InFile, WrADFF, "the flag for writing AeroDyn FF files", "Output AeroDyn FF files?")
 
 FormStr = "( L10 , 2X , 'Output AeroDyn FF files?' )"
 WRITE (US,FormStr)  WrADFF
 
    ! ---------- Read the flag for writing the BLADED FF files. -----------------------------------------
 
-CALL ReadLVar( UI, InFile, WrBLFF, "the flag for writing BLADED FF files", "Output BLADED FF files?")
+CALL ReadVar( UI, InFile, WrBLFF, "the flag for writing BLADED FF files", "Output BLADED FF files?")
 
 FormStr = "( L10 , 2X , 'Output BLADED FF files?' )"
 WRITE (US,FormStr)  WrBLFF
@@ -2081,7 +2085,7 @@ WRITE (US,FormStr)  WrBLFF
 
    ! ---------- Read the flag for writing the AeroDyn tower files. --------------------------------------
 
-CALL ReadLVar( UI, InFile, WrADTWR, "the flag for writing tower data", "Output tower data?")
+CALL ReadVar( UI, InFile, WrADTWR, "the flag for writing tower data", "Output tower data?")
 
 FormStr = "( L10 , 2X , 'Output tower data?' )"
 WRITE (US,FormStr)  WrADTWR
@@ -2089,7 +2093,7 @@ WRITE (US,FormStr)  WrADTWR
 
    ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
 
-CALL ReadLVar( UI, InFile, WrFmtFF, "the flag for writing formatted FF files", "Output formatted FF files?")
+CALL ReadVar( UI, InFile, WrFmtFF, "the flag for writing formatted FF files", "Output formatted FF files?")
 
 FormStr = "( L10 , 2X , 'Output formatted FF files?' )"
 WRITE (US,FormStr)  WrFmtFF
@@ -2097,7 +2101,7 @@ WRITE (US,FormStr)  WrFmtFF
 
    ! ---------- Read the flag for writing coherent time series files. --------------------------------------
 
-CALL ReadLVar( UI, InFile, WrACT, "the flag for writing coherent time series files", "Output coherent time series files?")
+CALL ReadVar( UI, InFile, WrACT, "the flag for writing coherent time series files", "Output coherent time series files?")
 
 FormStr = "( L10 , 2X , 'Output coherent turbulence time step file?' )"
 WRITE (US,FormStr)  WrACT
@@ -2105,7 +2109,7 @@ WRITE (US,FormStr)  WrACT
 
    ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
 
-CALL ReadLVar( UI, InFile, Clockwise, "the flag for direction of turbine rotation", "Clockwise rotation when looking downwind?")
+CALL ReadVar( UI, InFile, Clockwise, "the flag for direction of turbine rotation", "Clockwise rotation when looking downwind?")
 
 FormStr = "( L10 , 2X , 'Clockwise rotation when looking downwind?' )"
 WRITE (US,FormStr)  Clockwise
@@ -2128,6 +2132,7 @@ FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specifie
    ENDSELECT
          
 
+
    !==================================================================================
    ! Read the turbine/model specifications.
    !===================================================================================
@@ -2141,7 +2146,7 @@ CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
 
    ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
 
-CALL ReadIVar( UI, InFile, NumGrid_Z, "the vertical matrix dimension", "Vertical grid-point matrix dimension")
+CALL ReadVar( UI, InFile, NumGrid_Z, "the vertical matrix dimension", "Vertical grid-point matrix dimension")
 
    IF ( NumGrid_Z < 2 )  THEN
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
@@ -2153,7 +2158,7 @@ WRITE (US,FormStr)  NumGrid_Z
 
    ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
 
-CALL ReadIVar( UI, InFile, NumGrid_Y, "the horizontal matrix dimension", "Horizontal grid-point matrix dimension")
+CALL ReadVar( UI, InFile, NumGrid_Y, "the horizontal matrix dimension", "Horizontal grid-point matrix dimension")
 
    IF ( NumGrid_Y < 2 )  THEN
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
@@ -2165,7 +2170,7 @@ WRITE (US,FormStr)  NumGrid_Y
 
    ! ------------ Read in the time step. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, TimeStep, "the time step", "Time step [seconds]")
+CALL ReadVar( UI, InFile, TimeStep, "the time step", "Time step [seconds]")
 
    IF ( TimeStep <=  0.0 )  THEN
       CALL TS_Abort ( 'The time step must be greater than zero.' )
@@ -2177,7 +2182,7 @@ WRITE (US,FormStr)  TimeStep
 
    ! ------------ Read in the analysis time. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, AnalysisTime, "the analysis time", "Analysis time [seconds]")
+CALL ReadVar( UI, InFile, AnalysisTime, "the analysis time", "Analysis time [seconds]")
 
    IF ( AnalysisTime <=  0.0 )  THEN
       CALL TS_Abort ( 'The analysis time must be greater than zero.' )
@@ -2188,12 +2193,26 @@ WRITE (US,FormStr)  AnalysisTime
 
 
    ! ------------ Read in the usable time. ---------------------------------------------
+CALL ReadVar( UI, InFile, Line, "the usable output time", "Usable output time [seconds]")
 
-CALL ReadRVar( UI, InFile, UsableTime, "the usable output time", "Usable output time [seconds]")
-
-   IF ( UsableTime <=  0.0 )  THEN
-      CALL TS_Abort ( 'The usable output time must be greater than zero.' )
-   ENDIF
+   READ( Line, *, IOSTAT=IOS) UsableTime
+   
+   IF ( IOS /= 0 ) THEN ! Line didn't contian a number
+      CALL Conv2UC( Line )
+      IF ( TRIM(Line) == 'ALL' ) THEN
+         Periodic   = .TRUE.
+         UsableTime = AnalysisTime
+      ELSE
+         CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
+      END IF
+   
+   ELSE
+      IF ( UsableTime <=  0.0 )  THEN
+         CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
+      ENDIF
+      Periodic = .FALSE.
+   END IF
+   
 
 FormStr = "( F10.3 , 2X , 'Usable output time [seconds]' )"
 WRITE (US,FormStr)  UsableTime
@@ -2201,7 +2220,7 @@ WRITE (US,FormStr)  UsableTime
 
    ! ------------ Read in the hub height. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, HubHt, "the hub height", "Hub height [m]")
+CALL ReadVar( UI, InFile, HubHt, "the hub height", "Hub height [m]")
 
    IF ( HubHt <=  0.0 )  THEN
       CALL TS_Abort ( 'The hub height must be greater than zero.' )
@@ -2213,7 +2232,7 @@ WRITE (US,FormStr)  HubHt
 
    ! ------------ Read in the grid height. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, GridHeight, "the grid height", "Grid height [m]")
+CALL ReadVar( UI, InFile, GridHeight, "the grid height", "Grid height [m]")
 
    IF ( 0.5*GridHeight > HubHt  )THEN
       CALL TS_Abort( 'The hub must be higher than half of the grid height.')
@@ -2225,7 +2244,7 @@ WRITE (US,FormStr)  GridHeight
 
    ! ------------ Read in the grid width. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, GridWidth, "the grid width", "Grid width [m]")
+CALL ReadVar( UI, InFile, GridWidth, "the grid width", "Grid width [m]")
 
    IF ( GridWidth <=  0.0 )  THEN
       CALL TS_Abort ( 'The grid width must be greater than zero.' )
@@ -2242,7 +2261,7 @@ RotorDiameter = MIN( GridWidth, GridHeight )
 
    ! ------------ Read in the vertical flow angle. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, VFlowAng, "the vertical flow angle", "Vertical flow angle [degrees]")
+CALL ReadVar( UI, InFile, VFlowAng, "the vertical flow angle", "Vertical flow angle [degrees]")
 
    IF ( ABS( VFlowAng ) > 45.0 )  THEN
       CALL TS_Abort ( 'The vertical flow angle must not exceed +/- 45 degrees.' )
@@ -2254,7 +2273,7 @@ WRITE (US,FormStr)  VFlowAng
 
    ! ------------ Read in the horizontal flow angle. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, HFlowAng, "the horizontal flow angle", "Horizontal flow angle [degrees]")
+CALL ReadVar( UI, InFile, HFlowAng, "the horizontal flow angle", "Horizontal flow angle [degrees]")
 
 FormStr = "( F10.3 , 2X , 'Horizontal flow angle [degrees]' )"
 WRITE (US,FormStr)  HFlowAng
@@ -2273,7 +2292,7 @@ CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2" )
 
    ! ------------ Read in the turbulence model. ---------------------------------------------
 
-CALL ReadCVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
+CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
 
    TurbModel = ADJUSTL( TurbModel )
    CALL Conv2UC( TurbModel )
@@ -2322,7 +2341,7 @@ WRITE (US,FormStr)  TurbModel
 
    ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
 
-CALL ReadCVar( UI, InFile, Line, "the number of the IEC standard", "Number of the IEC standard")
+CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the IEC standard")
 
    IF ( TurbModel(1:3) == 'IEC' ) THEN
 
@@ -2408,7 +2427,7 @@ CALL ReadCVar( UI, InFile, Line, "the number of the IEC standard", "Number of th
 
    ! ------------ Read in the IEC turbulence characteristic. ---------------------------------------------
 
-CALL ReadCVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbulence characteristic")
+CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbulence characteristic")
 !!$! -- begin block --
 !!$! This block reads turbulence intensity, and stores it in the variable TurbIntH20.  This variable is not currently used, but will be soon for user-specified turbulence intensity for the HYDRO spectral models.
 !!$! This code is copied from TurbSim.f90
@@ -2523,7 +2542,7 @@ CALL ReadCVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbu
 
    ! ------------ Read in the IEC wind turbulence type ---------------------------------------------
 
-CALL ReadCVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type")
+CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type")
 
    IF ( ( TurbModel(1:3) == 'IEC' ) ) THEN
 
@@ -2664,7 +2683,7 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
 
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
 
-CALL ReadRVar( UI, InFile, RefHt, "the reference height", "Reference height [m]")
+CALL ReadVar( UI, InFile, RefHt, "the reference height", "Reference height [m]")
 
    IF ( RefHt <=  0.0 .AND. WindProfileType(1:1) /= 'U' )  THEN
       CALL TS_Abort ( 'The reference height must be greater than zero.' )
@@ -2817,7 +2836,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
       ! ------------ Read in the gradient Richardson number, RICH_NO. ---------------------------------------------
 
-   CALL ReadRVar( UI, InFile, RICH_NO, "the gradient Richardson number", "Gradient Richardson number")
+   CALL ReadVar( UI, InFile, RICH_NO, "the gradient Richardson number", "Gradient Richardson number")
 
    IF ( KHtest ) THEN
       IF ( RICH_NO /= 0.02 ) THEN
@@ -3142,7 +3161,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
 
-      CALL ReadCVar( UI, InFile, CTEventPath, "the path of the coherent turbulence events", "Coherence events path")
+      CALL ReadVar( UI, InFile, CTEventPath, "the path of the coherent turbulence events", "Coherence events path")
 
       IF ( LEN( TRIM(CTEventPath) ) <= 10 )  THEN
          FormStr = "( A10 , 2X , 'Name of the path containing the coherent turbulence data files' )"
@@ -3152,7 +3171,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
       WRITE (US,FormStr)  TRIM(CTEventPath)
 
-      CALL ReadCVar( UI, InFile, Line, "the event file type", "Event file type")
+      CALL ReadVar( UI, InFile, Line, "the event file type", "Event file type")
 
 
       IF ( KHtest ) THEN
@@ -3189,7 +3208,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
          ! ------------ Read the Randomization Flag, Randomize -----------------------------------
 
-      CALL ReadLVar( UI, InFile, Randomize, "the randomization flag", "Randomize CT Scaling")
+      CALL ReadVar( UI, InFile, Randomize, "the randomization flag", "Randomize CT Scaling")
 
 
       IF ( KHtest ) THEN
@@ -3203,17 +3222,17 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
 
-      CALL ReadRVar( UI, InFile, DistScl, "the disturbance scale", "Disturbance scale")
+      CALL ReadVar( UI, InFile, DistScl, "the disturbance scale", "Disturbance scale")
 
 
          ! ------------ Read the Lateral Fractional Location of tower centerline in wave, CTLy ----------
 
-      CALL ReadRVar( UI, InFile, CTLy, "the fractional location of tower centerline from right", &
+      CALL ReadVar( UI, InFile, CTLy, "the fractional location of tower centerline from right", &
                            "Location of tower centerline")
 
          ! ------------ Read the Vertical Fraction Location of hub in wave, CTLz ------------------------
 
-      CALL ReadRVar( UI, InFile, CTLz, "the fractional location of hub height from the bottom", &
+      CALL ReadVar( UI, InFile, CTLz, "the fractional location of hub height from the bottom", &
                      "Location of hub height")
 
       IF ( KHtest ) THEN
@@ -3273,7 +3292,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
 
-      CALL ReadRVar( UI, InFile, CTStartTime, "the minimum start time for coherent structures", "CTS Start Time")
+      CALL ReadVar( UI, InFile, CTStartTime, "the minimum start time for coherent structures", "CTS Start Time")
 
       CTStartTime = MAX( CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
 
@@ -3475,7 +3494,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines)
 
 
       ! ---------- Read the size of the arrays --------------------------------------------
-   CALL ReadIVar( U_in, FileName, NumUSRz, "NumUSRz", "Number of heights in the user-defined profiles" )
+   CALL ReadVar( U_in, FileName, NumUSRz, "NumUSRz", "Number of heights in the user-defined profiles" )
 
    IF ( NumUSRz < 1 ) THEN
       CALL TS_Abort( 'The number of heights specified in the user-defined profiles must be at least 1.')
@@ -3483,7 +3502,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines)
 
    DO I=1,3
          ! ---------- Read the size of the arrays --------------------------------------------
-      CALL ReadRVar( U_in, FileName, StdScale(I), "StdScale", "Scaling value for user-defined standard deviation profile" )
+      CALL ReadVar( U_in, FileName, StdScale(I), "StdScale", "Scaling value for user-defined standard deviation profile" )
 
       IF ( StdScale(I) <= 0. ) THEN
          CALL TS_Abort( 'The scaling value for the user-defined standard deviation profile must be positive.')
@@ -3667,7 +3686,7 @@ SUBROUTINE GetUSRSpec(FileName)
 
 
       ! ---------- Read the size of the arrays --------------------------------------------
-   CALL ReadIVar( USpec, FileName, NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra" )
+   CALL ReadVar( USpec, FileName, NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra" )
 
    IF ( NumUSRf < 3 ) THEN
       CALL TS_Abort( 'The number of frequencies specified in the user-defined spectra must be at least 3.')
@@ -3675,7 +3694,7 @@ SUBROUTINE GetUSRSpec(FileName)
 
    DO I=1,3
          ! ---------- Read the scaling for the arrays --------------------------------------------
-      CALL ReadRVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile" )
+      CALL ReadVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile" )
 
       IF ( SpecScale(I) <= 0. ) THEN
          CALL TS_Abort( 'The scaling value for the user-defined spectra must be positive.')
@@ -5709,18 +5728,18 @@ INTEGER                 :: IOS            ! I/O Status
 
          ! Read the nondimensional lateral width of the dataset, Ym_max
 
-   CALL ReadRVar( Un, CTEventFile, Ym_max, "the nondimensional lateral width of the dataset", &
+   CALL ReadVar( Un, CTEventFile, Ym_max, "the nondimensional lateral width of the dataset", &
                                                    "Nondimensional lateral dataset width")
 
          ! Read the nondimensional vertical height of the dataset, Zm_max
 
-   CALL ReadRVar( Un, CTEventFile, Zm_max, "the nondimensional vertical height of the dataset", &
+   CALL ReadVar( Un, CTEventFile, Zm_max, "the nondimensional vertical height of the dataset", &
                                           "Nondimensional vertical dataset height")
 
 
          ! Read the rest of the header
 
-   CALL ReadIVar( Un, CTEventFile, NumEvents, "NumEvents", "the number of coherent structures.")
+   CALL ReadVar( Un, CTEventFile, NumEvents, "NumEvents", "the number of coherent structures.")
 
 
    IF ( NumEvents > 0 ) THEN
@@ -5821,7 +5840,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
    CHARACTER(38)                :: Frmt = "( A10, 2X, A )"                         ! Output format for real parameters
 
 
-   CALL ReadCVar( UnIn, Fil, CharLine, VarName, VarDescr )
+   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr )
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
@@ -5926,7 +5945,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE 
 
    Frmt = "( '(',F9.3,"//TRIM(Frmt)//"(',',G10.3),')',2X , A )"
 
-   CALL ReadCVar( UnIn, Fil, CharLine, VarName, VarDescr ) !Maybe I should read this in explicitly...
+   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr ) !Maybe I should read this in explicitly...
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
@@ -6004,7 +6023,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
    CHARACTER(38)                :: Frmt = "( F10.3, 2X, A )"                       ! Output format for real parameters
 
 
-   CALL ReadCVar( UnIn, Fil, CharLine, VarName, VarDescr )
+   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr )
 
    IF ( PRESENT(IGNORE) ) THEN
 
@@ -7302,7 +7321,10 @@ INTEGER                     :: AllocStat
    WRITE (US,'()')
    WRITE (US,FormStr)  'Height Offset', Ztmp, ' m'
    WRITE (US,FormStr)  'Grid Base    ', Z(1), ' m'
-
+   
+   WRITE (US,'()'   )
+   WRITE (US,'( A)' ) 'Creating a PERIODIC output file.'
+ 
       ! Calculate some numbers for normalizing the data.
 
    U_C1 = 1000.0/( UHub*TI(1) )
@@ -7479,6 +7501,7 @@ REAL(SiKi)                :: WOff                       ! Offset for the W compo
 REAL(SiKi)                :: WScl                       ! Slope  for the W component
 
 INTEGER, PARAMETER        :: DecRound  = 3              ! Number of decimal places to round to
+INTEGER(B2Ki)             :: FileID                     ! File ID, determines specific output format (if periodic or not)
 INTEGER                   :: IC                         ! counter for the velocity component of V
 INTEGER                   :: II                         ! counter for the point on the grid/tower
 INTEGER                   :: IT                         ! counter for the timestep
@@ -7492,6 +7515,17 @@ INTEGER(B4Ki)             :: IP
 INTEGER(B2Ki),ALLOCATABLE :: TmpVarray(:)                ! This array holds the normalized velocities before being written to the binary file
 
 INTEGER                   :: AllocStat
+
+
+
+      ! Set the file format ID
+      
+   IF ( Periodic ) THEN 
+      FileID = 8
+   ELSE
+      FileID = 7
+   END IF      
+
 
       ! Find the range of our velocity
 
@@ -7581,10 +7615,10 @@ INTEGER                   :: AllocStat
    CALL WrScr ( ' Generating AeroDyn binary time-series file "'//TRIM( RootName )//'.bts"' )
 
 
+
       ! Write the header
 
-
-   WRITE (UAFFW)   INT(   7                , B2Ki )          ! TurbSim format
+   WRITE (UAFFW)   INT( FileID             , B2Ki )          ! TurbSim format (7=not PERIODIC, 8=PERIODIC)
 
    WRITE (UAFFW)   INT( NumGrid_Z          , B4Ki )          ! the number of grid points vertically
    WRITE (UAFFW)   INT( NumGrid_Y          , B4Ki )          ! the number of grid points laterally

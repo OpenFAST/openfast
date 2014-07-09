@@ -1,5 +1,5 @@
-TurbSim Input File. Valid for TurbSim v1.06.00, 21-Sep-2012. Input File for Certification Test #2 (von Karman Spectrum, formatted HH files).
-
+TurbSim Input File. Valid for TurbSim v1.07.00.
+Input File for Certification Test #2 (von Karman Spectrum, formatted HH files).
 ---------Runtime Options-----------------------------------
 123456           RandSeed1       - First random seed  (-2147483648 to 2147483647)
 789012           RandSeed2       - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"

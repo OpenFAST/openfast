@@ -695,3 +695,10 @@ v1.06.01a-bjj 19-Oct-2012 B. Jonkman
 
 v1.06.01b-bjj 23-Oct-2013 B. Jonkman
   I put the subroutines in BlankModVKM.f90 in a module and use it in TSSubs.f90.
+
+v1.07.00a-bjj 9-Jul-2014 B. Jonkman
+  I added the option to have periodic output files. To select this option, set UsableTime to "ALL".
+    When Periodic = .TRUE., (i.e., UsableTime is "ALL") the program WILL NOT add GridWidth/MeanHHWS seconds
+    to the simulation; the .sum file will contain an extra statement that this is a "PERIODIC" file when the .wnd output is
+    chosen; .bts files will use a different format ID (8) to indicate they are Periodic (instead of the old way, indicated by
+    format ID = 7). (See Bugzilla Bug 60.)

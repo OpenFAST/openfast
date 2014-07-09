@@ -4,17 +4,18 @@ PROGRAM TurbSim
    ! A turbulence simulator developed by contractors and staff at the
    ! National Renewable Energy Laboratory, Golden, Colorado
    !
-   ! v1.0a-bjj  15-Mar-2004  B. Jonkman  
-   ! v1.0        4-Nov-2005  B. Jonkman
-   ! v1.01      24-Jan-2006  B. Jonkman  (NWTC subs v1.00a-mlb)
-   ! v1.10      10-Apr-2006  B. Jonkman  (NWTC subs v1.12)
-   ! v1.20      20-Oct-2006  B. Jonkman  (NWTC subs v1.12)
-   ! v1.21       1-Feb-2007  B. Jonkman  (NWTC subs v1.12)
-   ! v1.30       4-Apr-2008  B. Jonkman  (NWTC subs v1.01.09)
-   ! v1.40      12-Sep-2008  B. Jonkman  (NWTC subs v1.01.09)
-   ! v1.41h     11-Jun-2009  B. Jonkman  (NWTC subs v1.01.09)
-   ! v1.50      25-Sep-2009  B. Jonkman  (NWTC subs v1.01.09)
-   ! V1.06.00   21-Sep-2012  L. Kilcher & B. Jonkman (NWTC Library v1.04.01)
+   ! v1.0a-bjj       15-Mar-2004  B. Jonkman  
+   ! v1.0             4-Nov-2005  B. Jonkman
+   ! v1.01           24-Jan-2006  B. Jonkman  (NWTC subs v1.00a-mlb)
+   ! v1.10           10-Apr-2006  B. Jonkman  (NWTC subs v1.12)
+   ! v1.20           20-Oct-2006  B. Jonkman  (NWTC subs v1.12)
+   ! v1.21            1-Feb-2007  B. Jonkman  (NWTC subs v1.12)
+   ! v1.30            4-Apr-2008  B. Jonkman  (NWTC subs v1.01.09)
+   ! v1.40           12-Sep-2008  B. Jonkman  (NWTC subs v1.01.09)
+   ! v1.41h          11-Jun-2009  B. Jonkman  (NWTC subs v1.01.09)
+   ! v1.50           25-Sep-2009  B. Jonkman  (NWTC subs v1.01.09)
+   ! V1.06.00        21-Sep-2012  L. Kilcher & B. Jonkman (NWTC Library v1.04.01)
+   ! v1.07.00a-bjj    9-Jul-2014  B. Jonkman  (NWTC Library v1.04.02a-bjj)
    !
    ! This program simulates a full field of turbulent winds at points in space
    ! in a rectangular Cartesian plane perpendicular to the mean wind direction.
@@ -321,11 +322,8 @@ IF ( WrACT ) THEN
       WrACT = .FALSE.
       
    ELSEIF ( .NOT. ( WrADFF .OR. WrBLFF ) ) THEN
-      WrBLFF = .TRUE.
-      CALL WrScr1( ' AeroDyn/BLADED Full-Field files will be generated along with the coherent turbulence file.' )
-!BJJ fix in next release: We can't default to this file type at this point because AeroDyn can't read the .bts files yet.      
-      !WrADFF = .TRUE.
-      !CALL WrScr1( ' AeroDyn Full-Field files will be generated along with the coherent turbulence file.' )
+      WrADFF = .TRUE.
+      CALL WrScr1( ' AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.' )
    ENDIF
       
 ENDIF !WrAct
@@ -337,6 +335,15 @@ IF ( ( IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 ) .AND. &
    CALL TS_Warn( ' The EWM parameters are valid for 10-min simulations only.', .TRUE. )
 ENDIF        
 
+
+      ! Warn if Periodic is used with incompatible settings
+      
+IF ( Periodic .AND. .NOT. EqualRealNos(AnalysisTime, UsableTime) ) THEN
+   CALL TS_Warn( ' Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', &
+                 WrSum=.TRUE.)
+   Periodic = .FALSE.
+END IF
+      
 
    ! Open appropriate output files.  We will open formatted FF files later, if requested.
    ! Mention the files in the summary file.
@@ -441,10 +448,18 @@ ENDIF
    ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
    ! Make sure it is a multiple of 4 too.
 
-NumOutSteps = CEILING( ( UsableTime + GridWidth/UHub )/TimeStep )
-NumSteps    = MAX( CEILING( AnalysisTime / TimeStep ), NumOutSteps )
-NumSteps4   = ( NumSteps - 1 )/4 + 1
-NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+IF ( Periodic ) THEN
+   NumSteps    = CEILING( AnalysisTime / TimeStep )
+   NumSteps4   = ( NumSteps - 1 )/4 + 1
+   NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+   NumOutSteps = NumSteps
+ELSE
+   NumOutSteps = CEILING( ( UsableTime + GridWidth/UHub )/TimeStep )
+   NumSteps    = MAX( CEILING( AnalysisTime / TimeStep ), NumOutSteps )
+   NumSteps4   = ( NumSteps - 1 )/4 + 1
+   NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+END IF
+
 INumSteps   = 1.0/NumSteps
 
    ! If we are going to generate debug output, open the debug file.
