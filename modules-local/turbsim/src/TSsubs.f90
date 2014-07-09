@@ -829,7 +829,7 @@ POINT_I: DO IZ=1,ZLim   !NumGrid_Z
             DO IY=1,IYmax(IZ) !NumGrid_Y
       
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IY loop
+               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
