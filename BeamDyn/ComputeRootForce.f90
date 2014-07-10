@@ -1,6 +1,6 @@
    SUBROUTINE ComputeRootForce(uuN0,uuNf,Stif0,node_elem,dof_node,ngp,RootForce)
    
-   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Stif0(:,:,:)
+   REAL(ReKi),INTENT(IN):: uuN0(:,:),uuNf(:),Stif0(:,:)
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node,ngp
    REAL(ReKi),INTENT(OUT):: RootForce(:)
    
@@ -70,17 +70,18 @@
    IF(allo_stat/=0) GOTO 9999
    fffGP = 0.0D0
    
-   
-   CALL ElemNodalDispGL(uuN0,node_elem,dof_node,1,Nuu0)
-   CALL ElemNodalDispGL(uuNf,node_elem,dof_node,1,Nuuu)
-   CALL ElemNodalStifGL(Stif0,node_elem,dof_node,1,NStif0)
+   i = 1
+   Nuu0(:) = uuN0(:,i)
+!   CALL ElemNodalDispGL(uuN0,node_elem,dof_node,1,Nuu0)
+   CALL ElemNodalDispGL(uuNf,node_elem,dof_node,i,Nuuu)
+!   CALL ElemNodalStifGL(Stif0,node_elem,dof_node,1,NStif0)
 
    CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
    CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
    
    CALL ComputeStrainForceGP(Nuu0,Nuuu,Nrr0,Nrrr,NStif0,ngp,node_elem,dof_node,eeeGP,fffGP)
    
-   CALL BDyn_gen_gll_LSGL(ngp-1,GLL_temp,w_temp)
+   CALL BeamDyn_gen_gll_LSGL(ngp-1,GLL_temp,w_temp)
    CALL BldGaussPointWeight(ngp,gp,gw)
    
    rr(1) = -1.0D0/gp(ngp)
