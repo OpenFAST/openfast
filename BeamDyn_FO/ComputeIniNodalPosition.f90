@@ -10,6 +10,9 @@
    REAL(ReKi)              :: temp_a
    REAL(ReKi)              :: temp_b
    REAL(ReKi)              :: temp_c
+   REAL(ReKi)              :: temp1
+   REAL(ReKi)              :: temp2
+   REAL(ReKi)              :: temp_area
    REAL(ReKi)              :: temp_radius
    REAL(ReKi)              :: temp_angle
    REAL(ReKi)              :: temp_v1(3)

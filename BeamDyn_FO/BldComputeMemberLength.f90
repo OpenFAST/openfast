@@ -9,27 +9,21 @@
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: temp_id
    REAL(ReKi)                  :: temp_area
-   REAL(ReKi)                  :: x1
-   REAL(ReKi)                  :: x2
-   REAL(ReKi)                  :: x3
-   REAL(ReKi)                  :: y1
-   REAL(ReKi)                  :: y2
-   REAL(ReKi)                  :: y3
-   REAL(ReKi)                  :: z1
-   REAL(ReKi)                  :: z2
-   REAL(ReKi)                  :: z3
+   REAL(ReKi)                  :: EndP1(3)
+   REAL(ReKi)                  :: MidP(3)
+   REAL(ReKi)                  :: EndP2(3)
+   REAL(ReKi)                  :: temp_v1(3)
+   REAL(ReKi)                  :: temp_v2(3)
+   REAL(ReKi)                  :: temp_v3(3)
    REAL(ReKi),        PARAMETER:: eps = 1.0D-10
 
-   x1 = 0.0D0
-   x2 = 0.0D0
-   x3 = 0.0D0
-   y1 = 0.0D0
-   y2 = 0.0D0
-   y3 = 0.0D0
-   z1 = 0.0D0
-   z2 = 0.0D0
-   z3 = 0.0D0
-   temp_area = 0.0D0
+   temp_area  = 0.0D0
+   EndP1(:)   = 0.0D0
+   MidP(:)    = 0.0D0
+   EndP2(:)   = 0.0D0
+   temp_v1(:) = 0.0D0
+   temp_v2(:) = 0.0D0
+   temp_v3(:) = 0.0D0
 
 
    DO i=1,member_total
