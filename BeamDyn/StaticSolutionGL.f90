@@ -25,7 +25,7 @@
    Eref = 0.0D0
 
    DO i=1,niter
-       WRITE(*,*) "N-R Iteration #:", i
+!       WRITE(*,*) "N-R Iteration #:", i
 !       IF(i==2) STOP
        StifK = 0.0D0
        RHS = 0.0D0
@@ -46,8 +46,8 @@
                StifK_LU(j,k) = StifK(j+6,k+6)
            ENDDO 
        ENDDO
-       CALL Norm(dof_total-6,feqv,errf)
-       WRITE(*,*) "NORM(feqv) = ", errf
+       errf = Norm(feqv)
+!       WRITE(*,*) "NORM(feqv) = ", errf
    
 
 !       CALL CGSolver(RHS,StifK,ui,bc,dof_total)
@@ -67,8 +67,8 @@
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
            Enorm = SQRT(DOT_PRODUCT(ui_temp,feqv))
-           WRITE(*,*) "Enorm = ", Enorm
-           WRITE(*,*) "Eref = ", Eref
+!           WRITE(*,*) "Enorm = ", Enorm
+!           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF
            

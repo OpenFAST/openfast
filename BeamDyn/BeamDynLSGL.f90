@@ -133,6 +133,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    REAL(ReKi)              :: temp_phi
    REAL(ReKi)              :: temp_POS(3)
    REAL(ReKi)              :: temp_CRV(3)
+   REAL(ReKi)              :: temp_e1(3)
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_w(:)
    REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
@@ -181,9 +182,9 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
        temp_twist(1) = InputFileData%initial_twist(i)
        temp_twist(2) = InputFileData%initial_twist(i+1)
        DO j=1,p%node_elem
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS)
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1)
            temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-           CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
+           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV)
            temp_id2 = (j-1)*p%dof_node
            p%uuN0(temp_id2+1,i) = temp_POS(1)
            p%uuN0(temp_id2+2,i) = temp_POS(2)
@@ -191,14 +192,14 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
            p%uuN0(temp_id2+4,i) = temp_CRV(1)
            p%uuN0(temp_id2+5,i) = temp_CRV(2)
            p%uuN0(temp_id2+6,i) = temp_CRV(3)
-           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
-           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
-           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
+!           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
+!           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
+!           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
        ENDDO
    ENDDO
-   p%uuN0(6,1) = 1.6568526243622832 !1.64039390858428802
-   p%uuN0(12,1)= 1.2133871423399105 !1.21338673221741544
-   p%uuN0(18,1)= 0.79565168817258936 !0.81028671777792349
+!   p%uuN0(6,1) = 1.6568526243622832 !1.64039390858428802
+!   p%uuN0(12,1)= 1.2133871423399105 !1.21338673221741544
+!   p%uuN0(18,1)= 0.79565168817258936 !0.81028671777792349
 !   p%uuN0(24,1)= 0.81028671777792349
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
@@ -305,7 +306,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 
       ! Define parameters here:
 
-      p%niter = 10
+      p%niter = 40
       p%piter = 0 !ADDED NEW VARIABLE TO TRACK NUMBER OF ITERATIONS FOR CONDITIONAL STATEMENTS, NJ 3/18/2014
 
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
@@ -333,7 +334,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
 !      p%F_ext(p%dof_total-3) = -1.0E+05
-      p%F_ext(p%dof_total-3) = 6.0E+00
+      p%F_ext(p%dof_total-3) = 6.0E+02
 !------------------
 !END input
 !------------------
