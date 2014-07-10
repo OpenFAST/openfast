@@ -208,13 +208,13 @@ n=1
 !                      &BDyn_Parameter%elem_total, BDyn_Parameter%dof_total,BDyn_Parameter%node_total,&
 !                      &BDyn_Parameter%ngp,BDyn_Parameter%niter)   
 
-!   CALL ComputeRootForce(BDyn_Parameter%uuN0,BDyn_OtherState%uuNf,&
-!                 &BDyn_Parameter%Stif0,BDyn_Parameter%node_elem,BDyn_Parameter%dof_node,&
-!                 &BDyn_Parameter%ngp,BDyn_OtherState%RootForce)
+   CALL ComputeRootForce(BD_Parameter%uuN0,BD_OtherState%uuNf,&
+                 &BD_Parameter%Stif0,BD_Parameter%node_elem,BD_Parameter%dof_node,&
+                 &BD_Parameter%ngp,BD_OtherState%RootForce)
 
-   CALL ComputeRootForceNodal(BD_Parameter%uuN0,BD_OtherState%uuNf,&
-                    &BD_Parameter%Stif0_N1,BD_Parameter%node_elem,BD_Parameter%dof_node,&
-                    &BD_OtherState%RootForce)
+!   CALL ComputeRootForceNodal(BD_Parameter%uuN0,BD_OtherState%uuNf,&
+!                    &BD_Parameter%Stif0_N1,BD_Parameter%node_elem,BD_Parameter%dof_node,&
+!                    &BD_OtherState%RootForce)
 
    WRITE(OutUnit,*) 'Initial Nodal Configurations (uuN0):'
    WRITE(OutUnit,*) '=========================================='
