@@ -1,5 +1,6 @@
 ArcFiles.txt
 Archive.bat
+Build.bat
 ChangeLog.txt
 Disclaimer.txt
 RunTurbSim.pl
@@ -14,6 +15,7 @@ TurbSimOverview.pdf
 Source\BlankModVKM.f90
 Source\FFTMod.f90
 Source\Modules.f90
+Source\Root_Searching.f90
 Source\SetVersion.f90
 Source\TSsubs.f90
 Source\TurbSim.f90

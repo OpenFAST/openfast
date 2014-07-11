@@ -59,6 +59,7 @@ PROGRAM TurbSim
 
 
 USE                        FFT_Module
+USE                        ModifiedvKrm_mod
 USE                        Ran_Lux_Mod
 USE                        TSMods
 USE                        TSsubs
@@ -699,6 +700,8 @@ ENDIF
 
 IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
    U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType, UHANGLE=WindDir_profile) 
+ELSE IF ( WindProfileType(1:3) == 'API' )  THEN
+   U(1:ZLim) = getWindSpeed( U_Ref, H_Ref, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
 ELSE 
    U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
 ENDIF
@@ -749,8 +752,11 @@ WRITE (US,FormStr)  TRIM(TMName)
 FormStr  = "('   ',A,' =' ,F9.3,A)"
 FormStr1 = "('   ',A,' =' ,I9  ,A)"
 FormStr2 = "('   ',A,' =  ',A)"
-
-IF ( ( TurbModel  == 'IECKAI' ) .OR. ( TurbModel  == 'IECVKM' ) .OR. ( TurbModel  == 'MODVKM' ) )  THEN
+  
+IF ( ( TurbModel  == 'IECKAI' ) .OR. &
+     ( TurbModel  == 'IECVKM' ) .OR. &
+     ( TurbModel  == 'MODVKM' ) .OR. &
+     ( TRIM(TurbModel)  == 'API'    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
 
       ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
       ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
@@ -1182,7 +1188,7 @@ DO IZ=1,ZLim
 
 !bonnie: fix this so the the IEC runs differently?? It doesn't need as large an array here anymore...
       IF ( TurbModel(1:3) == 'IEC' ) THEN
-         CALL PSDcal( HubHt, UHub  )
+         CALL PSDcal( HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
       ELSEIF ( TurbModel(1:5) == 'TIDAL' .OR. TurbModel(1:5) == 'RIVER' ) THEN ! HydroTurbSim specific.
          !print *, Ustar
          !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
@@ -1245,7 +1251,7 @@ IF ( PSD_OUT ) THEN
    CLOSE( UP )
 ENDIF
 
-   ! Deallocate memory for work array
+   ! Deallocate memory for work array 
 
 IF ( ALLOCATED( Work  ) )  DEALLOCATE( Work  )
 
@@ -1361,8 +1367,12 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 V(:,:,:) = 0.0    ! initialize the velocity matrix
 
-IF (TurbModel(1:4) /= 'NONE') THEN
-   CALL CohSpecVMat(LC, NSize, Comp)    
+IF (TRIM(TurbModel) /= 'NONE') THEN                         ! MODIFIED BY Y GUO
+    IF (TRIM(TurbModel) == 'API') THEN
+        CALL CohSpecVMat_API(LC, NSize, Comp) 
+    ELSE
+        CALL CohSpecVMat(LC, NSize, Comp)
+    ENDIF
 ENDIF
 
 
@@ -1421,6 +1431,7 @@ CALL ExitFFT
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
 SELECT CASE ( TRIM(TurbModel) )
+!MLB: There does not seem to be a CASE for TurbModel=="API".
       
    CASE ('GP_LLJ','NWTCUP', 'SMOOTH', 'WF_UPW', 'WF_07D', 'WF_14D', 'USRVKM', 'TIDAL', 'RIVER') ! Do reynolds stress for HYDRO also.
                

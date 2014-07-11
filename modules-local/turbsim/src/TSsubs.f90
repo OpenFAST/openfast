@@ -4,7 +4,6 @@
 MODULE TSSubs
 
    USE                     NWTC_Library   
-   USE                     ModifiedvKrm_mod   
    USE                     ModifiedvKrm_mod
    IMPLICIT                NONE
 
@@ -819,15 +818,15 @@ ENDIF
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
 
-IF ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') ) THEN
+IF ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API" ) THEN
    InCohB(:)    = 0.12/LC
    DistZMExp(:) = 1.0
 ENDIF
-   
+
          II = 0
 POINT_I: DO IZ=1,ZLim   !NumGrid_Z
             DO IY=1,IYmax(IZ) !NumGrid_Y
-      
+
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
                IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
 
@@ -860,21 +859,21 @@ POINT_J:       DO JZ=1,IZ
                         dY = Y(I) - Y(J)
                         IF (dY > 0.5*GridWidth ) THEN
                            dY = dY - GridWidth - GridRes_Y
-                        ELSE IF (dY < -0.5*GridWidth ) THEN 
+                        ELSE IF (dY < -0.5*GridWidth ) THEN
                            dY = dY + GridWidth + GridRes_Y
                         END IF
 
                         Dist(Indx)= SQRT( ( dY )**2  + ( Z(IZ) - Z(JZ) )**2 )
                      END IF
 
-                     IF ( (TurbModel(1:3) == 'IEC')  .OR. (TurbModel == 'MODVKM')) THEN
+                     IF ( (TurbModel(1:3) == 'IEC')  .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API") THEN
                         DistU(Indx) = Dist(Indx)/UHub
 !                           TRH(Indx) = EXP( -InCDec(IVec)*SQRT( ( Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
                         UM       = 0.5*( U(IZ) + U(JZ) )
                         ZM       = 0.5*( Z(IZ) + Z(JZ) )
-                        
-                        DistU(Indx)     = Dist(Indx)/UM                           
+
+                        DistU(Indx)     = Dist(Indx)/UM
                         DistZMExp(Indx) = ( Dist(Indx)/ZM )**COHEXP     ! Note: 0**0 = 1
 
 !                       TRH(Indx) = EXP( -InCDec(IVec) * DistZMExp*SQRT( ( Freq(IFreq)* DistU )**2 + (InCohB(IVec)*Dist)**2 ) )
@@ -892,17 +891,17 @@ IF ( COH_OUT ) THEN
 
       CALL OpenFOutFile( UC, TRIM(RootName)//'.coh' )
 !      WRITE( UC, '(A4,X,3(A16),2(A11))' ) 'Comp','Distance', 'Avg Height', 'Avg Wind Speed', 'c(F1)','c(F2)'
-      
+
       WRITE( UC, '(A4,X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
       WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance',     Dist(:)
       WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance/U',   DistU(:)
       WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) '(r/Z)^CohExp', DistZMExp(:)
-            
+
 ENDIF
 
 DO IVec = 1,3
 
-   IF ( ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM')) .AND. ( IVec /= 1 ) ) THEN
+   IF ( ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API" ) .AND. ( IVec /= 1 ) ) THEN
          ! There is no coherence defined for the v or w component of the IEC spectral models
       IdentityCoh = .TRUE.
    ELSE
@@ -910,7 +909,7 @@ DO IVec = 1,3
    ENDIF
 
    CALL WrScr ( '    '//Comp(IVec)//'-component matrices' )
-   
+
    !--------------------------------------------------------------------------------
    ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
    !---------------------------------------------------------------------------------
@@ -923,9 +922,9 @@ DO IVec = 1,3
       !---------------------------------------------------
       IF (IdentityCoh) THEN
 
-            ! -----------------------------------------------------------------------------------      
-            !  The coherence is the Identity (as is Cholesky); the Veers' H matrix is as follows:   
-            ! -----------------------------------------------------------------------------------      
+            ! -----------------------------------------------------------------------------------
+            !  The coherence is the Identity (as is Cholesky); the Veers' H matrix is as follows:
+            ! -----------------------------------------------------------------------------------
 
          Indx = 1
          DO J = 1,NTot ! The column number
@@ -941,49 +940,49 @@ DO IVec = 1,3
                Indx = Indx + 1
             ENDDO ! I
          ENDDO ! J
-            
-      ELSE 
-      
-            ! -----------------------------------------------      
-            ! Create the coherence matrix for this frequency      
-            ! -----------------------------------------------      
-            
+
+      ELSE
+
+            ! -----------------------------------------------
+            ! Create the coherence matrix for this frequency
+            ! -----------------------------------------------
+
          DO II=1,NTot
             DO JJ=1,II
 
                   JJ1       = JJ - 1
                   Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
-                  TRH(Indx) = EXP( -1.0 * InCDec(IVec) * DistZMExp(Indx)* & 
+                  TRH(Indx) = EXP( -1.0 * InCDec(IVec) * DistZMExp(Indx)* &
                                       SQRT( (Freq(IFreq)*DistU(Indx) )**2 + (InCohB(IVec)*Dist(Indx))**2 ) )
 
             ENDDO ! JJ
-         ENDDO ! II                  
-         
+         ENDDO ! II
+
          IF (COH_OUT) THEN
 !            IF (IFreq == 1 .OR. IFreq == NumFreq) THEN
                WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, Freq(IFreq), TRH(1:NSize)
 !            ENDIF
          ENDIF
 
-            ! -------------------------------------------------------------      
+            ! -------------------------------------------------------------
             ! Calculate the Cholesky factorization for the coherence matrix
-            ! -------------------------------------------------------------      
-         
+            ! -------------------------------------------------------------
+
          CALL SPPTRF( 'L', NTot, TRH, Stat )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NTot'; returns Stat
 
          IF ( Stat /= 0 ) THEN
             CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
-                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Flt2LStr(Freq(IFreq)))//' Hz)'//&
+                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(Freq(IFreq)))//' Hz)'//&
                         '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
                         'Check the input file for invalid physical properties or modify the coherence exponent '//&
                         'or grid spacing.')
          ENDIF
-         
-            ! -------------------------------------------------------------      
+
+            ! -------------------------------------------------------------
             ! Create the lower triangular matrix, H, from Veer's method
-            ! -------------------------------------------------------------      
-         
+            ! -------------------------------------------------------------
+
          Indx = 1
          DO J = 1,NTot  ! Column
             DO I = J,NTot ! Row
@@ -996,22 +995,22 @@ DO IVec = 1,3
 
             ENDDO !I
          ENDDO !J
-         
+
       ENDIF !IdentityCoh
-      
-      ! -------------------------------------------------------------      
-      ! Calculate the correlated fourier coefficients.   
+
+      ! -------------------------------------------------------------
+      ! Calculate the correlated fourier coefficients.
       ! -------------------------------------------------------------
 
       IF2      = IF2 + 2
       IF1      = IF2 - 1
-      
+
       DO J=1,NTot
 
             ! Apply a random phase to each of the columns of H to
             ! produce random phases in the wind component.
             ! Then sum each of the rows into the vector V.
-            
+
          IRand = IFreq + (J-1)*NumFreq + (IVec-1)*NTot*NumFreq  ! This sorts the random numbers as they were done previously
 
          Ph    = TwoPi*RandNum(IRand)
@@ -1026,7 +1025,7 @@ DO IVec = 1,3
 
             Indx = Indx + 1      !H(I,J)
 
-         ENDDO ! I  
+         ENDDO ! I
       ENDDO ! J
 
    ENDDO !IFreq
@@ -1043,6 +1042,333 @@ IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
 RETURN
 
 END SUBROUTINE CohSpecVMat
+!=======================================================================
+SUBROUTINE CohSpecVMat_API( LC, NSize, Comp)
+
+   ! This subroutine computes the coherence between two points on the grid.
+   ! It stores the symmetric coherence matrix, packed into variable "Matrix"
+   ! This replaces what formerly was the "ExCoDW" matrix.
+
+USE                           TSMods
+
+IMPLICIT                      NONE
+
+   ! Passed variables
+
+REAL(ReKi),   INTENT(IN)   :: LC             ! IEC coherency scale parameter
+INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
+CHARACTER(*), INTENT(IN)   :: Comp(3)        ! u, v, or w
+
+   ! Internal variables
+
+REAL(ReKi)                 :: CohDec         ! The coherence decrement
+REAL(ReKi)                 :: CDistUM        ! Temporary variable for calculating coherence * dist
+REAL(ReKi)                 :: CPh            ! Cosine of the random phase
+!REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
+REAL(ReKi), ALLOCATABLE    :: Dist_Y(:)        ! The Y distance between points
+REAL(ReKi), ALLOCATABLE    :: Dist_Z(:)        ! The Z distance between points
+!mlb REAL(ReKi), ALLOCATABLE    :: Dist_Z12(:)        ! The distance between points (not really a distance!)
+REAL(ReKi), ALLOCATABLE    :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
+REAL(ReKi)                 :: DistLC
+
+REAL(ReKi)                 :: dY             ! the lateral distance between two points
+REAL(ReKi)                 :: Ph             ! Phase angle.
+REAL(ReKi)                 :: SPh            ! Sine of the random phase
+REAL(ReKi)                 :: UM             ! The mean wind speed of the two points
+REAL(ReKi)                 :: ZM             ! The mean height of the two points
+
+INTEGER                    :: J
+INTEGER                    :: JJ             ! Index of point J
+INTEGER                    :: JJ1
+INTEGER                    :: JY             ! Index of y-value of point J
+INTEGER                    :: JZ             ! Index of z-value of point J
+INTEGER                    :: I
+INTEGER                    :: IF1            ! Index to real part of vector
+INTEGER                    :: IF2            ! Index to complex part of vector
+INTEGER                    :: IFreq
+INTEGER                    :: II             ! The index of point I
+INTEGER                    :: Indx
+INTEGER                    :: IRand          ! Index of Random Number of Array
+INTEGER                    :: IVec           ! wind component, 1=u, 2=v, 3=w
+INTEGER                    :: IY             ! The index of the y-value of point I
+INTEGER                    :: IZ             ! Index of the z-value of point I
+INTEGER                    :: Stat
+
+LOGICAL                    :: IdentityCoh
+
+!REAL :: Coef_QX=1.00
+REAL :: Coef_QY=1.00
+REAL :: Coef_QZ=1.25
+!REAL :: Coef_PX=0.40
+REAL :: Coef_PY=0.40
+REAL :: Coef_PZ=0.50
+!REAL :: Coef_RX=0.92
+REAL :: Coef_RY=0.92
+REAL :: Coef_RZ=0.85
+!REAL :: Coef_AlphaX=2.90
+REAL :: Coef_AlphaY=45.0
+REAL :: Coef_AlphaZ=13.0
+REAL :: Coef_1=1.0!3.28
+REAL :: Coef_2=100.0!32.8
+!REAL :: Coef_2=10.0!32.8
+
+REAL :: TEMP_Y, TEMP_Z
+
+
+
+
+! ------------ arrays allocated -------------------------
+Stat = 0.
+
+!mlb IF ( .NOT. ALLOCATED( Dist ) ) ALLOCATE( Dist(NSize),      STAT=Stat )
+!mlb IF ( Stat /= 0 ) THEN
+!mlb    CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist coherence array.')
+!mlb ENDIF
+IF ( .NOT. ALLOCATED( Dist_Y ) ) ALLOCATE(Dist_Y(NSize),      STAT=Stat )
+IF ( Stat /= 0 ) THEN
+   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist_Y coherence array.')
+ENDIF
+IF ( .NOT. ALLOCATED( Dist_Z ) ) ALLOCATE( Dist_Z(NSize),      STAT=Stat )
+IF ( Stat /= 0 ) THEN
+   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist_Z coherence array.')
+ENDIF
+!mlb: IF ( .NOT. ALLOCATED( Dist_Z12 ) ) ALLOCATE( Dist_Z12(NSize),      STAT=Stat )
+!mlb:
+!mlb: IF ( Stat /= 0 ) THEN
+!mlb:    CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist_Z12 coherence array.')
+IF ( .NOT. ALLOCATED( Z1Z2 ) ) ALLOCATE( Z1Z2(NSize),      STAT=Stat )
+
+IF ( Stat /= 0 ) THEN
+   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Z1Z2 coherence array.')
+ENDIF
+
+
+
+!! Initialize the velocity matrix  !V(:,:,:) = 0.0 - done outside the subroutine
+
+!--------------------------------------------------------------------------------
+! Calculate the distances and other parameters that don't change with frequency
+!---------------------------------------------------------------------------------
+
+IF ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API") THEN
+   InCohB(:)    = 0.12/LC
+
+ENDIF
+
+         II = 0
+POINT_I: DO IZ=1,ZLim   !NumGrid_Z
+            DO IY=1,IYmax(IZ) !NumGrid_Y
+
+               II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
+!MLB: Does this exit the IY or IZ loop?
+               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IY loop
+
+               JJ = 0
+POINT_J:       DO JZ=1,IZ
+                  DO JY=1,IYmax(JZ) !NumGrid_Y
+
+                     JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
+
+                     IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
+
+                     IF ( IZ > NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
+                        I = YLim
+                        IF ( JZ > NumGrid_Z ) THEN
+                           J = YLim
+                        ELSE
+                           J = JY
+                        ENDIF
+                     ELSE
+                        I = IY
+                        J = JY
+                     ENDIF
+
+                     JJ1       = JJ - 1
+                     Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+
+                         Dist_Y(Indx)= ABS( Y(I) - Y(J) )
+
+                         Dist_Z(Indx)= ABS( Z(IZ) - Z(JZ) )
+!mlb                         Dist_Z12(Indx)=ABS(Z(IZ)*Z(JZ))
+                         Z1Z2(Indx) = Z(IZ)*Z(JZ)
+
+
+
+                  ENDDO    ! JY
+            ENDDO POINT_J  ! JZ
+
+      ENDDO             ! IY
+   ENDDO POINT_I        ! IZ
+
+!IF ( COH_OUT ) THEN
+IF ( .TRUE. ) THEN
+
+      ! Write the coherence for three frequencies, for debugging purposes
+
+      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh' )
+!      WRITE( UC, '(A4,X,3(A16),2(A11))' ) 'Comp','Distance', 'Avg Height', 'Avg Wind Speed', 'c(F1)','c(F2)'
+
+      WRITE( UC, '(A4,X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
+!MLB: Dist is never set or, apparently, used.
+!mlb      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance',     Dist(:)
+      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Y',   Dist_Y(:)
+      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Z', Dist_Z(:)
+!mlb      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Z12', Dist_Z12(:)
+      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
+ENDIF
+
+DO IVec = 1,3
+
+   IF ( ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API" ) .AND. ( IVec /= 1 ) ) THEN
+         ! There is no coherence defined for the v or w component of the IEC spectral models
+      IdentityCoh = .TRUE.
+   ELSE
+      IdentityCoh = .FALSE.
+   ENDIF
+
+   CALL WrScr ( '    '//Comp(IVec)//'-component matrices' )
+
+   !--------------------------------------------------------------------------------
+   ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
+   !---------------------------------------------------------------------------------
+
+   IF2 = 0
+   DO IFREQ = 1,NumFreq
+
+      !---------------------------------------------------
+      ! Calculate the coherence and Veers' H matrix (CSDs)
+      !---------------------------------------------------
+      IF (IdentityCoh) THEN
+
+            ! -----------------------------------------------------------------------------------
+            !  The coherence is the Identity (as is Cholesky); the Veers' H matrix is as follows:
+            ! -----------------------------------------------------------------------------------
+
+         Indx = 1
+         DO J = 1,NTot ! The column number
+
+               ! The diagonal entries of the matrix:
+
+            TRH(Indx) = SQRT( ABS( S(IFreq,J,IVec) ) )
+
+               ! The off-diagonal values:
+            Indx = Indx + 1
+            DO I = J+1,NTot ! The row number
+               TRH(Indx) = 0.0
+               Indx = Indx + 1
+            ENDDO ! I
+         ENDDO ! J
+
+      ELSE
+
+            ! -----------------------------------------------
+            ! Create the coherence matrix for this frequency
+            ! -----------------------------------------------
+
+         DO II=1,NTot
+            DO JJ=1,II
+
+                  JJ1       = JJ - 1
+                  Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+
+!mlb: THis is where to look for the error.
+
+!mlb                  TEMP_Y=Coef_AlphaY*Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
+!mlb                  TEMP_Z=Coef_AlphaZ*Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
+                  TEMP_Y=Coef_AlphaY*Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
+                  TEMP_Z=Coef_AlphaZ*Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
+
+!mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
+                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U_Ref)
+
+
+            ENDDO ! JJ
+         ENDDO ! II
+
+         IF (COH_OUT) THEN
+!            IF (IFreq == 1 .OR. IFreq == NumFreq) THEN
+               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, Freq(IFreq), TRH(1:NSize)
+!            ENDIF
+         ENDIF
+
+            ! -------------------------------------------------------------
+            ! Calculate the Cholesky factorization for the coherence matrix
+            ! -------------------------------------------------------------
+
+         CALL SPPTRF( 'L', NTot, TRH, Stat )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NTot'; returns Stat
+
+         IF ( Stat /= 0 ) THEN
+            CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
+                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(Freq(IFreq)))//' Hz)'//&
+                        '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
+                        'Check the input file for invalid physical properties or modify the coherence exponent '//&
+                        'or grid spacing.')
+         ENDIF
+
+            ! -------------------------------------------------------------
+            ! Create the lower triangular matrix, H, from Veer's method
+            ! -------------------------------------------------------------
+
+         Indx = 1
+         DO J = 1,NTot  ! Column
+            DO I = J,NTot ! Row
+
+                  ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
+
+               TRH(Indx) = TRH(Indx) * SQRT( ABS( S(IFreq,I,IVec) ) )
+
+               Indx = Indx + 1
+
+            ENDDO !I
+         ENDDO !J
+
+      ENDIF !IdentityCoh
+
+      ! -------------------------------------------------------------
+      ! Calculate the correlated fourier coefficients.
+      ! -------------------------------------------------------------
+
+      IF2      = IF2 + 2
+      IF1      = IF2 - 1
+
+      DO J=1,NTot
+
+            ! Apply a random phase to each of the columns of H to
+            ! produce random phases in the wind component.
+            ! Then sum each of the rows into the vector V.
+
+         IRand = IFreq + (J-1)*NumFreq + (IVec-1)*NTot*NumFreq  ! This sorts the random numbers as they were done previously
+
+         Ph    = TwoPi*RandNum(IRand)
+         CPh   = COS( Ph )
+         SPh   = SIN( Ph )
+
+         Indx  = NTot*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
+         DO I=J,NTot
+
+            V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
+            V(IF2,I,IVec) = V(IF2,I,IVec) + TRH(Indx)*SPh  !Imaginary part
+
+            Indx = Indx + 1      !H(I,J)
+
+         ENDDO ! I
+      ENDDO ! J
+
+   ENDDO !IFreq
+
+ENDDO !IVec
+
+IF (COH_OUT)  CLOSE( UC )
+
+!mlb IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
+IF ( ALLOCATED( Dist_Y    ) ) DEALLOCATE( Dist_Y     )
+IF ( ALLOCATED( Dist_Z ) ) DEALLOCATE( Dist_Z )
+!mlb IF ( ALLOCATED( Dist_Z12 ) ) DEALLOCATE( Dist_Z12 )
+IF ( ALLOCATED( Z1Z2 ) ) DEALLOCATE( Z1Z2 )
+CALL WrScr( ' Two-dimensional API coherence matrix is generated!' )
+RETURN
+
+END SUBROUTINE CohSpecVMat_API
 !=======================================================================
 SUBROUTINE GetChebCoefs(URef, RefHt)
 
@@ -1626,7 +1952,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
 
          CASE ( 'USRINP' )
             InCDec = (/   WS, HUGE(InCohB(1)), HUGE(InCohB(1)) /)
-            InCohB = (/0.0  , 0.0            , 0.0             /)         
+            InCohB = (/0.0  , 0.0            , 0.0             /)
 
          CASE DEFAULT   ! includes CASE ( 'SMOOTH' )
 
@@ -1695,7 +2021,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
          ZLtmp  = ZL
          Ustar2 = UStar*Ustar
    END SELECT
-   
+
    !-------------------------------------------------------------------------------------------------
    ! default UW Reynolds stress
    !-------------------------------------------------------------------------------------------------
@@ -1716,9 +2042,9 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
                UW = -0.0373 + 0.00675*Uhub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
             ENDIF
             UW = MAX(UW,0.0)
-            
+
          ENDIF
-                     
+
          IF (UW > 0) THEN
             SignProb = 0.765 + 0.57/PI * ATAN( 0.78511*LOG(UW)+3.42584)
             IF (rndSgn <= SignProb) UW = -UW
@@ -1734,7 +2060,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
             UW = -0.1310 + 0.0239*UHub + 0.556*Ustar2
          ENDIF
          UW = MAX(UW,0.0)
-         
+
          IF (UW > 0) THEN !i.e. not equal to zero
             SignProb = 0.765 + 0.57/PI * ATAN( 0.88356*LOG(UW)+2.47668)
             IF (rndSgn <= SignProb) UW = -UW
@@ -1967,7 +2293,7 @@ UnEc = US
 Echo = .FALSE.       ! Do not echo the input into a separate file
 
    !==========================================================
-   ! Initialize temporary variables   
+   ! Initialize temporary variables
    !==========================================================
 TmpUary    = (/ 0.0, 0.0, 0.0 /)
 TmpUstarD  = 0.0
@@ -2128,9 +2454,8 @@ FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specifie
       CASE (2)
          WRITE (US,FormStr)  ScaleIEC, "ALL"
       CASE DEFAULT
-         CALL TS_Abort ( 'The value for parameter ScaleIEC must be 0, 1, or 2.' )   
+         CALL TS_Abort ( 'The value for parameter ScaleIEC must be 0, 1, or 2.' )
    ENDSELECT
-         
 
 
    !==================================================================================
@@ -2307,7 +2632,7 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
       CASE ( 'RIVER' )
          TMName = 'River Turbulence'
       CASE ( 'IECMAN' )
-         TMName = 'IEC Mann'
+         TMName = 'IEC Mann' ! not implemented
       CASE ( 'SMOOTH' )
          TMName = 'RISO Smooth Terrain'
       CASE ( 'WF_UPW' )
@@ -2320,6 +2645,8 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
          TMName = 'No fluctuating wind components'
       CASE ( 'MODVKM' )
          TMName = 'Modified von Karman'
+      CASE ( 'API' )
+         TMName = 'API'
       CASE ( 'NWTCUP' )
          TMName = 'NREL National Wind Technology Center'
       CASE ( 'GP_LLJ' )
@@ -2332,7 +2659,7 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
       CASE DEFAULT
 !BONNIE: add the UsrVKM model to this list when the model is complete as well as USRINP
          CALL TS_Abort ( 'The turbulence model must be "IECKAI", "IECVKM", "SMOOTH",' &
-                    //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", or "NONE".' )
+                    //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "API", or "NONE".' )
 
    END SELECT  ! TurbModel
 
@@ -2343,7 +2670,7 @@ WRITE (US,FormStr)  TurbModel
 
 CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the IEC standard")
 
-   IF ( TurbModel(1:3) == 'IEC' ) THEN
+   IF ( TurbModel(1:3) == 'IEC' .OR. TRIM(TurbModel) == "API" ) THEN  !bjj: TurbModel=='MODVKM' is not in the IEC standard
 
       CALL Conv2UC( LINE )
 
@@ -2431,7 +2758,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 !!$! -- begin block --
 !!$! This block reads turbulence intensity, and stores it in the variable TurbIntH20.  This variable is not currently used, but will be soon for user-specified turbulence intensity for the HYDRO spectral models.
 !!$! This code is copied from TurbSim.f90
-!!$READ (Line,*,IOSTAT=IOS)  PerTurbInt ! This is to read the 
+!!$READ (Line,*,IOSTAT=IOS)  PerTurbInt ! This is to read the
 !!$IECTurbC = ADJUSTL( Line )
 !!$IF ( IOS /= 0 ) THEN
 !!$   CALL Conv2UC(IECTurbC)
@@ -2451,10 +2778,10 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 !!$   TurbIntH20 = 0.01*PerTurbInt
 !!$ENDIF
 !!$! -- end block --
-   
 
 
-   IF ( ( TurbModel(1:3) == 'IEC' ) .OR. ( TurbModel == 'MODVKM' ) ) THEN
+
+   IF ( ( TurbModel(1:3) == 'IEC' ) .OR. ( TurbModel == 'MODVKM' ) .OR. TRIM(TurbModel) == "API" ) THEN
 
       READ (Line,*,IOSTAT=IOS) Line1
 
@@ -2544,7 +2871,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
 CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type")
 
-   IF ( ( TurbModel(1:3) == 'IEC' ) ) THEN
+   IF ( ( TurbModel(1:3) == 'IEC' ) .OR. TRIM(TurbModel) == "API" ) THEN
 
       CALL Conv2UC( Line )
 
@@ -2600,7 +2927,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
          IF ( NumTurbInp ) THEN
             CALL TS_Abort ( ' When the turbulence intensity is entered as a percent, the IEC wind type must be "NTM".' )
          ENDIF
-         
+
       ELSE
 
          IECTurbE = ' '
@@ -2639,6 +2966,8 @@ SELECT CASE ( TRIM(TurbModel) )
       WindProfileType = 'H2L'
    CASE ( 'USRVKM' )
       WindProfileType = 'USR'
+   CASE ( 'API' )
+      WindProfileType = 'API'  ! ADDED BY YG
    CASE DEFAULT
       WindProfileType = 'IEC'
 END SELECT
@@ -2664,6 +2993,7 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
          ENDIF
       CASE ( 'IEC', 'N/A' )
       CASE ( 'USR', 'U' )
+      CASE ( 'API', 'A' )   ! ADDED BY Y.GUO
       CASE DEFAULT
          CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' )
    END SELECT
@@ -2701,7 +3031,7 @@ URef       = -999.9
 ! If we specify a Ustar (i.e. if Ustar /= "default") then we can enter "default" here,
 ! otherwise, we get circular logic...
 
-CALL ReadRVarDefault( UI, InFile, URef, "the reference wind speed", "Reference wind speed [m/s]", UseDefault, &
+   CALL ReadRVarDefault( UI, InFile, URef, "the reference wind speed", "Reference wind speed [m/s]", UseDefault, &
                      IGNORE=(IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 .OR. WindProfileType(1:1) == 'U') )
 
    NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
@@ -2716,8 +3046,14 @@ CALL ReadRVarDefault( UI, InFile, URef, "the reference wind speed", "Reference w
       RefHt = HubHt
       CALL GetUSR( UI, InFile, 37 ) !Read the last several lines of the file, then return to line 37
       URef = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE=WindProfileType) !This is UHub
-
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
+
+
+      ! We need to save the reference wind speed for the API model.
+
+   IF ( WindProfileType(1:3) == 'API' )  THEN
+      U_Ref = URef
+   END IF
 
 
    ! ------------ Read in the jet height -------------------------------------------------------------
@@ -2801,14 +3137,14 @@ CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness
    ! Read the meteorological boundary conditions for non-IEC models. !
    !=================================================================================
 
-IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' ) THEN
+IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TRIM(TurbModel) /= 'API' ) THEN  ! Modified by Y.Guo
 
    FormStr = "( // 'Non-IEC Meteorological Boundary Conditions:' / )"
    WRITE (US,FormStr)
    !READ (UI,'(/)')
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1" )
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2" )
-   
+
 
 
       ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------
@@ -2831,7 +3167,11 @@ ELSE
 
 ENDIF    ! Not IECKAI and Not IECVKM
 
-IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVKM' .AND. TurbModel /= 'IECMAN') THEN
+IF ( TurbModel /= 'IECKAI' .AND. &
+     TurbModel /= 'IECVKM' .AND. &
+     TurbModel /= 'MODVKM' .AND. &
+     TurbModel /= 'IECMAN' .AND. &
+     TRIM(TurbModel) /= 'API') THEN
 
 
       ! ------------ Read in the gradient Richardson number, RICH_NO. ---------------------------------------------
@@ -2855,7 +3195,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
    IF ( TRIM(TurbModel)=='TIDAL' ) THEN
       WRITE (US,"( A10, 2X, A )")  "N/A", 'Gradient Richardson number'
       RICH_NO = 0
-   ELSE      
+   ELSE
       FormStr = "( F10.3 , 2X , 'Gradient Richardson number' )"
       WRITE (US,FormStr)  RICH_NO
    END IF
@@ -2907,7 +3247,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
       ! ***** Calculate M-O length scale, L [meters] *****
       ! L should be constant in the surface layer
 
-   IF ( ZL /= 0.0 ) THEN  
+   IF ( ZL /= 0.0 ) THEN
         L = HubHt / ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
    ELSE
       L = HUGE( L )
@@ -2928,8 +3268,8 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
             TmpZary(TmpIndex) = MAX( MIN(TmpZary(TmpIndex), profileZmax), profileZmin)
          ENDDO
       ENDIF
-   
-   
+
+
    UseDefault = .TRUE.
 
    UstarDiab  = getUstarDiab(URef, RefHt)
@@ -2956,11 +3296,11 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
       CASE ('GP_LLJ')
          TmpUstarD  = -1.0
          IF ( URef < 0 ) THEN ! (1) We can't get a wind speed because Uref was default
-            UseDefault = .FALSE. ! We'll calculate the default value later              
+            UseDefault = .FALSE. ! We'll calculate the default value later
          ELSE
             Ustar = 0.17454 + 0.72045*UstarDiab**1.36242
          ENDIF
-                                           
+
       CASE ( 'NWTCUP' )
          UStar = 0.2716 + 0.7573*UstarDiab**1.2599
 
@@ -2977,7 +3317,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
       CALL TS_Abort( 'The reference wind speed and friction velocity cannot both be "default."')
    ELSEIF (UStar <= 0) THEN
       CALL TS_Abort( 'The friction velocity must be a positive number.')
-   ENDIF            
+   ENDIF
 
 
          ! ***** Calculate wind speed at hub height *****
@@ -3000,7 +3340,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
 
          IF (UJetMax + tmp > 0 ) UJetMax = UJetMax + tmp
 
-         CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and uStar        
+         CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and uStar
 
          URef = getWindSpeed(UJetMax, ZJetMax, RefHt, RotorDiameter, PROFILE=WindProfileType)
 
@@ -3011,7 +3351,7 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
    ENDIF !Jet wind profile
 
    UHub = getWindSpeed(URef, RefHt, HubHt, RotorDiameter, PROFILE=WindProfileType)
-   
+
          ! ***** Get uStar- and zl-profile values, if required, and determine offsets *****
       IF ( TmpUstarD == 0.0 ) THEN
          TmpUstarD = Ustar
@@ -3019,16 +3359,16 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
          IF ( TmpUstarD < 0.0 ) THEN  ! If > 0, we've already calculated these things...
             UstarDiab = getUstarDiab(URef, RefHt) !bjj: is this problematic for anything else?
             TmpUary   = getWindSpeed(URef, RefHt, TmpZary, RotorDiameter, PROFILE=WindProfileType)
-            TmpUstar  = getUstarARY( TmpUary,     TmpZary )         
+            TmpUstar  = getUstarARY( TmpUary,     TmpZary )
             TmpUstarD = SUM(TmpUstar) / SIZE(TmpUstar)    ! The average of those 3 points
          ENDIF
          UstarOffset = Ustar - TmpUstarD
          TmpUstar(:) = TmpUstar(:) + UstarOffset
-      ENDIF  
-      
+      ENDIF
+
       TmpZLary = getZLARY(TmpUary, TmpZary)
-      zlOffset = zL - SUM(TmpZLary) / SIZE(TmpUstar) 
-              
+      zlOffset = zL - SUM(TmpZLary) / SIZE(TmpUstar)
+
 
       ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
 
@@ -3055,27 +3395,27 @@ IF ( TurbModel /= 'IECKAI' .AND. TurbModel /= 'IECVKM' .AND. TurbModel /= 'MODVK
       ! Get the default mean Reynolds stresses
    UWskip     = .FALSE.
    UVskip     = .FALSE.
-   VWskip     = .FALSE.   
+   VWskip     = .FALSE.
    PC_UW      = TmpUstar(2)**2   ! Used only for GP-LLJ in GetDefaultRS()
-   
+
    CALL GetDefaultRS(  PC_UW, PC_UV, PC_VW )
 
 
-       ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------          
+       ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
    UseDefault = .TRUE.
    CALL ReadRVarDefault( UI, InFile, PC_UW, "the mean hub u'w' Reynolds stress", &
                                             "Mean hub u'w' Reynolds stress", UseDefault, IGNORESTR = UWskip )
-   IF (.NOT. UWskip) THEN  
+   IF (.NOT. UWskip) THEN
       TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
-   
+
       IF ( TmpUstarD /= 0.0 ) THEN
          UstarSlope  = 3.0*(Ustar -  SQRT( ABS(PC_UW) ) ) / TmpUstarD
-         UstarOffset = SQRT( ABS(PC_UW) ) - UstarSlope*(TmpUstar(2) - UstarOffset)         
+         UstarOffset = SQRT( ABS(PC_UW) ) - UstarSlope*(TmpUstar(2) - UstarOffset)
       ELSE
          UstarSlope  = 0.0
          UstarOffset = SQRT( ABS(PC_UW) )
       ENDIF
-   ENDIF   
+   ENDIF
 
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
    UseDefault = .TRUE.
@@ -3357,31 +3697,31 @@ FUNCTION getUstarARY(WS, Ht)
    USE                                  TSMods, ONLY: UstarSlope
    USE                                  TSMods, ONLY: profileZmax
    USE                                  TSMods, ONLY: profileZmin
-   
+
 
    IMPLICIT                              NONE
 
    REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height at which ustar is defined
    REAL(ReKi),   INTENT(IN)           :: WS(:)                       ! Wind speed(s) at heights, Ht
-   
+
    REAL(ReKi)                         :: tmpZ                        ! a temporary value
    REAL(ReKi)                         :: getUstarARY(SIZE(Ht))       ! the array of ustar values
-   
+
    INTEGER                            :: IZ
    INTEGER                            :: Zindx
    INTEGER                            :: Zindx_mn (1)
    INTEGER                            :: Zindx_mx (1)
-   
+
    LOGICAL                            :: mask(SIZE(Ht))
-   
+
    mask = Ht.GE.profileZmin
    IF ( ANY(mask) ) THEN
-      Zindx_mn = MINLOC( Ht, MASK=mask ) 
-            
+      Zindx_mn = MINLOC( Ht, MASK=mask )
+
       mask = Ht.LE.profileZmax
       IF ( ANY(mask) ) THEN
-         Zindx_mx = MAXLOC( Ht, MASK=mask )    
-            
+         Zindx_mx = MAXLOC( Ht, MASK=mask )
+
          DO IZ = 1,SIZE(Ht)
             IF ( Ht(IZ) < profileZmin ) THEN
                Zindx = Zindx_mn(1)
@@ -3390,25 +3730,25 @@ FUNCTION getUstarARY(WS, Ht)
             ELSE
                Zindx = IZ
             ENDIF
-            
+
             tmpZ = Ht(Zindx)      !ustar is constant below 50 meters, and we don't want to extrapolate too high (last measurement is at 116 m)
-               
+
             getUstarARY(  IZ) = ( 0.045355367 +  4.47275E-8*tmpZ**3)                                                &
                               + ( 0.511491978 -  0.09691157*LOG(tmpZ) - 199.226951/tmpZ**2           ) * WS(Zindx)  &
                               + (-0.00396447  - 55.7818832/tmpZ**2                                   ) * RICH_NO    &
                               + (-5.35764429  +  0.102002162*tmpZ/LOG(tmpZ) + 25.30585136/SQRT(tmpZ) ) * UstarDiab
-         ENDDO         
-            
+         ENDDO
+
       ELSE ! All are above the max height so we'll use the old relationship at all heights
          getUstarARY(:) = 0.17454 + 0.72045*UstarDiab**1.36242
       ENDIF
-            
-   ELSE ! All are below the min height so we'll use the diabatic Ustar value 
+
+   ELSE ! All are below the min height so we'll use the diabatic Ustar value
       getUstarARY(:) = UstarDiab
    ENDIF
-   
+
    getUstarARY = UstarSlope * getUstarARY(:) + UstarOffset  ! These terms are used to make the ustar profile match the rotor-disk averaged value and input hub u'w'
-      
+
 END FUNCTION
 !=======================================================================
 FUNCTION getUstarDiab(URef, RefHt)
@@ -3421,22 +3761,22 @@ FUNCTION getUstarDiab(URef, RefHt)
 
    REAL(ReKi),   INTENT(IN)           :: URef                        ! Wind speed at reference height
    REAL(ReKi),   INTENT(IN)           :: RefHt                       ! Reference height
-   
+
    REAL(ReKi)                         :: tmp                         ! a temporary value
-   REAL(ReKi)                         :: psiM                        
+   REAL(ReKi)                         :: psiM
    REAL(ReKi)                         :: getUstarDiab                ! the diabatic u* value (u*0)
-   
+
    IF ( ZL >= 0 ) THEN !& ZL < 1
       psiM = -5.0*MIN(ZL, REAL(1.0,ReKi) )
    ELSE
-      tmp = (1.0 - 15.0*ZL)**0.25  
-            
+      tmp = (1.0 - 15.0*ZL)**0.25
+
       !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
       psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
 
    ENDIF
 
-   getUstarDiab = ( 0.4 * Uref ) / ( LOG( RefHt / z0 ) - psiM )   
+   getUstarDiab = ( 0.4 * Uref ) / ( LOG( RefHt / z0 ) - psiM )
 
 END FUNCTION
 !=======================================================================
@@ -3650,12 +3990,12 @@ SUBROUTINE GetUSRSpec(FileName)
    USE                                   TSMods, ONLY: Uspec_USR         ! User-defined u-component spectra
    USE                                   TSMods, ONLY: Vspec_USR         ! User-defined v-component spectra
    USE                                   TSMods, ONLY: Wspec_USR         ! User-defined w-component spectra
-   
+
    IMPLICIT                              NONE
 
    CHARACTER(*), INTENT(IN)           :: FileName                       ! Name of the input file
    CHARACTER(200)                     :: LINE
-   
+
    REAL(ReKi)                         :: Freq_USR_Tmp
    REAL(ReKi)                         :: U_USR_Tmp
    REAL(ReKi)                         :: V_USR_Tmp
@@ -3719,13 +4059,13 @@ SUBROUTINE GetUSRSpec(FileName)
    IF ( IOAstat /= 0 )  THEN
       CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumUSRf/1024**2 ) )//' MB for the user-defined v spectra array.')
    ENDIF
-   
+
    ALLOCATE ( Wspec_USR(NumUSRf) , STAT=IOAstat )
 
    IF ( IOAstat /= 0 )  THEN
       CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumUSRf/1024**2 ) )//' MB for the user-defined w spectra array.')
    ENDIF
-   
+
 
 
       ! ---------- Skip 4 lines --------------------------------------------
@@ -3743,19 +4083,19 @@ SUBROUTINE GetUSRSpec(FileName)
       ENDIF
 
       IF ( ( Uspec_USR(I) <= REAL( 0., ReKi ) ) .OR. &
-           ( Vspec_USR(I) <= REAL( 0., ReKi ) ) .OR. & 
+           ( Vspec_USR(I) <= REAL( 0., ReKi ) ) .OR. &
            ( Wspec_USR(I) <= REAL( 0., ReKi ) ) ) THEN
          CALL TS_Abort( 'The spectra must contain positive numbers.' );
 !      ELSEIF ( Freq_USR(I) <= REAL( 0., ReKi ) ) THEN
 !         CALL TS_Abort( 'The frequencies must be a positive number.' );
       ENDIF
-      
+
          ! Scale by the factors earlier in the input file
-      
+
       Uspec_USR(I) = Uspec_USR(I)*SpecScale(1)
       Vspec_USR(I) = Vspec_USR(I)*SpecScale(2)
       Wspec_USR(I) = Wspec_USR(I)*SpecScale(3)
-      
+
    ENDDO
 
       ! ------- Sort the arrays by frequency -----------------------------------
@@ -3794,7 +4134,7 @@ SUBROUTINE GetUSRSpec(FileName)
 
       ! --------- Close the file ---------------------------------------
 
-   CLOSE( USpec )      
+   CLOSE( USpec )
 
 END SUBROUTINE GetUSRSpec
 !=======================================================================
@@ -3809,11 +4149,14 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    USE                                  TSMods, ONLY: ChebyCoef_WS   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: HubHt          ! The hub height (used with HFlowAng)
+   USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM50      ! IEC Extreme 50-yr wind speed model
+   USE                                  TSMods, ONLY: IEC_EWM100      ! IEC Extreme 100-yr wind speed model
    USE                                  TSMods, ONLY: IEC_WindType   ! Type of IEC wind
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: PLExp          ! Power law exponent
+   USE                                  TSMods, ONLY: U_Ref          ! The input wind speed at the reference height (URef is being overwritten for some reason)
    USE                                  TSMods, ONLY: U_Usr          ! User-defined wind speeds
    USE                                  TSMods, ONLY: Ustar          ! Friction or shear velocity
    USE                                  TSMods, ONLY: Vref           ! IEC Extreme wind value
@@ -3831,7 +4174,7 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    REAL(ReKi),   INTENT(IN)           :: RotorDiam                   ! Diameter of rotor disk (meters)
    REAL(ReKi),   INTENT(OUT),OPTIONAL :: UHangle(SIZE(Ht))           ! Horizontal wind angle
    REAL(ReKi)                         :: getWindSpeedAry(SIZE(Ht))   ! This function, approximate wind speed at Ht
-   
+
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
@@ -3847,11 +4190,18 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    INTEGER                            :: Indx
    INTEGER                            :: J
 
+   REAL                               :: C_factor
+   REAL(ReKi)                         :: ZRef
+
+
    IF ( IEC_WindType == IEC_EWM50 ) THEN
       getWindSpeedAry(:) = VRef*( Ht(:)/HubHt )**0.11                ! [IEC 61400-1 6.3.2.1 (14)]  !bjj: this PLExp should be set to 0.11 already, why is this hard-coded?
       RETURN
    ELSEIF ( IEC_WindType == IEC_EWM1 ) THEN
       getWindSpeedAry(:) = 0.8*VRef*( Ht(:)/HubHt )**0.11            ! [IEC 61400-1 6.3.2.1 (14), (15)]
+      RETURN
+   ELSEIF ( IEC_WindType == IEC_EWM100 ) THEN
+      getWindSpeedAry(:) = VRef*( Ht(:)/HubHt )**0.11               ! [API-IEC RECCOMENDATAION]  ADDED BY YGUO
       RETURN
    ENDIF
 
@@ -3918,7 +4268,7 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
                !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
                getWindSpeedAry(:) = URef*( LOG( Ht(:) / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )
 !            ENDIF
-               
+
 !         ENDIF
       CASE ( 'H2L', 'H' )
 
@@ -3926,13 +4276,24 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
                ! RefHt and URef both get modified consistently, therefore RefHt is used instead of H_ref.
                !print *, RefHt,H_ref,URef,Ustar ! Need to include H_ref from TSmods for this print statement to work.
                getWindSpeedAry(:) = LOG(Ht(:)/RefHt)*Ustar/0.41+URef
-            
+
       CASE ( 'PL', 'P' )
 
 !         IF ( RefHt > 0.0 .AND. Ht > 0.0 ) THEN
             getWindSpeedAry(:) = URef*( Ht(:)/RefHt )**PLExp
-!         ENDIF
 
+!         ENDIF
+     CASE ( 'API', 'A' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+
+     ! sample to write to screen.CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
+!            CALL WrScr ('calling to API wind profile and write array')
+                ! TO ADD THE FSOLVE PROGRAM TO CALCULATE C_factor
+!            getWindSpeedAry(:)  = ZRef*(1+LOG( Ht(:) / 10) )*( 1-0.41*(0.06*(1+0.043*ZRef)*(Ht/10)**(-0.22)))*LOG(600.0/3600.0)
+!            getWindSpeedAry(:)  = RefHt*(1+LOG( Ht(:) / 10) )*( 1-0.41*(0.06*(1+0.043*RefHt)*(Ht/10)**(-0.22)))*LOG(600.0/3600.0)
+!            getWindSpeedAry(:)  = URef*(1+LOG( Ht(:) / RefHt) )*( 1-0.41*(0.06*(1+0.043*URef)*(Ht/RefHt)**(-0.22)))*LOG(600.0/3600.0)
+!            getWindSpeedAry(:)  = URef*(1+LOG( Ht(:) / RefHt) )
+!            getWindSpeedAry(:) = URef*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*URef )*LOG( Ht(:)/RefHt) )
+            getWindSpeedAry(:) = U_Ref*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U_Ref )*LOG( Ht(:)/H_Ref) )
       CASE ( 'USR', 'U' )
 
          DO J = 1,SIZE(Ht)
@@ -4018,11 +4379,13 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    USE                                  TSMods, ONLY: ChebyCoef_WS   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: HubHt          ! The hub height (used with HFlowAng)
+   USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM50      ! IEC Extreme 50-yr wind speed model
    USE                                  TSMods, ONLY: IEC_WindType   ! Type of IEC wind
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: PLExp          ! Power law exponent
+   USE                                  TSMods, ONLY: U_Ref          ! The input wind speed at the reference height (URef is being overwritten for some reason)
    USE                                  TSMods, ONLY: U_Usr          ! User-defined wind speeds
    USE                                  TSMods, ONLY: Ustar          ! Friction or shear velocity
    USE                                  TSMods, ONLY: Vref           ! IEC Extreme wind value
@@ -4031,7 +4394,7 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
    USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
    USE                                  TSMods, ONLY: ZL             ! M-O stability parameter
-
+   USE                                  TSMods, ONLY: U0_1HR          !% ADDED BY Y. GUO
    IMPLICIT                              NONE
 
    REAL(ReKi),   INTENT(IN)           :: URef                        ! Wind speed at reference height
@@ -4055,6 +4418,14 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    INTEGER                            :: I
    INTEGER                            :: Indx
 
+   !REAL(ReKi)                   :: U0_1HR                        ! Wind speed at reference height in 1hr time duration, added by Y.G. ON April 16 2013
+   REAL                         :: C_factor                       ! Factor to convert wind speed from 10-min to 1 hr, added by Y.G. ON April 16 2013
+   REAL :: X0                                              ! Added by Y. Guo for calculating C_factor
+   REAL :: X, TEMP_1, TEMP_2                                                ! Added by Y. Guo for calculating C_factor
+   !=======================================
+
+      X0=URef
+      !========================
    ! IF Z0 <= 0.0    CALL ProgAbort('The surface roughness must be a positive number')
 
    IF ( IEC_WindType == IEC_EWM50 ) THEN
@@ -4139,7 +4510,7 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
                getWindSpeedVal = LOG(Ht/RefHt)*Ustar/0.41+URef
 
 
-      CASE ( 'PL', 'P' )
+      CASE ( 'PL', 'P' )  ! POWER LAW, commented by Y. Guo on April 16 2013
 
          IF ( RefHt > 0.0 .AND. Ht > 0.0 ) THEN
             getWindSpeedVal = URef*( Ht/RefHt )**PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
@@ -4200,6 +4571,26 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
          ENDIF
 
+      CASE ( 'API', 'A' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+
+!MLB: We can exclude this logic by forcing the user to enter the 1-hour mean wind speed.
+!     If we add the API stuff to the main version of TurbSim, we may want to eliminate that requirement, but we will have to
+!     add a new input parameter saying how long a period was used to calculate the reference wind speed.
+
+!           CALL ROOT_SEARCHING(X0,X,URef,RefHt,HubHt)  !URef
+           !CALL Root_Searching(X0,X,42.5,10.0,10.0)  !URef, USED TO DEBUG THE CODE
+!           U0_1HR=X  ! This is the wind speed at 10 m height within 1-hr window
+
+!            CALL WrScr ('Calling to API wind profile')
+!           TEMP_1=0.0573*(1.0+0.15*U0_1HR)**0.5
+!           TEMP_2=0.06*(1+0.043*U0_1HR)*(Ht/10.0)**(-0.22)
+!           getWindSpeedVal = U0_1HR*(1.0+TEMP_1*LOG( Ht / 10.0) )*( 1.0-0.41*TEMP_2*LOG(600.0/3600.0))
+!           getWindSpeedVal = U0_1HR*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U0_1HR )*LOG( Ht/RefHt) )
+!MLB: This assumes that the reference wind speed entered by the user is the 1-hour average wind speed at the input reference height.
+           getWindSpeedVal = U_Ref*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U_Ref )*LOG( Ht/H_Ref) )
+
+!            CALL WrScr ('API wind profile generated')
+
       CASE DEFAULT   ! This is how it worked before
 
          IF ( Ht == RefHt ) THEN
@@ -4217,6 +4608,9 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
 RETURN
 END FUNCTION getWindSpeedVal
+
+
+
 !=======================================================================
 FUNCTION getZLARY(WS, Ht)
 
@@ -4233,25 +4627,25 @@ FUNCTION getZLARY(WS, Ht)
 
    REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height at which local z/L is defined
    REAL(ReKi),   INTENT(IN)           :: WS(:)                       ! Wind speed(s) at heights, Ht
-   
+
    REAL(ReKi)                         :: tmpZ                        ! a temporary value
    REAL(ReKi)                         :: getZLary(SIZE(Ht))          ! the array of z/L values
-   
+
    INTEGER                            :: IZ
    INTEGER                            :: Zindx
    INTEGER                            :: Zindx_mn (1)
    INTEGER                            :: Zindx_mx (1)
-   
+
    LOGICAL                            :: mask(SIZE(Ht))
-   
+
    mask = Ht.GE.profileZmin
    IF ( ANY(mask) ) THEN
-      Zindx_mn = MINLOC( Ht, MASK=mask ) 
-            
+      Zindx_mn = MINLOC( Ht, MASK=mask )
+
       mask = Ht.LE.profileZmax
       IF ( ANY(mask) ) THEN
-         Zindx_mx = MAXLOC( Ht, MASK=mask )    
-            
+         Zindx_mx = MAXLOC( Ht, MASK=mask )
+
          DO IZ = 1,SIZE(Ht)
             IF ( Ht(IZ) < profileZmin ) THEN
                Zindx = Zindx_mn(1)
@@ -4268,28 +4662,28 @@ FUNCTION getZLARY(WS, Ht)
                IF ( Rich_No >= 0 ) THEN
                   getZLary( IZ) =                     - 0.352464*Rich_No + 0.005272*WS(Zindx) + 0.465838
                ELSE
-                  getZLary( IZ) =  0.004034*Ht(Zindx) + 0.809494*Rich_No - 0.008298*WS(Zindx) - 0.386632 
+                  getZLary( IZ) =  0.004034*Ht(Zindx) + 0.809494*Rich_No - 0.008298*WS(Zindx) - 0.386632
                ENDIF !Rich_NO
-            ELSE   
+            ELSE
                IF ( Rich_No >= 0 ) THEN
-                  getZLary( IZ) =  0.003068*Ht(Zindx) + 1.140264*Rich_No + 0.036726*WS(Zindx) - 0.407269 
+                  getZLary( IZ) =  0.003068*Ht(Zindx) + 1.140264*Rich_No + 0.036726*WS(Zindx) - 0.407269
                ELSE
-                  getZLary( IZ) =  0.003010*Ht(Zindx) + 0.942617*Rich_No                     - 0.221886 
-               ENDIF   
+                  getZLary( IZ) =  0.003010*Ht(Zindx) + 0.942617*Rich_No                     - 0.221886
+               ENDIF
             ENDIF
             getZLary( IZ) = MIN( getZLary( IZ), 1.0 )
             getZLary( IZ) = getZLary(IZ) * tmpZ
-            
-         ENDDO         
-            
+
+         ENDDO
+
       ELSE ! All are above the max height so instead of extrapolating, we'll use ZL at all heights
          getZLary(:) = ZL
       ENDIF
-            
+
    ELSE ! All are below the min height so we'll keep L constant (as is the case in the surface layer)
       getZLary(:) = Ht(:) / L
    ENDIF
-   
+
    getZLARY = getZLARY(:) + ZLOffset  ! This offset term is used to make the zl profile match the rotor-disk averaged value
 
 
@@ -4362,7 +4756,7 @@ IF (zL_loc >= 0) THEN
 
    phiM   =  1.0 + 4.7*(zL_loc)                   ! = q
    phiE   = (1.0 + 2.5*(zL_loc)**0.6)**Exp32
-   
+
    zl_loc = MAX( zl_loc, REAL(0.025,ReKi) ) !This will prevent 0**-x from becoming infinite.  ustar_loc has this built in already.  This value is the observed min here anyway.
 
       ! Calculate NEUTRAL/STABLE spectral estimates
@@ -4636,6 +5030,99 @@ ENDDO ! I
 RETURN
 END SUBROUTINE IEC_vKrm
 !=======================================================================
+!
+!!=======================================================================
+SUBROUTINE API_Spec ( Ht, Ucmp, Spec )
+
+
+   ! This subroutine defines the API-BULLET-IN recommended extreme wind spectrum
+   ! The use of this subroutine requires that all variables have the units of meters and seconds.
+   ! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
+
+   ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
+   !       and then overwrites the u-component spectrum with the API model.
+
+
+USE                     TSMods
+
+IMPLICIT                NONE
+
+      ! Passed variables
+
+REAL(ReKi),INTENT(IN) :: Ht   ! Must be HubHt, value ignored
+REAL(ReKi),INTENT(IN) :: Ucmp   ! Must be HubHt, value ignored,
+!REAL(ReKi),INTENT(IN) :: URef ! Added by YG
+!REAL(ReKi),INTENT(IN)           :: RefHt                       ! Reference height
+REAL(ReKi),INTENT(OUT) :: Spec     (:,:)
+
+      ! Internal variables
+
+REAL(ReKi),PARAMETER  :: N    =  0.468
+REAL(ReKi),PARAMETER  :: Exp2 = 2.0/3.0
+REAL(ReKi),PARAMETER  :: Exp3 = -0.75
+REAL(ReKi),PARAMETER  :: Exp4 = 0.45
+REAL(ReKi),PARAMETER  :: Exp5 = 5.0/( 3.0*N )
+!mlb REAL(ReKi),PARAMETER  :: Exp5 = 11.0/6.0
+REAL(ReKi),PARAMETER  :: Ref_Ht = 10.0
+REAL(ReKi),PARAMETER  :: Ref_WS = 10.0
+REAL(ReKi)            :: Scale1
+REAL(ReKi)            :: Scale2
+REAL(ReKi)            :: Temp
+!mlb REAL(ReKi)            :: FLU2
+!mlb REAL(ReKi)            :: L1_U
+REAL(ReKi)            :: Lambda
+!mlb REAL(ReKi)            :: SigmaL1_U
+!mlb REAL(ReKi)            :: Tmp1, Tmp2, Tmp3
+!mlb REAL :: X0=10.0                                              ! Added by Y. Guo for calculating UHr_10
+!mlb REAL :: X
+INTEGER               :: I
+!mlb REAL                  :: UHr_10
+   ! Define u-component integral scale.
+   ! Set up scaling values.
+
+IF ( HubHt  <  30.0 )  THEN
+  Lambda = 0.7*HubHt
+ELSE
+  Lambda = 21.0
+ENDIF
+
+
+CALL IEC_Kaim ( Ht, Ucmp, Spec )
+
+   ! Define u-component integral scale.
+!CALL WrScr ('Calling Froya/API wind spectrum.............')
+!mlb L1_U   = 3.5*Lambda/UHub
+!mlb SigmaL1_U = 2.0*SigmaIEC*UHub*L1_U
+
+!mlb CALL ROOT_SEARCHING(X0,X,UHub,Ht,Ht)
+!mlb UHr_10=X;
+
+   ! Compute some parameters that are independent of frequency.
+
+Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( U_Ref/Ref_WS )**Exp3
+Scale2 = 320.0*( U_Ref/Ref_WS )**2*( Ht/Ref_Ht )**Exp4
+
+DO I=1,NumFreq
+
+
+!mlb    Tmp1      = 172.0*Freq(I)*(Ht/10.0)**Exp2*(UHr_10/10.0)**Exp3
+!mlb    Tmp2       = (1.0+Tmp1**Exp1)**(5.0/3.0/Exp1)
+!mlb 
+!mlb    Spec(I,1) = 320.0*(UHr_10/10.0)**2*(Ht/10.0)**Exp4/Tmp2
+
+   Temp      = Scale1*Freq(I)
+   Spec(I,1) = Scale2/( 1.0 + Temp**N )**Exp5
+
+ENDDO ! I
+
+!CALL WrScr ('Froya/API wind spectrum generated')
+
+RETURN
+END SUBROUTINE API_Spec
+!=======================================================================
+
+
+
 SUBROUTINE InF_Turb ( Ht, Ucmp, Spec )
 
    ! This subroutine defines the 3-D turbulence spectrum that can be expected to exist upstream of a large, multi-row
@@ -5533,8 +6020,8 @@ USE              TSMods, ONLY: UStar
 
 IMPLICIT                 NONE
 
-REAL(ReKi)               :: A                                        ! A constant/offset term in the pkCTKE calculation   
-REAL(ReKi)               :: A_uSt                                    ! The scaling term for Ustar 
+REAL(ReKi)               :: A                                        ! A constant/offset term in the pkCTKE calculation
+REAL(ReKi)               :: A_uSt                                    ! The scaling term for Ustar
 REAL(ReKi)               :: A_zL                                     ! The scaling term for z/L
 REAL(ReKi), INTENT(IN)   :: Ht                                       ! The height at the billow center
 REAL(ReKi)               :: pkCTKE_LLJ                               ! The max CTKE expected for LLJ coh structures
@@ -5547,36 +6034,36 @@ INTEGER                  :: Zindx_mn (1)
 
 
    Zindx_mn = MINLOC( ABS(z_Ary-Ht) )
-   
+
    SELECT CASE ( Zindx_mn(1) )
       CASE ( 1 )  ! 54 m
-         A     = -0.051   
-         A_zL  = -0.0384  
+         A     = -0.051
+         A_zL  = -0.0384
          A_uSt =  9.9710
-         
+
       CASE ( 2 )  ! 67 m
          A     = -0.054
-         A_zL  = -0.1330  
+         A_zL  = -0.1330
          A_uSt = 10.2460
-         
+
       CASE ( 3 )  ! 85 m
-         A     = -0.062   
-         A_zL  = -0.1320  
+         A     = -0.062
+         A_zL  = -0.1320
          A_uSt = 10.1660
-         
+
       CASE ( 4 )  !116 m
-         A     = -0.092   
-         A_zL  = -0.3330  
+         A     = -0.092
+         A_zL  = -0.3330
          A_uSt = 10.7640
 
       CASE DEFAULT !This should not occur
          CALL TS_Abort( 'Error in pkCTKE_LLJ():: Height index is invalid.' )
-   END SELECT   
-    
+   END SELECT
+
    CALL RndPearsonIV( rndCTKE, RndParms, (/REAL(-10.,ReKi), REAL(17.5,ReKi)/) )
 
    pkCTKE_LLJ = MAX(0.0, A + A_uSt*UStar + A_zL*ZL + rndCTKE)
-   
+
 END FUNCTION pkCTKE_LLJ
 !=======================================================================
 FUNCTION PowerLawExp( Ri_No )
@@ -5631,7 +6118,7 @@ END SELECT
 RETURN
 END FUNCTION PowerLawExp
 !=======================================================================
-SUBROUTINE PSDcal ( Ht, Ucmp, ZL_loc, Ustar_loc )
+SUBROUTINE PSDcal ( Ht, Ucmp ,ZL_loc, Ustar_loc)
 
    ! This routine calls the appropriate spectral model.
 
@@ -5644,7 +6131,8 @@ REAL(ReKi), INTENT(IN)           :: Ht             ! Height
 REAL(ReKi), INTENT(IN)           :: Ucmp           ! Velocity
 REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
-
+!REAL(ReKi), INTENT(IN), OPTIONAL               :: URef ! Must be UHub,  value ignored   ! ADDED BY YG
+!REAL(ReKi), INTENT(IN), OPTIONAL              :: RefHt                       ! Reference height    ! ADDED BY YG
 
 SELECT CASE ( TRIM(TurbModel) )
    CASE ( 'GP_LLJ' )
@@ -5658,6 +6146,8 @@ SELECT CASE ( TRIM(TurbModel) )
       CALL IEC_Kaim  ( Ht, Ucmp, Work )
    CASE ( 'IECVKM' )
       CALL IEC_vKrm  ( Ht, Ucmp, Work )
+   CASE ( 'API' )
+      CALL API_Spec ( Ht, Ucmp, Work )
    CASE ('NWTCUP')
       CALL NWTC_Turb  ( Ht, Ucmp, Work )
    CASE ( 'SMOOTH' )
@@ -5677,7 +6167,7 @@ SELECT CASE ( TRIM(TurbModel) )
 
    CASE ( 'MODVKM' )
       IF (MVK) THEN
-         CALL Mod_vKrm( Ht, Ucmp, Work )
+ !        CALL Mod_vKrm( Ht, Ucmp, Work )
       ELSE
          CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( TurbModel )//'", not availible.' )
       ENDIF
@@ -5789,25 +6279,25 @@ INTEGER                 :: IOS            ! I/O Status
          MaxEvtCTKE = MAX( MaxEvtCTKE, pkCTKE(I) )
 
       ENDDO
-      
-      IF ( MaxEvtCTKE > 0.0 ) THEN          
+
+      IF ( MaxEvtCTKE > 0.0 ) THEN
             ScaleVel = MAX( ScaleVel, SQRT( CTKE / MaxEvtCTKE ) )
             ! Calculate the Velocity Scale Factor, based on the requested maximum CTKE
       ENDIF
-         
+
          ! Calculate the TimeScaleFactor, based on the Zm_max in the Events file.
-         
+
       TSclFact = ScaleWid / (ScaleVel * Zm_max)
-      
+
          ! Scale the time based on TSclFact
-         
+
       DO I=1,NumEvents
          EventLen(I) = EventLen(I)*TSclFact
       ENDDO
-      
+
    ELSE
-   
-      TSclFact = ScaleWid / (ScaleVel * Zm_max) 
+
+      TSclFact = ScaleWid / (ScaleVel * Zm_max)
 
    ENDIF  ! FileNum > 0
 
@@ -5881,7 +6371,7 @@ END SUBROUTINE ReadCVarDefault ! ( UnIn, Fil, RealVar, VarName, VarDescr )
 SUBROUTINE ReadLIVar( UnIn, Fil, IntVar, VarName, VarDescr )
 
       ! This routine reads a single integer variable from the next line of the input file.
-      ! BJJ modified from NWTC_subs ReadIVar(), with just the call to ReadNum() removed.  This 
+      ! BJJ modified from NWTC_subs ReadIVar(), with just the call to ReadNum() removed.  This
       !     will allow users to keep their T/F values in their input files if they want to.
 
       ! Argument declarations:
@@ -6081,10 +6571,10 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
       WRITE (UnEc,Frmt)  RealVar, VarDescr
 
       Def = .FALSE.
-      
+
       IF ( PRESENT(IGNORESTR) ) THEN
          IGNORESTR = .FALSE.
-      ENDIF        
+      ENDIF
 
    ENDIF
 
@@ -6271,7 +6761,7 @@ IMPLICIT                            NONE
 
 REAL(ReKi)                       :: RN(1)
 INTEGER                          :: I           ! loop counter
-INTEGER                          :: NumSeeds    ! number of seeds in the intrinsic random number generator 
+INTEGER                          :: NumSeeds    ! number of seeds in the intrinsic random number generator
 INTEGER                          :: Sttus       ! allocation status
 
 
@@ -6279,9 +6769,9 @@ IF (RNG_type == 'NORMAL') THEN
 
 
       ! determine the number of seeds necessary (gfortran needs 8 or 12 seeds, not just 2)
-      
+
    CALL RANDOM_SEED ( SIZE = NumSeeds )
-      
+
    IF ( NumSeeds /= 2 ) THEN
       CALL ProgWarn( ' The random number generator in use differs from the original code provided by NREL. This pRNG uses ' &
                         //TRIM(Int2LStr(NumSeeds))//' seeds instead of the 2 in the TurbSim input file.')
@@ -6292,7 +6782,7 @@ IF (RNG_type == 'NORMAL') THEN
       IF (Sttus/= 0 ) THEN
          CALL ProgAbort( ' Error allocating space for RandSeedAry array.' )
          RETURN
-      END IF   
+      END IF
    END IF
 
 
@@ -6303,10 +6793,10 @@ IF (RNG_type == 'NORMAL') THEN
    DO I = 2,NumSeeds,2
       RandSeedAry(I) = RandSeed(2)
    END DO
-                     
-                  
+
+
    CALL RANDOM_SEED ( PUT=RandSeedAry )
-   
+
 
 ELSEIF (RNG_type == 'RANLUX') THEN
 
@@ -6969,11 +7459,11 @@ SUBROUTINE Tidal_Turb ( Shr_DuDz, Spec )
 
    ! This subroutine defines the 3-D turbulence expected in a tidal channel.
    ! It is similar to the 'smooth' spectral model (RISO; Hojstrup, Olesen and Larsen) for wind,
-   ! but is scaled by the TKE (SigmaU**2), and du/dz rather than Ustar and u/z.  
+   ! but is scaled by the TKE (SigmaU**2), and du/dz rather than Ustar and u/z.
    ! The fit is based on data from Puget Sound, estimated by L. Kilcher.
    ! The use of this subroutine requires that variables have the units of meters and seconds.
    ! Note that this model does not require height.
-   
+
 
 USE                     TSMods
 
@@ -7006,7 +7496,7 @@ END SELECT
 
 tmpvec = tmpa*(/Sigma_U2, Sigma_V2, Sigma_W2/)/Shr_DuDz
 
-DO I = 1,NumFreq  
+DO I = 1,NumFreq
    tmpX  = (Freq(I)/Shr_DuDz)**Exp1
    Spec(I,1) = tmpvec(1) / (1.0 + tmpb(1)*tmpX)
    Spec(I,2) = tmpvec(2) / (1.0 + tmpb(2)*tmpX)
@@ -7056,7 +7546,7 @@ END SUBROUTINE Tidal_Turb
 !!!!bjj End of proposed change
 SUBROUTINE TS_Abort ( Message )
    ! This routine outputs fatal warning messages and ends the program.
-      
+
    USE                              TSMods, ONLY:   US                           ! unit number for summary file
 
       ! Argument declarations.
@@ -7065,7 +7555,7 @@ SUBROUTINE TS_Abort ( Message )
 
 
       ! Write the message to the summary file
-      
+
    WRITE (US, "(/'ERROR:  ', A / )") Message
    WRITE (US, "('ABORTING PROGRAM.')" )
 
@@ -7079,7 +7569,7 @@ END SUBROUTINE TS_Abort
 SUBROUTINE TS_Warn ( Message, WrSum )
 
    ! This routine outputs non-fatal warning messages and returns to the calling routine.
-      
+
    USE                              TSMods, ONLY:   US                           ! unit number for summary file
 
       ! Argument declarations.
@@ -7120,14 +7610,14 @@ SUBROUTINE UsrSpec ( Ht, Ucmp, Spec )
       ! Internal variables
 
    REAL(ReKi)            :: Tmp
-   
-   
+
+
    INTEGER               :: I
    INTEGER               :: Indx
    INTEGER               :: J
 
       ! --------- Interpolate to the desired frequencies ---------------
-   
+
    Indx = 1;
 
    DO I=1,NumFreq
@@ -7141,21 +7631,21 @@ SUBROUTINE UsrSpec ( Ht, Ucmp, Spec )
          Spec(I,2) = Vspec_USR(NumUSRf)
          Spec(I,3) = Wspec_USR(NumUSRf)
       ELSE
-      
+
             ! Find the two points between which the frequency lies
 
          DO J=(Indx+1),NumUSRf
             IF ( Freq(I) <= Freq_USR(J) ) THEN
                Indx = J-1
-               
+
                   ! Let's just do a linear interpolation for now
 
                Tmp  = (Freq(I) - Freq_USR(Indx)) / ( Freq_USR(Indx) - Freq_USR(J) )
 
                Spec(I,1) = Tmp * ( Uspec_USR(Indx) - Uspec_USR(J) ) + Uspec_USR(Indx)
                Spec(I,2) = Tmp * ( Vspec_USR(Indx) - Vspec_USR(J) ) + Vspec_USR(Indx)
-               Spec(I,3) = Tmp * ( Wspec_USR(Indx) - Wspec_USR(J) ) + Wspec_USR(Indx)  
-               
+               Spec(I,3) = Tmp * ( Wspec_USR(Indx) - Wspec_USR(J) ) + Wspec_USR(Indx)
+
                EXIT
             ENDIF
          ENDDO ! J
@@ -7891,7 +8381,7 @@ IF (DEBUG_OUT) THEN
 ENDIF
 
       PtrCurr => PtrCurr%Next
-      
+
 !bjj deallocate the linked list!!!!
 
    ENDDO !IE: number of events

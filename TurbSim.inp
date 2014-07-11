@@ -1,4 +1,4 @@
----------TurbSim v1.07.* Input File------------------------
+---------TurbSim v1.08.* Input File------------------------
 Example input file for TurbSim.
 ---------Runtime Options-----------------------------------
 2318573             RandSeed1       - First random seed  (-2147483648 to 2147483647)
@@ -27,15 +27,15 @@ True                Clockwise       - Clockwise rotation looking downwind? (used
 0                   HFlowAng        - Horizontal mean flow (skew) angle [degrees]
 
 --------Meteorological Boundary Conditions-------------------
-"SMOOTH"            TurbModel       - Turbulence model ("IECKAI"=Kaimal, "IECVKM"=von Karman, "GP_LLJ", "NWTCUP", "SMOOTH", "WF_UPW", "WF_07D", "WF_14D", "TIDAL", or "NONE")
-"1-ED3"             IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
+"SMOOTH"            TurbModel       - Turbulence model ("IECKAI"=Kaimal, "IECVKM"=von Karman, "GP_LLJ", "NWTCUP", "SMOOTH", "WF_UPW", "WF_07D", "WF_14D", "TIDAL", "API", or "NONE")
+"1-Ed3"             IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
 "A"                 IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP model, not used for other models)
 "NTM"               IEC_WindType    - IEC turbulence type ("NTM"=normal, "xETM"=extreme turbulence, "xEWM1"=extreme 1-year wind, "xEWM50"=extreme 50-year wind, where x=wind turbine class 1, 2, or 3)
 default             ETMc            - IEC Extreme Turbulence Model "c" parameter [m/s]
-default             WindProfileType - Wind profile type ("JET";"LOG"=logarithmic;"PL"=power law;"H2L"=Log law for TIDAL spectral model;"IEC"=PL on rotor disk, LOG elsewhere; or "default")
+"PL"                WindProfileType - Velocity profile type ("JET";"LOG"=logarithmic;"PL"=power law;"H2L"=Log law for TIDAL spectral model;"API"=API profile;"IEC"=PL on rotor disk, LOG elsewhere; or "default")
 84.2876             RefHt           - Height of the reference velocity (URef) [m]
-18.2                URef            - Mean (total) velocity at the reference height [m/s] (or "default" for JET wind profile)
-default             ZJetMax         - Jet height [m] (used only for JET wind profile, valid 70-490 m)
+18.2                URef            - Mean (total) velocity at the reference height [m/s] (or "default" for JET velocity profile)
+default             ZJetMax         - Jet height [m] (used only for JET velocity profile, valid 70-490 m)
 default             PLExp           - Power law exponent [-] (or "default")
 default             Z0              - Surface roughness length [m] (or "default")
 
@@ -53,7 +53,7 @@ default             IncDec3         - w-component coherence parameters (e.g. "10
 default             CohExp          - Coherence exponent (or "default")
 
 --------Coherent Turbulence Scaling Parameters-------------------
-"M:\coh_events\eventdata"  CTEventPath     - Name of the path where event data files are located
+"C:/Yiwork_NREL/OffshoreWind/Turbsim/Test/EventData"  CTEventPath     - Name of the path where event data files are located
 "Random"            CTEventFile     - Type of event files ("LES", "DNS", or "RANDOM")
 true                Randomize       - Randomize the disturbance scale and locations? (true/false)
  1.0                DistScl         - Disturbance scale (ratio of event dataset height to rotor disk). (Ignored when Randomize = true.)

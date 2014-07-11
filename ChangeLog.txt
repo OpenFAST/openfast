@@ -702,3 +702,6 @@ v1.07.00a-bjj 9-Jul-2014 B. Jonkman
     to the simulation; the .sum file will contain an extra statement that this is a "PERIODIC" file when the .wnd output is
     chosen; .bts files will use a different format ID (8) to indicate they are Periodic (instead of the old way, indicated by
     format ID = 7). (See Bugzilla Bug 60.)
+
+v1.08.00c-mlb M Buhl, Y. Gao
+added API spectral model
