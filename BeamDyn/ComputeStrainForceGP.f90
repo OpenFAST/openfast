@@ -52,7 +52,9 @@
        gpr = gp(igp)
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
        CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
+       Stif(:,:) = NStif0(:,:,igp)
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
+write(*,*) "Stif",Stif(1,:)
        eee = 0.0D0
        tempS = 0.0D0
        tempK = 0.0D0

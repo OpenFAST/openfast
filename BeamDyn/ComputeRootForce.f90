@@ -1,6 +1,6 @@
    SUBROUTINE ComputeRootForce(uuN0,uuNf,Stif0,node_elem,dof_node,ngp,RootForce)
    
-   REAL(ReKi),INTENT(IN):: uuN0(:,:),uuNf(:),Stif0(:,:)
+   REAL(ReKi),INTENT(IN):: uuN0(:,:),uuNf(:),Stif0(:,:,:)
    INTEGER(IntKi),INTENT(IN):: node_elem,dof_node,ngp
    REAL(ReKi),INTENT(OUT):: RootForce(:)
    
@@ -34,7 +34,7 @@
    IF(allo_stat/=0) GOTO 9999
    Nrrr = 0.0D0
    
-   ALLOCATE(NStif0(dof_node,dof_node,node_elem),STAT = allo_stat)
+   ALLOCATE(NStif0(dof_node,dof_node,ngp),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    NStif0 = 0.0D0
    
@@ -75,7 +75,9 @@
 !   CALL ElemNodalDispGL(uuN0,node_elem,dof_node,1,Nuu0)
    CALL ElemNodalDispGL(uuNf,node_elem,dof_node,i,Nuuu)
 !   CALL ElemNodalStifGL(Stif0,node_elem,dof_node,1,NStif0)
-
+   DO i=1,ngp
+       NStif0(:,:,i) = Stif0(:,:,i)
+   ENDDO
    CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
    CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
    

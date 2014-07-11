@@ -209,7 +209,7 @@ n=1
 !                      &BDyn_Parameter%ngp,BDyn_Parameter%niter)   
 
    CALL ComputeRootForce(BD_Parameter%uuN0,BD_OtherState%uuNf,&
-                 &BD_Parameter%Stif0,BD_Parameter%node_elem,BD_Parameter%dof_node,&
+                 &BD_Parameter%Stif0_GL,BD_Parameter%node_elem,BD_Parameter%dof_node,&
                  &BD_Parameter%ngp,BD_OtherState%RootForce)
 
 !   CALL ComputeRootForceNodal(BD_Parameter%uuN0,BD_OtherState%uuNf,&
