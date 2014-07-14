@@ -80,7 +80,13 @@ write(*,*) "Stif",Stif(1,:)
        ENDDO
        
        fff = 0.0D0
-       fff = MATMUL(Stif,temp_eee)
+       fff = MATMUL(NStif0(:,:,igp),temp_eee)
+DO i=1,6
+    WRITE(*,*) "ees(i)",i,temp_eee(i)
+ENDDO
+DO i=1,6
+    WRITE(*,*) "ffs(i)",i,fff(i)
+ENDDO
        
        k1s = temp_eee(4)
        fff(1) = fff(1) + 0.5D0*cet*k1s*k1s

@@ -80,6 +80,7 @@
                    & + temp_radius*SIN(temp_a)*CrossProduct(temp_v3,temp_v1)
        e1(:) = -temp_radius*SIN(temp_a)*temp_v1(:) + temp_radius*COS(temp_a)*CrossProduct(temp_v3,temp_v1)
        e1(:) = e1(:)/Norm(e1)
+       WRITE(*,*) "e1: ",e1(:)
    ENDIF
 
 
