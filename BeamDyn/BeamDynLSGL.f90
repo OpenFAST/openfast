@@ -42,7 +42,7 @@ MODULE BeamDynLSGL
 
    PUBLIC :: StaticSolutionGL                      ! for static verificaiton
    PUBLIC:: ComputeRootForce
-!   PUBLIC:: ComputeRootForceNodal
+   PUBLIC:: ComputeRootForceNodal
 
 CONTAINS
 INCLUDE 'NodeLoc.f90'
@@ -74,7 +74,7 @@ INCLUDE 'StaticSolutionGL.f90'
 
 INCLUDE 'NewNodalDataAt0.f90'
 INCLUDE 'NodalData.f90'
-!INCLUDE 'ComputeRootForceNodal.f90'
+INCLUDE 'ComputeRootForceNodal.f90'
 INCLUDE 'ComputeStrainForceGP.f90'
 INCLUDE 'ComputeRootForce.f90'
 
@@ -219,10 +219,6 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
        temp_GLL(i) = (temp_GLL(i) + 1.0D0)/2.0D0
    ENDDO
 
-   DO i=1,p%ngp
-       WRITE(*,*) "temp_GLL",i,temp_GLL(i)
-   ENDDO
-
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
            DO j=1,p%ngp
@@ -271,24 +267,24 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
-   WRITE(*,*) "temp_GL: ", temp_GLL(:)
-   DO i=1,InputFileData%member_total*2+1
-       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
-   ENDDO
-   DO i=1,InputFileData%member_total+1
-       WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
-   ENDDO
-   DO i=1,InputFiledata%member_total
-       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
+!   WRITE(*,*) "temp_GL: ", temp_GLL(:)
+!   DO i=1,InputFileData%member_total*2+1
+!       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
+!   ENDDO
+!   DO i=1,InputFileData%member_total+1
+!       WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
+!   ENDDO
+!   DO i=1,InputFiledata%member_total
+!       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
 !       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
-       DO j=1,p%node_elem
-           WRITE(*,*) "Nodal Position:",j
-           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
-           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
-       ENDDO
-   ENDDO
+!       DO j=1,p%node_elem
+!           WRITE(*,*) "Nodal Position:",j
+!           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
+!           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
+!       ENDDO
+!   ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
-   WRITE(*,*) "node_elem: ", p%node_elem
+!   WRITE(*,*) "node_elem: ", p%node_elem
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
