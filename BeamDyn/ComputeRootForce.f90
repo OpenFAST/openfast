@@ -94,8 +94,6 @@
    DO i=1,ngp
        temp_id = (i-1)*dof_node
        DO j=1,dof_node
-WRITE(*,*) "hhv",i,hhx(i)
-WRITE(*,*) "fffGP",j,fffGP(temp_id+j)
            RootForce(j) = RootForce(j) + hhx(i)*fffGP(temp_id+j)
        ENDDO
    ENDDO

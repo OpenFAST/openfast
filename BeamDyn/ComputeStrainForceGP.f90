@@ -54,7 +54,6 @@
        CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,NStif0,node_elem,dof_node,uu0,E10,Stif)
        Stif(:,:) = NStif0(:,:,igp)
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
-write(*,*) "Stif",Stif(1,:)
        eee = 0.0D0
        tempS = 0.0D0
        tempK = 0.0D0
@@ -87,23 +86,12 @@ write(*,*) "Stif",Stif(1,:)
        e1s = temp_eee(1)
        fff(4) = fff(4) + cet*e1s*k1s
        
-DO i=1,3
-   DO j=1,3
-       WRITE(*,*) "RR0",(i-1)*3+j,RR0(j,i)
-   ENDDO
-ENDDO
        DO i=1,3
            tempS(i) = fff(i)
            tempK(i) = fff(i+3)
        ENDDO       
        tempS = MATMUL(RR0,tempS)
        tempK = MATMUL(RR0,tempK)
-DO i=1,3
-    WRITE(*,*) "fff(i)",i,tempS(i)
-ENDDO
-DO i=1,3
-    WRITE(*,*) "fff(i)",i+3,tempK(i)
-ENDDO
        DO i=1,3
            fffGP(temp_id+i) = tempS(i)
            fffGP(temp_id+i+3) = tempK(i)
