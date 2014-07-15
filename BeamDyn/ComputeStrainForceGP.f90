@@ -81,24 +81,29 @@ write(*,*) "Stif",Stif(1,:)
        
        fff = 0.0D0
        fff = MATMUL(NStif0(:,:,igp),temp_eee)
-DO i=1,6
-    WRITE(*,*) "ees(i)",i,temp_eee(i)
-ENDDO
-DO i=1,6
-    WRITE(*,*) "ffs(i)",i,fff(i)
-ENDDO
-       
+
        k1s = temp_eee(4)
        fff(1) = fff(1) + 0.5D0*cet*k1s*k1s
        e1s = temp_eee(1)
        fff(4) = fff(4) + cet*e1s*k1s
        
+DO i=1,3
+   DO j=1,3
+       WRITE(*,*) "RR0",(i-1)*3+j,RR0(j,i)
+   ENDDO
+ENDDO
        DO i=1,3
            tempS(i) = fff(i)
            tempK(i) = fff(i+3)
        ENDDO       
        tempS = MATMUL(RR0,tempS)
        tempK = MATMUL(RR0,tempK)
+DO i=1,3
+    WRITE(*,*) "fff(i)",i,tempS(i)
+ENDDO
+DO i=1,3
+    WRITE(*,*) "fff(i)",i+3,tempK(i)
+ENDDO
        DO i=1,3
            fffGP(temp_id+i) = tempS(i)
            fffGP(temp_id+i+3) = tempK(i)
