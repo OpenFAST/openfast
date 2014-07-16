@@ -197,10 +197,20 @@ INCLUDE 'DynamicSolution_Force.f90'
        temp_twist(1) = InputFileData%initial_twist(i)
        temp_twist(2) = InputFileData%initial_twist(i+1)
        DO j=1,p%node_elem
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1)
+!-----Circle modeling--------
+!           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1)
+!-----END Circle modeling----
+!-----Quadratic modeling-----
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS)
+!-----END Quadratic modeling-
            IF(InputFileData%ini_curv) THEN
                temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-               CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV)
+!-----Circle modeling--------
+!               CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV)
+!-----END Circle modeling----
+!-----Quadratic modeling-----
+           CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
+!-----END Quadratic modeling-
            ELSE
                temp_CRV(:) = 0.0D0
            ENDIF
@@ -213,7 +223,12 @@ INCLUDE 'DynamicSolution_Force.f90'
            p%uuN0(temp_id2+6,i) = temp_CRV(3)
        ENDDO
       DO j=1,p%ngp
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GL(j),temp_POS,temp_e1)
+!-----Circle modeling--------
+!           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GL(j),temp_POS,temp_e1)
+!-----END Circle modeling----
+!-----Quadratic modeling-----
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GL(j),temp_POS)
+!-----END Quadratic modeling-
            temp_id2 = (i-1)*p%ngp+j+1
            temp_L2(1:3,temp_id2) = temp_POS(1:3)
        ENDDO
