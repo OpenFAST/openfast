@@ -184,9 +184,11 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
        temp_twist(1) = InputFileData%initial_twist(i)
        temp_twist(2) = InputFileData%initial_twist(i+1)
        DO j=1,p%node_elem
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1)
+!           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1) ! 3-Point-on-a-circle interpolation
+           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_Pos)   ! Quadratic interpolation given 3 points
            temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV)
+!           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV) ! 3-Point-on-a-circle interpolation
+           CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
            temp_id2 = (j-1)*p%dof_node
            p%uuN0(temp_id2+1,i) = temp_POS(1)
            p%uuN0(temp_id2+2,i) = temp_POS(2)
@@ -274,15 +276,15 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   DO i=1,InputFileData%member_total+1
 !       WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
 !   ENDDO
-!   DO i=1,InputFiledata%member_total
-!       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
-!       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
-!       DO j=1,p%node_elem
-!           WRITE(*,*) "Nodal Position:",j
-!           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
-!           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
-!       ENDDO
-!   ENDDO
+   DO i=1,InputFiledata%member_total
+       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
+       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
+       DO j=1,p%node_elem
+           WRITE(*,*) "Nodal Position:",j
+           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
+           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
+       ENDDO
+   ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
 !   WRITE(*,*) "node_elem: ", p%node_elem
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
