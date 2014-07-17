@@ -58,19 +58,19 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
 
       ! Compute the mean interarrival time and the expected length of events
 
-   SELECT CASE ( TRIM(TurbModel) )
+   SELECT CASE ( SpecModel )
 
-      CASE ( 'NWTCUP', 'NONE', 'USRVKM' )
+      CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
          lambda = -0.000904*Rich_No + 0.000562*WindSpeed + 0.001389
          lambda = 1.0 / lambda
 
-         IF ( TurbModel(1:4) == 'NONE' ) THEN
+         IF ( SpecModel == SpecModel_NONE ) THEN
             ExpectedTime = 600.0
          ELSE
             CALL RndModLogNorm( p_RandNum, OtherSt_RandNum, ExpectedTime, Height )
          ENDIF
 
-      CASE ( 'GP_LLJ', 'SMOOTH' , 'TIDAL', 'RIVER') ! HYDRO: added 'TIDAL' and 'RIVER' to the spectral models that get handled this way.
+      CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER) ! HYDRO: added 'TIDAL' and 'RIVER' to the spectral models that get handled this way.
          iA     =        0.001797800 + (7.17399E-10)*Height**3.021144723
          iB     =  EXP(-10.590340100 - (4.92440E-05)*Height**2.5)
          iC     = SQRT(  3.655013599 + (8.91203E-06)*Height**3  )
@@ -79,19 +79,19 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
 
          CALL RndTcohLLJ( p_RandNum, OtherSt_RandNum, ExpectedTime, Height )
 
-      CASE ( 'WF_UPW' )
+      CASE ( SpecModel_WF_UPW )
         lambda = 0.000529*WindSpeed + 0.000365*Rich_No - 0.000596
         lambda = 1.0 / lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, ExpectedTime, SpecModel_WF_UPW )
 
-      CASE ( 'WF_07D' )
+      CASE ( SpecModel_WF_07D )
          lambda = 0.000813*WindSpeed - 0.002642*Rich_No + 0.002676
          lambda = 1.0 / lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, ExpectedTime, SpecModel_WF_07D )
 
-      CASE ( 'WF_14D' )
+      CASE ( SpecModel_WF_14D )
          lambda = 0.001003*WindSpeed - 0.00254*Rich_No - 0.000984
          lambda = 1.0 / lambda
 
@@ -209,7 +209,7 @@ WRITE ( US, '(A,F8.3," seconds")' )  'Predicted length of coherent events  = ',E
 
       ! Next, we start concatenating events until there is no space or we exceed the expected time
 
-   IF ( TurbModel(1:4) /= 'NONE' ) THEN
+   IF ( SpecModel /= SpecModel_NONE ) THEN
 
       NumCompared = 0
 
@@ -277,7 +277,7 @@ WRITE ( US, '(A,F8.3," seconds")' )  'Predicted length of coherent events  = ',E
 
       ENDDO ! WHILE (EventTimeSum < ExpectedTime .AND. NumCompared < NumCTEvents)
 
-   ENDIF ! TurbModel /= 'NONE'
+   ENDIF ! SpecModel /= SpecModel_NONE
 
 IF ( NumCTt > 0 ) THEN
    EventTimeStep = EventTimeSum / NumCTt                                          ! Average timestep of coherent event data
@@ -309,10 +309,7 @@ CHARACTER(*), INTENT(IN)   :: Comp(3)        ! u, v, or w
 
    ! Internal variables
 
-REAL(ReKi)                 :: CohDec         ! The coherence decrement
-REAL(ReKi)                 :: CDistUM        ! Temporary variable for calculating coherence * dist
 REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
-REAL(ReKi)                 :: DistLC
 REAL(ReKi), ALLOCATABLE    :: DistU(:)
 REAL(ReKi), ALLOCATABLE    :: DistZMExp(:)
 REAL(ReKi)                 :: dY             ! the lateral distance between two points
@@ -335,7 +332,6 @@ INTEGER                    :: Stat
 
 LOGICAL                    :: IdentityCoh
 
-character(1024)            :: ErrMsg
 
 
 ! ------------ arrays allocated -------------------------
@@ -365,7 +361,7 @@ ENDIF
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
 
-IF ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API" ) THEN
+IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
    InCohB(:)    = 0.12/LC
    DistZMExp(:) = 1.0
 ENDIF
@@ -413,7 +409,7 @@ POINT_J:       DO JZ=1,IZ
                         Dist(Indx)= SQRT( ( dY )**2  + ( Z(IZ) - Z(JZ) )**2 )
                      END IF
 
-                     IF ( (TurbModel(1:3) == 'IEC')  .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API") THEN
+                     IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM  .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
                         DistU(Indx) = Dist(Indx)/UHub
 !                           TRH(Indx) = EXP( -InCDec(IVec)*SQRT( ( Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
@@ -424,7 +420,7 @@ POINT_J:       DO JZ=1,IZ
                         DistZMExp(Indx) = ( Dist(Indx)/ZM )**COHEXP     ! Note: 0**0 = 1
 
 !                       TRH(Indx) = EXP( -InCDec(IVec) * DistZMExp*SQRT( ( Freq(IFreq)* DistU )**2 + (InCohB(IVec)*Dist)**2 ) )
-                     ENDIF !TurbModel
+                     ENDIF !SpecModel
 
                   ENDDO    ! JY
             ENDDO POINT_J  ! JZ
@@ -448,7 +444,7 @@ ENDIF
 
 DO IVec = 1,3
 
-   IF ( ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API" ) .AND. ( IVec /= 1 ) ) THEN
+   IF ( ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) .AND. ( IVec /= 1 ) ) THEN
          ! There is no coherence defined for the v or w component of the IEC spectral models
       IdentityCoh = .TRUE.
    ELSE
@@ -522,18 +518,11 @@ CHARACTER(*), INTENT(IN)   :: Comp(3)        ! u, v, or w
 
    ! Internal variables
 
-REAL(ReKi)                 :: CohDec         ! The coherence decrement
-REAL(ReKi)                 :: CDistUM        ! Temporary variable for calculating coherence * dist
 !REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE    :: Dist_Y(:)        ! The Y distance between points
 REAL(ReKi), ALLOCATABLE    :: Dist_Z(:)        ! The Z distance between points
 !mlb REAL(ReKi), ALLOCATABLE    :: Dist_Z12(:)        ! The distance between points (not really a distance!)
 REAL(ReKi), ALLOCATABLE    :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
-REAL(ReKi)                 :: DistLC
-
-REAL(ReKi)                 :: dY             ! the lateral distance between two points
-REAL(ReKi)                 :: UM             ! The mean wind speed of the two points
-REAL(ReKi)                 :: ZM             ! The mean height of the two points
 
 INTEGER                    :: J
 INTEGER                    :: JJ             ! Index of point J
@@ -551,7 +540,6 @@ INTEGER                    :: Stat
 
 LOGICAL                    :: IdentityCoh
 
-character(1024)            :: ErrMsg
 
 !REAL :: Coef_QX=1.00
 REAL :: Coef_QY=1.00
@@ -607,7 +595,7 @@ ENDIF
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
 
-IF ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API") THEN
+IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API) THEN
    InCohB(:)    = 0.12/LC
 
 ENDIF
@@ -676,7 +664,7 @@ ENDIF
 
 DO IVec = 1,3
 
-   IF ( ( (TurbModel(1:3) == 'IEC') .OR. (TurbModel == 'MODVKM') .OR. TRIM(TurbModel) == "API" ) .AND. ( IVec /= 1 ) ) THEN
+   IF ( ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) .AND. ( IVec /= 1 ) ) THEN
          ! There is no coherence defined for the v or w component of the IEC spectral models
       IdentityCoh = .TRUE.
    ELSE
@@ -866,7 +854,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
    USE                     TSMods, ONLY : InCDec
    USE                     TSMods, ONLY : InCohB
    USE                     TSMods, ONLY : RICH_NO
-   USE                     TSMods, ONLY : TurbModel
+   USE                     TSMods, ONLY : TurbModel, SpecModel
 !   USE                     TSMods, ONLY : UHub
 
 !   REAL(ReKi), PARAMETER                :: a =  0.007697495  !coeffs for WF_xxD best-fit equations
@@ -907,9 +895,9 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             Ri_Cat = 5
       ENDIF
 
-      SELECT CASE ( TurbModel )
+      SELECT CASE ( SpecModel )
 
-         CASE ( 'GP_LLJ' )
+         CASE ( SpecModel_GP_LLJ )
             HT1 = MAX( 60.0, MIN( Ht, 100.0 ) )
             IF ( WS <= 14.0 ) THEN
                IF ( WS <= 8.0 ) THEN
@@ -1070,7 +1058,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                END SELECT
 
 
-         CASE ( 'NWTCUP', 'USRVKM' )
+         CASE ( SpecModel_NWTCUP, SpecModel_USRVKM )
             HT1 = MAX( 25.0, MIN( Ht, 50.0 ) )
 
             IF ( WS <= 14.0 ) THEN
@@ -1231,7 +1219,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                                            0.125103070*WS1**(-1.02886635) /)
                END SELECT
 
-         CASE ( 'WF_UPW' )
+         CASE ( SpecModel_WF_UPW )
             HT1 = MAX( 5.0, MIN( Ht, 35.0 ) )
             IF ( WS <= 14.0 ) THEN
                IF ( WS <= 10 ) THEN
@@ -1312,7 +1300,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             InCDec(3)     =  0.4*InCDec(1)  !cohA(w) = cohA(u)/2.5, number derived from histograms of u/w for NWTC and LLLJP data
             InCohB(3)     = 10.0*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
 
-         CASE ( 'WF_07D', 'WF_14D' )
+         CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
             HT1 = MAX( 5.0, MIN( Ht, 35.0 ) )
             IF ( WS <= 12.0 ) THEN
                IF     ( WS <=  8.0 ) THEN  !      WS <= 8
@@ -1371,7 +1359,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             InCDec(3)     =  0.4*InCDec(1)  !cohA(w) = cohA(u)/2.5, number derived from histograms of u/w for NWTC and LLLJP data
             InCohB(3)     = 10.0*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
 
-         CASE ( 'USRINP' )
+         CASE ( SpecModel_USER )
             InCDec = (/   WS, HUGE(InCohB(1)), HUGE(InCohB(1)) /)
             InCohB = (/0.0  , 0.0            , 0.0             /)
 
@@ -1393,7 +1381,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    USE                     TSMods, ONLY : H_ref                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : RICH_NO
    USE                     TSMods, ONLY : RotorDiameter
-   USE                     TSMods, ONLY : TurbModel
+   USE                     TSMods, ONLY : TurbModel, SpecModel
    USE                     TSMods, ONLY : UHub
    USE                     TSMods, ONLY : Ustar
    USE                     TSMods, ONLY : UVskip                                   ! Flag to determine if UV cross-feed term should be skipped or used
@@ -1407,13 +1395,9 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    
 use TurbSim_Types
    
-   REAL(ReKi)                          :: Coef(11)    !coefficients for pdf in NWTCUP random residual calculation
-   REAL(ReKi)                          :: FnRange(2)  !min/max values for range in NWTCUP random residual calculation
-   REAL(ReKi)                          :: fMax        !max value for pdf in NWTCUP random residual calculation
    REAL(ReKi), INTENT(INOUT)           :: UW  ! PC_UW
    REAL(ReKi), INTENT(OUT)             :: UV  ! PC_UV
    REAL(ReKi), INTENT(OUT)             :: VW  ! PC_VW
-   REAL(ReKi)                          :: rnd
    REAL(ReKi)                          :: rndSgn
    REAL(ReKi)                          :: SignProb
    REAL(ReKi)                          :: Shr
@@ -1430,12 +1414,12 @@ use TurbSim_Types
 
 !BJJ: check the ranges of our best-fit parameters, using domains of measured values
 
-   SELECT CASE ( TurbModel )
-      CASE ( 'GP_LLJ' )
+   SELECT CASE ( SpecModel )
+      CASE ( SpecModel_GP_LLJ )
          ZLtmp  = MIN( MAX( ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
          UStar2 = MIN( MAX( UStar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
-      CASE ( 'NWTCUP' )
+      CASE ( SpecModel_NWTCUP )
          ZLtmp  = MIN( MAX( ZL,    REAL(-0.5,ReKi) ), REAL(3.5,ReKi) )  !Limit the observed values of z/L
          UStar2 = MIN( MAX( UStar, REAL( 0.2,ReKi) ), REAL(1.4,ReKi) )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
@@ -1453,9 +1437,9 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( TRIM(TurbModel) )
+   SELECT CASE ( SpecModel )
 
-      CASE ( 'GP_LLJ' )
+      CASE ( SpecModel_GP_LLJ )
 
          IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
             IF ( HubHt >= 100.5 ) THEN     ! 116m
@@ -1476,7 +1460,7 @@ use TurbSim_Types
             IF (rndSgn <= SignProb) UW = -UW
          ENDIF
 
-      CASE ( 'NWTCUP' )
+      CASE ( SpecModel_NWTCUP )
 
          IF ( HubHt > 47.0 ) THEN      ! 58m data
             UW = 0.165 - 0.0232*UHub - 0.0129*RICH_NO + 1.337*Ustar2 - 0.758*SHR
@@ -1492,16 +1476,16 @@ use TurbSim_Types
             IF (rndSgn <= SignProb) UW = -UW
          ENDIF
 
-      CASE ( 'WF_14D' )
+      CASE ( SpecModel_WF_14D )
 
          UW = -Ustar2
          IF ( rndSgn > 0.9937 )  UW = -UW
 
-      CASE ( 'USRINP' )
+      CASE ( SpecModel_USER )
          UW = 0.0
          UWskip = .true.
 
-      CASE ( 'TIDAL', 'RIVER' ) ! HYDROTURBSIM specific.
+      CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
          UW = -Ustar2*(1-HubHt/H_ref)
       CASE DEFAULT
 
@@ -1514,9 +1498,9 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( TurbModel )
+   SELECT CASE ( SpecModel )
 
-      CASE ( 'GP_LLJ' )
+      CASE ( SpecModel_GP_LLJ )
 
          IF ( HubHt >= 100.5 ) THEN     ! 116m
             UV = 0.199 - 0.0167*Uhub + 0.0115*ZLtmp + 1.143*Ustar2
@@ -1536,7 +1520,7 @@ use TurbSim_Types
             IF ( rndSgn < 0.6191 ) UV = -UV
          ENDIF
 
-      CASE ( 'NWTCUP' )
+      CASE ( SpecModel_NWTCUP )
 
             ! Get the magnitude and add the sign
          IF ( HubHt > 47.0 ) THEN      ! 58m data
@@ -1552,19 +1536,19 @@ use TurbSim_Types
             IF (rndSgn <= SignProb) UV = -UV
          ENDIF
 
-      CASE ( 'WF_UPW' )
+      CASE ( SpecModel_WF_UPW )
 
          UV = 0.0202 + 0.890*Ustar2 - 2.461*Shr
          UV = MAX(UV,0.0)
          IF ( rndSgn < 0.7315 ) UV = -UV
 
-      CASE ( 'WF_07D' )
+      CASE ( SpecModel_WF_07D )
 
          UV = 0.5040 + 0.177*Ustar2
          UV = MAX(UV,0.0)
          IF ( rndSgn < 0.7355 ) UV = -UV
 
-      CASE ( 'WF_14D' )
+      CASE ( SpecModel_WF_14D )
 
          UV = 0.0430 + 0.258*Ustar2
          UV = MAX(UV,0.0)
@@ -1583,9 +1567,9 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( TurbModel )
+   SELECT CASE ( SpecModel )
 
-      CASE ( 'GP_LLJ' )
+      CASE ( SpecModel_GP_LLJ )
 
          IF ( HubHt >= 100.5 ) THEN     ! 116m
             VW =  0.0528  - 0.00210*Uhub - 0.00531*RICH_NO - 0.519*Shr + 0.283*Ustar2
@@ -1605,7 +1589,7 @@ use TurbSim_Types
             IF ( rndSgn < 0.3111 ) VW = -VW
          ENDIF
 
-      CASE ( 'NWTCUP' )
+      CASE ( SpecModel_NWTCUP )
 
          IF ( HubHt > 47.0 ) THEN      ! 58m data
             VW = 0.174 + 0.00154*UHub - 0.0270*RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
@@ -1620,19 +1604,19 @@ use TurbSim_Types
             IF (rndSgn <= SignProb) VW = -VW
          ENDIF
 
-      CASE ( 'WF_UPW' )
+      CASE ( SpecModel_WF_UPW )
 
          VW = 0.0263 + 0.273*Ustar2 - 0.684*Shr
          VW = MAX(VW,0.0)
          IF ( rndSgn < 0.3139 ) VW = -VW
 
-      CASE ( 'WF_07D' )
+      CASE ( SpecModel_WF_07D )
 
          VW = 0.241 + 0.118*Ustar2
          VW = MAX(VW,0.0)
          IF ( rndSgn < 0.0982 ) VW = -VW
 
-      CASE ( 'WF_14D' )
+      CASE ( SpecModel_WF_14D )
 
          VW =-0.0224 + 0.159*Ustar2
          VW = MAX(VW,0.0)
@@ -1841,7 +1825,6 @@ REAL(ReKi), INTENT(IN)   :: Ht                                       ! The heigh
 REAL(ReKi)               :: pkCTKE_LLJ                               ! The max CTKE expected for LLJ coh structures
 REAL(ReKi)               :: rndCTKE                                  ! The random residual
 REAL(ReKi), PARAMETER    :: RndParms(5) = (/0.252510525, -0.67391279, 2.374794977, 1.920555797, -0.93417558/) ! parameters for the Pearson IV random residual
-REAL(ReKi)               :: z                                        ! The height
 REAL(ReKi), PARAMETER    :: z_Ary(4)    = (/54., 67., 85., 116./)    ! Aneomoeter heights
 
 INTEGER                  :: Zindx_mn (1)
@@ -1898,23 +1881,23 @@ IF ( KHtest ) THEN
    RETURN
 ENDIF
 
-SELECT CASE ( TRIM(TurbModel) )
+SELECT CASE ( SpecModel )
 
-   CASE ('WF_UPW', 'NWTCUP')
+   CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
       IF ( Ri_No > 0.0 ) THEN
          PowerLawExp = 0.14733
       ELSE
          PowerLawExp = 0.087687698 + 0.059641545*EXP(Ri_No/0.04717783)
       ENDIF
 
-   CASE ( 'WF_07D', 'WF_14D' )
+   CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
       IF ( Ri_No > 0.04 ) THEN
          PowerLawExp = 0.17903
       ELSE
          PowerLawExp = 0.127704032 + 0.031228952*EXP(Ri_No/0.0805173)
       ENDIF
 
-   CASE ('SMOOTH', 'GP_LLJ', 'TIDAL', 'RIVER')
+   CASE (SpecModel_SMOOTH, SpecModel_GP_LLJ, SpecModel_TIDAL, SpecModel_RIVER)
       ! A 1/7 power law seems to work ok for HYDRO spectral models also...
       PowerLawExp = 0.143
 
@@ -1948,38 +1931,38 @@ REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
 !REAL(ReKi), INTENT(IN), OPTIONAL               :: URef ! Must be UHub,  value ignored   ! ADDED BY YG
 !REAL(ReKi), INTENT(IN), OPTIONAL              :: RefHt                       ! Reference height    ! ADDED BY YG
 
-SELECT CASE ( TRIM(TurbModel) )
-   CASE ( 'GP_LLJ' )
+SELECT CASE ( SpecModel )
+   CASE ( SpecModel_GP_LLJ )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
-         CALL GP_Turb   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
+         CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
       ELSE
-         CALL GP_Turb   ( Ht, Ucmp, ZL,     Ustar,     Work )
+         CALL Spec_GPLLJ   ( Ht, Ucmp, ZL,     Ustar,     Work )
       ENDIF
-   CASE ( 'IECKAI' )
-!bjj TEST: CALL TestSpec ( Ht, Ucmp, Work )
-      CALL IEC_Kaim  ( Ht, Ucmp, Work )
-   CASE ( 'IECVKM' )
-      CALL IEC_vKrm  ( Ht, Ucmp, Work )
-   CASE ( 'API' )
-      CALL API_Spec ( Ht, Ucmp, Work )
-   CASE ('NWTCUP')
-      CALL NWTC_Turb  ( Ht, Ucmp, Work )
-   CASE ( 'SMOOTH' )
-      CALL St_Turb   ( Ht, Ucmp, Work )
-   CASE ( 'TIDAL', 'RIVER' )
-      CALL Tidal_Turb  ( Ucmp, Work )
-   CASE ( 'USRINP' )
-      CALL UsrSpec   ( Ht, Ucmp, Work )
-   CASE ( 'USRVKM' )
-      CALL vonKrmn   ( Ht, Ucmp, Work )
-   CASE ('WF_UPW')
-      CALL InF_Turb  ( Ht, Ucmp, Work )
-   CASE ( 'WF_07D', 'WF_14D' )
-      CALL OutF_Turb ( Ht, Ucmp, Work )
-   CASE ( 'NONE  ' )
+   CASE ( SpecModel_IECKAI )
+      CALL Spec_IECKAI  ( Ht, Ucmp, Work )
+   CASE ( SpecModel_IECVKM )
+      CALL Spec_IECVKM  ( Ht, Ucmp, Work )
+   CASE ( SpecModel_API )
+      CALL Spec_API ( Ht, Ucmp, Work )
+   CASE (SpecModel_NWTCUP)
+      CALL Spec_NWTCUP  ( Ht, Ucmp, Work )
+   CASE ( SpecModel_SMOOTH )
+      CALL Spec_SMOOTH   ( Ht, Ucmp, Work )
+   CASE ( SpecModel_TIDAL, SpecModel_RIVER )
+      CALL Spec_TIDAL  ( Ucmp, Work, SpecModel )
+   CASE ( SpecModel_USER )
+      CALL Spec_UserSpec   ( Ht, Ucmp, Work )
+   CASE ( SpecModel_USRVKM )
+      CALL Spec_vonKrmn   ( Ht, Ucmp, Work )
+   CASE (SpecModel_WF_UPW)
+      CALL Spec_WF_UPW  ( Ht, Ucmp, Work )
+   CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
+      CALL Spec_WF_DW ( Ht, Ucmp, Work )
+   CASE ( SpecModel_NONE )
       Work(:,:) = 0.0
+!bjj TEST: CALL Spec_Test ( Ht, Ucmp, Work )
 
-   CASE ( 'MODVKM' )
+   CASE ( SpecModel_MODVKM )
       IF (MVK) THEN
  !        CALL Mod_vKrm( Ht, Ucmp, Work )
       ELSE

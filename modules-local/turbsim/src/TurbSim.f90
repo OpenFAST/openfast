@@ -283,7 +283,11 @@ call WrSum_Heading1(US)
 
 !BONNIE: UPPER LIMIT ON RICH_NO?
 IF ( WrACT ) THEN
-   IF ( TurbModel(1:3) == 'IEC' .OR. TurbModel == 'MODVKM' .OR. TurbModel == 'USRINP' .OR. TurbModel(1:5) == 'TIDAL' ) THEN
+   IF ( SpecModel == SpecModel_IECKAI .or. &
+        SpecModel == SpecModel_IECVKM .OR. &
+        SpecModel == SpecModel_MODVKM .OR. &
+        SpecModel == SpecModel_USER   .OR. &
+        SpecModel == SpecModel_TIDAL   ) THEN
       FormStr = "( // 'Coherent turbulence time step files are not available for IEC or TIDAL spectral models.')"
 
       WRITE (US, FormStr)
@@ -584,7 +588,7 @@ IF ( AllocStat /= 0 )  THEN
    CALL TS_Abort ( 'Error allocating memory for the vertical locations of the grid points.' )
 ENDIF
 
-IF ( TurbModel == 'GP_LLJ') THEN
+IF ( SpecModel == SpecModel_GP_LLJ) THEN
 
       ! Allocate the array for the z/l profile
       
@@ -722,10 +726,10 @@ ENDIF
 
 
   
-IF ( ( TurbModel  == 'IECKAI' ) .OR. &
-     ( TurbModel  == 'IECVKM' ) .OR. &
-     ( TurbModel  == 'MODVKM' ) .OR. &
-     ( TRIM(TurbModel)  == 'API'    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
+IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
+     ( SpecModel  == SpecModel_IECVKM ) .OR. &
+     ( SpecModel  == SpecModel_MODVKM ) .OR. &
+     ( SpecModel  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
 
       ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
       ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
@@ -818,7 +822,7 @@ IF ( ( TurbModel  == 'IECKAI' ) .OR. &
 
    ENDIF
 
-   IF ( MVK .AND. TurbModel  == 'MODVKM' ) THEN
+   IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
       z0 = FindZ0(HubHt, SigmaIEC, UHub, Fc)
       CALL ScaleMODVKM(HubHt, UHub, TmpU, TmpV, TmpW)
    ENDIF
@@ -882,7 +886,7 @@ ENDIF
 
    ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
 
-IF ( TurbModel(1:5) == 'TIDAL' .OR. TurbModel(1:5) == 'RIVER' ) THEN
+IF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN
       ! Calculate the shear, DUDZ, for all heights.
    ALLOCATE ( DUDZ(ZLim) , STAT=AllocStat ) ! Shear
    DUDZ(1)=(U(2)-U(1))/(Z(2)-Z(1))
@@ -902,9 +906,9 @@ DO IZ=1,ZLim
 
 
 !bonnie: fix this so the the IEC runs differently?? It doesn't need as large an array here anymore...
-      IF ( TurbModel(1:3) == 'IEC' ) THEN
+      IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM ) THEN
          CALL PSDcal( HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
-      ELSEIF ( TurbModel(1:5) == 'TIDAL' .OR. TurbModel(1:5) == 'RIVER' ) THEN ! HydroTurbSim specific.
+      ELSEIF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
          !print *, Ustar
          !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
          Sigma_U2=4.5*Ustar*Ustar*EXP(-2*Z(IZ)/H_ref)
@@ -1026,8 +1030,8 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 V(:,:,:) = 0.0    ! initialize the velocity matrix
 
-IF (TRIM(TurbModel) /= 'NONE') THEN                         ! MODIFIED BY Y GUO
-    IF (TRIM(TurbModel) == 'API') THEN
+IF (SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
+    IF (SpecModel == SpecModel_API) THEN
         CALL CohSpecVMat_API(LC, NSize, Comp) 
     ELSE
         CALL CohSpecVMat(LC, NSize, Comp)
@@ -1089,10 +1093,18 @@ CALL ExitFFT
 
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
-SELECT CASE ( TRIM(TurbModel) )
+SELECT CASE ( SpecModel )
 !MLB: There does not seem to be a CASE for TurbModel=="API".
       
-   CASE ('GP_LLJ','NWTCUP', 'SMOOTH', 'WF_UPW', 'WF_07D', 'WF_14D', 'USRVKM', 'TIDAL', 'RIVER') ! Do reynolds stress for HYDRO also.
+CASE (SpecModel_GP_LLJ, &
+      SpecModel_NWTCUP, &
+      SpecModel_SMOOTH, &
+      SpecModel_WF_UPW, &
+      SpecModel_WF_07D, &
+      SpecModel_WF_14D, &
+      SpecModel_USRVKM, &
+      SpecModel_TIDAL,  &
+      SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
                
             ! Calculate coefficients for obtaining "correct" Reynold's stresses at the hub
          UWsum = 0.0
@@ -1164,7 +1176,7 @@ SELECT CASE ( TRIM(TurbModel) )
          WRITE( US, FormStr ) "u'v'           ", UVmax
          WRITE( US, FormStr ) "v'w'           ", VWmax
 
-   CASE ( 'IECKAI', 'IECVKM' )
+   CASE ( SpecModel_IECKAI, SpecModel_IECVKM )
 
       IF (ScaleIEC > 0) THEN
 
@@ -1189,7 +1201,7 @@ SELECT CASE ( TRIM(TurbModel) )
             UGridMean = CGridSum/NumSteps !BJJ: NumOutSteps  -- scale to the output value?
             UGridSig  = SQRT( ABS( (CGridSum2/NumSteps) - UGridMean*UGridMean ) )
             
-            IF ( IVec == 1 .OR. TurbModel == 'IECVKM' ) THEN
+            IF ( IVec == 1 .OR. SpecModel == SpecModel_IECVKM ) THEN
                TargetSigma = SigmaIEC
             ELSEIF (IVec == 2) THEN
                TargetSigma = 0.8*SigmaIEC             !IEC 61400-1, Appendix B
@@ -1244,7 +1256,7 @@ IF ( WrADHH )  THEN
    FormStr = "( '!    Mean Total Wind Speed = ' , F8.3 , ' m/s' )"
    WRITE (UAHH,FormStr)  UHub
 
-   IF ( (TurbModel == 'IECKAI') .OR. (TurbModel == 'IECVKM') .OR. (TurbModel == 'MODVKM') ) THEN
+   IF ( SpecModel == SpecModel_IECKAI .OR. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM ) THEN
       FormStr = "( '!    Turbulence Intensity  = ' , F8.3 , '%' )"
       WRITE (UAHH,FormStr)  100.0*TurbInt
    ENDIF
@@ -1760,9 +1772,9 @@ IF ( WrACT ) THEN
 
          ! Determine the maximum predicted CTKE
          
-         SELECT CASE ( TRIM(TurbModel) )
+         SELECT CASE ( SpecModel )
          
-            CASE ( 'NWTCUP',  'NONE', 'USRVKM' )
+            CASE ( SpecModel_NWTCUP,  SpecModel_NONE, SpecModel_USRVKM )
             
                IF (KHtest) THEN
                   CTKE = 30.0 !Scale for large coherence
@@ -1790,14 +1802,14 @@ IF ( WrACT ) THEN
                   
                ENDIF !KHTest
                
-            CASE ( 'GP_LLJ', 'SMOOTH' , 'TIDAL', 'RIVER' )          
+            CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
 
                CTKE = pkCTKE_LLJ(Zbottom+0.5*ScaleWid)
                
-            CASE ( 'WF_UPW' )
+            CASE ( SpecModel_WF_UPW )
                CTKE = -2.964523*Rich_No - 0.207382*Uwave + 25.640037*WSig - 10.832925
                
-            CASE ( 'WF_07D' )
+            CASE ( SpecModel_WF_07D )
                CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*WSig - 0.106633
 
                IF ( (Rich_No > -0.025) .AND. (Rich_No < 0.05) .AND. (UStar > 1.0) .AND. (UStar < 1.56) ) THEN
@@ -1806,7 +1818,7 @@ IF ( WrACT ) THEN
                ENDIF
                
                
-            CASE ( 'WF_14D' )
+            CASE ( SpecModel_WF_14D )
                CTKE = 1.667367*Rich_No - 0.003063*Uwave + 19.653682*WSig - 11.808237
                
             CASE DEFAULT   ! This case should not happen            

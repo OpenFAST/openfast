@@ -30,11 +30,10 @@ CONTAINS
 
 
 !=======================================================================
-SUBROUTINE IEC_Kaim ( Ht, Ucmp, Spec )
+!> This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
+!! the use of this subroutine requires that all variables have the units of meters and seconds.
+SUBROUTINE Spec_IECKAI ( Ht, Ucmp, Spec )
 
-
-   ! This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
-   ! the use of this subroutine requires that all variables have the units of meters and seconds.
 
 USE                     TSMods
 
@@ -42,9 +41,9 @@ IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Input: Height (Should be HubHt), value ignored
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Input: Velocity (Should be UHub), value ignored
-REAL(ReKi)            :: Spec   (:,:)            ! Output: target spectrum
+REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored
+REAL(ReKi),INTENT(IN)    :: Ucmp                    !<  Input: Velocity (Should be UHub), value ignored
+REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
       ! Internal variables
 
@@ -110,14 +109,11 @@ ENDDO !IVec
 
 
 RETURN
-END SUBROUTINE IEC_Kaim
+END SUBROUTINE Spec_IECKAI
 !=======================================================================
-SUBROUTINE IEC_vKrm ( Ht, Ucmp, Spec )
-
-
-   ! This subroutine defines the von Karman PSD model as specified by IEC 61400-1 (2nd Ed).
-   ! The use of this subroutine requires that all variables have the units of meters and seconds.
-
+!> This subroutine defines the von Karman PSD model as specified by IEC 61400-1 (2nd Ed).
+!! The use of this subroutine requires that all variables have the units of meters and seconds.
+SUBROUTINE Spec_IECVKM ( Ht, Ucmp, Spec )
 
 USE                     TSMods
 
@@ -125,9 +121,10 @@ IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht   ! Must be HubHt, value ignored
-REAL(ReKi),INTENT(IN) :: Ucmp ! Must be UHub,  value ignored
-REAL(ReKi)            :: Spec     (:,:)
+REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Must be HubHt), value ignored
+REAL(ReKi),INTENT(IN)    :: Ucmp                    !<  Input: Velocity (Must be UHub), value ignored
+REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
+
 
       ! Internal variables
 
@@ -167,16 +164,12 @@ DO I=1,NumFreq
 ENDDO ! I
 
 RETURN
-END SUBROUTINE IEC_vKrm
+END SUBROUTINE Spec_IECVKM
 !=======================================================================
-
-!=======================================================================
-SUBROUTINE API_Spec ( Ht, Ucmp, Spec )
-
-
-   ! This subroutine defines the API-BULLET-IN recommended extreme wind spectrum
-   ! The use of this subroutine requires that all variables have the units of meters and seconds.
-   ! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
+!> This subroutine defines the API-BULLET-IN recommended extreme wind spectrum
+!! The use of this subroutine requires that all variables have the units of meters and seconds.
+!! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
+SUBROUTINE Spec_API ( Ht, Ucmp, Spec )
 
    ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
    !       and then overwrites the u-component spectrum with the API model.
@@ -187,12 +180,12 @@ USE                     TSMods
 IMPLICIT                NONE
 
       ! Passed variables
+REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored
+REAL(ReKi),INTENT(IN)    :: Ucmp                    !<  Input: Velocity (Should be UHub), value ignored
+REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
-REAL(ReKi),INTENT(IN) :: Ht   ! Must be HubHt, value ignored
-REAL(ReKi),INTENT(IN) :: Ucmp   ! Must be HubHt, value ignored,
 !REAL(ReKi),INTENT(IN) :: URef ! Added by YG
 !REAL(ReKi),INTENT(IN)           :: RefHt                       ! Reference height
-REAL(ReKi),INTENT(OUT) :: Spec     (:,:)
 
       ! Internal variables
 
@@ -226,7 +219,7 @@ ELSE
 ENDIF
 
 
-CALL IEC_Kaim ( Ht, Ucmp, Spec )
+CALL Spec_IECKAI ( Ht, Ucmp, Spec )
 
    ! Define u-component integral scale.
 !CALL WrScr ('Calling Froya/API wind spectrum.............')
@@ -257,13 +250,12 @@ ENDDO ! I
 !CALL WrScr ('Froya/API wind spectrum generated')
 
 RETURN
-END SUBROUTINE API_Spec
+END SUBROUTINE Spec_API
 !=======================================================================
-
-SUBROUTINE GP_Turb ( Ht, Ucmp, ZL_tmp, UStar_tmp, Spec )
-   ! This subroutine defines the 3-D turbulence spectrum that can be expected over terrain
-   ! and heights similiar to the LLLJP project as developed by Neil Kelley & Bonnie Jonkman at NREL.
-   ! The use of this subroutine requires that variables have the units of meters and seconds.
+!> This subroutine defines the 3-D turbulence spectrum that can be expected over terrain
+!! and heights similiar to the LLLJP project as developed by Neil Kelley & Bonnie Jonkman at NREL.
+!! The use of this subroutine requires that variables have the units of meters and seconds.
+SUBROUTINE Spec_GPLLJ ( Ht, Ucmp, ZL_tmp, UStar_tmp, Spec )
 
 USE                     TSMods
 
@@ -271,11 +263,12 @@ IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Height (local)
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Longitudinal Velocity (local)
-REAL(ReKi),INTENT(IN) :: Ustar_tmp               ! Local ustar
-REAL(ReKi),INTENT(IN) :: ZL_tmp                  ! Local z/l
-REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD
+REAL(ReKi),INTENT(IN)    :: Ht                      !< Height (local)
+REAL(ReKi),INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity (local)
+REAL(ReKi),INTENT(IN)    :: Ustar_tmp               !< Local ustar
+REAL(ReKi),INTENT(IN)    :: ZL_tmp                  !< Local z/l
+REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
+
 
    ! Internal variables
 
@@ -460,14 +453,14 @@ ENDIF
 
 
 RETURN
-END SUBROUTINE GP_Turb
+END SUBROUTINE Spec_GPLLJ
 !=======================================================================
-SUBROUTINE NWTC_Turb ( Ht, Ucmp, Spec )
+!> This subroutine defines the 3-D turbulence spectrum that can be expected
+!! over terrain and heights similiar to the NWTC LIST project as developed
+!! by Neil Kelley & Bonnie Jonkman at NREL. The use of this subroutine
+!! requires that variables have the units of meters and seconds.
+SUBROUTINE Spec_NWTCUP ( Ht, Ucmp, Spec )
 
-   ! This subroutine defines the 3-D turbulence spectrum that can be expected
-   ! over terrain and heights similiar to the NWTC LIST project as developed
-   ! by Neil Kelley & Bonnie Jonkman at NREL. The use of this subroutine
-   ! requires that variables have the units of meters and seconds.
 
 USE                     TSMods
 
@@ -475,9 +468,11 @@ IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Height (local)
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Longitudinal Velocity (local)
-REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD
+REAL(ReKi),INTENT(IN)    :: Ht                      !< Height (local)
+REAL(ReKi),INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity (local)
+REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !< Output: target spectrum
+
+
 
    ! Internal variables
 
@@ -677,9 +672,11 @@ ENDIF
 
 RETURN
 
-END SUBROUTINE NWTC_Turb
+END SUBROUTINE Spec_NWTCUP
 !=======================================================================
-SUBROUTINE UsrSpec ( Ht, Ucmp, Spec )
+!> This routine linearly interpolates an input file that specifies the
+!! velocity spectra for each of 3 wind components (u,v,w)
+SUBROUTINE Spec_UserSpec ( Ht, Ucmp, Spec )
 
 
    USE                     TSMods
@@ -688,9 +685,9 @@ SUBROUTINE UsrSpec ( Ht, Ucmp, Spec )
 
          ! Passed variables
 
-   REAL(ReKi),INTENT(IN) :: Ht    ! local height
-   REAL(ReKi),INTENT(IN) :: Ucmp  ! local wind speed
-   REAL(ReKi)            :: Spec     (:,:)
+   REAL(ReKi),INTENT(IN)    :: Ht                      !< local height
+   REAL(ReKi),INTENT(IN)    :: Ucmp                    !< local wind speed
+   REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !< Output: target spectrum
 
       ! Internal variables
 
@@ -742,13 +739,13 @@ SUBROUTINE UsrSpec ( Ht, Ucmp, Spec )
    RETURN
 
 
-END SUBROUTINE UsrSpec
+END SUBROUTINE Spec_UserSpec
 !=======================================================================
-SUBROUTINE ST_Turb ( Ht, Ucmp, Spec )
+!> This subroutine defines the 3-D turbulence spectrum that can be expected over flat,
+!! homogeneous terrain as developed by RISO authors Hojstrup, Olesen, and Larsen.
+!! The use of this subroutine requires that variables have the units of meters and seconds.
+SUBROUTINE Spec_SMOOTH ( Ht, Ucmp, Spec )
 
-   ! This subroutine defines the 3-D turbulence spectrum that can be expected over flat,
-   ! homogeneous terrain as developed by RISO authors Hojstrup, Olesen, and Larsen.
-   ! The use of this subroutine requires that variables have the units of meters and seconds.
 
 USE                     TSMods
 
@@ -756,9 +753,9 @@ IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Height
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Longitudinal Velocity
-REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD
+REAL(ReKi),INTENT(IN)    :: Ht                      !< Height
+REAL(ReKi),INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity
+REAL(ReKi),INTENT(INOUT) :: Spec     (:,:)          !< output: target spectra
 
    ! Internal variables
 
@@ -856,18 +853,15 @@ ENDIF
 
 
 RETURN
-END SUBROUTINE ST_Turb
+END SUBROUTINE Spec_SMOOTH
 !=======================================================================
-SUBROUTINE Tidal_Turb ( Shr_DuDz, Spec )
-   ! HYDROTURBSIM specific.
-
-   ! This subroutine defines the 3-D turbulence expected in a tidal channel.
-   ! It is similar to the 'smooth' spectral model (RISO; Hojstrup, Olesen and Larsen) for wind,
-   ! but is scaled by the TKE (SigmaU**2), and du/dz rather than Ustar and u/z.
-   ! The fit is based on data from Puget Sound, estimated by L. Kilcher.
-   ! The use of this subroutine requires that variables have the units of meters and seconds.
-   ! Note that this model does not require height.
-
+!> This subroutine defines the 3-D turbulence expected in a tidal channel (HYDROTURBSIM specific).
+!! It is similar to the 'smooth' spectral model (RISO; Hojstrup, Olesen and Larsen) for wind,
+!! but is scaled by the TKE (SigmaU**2), and du/dz rather than Ustar and u/z.
+!! The fit is based on data from Puget Sound, estimated by L. Kilcher.
+!! The use of this subroutine requires that variables have the units of meters and seconds.
+!! Note that this model does not require height.
+SUBROUTINE Spec_TIDAL ( Shr_DuDz, Spec, SpecModel )
 
 USE                     TSMods
 
@@ -875,8 +869,9 @@ IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Shr_DuDz                ! Shear (du/dz)
-REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD
+REAL(ReKi),INTENT(IN) :: Shr_DuDz                !< Shear (du/dz)
+INTEGER,   INTENT(IN) :: SpecModel               !< SpecModel (SpecModel_TIDAL .OR. SpecModel_RIVER)
+REAL(ReKi),INTENT(OUT):: Spec     (:,:)          !< output: target spectra
 
    ! Internal variables
 
@@ -888,11 +883,11 @@ REAL(ReKi)            :: tmpb (3)               ! Spectra coefficients
 INTEGER               :: I                      ! DO LOOP counter
 
 
-SELECT CASE ( TRIM(TurbModel) )
-   CASE ( 'TIDAL' )
+SELECT CASE ( SpecModel )
+   CASE ( SpecModel_TIDAL )
       tmpa = (/ 0.193, 0.053 , 0.0362 /)*TwoPi ! These coefficients were calculated using Shr_DuDz in units of 'radians', so we multiply these coefficients by 2*pi.
       tmpb = (/ 0.201, 0.0234, 0.0124 /)*(TwoPi**Exp1)
-   CASE ( 'RIVER' )
+   CASE ( SpecModel_RIVER )
       ! THESE ARE NOT VERIFIED YET!!!, therefore they are undocumented.
       tmpa = (/ 0.081, 0.056 , 0.026 /)*TwoPi
       tmpb = (/ 0.16, 0.025, 0.020 /)*(TwoPi**Exp1)
@@ -908,9 +903,11 @@ DO I = 1,NumFreq
 ENDDO
 
 RETURN
-END SUBROUTINE Tidal_Turb
+END SUBROUTINE Spec_TIDAL
 !=======================================================================
-SUBROUTINE TestSpec ( Ht, Ucmp, Spec )
+!> This routine is just a test function to see if we get the requested
+!! spectra from the TurbSim code.
+SUBROUTINE Spec_Test ( Spec )
 
 
 USE                     TSMods
@@ -919,9 +916,7 @@ IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Input: Height (Should be HubHt)
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Input: Velocity (Should be UHub)
-REAL(ReKi)            :: Spec   (:,:)            ! Output: target spectrum
+REAL(ReKi), intent(out) :: Spec   (:,:)            !< Output: target spectrum
 
 INTEGER               :: I
 INTEGER               :: IVec
@@ -931,27 +926,24 @@ INTEGER               :: IVec
 
 DO IVec = 1,3
 
-   DO I = 1,NumFreq
+   DO I = 1,SIZE(Spec,1)
       Spec(I,IVec) = 0.0
    ENDDO !I
    !I = INT( NumFreq/2 )
    I = INT( 100 )
    Spec( I, IVec ) = 1/Freq(1)
 
-print *, 'Test Spectra: sine wave with frequency ', Freq(I), ' Hz.'
+   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(Freq(I)))//' Hz.' )
 
 ENDDO !IVec
 
 
 RETURN
-END SUBROUTINE TestSpec
+END SUBROUTINE Spec_Test
 !=======================================================================
-SUBROUTINE vonKrmn ( Ht, Ucmp, Spec )
-
-
-   ! This subroutine defines the von Karman PSD model.
-   ! The use of this subroutine requires that all variables have the units of meters and seconds.
-
+!> This subroutine defines the von Karman PSD model.
+!! The use of this subroutine requires that all variables have the units of meters and seconds.
+SUBROUTINE Spec_vonKrmn ( Ht, Ucmp, Spec )
 
 USE                     TSMods
 
@@ -1037,16 +1029,15 @@ DO I=1,NumFreq
 ENDDO ! I
 
 RETURN
-END SUBROUTINE vonKrmn
+END SUBROUTINE Spec_vonKrmn
 !=======================================================================
+!> This subroutine defines the 3-D turbulence spectrum that can be expected to exist upstream of a large, multi-row
+!! wind park.  It is based on the smooth or homogeneous terrain models of Hojstrup, Olesen, and Larsen of RISO
+!! National Laboratory in Denmark.  The RISO model has been adjusted to reflect the different spectral scaling present
+!! in the flow upwind of a large wind park.  The scaling is based on measurements made by the National Renewable Energy
+!! Laboratory (NREL) in San Gorgonio Pass, California.
+SUBROUTINE Spec_WF_UPW ( Ht, Ucmp, Spec )
 
-SUBROUTINE InF_Turb ( Ht, Ucmp, Spec )
-
-   ! This subroutine defines the 3-D turbulence spectrum that can be expected to exist upstream of a large, multi-row
-   ! wind park.  It is based on the smooth or homogeneous terrain models of Hojstrup, Olesen, and Larsen of RISO
-   ! National Laboratory in Denmark.  The RISO model has been adjusted to reflect the different spectral scaling present
-   ! in the flow upwind of a large wind park.  The scaling is based on measurements made by the National Renewable Energy
-   ! Laboratory (NREL) in San Gorgonio Pass, California.
 
 USE                     TSMods
 
@@ -1056,7 +1047,7 @@ IMPLICIT                NONE
 
 REAL(ReKi),INTENT(IN) :: Ht                      ! Height   ( input )
 REAL(ReKi),INTENT(IN) :: Ucmp                    ! Velocity ( input )
-REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD ( output )
+REAL(ReKi),INTENT(out):: Spec     (:,:)          ! Target velocity spectra ( output )
 
    ! Internal variables
 
@@ -1356,24 +1347,22 @@ ENDIF  ! ZL < 0
 
 
 RETURN
-END SUBROUTINE InF_Turb
+END SUBROUTINE Spec_WF_UPW
 !=======================================================================
-SUBROUTINE OutF_Turb ( Ht, Ucmp, Spec )
-
-   ! This subroutine defines the 3-D turbulence spectrum that can be expected to exist (7 to 14 rotor diameters) 
-   ! downstream of a large, multi-row wind park.  The scaling is based on measurements made by the National 
-   ! Renewable Energy Laboratory (NREL) in San Gorgonio Pass, California.
-
+!> This subroutine defines the 3-D turbulence spectrum that can be expected to exist (7 to 14 rotor diameters) 
+!! downstream of a large, multi-row wind park.  The scaling is based on measurements made by the National 
+!! Renewable Energy Laboratory (NREL) in San Gorgonio Pass, California.
+SUBROUTINE Spec_WF_DW ( Ht, Ucmp, Spec )
 
 USE                     TSMods
 
 IMPLICIT                NONE
 
-   !Passed variables
+   ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Height
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Velocity
-REAL(ReKi)            :: Spec     (:,:)          ! Working array for PSD
+REAL(ReKi),INTENT(IN) :: Ht                      ! Height   ( input )
+REAL(ReKi),INTENT(IN) :: Ucmp                    ! Velocity ( input )
+REAL(ReKi),INTENT(out):: Spec     (:,:)          ! Target velocity spectra ( output )
 
    ! Internal variables
 
@@ -2048,7 +2037,7 @@ CONTAINS
    RETURN
    END FUNCTION Beta10
    !=======================================================================
-END SUBROUTINE OutF_Turb
+END SUBROUTINE Spec_WF_DW
 
 !=======================================================================
 END MODULE TS_VelocitySpectra

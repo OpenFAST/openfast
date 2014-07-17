@@ -296,25 +296,12 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
       CASE ( 'LOG', 'L' )
 
-!         IF ( Ht > 0.0 .AND. RefHt > 0.0 .AND. RefHt /= Z0 ) THEN
-
-            IF ( ZL >= 0 ) THEN !& ZL < 1
-               psiM = -5.0*ZL
-            ELSE
-               tmp = (1.0 - 15.0*ZL)**0.25
-
-               !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
-               psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
-            ENDIF
-
-!            IF ( Ustar > 0. ) THEN
-!               getWindSpeedAry(:) = ( UstarDiab / 0.4 ) * ( LOG( Ht(:) / Z0 ) - psiM )
-!            ELSE
-               !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
-               getWindSpeedAry(:) = URef*( LOG( Ht(:) / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )
-!            ENDIF
-
-!         ENDIF
+            DO J = 1,SIZE(Ht)
+               getWindSpeedAry(J) = getLogWindSpeed( Ht(J), RefHt, URef, ZL, Z0)
+            END DO
+            
+            
+            
       CASE ( 'H2L', 'H' )
 
                ! Calculate the windspeed.
@@ -526,27 +513,7 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
       CASE ( 'LOG', 'L' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
-         IF ( Ht > 0.0 .AND. RefHt > 0.0 .AND. RefHt /= Z0 ) THEN
-
-            IF ( ZL >= 0 ) THEN !& ZL < 1
-               psiM = -5.0*ZL
-            ELSE
-               tmp = (1.0 - 15.0*ZL)**0.25
-
-               !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
-               psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
-            ENDIF
-
-!            IF ( Ustar > 0. ) THEN
-!               getWindSpeedVal = ( UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
-!            ELSE
-               !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
-               getWindSpeedVal = URef*( LOG( Ht / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )
-!            ENDIF
-
-         ELSE
-            getWindSpeedVal = 0.0
-         ENDIF
+         getWindSpeedVal = getLogWindSpeed(Ht, RefHt, URef, ZL, Z0)
 
       CASE ( 'H2L', 'H' )
                ! Calculate the windspeed.
@@ -653,6 +620,56 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
 RETURN
 END FUNCTION getWindSpeedVal
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!! This routine calculates the wind speed at Ht assuming a logarithmic wind profile and inputs RefHt, URef, Z/L and Z0
+!!
+!!      U_{ref}*( LOG( Ht / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )
+!! where
+!!      psiM is a function of Z/L
+!! In neutral conditions, psiM is 0 and we get the IEC log wind profile.
+
+function getLogWindSpeed(Ht, RefHt, URef, ZL, Z0)
+
+   REAL(ReKi),             INTENT(IN) :: Ht                 !< height at which wind speed is requested [m]
+   REAL(ReKi),             INTENT(IN) :: RefHt              !< height of the reference wind speed [m]
+   REAL(ReKi),             INTENT(IN) :: URef               !< reference wind speed [m/s]
+   REAL(ReKi),             INTENT(IN) :: ZL                 !< a measure of stability [-]
+   REAL(ReKi),             INTENT(IN) :: Z0                 !< surface roughness length [m]
+
+   REAL(ReKi)                         :: getLogWindSpeed    !< the calculated wind speed at Ht
+   
+   
+      ! local variables
+   REAL(ReKi)                         :: psiM               ! The diabatic term for the log wind profile
+   REAL(ReKi)                         :: tmp                ! A temporary variable for calculating psiM
+   
+   
+      
+      IF ( Ht > 0.0 .AND. RefHt > 0.0 .AND. .NOT. EqualRealNos( RefHt, Z0 ) ) THEN
+
+         IF ( ZL >= 0 ) THEN !& ZL < 1
+            psiM = -5.0*ZL
+         ELSE
+            tmp = (1.0 - 15.0*ZL)**0.25
+
+            !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
+            psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
+         ENDIF
+
+!            IF ( Ustar > 0. ) THEN
+!               getWindSpeedVal = ( UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
+!            ELSE
+            !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
+         getLogWindSpeed = URef*( LOG( Ht / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )
+!            ENDIF
+
+      ELSE
+         getLogWindSpeed = 0.0_ReKi
+      ENDIF
+
+
+end function getLogWindSpeed
 
 !=======================================================================
 END MODULE TS_Profiles
