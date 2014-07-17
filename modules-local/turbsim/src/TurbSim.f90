@@ -60,9 +60,13 @@ PROGRAM TurbSim
 
 USE                        FFT_Module
 USE                        ModifiedvKrm_mod
-USE                        Ran_Lux_Mod
 USE                        TSMods
 USE                        TSsubs
+USE TS_FileIO
+   USE TS_RandNum
+   USE TS_Profiles
+   USE TS_VelocitySpectra
+
 
 !BONNIE:*****************************
 ! USE    IFPORT, ONLY: TIMEF ! Wall Clock Time
@@ -227,7 +231,6 @@ INTEGER                 ::  ZHi_YLo                         ! Index for interpol
 INTEGER                 ::  ZLo_YHi                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 
-LOGICAL                 ::  HubPr                           ! Flag to indicate if the hub height is to be printed separately in the summary file
 
 CHARACTER(1)            ::  Comp (3) = (/ 'u', 'v', 'w' /)  ! The names of the wind components
 
@@ -273,34 +276,7 @@ CALL GetFiles
 
 CALL GetInput
 
-IF ( NumUSRz > 0 ) THEN
-   FormStr = "( // 'User-Defined profiles:' / )"
-   WRITE (US,FormStr)
-   
-   IF ( ALLOCATED( L_USR ) ) THEN
-      FormStr = "(A97)"
-      WRITE (US,FormStr) '  Height   Wind Speed   Horizontal Angle   u Std. Dev.   v Std. Dev.   w Std. Dev.   Length Scale'
-      WRITE (US,FormStr) '   (m)        (m/s)          (deg)            (m/s)         (m/s)         (m/s)          (m)    '
-      WRITE (US,FormStr) '  ------   ----------   ----------------   -----------   -----------   -----------   ------------'
-      
-      FormStr = "( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X, 3(4X,F7.2,3X), 3X,F10.2 )"
-      DO I=NumUSRz,1,-1
-         WRITE (US,FormStr)  Z_USR(I), U_USR(I), WindDir_USR(I), Sigma_USR(I)*StdScale(1), Sigma_USR(I)*StdScale(2), &
-                             Sigma_USR(I)*StdScale(3), L_USR(I)      
-      ENDDO   
-   ELSE
-      FormStr = "(A40)"
-      WRITE (US,FormStr) '  Height   Wind Speed   Horizontal Angle'
-      WRITE (US,FormStr) '   (m)        (m/s)          (deg)      '
-      WRITE (US,FormStr) '  ------   ----------   ----------------'
-     
-      FormStr = "( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X)"
-      DO I=NumUSRz,1,-1
-         WRITE (US,FormStr) Z_USR(I), U_USR(I), WindDir_USR(I)      
-      ENDDO   
-   ENDIF
-   
-ENDIF
+call WrSum_Heading1(US)
 
 
    ! Determine if coherent turbulence should be generated
@@ -744,14 +720,7 @@ IF (DEBUG_OUT) THEN
    ENDDO
 ENDIF
 
-FormStr = "( // 'Turbulence Simulation Scaling Parameter Summary:' / )"
-WRITE (US,FormStr)
-FormStr = "('   Turbulence model used                            =  ' , A )"
-WRITE (US,FormStr)  TRIM(TMName)
 
-FormStr  = "('   ',A,' =' ,F9.3,A)"
-FormStr1 = "('   ',A,' =' ,I9  ,A)"
-FormStr2 = "('   ',A,' =  ',A)"
   
 IF ( ( TurbModel  == 'IECKAI' ) .OR. &
      ( TurbModel  == 'IECVKM' ) .OR. &
@@ -854,152 +823,14 @@ IF ( ( TurbModel  == 'IECKAI' ) .OR. &
       CALL ScaleMODVKM(HubHt, UHub, TmpU, TmpV, TmpW)
    ENDIF
 
-
-      ! Write out a parameter summary to the summary file.
-
-   IF ( NumTurbInp ) THEN
-      WRITE (US,FormStr2)      "Turbulence characteristic                       ", "User-specified"
-   ELSE
-      WRITE (US,FormStr2)      "Turbulence characteristic                       ", TRIM(IECTurbE)//IECTurbC
-      WRITE (US,FormStr2)      "IEC turbulence type                             ", TRIM(IEC_WindDesc)
-      
-      IF ( IEC_WindType /= IEC_NTM ) THEN       
-         WRITE (US,FormStr)    "Reference wind speed average over 10 minutes    ", Vref,                      " m/s"
-         WRITE (US,FormStr)    "Annual wind speed average at hub height         ", Vave,                      " m/s"
-      ENDIF
-   ENDIF      
+ELSE
+    LC = 0.0    ! The length scale is not defined for the non-IEC models
+ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
    
-   WRITE (US,FormStr2)         "IEC standard                                    ", IECeditionSTR(IECedition)
-   
-   IF ( TurbModel  /= 'MODVKM' ) THEN
-      ! Write out a parameter summary to the summary file.
+CALL WrSum_SpecModel( US, LC, Lambda1, TurbInt15, SigmaSlope, TurbInt, Z(NumGrid_Z2) )
 
-      WRITE (US,FormStr)       "Mean wind speed at hub height                   ", UHub,                      " m/s"
 
-      IF (.NOT. NumTurbInp) THEN
-         IF ( IECedition == 2 ) THEN
-            WRITE (US,FormStr) "Char value of turbulence intensity at 15 m/s    ", 100.0*TurbInt15,           "%"
-            WRITE (US,FormStr) "Standard deviation slope                        ", SigmaSlope,                ""
-         ELSE                                                                                                 
-               ! This is supposed to be the expected value of what is measured at a site.                     
-               ! We actually calculate the 90th percentile value to use in the code as the                    
-               ! "Characteristic Value".                                                                      
-            WRITE (US,FormStr) "Expected value of turbulence intensity at 15 m/s", 100.0*TurbInt15,           "%"
-         ENDIF                                                                                                
-                                                                                                              
-      ENDIF                                                                                                   
-                                                                                                              
-      WRITE (US,FormStr)       "Characteristic value of standard deviation      ", SigmaIEC,                  " m/s"
-      WRITE (US,FormStr)       "Turbulence scale                                ", Lambda1,                   " m"
-                                                                                                              
-      IF ( TurbModel  == 'IECKAI' )  THEN                                                                     
-         WRITE (US,FormStr)    "u-component integral scale                      ", Lambda1*8.1,               " m"
-         WRITE (US,FormStr)    "Coherency scale                                 ", LC,                        " m"
-      ELSEIF ( TurbModel  == 'IECVKM' )  THEN                                                                 
-         WRITE (US,FormStr)    "Isotropic integral scale                        ", LC,                        " m"
-      ENDIF                                                                                                   
-                                                                                                              
-      WRITE (US,FormStr)       "Characteristic value of hub turbulence intensity", 100.0*TurbInt,             "%"
-                                                                                                              
-   ELSE                                                                                                       
-      WRITE (US,FormStr1)      "Boundary layer depth                            ", NINT(h),                   " m"
-      WRITE (US,FormStr)       "Site Latitude                                   ", Latitude,                  " degs"
-      WRITE (US,FormStr)       "Hub mean streamwise velocity                    ", UHub,                      " m/s"
-      WRITE (US,FormStr)       "Hub local u*                                    ", UStar,                     " m/s" !BONNIE: is this LOCAL? of Disk-avg
-      WRITE (US,FormStr)       "Target IEC Turbulence Intensity                 ", 100.0*TurbInt,             "%"
-      WRITE (US,FormStr)       "Target IEC u-component standard deviation       ", SigmaIEC,                  " m/s"
-      WRITE (US,FormStr)       "u-component integral scale                      ", TmpU,                      " m"
-      WRITE (US,FormStr)       "v-component integral scale                      ", TmpV,                      " m"
-      WRITE (US,FormStr)       "w-component integral scale                      ", TmpW,                      " m"
-      WRITE (US,FormStr)       "Isotropic integral scale                        ", LC,                        " m"
-   ENDIF                                                                                                      
-   WRITE (US,FormStr)          "Gradient Richardson number                      ", 0.0,                       ""
 
-! Ustar = SigmaIEC/2.15 ! Value based on equating original Kaimal spectrum with IEC formulation
-
-ELSEIF ( TRIM(TurbModel) == 'TIDAL' ) THEN
-   WRITE (US,FormStr2)         "Gradient Richardson number                      ", "N/A"
-   WRITE (US,FormStr)          "Mean velocity at hub height                     ", UHub,                      " m/s"     
-   
-ELSE   
-   LC = 0.0    ! The length scale is not defined for the non-IEC models
- 
-   WRITE (US,FormStr)          "Gradient Richardson number                      ", RICH_NO,                   ""
-   WRITE (US,FormStr)          "Monin-Obukhov (M-O) z/L parameter               ", ZL,                        ""
-                                                                                                              
-   IF ( ZL /= 0.0 ) THEN                                                                                      
-      WRITE (US,FormStr)       "Monin-Obukhov (M-O) length scale                ", L,                         " m"
-   ELSE                                                                                                       
-      WRITE (US,FormStr2)      "Monin-Obukhov (M-O) length scale                ", "Infinite"                 
-   ENDIF                                                                                                      
-   WRITE (US,FormStr)          "Mean wind speed at hub height                   ", UHub,                      " m/s"     
-    
-ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
-
-TmpReal = 0.5*RotorDiameter
-WTmp    = getWindSpeed(UHub,HubHt,HubHt+TmpReal,RotorDiameter,PROFILE=WindProfileType)   !Velocity at the top of rotor
-VTmp    = getWindSpeed(UHub,HubHt,HubHt-TmpReal,RotorDiameter,PROFILE=WindProfileType)   !Velocity at the bottom of the rotor
-      
-WRITE(US,'()')   ! A BLANK LINE
-
-SELECT CASE ( TRIM(WindProfileType) )
-   CASE ('JET','J')
-      PLExp = LOG( WTmp/VTmp ) / LOG( (HubHt+TmpReal)/(HubHt-TmpReal) )  !TmpReal = RotorDiameter/2
-      UTmp  = 0.0422*ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
-      
-      WRITE (US,FormStr2)      "Wind profile type                               ", "Low-level jet"      
-      WRITE (US,FormStr)       "Jet height                                      ",  ZJetMax,                  " m"
-      WRITE (US,FormStr)       "Jet wind speed                                  ",  UJetMax,                  " m/s"
-      WRITE (US,FormStr)       "Upper limit of observed jet wind speed          ",  UTmp,                     " m/s"
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
-      
-      IF ( UTmp < UJetMax ) THEN
-         CALL TS_Warn( 'The computed jet wind speed is larger than the ' &
-                     //'maximum observed jet wind speed at this height.', .FALSE. )
-      ENDIF            
-                    
-   CASE ('LOG','L')
-      PLExp = LOG( WTmp/VTmp ) / LOG( (HubHt+TmpReal)/(HubHt-TmpReal) )  !TmpReal = RotorDiameter/2
-      
-      WRITE (US,FormStr2)      "Wind profile type                               ", "Logarithmic"      
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
-
-   CASE ('H2L','H')
-      PLExp = LOG( WTmp/VTmp ) / LOG( (HubHt+TmpReal)/(HubHt-TmpReal) )  !TmpReal = RotorDiameter/2
-      
-      WRITE (US,FormStr2)      "Velocity profile type                           ", "Logarithmic (H2L)"      
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
-
-   CASE ('PL','P')
-      WRITE (US,FormStr2)      "Wind profile type                               ", "Power law"      
-      WRITE (US,FormStr)       "Power law exponent                              ",  PLExp,                    ""
-      
-   CASE ('USR','U')
-      PLExp = LOG( WTmp/VTmp ) / LOG( (HubHt+TmpReal)/(HubHt-TmpReal) )  !TmpReal = RotorDiameter/2    
-
-      WRITE (US,FormStr2)      "Wind profile type                               ", "Linear interpolation of user-defined profile"
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
-                               
-   CASE DEFAULT                
-      WRITE (US,FormStr2)      "Wind profile type                               ", "Power law on rotor disk, logarithmic elsewhere"
-      WRITE (US,FormStr)       "Power law exponent                              ",  PLExp,                    ""
-      
-END SELECT
-
-WRITE(US,FormStr)              "Mean shear across rotor disk                    ", (WTmp-VTmp)/RotorDiameter, " (m/s)/m"
-WRITE(US,FormStr)              "Assumed rotor diameter                          ", RotorDiameter,             " m"      
-WRITE(US,FormStr)              "Surface roughness length                        ", z0,                        " m"      
-WRITE(US,'()')                                                                                                 ! A BLANK LINE
-WRITE(US,FormStr1)             "Number of time steps in the FFT                 ", NumSteps,                  ""       
-WRITE(US,FormStr1)             "Number of time steps output                     ", NumOutSteps,               ""          
-
-IF (KHtest) THEN
-   WRITE(US,"(/'KH Billow Test Parameters:' / )") ! HEADER
-   WRITE(US,FormStr)           "Gradient Richardson number                      ", RICH_NO,                   ""
-   WRITE(US,FormStr)           "Power law exponent                              ", PLexp,                     ""
-   WRITE(US,FormStr)           "Length of coherent structures                   ", UsableTime / 2.0,          " s"
-   WRITE(US,FormStr)           "Minimum coherent TKE                            ", 30.0,                      " (m/s)^2"
-ENDIF
 
 !bjj: This doesn't need to be part of the summary file, so put it in the debug file
 IF ( DEBUG_OUT .AND. WindProfileType(1:1) == 'J' ) THEN
@@ -1018,125 +849,9 @@ IF ( DEBUG_OUT .AND. WindProfileType(1:1) == 'J' ) THEN
    WRITE(UD,FormStr)  ( ChebyCoef_WD(IY), IY=1,11 )   
 ENDIF
 
-   ! Write mean flow angles and wind speed profile to the summary file.
-
-FormStr = "(//,'Mean Flow Angles:',/)"
-WRITE(US,FormStr)
-
-FormStr = "(3X,A,F6.1,' degrees')"
-WRITE(US,FormStr)  'Vertical   =', VFlowAng
-WRITE(US,FormStr)  'Horizontal =', HFlowAng
 
 
-FormStr = "(/'Mean Wind Speed Profile:')"
-WRITE(US,FormStr)
 
-IF ( ALLOCATED( ZL_profile ) .AND. ALLOCATED( Ustar_profile ) ) THEN
-   FormStr = "(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)   z/L(z)    u*(z)')"
-   WRITE(US,FormStr)
-   FormStr = "(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)       (-)      (m/s)')"
-   WRITE(US,FormStr)
-   FormStr = "(  '   ------    ----------   ----------------  ----------   ----------   ----------   ------   ------')"
-   WRITE(US,FormStr)
-
-   FormStr = '(1X,F8.1,1X,F11.2,5x,F11.2,4x,3(2X,F8.2,3X),2(1X,F8.3))'
-ELSE
-   FormStr = "(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)')"
-   WRITE(US,FormStr)
-   FormStr = "(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)   ')"
-   WRITE(US,FormStr)
-   FormStr = "(  '   ------    ----------   ----------------  ----------   ----------   ----------')"
-   WRITE(US,FormStr)
-
-   FormStr = '(1X,F8.1,1X,F11.2,5x,F11.2,4x,3(2X,F8.2,3X))'
-ENDIF
-HubPr = ( ABS( HubHt - Z(NumGrid_Z2) ) > Tolerance )     !If the hub height is not on the z-grid, print it, too.
-
-   ! Get the angles to rotate the wind components from streamwise orientation to the X-Y-Z grid at the Hub
-            
-CVFA = COS( VFlowAng*D2R )
-SVFA = SIN( VFlowAng*D2R ) 
-CHFA = COS( HFlowAng*D2R )
-SHFA = SIN( HFlowAng*D2R )
-
-   ! Write out the grid points & the hub
-
-DO IZ = NumGrid_Z,1, -1
-   
-   IF ( HubPr  .AND. ( Z(IZ) < HubHt ) ) THEN
-   
-      JZ = NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
-      
-      IF ( ALLOCATED( WindDir_profile ) ) THEN      
-         CHFA = COS( WindDir_profile(JZ)*D2R )
-         SHFA = SIN( WindDir_profile(JZ)*D2R )
-         
-         IF ( ALLOCATED( ZL_profile ) ) THEN
-            
-            WRITE(US,FormStr)  Z(JZ), U(JZ), WindDir_profile(JZ), U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA, &
-                              ZL_profile(JZ), UStar_profile(JZ)
-         ELSE
-            WRITE(US,FormStr)  Z(JZ), U(JZ), WindDir_profile(JZ), U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA
-         ENDIF
-      ELSE
-         IF ( ALLOCATED( ZL_profile ) ) THEN
-            WRITE(US,FormStr)  Z(JZ), U(JZ), HFlowAng, U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA, &
-                              ZL_profile(JZ), UStar_profile(JZ)
-         ELSE
-            WRITE(US,FormStr)  Z(JZ), U(JZ), HFlowAng, U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA
-         ENDIF
-      ENDIF
-   
-      HubPr = .FALSE.
-   ENDIF
-   
-   IF ( ALLOCATED( WindDir_profile ) ) THEN
-      CHFA = COS( WindDir_profile(IZ)*D2R )
-      SHFA = SIN( WindDir_profile(IZ)*D2R )
-
-      IF ( ALLOCATED( ZL_profile ) ) THEN
-         WRITE(US,FormStr)  Z(IZ), U(IZ), WindDir_profile(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                            ZL_profile(IZ), UStar_profile(IZ)
-      ELSE
-         WRITE(US,FormStr)  Z(IZ), U(IZ), WindDir_profile(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-      ENDIF
-   ELSE
-      IF ( ALLOCATED( ZL_profile ) ) THEN
-         WRITE(US,FormStr)  Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                            ZL_profile(IZ), UStar_profile(IZ)
-      ELSE
-         WRITE(US,FormStr)  Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-      ENDIF
-   ENDIF                
-
-ENDDO ! IZ
-   
-   ! Write out the tower points
-   
-DO IZ = NumGrid_Z,ZLim
-
-   IF ( Z(IZ) < Z(1) ) THEN
-      IF ( ALLOCATED( WindDir_profile ) ) THEN
-         CHFA = COS( WindDir_profile(IZ)*D2R )
-         SHFA = SIN( WindDir_profile(IZ)*D2R )
-
-         IF ( ALLOCATED( ZL_profile ) ) THEN
-            WRITE(US,FormStr)  Z(IZ), U(IZ), WindDir_profile(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                               ZL_profile(IZ), UStar_profile(IZ)
-         ELSE
-            WRITE(US,FormStr)  Z(IZ), U(IZ), WindDir_profile(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-         ENDIF
-      ELSE
-         IF ( ALLOCATED( ZL_profile ) ) THEN
-            WRITE(US,FormStr)  Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                               ZL_profile(IZ), UStar_profile(IZ)
-         ELSE
-            WRITE(US,FormStr)  Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-         ENDIF
-      ENDIF                
-   ENDIF
-
-ENDDO ! IZ
 
 
    !  Allocate the turbulence PSD array.
@@ -1273,73 +988,17 @@ IF ( ALLOCATED( Wspec_USR  ) )  DEALLOCATE( Wspec_USR  )
 
    ! Allocate memory for random number array
 
-ALLOCATE ( RandNum(NTot*NumFreq*3) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumFreq*3/1024**2 ) )//' MB for the random-number array.' )
-ENDIF
-
-   ! Reinitialize the random number generator ( it was initialized when the
-   ! seeds were read in ) so that the same seed always generates the same
-   ! random phases, regardless of previous randomizations in this code.
-
-RandSeed(1) = RandSeedTmp
-CALL RndInit()
-
-   ! Let's go ahead and get all the random numbers we will need for the entire
-   ! run.  This (hopefully) will be faster than getting them one at a time,
-   ! but it will use more memory.
-   ! These pRNGs have been initialized in the GetInput() subroutine
-
-IF (RNG_type == 'NORMAL') THEN  
-
-      !The first two real numbers in the RandSeed array are used as seeds
-      !The number of seeds needed are compiler specific, thus we can't assume only 2 seeds anymore
-
-   CALL RANDOM_NUMBER ( RandNum )
-
-   ! Let's harvest the random seeds so that they can be used for the next run if desired.
-   ! Write them to the summary file.
-
-   CALL RANDOM_SEED ( GET=RandSeedAry )
-
-   FormStr = "(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)"
-   WRITE(US,FormStr)
-
-   DO I = 1,SIZE( RandSeedAry )
-      FormStr = "(I13,' Harvested seed #',I2)"
-      WRITE(US,FormStr)  RandSeedAry(I), I
-   END DO
-
-   DEALLOCATE(RandSeedAry, STAT=AllocStat)
+CALL AllocAry( PhaseAngles, NTot, NumFreq, 3, 'Random Phases' )
+CALL RndPhases(p_RandNum, OtherSt_RandNum, PhaseAngles, NTot, NumFreq)
 
 
-ELSEIF (RNG_type == 'RANLUX') THEN
+WRITE(US,"(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)")
 
-   CALL RanLux ( RandNum )
+DO I = 1,SIZE( OtherSt_RandNum%nextSeed  )
+   WRITE(US,"(I13,' Harvested seed #',I2)")  OtherSt_RandNum%nextSeed (I), I
+END DO
 
-   CALL RLuxAT ( LuxLevel, RandSeed(1), I, II )
-
-   FormStr = "(//,'Harvested Random Seeds after Generation of the Random Numbers:')"
-   WRITE(US,FormStr)
-
-   FormStr = "(/,I13,' K1')"
-   WRITE(US,FormStr)  I
-
-   FormStr = "(I13,' K2')"
-   WRITE(US,FormStr)  II
-
-ELSE
- 
-   I = NTot*NumFreq
-
-   Indx = 1
-   DO IVec = 1,3
-      CALL ARand( RandSeed(IVec), RandNum, I,  Indx)
-      Indx = Indx + I
-   ENDDO
-
-ENDIF
+IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)
 
 
    !  Allocate the transfer-function matrix. 
@@ -1376,11 +1035,11 @@ IF (TRIM(TurbModel) /= 'NONE') THEN                         ! MODIFIED BY Y GUO
 ENDIF
 
 
-   ! Deallocate the Freq, S, and RandNum arrays and the spectral matrix
+   ! Deallocate the Freq, S, and RandPhases arrays and the spectral matrix
 
-IF ( ALLOCATED( Freq    ) )  DEALLOCATE( Freq    )
-IF ( ALLOCATED( S       ) )  DEALLOCATE( S       )
-IF ( ALLOCATED( RandNum ) )  DEALLOCATE( RandNum )
+IF ( ALLOCATED( Freq        ) )  DEALLOCATE( Freq        )
+IF ( ALLOCATED( S           ) )  DEALLOCATE( S           )
+IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
 
    !  Allocate the FFT working storage and initialize its variables
 
@@ -2086,7 +1745,7 @@ IF ( WrACT ) THEN
          ! If the coherent structures do not cover the whole disk, increase the shear
 
       IF ( DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
-         CALL RndUnif( TmpReal )
+         CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpReal )
          ScaleVel = ScaleVel * ( 1.0 + TmpReal * (1 - DistScl) / DistScl )
       ENDIF
 
@@ -2107,7 +1766,7 @@ IF ( WrACT ) THEN
             
                IF (KHtest) THEN
                   CTKE = 30.0 !Scale for large coherence
-                  CALL RndNWTCpkCTKE( CTKE )
+                  CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, CTKE )
                ELSE    
                
                      ! Increase the Scaling Velocity for computing U,V,W in AeroDyn
@@ -2116,7 +1775,7 @@ IF ( WrACT ) THEN
                   CTKE =  0.616055*Rich_No - 0.242143*Uwave + 23.921801*WSig - 11.082978
             
                      ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
-                  CALL RndUnif( TmpReal )
+                  CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpReal )
                   CTKE = MAX( CTKE + (2.0 * TmpReal - 1.0) * 6.0, 0.0 )
 
                   IF ( CTKE > 0.0 ) THEN
@@ -2125,7 +1784,7 @@ IF ( WrACT ) THEN
                      ENDIF
 
                      IF ( CTKE >= 30.0 .AND. Rich_No >= 0.0 .AND. Rich_No <= 0.05 ) THEN
-                        CALL RndNWTCpkCTKE( CTKE )
+                        CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, CTKE )
                      ENDIF
                   ENDIF
                   
@@ -2142,7 +1801,7 @@ IF ( WrACT ) THEN
                CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*WSig - 0.106633
 
                IF ( (Rich_No > -0.025) .AND. (Rich_No < 0.05) .AND. (UStar > 1.0) .AND. (UStar < 1.56) ) THEN
-                  CALL RndpkCTKE_WFTA( TmpReal )  ! Add a random residual
+                  CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpReal )  ! Add a random residual
                   CTKE = CTKE + TmpReal
                ENDIF
                
