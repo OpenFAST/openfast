@@ -290,7 +290,7 @@ WRITE ( US, '(A,F8.3," seconds")' )   'Length of coherent events            = ',
 
 END SUBROUTINE CalcEvents
 !=======================================================================
-SUBROUTINE CohSpecVMat( LC, NSize, Comp )
+SUBROUTINE CohSpecVMat( LC, NSize )
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -305,7 +305,6 @@ IMPLICIT                      NONE
 
 REAL(ReKi),   INTENT(IN)   :: LC             ! IEC coherency scale parameter
 INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
-CHARACTER(*), INTENT(IN)   :: Comp(3)        ! u, v, or w
 
    ! Internal variables
 
@@ -400,10 +399,10 @@ POINT_J:       DO JZ=1,IZ
                         Dist(Indx)= SQRT( ( Y(I) - Y(J) )**2  + ( Z(IZ) - Z(JZ) )**2 )
                      ELSE
                         dY = Y(I) - Y(J)
-                        IF (dY > 0.5*GridWidth ) THEN
-                           dY = dY - GridWidth - GridRes_Y
-                        ELSE IF (dY < -0.5*GridWidth ) THEN
-                           dY = dY + GridWidth + GridRes_Y
+                        IF (dY > 0.5*p_grid%GridWidth ) THEN
+                           dY = dY - p_grid%GridWidth - p_grid%GridRes_Y
+                        ELSE IF (dY < -0.5*p_grid%GridWidth ) THEN
+                           dY = dY + p_grid%GridWidth + p_grid%GridRes_Y
                         END IF
 
                         Dist(Indx)= SQRT( ( dY )**2  + ( Z(IZ) - Z(JZ) )**2 )
@@ -482,7 +481,7 @@ DO IVec = 1,3
 
       END IF      
       
-      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, Comp )
+      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize )
 
    ENDDO !IFreq
 
@@ -499,7 +498,7 @@ RETURN
 
 END SUBROUTINE CohSpecVMat
 !=======================================================================
-SUBROUTINE CohSpecVMat_API( LC, NSize, Comp)
+SUBROUTINE CohSpecVMat_API( LC, NSize)
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -514,7 +513,6 @@ IMPLICIT                      NONE
 
 REAL(ReKi),   INTENT(IN)   :: LC             ! IEC coherency scale parameter
 INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
-CHARACTER(*), INTENT(IN)   :: Comp(3)        ! u, v, or w
 
    ! Internal variables
 
@@ -711,7 +709,7 @@ DO IVec = 1,3
       END IF
       
          
-      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, Comp )
+      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize )
          
 
    ENDDO !IFreq
@@ -730,7 +728,7 @@ RETURN
 
 END SUBROUTINE CohSpecVMat_API
 !=======================================================================
-SUBROUTINE Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, Comp )
+SUBROUTINE Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize )
 
 use NWTC_LAPACK
 USE TSMods
@@ -743,7 +741,6 @@ REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! A
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
 INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of dimension 2 of Matrix
-CHARACTER(*),     INTENT(IN)     :: Comp(3)                                  ! u, v, or w
 
 
 REAL(ReKi)                       :: CPh                                      ! Cosine of the random phase
@@ -1376,7 +1373,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    ! This subroutine is used to get the default values of the Reynolds
    !  stresses.
 
-   USE                     TSMods, ONLY : GridHeight
+   USE                     TSMods, ONLY : p_grid
    USE                     TSMods, ONLY : HubHt
    USE                     TSMods, ONLY : H_ref                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : RICH_NO
@@ -1407,10 +1404,10 @@ use TurbSim_Types
    REAL(ReKi)                          :: ZLtmp
 
    Z(2) = HubHt + 0.5*RotorDiameter    ! top of the grid
-   Z(1) = Z(2) - GridHeight            ! bottom of the grid
+   Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
    V(:) = getWindSpeed(UHub, HubHt, Z, RotorDiameter, PROFILE=WindProfileType)
 
-   Shr = ( V(2)-V(1) ) / GridHeight    ! dv/dz
+   Shr = ( V(2)-V(1) ) / p_grid%GridHeight    ! dv/dz
 
 !BJJ: check the ranges of our best-fit parameters, using domains of measured values
 
@@ -2114,6 +2111,233 @@ END SUBROUTINE WriteEvents
 
 !=======================================================================
 
+SUBROUTINE CreateGrid( p, NumGrid_Y2, NumGrid_Z2, NSize )
+
+! Assumes that these variables are set:
+!  GridHeight
+!  GridWidth 
+!  NumGrid_Y
+!  NumGrid_Z
+
+use TSMods
+
+   TYPE(TurbSim_GridParameterType), INTENT(INOUT) :: p
+   INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
+   INTEGER                        , INTENT(  OUT) :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
+   INTEGER                        , INTENT(  OUT) :: NSize                           ! Size of the spectral matrix at each frequency
+   
+   ! local variables:
+REAL(ReKi)              ::  TmpReal                         ! A temporary variable holding a Z (height) value, and other misc. variables
+   INTEGER                                        :: IY, IZ                          ! loop counters 
+   INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
+   
+   
+   p_grid%GridRes_Y = p_grid%GridWidth  / REAL( NumGrid_Y - 1, ReKi )
+   p_grid%GridRes_Z = p_grid%GridHeight / REAL( NumGrid_Z - 1, ReKi )      
+
+   p_grid%Zbottom = HubHt + 0.5*RotorDiameter                             ! height of the highest grid points
+   p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
+
+   IF ( p_grid%Zbottom <= 0.0 ) THEN
+      CALL TS_Abort ( 'The lowest grid point ('//TRIM(Flt2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
+                      'Adjust the appropriate values in the input file.' )
+   ENDIF
+
+   NumGrid_Y2 = INT( ( NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
+   NumGrid_Z2 = INT( Tolerance + ( HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
+
+   ExtraTwrPt = .FALSE.
+
+   IF ( MOD(NumGrid_Y, 2) == 0 ) THEN
+      ExtraTwrPt = .TRUE.
+      ExtraHubPt = .TRUE.
+   ELSEIF ( ABS((NumGrid_Z2-1)*p_grid%GridRes_Z + p_grid%Zbottom - HubHt) > Tolerance ) THEN
+      ExtraHubPt = .TRUE.
+   ELSE
+      ExtraHubPt = .FALSE.
+   ENDIF
+
+   NTot    = NumGrid_Y*NumGrid_Z                ! Number of points in the regular grid
+
+   IF (ExtraHubPT) THEN
+      NTot = NTot + 1                           ! Add the hub point if necessary
+      ZLim = NumGrid_Z+1
+      YLim = NumGrid_Y+1
+   ELSE
+      ZLim = NumGrid_Z
+      YLim = NumGrid_Y
+   ENDIF
+
+   IF ( WrADTWR ) THEN
+
+         ! Compute the number of points between the bottom of the grid and the ground 
+         ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
+ 
+      IZ = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
+
+      IF ( ExtraTwrPt ) THEN 
+         IZ = IZ + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
+      ENDIF
+
+      IF ( IZ > 0 ) THEN
+
+         ZLim = ZLim + IZ
+         NTot = NTot + IZ                       ! Add the number of tower points
+
+         IF ( .NOT. ExtraHubPT ) THEN
+            YLim = YLim + 1
+         ENDIF
+
+      ELSE
+
+         CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', .TRUE.)  
+
+         WrADTWR = .FALSE.
+         CLOSE( UATWR )
+
+      ENDIF
+
+   ENDIF
+
+   NSize   = NTot*( NTot + 1 )/2   
+   
+   
+   CALL AllocAry(Z,     ZLim, 'Z (vertical locations of the grid points)' )
+   CALL AllocAry(Y,     YLim, 'Y (lateral locations of the grid points)' )
+   CALL AllocAry(IYmax, ZLim, 'IYmax (horizontal locations at each height)' ) !  Allocate the array of vertical locations of the grid points.
+
+   
+      ! Initialize cartesian Y,Z values of the grid.
+
+   DO IY = 1,NumGrid_Y
+      Y(IY)    = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
+   ENDDO
+
+   DO IZ = 1,NumGrid_Z
+      Z(IZ)     = p_grid%Zbottom + p_grid%GridRes_Z*( IZ - 1 )
+      IYmax(IZ) = NumGrid_Y           ! Number of lateral points at this height
+   ENDDO
+
+   IF (ExtraHubPT) THEN
+
+      Y(NumGrid_Y+1)     = 0.0
+      Z(NumGrid_Z+1)     = HubHt
+      IYmax(NumGrid_Z+1) = 1
+
+      p_grid%HubIndx = NumGrid_Y*NumGrid_Z + 1
+
+      FirstTwrPt = NumGrid_Z + 2              ! The start of tower points, if they exist
+
+   ELSE
+
+      p_grid%HubIndx = NumGrid_Y*(NumGrid_Z2-1) + NumGrid_Y2
+
+      FirstTwrPt = NumGrid_Z + 1              ! The start of tower points, if they exist
+
+   ENDIF
+
+   IF ( WrADTWR ) THEN
+
+      Y(YLim) = 0.0
+   
+      TmpReal  = Z(1)
+
+      IF ( ExtraTwrPt ) THEN 
+         TmpReal = TmpReal + p_grid%GridRes_Z
+      ENDIF
+
+      DO IZ = FirstTwrPt,ZLim
+         Z(IZ)     = TmpReal - p_grid%GridRes_Z
+         TmpReal   = Z(IZ)
+
+         IYmax(IZ) = 1                 ! The number of lateral points at this height
+      ENDDO
+
+   ENDIF   
+   
+   
+
+   
+
+END SUBROUTINE CreateGrid
+
+!=======================================================================
+!> This routine calculates the wind components in the Inertial reference
+!!  frame.
+SUBROUTINE CalculateWindComponents(v, ubar, HFlowAng, VFlowAng, V_Inertial, UH, UT)
+
+   REAL(ReKi), INTENT(IN)           :: v(3)               !< u,v,w components (streamwise)
+   REAL(ReKi), INTENT(IN)           :: ubar               !< mean streamwise component
+   REAL(ReKi), INTENT(IN)           :: HFlowAng           !< horizontal flow angle
+   REAL(ReKi), INTENT(IN)           :: VFlowAng           !< vertical flow angle
+                                    
+   REAL(ReKi), INTENT(OUT)          :: V_Inertial(3)      !< U,V,W components (inertial)
+   REAL(ReKi), INTENT(OUT),OPTIONAL :: UH                 !< horizontal wind speed (U+V components)
+   REAL(ReKi), INTENT(OUT),OPTIONAL :: UT                 !< total wind speed (U+V+W components)
+   
+   
+   
+   ! Local variables
+   REAL(ReKi)              :: UTmp                            ! The instantaneous u-component wind speed at the hub
+   REAL(ReKi)              :: UHTmp2                          ! The square of the instantaneous horizontal wind speed at the hub
+   REAL(ReKi)              :: V_Inertial2(3)                  ! the U,V,W components (inertial) squared
+   
+   REAL(ReKi)              :: CVFA                            ! Cosine of the vertical flow angle
+   REAL(ReKi)              :: SVFA                            ! Sine of the vertical flow angle
+   REAL(ReKi)              :: CHFA                            ! Cosine of the horizontal flow angle
+   REAL(ReKi)              :: SHFA                            ! Sine of the horizontal flow angle
 
 
+   CHFA = COS( HFlowAng*D2R )
+   SHFA = SIN( HFlowAng*D2R )
+
+   CVFA = COS( VFlowAng*D2R )
+   SVFA = SIN( VFlowAng*D2R )
+
+   
+
+      ! Calculate longitudinal (UTmp) value for point,
+      ! as well as rotated (V_Inertial) 
+      ! components applying specified flow angles.
+
+      ! Add mean wind speed to the streamwise component
+   UTmp = v(1) + ubar
+   
+      ! Rotate the wind components from streamwise orientation to the X-Y-Z grid       
+   V_Inertial(1) = UTmp*CHFA*CVFA - v(2)*SHFA - v(3)*CHFA*SVFA
+   V_Inertial(2) = UTmp*SHFA*CVFA + v(2)*CHFA - v(3)*SHFA*SVFA  
+   V_Inertial(3) = UTmp*SVFA                  + v(3)*CVFA
+
+   IF ( PRESENT( UH ) .OR. PRESENT( UT ) ) THEN
+         ! Calculate hub horizontal wind speed (UHTmp) and Total wind speed (UTTmp)
+   
+      V_Inertial2 = V_Inertial*V_Inertial             !inertial frame coordinates   
+      UHTmp2      = V_Inertial2(1) + V_Inertial2(2)   !inertial frame coordinates
+
+      IF ( PRESENT( UH ) ) UH = SQRT( UHTmp2 )        !inertial frame coordinates
+      IF ( PRESENT( UT ) ) UT = SQRT( UHTmp2 + V_Inertial2(3) )
+   END IF
+
+END SUBROUTINE CalculateWindComponents
+!=======================================================================
+! This routine calculates the instantaneous Reynolds stresses, including TKE and CTKE
+SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
+   REAL(ReKi), INTENT(IN)  :: v(3)               !< u,v,w components (streamwise, zero-mean)
+   
+   REAL(ReKi), INTENT(OUT) ::  uv                !< The instantaneous u'v' Reynolds stress at the hub
+   REAL(ReKi), INTENT(OUT) ::  uw                !< The instantaneous u'w' Reynolds stress at the hub
+   REAL(ReKi), INTENT(OUT) ::  vw                !< The instantaneous v'w' Reynolds stress at the hub
+   REAL(ReKi), INTENT(OUT) ::  TKE               !< The instantaneous TKE at the hub
+   REAL(ReKi), INTENT(OUT) ::  CTKE              !< The instantaneous CTKE the hub
+   
+   
+   uv = v(1)*v(2)
+   uw = v(1)*v(3)
+   vw = v(2)*v(3)
+   
+   TKE  = 0.5*(v(1)*v(1) + v(2)*v(2) + v(3)*v(3))
+   CTKE = 0.5*SQRT(uv*uv + uw*uw + vw*vw)
+   
+END SUBROUTINE
+!=======================================================================
 END MODULE TSSubs

@@ -66,7 +66,7 @@ USE TS_FileIO
    USE TS_RandNum
    USE TS_Profiles
    USE TS_VelocitySpectra
-
+use TS_CohStructures
 
 !BONNIE:*****************************
 ! USE    IFPORT, ONLY: TIMEF ! Wall Clock Time
@@ -80,68 +80,48 @@ IMPLICIT                   NONE
 
 REAL(DbKi)              ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
 REAL(DbKi)              ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
-REAL(DbKi), PARAMETER   ::  DblZero = 0.0                   ! Zero, used to compare 8-byte reals against zero in MAX() functions (to conform to F95 standards)
-REAL(DbKi)              ::  UBar                            ! The mean u-component wind speed at the hub
-REAL(DbKi)              ::  UHBar                           ! The mean horizontal wind speed at the hub
-REAL(DbKi)              ::  UHSum2                          ! The sum of the squared horizontal wind speed at the hub
-REAL(DbKi)              ::  UHTmp                           ! The instantaneous horizontal wind speed at the hub
-REAL(DbKi)              ::  UHTmp2                          ! The instantaneous squared horizontal wind speed at the hub
-REAL(DbKi)              ::  USum2                           ! The sum of the squared u-component wind speed at the hub
-REAL(DbKi)              ::  UTBar                           ! The mean total wind speed at the hub
-REAL(DbKi)              ::  UTmp                            ! The instantaneous u-component wind speed at the hub
-REAL(DbKi)              ::  UTmp2                           ! The instantaneous squared u-component wind speed at the hub
-REAL(DbKi)              ::  UTSum2                          ! The sum of the squared total wind speed at the hub
-REAL(DbKi)              ::  UTTmp                           ! The instantaneous total wind speed at the hub
-REAL(DbKi)              ::  UTTmp2                          ! The instantaneous squared total wind speed at the hub
-REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
-REAL(DbKi)              ::  UXSum                           ! The sum of the U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UXSum2                          ! The sum of the squared U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UXTmp                           ! The instantaneous U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UXTmp2                          ! The instantaneous squared U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UYBar                           ! The mean V-component (v rotated; y-direction) wind speed at the hub
-REAL(DbKi)              ::  UYSum                           ! The sum of the V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UYSum2                          ! The sum of the squared V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UYTmp                           ! The instantaneous V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UYTmp2                          ! The instantaneous squared V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UZBar                           ! The mean W-component (w rotated; z-direction) wind speed at the hub
-REAL(DbKi)              ::  UZSum                           ! The sum of the W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  UZSum2                          ! The sum of the squared W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  UZTmp                           ! The instantaneous W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  UZTmp2                          ! The instantaneous squared W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  VBar                            ! The mean v-component wind speed at the hub
-REAL(DbKi)              ::  VSum2                           ! The sum of the squared v-component wind speed at the hub
-REAL(DbKi)              ::  VTmp                            ! The instantaneous v-component wind speed at the hub
-REAL(DbKi)              ::  VTmp2                           ! The instantaneous squared v-component wind speed at the hub
-REAL(DbKi)              ::  WBar                            ! The mean w-component wind speed at the hub
-REAL(DbKi)              ::  WSum2                           ! The sum of the squared w-component wind speed at the hub
-REAL(DbKi)              ::  WTmp                            ! The instantaneous w-component wind speed at the hub
-REAL(DbKi)              ::  WTmp2                           ! The instantaneous squared w-component wind speed at the hub
+REAL(DbKi), PARAMETER   ::  DblZero = 0.0_DbKi              ! Zero, used to compare 8-byte reals against zero in MAX() functions (to conform to F95 standards)
 
-REAL(ReKi)              ::  CHFA                            ! Cosine of the Horizontal Flow Angle
+REAL(DbKi)              ::  USum                            ! The sum u-component wind speed at the hub
+REAL(DbKi)              ::  VSum                            ! The sum v-component wind speed at the hub
+REAL(DbKi)              ::  WSum                            ! The sum w-component wind speed at the hub
+REAL(ReKi)              ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
+REAL(ReKi)              ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
+REAL(ReKi)              ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
+
+REAL(ReKi)              ::  USig                            ! Standard deviation of the u-component wind speed at the hub
+REAL(ReKi)              ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
+REAL(ReKi)              ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
+REAL(ReKi)              ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
+
+
+
+REAL(ReKi)              ::  UVsum                           ! The sum of the u'v' Reynolds stress component at the hub
+REAL(ReKi)              ::  UWsum                           ! The sum of the u'w' Reynolds stress component at the hub
+REAL(ReKi)              ::  VWsum                           ! The sum of the v'w' Reynolds stress component at the hub
+
+REAL(DbKi)              ::  USum2                           ! The sum of the squared u-component wind speed at the hub
+REAL(DbKi)              ::  VSum2                           ! The sum of the squared v-component wind speed at the hub
+REAL(DbKi)              ::  WSum2                           ! The sum of the squared w-component wind speed at the hub
+REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
+
+REAL(ReKi)              ::  UGridMean                       ! Average wind speed at the points surrounding the hub
+REAL(ReKi)              ::  UGridSig                        ! Standard deviation of the wind speed at the points surrounding the hub
+REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensity of the points surrounding the hub
+
+
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
-REAL(ReKi)              ::  CVFA                            ! Cosine of the Vertical Flow Angle
 REAL(ReKi)              ::  CTKE                            ! Coherent Turbulent Kenetic Energy at the hub
-REAL(ReKi)              ::  CTKEmax                         ! Maximum instantaneous Coherent Turbulent Kenetic Energy at the hub
 REAL(ReKi)              ::  DelF5                           ! half of the delta frequency, used to discretize the continuous PSD at each point
 REAL(ReKi)              ::  DelF                            ! Delta frequency
 REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
-REAL(ReKi), PARAMETER   ::  KHT_LES_dT = 0.036335           ! The average time step in the LES test file, used here for the KH test
-REAL(ReKi), PARAMETER   ::  KHT_LES_Zm = 6.35475            ! The non-dimensional z dimension defined in LES test file, used here for the KH test
 REAL(ReKi)              ::  LC                              ! IEC coherency scale parameter
 REAL(ReKi)              ::  Lambda1                         ! IEC turbulence scale parameter
 REAL(ReKi)              ::  MaxEvtCTKE                      ! Maximum non-dimensional CTKE in events (used for scaling coherent events to appropriate size)
-REAL(ReKi)              ::  ScaleWid                        ! Scaling width for LE coherent turbulence (RotDiam in AeroDyn FD_Wind)
-REAL(ReKi)              ::  ScaleVel                        ! Scaling velocity for LE coherent turbulence, U0.  2*U0 is the difference in wind speed between the top and bottom of the wave.
-REAL(ReKi)              ::  SHFA                            ! Sine of the Horizontal Flow Angle
 REAL(ReKi)              ::  SigmaSlope                      ! Slope used with IEC models to determine target sigma and turbulent intensity
-REAL(ReKi)              ::  SumS                            ! Sum of the velocity-squared, used for calculating standard deviations in the summary file
-REAL(ReKi)              ::  SUstar                          ! Simulated U-star at the hub
-REAL(ReKi)              ::  SVFA                            ! Sine of the Vertical Flow Angle
 REAL(ReKi)              ::  TargetSigma                     ! The target standard deviation for the IEC models, if scaling is requested.
 REAL(ReKi)              ::  Time                            ! The time at each step (Used in the binary HH file for GenPro)
 REAL(ReKi)              ::  TKE                             ! Turbulent Kenetic Energy at the hub
-REAL(ReKi)              ::  TKEmax                          ! Maximum instantaneous Turbulent Kenetic Energy at the hub
-!REAL(ReKi)             ::  TmpPLExp                        ! Temporarily holds the Power Law Exponent for KH scaling
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
 REAL(ReKi)              ::  TmpW                            ! Temporarily holds the value of the w component
@@ -151,67 +131,18 @@ REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for 
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  TurbInt                         ! IEC target Turbulence Intensity 
 REAL(ReKi)              ::  TurbInt15                       ! Turbulence Intensity at hub height with a mean wind speed of 15 m/s
-REAL(ReKi)              ::  UGridMean                       ! Average wind speed at the points surrounding the hub
-REAL(ReKi)              ::  UGridSig                        ! Standard deviation of the wind speed at the points surrounding the hub
-REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensity of the points surrounding the hub
-REAL(ReKi)              ::  UHSig                           ! Approximate sigma of the horizontal wind speed at the hub point
-REAL(ReKi)              ::  UH_TI                           ! TI of the horizontal wind speed at the hub point
-REAL(ReKi)              ::  UHmax                           ! Maximum horizontal wind speed at the hub
-REAL(ReKi)              ::  UHmin                           ! Minimum horizontal wind speed at the hub
-REAL(ReKi)              ::  Umax                            ! Maximum u-component wind speed at the hub
-REAL(ReKi)              ::  Umin                            ! Minimum u-component wind speed at the hub
-REAL(ReKi)              ::  USig                            ! Standard deviation of the u-component wind speed at the hub
-REAL(ReKi)              ::  UTSig                           ! Standard deviation of the total wind speed at the hub
-REAL(ReKi)              ::  UT_TI                           ! Turbulent Intensity of the total wind speed at the hub
-REAL(ReKi)              ::  UTmax                           ! Maximum total wind speed at the hub
-REAL(ReKi)              ::  UTmin                           ! Minimum total wind speed at the hub
-REAL(ReKi)              ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
-REAL(ReKi)              ::  UVMin                           ! Minimum u'v' Reynolds Stress at the hub
-REAL(ReKi)              ::  UVTmp                           ! The instantaneous u'v' Reynolds stress at the hub
-REAL(ReKi)              ::  UV_RS                           ! The average u'v' Reynolds stress at the hub
-REAL(ReKi)              ::  UVcor                           ! The u-v cross component correlation coefficient at the hub
-REAL(ReKi)              ::  UVsum                           ! The sum of the u'v' Reynolds stress component at the hub
-REAL(ReKi)              ::  Uwave                           ! Wind speed at center of the k-h wave 
-REAL(ReKi)              ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  UWMin                           ! Minimum u'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  UWTmp                           ! The instantaneous u'w' Reynolds stress at the hub
-REAL(ReKi)              ::  UW_RS                           ! The average u'w' Reynolds stress at the hub
-REAL(ReKi)              ::  UWcor                           ! The u-w cross component correlation coefficient at the hub
-REAL(ReKi)              ::  UWsum                           ! The sum of the u'w' Reynolds stress component at the hub
-REAL(ReKi)              ::  UXmax                           ! Maximum U-component (X-direction) wind speed at the hub
-REAL(ReKi)              ::  UXmin                           ! Minimum U-component wind speed at the hub
-REAL(ReKi)              ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
-REAL(ReKi)              ::  UYmax                           ! Maximum V-component (Y-direction) wind speed at the hub
-REAL(ReKi)              ::  UYmin                           ! Minimum V-component wind speed at the hub
-REAL(ReKi)              ::  UYSig                           ! Standard deviation of the V-component wind speed at the hub
-REAL(ReKi)              ::  UZmax                           ! Maximum W-component (Z-direction) wind speed at the hub
-REAL(ReKi)              ::  UZmin                           ! Minimum W-component wind speed at the hub
-REAL(ReKi)              ::  UZSig                           ! Standard deviation of the W-component wind speed at the hub
-REAL(ReKi)              ::  U_TI                            ! The u-component turbulence intensity at the hub
-REAL(ReKi)              ::  Vmax                            ! Maximum v-component wind speed at the hub
-REAL(ReKi)              ::  Vmin                            ! Minimum v-component wind speed at the hub
-REAL(ReKi)              ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
-REAL(ReKi)              ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  VWMin                           ! Minimum v'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  VWTmp                           ! The instantaneous v'w' Reynolds stress at the hub
-REAL(ReKi)              ::  VW_RS                           ! The average v'w' Reynolds stress at the hub
-REAL(ReKi)              ::  VWcor                           ! The v-w cross component correlation coefficient at the hub
-REAL(ReKi)              ::  VWsum                           ! The sum of the v'w' Reynolds stress component at the hub
-REAL(ReKi)              ::  V_TI                            ! The v-component turbulence intensity at the hub
-REAL(ReKi)              ::  Wmax                            ! Maximum w-component wind speed at the hub
-REAL(ReKi)              ::  Wmin                            ! Minimum w-component wind speed at the hub
-REAL(ReKi)              ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
-REAL(ReKi)              ::  W_TI                            ! The w-component turbulence intensity at the hub
-REAL(ReKi)              ::  Zbottom                         ! The height of the lowest point on the grid (before tower points are added), equal to Z(1)
-REAL(ReKi)              ::  TmpReal                         ! A temporary variable holding a Z (height) value, and other misc. variables
+REAL(ReKi)              ::  TmpRndNum                       ! A temporary variable holding a random variate
 REAL(ReKi)              ::  HorVar                          ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  ROT                             ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  Total                           ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  TotalU                          ! Variables used when DEBUG_OUT is set             
 REAL(ReKi)              ::  TotalV                          ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  TotalW                          ! Variables used when DEBUG_OUT is set
+
+REAL(ReKi)              :: this_HFlowAng                    ! Horizontal flow angle.
+REAL(ReKi)              :: v3(3)                            ! temporary 3-component array containing velocity
+
 INTEGER                 ::  AllocStat                       ! The status of allocating space for variables
-INTEGER                 ::  HubIndx                         ! Index that tells where the hub point is in the V matrix
 INTEGER                 ::  I                               ! A loop counter
 INTEGER                 ::  IFreq                           ! Index for frequency
 INTEGER                 ::  II                              ! An index for points in the velocity matrix
@@ -232,7 +163,6 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 
 
-CHARACTER(1)            ::  Comp (3) = (/ 'u', 'v', 'w' /)  ! The names of the wind components
 
 
 !BONNIE:*****************************
@@ -337,7 +267,8 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrBHHTP )  THEN   
 
-      CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin' )
+      CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin' )  ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UFTP)
 !      CALL OpenBin ( UGTP, TRIM( RootName)//'.bin', 2 )  !RECORD LENGTH (2) IS NOT USED HERE
       FormStr = "( 3X , A , ' (hub-height binary turbulence-parameter file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.bin'
@@ -347,7 +278,8 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrFHHTP )  THEN     
 
-      CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat' )
+      CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat' ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UFTP )
       FormStr = "( 3X , A , ' (formatted turbulence-parameter file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.dat'
       CALL WrScr ( '    '//TRIM( RootName)//'.dat (a formatted turbulence-parameter file)' )
@@ -356,7 +288,8 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrADHH )  THEN     
 
-      CALL OpenFOutFile ( UAHH, TRIM( RootName)//'.hh' )
+      CALL OpenFOutFile ( UAHH, TRIM( RootName)//'.hh' ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UAHH )
       FormStr = "( 3X , A , '  (AeroDyn hub-height file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.hh'
       CALL WrScr ( '    '//TRIM( RootName)//'.hh  (an AeroDyn hub-height file)' )
@@ -425,6 +358,7 @@ ELSE
 ENDIF
 
 
+
    ! Calculate Total time and NumSteps.
    ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
    ! Make sure it is a multiple of 4 too.
@@ -435,13 +369,27 @@ IF ( Periodic ) THEN
    NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
    NumOutSteps = NumSteps
 ELSE
-   NumOutSteps = CEILING( ( UsableTime + GridWidth/UHub )/TimeStep )
+   NumOutSteps = CEILING( ( UsableTime + p_grid%GridWidth/UHub )/TimeStep )
    NumSteps    = MAX( CEILING( AnalysisTime / TimeStep ), NumOutSteps )
    NumSteps4   = ( NumSteps - 1 )/4 + 1
    NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
 END IF
 
 INumSteps   = 1.0/NumSteps
+
+NumFreq     = NumSteps/2
+DelF        = 1.0/( NumSteps*TimeStep )
+DelF5       = 0.5*DelF
+
+
+   !  Allocate/Initialize the array of frequencies.
+
+call AllocAry( Freq, NumFreq, 'Freq (frequency array)')
+
+DO IFreq=1,NumFreq
+   Freq(IFreq) = IFreq*DelF
+ENDDO 
+
 
    ! If we are going to generate debug output, open the debug file.
 
@@ -450,6 +398,14 @@ IF (DEBUG_OUT) THEN
    
    WRITE (UD,*)  'UHub=',UHub
    WRITE (UD,*)  'NumOutSteps, NumSteps, INumSteps=', NumOutSteps, NumSteps, INumSteps
+   
+   ROT     = 1.0/( NumGrid_Y*TimeStep ) 
+   WRITE (UD,*)  'TimeStep,DelF,NumFreq,ROT=',TimeStep,DelF,NumFreq,ROT
+   WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
+   
+   WRITE (UD,*)  'DelF=',DelF
+   WRITE (UD,*)  'Freq(1) = ',Freq(1),'  Freq(NumFreq) = ',Freq(NumFreq)
+   
 ENDIF
 
 
@@ -457,265 +413,59 @@ IF ( NumSteps < 8 )  THEN
    CALL TS_Abort ( 'Too few (less than 8) time steps.  Increase the usable length of the time series or decrease the time step.' )
 ENDIF
 
+
+
    ! Define the other parameters for the time series.
+CALL CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize )
 
-GridRes_Y = GridWidth  / REAL( NumGrid_Y - 1, ReKi )
-GridRes_Z = GridHeight / REAL( NumGrid_Z - 1, ReKi )      
+      
 
-Zbottom = HubHt + 0.5*RotorDiameter                         ! height of the highest grid points
-Zbottom = Zbottom - GridRes_Z * REAL(NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
-
-IF ( Zbottom <= 0.0 ) THEN
-   CALL TS_Abort ( 'The lowest grid point ('//TRIM(Flt2LStr(Zbottom))// ' m) must be above the ground. '//&
-                   'Adjust the appropriate values in the input file.' )
-ENDIF
-
-NumGrid_Y2 = INT( ( NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
-NumGrid_Z2 = INT( Tolerance + ( HubHt - Zbottom ) / GridRes_Z ) + 1 
-
-ExtraTwrPt = .FALSE.
-
-IF ( MOD(NumGrid_Y, 2) == 0 ) THEN
-   ExtraTwrPt = .TRUE.
-   ExtraHubPt = .TRUE.
-ELSEIF ( ABS((NumGrid_Z2-1)*GridRes_Z + Zbottom - HubHt) > Tolerance ) THEN
-   ExtraHubPt = .TRUE.
-ELSE
-   ExtraHubPt = .FALSE.
-ENDIF
-
-NumFreq = NumSteps/2
-DelF    = 1.0/( NumSteps*TimeStep )
-DelF5   = 0.5*DelF
-NTot    = NumGrid_Y*NumGrid_Z                ! Number of points in the regular grid
-
-IF (ExtraHubPT) THEN
-   NTot = NTot + 1                           ! Add the hub point if necessary
-   ZLim = NumGrid_Z+1
-   YLim = NumGrid_Y+1
-ELSE
-   ZLim = NumGrid_Z
-   YLim = NumGrid_Y
-ENDIF
-
-IF ( WrADTWR ) THEN
-
-      ! Compute the number of points between the bottom of the grid and the ground 
-      ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
- 
-   IZ = INT( ( Zbottom - Tolerance ) / GridRes_Z )
-
-   IF ( ExtraTwrPt ) THEN 
-      IZ = IZ + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
-   ENDIF
-
-   IF ( IZ > 0 ) THEN
-
-      ZLim = ZLim + IZ
-      NTot = NTot + IZ                       ! Add the number of tower points
-
-      IF ( .NOT. ExtraHubPT ) THEN
-         YLim = YLim + 1
-      ENDIF
-
-   ELSE
-
-      CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', .TRUE.)  
-
-      WrADTWR = .FALSE.
-      CLOSE( UATWR )
-
-   ENDIF
-
-ENDIF
-
-NSize   = NTot*( NTot + 1 )/2
 
 IF (DEBUG_OUT) THEN
-   ROT     = 1.0/( NumGrid_Y*TimeStep ) 
-   WRITE (UD,*)  'TimeStep,DelF,NumFreq,ROT=',TimeStep,DelF,NumFreq,ROT
-   WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
-ENDIF
-
-
-   !  Allocate the array of frequencies.
-
-ALLOCATE ( Freq(NumFreq) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumFreq/1024**2 ) )//' MB for the frequency array.' )
-ENDIF
-
-
-   ! Initialize the arrays.
-
-DO IFreq=1,NumFreq
-   Freq(IFreq) = IFreq*DelF
-ENDDO 
-
-IF (DEBUG_OUT) THEN
-   WRITE (UD,*)  'DelF=',DelF
-   WRITE (UD,*)  'Freq(1) = ',Freq(1),'  Freq(NumFreq) = ',Freq(NumFreq)
-   WRITE (UD,*)  'GridRes=', GridRes_Y, ' x ', GridRes_Z
+   WRITE (UD,*)  'GridRes=', p_grid%GridRes_Y, ' x ', p_grid%GridRes_Z
    WRITE (UD,*)  ' '
-   WRITE (UD,*)  'U='
+   WRITE (UD,*)  'U='   
 ENDIF
 
 
-   !  Allocate the array of the steady, u-component winds.
-
-ALLOCATE ( U(ZLim) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating memory for the array of the steady, u-component winds.' )
-ENDIF
-
-
-   !  Allocate the array of lateral locations of the grid points.
-
-ALLOCATE ( Y(YLim) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating memory for the lateral locations of the grid points.' )
-ENDIF
-
-
-   !  Allocate the array of vertical locations of the grid points.
-
-ALLOCATE ( Z(ZLim) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating memory for the vertical locations of the grid points.' )
-ENDIF
-
-IF ( SpecModel == SpecModel_GP_LLJ) THEN
-
-      ! Allocate the array for the z/l profile
-      
-   ALLOCATE ( ZL_profile(ZLim) , STAT=AllocStat )
-
-   IF ( AllocStat /= 0 )  THEN
-      CALL TS_Abort ( 'Error allocating memory for the z/l profile.' )
-   ENDIF
-      
-         ! Allocate the array for the ustar profile      
-   
-   ALLOCATE ( Ustar_profile(ZLim) , STAT=AllocStat )
-
-   IF ( AllocStat /= 0 )  THEN
-      CALL TS_Abort ( 'Error allocating memory for the friction velocity profile.' )
-   ENDIF
-     
-ENDIF
-
+   !  Wind speed:
+CALL AllocAry(U,     ZLim, 'u (steady, u-component winds)' )
+           
 IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
+   CALL AllocAry(WindDir_profile, ZLim, 'WindDir_profile (wind direction profile)' )                  ! Allocate the array for the wind direction profile      
    
-         ! Allocate the array for the wind direction profile      
-     
-   ALLOCATE ( WindDir_profile(ZLim) , STAT=AllocStat )
-
-   IF ( AllocStat /= 0 )  THEN
-      CALL TS_Abort ( 'Error allocating memory for the wind direction profile.' )
-   ENDIF
-   
-ENDIF   
-
-   !  Allocate the array of vertical locations of the grid points.
-
-ALLOCATE ( IYmax(ZLim) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating memory for the number of horizontal locations at each height.' )
-ENDIF
-
-
-   ! Initialize cartesian Y,Z values of the grid.
-
-DO IY = 1,NumGrid_Y
-   Y(IY)    = -0.5*GridWidth  + GridRes_Y*( IY - 1 )
-ENDDO
-
-DO IZ = 1,NumGrid_Z
-   Z(IZ)     = Zbottom + GridRes_Z*( IZ - 1 )
-   IYmax(IZ) = NumGrid_Y           ! Number of lateral points at this height
-ENDDO
-
-IF (ExtraHubPT) THEN
-
-   Y(NumGrid_Y+1)     = 0.0
-   Z(NumGrid_Z+1)     = HubHt
-   IYmax(NumGrid_Z+1) = 1
-
-   HubIndx = NumGrid_Y*NumGrid_Z + 1
-
-   JZ = NumGrid_Z + 2              ! The start of tower points, if they exist
-
-ELSE
-
-   HubIndx = NumGrid_Y*(NumGrid_Z2-1) + NumGrid_Y2
-
-   JZ = NumGrid_Z + 1              ! The start of tower points, if they exist
-
-ENDIF
-
-IF ( WrADTWR ) THEN
-
-   Y(YLim) = 0.0
-   
-   TmpReal  = Z(1)
-
-   IF ( ExtraTwrPt ) THEN 
-      TmpReal = TmpReal + GridRes_Z
-   ENDIF
-
-   DO IZ = JZ,ZLim
-      Z(IZ)     = TmpReal - GridRes_Z
-      TmpReal   = Z(IZ)
-
-      IYmax(IZ) = 1                 ! The number of lateral points at this height
-   ENDDO
-
-ENDIF
-
-
-IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
    U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType, UHANGLE=WindDir_profile) 
 ELSE IF ( WindProfileType(1:3) == 'API' )  THEN
    U(1:ZLim) = getWindSpeed( U_Ref, H_Ref, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
 ELSE 
    U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
 ENDIF
-IF ( ALLOCATED( ZL_profile ) )        ZL_profile(:) = getZLARY(    U(1:ZLim), Z(1:ZLim) )
-IF ( ALLOCATED( Ustar_profile ) )  Ustar_profile(:) = getUstarARY( U(1:ZLim), Z(1:ZLim) )
 
+IF ( SpecModel == SpecModel_GP_LLJ) THEN
 
-IF ( WrACT ) THEN
-   ScaleWid = RotorDiameter * DistScl           !  This is the scaled height of the coherent event data set
-   Zbottom  = HubHt - CTLz*ScaleWid             !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
-
-   IF ( KHtest ) THEN      
-         ! for LES test case....
-      ScaleVel = ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
-      ScaleVel = 50 * ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
-   ELSE
-   !   TmpPLExp = PLExp 
-   !   PLExp    = MIN( 2.0, 1.35*PLExp )        ! Increase the shear of the background (?)
-
-      ScaleVel =            getWindSpeed(UHub,HubHt,Zbottom+ScaleWid,RotorDiameter,PROFILE=WindProfileType)   ! Velocity at the top of the wave
-      ScaleVel = ScaleVel - getWindSpeed(UHub,HubHt,Zbottom,         RotorDiameter,PROFILE=WindProfileType)   ! Shear across the wave
-      ScaleVel = 0.5 * ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
+      ! Allocate the arrays for the z/l and ustar profile
       
-   !   PLExp = TmpPLExp
-   ENDIF
+   CALL AllocAry(ZL_profile,    ZLim, 'ZL_profile (z/l profile)' )
+   CALL AllocAry(Ustar_profile, ZLim, 'Ustar_profile (friction velocity profile)' )         
 
-   Uwave = getWindSpeed(UHub,HubHt,Zbottom+0.5*ScaleWid,RotorDiameter,PROFILE=WindProfileType)                 ! WindSpeed at center of wave
+   ZL_profile(:) = getZLARY(    U(1:ZLim), Z(1:ZLim) )
+   Ustar_profile(:) = getUstarARY( U(1:ZLim), Z(1:ZLim) )
+   
+END IF
 
-!BONNIE: MAYBE WE SHOULDN'T OPEN THIS FILE UNTIL WE NEED TO WRITE TO IT
-   IF (ScaleVel < 0. ) THEN
-      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', .TRUE. )
-      WrACT = .FALSE.
+
+IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
+   IF (ExtraHubPT) THEN    
+      JZ = NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
+   ELSE
+      JZ = NumGrid_Z2
    ENDIF
-ENDIF
+   HH_HFlowAng = WindDir_profile(JZ)   
+ELSE
+   HH_HFlowAng = HFlowAng
+END IF
+
+CALL CohStr_Open()
 
 
 IF (DEBUG_OUT) THEN
@@ -1032,9 +782,9 @@ V(:,:,:) = 0.0    ! initialize the velocity matrix
 
 IF (SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (SpecModel == SpecModel_API) THEN
-        CALL CohSpecVMat_API(LC, NSize, Comp) 
+        CALL CohSpecVMat_API(LC, NSize) 
     ELSE
-        CALL CohSpecVMat(LC, NSize, Comp)
+        CALL CohSpecVMat(LC, NSize)
     ENDIF
 ENDIF
 
@@ -1091,6 +841,7 @@ IF ( ALLOCATED( TRH  ) )  DEALLOCATE( TRH  )
 
 CALL ExitFFT
 
+
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
 SELECT CASE ( SpecModel )
@@ -1115,12 +866,12 @@ CASE (SpecModel_GP_LLJ, &
          WSum2 = 0.0
          
          DO IT = 1,NumSteps
-            UWsum = UWsum + V(IT,HubIndx,1) * V(IT,HubIndx,3)
-            UVsum = UVsum + V(IT,HubIndx,1) * V(IT,HubIndx,2)
-            VWsum = VWsum + V(IT,HubIndx,2) * V(IT,HubIndx,3)
-            USum2 = USum2 + V(IT,HubIndx,1) * V(IT,HubIndx,1)
-            VSum2 = VSum2 + V(IT,HubIndx,2) * V(IT,HubIndx,2)
-            WSum2 = WSum2 + V(IT,HubIndx,3) * V(IT,HubIndx,3)
+            UWsum = UWsum + V(IT,p_grid%HubIndx,1) * V(IT,p_grid%HubIndx,3)
+            UVsum = UVsum + V(IT,p_grid%HubIndx,1) * V(IT,p_grid%HubIndx,2)
+            VWsum = VWsum + V(IT,p_grid%HubIndx,2) * V(IT,p_grid%HubIndx,3)
+            USum2 = USum2 + V(IT,p_grid%HubIndx,1) * V(IT,p_grid%HubIndx,1)
+            VSum2 = VSum2 + V(IT,p_grid%HubIndx,2) * V(IT,p_grid%HubIndx,2)
+            WSum2 = WSum2 + V(IT,p_grid%HubIndx,3) * V(IT,p_grid%HubIndx,3)
          ENDDO
          UWsum = UWsum * INumSteps  !These "sums" are now "means"
          UVsum = UVsum * INumSteps  !These "sums" are now "means"
@@ -1180,13 +931,10 @@ CASE (SpecModel_GP_LLJ, &
 
       IF (ScaleIEC > 0) THEN
 
-         FormStr = "(//,'Scaling statistics from the hub grid point:',/)"
-         WRITE( US, FormStr )
-                  
-         FormStr = "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')"
-         WRITE( US, FormStr )
-         FormStr = "(2X,'---------  ------------------  ---------------------  --------------')"
-         WRITE( US, FormStr )
+         WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
+         WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
+         WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
+         
          FormStr = "(2X,3x,A,7x,f11.3,9x,f12.3,11x,f10.3)"                        
 
          DO IVec = 1,3
@@ -1194,8 +942,8 @@ CASE (SpecModel_GP_LLJ, &
             CGridSum2 = 0.0
                            
             DO IT=1,NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-               CGridSum  = CGridSum  + V( IT, HubIndx, IVec )
-               CGridSum2 = CGridSum2 + V( IT, HubIndx, IVec )* V( IT, HubIndx, IVec )
+               CGridSum  = CGridSum  + V( IT, p_grid%HubIndx, IVec )
+               CGridSum2 = CGridSum2 + V( IT, p_grid%HubIndx, IVec )* V( IT, p_grid%HubIndx, IVec )
             ENDDO ! IT
                
             UGridMean = CGridSum/NumSteps !BJJ: NumOutSteps  -- scale to the output value?
@@ -1236,483 +984,39 @@ CASE (SpecModel_GP_LLJ, &
 
 END SELECT
 
-      ! Write Headers for Hub-Height files
 
-  ! Generate header for HH AeroDyn file.
+
+!..............................................................................
+! Write hub-height output files (before adding mean and rotating final results)
+!..............................................................................
 
 IF ( WrADHH )  THEN
-
-   CALL WrScr ( ' Hub-height AeroDyn data were written to "'//TRIM( RootName )//'.hh"' )
-
-   FormStr = "( '! This hub-height wind-speed file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )"
-   WRITE (UAHH,FormStr)   TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
-
-   FormStr = "( '!' )"
-   WRITE (UAHH,FormStr)
-
-   FormStr = "( '! The requested statistics for this data were:' )"
-   WRITE (UAHH,FormStr)
-
-   FormStr = "( '!    Mean Total Wind Speed = ' , F8.3 , ' m/s' )"
-   WRITE (UAHH,FormStr)  UHub
-
-   IF ( SpecModel == SpecModel_IECKAI .OR. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM ) THEN
-      FormStr = "( '!    Turbulence Intensity  = ' , F8.3 , '%' )"
-      WRITE (UAHH,FormStr)  100.0*TurbInt
-   ENDIF
-
-   FormStr = "( '!' )"
-   WRITE (UAHH,FormStr)
-
-   FormStr = "( '!   Time  HorSpd  WndDir  VerSpd  HorShr  VerShr  LnVShr  GstSpd' )"
-   WRITE (UAHH,FormStr)
-
-   FormStr = "( '!  (sec)   (m/s)   (deg)   (m/s)     (-)     (-)     (-)   (m/s)' )"
-   WRITE (UAHH,FormStr)
-
-ENDIF ! ( WrADHH )
-
-
-   ! Generate hub-height formatted turbulence parameters file header.
-
-IF ( WrFHHTP )  THEN
-
-   CALL WrScr ( ' Hub-height formatted turbulence parameters were written to "'//TRIM( RootName )//'.dat"' )
-
-   FormStr = "( / 'This hub-height turbulence-parameter file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' / )"
-   WRITE (UFTP,FormStr)  TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
- 
-   FormStr = "('   Time',6X,'U',7X,'Uh',7X,'Ut',8X,'V',8X,'W',8X,'u''',7X,'v''',7X,'w'''," &
-           //"6X,'u''w''',5X,'u''v''',5X,'v''w''',5X,'TKE',6X,'CTKE')"
-   WRITE (UFTP,FormStr)
-
-ENDIF ! WrFHHTP
-
-
-   ! Inform user if HH binary turbulence parameters are being written.
+   CALL WrHH_ADtxtfile(TurbInt)   
+END IF
 
 IF ( WrBHHTP )  THEN
-   CALL WrScr ( ' Hub-height binary turbulence parameters were written to "'//TRIM( RootName )//'.bin"' )
-ENDIF
-
-
-   ! Initialize statistical quantities for hub-height turbulence parameters.
-
-CALL WrScr ( ' Computing hub-height statistics' )
-
-CTKEmax = -HUGE( CTKEmax )
-TKEmax  = -HUGE(  TKEmax )
-UBar    =      0.0
-UHBar   =      0.0
-UHmax   = -HUGE( UHmax )
-UHmin   =  HUGE( UHmin )
-UHSum2  =      0.0
-Umax    = -HUGE( Umax )
-Umin    =  HUGE( Umin )
-USum2   =      0.0
-UTBar   =      0.0
-UTmax   = -HUGE( UTmax )
-UTmin   =  HUGE( UTmin )
-UTSum2  =      0.0
-UV_RS   =      0.0
-UVMax   =  V(1,HubIndx,1)*V(1,HubIndx,2) 
-UVMin   =  HUGE( UVMin )
-UVsum   =      0.0
-UW_RS   =      0.0
-UWMax   =  V(1,HubIndx,1)*V(1,HubIndx,3) 
-UWMin   =  HUGE( UWMin )
-UWsum   =      0.0
-VBar    =      0.0
-Vmax    = -HUGE( Vmax )
-Vmin    =  HUGE( Vmin )
-VSum2   =      0.0
-VW_RS   =      0.0
-VWMax   =  V(1,HubIndx,2)*V(1,HubIndx,3)
-VWMin   =  HUGE( VWMin )
-VWsum   =      0.0
-WBar    =      0.0
-Wmax    = -HUGE( Wmax )
-Wmin    =  HUGE( Wmin )
-WSum2   =      0.0
-UXBar   =      0.0
-UXmax   = -HUGE( UXmax )
-UXmin   =  HUGE( UXmin )
-UXSum   =      0.0
-UXSum2  =      0.0
-UXTmp   =      0.0
-UXTmp2  =      0.0
-UYBar   =      0.0
-UYmax   = -HUGE( UYmax )
-UYmin   =  HUGE( UYmin )
-UYSum   =      0.0
-UYSum2  =      0.0
-UYTmp   =      0.0
-UYTmp2  =      0.0
-UZBar   =      0.0
-UZmax   = -HUGE( UZmax )
-UZmin   =  HUGE( UZmin )
-UZSum   =      0.0
-UZSum2  =      0.0
-UZTmp   =      0.0
-UZTmp2  =      0.0
-
-IF ( ALLOCATED( WindDir_profile ) ) THEN
-   IF (ExtraHubPT) THEN    
-      JZ = NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
-   ELSE
-      JZ = NumGrid_Z2
-   ENDIF
-   CHFA = COS( WindDir_profile(JZ)*D2R )
-   SHFA = SIN( WindDir_profile(JZ)*D2R )
-ELSE
-   CHFA = COS( HFlowAng*D2R )
-   SHFA = SIN( HFlowAng*D2R )
-ENDIF
-         
-CVFA = COS( VFlowAng*D2R )
-SVFA = SIN( VFlowAng*D2R )
-
-DO IT=1,NumSteps
-
-   Time = TimeStep*( IT - 1 )
-
-      ! Calculate longitudinal (UTmp), lateral (VTmp), and upward (WTmp)
-      ! values for hub station, as well as rotated (XTmp, YTmp, ZTmp) 
-      ! components applying specified flow angles.
-
-      ! Add mean wind speed to the streamwise component
-   UTmp = V(IT,HubIndx,1) + UHub
-   VTmp = V(IT,HubIndx,2)
-   WTmp = V(IT,HubIndx,3)
-   
-      ! Rotate the wind components from streamwise orientation to the X-Y-Z grid at the Hub      
-   UXTmp = UTmp*CHFA*CVFA - VTmp*SHFA - WTmp*CHFA*SVFA
-   UYTmp = UTmp*SHFA*CVFA + VTmp*CHFA - WTmp*SHFA*SVFA  
-   UZTmp = UTmp*SVFA                  + WTmp*CVFA
-
-      ! Calculate hub horizontal wind speed (UHTmp) and Total wind speed (UTTmp)
-   UTmp2 = UTmp*UTmp          !flow coordinates
-   VTmp2 = VTmp*VTmp
-   WTmp2 = WTmp*WTmp
-   
-   UXTmp2 = UXTmp*UXTmp       !inertial frame coordinates
-   UYTmp2 = UYTmp*UYTmp
-   UZTmp2 = UZTmp*UZTmp
-   
-   UHTmp2 = UXTmp2 + UYTmp2   !inertial frame coordinates
-   UTTmp2 = UHTmp2 + UZTmp2
-
-   UHTmp = SQRT( UHTmp2 )     !inertial frame coordinates
-   UTTmp = SQRT( UTTmp2 )
-
-      ! Form running sums for hub standard deviations
-
-   UBar   = UBar   + UTmp     !flow coordinates
-   VBar   = VBar   + VTmp     !flow coordinates
-   WBar   = WBar   + WTmp     !flow coordinates
-
-   USum2  = USum2  + UTmp2    !flow coordinates
-   VSum2  = VSum2  + VTmp2    !flow coordinates
-   WSum2  = WSum2  + WTmp2    !flow coordinates
-
-   UXBar   = UXBar + UXTmp
-   UYBar   = UYBar + UYTmp
-   UZBar   = UZBar + UZTmp
-
-   UXSum2  = UXSum2 + UXTmp2
-   UYSum2  = UYSum2 + UYTmp2
-   UZSum2  = UZSum2 + UZTmp2
-
-   UHBar  = UHBar  + UHTmp
-   UTBar  = UTBar  + UTTmp
-
-   UHSum2 = UHSum2 + UHTmp2
-   UTSum2 = UTSum2 + UTTmp2
-
-
-      ! Determine hub extremes.
-      
-   IF ( UTmp  > Umax  )  Umax  = UTmp     !flow coordinates,
-   IF ( UTmp  < Umin  )  Umin  = UTmp     !flow coordinates,
-
-   IF ( VTmp  > Vmax  )  Vmax  = VTmp     !flow coordinates,
-   IF ( VTmp  < Vmin  )  Vmin  = VTmp     !flow coordinates,
-
-   IF ( WTmp  > Wmax  )  Wmax  = WTmp     !flow coordinates,
-   IF ( WTmp  < Wmin  )  Wmin  = WTmp     !flow coordinates,
-
-   IF ( UXTmp > UXmax )  UXmax = UXTmp
-   IF ( UXTmp < UXmin )  UXmin = UXTmp
-
-   IF ( UYTmp > UYmax )  UYmax = UYTmp
-   IF ( UYTmp < UYmin )  UYmin = UYTmp
-
-   IF ( UZTmp > UZmax )  UZmax = UZTmp
-   IF ( UZTmp < UZmin )  UZmin = UZTmp
-
-   IF ( UHTmp > UHmax )  UHmax = UHTmp
-   IF ( UHTmp < UHmin )  UHmin = UHTmp
-
-   IF ( UTTmp > UTmax )  UTmax = UTTmp
-   IF ( UTTmp < UTmin )  UTmin = UTTmp
-
-      ! Find maxes and mins of instantaneous hub Reynolds stresses u'w', u'v', and v'w'
-
-   UVTmp = V(IT,HubIndx,1)*V(IT,HubIndx,2)
-   UWTmp = V(IT,HubIndx,1)*V(IT,HubIndx,3)
-   VWTmp = V(IT,HubIndx,2)*V(IT,HubIndx,3)
-
-   IF     ( UVTmp < UVMin )  THEN
-      UVMin = UVTmp
-   ELSEIF ( UVTmp > UVMax )  THEN
-      UVMax = UVTmp
-   ENDIF
-
-   IF     ( UWTmp < UWMin )  THEN
-      UWMin = UWTmp
-   ELSEIF ( UWTmp > UWMax )  THEN
-      UWMax = UWTmp
-   ENDIF
-
-   IF     ( VWTmp < VWMin )  THEN
-      VWMin = VWTmp
-   ELSEIF ( VWTmp > VWMax )  THEN
-      VWMax = VWTmp
-   ENDIF
-
-      ! Find maximum of instantaneous TKE and CTKE.
-
-   TKE  = 0.5*(V(IT,HubIndx,1)*V(IT,HubIndx,1) + V(IT,HubIndx,2)*V(IT,HubIndx,2) + V(IT,HubIndx,3)*V(IT,HubIndx,3))
-   CTKE = 0.5*SQRT(UVTmp*UVTmp + UWTmp*UWTmp + VWTmp*VWTmp)
-
-   IF (CTKE > CTKEmax) CTKEmax = CTKE
-   IF ( TKE >  TKEmax)  TKEmax =  TKE
-
-      ! Find sums for mean and square Reynolds stresses for hub-level simulation.
-   UVsum = UVsum + UVTmp
-   UWsum = UWsum + UWTmp
-   VWsum = VWsum + VWTmp
-
-         ! Are we generating HH AeroDyn files?
-
-   IF ( IT <= NumOutSteps ) THEN
-      IF ( WrADHH )  THEN
-         WRITE (UAHH,'(F8.3,3F8.2,3F8.3,F8.2)')  Time, UHTmp, -1.0*R2D*ATAN2( UYTmp , UXTmp ), &
-                                                   UZTmp, 0.0, PLExp, 0.0, 0.0 
-!bjj: Should we output instantaneous horizontal shear, instead of 0?  
-!     Should the power law exponent be an instantaneous value, too?
-!                                                   
-      ENDIF ! ( WrADHH )
-
-
-         ! Output HH binary turbulence parameters for GenPro analysis.
-         ! Output order:  Time,U,Uh,Ut,V,W,u',v',w',u'w',u'v',v'w',TKE,CTKE.
-   
-      IF ( WrBHHTP )  THEN
-
-            !bjj: Vtmp = V(IT,HubIndx,2); WTmp = V(IT,HubIndx,3) so it's redundant to output them twice:
-
-         WRITE (UGTP)  REAL(Time,SiKi), REAL(UXTmp,SiKi), REAL(UHTmp,SiKi), REAL(UTTmp,SiKi), &
-                                        REAL(UYTmp,SiKi), REAL(UZTmp,SiKi), &
-                       REAL(V(IT,HubIndx,1),SiKi), REAL(V(IT,HubIndx,2),SiKi), REAL(V(IT,HubIndx,3),SiKi), &
-                       REAL(UWTmp,SiKi), REAL(UVTmp,SiKi), REAL(VWTmp,SiKi), REAL(TKE,SiKi), REAL(CTKE,SiKi)                        
-
-      ENDIF
-
-
-         ! Output HH formatted turbulence parameters for plotting and analysis.
-         ! Output order:  ET,U,Uh,Ut,V,W,u',v',w',u'w',u'v',v'w', TKE, CTKE.
-
-      IF ( WrFHHTP )  THEN
-         WRITE(UFTP,'(F7.2,13F9.3)') Time,UXTmp,UHTmp,UTTmp,UYTmp,UZTmp, &
-                                     V(IT,HubIndx,1), V(IT,HubIndx,2), V(IT,HubIndx,3), &
-                                     UWTmp, UVTmp, VWTmp, TKE, CTKE
-      ENDIF
-
-   ENDIF !IT <= NumOutSteps
-
-ENDDO ! IT
-
-   ! Close hub-height output files
-   
-IF ( WrADHH  ) CLOSE(UAHH)
-IF ( WrFHHTP ) CLOSE(UFTP)
-IF ( WrBHHTP ) CLOSE(UGTP)
-
-
-   ! Calculate mean hub-height Reynolds stresses.
-UW_RS =  UWsum*INumSteps
-UV_RS =  UVsum*INumSteps
-VW_RS =  VWsum*INumSteps
-
-   ! Simulated Hub UStar.
-SUstar = SQRT( ABS( UW_RS ) )
-
-   ! Calculate mean values for hub station.
-
-UBar = UBar*INumSteps
-VBar = VBar*INumSteps
-WBar = WBar*INumSteps
-
-UXBar = UXBar*INumSteps
-UYBar = UYBar*INumSteps
-UZBar = UZBar*INumSteps
-
-UHBar = UHBar*INumSteps
-UTBar = UTBar*INumSteps
-
-
-   ! Calculate the standard deviations for hub station.
-   ! (SNWind/SNLwind-3D) NOTE: This algorithm is the approximate algorithm.
-   ! bjj: do the algebra and you'll find that it's std() using the 1/n definition   
-
-USig  = SQRT( MAX( USum2 *INumSteps-UBar *UBar , DblZero ) )
-VSig  = SQRT( MAX( VSum2 *INumSteps-VBar *VBar , DblZero ) )
-WSig  = SQRT( MAX( WSum2 *INumSteps-WBar *WBar , DblZero ) )
-
-UXSig = SQRT( MAX( UXSum2*INumSteps-UXBar*UXBar, DblZero ) )
-UYSig = SQRT( MAX( UYSum2*INumSteps-UYBar*UYBar, DblZero ) )
-UZSig = SQRT( MAX( UZSum2*INumSteps-UZBar*UZBar, DblZero ) )
-
-UHSig = SQRT( MAX( UHSum2*INumSteps-UHBar*UHBar, DblZero ) )
-UTSig = SQRT( MAX( UTSum2*INumSteps-UTBar*UTBar, DblZero ) )
-
-
-   ! Calculate Cross-component correlation coefficients
-UWcor = ( UW_RS ) / (USig * WSig) ! this definition assumes u' and w' have zero mean
-UVcor = ( UV_RS ) / (USig * VSig)
-VWcor = ( VW_RS ) / (VSig * WSig)
-
-
-   ! Calculate turbulence intensities.
-U_TI = USig/UBar    
-V_TI = VSig/UBar
-W_TI = WSig/UBar
-
-UH_TI = UHSig/UHBar
-UT_TI = UTSig/UTBar
-
-
-   ! Write out the hub-level stats to the summary file.
-
-CALL WrScr ( ' Writing statistics to summary file' )
-
-FormStr = "(//,'Hub-Height Simulated Turbulence Statistical Summary:')"
-WRITE(US,FormStr)
-
-FormStr = "(/,3X,'Type of Wind        Min (m/s)   Mean (m/s)    Max (m/s)  Sigma (m/s)       TI (%)')"
-WRITE(US,FormStr)
-
-FormStr = "(  3X,'----------------    ---------   ----------    ---------  -----------       ------')"
-WRITE(US,FormStr)
-
-FormStr = "(3X,A,F13.2,2F13.2,2F13.3)"
-!bjj for analysis, extra precision: FormStr = "(3X,A,F13.2,2F13.2,2F13.6)"
-
-WRITE (US,FormStr)  'Longitudinal (u)',  Umin,  UBar,  Umax,  USig, 100.0* U_TI
-WRITE (US,FormStr)  'Lateral (v)     ',  Vmin,  VBar,  Vmax,  VSig, 100.0* V_TI
-WRITE (US,FormStr)  'Vertical (w)    ',  Wmin,  WBar,  Wmax,  WSig, 100.0* W_TI
-WRITE (US,FormStr)  'U component     ', UXmin, UXBar, UXmax, UXSig, 100.0*UXSig/UXBar
-WRITE (US,FormStr)  'V component     ', UYmin, UYBar, UYmax, UYSig, 100.0*UYSig/UXBar
-WRITE (US,FormStr)  'W component     ', UZmin, UZBar, UZmax, UZSig, 100.0*UZSig/UXBar
-WRITE (US,FormStr)  'Horizontal (U&V)', UHmin, UHBar, UHmax, UHSig, 100.0*UH_TI
-WRITE (US,FormStr)  'Total           ', UTmin, UTBar, UTmax, UTSig, 100.0*UT_TI
-
-FormStr = "(/,3X,'                    Min Reynolds     Mean Reynolds    Max Reynolds    Correlation')"
-WRITE(US,FormStr)
-FormStr = "(  3X,'Product             Stress (m/s)^2   Stress (m/s)^2   Stress (m/s)^2  Coefficient')"
-WRITE(US,FormStr)
-FormStr = "(  3X,'----------------    --------------   --------------   --------------  -----------')"
-WRITE(US,FormStr)
-
-FormStr = "(3X,A,3(3X,F12.3,3X),F11.3)"
-WRITE (US,FormStr)  "u'w'            ",  UWMin,  UW_RS, UWMax, UWcor
-WRITE (US,FormStr)  "u'v'            ",  UVMin,  UV_RS, UVMax, UVcor
-WRITE (US,FormStr)  "v'w'            ",  VWMin,  VW_RS, VWMax, VWcor
-
-FormStr = "(3X,A,' = ',F10.3,A)"
-WRITE(US,"(/)")   ! blank line
-WRITE(US,FormStr)  "Friction Velocity (Ustar) ", SUstar,  " m/s"
-WRITE(US,FormStr)  "Maximum Instantaneous TKE ", TKEmax,  " (m/s)^2"
-WRITE(US,FormStr)  "Maximum Instantaneous CTKE", CTKEmax, " (m/s)^2"
-
-   !  Allocate the array of standard deviations.
-
-ALLOCATE ( SDary(NumGrid_Y) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating memory for the array of standard deviations.' )
-ENDIF
-
-
-   ! Calculate standard deviations for each grid point.  Write them to summary file.
-
-FormStr = "(//,'Grid Point Variance Summary:',/)"
-WRITE(US,FormStr)
-
-FormStr = "(3X,'Y-coord',"//TRIM(FLT2LSTR(REAL(NumGrid_Y,ReKi)))//"F8.2)"
-
-WRITE(US,FormStr)  Y(1:NumGrid_Y)
-
-FormStr1 = "(/,3X'Height   Standard deviation at grid points for the ',A,' component:')"
-FormStr2 = "(F9.2,1X,"//TRIM(FLT2LSTR(REAL(NumGrid_Y,ReKi)))//"F8.3)"
-
-
-UTmp = 0
-VTmp = 0
-WTmp = 0
-
-DO IVec=1,3
-
-   WRITE(US,FormStr1)  Comp(IVec)
-
-   DO IZ=NumGrid_Z,1,-1
-
-      DO IY=1,NumGrid_Y
-
-         II   = (IZ-1)*NumGrid_Y+IY
-         SumS = 0.0
-
-         DO IT=1,NumSteps
-            SumS = SumS + V(IT,II,IVec)**2            
-         ENDDO ! IT         
-
-         SDary(IY) = SQRT(SumS*INumSteps)   !  Was:  SDary(IZ,IY) = SQRT(SumS*INumSteps)/U(IZ,NumGrid/2)
-
-      ENDDO ! IY
-
-      WRITE(US,FormStr2) Z(IZ), SDary(1:NumGrid_Y)
-
-      IF ( IVec == 1 ) THEN
-         UTmp = UTmp + SUM( SDary )
-      ELSEIF ( IVec == 2 ) THEN
-         VTmp = VTmp + SUM( SDary )
-      ELSE
-         WTmp = WTmp + SUM( SDary )
-      ENDIF
-   ENDDO ! IZ
-
-ENDDO ! Ivec
-
-FormStr2 = "(6X,A,' component: ',F8.3,' m/s')"
-WRITE(US,"(/'   Mean standard deviation across all grid points:')")
-WRITE(US,FormStr2) Comp(1), UTmp / ( NumGrid_Y*NumGrid_Z )
-WRITE(US,FormStr2) Comp(2), VTmp / ( NumGrid_Y*NumGrid_Z ) 
-WRITE(US,FormStr2) Comp(3), WTmp / ( NumGrid_Y*NumGrid_Z ) 
-
-
-   !  Deallocate the array of standard deviations.
-
-IF ( ALLOCATED( SDary ) )  DEALLOCATE( SDary )
-
-   ! Add mean wind to u' components.
-
+   CALL WrHH_binary()   
+END IF
+
+IF ( WrFHHTP )  THEN
+   CALL WrHH_text()   
+END IF
+
+   ! Write statistics of the run to the summary file:
+CALL WrSum_Stats(USig, VSig, WSig, UXSig)
+p_CohStr%WSig=WSig
+
+!..............................................................................
+! Add mean wind to u' components and rotate to inertial reference  
+!  frame coordinate system
+!..............................................................................
 II = 0
 DO IZ=1,ZLim   
 
    IF ( ALLOCATED( WindDir_profile ) ) THEN  ! The horizontal flow angle changes with height
-      CHFA = COS( WindDir_profile(IZ)*D2R )
-      SHFA = SIN( WindDir_profile(IZ)*D2R )
+      this_HFlowAng = WindDir_profile(IZ)
+   ELSE
+      this_HFlowAng = HFlowAng
    ENDIF      
 
   DO IY=1,IYmax(IZ)  
@@ -1721,22 +1025,14 @@ DO IZ=1,ZLim
 
       DO IT=1,NumSteps
 
-            ! Add mean wind speed to the streamwise component
+            ! Add mean wind speed to the streamwise component and
+            ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
             
-         TmpU = V(IT,II,1) + U(IZ)
-         TmpV = V(IT,II,2)
-         TmpW = V(IT,II,3)
-         
-            ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates
-                     
-         V(IT,II,1) = TmpU*CHFA*CVFA - TmpV*SHFA - TmpW*CHFA*SVFA
-         V(IT,II,2) = TmpU*SHFA*CVFA + TmpV*CHFA - TmpW*SHFA*SVFA  
-         V(IT,II,3) = TmpU*SVFA                  + TmpW*CVFA                  
-
+         v3 = V(IT,II,:)
+         CALL CalculateWindComponents( v3, U(IZ), this_HFlowAng, VFlowAng, V(IT,II,:) )
+                        
       ENDDO ! IT
-
   ENDDO ! IY
-
 ENDDO ! IZ
 
 TmpU = MAX( ABS(MAXVAL(U)-UHub), ABS(MINVAL(U)-UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files
@@ -1757,15 +1053,15 @@ IF ( WrACT ) THEN
          ! If the coherent structures do not cover the whole disk, increase the shear
 
       IF ( DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
-         CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpReal )
-         ScaleVel = ScaleVel * ( 1.0 + TmpReal * (1 - DistScl) / DistScl )
+         CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum ) !returns TmpRndNum, a random variate
+         p_CohStr%ScaleVel = p_CohStr%ScaleVel * ( 1.0 + TmpRndNum * (1 - DistScl) / DistScl )
       ENDIF
 
          !Apply a scaling factor to account for short inter-arrival times getting wiped out due to long events
 
-      ScaleVel =  ScaleVel*( 1.0 + 323.1429 * EXP( -MAX(Uwave,10.0) / 2.16617 ) )
+      p_CohStr%ScaleVel =  p_CohStr%ScaleVel*( 1.0 + 323.1429 * EXP( -MAX(p_CohStr%Uwave,10.0) / 2.16617 ) )
 
-      !TSclFact = ScaleWid / (ScaleVel * Zm_max)
+      !TSclFact = p_CohStr%ScaleWid / (ScaleVel * Zm_max)
 
    ENDIF
 
@@ -1784,11 +1080,11 @@ IF ( WrACT ) THEN
                      ! Increase the Scaling Velocity for computing U,V,W in AeroDyn
                      ! These numbers are based on LIST/ART data (58m-level sonic anemometer)
 
-                  CTKE =  0.616055*Rich_No - 0.242143*Uwave + 23.921801*WSig - 11.082978
+                  CTKE =  0.616055*Rich_No - 0.242143*p_CohStr%Uwave + 23.921801*WSig - 11.082978
             
                      ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
-                  CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpReal )
-                  CTKE = MAX( CTKE + (2.0 * TmpReal - 1.0) * 6.0, 0.0 )
+                  CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum )
+                  CTKE = MAX( CTKE + (2.0 * TmpRndNum - 1.0) * 6.0, 0.0 )
 
                   IF ( CTKE > 0.0 ) THEN
                      IF ( CTKE > 20.0)  THEN    ! Correct with residual
@@ -1804,22 +1100,22 @@ IF ( WrACT ) THEN
                
             CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
 
-               CTKE = pkCTKE_LLJ(Zbottom+0.5*ScaleWid)
+               CTKE = pkCTKE_LLJ(p_grid%Zbottom+0.5*p_CohStr%ScaleWid)
                
             CASE ( SpecModel_WF_UPW )
-               CTKE = -2.964523*Rich_No - 0.207382*Uwave + 25.640037*WSig - 10.832925
+               CTKE = -2.964523*Rich_No - 0.207382*p_CohStr%Uwave + 25.640037*p_CohStr%WSig - 10.832925
                
             CASE ( SpecModel_WF_07D )
-               CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*WSig - 0.106633
+               CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*p_CohStr%WSig - 0.106633
 
                IF ( (Rich_No > -0.025) .AND. (Rich_No < 0.05) .AND. (UStar > 1.0) .AND. (UStar < 1.56) ) THEN
-                  CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpReal )  ! Add a random residual
-                  CTKE = CTKE + TmpReal
+                  CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpRndNum )  ! Add a random residual
+                  CTKE = CTKE + TmpRndNum
                ENDIF
                
                
             CASE ( SpecModel_WF_14D )
-               CTKE = 1.667367*Rich_No - 0.003063*Uwave + 19.653682*WSig - 11.808237
+               CTKE = 1.667367*Rich_No - 0.003063*p_CohStr%Uwave + 19.653682*p_CohStr%WSig - 11.808237
                
             CASE DEFAULT   ! This case should not happen            
                CALL TS_Abort( 'Invalid turbulence model in coherent structure analysis.' )            
@@ -1831,21 +1127,21 @@ IF ( WrACT ) THEN
 
       ! Read and allocate coherent event start times and lengths, calculate TSclFact
 
-   CALL ReadEventFile( UACT, ScaleWid, ScaleVel, CTKE )
+   CALL ReadEventFile( UACT, p_CohStr%ScaleWid, p_CohStr%ScaleVel, CTKE )
 
    CLOSE ( UACT )  
    
-   CALL CalcEvents( REAL( Uwave, ReKi ), MaxEvtCTKE,  Zbottom+0.5*ScaleWid) 
+   CALL CalcEvents( REAL( p_CohStr%Uwave, ReKi ), MaxEvtCTKE,  p_grid%Zbottom+0.5*p_CohStr%ScaleWid) 
 
    WRITE(US, '(A,F8.3," (m/s)^2")') 'Maximum predicted event CTKE         = ', CTKE
 
       ! Write event data to the time step output file (opened at the beginnig)
 
    WRITE (UACTTS, "( A14,   ' = FileType')") CTExt
-   WRITE (UACTTS, "( G14.7, ' = ScaleVel')") ScaleVel
+   WRITE (UACTTS, "( G14.7, ' = ScaleVel')") p_CohStr%ScaleVel
    WRITE (UACTTS, "( G14.7, ' = MHHWindSpeed')") UHub
-   WRITE (UACTTS, "( G14.7, ' = Ymax')") ScaleWid*Ym_max/Zm_max
-   WRITE (UACTTS, "( G14.7, ' = Zmax')") ScaleWid
+   WRITE (UACTTS, "( G14.7, ' = Ymax')") p_CohStr%ScaleWid*Ym_max/Zm_max
+   WRITE (UACTTS, "( G14.7, ' = Zmax')") p_CohStr%ScaleWid
    WRITE (UACTTS, "( G14.7, ' = DistScl')") DistScl
    WRITE (UACTTS, "( G14.7, ' = CTLy')") CTLy
    WRITE (UACTTS, "( G14.7, ' = CTLz')") CTLz
@@ -1879,8 +1175,8 @@ IF ( WrBLFF .OR. WrADTWR .OR. WrADFF )  THEN
       ZLo_YHi   = ( NumGrid_Z2 - 1 )*NumGrid_Y + NumGrid_Y2 + 1
       ZHi_YHi   = ( NumGrid_Z2     )*NumGrid_Y + NumGrid_Y2 + 1
     
-      TmpZ      = (HubHt - Z(NumGrid_Z2))/GridRes_Z
-      TmpY      = ( 0.0  - Y(NumGrid_Y2))/GridRes_Y
+      TmpZ      = (HubHt - Z(NumGrid_Z2))/p_grid%GridRes_Z
+      TmpY      = ( 0.0  - Y(NumGrid_Y2))/p_grid%GridRes_Y
       CGridSum  = 0.0
       CGridSum2 = 0.0
 
@@ -1938,7 +1234,7 @@ ENDIF
    ! Are we generating FF formatted files?
 
 IF ( WrFmtFF )  THEN
-   CALL WrFormattedFF(HubIndx)
+   CALL WrFormattedFF(p_grid%HubIndx)
 ENDIF ! ( WrFmtFF )
 
 
@@ -1965,7 +1261,7 @@ ENDIF
 CALL CPU_TIME ( CPUtime )
 
 FormStr = "(//,'Processing complete.  ',A,' CPU seconds used.')"
-WRITE (US,FormStr)  TRIM( Flt2LStr( CPUtime ) )
+WRITE (US,FormStr)  TRIM( Num2LStr( CPUtime ) )
 
 !BONNIE: ****************************
 !Time = TIMEF()
@@ -1977,7 +1273,7 @@ WRITE (US,FormStr)  TRIM( Flt2LStr( CPUtime ) )
 CLOSE ( US )
 
 
-CALL WrScr1  ( ' Processing complete.  '//TRIM( Flt2LStr( CPUtime ) )//' CPU seconds used.' )
+CALL WrScr1  ( ' Processing complete.  '//TRIM( Num2LStr( CPUtime ) )//' CPU seconds used.' )
 CALL NormStop
 
 
