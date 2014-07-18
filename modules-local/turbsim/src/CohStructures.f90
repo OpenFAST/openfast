@@ -35,12 +35,11 @@ CONTAINS
 
 SUBROUTINE CohStr_Open()
 use TSMods
-
+!this routine is replicated in CohStr_WriteCTS()
    
 
-   IF ( WrACT ) THEN
       p_CohStr%ScaleWid = RotorDiameter * DistScl           !  This is the scaled height of the coherent event data set
-      p_grid%Zbottom  = HubHt - CTLz*p_CohStr%ScaleWid             !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
+      p_CohStr%Zbottom  = HubHt - CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
 
       IF ( KHtest ) THEN      
             ! for LES test case....
@@ -64,11 +63,10 @@ use TSMods
          CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', .TRUE. )
          WrACT = .FALSE.
       ENDIF
-   ENDIF
-
+            
 END SUBROUTINE CohStr_Open
 !=======================================================================
-SUBROUTINE CohStr_ReadEventFile( Un, ScaleWid, ScaleVel, CTKE )
+SUBROUTINE CohStr_ReadEventFile( Un, ScaleWid, ScaleVel, CTKE, ErrStat, ErrMsg )
 
       ! This subroutine reads the events definitions from the event data file
 
@@ -80,69 +78,69 @@ SUBROUTINE CohStr_ReadEventFile( Un, ScaleWid, ScaleVel, CTKE )
 
       ! Passed Variables
 
-INTEGER,    INTENT(IN)  :: Un             ! I/O Unit
-REAL(ReKi),INTENT(IN)   :: CTKE           ! Predicted maximum CTKE
-REAL(ReKi),INTENT(INOUT):: ScaleVel       ! The shear we're scaling for
-REAL(ReKi),INTENT(IN)   :: ScaleWid       ! The height of the wave we're scaling with
+INTEGER,                         INTENT(IN)    :: Un             ! I/O Unit
+REAL(ReKi),                      INTENT(IN)    :: CTKE           ! Predicted maximum CTKE
+REAL(ReKi),                      INTENT(INOUT) :: ScaleVel       ! The shear we're scaling for
+REAL(ReKi),                      INTENT(IN)    :: ScaleWid       ! The height of the wave we're scaling with
+INTEGER(IntKi),                  intent(  out) :: ErrStat        ! Error level
+CHARACTER(*),                    intent(  out) :: ErrMsg         ! Message describing error
 
       ! Local variables
 REAL(ReKi)              :: MaxEvtCTKE        ! The maximum CTKE in the dataset of events
 
-INTEGER                 :: AllocStat      ! Array allocation status
 INTEGER                 :: I              ! DO loop counter
 INTEGER                 :: IOS            ! I/O Status
 
+INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
+CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
 
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    MaxEvtCTKE = 0.0  ! initialize the MAX variable
 
-   CALL OpenFInpFile ( Un,  p_CohStr%CTEventFile  )
+   CALL OpenFInpFile ( Un,  p_CohStr%CTEventFile, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
+      IF (ErrStat >= AbortErrLev) RETURN
    
 
          ! Read the nondimensional lateral width of the dataset, Ym_max
 
-   CALL ReadVar( Un, p_CohStr%CTEventFile, Ym_max, "the nondimensional lateral width of the dataset", &
-                                                   "Nondimensional lateral dataset width")
+   CALL ReadVar( Un, p_CohStr%CTEventFile, Ym_max, "Ym_max", "Nondimensional lateral dataset width", ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
 
          ! Read the nondimensional vertical height of the dataset, Zm_max
 
-   CALL ReadVar( Un, p_CohStr%CTEventFile, Zm_max, "the nondimensional vertical height of the dataset", &
-                                          "Nondimensional vertical dataset height")
+   CALL ReadVar( Un, p_CohStr%CTEventFile, Zm_max, "Zm_max", "Nondimensional vertical dataset height", ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
 
 
          ! Read the rest of the header
 
-   CALL ReadVar( Un, p_CohStr%CTEventFile, NumEvents, "NumEvents", "the number of coherent structures.")
-
+   CALL ReadVar( Un, p_CohStr%CTEventFile, NumEvents, "NumEvents", "the number of coherent structures.", ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
+      
+      
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(Un)
+      RETURN
+   END IF
+      
 
    IF ( NumEvents > 0 ) THEN
 
-            ! Allocate memory for coherent event start times and lengths
 
-      ALLOCATE ( EventName(NumEvents) , STAT=AllocStat )
+      CALL AllocAry( p_CohStr%EventID,  NumEvents , 'EventID',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%EventTS,  NumEvents , 'EventTS',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%EventLen, NumEvents , 'EventLen', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%pkCTKE,   NumEvents , 'pkCTKE',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
 
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event name.' )
-      ENDIF
-
-      ALLOCATE ( EventTS(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event timestep lengths.' )
-      ENDIF
-
-      ALLOCATE ( EventLen(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event lengths.' )
-      ENDIF
-
-      ALLOCATE ( pkCTKE(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event peak CTKE.' )
-      ENDIF
-
-
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(Un)
+         RETURN
+      END IF
+      
             ! Read the last header lines
 
       CALL ReadCom( Un, p_CohStr%CTEventFile, 'the fourth header line')  ! A blank line
@@ -153,12 +151,12 @@ INTEGER                 :: IOS            ! I/O Status
 
       DO I=1,NumEvents
 
-         READ ( Un, *, IOSTAT=IOS )  EventName(I),  EventTS(I), EventLen(I), pkCTKE(I)
+         READ ( Un, *, IOSTAT=IOS )  p_CohStr%EventID(I),  p_CohStr%EventTS(I), p_CohStr%EventLen(I), p_CohStr%pkCTKE(I)
 
          IF ( IOS /= 0 )  THEN
             CALL TS_Abort ( 'Error reading event '//TRIM( Int2LStr( I ) )//' from the coherent event data file.' )
          ENDIF
-         MaxEvtCTKE = MAX( MaxEvtCTKE, pkCTKE(I) )
+         MaxEvtCTKE = MAX( MaxEvtCTKE, p_CohStr%pkCTKE(I) )
 
       ENDDO
 
@@ -174,7 +172,7 @@ INTEGER                 :: IOS            ! I/O Status
          ! Scale the time based on TSclFact
 
       DO I=1,NumEvents
-         EventLen(I) = EventLen(I)*TSclFact
+         p_CohStr%EventLen(I) = p_CohStr%EventLen(I)*TSclFact
       ENDDO
 
    ELSE
@@ -187,7 +185,7 @@ INTEGER                 :: IOS            ! I/O Status
 
 END SUBROUTINE CohStr_ReadEventFile
 !=======================================================================
-SUBROUTINE CohStr_CalcEvents( WindSpeed, MaxCTKE, Height )
+SUBROUTINE CohStr_CalcEvents( WindSpeed, Height )
 
       ! This subroutine calculates what events to use and when to use them.
       ! It computes the number of timesteps in the file, NumCTt.
@@ -198,7 +196,6 @@ SUBROUTINE CohStr_CalcEvents( WindSpeed, MaxCTKE, Height )
 
       ! passed variables
 REAL(ReKi), INTENT(IN)      :: WindSpeed           ! Hub height wind speed
-REAL(ReKi), INTENT(OUT)     :: MaxCTKE             ! Maximum CTKE of events we've picked
 REAL(ReKi), INTENT(IN)      :: Height              ! Height for expected length PDF equation
 
       ! local variables
@@ -208,6 +205,7 @@ REAL(ReKi)                  :: iC                  ! Variable used to calculate 
 REAL(ReKi)                  :: rn                  ! random number
 REAL(ReKi)                  :: TEnd                ! End time for the current event
 REAL(ReKi)                  :: TStartNext   = 0.0  ! temporary start time for next event
+REAL(ReKi)                  :: MaxCTKE             ! Maximum CTKE of events we've picked
 
 INTEGER                     :: IStat               ! Status of memory allocation
 INTEGER                     :: NewEvent            ! event number of the new event
@@ -327,13 +325,13 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
       PtrTail%EventNum     = NewEvent
       PtrTail%TStart       = TStartNext
-      PtrTail%delt         = EventLen( NewEvent ) / EventTS( NewEvent )          ! the average delta time in the event
+      PtrTail%delt         = p_CohStr%EventLen( NewEvent ) / p_CohStr%EventTS( NewEvent )          ! the average delta time in the event
       PtrTail%Connect2Prev = .FALSE.
 
-      MaxCTKE              = MAX( MaxCTKE, pkCTKE( NewEvent ) )
+      MaxCTKE              = MAX( MaxCTKE, p_CohStr%pkCTKE( NewEvent ) )
       y_CohStr%NumCTEvents          = y_CohStr%NumCTEvents + 1
 
-      TEnd = TStartNext + EventLen( NewEvent )
+      TEnd = TStartNext + p_CohStr%EventLen( NewEvent )
 
 
       IF ( KHtest ) THEN
@@ -351,12 +349,12 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
 
       IF ( (TStartNext - TEnd) > PtrTail%delt ) THEN
-         NumCTt = NumCTt + EventTS( NewEvent ) + 2                                  ! add a zero-line (essentially a break between events)
+         NumCTt = NumCTt + p_CohStr%EventTS( NewEvent ) + 2                                  ! add a zero-line (essentially a break between events)
       ELSE
-         NumCTt = NumCTt + EventTS( NewEvent ) + 1
+         NumCTt = NumCTt + p_CohStr%EventTS( NewEvent ) + 1
       ENDIF
 
-      y_CohStr%EventTimeSum     = y_CohStr%EventTimeSum + EventLen( NewEvent )
+      y_CohStr%EventTimeSum     = y_CohStr%EventTimeSum + p_CohStr%EventLen( NewEvent )
 
    ENDDO
 
@@ -390,10 +388,10 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
             IF ( ASSOCIATED( PtrCurr%Next ) ) THEN
                TStartNext = PtrCurr%Next%TStart
             ELSE !We're starting after the last event in the record
-               TStartNext = UsableTime + 0.5 * EventLen( NewEvent )  ! We can go a little beyond the end...
+               TStartNext = UsableTime + 0.5 * p_CohStr%EventLen( NewEvent )  ! We can go a little beyond the end...
             ENDIF
 
-            IF ( TStartNext - (PtrCurr%TStart + EventLen( PtrCurr%EventNum ) + PtrCurr%delt) > EventLen( NewEvent ) ) THEN
+            IF ( TStartNext - (PtrCurr%TStart + p_CohStr%EventLen( PtrCurr%EventNum ) + PtrCurr%delt) > p_CohStr%EventLen( NewEvent ) ) THEN
 
                Inserted = .TRUE.
 
@@ -404,19 +402,19 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
                ENDIF
 
                PtrNew%EventNum      = NewEvent
-               PtrNew%TStart        = PtrCurr%TStart + EventLen( PtrCurr%EventNum )
-               PtrNew%delt          = EventLen( NewEvent ) / EventTS( NewEvent )          ! the average delta time in the event
+               PtrNew%TStart        = PtrCurr%TStart + p_CohStr%EventLen( PtrCurr%EventNum )
+               PtrNew%delt          = p_CohStr%EventLen( NewEvent ) / p_CohStr%EventTS( NewEvent )          ! the average delta time in the event
                PtrNew%Connect2Prev  = .TRUE.
 
                PtrNew%Next  => PtrCurr%Next
                PtrCurr%Next => PtrNew
                PtrCurr      => PtrCurr%Next    ! Let's try to add the next event after the other events
 
-               MaxCTKE              = MAX( MaxCTKE, pkCTKE( NewEvent ) )
+               MaxCTKE              = MAX( MaxCTKE, p_CohStr%pkCTKE( NewEvent ) )
                y_CohStr%NumCTEvents          = y_CohStr%NumCTEvents + 1
-               NumCTt               = NumCTt + EventTS( NewEvent )  ! there is no break between events
+               NumCTt               = NumCTt + p_CohStr%EventTS( NewEvent )  ! there is no break between events
                                    !(we may have one too many NumCTt here, so we'll deal with it when we write the file later)
-               y_CohStr%EventTimeSum         = y_CohStr%EventTimeSum + EventLen( NewEvent )
+               y_CohStr%EventTimeSum         = y_CohStr%EventTimeSum + p_CohStr%EventLen( NewEvent )
 
 
             ELSE
@@ -442,5 +440,349 @@ ENDIF
 
 
 END SUBROUTINE CohStr_CalcEvents
+!=======================================================================
+!> This subroutine writes the coherent events CTS file
+SUBROUTINE CohStr_WriteCTS(ErrStat, ErrMsg)
+use TSMods
+use TS_RandNum
+
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+
+
+   REAL(ReKi)              ::  TmpRndNum                       ! A temporary variable holding a random variate
+
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   CALL WrScr ( ' Generating coherent turbulent time step file "'//TRIM( RootName )//'.cts"' )
+   
+   
+   p_CohStr%ScaleWid = RotorDiameter * DistScl           !  This is the scaled height of the coherent event data set
+   p_CohStr%Zbottom  = HubHt - CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
+   
+   p_CohStr%Uwave    = getWindSpeed(UHub,HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, RotorDiameter, PROFILE=WindProfileType)                 ! WindSpeed at center of wave
+   
+   !-------------------------
+   ! compute ScaleVel:
+   !-------------------------
+
+   IF ( KHtest ) THEN      
+         ! for LES test case....
+      p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
+      p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
+   ELSE
+      p_CohStr%ScaleVel =  getWindSpeed(UHub,HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,RotorDiameter,PROFILE=WindProfileType) &  ! Velocity at the top of the wave
+                         - getWindSpeed(UHub,HubHt,p_CohStr%Zbottom,                  RotorDiameter,PROFILE=WindProfileType)    ! Shear across the wave
+      p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
+      
+      
+         ! If the coherent structures do not cover the whole disk, increase the shear
+
+      IF ( DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
+         CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum ) !returns TmpRndNum, a random variate
+         p_CohStr%ScaleVel = p_CohStr%ScaleVel * ( 1.0 + TmpRndNum * (1 - DistScl) / DistScl )
+      ENDIF
+
+         !Apply a scaling factor to account for short inter-arrival times getting wiped out due to long events
+
+      p_CohStr%ScaleVel =  p_CohStr%ScaleVel*( 1.0 + 323.1429 * EXP( -MAX(p_CohStr%Uwave,10.0) / 2.16617 ) )
+            
+   ENDIF
+
+   IF (p_CohStr%ScaleVel < 0. ) THEN
+      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', .TRUE. )
+      WrACT = .FALSE.
+      RETURN
+   ENDIF
+      
+
+   !-------------------------
+   ! compute maximum predicted CTKE:
+   !-------------------------
+         
+   SELECT CASE ( SpecModel )
+         
+      CASE ( SpecModel_NWTCUP,  SpecModel_NONE, SpecModel_USRVKM )
+            
+         IF (KHtest) THEN
+            y_CohStr%CTKE = 30.0 !Scale for large coherence
+            CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, y_CohStr%CTKE )
+         ELSE    
+               
+               ! Increase the Scaling Velocity for computing U,V,W in AeroDyn
+               ! These numbers are based on LIST/ART data (58m-level sonic anemometer)
+
+            y_CohStr%CTKE =  0.616055*Rich_No - 0.242143*p_CohStr%Uwave + 23.921801*p_CohStr%WSig - 11.082978
+            
+               ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
+            CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum )
+            y_CohStr%CTKE = MAX( y_CohStr%CTKE + (2.0 * TmpRndNum - 1.0) * 6.0, 0.0 )
+
+            IF ( y_CohStr%CTKE > 0.0 ) THEN
+               IF ( y_CohStr%CTKE > 20.0)  THEN    ! Correct with residual
+                  y_CohStr%CTKE = y_CohStr%CTKE + ( 0.11749127 * (y_CohStr%CTKE**1.369025) - 7.5976449 )
+               ENDIF
+
+               IF ( y_CohStr%CTKE >= 30.0 .AND. Rich_No >= 0.0 .AND. Rich_No <= 0.05 ) THEN
+                  CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, y_CohStr%CTKE )
+               ENDIF
+            ENDIF
+                  
+         ENDIF !KHTest
+               
+      CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
+
+         y_CohStr%CTKE = pkCTKE_LLJ(p_grid%Zbottom+0.5*p_CohStr%ScaleWid)
+               
+      CASE ( SpecModel_WF_UPW )
+         y_CohStr%CTKE = -2.964523*Rich_No - 0.207382*p_CohStr%Uwave + 25.640037*p_CohStr%WSig - 10.832925
+               
+      CASE ( SpecModel_WF_07D )
+         y_CohStr%CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*p_CohStr%WSig - 0.106633
+
+         IF ( (Rich_No > -0.025) .AND. (Rich_No < 0.05) .AND. (UStar > 1.0) .AND. (UStar < 1.56) ) THEN
+            CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpRndNum )  ! Add a random residual
+            y_CohStr%CTKE = y_CohStr%CTKE + TmpRndNum
+         ENDIF
+               
+               
+      CASE ( SpecModel_WF_14D )
+         y_CohStr%CTKE = 1.667367*Rich_No - 0.003063*p_CohStr%Uwave + 19.653682*p_CohStr%WSig - 11.808237
+               
+      CASE DEFAULT   ! This case should not happen            
+         CALL TS_Abort( 'Invalid turbulence model in coherent structure analysis.' )            
+               
+   END SELECT                    
+
+   y_CohStr%CTKE   = MAX( y_CohStr%CTKE, 1.0 )     ! make sure CTKE is not negative and, so that we don't divide by zero in ReadEventFile, set it to some arbitrary low number   
+   
+   !-------------------------
+   ! Read and allocate coherent event start times and lengths, calculate TSclFact:
+   !-------------------------
+   
+   CALL CohStr_ReadEventFile( UACT, p_CohStr%ScaleWid, p_CohStr%ScaleVel, y_CohStr%CTKE, ErrStat, ErrMsg )
+   IF (ErrStat >= AbortErrLev) RETURN
+
+   
+   CALL CohStr_CalcEvents( p_CohStr%Uwave,  p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid) 
+         
+
+   !-------------------------
+   ! Write the file:
+   !-------------------------
+   
+   CALL CohStr_WriteEvents ( UACTTS, UACT, TSclFact )
+
+   !-------------------------
+   ! Deallocate the coherent event arrays.
+   !-------------------------
+
+   IF ( ALLOCATED( p_CohStr%EventID   ) )  DEALLOCATE( p_CohStr%EventID   )
+   IF ( ALLOCATED( p_CohStr%EventTS   ) )  DEALLOCATE( p_CohStr%EventTS   )
+   IF ( ALLOCATED( p_CohStr%EventLen  ) )  DEALLOCATE( p_CohStr%EventLen  )
+   IF ( ALLOCATED( p_CohStr%pkCTKE    ) )  DEALLOCATE( p_CohStr%pkCTKE    )
+   
+         
+END SUBROUTINE CohStr_WriteCTS
+!=======================================================================
+FUNCTION pkCTKE_LLJ(Ht)
+
+USE              TSMods, ONLY: ZL
+USE              TSMods, ONLY: UStar
+   use tsmods, only: p_RandNum
+   use tsmods, only: OtherSt_RandNum
+   
+use TurbSim_Types
+
+IMPLICIT                 NONE
+
+REAL(ReKi)               :: A                                        ! A constant/offset term in the pkCTKE calculation
+REAL(ReKi)               :: A_uSt                                    ! The scaling term for Ustar
+REAL(ReKi)               :: A_zL                                     ! The scaling term for z/L
+REAL(ReKi), INTENT(IN)   :: Ht                                       ! The height at the billow center
+REAL(ReKi)               :: pkCTKE_LLJ                               ! The max CTKE expected for LLJ coh structures
+REAL(ReKi)               :: rndCTKE                                  ! The random residual
+REAL(ReKi), PARAMETER    :: RndParms(5) = (/0.252510525, -0.67391279, 2.374794977, 1.920555797, -0.93417558/) ! parameters for the Pearson IV random residual
+REAL(ReKi), PARAMETER    :: z_Ary(4)    = (/54., 67., 85., 116./)    ! Aneomoeter heights
+
+INTEGER                  :: Zindx_mn (1)
+
+
+   Zindx_mn = MINLOC( ABS(z_Ary-Ht) )
+
+   SELECT CASE ( Zindx_mn(1) )
+      CASE ( 1 )  ! 54 m
+         A     = -0.051
+         A_zL  = -0.0384
+         A_uSt =  9.9710
+
+      CASE ( 2 )  ! 67 m
+         A     = -0.054
+         A_zL  = -0.1330
+         A_uSt = 10.2460
+
+      CASE ( 3 )  ! 85 m
+         A     = -0.062
+         A_zL  = -0.1320
+         A_uSt = 10.1660
+
+      CASE ( 4 )  !116 m
+         A     = -0.092
+         A_zL  = -0.3330
+         A_uSt = 10.7640
+
+      CASE DEFAULT !This should not occur
+         CALL TS_Abort( 'Error in pkCTKE_LLJ():: Height index is invalid.' )
+   END SELECT
+
+   CALL RndPearsonIV( p_RandNum, OtherSt_RandNum, rndCTKE, RndParms, (/REAL(-10.,ReKi), REAL(17.5,ReKi)/) )
+
+   pkCTKE_LLJ = MAX(0.0, A + A_uSt*UStar + A_zL*ZL + rndCTKE)
+
+END FUNCTION pkCTKE_LLJ
+!=======================================================================
+SUBROUTINE CohStr_WriteEvents( UnOut, UnIn, TScale )
+
+    ! This subroutine writes the events as calculated in CalcEvents.
+
+USE                     TSMods
+
+IMPLICIT                NONE
+
+      ! Passed Variables
+
+REAL(ReKi), INTENT(IN)  :: TScale                 ! Time scaling factor
+INTEGER,    INTENT(IN)  :: UnIn                   ! I/O Unit for input file
+INTEGER,    INTENT(IN)  :: UnOut                  ! I/O Unit for output file
+
+
+      ! Local Variables
+
+REAL(ReKi)              :: CurrentTime = 0.0      ! the current time (in seconds)
+REAL(ReKi)              :: CTTime                 ! Time from beginning of event file
+REAL(ReKi)              :: deltaTime = 0.0        ! difference between two time steps in the event files
+
+INTEGER                 :: FileNum                ! File Number in the event file
+INTEGER                 :: IE                     ! Loop counter for event number
+INTEGER                 :: IStat                  ! Status of file read
+INTEGER                 :: IT                     ! Loop counter for time step
+
+
+CHARACTER(200)          :: InpFile                ! Name of the input file
+TYPE (Event), POINTER   :: PtrCurr  => NULL()     ! Pointer to the current event
+
+
+
+   CALL OpenFOutFile ( UnOut, TRIM( RootName )//'.cts' ) 
+
+IF (DEBUG_OUT) THEN
+   WRITE (UD,'(/,A)' ) 'Computed Coherent Events'
+   WRITE (UD,*) 'Event#     Start Time        End Time'
+ENDIF
+
+
+      ! Write event data to the time step output file (opened at the beginnig)
+
+   WRITE (UnOut, "( A14,   ' = FileType')")     p_CohStr%CTExt
+   WRITE (UnOut, "( G14.7, ' = ScaleVel')")     p_CohStr%ScaleVel
+   WRITE (UnOut, "( G14.7, ' = MHHWindSpeed')") UHub
+   WRITE (UnOut, "( G14.7, ' = Ymax')")         p_CohStr%ScaleWid*Ym_max/Zm_max
+   WRITE (UnOut, "( G14.7, ' = Zmax')")         p_CohStr%ScaleWid
+   WRITE (UnOut, "( G14.7, ' = DistScl')")      DistScl
+   WRITE (UnOut, "( G14.7, ' = CTLy')")         CTLy
+   WRITE (UnOut, "( G14.7, ' = CTLz')")         CTLz
+   WRITE (UnOut, "( G14.7, ' = NumCTt')")       NumCTt
+
+
+   PtrCurr => PtrHead
+
+
+   DO IE = 1,y_CohStr%NumCTEvents
+
+      IF ( .NOT. ASSOCIATED ( PtrCurr ) ) EXIT     ! This shouldn't be necessary, given the way we created the list
+
+
+      IF ( .NOT. PtrCurr%Connect2Prev ) THEN
+
+         IF ( CurrentTime < PtrCurr%TStart ) THEN
+
+            WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0     ! Print end of previous event
+
+            NumCTt = NumCTt - 1  ! Let's make sure the right number of points have been written to the file.
+
+            IF ( CurrentTime < PtrCurr%TStart - PtrCurr%delt ) THEN  !This assumes a ramp of 1 delta t for each structure....
+
+               WRITE ( UnOut, '(G14.7,1x,I5.5)') MAX(PtrCurr%TStart - PtrCurr%delt, REAL(0.0, ReKi) ), 0
+               NumCTt = NumCTt - 1
+
+            ENDIF
+
+         ENDIF
+
+      ENDIF  ! NOT Connect2Prev
+
+
+      WRITE ( InpFile, '(I5.5)' ) p_CohStr%EventID( PtrCurr%EventNum )
+      InpFile = TRIM( p_CohStr%CTEventPath )//PathSep//'Event'//TRIM( InpFile)//'.dat'
+
+      CALL OpenFInpFile( UnIn, InpFile )
+
+
+      DO IT = 1,p_CohStr%EventTS( PtrCurr%EventNum )
+
+         READ  ( UnIn, *, IOSTAT=IStat ) FileNum, CTTime, deltaTime
+
+         IF (IStat /= 0) THEN
+            CALL TS_Abort( 'Error reading event file'//TRIM( InpFile ) )
+         ENDIF
+
+         CurrentTime = PtrCurr%TStart + CTTime*TScale
+
+         WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, FileNum
+         NumCTt = NumCTt - 1
+
+      ENDDO    ! IT: Event timestep
+
+
+      CLOSE ( UnIn )
+
+
+         ! Add one (delta time) space between events
+
+      CurrentTime = CurrentTime + deltaTime*TScale
+
+IF (DEBUG_OUT) THEN
+   WRITE ( UD,'(I6, 2(2x,F14.5))' ) PtrCurr%EventNum, PtrCurr%TStart, CurrentTime
+ENDIF
+
+      PtrCurr => PtrCurr%Next
+
+!bjj deallocate the linked list!!!!
+
+   ENDDO !IE: number of events
+
+   WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0     !Add the last line
+   NumCTt = NumCTt - 1
+
+      ! Let's append zero lines at the end of the file if we haven't output NumCTt lines, yet.
+      ! We've subtracted from NumCTt every time we wrote a line so now the number in NumCTt is
+      ! how many lines short we are.
+
+   IF ( deltaTime > 0 ) THEN
+      deltaTime = deltaTime*TScale
+   ELSE
+      deltaTime = 0.5
+   ENDIF
+
+   DO IE = 1, NumCTt  ! Write zeros at the end if we happened to insert an event that overwrote one of our zero lines
+      CurrentTime = CurrentTime + deltaTime
+      WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0
+   ENDDO
+
+   CLOSE ( UnOut )
+
+END SUBROUTINE CohStr_WriteEvents
 !=======================================================================
 END MODULE TS_CohStructures

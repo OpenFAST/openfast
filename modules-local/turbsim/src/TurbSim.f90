@@ -111,13 +111,11 @@ REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensit
 
 
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
-REAL(ReKi)              ::  CTKE                            ! Coherent Turbulent Kenetic Energy at the hub
 REAL(ReKi)              ::  DelF5                           ! half of the delta frequency, used to discretize the continuous PSD at each point
 REAL(ReKi)              ::  DelF                            ! Delta frequency
 REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
 REAL(ReKi)              ::  LC                              ! IEC coherency scale parameter
 REAL(ReKi)              ::  Lambda1                         ! IEC turbulence scale parameter
-REAL(ReKi)              ::  MaxEvtCTKE                      ! Maximum non-dimensional CTKE in events (used for scaling coherent events to appropriate size)
 REAL(ReKi)              ::  SigmaSlope                      ! Slope used with IEC models to determine target sigma and turbulent intensity
 REAL(ReKi)              ::  TargetSigma                     ! The target standard deviation for the IEC models, if scaling is requested.
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
@@ -129,7 +127,6 @@ REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for 
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  TurbInt                         ! IEC target Turbulence Intensity 
 REAL(ReKi)              ::  TurbInt15                       ! Turbulence Intensity at hub height with a mean wind speed of 15 m/s
-REAL(ReKi)              ::  TmpRndNum                       ! A temporary variable holding a random variate
 REAL(ReKi)              ::  HorVar                          ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  ROT                             ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  Total                           ! Variables used when DEBUG_OUT is set
@@ -473,7 +470,6 @@ ELSE
    HH_HFlowAng = HFlowAng
 END IF
 
-CALL CohStr_Open()
 
 
 IF (DEBUG_OUT) THEN
@@ -807,7 +803,8 @@ IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
 
    !  Allocate the FFT working storage and initialize its variables
 
-CALL InitFFT( NumSteps )
+CALL InitFFT( NumSteps, FFT_Data, ErrStat=ErrStat )
+CALL CheckError()
 
 
    ! Get the stationary-point time series.
@@ -838,7 +835,8 @@ DO IVec=1,3
 
          ! perform FFT
 
-      CALL ApplyFFT( TRH )
+      CALL ApplyFFT( TRH, FFT_Data, ErrStat )
+      CALL CheckError()
         
       V(1:NumSteps,Indx,IVec) = TRH(1:NumSteps)
 
@@ -849,7 +847,8 @@ ENDDO ! IVec
    ! Deallocate the TRH array and the FFT working storage.
 IF ( ALLOCATED( TRH  ) )  DEALLOCATE( TRH  )
 
-CALL ExitFFT
+CALL ExitFFT(FFT_Data, ErrStat )
+CALL CheckError()
 
 
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
@@ -1014,7 +1013,7 @@ IF ( WrFHHTP )  THEN
 END IF
 
    ! Write statistics of the run to the summary file:
-CALL WrSum_Stats(USig, VSig, WSig, UXSig, ErrStat, ErrMsg)
+CALL WrSum_Stats(USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 CALL CheckError()
 p_CohStr%WSig=WSig
 
@@ -1057,93 +1056,11 @@ IF ( ALLOCATED( WindDir_profile ) )  DEALLOCATE( WindDir_profile )
    ! Are we generating a coherent turbulent timestep file?
    
 IF ( WrACT ) THEN
-
-   CALL WrScr ( ' Generating coherent turbulent time step file "'//TRIM( RootName )//'.cts"' )
-
-   IF ( .NOT. KHtest ) THEN
-
-         ! If the coherent structures do not cover the whole disk, increase the shear
-
-      IF ( DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
-         CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum ) !returns TmpRndNum, a random variate
-         p_CohStr%ScaleVel = p_CohStr%ScaleVel * ( 1.0 + TmpRndNum * (1 - DistScl) / DistScl )
-      ENDIF
-
-         !Apply a scaling factor to account for short inter-arrival times getting wiped out due to long events
-
-      p_CohStr%ScaleVel =  p_CohStr%ScaleVel*( 1.0 + 323.1429 * EXP( -MAX(p_CohStr%Uwave,10.0) / 2.16617 ) )
-
-      !TSclFact = p_CohStr%ScaleWid / (ScaleVel * Zm_max)
-
-   ENDIF
-
-
-         ! Determine the maximum predicted CTKE
-         
-         SELECT CASE ( SpecModel )
-         
-            CASE ( SpecModel_NWTCUP,  SpecModel_NONE, SpecModel_USRVKM )
-            
-               IF (KHtest) THEN
-                  CTKE = 30.0 !Scale for large coherence
-                  CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, CTKE )
-               ELSE    
-               
-                     ! Increase the Scaling Velocity for computing U,V,W in AeroDyn
-                     ! These numbers are based on LIST/ART data (58m-level sonic anemometer)
-
-                  CTKE =  0.616055*Rich_No - 0.242143*p_CohStr%Uwave + 23.921801*WSig - 11.082978
-            
-                     ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
-                  CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum )
-                  CTKE = MAX( CTKE + (2.0 * TmpRndNum - 1.0) * 6.0, 0.0 )
-
-                  IF ( CTKE > 0.0 ) THEN
-                     IF ( CTKE > 20.0)  THEN    ! Correct with residual
-                        CTKE = CTKE + ( 0.11749127 * (CTKE**1.369025) - 7.5976449 )
-                     ENDIF
-
-                     IF ( CTKE >= 30.0 .AND. Rich_No >= 0.0 .AND. Rich_No <= 0.05 ) THEN
-                        CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, CTKE )
-                     ENDIF
-                  ENDIF
-                  
-               ENDIF !KHTest
-               
-            CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
-
-               CTKE = pkCTKE_LLJ(p_grid%Zbottom+0.5*p_CohStr%ScaleWid)
-               
-            CASE ( SpecModel_WF_UPW )
-               CTKE = -2.964523*Rich_No - 0.207382*p_CohStr%Uwave + 25.640037*p_CohStr%WSig - 10.832925
-               
-            CASE ( SpecModel_WF_07D )
-               CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*p_CohStr%WSig - 0.106633
-
-               IF ( (Rich_No > -0.025) .AND. (Rich_No < 0.05) .AND. (UStar > 1.0) .AND. (UStar < 1.56) ) THEN
-                  CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpRndNum )  ! Add a random residual
-                  CTKE = CTKE + TmpRndNum
-               ENDIF
-               
-               
-            CASE ( SpecModel_WF_14D )
-               CTKE = 1.667367*Rich_No - 0.003063*p_CohStr%Uwave + 19.653682*p_CohStr%WSig - 11.808237
-               
-            CASE DEFAULT   ! This case should not happen            
-               CALL TS_Abort( 'Invalid turbulence model in coherent structure analysis.' )            
-               
-         END SELECT                    
-
-         CTKE   = MAX( CTKE, 1.0 )     ! make sure CTKE is not negative and, so that we don't divide by zero in ReadEventFile, set it to some arbitrary low number
-
-
-      ! Read and allocate coherent event start times and lengths, calculate TSclFact
-
-   CALL CohStr_ReadEventFile( UACT, p_CohStr%ScaleWid, p_CohStr%ScaleVel, CTKE )
-
    
-   CALL CohStr_CalcEvents( REAL( p_CohStr%Uwave, ReKi ), MaxEvtCTKE,  p_grid%Zbottom+0.5*p_CohStr%ScaleWid) 
-
+   CALL CohStr_WriteCTS(ErrStat, ErrMsg)
+   CALL CheckError()
+   
+         
       ! Write the number of separate events to the summary file
 
    IF (KHtest) THEN
@@ -1152,21 +1069,12 @@ IF ( WrACT ) THEN
       WRITE ( US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda
    ENDIF
 
-   WRITE ( US, '(A,I8)'   )            'Number of coherent events            = ',y_CohStr%NumCTEvents
-   WRITE ( US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ',y_CohStr%ExpectedTime
-   WRITE ( US, '(A,F8.3," seconds")')  'Length of coherent events            = ',y_CohStr%EventTimeSum
-   WRITE ( US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', CTKE
+   WRITE ( US, '(A,I8)'   )            'Number of coherent events            = ', y_CohStr%NumCTEvents
+   WRITE ( US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
+   WRITE ( US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
+   WRITE ( US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
 
    
-   CALL CohStr_WriteEvents ( UACTTS, UACT, TSclFact )
-
-
-      ! Deallocate the coherent event times arrays.
-
-   IF ( ALLOCATED( EventName ) )  DEALLOCATE( EventName )
-   IF ( ALLOCATED( EventTS   ) )  DEALLOCATE( EventTS   )
-   IF ( ALLOCATED( EventLen  ) )  DEALLOCATE( EventLen  )
-   IF ( ALLOCATED( pkCTKE    ) )  DEALLOCATE( pkCTKE    )
 
 ENDIF !WrACT
 

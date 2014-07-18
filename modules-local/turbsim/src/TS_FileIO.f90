@@ -3185,7 +3185,7 @@ USE TSMods
 
 END SUBROUTINE WrHH_text
 !=======================================================================
-SUBROUTINE WrSum_Stats(USig, VSig, WSig, UXSig, ErrStat, ErrMsg)
+SUBROUTINE WrSum_Stats(USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 
 
 use TSMods
@@ -3194,6 +3194,8 @@ REAL(ReKi), INTENT(OUT) ::  USig                            ! Standard deviation
 REAL(ReKi), INTENT(OUT) ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
 REAL(ReKi), INTENT(OUT) ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
 REAL(ReKi), INTENT(OUT) ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
+REAL(DbKi), INTENT(OUT) ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
+
    INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
 
@@ -3211,7 +3213,6 @@ REAL(DbKi)              ::  UTmp2                           ! The instantaneous 
 REAL(DbKi)              ::  UTSum2                          ! The sum of the squared total wind speed at the hub
 REAL(DbKi)              ::  UTTmp                           ! The instantaneous total wind speed at the hub
 REAL(DbKi)              ::  UTTmp2                          ! The instantaneous squared total wind speed at the hub
-REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
 REAL(DbKi)              ::  UXSum                           ! The sum of the U-component (u rotated) wind speed at the hub
 REAL(DbKi)              ::  UXSum2                          ! The sum of the squared U-component (u rotated) wind speed at the hub
 REAL(DbKi)              ::  UXTmp                           ! The instantaneous U-component (u rotated) wind speed at the hub
