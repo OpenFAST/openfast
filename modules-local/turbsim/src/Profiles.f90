@@ -226,8 +226,8 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    CHARACTER(*), INTENT(IN), OPTIONAL :: profile                     ! String that determines what profile is to be used
    CHARACTER(3)                       :: profile_type
 
-   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
-   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
+!   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
+!   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
    REAL(ReKi)                         :: tmpHt(2)
    REAL(ReKi)                         :: tmpWS(2)
 
@@ -235,8 +235,8 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    INTEGER                            :: Indx
    INTEGER                            :: J
 
-   REAL                               :: C_factor
-   REAL(ReKi)                         :: ZRef
+!   REAL                               :: C_factor
+!   REAL(ReKi)                         :: ZRef
 
 
    IF ( IEC_WindType == IEC_EWM50 ) THEN
@@ -442,8 +442,8 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    CHARACTER(*), INTENT(IN), OPTIONAL :: profile                     ! String that determines what profile is to be used
    CHARACTER(3)                       :: profile_type
 
-   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
-   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
+!   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
+!   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
    REAL(ReKi)                         :: tmpHt(2)
    REAL(ReKi)                         :: tmpWS(2)
 
@@ -451,9 +451,9 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    INTEGER                            :: Indx
 
    !REAL(ReKi)                   :: U0_1HR                        ! Wind speed at reference height in 1hr time duration, added by Y.G. ON April 16 2013
-   REAL                         :: C_factor                       ! Factor to convert wind speed from 10-min to 1 hr, added by Y.G. ON April 16 2013
+!   REAL                         :: C_factor                       ! Factor to convert wind speed from 10-min to 1 hr, added by Y.G. ON April 16 2013
    REAL :: X0                                              ! Added by Y. Guo for calculating C_factor
-   REAL :: X, TEMP_1, TEMP_2                                                ! Added by Y. Guo for calculating C_factor
+   !REAL :: X, TEMP_1, TEMP_2                                                 ! Added by Y. Guo for calculating C_factor
    !=======================================
 
       X0=URef

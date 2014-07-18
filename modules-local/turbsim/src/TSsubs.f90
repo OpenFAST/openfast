@@ -20,275 +20,7 @@ use TS_VelocitySpectra
 
 CONTAINS
 
-!=======================================================================
-SUBROUTINE CalcEvents( WindSpeed, MaxCTKE, Height )
 
-      ! This subroutine calculates what events to use and when to use them.
-      ! It computes the number of timesteps in the file, NumCTt.
-
-   USE                         TSMods
-
-   IMPLICIT                    NONE
-
-      ! passed variables
-REAL(ReKi), INTENT(IN)      :: WindSpeed           ! Hub height wind speed
-REAL(ReKi), INTENT(OUT)     :: MaxCTKE             ! Maximum CTKE of events we've picked
-REAL(ReKi), INTENT(IN)      :: Height              ! Height for expected length PDF equation
-
-      ! local variables
-REAL(ReKi)                  :: EventTimeSum = 0.0  ! Amount of time the coherent structure takes
-REAL(ReKi)                  :: ExpectedTime        ! Amount of time the coherent structures should take
-REAL(ReKi)                  :: iA                  ! Variable used to calculate IAT
-REAL(ReKi)                  :: iB                  ! Variable used to calculate IAT
-REAL(ReKi)                  :: iC                  ! Variable used to calculate IAT
-REAL(ReKi)                  :: lambda              ! The expected value of interarrival times for the Poisson process
-REAL(ReKi)                  :: rn                  ! random number
-REAL(ReKi)                  :: TEnd                ! End time for the current event
-REAL(ReKi)                  :: TStartNext   = 0.0  ! temporary start time for next event
-
-INTEGER                     :: IStat               ! Status of memory allocation
-INTEGER                     :: NewEvent            ! event number of the new event
-INTEGER                     :: NumCompared         ! Number of events we've compared
-
-LOGICAL(1)                  :: Inserted            ! Whether an event was inserted here
-
-TYPE(Event), POINTER        :: PtrCurr  => NULL()  ! Pointer to the current event in the list
-TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted into the list
-
-
-      ! Compute the mean interarrival time and the expected length of events
-
-   SELECT CASE ( SpecModel )
-
-      CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
-         lambda = -0.000904*Rich_No + 0.000562*WindSpeed + 0.001389
-         lambda = 1.0 / lambda
-
-         IF ( SpecModel == SpecModel_NONE ) THEN
-            ExpectedTime = 600.0
-         ELSE
-            CALL RndModLogNorm( p_RandNum, OtherSt_RandNum, ExpectedTime, Height )
-         ENDIF
-
-      CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER) ! HYDRO: added 'TIDAL' and 'RIVER' to the spectral models that get handled this way.
-         iA     =        0.001797800 + (7.17399E-10)*Height**3.021144723
-         iB     =  EXP(-10.590340100 - (4.92440E-05)*Height**2.5)
-         iC     = SQRT(  3.655013599 + (8.91203E-06)*Height**3  )
-         lambda = iA + iB*MIN( (WindSpeed**iC), HUGE(iC) )  ! lambda = iA + iB*(WindSpeed**iC)
-         lambda = 1.0 / lambda
-
-         CALL RndTcohLLJ( p_RandNum, OtherSt_RandNum, ExpectedTime, Height )
-
-      CASE ( SpecModel_WF_UPW )
-        lambda = 0.000529*WindSpeed + 0.000365*Rich_No - 0.000596
-        lambda = 1.0 / lambda
-
-         CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, ExpectedTime, SpecModel_WF_UPW )
-
-      CASE ( SpecModel_WF_07D )
-         lambda = 0.000813*WindSpeed - 0.002642*Rich_No + 0.002676
-         lambda = 1.0 / lambda
-
-         CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, ExpectedTime, SpecModel_WF_07D )
-
-      CASE ( SpecModel_WF_14D )
-         lambda = 0.001003*WindSpeed - 0.00254*Rich_No - 0.000984
-         lambda = 1.0 / lambda
-
-         CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, ExpectedTime, SpecModel_WF_14D )
-
-      CASE DEFAULT
-         !This should not happen
-
-   END SELECT
-
-   ExpectedTime = ExpectedTime * ( UsableTime - CTStartTime ) / 600.0  ! Scale for use with the amount of time we've been given
-
-
-!BONNIE: PERHAPS WE SHOULD JUST PUT IN A CHECK THAT TURNS OFF THE COHERENT TIME STEP FILE IF THE
-!        CTSTARTTIME IS LESS THAN THE USABLETIME... MAYBE WHEN WE'RE READING THE INPUT FILE...
-ExpectedTime = MAX( ExpectedTime, REAL(0.0,ReKi) )  ! This occurs if CTStartTime = 0
-
-      ! We start by adding events at random times
-
-   NumCTEvents = 0                                    ! Number of events = length of our linked list
-   NumCTt      = 0                                    ! Total number of time steps in the events we've picked
-   MaxCTKE     = 0.0                                  ! Find the maximum CTKE for the events that we've selected
-
-
-   CALL RndExp(p_RandNum, OtherSt_RandNum, rn, lambda)                            ! Assume the last event ended at time zero
-
-   TStartNext = rn / 2.0
-
-   IF ( KHtest ) THEN
-      ExpectedTime = UsableTime   / 2                 ! When testing, add coherent events for half of the record
-      TStartNext   = ExpectedTime / 2                 ! When testing, start about a quarter of the way into the record
-   ENDIF
-
-   IF ( TStartNext < CTStartTime ) THEN
-      TStartNext = TStartNext + CTStartTime           ! Make sure the events start after time specified by CTStartTime
-   ENDIF
-
-   IF ( TStartNext > 0 ) NumCTt = NumCTt + 1          ! Add a point before the first event
-
-   DO WHILE ( TStartNext < UsableTime .AND. EventTimeSum < ExpectedTime )
-
-      CALL RndUnif( p_RandNum, OtherSt_RandNum, rn )
-
-      NewEvent = INT( rn*( NumEvents - 1.0 ) ) + 1
-      NewEvent = MAX( 1, MIN( NewEvent, NumEvents ) ) ! take care of possible rounding issues....
-
-
-      IF ( .NOT. ASSOCIATED ( PtrHead ) ) THEN
-
-         ALLOCATE ( PtrHead, STAT=IStat )             ! The pointer %Next is nullified in allocation
-
-         IF ( IStat /= 0 ) THEN
-            CALL TS_Abort ( 'Error allocating memory for new event.' )
-         ENDIF
-
-         PtrTail => PtrHead
-
-      ELSE
-
-         ALLOCATE ( PtrTail%Next, STAT=IStat )     ! The pointer PtrTail%Next%Next is nullified in allocation
-
-         IF ( IStat /= 0 ) THEN
-            CALL TS_Abort ( 'Error allocating memory for new event.' )
-         ENDIF
-
-         PtrTail => PtrTail%Next                   ! Move the pointer to point to the last record in the list
-
-      ENDIF
-
-      PtrTail%EventNum     = NewEvent
-      PtrTail%TStart       = TStartNext
-      PtrTail%delt         = EventLen( NewEvent ) / EventTS( NewEvent )          ! the average delta time in the event
-      PtrTail%Connect2Prev = .FALSE.
-
-      MaxCTKE              = MAX( MaxCTKE, pkCTKE( NewEvent ) )
-      NumCTEvents          = NumCTEvents + 1
-
-      TEnd = TStartNext + EventLen( NewEvent )
-
-
-      IF ( KHtest ) THEN
-         TStartNext   = UsableTime + TStartNext !TEnd + PtrTail%delt ! Add the events right after each other
-      ELSE
-
-         DO WHILE ( TStartNext <= TEnd )
-
-            CALL RndExp(p_RandNum, OtherSt_RandNum, rn, lambda)    ! compute the interarrival time
-            TStartNext        = TStartNext + rn !+ EventLen( NewEvent )
-
-         ENDDO
-
-      ENDIF
-
-
-      IF ( (TStartNext - TEnd) > PtrTail%delt ) THEN
-         NumCTt = NumCTt + EventTS( NewEvent ) + 2                                  ! add a zero-line (essentially a break between events)
-      ELSE
-         NumCTt = NumCTt + EventTS( NewEvent ) + 1
-      ENDIF
-
-      EventTimeSum     = EventTimeSum + EventLen( NewEvent )
-
-   ENDDO
-
-      ! Write the number of separate events to the summary file
-
-   IF (KHtest) THEN
-      WRITE ( US,'(/)' )
-   ELSE
-      WRITE ( US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',lambda
-   ENDIF
-
-WRITE ( US, '(A,I8)'   )             'Number of coherent events            = ',NumCTEvents
-WRITE ( US, '(A,F8.3," seconds")' )  'Predicted length of coherent events  = ',ExpectedTime
-
-      ! Next, we start concatenating events until there is no space or we exceed the expected time
-
-   IF ( SpecModel /= SpecModel_NONE ) THEN
-
-      NumCompared = 0
-
-      DO WHILE ( EventTimeSum < ExpectedTime .AND. NumCompared < NumCTEvents )
-
-         CALL RndUnif( p_RandNum, OtherSt_RandNum, rn )
-
-         NewEvent = INT( rn*( NumEvents - 1.0 ) ) + 1
-         NewEvent = MAX( 1, MIN( NewEvent, NumEvents ) )    ! take care of possible rounding issues....
-
-         NumCompared = 0
-         Inserted    = .FALSE.
-
-         DO WHILE ( NumCompared < NumCTEvents .AND. .NOT. Inserted )
-
-            IF ( .NOT. ASSOCIATED ( PtrCurr ) ) THEN        ! Wrap around to the beginning of the list
-               PtrCurr => PtrHead
-            ENDIF
-
-
-               ! See if the NewEvent fits between the end of event pointed to by PtrCurr and the
-               ! beginning of the event pointed to by PtrCurr%Next
-
-            IF ( ASSOCIATED( PtrCurr%Next ) ) THEN
-               TStartNext = PtrCurr%Next%TStart
-            ELSE !We're starting after the last event in the record
-               TStartNext = UsableTime + 0.5 * EventLen( NewEvent )  ! We can go a little beyond the end...
-            ENDIF
-
-            IF ( TStartNext - (PtrCurr%TStart + EventLen( PtrCurr%EventNum ) + PtrCurr%delt) > EventLen( NewEvent ) ) THEN
-
-               Inserted = .TRUE.
-
-               ALLOCATE ( PtrNew, STAT=IStat )           ! The pointer %Next is nullified in allocation
-
-               IF ( IStat /= 0 ) THEN
-                  CALL TS_Abort ( 'Error allocating memory for new event.' )
-               ENDIF
-
-               PtrNew%EventNum      = NewEvent
-               PtrNew%TStart        = PtrCurr%TStart + EventLen( PtrCurr%EventNum )
-               PtrNew%delt          = EventLen( NewEvent ) / EventTS( NewEvent )          ! the average delta time in the event
-               PtrNew%Connect2Prev  = .TRUE.
-
-               PtrNew%Next  => PtrCurr%Next
-               PtrCurr%Next => PtrNew
-               PtrCurr      => PtrCurr%Next    ! Let's try to add the next event after the other events
-
-               MaxCTKE              = MAX( MaxCTKE, pkCTKE( NewEvent ) )
-               NumCTEvents          = NumCTEvents + 1
-               NumCTt               = NumCTt + EventTS( NewEvent )  ! there is no break between events
-                                   !(we may have one too many NumCTt here, so we'll deal with it when we write the file later)
-               EventTimeSum         = EventTimeSum + EventLen( NewEvent )
-
-
-            ELSE
-
-               NumCompared = NumCompared + 1
-
-            ENDIF
-
-            PtrCurr => PtrCurr%Next
-
-         ENDDO ! WHILE (NumCompared < NumCTEvents .AND. .NOT. Inserted)
-
-      ENDDO ! WHILE (EventTimeSum < ExpectedTime .AND. NumCompared < NumCTEvents)
-
-   ENDIF ! SpecModel /= SpecModel_NONE
-
-IF ( NumCTt > 0 ) THEN
-   EventTimeStep = EventTimeSum / NumCTt                                          ! Average timestep of coherent event data
-ELSE
-   EventTimeStep = 0.0
-ENDIF
-
-
-WRITE ( US, '(A,F8.3," seconds")' )   'Length of coherent events            = ',EventTimeSum
-
-END SUBROUTINE CalcEvents
 !=======================================================================
 SUBROUTINE CohSpecVMat( LC, NSize )
 
@@ -1936,11 +1668,11 @@ SELECT CASE ( SpecModel )
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL,     Ustar,     Work )
       ENDIF
    CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( Ht, Ucmp, Work )
+      CALL Spec_IECKAI  ( Work )
    CASE ( SpecModel_IECVKM )
-      CALL Spec_IECVKM  ( Ht, Ucmp, Work )
+      CALL Spec_IECVKM  ( Work )
    CASE ( SpecModel_API )
-      CALL Spec_API ( Ht, Ucmp, Work )
+      CALL Spec_API ( Ht, Work )
    CASE (SpecModel_NWTCUP)
       CALL Spec_NWTCUP  ( Ht, Ucmp, Work )
    CASE ( SpecModel_SMOOTH )
@@ -1948,7 +1680,7 @@ SELECT CASE ( SpecModel )
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
       CALL Spec_TIDAL  ( Ucmp, Work, SpecModel )
    CASE ( SpecModel_USER )
-      CALL Spec_UserSpec   ( Ht, Ucmp, Work )
+      CALL Spec_UserSpec   ( Work )
    CASE ( SpecModel_USRVKM )
       CALL Spec_vonKrmn   ( Ht, Ucmp, Work )
    CASE (SpecModel_WF_UPW)
@@ -1984,7 +1716,7 @@ END SUBROUTINE PSDcal
 !=======================================================================
 
 
-SUBROUTINE WriteEvents( UnOut, UnIn, TScale )
+SUBROUTINE CohStr_WriteEvents( UnOut, UnIn, TScale )
 
     ! This subroutine writes the events as calculated in CalcEvents.
 
@@ -2015,16 +1747,32 @@ CHARACTER(200)          :: InpFile                ! Name of the input file
 TYPE (Event), POINTER   :: PtrCurr  => NULL()     ! Pointer to the current event
 
 
+
+   CALL OpenFOutFile ( UnOut, TRIM( RootName )//'.cts' ) 
+
 IF (DEBUG_OUT) THEN
    WRITE (UD,'(/,A)' ) 'Computed Coherent Events'
    WRITE (UD,*) 'Event#     Start Time        End Time'
 ENDIF
 
 
+      ! Write event data to the time step output file (opened at the beginnig)
+
+   WRITE (UnOut, "( A14,   ' = FileType')")     p_CohStr%CTExt
+   WRITE (UnOut, "( G14.7, ' = ScaleVel')")     p_CohStr%ScaleVel
+   WRITE (UnOut, "( G14.7, ' = MHHWindSpeed')") UHub
+   WRITE (UnOut, "( G14.7, ' = Ymax')")         p_CohStr%ScaleWid*Ym_max/Zm_max
+   WRITE (UnOut, "( G14.7, ' = Zmax')")         p_CohStr%ScaleWid
+   WRITE (UnOut, "( G14.7, ' = DistScl')")      DistScl
+   WRITE (UnOut, "( G14.7, ' = CTLy')")         CTLy
+   WRITE (UnOut, "( G14.7, ' = CTLz')")         CTLz
+   WRITE (UnOut, "( G14.7, ' = NumCTt')")       NumCTt
+
+
    PtrCurr => PtrHead
 
 
-   DO IE = 1,NumCTEvents
+   DO IE = 1,y_CohStr%NumCTEvents
 
       IF ( .NOT. ASSOCIATED ( PtrCurr ) ) EXIT     ! This shouldn't be necessary, given the way we created the list
 
@@ -2050,7 +1798,7 @@ ENDIF
 
 
       WRITE ( InpFile, '(I5.5)' ) EventName( PtrCurr%EventNum )
-      InpFile = TRIM( CTEventPath )//PathSep//'Event'//TRIM( InpFile)//'.dat'
+      InpFile = TRIM( p_CohStr%CTEventPath )//PathSep//'Event'//TRIM( InpFile)//'.dat'
 
       CALL OpenFInpFile( UnIn, InpFile )
 
@@ -2106,12 +1854,14 @@ ENDIF
       WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0
    ENDDO
 
-END SUBROUTINE WriteEvents
+   CLOSE ( UnOut )
+
+END SUBROUTINE CohStr_WriteEvents
 
 
 !=======================================================================
 
-SUBROUTINE CreateGrid( p, NumGrid_Y2, NumGrid_Z2, NSize )
+SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 
 ! Assumes that these variables are set:
 !  GridHeight
@@ -2121,16 +1871,23 @@ SUBROUTINE CreateGrid( p, NumGrid_Y2, NumGrid_Z2, NSize )
 
 use TSMods
 
-   TYPE(TurbSim_GridParameterType), INTENT(INOUT) :: p
+   TYPE(TurbSim_GridParameterType), INTENT(INOUT) :: p_grid
    INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
    INTEGER                        , INTENT(  OUT) :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
    INTEGER                        , INTENT(  OUT) :: NSize                           ! Size of the spectral matrix at each frequency
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    
    ! local variables:
 REAL(ReKi)              ::  TmpReal                         ! A temporary variable holding a Z (height) value, and other misc. variables
    INTEGER                                        :: IY, IZ                          ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
    
+   INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
    p_grid%GridRes_Y = p_grid%GridWidth  / REAL( NumGrid_Y - 1, ReKi )
    p_grid%GridRes_Z = p_grid%GridHeight / REAL( NumGrid_Z - 1, ReKi )      
@@ -2139,7 +1896,7 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
    p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
    IF ( p_grid%Zbottom <= 0.0 ) THEN
-      CALL TS_Abort ( 'The lowest grid point ('//TRIM(Flt2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
+      CALL TS_Abort ( 'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
                       'Adjust the appropriate values in the input file.' )
    ENDIF
 
@@ -2202,10 +1959,11 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
    NSize   = NTot*( NTot + 1 )/2   
    
    
-   CALL AllocAry(Z,     ZLim, 'Z (vertical locations of the grid points)' )
-   CALL AllocAry(Y,     YLim, 'Y (lateral locations of the grid points)' )
-   CALL AllocAry(IYmax, ZLim, 'IYmax (horizontal locations at each height)' ) !  Allocate the array of vertical locations of the grid points.
+   CALL AllocAry(Z,     ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(Y,     YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(IYmax, ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
 
+   IF (ErrStat >= AbortErrLev) RETURN
    
       ! Initialize cartesian Y,Z values of the grid.
 
@@ -2339,5 +2097,11 @@ SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
    CTKE = 0.5*SQRT(uv*uv + uw*uw + vw*vw)
    
 END SUBROUTINE
+!=======================================================================
+SUBROUTINE TS_End()
+
+   
+
+END SUBROUTINE TS_END
 !=======================================================================
 END MODULE TSSubs

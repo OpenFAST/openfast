@@ -82,9 +82,9 @@ REAL(DbKi)              ::  CGridSum                        ! The sums of the ve
 REAL(DbKi)              ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
 REAL(DbKi), PARAMETER   ::  DblZero = 0.0_DbKi              ! Zero, used to compare 8-byte reals against zero in MAX() functions (to conform to F95 standards)
 
-REAL(DbKi)              ::  USum                            ! The sum u-component wind speed at the hub
-REAL(DbKi)              ::  VSum                            ! The sum v-component wind speed at the hub
-REAL(DbKi)              ::  WSum                            ! The sum w-component wind speed at the hub
+!REAL(DbKi)              ::  USum                            ! The sum u-component wind speed at the hub
+!REAL(DbKi)              ::  VSum                            ! The sum v-component wind speed at the hub
+!REAL(DbKi)              ::  WSum                            ! The sum w-component wind speed at the hub
 REAL(ReKi)              ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
 REAL(ReKi)              ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
 REAL(ReKi)              ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
@@ -120,8 +120,6 @@ REAL(ReKi)              ::  Lambda1                         ! IEC turbulence sca
 REAL(ReKi)              ::  MaxEvtCTKE                      ! Maximum non-dimensional CTKE in events (used for scaling coherent events to appropriate size)
 REAL(ReKi)              ::  SigmaSlope                      ! Slope used with IEC models to determine target sigma and turbulent intensity
 REAL(ReKi)              ::  TargetSigma                     ! The target standard deviation for the IEC models, if scaling is requested.
-REAL(ReKi)              ::  Time                            ! The time at each step (Used in the binary HH file for GenPro)
-REAL(ReKi)              ::  TKE                             ! Turbulent Kenetic Energy at the hub
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
 REAL(ReKi)              ::  TmpW                            ! Temporarily holds the value of the w component
@@ -163,6 +161,8 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 
 
+INTEGER(IntKi)          :: ErrStat     ! allocation status
+CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
 
 
 !BONNIE:*****************************
@@ -182,11 +182,6 @@ CALL NWTC_Init
 CALL SetVersion
 
 
-   ! Open the console for output.
-
-CALL OpenCon
-
-
    ! Print out program name, version, and date.
 
 CALL DispNVD
@@ -204,7 +199,9 @@ CALL GetFiles
 
    ! Get input parameters.
 
-CALL GetInput
+CALL GetInput(ErrStat, ErrMsg)
+CALL CheckError()
+
 
 call WrSum_Heading1(US)
 
@@ -267,9 +264,10 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrBHHTP )  THEN   
 
-      CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin' )  ! just making sure it can be opened (not locked elsewhere)
-      CLOSE(UFTP)
-!      CALL OpenBin ( UGTP, TRIM( RootName)//'.bin', 2 )  !RECORD LENGTH (2) IS NOT USED HERE
+      CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin', ErrStat, ErrMsg )  ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UGTP)
+      CALL CheckError()
+!      CALL OpenBOutFile ( UGTP, TRIM( RootName)//'.bin', ErrStat, ErrMsg )
       FormStr = "( 3X , A , ' (hub-height binary turbulence-parameter file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.bin'
       CALL WrScr ( '    '//TRIM( RootName)//'.bin (a binary hub-height turbulence-parameter file)' )
@@ -278,8 +276,9 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrFHHTP )  THEN     
 
-      CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat' ) ! just making sure it can be opened (not locked elsewhere)
+      CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat', ErrStat, ErrMsg ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE( UFTP )
+      CALL CheckError()
       FormStr = "( 3X , A , ' (formatted turbulence-parameter file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.dat'
       CALL WrScr ( '    '//TRIM( RootName)//'.dat (a formatted turbulence-parameter file)' )
@@ -298,7 +297,8 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrADFF )  THEN
 
-      CALL OpenBin ( UAFFW, TRIM(RootName)//'.bts', 2 )
+      CALL OpenBOutFile ( UAFFW, TRIM(RootName)//'.bts', ErrStat, ErrMsg )
+      CALL CheckError()
 
       FormStr = "( 3X , A , ' (AeroDyn/TurbSim full-field wind file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.bts'
@@ -308,7 +308,8 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrBLFF )  THEN
 
-      CALL OpenBin ( UBFFW, TRIM(RootName)//'.wnd', 2 )
+      CALL OpenBOutFile ( UBFFW, TRIM(RootName)//'.wnd', ErrStat, ErrMsg )
+      CALL CheckError()
 
       FormStr = "( 3X , A , ' (AeroDyn/BLADED full-field wnd file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.wnd'
@@ -318,7 +319,8 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrADTWR .AND. (WrBLFF .OR. .NOT. WrADFF) )  THEN
 
-      CALL OpenBin ( UATWR, TRIM( RootName )//'.twr', 2 )
+      CALL OpenBOutFile ( UATWR, TRIM( RootName )//'.twr', ErrStat, ErrMsg )
+      CALL CheckError()
 
       FormStr = "( 3X , A , ' (Binary tower twr file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.twr'
@@ -328,8 +330,9 @@ IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR.
 
    IF ( WrACT ) THEN
 
-      CALL OpenFInpFile ( UACT,  CTEventFile  )
-      CALL OpenFOutFile ( UACTTS, TRIM( RootName )//'.cts' )         
+      CALL OpenFOutFile ( UACTTS, TRIM( RootName )//'.cts', ErrStat, ErrMsg  )         ! just making sure it can be opened (not locked elsewhere)
+      close(UACTTS)
+      CALL CheckError()
       
       FormStr = "( 3X , A , ' (AeroDyn coherent turbulence time step file)' )"
       WRITE (US,FormStr)  TRIM( RootName)//'.cts'
@@ -384,7 +387,8 @@ DelF5       = 0.5*DelF
 
    !  Allocate/Initialize the array of frequencies.
 
-call AllocAry( Freq, NumFreq, 'Freq (frequency array)')
+call AllocAry( Freq, NumFreq, 'Freq (frequency array)', ErrStat, ErrMsg)
+CALL CheckError()
 
 DO IFreq=1,NumFreq
    Freq(IFreq) = IFreq*DelF
@@ -416,8 +420,8 @@ ENDIF
 
 
    ! Define the other parameters for the time series.
-CALL CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize )
-
+CALL CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
+CALL CheckError()
       
 
 
@@ -429,10 +433,12 @@ ENDIF
 
 
    !  Wind speed:
-CALL AllocAry(U,     ZLim, 'u (steady, u-component winds)' )
+CALL AllocAry(U,     ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
+CALL CheckError()
            
 IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
-   CALL AllocAry(WindDir_profile, ZLim, 'WindDir_profile (wind direction profile)' )                  ! Allocate the array for the wind direction profile      
+   CALL AllocAry(WindDir_profile, ZLim, 'WindDir_profile (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
+   CALL CheckError()
    
    U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType, UHANGLE=WindDir_profile) 
 ELSE IF ( WindProfileType(1:3) == 'API' )  THEN
@@ -445,8 +451,10 @@ IF ( SpecModel == SpecModel_GP_LLJ) THEN
 
       ! Allocate the arrays for the z/l and ustar profile
       
-   CALL AllocAry(ZL_profile,    ZLim, 'ZL_profile (z/l profile)' )
-   CALL AllocAry(Ustar_profile, ZLim, 'Ustar_profile (friction velocity profile)' )         
+   CALL AllocAry(ZL_profile,    ZLim, 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
+   CALL CheckError()
+   CALL AllocAry(Ustar_profile, ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
+   CALL CheckError()
 
    ZL_profile(:) = getZLARY(    U(1:ZLim), Z(1:ZLim) )
    Ustar_profile(:) = getUstarARY( U(1:ZLim), Z(1:ZLim) )
@@ -742,9 +750,11 @@ IF ( ALLOCATED( Wspec_USR  ) )  DEALLOCATE( Wspec_USR  )
 
    ! Allocate memory for random number array
 
-CALL AllocAry( PhaseAngles, NTot, NumFreq, 3, 'Random Phases' )
-CALL RndPhases(p_RandNum, OtherSt_RandNum, PhaseAngles, NTot, NumFreq)
+CALL AllocAry( PhaseAngles, NTot, NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
+CALL CheckError()
 
+CALL RndPhases(p_RandNum, OtherSt_RandNum, PhaseAngles, NTot, NumFreq, ErrStat, ErrMsg)
+CALL CheckError()
 
 WRITE(US,"(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)")
 
@@ -995,7 +1005,8 @@ IF ( WrADHH )  THEN
 END IF
 
 IF ( WrBHHTP )  THEN
-   CALL WrHH_binary()   
+   CALL WrHH_binary(ErrStat, ErrMsg)
+   CALL CheckError()
 END IF
 
 IF ( WrFHHTP )  THEN
@@ -1003,7 +1014,8 @@ IF ( WrFHHTP )  THEN
 END IF
 
    ! Write statistics of the run to the summary file:
-CALL WrSum_Stats(USig, VSig, WSig, UXSig)
+CALL WrSum_Stats(USig, VSig, WSig, UXSig, ErrStat, ErrMsg)
+CALL CheckError()
 p_CohStr%WSig=WSig
 
 !..............................................................................
@@ -1127,29 +1139,27 @@ IF ( WrACT ) THEN
 
       ! Read and allocate coherent event start times and lengths, calculate TSclFact
 
-   CALL ReadEventFile( UACT, p_CohStr%ScaleWid, p_CohStr%ScaleVel, CTKE )
+   CALL CohStr_ReadEventFile( UACT, p_CohStr%ScaleWid, p_CohStr%ScaleVel, CTKE )
 
-   CLOSE ( UACT )  
    
-   CALL CalcEvents( REAL( p_CohStr%Uwave, ReKi ), MaxEvtCTKE,  p_grid%Zbottom+0.5*p_CohStr%ScaleWid) 
+   CALL CohStr_CalcEvents( REAL( p_CohStr%Uwave, ReKi ), MaxEvtCTKE,  p_grid%Zbottom+0.5*p_CohStr%ScaleWid) 
 
-   WRITE(US, '(A,F8.3," (m/s)^2")') 'Maximum predicted event CTKE         = ', CTKE
+      ! Write the number of separate events to the summary file
 
-      ! Write event data to the time step output file (opened at the beginnig)
+   IF (KHtest) THEN
+      WRITE ( US,'(/)' )
+   ELSE
+      WRITE ( US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda
+   ENDIF
 
-   WRITE (UACTTS, "( A14,   ' = FileType')") CTExt
-   WRITE (UACTTS, "( G14.7, ' = ScaleVel')") p_CohStr%ScaleVel
-   WRITE (UACTTS, "( G14.7, ' = MHHWindSpeed')") UHub
-   WRITE (UACTTS, "( G14.7, ' = Ymax')") p_CohStr%ScaleWid*Ym_max/Zm_max
-   WRITE (UACTTS, "( G14.7, ' = Zmax')") p_CohStr%ScaleWid
-   WRITE (UACTTS, "( G14.7, ' = DistScl')") DistScl
-   WRITE (UACTTS, "( G14.7, ' = CTLy')") CTLy
-   WRITE (UACTTS, "( G14.7, ' = CTLz')") CTLz
-   WRITE (UACTTS, "( G14.7, ' = NumCTt')") NumCTt
+   WRITE ( US, '(A,I8)'   )            'Number of coherent events            = ',y_CohStr%NumCTEvents
+   WRITE ( US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ',y_CohStr%ExpectedTime
+   WRITE ( US, '(A,F8.3," seconds")')  'Length of coherent events            = ',y_CohStr%EventTimeSum
+   WRITE ( US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', CTKE
+
    
-   CALL WriteEvents ( UACTTS, UACT, TSclFact )
+   CALL CohStr_WriteEvents ( UACTTS, UACT, TSclFact )
 
-   CLOSE ( UACTTS )
 
       ! Deallocate the coherent event times arrays.
 
@@ -1276,5 +1286,19 @@ CLOSE ( US )
 CALL WrScr1  ( ' Processing complete.  '//TRIM( Num2LStr( CPUtime ) )//' CPU seconds used.' )
 CALL NormStop
 
+
+CONTAINS
+!...........................................................
+SUBROUTINE CheckError()
+   IF (ErrStat /= ErrID_None) THEN
+   
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL TS_end()
+         CALL TS_Abort( TRIM(ErrMSg) )
+      ELSE
+         CALL WrScr(TRIM(ErrMsg))
+      END IF
+   END IF
+END SUBROUTINE CheckError
 
 END PROGRAM

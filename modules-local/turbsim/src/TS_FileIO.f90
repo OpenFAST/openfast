@@ -34,7 +34,7 @@ MODULE TS_FileIO
 CONTAINS
 
 !=======================================================================
-SUBROUTINE GetInput
+SUBROUTINE GetInput(ErrStat, ErrMsg)
 
 
   ! This subroutine is used to read parameters from the input file.
@@ -42,6 +42,9 @@ SUBROUTINE GetInput
 USE                  TSMods
 
 IMPLICIT             NONE
+
+INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
+CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
 
    ! Local variables
 
@@ -67,8 +70,8 @@ CHARACTER(99)     :: Line            ! An input line
 CHARACTER(1)      :: Line1           ! The first character of an input line
 
 
-UnEc = US
-Echo = .FALSE.       ! Do not echo the input into a separate file
+!UnEc = US
+!Echo = .FALSE.       ! Do not echo the input into a separate file
 
    !==========================================================
    ! Initialize temporary variables
@@ -89,8 +92,7 @@ CALL WrScr1(' Reading the input file "'//TRIM(InFile)//'".' )
    ! Read the runtime options.
    !==========================================================
 
-FormStr = "( / 'Runtime Options:' / )"
-WRITE (US,FormStr)
+WRITE (US,"( / 'Runtime Options:' / )")
 CALL ReadCom( UI, InFile, "File Heading Line 1" )
 CALL ReadCom( UI, InFile, "File Heading Line 2" )
 CALL ReadCom( UI, InFile, "Runtime Options Heading" )
@@ -101,8 +103,7 @@ CALL ReadCom( UI, InFile, "Runtime Options Heading" )
 
 CALL ReadVar( UI, InFile, p_RandNum%RandSeed(1), "RandSeed(1)", "Random seed #1")
 
-FormStr = "( I10 , 2X , 'Random seed #1' )"
-WRITE (US,FormStr)  p_RandNum%RandSeed(1)
+WRITE (US,"( I10 , 2X , 'Random seed #1' )")  p_RandNum%RandSeed(1)
 
 
    ! ---------- Read Random seed 2 -----------------------
@@ -146,9 +147,9 @@ CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
 
    ENDIF
 
-   ! Initialize the RNG
+   ! Initialize the RNG (for computing "default" values that contain random variates)
 
-CALL RandNum_Init(p_RandNum, OtherSt_RandNum)
+CALL RandNum_Init(p_RandNum, OtherSt_RandNum, ErrStat, ErrMsg)
 
 
    ! --------- Read the flag for writing the binary HH (GenPro) turbulence parameters. -------------
@@ -223,7 +224,7 @@ FormStr = "( L10 , 2X , 'Clockwise rotation when looking downwind?' )"
 WRITE (US,FormStr)  Clockwise
 
    ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
-CALL ReadLIVar( UI, InFile, ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
+CALL ReadVar( UI, InFile, ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
                "Scale IEC turbulence models to specified standard deviation?")
 
 FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specified standard deviation' )"
@@ -449,14 +450,15 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
          SpecModel = SpecModel_USRVKM
       CASE ( 'USRINP' )
          TMName = 'User-input '
-         CALL GetUSRspec("UsrSpec.inp")      ! bjj: before documenting, please fix this hard-coded name!
+         CALL GetUSRspec("UsrSpec.inp", ErrStat, ErrMsg)      ! bjj: before documenting, please fix this hard-coded name!
          SpecModel = SpecModel_USER
       CASE DEFAULT
 !BONNIE: add the UsrVKM model to this list when the model is complete as well as USRINP
          CALL TS_Abort ( 'The turbulence model must be "IECKAI", "IECVKM", "SMOOTH",' &
                     //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "API", or "NONE".' )
 
-   END SELECT  ! TurbModel
+      END SELECT  ! TurbModel
+      IF (ErrStat >= AbortErrLev) RETURN
 
 FormStr = "( 4X , A6 , 2X , '"//TRIM( TMName )//" spectral model' )"
 WRITE (US,FormStr)  TurbModel
@@ -742,7 +744,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
 UseDefault = .TRUE.
 ETMc = 2;
-CALL ReadRVarDefault( UI, InFile, ETMc, "the ETM c parameter", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', &
+CALL ReadRVarDefault( UI, InFile, ETMc, "the ETM c parameter", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', US, &
                       UseDefault, IGNORE=(IEC_WindType /= IEC_ETM ))
 
    IF ( ETMc <= 0. ) THEN
@@ -767,7 +769,7 @@ SELECT CASE ( SpecModel )
       WindProfileType = 'IEC'
 END SELECT
 
-CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Wind profile type", UseDefault )
+CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Wind profile type", US, UseDefault )
 
       ! Make sure the variable is valid for this turbulence model
 
@@ -826,7 +828,7 @@ URef       = -999.9
 ! If we specify a Ustar (i.e. if Ustar /= "default") then we can enter "default" here,
 ! otherwise, we get circular logic...
 
-   CALL ReadRVarDefault( UI, InFile, URef, "the reference wind speed", "Reference wind speed [m/s]", UseDefault, &
+   CALL ReadRVarDefault( UI, InFile, URef, "the reference wind speed", "Reference wind speed [m/s]", US, UseDefault, &
                      IGNORE=(IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 .OR. WindProfileType(1:1) == 'U') )
 
    NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
@@ -839,7 +841,8 @@ URef       = -999.9
 
    ELSEIF ( WindProfileType(1:1) == 'U' ) THEN
       RefHt = HubHt
-      CALL GetUSR( UI, InFile, 37 ) !Read the last several lines of the file, then return to line 37
+      CALL GetUSR( UI, InFile, 37, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
+      IF (ErrStat >= AbortErrLev) RETURN
       URef = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE=WindProfileType) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
@@ -856,7 +859,7 @@ URef       = -999.9
 UseDefault = .FALSE.
 ZJetMax    = -999.9
 
-CALL ReadRVarDefault( UI, InFile, ZJetMax, "the jet height", "Jet height [m]", UseDefault, IGNORE=WindProfileType(1:1) /= 'J')
+CALL ReadRVarDefault( UI, InFile, ZJetMax, "the jet height", "Jet height [m]", US, UseDefault, IGNORE=WindProfileType(1:1) /= 'J')
 
    IF ( WindProfileType(1:1) == 'J' .AND. .NOT. UseDefault ) THEN
       IF ( ZJetMax <  70.0 .OR. ZJetMax > 490.0 )  THEN
@@ -884,7 +887,7 @@ SELECT CASE ( SpecModel )
 END SELECT
 getPLExp = .NOT. UseDefault
 
-CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law exponent", UseDefault, &
+CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law exponent", US, UseDefault, &
                IGNORE=( ((INDEX( 'JLUH', WindProfileType(1:1) ) > 0.)) .OR. &
                          IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 ) )
 
@@ -920,7 +923,7 @@ SELECT CASE ( SpecModel )
       Z0 = 0.030 ! Represents smooth, homogenous terrain
 END SELECT
 
-CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness length [m]", UseDefault, &
+CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness length [m]", US, UseDefault, &
                        IGNORE=SpecModel==SpecModel_TIDAL)
 
    IF ( Z0 <= 0.0 ) THEN
@@ -947,7 +950,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. SpecModel /= SpecModel_IECVKM .AND. Spe
    UseDefault = .TRUE.
    Latitude   = 45.0
 
-   CALL ReadRVarDefault( UI, InFile, Latitude, "the site latitude", "Site latitude [degrees]", UseDefault)
+   CALL ReadRVarDefault( UI, InFile, Latitude, "the site latitude", "Site latitude [degrees]", US, UseDefault)
 
       IF ( ABS(Latitude) < 5.0 .OR. ABS(Latitude) > 90.0 ) THEN
          CALL TS_Abort( 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.' )
@@ -1105,7 +1108,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    END SELECT
 
-   CALL ReadRVarDefault( UI, InFile, UStar, "the friction or shear velocity", "Friction or shear velocity [m/s]", UseDefault )
+   CALL ReadRVarDefault( UI, InFile, UStar, "the friction or shear velocity", "Friction or shear velocity [m/s]", US, UseDefault )
 
    IF ( Uref < 0.0 .AND. UseDefault ) THEN  ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
       CALL TS_Abort( 'The reference wind speed and friction velocity cannot both be "default."')
@@ -1178,7 +1181,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ENDIF
    ENDIF
 
-   CALL ReadRVarDefault( UI, InFile, ZI, "the mixing layer depth", "Mixing layer depth [m]", UseDefault, &
+   CALL ReadRVarDefault( UI, InFile, ZI, "the mixing layer depth", "Mixing layer depth [m]", US, UseDefault, &
                                                                   IGNORE=(ZL>=0. .AND. SpecModel /= SpecModel_GP_LLJ) )
 
       IF ( ( ZL < 0.0 ) .AND. ( ZI <= 0.0 ) ) THEN
@@ -1198,7 +1201,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
        ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
    UseDefault = .TRUE.
    CALL ReadRVarDefault( UI, InFile, PC_UW, "the mean hub u'w' Reynolds stress", &
-                                            "Mean hub u'w' Reynolds stress", UseDefault, IGNORESTR = UWskip )
+                                            "Mean hub u'w' Reynolds stress", US, UseDefault, IGNORESTR = UWskip )
    IF (.NOT. UWskip) THEN
       TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
 
@@ -1214,12 +1217,12 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
    UseDefault = .TRUE.
    CALL ReadRVarDefault( UI, InFile, PC_UV, "the mean hub u'v' Reynolds stress", &
-                                            "Mean hub u'v' Reynolds stress", UseDefault, IGNORESTR = UVskip )
+                                            "Mean hub u'v' Reynolds stress", US, UseDefault, IGNORESTR = UVskip )
 
       ! ------------ Read in the mean hub v'w' Reynolds stress, PC_VW ---------------------------------------------
    UseDefault = .TRUE.
    CALL ReadRVarDefault( UI, InFile, PC_VW, "the mean hub v'w' Reynolds stress", &
-                                            "Mean hub v'w' Reynolds stress", UseDefault, IGNORESTR = VWskip )
+                                            "Mean hub v'w' Reynolds stress", US, UseDefault, IGNORESTR = VWskip )
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
    CALL GetDefaultCoh( UHub, HubHt )
@@ -1229,7 +1232,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
    InCVar(2) = InCohB(1)
 
    CALL ReadRAryDefault( UI, InFile, InCVar, "the u-component coherence parameters", &
-                                             "u-component coherence parameters", UseDefault)
+                                             "u-component coherence parameters", US, UseDefault)
    InCDec(1) = InCVar(1)
    InCohB(1) = InCVar(2)
 
@@ -1243,8 +1246,8 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
    InCVar(1) = InCDec(2)
    InCVar(2) = InCohB(2)
 
-   CALL ReadRAryDefault( UI, InFile, InCVar, "the v-component coherence parameters", &
-                                             "v-component coherence parameters", UseDefault)
+   CALL ReadRAryDefault( UI, InFile, InCVar, "the v-component coherence parameters",  &
+                                             "v-component coherence parameters", US, UseDefault)
 
    InCDec(2) = InCVar(1)
    InCohB(2) = InCVar(2)
@@ -1260,7 +1263,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
    InCVar(2) = InCohB(3)
 
    CALL ReadRAryDefault( UI, InFile, InCVar, "the w-component coherence parameters", &
-                                             "w-component coherence parameters", UseDefault)
+                                             "w-component coherence parameters", US, UseDefault)
 
    InCDec(3) = InCVar(1)
    InCohB(3) = InCVar(2)
@@ -1273,7 +1276,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    UseDefault = .TRUE.
    CohExp     = 0.0    ! was 0.25
-   CALL ReadRVarDefault( UI, InFile, CohExp, "the coherence exponent", "Coherence exponent", UseDefault)
+   CALL ReadRVarDefault( UI, InFile, CohExp, "the coherence exponent", "Coherence exponent", US, UseDefault)
 
       IF ( COHEXP < 0.0 ) THEN
          CALL TS_Abort ( 'The coherence exponent must be non-negative.')
@@ -1295,29 +1298,29 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
 
-      CALL ReadVar( UI, InFile, CTEventPath, "the path of the coherent turbulence events", "Coherence events path")
+      CALL ReadVar( UI, InFile, p_CohStr%CTEventPath, "the path of the coherent turbulence events", "Coherence events path")
 
-      IF ( LEN( TRIM(CTEventPath) ) <= 10 )  THEN
+      IF ( LEN( TRIM(p_CohStr%CTEventPath) ) <= 10 )  THEN
          FormStr = "( A10 , 2X , 'Name of the path containing the coherent turbulence data files' )"
       ELSE
          FormStr = "( A, /, 12X , 'Name of the path containing the coherent turbulence data files' )"
       ENDIF
 
-      WRITE (US,FormStr)  TRIM(CTEventPath)
+      WRITE (US,FormStr)  TRIM(p_CohStr%CTEventPath)
 
       CALL ReadVar( UI, InFile, Line, "the event file type", "Event file type")
 
 
       IF ( KHtest ) THEN
 
-         CText = 'les'
-         CTEventFile = TRIM(CTEventPath)//PathSep//'Events.xtm'
+         p_CohStr%CText = 'les'
+         p_CohStr%CTEventFile = TRIM(p_CohStr%CTEventPath)//PathSep//'Events.xtm'
 
          CALL WrScr( ' LES events will be used for the KH test.' )
 
       ELSE
 
-         CText = Line  !This will preserve the case formatting, in case it matters.
+         p_CohStr%CText = Line  !This will preserve the case formatting, in case it matters.
 
          CALL Conv2UC( Line )
 
@@ -1325,19 +1328,19 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
              CALL RndUnif( p_RandNum, OtherSt_RandNum, tmp )
 
              IF ( tmp <= 0.5 ) THEN
-                 CText = 'les'
+                 p_CohStr%CText = 'les'
              ELSE
-                 CText = 'dns'
+                 p_CohStr%CText = 'dns'
              ENDIF
          ENDIF
 
-         CTEventFile = TRIM(CTEventPath)//PathSep//'Events.'//TRIM(CText)
+         p_CohStr%CTEventFile = TRIM(p_CohStr%CTEventPath)//PathSep//'Events.'//TRIM(p_CohStr%CText)
 
       ENDIF
 
       FormStr = "( 7X, A3, 2X, 'Type of coherent turbulence data files' )"
 
-      WRITE (US,FormStr) TRIM(CText)
+      WRITE (US,FormStr) TRIM(p_CohStr%CText)
 
 
          ! ------------ Read the Randomization Flag, Randomize -----------------------------------
@@ -1517,7 +1520,7 @@ DescStr = 'This full-field file was '//TRIM(DescStr)
 RETURN
 END SUBROUTINE GetFiles
 !=======================================================================
-SUBROUTINE GetUSR(U_in, FileName, NLines)
+SUBROUTINE GetUSR(U_in, FileName, NLines, ErrStat, ErrMsg)
 
    USE                                   TSMods, ONLY: HubHt             ! Hub Height
    USE                                   TSMods, ONLY: L_USR             ! von Karman length scale
@@ -1530,6 +1533,13 @@ SUBROUTINE GetUSR(U_in, FileName, NLines)
    USE                                   TSMods, ONLY: Z_USR             ! heights corresponding to the profiles
    IMPLICIT                              NONE
 
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+   
+   INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+   
+   
    CHARACTER(*), INTENT(IN)           :: FileName                       ! Name of the input file
    CHARACTER(200)                     :: LINE
 
@@ -1548,6 +1558,10 @@ SUBROUTINE GetUSR(U_in, FileName, NLines)
 
    LOGICAL                            :: ReadSigL                       ! Whether or not to read the last 2 columns
 
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
       ! Find the end of the input file, where the "User-Defined Variables" are located
    READ ( U_in, '(A)', IOSTAT=IOAstat ) LINE
 
@@ -1587,16 +1601,16 @@ SUBROUTINE GetUSR(U_in, FileName, NLines)
    ENDDO
 
       ! Allocate the data arrays
-   CALL AllocAry(Z_USR,       NumUSRz, 'Z_Usr (user-defined height)')
-   CALL AllocAry(U_USR,       NumUSRz, 'U_USR (user-defined wind speed)')
-   CALL AllocAry(WindDir_USR, NumUSRz, 'WindDir_USR (user-defined wind direction)')
+   CALL AllocAry(Z_USR,       NumUSRz, 'Z_Usr (user-defined height)',               ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry(U_USR,       NumUSRz, 'U_USR (user-defined wind speed)',           ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry(WindDir_USR, NumUSRz, 'WindDir_USR (user-defined wind direction)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
 
    IF ( SpecModel == SpecModel_USRVKM ) THEN
       ReadSigL = .TRUE.
 
-      CALL AllocAry(Sigma_USR, NumUSRz, 'Sigma_USR (user-defined sigma)')
-      CALL AllocAry(L_USR,     NumUSRz, 'L_USR (user-defined length scale)')
+      CALL AllocAry(Sigma_USR, NumUSRz, 'Sigma_USR (user-defined sigma)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+      CALL AllocAry(L_USR,     NumUSRz, 'L_USR (user-defined length scale)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
       
    ELSE
       ReadSigL = .FALSE.
@@ -1695,7 +1709,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines)
 
 END SUBROUTINE GetUSR
 !=======================================================================
-SUBROUTINE GetUSRSpec(FileName)
+SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
 
    USE                                   TSMods, ONLY: TurbModel, SpecModel         ! Type of turbulence model
    USE                                   TSMods, ONLY: NumUSRf           ! Length of user-defined spectra (# frequencies)
@@ -1707,6 +1721,8 @@ SUBROUTINE GetUSRSpec(FileName)
 
    IMPLICIT                              NONE
 
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    CHARACTER(*), INTENT(IN)           :: FileName                       ! Name of the input file
    CHARACTER(200)                     :: LINE
 
@@ -1721,7 +1737,12 @@ SUBROUTINE GetUSRSpec(FileName)
    INTEGER                            :: J
    INTEGER                            :: IOAstat                        ! Input/Output/Allocate status
 
+   INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
 
+   ErrStat = ErrID_None
+   ErrMSg  = ""
+   
       ! --------- Open the file ---------------
 
    CALL OpenFInpFile( USpec, FileName )
@@ -1756,10 +1777,10 @@ SUBROUTINE GetUSRSpec(FileName)
    ENDDO
 
       ! Allocate the data arrays
-   CALL AllocAry( Freq_USR,  NumUSRf, 'Freq_USR (user-defined frequencies)' )
-   CALL AllocAry( Uspec_USR, NumUSRf, 'Uspec_USR (user-defined u spectra)' )
-   CALL AllocAry( Vspec_USR, NumUSRf, 'Vspec_USR (user-defined v spectra)' )
-   CALL AllocAry( Wspec_USR, NumUSRf, 'Wspec_USR (user-defined w spectra)' )
+   CALL AllocAry( Freq_USR,  NumUSRf, 'Freq_USR (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Uspec_USR, NumUSRf, 'Uspec_USR (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Vspec_USR, NumUSRf, 'Vspec_USR (user-defined v spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Wspec_USR, NumUSRf, 'Wspec_USR (user-defined w spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
 
 
@@ -1832,124 +1853,9 @@ SUBROUTINE GetUSRSpec(FileName)
    CLOSE( USpec )
 
 END SUBROUTINE GetUSRSpec
+
 !=======================================================================
-SUBROUTINE ReadEventFile( Un, ScaleWid, ScaleVel, CTKE )
-
-      ! This subroutine reads the events definitions from the event data file
-
-   USE                     TSMods
-
-
-   IMPLICIT                NONE
-
-
-      ! Passed Variables
-
-INTEGER,    INTENT(IN)  :: Un             ! I/O Unit
-REAL(ReKi),INTENT(IN)   :: CTKE           ! Predicted maximum CTKE
-REAL(ReKi),INTENT(INOUT):: ScaleVel       ! The shear we're scaling for
-REAL(ReKi),INTENT(IN)   :: ScaleWid       ! The height of the wave we're scaling with
-
-      ! Local variables
-REAL(ReKi)              :: MaxEvtCTKE        ! The maximum CTKE in the dataset of events
-
-INTEGER                 :: AllocStat      ! Array allocation status
-INTEGER                 :: I              ! DO loop counter
-INTEGER                 :: IOS            ! I/O Status
-
-
-   MaxEvtCTKE = 0.0  ! initialize the MAX variable
-
-
-         ! Read the nondimensional lateral width of the dataset, Ym_max
-
-   CALL ReadVar( Un, CTEventFile, Ym_max, "the nondimensional lateral width of the dataset", &
-                                                   "Nondimensional lateral dataset width")
-
-         ! Read the nondimensional vertical height of the dataset, Zm_max
-
-   CALL ReadVar( Un, CTEventFile, Zm_max, "the nondimensional vertical height of the dataset", &
-                                          "Nondimensional vertical dataset height")
-
-
-         ! Read the rest of the header
-
-   CALL ReadVar( Un, CTEventFile, NumEvents, "NumEvents", "the number of coherent structures.")
-
-
-   IF ( NumEvents > 0 ) THEN
-
-            ! Allocate memory for coherent event start times and lengths
-
-      ALLOCATE ( EventName(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event name.' )
-      ENDIF
-
-      ALLOCATE ( EventTS(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event timestep lengths.' )
-      ENDIF
-
-      ALLOCATE ( EventLen(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event lengths.' )
-      ENDIF
-
-      ALLOCATE ( pkCTKE(NumEvents) , STAT=AllocStat )
-
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for the coherent event peak CTKE.' )
-      ENDIF
-
-
-            ! Read the last header lines
-
-      CALL ReadCom( Un, CTEventFile, 'the fourth header line')  ! A blank line
-      CALL ReadCom( Un, CTEventFile, 'the fifth header line')   ! The column heading lines
-
-
-            ! Read the event definitions and scale times by TScale
-
-      DO I=1,NumEvents
-
-         READ ( Un, *, IOSTAT=IOS )  EventName(I),  EventTS(I), EventLen(I), pkCTKE(I)
-
-         IF ( IOS /= 0 )  THEN
-            CALL TS_Abort ( 'Error reading event '//TRIM( Int2LStr( I ) )//' from the coherent event data file.' )
-         ENDIF
-         MaxEvtCTKE = MAX( MaxEvtCTKE, pkCTKE(I) )
-
-      ENDDO
-
-      IF ( MaxEvtCTKE > 0.0 ) THEN
-            ScaleVel = MAX( ScaleVel, SQRT( CTKE / MaxEvtCTKE ) )
-            ! Calculate the Velocity Scale Factor, based on the requested maximum CTKE
-      ENDIF
-
-         ! Calculate the TimeScaleFactor, based on the Zm_max in the Events file.
-
-      TSclFact = ScaleWid / (ScaleVel * Zm_max)
-
-         ! Scale the time based on TSclFact
-
-      DO I=1,NumEvents
-         EventLen(I) = EventLen(I)*TSclFact
-      ENDDO
-
-   ELSE
-
-      TSclFact = ScaleWid / (ScaleVel * Zm_max)
-
-   ENDIF  ! FileNum > 0
-
-
-END SUBROUTINE ReadEventFile
-!=======================================================================
-SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE )
+SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, US, Def, IGNORE )
 
 
       ! This routine reads a single character variable from the next line of the input file.
@@ -1959,6 +1865,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
 
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(IN)          :: US                                              ! I/O unit for echo/summary file.
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether to ignore this input
@@ -1979,7 +1886,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
-         WRITE (UnEc,Frmt)  "N/A", VarDescr
+         WRITE (US,Frmt)  "N/A", VarDescr
          Def = .TRUE.
          RETURN
       ENDIF
@@ -1993,9 +1900,9 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
       CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
 
       IF ( Def ) THEN  ! use the value as a default
-         WRITE (UnEc,Frmt)  CharVar, VarDescr
+         WRITE (US,Frmt)  CharVar, VarDescr
       ELSE
-         WRITE (UnEc,Frmt)  "CALCULATED", VarDescr
+         WRITE (US,Frmt)  "CALCULATED", VarDescr
       ENDIF
 
       Def = .TRUE.
@@ -2004,7 +1911,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
 
       CharVar = CharLine
 
-      WRITE (UnEc,Frmt)  CharVar, VarDescr
+      WRITE (US,Frmt)  CharVar, VarDescr
 
       Def = .FALSE.
 
@@ -2013,44 +1920,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, Def, IGNORE 
    RETURN
 END SUBROUTINE ReadCVarDefault ! ( UnIn, Fil, RealVar, VarName, VarDescr )
 !=======================================================================
-SUBROUTINE ReadLIVar( UnIn, Fil, IntVar, VarName, VarDescr )
-
-      ! This routine reads a single integer variable from the next line of the input file.
-      ! BJJ modified from NWTC_subs ReadIVar(), with just the call to ReadNum() removed.  This
-      !     will allow users to keep their T/F values in their input files if they want to.
-
-      ! Argument declarations:
-
-   INTEGER, INTENT(OUT)         :: IntVar                                          ! Integer variable being read.
-   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-
-   CHARACTER(*), INTENT(IN)     :: Fil                                             ! Name of the input file.
-   CHARACTER(*), INTENT(IN)     :: VarDescr                                        ! Text string describing the variable.
-   CHARACTER(*), INTENT(IN)     :: VarName                                         ! Text string containing the variable name.
-
-
-      ! Local declarations:
-
-   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
-
-   CHARACTER(33)                :: Frmt = "( 2X, I11, 2X, A, T30, ' - ', A )"      ! Output format for integer parameters.
-
-
-   READ (UnIn,*,IOSTAT=IOS)  IntVar
-
-   CALL CheckIOS ( IOS, Fil, VarName, NumType )
-
-   IF ( Echo )  THEN
-      WRITE (UnEc,Frmt)  IntVar, VarName, VarDescr
-   END IF
-
-
-   RETURN
-
-
-END SUBROUTINE ReadLIVar
-!=======================================================================
-SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE )
+SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGNORE )
 
       ! This routine reads a real array from the next line of the input file.
       ! The input is allowed to be "default"
@@ -2060,6 +1930,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE 
    REAL(ReKi), INTENT(INOUT)    :: RealAry (:)                                     ! Real variable being read.
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(IN)          :: US                                              ! I/O unit for echo/summary file.
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
@@ -2084,7 +1955,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE 
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
-         WRITE (UnEc,"( A10, 2X, A )")  "N/A", VarDescr
+         WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
          Def = .TRUE.
          RETURN
       ENDIF
@@ -2098,9 +1969,9 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE 
       CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
 
       IF ( Def ) THEN  ! use the value as a default
-         WRITE (UnEc,Frmt)  RealAry, VarDescr
+         WRITE (US,Frmt)  RealAry, VarDescr
       ELSE
-         WRITE (UnEc,"( A10, 2X, A )")  "CALCULATED", VarDescr
+         WRITE (US,"( A10, 2X, A )")  "CALCULATED", VarDescr
       ENDIF
 
       Def = .TRUE.
@@ -2119,7 +1990,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE 
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType )
 
-      WRITE (UnEc,Frmt)  RealAry, VarDescr
+      WRITE (US,Frmt)  RealAry, VarDescr
 
       Def = .FALSE.
 
@@ -2130,7 +2001,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, Def, IGNORE 
 
 END SUBROUTINE ReadRAryDefault
 !=======================================================================
-SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE, IGNORESTR )
+SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGNORE, IGNORESTR )
 
       ! This routine reads a single real variable from the next line of the input file.
       ! The input is allowed to be "default"
@@ -2140,6 +2011,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
    REAL(ReKi), INTENT(INOUT)    :: RealVar                                         ! Real variable being read.
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(IN)          :: US                                              ! I/O unit for echo/summary file.
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
@@ -2163,7 +2035,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
    IF ( PRESENT(IGNORE) ) THEN
 
       IF ( IGNORE ) THEN
-         WRITE (UnEc,"( A10, 2X, A )")  "N/A", VarDescr
+         WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
          Def = .TRUE.
          RETURN
       ENDIF
@@ -2176,7 +2048,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
    IF ( PRESENT(IGNORESTR) ) THEN
       IF ( TRIM( CharLine ) == 'NONE' ) THEN
          IGNORESTR = .TRUE.
-         WRITE (UnEc,"( A10, 2X, A )")  "N/A", VarDescr
+         WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
          Def = .TRUE.
          RealVar = 0.0  ! This is set for the Reynolds stress inputs, but if IGNORESTR is used for other inputs, it may need to be changed
          RETURN
@@ -2189,16 +2061,16 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
 
       IF ( PRESENT(IGNORESTR) ) THEN
          IF ( IGNORESTR ) THEN  !We've told it to ignore this input, by default
-            WRITE (UnEc,"( A10, 2X, A )")  "N/A", VarDescr
+            WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
             RealVar = 0.0  ! This is set for the Reynolds stress inputs, but if IGNORESTR is used for other inputs, it may need to be changed
             RETURN
          ENDIF
       ENDIF
 
       IF ( Def ) THEN  ! use the value as a default
-         WRITE (UnEc,Frmt)  RealVar, VarDescr
+         WRITE (US,Frmt)  RealVar, VarDescr
       ELSE
-         WRITE (UnEc,"( A10, 2X, A )")  "CALCULATED", VarDescr
+         WRITE (US,"( A10, 2X, A )")  "CALCULATED", VarDescr
       ENDIF
 
       Def = .TRUE.
@@ -2213,7 +2085,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, Def, IGNORE,
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType )
 
-      WRITE (UnEc,Frmt)  RealVar, VarDescr
+      WRITE (US,Frmt)  RealVar, VarDescr
 
       Def = .FALSE.
 
@@ -3204,13 +3076,17 @@ ENDIF
 
 END SUBROUTINE WrHH_ADtxtfile
 !=======================================================================
-SUBROUTINE WrHH_binary()
+SUBROUTINE WrHH_binary(ErrStat, ErrMsg)
 
    ! Output HH binary turbulence parameters for GenPro analysis.
    ! Output order:  Time,U,Uh,Ut,V,W,u',v',w',u'w',u'v',v'w',TKE,CTKE.
 
 
 USE TSMods
+
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+
 
    ! local variables
    
@@ -3228,7 +3104,8 @@ USE TSMods
 
 
 
-   CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin' ) 
+   CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin', ErrStat, ErrMsg ) 
+   IF (ErrStat >= AbortErrLev) RETURN
 
    CALL WrScr ( ' Hub-height binary turbulence parameters were written to "'//TRIM( RootName )//'.bin"' )
 
@@ -3308,7 +3185,7 @@ USE TSMods
 
 END SUBROUTINE WrHH_text
 !=======================================================================
-SUBROUTINE WrSum_Stats(USig, VSig, WSig, UXSig)
+SUBROUTINE WrSum_Stats(USig, VSig, WSig, UXSig, ErrStat, ErrMsg)
 
 
 use TSMods
@@ -3317,6 +3194,8 @@ REAL(ReKi), INTENT(OUT) ::  USig                            ! Standard deviation
 REAL(ReKi), INTENT(OUT) ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
 REAL(ReKi), INTENT(OUT) ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
 REAL(ReKi), INTENT(OUT) ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
 
 
 REAL(DbKi)              ::  SumS                            ! Sum of the velocity-squared, used for calculating standard deviations in the summary file
@@ -3703,7 +3582,8 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
       !  Allocate the array of standard deviations.
 
-   CALL AllocAry( SDary, NumGrid_Y, 'SDary (standard deviations)')
+   CALL AllocAry( SDary, NumGrid_Y, 'SDary (standard deviations)', ErrStat, ErrMsg)
+   IF (ErrStat >= AbortErrLev) RETURN
 
 
       ! Calculate standard deviations for each grid point.  Write them to summary file.

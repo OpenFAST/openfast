@@ -32,7 +32,7 @@ CONTAINS
 !=======================================================================
 !> This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
 !! the use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECKAI ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_IECKAI ( Spec )
 
 
 USE                     TSMods
@@ -41,8 +41,6 @@ IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored
-REAL(ReKi),INTENT(IN)    :: Ucmp                    !<  Input: Velocity (Should be UHub), value ignored
 REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
       ! Internal variables
@@ -113,7 +111,7 @@ END SUBROUTINE Spec_IECKAI
 !=======================================================================
 !> This subroutine defines the von Karman PSD model as specified by IEC 61400-1 (2nd Ed).
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECVKM ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_IECVKM ( Spec )
 
 USE                     TSMods
 
@@ -121,8 +119,6 @@ IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Must be HubHt), value ignored
-REAL(ReKi),INTENT(IN)    :: Ucmp                    !<  Input: Velocity (Must be UHub), value ignored
 REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
 
@@ -169,7 +165,7 @@ END SUBROUTINE Spec_IECVKM
 !> This subroutine defines the API-BULLET-IN recommended extreme wind spectrum
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
 !! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
-SUBROUTINE Spec_API ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_API ( Ht, Spec )
 
    ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
    !       and then overwrites the u-component spectrum with the API model.
@@ -181,7 +177,6 @@ IMPLICIT                NONE
 
       ! Passed variables
 REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored
-REAL(ReKi),INTENT(IN)    :: Ucmp                    !<  Input: Velocity (Should be UHub), value ignored
 REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
 !REAL(ReKi),INTENT(IN) :: URef ! Added by YG
@@ -219,7 +214,7 @@ ELSE
 ENDIF
 
 
-CALL Spec_IECKAI ( Ht, Ucmp, Spec )
+CALL Spec_IECKAI ( Spec )
 
    ! Define u-component integral scale.
 !CALL WrScr ('Calling Froya/API wind spectrum.............')
@@ -676,7 +671,7 @@ END SUBROUTINE Spec_NWTCUP
 !=======================================================================
 !> This routine linearly interpolates an input file that specifies the
 !! velocity spectra for each of 3 wind components (u,v,w)
-SUBROUTINE Spec_UserSpec ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_UserSpec ( Spec )
 
 
    USE                     TSMods
@@ -685,8 +680,6 @@ SUBROUTINE Spec_UserSpec ( Ht, Ucmp, Spec )
 
          ! Passed variables
 
-   REAL(ReKi),INTENT(IN)    :: Ht                      !< local height
-   REAL(ReKi),INTENT(IN)    :: Ucmp                    !< local wind speed
    REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !< Output: target spectrum
 
       ! Internal variables

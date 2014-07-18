@@ -39,7 +39,7 @@ USE TurbSim_Types
 CONTAINS
 
 !=======================================================================
-SUBROUTINE RandNum_Init(p, OtherSt )
+SUBROUTINE RandNum_Init(p, OtherSt, ErrStat, ErrMsg )
 
    ! Initialize the Random Number Generators
 
@@ -47,14 +47,19 @@ USE                                 Ran_Lux_Mod
 
 IMPLICIT                            NONE
 
-TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p                   ! parameters for random number generation
-TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt             ! other states for random number generation
+TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p           ! parameters for random number generation
+TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt     ! other states for random number generation
+INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
+CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
+
+
 
 REAL(ReKi)                       :: RN(1)
 INTEGER                          :: I           ! loop counter
 INTEGER                          :: NumSeeds    ! number of seeds in the intrinsic random number generator
-INTEGER                          :: Sttus       ! allocation status
 
+ErrStat = ErrID_None
+ErrMsg  = ""
 
 IF (p%pRNG == pRNG_INTRINSIC) THEN ! RNG_type == 'NORMAL'
 
@@ -69,11 +74,8 @@ IF (p%pRNG == pRNG_INTRINSIC) THEN ! RNG_type == 'NORMAL'
    END IF
 
    IF ( .NOT. ALLOCATED( OtherSt%nextSeed ) ) THEN
-      CALL AllocAry( OtherSt%nextSeed, NumSeeds, 'nextSeed', Sttus )         
-      IF (Sttus/= 0 ) THEN
-         CALL ProgAbort( ' Error allocating space for RandSeedAry array.' )
-         RETURN
-      END IF      
+      CALL AllocAry( OtherSt%nextSeed, NumSeeds, 'nextSeed', ErrSTat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
    END IF
 
 
@@ -94,11 +96,8 @@ ELSEIF (p%pRNG == pRNG_RANLUX) THEN ! RNG_type == 'RANLUX'
    CALL RLuxGo ( LuxLevel, ABS( p%RandSeed(1) ), 0, 0 )
    
    IF (.NOT. ALLOCATED( OtherSt%nextSeed ) ) THEN
-      CALL AllocAry( OtherSt%nextSeed, 2, 'nextSeed', Sttus ) 
-      IF (Sttus/= 0 ) THEN
-         CALL ProgAbort( ' Error allocating space for nextSeed array.' )
-         RETURN
-      END IF      
+      CALL AllocAry( OtherSt%nextSeed, 2, 'nextSeed', ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN 
    END IF
    
    
@@ -107,11 +106,8 @@ ELSE ! pRNG == pRNG_SNLW3
 
    
    IF (.NOT. ALLOCATED( OtherSt%nextSeed ) ) THEN
-      CALL AllocAry( OtherSt%nextSeed, 3, 'nextSeed', Sttus ) 
-      IF (Sttus/= 0 ) THEN
-         CALL ProgAbort( ' Error allocating space for nextSeed array.' )
-         RETURN
-      END IF      
+      CALL AllocAry( OtherSt%nextSeed, 3, 'nextSeed', ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN 
    END IF
    
    
@@ -920,7 +916,7 @@ RandUnifNum = RN(1)
 END SUBROUTINE RndUnif
 
 !======================================================================
-SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NTot, NumFreq)
+SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NTot, NumFreq, ErrStat, ErrMsg)
 
 USE                        Ran_Lux_Mod
 
@@ -928,6 +924,8 @@ IMPLICIT NONE
 
 TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p                        ! parameters for random number generation
 TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt                  ! other states for random number generation
+INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
+CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
 
 INTEGER(IntKi)              , INTENT(IN   ) :: NTot                     ! number of points being simulated
 INTEGER(IntKi)              , INTENT(IN   ) :: NumFreq                  ! number of frequencies being simulated
@@ -949,14 +947,18 @@ INTEGER                                     :: LuxLevelOut, InitSeed
 ! get the uniformly distributed random numbers:
 
 
-   CALL AllocAry( RandNum, SIZE(PhaseAngles), 'RandNum' )
+   CALL AllocAry( RandNum, SIZE(PhaseAngles), 'RandNum', ErrStat, ErrMsg )
 
 
       ! Reinitialize the random number generator ( it was initialized when the
       ! seeds were read in ) so that the same seed always generates the same
       ! random phases, regardless of previous randomizations in this code.
 
-   CALL RandNum_Init(p, OtherSt)
+   CALL RandNum_Init(p, OtherSt, ErrStat, ErrMsg)
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
 
       ! Let's go ahead and get all the random numbers we will need for the entire
       ! run.  This (hopefully) will be faster than getting them one at a time,
