@@ -224,18 +224,18 @@ FormStr = "( L10 , 2X , 'Clockwise rotation when looking downwind?' )"
 WRITE (US,FormStr)  Clockwise
 
    ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
-CALL ReadVar( UI, InFile, ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
+CALL ReadVar( UI, InFile, p_IEC%ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
                "Scale IEC turbulence models to specified standard deviation?")
 
 FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specified standard deviation' )"
-   SELECT CASE ( ScaleIEC )
+   SELECT CASE ( p_IEC%ScaleIEC )
       CASE (0)
-         WRITE (US,FormStr)  ScaleIEC, "NONE"
+         WRITE (US,FormStr)  p_IEC%ScaleIEC, "NONE"
       CASE (1, -1)   ! included the -1 for reading t/f on other systems
-         WRITE (US,FormStr)  ScaleIEC, "HUB"
-         ScaleIEC = 1;
+         WRITE (US,FormStr)  p_IEC%ScaleIEC, "HUB"
+         p_IEC%ScaleIEC = 1;
       CASE (2)
-         WRITE (US,FormStr)  ScaleIEC, "ALL"
+         WRITE (US,FormStr)  p_IEC%ScaleIEC, "ALL"
       CASE DEFAULT
          CALL TS_Abort ( 'The value for parameter ScaleIEC must be 0, 1, or 2.' )
    ENDSELECT
@@ -479,57 +479,57 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
       TmpIndex = INDEX(Line, "-ED")
 
       IF ( TmpIndex > 0 ) THEN
-         READ ( Line(TmpIndex+3:),*,IOSTAT=IOS ) IECedition
+         READ ( Line(TmpIndex+3:),*,IOSTAT=IOS ) p_IEC%IECedition
 
          CALL CheckIOS( IOS, InFile, 'the IEC edition number', NumType )
 
-         IF ( IECedition < 1 .OR. IECedition > SIZE(IECeditionSTR) ) THEN
+         IF ( p_IEC%IECedition < 1 .OR. p_IEC%IECedition > SIZE(IECeditionSTR) ) THEN
             CALL TS_Abort( 'Invalid IEC edition number.' )
          ENDIF
 
          Line = Line(1:TmpIndex-1)
       ELSE
-         IECedition = 0
+         p_IEC%IECedition = 0
       ENDIF
 
-      READ ( Line,*,IOSTAT=IOS ) IECstandard
+      READ ( Line,*,IOSTAT=IOS ) p_IEC%IECstandard
 
-      SELECT CASE ( IECstandard )
+      SELECT CASE ( p_IEC%IECstandard )
          CASE ( 1 )
-            IF (IECedition < 1 ) THEN  ! Set up the default
+            IF (p_IEC%IECedition < 1 ) THEN  ! Set up the default
                IF ( SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_USRVKM ) THEN
-                  IECedition = 2   ! The von Karman model is not specified in edition 3 of the -1 standard
+                  p_IEC%IECedition = 2   ! The von Karman model is not specified in edition 3 of the -1 standard
                ELSE
-                  IECedition = 3
+                  p_IEC%IECedition = 3
                ENDIF
             ELSE
-               IF ( IECedition < 2 ) THEN
+               IF ( p_IEC%IECedition < 2 ) THEN
                   CALL TS_Abort( 'The IEC edition number must be 2 or 3' )
                ENDIF
             ENDIF
 
          CASE ( 2 )
                ! The scaling is the same as 64100-1, Ed. 2 with "A" or user-specified turbulence
-            IF (IECedition < 1 ) THEN  ! Set up the default
-               IECedition = 2
+            IF (p_IEC%IECedition < 1 ) THEN  ! Set up the default
+               p_IEC%IECedition = 2
             ELSE
                CALL TS_Abort( ' The edition number cannot be specified for the 61400-2 standard.')
             ENDIF
-            IECeditionSTR(IECedition) = 'IEC 61400-2 Ed. 2: 2005'
+            IECeditionSTR(p_IEC%IECedition) = 'IEC 61400-2 Ed. 2: 2005'
 
          CASE ( 3 )
                ! The scaling for 61400-3 (Offshore) is the same as 61400-1 except it has a different power law exponent
-            IF (IECedition < 1 ) THEN  ! Set up the default
+            IF (p_IEC%IECedition < 1 ) THEN  ! Set up the default
 
                IF ( SpecModel /= SpecModel_IECKAI ) THEN
                   CALL TS_Abort( ' The von Karman model is not valid for the 61400-3 standard.')
                ENDIF
-               IECedition = 3   ! This is the edition of the -1 standard
+               p_IEC%IECedition = 3   ! This is the edition of the -1 standard
 
             ELSE
                CALL TS_Abort( ' The edition number cannot be specified for the 61400-3 standard.')
             ENDIF
-            IECeditionSTR(IECedition) = 'IEC 61400-3 Ed. 1: 2006'
+            IECeditionSTR(p_IEC%IECedition) = 'IEC 61400-3 Ed. 1: 2006'
 
          CASE DEFAULT
             CALL TS_Abort( 'The number of the IEC 61400-x standard must be 1, 2, or 3.')
@@ -537,11 +537,11 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
       END SELECT
 
       FormStr = "( 7X, I3, 2X, 'IEC standard: ', A )"
-      WRITE (US,FormStr)  IECstandard, TRIM(IECeditionSTR(IECedition))
+      WRITE (US,FormStr)  p_IEC%IECstandard, TRIM(IECeditionSTR(p_IEC%IECedition))
 
    ELSE ! NOT IEC
-      IECstandard = 0
-      IECedition  = 0
+      p_IEC%IECstandard = 0
+      p_IEC%IECedition  = 0
 
       FormStr = "( 7X, A3, 2X, 'IEC standard' )"
       WRITE (US,FormStr)  'N/A'
@@ -590,35 +590,35 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
       ! Check to see if the entry was a number.
 
-      READ (Line,*,IOSTAT=IOS)  PerTurbInt
+      READ (Line,*,IOSTAT=IOS)  p_IEC%PerTurbInt
 
       IF ( IOS == 0 )  THEN
 
          ! Let's use turbulence value.
 
-         NumTurbInp = .TRUE.
+         p_IEC%NumTurbInp = .TRUE.
          FormStr    = "( F10.3 , 2X , 'Percent turbulence intensity, ', A )"
-         WRITE (US,FormStr)  PerTurbInt, TRIM(IECeditionSTR(IECedition))
+         WRITE (US,FormStr)  p_IEC%PerTurbInt, TRIM(IECeditionSTR(p_IEC%IECedition))
 
       ELSE
 
          ! Let's use one of the standard turbulence values (A or B or C).
 
-         NumTurbInp = .FALSE.
-         IECTurbC   = ADJUSTL( Line )
-         CALL Conv2UC(  IECTurbC )
+         p_IEC%NumTurbInp = .FALSE.
+         p_IEC%IECTurbC   = ADJUSTL( Line )
+         CALL Conv2UC(  p_IEC%IECTurbC )
 
-         SELECT CASE ( IECTurbC )
+         SELECT CASE ( p_IEC%IECTurbC )
             CASE ( 'A' )
             CASE ( 'B' )
-               IF ( IECstandard == 2 ) THEN
+               IF ( p_IEC%IECstandard == 2 ) THEN
                   CALL TS_Abort (' The IEC 61400-2 turbulence characteristic must be either "A" or a real number.' )
                ENDIF
             CASE ( 'C' )
-               IF ( IECstandard == 2 ) THEN
+               IF ( p_IEC%IECstandard == 2 ) THEN
                   CALL TS_Abort (' The IEC 61400-2 turbulence characteristic must be either "A" or a real number.' )
-               ELSEIF ( IECedition < 3 ) THEN
-                  CALL TS_Abort (' The turbulence characteristic for '//TRIM(IECeditionSTR(IECedition) )// &
+               ELSEIF ( p_IEC%IECedition < 3 ) THEN
+                  CALL TS_Abort (' The turbulence characteristic for '//TRIM(IECeditionSTR(p_IEC%IECedition) )// &
                                   ' must be either "A", "B", or a real number.' )
                ENDIF
             CASE DEFAULT
@@ -626,7 +626,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
          END SELECT  ! IECTurbC
 
          FormStr  = "( 9X , A1 , 2X , 'IEC turbulence characteristic' )"
-         WRITE (US,FormStr)  IECTurbC
+         WRITE (US,FormStr)  p_IEC%IECTurbC
 
       ENDIF
 
@@ -658,9 +658,9 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
          ! These variables are not used for non-IEC turbulence
 
-      IECedition = 0
-      NumTurbInp = .TRUE.
-      PerTurbInt = 0.0
+      p_IEC%IECedition = 0
+      p_IEC%NumTurbInp = .TRUE.
+      p_IEC%PerTurbInt = 0.0
 
    ENDIF
 
@@ -672,70 +672,70 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
 
       CALL Conv2UC( Line )
 
-      IECTurbE   = Line(1:1)
+      p_IEC%IECTurbE   = Line(1:1)
 
       ! Let's see if the first character is a number (for the ETM case)
-      SELECT CASE ( IECTurbE )
+      SELECT CASE ( p_IEC%IECTurbE )
          CASE ('1')
-            Vref = 50.0
+            p_IEC%Vref = 50.0
             Line = Line(2:)
          CASE ('2')
-            Vref = 42.5
+            p_IEC%Vref = 42.5
             Line = Line(2:)
          CASE ('3')
-            Vref = 37.5
+            p_IEC%Vref = 37.5
             Line = Line(2:)
          CASE DEFAULT
                ! There's no number at the start of the string so let's move on (it's NTM).
-            Vref = -999.9
-            IECTurbE = ' '
+            p_IEC%Vref = -999.9
+            p_IEC%IECTurbE = ' '
       END SELECT
 
       SELECT CASE ( TRIM( Line ) )
          CASE ( 'NTM'   )
-            IEC_WindType = IEC_NTM
-            IEC_WindDesc = 'Normal Turbulence Model'
+            p_IEC%IEC_WindType = IEC_NTM
+            p_IEC%IEC_WindDesc = 'Normal Turbulence Model'
          CASE ( 'ETM'   )
-            IEC_WindType = IEC_ETM
-            IEC_WindDesc = 'Extreme Turbulence Model'
+            p_IEC%IEC_WindType = IEC_ETM
+            p_IEC%IEC_WindDesc = 'Extreme Turbulence Model'
          CASE ( 'EWM1'  )
-            IEC_WindType = IEC_EWM1
-            IEC_WindDesc = 'Extreme 1-Year Wind Speed Model'
+            p_IEC%IEC_WindType = IEC_EWM1
+            p_IEC%IEC_WindDesc = 'Extreme 1-Year Wind Speed Model'
          CASE ( 'EWM50' )
-            IEC_WindType = IEC_EWM50
-            IEC_WindDesc = 'Extreme 50-Year Wind Speed Model'
+            p_IEC%IEC_WindType = IEC_EWM50
+            p_IEC%IEC_WindDesc = 'Extreme 50-Year Wind Speed Model'
          CASE DEFAULT
             CALL TS_Abort ( ' Valid entries for the IEC wind turbulence are "NTM", "xETM", "xEWM1", or "xEWM50", '// &
                              'where x is the wind turbine class (1, 2, or 3).' )
       END SELECT
 
-      IF ( IEC_WindType /= IEC_NTM ) THEN
+      IF ( p_IEC%IEC_WindType /= IEC_NTM ) THEN
 
-         IF (IECedition /= 3 .OR. IECstandard == 2) THEN
+         IF (p_IEC%IECedition /= 3 .OR. p_IEC%IECstandard == 2) THEN
             CALL TS_Abort ( ' The extreme turbulence and extreme wind speed models are available with '// &
                          'the IEC 61400-1 Ed. 3 or 61400-3 scaling only.')
          ENDIF
 
-         IF (Vref < 0. ) THEN
+         IF (p_IEC%Vref < 0. ) THEN
             CALL TS_Abort ( ' A wind turbine class (1, 2, or 3) must be specified with the '// &
                          'extreme turbulence and extreme wind types. (i.e. "1ETM")')
          ENDIF
 
-         IF ( NumTurbInp ) THEN
+         IF ( p_IEC%NumTurbInp ) THEN
             CALL TS_Abort ( ' When the turbulence intensity is entered as a percent, the IEC wind type must be "NTM".' )
          ENDIF
 
       ELSE
 
-         IECTurbE = ' '
+         p_IEC%IECTurbE = ' '
 
       ENDIF
 
       FormStr = "( 4X, A6 , 2X , 'IEC ', A )"
-      WRITE (US,FormStr)  TRIM(IECTurbE)//TRIM(Line), TRIM(IEC_WindDesc)
+      WRITE (US,FormStr)  TRIM(p_IEC%IECTurbE)//TRIM(Line), TRIM(p_IEC%IEC_WindDesc)
 
    ELSE
-      IEC_WindType = IEC_NTM
+      p_IEC%IEC_WindType = IEC_NTM
 
       FormStr = "( A10 , 2X , 'IEC turbulence type' )"
       WRITE (US,FormStr)  'N/A'
@@ -743,11 +743,11 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
 
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
 UseDefault = .TRUE.
-ETMc = 2;
-CALL ReadRVarDefault( UI, InFile, ETMc, "the ETM c parameter", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', US, &
-                      UseDefault, IGNORE=(IEC_WindType /= IEC_ETM ))
+p_IEC%ETMc = 2;
+CALL ReadRVarDefault( UI, InFile, p_IEC%ETMc, "the ETM c parameter", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', US, &
+                      UseDefault, IGNORE=(p_IEC%IEC_WindType /= IEC_ETM ))
 
-   IF ( ETMc <= 0. ) THEN
+   IF ( p_IEC%ETMc <= 0. ) THEN
       CALL TS_Abort('The ETM "c" parameter must be a positive number');
    ENDIF
 
@@ -779,7 +779,7 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
             CALL TS_Abort( 'The jet wind profile is available with the GP_LLJ spectral model only.')
          ENDIF
       CASE ( 'LOG','L' )
-         IF (IEC_WindType /= IEC_NTM ) THEN
+         IF (p_IEC%IEC_WindType /= IEC_NTM ) THEN
             CALL TS_Abort( ' The IEC turbulence type must be NTM for the logarithmic wind profile.' )
 !bjj check that IEC_WindType == IEC_NTM for non-IEC
          ENDIF
@@ -829,12 +829,12 @@ URef       = -999.9
 ! otherwise, we get circular logic...
 
    CALL ReadRVarDefault( UI, InFile, URef, "the reference wind speed", "Reference wind speed [m/s]", US, UseDefault, &
-                     IGNORE=(IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 .OR. WindProfileType(1:1) == 'U') )
+                     IGNORE=(p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 .OR. WindProfileType(1:1) == 'U') )
 
    NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
 
    IF ( ( WindProfileType(1:1) /= 'J' .OR. .NOT. UseDefault) .AND. &
-        (IEC_WindType /= IEC_EWM1 .AND. IEC_WindType /= IEC_EWM50 .AND. WindProfileType(1:1) /= 'U') ) THEN
+        (p_IEC%IEC_WindType /= IEC_EWM1 .AND. p_IEC%IEC_WindType /= IEC_EWM50 .AND. WindProfileType(1:1) /= 'U') ) THEN
       IF ( URef <=  0.0 )  THEN
          CALL TS_Abort ( 'The reference wind speed must be greater than zero.' )
       ENDIF
@@ -889,7 +889,7 @@ getPLExp = .NOT. UseDefault
 
 CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law exponent", US, UseDefault, &
                IGNORE=( ((INDEX( 'JLUH', WindProfileType(1:1) ) > 0.)) .OR. &
-                         IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 ) )
+                         p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) )
 
    IF ( .NOT. UseDefault ) THEN  ! We didn't use a default (we entered a number on the line)
       getPLExp = .FALSE.
@@ -1444,7 +1444,7 @@ ELSE  ! IECVKM or IECKAI models
    RICH_NO = 0.0                       ! Richardson Number in neutral conditions
    COHEXP  = 0.0                       ! Coherence exponent
 
-   IF ( IECedition == 3 ) THEN
+   IF ( p_IEC%IECedition == 3 ) THEN
       IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
    ELSE
       IncDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
@@ -1461,7 +1461,7 @@ ELSE  ! IECVKM or IECKAI models
    PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
    PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
 
-   IF ( NumTurbInp .AND. PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
+   IF ( p_IEC%NumTurbInp .AND. p_IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
       TurbModel = 'NONE'
       SpecModel = SpecModel_NONE
    ENDIF
@@ -2667,33 +2667,20 @@ USE TSMods, only: L_USR
 
 END SUBROUTINE WrSum_Heading1
 !=======================================================================
-SUBROUTINE WrSum_SpecModel(US, LC, Lambda1, TurbInt15, SigmaSlope, TurbInt, GridVertCenter )
+SUBROUTINE WrSum_SpecModel(US, p_IEC, GridVertCenter )
 
 !USE TSMods, only: FormStr
 !USE TSMods, only: FormStr1
 !USE TSMods, only: FormStr2
 !USE TSMods, only: TMName
 !
-!USE TSMods, only: NumTurbInp
-!USE TSMods, only: IECTurbE
-!USE TSMods, only: IECTurbC
-!USE TSMods, only: IEC_WindDesc
-!USE TSMods, only: IEC_WindType
-!USE TSMods, only: Vref
-!USE TSMods, only: Vave
 !USE TSMods, only: IEC_NTM
 !USE TSMods, only: IECeditionSTR
-!USE TSMods, only: IECedition
 use TSMods
 
 
-  INTEGER,    INTENT(IN) :: US
-
-   REAL(ReKi), INTENT(IN)  ::  LC                              ! IEC coherency scale parameter
-   REAL(ReKi), INTENT(IN)  ::  Lambda1                         ! IEC turbulence scale parameter
-   REAL(ReKi), INTENT(IN)  ::  SigmaSlope                      ! Slope used with IEC models to determine target sigma and turbulent intensity
-   REAL(ReKi), INTENT(IN)  ::  TurbInt15                       ! Turbulence Intensity at hub height with a mean wind speed of 15 m/s
-   REAL(ReKi), INTENT(IN)  ::  TurbInt                         ! IEC target Turbulence Intensity 
+   INTEGER,    INTENT(IN) :: US
+   TYPE(IEC_ParameterType), INTENT(IN) :: p_IEC                       ! parameters for IEC models   
    REAL(ReKi), INTENT(IN)  ::  GridVertCenter                  ! Position of vertical "middle" grid point (to determine if it is the hub height)
    
    ! local variables:   
@@ -2719,10 +2706,8 @@ use TSMods
    ! write to the summary file:
    
    
-   FormStr = "( // 'Turbulence Simulation Scaling Parameter Summary:' / )"
-   WRITE (US,FormStr)
-   FormStr = "('   Turbulence model used                            =  ' , A )"
-   WRITE (US,FormStr)  TRIM(TMName)
+   WRITE (US,"( // 'Turbulence Simulation Scaling Parameter Summary:' / )")
+   WRITE (US,    "('   Turbulence model used                            =  ' , A )")  TRIM(TMName)
 
    FormStr  = "('   ',A,' =' ,F9.3,A)"
    FormStr1 = "('   ',A,' =' ,I9  ,A)"
@@ -2737,61 +2722,61 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
      ( SpecModel  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
       
       
-   IF ( NumTurbInp ) THEN
+   IF ( p_IEC%NumTurbInp ) THEN
       WRITE (US,FormStr2)      "Turbulence characteristic                       ", "User-specified"
    ELSE
-      WRITE (US,FormStr2)      "Turbulence characteristic                       ", TRIM(IECTurbE)//IECTurbC
-      WRITE (US,FormStr2)      "IEC turbulence type                             ", TRIM(IEC_WindDesc)
+      WRITE (US,FormStr2)      "Turbulence characteristic                       ", TRIM(p_IEC%IECTurbE)//p_IEC%IECTurbC
+      WRITE (US,FormStr2)      "IEC turbulence type                             ", TRIM(p_IEC%IEC_WindDesc)
       
-      IF ( IEC_WindType /= IEC_NTM ) THEN       
-         WRITE (US,FormStr)    "Reference wind speed average over 10 minutes    ", Vref,                      " m/s"
-         WRITE (US,FormStr)    "Annual wind speed average at hub height         ", Vave,                      " m/s"
+      IF ( p_IEC%IEC_WindType /= IEC_NTM ) THEN       
+         WRITE (US,FormStr)    "Reference wind speed average over 10 minutes    ", p_IEC%Vref,                " m/s"
+         WRITE (US,FormStr)    "Annual wind speed average at hub height         ", p_IEC%Vave,                " m/s"
       ENDIF
    ENDIF      
    
-   WRITE (US,FormStr2)         "IEC standard                                    ", IECeditionSTR(IECedition)
+   WRITE (US,FormStr2)         "IEC standard                                    ", IECeditionSTR(p_IEC%IECedition)
    
    IF ( SpecModel  /= SpecModel_MODVKM ) THEN
       ! Write out a parameter summary to the summary file.
 
       WRITE (US,FormStr)       "Mean wind speed at hub height                   ", UHub,                      " m/s"
 
-      IF (.NOT. NumTurbInp) THEN ! "A", "B", or "C" turbulence:
-         IF ( IECedition == 2 ) THEN
-            WRITE (US,FormStr) "Char value of turbulence intensity at 15 m/s    ", 100.0*TurbInt15,           "%"
-            WRITE (US,FormStr) "Standard deviation slope                        ", SigmaSlope,                ""
+      IF (.NOT. p_IEC%NumTurbInp) THEN ! "A", "B", or "C" turbulence:
+         IF ( p_IEC%IECedition == 2 ) THEN
+            WRITE (US,FormStr) "Char value of turbulence intensity at 15 m/s    ", 100.0*p_IEC%TurbInt15,     "%"
+            WRITE (US,FormStr) "Standard deviation slope                        ", p_IEC%SigmaSlope,          ""
          ELSE                                                                                                 
                ! This is supposed to be the expected value of what is measured at a site.                     
                ! We actually calculate the 90th percentile value to use in the code as the                    
                ! "Characteristic Value".                                                                      
-            WRITE (US,FormStr) "Expected value of turbulence intensity at 15 m/s", 100.0*TurbInt15,           "%"
+            WRITE (US,FormStr) "Expected value of turbulence intensity at 15 m/s", 100.0*p_IEC%TurbInt15,           "%"
          ENDIF                                                                                                
                                                                                                               
       ENDIF                                                                                                   
                                                                                                               
-      WRITE (US,FormStr)       "Characteristic value of standard deviation      ", SigmaIEC(1),               " m/s"
-      WRITE (US,FormStr)       "Turbulence scale                                ", Lambda1,                   " m"
+      WRITE (US,FormStr)       "Characteristic value of standard deviation      ", p_IEC%SigmaIEC(1),          " m/s"
+      WRITE (US,FormStr)       "Turbulence scale                                ", p_IEC%Lambda(1),            " m"
                                                                                                               
       IF ( SpecModel  == SpecModel_IECKAI )  THEN                                                                     
-         WRITE (US,FormStr)    "u-component integral scale                      ", Lambda1*8.1,               " m"
-         WRITE (US,FormStr)    "Coherency scale                                 ", LC,                        " m"
+         WRITE (US,FormStr)    "u-component integral scale                      ", p_IEC%IntegralScale(1),     " m"
+         WRITE (US,FormStr)    "Coherency scale                                 ", p_IEC%LC,                   " m"
       ELSEIF ( SpecModel  == SpecModel_IECVKM )  THEN                                                                 
-         WRITE (US,FormStr)    "Isotropic integral scale                        ", LC,                        " m"
+         WRITE (US,FormStr)    "Isotropic integral scale                        ", p_IEC%IntegralScale(1),     " m"
       ENDIF                                                                                                   
                                                                                                               
-      WRITE (US,FormStr)       "Characteristic value of hub turbulence intensity", 100.0*TurbInt,             "%"
+      WRITE (US,FormStr)       "Characteristic value of hub turbulence intensity", 100.0*p_IEC%TurbInt,              "%"
                                                                                                               
-   ELSE                                                                                                       
+   ELSE   ! ModVKM                                                                                                    
       WRITE (US,FormStr1)      "Boundary layer depth                            ", NINT(h),                   " m"
       WRITE (US,FormStr)       "Site Latitude                                   ", Latitude,                  " degs"
       WRITE (US,FormStr)       "Hub mean streamwise velocity                    ", UHub,                      " m/s"
       WRITE (US,FormStr)       "Hub local u*                                    ", UStar,                     " m/s" !BONNIE: is this LOCAL? of Disk-avg
-      WRITE (US,FormStr)       "Target IEC Turbulence Intensity                 ", 100.0*TurbInt,             "%"
-      WRITE (US,FormStr)       "Target IEC u-component standard deviation       ", SigmaIEC(1),               " m/s"
-      WRITE (US,FormStr)       "u-component integral scale                      ", TmpU,                      " m"
-      WRITE (US,FormStr)       "v-component integral scale                      ", TmpV,                      " m"
-      WRITE (US,FormStr)       "w-component integral scale                      ", TmpW,                      " m"
-      WRITE (US,FormStr)       "Isotropic integral scale                        ", LC,                        " m"
+      WRITE (US,FormStr)       "Target IEC Turbulence Intensity                 ", 100.0*p_IEC%TurbInt,             "%"
+      WRITE (US,FormStr)       "Target IEC u-component standard deviation       ", p_IEC%SigmaIEC(1),         " m/s"
+      WRITE (US,FormStr)       "u-component integral scale                      ", p_IEC%Lambda(1),                 " m"
+      WRITE (US,FormStr)       "v-component integral scale                      ", p_IEC%Lambda(2),                 " m"
+      WRITE (US,FormStr)       "w-component integral scale                      ", p_IEC%Lambda(3),                 " m"
+      WRITE (US,FormStr)       "Isotropic integral scale                        ", p_IEC%LC,                        " m"
    ENDIF                                                                                                      
    WRITE (US,FormStr)          "Gradient Richardson number                      ", 0.0,                       ""
 

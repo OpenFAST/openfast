@@ -1576,9 +1576,9 @@ SELECT CASE ( SpecModel )
       PowerLawExp = 0.143
 
    CASE DEFAULT
-      IF ( IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 ) THEN
+      IF ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) THEN
          PowerLawExp = 0.11         ! [IEC 61400-1 6.3.2.1 (14)]
-      ELSEIF ( IECstandard == 3 ) THEN
+      ELSEIF ( p_IEC%IECstandard == 3 ) THEN
          PowerLawExp = 0.14         ! [IEC 61400-3 Page 22 (3)]
       ELSE
          PowerLawExp = 0.2          ! [IEC 61400-1 6.3.1.2 (10)]
@@ -1613,9 +1613,9 @@ SELECT CASE ( SpecModel )
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL,     Ustar,     Work )
       ENDIF
    CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( SigmaIEC, Work )
+      CALL Spec_IECKAI  ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Work )
    CASE ( SpecModel_IECVKM )
-      CALL Spec_IECVKM  ( Work )
+      CALL Spec_IECVKM  ( p_IEC%SigmaIEC(1), p_IEC%IntegralScale, Work )
    CASE ( SpecModel_API )
       CALL Spec_API ( Ht, Work )
    CASE (SpecModel_NWTCUP)
@@ -1896,7 +1896,7 @@ SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
    
 END SUBROUTINE
 !=======================================================================
-SUBROUTINE Scaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, HubFactor)
+SUBROUTINE TimeSeriesScaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, HubFactor)
 
 
    TYPE(TurbSim_GridParameterType), INTENT(IN)     ::  p_grid                          ! parameters defining TurbSim's grid (including time/frequency)
@@ -1956,7 +1956,142 @@ SUBROUTINE Scaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, HubFactor)
 
    ENDDO !IVec   
 
-END SUBROUTINE Scaling_IEC
+END SUBROUTINE TimeSeriesScaling_IEC
+!=======================================================================
+SUBROUTINE CalcIECScalingParams( p_IEC )
+! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
+! calculates SigmaIEC, Lambda, IntegralScale, Lc
+use TurbSim_Types
+use TSMods, only: UHub, HubHt, Fc, z0, SpecModel
+
+   TYPE(IEC_ParameterType), INTENT(INOUT) :: p_IEC                       ! parameters for IEC models
+      
+   IF ( p_IEC%NumTurbInp )  THEN
+   
+         ! user specified a particular percent TI:
+         
+      p_IEC%TurbInt     = 0.01*p_IEC%PerTurbInt
+      p_IEC%SigmaIEC(1) = p_IEC%TurbInt*UHub
+      
+      ! bjj: note Vave isn't set in this case, but we only print it to the summary file (and use it) if .not. NumTurbInp      
+
+   ELSE
+
+      
+      SELECT CASE (p_IEC%IECedition)
+
+         CASE ( 2 )
+
+            IF ( p_IEC%IECTurbC  == 'A' ) THEN
+               p_IEC%TurbInt15  = 0.18
+               p_IEC%SigmaSlope = 2.0
+            ELSEIF ( p_IEC%IECTurbC  == 'B' ) THEN
+               p_IEC%TurbInt15  = 0.16
+               p_IEC%SigmaSlope = 3.0
+            ELSE   ! We should never get here, but just to be complete...
+               CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
+            ENDIF
+
+            p_IEC%SigmaIEC(1) = p_IEC%TurbInt15*( ( 15.0 + p_IEC%SigmaSlope*UHub ) / ( p_IEC%SigmaSlope + 1.0 ) )
+            p_IEC%TurbInt  = p_IEC%SigmaIEC(1)/UHub
+         
+         CASE ( 3 )
+
+            IF ( p_IEC%IECTurbC == 'A' ) THEN
+               p_IEC%TurbInt15  = 0.16
+            ELSEIF ( p_IEC%IECTurbC == 'B' ) THEN
+               p_IEC%TurbInt15  = 0.14
+            ELSEIF ( p_IEC%IECTurbC == 'C' ) THEN
+               p_IEC%TurbInt15  = 0.12
+            ELSE   ! We should never get here, but just to be complete...
+               CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
+            ENDIF  
+
+                   
+            SELECT CASE ( p_IEC%IEC_WindType )
+               CASE ( IEC_NTM )
+                  p_IEC%SigmaIEC(1) = p_IEC%TurbInt15*( 0.75*UHub + 5.6 )                                      ! [IEC-1 Ed3 6.3.1.3 (11)]
+               CASE ( IEC_ETM )
+                  p_IEC%Vave        = 0.2*p_IEC%Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
+                  p_IEC%SigmaIEC(1) = p_IEC%ETMc * p_IEC%TurbInt15 * ( 0.072 * &
+                                     ( p_IEC%Vave / p_IEC%ETMc + 3.0) * (Uhub / p_IEC%ETMc - 4.0)+10.0 )       ! [IEC-1 Ed3 6.3.2.3 (19)]
+               CASE ( IEC_EWM1, IEC_EWM50 )
+                  p_IEC%Vave        = 0.2*p_IEC%Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
+                  p_IEC%SigmaIEC(1) = 0.11*Uhub                                                                ! [IEC-1 Ed3 6.3.2.1 (16)]
+               CASE DEFAULT 
+                  CALL TS_Abort( 'Invalid IEC wind type.')
+            END SELECT           
+            p_IEC%TurbInt  = p_IEC%SigmaIEC(1)/UHub     
+            
+         CASE DEFAULT ! Likewise, this should never happen...
+
+            CALL TS_Abort( 'Invalid IEC 61400-1 edition number.' )
+            
+         END SELECT                            
+      
+
+   ENDIF
+
+   
+      ! IEC turbulence scale parameter, Lambda(1), and IEC coherency scale parameter, LC
+
+   IF ( p_IEC%IECedition == 2 ) THEN  
+      
+         ! section 6.3.1.3 Eq. 9
+      IF ( HubHt < 30.0 )  THEN
+         p_IEC%Lambda(1) = 0.7*HubHt
+      ELSE
+         p_IEC%Lambda(1) = 21.0
+      ENDIF
+
+      p_IEC%LC = 3.5*p_IEC%Lambda(1)
+
+   ELSE !IF (p_IEC%IECedition == 3 )
+      
+         ! section 6.3.1.3 Eq. 9      
+         
+      IF ( HubHt < 60.0 )  THEN
+         p_IEC%Lambda(1) = 0.7*HubHt
+      ELSE
+         p_IEC%Lambda(1) = 42.0
+      ENDIF
+
+      p_IEC%LC = 8.1*p_IEC%Lambda(1)
+
+   ENDIF
+   
+      ! Set Lambda for Modified von Karman model:
+
+   IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
+      z0 = FindZ0(HubHt, p_IEC%SigmaIEC(1), UHub, Fc)
+      CALL ScaleMODVKM(HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
+   ENDIF   
+
+   
+      ! Sigma for v and w components and
+      ! Integral scales (which depend on lambda)
+   
+   IF ( SpecModel == SpecModel_IECVKM ) THEN
+      
+      p_IEC%SigmaIEC(2)      =  1.0*p_IEC%SigmaIEC(1)
+      p_IEC%SigmaIEC(3)      =  1.0*p_IEC%SigmaIEC(1)
+      
+      p_IEC%IntegralScale(:) =  3.5 *p_IEC%Lambda(1)   !L_k
+            
+   ELSE
+      
+      p_IEC%SigmaIEC(2)      =  0.8*p_IEC%SigmaIEC(1)
+      p_IEC%SigmaIEC(3)      =  0.5*p_IEC%SigmaIEC(1)
+            
+      p_IEC%IntegralScale(1) =  8.1 *p_IEC%Lambda(1)   !L_k
+      p_IEC%IntegralScale(2) =  2.7 *p_IEC%Lambda(1)   !L_k
+      p_IEC%IntegralScale(3) =  0.66*p_IEC%Lambda(1)   !L_k
+      
+   END IF
+   
+   
+
+END SUBROUTINE CalcIECScalingParams
 !=======================================================================
 SUBROUTINE TS_End()
 

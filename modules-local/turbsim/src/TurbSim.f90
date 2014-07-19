@@ -110,9 +110,6 @@ REAL(ReKi)              ::  CPUtime                         ! Contains the numbe
 REAL(ReKi)              ::  DelF5                           ! half of the delta frequency, used to discretize the continuous PSD at each point
 REAL(ReKi)              ::  DelF                            ! Delta frequency
 REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
-REAL(ReKi)              ::  LC                              ! IEC coherency scale parameter
-REAL(ReKi)              ::  Lambda1                         ! IEC turbulence scale parameter
-REAL(ReKi)              ::  SigmaSlope                      ! Slope used with IEC models to determine target sigma and turbulent intensity
 REAL(ReKi)              ::  TargetSigma                     ! The target standard deviation for the IEC models, if scaling is requested.
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
@@ -121,8 +118,6 @@ REAL(ReKi)              ::  TmpY                            ! Temp variable for 
 REAL(ReKi)              ::  TmpZ                            ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
-REAL(ReKi)              ::  TurbInt                         ! IEC target Turbulence Intensity 
-REAL(ReKi)              ::  TurbInt15                       ! Turbulence Intensity at hub height with a mean wind speed of 15 m/s
 REAL(ReKi)              ::  HorVar                          ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  ROT                             ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  Total                           ! Variables used when DEBUG_OUT is set
@@ -235,7 +230,7 @@ ENDIF !WrAct
 
       ! Warn if EWM is used with incompatible times
       
-IF ( ( IEC_WindType == IEC_EWM1 .OR. IEC_WindType == IEC_EWM50 ) .AND. & 
+IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) .AND. & 
       ABS( REAL(600.0,ReKi) - MAX(AnalysisTime,UsableTime) ) > REAL(90.0, ReKi) ) THEN
    CALL TS_Warn( ' The EWM parameters are valid for 10-min simulations only.', .TRUE. )
 ENDIF        
@@ -489,112 +484,20 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
       ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
       ! IECTurbC = A, B, or C or from user specified quantity.
       
-
-   IF ( NumTurbInp )  THEN
-   
-      TurbInt  = 0.01*PerTurbInt
-      SigmaIEC(1) = TurbInt*UHub
-
-   ELSE
-
-      SELECT CASE (IECedition)
-
-         CASE ( 2 )
-
-            IF ( IECTurbC  == 'A' ) THEN
-               TurbInt15  = 0.18
-               SigmaSlope = 2.0
-            ELSEIF ( IECTurbC  == 'B' ) THEN
-               TurbInt15  = 0.16
-               SigmaSlope = 3.0
-            ELSE   ! We should never get here, but just to be complete...
-               CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
-            ENDIF
-
-            SigmaIEC(1) = TurbInt15*( ( 15.0 + SigmaSlope*UHub ) / ( SigmaSlope + 1.0 ) )
-            TurbInt  = SigmaIEC(1)/UHub
-         
-         CASE ( 3 )
-
-            IF ( IECTurbC == 'A' ) THEN
-               TurbInt15  = 0.16
-            ELSEIF ( IECTurbC == 'B' ) THEN
-               TurbInt15  = 0.14
-            ELSEIF ( IECTurbC == 'C' ) THEN
-               TurbInt15  = 0.12
-            ELSE   ! We should never get here, but just to be complete...
-               CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
-            ENDIF  
-
-                   
-            SELECT CASE ( IEC_WindType )
-               CASE ( IEC_NTM )
-                  SigmaIEC(1) = TurbInt15*( 0.75*UHub + 5.6 )                                      ! [IEC-1 Ed3 6.3.1.3 (11)]
-               CASE ( IEC_ETM )
-                  Vave     = 0.2*Vref                                                              ! [IEC-1 Ed3 6.3.1.1 ( 9)]
-                  SigmaIEC(1) = ETMc*TurbInt15*( 0.072*(Vave/ETMc + 3.0)*(Uhub/ETMc - 4.0)+10.0 )  ! [IEC-1 Ed3 6.3.2.3 (19)]
-               CASE ( IEC_EWM1, IEC_EWM50 )
-                  Vave     = 0.2*Vref                                                              ! [IEC-1 Ed3 6.3.1.1 ( 9)]
-                  SigmaIEC(1) = 0.11*Uhub                                                          ! [IEC-1 Ed3 6.3.2.1 (16)]
-               CASE DEFAULT 
-                  CALL TS_Abort( 'Invalid IEC wind type.')
-            END SELECT           
-            TurbInt  = SigmaIEC(1)/UHub     
-            
-         CASE DEFAULT ! Likewise, this should never happen...
-
-            CALL TS_Abort( 'Invalid IEC 61400-1 edition number.' )
-            
-         END SELECT                            
-      
-
-   ENDIF
-
-   IF ( SpecModel == SpecModel_IECVKM ) THEN
-      SigmaIEC(2) =  1.0*SigmaIEC(1)
-      SigmaIEC(3) =  1.0*SigmaIEC(1)
-   ELSE
-      SigmaIEC(2) =  0.8*SigmaIEC(1)
-      SigmaIEC(3) =  0.5*SigmaIEC(1)
-   END IF
-         
-   
+   CALL CalcIECScalingParams(p_IEC)
+                  
    IF (DEBUG_OUT) THEN
-      WRITE (UD,*)  'SigmaIEC,TurbInt=',SigmaIEC(1),TurbInt
-   ENDIF
-
-      ! IEC turbulence scale parameter, Lambda1, and IEC coherency scale parameter, LC
-
-   IF ( IECedition == 2 ) THEN
-      IF ( HubHt < 30.0 )  THEN
-         Lambda1 = 0.7*HubHt
-      ELSE
-         Lambda1 = 21.0
-      ENDIF
-
-      LC = 3.5*Lambda1
-
-   ELSE !IF (IECedition == 3 )
-      IF ( HubHt < 60.0 )  THEN
-         Lambda1 = 0.7*HubHt
-      ELSE
-         Lambda1 = 42.0
-      ENDIF
-
-      LC = 8.1*Lambda1
-
-   ENDIF
-
-   IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
-      z0 = FindZ0(HubHt, SigmaIEC(1), UHub, Fc)
-      CALL ScaleMODVKM(HubHt, UHub, TmpU, TmpV, TmpW)
+      WRITE (UD,*)  'SigmaIEC,TurbInt=',p_IEC%SigmaIEC(1),p_IEC%TurbInt
    ENDIF
 
 ELSE
-    LC = 0.0    ! The length scale is not defined for the non-IEC models
+    p_IEC%SigmaIEC = 0
+    p_IEC%Lambda = 0
+    p_IEC%IntegralScale = 0
+    p_IEC%LC = 0.0    ! The length scale is not defined for the non-IEC models
 ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
    
-CALL WrSum_SpecModel( US, LC, Lambda1, TurbInt15, SigmaSlope, TurbInt, p_grid%Z(NumGrid_Z2) )
+CALL WrSum_SpecModel( US, p_IEC, p_grid%Z(NumGrid_Z2) )
 
 
 
@@ -790,9 +693,9 @@ V(:,:,:) = 0.0    ! initialize the velocity matrix
 
 IF (SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (SpecModel == SpecModel_API) THEN
-        CALL CohSpecVMat_API(LC, NSize) 
+        CALL CohSpecVMat_API(p_IEC%LC, NSize) 
     ELSE
-        CALL CohSpecVMat(LC, NSize)
+        CALL CohSpecVMat(p_IEC%LC, NSize)
     ENDIF
 ENDIF
 
@@ -940,9 +843,9 @@ CASE (SpecModel_GP_LLJ, &
 
    CASE ( SpecModel_IECKAI , SpecModel_IECVKM )
 
-      IF (ScaleIEC > 0) THEN
+      IF (p_IEC%ScaleIEC > 0) THEN
 
-         CALL Scaling_IEC(p_grid, V, ScaleIEC, SigmaIEC, ActualSigma, HubFactor)
+         CALL TimeSeriesScaling_IEC(p_grid, V, p_IEC%ScaleIEC, p_IEC%SigmaIEC, ActualSigma, HubFactor)
          
          WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
          WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
@@ -950,7 +853,7 @@ CASE (SpecModel_GP_LLJ, &
          
          FormStr = "(2X,3x,A,7x,f11.3,9x,f12.3,11x,f10.3)"                        
          DO IVec = 1,3
-            WRITE( US, FormStr) Comp(IVec)//"'", SigmaIEC(IVec), ActualSigma(IVec), HubFactor(IVec)
+            WRITE( US, FormStr) Comp(IVec)//"'", p_IEC%SigmaIEC(IVec), ActualSigma(IVec), HubFactor(IVec)
          END DO
            
       ENDIF !ScaleIEC
@@ -964,7 +867,7 @@ END SELECT
 !..............................................................................
 
 IF ( WrADHH )  THEN
-   CALL WrHH_ADtxtfile(TurbInt)   
+   CALL WrHH_ADtxtfile(p_IEC%TurbInt)   
 END IF
 
 IF ( WrBHHTP )  THEN
@@ -1017,7 +920,9 @@ TmpU = MAX( ABS(MAXVAL(U)-UHub), ABS(MINVAL(U)-UHub) )  !Get the range of wind s
 IF ( ALLOCATED( U               ) )  DEALLOCATE( U               )
 IF ( ALLOCATED( WindDir_profile ) )  DEALLOCATE( WindDir_profile )
 
-   ! Are we generating a coherent turbulent timestep file?
+!..............................................................................
+! Are we generating a coherent turbulent timestep file?
+!..............................................................................
    
 IF ( WrACT ) THEN
    
@@ -1042,10 +947,11 @@ IF ( WrACT ) THEN
 
 ENDIF !WrACT
 
+!..............................................................................
+! Are we generating FF AeroDyn/BLADED files OR Tower Files?
+!..............................................................................
 
-   ! Are we generating FF AeroDyn/BLADED files OR Tower Files?
-
-IF ( WrBLFF .OR. WrADTWR .OR. WrADFF )  THEN
+IF ( WrBLFF .OR. WrADFF .OR. WrADTWR )  THEN !bjj: isn't WrADTWR redundant here?
 
       ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
 

@@ -197,14 +197,13 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM50      ! IEC Extreme 50-yr wind speed model
-   USE                                  TSMods, ONLY: IEC_EWM100      ! IEC Extreme 100-yr wind speed model
-   USE                                  TSMods, ONLY: IEC_WindType   ! Type of IEC wind
+   USE                                  TSMods, ONLY: IEC_EWM100     ! IEC Extreme 100-yr wind speed model
+   USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: PLExp          ! Power law exponent
    USE                                  TSMods, ONLY: U_Ref          ! The input wind speed at the reference height (URef is being overwritten for some reason)
    USE                                  TSMods, ONLY: U_Usr          ! User-defined wind speeds
    USE                                  TSMods, ONLY: Ustar          ! Friction or shear velocity
-   USE                                  TSMods, ONLY: Vref           ! IEC Extreme wind value
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
    USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
@@ -239,14 +238,14 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 !   REAL(ReKi)                         :: ZRef
 
 
-   IF ( IEC_WindType == IEC_EWM50 ) THEN
-      getWindSpeedAry(:) = VRef*( Ht(:)/HubHt )**0.11                ! [IEC 61400-1 6.3.2.1 (14)]  !bjj: this PLExp should be set to 0.11 already, why is this hard-coded?
+   IF ( p_IEC%IEC_WindType == IEC_EWM50 ) THEN
+      getWindSpeedAry(:) = p_IEC%VRef*( Ht(:)/HubHt )**0.11                ! [IEC 61400-1 6.3.2.1 (14)]  !bjj: this PLExp should be set to 0.11 already, why is this hard-coded?
       RETURN
-   ELSEIF ( IEC_WindType == IEC_EWM1 ) THEN
-      getWindSpeedAry(:) = 0.8*VRef*( Ht(:)/HubHt )**0.11            ! [IEC 61400-1 6.3.2.1 (14), (15)]
+   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM1 ) THEN
+      getWindSpeedAry(:) = 0.8*p_IEC%VRef*( Ht(:)/HubHt )**0.11            ! [IEC 61400-1 6.3.2.1 (14), (15)]
       RETURN
-   ELSEIF ( IEC_WindType == IEC_EWM100 ) THEN
-      getWindSpeedAry(:) = VRef*( Ht(:)/HubHt )**0.11               ! [API-IEC RECCOMENDATAION]  ADDED BY YGUO
+   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM100 ) THEN
+      getWindSpeedAry(:) = p_IEC%VRef*( Ht(:)/HubHt )**0.11               ! [API-IEC RECCOMENDATAION]  ADDED BY YGUO  !bjj: this is the same as IEC_EWM50, but we should check that IEC_EWM100 is used in ALL the same places IEC_EWM50 is
       RETURN
    ENDIF
 
@@ -414,13 +413,12 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM50      ! IEC Extreme 50-yr wind speed model
-   USE                                  TSMods, ONLY: IEC_WindType   ! Type of IEC wind
+   USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: PLExp          ! Power law exponent
    USE                                  TSMods, ONLY: U_Ref          ! The input wind speed at the reference height (URef is being overwritten for some reason)
    USE                                  TSMods, ONLY: U_Usr          ! User-defined wind speeds
    USE                                  TSMods, ONLY: Ustar          ! Friction or shear velocity
-   USE                                  TSMods, ONLY: Vref           ! IEC Extreme wind value
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
    USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
@@ -460,11 +458,11 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
       !========================
    ! IF Z0 <= 0.0    CALL ProgAbort('The surface roughness must be a positive number')
 
-   IF ( IEC_WindType == IEC_EWM50 ) THEN
-      getWindSpeedVal = VRef*( Ht/HubHt )**0.11                      ! [IEC 61400-1 6.3.2.1 (14)]
+   IF ( p_IEC%IEC_WindType == IEC_EWM50 ) THEN
+      getWindSpeedVal = p_IEC%VRef*( Ht/HubHt )**0.11                      ! [IEC 61400-1 6.3.2.1 (14)]
       RETURN
-   ELSEIF ( IEC_WindType == IEC_EWM1 ) THEN
-      getWindSpeedVal = 0.8*VRef*( Ht/HubHt )**0.11                  ! [IEC 61400-1 6.3.2.1 (14), (15)]
+   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM1 ) THEN
+      getWindSpeedVal = 0.8*p_IEC%VRef*( Ht/HubHt )**0.11                  ! [IEC 61400-1 6.3.2.1 (14), (15)]
       RETURN
    ENDIF
 

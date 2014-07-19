@@ -32,62 +32,42 @@ CONTAINS
 !=======================================================================
 !> This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
 !! the use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECKAI ( SigmaIEC, Spec )
+SUBROUTINE Spec_IECKAI ( SigmaIEC, L_K, Spec )
 
 
-USE                     TSMods, ONLY: HubHt, Uhub, p_grid, IECedition
+USE                     TSMods, ONLY: HubHt, Uhub, p_grid
 
 IMPLICIT                NONE
 
       ! Passed variables
 
 REAL(ReKi),INTENT(IN   ) :: SigmaIEC (3)              !<  Input: sigma for 3 wind components specified by the IEC
+REAL(ReKi),INTENT(IN   ) :: L_k      (3)              !<  Input: L_k (integral scale parameter) for 3 wind components specified by the IEC
 REAL(ReKi),INTENT(INOUT) :: Spec     (:,:)            !<  Output: target spectrum
 
    ! Internal variables
 
 REAL(ReKi),PARAMETER  :: Exp1    = 5.0/3.0
-REAL(ReKi)            :: Lambda
 REAL(ReKi)            :: LambdaU
 
-REAL(ReKi)            :: LU      (3)
+REAL(ReKi)            :: L_over_U      (3)
 REAL(ReKi)            :: SigmaLU (3)
 
 INTEGER               :: I
 INTEGER               :: IVec
 
 
-   ! Define integral scales.
-
-IF (IECedition == 2) THEN
-   IF ( HubHt < 30.0 )  THEN
-      Lambda = 0.7*HubHt
-   ELSE
-      Lambda = 21.0
-   ENDIF
-ELSE !ED 3
-   IF ( HubHt < 60.0 )  THEN
-      Lambda = 0.7*HubHt
-   ELSE
-      Lambda = 42.0
-   ENDIF
-ENDIF
-
-LambdaU = Lambda/Uhub
-LU(1) = 8.10*LambdaU
-LU(2) = 2.70*LambdaU
-LU(3) = 0.66*LambdaU
 
    ! Create the spectrum.
-
-SigmaLU = 4.0*SigmaIEC**2*LU ! array operations
+L_over_U = L_k / UHub
+SigmaLU  = 4.0 * SigmaIEC**2 * L_over_U     ! array operations
 
 DO IVec = 1,3
 
-   LU(IVec) = 6.0*LU(IVec)
+   L_over_U(IVec) = 6.0*L_over_U(IVec)
 
    DO I = 1,p_grid%NumFreq
-      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + LU(IVec)*p_grid%Freq(I) )**Exp1
+      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + L_over_U(IVec)*p_grid%Freq(I) )**Exp1
    ENDDO !I
 
 ENDDO !IVec
@@ -98,7 +78,7 @@ END SUBROUTINE Spec_IECKAI
 !=======================================================================
 !> This subroutine defines the von Karman PSD model as specified by IEC 61400-1 (2nd Ed).
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECVKM ( Spec )
+SUBROUTINE Spec_IECVKM ( SigmaIEC_u, IntegralScale, Spec )
 
 USE                     TSMods
 
@@ -106,6 +86,8 @@ IMPLICIT                NONE
 
       ! Passed variables
 
+REAL(ReKi),INTENT(IN   ) :: SigmaIEC_u              !<  Input: target standard deviation for u component
+REAL(ReKi),INTENT(IN   ) :: IntegralScale (3)       !<  Input: integral scale parameter, L (isotropic, so we only care about the 1st one)
 REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
 
@@ -115,7 +97,6 @@ REAL(ReKi),PARAMETER  :: Exp1 =  5.0/6.0
 REAL(ReKi),PARAMETER  :: Exp2 = 11.0/6.0
 REAL(ReKi)            :: FLU2
 REAL(ReKi)            :: L1_U
-REAL(ReKi)            :: Lambda
 REAL(ReKi)            :: SigmaL1_U
 REAL(ReKi)            :: Tmp
 
@@ -124,16 +105,11 @@ INTEGER               :: I
 
    ! Set up scaling values.
 
-IF ( HubHt  <  30.0 )  THEN
-  Lambda = 0.7*HubHt
-ELSE
-  Lambda = 21.0
-ENDIF
 
    ! Define u-component integral scale.
 
-L1_U   = 3.5*Lambda/UHub
-SigmaL1_U = 2.0*SigmaIEC(1)*SigmaIEC(1)*L1_U
+L1_U   = IntegralScale(1)/UHub
+SigmaL1_U = 2.0*SigmaIEC_u*SigmaIEC_u*L1_U
 
 DO I=1,p_grid%NumFreq
 
@@ -184,24 +160,16 @@ REAL(ReKi)            :: Scale2
 REAL(ReKi)            :: Temp
 !mlb REAL(ReKi)            :: FLU2
 !mlb REAL(ReKi)            :: L1_U
-REAL(ReKi)            :: Lambda
-!mlb REAL(ReKi)            :: SigmaL1_U
-!mlb REAL(ReKi)            :: Tmp1, Tmp2, Tmp3
 !mlb REAL :: X0=10.0                                              ! Added by Y. Guo for calculating UHr_10
 !mlb REAL :: X
 INTEGER               :: I
 !mlb REAL                  :: UHr_10
-   ! Define u-component integral scale.
+
    ! Set up scaling values.
 
-IF ( HubHt  <  30.0 )  THEN
-  Lambda = 0.7*HubHt
-ELSE
-  Lambda = 21.0
-ENDIF
-
-
-CALL Spec_IECKAI ( SigmaIEC, Spec )
+   ! calculate the spectra for the v and w components using IECKAI model
+   ! because API doesn't specify a spectra for those components
+CALL Spec_IECKAI ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Spec )
 
    ! Define u-component integral scale.
 !CALL WrScr ('Calling Froya/API wind spectrum.............')
