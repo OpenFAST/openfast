@@ -916,7 +916,7 @@ RandUnifNum = RN(1)
 END SUBROUTINE RndUnif
 
 !======================================================================
-SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NTot, NumFreq, ErrStat, ErrMsg)
+SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NPoints, NumFreq, ErrStat, ErrMsg)
 
 USE                        Ran_Lux_Mod
 
@@ -927,10 +927,10 @@ TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt                  ! other 
 INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
 CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
 
-INTEGER(IntKi)              , INTENT(IN   ) :: NTot                     ! number of points being simulated
+INTEGER(IntKi)              , INTENT(IN   ) :: NPoints              ! number of points being simulated
 INTEGER(IntKi)              , INTENT(IN   ) :: NumFreq                  ! number of frequencies being simulated
 
-REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(NTot,NumFreq,3)   ! random phases
+REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(NPoints,NumFreq,3)   ! random phases
 
 
 
@@ -988,7 +988,7 @@ INTEGER                                     :: LuxLevelOut, InitSeed
 
    ELSE
  
-      NumPointsFreq = NTot*NumFreq
+      NumPointsFreq = NPoints*NumFreq
 
       Indx = 1
       DO IVec = 1,3  ! 3 wind components
@@ -1003,8 +1003,8 @@ INTEGER                                     :: LuxLevelOut, InitSeed
                                        
    DO IVec = 1,3
       DO IFreq = 1,NumFreq
-         DO J=1,NTot
-            Indx = IFreq + (J-1)*NumFreq + (IVec-1)*NTot*NumFreq  ! This sorts the random numbers as they were done previously
+         DO J=1,NPoints
+            Indx = IFreq + (J-1)*NumFreq + (IVec-1)*NPoints*NumFreq  ! This sorts the random numbers as they were done previously
 
             PhaseAngles(J,IFreq,IVec)  = TwoPi*RandNum(Indx)
          ENDDO ! J

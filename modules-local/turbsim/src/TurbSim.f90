@@ -80,11 +80,7 @@ IMPLICIT                   NONE
 
 REAL(DbKi)              ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
 REAL(DbKi)              ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
-REAL(DbKi), PARAMETER   ::  DblZero = 0.0_DbKi              ! Zero, used to compare 8-byte reals against zero in MAX() functions (to conform to F95 standards)
 
-!REAL(DbKi)              ::  USum                            ! The sum u-component wind speed at the hub
-!REAL(DbKi)              ::  VSum                            ! The sum v-component wind speed at the hub
-!REAL(DbKi)              ::  WSum                            ! The sum w-component wind speed at the hub
 REAL(ReKi)              ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
 REAL(ReKi)              ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
 REAL(ReKi)              ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
@@ -136,6 +132,10 @@ REAL(ReKi)              ::  TotalW                          ! Variables used whe
 
 REAL(ReKi)              :: this_HFlowAng                    ! Horizontal flow angle.
 REAL(ReKi)              :: v3(3)                            ! temporary 3-component array containing velocity
+REAL(ReKi)              ::  ActualSigma(3)                  ! actual standard deviations at the hub
+REAL(ReKi)              ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
+
+
 
 INTEGER                 ::  AllocStat                       ! The status of allocating space for variables
 INTEGER                 ::  I                               ! A loop counter
@@ -364,31 +364,31 @@ ENDIF
    ! Make sure it is a multiple of 4 too.
 
 IF ( Periodic ) THEN
-   NumSteps    = CEILING( AnalysisTime / TimeStep )
-   NumSteps4   = ( NumSteps - 1 )/4 + 1
-   NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
-   NumOutSteps = NumSteps
+   p_grid%NumSteps    = CEILING( AnalysisTime / p_grid%TimeStep )
+   NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
+   p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+   NumOutSteps = p_grid%NumSteps
 ELSE
-   NumOutSteps = CEILING( ( UsableTime + p_grid%GridWidth/UHub )/TimeStep )
-   NumSteps    = MAX( CEILING( AnalysisTime / TimeStep ), NumOutSteps )
-   NumSteps4   = ( NumSteps - 1 )/4 + 1
-   NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+   NumOutSteps = CEILING( ( UsableTime + p_grid%GridWidth/UHub )/p_grid%TimeStep )
+   p_grid%NumSteps    = MAX( CEILING( AnalysisTime / p_grid%TimeStep ), NumOutSteps )
+   NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
+   p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
 END IF
 
-INumSteps   = 1.0/NumSteps
+INumSteps   = 1.0/p_grid%NumSteps
 
-NumFreq     = NumSteps/2
-DelF        = 1.0/( NumSteps*TimeStep )
+p_grid%NumFreq     = p_grid%NumSteps/2
+DelF        = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
 DelF5       = 0.5*DelF
 
 
    !  Allocate/Initialize the array of frequencies.
 
-call AllocAry( Freq, NumFreq, 'Freq (frequency array)', ErrStat, ErrMsg)
+call AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat, ErrMsg)
 CALL CheckError()
 
-DO IFreq=1,NumFreq
-   Freq(IFreq) = IFreq*DelF
+DO IFreq=1,p_grid%NumFreq
+   p_grid%Freq(IFreq) = IFreq*DelF
 ENDDO 
 
 
@@ -398,19 +398,19 @@ IF (DEBUG_OUT) THEN
    CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
    
    WRITE (UD,*)  'UHub=',UHub
-   WRITE (UD,*)  'NumOutSteps, NumSteps, INumSteps=', NumOutSteps, NumSteps, INumSteps
+   WRITE (UD,*)  'NumOutSteps, NumSteps, INumSteps=', NumOutSteps, p_grid%NumSteps, INumSteps
    
-   ROT     = 1.0/( NumGrid_Y*TimeStep ) 
-   WRITE (UD,*)  'TimeStep,DelF,NumFreq,ROT=',TimeStep,DelF,NumFreq,ROT
+   ROT     = 1.0/( NumGrid_Y*p_grid%TimeStep ) 
+   WRITE (UD,*)  'TimeStep,DelF,NumFreq,ROT=',p_grid%TimeStep,DelF,p_grid%NumFreq,ROT
    WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
    
    WRITE (UD,*)  'DelF=',DelF
-   WRITE (UD,*)  'Freq(1) = ',Freq(1),'  Freq(NumFreq) = ',Freq(NumFreq)
+   WRITE (UD,*)  'Freq(1) = ',p_grid%Freq(1),'  Freq(NumFreq) = ',p_grid%Freq(p_grid%NumFreq)
    
 ENDIF
 
 
-IF ( NumSteps < 8 )  THEN
+IF ( p_grid%NumSteps < 8 )  THEN
    CALL TS_Abort ( 'Too few (less than 8) time steps.  Increase the usable length of the time series or decrease the time step.' )
 ENDIF
 
@@ -437,11 +437,11 @@ IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
    CALL AllocAry(WindDir_profile, ZLim, 'WindDir_profile (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
    CALL CheckError()
    
-   U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType, UHANGLE=WindDir_profile) 
+   U(1:ZLim) = getWindSpeed( UHub,  HubHt, p_grid%Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType, UHANGLE=WindDir_profile) 
 ELSE IF ( WindProfileType(1:3) == 'API' )  THEN
-   U(1:ZLim) = getWindSpeed( U_Ref, H_Ref, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
+   U(1:ZLim) = getWindSpeed( U_Ref, H_Ref, p_grid%Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
 ELSE 
-   U(1:ZLim) = getWindSpeed( UHub, HubHt, Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
+   U(1:ZLim) = getWindSpeed( UHub,  HubHt, p_grid%Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
 ENDIF
 
 IF ( SpecModel == SpecModel_GP_LLJ) THEN
@@ -453,8 +453,8 @@ IF ( SpecModel == SpecModel_GP_LLJ) THEN
    CALL AllocAry(Ustar_profile, ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
-   ZL_profile(:) = getZLARY(    U(1:ZLim), Z(1:ZLim) )
-   Ustar_profile(:) = getUstarARY( U(1:ZLim), Z(1:ZLim) )
+   ZL_profile(:)    = getZLARY(    U(1:ZLim), p_grid%Z(1:ZLim) )
+   Ustar_profile(:) = getUstarARY( U(1:ZLim), p_grid%Z(1:ZLim) )
    
 END IF
 
@@ -474,7 +474,7 @@ END IF
 
 IF (DEBUG_OUT) THEN
    DO IZ = 1,ZLim
-      WRITE (UD,*)  Z(IZ), U(IZ)
+      WRITE (UD,*)  p_grid%Z(IZ), U(IZ)
    ENDDO
 ENDIF
 
@@ -493,7 +493,7 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
    IF ( NumTurbInp )  THEN
    
       TurbInt  = 0.01*PerTurbInt
-      SigmaIEC = TurbInt*UHub
+      SigmaIEC(1) = TurbInt*UHub
 
    ELSE
 
@@ -511,8 +511,8 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
                CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
             ENDIF
 
-            SigmaIEC = TurbInt15*( ( 15.0 + SigmaSlope*UHub ) / ( SigmaSlope + 1.0 ) )
-            TurbInt  = SigmaIEC/UHub
+            SigmaIEC(1) = TurbInt15*( ( 15.0 + SigmaSlope*UHub ) / ( SigmaSlope + 1.0 ) )
+            TurbInt  = SigmaIEC(1)/UHub
          
          CASE ( 3 )
 
@@ -529,17 +529,17 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
                    
             SELECT CASE ( IEC_WindType )
                CASE ( IEC_NTM )
-                  SigmaIEC = TurbInt15*( 0.75*UHub + 5.6 )                                      ! [IEC-1 Ed3 6.3.1.3 (11)]
+                  SigmaIEC(1) = TurbInt15*( 0.75*UHub + 5.6 )                                      ! [IEC-1 Ed3 6.3.1.3 (11)]
                CASE ( IEC_ETM )
-                  Vave     = 0.2*Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
-                  SigmaIEC = ETMc*TurbInt15*( 0.072*(Vave/ETMc + 3.0)*(Uhub/ETMc - 4.0)+10.0 )  ! [IEC-1 Ed3 6.3.2.3 (19)]
+                  Vave     = 0.2*Vref                                                              ! [IEC-1 Ed3 6.3.1.1 ( 9)]
+                  SigmaIEC(1) = ETMc*TurbInt15*( 0.072*(Vave/ETMc + 3.0)*(Uhub/ETMc - 4.0)+10.0 )  ! [IEC-1 Ed3 6.3.2.3 (19)]
                CASE ( IEC_EWM1, IEC_EWM50 )
-                  Vave     = 0.2*Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
-                  SigmaIEC = 0.11*Uhub                                                          ! [IEC-1 Ed3 6.3.2.1 (16)]
+                  Vave     = 0.2*Vref                                                              ! [IEC-1 Ed3 6.3.1.1 ( 9)]
+                  SigmaIEC(1) = 0.11*Uhub                                                          ! [IEC-1 Ed3 6.3.2.1 (16)]
                CASE DEFAULT 
                   CALL TS_Abort( 'Invalid IEC wind type.')
             END SELECT           
-            TurbInt  = SigmaIEC/UHub     
+            TurbInt  = SigmaIEC(1)/UHub     
             
          CASE DEFAULT ! Likewise, this should never happen...
 
@@ -550,8 +550,17 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
 
    ENDIF
 
+   IF ( SpecModel == SpecModel_IECVKM ) THEN
+      SigmaIEC(2) =  1.0*SigmaIEC(1)
+      SigmaIEC(3) =  1.0*SigmaIEC(1)
+   ELSE
+      SigmaIEC(2) =  0.8*SigmaIEC(1)
+      SigmaIEC(3) =  0.5*SigmaIEC(1)
+   END IF
+         
+   
    IF (DEBUG_OUT) THEN
-      WRITE (UD,*)  'SigmaIEC,TurbInt=',SigmaIEC,TurbInt
+      WRITE (UD,*)  'SigmaIEC,TurbInt=',SigmaIEC(1),TurbInt
    ENDIF
 
       ! IEC turbulence scale parameter, Lambda1, and IEC coherency scale parameter, LC
@@ -577,7 +586,7 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
    ENDIF
 
    IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
-      z0 = FindZ0(HubHt, SigmaIEC, UHub, Fc)
+      z0 = FindZ0(HubHt, SigmaIEC(1), UHub, Fc)
       CALL ScaleMODVKM(HubHt, UHub, TmpU, TmpV, TmpW)
    ENDIF
 
@@ -585,7 +594,7 @@ ELSE
     LC = 0.0    ! The length scale is not defined for the non-IEC models
 ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
    
-CALL WrSum_SpecModel( US, LC, Lambda1, TurbInt15, SigmaSlope, TurbInt, Z(NumGrid_Z2) )
+CALL WrSum_SpecModel( US, LC, Lambda1, TurbInt15, SigmaSlope, TurbInt, p_grid%Z(NumGrid_Z2) )
 
 
 
@@ -614,27 +623,20 @@ ENDIF
 
    !  Allocate the turbulence PSD array.
 
-ALLOCATE ( S(NumFreq,NTot,3) , STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumFreq*NTot*3/1024**2 ) )//' MB for the turbulence PSD array.' )
-ENDIF
-
+CALL AllocAry( S,    p_grid%NumFreq,p_grid%NPoints,3, 'S (turbulence PSD)',ErrStat, ErrMsg )
+CALL CheckError()
 
    !  Allocate the work array.
 
-ALLOCATE ( Work(NumFreq,3) , STAT=AllocStat ) !NumSteps2
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumFreq*3/1024**2 ) )//' MB for the work array.' )
-ENDIF
+CALL AllocAry( Work, p_grid%NumFreq,3,             'Work',              ErrStat, ErrMsg )
+CALL CheckError()
 
 IF (PSD_OUT) THEN
    CALL OpenFOutFile ( UP, TRIM( RootName )//'.psd')
    WRITE (UP,"(A)")  'PSDs '
-   FormStr = "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( NumFreq ) )//"('"//TAB//"',G10.4) )"
-   WRITE (UP, FormStr)  'Comp','Ht', Freq(:)
-   FormStr = "( I4,"//TRIM( Int2LStr( NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
+   FormStr = "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p_grid%NumFreq ) )//"('"//TAB//"',G10.4) )"
+   WRITE (UP, FormStr)  'Comp','Ht', p_grid%Freq(:)
+   FormStr = "( I4,"//TRIM( Int2LStr( p_grid%NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
 ENDIF
 
 
@@ -643,10 +645,10 @@ ENDIF
 IF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN
       ! Calculate the shear, DUDZ, for all heights.
    ALLOCATE ( DUDZ(ZLim) , STAT=AllocStat ) ! Shear
-   DUDZ(1)=(U(2)-U(1))/(Z(2)-Z(1))
-   DUDZ(ZLim)=(U(ZLim)-U(ZLim-1))/(Z(ZLim)-Z(ZLim-1))
+   DUDZ(1)=(U(2)-U(1))/(p_grid%Z(2)-p_grid%Z(1))
+   DUDZ(ZLim)=(U(ZLim)-U(ZLim-1))/(p_grid%Z(ZLim)-p_grid%Z(ZLim-1))
    DO I = 2,ZLim-1
-      DUDZ(I)=(U(I+1)-U(I-1))/(Z(I+1)-Z(I-1))
+      DUDZ(I)=(U(I+1)-U(I-1))/(p_grid%Z(I+1)-p_grid%Z(I-1))
    ENDDO
 ENDIF
 
@@ -665,14 +667,14 @@ DO IZ=1,ZLim
       ELSEIF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
          !print *, Ustar
          !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
-         Sigma_U2=4.5*Ustar*Ustar*EXP(-2*Z(IZ)/H_ref)
+         Sigma_U2=4.5*Ustar*Ustar*EXP(-2*p_grid%Z(IZ)/H_ref)
          Sigma_V2=0.5*Sigma_U2
          Sigma_W2=0.2*Sigma_U2
-         CALL PSDCal( Z(IZ) , DUDZ(IZ) )
+         CALL PSDCal( p_grid%Z(IZ) , DUDZ(IZ) )
       ELSEIF ( ALLOCATED( ZL_profile ) ) THEN
-         CALL PSDcal( Z(IZ), U(IZ), ZL_profile(IZ), Ustar_profile(IZ) )
+         CALL PSDcal( p_grid%Z(IZ), U(IZ), ZL_profile(IZ), Ustar_profile(IZ) )
       ELSE
-         CALL PSDcal( Z(IZ), U(IZ) )
+         CALL PSDcal( p_grid%Z(IZ), U(IZ) )
       ENDIF               
 
       IF (DEBUG_OUT) THEN
@@ -680,7 +682,7 @@ DO IZ=1,ZLim
             TotalV = 0.0
             TotalW = 0.0
 
-            DO IFreq=1,NumFreq
+            DO IFreq=1,p_grid%NumFreq
                TotalU = TotalU + Work(IFreq,1)
                TotalV = TotalV + Work(IFreq,2)
                TotalW = TotalW + Work(IFreq,3)
@@ -692,7 +694,7 @@ DO IZ=1,ZLim
             TotalW = TotalW*DelF
             HorVar = Total *DelF
 
-            WRITE(UD,*)  'At H=', Z(IZ)
+            WRITE(UD,*)  'At H=', p_grid%Z(IZ)
             WRITE(UD,*)  '   TotalU=', TotalU, '  TotalV=', TotalV, '  TotalW=', TotalW, ' (m/s^2)'
             WRITE(UD,*)  '   HorVar=',HorVar,' (m/s^2)', '   HorSigma=',SQRT(HorVar),' (m/s)'
       ENDIF
@@ -704,11 +706,11 @@ DO IZ=1,ZLim
          
          Indx = JZ
 
-         DO IY=1,IYmax(IZ)   
+         DO IY=1,p_grid%IYmax(IZ)   
           
             Indx = Indx + 1
  
-            DO IFreq=1,NumFreq
+            DO IFreq=1,p_grid%NumFreq
                S(IFreq,Indx,IVec) = Work(IFreq,IVec)*DelF5
             ENDDO ! IFreq
 
@@ -716,7 +718,7 @@ DO IZ=1,ZLim
 
       ENDDO ! IVec
 
-      JZ = JZ + IYmax(IZ)     ! The next starting index at height IZ + 1
+      JZ = JZ + p_grid%IYmax(IZ)     ! The next starting index at height IZ + 1
 
 ENDDO ! IZ
 
@@ -746,10 +748,10 @@ IF ( ALLOCATED( Wspec_USR  ) )  DEALLOCATE( Wspec_USR  )
 
    ! Allocate memory for random number array
 
-CALL AllocAry( PhaseAngles, NTot, NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
+CALL AllocAry( PhaseAngles, p_grid%NPoints, p_grid%NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
 CALL CheckError()
 
-CALL RndPhases(p_RandNum, OtherSt_RandNum, PhaseAngles, NTot, NumFreq, ErrStat, ErrMsg)
+CALL RndPhases(p_RandNum, OtherSt_RandNum, PhaseAngles, p_grid%NPoints, p_grid%NumFreq, ErrStat, ErrMsg)
 CALL CheckError()
 
 WRITE(US,"(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)")
@@ -763,20 +765,20 @@ IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)
 
    !  Allocate the transfer-function matrix. 
    
-ALLOCATE ( TRH( MAX(NumSteps,NSize) ) , STAT=AllocStat )
+ALLOCATE ( TRH( MAX(p_grid%NumSteps,NSize) ) , STAT=AllocStat )
 
 IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*MAX(NumSteps,NSize)/1024**2 ) )// &
+   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*MAX(p_grid%NumSteps,NSize)/1024**2 ) )// &
                     ' MB for the temporary transfer-function matrix.' )   
 ENDIF
 
 
    !  Allocate the array that contains the velocities.
 
-ALLOCATE ( V(NumSteps,NTot,3), STAT=AllocStat )
+ALLOCATE ( V(p_grid%NumSteps,p_grid%NPoints,3), STAT=AllocStat )
 
 IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*NumSteps*NTot*3/1024**2 ) )//' MB for velocity array.' )
+   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*p_grid%NumSteps*p_grid%NPoints*3/1024**2 ) )//' MB for velocity array.' )
 ENDIF
 
 
@@ -797,13 +799,13 @@ ENDIF
 
    ! Deallocate the Freq, S, and RandPhases arrays and the spectral matrix
 
-IF ( ALLOCATED( Freq        ) )  DEALLOCATE( Freq        )
+IF ( ALLOCATED( p_grid%Freq        ) )  DEALLOCATE( p_grid%Freq        )
 IF ( ALLOCATED( S           ) )  DEALLOCATE( S           )
 IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
 
    !  Allocate the FFT working storage and initialize its variables
 
-CALL InitFFT( NumSteps, FFT_Data, ErrStat=ErrStat )
+CALL InitFFT( p_grid%NumSteps, FFT_Data, ErrStat=ErrStat )
 CALL CheckError()
 
 
@@ -815,7 +817,7 @@ DO IVec=1,3
 
    CALL WrScr ( '    '//Comp(IVec)//'-component' )
 
-   DO Indx=1,NTot    !NTotB
+   DO Indx=1,p_grid%NPoints    !NTotB
 
          ! Overwrite the first point with zero.  This sets the real (and 
          ! imaginary) part of the steady-state value to zero so that we 
@@ -823,14 +825,14 @@ DO IVec=1,3
 
       TRH(1)=0.0
 
-      DO IT=2,NumSteps-1
+      DO IT=2,p_grid%NumSteps-1
          TRH(IT) = V(IT-1,Indx,IVec)
       ENDDO ! IT
 
          ! Now, let's add a complex zero to the end to set the power in the Nyquist
          ! frequency to zero.
 
-      TRH(NumSteps) = 0.0
+      TRH(p_grid%NumSteps) = 0.0
 
 
          ! perform FFT
@@ -838,7 +840,7 @@ DO IVec=1,3
       CALL ApplyFFT( TRH, FFT_Data, ErrStat )
       CALL CheckError()
         
-      V(1:NumSteps,Indx,IVec) = TRH(1:NumSteps)
+      V(1:p_grid%NumSteps,Indx,IVec) = TRH(1:p_grid%NumSteps)
 
    ENDDO ! Indx
 
@@ -874,7 +876,7 @@ CASE (SpecModel_GP_LLJ, &
          VSum2 = 0.0
          WSum2 = 0.0
          
-         DO IT = 1,NumSteps
+         DO IT = 1,p_grid%NumSteps
             UWsum = UWsum + V(IT,p_grid%HubIndx,1) * V(IT,p_grid%HubIndx,3)
             UVsum = UVsum + V(IT,p_grid%HubIndx,1) * V(IT,p_grid%HubIndx,2)
             VWsum = VWsum + V(IT,p_grid%HubIndx,2) * V(IT,p_grid%HubIndx,3)
@@ -912,8 +914,8 @@ CASE (SpecModel_GP_LLJ, &
          UVMax = MAX( MIN( UVMax, 1.0 ), -1.0 )
          VWMax = MAX( MIN( VWMax, 1.0 ), -1.0 )
                   
-         DO Indx = 1,NTot
-            DO IT = 1, NumSteps
+         DO Indx = 1,p_grid%NPoints
+            DO IT = 1, p_grid%NumSteps
                TmpU = V(IT,Indx,1)
                TmpV = V(IT,Indx,2)
                TmpW = V(IT,Indx,3)
@@ -936,58 +938,20 @@ CASE (SpecModel_GP_LLJ, &
          WRITE( US, FormStr ) "u'v'           ", UVmax
          WRITE( US, FormStr ) "v'w'           ", VWmax
 
-   CASE ( SpecModel_IECKAI, SpecModel_IECVKM )
+   CASE ( SpecModel_IECKAI , SpecModel_IECVKM )
 
       IF (ScaleIEC > 0) THEN
 
+         CALL Scaling_IEC(p_grid, V, ScaleIEC, SigmaIEC, ActualSigma, HubFactor)
+         
          WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
          WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
          WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
          
          FormStr = "(2X,3x,A,7x,f11.3,9x,f12.3,11x,f10.3)"                        
-
          DO IVec = 1,3
-            CGridSum  = 0.0
-            CGridSum2 = 0.0
-                           
-            DO IT=1,NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-               CGridSum  = CGridSum  + V( IT, p_grid%HubIndx, IVec )
-               CGridSum2 = CGridSum2 + V( IT, p_grid%HubIndx, IVec )* V( IT, p_grid%HubIndx, IVec )
-            ENDDO ! IT
-               
-            UGridMean = CGridSum/NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-            UGridSig  = SQRT( ABS( (CGridSum2/NumSteps) - UGridMean*UGridMean ) )
-            
-            IF ( IVec == 1 .OR. SpecModel == SpecModel_IECVKM ) THEN
-               TargetSigma = SigmaIEC
-            ELSEIF (IVec == 2) THEN
-               TargetSigma = 0.8*SigmaIEC             !IEC 61400-1, Appendix B
-            ELSE  
-               TargetSigma = 0.5*SigmaIEC             !IEC 61400-1, Appendix B
-            ENDIF
-
-            WRITE( US, FormStr) Comp(IVec)//"'", TargetSigma, UGridSig, TargetSigma/UGridSig
-            
-            IF (ScaleIEC == 1 .OR. IVec > 1) THEN ! v and w have no coherence, thus all points have same std, so we'll save some calculations
-               V(:,:,IVec) =     (TargetSigma / UGridSig) * V(:,:,IVec)
-            ELSE  ! Scale each point individually
-               DO Indx = 1,NTot             
-                  CGridSum  = 0.0
-                  CGridSum2 = 0.0
-                                    
-                  DO IT=1,NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-                     CGridSum  = CGridSum  + V( IT, Indx, IVec )
-                     CGridSum2 = CGridSum2 + V( IT, Indx, IVec )* V( IT, Indx, IVec )
-                  ENDDO ! IT
-                  
-                  UGridMean = CGridSum/NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-                  UGridSig  = SQRT( ABS( (CGridSum2/NumSteps) - UGridMean*UGridMean ) )
-            
-                  V(:,Indx,IVec) = (TargetSigma / UGridSig) * V(:,Indx,IVec)   
-               ENDDO ! Indx
-            ENDIF            
-
-         ENDDO !IVec
+            WRITE( US, FormStr) Comp(IVec)//"'", SigmaIEC(IVec), ActualSigma(IVec), HubFactor(IVec)
+         END DO
            
       ENDIF !ScaleIEC
 
@@ -1030,11 +994,11 @@ DO IZ=1,ZLim
       this_HFlowAng = HFlowAng
    ENDIF      
 
-  DO IY=1,IYmax(IZ)  
+  DO IY=1,p_grid%IYmax(IZ)  
 
       II = II + 1
 
-      DO IT=1,NumSteps
+      DO IT=1,p_grid%NumSteps
 
             ! Add mean wind speed to the streamwise component and
             ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
@@ -1069,7 +1033,7 @@ IF ( WrACT ) THEN
       WRITE ( US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda
    ENDIF
 
-   WRITE ( US, '(A,I8)'   )            'Number of coherent events            = ', y_CohStr%NumCTEvents
+   WRITE ( US, '(A,I8)'   )            'Number of coherent events            = ', y_CohStr%NumCTEvents_separate
    WRITE ( US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
    WRITE ( US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
    WRITE ( US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
@@ -1093,12 +1057,12 @@ IF ( WrBLFF .OR. WrADTWR .OR. WrADFF )  THEN
       ZLo_YHi   = ( NumGrid_Z2 - 1 )*NumGrid_Y + NumGrid_Y2 + 1
       ZHi_YHi   = ( NumGrid_Z2     )*NumGrid_Y + NumGrid_Y2 + 1
     
-      TmpZ      = (HubHt - Z(NumGrid_Z2))/p_grid%GridRes_Z
-      TmpY      = ( 0.0  - Y(NumGrid_Y2))/p_grid%GridRes_Y
+      TmpZ      = (HubHt - p_grid%Z(NumGrid_Z2))/p_grid%GridRes_Z
+      TmpY      = ( 0.0  - p_grid%Y(NumGrid_Y2))/p_grid%GridRes_Y
       CGridSum  = 0.0
       CGridSum2 = 0.0
 
-      DO IT=1,NumSteps
+      DO IT=1,p_grid%NumSteps
          
       ! Interpolate within the grid for this time step.
 
@@ -1110,8 +1074,8 @@ IF ( WrBLFF .OR. WrADTWR .OR. WrADFF )  THEN
          CGridSum2 = CGridSum2 + TmpV*TmpV
       ENDDO ! IT
 
-      UGridMean = CGridSum/NumSteps
-      UGridSig  = SQRT( ABS( (CGridSum2/NumSteps) - UGridMean*UGridMean ) )
+      UGridMean = CGridSum/p_grid%NumSteps
+      UGridSig  = SQRT( ABS( (CGridSum2/p_grid%NumSteps) - UGridMean*UGridMean ) )
       UGridTI   = 100.0*UGridSig/UGridMean
 
       FormStr = "(//,'U-component (X) statistics from the interpolated hub point:',/)"
@@ -1159,18 +1123,18 @@ ENDIF ! ( WrFmtFF )
    ! Deallocate the temporary V, Y, Z, and IYmax arrays.
 
 IF ( ALLOCATED( V               ) )  DEALLOCATE( V               )
-IF ( ALLOCATED( Y               ) )  DEALLOCATE( Y               )
-IF ( ALLOCATED( Z               ) )  DEALLOCATE( Z               )
-IF ( ALLOCATED( IYmax           ) )  DEALLOCATE( IYmax           )
+IF ( ALLOCATED( p_grid%Y        ) )  DEALLOCATE( p_grid%Y        )
+IF ( ALLOCATED( p_grid%Z        ) )  DEALLOCATE( p_grid%Z        )
+IF ( ALLOCATED( p_grid%IYmax    ) )  DEALLOCATE( p_grid%IYmax    )
 
 
 IF (DEBUG_OUT) THEN
    CLOSE( UD )       ! Close the debugging file
 ENDIF
 
-WRITE ( US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * TimeStep)
-IF ( WrACT .AND. EventTimeStep > 0.0 ) THEN
-   WRITE ( US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0 / (2.0 * EventTimeStep)
+WRITE ( US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p_grid%TimeStep)
+IF ( WrACT .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
+   WRITE ( US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0 / (2.0 * y_CohStr%EventTimeStep)
 ENDIF
 
 

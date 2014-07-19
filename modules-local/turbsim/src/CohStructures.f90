@@ -38,8 +38,8 @@ use TSMods
 !this routine is replicated in CohStr_WriteCTS()
    
 
-      p_CohStr%ScaleWid = RotorDiameter * DistScl           !  This is the scaled height of the coherent event data set
-      p_CohStr%Zbottom  = HubHt - CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
+      p_CohStr%ScaleWid = RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
+      p_CohStr%Zbottom  = HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
 
       IF ( KHtest ) THEN      
             ! for LES test case....
@@ -107,18 +107,18 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
          ! Read the nondimensional lateral width of the dataset, Ym_max
 
-   CALL ReadVar( Un, p_CohStr%CTEventFile, Ym_max, "Ym_max", "Nondimensional lateral dataset width", ErrStat2, ErrMsg2)
+   CALL ReadVar( Un, p_CohStr%CTEventFile, p_CohStr%Ym_max, "Ym_max", "Nondimensional lateral dataset width", ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
 
          ! Read the nondimensional vertical height of the dataset, Zm_max
 
-   CALL ReadVar( Un, p_CohStr%CTEventFile, Zm_max, "Zm_max", "Nondimensional vertical dataset height", ErrStat2, ErrMsg2)
+   CALL ReadVar( Un, p_CohStr%CTEventFile, p_CohStr%Zm_max, "Zm_max", "Nondimensional vertical dataset height", ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
 
 
          ! Read the rest of the header
 
-   CALL ReadVar( Un, p_CohStr%CTEventFile, NumEvents, "NumEvents", "the number of coherent structures.", ErrStat2, ErrMsg2)
+   CALL ReadVar( Un, p_CohStr%CTEventFile, p_CohStr%NumEvents, "NumEvents", "the number of coherent structures.", ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
       
       
@@ -128,13 +128,13 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
    END IF
       
 
-   IF ( NumEvents > 0 ) THEN
+   IF ( p_CohStr%NumEvents > 0 ) THEN
 
 
-      CALL AllocAry( p_CohStr%EventID,  NumEvents , 'EventID',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
-      CALL AllocAry( p_CohStr%EventTS,  NumEvents , 'EventTS',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
-      CALL AllocAry( p_CohStr%EventLen, NumEvents , 'EventLen', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
-      CALL AllocAry( p_CohStr%pkCTKE,   NumEvents , 'pkCTKE',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%EventID,  p_CohStr%NumEvents , 'EventID',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%EventTS,  p_CohStr%NumEvents , 'EventTS',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%EventLen, p_CohStr%NumEvents , 'EventLen', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
+      CALL AllocAry( p_CohStr%pkCTKE,   p_CohStr%NumEvents , 'pkCTKE',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CohStr_ReadEventFile')
 
       IF (ErrStat >= AbortErrLev) THEN
          CLOSE(Un)
@@ -149,7 +149,7 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
             ! Read the event definitions and scale times by TScale
 
-      DO I=1,NumEvents
+      DO I=1,p_CohStr%NumEvents
 
          READ ( Un, *, IOSTAT=IOS )  p_CohStr%EventID(I),  p_CohStr%EventTS(I), p_CohStr%EventLen(I), p_CohStr%pkCTKE(I)
 
@@ -167,17 +167,17 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
          ! Calculate the TimeScaleFactor, based on the Zm_max in the Events file.
 
-      TSclFact = ScaleWid / (ScaleVel * Zm_max)
+      TSclFact = ScaleWid / (ScaleVel * p_CohStr%Zm_max)
 
          ! Scale the time based on TSclFact
 
-      DO I=1,NumEvents
+      DO I=1,p_CohStr%NumEvents
          p_CohStr%EventLen(I) = p_CohStr%EventLen(I)*TSclFact
       ENDDO
 
    ELSE
 
-      TSclFact = ScaleWid / (ScaleVel * Zm_max)
+      TSclFact = ScaleWid / (ScaleVel * p_CohStr%Zm_max)
 
    ENDIF  ! FileNum > 0
 
@@ -263,7 +263,7 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
 
    END SELECT
 
-   y_CohStr%ExpectedTime = y_CohStr%ExpectedTime * ( UsableTime - CTStartTime ) / 600.0  ! Scale for use with the amount of time we've been given
+   y_CohStr%ExpectedTime = y_CohStr%ExpectedTime * ( UsableTime - p_CohStr%CTStartTime ) / 600.0  ! Scale for use with the amount of time we've been given
 
 
 !BONNIE: PERHAPS WE SHOULD JUST PUT IN A CHECK THAT TURNS OFF THE COHERENT TIME STEP FILE IF THE
@@ -273,8 +273,8 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
       ! We start by adding events at random times
 
    y_CohStr%NumCTEvents = 0                                    ! Number of events = length of our linked list
-   NumCTt      = 0                                    ! Total number of time steps in the events we've picked
-   MaxCTKE     = 0.0                                  ! Find the maximum CTKE for the events that we've selected
+   y_CohStr%NumCTt      = 0                                    ! Total number of time steps in the events we've picked
+   MaxCTKE              = 0.0                                  ! Find the maximum CTKE for the events that we've selected
 
    y_CohStr%EventTimeSum = 0.0 
 
@@ -287,46 +287,46 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
       TStartNext   = y_CohStr%ExpectedTime / 2                 ! When testing, start about a quarter of the way into the record
    ENDIF
 
-   IF ( TStartNext < CTStartTime ) THEN
-      TStartNext = TStartNext + CTStartTime           ! Make sure the events start after time specified by CTStartTime
+   IF ( TStartNext < p_CohStr%CTStartTime ) THEN
+      TStartNext = TStartNext + p_CohStr%CTStartTime           ! Make sure the events start after time specified by CTStartTime
    ENDIF
 
-   IF ( TStartNext > 0 ) NumCTt = NumCTt + 1          ! Add a point before the first event
+   IF ( TStartNext > 0 ) y_CohStr%NumCTt = y_CohStr%NumCTt + 1          ! Add a point before the first event
 
    DO WHILE ( TStartNext < UsableTime .AND. y_CohStr%EventTimeSum < y_CohStr%ExpectedTime )
 
       CALL RndUnif( p_RandNum, OtherSt_RandNum, rn )
 
-      NewEvent = INT( rn*( NumEvents - 1.0 ) ) + 1
-      NewEvent = MAX( 1, MIN( NewEvent, NumEvents ) ) ! take care of possible rounding issues....
+      NewEvent = INT( rn*( p_CohStr%NumEvents - 1.0 ) ) + 1
+      NewEvent = MAX( 1, MIN( NewEvent, p_CohStr%NumEvents ) ) ! take care of possible rounding issues....
 
 
-      IF ( .NOT. ASSOCIATED ( PtrHead ) ) THEN
+      IF ( .NOT. ASSOCIATED ( y_CohStr%PtrHead ) ) THEN
 
-         ALLOCATE ( PtrHead, STAT=IStat )             ! The pointer %Next is nullified in allocation
+         ALLOCATE ( y_CohStr%PtrHead, STAT=IStat )             ! The pointer %Next is nullified in allocation
 
          IF ( IStat /= 0 ) THEN
             CALL TS_Abort ( 'Error allocating memory for new event.' )
          ENDIF
 
-         PtrTail => PtrHead
+         y_CohStr%PtrTail => y_CohStr%PtrHead
 
       ELSE
 
-         ALLOCATE ( PtrTail%Next, STAT=IStat )     ! The pointer PtrTail%Next%Next is nullified in allocation
+         ALLOCATE ( y_CohStr%PtrTail%Next, STAT=IStat )     ! The pointer PtrTail%Next%Next is nullified in allocation
 
          IF ( IStat /= 0 ) THEN
             CALL TS_Abort ( 'Error allocating memory for new event.' )
          ENDIF
 
-         PtrTail => PtrTail%Next                   ! Move the pointer to point to the last record in the list
+         y_CohStr%PtrTail => y_CohStr%PtrTail%Next                   ! Move the pointer to point to the last record in the list
 
       ENDIF
 
-      PtrTail%EventNum     = NewEvent
-      PtrTail%TStart       = TStartNext
-      PtrTail%delt         = p_CohStr%EventLen( NewEvent ) / p_CohStr%EventTS( NewEvent )          ! the average delta time in the event
-      PtrTail%Connect2Prev = .FALSE.
+      y_CohStr%PtrTail%EventNum     = NewEvent
+      y_CohStr%PtrTail%TStart       = TStartNext
+      y_CohStr%PtrTail%delt         = p_CohStr%EventLen( NewEvent ) / p_CohStr%EventTS( NewEvent )          ! the average delta time in the event
+      y_CohStr%PtrTail%Connect2Prev = .FALSE.
 
       MaxCTKE              = MAX( MaxCTKE, p_CohStr%pkCTKE( NewEvent ) )
       y_CohStr%NumCTEvents          = y_CohStr%NumCTEvents + 1
@@ -348,16 +348,17 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
       ENDIF
 
 
-      IF ( (TStartNext - TEnd) > PtrTail%delt ) THEN
-         NumCTt = NumCTt + p_CohStr%EventTS( NewEvent ) + 2                                  ! add a zero-line (essentially a break between events)
+      IF ( (TStartNext - TEnd) > y_CohStr%PtrTail%delt ) THEN
+         y_CohStr%NumCTt = y_CohStr%NumCTt + p_CohStr%EventTS( NewEvent ) + 2                                  ! add a zero-line (essentially a break between events)
       ELSE
-         NumCTt = NumCTt + p_CohStr%EventTS( NewEvent ) + 1
+         y_CohStr%NumCTt = y_CohStr%NumCTt + p_CohStr%EventTS( NewEvent ) + 1
       ENDIF
 
       y_CohStr%EventTimeSum     = y_CohStr%EventTimeSum + p_CohStr%EventLen( NewEvent )
 
    ENDDO
 
+   y_CohStr%NumCTEvents_separate = y_CohStr%NumCTEvents
 
       ! Next, we start concatenating events until there is no space or we exceed the expected time
 
@@ -369,8 +370,8 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
          CALL RndUnif( p_RandNum, OtherSt_RandNum, rn )
 
-         NewEvent = INT( rn*( NumEvents - 1.0 ) ) + 1
-         NewEvent = MAX( 1, MIN( NewEvent, NumEvents ) )    ! take care of possible rounding issues....
+         NewEvent = INT( rn*( p_CohStr%NumEvents - 1.0 ) ) + 1
+         NewEvent = MAX( 1, MIN( NewEvent, p_CohStr%NumEvents ) )    ! take care of possible rounding issues....
 
          NumCompared = 0
          Inserted    = .FALSE.
@@ -378,7 +379,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
          DO WHILE ( NumCompared < y_CohStr%NumCTEvents .AND. .NOT. Inserted )
 
             IF ( .NOT. ASSOCIATED ( PtrCurr ) ) THEN        ! Wrap around to the beginning of the list
-               PtrCurr => PtrHead
+               PtrCurr => y_CohStr%PtrHead
             ENDIF
 
 
@@ -412,7 +413,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
                MaxCTKE              = MAX( MaxCTKE, p_CohStr%pkCTKE( NewEvent ) )
                y_CohStr%NumCTEvents          = y_CohStr%NumCTEvents + 1
-               NumCTt               = NumCTt + p_CohStr%EventTS( NewEvent )  ! there is no break between events
+               y_CohStr%NumCTt               = y_CohStr%NumCTt + p_CohStr%EventTS( NewEvent )  ! there is no break between events
                                    !(we may have one too many NumCTt here, so we'll deal with it when we write the file later)
                y_CohStr%EventTimeSum         = y_CohStr%EventTimeSum + p_CohStr%EventLen( NewEvent )
 
@@ -431,12 +432,11 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
    ENDIF ! SpecModel /= SpecModel_NONE
 
-IF ( NumCTt > 0 ) THEN
-   EventTimeStep = y_CohStr%EventTimeSum / NumCTt                                          ! Average timestep of coherent event data
-ELSE
-   EventTimeStep = 0.0
-ENDIF
-
+   IF ( y_CohStr%NumCTt > 0 ) THEN
+      y_CohStr%EventTimeStep = y_CohStr%EventTimeSum / y_CohStr%NumCTt                                          ! Average timestep of coherent event data
+   ELSE
+      y_CohStr%EventTimeStep = 0.0
+   ENDIF
 
 
 END SUBROUTINE CohStr_CalcEvents
@@ -459,8 +459,8 @@ use TS_RandNum
    CALL WrScr ( ' Generating coherent turbulent time step file "'//TRIM( RootName )//'.cts"' )
    
    
-   p_CohStr%ScaleWid = RotorDiameter * DistScl           !  This is the scaled height of the coherent event data set
-   p_CohStr%Zbottom  = HubHt - CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
+   p_CohStr%ScaleWid = RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
+   p_CohStr%Zbottom  = HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
    p_CohStr%Uwave    = getWindSpeed(UHub,HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, RotorDiameter, PROFILE=WindProfileType)                 ! WindSpeed at center of wave
    
@@ -480,9 +480,9 @@ use TS_RandNum
       
          ! If the coherent structures do not cover the whole disk, increase the shear
 
-      IF ( DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
+      IF ( p_CohStr%DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
          CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum ) !returns TmpRndNum, a random variate
-         p_CohStr%ScaleVel = p_CohStr%ScaleVel * ( 1.0 + TmpRndNum * (1 - DistScl) / DistScl )
+         p_CohStr%ScaleVel = p_CohStr%ScaleVel * ( 1.0 + TmpRndNum * (1 - p_CohStr%DistScl) / p_CohStr%DistScl )
       ENDIF
 
          !Apply a scaling factor to account for short inter-arrival times getting wiped out due to long events
@@ -688,15 +688,15 @@ ENDIF
    WRITE (UnOut, "( A14,   ' = FileType')")     p_CohStr%CTExt
    WRITE (UnOut, "( G14.7, ' = ScaleVel')")     p_CohStr%ScaleVel
    WRITE (UnOut, "( G14.7, ' = MHHWindSpeed')") UHub
-   WRITE (UnOut, "( G14.7, ' = Ymax')")         p_CohStr%ScaleWid*Ym_max/Zm_max
+   WRITE (UnOut, "( G14.7, ' = Ymax')")         p_CohStr%ScaleWid*p_CohStr%Ym_max/p_CohStr%Zm_max
    WRITE (UnOut, "( G14.7, ' = Zmax')")         p_CohStr%ScaleWid
-   WRITE (UnOut, "( G14.7, ' = DistScl')")      DistScl
-   WRITE (UnOut, "( G14.7, ' = CTLy')")         CTLy
-   WRITE (UnOut, "( G14.7, ' = CTLz')")         CTLz
-   WRITE (UnOut, "( G14.7, ' = NumCTt')")       NumCTt
+   WRITE (UnOut, "( G14.7, ' = DistScl')")      p_CohStr%DistScl
+   WRITE (UnOut, "( G14.7, ' = CTLy')")         p_CohStr%CTLy
+   WRITE (UnOut, "( G14.7, ' = CTLz')")         p_CohStr%CTLz
+   WRITE (UnOut, "( G14.7, ' = NumCTt')")       y_CohStr%NumCTt
 
 
-   PtrCurr => PtrHead
+   PtrCurr => y_CohStr%PtrHead
 
 
    DO IE = 1,y_CohStr%NumCTEvents
@@ -710,12 +710,12 @@ ENDIF
 
             WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0     ! Print end of previous event
 
-            NumCTt = NumCTt - 1  ! Let's make sure the right number of points have been written to the file.
+            y_CohStr%NumCTt = y_CohStr%NumCTt - 1  ! Let's make sure the right number of points have been written to the file.
 
             IF ( CurrentTime < PtrCurr%TStart - PtrCurr%delt ) THEN  !This assumes a ramp of 1 delta t for each structure....
 
                WRITE ( UnOut, '(G14.7,1x,I5.5)') MAX(PtrCurr%TStart - PtrCurr%delt, REAL(0.0, ReKi) ), 0
-               NumCTt = NumCTt - 1
+               y_CohStr%NumCTt = y_CohStr%NumCTt - 1
 
             ENDIF
 
@@ -741,7 +741,7 @@ ENDIF
          CurrentTime = PtrCurr%TStart + CTTime*TScale
 
          WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, FileNum
-         NumCTt = NumCTt - 1
+         y_CohStr%NumCTt = y_CohStr%NumCTt - 1
 
       ENDDO    ! IT: Event timestep
 
@@ -764,7 +764,7 @@ ENDIF
    ENDDO !IE: number of events
 
    WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0     !Add the last line
-   NumCTt = NumCTt - 1
+   y_CohStr%NumCTt = y_CohStr%NumCTt - 1
 
       ! Let's append zero lines at the end of the file if we haven't output NumCTt lines, yet.
       ! We've subtracted from NumCTt every time we wrote a line so now the number in NumCTt is
@@ -776,7 +776,7 @@ ENDIF
       deltaTime = 0.5
    ENDIF
 
-   DO IE = 1, NumCTt  ! Write zeros at the end if we happened to insert an event that overwrote one of our zero lines
+   DO IE = 1, y_CohStr%NumCTt  ! Write zeros at the end if we happened to insert an event that overwrote one of our zero lines
       CurrentTime = CurrentTime + deltaTime
       WRITE ( UnOut, '(G14.7,1x,I5.5)') CurrentTime, 0
    ENDDO

@@ -99,14 +99,14 @@ ENDIF
 
          II = 0
 POINT_I: DO IZ=1,ZLim   !NumGrid_Z
-            DO IY=1,IYmax(IZ) !NumGrid_Y
+            DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
+               IF (II > p_grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
-                  DO JY=1,IYmax(JZ) !NumGrid_Y
+                  DO JY=1,p_grid%IYmax(JZ) !NumGrid_Y
 
                      JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
 
@@ -125,32 +125,32 @@ POINT_J:       DO JZ=1,IZ
                      ENDIF
 
                      JJ1       = JJ - 1
-                     Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                     Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
                      IF ( .NOT. PeriodicY ) THEN
-                        Dist(Indx)= SQRT( ( Y(I) - Y(J) )**2  + ( Z(IZ) - Z(JZ) )**2 )
+                        Dist(Indx)= SQRT( ( p_grid%Y(I) - p_grid%Y(J) )**2  + ( p_grid%Z(IZ) - p_grid%Z(JZ) )**2 )
                      ELSE
-                        dY = Y(I) - Y(J)
+                        dY = p_grid%Y(I) - p_grid%Y(J)
                         IF (dY > 0.5*p_grid%GridWidth ) THEN
                            dY = dY - p_grid%GridWidth - p_grid%GridRes_Y
                         ELSE IF (dY < -0.5*p_grid%GridWidth ) THEN
                            dY = dY + p_grid%GridWidth + p_grid%GridRes_Y
                         END IF
 
-                        Dist(Indx)= SQRT( ( dY )**2  + ( Z(IZ) - Z(JZ) )**2 )
+                        Dist(Indx)= SQRT( ( dY )**2  + ( p_grid%Z(IZ) - p_grid%Z(JZ) )**2 )
                      END IF
 
                      IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM  .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
                         DistU(Indx) = Dist(Indx)/UHub
-!                           TRH(Indx) = EXP( -InCDec(IVec)*SQRT( ( Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
+!                           TRH(Indx) = EXP( -InCDec(IVec)*SQRT( ( p_grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
                         UM       = 0.5*( U(IZ) + U(JZ) )
-                        ZM       = 0.5*( Z(IZ) + Z(JZ) )
+                        ZM       = 0.5*( p_grid%Z(IZ) + p_grid%Z(JZ) )
 
                         DistU(Indx)     = Dist(Indx)/UM
                         DistZMExp(Indx) = ( Dist(Indx)/ZM )**COHEXP     ! Note: 0**0 = 1
 
-!                       TRH(Indx) = EXP( -InCDec(IVec) * DistZMExp*SQRT( ( Freq(IFreq)* DistU )**2 + (InCohB(IVec)*Dist)**2 ) )
+!                       TRH(Indx) = EXP( -InCDec(IVec) * DistZMExp*SQRT( ( p_grid%Freq(IFreq)* DistU )**2 + (InCohB(IVec)*Dist)**2 ) )
                      ENDIF !SpecModel
 
                   ENDDO    ! JY
@@ -188,7 +188,7 @@ DO IVec = 1,3
    ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
    !---------------------------------------------------------------------------------
 
-   DO IFREQ = 1,NumFreq
+   DO IFREQ = 1,p_grid%NumFreq
 
       !---------------------------------------------------
       ! Calculate the coherence and Veers' H matrix (CSDs)
@@ -199,14 +199,14 @@ DO IVec = 1,3
             ! Create the coherence matrix for this frequency
             ! -----------------------------------------------
 
-         DO II=1,NTot
+         DO II=1,p_grid%NPoints
             DO JJ=1,II
 
                   JJ1       = JJ - 1
-                  Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                  Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
                   TRH(Indx) = EXP( -1.0 * InCDec(IVec) * DistZMExp(Indx)* &
-                                      SQRT( (Freq(IFreq)*DistU(Indx) )**2 + (InCohB(IVec)*Dist(Indx))**2 ) )
+                                      SQRT( (p_grid%Freq(IFreq)*DistU(Indx) )**2 + (InCohB(IVec)*Dist(Indx))**2 ) )
 
             ENDDO ! JJ
          ENDDO ! II
@@ -332,15 +332,15 @@ ENDIF
 
          II = 0
 POINT_I: DO IZ=1,ZLim   !NumGrid_Z
-            DO IY=1,IYmax(IZ) !NumGrid_Y
+            DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
 !MLB: Does this exit the IY or IZ loop?
-               IF (II > NTot) EXIT POINT_I            ! Don't go past the end of the array; this exits the IY loop
+               IF (II > p_grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IY loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
-                  DO JY=1,IYmax(JZ) !NumGrid_Y
+                  DO JY=1,p_grid%IYmax(JZ) !NumGrid_Y
 
                      JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
 
@@ -359,13 +359,13 @@ POINT_J:       DO JZ=1,IZ
                      ENDIF
 
                      JJ1       = JJ - 1
-                     Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                     Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
-                         Dist_Y(Indx)= ABS( Y(I) - Y(J) )
+                         Dist_Y(Indx)= ABS( p_grid%Y(I) - p_grid%Y(J) )
 
-                         Dist_Z(Indx)= ABS( Z(IZ) - Z(JZ) )
+                         Dist_Z(Indx)= ABS( p_grid%Z(IZ) - p_grid%Z(JZ) )
 !mlb                         Dist_Z12(Indx)=ABS(Z(IZ)*Z(JZ))
-                         Z1Z2(Indx) = Z(IZ)*Z(JZ)
+                         Z1Z2(Indx) = p_grid%Z(IZ)*p_grid%Z(JZ)
 
 
 
@@ -407,7 +407,7 @@ DO IVec = 1,3
    ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
    !---------------------------------------------------------------------------------
 
-   DO IFREQ = 1,NumFreq
+   DO IFREQ = 1,p_grid%NumFreq
 
       !---------------------------------------------------
       ! Calculate the coherence and Veers' H matrix (CSDs)
@@ -419,18 +419,18 @@ DO IVec = 1,3
             ! Create the coherence matrix for this frequency
             ! -----------------------------------------------
 
-         DO II=1,NTot
+         DO II=1,p_grid%NPoints
             DO JJ=1,II
 
                   JJ1       = JJ - 1
-                  Indx      = NTot*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                  Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
 !mlb: THis is where to look for the error.
 
-!mlb                  TEMP_Y=Coef_AlphaY*Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
-!mlb                  TEMP_Z=Coef_AlphaZ*Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-                  TEMP_Y=Coef_AlphaY*Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
-                  TEMP_Z=Coef_AlphaZ*Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
+!mlb                  TEMP_Y=Coef_AlphaY*p_grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
+!mlb                  TEMP_Z=Coef_AlphaZ*p_grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
+                  TEMP_Y=Coef_AlphaY*p_grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
+                  TEMP_Z=Coef_AlphaZ*p_grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
                   TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U_Ref)
@@ -467,9 +467,9 @@ USE TSMods
 
 LOGICAL,          INTENT(IN)     :: IdentityCoh
 REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
-REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NTot,3).
+REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),       INTENT(IN)     :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NTot,3).
+REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
 INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of dimension 2 of Matrix
@@ -490,7 +490,7 @@ character(1024)                  :: ErrMsg
             ! -----------------------------------------------------------------------------------
 
          Indx = 1
-         DO J = 1,NTot ! The column number
+         DO J = 1,p_grid%NPoints ! The column number
 
                ! The diagonal entries of the matrix:
 
@@ -498,7 +498,7 @@ character(1024)                  :: ErrMsg
 
                ! The off-diagonal values:
             Indx = Indx + 1
-            DO I = J+1,NTot ! The row number
+            DO I = J+1,p_grid%NPoints ! The row number
                TRH(Indx) = 0.0
                Indx = Indx + 1
             ENDDO ! I
@@ -507,8 +507,8 @@ character(1024)                  :: ErrMsg
       ELSE
 
          IF (COH_OUT) THEN
-!            IF (IFreq == 1 .OR. IFreq == NumFreq) THEN
-               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, Freq(IFreq), TRH(1:NSize)
+!            IF (IFreq == 1 .OR. IFreq == p_grid%NumFreq) THEN
+               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p_grid%Freq(IFreq), TRH(1:NSize)
 !            ENDIF
          ENDIF
 
@@ -516,13 +516,13 @@ character(1024)                  :: ErrMsg
             ! Calculate the Cholesky factorization for the coherence matrix
             ! -------------------------------------------------------------
 
-         CALL LAPACK_pptrf( 'L', NTot, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NTot'; returns Stat
+         CALL LAPACK_pptrf( 'L', p_grid%NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
 
          IF ( Stat /= ErrID_None ) THEN
             CALL WrScr(ErrMsg)
             IF (Stat >= AbortErrLev) &
             CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
-                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(Freq(IFreq)))//' Hz)'//&
+                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p_grid%Freq(IFreq)))//' Hz)'//&
                         '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
                         'Check the input file for invalid physical properties or modify the coherence exponent '//&
                         'or grid spacing.')
@@ -533,8 +533,8 @@ character(1024)                  :: ErrMsg
             ! -------------------------------------------------------------
 
          Indx = 1
-         DO J = 1,NTot  ! Column
-            DO I = J,NTot ! Row
+         DO J = 1,p_grid%NPoints  ! Column
+            DO I = J,p_grid%NPoints ! Row
 
                   ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
 
@@ -554,7 +554,7 @@ character(1024)                  :: ErrMsg
       IF2      = IFreq*2
       IF1      = IF2 - 1
 
-      DO J=1,NTot
+      DO J=1,p_grid%NPoints
 
             ! Apply a random phase to each of the columns of H to
             ! produce random phases in the wind component.
@@ -563,8 +563,8 @@ character(1024)                  :: ErrMsg
          CPh   = COS( PhaseAngles(J,IFreq,IVec) )
          SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
 
-         Indx  = NTot*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
-         DO I=J,NTot
+         Indx  = p_grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
+         DO I=J,p_grid%NPoints
 
             V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
             V(IF2,I,IVec) = V(IF2,I,IVec) + TRH(Indx)*SPh  !Imaginary part
@@ -1613,7 +1613,7 @@ SELECT CASE ( SpecModel )
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL,     Ustar,     Work )
       ENDIF
    CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( Work )
+      CALL Spec_IECKAI  ( SigmaIEC, Work )
    CASE ( SpecModel_IECVKM )
       CALL Spec_IECVKM  ( Work )
    CASE ( SpecModel_API )
@@ -1716,10 +1716,10 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
       ExtraHubPt = .FALSE.
    ENDIF
 
-   NTot    = NumGrid_Y*NumGrid_Z                ! Number of points in the regular grid
+   p_grid%NPoints    = NumGrid_Y*NumGrid_Z                ! Number of points in the regular grid
 
    IF (ExtraHubPT) THEN
-      NTot = NTot + 1                           ! Add the hub point if necessary
+      p_grid%NPoints = p_grid%NPoints + 1                           ! Add the hub point if necessary
       ZLim = NumGrid_Z+1
       YLim = NumGrid_Y+1
    ELSE
@@ -1741,7 +1741,7 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
       IF ( IZ > 0 ) THEN
 
          ZLim = ZLim + IZ
-         NTot = NTot + IZ                       ! Add the number of tower points
+         p_grid%NPoints = p_grid%NPoints + IZ                       ! Add the number of tower points
 
          IF ( .NOT. ExtraHubPT ) THEN
             YLim = YLim + 1
@@ -1758,31 +1758,31 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
 
    ENDIF
 
-   NSize   = NTot*( NTot + 1 )/2   
+   NSize   = p_grid%NPoints*( p_grid%NPoints + 1 )/2   
    
    
-   CALL AllocAry(Z,     ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(Y,     YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(IYmax, ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
+   CALL AllocAry(p_grid%Z,     ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Y,     YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%IYmax, ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
 
    IF (ErrStat >= AbortErrLev) RETURN
    
       ! Initialize cartesian Y,Z values of the grid.
 
    DO IY = 1,NumGrid_Y
-      Y(IY)    = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
+      p_grid%Y(IY)    = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
    ENDDO
 
    DO IZ = 1,NumGrid_Z
-      Z(IZ)     = p_grid%Zbottom + p_grid%GridRes_Z*( IZ - 1 )
-      IYmax(IZ) = NumGrid_Y           ! Number of lateral points at this height
+      p_grid%Z(IZ)     = p_grid%Zbottom + p_grid%GridRes_Z*( IZ - 1 )
+      p_grid%IYmax(IZ) = NumGrid_Y           ! Number of lateral points at this height
    ENDDO
 
    IF (ExtraHubPT) THEN
 
-      Y(NumGrid_Y+1)     = 0.0
-      Z(NumGrid_Z+1)     = HubHt
-      IYmax(NumGrid_Z+1) = 1
+      p_grid%Y(NumGrid_Y+1)     = 0.0
+      p_grid%Z(NumGrid_Z+1)     = HubHt
+      p_grid%IYmax(NumGrid_Z+1) = 1
 
       p_grid%HubIndx = NumGrid_Y*NumGrid_Z + 1
 
@@ -1798,27 +1798,23 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
 
    IF ( WrADTWR ) THEN
 
-      Y(YLim) = 0.0
+      p_grid%Y(YLim) = 0.0
    
-      TmpReal  = Z(1)
+      TmpReal  = p_grid%Z(1)
 
       IF ( ExtraTwrPt ) THEN 
          TmpReal = TmpReal + p_grid%GridRes_Z
       ENDIF
 
       DO IZ = FirstTwrPt,ZLim
-         Z(IZ)     = TmpReal - p_grid%GridRes_Z
-         TmpReal   = Z(IZ)
+         p_grid%Z(IZ)     = TmpReal - p_grid%GridRes_Z
+         TmpReal   = p_grid%Z(IZ)
 
-         IYmax(IZ) = 1                 ! The number of lateral points at this height
+         p_grid%IYmax(IZ) = 1                 ! The number of lateral points at this height
       ENDDO
 
    ENDIF   
-   
-   
-
-   
-
+         
 END SUBROUTINE CreateGrid
 
 !=======================================================================
@@ -1899,6 +1895,68 @@ SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
    CTKE = 0.5*SQRT(uv*uv + uw*uw + vw*vw)
    
 END SUBROUTINE
+!=======================================================================
+SUBROUTINE Scaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, HubFactor)
+
+
+   TYPE(TurbSim_GridParameterType), INTENT(IN)     ::  p_grid                          ! parameters defining TurbSim's grid (including time/frequency)
+   REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        ! velocity 
+   REAL(ReKi),                      INTENT(IN)     ::  TargetSigma(3)                  ! target standard deviations
+   REAL(ReKi),                      INTENT(  OUT)  ::  ActualSigma(3)                  ! actual standard deviations
+   REAL(ReKi),                      INTENT(  OUT)  ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
+   INTEGER(IntKi),                  INTENT(In   )  ::  ScaleIEC                        ! scaling method: 1=use only 1 factor; 2=scale each individual point
+   
+   REAL(DbKi)                                      ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
+   REAL(DbKi)                                      ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
+   REAL(ReKi)                                      ::  UGridMean                       ! Average wind speed at a point 
+   REAL(ReKi)                                      ::  UGridSig                        ! Standard deviation of the wind speed at a point 
+   REAL(ReKi)                                      ::  UGridTI                         ! Turbulent Intensity of the points surrounding the hub
+   INTEGER(IntKi)                                  ::  IT                              ! loop counter (time)
+   INTEGER(IntKi)                                  ::  Indx                            ! loop counter (grid point)
+   INTEGER(IntKi)                                  ::  IVec                            ! loop counter (wind component)
+   
+   
+   DO IVec = 1,3
+      CGridSum  = 0.0
+      CGridSum2 = 0.0
+                           
+      DO IT=1,p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+         CGridSum  = CGridSum  + V( IT, p_grid%HubIndx, IVec )
+         CGridSum2 = CGridSum2 + V( IT, p_grid%HubIndx, IVec )* V( IT, p_grid%HubIndx, IVec )
+      ENDDO ! IT
+               
+      UGridMean          = CGridSum/p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+      ActualSigma(IVec)  = SQRT( ABS( (CGridSum2/p_grid%NumSteps) - UGridMean*UGridMean ) )
+            
+
+      HubFactor(IVec) = TargetSigma(IVec)/ActualSigma(IVec)
+                  
+      IF (ScaleIEC == 1 .OR. IVec > 1) THEN ! v and w have no coherence, thus all points have same std, so we'll save some calculations
+               
+         V(:,:,IVec) =     HubFactor(IVec) * V(:,:,IVec)
+               
+      ELSE  ! Scale each point individually
+               
+         DO Indx = 1,p_grid%NPoints             
+            CGridSum  = 0.0
+            CGridSum2 = 0.0
+                                    
+            DO IT=1,p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+               CGridSum  = CGridSum  + V( IT, Indx, IVec )
+               CGridSum2 = CGridSum2 + V( IT, Indx, IVec )* V( IT, Indx, IVec )
+            ENDDO ! IT
+                  
+            UGridMean = CGridSum/p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+            UGridSig  = SQRT( ABS( (CGridSum2/p_grid%NumSteps) - UGridMean*UGridMean ) )
+            
+            V(:,Indx,IVec) = (TargetSigma(IVec) / UGridSig) * V(:,Indx,IVec)   
+         ENDDO ! Indx
+               
+      ENDIF            
+
+   ENDDO !IVec   
+
+END SUBROUTINE Scaling_IEC
 !=======================================================================
 SUBROUTINE TS_End()
 

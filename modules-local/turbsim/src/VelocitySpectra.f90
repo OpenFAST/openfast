@@ -32,18 +32,19 @@ CONTAINS
 !=======================================================================
 !> This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
 !! the use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECKAI ( Spec )
+SUBROUTINE Spec_IECKAI ( SigmaIEC, Spec )
 
 
-USE                     TSMods
+USE                     TSMods, ONLY: HubHt, Uhub, p_grid, IECedition
 
 IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
+REAL(ReKi),INTENT(IN   ) :: SigmaIEC (3)              !<  Input: sigma for 3 wind components specified by the IEC
+REAL(ReKi),INTENT(INOUT) :: Spec     (:,:)            !<  Output: target spectrum
 
-      ! Internal variables
+   ! Internal variables
 
 REAL(ReKi),PARAMETER  :: Exp1    = 5.0/3.0
 REAL(ReKi)            :: Lambda
@@ -51,20 +52,9 @@ REAL(ReKi)            :: LambdaU
 
 REAL(ReKi)            :: LU      (3)
 REAL(ReKi)            :: SigmaLU (3)
-REAL(ReKi)            :: SigmaU
-REAL(ReKi)            :: SigmaV
-REAL(ReKi)            :: SigmaW
 
 INTEGER               :: I
 INTEGER               :: IVec
-
-
-   ! Setup scaling values.
-
-
-SigmaU = SigmaIEC
-SigmaV = 0.8*SigmaU
-SigmaW = 0.5*SigmaU
 
 
    ! Define integral scales.
@@ -90,17 +80,14 @@ LU(3) = 0.66*LambdaU
 
    ! Create the spectrum.
 
-SigmaLU(1) = 4.0*SigmaU**2*LU(1)
-SigmaLU(2) = 4.0*SigmaV**2*LU(2)
-SigmaLU(3) = 4.0*SigmaW**2*LU(3)
-
+SigmaLU = 4.0*SigmaIEC**2*LU ! array operations
 
 DO IVec = 1,3
 
    LU(IVec) = 6.0*LU(IVec)
 
-   DO I = 1,NumFreq
-      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + LU(IVec)*Freq(I) )**Exp1
+   DO I = 1,p_grid%NumFreq
+      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + LU(IVec)*p_grid%Freq(I) )**Exp1
    ENDDO !I
 
 ENDDO !IVec
@@ -146,11 +133,11 @@ ENDIF
    ! Define u-component integral scale.
 
 L1_U   = 3.5*Lambda/UHub
-SigmaL1_U = 2.0*SigmaIEC*SigmaIEC*L1_U
+SigmaL1_U = 2.0*SigmaIEC(1)*SigmaIEC(1)*L1_U
 
-DO I=1,NumFreq
+DO I=1,p_grid%NumFreq
 
-   FLU2      = ( Freq(I)*L1_U )**2
+   FLU2      = ( p_grid%Freq(I)*L1_U )**2
    Tmp       = 1.0 + 71.0*FLU2
 
    Spec(I,1) = 2.0*SigmaL1_U/Tmp**Exp1
@@ -214,12 +201,12 @@ ELSE
 ENDIF
 
 
-CALL Spec_IECKAI ( Spec )
+CALL Spec_IECKAI ( SigmaIEC, Spec )
 
    ! Define u-component integral scale.
 !CALL WrScr ('Calling Froya/API wind spectrum.............')
 !mlb L1_U   = 3.5*Lambda/UHub
-!mlb SigmaL1_U = 2.0*SigmaIEC*UHub*L1_U
+!mlb SigmaL1_U = 2.0*SigmaIEC(1)*UHub*L1_U
 
 !mlb CALL ROOT_SEARCHING(X0,X,UHub,Ht,Ht)
 !mlb UHr_10=X;
@@ -229,15 +216,15 @@ CALL Spec_IECKAI ( Spec )
 Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( U_Ref/Ref_WS )**Exp3
 Scale2 = 320.0*( U_Ref/Ref_WS )**2*( Ht/Ref_Ht )**Exp4
 
-DO I=1,NumFreq
+DO I=1,p_grid%NumFreq
 
 
-!mlb    Tmp1      = 172.0*Freq(I)*(Ht/10.0)**Exp2*(UHr_10/10.0)**Exp3
+!mlb    Tmp1      = 172.0*p_grid%Freq(I)*(Ht/10.0)**Exp2*(UHr_10/10.0)**Exp3
 !mlb    Tmp2       = (1.0+Tmp1**Exp1)**(5.0/3.0/Exp1)
 !mlb 
 !mlb    Spec(I,1) = 320.0*(UHr_10/10.0)**2*(Ht/10.0)**Exp4/Tmp2
 
-   Temp      = Scale1*Freq(I)
+   Temp      = Scale1*p_grid%Freq(I)
    Spec(I,1) = Scale2/( 1.0 + Temp**N )**Exp5
 
 ENDDO ! I
@@ -353,15 +340,15 @@ IF (zL_loc >= 0) THEN
 
 
    DO IC = 1,3  ! Wind components
-      DO I = 1,NumFreq
-         tmpX  = Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
+      DO I = 1,p_grid%NumFreq
+         tmpX  = p_grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
          X_l   = tmpX/fr_il(ic)
          X_h   = tmpX/fr_ih(ic)
 
          ps_l  = (Pr_il(ic)*scales(1,ic)*X_l*tmpPhi) / (1.0 + scales(2,ic)*X_l**Exp53);
          ps_h  = (Pr_ih(ic)*scales(1,ic)*X_h*tmpPhi) / (1.0 + scales(2,ic)*X_h**Exp53);
 
-         Spec(I,IC) = (ps_l + ps_h)*uStar2/Freq(I)
+         Spec(I,IC) = (ps_l + ps_h)*uStar2/p_grid%Freq(I)
       ENDDO
    ENDDO
 
@@ -402,10 +389,10 @@ ELSE
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
-   DO I=1,NumFreq
-      fi      = Freq(I)*tmpZIU
-      tmpF    = Freq(I)*tmpZU                ! reduced frequency
-      Ustar2F = uStar2/Freq(I)               ! Normalizing term
+   DO I=1,p_grid%NumFreq
+      fi      = p_grid%Freq(I)*tmpZIU
+      tmpF    = p_grid%Freq(I)*tmpZU                ! reduced frequency
+      Ustar2F = uStar2/p_grid%Freq(I)               ! Normalizing term
 
          ! u component
 
@@ -555,15 +542,15 @@ IF (zL >= 0) THEN
 
 
    DO IC = 1,3  ! Wind components
-      DO I = 1,NumFreq
-         tmpX  = Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
+      DO I = 1,p_grid%NumFreq
+         tmpX  = p_grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
          X_l   = tmpX/fr_il(ic)
          X_h   = tmpX/fr_ih(ic)
 
          ps_l  = (Pr_il(ic)*scales(1,ic)*X_l*tmpPhi) / (1.0 + scales(2,ic)*X_l**Exp53);
          ps_h  = (Pr_ih(ic)*scales(1,ic)*X_h*tmpPhi) / (1.0 + scales(2,ic)*X_h**Exp53);
 
-         Spec(I,IC) = (ps_l + ps_h)*uStar2/Freq(I)
+         Spec(I,IC) = (ps_l + ps_h)*uStar2/p_grid%Freq(I)
       ENDDO
    ENDDO
 
@@ -619,11 +606,11 @@ ELSE
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
-   DO I=1,NumFreq
-      fi      = Freq(I)*tmpZIU
+   DO I=1,p_grid%NumFreq
+      fi      = p_grid%Freq(I)*tmpZIU
 
-      tmpF    = Freq(I)*tmpZU                ! reduced frequency
-      Ustar2F = uStar2/Freq(I)               ! Normalizing term
+      tmpF    = p_grid%Freq(I)*tmpZU                ! reduced frequency
+      Ustar2F = uStar2/p_grid%Freq(I)               ! Normalizing term
 
          ! u component
 
@@ -695,13 +682,13 @@ SUBROUTINE Spec_UserSpec ( Spec )
 
    Indx = 1;
 
-   DO I=1,NumFreq
+   DO I=1,p_grid%NumFreq
 
-      IF ( Freq(I) <= Freq_USR(1) ) THEN
+      IF ( p_grid%Freq(I) <= Freq_USR(1) ) THEN
          Spec(I,1) = Uspec_USR(1)
          Spec(I,2) = Vspec_USR(1)
          Spec(I,3) = Wspec_USR(1)
-      ELSEIF ( Freq(I) >= Freq_USR(NumUSRf) ) THEN
+      ELSEIF ( p_grid%Freq(I) >= Freq_USR(NumUSRf) ) THEN
          Spec(I,1) = Uspec_USR(NumUSRf)
          Spec(I,2) = Vspec_USR(NumUSRf)
          Spec(I,3) = Wspec_USR(NumUSRf)
@@ -710,12 +697,12 @@ SUBROUTINE Spec_UserSpec ( Spec )
             ! Find the two points between which the frequency lies
 
          DO J=(Indx+1),NumUSRf
-            IF ( Freq(I) <= Freq_USR(J) ) THEN
+            IF ( p_grid%Freq(I) <= Freq_USR(J) ) THEN
                Indx = J-1
 
                   ! Let's just do a linear interpolation for now
 
-               Tmp  = (Freq(I) - Freq_USR(Indx)) / ( Freq_USR(Indx) - Freq_USR(J) )
+               Tmp  = (p_grid%Freq(I) - Freq_USR(Indx)) / ( Freq_USR(Indx) - Freq_USR(J) )
 
                Spec(I,1) = Tmp * ( Uspec_USR(Indx) - Uspec_USR(J) ) + Uspec_USR(Indx)
                Spec(I,2) = Tmp * ( Vspec_USR(Indx) - Vspec_USR(J) ) + Vspec_USR(Indx)
@@ -790,10 +777,10 @@ IF (zL >= 0) THEN
    tmpPhi = uStar2 * ( (phiE / phiM)**Exp2 )
    tmpF   = Ht / (Ucmp * phiM)
 
-   DO I = 1,NumFreq
-      tmpX  = Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
+   DO I = 1,p_grid%NumFreq
+      tmpX  = p_grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
       tmpXX = tmpX**Exp1
-      tmpN  = tmpPhi / Freq(I) * tmpX  ! normalization factor used to obtain power spectrum components
+      tmpN  = tmpPhi / p_grid%Freq(I) * tmpX  ! normalization factor used to obtain power spectrum components
 
       Spec(I,1) = tmpN * (79.0) / (1.0 + 263.0*tmpXX)
       Spec(I,2) = tmpN * (13.0) / (1.0 +  32.0*tmpXX)
@@ -811,12 +798,12 @@ ELSE
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
-   DO I = 1,NumFreq
+   DO I = 1,p_grid%NumFreq
 
-      Fi   = Freq(I)*tmpZIU
-      tmpF = Freq(I)*tmpZU                ! reduced frequency
+      Fi   = p_grid%Freq(I)*tmpZIU
+      tmpF = p_grid%Freq(I)*tmpZU                ! reduced frequency
 
-      Ustar2F = uStar2/Freq(I)
+      Ustar2F = uStar2/p_grid%Freq(I)
 
       ! u component
       Fr   = tmpF / UDen
@@ -888,8 +875,8 @@ END SELECT
 
 tmpvec = tmpa*(/Sigma_U2, Sigma_V2, Sigma_W2/)/Shr_DuDz
 
-DO I = 1,NumFreq
-   tmpX  = (Freq(I)/Shr_DuDz)**Exp1
+DO I = 1,p_grid%NumFreq
+   tmpX  = (p_grid%Freq(I)/Shr_DuDz)**Exp1
    Spec(I,1) = tmpvec(1) / (1.0 + tmpb(1)*tmpX)
    Spec(I,2) = tmpvec(2) / (1.0 + tmpb(2)*tmpX)
    Spec(I,3) = tmpvec(3) / (1.0 + tmpb(3)*tmpX)
@@ -924,9 +911,9 @@ DO IVec = 1,3
    ENDDO !I
    !I = INT( NumFreq/2 )
    I = INT( 100 )
-   Spec( I, IVec ) = 1/Freq(1)
+   Spec( I, IVec ) = 1/p_grid%Freq(1)
 
-   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(Freq(I)))//' Hz.' )
+   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(p_grid%Freq(I)))//' Hz.' )
 
 ENDDO !IVec
 
@@ -1007,9 +994,9 @@ ENDIF
 L1_U   = Lvk/Ucmp
 SigmaL1_U = 2.0*Sigma*Sigma*L1_U
 
-DO I=1,NumFreq
+DO I=1,p_grid%NumFreq
 
-   FLU2      = ( Freq(I)*L1_U )**2
+   FLU2      = ( p_grid%Freq(I)*L1_U )**2
    Tmp       = 1.0 + 71.0*FLU2
 
    Spec(I,1) = (StdScale(1)**2)*2.0*SigmaL1_U/Tmp**Exp1
@@ -1169,15 +1156,15 @@ IF ( ZL < 0 ) THEN
    VDen2 = HtZI2 / VDen**Exp2
 
 
-   DO I = 1,NumFreq
+   DO I = 1,p_grid%NumFreq
 
-         F   = Freq(I) * HtU
-         Fi  = Freq(I) * ZIU
+         F   = p_grid%Freq(I) * HtU
+         Fi  = p_grid%Freq(I) * ZIU
 
          ! Bonnie: These () around 0.3 HtZI are incorrect as compared to the original SMOOTH model. (For now, leave as is since parameters were-supposedly-calculated with this formulation)
          Fw  = SQRT( (F**2 + (0.3*HtZI**2) ) / (F**2 + 0.0225) )
 
-         Ustar2F = Ustar2 / Freq(I)
+         Ustar2F = Ustar2 / p_grid%Freq(I)
 
       ! CALCULATE UNSTABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
@@ -1289,14 +1276,14 @@ ELSE ! ZL >= 0    ! BEGIN STABLE FLOW LOOP
 
       phiEQ = (phiE / q)**Exp2
 
-      DO I = 1,NumFreq
+      DO I = 1,p_grid%NumFreq
 
          ! CALCULATE Reduced Frequency, f
 
-         f  = Freq(I) * Ht / Ucmp
+         f  = p_grid%Freq(I) * Ht / Ucmp
          fq = f / q     ! was XU = f/qu, XV = f/qv, XW = f/qw
 
-         Ustar2F = Ustar2 / Freq(I)
+         Ustar2F = Ustar2 / p_grid%Freq(I)
 
          ! CALCULATE NEUTRAL/STABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
@@ -1501,15 +1488,15 @@ IF (ZL < 0) THEN
    UDen2 = HtZI2 / UDen**Exp2
    VDen2 = HtZI2 / VDen**Exp2
 
-   DO I = 1,NumFreq
+   DO I = 1,p_grid%NumFreq
 
       ! Calculate f,fi,fru,frv
 
-      F   = Freq(I)*Ht / Ucmp
-      Fi  = Freq(I)*ZI / Ucmp
+      F   = p_grid%Freq(I)*Ht / Ucmp
+      Fi  = p_grid%Freq(I)*ZI / Ucmp
       Fw  = SQRT( (F**2 + (0.3*HtZI**2)) / (F**2 + 0.0225) )
 
-      Ustar2F = Ustar2 / Freq(I)
+      Ustar2F = Ustar2 / p_grid%Freq(I)
 
          ! CALCULATE UNSTABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
@@ -1650,12 +1637,12 @@ ELSE  ! ZL >= 0
 
    tmp    = (phiE / q)**Exp2
 
-   DO I = 1,NumFreq
+   DO I = 1,p_grid%NumFreq
 
-      F       = Freq(I) * Ht / Ucmp    ! Reduced frequency
+      F       = p_grid%Freq(I) * Ht / Ucmp    ! Reduced frequency
 
       Fq      = F / q
-      Ustar2F = Ustar2 / Freq(I)
+      Ustar2F = Ustar2 / p_grid%Freq(I)
 
          ! CALCULATE NEUTRAL/STABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
