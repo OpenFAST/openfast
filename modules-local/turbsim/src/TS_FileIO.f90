@@ -254,26 +254,26 @@ CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
 
    ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, NumGrid_Z, "the vertical matrix dimension", "Vertical grid-point matrix dimension")
+CALL ReadVar( UI, InFile, p_grid%NumGrid_Z, "the vertical matrix dimension", "Vertical grid-point matrix dimension")
 
-   IF ( NumGrid_Z < 2 )  THEN
+   IF ( p_grid%NumGrid_Z < 2 )  THEN
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
    ENDIF
 
 FormStr = "( I10 , 2X , 'Vertical grid-point matrix dimension' )"
-WRITE (US,FormStr)  NumGrid_Z
+WRITE (US,FormStr)  p_grid%NumGrid_Z
 
 
    ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, NumGrid_Y, "the horizontal matrix dimension", "Horizontal grid-point matrix dimension")
+CALL ReadVar( UI, InFile, p_grid%NumGrid_Y, "the horizontal matrix dimension", "Horizontal grid-point matrix dimension")
 
-   IF ( NumGrid_Y < 2 )  THEN
+   IF ( p_grid%NumGrid_Y < 2 )  THEN
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
    ENDIF
 
 FormStr = "( I10 , 2X , 'Horizontal grid-point matrix dimension' )"
-WRITE (US,FormStr)  NumGrid_Y
+WRITE (US,FormStr)  p_grid%NumGrid_Y
 
 
    ! ------------ Read in the time step. ---------------------------------------------
@@ -290,14 +290,14 @@ WRITE (US,FormStr)  p_grid%TimeStep
 
    ! ------------ Read in the analysis time. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, AnalysisTime, "the analysis time", "Analysis time [seconds]")
+CALL ReadVar( UI, InFile, p_grid%AnalysisTime, "the analysis time", "Analysis time [seconds]")
 
-   IF ( AnalysisTime <=  0.0 )  THEN
+   IF ( p_grid%AnalysisTime <=  0.0 )  THEN
       CALL TS_Abort ( 'The analysis time must be greater than zero.' )
    ENDIF
 
 FormStr = "( F10.3 , 2X , 'Analysis time [seconds]' )"
-WRITE (US,FormStr)  AnalysisTime
+WRITE (US,FormStr)  p_grid%AnalysisTime
 
 
    ! ------------ Read in the usable time. ---------------------------------------------
@@ -309,7 +309,7 @@ CALL ReadVar( UI, InFile, Line, "the usable output time", "Usable output time [s
       CALL Conv2UC( Line )
       IF ( TRIM(Line) == 'ALL' ) THEN
          Periodic   = .TRUE.
-         UsableTime = AnalysisTime
+         UsableTime = p_grid%AnalysisTime
       ELSE
          CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
       END IF
@@ -328,21 +328,21 @@ WRITE (US,FormStr)  UsableTime
 
    ! ------------ Read in the hub height. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, HubHt, "the hub height", "Hub height [m]")
+CALL ReadVar( UI, InFile, p_grid%HubHt, "the hub height", "Hub height [m]")
 
-   IF ( HubHt <=  0.0 )  THEN
+   IF ( p_grid%HubHt <=  0.0 )  THEN
       CALL TS_Abort ( 'The hub height must be greater than zero.' )
    ENDIF
 
 FormStr = "( F10.3 , 2X , 'Hub height [m]' )"
-WRITE (US,FormStr)  HubHt
+WRITE (US,FormStr)  p_grid%HubHt
 
 
    ! ------------ Read in the grid height. ---------------------------------------------
 
 CALL ReadVar( UI, InFile, p_grid%GridHeight, "the grid height", "Grid height [m]")
 
-   IF ( 0.5*p_grid%GridHeight > HubHt  )THEN
+   IF ( 0.5*p_grid%GridHeight > p_grid%HubHt  )THEN
       CALL TS_Abort( 'The hub must be higher than half of the grid height.')
    ENDIF
 
@@ -769,7 +769,7 @@ SELECT CASE ( SpecModel )
       WindProfileType = 'IEC'
 END SELECT
 
-CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Wind profile type", US, UseDefault )
+CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Wind profile type", US, UseDefault ) !converts WindProfileType to upper case
 
       ! Make sure the variable is valid for this turbulence model
 
@@ -840,10 +840,10 @@ URef       = -999.9
       ENDIF
 
    ELSEIF ( WindProfileType(1:1) == 'U' ) THEN
-      RefHt = HubHt
+      RefHt = p_grid%HubHt
       CALL GetUSR( UI, InFile, 37, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
       IF (ErrStat >= AbortErrLev) RETURN
-      URef = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE=WindProfileType) !This is UHub
+      URef = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
 
@@ -1045,7 +1045,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ! L should be constant in the surface layer
 
    IF ( ZL /= 0.0 ) THEN
-        L = HubHt / ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
+        L = p_grid%HubHt / ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
    ELSE
       L = HUGE( L )
    ENDIF
@@ -1059,7 +1059,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ! ------------ Read in the shear/friction velocity, Ustar, first calculating UstarDiab ------------------------
 
          ! Set up the heights for the zl- and ustar-profile averages across the rotor disk
-      TmpZary  = (/ HubHt-RotorDiameter/2., HubHt, HubHt+RotorDiameter/2. /)
+      TmpZary  = (/ p_grid%HubHt-RotorDiameter/2., p_grid%HubHt, p_grid%HubHt+RotorDiameter/2. /)
       IF (TmpZary(3) .GE. profileZmin .AND. TmpZary(1) .LE. profileZmax ) THEN  !set height limits so we don't extrapolate too far
          DO TmpIndex = 1,3
             TmpZary(TmpIndex) = MAX( MIN(TmpZary(TmpIndex), profileZmax), profileZmin)
@@ -1139,7 +1139,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
          CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and uStar
 
-         URef = getWindSpeed(UJetMax, ZJetMax, RefHt, RotorDiameter, PROFILE=WindProfileType)
+         URef = getWindSpeed(UJetMax, ZJetMax, RefHt, RotorDiameter, PROFILE_TYPE=WindProfileType)
 
       ELSE
          CALL GetChebCoefs(URef, RefHt)
@@ -1147,7 +1147,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    ENDIF !Jet wind profile
 
-   UHub = getWindSpeed(URef, RefHt, HubHt, RotorDiameter, PROFILE=WindProfileType)
+   UHub = getWindSpeed(URef, RefHt, p_grid%HubHt, RotorDiameter, PROFILE_TYPE=WindProfileType)
 
          ! ***** Get uStar- and zl-profile values, if required, and determine offsets *****
       IF ( TmpUstarD == 0.0 ) THEN
@@ -1155,7 +1155,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ELSE
          IF ( TmpUstarD < 0.0 ) THEN  ! If > 0, we've already calculated these things...
             UstarDiab = getUstarDiab(URef, RefHt) !bjj: is this problematic for anything else?
-            TmpUary   = getWindSpeed(URef, RefHt, TmpZary, RotorDiameter, PROFILE=WindProfileType)
+            TmpUary   = getWindSpeed(URef, RefHt, TmpZary, RotorDiameter, PROFILE_TYPE=WindProfileType)
             TmpUstar  = getUstarARY( TmpUary,     TmpZary )
             TmpUstarD = SUM(TmpUstar) / SIZE(TmpUstar)    ! The average of those 3 points
          ENDIF
@@ -1225,7 +1225,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
                                             "Mean hub v'w' Reynolds stress", US, UseDefault, IGNORESTR = VWskip )
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
-   CALL GetDefaultCoh( UHub, HubHt )
+   CALL GetDefaultCoh( UHub, p_grid%HubHt )
 
    UseDefault = .TRUE.
    InCVar(1) = InCDec(1)
@@ -1468,7 +1468,7 @@ ELSE  ! IECVKM or IECKAI models
 
       ! Calculate wind speed at hub height
 
-   UHub    = getWindSpeed(URef, RefHt, HubHt, RotorDiameter, PROFILE=WindProfileType)
+   UHub    = getWindSpeed(URef, RefHt, p_grid%HubHt, RotorDiameter, PROFILE_TYPE=WindProfileType)
 
 
 ENDIF
@@ -1517,7 +1517,7 @@ END SUBROUTINE GetFiles
 !=======================================================================
 SUBROUTINE GetUSR(U_in, FileName, NLines, ErrStat, ErrMsg)
 
-   USE                                   TSMods, ONLY: HubHt             ! Hub Height
+   USE                                   TSMods, ONLY: p_grid
    USE                                   TSMods, ONLY: L_USR             ! von Karman length scale
    USE                                   TSMods, ONLY: NumUSRz           ! Number of user-defined heights for the profiles
    USE                                   TSMods, ONLY: Sigma_USR         ! standard deviation profile
@@ -2122,7 +2122,7 @@ INTEGER(B4Ki)               :: IY
 INTEGER(B4Ki)               :: IZ
 
 INTEGER(B4Ki)               :: IP
-INTEGER(B2Ki)               :: TmpVarray(3*NumGrid_Y*NumGrid_Z) ! This array holds the normalized velocities before being written to the binary file
+INTEGER(B2Ki)               :: TmpVarray(3*p_grid%NumGrid_Y*p_grid%NumGrid_Z) ! This array holds the normalized velocities before being written to the binary file
 INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities
 
 INTEGER                     :: AllocStat
@@ -2149,7 +2149,7 @@ INTEGER                     :: AllocStat
    WRITE (US,FormStr)  'TI(v)', 100.0*TI(2), ' %'
    WRITE (US,FormStr)  'TI(w)', 100.0*TI(3), ' %'
 
-   Ztmp  = ( HubHt - p_grid%GridHeight / 2.0 - p_grid%Z(1) )  ! This is the grid offset
+   Ztmp  = ( p_grid%HubHt - p_grid%GridHeight / 2.0 - p_grid%Z(1) )  ! This is the grid offset
 
    WRITE (US,'()')
    WRITE (US,FormStr)  'Height Offset', Ztmp,        ' m'
@@ -2187,15 +2187,15 @@ INTEGER                     :: AllocStat
       WRITE (UBFFW)  REAL( p_grid%GridRes_Z     , SiKi )               ! grid spacing in vertical direction, in m
       WRITE (UBFFW)  REAL( p_grid%GridRes_Y     , SiKi )               ! grid spacing in lateral direction, in m
       WRITE (UBFFW)  REAL( p_grid%TimeStep*UHub , SiKi )               ! grid spacing in longitudinal direciton, in m
-      WRITE (UBFFW)   INT( NumOutSteps/2 , B4Ki )               ! half the number of points in alongwind direction
+      WRITE (UBFFW)   INT( p_grid%NumOutSteps/2 , B4Ki )               ! half the number of points in alongwind direction
       WRITE (UBFFW)  REAL( UHub          , SiKi )               ! the mean wind speed in m/s
       WRITE (UBFFW)  REAL( 0             , SiKi )               ! the vertical length scale of the longitudinal component in m
       WRITE (UBFFW)  REAL( 0             , SiKi )               ! the lateral length scale of the longitudinal component in m
       WRITE (UBFFW)  REAL( 0             , SiKi )               ! the longitudinal length scale of the longitudinal component in m
       WRITE (UBFFW)   INT( 0             , B4Ki )               ! an unused integer
       WRITE (UBFFW)   INT( p_RandNum%RandSeed(1)   , B4Ki )               ! the random number seed
-      WRITE (UBFFW)   INT( NumGrid_Z     , B4Ki )               ! the number of grid points vertically
-      WRITE (UBFFW)   INT( NumGrid_Y     , B4Ki )               ! the number of grid points laterally
+      WRITE (UBFFW)   INT( p_grid%NumGrid_Z     , B4Ki )               ! the number of grid points vertically
+      WRITE (UBFFW)   INT( p_grid%NumGrid_Y     , B4Ki )               ! the number of grid points laterally
       WRITE (UBFFW)   INT( 0             , B4Ki )               ! the vertical length scale of the lateral component, not used
       WRITE (UBFFW)   INT( 0             , B4Ki )               ! the lateral length scale of the lateral component, not used
       WRITE (UBFFW)   INT( 0             , B4Ki )               ! the longitudinal length scale of the lateral component, not used
@@ -2207,26 +2207,26 @@ INTEGER                     :: AllocStat
          ! Compute parameters for ordering output for FF AeroDyn files. (This is for BLADED compatibility.)
 
       IF ( Clockwise )  THEN
-         CFirst = NumGrid_Y
+         CFirst = p_grid%NumGrid_Y
          CLast  = 1
          CStep  = -1
       ELSE
          CFirst = 1
-         CLast  = NumGrid_Y
+         CLast  = p_grid%NumGrid_Y
          CStep  = 1
       ENDIF
 
 
          ! Loop through time.
 
-      DO IT=1,NumOutSteps  !Use only the number of timesteps requested originally
+      DO IT=1,p_grid%NumOutSteps  !Use only the number of timesteps requested originally
 
             ! Write out grid data in binary form.
          IP = 1
-         DO IZ=1,NumGrid_Z
+         DO IZ=1,p_grid%NumGrid_Z
             DO IY=CFirst,CLast,CStep
 
-               II = ( IZ - 1 )*NumGrid_Y + IY
+               II = ( IZ - 1 )*p_grid%NumGrid_Y + IY
 
                TmpVarray(IP)   = NINT( U_C1*V(IT,II,1) - U_C2, B2Ki )  ! Put the data into a temp array so that the WRITE() command works faster
                TmpVarray(IP+1) = NINT( V_C *V(IT,II,2)       , B2Ki )
@@ -2247,20 +2247,20 @@ INTEGER                     :: AllocStat
 
 
    IF ( WrADTWR .AND. ( WrBLFF .OR. .NOT. WrADFF ) ) THEN
-      IF ( ExtraHubPT ) THEN
-         IZ = ZLim - NumGrid_Z - 1
-         I  = NumGrid_Z*NumGrid_Y + 2
+      IF ( p_grid%ExtraHubPT ) THEN
+         IZ = p_grid%ZLim - p_grid%NumGrid_Z - 1
+         I  = p_grid%NumGrid_Z*p_grid%NumGrid_Y + 2
       ELSE
-         IZ = ZLim - NumGrid_Z
-         I  = NumGrid_Z*NumGrid_Y + 1
+         IZ = p_grid%ZLim - p_grid%NumGrid_Z
+         I  = p_grid%NumGrid_Z*p_grid%NumGrid_Y + 1
       ENDIF
 
-      IF ( ExtraTwrPt ) THEN
+      IF ( p_grid%ExtraTwrPT ) THEN
          IY = I
          I  = I + 1
       ELSE
          IZ = IZ + 1
-         IY = (NumGrid_Y / 2) + 1      !The grid location of the top tower point
+         IY = (p_grid%NumGrid_Y / 2) + 1      !The grid location of the top tower point
       ENDIF
 
 
@@ -2270,7 +2270,7 @@ INTEGER                     :: AllocStat
       WRITE (UATWR)  REAL( p_grid%GridRes_Z ,SiKi )         ! grid spacing in vertical direction, in m
       WRITE (UATWR)  REAL( p_grid%TimeStep*UHub ,   SiKi )         ! grid spacing in longitudinal direciton, in m
       WRITE (UATWR)  REAL( p_grid%Z(1) ,     SiKi )         ! The vertical location of the highest tower grid point in m
-      WRITE (UATWR)   INT( NumOutSteps ,     B4Ki )         ! The number of points in alongwind direction
+      WRITE (UATWR)   INT( p_grid%NumOutSteps ,     B4Ki )         ! The number of points in alongwind direction
       WRITE (UATWR)   INT( IZ ,              B4Ki )         ! the number of grid points vertically
       WRITE (UATWR)  REAL( UHub ,            SiKi )         ! the mean wind speed in m/s
       WRITE (UATWR)  REAL( 100.0*TI(1),      SiKi )         ! Longitudinal turbulence intensity
@@ -2285,7 +2285,7 @@ INTEGER                     :: AllocStat
       ENDIF
 
 
-      DO IT=1,NumOutSteps
+      DO IT=1,p_grid%NumOutSteps
 
          TmpTWRarray(1) = NINT( U_C1*V(IT,IY,1) - U_C2 , B2Ki )
          TmpTWRarray(2) = NINT( V_C *V(IT,IY,2)        , B2Ki )
@@ -2370,7 +2370,7 @@ INTEGER                   :: AllocStat
       VMax(IC) = V(1,1,IC)
 
       DO II=1,p_grid%NPoints   ! Let's check all of the points
-         DO IT=1,NumOutSteps  ! Use only the number of timesteps requested originally
+         DO IT=1,p_grid%NumOutSteps  ! Use only the number of timesteps requested originally
 
             IF ( V(IT,II,IC) > VMax(IC) ) THEN
 
@@ -2417,21 +2417,21 @@ INTEGER                   :: AllocStat
 
       ! Find the first tower point
 
-   NumGrid  = NumGrid_Y*NumGrid_Z
+   NumGrid  = p_grid%NumGrid_Y*p_grid%NumGrid_Z
 
    IF ( WrADTWR ) THEN
 
       TwrStart = NumGrid + 1
 
-      IF ( ExtraHubPT ) THEN
+      IF ( p_grid%ExtraHubPT ) THEN
          TwrStart = TwrStart + 1
       ENDIF
 
-      IF ( ExtraTwrPt ) THEN
+      IF ( p_grid%ExtraTwrPT ) THEN
          TwrTop   = TwrStart
          TwrStart = TwrStart + 1
       ELSE
-         TwrTop = INT(NumGrid_Y / 2) + 1      ! The top tower point is on the grid where Z = 1
+         TwrTop = INT(p_grid%NumGrid_Y / 2) + 1      ! The top tower point is on the grid where Z = 1
       ENDIF
 
       NumTower = p_grid%NPoints - TwrStart + 2
@@ -2453,16 +2453,16 @@ INTEGER                   :: AllocStat
 
    WRITE (UAFFW)   INT( FileID             , B2Ki )          ! TurbSim format (7=not PERIODIC, 8=PERIODIC)
 
-   WRITE (UAFFW)   INT( NumGrid_Z          , B4Ki )          ! the number of grid points vertically
-   WRITE (UAFFW)   INT( NumGrid_Y          , B4Ki )          ! the number of grid points laterally
+   WRITE (UAFFW)   INT( p_grid%NumGrid_Z          , B4Ki )          ! the number of grid points vertically
+   WRITE (UAFFW)   INT( p_grid%NumGrid_Y          , B4Ki )          ! the number of grid points laterally
    WRITE (UAFFW)   INT( NumTower           , B4Ki )          ! the number of tower points
-   WRITE (UAFFW)   INT( NumOutSteps        , B4Ki )          ! the number of time steps
+   WRITE (UAFFW)   INT( p_grid%NumOutSteps        , B4Ki )          ! the number of time steps
 
    WRITE (UAFFW)  REAL( p_grid%GridRes_Z          , SiKi )          ! grid spacing in vertical direction, in m
    WRITE (UAFFW)  REAL( p_grid%GridRes_Y          , SiKi )          ! grid spacing in lateral direction, in m
    WRITE (UAFFW)  REAL( p_grid%TimeStep           , SiKi )          ! grid spacing in delta time, in m/s
    WRITE (UAFFW)  REAL( UHub               , SiKi )          ! the mean wind speed in m/s at hub height
-   WRITE (UAFFW)  REAL( HubHt              , SiKi )          ! the hub height, in m
+   WRITE (UAFFW)  REAL( p_grid%HubHt              , SiKi )          ! the hub height, in m
    WRITE (UAFFW)  REAL( p_grid%Z(1)               , SiKi )          ! the height of the grid bottom, in m
 
    WRITE (UAFFW)  REAL( UScl               , SiKi )          ! the U-component slope for scaling
@@ -2480,7 +2480,7 @@ INTEGER                   :: AllocStat
 
    ENDDO
 
-      ALLOCATE ( TmpVarray( 3*(NumGrid_Z*NumGrid_Y + NumTower) ) , STAT=AllocStat )
+      ALLOCATE ( TmpVarray( 3*(p_grid%NumGrid_Z*p_grid%NumGrid_Y + NumTower) ) , STAT=AllocStat )
 
       IF ( AllocStat /= 0 )  THEN
          CALL TS_Abort ( 'Error allocating memory for temporary wind speed array.' )
@@ -2488,7 +2488,7 @@ INTEGER                   :: AllocStat
 
       ! Loop through time.
 
-   DO IT=1,NumOutSteps  !Use only the number of timesteps requested originally
+   DO IT=1,p_grid%NumOutSteps  !Use only the number of timesteps requested originally
 
          ! Write out grid data in binary form. II = (IZ - 1)*NumGrid_Y + IY, IY varies most rapidly
 
@@ -2568,7 +2568,7 @@ CHARACTER(200)               :: FormStr6                                 ! Strin
 
       ! Allocate the array of wind speeds.
 
-   ALLOCATE ( ZRow(NumGrid_Y) , STAT=AllocStat )
+   ALLOCATE ( ZRow(p_grid%NumGrid_Y) , STAT=AllocStat )
 
    IF ( AllocStat /= 0 )  THEN
       CALL TS_Abort ( 'Error allocating memory for array of wind speeds.' )
@@ -2588,27 +2588,27 @@ CHARACTER(200)               :: FormStr6                                 ! Strin
 
       WRITE (UFFF,FormStr1)  Comp(IVec)
 
-      WRITE (UFFF,FormStr2)  NumGrid_Y, NumGrid_Z, p_grid%GridRes_Y, p_grid%GridRes_Z, p_grid%TimeStep, HubHt, UHub
+      WRITE (UFFF,FormStr2)  p_grid%NumGrid_Y, p_grid%NumGrid_Z, p_grid%GridRes_Y, p_grid%GridRes_Z, p_grid%TimeStep, p_grid%HubHt, UHub
       WRITE (UFFF,FormStr3)
-      WRITE (UFFF,FormStr5)  ( p_grid%Z(IZ)-HubHt, IZ=1,NumGrid_Z )
+      WRITE (UFFF,FormStr5)  ( p_grid%Z(IZ)-p_grid%HubHt, IZ=1,p_grid%NumGrid_Z )
       WRITE (UFFF,FormStr4)
-      WRITE (UFFF,FormStr5)  ( p_grid%Y(IY), IY=1,NumGrid_Y )
+      WRITE (UFFF,FormStr5)  ( p_grid%Y(IY), IY=1,p_grid%NumGrid_Y )
 
          ! Write out elapsed time & hub-level value before component grid.
 
-      DO IT=1,NumOutSteps
+      DO IT=1,p_grid%NumOutSteps
 
          WRITE(UFFF,FormStr6)  p_grid%TimeStep*( IT - 1 ), V(IT,HubIndx,IVec)
 
-         DO IZ=1,NumGrid_Z  ! From the top to the bottom
+         DO IZ=1,p_grid%NumGrid_Z  ! From the top to the bottom
 
-            II = ( NumGrid_Z - IZ )*NumGrid_Y
+            II = ( p_grid%NumGrid_Z - IZ )*p_grid%NumGrid_Y
 
-            DO IY=1,NumGrid_Y  ! From the left to the right
+            DO IY=1,p_grid%NumGrid_Y  ! From the left to the right
                ZRow(IY) = V(IT,II+IY,IVec)
             ENDDO ! IY
 
-            WRITE (UFFF,FormStr5)  ( ZRow(IY), IY=1,NumGrid_Y )
+            WRITE (UFFF,FormStr5)  ( ZRow(IY), IY=1,p_grid%NumGrid_Y )
 
          ENDDO ! IZ
 
@@ -2691,10 +2691,6 @@ use TSMods
    REAL(ReKi)              ::  SVFA                            ! Sine of the vertical flow angle
    REAL(ReKi)              ::  CHFA                            ! Cosine of the horizontal flow angle
    REAL(ReKi)              ::  SHFA                            ! Sine of the horizontal flow angle
-
-   REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
-   REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
-   REAL(ReKi)              ::  TmpW                            ! Temporarily holds the value of the w component
    
    REAL(ReKi)              ::  UTmp                            ! The best fit of observed peak Uh at het height vs jet height
    REAL(ReKi)              ::  U_zb                            ! The velocity at the bottom of the rotor disk (for estimating log fit)
@@ -2802,14 +2798,14 @@ ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
 
 
 HalfRotDiam = 0.5*RotorDiameter
-U_zt        = getWindSpeed(UHub,HubHt,HubHt+HalfRotDiam,RotorDiameter,PROFILE=WindProfileType)   !Velocity at the top of rotor
-U_zb        = getWindSpeed(UHub,HubHt,HubHt-HalfRotDiam,RotorDiameter,PROFILE=WindProfileType)   !Velocity at the bottom of the rotor
+U_zt        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the top of rotor
+U_zb        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the bottom of the rotor
       
 WRITE(US,'()')   ! A BLANK LINE
 
 SELECT CASE ( TRIM(WindProfileType) )
    CASE ('JET','J')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (HubHt+HalfRotDiam)/(HubHt-HalfRotDiam) )  !TmpReal = RotorDiameter/2
+      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = RotorDiameter/2
       UTmp  = 0.0422*ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Low-level jet"      
@@ -2824,13 +2820,13 @@ SELECT CASE ( TRIM(WindProfileType) )
       ENDIF            
                     
    CASE ('LOG','L')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (HubHt+HalfRotDiam)/(HubHt-HalfRotDiam) )  
+      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Logarithmic"      
       WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
 
    CASE ('H2L','H')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (HubHt+HalfRotDiam)/(HubHt-HalfRotDiam) ) 
+      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) ) 
       
       WRITE (US,FormStr2)      "Velocity profile type                           ", "Logarithmic (H2L)"      
       WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
@@ -2840,7 +2836,7 @@ SELECT CASE ( TRIM(WindProfileType) )
       WRITE (US,FormStr)       "Power law exponent                              ",  PLExp,                    ""
       
    CASE ('USR','U')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (HubHt+HalfRotDiam)/(HubHt-HalfRotDiam) )  
+      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  
 
       WRITE (US,FormStr2)      "Wind profile type                               ", "Linear interpolation of user-defined profile"
       WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
@@ -2856,7 +2852,7 @@ WRITE(US,FormStr)              "Assumed rotor diameter                          
 WRITE(US,FormStr)              "Surface roughness length                        ", z0,                        " m"      
 WRITE(US,'()')                                                                                                 ! A BLANK LINE
 WRITE(US,FormStr1)             "Number of time steps in the FFT                 ", p_grid%NumSteps,                  ""       
-WRITE(US,FormStr1)             "Number of time steps output                     ", NumOutSteps,               ""          
+WRITE(US,FormStr1)             "Number of time steps output                     ", p_grid%NumOutSteps,               ""          
 
 IF (KHtest) THEN
    WRITE(US,"(/'KH Billow Test Parameters:' / )") ! HEADER
@@ -2909,16 +2905,16 @@ SVFA = SIN( VFlowAng*D2R )
 CHFA = COS( HFlowAng*D2R )
 SHFA = SIN( HFlowAng*D2R )
 
-HubPr = ( ABS( HubHt - GridVertCenter ) > Tolerance )     !If the hub height is not on the z-grid, print it, too.
+HubPr = ( ABS( p_grid%HubHt - GridVertCenter ) > Tolerance )     !If the hub height is not on the z-grid, print it, too.
 
 
    ! Write out the grid points & the hub
 
-DO IZ = NumGrid_Z,1, -1
+DO IZ = p_grid%NumGrid_Z,1, -1
    
-   IF ( HubPr  .AND. ( p_grid%Z(IZ) < HubHt ) ) THEN
+   IF ( HubPr  .AND. ( p_grid%Z(IZ) < p_grid%HubHt ) ) THEN
    
-      JZ = NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
+      JZ = p_grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
       
       IF ( ALLOCATED( WindDir_profile ) ) THEN      
          CHFA = COS( WindDir_profile(JZ)*D2R )
@@ -2966,7 +2962,7 @@ ENDDO ! IZ
    
    ! Write out the tower points
    
-DO IZ = NumGrid_Z,ZLim
+DO IZ = p_grid%NumGrid_Z,p_grid%ZLim
 
    IF ( p_grid%Z(IZ) < p_grid%Z(1) ) THEN
       IF ( ALLOCATED( WindDir_profile ) ) THEN
@@ -3038,7 +3034,7 @@ ENDIF
    WRITE (UAHH,"( '!   Time  HorSpd  WndDir  VerSpd  HorShr  VerShr  LnVShr  GstSpd' )")
    WRITE (UAHH,"( '!  (sec)   (m/s)   (deg)   (m/s)     (-)     (-)     (-)   (m/s)' )")
 
-   DO IT = 1, NumOutSteps
+   DO IT = 1, p_grid%NumOutSteps
       
       Time = p_grid%TimeStep*( IT - 1 )
             
@@ -3089,7 +3085,7 @@ USE TSMods
 
    CALL WrScr ( ' Hub-height binary turbulence parameters were written to "'//TRIM( RootName )//'.bin"' )
 
-   DO IT = 1, NumOutSteps
+   DO IT = 1, p_grid%NumOutSteps
       
       Time = p_grid%TimeStep*( IT - 1 )
       
@@ -3146,7 +3142,7 @@ USE TSMods
                         //"6X,'u''w''',5X,'u''v''',5X,'v''w''',5X,'TKE',6X,'CTKE')")   
    
    
-   DO IT = 1, NumOutSteps
+   DO IT = 1, p_grid%NumOutSteps
       
       Time = p_grid%TimeStep*( IT - 1 )
       
@@ -3563,17 +3559,17 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
       !  Allocate the array of standard deviations.
 
-   CALL AllocAry( SDary, NumGrid_Y, 'SDary (standard deviations)', ErrStat, ErrMsg)
+   CALL AllocAry( SDary, p_grid%NumGrid_Y, 'SDary (standard deviations)', ErrStat, ErrMsg)
    IF (ErrStat >= AbortErrLev) RETURN
 
 
       ! Calculate standard deviations for each grid point.  Write them to summary file.
 
    WRITE(US,"(//,'Grid Point Variance Summary:',/)")
-   WRITE(US,"(3X,'Y-coord',"//TRIM(Num2LStr(NumGrid_Y))//"F8.2)")  p_grid%Y(1:NumGrid_Y)
+   WRITE(US,"(3X,'Y-coord',"//TRIM(Num2LStr(p_grid%NumGrid_Y))//"F8.2)")  p_grid%Y(1:p_grid%NumGrid_Y)
 
    FormStr1 = "(/,3X'Height   Standard deviation at grid points for the ',A,' component:')"
-   FormStr2 = "(F9.2,1X,"//TRIM(Num2LStr(NumGrid_Y))//"F8.3)"
+   FormStr2 = "(F9.2,1X,"//TRIM(Num2LStr(p_grid%NumGrid_Y))//"F8.3)"
 
    UTmp = 0
    VTmp = 0
@@ -3583,11 +3579,11 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
       WRITE(US,FormStr1)  Comp(IVec)
 
-      DO IZ=NumGrid_Z,1,-1
+      DO IZ=p_grid%NumGrid_Z,1,-1
 
-         DO IY=1,NumGrid_Y
+         DO IY=1,p_grid%NumGrid_Y
 
-            II   = (IZ-1)*NumGrid_Y+IY
+            II   = (IZ-1)*p_grid%NumGrid_Y+IY
             SumS = 0.0
 
             DO IT=1,p_grid%NumSteps
@@ -3598,7 +3594,7 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
          ENDDO ! IY
 
-         WRITE(US,FormStr2) p_grid%Z(IZ), SDary(1:NumGrid_Y)
+         WRITE(US,FormStr2) p_grid%Z(IZ), SDary(1:p_grid%NumGrid_Y)
 
          IF ( IVec == 1 ) THEN
             UTmp = UTmp + SUM( SDary )
@@ -3613,9 +3609,9 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
    FormStr2 = "(6X,A,' component: ',F8.3,' m/s')"
    WRITE(US,"(/'   Mean standard deviation across all grid points:')")
-   WRITE(US,FormStr2) Comp(1), UTmp / ( NumGrid_Y*NumGrid_Z )
-   WRITE(US,FormStr2) Comp(2), VTmp / ( NumGrid_Y*NumGrid_Z ) 
-   WRITE(US,FormStr2) Comp(3), WTmp / ( NumGrid_Y*NumGrid_Z ) 
+   WRITE(US,FormStr2) Comp(1), UTmp / ( p_grid%NumGrid_Y*p_grid%NumGrid_Z )
+   WRITE(US,FormStr2) Comp(2), VTmp / ( p_grid%NumGrid_Y*p_grid%NumGrid_Z ) 
+   WRITE(US,FormStr2) Comp(3), WTmp / ( p_grid%NumGrid_Y*p_grid%NumGrid_Z ) 
 
 
       !  Deallocate the array of standard deviations.

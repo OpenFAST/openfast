@@ -28,8 +28,8 @@ use ts_errors
       ! Create interface for a generic getWindSpeed that actually uses specific routines.
 
    INTERFACE getWindSpeed
-      MODULE PROCEDURE getWindSpeedVal
-      MODULE PROCEDURE getWindSpeedAry
+      MODULE PROCEDURE getVelocity
+      MODULE PROCEDURE getVelocityProfile
    END INTERFACE
 
 
@@ -156,14 +156,14 @@ INTEGER                 :: I                 ! A loop counter
          ChebyCoef_WS(I) = Rich_No*UH_coef(2,I) + Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
       ENDDO
 
-      Utmp1              = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE='JET')
+      Utmp1              = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE_TYPE='JET')
 
          ! Now calculate the coefficients with just UJetMax term
 
       ChebyCoef_tmp(:)   = ChebyCoef_WS(:)
       ChebyCoef_WS(:)    = UH_coef(1,:)
 
-      Utmp2              = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
+      Utmp2              = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
       UJetMax            = (Uref - Utmp1)/Utmp2
 
          ! Get the final coefficients, using the computed UJetMax
@@ -177,28 +177,26 @@ INTEGER                 :: I                 ! A loop counter
    ENDDO
 
 !print *, 'UJetMax wind speed at ', ZJetMax, ' m: ', UJetMax, 'm/s'
-!Utmp1 = getWindSpeed(URef, RefHt, ZJetMax, 999.9, PROFILE='JET')
+!Utmp1 = getWindSpeed(URef, RefHt, ZJetMax, 999.9, PROFILE_TYPE='JET')
 !print *, "Calc'd  wind speed at ", ZJetMax, ' m: ', Utmp1, 'm/s'
 
 RETURN
 END SUBROUTINE GetChebCoefs
 !=======================================================================
 
-FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
+FUNCTION getVelocityProfile(URef, RefHt, Ht, RotorDiam, profile_type )
 
    ! Determine the wind speed at a given height, with reference wind speed.
-   ! Use power law if given height and reference height are within rotor disk.
-   ! Use log profile if reference height is below rotor disk.
 
    USE                                  TSMods, ONLY: ChebyCoef_WD   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: ChebyCoef_WS   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
-   USE                                  TSMods, ONLY: HubHt          ! The hub height (used with HFlowAng)
    USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM50      ! IEC Extreme 50-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM100     ! IEC Extreme 100-yr wind speed model
    USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
+   USE                                  TSMods, ONLY: p_grid         ! Grid information (HubHt)
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: PLExp          ! Power law exponent
    USE                                  TSMods, ONLY: U_Ref          ! The input wind speed at the reference height (URef is being overwritten for some reason)
@@ -216,17 +214,138 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    REAL(ReKi),   INTENT(IN)           :: RefHt                       ! Reference height
    REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height where wind speed should be calculated
    REAL(ReKi),   INTENT(IN)           :: RotorDiam                   ! Diameter of rotor disk (meters)
-   REAL(ReKi),   INTENT(OUT),OPTIONAL :: UHangle(SIZE(Ht))           ! Horizontal wind angle
-   REAL(ReKi)                         :: getWindSpeedAry(SIZE(Ht))   ! This function, approximate wind speed at Ht
+   REAL(ReKi)                         :: getVelocityProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
 
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-   CHARACTER(*), INTENT(IN), OPTIONAL :: profile                     ! String that determines what profile is to be used
-   CHARACTER(3)                       :: profile_type
+   CHARACTER(*), INTENT(IN)           :: profile_type                ! String that determines what profile is to be used
 
-!   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
-!   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
+   INTEGER                            :: I
+   INTEGER                            :: Indx
+   INTEGER                            :: J
+
+!   REAL                               :: C_factor
+!   REAL(ReKi)                         :: ZRef
+
+
+   IF ( p_IEC%IEC_WindType == IEC_EWM50 ) THEN
+      getVelocityProfile(:) = p_IEC%VRef*( Ht(:)/p_grid%HubHt )**0.11                ! [IEC 61400-1 6.3.2.1 (14)]  !bjj: this PLExp should be set to 0.11 already, why is this hard-coded?
+      RETURN
+   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM1 ) THEN
+      getVelocityProfile(:) = 0.8*p_IEC%VRef*( Ht(:)/p_grid%HubHt )**0.11            ! [IEC 61400-1 6.3.2.1 (14), (15)]
+      RETURN
+   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM100 ) THEN
+      getVelocityProfile(:) = p_IEC%VRef*( Ht(:)/p_grid%HubHt )**0.11               ! [API-IEC RECCOMENDATAION]  ADDED BY YGUO  !bjj: this is the same as IEC_EWM50, but we should check that IEC_EWM100 is used in ALL the same places IEC_EWM50 is
+      RETURN
+   ENDIF
+
+
+   SELECT CASE ( TRIM(profile_type) )
+
+      CASE ( 'JET' )
+
+         CALL ChebyshevVals( ChebyCoef_WS, Ht, getVelocityProfile, MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
+
+      CASE ( 'LOG' )
+
+            DO J = 1,SIZE(Ht)
+               getVelocityProfile(J) = getLogWindSpeed( Ht(J), RefHt, URef, ZL, Z0)
+            END DO
+            
+            
+            
+      CASE ( 'H2L' )
+
+               ! Calculate the windspeed.
+               ! RefHt and URef both get modified consistently, therefore RefHt is used instead of H_ref.
+               !print *, RefHt,H_ref,URef,Ustar ! Need to include H_ref from TSmods for this print statement to work.
+               getVelocityProfile(:) = LOG(Ht(:)/RefHt)*Ustar/0.41+URef
+
+      CASE ( 'PL' )
+
+!         IF ( RefHt > 0.0 .AND. Ht > 0.0 ) THEN
+            getVelocityProfile(:) = URef*( Ht(:)/RefHt )**PLExp
+
+!         ENDIF
+     CASE ( 'API' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+
+     ! sample to write to screen.CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
+!            CALL WrScr ('calling to API wind profile and write array')
+                ! TO ADD THE FSOLVE PROGRAM TO CALCULATE C_factor
+!            getVelocityProfile(:)  = ZRef*(1+LOG( Ht(:) / 10) )*( 1-0.41*(0.06*(1+0.043*ZRef)*(Ht/10)**(-0.22)))*LOG(600.0/3600.0)
+!            getVelocityProfile(:)  = RefHt*(1+LOG( Ht(:) / 10) )*( 1-0.41*(0.06*(1+0.043*RefHt)*(Ht/10)**(-0.22)))*LOG(600.0/3600.0)
+!            getVelocityProfile(:)  = URef*(1+LOG( Ht(:) / RefHt) )*( 1-0.41*(0.06*(1+0.043*URef)*(Ht/RefHt)**(-0.22)))*LOG(600.0/3600.0)
+!            getVelocityProfile(:)  = URef*(1+LOG( Ht(:) / RefHt) )
+!            getVelocityProfile(:) = URef*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*URef )*LOG( Ht(:)/RefHt) )
+            getVelocityProfile(:) = U_Ref*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U_Ref )*LOG( Ht(:)/H_Ref) )
+      CASE ( 'USR' )
+
+         DO J = 1,SIZE(Ht)
+            IF ( Ht(J) <= Z_USR(1) ) THEN
+               getVelocityProfile(J) = U_USR(1)
+            ELSEIF ( Ht(J) >= Z_USR(NumUSRz) ) THEN
+               getVelocityProfile(J) = U_USR(NumUSRz)
+            ELSE
+               ! Find the two points between which the height lies
+
+               DO I=2,NumUSRz
+                  IF ( Ht(J) <= Z_USR(I) ) THEN
+                     Indx = I-1
+
+                     ! Let's just do a linear interpolation for now
+                     getVelocityProfile(J) = (Ht(J) - Z_USR(Indx)) * ( U_USR(Indx) - U_USR(I) ) / ( Z_USR(Indx) - Z_USR(I) ) &
+                                        + U_USR(Indx)
+                     EXIT
+                  ENDIF
+               ENDDO
+
+            ENDIF
+
+         ENDDO
+
+      CASE DEFAULT   ! This is how it worked before
+
+         DO I=1,SIZE(getVelocityProfile)
+            IF ( Ht(I) == RefHt ) THEN
+               getVelocityProfile(I) = URef
+            ELSEIF ( ABS( Ht(I)-RefHt ) <= 0.5*RotorDiam ) THEN
+               getVelocityProfile(I) = URef*( Ht(I)/RefHt )**PLExp
+            ELSEIF ( Ht(I) > 0.0 .AND. RefHt > 0.0 .AND. RefHt /= Z0 ) THEN !Check that we don't have an invalid domain
+               getVelocityProfile(I) = URef*LOG( Ht(I)/Z0 )/LOG( RefHt/Z0 )
+            ELSE
+               getVelocityProfile(I) = 0.0
+            ENDIF
+         ENDDO
+
+   END SELECT
+
+RETURN
+END FUNCTION getVelocityProfile
+!=======================================================================
+FUNCTION getDirectionProfile( Ht, profile_type)
+
+   ! Determine the wind speed at a given height, with reference wind speed.
+
+   USE                                  TSMods, ONLY: ChebyCoef_WD   ! Chebyshev coefficients (must be defined before calling this function!)
+   USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
+   USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
+   USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
+   USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
+   USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
+   USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
+   USE                                  TSMods, ONLY: p_grid         ! grid information (hub height)
+
+   IMPLICIT                              NONE
+
+   REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height where wind speed should be calculated
+   REAL(ReKi)                         :: getDirectionProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
+
+   REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
+   REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
+
+   CHARACTER(*), INTENT(IN)           :: profile_type                ! String that determines what profile is to be used
+
    REAL(ReKi)                         :: tmpHt(2)
    REAL(ReKi)                         :: tmpWS(2)
 
@@ -238,182 +357,92 @@ FUNCTION getWindSpeedAry(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 !   REAL(ReKi)                         :: ZRef
 
 
-   IF ( p_IEC%IEC_WindType == IEC_EWM50 ) THEN
-      getWindSpeedAry(:) = p_IEC%VRef*( Ht(:)/HubHt )**0.11                ! [IEC 61400-1 6.3.2.1 (14)]  !bjj: this PLExp should be set to 0.11 already, why is this hard-coded?
-      RETURN
-   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM1 ) THEN
-      getWindSpeedAry(:) = 0.8*p_IEC%VRef*( Ht(:)/HubHt )**0.11            ! [IEC 61400-1 6.3.2.1 (14), (15)]
-      RETURN
-   ELSEIF ( p_IEC%IEC_WindType == IEC_EWM100 ) THEN
-      getWindSpeedAry(:) = p_IEC%VRef*( Ht(:)/HubHt )**0.11               ! [API-IEC RECCOMENDATAION]  ADDED BY YGUO  !bjj: this is the same as IEC_EWM50, but we should check that IEC_EWM100 is used in ALL the same places IEC_EWM50 is
-      RETURN
-   ENDIF
-
-
-   IF ( PRESENT( profile ) ) THEN
-      profile_type = profile
-      CALL Conv2UC( profile_type )
-   ELSE
-      profile_type = 'IEC'
-   ENDIF
-
    SELECT CASE ( TRIM(profile_type) )
 
-      CASE ( 'JET', 'J' )
+      CASE ( 'JET' )
 
-         CALL ChebyshevVals( ChebyCoef_WS, Ht, getWindSpeedAry, MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
+            ! Calculate the wind direction at this height
+         CALL ChebyshevVals( ChebyCoef_WD, Ht(:), getDirectionProfile(:), MinZ, MaxZ )
 
-         IF ( PRESENT( UHangle ) ) THEN
+            ! Compute the wind direction at hub height & the jet height
+         tmpHt(1) = p_grid%HubHt
+         tmpHt(2) = ZJetMax
+         CALL ChebyshevVals( ChebyCoef_WD, tmpHt, tmpWS(1:2), MinZ, MaxZ )
 
-               ! Calculate the wind direction at this height
-            CALL ChebyshevVals( ChebyCoef_WD, Ht(:), UHangle(:), MinZ, MaxZ )
-
-               ! Compute the wind direction at hub height & the jet height
-            tmpHt(1) = HubHt
-            tmpHt(2) = ZJetMax
-            CALL ChebyshevVals( ChebyCoef_WD, tmpHt, tmpWS(1:2), MinZ, MaxZ )
-
-               ! Make sure none of the directions are more than 45 degrees from the direction at the jet height
-            IF ( ABS(tmpWS(1) - tmpWS(2) ) > 45. ) THEN  ! The direction at the hub height
-               tmpWS(1) = tmpWS(2) + SIGN(REAL(45.,ReKi), tmpWS(1) - tmpWS(2))
-            ENDIF
-
-            DO I = 1,SIZE(UHangle) ! The directions at all the heights
-               IF ( ABS(UHangle(I) - tmpWS(2) ) > 45. ) THEN
-                  UHangle(I) = tmpWS(2) + SIGN(REAL(45.,ReKi), UHangle(I) - tmpWS(2))
-               ENDIF
-
-               ! Remove the hub height direction so that we have a relative direction, then
-               ! add the mean flow angle. (Note that the Chebyshev profile is cw looking upwind,
-               ! but the horizontal angle is ccw looking upwind)
-
-               UHangle(I) = HFlowAng - (UHangle(I) - tmpWS(1)) ! This is the counter-clockwise angle of the wind
-            ENDDO
-
+            ! Make sure none of the directions are more than 45 degrees from the direction at the jet height
+         IF ( ABS(tmpWS(1) - tmpWS(2) ) > 45. ) THEN  ! The direction at the hub height
+            tmpWS(1) = tmpWS(2) + SIGN(REAL(45.,ReKi), tmpWS(1) - tmpWS(2))
          ENDIF
 
+         DO I = 1,SIZE(getDirectionProfile) ! The directions at all the heights
+            IF ( ABS(getDirectionProfile(I) - tmpWS(2) ) > 45. ) THEN
+               getDirectionProfile(I) = tmpWS(2) + SIGN(REAL(45.,ReKi), getDirectionProfile(I) - tmpWS(2))
+            ENDIF
 
-      CASE ( 'LOG', 'L' )
+            ! Remove the hub height direction so that we have a relative direction, then
+            ! add the mean flow angle. (Note that the Chebyshev profile is cw looking upwind,
+            ! but the horizontal angle is ccw looking upwind)
 
-            DO J = 1,SIZE(Ht)
-               getWindSpeedAry(J) = getLogWindSpeed( Ht(J), RefHt, URef, ZL, Z0)
-            END DO
-            
-            
-            
-      CASE ( 'H2L', 'H' )
+            getDirectionProfile(I) = HFlowAng - (getDirectionProfile(I) - tmpWS(1)) ! This is the counter-clockwise angle of the wind
+         ENDDO
 
-               ! Calculate the windspeed.
-               ! RefHt and URef both get modified consistently, therefore RefHt is used instead of H_ref.
-               !print *, RefHt,H_ref,URef,Ustar ! Need to include H_ref from TSmods for this print statement to work.
-               getWindSpeedAry(:) = LOG(Ht(:)/RefHt)*Ustar/0.41+URef
 
-      CASE ( 'PL', 'P' )
-
-!         IF ( RefHt > 0.0 .AND. Ht > 0.0 ) THEN
-            getWindSpeedAry(:) = URef*( Ht(:)/RefHt )**PLExp
-
-!         ENDIF
-     CASE ( 'API', 'A' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
-
-     ! sample to write to screen.CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
-!            CALL WrScr ('calling to API wind profile and write array')
-                ! TO ADD THE FSOLVE PROGRAM TO CALCULATE C_factor
-!            getWindSpeedAry(:)  = ZRef*(1+LOG( Ht(:) / 10) )*( 1-0.41*(0.06*(1+0.043*ZRef)*(Ht/10)**(-0.22)))*LOG(600.0/3600.0)
-!            getWindSpeedAry(:)  = RefHt*(1+LOG( Ht(:) / 10) )*( 1-0.41*(0.06*(1+0.043*RefHt)*(Ht/10)**(-0.22)))*LOG(600.0/3600.0)
-!            getWindSpeedAry(:)  = URef*(1+LOG( Ht(:) / RefHt) )*( 1-0.41*(0.06*(1+0.043*URef)*(Ht/RefHt)**(-0.22)))*LOG(600.0/3600.0)
-!            getWindSpeedAry(:)  = URef*(1+LOG( Ht(:) / RefHt) )
-!            getWindSpeedAry(:) = URef*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*URef )*LOG( Ht(:)/RefHt) )
-            getWindSpeedAry(:) = U_Ref*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U_Ref )*LOG( Ht(:)/H_Ref) )
-      CASE ( 'USR', 'U' )
+      CASE ( 'USR' )
 
          DO J = 1,SIZE(Ht)
+
+               ! Calculate the wind direction at this height
+
             IF ( Ht(J) <= Z_USR(1) ) THEN
-               getWindSpeedAry(J) = U_USR(1)
+               getDirectionProfile(J) = WindDir_USR(1)
             ELSEIF ( Ht(J) >= Z_USR(NumUSRz) ) THEN
-               getWindSpeedAry(J) = U_USR(NumUSRz)
+               getDirectionProfile(J) = WindDir_USR(NumUSRz)
             ELSE
-               ! Find the two points between which the height lies
+               I = Indx + 1
 
-               DO I=2,NumUSRz
-                  IF ( Ht(J) <= Z_USR(I) ) THEN
-                     Indx = I-1
-
-                     ! Let's just do a linear interpolation for now
-                     getWindSpeedAry(J) = (Ht(J) - Z_USR(Indx)) * ( U_USR(Indx) - U_USR(I) ) / ( Z_USR(Indx) - Z_USR(I) ) &
-                                        + U_USR(Indx)
-                     EXIT
-                  ENDIF
-               ENDDO
-
-            ENDIF
-
-            IF ( PRESENT( UHangle ) ) THEN
-                  ! Calculate the wind direction at this height
-
-               IF ( Ht(J) <= Z_USR(1) ) THEN
-                  UHangle(J) = WindDir_USR(1)
-               ELSEIF ( Ht(J) >= Z_USR(NumUSRz) ) THEN
-                  UHangle(J) = WindDir_USR(NumUSRz)
+                  ! Let's just do a linear interpolation for now
+               !we need to check if the angle goes through 360, before we do the interpolation
+               tmpWS(1) = WindDir_USR(Indx) - WindDir_USR(I)
+               IF ( tmpWS(1) > 180. ) THEN
+                  tmpWS(1) = WindDir_USR(Indx)
+                  tmpWS(2) = WindDir_USR(I   ) + 360.
+               ELSEIF ( tmpWS(1) < -180. ) THEN
+                  tmpWS(1) = WindDir_USR(Indx) + 360.
+                  tmpWS(2) = WindDir_USR(I   )
                ELSE
-                  I = Indx + 1
-
-                     ! Let's just do a linear interpolation for now
-                  !we need to check if the angle goes through 360, before we do the interpolation
-                  tmpWS(1) = WindDir_USR(Indx) - WindDir_USR(I)
-                  IF ( tmpWS(1) > 180. ) THEN
-                     tmpWS(1) = WindDir_USR(Indx)
-                     tmpWS(2) = WindDir_USR(I   ) + 360.
-                  ELSEIF ( tmpWS(1) < -180. ) THEN
-                     tmpWS(1) = WindDir_USR(Indx) + 360.
-                     tmpWS(2) = WindDir_USR(I   )
-                  ELSE
-                     tmpWS(1) = WindDir_USR(Indx)
-                     tmpWS(2) = WindDir_USR(I   )
-                  ENDIF
-
-                 UHangle(J) = (Ht(J) - Z_USR(Indx)) * ( tmpWS(1) - tmpWS(2) ) / ( Z_USR(Indx) - Z_USR(I) ) + tmpWS(1)
-
+                  tmpWS(1) = WindDir_USR(Indx)
+                  tmpWS(2) = WindDir_USR(I   )
                ENDIF
 
-               UHangle(J) = HFlowAng + UHangle(J)  ! This is the counter-clockwise angle of the wind
+               getDirectionProfile(J) = (Ht(J) - Z_USR(Indx)) * ( tmpWS(1) - tmpWS(2) ) / ( Z_USR(Indx) - Z_USR(I) ) + tmpWS(1)
 
             ENDIF
+
+            getDirectionProfile(J) = HFlowAng + getDirectionProfile(J)  ! This is the counter-clockwise angle of the wind
+
          ENDDO
 
-      CASE DEFAULT   ! This is how it worked before
+      CASE DEFAULT   
 
-         DO I=1,SIZE(getWindSpeedAry)
-            IF ( Ht(I) == RefHt ) THEN
-               getWindSpeedAry(I) = URef
-            ELSEIF ( ABS( Ht(I)-RefHt ) <= 0.5*RotorDiam ) THEN
-               getWindSpeedAry(I) = URef*( Ht(I)/RefHt )**PLExp
-            ELSEIF ( Ht(I) > 0.0 .AND. RefHt > 0.0 .AND. RefHt /= Z0 ) THEN !Check that we don't have an invalid domain
-               getWindSpeedAry(I) = URef*LOG( Ht(I)/Z0 )/LOG( RefHt/Z0 )
-            ELSE
-               getWindSpeedAry(I) = 0.0
-            ENDIF
-         ENDDO
-
+         getDirectionProfile = HFlowAng
+   
    END SELECT
 
 RETURN
-END FUNCTION getWindSpeedAry
+END FUNCTION getDirectionProfile
 !=======================================================================
-FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
+FUNCTION getVelocity(URef, RefHt, Ht, RotorDiam, profile_type )
 
    ! Determine the wind speed at a given height, with reference wind speed.
-   ! Use power law if given height and reference height are within rotor disk.
-   ! Use log profile if reference height is below rotor disk.
 
    USE                                  TSMods, ONLY: ChebyCoef_WD   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: ChebyCoef_WS   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
-   USE                                  TSMods, ONLY: HubHt          ! The hub height (used with HFlowAng)
    USE                                  TSMods, ONLY: H_Ref          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
    USE                                  TSMods, ONLY: IEC_EWM50      ! IEC Extreme 50-yr wind speed model
    USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
+   USE                                  TSMods, ONLY: p_grid         ! grid information (hub ht)
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: PLExp          ! Power law exponent
    USE                                  TSMods, ONLY: U_Ref          ! The input wind speed at the reference height (URef is being overwritten for some reason)
@@ -431,14 +460,12 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    REAL(ReKi),   INTENT(IN)           :: RefHt                       ! Reference height
    REAL(ReKi),   INTENT(IN)           :: Ht                          ! Height where wind speed should be calculated
    REAL(ReKi),   INTENT(IN)           :: RotorDiam                   ! Diameter of rotor disk (meters)
-   REAL(ReKi),   INTENT(OUT),OPTIONAL :: UHangle                     ! Horizontal wind angle
-   REAL(ReKi)                         :: getWindSpeedVal             ! This function, approximate wind speed at Ht
+   REAL(ReKi)                         :: getVelocity             ! This function, approximate wind speed at Ht
 
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-   CHARACTER(*), INTENT(IN), OPTIONAL :: profile                     ! String that determines what profile is to be used
-   CHARACTER(3)                       :: profile_type
+   CHARACTER(*), INTENT(IN)           :: profile_type                     ! String that determines what profile is to be used
 
 !   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
 !   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
@@ -459,19 +486,13 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
    ! IF Z0 <= 0.0    CALL ProgAbort('The surface roughness must be a positive number')
 
    IF ( p_IEC%IEC_WindType == IEC_EWM50 ) THEN
-      getWindSpeedVal = p_IEC%VRef*( Ht/HubHt )**0.11                      ! [IEC 61400-1 6.3.2.1 (14)]
+      getVelocity = p_IEC%VRef*( Ht/p_grid%HubHt )**0.11                      ! [IEC 61400-1 6.3.2.1 (14)]
       RETURN
    ELSEIF ( p_IEC%IEC_WindType == IEC_EWM1 ) THEN
-      getWindSpeedVal = 0.8*p_IEC%VRef*( Ht/HubHt )**0.11                  ! [IEC 61400-1 6.3.2.1 (14), (15)]
+      getVelocity = 0.8*p_IEC%VRef*( Ht/p_grid%HubHt )**0.11                  ! [IEC 61400-1 6.3.2.1 (14), (15)]
       RETURN
    ENDIF
 
-   IF ( PRESENT( profile ) ) THEN
-      profile_type = profile
-      CALL Conv2UC( profile_type )
-   ELSE
-      profile_type = 'IEC'
-   ENDIF
 
    SELECT CASE ( TRIM(profile_type) )
 
@@ -479,61 +500,33 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 
          tmpHt(1) = Ht
          CALL ChebyshevVals( ChebyCoef_WS, tmpHt(1:1), tmpWS(1:1), MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
-         getWindSpeedVal = tmpWS(1)
-
-         IF ( PRESENT( UHangle ) ) THEN
-               ! Calculate the wind direciton at this height
-            CALL ChebyshevVals( ChebyCoef_WD, tmpHt(1:1), tmpWS(1:1), MinZ, MaxZ )
-            UHangle = tmpWS(1)
-
-               ! Compute the wind direction at hub height & the jet height
-            tmpHt(1) = HubHt
-            tmpHt(2) = ZJetMax
-            CALL ChebyshevVals( ChebyCoef_WD, tmpHt(1:2), tmpWS(1:2), MinZ, MaxZ )
-
-               ! Make sure none of the directions are more than 45 degrees from the direction at the jet height
-            IF ( ABS(tmpWS(1) - tmpWS(2) ) > 45. ) THEN  ! The direction at the hub height
-               tmpWS(1) = tmpWS(2) + SIGN(REAL(45.,ReKi), tmpWS(1) - tmpWS(2))
-            ENDIF
-
-            IF ( ABS(UHangle - tmpWS(2) ) > 45. ) THEN
-               UHangle  = tmpWS(2) + SIGN(REAL(45.,ReKi), UHangle  - tmpWS(2))
-            ENDIF
-
-               ! Remove the hub height direction so that we have a relative direction, then
-               ! add the mean flow angle. (Note that the Chebyshev profile is clockwise looking
-               ! from above, but the horizontal angle is counter-clockwise looking from above.)
-
-            UHangle = HFlowAng - (UHangle - tmpWS(1)) ! This is the counter-clockwise angle of the wind
-
-         ENDIF
-
+         getVelocity = tmpWS(1)
 
       CASE ( 'LOG', 'L' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
-         getWindSpeedVal = getLogWindSpeed(Ht, RefHt, URef, ZL, Z0)
+         getVelocity = getLogWindSpeed(Ht, RefHt, URef, ZL, Z0)
 
       CASE ( 'H2L', 'H' )
                ! Calculate the windspeed.
                ! RefHt and URef both get modified consistently, therefore RefHt is used instead of H_ref.
                !print *, RefHt,H_ref,URef,Ustar ! need to include H_ref from TSmods for this print statement to work.
-               getWindSpeedVal = LOG(Ht/RefHt)*Ustar/0.41+URef
+               getVelocity = LOG(Ht/RefHt)*Ustar/0.41+URef
 
 
       CASE ( 'PL', 'P' )  ! POWER LAW, commented by Y. Guo on April 16 2013
 
          IF ( RefHt > 0.0 .AND. Ht > 0.0 ) THEN
-            getWindSpeedVal = URef*( Ht/RefHt )**PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
+            getVelocity = URef*( Ht/RefHt )**PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
          ELSE
-            getWindSpeedVal = 0.0
+            getVelocity = 0.0
          ENDIF
 
       CASE ( 'USR', 'U' )
 
          IF ( Ht <= Z_USR(1) ) THEN
-            getWindSpeedVal = U_USR(1)
+            getVelocity = U_USR(1)
          ELSEIF ( Ht >= Z_USR(NumUSRz) ) THEN
-            getWindSpeedVal = U_USR(NumUSRz)
+            getVelocity = U_USR(NumUSRz)
          ELSE
             ! Find the two points between which the height lies
 
@@ -542,42 +535,10 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
                   Indx = I-1
 
                   ! Let's just do a linear interpolation for now
-                  getWindSpeedVal = (Ht - Z_USR(Indx)) * ( U_USR(Indx) - U_USR(I) ) / ( Z_USR(Indx) - Z_USR(I) ) + U_USR(Indx)
+                  getVelocity = (Ht - Z_USR(Indx)) * ( U_USR(Indx) - U_USR(I) ) / ( Z_USR(Indx) - Z_USR(I) ) + U_USR(Indx)
                   EXIT
                ENDIF
             ENDDO
-
-         ENDIF
-
-         IF ( PRESENT( UHangle ) ) THEN
-               ! Calculate the wind direction at this height
-
-            IF ( Ht <= Z_USR(1) ) THEN
-               UHangle = WindDir_USR(1)
-            ELSEIF ( Ht >= Z_USR(NumUSRz) ) THEN
-               UHangle = WindDir_USR(NumUSRz)
-            ELSE
-               I = Indx + 1
-
-                  ! Let's just do a linear interpolation for now
-               !we need to check if the angle goes through 360, before we do the interpolation
-               tmpWS(1) = WindDir_USR(Indx) - WindDir_USR(I)
-               IF ( tmpWS(1) > 180. ) THEN
-                  tmpWS(1) = WindDir_USR(Indx)
-                  tmpWS(2) = WindDir_USR(I   ) + 360.
-               ELSEIF ( tmpWS(1) < -180. ) THEN
-                  tmpWS(1) = WindDir_USR(Indx) + 360.
-                  tmpWS(2) = WindDir_USR(I   )
-               ELSE
-                  tmpWS(1) = WindDir_USR(Indx)
-                  tmpWS(2) = WindDir_USR(I   )
-               ENDIF
-
-               UHangle = (Ht - Z_USR(Indx)) * ( tmpWS(1) - tmpWS(2) ) / ( Z_USR(Indx) - Z_USR(I) ) + tmpWS(1)
-
-            ENDIF
-
-            UHangle = HFlowAng + UHangle  ! This is the counter-clockwise angle of the wind
 
          ENDIF
 
@@ -587,37 +548,37 @@ FUNCTION getWindSpeedVal(URef, RefHt, Ht, RotorDiam, profile, UHangle)
 !     If we add the API stuff to the main version of TurbSim, we may want to eliminate that requirement, but we will have to
 !     add a new input parameter saying how long a period was used to calculate the reference wind speed.
 
-!           CALL ROOT_SEARCHING(X0,X,URef,RefHt,HubHt)  !URef
+!           CALL ROOT_SEARCHING(X0,X,URef,RefHt,p_grid%HubHt)  !URef
            !CALL Root_Searching(X0,X,42.5,10.0,10.0)  !URef, USED TO DEBUG THE CODE
 !           U0_1HR=X  ! This is the wind speed at 10 m height within 1-hr window
 
 !            CALL WrScr ('Calling to API wind profile')
 !           TEMP_1=0.0573*(1.0+0.15*U0_1HR)**0.5
 !           TEMP_2=0.06*(1+0.043*U0_1HR)*(Ht/10.0)**(-0.22)
-!           getWindSpeedVal = U0_1HR*(1.0+TEMP_1*LOG( Ht / 10.0) )*( 1.0-0.41*TEMP_2*LOG(600.0/3600.0))
-!           getWindSpeedVal = U0_1HR*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U0_1HR )*LOG( Ht/RefHt) )
+!           getVelocity = U0_1HR*(1.0+TEMP_1*LOG( Ht / 10.0) )*( 1.0-0.41*TEMP_2*LOG(600.0/3600.0))
+!           getVelocity = U0_1HR*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U0_1HR )*LOG( Ht/RefHt) )
 !MLB: This assumes that the reference wind speed entered by the user is the 1-hour average wind speed at the input reference height.
-           getWindSpeedVal = U_Ref*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U_Ref )*LOG( Ht/H_Ref) )
+           getVelocity = U_Ref*( 1.0 + 0.0573*SQRT( 1.0 + 0.15*U_Ref )*LOG( Ht/H_Ref) )
 
 !            CALL WrScr ('API wind profile generated')
 
       CASE DEFAULT   ! This is how it worked before
 
          IF ( Ht == RefHt ) THEN
-            getWindSpeedVal = URef
+            getVelocity = URef
          ELSEIF ( ABS( Ht-RefHt ) <= 0.5*RotorDiam ) THEN
-            getWindSpeedVal = URef*( Ht/RefHt )**PLExp                ! [IEC 61400-1 6.3.1.2 (10)]
+            getVelocity = URef*( Ht/RefHt )**PLExp                ! [IEC 61400-1 6.3.1.2 (10)]
          ELSEIF ( Ht > 0.0 .AND. RefHt > 0.0 .AND. RefHt /= Z0 ) THEN !Check that we don't have an invalid domain
-            getWindSpeedVal = URef*LOG( Ht/Z0 )/LOG( RefHt/Z0 )
+            getVelocity = URef*LOG( Ht/Z0 )/LOG( RefHt/Z0 )
          ELSE
-            getWindSpeedVal = 0.0
+            getVelocity = 0.0
          ENDIF
 
    END SELECT
 
 
 RETURN
-END FUNCTION getWindSpeedVal
+END FUNCTION getVelocity
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !! This routine calculates the wind speed at Ht assuming a logarithmic wind profile and inputs RefHt, URef, Z/L and Z0
@@ -656,7 +617,7 @@ function getLogWindSpeed(Ht, RefHt, URef, ZL, Z0)
          ENDIF
 
 !            IF ( Ustar > 0. ) THEN
-!               getWindSpeedVal = ( UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
+!               getVelocity = ( UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
 !            ELSE
             !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
          getLogWindSpeed = URef*( LOG( Ht / Z0 ) - psiM )/( LOG( RefHt / Z0 ) - psiM )

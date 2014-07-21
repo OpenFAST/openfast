@@ -86,7 +86,7 @@ IF ( Stat /= 0 )  THEN
    CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the turbulence DistZMExp coherence array.')
 ENDIF
 
-!! Initialize the velocity matrix  !V(:,:,:) = 0.0 - done outside the subroutine
+V(:,:,:) = 0.0_ReKi    ! initialize the velocity matrix
 
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
@@ -98,7 +98,7 @@ IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecM
 ENDIF
 
          II = 0
-POINT_I: DO IZ=1,ZLim   !NumGrid_Z
+POINT_I: DO IZ=1,p_grid%ZLim   !NumGrid_Z
             DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
@@ -112,10 +112,10 @@ POINT_J:       DO JZ=1,IZ
 
                      IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
 
-                     IF ( IZ > NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
-                        I = YLim
-                        IF ( JZ > NumGrid_Z ) THEN
-                           J = YLim
+                     IF ( IZ > p_grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
+                        I = p_grid%YLim
+                        IF ( JZ > p_grid%NumGrid_Z ) THEN
+                           J = p_grid%YLim
                         ELSE
                            J = JY
                         ENDIF
@@ -206,7 +206,7 @@ DO IVec = 1,3
                   Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
                   TRH(Indx) = EXP( -1.0 * InCDec(IVec) * DistZMExp(Indx)* &
-                                      SQRT( (p_grid%Freq(IFreq)*DistU(Indx) )**2 + (InCohB(IVec)*Dist(Indx))**2 ) )
+                              SQRT( (p_grid%Freq(IFreq)*DistU(Indx) )**2 + (InCohB(IVec)*Dist(Indx))**2 ) )
 
             ENDDO ! JJ
          ENDDO ! II
@@ -291,6 +291,7 @@ REAL :: TEMP_Y, TEMP_Z
 
 
 
+V(:,:,:) = 0.0    ! initialize the velocity matrix
 
 ! ------------ arrays allocated -------------------------
 Stat = 0.
@@ -331,7 +332,7 @@ IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecM
 ENDIF
 
          II = 0
-POINT_I: DO IZ=1,ZLim   !NumGrid_Z
+POINT_I: DO IZ=1,p_grid%ZLim   !NumGrid_Z
             DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
@@ -346,10 +347,10 @@ POINT_J:       DO JZ=1,IZ
 
                      IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
 
-                     IF ( IZ > NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
-                        I = YLim
-                        IF ( JZ > NumGrid_Z ) THEN
-                           J = YLim
+                     IF ( IZ > p_grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
+                        I = p_grid%YLim
+                        IF ( JZ > p_grid%NumGrid_Z ) THEN
+                           J = p_grid%YLim
                         ELSE
                            J = JY
                         ENDIF
@@ -1106,7 +1107,6 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    !  stresses.
 
    USE                     TSMods, ONLY : p_grid
-   USE                     TSMods, ONLY : HubHt
    USE                     TSMods, ONLY : H_ref                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : RICH_NO
    USE                     TSMods, ONLY : RotorDiameter
@@ -1135,9 +1135,9 @@ use TurbSim_Types
    REAL(ReKi)                          :: Z(2)
    REAL(ReKi)                          :: ZLtmp
 
-   Z(2) = HubHt + 0.5*RotorDiameter    ! top of the grid
+   Z(2) = p_grid%HubHt + 0.5*RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
-   V(:) = getWindSpeed(UHub, HubHt, Z, RotorDiameter, PROFILE=WindProfileType)
+   V(:) = getWindSpeed(UHub, p_grid%HubHt, Z, RotorDiameter, PROFILE_TYPE=WindProfileType)
 
    Shr = ( V(2)-V(1) ) / p_grid%GridHeight    ! dv/dz
 
@@ -1171,11 +1171,11 @@ use TurbSim_Types
       CASE ( SpecModel_GP_LLJ )
 
          IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
-            IF ( HubHt >= 100.5 ) THEN     ! 116m
+            IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
                UW =  0.0399 - 0.00371*Uhub - 0.00182*RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
-            ELSEIF ( HubHt >= 76.0 ) THEN  ! 85 m
+            ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
                UW = 0.00668 - 0.00184*Uhub + 0.000709*RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
-            ELSEIF ( HubHt >= 60.5 ) THEN  ! 67 m
+            ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
                UW = -0.0216 + 0.00319*Uhub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
             ELSE                           ! 54 m
                UW = -0.0373 + 0.00675*Uhub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
@@ -1191,9 +1191,9 @@ use TurbSim_Types
 
       CASE ( SpecModel_NWTCUP )
 
-         IF ( HubHt > 47.0 ) THEN      ! 58m data
+         IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
             UW = 0.165 - 0.0232*UHub - 0.0129*RICH_NO + 1.337*Ustar2 - 0.758*SHR
-         ELSEIF ( HubHt >= 26.0 ) THEN ! 37m data
+         ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
             UW = 0.00279 - 0.00139*UHub + 1.074*Ustar2 + 0.179*SHR
          ELSE                          ! 15m data
             UW = -0.1310 + 0.0239*UHub + 0.556*Ustar2
@@ -1215,7 +1215,7 @@ use TurbSim_Types
          UWskip = .true.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
-         UW = -Ustar2*(1-HubHt/H_ref)
+         UW = -Ustar2*(1-p_grid%HubHt/H_ref)
       CASE DEFAULT
 
          UW = -Ustar2
@@ -1231,15 +1231,15 @@ use TurbSim_Types
 
       CASE ( SpecModel_GP_LLJ )
 
-         IF ( HubHt >= 100.5 ) THEN     ! 116m
+         IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
             UV = 0.199 - 0.0167*Uhub + 0.0115*ZLtmp + 1.143*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6527 ) UV = -UV
-         ELSEIF ( HubHt >= 76.0 ) THEN  ! 85 m
+         ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
             UV = 0.190 - 0.0156*Uhub + 0.00931*ZLtmp + 1.101*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6394 ) UV = -UV
-         ELSEIF ( HubHt >= 60.5 ) THEN  ! 67 m
+         ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
             UV = 0.178 - 0.0141*Uhub + 0.00709*ZLtmp + 1.072*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6326 ) UV = -UV
@@ -1252,9 +1252,9 @@ use TurbSim_Types
       CASE ( SpecModel_NWTCUP )
 
             ! Get the magnitude and add the sign
-         IF ( HubHt > 47.0 ) THEN      ! 58m data
+         IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
             UV = 0.669 - 0.0300*UHub - 0.0911*RICH_NO + 1.421*Ustar2 - 1.393*SHR
-         ELSEIF ( HubHt >= 26.0 ) THEN ! 37m data
+         ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
             UV = 1.521 - 0.00635*UHub - 0.2200*RICH_NO + 3.214*Ustar2 - 3.858*SHR
          ELSE                          ! 15m data
             UV = 0.462 - 0.01400*UHub + 1.277*Ustar2
@@ -1300,15 +1300,15 @@ use TurbSim_Types
 
       CASE ( SpecModel_GP_LLJ )
 
-         IF ( HubHt >= 100.5 ) THEN     ! 116m
+         IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
             VW =  0.0528  - 0.00210*Uhub - 0.00531*RICH_NO - 0.519*Shr + 0.283*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.2999 ) VW = -VW
-         ELSEIF ( HubHt >= 76.0 ) THEN  ! 85 m
+         ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
             VW =  0.0482  - 0.00264*Uhub - 0.00391*RICH_NO - 0.240*Shr + 0.265*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3061 ) VW = -VW
-         ELSEIF ( HubHt >= 60.5 ) THEN  ! 67 m
+         ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
             VW =  0.0444  - 0.00249*Uhub - 0.00403*RICH_NO - 0.141*Shr + 0.250*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3041 ) VW = -VW
@@ -1320,9 +1320,9 @@ use TurbSim_Types
 
       CASE ( SpecModel_NWTCUP )
 
-         IF ( HubHt > 47.0 ) THEN      ! 58m data
+         IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
             VW = 0.174 + 0.00154*UHub - 0.0270*RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
-         ELSEIF ( HubHt >= 26.0 ) THEN ! 37m data
+         ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
             VW = 0.120 + 0.00283*UHub - 0.0227*RICH_NO + 0.306*Ustar2 - 0.825*Shr
          ELSE                          ! 15m data
             VW = 0.0165 + 0.00833*UHub                 + 0.224*Ustar2
@@ -1648,7 +1648,7 @@ SELECT CASE ( SpecModel )
 END SELECT
 
 IF ( PSD_OUT ) THEN
-   !IF ( ABS(Ht - HubHt) < Tolerance ) THEN
+   !IF ( ABS(Ht - p_grid%HubHt) < Tolerance ) THEN
       WRITE( UP, FormStr ) 1, Ht, Work(:,1)
       WRITE( UP, FormStr ) 2, Ht, Work(:,2)
       WRITE( UP, FormStr ) 3, Ht, Work(:,3)
@@ -1691,40 +1691,40 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   p_grid%GridRes_Y = p_grid%GridWidth  / REAL( NumGrid_Y - 1, ReKi )
-   p_grid%GridRes_Z = p_grid%GridHeight / REAL( NumGrid_Z - 1, ReKi )      
+   p_grid%GridRes_Y = p_grid%GridWidth  / REAL( p_grid%NumGrid_Y - 1, ReKi )
+   p_grid%GridRes_Z = p_grid%GridHeight / REAL( p_grid%NumGrid_Z - 1, ReKi )      
 
-   p_grid%Zbottom = HubHt + 0.5*RotorDiameter                             ! height of the highest grid points
-   p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
+   p_grid%Zbottom = p_grid%HubHt + 0.5*RotorDiameter                             ! height of the highest grid points
+   p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(p_grid%NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
    IF ( p_grid%Zbottom <= 0.0 ) THEN
       CALL TS_Abort ( 'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
                       'Adjust the appropriate values in the input file.' )
    ENDIF
 
-   NumGrid_Y2 = INT( ( NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
-   NumGrid_Z2 = INT( Tolerance + ( HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
+   NumGrid_Y2 = INT( ( p_grid%NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
+   NumGrid_Z2 = INT( Tolerance + ( p_grid%HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
 
-   ExtraTwrPt = .FALSE.
+   p_grid%ExtraTwrPT = .FALSE.
 
-   IF ( MOD(NumGrid_Y, 2) == 0 ) THEN
-      ExtraTwrPt = .TRUE.
-      ExtraHubPt = .TRUE.
-   ELSEIF ( ABS((NumGrid_Z2-1)*p_grid%GridRes_Z + p_grid%Zbottom - HubHt) > Tolerance ) THEN
-      ExtraHubPt = .TRUE.
+   IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
+      p_grid%ExtraTwrPT = .TRUE.
+      p_grid%ExtraHubPT = .TRUE.
+   ELSEIF ( ABS((NumGrid_Z2-1)*p_grid%GridRes_Z + p_grid%Zbottom - p_grid%HubHt) > Tolerance ) THEN
+      p_grid%ExtraHubPT = .TRUE.
    ELSE
-      ExtraHubPt = .FALSE.
+      p_grid%ExtraHubPT = .FALSE.
    ENDIF
 
-   p_grid%NPoints    = NumGrid_Y*NumGrid_Z                ! Number of points in the regular grid
+   p_grid%NPoints    = p_grid%NumGrid_Y*p_grid%NumGrid_Z                ! Number of points in the regular grid
 
-   IF (ExtraHubPT) THEN
+   IF (p_grid%ExtraHubPT) THEN
       p_grid%NPoints = p_grid%NPoints + 1                           ! Add the hub point if necessary
-      ZLim = NumGrid_Z+1
-      YLim = NumGrid_Y+1
+      p_grid%ZLim = p_grid%NumGrid_Z+1
+      p_grid%YLim = p_grid%NumGrid_Y+1
    ELSE
-      ZLim = NumGrid_Z
-      YLim = NumGrid_Y
+      p_grid%ZLim = p_grid%NumGrid_Z
+      p_grid%YLim = p_grid%NumGrid_Y
    ENDIF
 
    IF ( WrADTWR ) THEN
@@ -1734,17 +1734,17 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
  
       IZ = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
 
-      IF ( ExtraTwrPt ) THEN 
+      IF ( p_grid%ExtraTwrPT ) THEN 
          IZ = IZ + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
       ENDIF
 
       IF ( IZ > 0 ) THEN
 
-         ZLim = ZLim + IZ
+         p_grid%ZLim = p_grid%ZLim + IZ
          p_grid%NPoints = p_grid%NPoints + IZ                       ! Add the number of tower points
 
-         IF ( .NOT. ExtraHubPT ) THEN
-            YLim = YLim + 1
+         IF ( .NOT. p_grid%ExtraHubPT ) THEN
+            p_grid%YLim = p_grid%YLim + 1
          ENDIF
 
       ELSE
@@ -1761,52 +1761,52 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
    NSize   = p_grid%NPoints*( p_grid%NPoints + 1 )/2   
    
    
-   CALL AllocAry(p_grid%Z,     ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%Y,     YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%IYmax, ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
+   CALL AllocAry(p_grid%Z,     p_grid%ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Y,     p_grid%YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%IYmax, p_grid%ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
 
    IF (ErrStat >= AbortErrLev) RETURN
    
       ! Initialize cartesian Y,Z values of the grid.
 
-   DO IY = 1,NumGrid_Y
+   DO IY = 1,p_grid%NumGrid_Y
       p_grid%Y(IY)    = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
    ENDDO
 
-   DO IZ = 1,NumGrid_Z
+   DO IZ = 1,p_grid%NumGrid_Z
       p_grid%Z(IZ)     = p_grid%Zbottom + p_grid%GridRes_Z*( IZ - 1 )
-      p_grid%IYmax(IZ) = NumGrid_Y           ! Number of lateral points at this height
+      p_grid%IYmax(IZ) = p_grid%NumGrid_Y           ! Number of lateral points at this height
    ENDDO
 
-   IF (ExtraHubPT) THEN
+   IF (p_grid%ExtraHubPT) THEN
 
-      p_grid%Y(NumGrid_Y+1)     = 0.0
-      p_grid%Z(NumGrid_Z+1)     = HubHt
-      p_grid%IYmax(NumGrid_Z+1) = 1
+      p_grid%Y(p_grid%NumGrid_Y+1)     = 0.0
+      p_grid%Z(p_grid%NumGrid_Z+1)     = p_grid%HubHt
+      p_grid%IYmax(p_grid%NumGrid_Z+1) = 1
 
-      p_grid%HubIndx = NumGrid_Y*NumGrid_Z + 1
+      p_grid%HubIndx = p_grid%NumGrid_Y*p_grid%NumGrid_Z + 1
 
-      FirstTwrPt = NumGrid_Z + 2              ! The start of tower points, if they exist
+      FirstTwrPt = p_grid%NumGrid_Z + 2              ! The start of tower points, if they exist
 
    ELSE
 
-      p_grid%HubIndx = NumGrid_Y*(NumGrid_Z2-1) + NumGrid_Y2
+      p_grid%HubIndx = p_grid%NumGrid_Y*(NumGrid_Z2-1) + NumGrid_Y2
 
-      FirstTwrPt = NumGrid_Z + 1              ! The start of tower points, if they exist
+      FirstTwrPt = p_grid%NumGrid_Z + 1              ! The start of tower points, if they exist
 
    ENDIF
 
    IF ( WrADTWR ) THEN
 
-      p_grid%Y(YLim) = 0.0
+      p_grid%Y(p_grid%YLim) = 0.0
    
       TmpReal  = p_grid%Z(1)
 
-      IF ( ExtraTwrPt ) THEN 
+      IF ( p_grid%ExtraTwrPT ) THEN 
          TmpReal = TmpReal + p_grid%GridRes_Z
       ENDIF
 
-      DO IZ = FirstTwrPt,ZLim
+      DO IZ = FirstTwrPt,p_grid%ZLim
          p_grid%Z(IZ)     = TmpReal - p_grid%GridRes_Z
          TmpReal   = p_grid%Z(IZ)
 
@@ -1910,7 +1910,6 @@ SUBROUTINE TimeSeriesScaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, 
    REAL(DbKi)                                      ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
    REAL(ReKi)                                      ::  UGridMean                       ! Average wind speed at a point 
    REAL(ReKi)                                      ::  UGridSig                        ! Standard deviation of the wind speed at a point 
-   REAL(ReKi)                                      ::  UGridTI                         ! Turbulent Intensity of the points surrounding the hub
    INTEGER(IntKi)                                  ::  IT                              ! loop counter (time)
    INTEGER(IntKi)                                  ::  Indx                            ! loop counter (grid point)
    INTEGER(IntKi)                                  ::  IVec                            ! loop counter (wind component)
@@ -1962,7 +1961,7 @@ SUBROUTINE CalcIECScalingParams( p_IEC )
 ! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
 ! calculates SigmaIEC, Lambda, IntegralScale, Lc
 use TurbSim_Types
-use TSMods, only: UHub, HubHt, Fc, z0, SpecModel
+use TSMods, only: UHub, p_grid, Fc, z0, SpecModel
 
    TYPE(IEC_ParameterType), INTENT(INOUT) :: p_IEC                       ! parameters for IEC models
       
@@ -2038,8 +2037,8 @@ use TSMods, only: UHub, HubHt, Fc, z0, SpecModel
    IF ( p_IEC%IECedition == 2 ) THEN  
       
          ! section 6.3.1.3 Eq. 9
-      IF ( HubHt < 30.0 )  THEN
-         p_IEC%Lambda(1) = 0.7*HubHt
+      IF ( p_grid%HubHt < 30.0 )  THEN
+         p_IEC%Lambda(1) = 0.7*p_grid%HubHt
       ELSE
          p_IEC%Lambda(1) = 21.0
       ENDIF
@@ -2050,8 +2049,8 @@ use TSMods, only: UHub, HubHt, Fc, z0, SpecModel
       
          ! section 6.3.1.3 Eq. 9      
          
-      IF ( HubHt < 60.0 )  THEN
-         p_IEC%Lambda(1) = 0.7*HubHt
+      IF ( p_grid%HubHt < 60.0 )  THEN
+         p_IEC%Lambda(1) = 0.7*p_grid%HubHt
       ELSE
          p_IEC%Lambda(1) = 42.0
       ENDIF
@@ -2063,8 +2062,8 @@ use TSMods, only: UHub, HubHt, Fc, z0, SpecModel
       ! Set Lambda for Modified von Karman model:
 
    IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
-      z0 = FindZ0(HubHt, p_IEC%SigmaIEC(1), UHub, Fc)
-      CALL ScaleMODVKM(HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
+      z0 = FindZ0(p_grid%HubHt, p_IEC%SigmaIEC(1), UHub, Fc)
+      CALL ScaleMODVKM(p_grid%HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
    ENDIF   
 
    

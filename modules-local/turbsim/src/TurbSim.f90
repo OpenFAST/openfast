@@ -110,7 +110,6 @@ REAL(ReKi)              ::  CPUtime                         ! Contains the numbe
 REAL(ReKi)              ::  DelF5                           ! half of the delta frequency, used to discretize the continuous PSD at each point
 REAL(ReKi)              ::  DelF                            ! Delta frequency
 REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
-REAL(ReKi)              ::  TargetSigma                     ! The target standard deviation for the IEC models, if scaling is requested.
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
 REAL(ReKi)              ::  TmpW                            ! Temporarily holds the value of the w component
@@ -118,6 +117,7 @@ REAL(ReKi)              ::  TmpY                            ! Temp variable for 
 REAL(ReKi)              ::  TmpZ                            ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
+
 REAL(ReKi)              ::  HorVar                          ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  ROT                             ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  Total                           ! Variables used when DEBUG_OUT is set
@@ -202,7 +202,7 @@ call WrSum_Heading1(US)
 
 !BONNIE: UPPER LIMIT ON RICH_NO?
 IF ( WrACT ) THEN
-   IF ( SpecModel == SpecModel_IECKAI .or. &
+   IF ( SpecModel == SpecModel_IECKAI .OR. &
         SpecModel == SpecModel_IECVKM .OR. &
         SpecModel == SpecModel_MODVKM .OR. &
         SpecModel == SpecModel_USER   .OR. &
@@ -231,14 +231,14 @@ ENDIF !WrAct
       ! Warn if EWM is used with incompatible times
       
 IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) .AND. & 
-      ABS( REAL(600.0,ReKi) - MAX(AnalysisTime,UsableTime) ) > REAL(90.0, ReKi) ) THEN
+      ABS( REAL(600.0,ReKi) - MAX(p_grid%AnalysisTime,UsableTime) ) > REAL(90.0, ReKi) ) THEN
    CALL TS_Warn( ' The EWM parameters are valid for 10-min simulations only.', .TRUE. )
 ENDIF        
 
 
       ! Warn if Periodic is used with incompatible settings
       
-IF ( Periodic .AND. .NOT. EqualRealNos(AnalysisTime, UsableTime) ) THEN
+IF ( Periodic .AND. .NOT. EqualRealNos(p_grid%AnalysisTime, UsableTime) ) THEN
    CALL TS_Warn( ' Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', &
                  WrSum=.TRUE.)
    Periodic = .FALSE.
@@ -359,13 +359,13 @@ ENDIF
    ! Make sure it is a multiple of 4 too.
 
 IF ( Periodic ) THEN
-   p_grid%NumSteps    = CEILING( AnalysisTime / p_grid%TimeStep )
+   p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
    NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
    p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
-   NumOutSteps = p_grid%NumSteps
+   p_grid%NumOutSteps = p_grid%NumSteps
 ELSE
-   NumOutSteps = CEILING( ( UsableTime + p_grid%GridWidth/UHub )/p_grid%TimeStep )
-   p_grid%NumSteps    = MAX( CEILING( AnalysisTime / p_grid%TimeStep ), NumOutSteps )
+   p_grid%NumOutSteps = CEILING( ( UsableTime + p_grid%GridWidth/UHub )/p_grid%TimeStep )
+   p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
    NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
    p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
 END IF
@@ -393,9 +393,9 @@ IF (DEBUG_OUT) THEN
    CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
    
    WRITE (UD,*)  'UHub=',UHub
-   WRITE (UD,*)  'NumOutSteps, NumSteps, INumSteps=', NumOutSteps, p_grid%NumSteps, INumSteps
+   WRITE (UD,*)  'NumOutSteps, NumSteps, INumSteps=', p_grid%NumOutSteps, p_grid%NumSteps, INumSteps
    
-   ROT     = 1.0/( NumGrid_Y*p_grid%TimeStep ) 
+   ROT     = 1.0/( p_grid%NumGrid_Y*p_grid%TimeStep ) 
    WRITE (UD,*)  'TimeStep,DelF,NumFreq,ROT=',p_grid%TimeStep,DelF,p_grid%NumFreq,ROT
    WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
    
@@ -425,38 +425,41 @@ ENDIF
 
 
    !  Wind speed:
-CALL AllocAry(U,     ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
+CALL AllocAry(U,     p_grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
 CALL CheckError()
-           
+
+IF ( WindProfileType(1:3) == 'API' )  THEN
+   U = getVelocityProfile( U_Ref, H_Ref, p_grid%Z, RotorDiameter, PROFILE_TYPE=WindProfileType)
+ELSE 
+   U = getVelocityProfile( UHub,  p_grid%HubHt, p_grid%Z, RotorDiameter, PROFILE_TYPE=WindProfileType) 
+ENDIF
+
+   ! Wind Direction:
 IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
-   CALL AllocAry(WindDir_profile, ZLim, 'WindDir_profile (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
+   CALL AllocAry(WindDir_profile, p_grid%ZLim, 'WindDir_profile (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
    CALL CheckError()
    
-   U(1:ZLim) = getWindSpeed( UHub,  HubHt, p_grid%Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType, UHANGLE=WindDir_profile) 
-ELSE IF ( WindProfileType(1:3) == 'API' )  THEN
-   U(1:ZLim) = getWindSpeed( U_Ref, H_Ref, p_grid%Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
-ELSE 
-   U(1:ZLim) = getWindSpeed( UHub,  HubHt, p_grid%Z(1:ZLim), RotorDiameter, PROFILE=WindProfileType)
-ENDIF
+   WindDir_profile = getDirectionProfile(p_grid%Z, WindProfileType)
+END IF
 
 IF ( SpecModel == SpecModel_GP_LLJ) THEN
 
       ! Allocate the arrays for the z/l and ustar profile
       
-   CALL AllocAry(ZL_profile,    ZLim, 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
+   CALL AllocAry(ZL_profile,    p_grid%ZLim, 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
    CALL CheckError()
-   CALL AllocAry(Ustar_profile, ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
+   CALL AllocAry(Ustar_profile, p_grid%ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
-   ZL_profile(:)    = getZLARY(    U(1:ZLim), p_grid%Z(1:ZLim) )
-   Ustar_profile(:) = getUstarARY( U(1:ZLim), p_grid%Z(1:ZLim) )
+   ZL_profile(:)    = getZLARY(    U, p_grid%Z )
+   Ustar_profile(:) = getUstarARY( U, p_grid%Z )
    
 END IF
 
 
 IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
-   IF (ExtraHubPT) THEN    
-      JZ = NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
+   IF (p_grid%ExtraHubPT) THEN    
+      JZ = p_grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
    ELSE
       JZ = NumGrid_Z2
    ENDIF
@@ -468,7 +471,7 @@ END IF
 
 
 IF (DEBUG_OUT) THEN
-   DO IZ = 1,ZLim
+   DO IZ = 1,p_grid%ZLim
       WRITE (UD,*)  p_grid%Z(IZ), U(IZ)
    ENDDO
 ENDIF
@@ -547,10 +550,10 @@ ENDIF
 
 IF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN
       ! Calculate the shear, DUDZ, for all heights.
-   ALLOCATE ( DUDZ(ZLim) , STAT=AllocStat ) ! Shear
+   ALLOCATE ( DUDZ(p_grid%ZLim) , STAT=AllocStat ) ! Shear
    DUDZ(1)=(U(2)-U(1))/(p_grid%Z(2)-p_grid%Z(1))
-   DUDZ(ZLim)=(U(ZLim)-U(ZLim-1))/(p_grid%Z(ZLim)-p_grid%Z(ZLim-1))
-   DO I = 2,ZLim-1
+   DUDZ(p_grid%ZLim)=(U(p_grid%ZLim)-U(p_grid%ZLim-1))/(p_grid%Z(p_grid%ZLim)-p_grid%Z(p_grid%ZLim-1))
+   DO I = 2,p_grid%ZLim-1
       DUDZ(I)=(U(I+1)-U(I-1))/(p_grid%Z(I+1)-p_grid%Z(I-1))
    ENDDO
 ENDIF
@@ -558,7 +561,7 @@ ENDIF
    ! Calculate the single point Power Spectral Densities. 
 
 JZ = 0   ! The index for numbering the points on the grid
-DO IZ=1,ZLim
+DO IZ=1,p_grid%ZLim
 
          ! The continuous, one-sided PSDs are evaluated at discrete
          ! points and the results are stored in the "Work" matrix.
@@ -566,7 +569,7 @@ DO IZ=1,ZLim
 
 !bonnie: fix this so the the IEC runs differently?? It doesn't need as large an array here anymore...
       IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM ) THEN
-         CALL PSDcal( HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
+         CALL PSDcal( p_grid%HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
       ELSEIF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
          !print *, Ustar
          !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
@@ -666,30 +669,18 @@ END DO
 IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)
 
 
-   !  Allocate the transfer-function matrix. 
    
-ALLOCATE ( TRH( MAX(p_grid%NumSteps,NSize) ) , STAT=AllocStat )
+CALL AllocAry( TRH, MAX(p_grid%NumSteps,NSize), 'TRH (transfer-function matrix)', ErrStat, ErrMsg) !  Allocate the transfer-function matrix.
+CALL CheckError()
 
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*MAX(p_grid%NumSteps,NSize)/1024**2 ) )// &
-                    ' MB for the temporary transfer-function matrix.' )   
-ENDIF
-
-
-   !  Allocate the array that contains the velocities.
-
-ALLOCATE ( V(p_grid%NumSteps,p_grid%NPoints,3), STAT=AllocStat )
-
-IF ( AllocStat /= 0 )  THEN
-   CALL TS_Abort ( 'Error allocating '//TRIM( Int2LStr( ReKi*p_grid%NumSteps*p_grid%NPoints*3/1024**2 ) )//' MB for velocity array.' )
-ENDIF
+CALL AllocAry( V, p_grid%NumSteps, p_grid%NPoints, 3, 'V (velocity)', ErrStat, ErrMsg) !  Allocate the array that contains the velocities.
+CALL CheckError()
 
 
    ! Calculate the transfer function matrices from the spectral matrix (the fourier coefficients).
 
 CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
-V(:,:,:) = 0.0    ! initialize the velocity matrix
 
 IF (SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (SpecModel == SpecModel_API) THEN
@@ -889,7 +880,7 @@ p_CohStr%WSig=WSig
 !  frame coordinate system
 !..............................................................................
 II = 0
-DO IZ=1,ZLim   
+DO IZ=1,p_grid%ZLim   
 
    IF ( ALLOCATED( WindDir_profile ) ) THEN  ! The horizontal flow angle changes with height
       this_HFlowAng = WindDir_profile(IZ)
@@ -955,15 +946,15 @@ IF ( WrBLFF .OR. WrADFF .OR. WrADTWR )  THEN !bjj: isn't WrADTWR redundant here?
 
       ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
 
-   IF (ExtraHubPT) THEN
+   IF (p_grid%ExtraHubPT) THEN
 
          ! Get points for bi-linear interpolation
-      ZLo_YLo   = ( NumGrid_Z2 - 1 )*NumGrid_Y + NumGrid_Y2
-      ZHi_YLo   = ( NumGrid_Z2     )*NumGrid_Y + NumGrid_Y2
-      ZLo_YHi   = ( NumGrid_Z2 - 1 )*NumGrid_Y + NumGrid_Y2 + 1
-      ZHi_YHi   = ( NumGrid_Z2     )*NumGrid_Y + NumGrid_Y2 + 1
+      ZLo_YLo   = ( NumGrid_Z2 - 1 )*p_grid%NumGrid_Y + NumGrid_Y2
+      ZHi_YLo   = ( NumGrid_Z2     )*p_grid%NumGrid_Y + NumGrid_Y2
+      ZLo_YHi   = ( NumGrid_Z2 - 1 )*p_grid%NumGrid_Y + NumGrid_Y2 + 1
+      ZHi_YHi   = ( NumGrid_Z2     )*p_grid%NumGrid_Y + NumGrid_Y2 + 1
     
-      TmpZ      = (HubHt - p_grid%Z(NumGrid_Z2))/p_grid%GridRes_Z
+      TmpZ      = (p_grid%HubHt - p_grid%Z(NumGrid_Z2))/p_grid%GridRes_Z
       TmpY      = ( 0.0  - p_grid%Y(NumGrid_Y2))/p_grid%GridRes_Y
       CGridSum  = 0.0
       CGridSum2 = 0.0

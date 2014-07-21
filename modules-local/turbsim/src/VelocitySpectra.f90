@@ -35,7 +35,7 @@ CONTAINS
 SUBROUTINE Spec_IECKAI ( SigmaIEC, L_K, Spec )
 
 
-USE                     TSMods, ONLY: HubHt, Uhub, p_grid
+USE                     TSMods, ONLY: Uhub, p_grid
 
 IMPLICIT                NONE
 
@@ -48,7 +48,6 @@ REAL(ReKi),INTENT(INOUT) :: Spec     (:,:)            !<  Output: target spectru
    ! Internal variables
 
 REAL(ReKi),PARAMETER  :: Exp1    = 5.0/3.0
-REAL(ReKi)            :: LambdaU
 
 REAL(ReKi)            :: L_over_U      (3)
 REAL(ReKi)            :: SigmaLU (3)
