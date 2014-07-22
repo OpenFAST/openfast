@@ -49,14 +49,12 @@ CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
    ! Local variables
 
 REAL(ReKi)        :: InCVar     (2)  ! Contains the coherence parameters (used for input)
-REAL(ReKi)        :: RefHt           ! Height for reference wind speed.
 REAL(ReKi)        :: tmp             ! variable for estimating Ustar
 REAL(ReKi)        :: TmpUary (3)     !Temporary vector to store windSpeed(z) values
 REAL(ReKi)        :: TmpUstar(3)     !Temporary vector to store ustar(z) values
 REAL(ReKi)        :: TmpUstarD       !Temporary ustarD value
 REAL(ReKi)        :: TmpZary (3)     !Temporary vector to store height(z) values
 REAL(ReKi)        :: TmpZLary(3)     !Temporary vector to store zL(z) values
-REAL(ReKi)        :: URef            ! Wind speed at the reference height.
 
 INTEGER           :: IOS             ! I/O status
 INTEGER           :: TmpIndex        ! Contains the index number when searching for substrings
@@ -95,18 +93,14 @@ CALL WrScr1(' Reading the input file "'//TRIM(InFile)//'".' )
    ! Read the runtime options.
    !==========================================================
 
-WRITE (US,"( / 'Runtime Options:' / )")
 CALL ReadCom( UI, InFile, "File Heading Line 1" )
 CALL ReadCom( UI, InFile, "File Heading Line 2" )
 CALL ReadCom( UI, InFile, "Runtime Options Heading" )
-!READ (UI,'(//)')
 
 
    ! ---------- Read Random seed 1 -----------------------
 
 CALL ReadVar( UI, InFile, p_RandNum%RandSeed(1), "RandSeed(1)", "Random seed #1")
-
-WRITE (US,"( I10 , 2X , 'Random seed #1' )")  p_RandNum%RandSeed(1)
 
 
    ! ---------- Read Random seed 2 -----------------------
@@ -127,7 +121,6 @@ CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
 
    IF (IOS == 0) THEN
 
-      WRITE (US,"( I10 , 2X , 'Random seed #2' )")  p_RandNum%RandSeed(2)
       p_RandNum%RNG_type = "NORMAL"
       p_RandNum%pRNG = pRNG_INTRINSIC
 
@@ -144,8 +137,6 @@ CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
          CALL TS_Abort( 'Invalid alternative random number generator.' )
       ENDIF
 
-      WRITE (US,"( 4X, A6, 2X, 'Type of random number generator' )")  p_RandNum%RNG_type
-
    ENDIF
 
    ! Initialize the RNG (for computing "default" values that contain random variates)
@@ -157,84 +148,62 @@ CALL RandNum_Init(p_RandNum, OtherSt_RandNum, ErrStat, ErrMsg)
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_BIN), "WrBHHTP", "Output binary HH turbulence parameters? [RootName.bin]")
 
-WRITE (US,"( L10 , 2X , 'Output binary HH turbulence parameters?' )")  WrFile(FileExt_BIN)
-
 
    ! --------- Read the flag for writing the formatted turbulence parameters. ----------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_DAT), "WrFHHTP", "Output formatted turbulence parameters? [RootName.dat]")
 
-WRITE (US,"( L10 , 2X , 'Output formatted turbulence parameters?' )")  WrFile(FileExt_DAT)
 
 
    ! ---------- Read the flag for writing the AeroDyn HH files. -------------------------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_HH), "WrADHH", "Output AeroDyn HH files? [RootName.hh]")
 
-WRITE (US,"( L10 , 2X , 'Output AeroDyn HH files?' )")  WrFile(FileExt_HH)
 
    ! ---------- Read the flag for writing the AeroDyn FF files. ---------------------------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_BTS), "WrADFF", "Output AeroDyn FF files? [RootName.bts]")
 
-WRITE (US,"( L10 , 2X , 'Output AeroDyn FF files?' )")  WrFile(FileExt_BTS)
 
    ! ---------- Read the flag for writing the BLADED FF files. -----------------------------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_WND) , "WrBLFF", "Output BLADED FF files? [RootName.wnd]")
 
-WRITE (US,"( L10 , 2X , 'Output BLADED FF files?' )")  WrFile(FileExt_WND)
 
 
    ! ---------- Read the flag for writing the AeroDyn tower files. --------------------------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_TWR), "WrADTWR", "Output tower data? [RootName.twr]")
 
-WRITE (US,"( L10 , 2X , 'Output tower data?' )")  WrFile(FileExt_TWR)
 
    ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_UVW), "WrFMTFF", "Output formatted FF files? [RootName.u, .v, .w]")
 
-WRITE (US,"( L10 , 2X , 'Output formatted FF files?' )")  WrFile(FileExt_UVW)
 
 
    ! ---------- Read the flag for writing coherent time series files. --------------------------------------
 
 CALL ReadVar( UI, InFile, WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]")
 
-WRITE (US,"( L10 , 2X , 'Output coherent turbulence time step file?' )")  WrFile(FileExt_CTS)
 
 
    ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
 
 CALL ReadVar( UI, InFile, Clockwise, "Clockwise", "Clockwise rotation when looking downwind?")
 
-WRITE (US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )")  Clockwise
 
    ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
 CALL ReadVar( UI, InFile, p_IEC%ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
                "Scale IEC turbulence models to specified standard deviation?")
 
-FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specified standard deviation' )"
-   SELECT CASE ( p_IEC%ScaleIEC )
-      CASE (0)
-         WRITE (US,FormStr)  p_IEC%ScaleIEC, "NONE"
-      CASE (1, -1)   ! included the -1 for reading t/f on other systems
-         WRITE (US,FormStr)  p_IEC%ScaleIEC, "HUB"
-         p_IEC%ScaleIEC = 1;
-      CASE (2)
-         WRITE (US,FormStr)  p_IEC%ScaleIEC, "ALL"
-      CASE DEFAULT
-         CALL TS_Abort ( 'The value for parameter ScaleIEC must be 0, 1, or 2.' )
-   ENDSELECT
+   IF ( p_IEC%ScaleIEC > 2 .OR. p_IEC%ScaleIEC < 0 ) CALL TS_Abort ( 'The value for parameter ScaleIEC must be 0, 1, or 2.' )
 
 
    !==================================================================================
    ! Read the turbine/model specifications.
    !===================================================================================
 
-WRITE (US,"( // 'Turbine/Model Specifications:' / )")
 CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 1" )
 CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
 !READ (UI,'(/)')
@@ -248,8 +217,6 @@ CALL ReadVar( UI, InFile, p_grid%NumGrid_Z, "NumGrid_Z", "Vertical grid-point ma
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
    ENDIF
 
-WRITE (US,"( I10 , 2X , 'Vertical grid-point matrix dimension' )")  p_grid%NumGrid_Z
-
 
    ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
 
@@ -259,7 +226,6 @@ CALL ReadVar( UI, InFile, p_grid%NumGrid_Y, "NumGrid_Y", "Horizontal grid-point 
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
    ENDIF
 
-WRITE (US,"( I10 , 2X , 'Horizontal grid-point matrix dimension' )")  p_grid%NumGrid_Y
 
 
    ! ------------ Read in the time step. ---------------------------------------------
@@ -270,7 +236,6 @@ CALL ReadVar( UI, InFile, p_grid%TimeStep, "TimeStep", "Time step [seconds]")
       CALL TS_Abort ( 'The time step must be greater than zero.' )
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Time step [seconds]' )")  p_grid%TimeStep
 
 
    ! ------------ Read in the analysis time. ---------------------------------------------
@@ -281,7 +246,6 @@ CALL ReadVar( UI, InFile, p_grid%AnalysisTime, "AnalysisTime", "Analysis time [s
       CALL TS_Abort ( 'The analysis time must be greater than zero.' )
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Analysis time [seconds]' )")  p_grid%AnalysisTime
 
 
    ! ------------ Read in the usable time. ---------------------------------------------
@@ -306,9 +270,6 @@ CALL ReadVar( UI, InFile, Line, "UsableTime", "Usable output time [seconds]")
    END IF
    
 
-WRITE (US,"( F10.3 , 2X , 'Usable output time [seconds]' )")  p_grid%UsableTime
-
-
    ! ------------ Read in the hub height. ---------------------------------------------
 
 CALL ReadVar( UI, InFile, p_grid%HubHt, "HubHt", "Hub height [m]")
@@ -317,7 +278,6 @@ CALL ReadVar( UI, InFile, p_grid%HubHt, "HubHt", "Hub height [m]")
       CALL TS_Abort ( 'The hub height must be greater than zero.' )
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Hub height [m]' )")  p_grid%HubHt
 
 
    ! ------------ Read in the grid height. ---------------------------------------------
@@ -328,7 +288,6 @@ CALL ReadVar( UI, InFile, p_grid%GridHeight, "GridHeight", "Grid height [m]")
       CALL TS_Abort( 'The hub must be higher than half of the grid height.')
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Grid height [m]' )")  p_grid%GridHeight
 
 
    ! ------------ Read in the grid width. ---------------------------------------------
@@ -339,7 +298,6 @@ CALL ReadVar( UI, InFile, p_grid%GridWidth, "GridWidth", "Grid width [m]")
       CALL TS_Abort ( 'The grid width must be greater than zero.' )
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Grid width [m]' )")  p_grid%GridWidth
 
 
    ! ***** Calculate the diameter of the rotor disk *****
@@ -355,21 +313,18 @@ CALL ReadVar( UI, InFile, VFlowAng, "tVFlowAng", "Vertical flow angle [degrees]"
       CALL TS_Abort ( 'The vertical flow angle must not exceed +/- 45 degrees.' )
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Vertical flow angle [degrees]' )")  VFlowAng
 
 
    ! ------------ Read in the horizontal flow angle. ---------------------------------------------
 
 CALL ReadVar( UI, InFile, HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]")
 
-WRITE (US,"( F10.3 , 2X , 'Horizontal flow angle [degrees]' )")  HFlowAng
 
 
    !==========================================================
    ! Read the meteorological boundary conditions.
    !==========================================================
 
-WRITE (US,"( // 'Meteorological Boundary Conditions:' / )")
 CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 1" )
 CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2" )
 
@@ -436,13 +391,12 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
       END SELECT  ! TurbModel
       IF (ErrStat >= AbortErrLev) RETURN
 
-WRITE (US, "( 4X , A6 , 2X , '"//TRIM( TMName )//" spectral model' )")  TurbModel
 
    ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
 
 CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the IEC standard")
 
-   IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_API ) THEN  !bjj: SpecModel==SpecModel_MODVKM is not in the IEC standard
+   IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_API .OR. SpecModel==SpecModel_MODVKM ) THEN  !bjj: SpecModel==SpecModel_MODVKM is not in the IEC standard
 
       CALL Conv2UC( LINE )
 
@@ -511,45 +465,14 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
 
       END SELECT
 
-      WRITE (US,"( 7X, I3, 2X, 'IEC standard: ', A )")  p_IEC%IECstandard, TRIM(IECeditionSTR(p_IEC%IECedition))
-
    ELSE ! NOT IEC
       p_IEC%IECstandard = 0
       p_IEC%IECedition  = 0
-      
-      WRITE (US,"( 7X, A3, 2X, 'IEC standard' )")  'N/A'
-
    ENDIF ! IEC
-
 
    ! ------------ Read in the IEC turbulence characteristic. ---------------------------------------------
 
 CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbulence characteristic")
-!!$! -- begin block --
-!!$! This block reads turbulence intensity, and stores it in the variable TurbIntH20.  This variable is not currently used, but will be soon for user-specified turbulence intensity for the HYDRO spectral models.
-!!$! This code is copied from TurbSim.f90
-!!$READ (Line,*,IOSTAT=IOS)  PerTurbInt ! This is to read the
-!!$IECTurbC = ADJUSTL( Line )
-!!$IF ( IOS /= 0 ) THEN
-!!$   CALL Conv2UC(IECTurbC)
-!!$   IF ( IECTurbC == 'A' ) THEN
-!!$      TurbIntH20  = 0.16
-!!$   ELSEIF ( IECTurbC == 'B' ) THEN
-!!$      TurbIntH20  = 0.14
-!!$   ELSEIF ( IECTurbC == 'C' ) THEN
-!!$      TurbIntH20  = 0.12
-!!$   ELSEIF ( IECTurbC == 'K' ) THEN
-!!$      TurbIntH20  = 0.16
-!!$   ELSE   ! We should never get here, but just to be complete...
-!!$      !print *, IECTurbC
-!!$      CALL TS_Abort( ' Invalid IEC turbulence characteristic.' )
-!!$   ENDIF
-!!$ELSE
-!!$   TurbIntH20 = 0.01*PerTurbInt
-!!$ENDIF
-!!$! -- end block --
-
-
 
    IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
 
@@ -569,8 +492,8 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
          ! Let's use turbulence value.
 
-         p_IEC%NumTurbInp = .TRUE.
-         WRITE (US,"( F10.3 , 2X , 'Percent turbulence intensity, ', A )")  p_IEC%PerTurbInt, TRIM(IECeditionSTR(p_IEC%IECedition))
+         p_IEC%NumTurbInp = .TRUE.         
+         p_IEC%IECTurbC = ""
 
       ELSE
 
@@ -597,9 +520,9 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
                CALL TS_Abort ( 'The IEC turbulence characteristic must be either "A", "B", "C", or a real number.' )
          END SELECT  ! IECTurbC
 
-         WRITE (US,"( 9X , A1 , 2X , 'IEC turbulence characteristic' )")  p_IEC%IECTurbC
-
       ENDIF
+      
+      KHtest = .FALSE.
 
    ELSE  !not IECKAI and not IECVKM and not MODVKM
 
@@ -608,8 +531,6 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
       IF ( Line(1:6) == 'KHTEST' ) THEN
          KHtest = .TRUE.
-         WRITE (US,"( 4X, A6, 2X, 'Kelvin-Helmholtz billow test case' )")  'KHTEST'
-
 
          IF ( SpecModel /= SpecModel_NWTCUP ) THEN
             CALL TS_Abort( 'The KH test can be used with the "NWTCUP" spectral model only.' )
@@ -621,23 +542,24 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
          ENDIF
 
       ELSE
-         WRITE (US,"( 7X, A3, 2X, 'IEC turbulence characteristic' )")  'N/A'
+         KHtest = .FALSE.
       ENDIF
 
 
          ! These variables are not used for non-IEC turbulence
 
       p_IEC%IECedition = 0
-      p_IEC%NumTurbInp = .TRUE.
+      p_IEC%NumTurbInp = .FALSE.
       p_IEC%PerTurbInt = 0.0
 
    ENDIF
 
+   
    ! ------------ Read in the IEC wind turbulence type ---------------------------------------------
 
 CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type")
 
-   IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_API ) THEN
+   IF ( SpecModel == SpecModel_IECKAI .OR. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_API ) THEN
 
       CALL Conv2UC( Line )
 
@@ -700,12 +622,8 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
 
       ENDIF
 
-      WRITE (US,"( 4X, A6 , 2X , 'IEC ', A )")  TRIM(p_IEC%IECTurbE)//TRIM(Line), TRIM(p_IEC%IEC_WindDesc)
-
    ELSE
       p_IEC%IEC_WindType = IEC_NTM
-      
-      WRITE (US,"( A10 , 2X , 'IEC turbulence type' )")  'N/A'
    ENDIF
 
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
@@ -718,6 +636,7 @@ CALL ReadRVarDefault( UI, InFile, p_IEC%ETMc, "the ETM c parameter", 'IEC Extrem
       CALL TS_Abort('The ETM "c" parameter must be a positive number');
    ENDIF
 
+   
    ! ------------ Read in the wind profile type -----------------------------------------------------------------
 
 UseDefault = .TRUE.         ! Calculate the default value
@@ -764,13 +683,13 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
 
    IF ( SpecModel == SpecModel_TIDAL .AND. TRIM(WindProfileType) /= "H2L" ) THEN
       WindProfileType = 'H2L'
-      CALL TS_Warn  ( 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', .TRUE.)
+      CALL TS_Warn  ( 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', -1)
    ENDIF
 
    IF ( KHTest ) THEN
       IF ( TRIM(WindProfileType) /= 'IEC' .AND. TRIM(WindProfileType) /= 'PL' ) THEN
          WindProfileType = 'IEC'
-         CALL TS_Warn  ( 'Overwriting wind profile type for the KH test.', .FALSE.)
+         CALL TS_Warn  ( 'Overwriting wind profile type for the KH test.', -1)
       ENDIF
    ENDIF
 
@@ -783,8 +702,6 @@ CALL ReadVar( UI, InFile, RefHt, "the reference height", "Reference height [m]")
       CALL TS_Abort ( 'The reference height must be greater than zero.' )
    ENDIF
 
-WRITE (US,"( F10.3 , 2X , 'Reference height [m]' )")  RefHt
-H_ref = RefHt ! Define the variable H_ref, for later use in HYDRO spectral models (RefHt gets modified later in the code)
 
    ! ------------ Read in the reference wind speed. -----------------------------------------------------
 
@@ -805,21 +722,14 @@ URef       = -999.9
          CALL TS_Abort ( 'The reference wind speed must be greater than zero.' )
       ENDIF
 
-   ELSEIF ( WindProfileType(1:1) == 'U' ) THEN
+   ELSEIF ( WindProfileType(1:1) == 'U' ) THEN ! for user-defined wind profiles, we overwrite RefHt and URef because they don't mean anything otherwise
       RefHt = p_grid%HubHt
       CALL GetUSR( UI, InFile, 37, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
       IF (ErrStat >= AbortErrLev) RETURN
       URef = getWindSpeed(URef, RefHt, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
-
-      ! We need to save the reference wind speed for the API model.
-
-   IF ( WindProfileType(1:3) == 'API' )  THEN
-      U_Ref = URef
-   END IF
-
-
+   
    ! ------------ Read in the jet height -------------------------------------------------------------
 
 UseDefault = .FALSE.
@@ -854,7 +764,7 @@ END SELECT
 getPLExp = .NOT. UseDefault
 
 CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law exponent", US, UseDefault, &
-               IGNORE=( ((INDEX( 'JLUH', WindProfileType(1:1) ) > 0.)) .OR. &
+               IGNORE=( ((INDEX( 'JLUHA', WindProfileType(1:1) ) > 0.)) .OR. &
                          p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) )
 
    IF ( .NOT. UseDefault ) THEN  ! We didn't use a default (we entered a number on the line)
@@ -863,7 +773,7 @@ CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law ex
       IF ( KHtest ) THEN
          IF ( PLExp /= 0.3 ) THEN
             PLExp = 0.3
-            CALL TS_Warn  ( 'Overwriting the power law exponent for KH test.', .FALSE. )
+            CALL TS_Warn  ( 'Overwriting the power law exponent for KH test.', -1 )
          ENDIF
       ENDIF
    ENDIF
@@ -896,14 +806,14 @@ CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness
       CALL TS_Abort ( 'The surface roughness length must be a positive number or "default".')
    ENDIF
 
-
+      
+   
    !=================================================================================
    ! Read the meteorological boundary conditions for non-IEC models. !
    !=================================================================================
 
 IF ( SpecModel /= SpecModel_IECKAI .AND. SpecModel /= SpecModel_IECVKM .AND. SpecModel /= SpecModel_API ) THEN  ! Modified by Y.Guo
 
-   WRITE (US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1" )
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2" )
 
@@ -929,6 +839,9 @@ ELSE
 
 ENDIF    ! Not IECKAI and Not IECVKM
 
+
+
+
 IF ( SpecModel /= SpecModel_IECKAI .AND. &
      SpecModel /= SpecModel_IECVKM .AND. &
      SpecModel /= SpecModel_MODVKM .AND. &
@@ -942,23 +855,17 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
    IF ( KHtest ) THEN
       IF ( RICH_NO /= 0.02 ) THEN
          RICH_NO = 0.02
-         CALL TS_Warn ( 'Overwriting the Richardson Number for KH test.', .FALSE. )
+         CALL TS_Warn ( 'Overwriting the Richardson Number for KH test.', -1 )
       ENDIF
    ENDIF
 
    IF ( SpecModel == SpecModel_USER .OR. SpecModel == SpecModel_USRVKM ) THEN
       IF ( RICH_NO /= 0.0 ) THEN
          RICH_NO = 0.0
-         CALL TS_Warn ( 'Overwriting the Richardson Number for the '//TRIM(TurbModel)//' model.', .FALSE. )
+         CALL TS_Warn ( 'Overwriting the Richardson Number for the '//TRIM(TurbModel)//' model.', -1 )
       ENDIF
    ENDIF
 
-   IF ( SpecModel == SpecModel_TIDAL ) THEN
-      WRITE (US,"( A10, 2X, A )")  "N/A", 'Gradient Richardson number'
-      RICH_NO = 0
-   ELSE
-      WRITE (US,"( F10.3 , 2X , 'Gradient Richardson number' )")  RICH_NO
-   END IF
 
       ! ***** Calculate M-O z/L parameter   :  z/L is a number in (-inf, 1] *****
 
@@ -1252,7 +1159,6 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    IF ( WrFile(FileExt_CTS) ) THEN
 
-      WRITE (US,"( // 'Coherent Turbulence Scaling Parameters:' / )")
       CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 1" )
       CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 2" )
 
@@ -1260,14 +1166,6 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
 
       CALL ReadVar( UI, InFile, p_CohStr%CTEventPath, "the path of the coherent turbulence events", "Coherence events path")
-
-      IF ( LEN( TRIM(p_CohStr%CTEventPath) ) <= 10 )  THEN
-         FormStr = "( A10 , 2X , 'Name of the path containing the coherent turbulence data files' )"
-      ELSE
-         FormStr = "( A, /, 12X , 'Name of the path containing the coherent turbulence data files' )"
-      ENDIF
-
-      WRITE (US,FormStr)  TRIM(p_CohStr%CTEventPath)
 
       CALL ReadVar( UI, InFile, Line, "the event file type", "Event file type")
 
@@ -1299,8 +1197,6 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
       ENDIF
 
-      WRITE (US,"( 7X, A3, 2X, 'Type of coherent turbulence data files' )") TRIM(p_CohStr%CText)
-
 
          ! ------------ Read the Randomization Flag, Randomize -----------------------------------
 
@@ -1312,7 +1208,6 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          CALL WrScr( ' Billow will cover rotor disk for KH test. ' )
       ENDIF
 
-      WRITE (US,"( L10 , 2X , 'Randomize the disturbance scale and location?' )")  Randomize
 
 
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
@@ -1376,17 +1271,11 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ENDIF
 
 
-      WRITE (US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")  p_CohStr%DistScl
-      WRITE (US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")  p_CohStr%CTLy
-      WRITE (US,"( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )")  p_CohStr%CTLz
-
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
 
       CALL ReadVar( UI, InFile, p_CohStr%CTStartTime, "the minimum start time for coherent structures", "CTS Start Time")
 
       p_CohStr%CTStartTime = MAX( p_CohStr%CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
-
-      WRITE (US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")  p_CohStr%CTStartTime
 
    ENDIF    ! WrFile(FileExt_CTS)
 
@@ -1396,6 +1285,8 @@ ELSE  ! IECVKM or IECKAI models
    RICH_NO = 0.0                       ! Richardson Number in neutral conditions
    COHEXP  = 0.0                       ! Coherence exponent
 
+   
+   
    IF ( p_IEC%IECedition == 3 ) THEN
       IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
    ELSE
@@ -1413,6 +1304,11 @@ ELSE  ! IECVKM or IECKAI models
    PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
    PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
 
+   UWskip  = .TRUE.
+   UVskip  = .TRUE.
+   VWskip  = .TRUE.
+   
+   
    IF ( p_IEC%NumTurbInp .AND. p_IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
       TurbModel = 'NONE'
       SpecModel = SpecModel_NONE
@@ -1833,7 +1729,7 @@ CONTAINS
 END SUBROUTINE GetUSRSpec
 
 !=======================================================================
-SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, US, Def, IGNORE )
+SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEch, Def, IGNORE )
 
 
       ! This routine reads a single character variable from the next line of the input file.
@@ -1843,7 +1739,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, US, Def, IGN
 
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: US                                              ! I/O unit for echo/summary file.
+   INTEGER, INTENT(IN)          :: UnEch                                           ! I/O unit for echo/summary file.
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether to ignore this input
@@ -1856,15 +1752,11 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, US, Def, IGN
 
       ! Local declarations:
 
-!  CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
-   CHARACTER(38)                :: Frmt = "( A10, 2X, A )"                         ! Output format for real parameters
-
 
    CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr )
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
-         WRITE (US,Frmt)  "N/A", VarDescr
          Def = .TRUE.
          RETURN
       ENDIF
@@ -1876,21 +1768,11 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, US, Def, IGN
    IF ( TRIM(CharLine) == 'DEFAULT' ) THEN
 
       CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
-
-      IF ( Def ) THEN  ! use the value as a default
-         WRITE (US,Frmt)  CharVar, VarDescr
-      ELSE
-         WRITE (US,Frmt)  "CALCULATED", VarDescr
-      ENDIF
-
       Def = .TRUE.
 
    ELSE
 
       CharVar = CharLine
-
-      WRITE (US,Frmt)  CharVar, VarDescr
-
       Def = .FALSE.
 
    ENDIF
@@ -1898,7 +1780,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, US, Def, IGN
    RETURN
 END SUBROUTINE ReadCVarDefault ! ( UnIn, Fil, RealVar, VarName, VarDescr )
 !=======================================================================
-SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGNORE )
+SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEch, Def, IGNORE )
 
       ! This routine reads a real array from the next line of the input file.
       ! The input is allowed to be "default"
@@ -1908,7 +1790,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGN
    REAL(ReKi), INTENT(INOUT)    :: RealAry (:)                                     ! Real variable being read.
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: US                                              ! I/O unit for echo/summary file.
+   INTEGER, INTENT(IN)          :: UnEch                                           ! I/O unit for echo/summary file.
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
@@ -1922,18 +1804,11 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGN
 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
 
-!  CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
-   CHARACTER(38)                :: Frmt = "( F10.3, 2X, , A )"                     ! Output format for real parameters
-
-   WRITE(Frmt,"(I2)") SIZE(RealAry)-1
-
-   Frmt = "( '(',F9.3,"//TRIM(Frmt)//"(',',G10.3),')',2X , A )"
 
    CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr ) !Maybe I should read this in explicitly...
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
-         WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
          Def = .TRUE.
          RETURN
       ENDIF
@@ -1945,13 +1820,6 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGN
    IF ( TRIM(CharLine) == 'DEFAULT' ) THEN
 
       CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
-
-      IF ( Def ) THEN  ! use the value as a default
-         WRITE (US,Frmt)  RealAry, VarDescr
-      ELSE
-         WRITE (US,"( A10, 2X, A )")  "CALCULATED", VarDescr
-      ENDIF
-
       Def = .TRUE.
 
    ELSE
@@ -1967,9 +1835,6 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGN
       ENDIF
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType )
-
-      WRITE (US,Frmt)  RealAry, VarDescr
-
       Def = .FALSE.
 
    ENDIF
@@ -1979,7 +1844,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, US, Def, IGN
 
 END SUBROUTINE ReadRAryDefault
 !=======================================================================
-SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGNORE, IGNORESTR )
+SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEch, Def, IGNORE, IGNORESTR )
 
       ! This routine reads a single real variable from the next line of the input file.
       ! The input is allowed to be "default"
@@ -1989,7 +1854,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGN
    REAL(ReKi), INTENT(INOUT)    :: RealVar                                         ! Real variable being read.
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: US                                              ! I/O unit for echo/summary file.
+   INTEGER, INTENT(IN)          :: UnEch                                           ! I/O unit for echo/summary file.
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
@@ -2004,16 +1869,12 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGN
 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
 
-!  CHARACTER(38)                :: Frmt = "( 2X, ES11.4e2, 2X, A, T30, ' - ', A )" ! Output format for real parameters
-   CHARACTER(38)                :: Frmt = "( F10.3, 2X, A )"                       ! Output format for real parameters
-
 
    CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr )
 
    IF ( PRESENT(IGNORE) ) THEN
 
       IF ( IGNORE ) THEN
-         WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
          Def = .TRUE.
          RETURN
       ENDIF
@@ -2026,7 +1887,6 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGN
    IF ( PRESENT(IGNORESTR) ) THEN
       IF ( TRIM( CharLine ) == 'NONE' ) THEN
          IGNORESTR = .TRUE.
-         WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
          Def = .TRUE.
          RealVar = 0.0  ! This is set for the Reynolds stress inputs, but if IGNORESTR is used for other inputs, it may need to be changed
          RETURN
@@ -2039,16 +1899,9 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGN
 
       IF ( PRESENT(IGNORESTR) ) THEN
          IF ( IGNORESTR ) THEN  !We've told it to ignore this input, by default
-            WRITE (US,"( A10, 2X, A )")  "N/A", VarDescr
             RealVar = 0.0  ! This is set for the Reynolds stress inputs, but if IGNORESTR is used for other inputs, it may need to be changed
             RETURN
          ENDIF
-      ENDIF
-
-      IF ( Def ) THEN  ! use the value as a default
-         WRITE (US,Frmt)  RealVar, VarDescr
-      ELSE
-         WRITE (US,"( A10, 2X, A )")  "CALCULATED", VarDescr
       ENDIF
 
       Def = .TRUE.
@@ -2062,8 +1915,6 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGN
       READ (CharLine,*,IOSTAT=IOS)  RealVar
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType )
-
-      WRITE (US,Frmt)  RealVar, VarDescr
 
       Def = .FALSE.
 
@@ -2622,7 +2473,7 @@ INTEGER                      :: UFFF                                     ! I/O u
 END SUBROUTINE WrFormattedFF
 !=======================================================================
 
-SUBROUTINE WrSum_Heading1( US  )
+SUBROUTINE WrSum_UserInput( US  )
 
 
 USE TSMods, only: NumUSRz
@@ -2662,7 +2513,7 @@ USE TSMods, only: L_USR
    
    ENDIF
 
-END SUBROUTINE WrSum_Heading1
+END SUBROUTINE WrSum_UserInput
 !=======================================================================
 SUBROUTINE WrSum_SpecModel(US, p_IEC, GridVertCenter )
 
@@ -2815,7 +2666,7 @@ SELECT CASE ( TRIM(WindProfileType) )
       
       IF ( UTmp < UJetMax ) THEN
          CALL TS_Warn( 'The computed jet wind speed is larger than the ' &
-                     //'maximum observed jet wind speed at this height.', .FALSE. )
+                     //'maximum observed jet wind speed at this height.', -1 )
       ENDIF            
                     
    CASE ('LOG','L')
@@ -3621,6 +3472,219 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
 END SUBROUTINE WrSum_Stats
 !=======================================================================
+
+SUBROUTINE WrSum_EchoInputs()
+
+use TSMods
+
+   INTEGER                      :: I          ! loop counter
+   CHARACTER(10)                :: TmpStr     ! temporary string used to write output to summary file
+
+
+
+!..................................................................................................................................
+   WRITE (US,"( / 'Runtime Options:' / )")
+   WRITE (US,"( I10 , 2X , 'Random seed #1' )"                            )  p_RandNum%RandSeed(1)
+   
+   IF (p_RandNum%pRNG == pRNG_INTRINSIC) THEN
+      WRITE (US,"( I10 , 2X , 'Random seed #2' )"                         )  p_RandNum%RandSeed(2)
+   ELSE
+      WRITE (US,"( 4X, A6, 2X, 'Type of random number generator' )"       )  p_RandNum%RNG_type
+   ENDIF
+      
+   WRITE (US,"( L10 , 2X , 'Output binary HH turbulence parameters?' )"   )  WrFile(FileExt_BIN)
+   WRITE (US,"( L10 , 2X , 'Output formatted turbulence parameters?' )"   )  WrFile(FileExt_DAT)
+   WRITE (US,"( L10 , 2X , 'Output AeroDyn HH files?' )"                  )  WrFile(FileExt_HH)
+   WRITE (US,"( L10 , 2X , 'Output AeroDyn FF files?' )"                  )  WrFile(FileExt_BTS)
+   WRITE (US,"( L10 , 2X , 'Output BLADED FF files?' )"                   )  WrFile(FileExt_WND)
+   WRITE (US,"( L10 , 2X , 'Output tower data?' )"                        )  WrFile(FileExt_TWR)
+   WRITE (US,"( L10 , 2X , 'Output formatted FF files?' )"                )  WrFile(FileExt_UVW)
+   WRITE (US,"( L10 , 2X , 'Output coherent turbulence time step file?' )")  WrFile(FileExt_CTS)
+   WRITE (US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )" )  Clockwise   
+   
+   SELECT CASE ( p_IEC%ScaleIEC )
+      CASE (0)
+         TmpStr= "NONE"
+      CASE (1, -1)   ! included the -1 for reading t/f on other systems
+         TmpStr = "HUB"
+      CASE (2)
+         TmpStr = "ALL"
+   ENDSELECT   
+   
+   WRITE (US,"( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specified standard deviation' )")  p_IEC%ScaleIEC, TRIM(TmpStr)
+   
+   
+!..................................................................................................................................
+   WRITE (US,"( // 'Turbine/Model Specifications:' / )")
+   WRITE (US,"( I10   , 2X , 'Vertical grid-point matrix dimension' )"  )  p_grid%NumGrid_Z
+   WRITE (US,"( I10   , 2X , 'Horizontal grid-point matrix dimension' )")  p_grid%NumGrid_Y
+   WRITE (US,"( F10.3 , 2X , 'Time step [seconds]' )"                   )  p_grid%TimeStep
+   WRITE (US,"( F10.3 , 2X , 'Analysis time [seconds]' )"               )  p_grid%AnalysisTime
+   WRITE (US,"( F10.3 , 2X , 'Usable output time [seconds]' )"          )  p_grid%UsableTime
+   WRITE (US,"( F10.3 , 2X , 'Hub height [m]' )"                        )  p_grid%HubHt  
+   WRITE (US,"( F10.3 , 2X , 'Grid height [m]' )"                       )  p_grid%GridHeight
+   WRITE (US,"( F10.3 , 2X , 'Grid width [m]' )"                        )  p_grid%GridWidth
+   WRITE (US,"( F10.3 , 2X , 'Vertical flow angle [degrees]' )"         )  VFlowAng
+   WRITE (US,"( F10.3 , 2X , 'Horizontal flow angle [degrees]' )"       )  HFlowAng
+   
+
+!..................................................................................................................................
+   WRITE (US,"( // 'Meteorological Boundary Conditions:' / )")
+   WRITE (US, "( 4X , A6 , 2X , '"//TRIM( TMName )//" spectral model' )")  TurbModel
+   IF (p_IEC%IECstandard > 0) then
+      WRITE (US,"( 7X, I3, 2X, 'IEC standard: ', A )")  p_IEC%IECstandard, TRIM(IECeditionSTR(p_IEC%IECedition))
+      IF (p_IEC%NumTurbInp) THEN
+         WRITE (US,"( F10.3 , 2X , 'Percent turbulence intensity, ', A )")  p_IEC%PerTurbInt, TRIM(IECeditionSTR(p_IEC%IECedition))
+      ELSE
+         WRITE (US,"( 9X , A1 , 2X , 'IEC turbulence characteristic' )"  )  p_IEC%IECTurbC   
+      END IF
+      
+      SELECT CASE ( p_IEC%IEC_WindType )
+         CASE (IEC_NTM)
+            TmpStr= "NTM"
+         CASE (IEC_ETM)   ! included the -1 for reading t/f on other systems
+            TmpStr = "ETM"
+         CASE (IEC_EWM1)
+            TmpStr = "EWM1"
+         CASE (IEC_EWM50)
+            TmpStr = "EWM50"
+         CASE (IEC_EWM100)
+            TmpStr = "EWM100"
+      ENDSELECT
+                        
+      WRITE (US,"( 4X, A6 , 2X , 'IEC ', A )")  TRIM(p_IEC%IECTurbE)//TRIM(TmpStr), TRIM(p_IEC%IEC_WindDesc)
+      
+   ELSE
+      WRITE (US,"( 7X, A3, 2X, 'IEC standard' )"                        )  'N/A'
+      IF (KHtest) THEN
+         WRITE (US,"( 4X, A6, 2X, 'Kelvin-Helmholtz billow test case' )")  'KHTEST'   
+      ELSE   
+         WRITE (US,"( A10, 2X, 'IEC turbulence characteristic' )"       )  'N/A'   
+      END IF      
+      WRITE (US,"( A10 , 2X , 'IEC turbulence type' )"                  )  'N/A'
+      
+   END IF
+
+   IF ( p_IEC%IEC_WindType /= IEC_ETM ) THEN
+      WRITE (US,"(  A10, 2X, 'IEC Extreme Turbulence Model (ETM) ""c"" parameter [m/s]' )")  'N/A'   
+   ELSE
+      WRITE (US,"( F10.3, 2X, 'IEC Extreme Turbulence Model (ETM) ""c"" parameter [m/s]' )") p_IEC%ETMc 
+   END IF      
+
+   WRITE (US,"(   A10 , 2X , 'Wind profile type' )"                  )  WindProfileType   
+   WRITE (US,"( F10.3 , 2X , 'Reference height [m]' )"               )  RefHt
+   WRITE (US,"( F10.3 , 2X , 'Reference wind speed [m/s]' )"         )  URef
+      
+   IF ( WindProfileType /= 'JET' ) THEN
+      WRITE (US,"(  A10, 2X, 'Jet height [m]' )"                     )  'N/A'   
+   ELSE
+      WRITE (US,"( F10.3, 2X, 'Jet height [m]' )"                    ) ZJetMax 
+   END IF      
+      
+   IF ( INDEX( 'JLUHA', WindProfileType(1:1) ) > 0. .OR. &
+      p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) THEN
+      WRITE (US,"(  A10, 2X, 'Power law exponent' )"                 )  'N/A'   
+   ELSE
+      WRITE (US,"( F10.3 , 2X , 'Power law exponent' )"              )  PLExp
+   END IF      
+      
+   IF ( SpecModel==SpecModel_TIDAL  ) THEN
+      WRITE (US,"(  A10, 2X, 'Surface roughness length [m]' )"       )  'N/A'   
+   ELSE      
+      WRITE (US,"( F10.3 , 2X , 'Surface roughness length [m]' )"    )  Z0
+   END IF
+        
+!..................................................................................................................................
+!***
+IF ( SpecModel == SpecModel_IECKAI .OR. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_API ) RETURN  
+!***
+
+WRITE (US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
+   
+   IF ( SpecModel /= SpecModel_IECKAI .AND. SpecModel /= SpecModel_IECVKM .AND. SpecModel /= SpecModel_API ) THEN
+      WRITE (US,"( F10.3 , 2X , 'Site latitude [degrees]' )"    )  Latitude      
+   ELSE
+      WRITE (US,"( A10 , 2X , 'Site latitude [degrees]' )"    )  'N/A'            
+   END IF
+
+!***
+IF ( SpecModel == SpecModel_ModVKM ) RETURN  
+!***
+
+   IF ( SpecModel /= SpecModel_IECKAI .AND. & 
+        SpecModel /= SpecModel_IECVKM .AND. & 
+        SpecModel /= SpecModel_API    .AND. & 
+        SpecModel /= SpecModel_ModVKM .AND. & 
+        SpecModel /= SpecModel_TIDAL   ) THEN
+      WRITE (US,"( F10.3 , 2X , 'Gradient Richardson number' )")  RICH_NO
+   ELSE
+      WRITE (US,"(   a10 , 2X , 'Gradient Richardson number' )")  'N/A'
+   END IF
+   
+   IF ( SpecModel /= SpecModel_IECKAI .AND. & 
+        SpecModel /= SpecModel_IECVKM .AND. & 
+        SpecModel /= SpecModel_API    .AND. & 
+        SpecModel /= SpecModel_ModVKM  ) THEN
+      WRITE (US,"( F10.3 , 2X , 'Friction or shear velocity [m/s]' )")  UStar
+      
+      IF (ZL>=0. .AND. SpecModel /= SpecModel_GP_LLJ) THEN
+         WRITE (US,'(   A10 , 2X , "Mixing layer depth [m]" )'       )  'N/A'
+      ELSE         
+         WRITE (US,"( F10.3 , 2X , 'Mixing layer depth [m]' )"       )  ZI
+      END IF
+
+   ELSE
+      WRITE (US,'(   A10 , 2X , "Friction or shear velocity [m/s]" )')  'N/A'
+      WRITE (US,'(   A10 , 2X , "Mixing layer depth [m]" )'          )  'N/A'
+   END IF
+
+   IF (.NOT. UWskip) THEN
+      WRITE (US,'( F10.3 , 2X , "Mean hub u''w'' Reynolds stress" )' )  PC_UW
+   ELSE
+      WRITE (US,'(   A10 , 2X , "Mean hub u''w'' Reynolds stress" )' )  'N/A'
+   END IF
+   
+   IF (.NOT. UVskip) THEN
+      WRITE (US,'( F10.3 , 2X , "Mean hub u''v'' Reynolds stress" )' )  PC_UV
+   ELSE
+      WRITE (US,'(   A10 , 2X , "Mean hub u''v'' Reynolds stress" )' )  'N/A'
+   END IF
+
+   IF (.NOT. VWskip) THEN
+      WRITE (US,'( F10.3 , 2X , "Mean hub v''w'' Reynolds stress" )' )  PC_VW
+   ELSE   
+      WRITE (US,'(   A10 , 2X , "Mean hub v''w'' Reynolds stress" )' )  'N/A'
+   END IF
+   
+   do i=1,3
+      WRITE (US,"( '(',F9.3,',',G10.3,')',2X , A,'-component coherence parameters' )")  InCDec(i), InCohB(i), Comp(i)
+   end do
+   
+   WRITE (US,'( F10.3 , 2X , "Coherence exponent" )' )  CohExp
+   
+!..................................................................................................................................
+!***
+IF ( .NOT. WrFile(FileExt_CTS) ) RETURN  
+!***
+      WRITE (US,"( // 'Coherent Turbulence Scaling Parameters:' / )")
+   
+
+      IF ( LEN( TRIM(p_CohStr%CTEventPath) ) <= 10 )  THEN
+         WRITE (US,"( A10 , 2X , 'Name of the path containing the coherent turbulence data files' )") TRIM(p_CohStr%CTEventPath)
+      ELSE
+         WRITE (US,"( A, /, 12X , 'Name of the path containing the coherent turbulence data files' )") TRIM(p_CohStr%CTEventPath)
+      ENDIF
+      WRITE (US,"( 7X, A3, 2X, 'Type of coherent turbulence data files' )") TRIM(p_CohStr%CText)
+!      WRITE (US,"( L10 , 2X , 'Randomize the disturbance scale and location?' )")  Randomize
+      WRITE (US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")  p_CohStr%DistScl
+      WRITE (US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")  p_CohStr%CTLy
+      WRITE (US,"( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )")  p_CohStr%CTLz
+      WRITE (US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")  p_CohStr%CTStartTime
+            
+!..................................................................................................................................
+   
+END SUBROUTINE WrSum_EchoInputs
+
 
 !=======================================================================
 END MODULE TS_FileIO

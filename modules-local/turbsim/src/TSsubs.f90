@@ -336,8 +336,7 @@ POINT_I: DO IZ=1,p_grid%ZLim   !NumGrid_Z
             DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-!MLB: Does this exit the IY or IZ loop?
-               IF (II > p_grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IY loop
+               IF (II > p_grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
@@ -434,7 +433,7 @@ DO IVec = 1,3
                   TEMP_Z=Coef_AlphaZ*p_grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
-                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U_Ref)
+                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/URef)
 
 
             ENDDO ! JJ
@@ -1107,7 +1106,7 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    !  stresses.
 
    USE                     TSMods, ONLY : p_grid
-   USE                     TSMods, ONLY : H_ref                           ! This is needed for the HYDRO spectral models.
+   USE                     TSMods, ONLY : RefHt                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : RICH_NO
    USE                     TSMods, ONLY : TurbModel, SpecModel
    USE                     TSMods, ONLY : UHub
@@ -1214,7 +1213,7 @@ use TurbSim_Types
          UWskip = .true.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
-         UW = -Ustar2*(1-p_grid%HubHt/H_ref)
+         UW = -Ustar2*(1-p_grid%HubHt/RefHt)
       CASE DEFAULT
 
          UW = -Ustar2
@@ -1423,7 +1422,7 @@ FUNCTION getUstarARY(WS, Ht)
 
 END FUNCTION
 !=======================================================================
-FUNCTION getUstarDiab(URef, RefHt)
+FUNCTION getUstarDiab(u_ref, z_ref)
 
    USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
    USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
@@ -1431,8 +1430,8 @@ FUNCTION getUstarDiab(URef, RefHt)
 
    IMPLICIT                              NONE
 
-   REAL(ReKi),   INTENT(IN)           :: URef                        ! Wind speed at reference height
-   REAL(ReKi),   INTENT(IN)           :: RefHt                       ! Reference height
+   REAL(ReKi),   INTENT(IN)           :: u_ref                       ! Wind speed at reference height
+   REAL(ReKi),   INTENT(IN)           :: z_ref                       ! Reference height
 
    REAL(ReKi)                         :: tmp                         ! a temporary value
    REAL(ReKi)                         :: psiM
@@ -1448,7 +1447,7 @@ FUNCTION getUstarDiab(URef, RefHt)
 
    ENDIF
 
-   getUstarDiab = ( 0.4 * Uref ) / ( LOG( RefHt / z0 ) - psiM )
+   getUstarDiab = ( 0.4 * u_ref ) / ( LOG( z_ref / z0 ) - psiM )
 
 END FUNCTION
 !=======================================================================
@@ -1588,7 +1587,7 @@ END SELECT
 RETURN
 END FUNCTION PowerLawExp
 !=======================================================================
-SUBROUTINE PSDcal ( Ht, Ucmp ,ZL_loc, Ustar_loc)
+SUBROUTINE PSDcal ( Ht, Ucmp, UShr, ZL_loc, Ustar_loc)
 
    ! This routine calls the appropriate spectral model.
 
@@ -1599,10 +1598,9 @@ IMPLICIT                            NONE
 
 REAL(ReKi), INTENT(IN)           :: Ht             ! Height
 REAL(ReKi), INTENT(IN)           :: Ucmp           ! Velocity
+REAL(ReKi), INTENT(IN), OPTIONAL :: UShr           ! Shear (du/dz)
 REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
-!REAL(ReKi), INTENT(IN), OPTIONAL               :: URef ! Must be UHub,  value ignored   ! ADDED BY YG
-!REAL(ReKi), INTENT(IN), OPTIONAL              :: RefHt                       ! Reference height    ! ADDED BY YG
 
 SELECT CASE ( SpecModel )
    CASE ( SpecModel_GP_LLJ )
@@ -1622,7 +1620,7 @@ SELECT CASE ( SpecModel )
    CASE ( SpecModel_SMOOTH )
       CALL Spec_SMOOTH   ( Ht, Ucmp, Work )
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-      CALL Spec_TIDAL  ( Ucmp, Work, SpecModel )
+      CALL Spec_TIDAL  ( Ht, UShr, Work, SpecModel )
    CASE ( SpecModel_USER )
       CALL Spec_UserSpec   ( Work )
    CASE ( SpecModel_USRVKM )
@@ -1786,7 +1784,7 @@ use FFT_Module, only: PSF
 
       ELSE
 
-         CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', .TRUE.)  
+         CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', US)  
 
          WrFile(FileExt_TWR) = .FALSE.
 
@@ -2127,6 +2125,76 @@ use TSMods, only: UHub, p_grid, Fc, z0, SpecModel
    
 
 END SUBROUTINE CalcIECScalingParams
+!=======================================================================
+SUBROUTINE TS_ValidateInput(ErrStat, ErrMsg)
+
+use TSMods
+
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+   
+   INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+   
+
+
+
+ErrStat = ErrID_None
+ErrMsg  = ""
+
+
+!BONNIE: UPPER LIMIT ON RICH_NO?
+IF ( WrFile(FileExt_CTS) ) THEN
+   
+      ! models where coherent structures apply:
+   IF ( SpecModel == SpecModel_GP_LLJ .OR. &
+        SpecModel == SpecModel_NWTCUP .OR. &
+        SpecModel == SpecModel_SMOOTH .OR. &
+        SpecModel == SpecModel_WF_UPW .OR. &
+        SpecModel == SpecModel_WF_07D .OR. &
+        SpecModel == SpecModel_WF_14D ) THEN
+      
+      IF ( Rich_No <= -0.05 ) THEN
+         CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, 'TS_ValidateInput')
+         WrFile(FileExt_CTS) = .FALSE.      
+      ELSEIF ( .NOT. ( WrFile(FileExt_BTS) .OR. WrFile(FileExt_WND) ) ) THEN
+         CALL SetErrStat( ErrID_Info, 'AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.', ErrStat, ErrMsg, 'TS_ValidateInput')
+         WrFile(FileExt_BTS) = .TRUE.
+      ENDIF      
+      
+   ELSE
+      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(TurbModel)//' model.', ErrStat, ErrMsg, 'TS_ValidateInput')
+      WrFile(FileExt_CTS) = .FALSE.      
+   END IF
+      
+ENDIF !WrAct
+
+
+      ! Warn if EWM is used with incompatible times
+      
+IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) .AND. & 
+      ABS( 600.0_ReKi - MAX(p_grid%AnalysisTime,p_grid%UsableTime) ) > 90.0_ReKi ) THEN
+   CALL SetErrStat( ErrID_Warn, 'The EWM parameters are valid for 10-min simulations only.', ErrStat, ErrMsg, 'TS_ValidateInput')   
+ENDIF        
+
+
+      ! Warn if Periodic is used with incompatible settings
+      
+IF ( p_grid%Periodic .AND. .NOT. EqualRealNos(p_grid%AnalysisTime, p_grid%UsableTime) ) THEN
+   CALL SetErrStat( ErrID_Warn, 'Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', ErrStat, ErrMsg, 'TS_ValidateInput')  
+   p_grid%Periodic = .FALSE.
+END IF
+
+
+   ! Warn if tower points are output but grid is not:
+IF ( WrFile(FileExt_TWR) .AND. .NOT. ( WrFile(FileExt_WND) .OR. WrFile(FileExt_BTS)) ) THEN 
+   CALL SetErrStat( ErrID_Info, 'TurbSim .bts file will be generated to contain the tower points.', ErrStat, ErrMsg, 'TS_ValidateInput')  
+   WrFile(FileExt_BTS) = .TRUE.
+END IF
+
+
+
+END SUBROUTINE TS_ValidateInput
 !=======================================================================
 SUBROUTINE TS_End()
 

@@ -60,7 +60,7 @@ use TSMods
 
    !BONNIE: MAYBE WE SHOULDN'T OPEN THIS FILE UNTIL WE NEED TO WRITE TO IT
       IF (p_CohStr%ScaleVel < 0. ) THEN
-         CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', .TRUE. )
+         CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', US )
          WrFile(FileExt_CTS) = .FALSE.
       ENDIF
             
@@ -497,7 +497,7 @@ use TS_RandNum
    ENDIF
 
    IF (p_CohStr%ScaleVel < 0. ) THEN
-      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', .TRUE. )
+      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', US )
       WrFile(FileExt_CTS) = .FALSE.
       RETURN
    ENDIF

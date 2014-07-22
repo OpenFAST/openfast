@@ -191,61 +191,14 @@ CALL GetFiles
 CALL GetInput(ErrStat, ErrMsg)
 CALL CheckError()
 
+CALL WrSum_EchoInputs() 
+call WrSum_UserInput(US)
 
-call WrSum_Heading1(US)
-
+call TS_ValidateInput(ErrStat, ErrMsg)
+CALL CheckError()
 
    ! Determine if coherent turbulence should be generated
 
-!BONNIE: UPPER LIMIT ON RICH_NO?
-IF ( WrFile(FileExt_CTS) ) THEN
-   IF ( SpecModel == SpecModel_IECKAI .OR. &
-        SpecModel == SpecModel_IECVKM .OR. &
-        SpecModel == SpecModel_MODVKM .OR. &
-        SpecModel == SpecModel_USER   .OR. &
-        SpecModel == SpecModel_TIDAL   ) THEN
-
-      WRITE (US, "( // 'Coherent turbulence time step files are not available for IEC or TIDAL spectral models.')")
-      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with the '//TRIM(TurbModel)//' model.', .TRUE. )
-      WrFile(FileExt_CTS) = .FALSE.
-      
-   ELSEIF ( Rich_No <= -0.05 ) THEN
-      FormStr = "( // 'Coherent turbulence time step files are not available when "// &
-                      "the Richardson number is less than or equal to -0.05.')"
-      
-      WRITE (US, FormStr)
-      CALL TS_Warn( ' A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', .TRUE. )
-      WrFile(FileExt_CTS) = .FALSE.
-      
-   ELSEIF ( .NOT. ( WrFile(FileExt_BTS) .OR. WrFile(FileExt_WND) ) ) THEN
-      WrFile(FileExt_BTS) = .TRUE.
-      CALL WrScr1( ' AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.' )
-   ENDIF
-      
-ENDIF !WrAct
-
-      ! Warn if EWM is used with incompatible times
-      
-IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) .AND. & 
-      ABS( REAL(600.0,ReKi) - MAX(p_grid%AnalysisTime,p_grid%UsableTime) ) > REAL(90.0, ReKi) ) THEN
-   CALL TS_Warn( ' The EWM parameters are valid for 10-min simulations only.', .TRUE. )
-ENDIF        
-
-
-      ! Warn if Periodic is used with incompatible settings
-      
-IF ( p_grid%Periodic .AND. .NOT. EqualRealNos(p_grid%AnalysisTime, p_grid%UsableTime) ) THEN
-   CALL TS_Warn( ' Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', &
-                 WrSum=.TRUE.)
-   p_grid%Periodic = .FALSE.
-END IF
-
-
-   ! Warn if tower points are output but grid is not:
-IF ( WrFile(FileExt_TWR) .AND. .NOT. ( WrFile(FileExt_WND) .OR. WrFile(FileExt_BTS)) ) THEN 
-   CALL TS_Warn( 'TurbSim .bts file will be generated to hole the tower points.', .true. )
-   WrFile(FileExt_BTS) = .TRUE.
-END IF
 
 
 
@@ -355,26 +308,6 @@ CALL CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 CALL CheckError()
       
 
-
-IF (DEBUG_OUT) THEN
-   ! If we are going to generate debug output, open the debug file.
-
-   CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
-         
-   WRITE (UD,*)  'UHub=',UHub
-   WRITE (UD,*)  'NumOutSteps, NumSteps=', p_grid%NumOutSteps, p_grid%NumSteps
-   
-   WRITE (UD,*)  'TimeStep,NumFreq,ROT=',p_grid%TimeStep,p_grid%NumFreq
-   WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
-   
-   WRITE (UD,*)  'DelF=',p_grid%Freq(1)
-   WRITE (UD,*)  'Freq(1) = ',p_grid%Freq(1),'  Freq(NumFreq) = ',p_grid%Freq(p_grid%NumFreq)      
-   
-   WRITE (UD,*)  'GridRes=', p_grid%GridRes_Y, ' x ', p_grid%GridRes_Z
-   WRITE (UD,*)  ' '
-   WRITE (UD,*)  'U='   
-ENDIF
-
 !bjj: why is this here???? just for the ifft?
 IF ( p_grid%NumSteps < 8 )  THEN
    CALL TS_Abort ( 'Too few (less than 8) time steps.  Increase the usable length of the time series or decrease the time step.' )
@@ -387,7 +320,7 @@ CALL AllocAry(U,     p_grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrM
 CALL CheckError()
 
 IF ( WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( U_Ref, H_Ref, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   U = getVelocityProfile( URef, RefHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 ELSE 
    U = getVelocityProfile( UHub,  p_grid%HubHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) 
 ENDIF
@@ -427,14 +360,6 @@ ELSE
 END IF
 
 
-
-IF (DEBUG_OUT) THEN
-   DO IZ = 1,p_grid%ZLim
-      WRITE (UD,*)  p_grid%Z(IZ), U(IZ)
-   ENDDO
-ENDIF
-
-
   
 IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
      ( SpecModel  == SpecModel_IECVKM ) .OR. &
@@ -447,10 +372,6 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
       
    CALL CalcIECScalingParams(p_IEC)
                   
-   IF (DEBUG_OUT) THEN
-      WRITE (UD,*)  'SigmaIEC,TurbInt=',p_IEC%SigmaIEC(1),p_IEC%TurbInt
-   ENDIF
-
 ELSE
     p_IEC%SigmaIEC = 0
     p_IEC%Lambda = 0
@@ -463,13 +384,19 @@ CALL WrSum_SpecModel( US, p_IEC, p_grid%Z(NumGrid_Z2) )
 
 
 
-!bjj: This doesn't need to be part of the summary file, so put it in the debug file
-IF ( DEBUG_OUT .AND. WindProfileType(1:1) == 'J' ) THEN
-   WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
-   WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( IY, IY=0,10 )
-   WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
-   WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( ChebyCoef_WS(IY), IY=1,11 )
-   WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( ChebyCoef_WD(IY), IY=1,11 )   
+IF (DEBUG_OUT) THEN
+   ! If we are going to generate debug output, open the debug file.
+
+   CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
+         
+   !bjj: This doesn't need to be part of the summary file, so put it in the debug file
+   IF (WindProfileType(1:1) == 'J' ) THEN
+      WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
+      WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( IY, IY=0,10 )
+      WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
+      WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( ChebyCoef_WS(IY), IY=1,11 )
+      WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( ChebyCoef_WD(IY), IY=1,11 )   
+   ENDIF
 ENDIF
 
 
@@ -516,15 +443,13 @@ DO IZ=1,p_grid%ZLim
 
       IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM ) THEN
          CALL PSDcal( p_grid%HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
+         
       ELSEIF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
-         !print *, Ustar
-         !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
-         Sigma_U2=4.5*Ustar*Ustar*EXP(-2*p_grid%Z(IZ)/H_ref)
-         Sigma_V2=0.5*Sigma_U2
-         Sigma_W2=0.2*Sigma_U2
-         CALL PSDCal( p_grid%Z(IZ) , DUDZ(IZ) )
+         CALL PSDCal( p_grid%Z(IZ) , U(IZ), UShr=DUDZ(IZ) )
+         
       ELSEIF ( ALLOCATED( ZL_profile ) ) THEN
-         CALL PSDcal( p_grid%Z(IZ), U(IZ), ZL_profile(IZ), Ustar_profile(IZ) )
+         CALL PSDcal( p_grid%Z(IZ), U(IZ), ZL_loc=ZL_profile(IZ), UStar_loc=Ustar_profile(IZ) )
+         
       ELSE
          CALL PSDcal( p_grid%Z(IZ), U(IZ) )
       ENDIF               
@@ -759,7 +684,7 @@ CASE (SpecModel_GP_LLJ, &
             !     out of whack.  We'll display a warning in this case.
             
          IF ( ABS(UWMax) > 1.0 .OR. ABS(UVMax) > 1.0 .OR. ABS(VWMax) > 1.0 ) THEN
-            CALL TS_Warn( "Scaling terms exceed 1.0.  Reynolds stresses may be affected.", .FALSE.)
+            CALL TS_Warn( "Scaling terms exceed 1.0.  Reynolds stresses may be affected.", -1)
          ENDIF
          
          UWMax = MAX( MIN( UWMax, 1.0 ), -1.0 )

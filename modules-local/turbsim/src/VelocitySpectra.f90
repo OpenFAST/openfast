@@ -138,7 +138,7 @@ USE                     TSMods
 IMPLICIT                NONE
 
       ! Passed variables
-REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored
+REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored !bjj: is this true????
 REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
 !REAL(ReKi),INTENT(IN) :: URef ! Added by YG
@@ -180,8 +180,8 @@ CALL Spec_IECKAI ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Spec )
 
    ! Compute some parameters that are independent of frequency.
 
-Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( U_Ref/Ref_WS )**Exp3
-Scale2 = 320.0*( U_Ref/Ref_WS )**2*( Ht/Ref_Ht )**Exp4
+Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( URef/Ref_WS )**Exp3
+Scale2 = 320.0*( URef/Ref_WS )**2*( Ht/Ref_Ht )**Exp4   !bjj: I'm not liking how URef and Ht are not necessarially defined at the same node (URef from input file, Ht from wherever)
 
 DO I=1,p_grid%NumFreq
 
@@ -808,7 +808,7 @@ END SUBROUTINE Spec_SMOOTH
 !! The fit is based on data from Puget Sound, estimated by L. Kilcher.
 !! The use of this subroutine requires that variables have the units of meters and seconds.
 !! Note that this model does not require height.
-SUBROUTINE Spec_TIDAL ( Shr_DuDz, Spec, SpecModel )
+SUBROUTINE Spec_TIDAL ( Ht, Shr_DuDz, Spec, SpecModel )
 
 USE                     TSMods
 
@@ -816,6 +816,7 @@ IMPLICIT                NONE
 
    ! Passed variables
 
+REAL(ReKi),INTENT(IN) :: Ht                      !< Height (dz)
 REAL(ReKi),INTENT(IN) :: Shr_DuDz                !< Shear (du/dz)
 INTEGER,   INTENT(IN) :: SpecModel               !< SpecModel (SpecModel_TIDAL .OR. SpecModel_RIVER)
 REAL(ReKi),INTENT(OUT):: Spec     (:,:)          !< output: target spectra
@@ -823,11 +824,23 @@ REAL(ReKi),INTENT(OUT):: Spec     (:,:)          !< output: target spectra
    ! Internal variables
 
 REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
+REAL(ReKi)            :: Sigma_U2               ! Standard Deviation of U velocity, squared.
+REAL(ReKi)            :: Sigma_V2               ! Standard Deviation of V velocity, squared.
+REAL(ReKi)            :: Sigma_W2               ! Standard Deviation of W velocity, squared.
+
 REAL(ReKi)            :: tmpX                   ! Temporary variable for calculation of Spec
 REAL(ReKi)            :: tmpvec(3)              ! Temporary vector for calculation of Spec
 REAL(ReKi)            :: tmpa (3)               ! Spectra coefficients
 REAL(ReKi)            :: tmpb (3)               ! Spectra coefficients
 INTEGER               :: I                      ! DO LOOP counter
+
+
+
+!print *, Ustar
+!Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
+Sigma_U2=4.5*Ustar*Ustar*EXP(-2*Ht/RefHt)
+Sigma_V2=0.5*Sigma_U2
+Sigma_W2=0.2*Sigma_U2
 
 
 SELECT CASE ( SpecModel )
