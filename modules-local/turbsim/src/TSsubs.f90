@@ -1109,7 +1109,6 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    USE                     TSMods, ONLY : p_grid
    USE                     TSMods, ONLY : H_ref                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : RICH_NO
-   USE                     TSMods, ONLY : RotorDiameter
    USE                     TSMods, ONLY : TurbModel, SpecModel
    USE                     TSMods, ONLY : UHub
    USE                     TSMods, ONLY : Ustar
@@ -1135,9 +1134,9 @@ use TurbSim_Types
    REAL(ReKi)                          :: Z(2)
    REAL(ReKi)                          :: ZLtmp
 
-   Z(2) = p_grid%HubHt + 0.5*RotorDiameter    ! top of the grid
+   Z(2) = p_grid%HubHt + 0.5*p_grid%RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
-   V(:) = getWindSpeed(UHub, p_grid%HubHt, Z, RotorDiameter, PROFILE_TYPE=WindProfileType)
+   V(:) = getWindSpeed(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
    Shr = ( V(2)-V(1) ) / p_grid%GridHeight    ! dv/dz
 
@@ -1647,13 +1646,6 @@ SELECT CASE ( SpecModel )
       CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( TurbModel )//'", not availible.' )
 END SELECT
 
-IF ( PSD_OUT ) THEN
-   !IF ( ABS(Ht - p_grid%HubHt) < Tolerance ) THEN
-      WRITE( UP, FormStr ) 1, Ht, Work(:,1)
-      WRITE( UP, FormStr ) 2, Ht, Work(:,2)
-      WRITE( UP, FormStr ) 3, Ht, Work(:,3)
-   !ENDIF
-ENDIF
 
 
 RETURN
@@ -1672,6 +1664,7 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 !  NumGrid_Z
 
 use TSMods
+use FFT_Module, only: PSF
 
    TYPE(TurbSim_GridParameterType), INTENT(INOUT) :: p_grid
    INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
@@ -1681,9 +1674,11 @@ use TSMods
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    
    ! local variables:
-REAL(ReKi)              ::  TmpReal                         ! A temporary variable holding a Z (height) value, and other misc. variables
-   INTEGER                                        :: IY, IZ                          ! loop counters 
+   REAL(ReKi)                                     :: TmpReal                         ! A temporary variable holding a Z (height) value, and other misc. variables
+   REAL(ReKi)                                     :: DelF                            ! Delta frequency
+   INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
+   INTEGER                                        :: NumSteps4                       ! one-fourth the number of steps
    
    INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
@@ -1691,10 +1686,46 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   
+   ! First, let's deal with the frequencies:
+   
+      ! Calculate Total time and NumSteps.
+      ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
+      ! Make sure it is a multiple of 4 too.
+
+   IF ( p_grid%Periodic ) THEN
+      p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
+      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
+      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+      p_grid%NumOutSteps = p_grid%NumSteps
+   ELSE
+      p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth/UHub )/p_grid%TimeStep )
+      p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
+      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
+      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+   END IF
+
+
+   p_grid%NumFreq     = p_grid%NumSteps/2
+   DelF        = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
+      
+   
+   CALL AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   IF (ErrStat >= AbortErrLev) RETURN
+
+   DO IFreq=1,p_grid%NumFreq
+      p_grid%Freq(IFreq) = IFreq*DelF
+   ENDDO 
+   
+   
+   ! Then, let's deal with the rectangular grid:
+   
+   
    p_grid%GridRes_Y = p_grid%GridWidth  / REAL( p_grid%NumGrid_Y - 1, ReKi )
    p_grid%GridRes_Z = p_grid%GridHeight / REAL( p_grid%NumGrid_Z - 1, ReKi )      
 
-   p_grid%Zbottom = p_grid%HubHt + 0.5*RotorDiameter                             ! height of the highest grid points
+   p_grid%Zbottom = p_grid%HubHt + 0.5*p_grid%RotorDiameter                             ! height of the highest grid points
    p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(p_grid%NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
    IF ( p_grid%Zbottom <= 0.0 ) THEN
@@ -1704,7 +1735,7 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
 
    NumGrid_Y2 = INT( ( p_grid%NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
    NumGrid_Z2 = INT( Tolerance + ( p_grid%HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
-
+   
    p_grid%ExtraTwrPT = .FALSE.
 
    IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
@@ -1718,8 +1749,11 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
 
    p_grid%NPoints    = p_grid%NumGrid_Y*p_grid%NumGrid_Z                ! Number of points in the regular grid
 
+   
+   ! Then, let's deal with the hub point:
+   
    IF (p_grid%ExtraHubPT) THEN
-      p_grid%NPoints = p_grid%NPoints + 1                           ! Add the hub point if necessary
+      p_grid%NPoints = p_grid%NPoints + 1                               ! Add the hub point if necessary
       p_grid%ZLim = p_grid%NumGrid_Z+1
       p_grid%YLim = p_grid%NumGrid_Y+1
    ELSE
@@ -1727,7 +1761,10 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
       p_grid%YLim = p_grid%NumGrid_Y
    ENDIF
 
-   IF ( WrADTWR ) THEN
+   
+   ! Finally, let's deal with the tower "lollipop" points:
+   
+   IF ( WrFile(FileExt_TWR) ) THEN
 
          ! Compute the number of points between the bottom of the grid and the ground 
          ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
@@ -1751,8 +1788,7 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
 
          CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', .TRUE.)  
 
-         WrADTWR = .FALSE.
-         CLOSE( UATWR )
+         WrFile(FileExt_TWR) = .FALSE.
 
       ENDIF
 
@@ -1796,7 +1832,7 @@ REAL(ReKi)              ::  TmpReal                         ! A temporary variab
 
    ENDIF
 
-   IF ( WrADTWR ) THEN
+   IF ( WrFile(FileExt_TWR) ) THEN
 
       p_grid%Y(p_grid%YLim) = 0.0
    

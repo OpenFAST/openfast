@@ -107,8 +107,7 @@ REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensit
 
 
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
-REAL(ReKi)              ::  DelF5                           ! half of the delta frequency, used to discretize the continuous PSD at each point
-REAL(ReKi)              ::  DelF                            ! Delta frequency
+REAL(ReKi)              ::  HalfDelF                           ! half of the delta frequency, used to discretize the continuous PSD at each point
 REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
@@ -119,7 +118,6 @@ REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for 
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
 
 REAL(ReKi)              ::  HorVar                          ! Variables used when DEBUG_OUT is set
-REAL(ReKi)              ::  ROT                             ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  Total                           ! Variables used when DEBUG_OUT is set
 REAL(ReKi)              ::  TotalU                          ! Variables used when DEBUG_OUT is set             
 REAL(ReKi)              ::  TotalV                          ! Variables used when DEBUG_OUT is set
@@ -146,12 +144,11 @@ INTEGER                 ::  NSize                           ! Size of the spectr
 
 INTEGER                 ::  NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
 INTEGER                 ::  NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
-INTEGER                 ::  NumSteps4                       ! one-fourth the number of steps
 INTEGER                 ::  ZHi_YHi                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  ZHi_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  ZLo_YHi                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
-
+INTEGER                 ::  UnOut                           ! unit for output files
 
 INTEGER(IntKi)          :: ErrStat     ! allocation status
 CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
@@ -201,17 +198,16 @@ call WrSum_Heading1(US)
    ! Determine if coherent turbulence should be generated
 
 !BONNIE: UPPER LIMIT ON RICH_NO?
-IF ( WrACT ) THEN
+IF ( WrFile(FileExt_CTS) ) THEN
    IF ( SpecModel == SpecModel_IECKAI .OR. &
         SpecModel == SpecModel_IECVKM .OR. &
         SpecModel == SpecModel_MODVKM .OR. &
         SpecModel == SpecModel_USER   .OR. &
         SpecModel == SpecModel_TIDAL   ) THEN
-      FormStr = "( // 'Coherent turbulence time step files are not available for IEC or TIDAL spectral models.')"
 
-      WRITE (US, FormStr)
+      WRITE (US, "( // 'Coherent turbulence time step files are not available for IEC or TIDAL spectral models.')")
       CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with the '//TRIM(TurbModel)//' model.', .TRUE. )
-      WrACT = .FALSE.
+      WrFile(FileExt_CTS) = .FALSE.
       
    ELSEIF ( Rich_No <= -0.05 ) THEN
       FormStr = "( // 'Coherent turbulence time step files are not available when "// &
@@ -219,10 +215,10 @@ IF ( WrACT ) THEN
       
       WRITE (US, FormStr)
       CALL TS_Warn( ' A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', .TRUE. )
-      WrACT = .FALSE.
+      WrFile(FileExt_CTS) = .FALSE.
       
-   ELSEIF ( .NOT. ( WrADFF .OR. WrBLFF ) ) THEN
-      WrADFF = .TRUE.
+   ELSEIF ( .NOT. ( WrFile(FileExt_BTS) .OR. WrFile(FileExt_WND) ) ) THEN
+      WrFile(FileExt_BTS) = .TRUE.
       CALL WrScr1( ' AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.' )
    ENDIF
       
@@ -231,118 +227,118 @@ ENDIF !WrAct
       ! Warn if EWM is used with incompatible times
       
 IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) .AND. & 
-      ABS( REAL(600.0,ReKi) - MAX(p_grid%AnalysisTime,UsableTime) ) > REAL(90.0, ReKi) ) THEN
+      ABS( REAL(600.0,ReKi) - MAX(p_grid%AnalysisTime,p_grid%UsableTime) ) > REAL(90.0, ReKi) ) THEN
    CALL TS_Warn( ' The EWM parameters are valid for 10-min simulations only.', .TRUE. )
 ENDIF        
 
 
       ! Warn if Periodic is used with incompatible settings
       
-IF ( Periodic .AND. .NOT. EqualRealNos(p_grid%AnalysisTime, UsableTime) ) THEN
+IF ( p_grid%Periodic .AND. .NOT. EqualRealNos(p_grid%AnalysisTime, p_grid%UsableTime) ) THEN
    CALL TS_Warn( ' Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', &
                  WrSum=.TRUE.)
-   Periodic = .FALSE.
+   p_grid%Periodic = .FALSE.
 END IF
-      
+
+
+   ! Warn if tower points are output but grid is not:
+IF ( WrFile(FileExt_TWR) .AND. .NOT. ( WrFile(FileExt_WND) .OR. WrFile(FileExt_BTS)) ) THEN 
+   CALL TS_Warn( 'TurbSim .bts file will be generated to hole the tower points.', .true. )
+   WrFile(FileExt_BTS) = .TRUE.
+END IF
+
+
+
 
    ! Open appropriate output files.  We will open formatted FF files later, if requested.
    ! Mention the files in the summary file.
 
-IF ( WrBHHTP .OR. WrFHHTP .OR. WrADHH .OR. WrADFF .OR. WrFmtFF .OR. WrADTWR .OR. WrACT .OR. WrBLFF )  THEN
+IF ( ANY (WrFile) )  THEN
+   CALL GetNewUnit( UnOut )
 
-   FormStr = "( // 'You have requested that the following file(s) be generated:' / )"
-   WRITE (US,FormStr)
-   CALL WrScr1 ( ' You have requested that the following file(s) be generated:' )
+   WRITE (US,"( // 'You have requested that the following file(s) be generated:' / )")
+   CALL WrScr1  ( ' You have requested that the following file(s) be generated:' )
 
-   IF ( WrBHHTP )  THEN   
+   IF ( WrFile(FileExt_BIN) )  THEN   
 
-      CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin', ErrStat, ErrMsg )  ! just making sure it can be opened (not locked elsewhere)
-      CLOSE(UGTP)
+!      CALL OpenBOutFile ( UnOut, TRIM( RootName)//'.bin', ErrStat, ErrMsg )
+      CALL OpenUOutfile ( UnOut , TRIM( RootName)//'.bin', ErrStat, ErrMsg )  ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UnOut)
       CALL CheckError()
-!      CALL OpenBOutFile ( UGTP, TRIM( RootName)//'.bin', ErrStat, ErrMsg )
-      FormStr = "( 3X , A , ' (hub-height binary turbulence-parameter file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.bin'
+      
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".bin (a binary hub-height turbulence-parameter file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.bin (a binary hub-height turbulence-parameter file)' )
 
    ENDIF
 
-   IF ( WrFHHTP )  THEN     
+   IF ( WrFile(FileExt_DAT) )  THEN     
 
-      CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat', ErrStat, ErrMsg ) ! just making sure it can be opened (not locked elsewhere)
-      CLOSE( UFTP )
+      CALL OpenFOutFile ( UnOut, TRIM( RootName)//'.dat', ErrStat, ErrMsg ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UnOut )
       CALL CheckError()
-      FormStr = "( 3X , A , ' (formatted turbulence-parameter file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.dat'
-      CALL WrScr ( '    '//TRIM( RootName)//'.dat (a formatted turbulence-parameter file)' )
+      
+      WRITE (US, "( 3X ,'"//TRIM( RootName)//".dat (a formatted turbulence-parameter file)' )")  
+      CALL WrScr ( '     '//TRIM( RootName)//'.dat (a formatted turbulence-parameter file)' )
 
    ENDIF
 
-   IF ( WrADHH )  THEN     
+   IF ( WrFile(FileExt_HH) )  THEN     
 
-      CALL OpenFOutFile ( UAHH, TRIM( RootName)//'.hh' ) ! just making sure it can be opened (not locked elsewhere)
-      CLOSE( UAHH )
-      FormStr = "( 3X , A , '  (AeroDyn hub-height file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.hh'
+      CALL OpenFOutFile ( UnOut, TRIM( RootName)//'.hh', ErrStat, ErrMsg ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UnOut )
+      CALL CheckError()
+      
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".hh  (an AeroDyn hub-height file)' )")
       CALL WrScr ( '    '//TRIM( RootName)//'.hh  (an AeroDyn hub-height file)' )
 
    ENDIF
 
-   IF ( WrADFF )  THEN
+   IF ( WrFile(FileExt_BTS) )  THEN
 
-      CALL OpenBOutFile ( UAFFW, TRIM(RootName)//'.bts', ErrStat, ErrMsg )
+      CALL OpenBOutFile ( UnOut, TRIM(RootName)//'.bts', ErrStat, ErrMsg )
+      CLOSE( UnOut )
       CALL CheckError()
 
-      FormStr = "( 3X , A , ' (AeroDyn/TurbSim full-field wind file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.bts'
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".bts (an AeroDyn/TurbSim full-field wind file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.bts (an AeroDyn/TurbSim full-field wind file)' )
 
    ENDIF
 
-   IF ( WrBLFF )  THEN
+   IF ( WrFile(FileExt_WND) )  THEN
 
-      CALL OpenBOutFile ( UBFFW, TRIM(RootName)//'.wnd', ErrStat, ErrMsg )
+      CALL OpenBOutFile ( UnOut, TRIM(RootName)//'.wnd', ErrStat, ErrMsg )
+      CLOSE(UnOut)
       CALL CheckError()
 
-      FormStr = "( 3X , A , ' (AeroDyn/BLADED full-field wnd file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.wnd'
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".wnd (an AeroDyn/BLADED full-field wnd file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.wnd (an AeroDyn/BLADED full-field wnd file)' )
 
    ENDIF
+   
+   IF ( WrFile(FileExt_TWR) .AND. WrFile(FileExt_WND) )  THEN
 
-   IF ( WrADTWR .AND. (WrBLFF .OR. .NOT. WrADFF) )  THEN
-
-      CALL OpenBOutFile ( UATWR, TRIM( RootName )//'.twr', ErrStat, ErrMsg )
+      CALL OpenBOutFile ( UnOut, TRIM( RootName )//'.twr', ErrStat, ErrMsg )
+      CLOSE(UnOut)       
       CALL CheckError()
 
-      FormStr = "( 3X , A , ' (Binary tower twr file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.twr'
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".twr (a binary tower file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.twr (a binary tower file)' )
 
    ENDIF
 
-   IF ( WrACT ) THEN
-
-      CALL OpenFOutFile ( UACTTS, TRIM( RootName )//'.cts', ErrStat, ErrMsg  )         ! just making sure it can be opened (not locked elsewhere)
-      close(UACTTS)
-      CALL CheckError()
-      
-      FormStr = "( 3X , A , ' (AeroDyn coherent turbulence time step file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.cts'
+   IF ( WrFile(FileExt_CTS) ) THEN      
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".cts (a coherent turbulence time step file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.cts (a coherent turbulence time step file)' )
-
    ENDIF
 
-   IF ( WrFmtFF )  THEN
-      FormStr = "( 3X , A , ' (formatted full-field U-component file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.u'
+   IF ( WrFile(FileExt_UVW) )  THEN
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".u (a formatted full-field U-component file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.u (a formatted full-field U-component file)' )
 
-      FormStr = "( 3X , A , ' (formatted full-field V-component file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.v'
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".v (a formatted full-field V-component file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.v (a formatted full-field V-component file)' )
 
-      FormStr = "( 3X , A , ' (formatted full-field W-component file)' )"
-      WRITE (US,FormStr)  TRIM( RootName)//'.w'
+      WRITE (US,"( 3X ,'"//TRIM( RootName)//".w (a formatted full-field W-component file)' )")  
       CALL WrScr ( '    '//TRIM( RootName)//'.w (a formatted full-field W-component file)' )
    ENDIF
 
@@ -354,63 +350,6 @@ ENDIF
 
 
 
-   ! Calculate Total time and NumSteps.
-   ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
-   ! Make sure it is a multiple of 4 too.
-
-IF ( Periodic ) THEN
-   p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
-   NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
-   p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
-   p_grid%NumOutSteps = p_grid%NumSteps
-ELSE
-   p_grid%NumOutSteps = CEILING( ( UsableTime + p_grid%GridWidth/UHub )/p_grid%TimeStep )
-   p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
-   NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
-   p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
-END IF
-
-INumSteps   = 1.0/p_grid%NumSteps
-
-p_grid%NumFreq     = p_grid%NumSteps/2
-DelF        = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
-DelF5       = 0.5*DelF
-
-
-   !  Allocate/Initialize the array of frequencies.
-
-call AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat, ErrMsg)
-CALL CheckError()
-
-DO IFreq=1,p_grid%NumFreq
-   p_grid%Freq(IFreq) = IFreq*DelF
-ENDDO 
-
-
-   ! If we are going to generate debug output, open the debug file.
-
-IF (DEBUG_OUT) THEN
-   CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
-   
-   WRITE (UD,*)  'UHub=',UHub
-   WRITE (UD,*)  'NumOutSteps, NumSteps, INumSteps=', p_grid%NumOutSteps, p_grid%NumSteps, INumSteps
-   
-   ROT     = 1.0/( p_grid%NumGrid_Y*p_grid%TimeStep ) 
-   WRITE (UD,*)  'TimeStep,DelF,NumFreq,ROT=',p_grid%TimeStep,DelF,p_grid%NumFreq,ROT
-   WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
-   
-   WRITE (UD,*)  'DelF=',DelF
-   WRITE (UD,*)  'Freq(1) = ',p_grid%Freq(1),'  Freq(NumFreq) = ',p_grid%Freq(p_grid%NumFreq)
-   
-ENDIF
-
-
-IF ( p_grid%NumSteps < 8 )  THEN
-   CALL TS_Abort ( 'Too few (less than 8) time steps.  Increase the usable length of the time series or decrease the time step.' )
-ENDIF
-
-
-
    ! Define the other parameters for the time series.
 CALL CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 CALL CheckError()
@@ -418,10 +357,29 @@ CALL CheckError()
 
 
 IF (DEBUG_OUT) THEN
+   ! If we are going to generate debug output, open the debug file.
+
+   CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
+         
+   WRITE (UD,*)  'UHub=',UHub
+   WRITE (UD,*)  'NumOutSteps, NumSteps=', p_grid%NumOutSteps, p_grid%NumSteps
+   
+   WRITE (UD,*)  'TimeStep,NumFreq,ROT=',p_grid%TimeStep,p_grid%NumFreq
+   WRITE (UD,*)  'PI,Deg2Rad=',Pi, D2R
+   
+   WRITE (UD,*)  'DelF=',p_grid%Freq(1)
+   WRITE (UD,*)  'Freq(1) = ',p_grid%Freq(1),'  Freq(NumFreq) = ',p_grid%Freq(p_grid%NumFreq)      
+   
    WRITE (UD,*)  'GridRes=', p_grid%GridRes_Y, ' x ', p_grid%GridRes_Z
    WRITE (UD,*)  ' '
    WRITE (UD,*)  'U='   
 ENDIF
+
+!bjj: why is this here???? just for the ifft?
+IF ( p_grid%NumSteps < 8 )  THEN
+   CALL TS_Abort ( 'Too few (less than 8) time steps.  Increase the usable length of the time series or decrease the time step.' )
+ENDIF
+
 
 
    !  Wind speed:
@@ -429,9 +387,9 @@ CALL AllocAry(U,     p_grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrM
 CALL CheckError()
 
 IF ( WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( U_Ref, H_Ref, p_grid%Z, RotorDiameter, PROFILE_TYPE=WindProfileType)
+   U = getVelocityProfile( U_Ref, H_Ref, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 ELSE 
-   U = getVelocityProfile( UHub,  p_grid%HubHt, p_grid%Z, RotorDiameter, PROFILE_TYPE=WindProfileType) 
+   U = getVelocityProfile( UHub,  p_grid%HubHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) 
 ENDIF
 
    ! Wind Direction:
@@ -507,23 +465,12 @@ CALL WrSum_SpecModel( US, p_IEC, p_grid%Z(NumGrid_Z2) )
 
 !bjj: This doesn't need to be part of the summary file, so put it in the debug file
 IF ( DEBUG_OUT .AND. WindProfileType(1:1) == 'J' ) THEN
-   FormStr = "(//'Jet wind profile Chebyshev coefficients:' / )"
-   WRITE (UD,FormStr) 
-   
-   FormStr = "( 3X,'Order: ',11(1X,I10) )"
-   WRITE(US,FormStr)  ( IY, IY=0,10 )
-   FormStr = "( 3X,'------ ',11(1X,'----------') )"
-   WRITE(UD,FormStr)
-    
-   FormStr = "( 3X,'Speed: ',11(1X,E10.3) )"
-   WRITE(UD,FormStr)  ( ChebyCoef_WS(IY), IY=1,11 )
-
-   FormStr = "( 3X,'Angle: ',11(1X,E10.3) )"
-   WRITE(UD,FormStr)  ( ChebyCoef_WD(IY), IY=1,11 )   
+   WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
+   WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( IY, IY=0,10 )
+   WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
+   WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( ChebyCoef_WS(IY), IY=1,11 )
+   WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( ChebyCoef_WD(IY), IY=1,11 )   
 ENDIF
-
-
-
 
 
 
@@ -560,14 +507,13 @@ ENDIF
 
    ! Calculate the single point Power Spectral Densities. 
 
+HalfDelF = 0.5*p_grid%Freq(1)   
 JZ = 0   ! The index for numbering the points on the grid
 DO IZ=1,p_grid%ZLim
 
          ! The continuous, one-sided PSDs are evaluated at discrete
          ! points and the results are stored in the "Work" matrix.
 
-
-!bonnie: fix this so the the IEC runs differently?? It doesn't need as large an array here anymore...
       IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM ) THEN
          CALL PSDcal( p_grid%HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
       ELSEIF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
@@ -583,6 +529,14 @@ DO IZ=1,p_grid%ZLim
          CALL PSDcal( p_grid%Z(IZ), U(IZ) )
       ENDIF               
 
+      IF ( PSD_OUT ) THEN
+         !IF ( ABS(Ht - p_grid%HubHt) < Tolerance ) THEN
+            WRITE( UP, FormStr ) 1, p_grid%Z(IZ), Work(:,1)
+            WRITE( UP, FormStr ) 2, p_grid%Z(IZ), Work(:,2)
+            WRITE( UP, FormStr ) 3, p_grid%Z(IZ), Work(:,3)
+         !ENDIF
+      ENDIF      
+      
       IF (DEBUG_OUT) THEN
             TotalU = 0.0
             TotalV = 0.0
@@ -595,10 +549,10 @@ DO IZ=1,p_grid%ZLim
             ENDDO ! IFreq
 
             Total  = SQRT( TotalU*TotalU + TotalV*TotalV )
-            TotalU = TotalU*DelF
-            TotalV = TotalV*DelF
-            TotalW = TotalW*DelF
-            HorVar = Total *DelF
+            TotalU = TotalU*p_grid%Freq(1)
+            TotalV = TotalV*p_grid%Freq(1)
+            TotalW = TotalW*p_grid%Freq(1)
+            HorVar = Total *p_grid%Freq(1)
 
             WRITE(UD,*)  'At H=', p_grid%Z(IZ)
             WRITE(UD,*)  '   TotalU=', TotalU, '  TotalV=', TotalV, '  TotalW=', TotalW, ' (m/s^2)'
@@ -617,7 +571,7 @@ DO IZ=1,p_grid%ZLim
             Indx = Indx + 1
  
             DO IFreq=1,p_grid%NumFreq
-               S(IFreq,Indx,IVec) = Work(IFreq,IVec)*DelF5
+               S(IFreq,Indx,IVec) = Work(IFreq,IVec)*HalfDelF
             ENDDO ! IFreq
 
          ENDDO !IY
@@ -762,6 +716,7 @@ CASE (SpecModel_GP_LLJ, &
       SpecModel_TIDAL,  &
       SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
                
+   
             ! Calculate coefficients for obtaining "correct" Reynold's stresses at the hub
          UWsum = 0.0
          UVsum = 0.0
@@ -769,6 +724,9 @@ CASE (SpecModel_GP_LLJ, &
          USum2 = 0.0
          VSum2 = 0.0
          WSum2 = 0.0
+         
+         INumSteps   = 1.0/p_grid%NumSteps
+         
          
          DO IT = 1,p_grid%NumSteps
             UWsum = UWsum + V(IT,p_grid%HubIndx,1) * V(IT,p_grid%HubIndx,3)
@@ -820,13 +778,9 @@ CASE (SpecModel_GP_LLJ, &
             ENDDO          
          ENDDO
 
-         FormStr = "(//,'Scaling statistics from the hub grid point:',/)"
-         WRITE( US, FormStr )
-                  
-         FormStr = "(3X,'Cross-Component  Scaling Factor')"
-         WRITE( US, FormStr )
-         FormStr = "(3X,'---------------  --------------')"
-         WRITE( US, FormStr )
+         WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )
+         WRITE( US, "(3X,'Cross-Component  Scaling Factor')" )
+         WRITE( US, "(3X,'---------------  --------------')" )
          FormStr = "(3X,A,2X,E14.5)"
          WRITE( US, FormStr ) "u'w'           ", UWmax
          WRITE( US, FormStr ) "u'v'           ", UVmax
@@ -842,9 +796,8 @@ CASE (SpecModel_GP_LLJ, &
          WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
          WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
          
-         FormStr = "(2X,3x,A,7x,f11.3,9x,f12.3,11x,f10.3)"                        
          DO IVec = 1,3
-            WRITE( US, FormStr) Comp(IVec)//"'", p_IEC%SigmaIEC(IVec), ActualSigma(IVec), HubFactor(IVec)
+            WRITE( US, "(2X,3x,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p_IEC%SigmaIEC(IVec), ActualSigma(IVec), HubFactor(IVec)
          END DO
            
       ENDIF !ScaleIEC
@@ -857,17 +810,19 @@ END SELECT
 ! Write hub-height output files (before adding mean and rotating final results)
 !..............................................................................
 
-IF ( WrADHH )  THEN
-   CALL WrHH_ADtxtfile(p_IEC%TurbInt)   
+IF ( WrFile(FileExt_HH) )  THEN
+   CALL WrHH_ADtxtfile(p_IEC%TurbInt, ErrStat, ErrMsg)   
+   CALL CheckError()
 END IF
 
-IF ( WrBHHTP )  THEN
+IF ( WrFile(FileExt_BIN) )  THEN
    CALL WrHH_binary(ErrStat, ErrMsg)
    CALL CheckError()
 END IF
 
-IF ( WrFHHTP )  THEN
-   CALL WrHH_text()   
+IF ( WrFile(FileExt_DAT) )  THEN
+   CALL WrHH_text( ErrStat, ErrMsg )   
+   CALL CheckError()
 END IF
 
    ! Write statistics of the run to the summary file:
@@ -915,7 +870,7 @@ IF ( ALLOCATED( WindDir_profile ) )  DEALLOCATE( WindDir_profile )
 ! Are we generating a coherent turbulent timestep file?
 !..............................................................................
    
-IF ( WrACT ) THEN
+IF ( WrFile(FileExt_CTS) ) THEN
    
    CALL CohStr_WriteCTS(ErrStat, ErrMsg)
    CALL CheckError()
@@ -942,7 +897,7 @@ ENDIF !WrACT
 ! Are we generating FF AeroDyn/BLADED files OR Tower Files?
 !..............................................................................
 
-IF ( WrBLFF .OR. WrADFF .OR. WrADTWR )  THEN !bjj: isn't WrADTWR redundant here?
+IF ( WrFile(FileExt_WND) .OR. WrFile(FileExt_BTS)  )  THEN 
 
       ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
 
@@ -993,18 +948,19 @@ IF ( WrBLFF .OR. WrADFF .OR. WrADTWR )  THEN !bjj: isn't WrADTWR redundant here?
    WRITE(US,FormStr)  'Mean' , UGridMean, ' m/s'
    WRITE(US,FormStr)  'TI  ' , UGridTI  , ' %'
 
-   IF ( WrADFF ) THEN
-      CALL WrBinTURBSIM
+   IF ( WrFile(FileExt_BTS) ) THEN
+      CALL WrBinTURBSIM(ErrStat, ErrMsg)
+      CALL CheckError()
    END IF   
    
-   IF ( WrBLFF .OR. (WrADTWR .AND. .NOT. WrADFF) ) THEN
+   IF ( WrFile(FileExt_WND) ) THEN
 
          ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
          ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
          ! in this BLADED-style binary output.  TmpU is |V-UHub|
       USig = MAX(USig,0.05*TmpU)
-      CALL WrBinBLADED(USig, VSig, WSig)
-
+      CALL WrBinBLADED(USig, VSig, WSig, ErrStat, ErrMsg)
+      CALL CheckError()
    ENDIF
    
 ENDIF
@@ -1012,9 +968,9 @@ ENDIF
 
    ! Are we generating FF formatted files?
 
-IF ( WrFmtFF )  THEN
-   CALL WrFormattedFF(p_grid%HubIndx)
-ENDIF ! ( WrFmtFF )
+IF ( WrFile(FileExt_UVW) )  THEN
+   CALL WrFormattedFF(p_grid, V)
+ENDIF ! ( WrFile(FileExt_UVW) )
 
 
    ! Deallocate the temporary V, Y, Z, and IYmax arrays.
@@ -1030,7 +986,7 @@ IF (DEBUG_OUT) THEN
 ENDIF
 
 WRITE ( US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p_grid%TimeStep)
-IF ( WrACT .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
+IF ( WrFile(FileExt_CTS) .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
    WRITE ( US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0 / (2.0 * y_CohStr%EventTimeStep)
 ENDIF
 
@@ -1039,14 +995,12 @@ ENDIF
 
 CALL CPU_TIME ( CPUtime )
 
-FormStr = "(//,'Processing complete.  ',A,' CPU seconds used.')"
-WRITE (US,FormStr)  TRIM( Num2LStr( CPUtime ) )
+WRITE (US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2LStr( CPUtime ) )
 
 !BONNIE: ****************************
 !Time = TIMEF()
 !PRINT *, Time
-!FormStr = "(//,'BONNIE TEST.  ',A,' seconds for completion.')"
-!WRITE (US,FormStr)  TRIM( Flt2LStr( CPUtime ) )
+!WRITE (US,"(//,'BONNIE TEST.  ',A,' seconds for completion.')")  TRIM( Flt2LStr( CPUtime ) )
 !END BONNIE ************************************
 
 CLOSE ( US )

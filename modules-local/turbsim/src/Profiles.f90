@@ -156,14 +156,14 @@ INTEGER                 :: I                 ! A loop counter
          ChebyCoef_WS(I) = Rich_No*UH_coef(2,I) + Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
       ENDDO
 
-      Utmp1              = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE_TYPE='JET')
+      Utmp1              = getWindSpeed(URef, RefHt, RefHt, p_grid%RotorDiameter, PROFILE_TYPE='JET')
 
          ! Now calculate the coefficients with just UJetMax term
 
       ChebyCoef_tmp(:)   = ChebyCoef_WS(:)
       ChebyCoef_WS(:)    = UH_coef(1,:)
 
-      Utmp2              = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
+      Utmp2              = getWindSpeed(URef, RefHt, RefHt, p_grid%RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
       UJetMax            = (Uref - Utmp1)/Utmp2
 
          ! Get the final coefficients, using the computed UJetMax

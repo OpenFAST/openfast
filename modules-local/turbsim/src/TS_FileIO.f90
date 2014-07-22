@@ -60,6 +60,7 @@ REAL(ReKi)        :: URef            ! Wind speed at the reference height.
 
 INTEGER           :: IOS             ! I/O status
 INTEGER           :: TmpIndex        ! Contains the index number when searching for substrings
+INTEGER           :: UI              ! I/O unit for input file.
 
 LOGICAL           :: getPLExp        ! Whether the power law exponent needs to be calculated
 LOGICAL           :: Randomize       ! Whether to randomize the coherent turbulence scaling
@@ -84,7 +85,9 @@ UstarSlope = 1.0
 zlOffset   = 0.0
 
    ! Open input file.
-CALL OpenFInpFile( UI, InFile )
+CALL GetNewUnit( UI, ErrStat, ErrMsg)
+CALL OpenFInpFile( UI, InFile, ErrStat, ErrMsg )
+IF (ErrStat >= AbortErrLev) RETURN
 
 CALL WrScr1(' Reading the input file "'//TRIM(InFile)//'".' )
 
@@ -124,26 +127,24 @@ CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
 
    IF (IOS == 0) THEN
 
-      FormStr = "( I10 , 2X , 'Random seed #2' )"
-      WRITE (US,FormStr)  p_RandNum%RandSeed(2)
-      RNG_type = "NORMAL"
+      WRITE (US,"( I10 , 2X , 'Random seed #2' )")  p_RandNum%RandSeed(2)
+      p_RandNum%RNG_type = "NORMAL"
       p_RandNum%pRNG = pRNG_INTRINSIC
 
    ELSE
 
-      RNG_type = ADJUSTL( Line )
-      CALL Conv2UC( RNG_type )
+      p_RandNum%RNG_type = ADJUSTL( Line )
+      CALL Conv2UC( p_RandNum%RNG_type )
 
-      IF ( RNG_type == "RANLUX") THEN
+      IF ( p_RandNum%RNG_type == "RANLUX") THEN
          p_RandNum%pRNG = pRNG_RANLUX
-      ELSE IF ( RNG_type == "RNSNLW") THEN
+      ELSE IF ( p_RandNum%RNG_type == "RNSNLW") THEN
          p_RandNum%pRNG = pRNG_SNLW3
       ELSE
          CALL TS_Abort( 'Invalid alternative random number generator.' )
       ENDIF
 
-      FormStr  = "( 4X, A6, 2X, 'Type of random number generator' )"
-      WRITE (US,FormStr)  RNG_type
+      WRITE (US,"( 4X, A6, 2X, 'Type of random number generator' )")  p_RandNum%RNG_type
 
    ENDIF
 
@@ -154,74 +155,62 @@ CALL RandNum_Init(p_RandNum, OtherSt_RandNum, ErrStat, ErrMsg)
 
    ! --------- Read the flag for writing the binary HH (GenPro) turbulence parameters. -------------
 
-CALL ReadVar( UI, InFile, WrBHHTP, "the flag for writing the binary HH turbulence parameters", &
-                                    "Output binary HH turbulence parameters?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_BIN), "WrBHHTP", "Output binary HH turbulence parameters? [RootName.bin]")
 
-FormStr = "( L10 , 2X , 'Output binary HH turbulence parameters?' )"
-WRITE (US,FormStr)  WrBHHTP
+WRITE (US,"( L10 , 2X , 'Output binary HH turbulence parameters?' )")  WrFile(FileExt_BIN)
 
 
    ! --------- Read the flag for writing the formatted turbulence parameters. ----------------------
 
-CALL ReadVar( UI, InFile, WrFHHTP, "the flag for writing the formatted turbulence parameters", &
-                                    "Output formatted turbulence parameters?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_DAT), "WrFHHTP", "Output formatted turbulence parameters? [RootName.dat]")
 
-FormStr = "( L10 , 2X , 'Output formatted turbulence parameters?' )"
-WRITE (US,FormStr)  WrFHHTP
+WRITE (US,"( L10 , 2X , 'Output formatted turbulence parameters?' )")  WrFile(FileExt_DAT)
 
 
    ! ---------- Read the flag for writing the AeroDyn HH files. -------------------------------------
 
-CALL ReadVar( UI, InFile, WrADHH, "the flag for writing AeroDyn HH files", "Output AeroDyn HH files?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_HH), "WrADHH", "Output AeroDyn HH files? [RootName.hh]")
 
-FormStr = "( L10 , 2X , 'Output AeroDyn HH files?' )"
-WRITE (US,FormStr)  WrADHH
+WRITE (US,"( L10 , 2X , 'Output AeroDyn HH files?' )")  WrFile(FileExt_HH)
 
    ! ---------- Read the flag for writing the AeroDyn FF files. ---------------------------------------
 
-CALL ReadVar( UI, InFile, WrADFF, "the flag for writing AeroDyn FF files", "Output AeroDyn FF files?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_BTS), "WrADFF", "Output AeroDyn FF files? [RootName.bts]")
 
-FormStr = "( L10 , 2X , 'Output AeroDyn FF files?' )"
-WRITE (US,FormStr)  WrADFF
+WRITE (US,"( L10 , 2X , 'Output AeroDyn FF files?' )")  WrFile(FileExt_BTS)
 
    ! ---------- Read the flag for writing the BLADED FF files. -----------------------------------------
 
-CALL ReadVar( UI, InFile, WrBLFF, "the flag for writing BLADED FF files", "Output BLADED FF files?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_WND) , "WrBLFF", "Output BLADED FF files? [RootName.wnd]")
 
-FormStr = "( L10 , 2X , 'Output BLADED FF files?' )"
-WRITE (US,FormStr)  WrBLFF
+WRITE (US,"( L10 , 2X , 'Output BLADED FF files?' )")  WrFile(FileExt_WND)
 
 
    ! ---------- Read the flag for writing the AeroDyn tower files. --------------------------------------
 
-CALL ReadVar( UI, InFile, WrADTWR, "the flag for writing tower data", "Output tower data?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_TWR), "WrADTWR", "Output tower data? [RootName.twr]")
 
-FormStr = "( L10 , 2X , 'Output tower data?' )"
-WRITE (US,FormStr)  WrADTWR
-
+WRITE (US,"( L10 , 2X , 'Output tower data?' )")  WrFile(FileExt_TWR)
 
    ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
 
-CALL ReadVar( UI, InFile, WrFmtFF, "the flag for writing formatted FF files", "Output formatted FF files?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_UVW), "WrFMTFF", "Output formatted FF files? [RootName.u, .v, .w]")
 
-FormStr = "( L10 , 2X , 'Output formatted FF files?' )"
-WRITE (US,FormStr)  WrFmtFF
+WRITE (US,"( L10 , 2X , 'Output formatted FF files?' )")  WrFile(FileExt_UVW)
 
 
    ! ---------- Read the flag for writing coherent time series files. --------------------------------------
 
-CALL ReadVar( UI, InFile, WrACT, "the flag for writing coherent time series files", "Output coherent time series files?")
+CALL ReadVar( UI, InFile, WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]")
 
-FormStr = "( L10 , 2X , 'Output coherent turbulence time step file?' )"
-WRITE (US,FormStr)  WrACT
+WRITE (US,"( L10 , 2X , 'Output coherent turbulence time step file?' )")  WrFile(FileExt_CTS)
 
 
    ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
 
-CALL ReadVar( UI, InFile, Clockwise, "the flag for direction of turbine rotation", "Clockwise rotation when looking downwind?")
+CALL ReadVar( UI, InFile, Clockwise, "Clockwise", "Clockwise rotation when looking downwind?")
 
-FormStr = "( L10 , 2X , 'Clockwise rotation when looking downwind?' )"
-WRITE (US,FormStr)  Clockwise
+WRITE (US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )")  Clockwise
 
    ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
 CALL ReadVar( UI, InFile, p_IEC%ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
@@ -245,8 +234,7 @@ FormStr = "( I2, ' - ', A5, 2X , 'IEC turbulence models scaled to exact specifie
    ! Read the turbine/model specifications.
    !===================================================================================
 
-FormStr = "( // 'Turbine/Model Specifications:' / )"
-WRITE (US,FormStr)
+WRITE (US,"( // 'Turbine/Model Specifications:' / )")
 CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 1" )
 CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
 !READ (UI,'(/)')
@@ -254,146 +242,134 @@ CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
 
    ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%NumGrid_Z, "the vertical matrix dimension", "Vertical grid-point matrix dimension")
+CALL ReadVar( UI, InFile, p_grid%NumGrid_Z, "NumGrid_Z", "Vertical grid-point matrix dimension")
 
    IF ( p_grid%NumGrid_Z < 2 )  THEN
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
    ENDIF
 
-FormStr = "( I10 , 2X , 'Vertical grid-point matrix dimension' )"
-WRITE (US,FormStr)  p_grid%NumGrid_Z
+WRITE (US,"( I10 , 2X , 'Vertical grid-point matrix dimension' )")  p_grid%NumGrid_Z
 
 
    ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%NumGrid_Y, "the horizontal matrix dimension", "Horizontal grid-point matrix dimension")
+CALL ReadVar( UI, InFile, p_grid%NumGrid_Y, "NumGrid_Y", "Horizontal grid-point matrix dimension")
 
    IF ( p_grid%NumGrid_Y < 2 )  THEN
       CALL TS_Abort ( 'The matrix must be >= 2x2.' )
    ENDIF
 
-FormStr = "( I10 , 2X , 'Horizontal grid-point matrix dimension' )"
-WRITE (US,FormStr)  p_grid%NumGrid_Y
+WRITE (US,"( I10 , 2X , 'Horizontal grid-point matrix dimension' )")  p_grid%NumGrid_Y
 
 
    ! ------------ Read in the time step. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%TimeStep, "the time step", "Time step [seconds]")
+CALL ReadVar( UI, InFile, p_grid%TimeStep, "TimeStep", "Time step [seconds]")
 
    IF ( p_grid%TimeStep <=  0.0 )  THEN
       CALL TS_Abort ( 'The time step must be greater than zero.' )
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Time step [seconds]' )"
-WRITE (US,FormStr)  p_grid%TimeStep
+WRITE (US,"( F10.3 , 2X , 'Time step [seconds]' )")  p_grid%TimeStep
 
 
    ! ------------ Read in the analysis time. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%AnalysisTime, "the analysis time", "Analysis time [seconds]")
+CALL ReadVar( UI, InFile, p_grid%AnalysisTime, "AnalysisTime", "Analysis time [seconds]")
 
    IF ( p_grid%AnalysisTime <=  0.0 )  THEN
       CALL TS_Abort ( 'The analysis time must be greater than zero.' )
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Analysis time [seconds]' )"
-WRITE (US,FormStr)  p_grid%AnalysisTime
+WRITE (US,"( F10.3 , 2X , 'Analysis time [seconds]' )")  p_grid%AnalysisTime
 
 
    ! ------------ Read in the usable time. ---------------------------------------------
-CALL ReadVar( UI, InFile, Line, "the usable output time", "Usable output time [seconds]")
+CALL ReadVar( UI, InFile, Line, "UsableTime", "Usable output time [seconds]")
 
-   READ( Line, *, IOSTAT=IOS) UsableTime
+   READ( Line, *, IOSTAT=IOS) p_grid%UsableTime
    
    IF ( IOS /= 0 ) THEN ! Line didn't contian a number
       CALL Conv2UC( Line )
       IF ( TRIM(Line) == 'ALL' ) THEN
-         Periodic   = .TRUE.
-         UsableTime = p_grid%AnalysisTime
+         p_grid%Periodic   = .TRUE.
+         p_grid%UsableTime = p_grid%AnalysisTime
       ELSE
          CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
       END IF
    
    ELSE
-      IF ( UsableTime <=  0.0 )  THEN
+      IF ( p_grid%UsableTime <=  0.0 )  THEN
          CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
       ENDIF
-      Periodic = .FALSE.
+      p_grid%Periodic = .FALSE.
    END IF
    
 
-FormStr = "( F10.3 , 2X , 'Usable output time [seconds]' )"
-WRITE (US,FormStr)  UsableTime
+WRITE (US,"( F10.3 , 2X , 'Usable output time [seconds]' )")  p_grid%UsableTime
 
 
    ! ------------ Read in the hub height. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%HubHt, "the hub height", "Hub height [m]")
+CALL ReadVar( UI, InFile, p_grid%HubHt, "HubHt", "Hub height [m]")
 
    IF ( p_grid%HubHt <=  0.0 )  THEN
       CALL TS_Abort ( 'The hub height must be greater than zero.' )
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Hub height [m]' )"
-WRITE (US,FormStr)  p_grid%HubHt
+WRITE (US,"( F10.3 , 2X , 'Hub height [m]' )")  p_grid%HubHt
 
 
    ! ------------ Read in the grid height. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%GridHeight, "the grid height", "Grid height [m]")
+CALL ReadVar( UI, InFile, p_grid%GridHeight, "GridHeight", "Grid height [m]")
 
    IF ( 0.5*p_grid%GridHeight > p_grid%HubHt  )THEN
       CALL TS_Abort( 'The hub must be higher than half of the grid height.')
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Grid height [m]' )"
-WRITE (US,FormStr)  p_grid%GridHeight
+WRITE (US,"( F10.3 , 2X , 'Grid height [m]' )")  p_grid%GridHeight
 
 
    ! ------------ Read in the grid width. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p_grid%GridWidth, "the grid width", "Grid width [m]")
+CALL ReadVar( UI, InFile, p_grid%GridWidth, "GridWidth", "Grid width [m]")
 
    IF ( p_grid%GridWidth <=  0.0 )  THEN
       CALL TS_Abort ( 'The grid width must be greater than zero.' )
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Grid width [m]' )"
-WRITE (US,FormStr)  p_grid%GridWidth
+WRITE (US,"( F10.3 , 2X , 'Grid width [m]' )")  p_grid%GridWidth
 
 
    ! ***** Calculate the diameter of the rotor disk *****
 
-RotorDiameter = MIN( p_grid%GridWidth, p_grid%GridHeight )
+p_grid%RotorDiameter = MIN( p_grid%GridWidth, p_grid%GridHeight )
 
 
    ! ------------ Read in the vertical flow angle. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, VFlowAng, "the vertical flow angle", "Vertical flow angle [degrees]")
+CALL ReadVar( UI, InFile, VFlowAng, "tVFlowAng", "Vertical flow angle [degrees]")
 
    IF ( ABS( VFlowAng ) > 45.0 )  THEN
       CALL TS_Abort ( 'The vertical flow angle must not exceed +/- 45 degrees.' )
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Vertical flow angle [degrees]' )"
-WRITE (US,FormStr)  VFlowAng
+WRITE (US,"( F10.3 , 2X , 'Vertical flow angle [degrees]' )")  VFlowAng
 
 
    ! ------------ Read in the horizontal flow angle. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, HFlowAng, "the horizontal flow angle", "Horizontal flow angle [degrees]")
+CALL ReadVar( UI, InFile, HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]")
 
-FormStr = "( F10.3 , 2X , 'Horizontal flow angle [degrees]' )"
-WRITE (US,FormStr)  HFlowAng
+WRITE (US,"( F10.3 , 2X , 'Horizontal flow angle [degrees]' )")  HFlowAng
 
 
    !==========================================================
    ! Read the meteorological boundary conditions.
    !==========================================================
 
-FormStr = "( // 'Meteorological Boundary Conditions:' / )"
-WRITE (US,FormStr)
-!READ (UI,'(/)')
+WRITE (US,"( // 'Meteorological Boundary Conditions:' / )")
 CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 1" )
 CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2" )
 
@@ -460,8 +436,7 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
       END SELECT  ! TurbModel
       IF (ErrStat >= AbortErrLev) RETURN
 
-FormStr = "( 4X , A6 , 2X , '"//TRIM( TMName )//" spectral model' )"
-WRITE (US,FormStr)  TurbModel
+WRITE (US, "( 4X , A6 , 2X , '"//TRIM( TMName )//" spectral model' )")  TurbModel
 
    ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
 
@@ -536,15 +511,13 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
 
       END SELECT
 
-      FormStr = "( 7X, I3, 2X, 'IEC standard: ', A )"
-      WRITE (US,FormStr)  p_IEC%IECstandard, TRIM(IECeditionSTR(p_IEC%IECedition))
+      WRITE (US,"( 7X, I3, 2X, 'IEC standard: ', A )")  p_IEC%IECstandard, TRIM(IECeditionSTR(p_IEC%IECedition))
 
    ELSE ! NOT IEC
       p_IEC%IECstandard = 0
       p_IEC%IECedition  = 0
-
-      FormStr = "( 7X, A3, 2X, 'IEC standard' )"
-      WRITE (US,FormStr)  'N/A'
+      
+      WRITE (US,"( 7X, A3, 2X, 'IEC standard' )")  'N/A'
 
    ENDIF ! IEC
 
@@ -597,8 +570,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
          ! Let's use turbulence value.
 
          p_IEC%NumTurbInp = .TRUE.
-         FormStr    = "( F10.3 , 2X , 'Percent turbulence intensity, ', A )"
-         WRITE (US,FormStr)  p_IEC%PerTurbInt, TRIM(IECeditionSTR(p_IEC%IECedition))
+         WRITE (US,"( F10.3 , 2X , 'Percent turbulence intensity, ', A )")  p_IEC%PerTurbInt, TRIM(IECeditionSTR(p_IEC%IECedition))
 
       ELSE
 
@@ -625,8 +597,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
                CALL TS_Abort ( 'The IEC turbulence characteristic must be either "A", "B", "C", or a real number.' )
          END SELECT  ! IECTurbC
 
-         FormStr  = "( 9X , A1 , 2X , 'IEC turbulence characteristic' )"
-         WRITE (US,FormStr)  p_IEC%IECTurbC
+         WRITE (US,"( 9X , A1 , 2X , 'IEC turbulence characteristic' )")  p_IEC%IECTurbC
 
       ENDIF
 
@@ -637,22 +608,20 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
       IF ( Line(1:6) == 'KHTEST' ) THEN
          KHtest = .TRUE.
-         FormStr = "( 4X, A6, 2X, 'Kelvin-Helmholtz billow test case' )"
-         WRITE (US,FormStr)  'KHTEST'
+         WRITE (US,"( 4X, A6, 2X, 'Kelvin-Helmholtz billow test case' )")  'KHTEST'
 
 
          IF ( SpecModel /= SpecModel_NWTCUP ) THEN
             CALL TS_Abort( 'The KH test can be used with the "NWTCUP" spectral model only.' )
          ENDIF
 
-         IF ( .NOT. WrACT ) THEN
+         IF ( .NOT. WrFile(FileExt_CTS) ) THEN
             CALL WRScr( ' Coherent turbulence time step files must be generated when using the "KHTEST" option.' )
-            WRACT  = .TRUE.
+            WrFile(FileExt_CTS)  = .TRUE.
          ENDIF
 
       ELSE
-         FormStr = "( 7X, A3, 2X, 'IEC turbulence characteristic' )"
-         WRITE (US,FormStr)  'N/A'
+         WRITE (US,"( 7X, A3, 2X, 'IEC turbulence characteristic' )")  'N/A'
       ENDIF
 
 
@@ -731,14 +700,12 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
 
       ENDIF
 
-      FormStr = "( 4X, A6 , 2X , 'IEC ', A )"
-      WRITE (US,FormStr)  TRIM(p_IEC%IECTurbE)//TRIM(Line), TRIM(p_IEC%IEC_WindDesc)
+      WRITE (US,"( 4X, A6 , 2X , 'IEC ', A )")  TRIM(p_IEC%IECTurbE)//TRIM(Line), TRIM(p_IEC%IEC_WindDesc)
 
    ELSE
       p_IEC%IEC_WindType = IEC_NTM
-
-      FormStr = "( A10 , 2X , 'IEC turbulence type' )"
-      WRITE (US,FormStr)  'N/A'
+      
+      WRITE (US,"( A10 , 2X , 'IEC turbulence type' )")  'N/A'
    ENDIF
 
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
@@ -774,23 +741,23 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
       ! Make sure the variable is valid for this turbulence model
 
    SELECT CASE ( TRIM(WindProfileType) )
-      CASE ( 'JET','J' )
+      CASE ( 'JET' )
          IF ( SpecModel /= SpecModel_GP_LLJ ) THEN
             CALL TS_Abort( 'The jet wind profile is available with the GP_LLJ spectral model only.')
          ENDIF
-      CASE ( 'LOG','L' )
+      CASE ( 'LOG')
          IF (p_IEC%IEC_WindType /= IEC_NTM ) THEN
             CALL TS_Abort( ' The IEC turbulence type must be NTM for the logarithmic wind profile.' )
 !bjj check that IEC_WindType == IEC_NTM for non-IEC
          ENDIF
-      CASE ( 'PL',  'P' )
-      CASE ( 'H2L', 'H' )
+      CASE ( 'PL'  )
+      CASE ( 'H2L' )
          IF ( SpecModel /= SpecModel_TIDAL ) THEN
             CALL TS_Abort(  'The "H2L" mean profile type should be used only with the "TIDAL" spectral model.' )
          ENDIF
-      CASE ( 'IEC', 'N/A' )
-      CASE ( 'USR', 'U' )
-      CASE ( 'API', 'A' )   ! ADDED BY Y.GUO
+      CASE ( 'IEC' )
+      CASE ( 'USR' )
+      CASE ( 'API' )   ! ADDED BY Y.GUO
       CASE DEFAULT
          CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' )
    END SELECT
@@ -816,8 +783,7 @@ CALL ReadVar( UI, InFile, RefHt, "the reference height", "Reference height [m]")
       CALL TS_Abort ( 'The reference height must be greater than zero.' )
    ENDIF
 
-FormStr = "( F10.3 , 2X , 'Reference height [m]' )"
-WRITE (US,FormStr)  RefHt
+WRITE (US,"( F10.3 , 2X , 'Reference height [m]' )")  RefHt
 H_ref = RefHt ! Define the variable H_ref, for later use in HYDRO spectral models (RefHt gets modified later in the code)
 
    ! ------------ Read in the reference wind speed. -----------------------------------------------------
@@ -843,7 +809,7 @@ URef       = -999.9
       RefHt = p_grid%HubHt
       CALL GetUSR( UI, InFile, 37, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
       IF (ErrStat >= AbortErrLev) RETURN
-      URef = getWindSpeed(URef, RefHt, RefHt, RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
+      URef = getWindSpeed(URef, RefHt, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
 
@@ -937,9 +903,7 @@ CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness
 
 IF ( SpecModel /= SpecModel_IECKAI .AND. SpecModel /= SpecModel_IECVKM .AND. SpecModel /= SpecModel_API ) THEN  ! Modified by Y.Guo
 
-   FormStr = "( // 'Non-IEC Meteorological Boundary Conditions:' / )"
-   WRITE (US,FormStr)
-   !READ (UI,'(/)')
+   WRITE (US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1" )
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2" )
 
@@ -993,8 +957,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       WRITE (US,"( A10, 2X, A )")  "N/A", 'Gradient Richardson number'
       RICH_NO = 0
    ELSE
-      FormStr = "( F10.3 , 2X , 'Gradient Richardson number' )"
-      WRITE (US,FormStr)  RICH_NO
+      WRITE (US,"( F10.3 , 2X , 'Gradient Richardson number' )")  RICH_NO
    END IF
 
       ! ***** Calculate M-O z/L parameter   :  z/L is a number in (-inf, 1] *****
@@ -1059,7 +1022,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ! ------------ Read in the shear/friction velocity, Ustar, first calculating UstarDiab ------------------------
 
          ! Set up the heights for the zl- and ustar-profile averages across the rotor disk
-      TmpZary  = (/ p_grid%HubHt-RotorDiameter/2., p_grid%HubHt, p_grid%HubHt+RotorDiameter/2. /)
+      TmpZary  = (/ p_grid%HubHt-p_grid%RotorDiameter/2., p_grid%HubHt, p_grid%HubHt+p_grid%RotorDiameter/2. /)
       IF (TmpZary(3) .GE. profileZmin .AND. TmpZary(1) .LE. profileZmax ) THEN  !set height limits so we don't extrapolate too far
          DO TmpIndex = 1,3
             TmpZary(TmpIndex) = MAX( MIN(TmpZary(TmpIndex), profileZmax), profileZmin)
@@ -1139,7 +1102,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
          CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and uStar
 
-         URef = getWindSpeed(UJetMax, ZJetMax, RefHt, RotorDiameter, PROFILE_TYPE=WindProfileType)
+         URef = getWindSpeed(UJetMax, ZJetMax, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
       ELSE
          CALL GetChebCoefs(URef, RefHt)
@@ -1147,7 +1110,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    ENDIF !Jet wind profile
 
-   UHub = getWindSpeed(URef, RefHt, p_grid%HubHt, RotorDiameter, PROFILE_TYPE=WindProfileType)
+   UHub = getWindSpeed(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
          ! ***** Get uStar- and zl-profile values, if required, and determine offsets *****
       IF ( TmpUstarD == 0.0 ) THEN
@@ -1155,7 +1118,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ELSE
          IF ( TmpUstarD < 0.0 ) THEN  ! If > 0, we've already calculated these things...
             UstarDiab = getUstarDiab(URef, RefHt) !bjj: is this problematic for anything else?
-            TmpUary   = getWindSpeed(URef, RefHt, TmpZary, RotorDiameter, PROFILE_TYPE=WindProfileType)
+            TmpUary   = getWindSpeed(URef, RefHt, TmpZary, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
             TmpUstar  = getUstarARY( TmpUary,     TmpZary )
             TmpUstarD = SUM(TmpUstar) / SIZE(TmpUstar)    ! The average of those 3 points
          ENDIF
@@ -1287,11 +1250,9 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          ! Read the Coherent Turbulence Scaling Parameters, if necessary.  !
          !=================================================================================
 
-   IF ( WrACT ) THEN
+   IF ( WrFile(FileExt_CTS) ) THEN
 
-      FormStr = "( // 'Coherent Turbulence Scaling Parameters:' / )"
-      WRITE (US,FormStr)
-      !READ (UI,'(/)')                        ! Read header line
+      WRITE (US,"( // 'Coherent Turbulence Scaling Parameters:' / )")
       CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 1" )
       CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 2" )
 
@@ -1338,9 +1299,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
       ENDIF
 
-      FormStr = "( 7X, A3, 2X, 'Type of coherent turbulence data files' )"
-
-      WRITE (US,FormStr) TRIM(p_CohStr%CText)
+      WRITE (US,"( 7X, A3, 2X, 'Type of coherent turbulence data files' )") TRIM(p_CohStr%CText)
 
 
          ! ------------ Read the Randomization Flag, Randomize -----------------------------------
@@ -1353,8 +1312,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          CALL WrScr( ' Billow will cover rotor disk for KH test. ' )
       ENDIF
 
-      FormStr = "( L10 , 2X , 'Randomize the disturbance scale and location?' )"
-      WRITE (US,FormStr)  Randomize
+      WRITE (US,"( L10 , 2X , 'Randomize the disturbance scale and location?' )")  Randomize
 
 
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
@@ -1385,7 +1343,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
             ! If the turbulence is not the size of the rotor, assume it's half the size
             ! of the disk, with equal probablilty of being in the lower or upper half.
 
-         IF ( tmp > 0.25 .OR. RotorDiameter <= 30.0 ) THEN
+         IF ( tmp > 0.25 .OR. p_grid%RotorDiameter <= 30.0 ) THEN
 
             p_CohStr%DistScl = 1.0
             p_CohStr%CTLy    = 0.5
@@ -1408,9 +1366,9 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
          IF ( p_CohStr%DistScl < 0.0 ) THEN
             CALL TS_Abort ('The disturbance scale must be a positive.')
-         ELSEIF ( RotorDiameter <= 30.0 .AND. p_CohStr%DistScl < 1.0 ) THEN
+         ELSEIF ( p_grid%RotorDiameter <= 30.0 .AND. p_CohStr%DistScl < 1.0 ) THEN
             CALL TS_Abort ('The disturbance scale must be at least 1.0 for rotor diameters less than 30.')
-         ELSEIF ( RotorDiameter*p_CohStr%DistScl <= 15.0  ) THEN
+         ELSEIF ( p_grid%RotorDiameter*p_CohStr%DistScl <= 15.0  ) THEN
             CALL TS_Abort ('The coherent turbulence must be greater than 15 meters in height.  '//&
                         'Increase the rotor diameter or the disturbance scale. ')
          ENDIF
@@ -1418,14 +1376,9 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       ENDIF
 
 
-      FormStr = "( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )"
-      WRITE (US,FormStr)  p_CohStr%DistScl
-
-      FormStr = "( F10.3 , 2X , 'Fractional location of tower centerline from right' )"
-      WRITE (US,FormStr)  p_CohStr%CTLy
-
-      FormStr = "( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )"
-      WRITE (US,FormStr)  p_CohStr%CTLz
+      WRITE (US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")  p_CohStr%DistScl
+      WRITE (US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")  p_CohStr%CTLy
+      WRITE (US,"( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )")  p_CohStr%CTLz
 
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
 
@@ -1433,10 +1386,9 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
       p_CohStr%CTStartTime = MAX( p_CohStr%CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
 
-      FormStr = "( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )"
-      WRITE (US,FormStr)  p_CohStr%CTStartTime
+      WRITE (US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")  p_CohStr%CTStartTime
 
-   ENDIF    ! WrACT
+   ENDIF    ! WrFile(FileExt_CTS)
 
 
 ELSE  ! IECVKM or IECKAI models
@@ -1468,7 +1420,7 @@ ELSE  ! IECVKM or IECKAI models
 
       ! Calculate wind speed at hub height
 
-   UHub    = getWindSpeed(URef, RefHt, p_grid%HubHt, RotorDiameter, PROFILE_TYPE=WindProfileType)
+   UHub    = getWindSpeed(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
 
 ENDIF
@@ -1504,8 +1456,7 @@ CALL OpenFOutFile( US, TRIM( RootName )//'.sum' ) ! Formatted output file
    ! Let's make sure the binary file and the full-field file have the same date and time.
 DescStr = 'generated by '//TRIM( ProgName )//TRIM( ProgVer )//' on '//CurDate()//' at '//CurTime()//'.'
 
-FormStr = "( / 'This summary file was ', A / )"
-WRITE (US,FormStr)  TRIM(DescStr)
+WRITE (US,"( / 'This summary file was ', A / )")  TRIM(DescStr)
 
    ! Capitalize the first letter of the string.
 
@@ -1708,7 +1659,6 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
 
    USE                                   TSMods, ONLY: TurbModel, SpecModel         ! Type of turbulence model
    USE                                   TSMods, ONLY: NumUSRf           ! Length of user-defined spectra (# frequencies)
-   USE                                   TSMods, ONLY: USpec             ! Unit number for the user-defined spectra file
    USE                                   TSMods, ONLY: Freq_USR          ! Frequencies for the user-defined spectra
    USE                                   TSMods, ONLY: Uspec_USR         ! User-defined u-component spectra
    USE                                   TSMods, ONLY: Vspec_USR         ! User-defined v-component spectra
@@ -1731,7 +1681,9 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
    INTEGER                            :: Indx
    INTEGER                            :: J
    INTEGER                            :: IOAstat                        ! Input/Output/Allocate status
+   INTEGER                            :: USpec                          ! I/O unit for user-defined spectra
 
+   
    INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
 
@@ -1740,7 +1692,9 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
    
       ! --------- Open the file ---------------
 
-   CALL OpenFInpFile( USpec, FileName )
+   CALL GetNewUnit( USpec, ErrStat, ErrMsg )
+   CALL OpenFInpFile( USpec, FileName, ErrStat, ErrMsg )
+   IF (ErrStat >= AbortErrLev) RETURN
 
    CALL WrScr1(' Reading the user-defined spectra input file "'//TRIM(FileName)//'".' )
 
@@ -1750,38 +1704,51 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
       READ ( USpec, '(A)', IOSTAT=IOAstat ) LINE
 
       IF ( IOAstat /= 0 ) THEN
-         CALL TS_Abort( 'Could not read entire input file for user-defined spectra.' )
+         CALL SetErrStat(ErrID_Fatal, 'Could not read entire input file for user-defined spectra.' , ErrStat, ErrMsg, 'GetUSR')
+         CALL Cleanup()
+         RETURN
       ENDIF
    ENDDO
 
 
       ! ---------- Read the size of the arrays --------------------------------------------
-   CALL ReadVar( USpec, FileName, NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra" )
+   CALL ReadVar( USpec, FileName, NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra", ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
    IF ( NumUSRf < 3 ) THEN
-      CALL TS_Abort( 'The number of frequencies specified in the user-defined spectra must be at least 3.')
+      CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, 'GetUSR')
+      CALL Cleanup()
+      RETURN
    ENDIF
 
    DO I=1,3
          ! ---------- Read the scaling for the arrays --------------------------------------------
-      CALL ReadVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile" )
+      CALL ReadVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
       IF ( SpecScale(I) <= 0. ) THEN
-         CALL TS_Abort( 'The scaling value for the user-defined spectra must be positive.')
+         CALL SetErrStat(ErrID_Fatal, 'The scaling value for the user-defined spectra must be positive.' , ErrStat, ErrMsg, 'GetUSR')
+         CALL Cleanup()
+         RETURN
       ENDIF
    ENDDO
 
       ! Allocate the data arrays
-   CALL AllocAry( Freq_USR,  NumUSRf, 'Freq_USR (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( Uspec_USR, NumUSRf, 'Uspec_USR (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( Vspec_USR, NumUSRf, 'Vspec_USR (user-defined v spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( Wspec_USR, NumUSRf, 'Wspec_USR (user-defined w spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Freq_USR,  NumUSRf, 'Freq_USR (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Uspec_USR, NumUSRf, 'Uspec_USR (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Vspec_USR, NumUSRf, 'Vspec_USR (user-defined v spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( Wspec_USR, NumUSRf, 'Wspec_USR (user-defined w spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
-
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+   
 
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
-      CALL ReadCom( USpec, FileName, "Headers for user-defined variables" )
+      CALL ReadCom( USpec, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
    ENDDO
 
       ! ---------- Read the data lines --------------------------------------
@@ -1790,13 +1757,19 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
       READ( USpec, *, IOSTAT=IOAstat ) Freq_USR(I), Uspec_USR(I), Vspec_USR(I), Wspec_USR(I)
 
       IF ( IOAstat /= 0 ) THEN
-         CALL TS_Abort( 'Could not read entire user-defined spectra on line '//Int2LStr(I)//'.' )
+         CALL SetErrStat(ErrID_Fatal, 'Could not read entire user-defined spectra on line '//Int2LStr(I)//'.' , ErrStat, ErrMsg, 'GetUSR')
+         CALL Cleanup()
+         RETURN
       ENDIF
 
       IF ( ( Uspec_USR(I) <= REAL( 0., ReKi ) ) .OR. &
            ( Vspec_USR(I) <= REAL( 0., ReKi ) ) .OR. &
            ( Wspec_USR(I) <= REAL( 0., ReKi ) ) ) THEN
-         CALL TS_Abort( 'The spectra must contain positive numbers.' );
+
+         CALL SetErrStat(ErrID_Fatal, 'The spectra must contain positive numbers.' , ErrStat, ErrMsg, 'GetUSR')
+         CALL Cleanup()
+         RETURN
+         
 !      ELSEIF ( Freq_USR(I) <= REAL( 0., ReKi ) ) THEN
 !         CALL TS_Abort( 'The frequencies must be a positive number.' );
       ENDIF
@@ -1818,8 +1791,10 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
             IF ( Freq_USR(I) > Freq_USR(J) ) THEN
                Indx = J+1
                EXIT
-            ELSEIF ( Freq_USR(I) == Freq_USR(J) ) THEN
-               CALL TS_Abort( 'Error: user-defined spectra must contain unique frequencies.' )
+            ELSEIF ( EqualRealNos( Freq_USR(I), Freq_USR(J) ) ) THEN
+               CALL SetErrStat(ErrID_Fatal, 'Error: user-defined spectra must contain unique frequencies.' , ErrStat, ErrMsg, 'GetUSR')
+               CALL Cleanup()
+               RETURN
             ENDIF
          ENDDO
 
@@ -1845,8 +1820,16 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
 
       ! --------- Close the file ---------------------------------------
 
-   CLOSE( USpec )
-
+   CALL Cleanup()
+   
+CONTAINS
+   SUBROUTINE Cleanup()
+   
+      CLOSE( USpec )
+   
+   
+   END SUBROUTINE Cleanup
+   
 END SUBROUTINE GetUSRSpec
 
 !=======================================================================
@@ -2095,20 +2078,24 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, US, Def, IGN
 END SUBROUTINE ReadRVarDefault
 !=======================================================================
 
-SUBROUTINE WrBinBLADED(USig, VSig, WSig)
+SUBROUTINE WrBinBLADED(USig, VSig, WSig, ErrStat, ErrMsg)
 
 USE                         TSMods
 
 
 IMPLICIT                    NONE
 
+   REAL(ReKi),INTENT(IN)    :: USig                          ! Standard deviation of U
+   REAL(ReKi),INTENT(IN)    :: VSig                          ! Standard deviation of V
+   REAL(ReKi),INTENT(IN)    :: WSig                          ! Standard deviation of W
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+
+
 REAL(ReKi)                  :: U_C1                          ! Scale for converting BLADED U data
 REAL(ReKi)                  :: U_C2                          ! Offset for converting BLADED U data
-REAL(ReKi),INTENT(INOUT)    :: USig                          ! Standard deviation of U
 REAL(ReKi)                  :: V_C                           ! Scale for converting BLADED V data
-REAL(ReKi),INTENT(INOUT)    :: VSig                          ! Standard deviation of V
 REAL(ReKi)                  :: W_C                           ! Scale for converting BLADED W data
-REAL(ReKi),INTENT(INOUT)    :: WSig                          ! Standard deviation of W
 REAL(ReKi)                  :: TI(3)                         ! Turbulence intensity for scaling data
 REAL(ReKi)                  :: ZTmp                          ! This is the vertical center of the grid
 
@@ -2126,22 +2113,18 @@ INTEGER(B2Ki)               :: TmpVarray(3*p_grid%NumGrid_Y*p_grid%NumGrid_Z) ! 
 INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities
 
 INTEGER                     :: AllocStat
-
+INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
+INTEGER                     :: UATWR                                ! I/O unit for AeroDyn tower data (*.twr file).
 
 
       ! Put normalizing factors into the summary file.  The user can use them to
       ! tell a simulation program how to rescale the data.
 
-   USig  = MAX(100.0*Tolerance, USig)
-   VSig  = MAX(100.0*Tolerance, VSig)
-   WSig  = MAX(100.0*Tolerance, WSig)
+   TI(1)  = MAX(100.0*Tolerance, USig) / UHub
+   TI(2)  = MAX(100.0*Tolerance, VSig) / UHub
+   TI(3)  = MAX(100.0*Tolerance, WSig) / UHub
 
-   TI(1) = USig / UHub
-   TI(2) = VSig / UHub
-   TI(3) = WSig / UHub
-
-   FormStr = "(//,'Normalizing Parameters for Binary Data (approximate statistics):',/)"
-   WRITE (US,FormStr)
+   WRITE (US,"(//,'Normalizing Parameters for Binary Data (approximate statistics):',/)")
 
    FormStr = "(3X,A,' =',F9.4,A)"
    WRITE (US,FormStr)  'UBar ', UHub, ' m/s'
@@ -2168,8 +2151,12 @@ INTEGER                     :: AllocStat
 
    ZTmp     = p_grid%Z(1) + p_grid%GridHeight/2.0  !This is the vertical center of the grid
 
-   IF ( WrBLFF )  THEN
+   IF ( WrFile(FileExt_WND) )  THEN
 
+      CALL GetNewUnit( UBFFW )
+      CALL OpenBOutFile ( UBFFW, TRIM(RootName)//'.wnd', ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
+      
       CALL WrScr ( ' Generating BLADED binary time-series file "'//TRIM( RootName )//'.wnd"' )
 
                ! Put header information into the binary data file.
@@ -2242,83 +2229,91 @@ INTEGER                     :: AllocStat
 
       CLOSE ( UBFFW )
 
+      
+      ! Now write tower data file if necessary:
+      IF ( WrFile(FileExt_TWR) ) THEN
+         IF ( p_grid%ExtraHubPT ) THEN
+            IZ = p_grid%ZLim - p_grid%NumGrid_Z - 1
+            I  = p_grid%NumGrid_Z*p_grid%NumGrid_Y + 2
+         ELSE
+            IZ = p_grid%ZLim - p_grid%NumGrid_Z
+            I  = p_grid%NumGrid_Z*p_grid%NumGrid_Y + 1
+         ENDIF
 
-   ENDIF ! WrBLFF
+         IF ( p_grid%ExtraTwrPT ) THEN
+            IY = I
+            I  = I + 1
+         ELSE
+            IZ = IZ + 1
+            IY = (p_grid%NumGrid_Y / 2) + 1      !The grid location of the top tower point
+         ENDIF
 
-
-   IF ( WrADTWR .AND. ( WrBLFF .OR. .NOT. WrADFF ) ) THEN
-      IF ( p_grid%ExtraHubPT ) THEN
-         IZ = p_grid%ZLim - p_grid%NumGrid_Z - 1
-         I  = p_grid%NumGrid_Z*p_grid%NumGrid_Y + 2
-      ELSE
-         IZ = p_grid%ZLim - p_grid%NumGrid_Z
-         I  = p_grid%NumGrid_Z*p_grid%NumGrid_Y + 1
-      ENDIF
-
-      IF ( p_grid%ExtraTwrPT ) THEN
-         IY = I
-         I  = I + 1
-      ELSE
-         IZ = IZ + 1
-         IY = (p_grid%NumGrid_Y / 2) + 1      !The grid location of the top tower point
-      ENDIF
-
-
-      CALL WrScr ( ' Generating tower binary time-series file "'//TRIM( RootName )//'.twr"' )
-
-
-      WRITE (UATWR)  REAL( p_grid%GridRes_Z ,SiKi )         ! grid spacing in vertical direction, in m
-      WRITE (UATWR)  REAL( p_grid%TimeStep*UHub ,   SiKi )         ! grid spacing in longitudinal direciton, in m
-      WRITE (UATWR)  REAL( p_grid%Z(1) ,     SiKi )         ! The vertical location of the highest tower grid point in m
-      WRITE (UATWR)   INT( p_grid%NumOutSteps ,     B4Ki )         ! The number of points in alongwind direction
-      WRITE (UATWR)   INT( IZ ,              B4Ki )         ! the number of grid points vertically
-      WRITE (UATWR)  REAL( UHub ,            SiKi )         ! the mean wind speed in m/s
-      WRITE (UATWR)  REAL( 100.0*TI(1),      SiKi )         ! Longitudinal turbulence intensity
-      WRITE (UATWR)  REAL( 100.0*TI(2),      SiKi )         ! Lateral turbulence intensity
-      WRITE (UATWR)  REAL( 100.0*TI(3),      SiKi )         ! Vertical turbulence intensity
+         
+         CALL GetNewUnit( UATWR )
+         CALL OpenBOutFile ( UATWR, TRIM( RootName )//'.twr', ErrStat, ErrMsg )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+         CALL WrScr ( ' Generating tower binary time-series file "'//TRIM( RootName )//'.twr"' )
 
 
-      ALLOCATE ( TmpTWRarray( 3*(p_grid%NPoints-I+2) ) , STAT=AllocStat )
+         WRITE (UATWR)  REAL( p_grid%GridRes_Z     ,   SiKi )         ! grid spacing in vertical direction, in m
+         WRITE (UATWR)  REAL( p_grid%TimeStep*UHub ,   SiKi )         ! grid spacing in longitudinal direciton, in m
+         WRITE (UATWR)  REAL( p_grid%Z(1)          ,   SiKi )         ! The vertical location of the highest tower grid point in m
+         WRITE (UATWR)   INT( p_grid%NumOutSteps   ,   B4Ki )         ! The number of points in alongwind direction
+         WRITE (UATWR)   INT( IZ ,                     B4Ki )         ! the number of grid points vertically
+         WRITE (UATWR)  REAL( UHub ,            SiKi )         ! the mean wind speed in m/s
+         WRITE (UATWR)  REAL( 100.0*TI(1),             SiKi )         ! Longitudinal turbulence intensity
+         WRITE (UATWR)  REAL( 100.0*TI(2),             SiKi )         ! Lateral turbulence intensity
+         WRITE (UATWR)  REAL( 100.0*TI(3),             SiKi )         ! Vertical turbulence intensity
 
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for temporary tower wind speed array.' )
-      ENDIF
+
+         ALLOCATE ( TmpTWRarray( 3*(p_grid%NPoints-I+2) ) , STAT=AllocStat )
+
+         IF ( AllocStat /= 0 )  THEN
+            CALL TS_Abort ( 'Error allocating memory for temporary tower wind speed array.' )
+         ENDIF
 
 
-      DO IT=1,p_grid%NumOutSteps
+         DO IT=1,p_grid%NumOutSteps
 
-         TmpTWRarray(1) = NINT( U_C1*V(IT,IY,1) - U_C2 , B2Ki )
-         TmpTWRarray(2) = NINT( V_C *V(IT,IY,2)        , B2Ki )
-         TmpTWRarray(3) = NINT( W_C *V(IT,IY,3)        , B2Ki )
+            TmpTWRarray(1) = NINT( U_C1*V(IT,IY,1) - U_C2 , B2Ki )
+            TmpTWRarray(2) = NINT( V_C *V(IT,IY,2)        , B2Ki )
+            TmpTWRarray(3) = NINT( W_C *V(IT,IY,3)        , B2Ki )
 
-         IP = 4
-         DO II = I,p_grid%NPoints    ! This assumes we have points in a single line along the center of the hub
-            TmpTWRarray(IP  ) = NINT( U_C1*V(IT,II,1) - U_C2 , B2Ki )
-            TmpTWRarray(IP+1) = NINT( V_C *V(IT,II,2)        , B2Ki )
-            TmpTWRarray(IP+2) = NINT( W_C *V(IT,II,3)        , B2Ki )
+            IP = 4
+            DO II = I,p_grid%NPoints    ! This assumes we have points in a single line along the center of the hub
+               TmpTWRarray(IP  ) = NINT( U_C1*V(IT,II,1) - U_C2 , B2Ki )
+               TmpTWRarray(IP+1) = NINT( V_C *V(IT,II,2)        , B2Ki )
+               TmpTWRarray(IP+2) = NINT( W_C *V(IT,II,3)        , B2Ki )
 
-            IP = IP + 3
-         ENDDO    ! II
+               IP = IP + 3
+            ENDDO    ! II
 
-         WRITE (UATWR) TmpTWRarray(:)
+            WRITE (UATWR) TmpTWRarray(:)
 
-      ENDDO ! IT
+         ENDDO ! IT
 
-      CLOSE ( UATWR )
+         CLOSE ( UATWR )
 
-      IF ( ALLOCATED( TmpTWRarray) ) DEALLOCATE( TmpTWRarray )
+         IF ( ALLOCATED( TmpTWRarray) ) DEALLOCATE( TmpTWRarray )
 
-   ENDIF !WrADWTR
+      ENDIF !WrADWTR
 
+   ENDIF ! WrFile(FileExt_WND)
+   
 
 END SUBROUTINE WrBinBLADED
 !=======================================================================
-SUBROUTINE WrBinTURBSIM
+SUBROUTINE WrBinTURBSIM(ErrStat, ErrMsg)
 
 USE                       TSMods
 
 
 IMPLICIT                  NONE
+
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+
 
 REAL(SiKi), PARAMETER     :: IntMax   =  32767.0
 REAL(SiKi), PARAMETER     :: IntMin   = -32768.0
@@ -2345,15 +2340,17 @@ INTEGER(B4Ki)             :: TwrStart                   ! First index of a tower
 INTEGER(B4Ki)             :: TwrTop                     ! The index of top of the tower (it could be on the grid instead of at the end)
 
 INTEGER(B4Ki)             :: IP
-INTEGER(B2Ki),ALLOCATABLE :: TmpVarray(:)                ! This array holds the normalized velocities before being written to the binary file
+INTEGER(B2Ki),ALLOCATABLE :: TmpVarray(:)               ! This array holds the normalized velocities before being written to the binary file
 
 INTEGER                   :: AllocStat
+INTEGER                   :: UAFFW                      ! I/O unit for AeroDyn FF data (*.bts file).
+
 
 
 
       ! Set the file format ID
       
-   IF ( Periodic ) THEN 
+   IF ( p_grid%Periodic ) THEN 
       FileID = 8
    ELSE
       FileID = 7
@@ -2419,7 +2416,7 @@ INTEGER                   :: AllocStat
 
    NumGrid  = p_grid%NumGrid_Y*p_grid%NumGrid_Z
 
-   IF ( WrADTWR ) THEN
+   IF ( WrFile(FileExt_TWR) ) THEN
 
       TwrStart = NumGrid + 1
 
@@ -2446,12 +2443,16 @@ INTEGER                   :: AllocStat
    LenDesc = LEN_TRIM( DescStr )             ! Length of the string that contains program name, version, date, and time
 
    CALL WrScr ( ' Generating AeroDyn binary time-series file "'//TRIM( RootName )//'.bts"' )
+   
+   CALL GetNewUnit(UAFFW, ErrStat, ErrMsg)
+   CALL OpenBOutFile ( UAFFW, TRIM(RootName)//'.bts', ErrStat, ErrMsg )
+   IF (ErrStat >= AbortErrLev) RETURN
 
 
 
       ! Write the header
 
-   WRITE (UAFFW)   INT( FileID             , B2Ki )          ! TurbSim format (7=not PERIODIC, 8=PERIODIC)
+   WRITE (UAFFW)   INT( FileID                    , B2Ki )          ! TurbSim format (7=not PERIODIC, 8=PERIODIC)
 
    WRITE (UAFFW)   INT( p_grid%NumGrid_Z          , B4Ki )          ! the number of grid points vertically
    WRITE (UAFFW)   INT( p_grid%NumGrid_Y          , B4Ki )          ! the number of grid points laterally
@@ -2465,14 +2466,14 @@ INTEGER                   :: AllocStat
    WRITE (UAFFW)  REAL( p_grid%HubHt              , SiKi )          ! the hub height, in m
    WRITE (UAFFW)  REAL( p_grid%Z(1)               , SiKi )          ! the height of the grid bottom, in m
 
-   WRITE (UAFFW)  REAL( UScl               , SiKi )          ! the U-component slope for scaling
-   WRITE (UAFFW)  REAL( UOff               , SiKi )          ! the U-component offset for scaling
-   WRITE (UAFFW)  REAL( VScl               , SiKi )          ! the V-component slope for scaling
-   WRITE (UAFFW)  REAL( VOff               , SiKi )          ! the V-component offset for scaling
-   WRITE (UAFFW)  REAL( WScl               , SiKi )          ! the W-component slope for scaling
-   WRITE (UAFFW)  REAL( WOff               , SiKi )          ! the W-component offset for scaling
+   WRITE (UAFFW)  REAL( UScl                      , SiKi )          ! the U-component slope for scaling
+   WRITE (UAFFW)  REAL( UOff                      , SiKi )          ! the U-component offset for scaling
+   WRITE (UAFFW)  REAL( VScl                      , SiKi )          ! the V-component slope for scaling
+   WRITE (UAFFW)  REAL( VOff                      , SiKi )          ! the V-component offset for scaling
+   WRITE (UAFFW)  REAL( WScl                      , SiKi )          ! the W-component slope for scaling
+   WRITE (UAFFW)  REAL( WOff                      , SiKi )          ! the W-component offset for scaling
 
-   WRITE (UAFFW)   INT( LenDesc            , B4Ki )          ! the number of characters in the string, max 200
+   WRITE (UAFFW)   INT( LenDesc                   , B4Ki )          ! the number of characters in the string, max 200
 
    DO II=1,LenDesc
 
@@ -2504,7 +2505,7 @@ INTEGER                   :: AllocStat
       ENDDO ! II
 
 
-      IF ( WrADTWR ) THEN
+      IF ( WrFile(FileExt_TWR) ) THEN
 
             ! Write out the tower data in binary form
 
@@ -2535,36 +2536,32 @@ INTEGER                   :: AllocStat
 
 END SUBROUTINE WrBinTURBSIM
 !=======================================================================
-SUBROUTINE WrFormattedFF(HubIndx)
+SUBROUTINE WrFormattedFF(p_grid, V)
 
-USE                     TSMods
+USE                     TSMods, only: RootName, UHub
+USE TurbSim_Types
 
 IMPLICIT                NONE
+
+TYPE(TurbSim_GridParameterType), INTENT(IN)          :: p_grid
+REAL(ReKi),                      INTENT(IN)          :: V          (:,:,:)                       ! The Velocities to write to a file
+
 
 REAL(ReKi), ALLOCATABLE      :: ZRow       (:)                           ! The horizontal locations of the grid points (NumGrid_Y) at each height.
 
 INTEGER                      :: AllocStat
-INTEGER, INTENT(IN)          :: HubIndx
 INTEGER                      :: II
 INTEGER                      :: IT
 INTEGER                      :: IVec
 INTEGER                      :: IY
 INTEGER                      :: IZ
 
-CHARACTER(200)               :: FormStr3                                 ! String used to store format specifiers.
-CHARACTER(200)               :: FormStr4                                 ! String used to store format specifiers.
 CHARACTER(200)               :: FormStr5                                 ! String used to store format specifiers.
-CHARACTER(200)               :: FormStr6                                 ! String used to store format specifiers.
+
+INTEGER                      :: UFFF                                     ! I/O unit for formatted FF data.
 
 
-
-   FormStr  = "( / 'This full-field turbulence file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' / )"
-   FormStr1 = "( ' | ', A,'-comp |  Y  x  Z  | Grid Resolution (Y x Z) | Time-step | Hub Elev | Mean U |')"
-   FormStr2 = "(I14,I6,F11.3,F11.3,F15.3,F11.2,F10.2)"
-   FormStr3 = "(/,' Z Coordinates (m):')"
-   FormStr4 = "(/,' Y Coordinates (m):')"
-   FormStr5 = "(1X,98(F8.3),:)"
-   FormStr6 = "(/,1X,2(F8.3))"
+   FormStr5 = "(1X,"//trim(num2lstr(max(p_grid%NumGrid_Z,p_grid%NumGrid_Y)))//"(F8.3),:)"
 
       ! Allocate the array of wind speeds.
 
@@ -2574,31 +2571,31 @@ CHARACTER(200)               :: FormStr6                                 ! Strin
       CALL TS_Abort ( 'Error allocating memory for array of wind speeds.' )
    ENDIF
 
+   CALL GetNewUnit(UFFF)
 
    DO IVec=1,3
 
       CALL WrScr ( ' Generating full-field formatted file "'//TRIM(RootName)//'.'//Comp(IVec)//'".' )
-
       CALL OpenFOutFile ( UFFF, TRIM( RootName )//'.'//Comp(IVec) )
 
 
          ! Create file header.
 
-      WRITE (UFFF,FormStr )  TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
+      WRITE (UFFF,"( / 'This full-field turbulence file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' / )" )  TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
 
-      WRITE (UFFF,FormStr1)  Comp(IVec)
+      WRITE (UFFF,"( ' | ', A,'-comp |  Y  x  Z  | Grid Resolution (Y x Z) | Time-step | Hub Elev | Mean U |')")  Comp(IVec)
 
-      WRITE (UFFF,FormStr2)  p_grid%NumGrid_Y, p_grid%NumGrid_Z, p_grid%GridRes_Y, p_grid%GridRes_Z, p_grid%TimeStep, p_grid%HubHt, UHub
-      WRITE (UFFF,FormStr3)
+      WRITE (UFFF,"(I14,I6,F11.3,F11.3,F15.3,F11.2,F10.2)")  p_grid%NumGrid_Y, p_grid%NumGrid_Z, p_grid%GridRes_Y, p_grid%GridRes_Z, p_grid%TimeStep, p_grid%HubHt, UHub
+      WRITE (UFFF,"(/,' Z Coordinates (m):')")
       WRITE (UFFF,FormStr5)  ( p_grid%Z(IZ)-p_grid%HubHt, IZ=1,p_grid%NumGrid_Z )
-      WRITE (UFFF,FormStr4)
+      WRITE (UFFF,"(/,' Y Coordinates (m):')")
       WRITE (UFFF,FormStr5)  ( p_grid%Y(IY), IY=1,p_grid%NumGrid_Y )
 
          ! Write out elapsed time & hub-level value before component grid.
 
       DO IT=1,p_grid%NumOutSteps
 
-         WRITE(UFFF,FormStr6)  p_grid%TimeStep*( IT - 1 ), V(IT,HubIndx,IVec)
+         WRITE(UFFF,"(/,1X,2(F8.3))")  p_grid%TimeStep*( IT - 1 ), V(IT,p_grid%HubIndx,IVec)
 
          DO IZ=1,p_grid%NumGrid_Z  ! From the top to the bottom
 
@@ -2670,8 +2667,6 @@ END SUBROUTINE WrSum_Heading1
 SUBROUTINE WrSum_SpecModel(US, p_IEC, GridVertCenter )
 
 !USE TSMods, only: FormStr
-!USE TSMods, only: FormStr1
-!USE TSMods, only: FormStr2
 !USE TSMods, only: TMName
 !
 !USE TSMods, only: IEC_NTM
@@ -2682,22 +2677,27 @@ use TSMods
    INTEGER,    INTENT(IN) :: US
    TYPE(IEC_ParameterType), INTENT(IN) :: p_IEC                       ! parameters for IEC models   
    REAL(ReKi), INTENT(IN)  ::  GridVertCenter                  ! Position of vertical "middle" grid point (to determine if it is the hub height)
+
    
    ! local variables:   
 
-   REAL(ReKi)              ::  HalfRotDiam                     ! Half of the rotor diameter
+   REAL(ReKi)              ::  HalfRotDiam                           ! Half of the rotor diameter
    
-   REAL(ReKi)              ::  CVFA                            ! Cosine of the vertical flow angle
-   REAL(ReKi)              ::  SVFA                            ! Sine of the vertical flow angle
-   REAL(ReKi)              ::  CHFA                            ! Cosine of the horizontal flow angle
-   REAL(ReKi)              ::  SHFA                            ! Sine of the horizontal flow angle
+   REAL(ReKi)              ::  CVFA                                  ! Cosine of the vertical flow angle
+   REAL(ReKi)              ::  SVFA                                  ! Sine of the vertical flow angle
+   REAL(ReKi)              ::  CHFA                                  ! Cosine of the horizontal flow angle
+   REAL(ReKi)              ::  SHFA                                  ! Sine of the horizontal flow angle
    
-   REAL(ReKi)              ::  UTmp                            ! The best fit of observed peak Uh at het height vs jet height
-   REAL(ReKi)              ::  U_zb                            ! The velocity at the bottom of the rotor disk (for estimating log fit)
-   REAL(DbKi)              ::  U_zt                            ! The velocity at the top of the rotor disk (for estimating log fit)
+   REAL(ReKi)              ::  UTmp                                  ! The best fit of observed peak Uh at het height vs jet height
+   REAL(ReKi)              ::  U_zb                                  ! The velocity at the bottom of the rotor disk (for estimating log fit)
+   REAL(DbKi)              ::  U_zt                                  ! The velocity at the top of the rotor disk (for estimating log fit)
       
-   INTEGER                 :: iz, jz                           ! loop counters
-   LOGICAL                 ::  HubPr                           ! Flag to indicate if the hub height is to be printed separately in the summary file
+   INTEGER                 :: iz, jz                                 ! loop counters
+   LOGICAL                 ::  HubPr                                 ! Flag to indicate if the hub height is to be printed separately in the summary file
+
+   CHARACTER(*),PARAMETER  :: FormStr1 = "('   ',A,' =' ,I9  ,A)"    ! String used to store format specifiers.
+   CHARACTER(*),PARAMETER  :: FormStr2 = "('   ',A,' =  ',A)"        ! String used to store format specifiers.
+   
    
    ! write to the summary file:
    
@@ -2706,8 +2706,7 @@ use TSMods
    WRITE (US,    "('   Turbulence model used                            =  ' , A )")  TRIM(TMName)
 
    FormStr  = "('   ',A,' =' ,F9.3,A)"
-   FormStr1 = "('   ',A,' =' ,I9  ,A)"
-   FormStr2 = "('   ',A,' =  ',A)"
+   
    
    
       ! Write out a parameter summary to the summary file.
@@ -2797,15 +2796,15 @@ ELSE
 ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
 
 
-HalfRotDiam = 0.5*RotorDiameter
-U_zt        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the top of rotor
-U_zb        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the bottom of the rotor
+HalfRotDiam = 0.5*p_grid%RotorDiameter
+U_zt        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the top of rotor
+U_zb        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the bottom of the rotor
       
 WRITE(US,'()')   ! A BLANK LINE
 
 SELECT CASE ( TRIM(WindProfileType) )
    CASE ('JET','J')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = RotorDiameter/2
+      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = p_grid%RotorDiameter/2
       UTmp  = 0.0422*ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Low-level jet"      
@@ -2847,8 +2846,8 @@ SELECT CASE ( TRIM(WindProfileType) )
       
 END SELECT
 
-WRITE(US,FormStr)              "Mean shear across rotor disk                    ", (U_zt-U_zb)/RotorDiameter, " (m/s)/m"
-WRITE(US,FormStr)              "Assumed rotor diameter                          ", RotorDiameter,             " m"      
+WRITE(US,FormStr)              "Mean shear across rotor disk                    ", (U_zt-U_zb)/p_grid%RotorDiameter, " (m/s)/m"
+WRITE(US,FormStr)              "Assumed rotor diameter                          ", p_grid%RotorDiameter,             " m"      
 WRITE(US,FormStr)              "Surface roughness length                        ", z0,                        " m"      
 WRITE(US,'()')                                                                                                 ! A BLANK LINE
 WRITE(US,FormStr1)             "Number of time steps in the FFT                 ", p_grid%NumSteps,                  ""       
@@ -2858,40 +2857,32 @@ IF (KHtest) THEN
    WRITE(US,"(/'KH Billow Test Parameters:' / )") ! HEADER
    WRITE(US,FormStr)           "Gradient Richardson number                      ", RICH_NO,                   ""
    WRITE(US,FormStr)           "Power law exponent                              ", PLexp,                     ""
-   WRITE(US,FormStr)           "Length of coherent structures                   ", UsableTime / 2.0,          " s"
+   WRITE(US,FormStr)           "Length of coherent structures                   ", p_grid%UsableTime / 2.0,          " s"
    WRITE(US,FormStr)           "Minimum coherent TKE                            ", 30.0,                      " (m/s)^2"
 ENDIF
 
 
    ! Write mean flow angles and wind speed profile to the summary file.
 
-FormStr = "(//,'Mean Flow Angles:',/)"
-WRITE(US,FormStr)
+WRITE(US,"(//,'Mean Flow Angles:',/)")
 
 FormStr = "(3X,A,F6.1,' degrees')"
 WRITE(US,FormStr)  'Vertical   =', VFlowAng
 WRITE(US,FormStr)  'Horizontal =', HFlowAng
 
 
-FormStr = "(/'Mean Wind Speed Profile:')"
-WRITE(US,FormStr)
+WRITE(US,"(/'Mean Wind Speed Profile:')")
 
 IF ( ALLOCATED( ZL_profile ) .AND. ALLOCATED( Ustar_profile ) ) THEN
-   FormStr = "(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)   z/L(z)    u*(z)')"
-   WRITE(US,FormStr)
-   FormStr = "(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)       (-)      (m/s)')"
-   WRITE(US,FormStr)
-   FormStr = "(  '   ------    ----------   ----------------  ----------   ----------   ----------   ------   ------')"
-   WRITE(US,FormStr)
+   WRITE(US,"(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)   z/L(z)    u*(z)')")
+   WRITE(US,"(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)       (-)      (m/s)')")
+   WRITE(US,"(  '   ------    ----------   ----------------  ----------   ----------   ----------   ------   ------')")
 
    FormStr = '(1X,F8.1,1X,F11.2,5x,F11.2,4x,3(2X,F8.2,3X),2(1X,F8.3))'
 ELSE
-   FormStr = "(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)')"
-   WRITE(US,FormStr)
-   FormStr = "(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)   ')"
-   WRITE(US,FormStr)
-   FormStr = "(  '   ------    ----------   ----------------  ----------   ----------   ----------')"
-   WRITE(US,FormStr)
+   WRITE(US,"(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)')")
+   WRITE(US,"(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)   ')")
+   WRITE(US,"(  '   ------    ----------   ----------------  ----------   ----------   ----------')")
 
    FormStr = '(1X,F8.1,1X,F11.2,5x,F11.2,4x,3(2X,F8.2,3X))'
 ENDIF
@@ -2990,11 +2981,13 @@ ENDDO ! IZ
 
 END SUBROUTINE WrSum_SpecModel
 !=======================================================================
-SUBROUTINE WrHH_ADtxtfile(TurbInt)
+SUBROUTINE WrHH_ADtxtfile(TurbInt, ErrStat, ErrMsg)
 
 USE TSMods
 
-   REAL(ReKi), INTENT(IN)  ::  TurbInt                         ! IEC target Turbulence Intensity 
+   REAL(ReKi),     INTENT(IN)    ::  TurbInt                        ! IEC target Turbulence Intensity 
+   INTEGER(IntKi), intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),   intent(  out) :: ErrMsg                          ! Message describing error
 
 
    REAL(ReKi)              ::  CVFA                            ! Cosine of the vertical flow angle
@@ -3007,6 +3000,7 @@ USE TSMods
 
    REAL(ReKi)              :: Time                             ! The instantaneous Time (s)
    INTEGER(IntKi)          :: IT                               ! loop counter (time step)
+   INTEGER                 :: UAHH                             ! I/O unit for AeroDyn HH data (*.hh  file).
 
    
    
@@ -3016,14 +3010,13 @@ USE TSMods
    CVFA = COS( VFlowAng*D2R )
    SVFA = SIN( VFlowAng*D2R )
 
-
-   CALL OpenFOutFile ( UAHH, TRIM( RootName)//'.hh' )
+   CALL GetNewUnit( UAHH, ErrStat, ErrMsg)
+   CALL OpenFOutFile ( UAHH, TRIM( RootName)//'.hh', ErrStat, ErrMsg )
+   IF (ErrStat >= AbortErrLev) RETURN
 
    CALL WrScr ( ' Hub-height AeroDyn data were written to "'//TRIM( RootName )//'.hh"' )
 
-   FormStr = "( '! This hub-height wind-speed file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )"
-   WRITE (UAHH,FormStr)   TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
-
+   WRITE (UAHH,"( '! This hub-height wind-speed file was generated by ' , A , A , ' on ' , A , ' at ' , A , '.' )")   TRIM(ProgName), TRIM( ProgVer ), CurDate(), CurTime()
    WRITE (UAHH,"( '!' )")
    WRITE (UAHH,"( '! The requested statistics for this data were:' )")
    WRITE (UAHH,"( '!    Mean Total Wind Speed = ' , F8.3 , ' m/s' )")  UHub
@@ -3077,9 +3070,12 @@ USE TSMods
                                                                
    REAL(ReKi)              :: Time                             ! The instantaneous Time (s)
    INTEGER(IntKi)          :: IT                               ! loop counter (time step)
+   INTEGER                 :: UGTP                             ! I/O unit for GenPro HH turbulence properties.
 
 
 
+   CALL GetNewUnit(UGTP, ErrStat, ErrMsg)
+   
    CALL OpenUOutfile ( UGTP , TRIM( RootName)//'.bin', ErrStat, ErrMsg ) 
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3102,17 +3098,20 @@ USE TSMods
    END DO
 
    CLOSE(UGTP)
-!WrBHHTP
+!WrFile(FileExt_BIN)
 
 END SUBROUTINE WrHH_binary
 !=======================================================================
-SUBROUTINE WrHH_text()
+SUBROUTINE WrHH_text(ErrStat, ErrMsg)
 
    ! Output HH text turbulence parameters
    ! Output order:  Time,U,Uh,Ut,V,W,u',v',w',u'w',u'v',v'w',TKE,CTKE.
 
 
 USE TSMods
+
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
 
    ! local variables
    
@@ -3127,11 +3126,14 @@ USE TSMods
                                                                
    REAL(ReKi)              :: Time                             ! The instantaneous Time (s)
    INTEGER(IntKi)          :: IT                               ! loop counter (time step)
+   INTEGER(IntKi)          :: UFTP                             ! I/O unit for formatted HH turbulence properties
 
+   
+   ! WrFile(FileExt_DAT)
 
-   ! WrFHHTP
-
-   CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat' )
+   CALL GetNewUnit( UFTP, ErrStat, ErrMsg )
+   CALL OpenFOutFile ( UFTP, TRIM( RootName)//'.dat', ErrStat, ErrMsg )
+   IF (ErrStat >= AbortErrLev) RETURN
 
    CALL WrScr ( ' Hub-height formatted turbulence parameters were written to "'//TRIM( RootName )//'.dat"' )
 
@@ -3166,112 +3168,116 @@ SUBROUTINE WrSum_Stats(USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 
 use TSMods
 
-REAL(ReKi), INTENT(OUT) ::  USig                            ! Standard deviation of the u-component wind speed at the hub
-REAL(ReKi), INTENT(OUT) ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
-REAL(ReKi), INTENT(OUT) ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
-REAL(ReKi), INTENT(OUT) ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
-REAL(DbKi), INTENT(OUT) ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
+REAL(ReKi),    INTENT(OUT)   ::  USig                            ! Standard deviation of the u-component wind speed at the hub
+REAL(ReKi),    INTENT(OUT)   ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
+REAL(ReKi),    INTENT(OUT)   ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
+REAL(ReKi),    INTENT(OUT)   ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
+REAL(DbKi),    INTENT(OUT)   ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
 
-   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
-   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
-
-
-REAL(DbKi)              ::  SumS                            ! Sum of the velocity-squared, used for calculating standard deviations in the summary file
-REAL(DbKi)              ::  UBar                            ! The mean u-component wind speed at the hub
-REAL(DbKi)              ::  UHBar                           ! The mean horizontal wind speed at the hub
-REAL(DbKi)              ::  UHSum2                          ! The sum of the squared horizontal wind speed at the hub
-REAL(DbKi)              ::  UHTmp                           ! The instantaneous horizontal wind speed at the hub
-REAL(DbKi)              ::  UHTmp2                          ! The instantaneous squared horizontal wind speed at the hub
-REAL(DbKi)              ::  USum2                           ! The sum of the squared u-component wind speed at the hub
-REAL(DbKi)              ::  UTBar                           ! The mean total wind speed at the hub
-REAL(DbKi)              ::  UTmp                            ! The instantaneous u-component wind speed at the hub
-REAL(DbKi)              ::  UTmp2                           ! The instantaneous squared u-component wind speed at the hub
-REAL(DbKi)              ::  UTSum2                          ! The sum of the squared total wind speed at the hub
-REAL(DbKi)              ::  UTTmp                           ! The instantaneous total wind speed at the hub
-REAL(DbKi)              ::  UTTmp2                          ! The instantaneous squared total wind speed at the hub
-REAL(DbKi)              ::  UXSum                           ! The sum of the U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UXSum2                          ! The sum of the squared U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UXTmp                           ! The instantaneous U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UXTmp2                          ! The instantaneous squared U-component (u rotated) wind speed at the hub
-REAL(DbKi)              ::  UYBar                           ! The mean V-component (v rotated; y-direction) wind speed at the hub
-REAL(DbKi)              ::  UYSum                           ! The sum of the V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UYSum2                          ! The sum of the squared V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UYTmp                           ! The instantaneous V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UYTmp2                          ! The instantaneous squared V-component (v rotated) wind speed at the hub
-REAL(DbKi)              ::  UZBar                           ! The mean W-component (w rotated; z-direction) wind speed at the hub
-REAL(DbKi)              ::  UZSum                           ! The sum of the W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  UZSum2                          ! The sum of the squared W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  UZTmp                           ! The instantaneous W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  UZTmp2                          ! The instantaneous squared W-component (w rotated) wind speed at the hub
-REAL(DbKi)              ::  VBar                            ! The mean v-component wind speed at the hub
-REAL(DbKi)              ::  VSum2                           ! The sum of the squared v-component wind speed at the hub
-REAL(DbKi)              ::  VTmp                            ! The instantaneous v-component wind speed at the hub
-REAL(DbKi)              ::  VTmp2                           ! The instantaneous squared v-component wind speed at the hub
-REAL(DbKi)              ::  WBar                            ! The mean w-component wind speed at the hub
-REAL(DbKi)              ::  WSum2                           ! The sum of the squared w-component wind speed at the hub
-REAL(DbKi)              ::  WTmp                            ! The instantaneous w-component wind speed at the hub
-REAL(DbKi)              ::  WTmp2                           ! The instantaneous squared w-component wind speed at the hub
-
-REAL(ReKi)              ::  CHFA                            ! Cosine of the Horizontal Flow Angle
-REAL(ReKi)              ::  CVFA                            ! Cosine of the Vertical Flow Angle
-REAL(ReKi)              ::  SVFA                            ! Sine of the Vertical Flow Angle
-REAL(ReKi)              ::  SHFA                            ! Sine of the Horizontal Flow Angle
-REAL(ReKi)              ::  CTKEmax                         ! Maximum instantaneous Coherent Turbulent Kenetic Energy at the hub
-REAL(ReKi)              ::  TKEmax                          ! Maximum instantaneous Turbulent Kenetic Energy at the hub
+INTEGER(IntKi),intent(  out) :: ErrStat                          ! Error level
+CHARACTER(*),  intent(  out) :: ErrMsg                           ! Message describing error
 
 
-REAL(ReKi)              ::  UHmax                           ! Maximum horizontal wind speed at the hub
-REAL(ReKi)              ::  UHmin                           ! Minimum horizontal wind speed at the hub
-REAL(ReKi)              ::  Umax                            ! Maximum u-component wind speed at the hub
-REAL(ReKi)              ::  Umin                            ! Minimum u-component wind speed at the hub
-REAL(ReKi)              ::  UTSig                           ! Standard deviation of the total wind speed at the hub
-REAL(ReKi)              ::  UT_TI                           ! Turbulent Intensity of the total wind speed at the hub
-REAL(ReKi)              ::  UTmax                           ! Maximum total wind speed at the hub
-REAL(ReKi)              ::  UTmin                           ! Minimum total wind speed at the hub
-REAL(ReKi)              ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
-REAL(ReKi)              ::  UVMin                           ! Minimum u'v' Reynolds Stress at the hub
-REAL(ReKi)              ::  UVTmp                           ! The instantaneous u'v' Reynolds stress at the hub
-REAL(ReKi)              ::  UV_RS                           ! The average u'v' Reynolds stress at the hub
-REAL(ReKi)              ::  UVcor                           ! The u-v cross component correlation coefficient at the hub
-REAL(ReKi)              ::  UVsum                           ! The sum of the u'v' Reynolds stress component at the hub
-REAL(ReKi)              ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  UWMin                           ! Minimum u'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  UWTmp                           ! The instantaneous u'w' Reynolds stress at the hub
-REAL(ReKi)              ::  UW_RS                           ! The average u'w' Reynolds stress at the hub
-REAL(ReKi)              ::  UWcor                           ! The u-w cross component correlation coefficient at the hub
-REAL(ReKi)              ::  UWsum                           ! The sum of the u'w' Reynolds stress component at the hub
-REAL(ReKi)              ::  UXmax                           ! Maximum U-component (X-direction) wind speed at the hub
-REAL(ReKi)              ::  UXmin                           ! Minimum U-component wind speed at the hub
-REAL(ReKi)              ::  UYmax                           ! Maximum V-component (Y-direction) wind speed at the hub
-REAL(ReKi)              ::  UYmin                           ! Minimum V-component wind speed at the hub
-REAL(ReKi)              ::  UYSig                           ! Standard deviation of the V-component wind speed at the hub
-REAL(ReKi)              ::  UZmax                           ! Maximum W-component (Z-direction) wind speed at the hub
-REAL(ReKi)              ::  UZmin                           ! Minimum W-component wind speed at the hub
-REAL(ReKi)              ::  UZSig                           ! Standard deviation of the W-component wind speed at the hub
-REAL(ReKi)              ::  U_TI                            ! The u-component turbulence intensity at the hub
-REAL(ReKi)              ::  Vmax                            ! Maximum v-component wind speed at the hub
-REAL(ReKi)              ::  Vmin                            ! Minimum v-component wind speed at the hub
-REAL(ReKi)              ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  VWMin                           ! Minimum v'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  VWTmp                           ! The instantaneous v'w' Reynolds stress at the hub
-REAL(ReKi)              ::  VW_RS                           ! The average v'w' Reynolds stress at the hub
-REAL(ReKi)              ::  VWcor                           ! The v-w cross component correlation coefficient at the hub
-REAL(ReKi)              ::  VWsum                           ! The sum of the v'w' Reynolds stress component at the hub
-REAL(ReKi)              ::  V_TI                            ! The v-component turbulence intensity at the hub
-REAL(ReKi)              ::  Wmax                            ! Maximum w-component wind speed at the hub
-REAL(ReKi)              ::  Wmin                            ! Minimum w-component wind speed at the hub
-REAL(ReKi)              ::  W_TI                            ! The w-component turbulence intensity at the hub
+REAL(DbKi)                   ::  SumS                            ! Sum of the velocity-squared, used for calculating standard deviations in the summary file
+REAL(DbKi)                   ::  UBar                            ! The mean u-component wind speed at the hub
+REAL(DbKi)                   ::  UHBar                           ! The mean horizontal wind speed at the hub
+REAL(DbKi)                   ::  UHSum2                          ! The sum of the squared horizontal wind speed at the hub
+REAL(DbKi)                   ::  UHTmp                           ! The instantaneous horizontal wind speed at the hub
+REAL(DbKi)                   ::  UHTmp2                          ! The instantaneous squared horizontal wind speed at the hub
+REAL(DbKi)                   ::  USum2                           ! The sum of the squared u-component wind speed at the hub
+REAL(DbKi)                   ::  UTBar                           ! The mean total wind speed at the hub
+REAL(DbKi)                   ::  UTmp                            ! The instantaneous u-component wind speed at the hub
+REAL(DbKi)                   ::  UTmp2                           ! The instantaneous squared u-component wind speed at the hub
+REAL(DbKi)                   ::  UTSum2                          ! The sum of the squared total wind speed at the hub
+REAL(DbKi)                   ::  UTTmp                           ! The instantaneous total wind speed at the hub
+REAL(DbKi)                   ::  UTTmp2                          ! The instantaneous squared total wind speed at the hub
+REAL(DbKi)                   ::  UXSum                           ! The sum of the U-component (u rotated) wind speed at the hub
+REAL(DbKi)                   ::  UXSum2                          ! The sum of the squared U-component (u rotated) wind speed at the hub
+REAL(DbKi)                   ::  UXTmp                           ! The instantaneous U-component (u rotated) wind speed at the hub
+REAL(DbKi)                   ::  UXTmp2                          ! The instantaneous squared U-component (u rotated) wind speed at the hub
+REAL(DbKi)                   ::  UYBar                           ! The mean V-component (v rotated; y-direction) wind speed at the hub
+REAL(DbKi)                   ::  UYSum                           ! The sum of the V-component (v rotated) wind speed at the hub
+REAL(DbKi)                   ::  UYSum2                          ! The sum of the squared V-component (v rotated) wind speed at the hub
+REAL(DbKi)                   ::  UYTmp                           ! The instantaneous V-component (v rotated) wind speed at the hub
+REAL(DbKi)                   ::  UYTmp2                          ! The instantaneous squared V-component (v rotated) wind speed at the hub
+REAL(DbKi)                   ::  UZBar                           ! The mean W-component (w rotated; z-direction) wind speed at the hub
+REAL(DbKi)                   ::  UZSum                           ! The sum of the W-component (w rotated) wind speed at the hub
+REAL(DbKi)                   ::  UZSum2                          ! The sum of the squared W-component (w rotated) wind speed at the hub
+REAL(DbKi)                   ::  UZTmp                           ! The instantaneous W-component (w rotated) wind speed at the hub
+REAL(DbKi)                   ::  UZTmp2                          ! The instantaneous squared W-component (w rotated) wind speed at the hub
+REAL(DbKi)                   ::  VBar                            ! The mean v-component wind speed at the hub
+REAL(DbKi)                   ::  VSum2                           ! The sum of the squared v-component wind speed at the hub
+REAL(DbKi)                   ::  VTmp                            ! The instantaneous v-component wind speed at the hub
+REAL(DbKi)                   ::  VTmp2                           ! The instantaneous squared v-component wind speed at the hub
+REAL(DbKi)                   ::  WBar                            ! The mean w-component wind speed at the hub
+REAL(DbKi)                   ::  WSum2                           ! The sum of the squared w-component wind speed at the hub
+REAL(DbKi)                   ::  WTmp                            ! The instantaneous w-component wind speed at the hub
+REAL(DbKi)                   ::  WTmp2                           ! The instantaneous squared w-component wind speed at the hub
+                             
+REAL(ReKi)                   ::  CHFA                            ! Cosine of the Horizontal Flow Angle
+REAL(ReKi)                   ::  CVFA                            ! Cosine of the Vertical Flow Angle
+REAL(ReKi)                   ::  SVFA                            ! Sine of the Vertical Flow Angle
+REAL(ReKi)                   ::  SHFA                            ! Sine of the Horizontal Flow Angle
+REAL(ReKi)                   ::  CTKEmax                         ! Maximum instantaneous Coherent Turbulent Kenetic Energy at the hub
+REAL(ReKi)                   ::  TKEmax                          ! Maximum instantaneous Turbulent Kenetic Energy at the hub
+                             
+                             
+REAL(ReKi)                   ::  UHmax                           ! Maximum horizontal wind speed at the hub
+REAL(ReKi)                   ::  UHmin                           ! Minimum horizontal wind speed at the hub
+REAL(ReKi)                   ::  Umax                            ! Maximum u-component wind speed at the hub
+REAL(ReKi)                   ::  Umin                            ! Minimum u-component wind speed at the hub
+REAL(ReKi)                   ::  UTSig                           ! Standard deviation of the total wind speed at the hub
+REAL(ReKi)                   ::  UT_TI                           ! Turbulent Intensity of the total wind speed at the hub
+REAL(ReKi)                   ::  UTmax                           ! Maximum total wind speed at the hub
+REAL(ReKi)                   ::  UTmin                           ! Minimum total wind speed at the hub
+REAL(ReKi)                   ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
+REAL(ReKi)                   ::  UVMin                           ! Minimum u'v' Reynolds Stress at the hub
+REAL(ReKi)                   ::  UVTmp                           ! The instantaneous u'v' Reynolds stress at the hub
+REAL(ReKi)                   ::  UV_RS                           ! The average u'v' Reynolds stress at the hub
+REAL(ReKi)                   ::  UVcor                           ! The u-v cross component correlation coefficient at the hub
+REAL(ReKi)                   ::  UVsum                           ! The sum of the u'v' Reynolds stress component at the hub
+REAL(ReKi)                   ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
+REAL(ReKi)                   ::  UWMin                           ! Minimum u'w' Reynolds Stress at the hub
+REAL(ReKi)                   ::  UWTmp                           ! The instantaneous u'w' Reynolds stress at the hub
+REAL(ReKi)                   ::  UW_RS                           ! The average u'w' Reynolds stress at the hub
+REAL(ReKi)                   ::  UWcor                           ! The u-w cross component correlation coefficient at the hub
+REAL(ReKi)                   ::  UWsum                           ! The sum of the u'w' Reynolds stress component at the hub
+REAL(ReKi)                   ::  UXmax                           ! Maximum U-component (X-direction) wind speed at the hub
+REAL(ReKi)                   ::  UXmin                           ! Minimum U-component wind speed at the hub
+REAL(ReKi)                   ::  UYmax                           ! Maximum V-component (Y-direction) wind speed at the hub
+REAL(ReKi)                   ::  UYmin                           ! Minimum V-component wind speed at the hub
+REAL(ReKi)                   ::  UYSig                           ! Standard deviation of the V-component wind speed at the hub
+REAL(ReKi)                   ::  UZmax                           ! Maximum W-component (Z-direction) wind speed at the hub
+REAL(ReKi)                   ::  UZmin                           ! Minimum W-component wind speed at the hub
+REAL(ReKi)                   ::  UZSig                           ! Standard deviation of the W-component wind speed at the hub
+REAL(ReKi)                   ::  U_TI                            ! The u-component turbulence intensity at the hub
+REAL(ReKi)                   ::  Vmax                            ! Maximum v-component wind speed at the hub
+REAL(ReKi)                   ::  Vmin                            ! Minimum v-component wind speed at the hub
+REAL(ReKi)                   ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
+REAL(ReKi)                   ::  VWMin                           ! Minimum v'w' Reynolds Stress at the hub
+REAL(ReKi)                   ::  VWTmp                           ! The instantaneous v'w' Reynolds stress at the hub
+REAL(ReKi)                   ::  VW_RS                           ! The average v'w' Reynolds stress at the hub
+REAL(ReKi)                   ::  VWcor                           ! The v-w cross component correlation coefficient at the hub
+REAL(ReKi)                   ::  VWsum                           ! The sum of the v'w' Reynolds stress component at the hub
+REAL(ReKi)                   ::  V_TI                            ! The v-component turbulence intensity at the hub
+REAL(ReKi)                   ::  Wmax                            ! Maximum w-component wind speed at the hub
+REAL(ReKi)                   ::  Wmin                            ! Minimum w-component wind speed at the hub
+REAL(ReKi)                   ::  W_TI                            ! The w-component turbulence intensity at the hub
 
-REAL(ReKi)              ::  CTKE                            ! Coherent Turbulent Kenetic Energy at the hub
-REAL(ReKi)              ::  TKE                             ! Turbulent Kenetic Energy at the hub
-REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
-REAL(ReKi)              ::  UHSig                           ! Approximate sigma of the horizontal wind speed at the hub point
-REAL(ReKi)              ::  SUstar                          ! Simulated U-star at the hub
+REAL(ReKi)                   ::  CTKE                            ! Coherent Turbulent Kenetic Energy at the hub
+REAL(ReKi)                   ::  TKE                             ! Turbulent Kenetic Energy at the hub
+REAL(ReKi)                   ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
+REAL(ReKi)                   ::  UHSig                           ! Approximate sigma of the horizontal wind speed at the hub point
+REAL(ReKi)                   ::  SUstar                          ! Simulated U-star at the hub
+REAL(ReKi), ALLOCATABLE      ::  SDary      (:)                  ! The array of standard deviations (NumGrid_Z,NumGrid_Y).
 
-REAL(ReKi)              ::  UH_TI                           ! TI of the horizontal wind speed at the hub point
+REAL(ReKi)                   ::  UH_TI                           ! TI of the horizontal wind speed at the hub point
 
 
-INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
+INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
+
+   CHARACTER(*),PARAMETER  :: FormStr2 = "(6X,A,' component: ',F8.3,' m/s')"        ! String used to store format specifiers.
+
 
    ! Initialize statistical quantities for hub-height turbulence parameters.
 
@@ -3521,14 +3527,9 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
    CALL WrScr ( ' Writing statistics to summary file' )
 
-   FormStr = "(//,'Hub-Height Simulated Turbulence Statistical Summary:')"
-   WRITE(US,FormStr)
-
-   FormStr = "(/,3X,'Type of Wind        Min (m/s)   Mean (m/s)    Max (m/s)  Sigma (m/s)       TI (%)')"
-   WRITE(US,FormStr)
-
-   FormStr = "(  3X,'----------------    ---------   ----------    ---------  -----------       ------')"
-   WRITE(US,FormStr)
+   WRITE(US,"(//,'Hub-Height Simulated Turbulence Statistical Summary:')")
+   WRITE(US,"(/,3X,'Type of Wind        Min (m/s)   Mean (m/s)    Max (m/s)  Sigma (m/s)       TI (%)')")
+   WRITE(US,"(  3X,'----------------    ---------   ----------    ---------  -----------       ------')")
 
    FormStr = "(3X,A,F13.2,2F13.2,2F13.3)"
    !bjj for analysis, extra precision: FormStr = "(3X,A,F13.2,2F13.2,2F13.6)"
@@ -3568,8 +3569,6 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
    WRITE(US,"(//,'Grid Point Variance Summary:',/)")
    WRITE(US,"(3X,'Y-coord',"//TRIM(Num2LStr(p_grid%NumGrid_Y))//"F8.2)")  p_grid%Y(1:p_grid%NumGrid_Y)
 
-   FormStr1 = "(/,3X'Height   Standard deviation at grid points for the ',A,' component:')"
-   FormStr2 = "(F9.2,1X,"//TRIM(Num2LStr(p_grid%NumGrid_Y))//"F8.3)"
 
    UTmp = 0
    VTmp = 0
@@ -3577,7 +3576,7 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
    DO IVec=1,3
 
-      WRITE(US,FormStr1)  Comp(IVec)
+      WRITE(US,"(/,3X'Height   Standard deviation at grid points for the ',A,' component:')")  Comp(IVec)
 
       DO IZ=p_grid%NumGrid_Z,1,-1
 
@@ -3594,7 +3593,7 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
          ENDDO ! IY
 
-         WRITE(US,FormStr2) p_grid%Z(IZ), SDary(1:p_grid%NumGrid_Y)
+         WRITE(US,"(F9.2,1X,"//TRIM(Num2LStr(p_grid%NumGrid_Y))//"F8.3)") p_grid%Z(IZ), SDary(1:p_grid%NumGrid_Y)
 
          IF ( IVec == 1 ) THEN
             UTmp = UTmp + SUM( SDary )
@@ -3607,7 +3606,7 @@ INTEGER(IntKi)          :: IT, IVec, IY, IZ, II
 
    ENDDO ! Ivec
 
-   FormStr2 = "(6X,A,' component: ',F8.3,' m/s')"
+   
    WRITE(US,"(/'   Mean standard deviation across all grid points:')")
    WRITE(US,FormStr2) Comp(1), UTmp / ( p_grid%NumGrid_Y*p_grid%NumGrid_Z )
    WRITE(US,FormStr2) Comp(2), VTmp / ( p_grid%NumGrid_Y*p_grid%NumGrid_Z ) 
