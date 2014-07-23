@@ -102,6 +102,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: station_total 
     INTEGER(IntKi)  :: format_index 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: station_eta 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: IniTwist_eta 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: stiff0 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: mass0 
   END TYPE BladeInputData
@@ -1604,6 +1605,19 @@ IF (ALLOCATED(SrcbladeinputdataData%station_eta)) THEN
    END IF
    DstbladeinputdataData%station_eta = SrcbladeinputdataData%station_eta
 ENDIF
+IF (ALLOCATED(SrcbladeinputdataData%IniTwist_eta)) THEN
+   i1_l = LBOUND(SrcbladeinputdataData%IniTwist_eta,1)
+   i1_u = UBOUND(SrcbladeinputdataData%IniTwist_eta,1)
+   IF (.NOT.ALLOCATED(DstbladeinputdataData%IniTwist_eta)) THEN 
+      ALLOCATE(DstbladeinputdataData%IniTwist_eta(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copybladeinputdata: Error allocating DstbladeinputdataData%IniTwist_eta.'
+         RETURN
+      END IF
+   END IF
+   DstbladeinputdataData%IniTwist_eta = SrcbladeinputdataData%IniTwist_eta
+ENDIF
 IF (ALLOCATED(SrcbladeinputdataData%stiff0)) THEN
    i1_l = LBOUND(SrcbladeinputdataData%stiff0,1)
    i1_u = UBOUND(SrcbladeinputdataData%stiff0,1)
@@ -1651,6 +1665,9 @@ ENDIF
 IF (ALLOCATED(bladeinputdataData%station_eta)) THEN
    DEALLOCATE(bladeinputdataData%station_eta)
 ENDIF
+IF (ALLOCATED(bladeinputdataData%IniTwist_eta)) THEN
+   DEALLOCATE(bladeinputdataData%IniTwist_eta)
+ENDIF
 IF (ALLOCATED(bladeinputdataData%stiff0)) THEN
    DEALLOCATE(bladeinputdataData%stiff0)
 ENDIF
@@ -1696,6 +1713,7 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! station_total
   Int_BufSz  = Int_BufSz  + 1  ! format_index
   Re_BufSz    = Re_BufSz    + SIZE( InData%station_eta )  ! station_eta 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%IniTwist_eta )  ! IniTwist_eta 
   Re_BufSz    = Re_BufSz    + SIZE( InData%stiff0 )  ! stiff0 
   Re_BufSz    = Re_BufSz    + SIZE( InData%mass0 )  ! mass0 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
@@ -1708,6 +1726,10 @@ ENDIF
   IF ( ALLOCATED(InData%station_eta) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%station_eta))-1 ) =  PACK(InData%station_eta ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%station_eta)
+  ENDIF
+  IF ( ALLOCATED(InData%IniTwist_eta) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%IniTwist_eta))-1 ) =  PACK(InData%IniTwist_eta ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%IniTwist_eta)
   ENDIF
   IF ( ALLOCATED(InData%stiff0) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%stiff0))-1 ) =  PACK(InData%stiff0 ,.TRUE.)
@@ -1761,6 +1783,12 @@ ENDIF
     OutData%station_eta = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%station_eta))-1 ),mask1,OutData%station_eta)
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%station_eta)
+  ENDIF
+  IF ( ALLOCATED(OutData%IniTwist_eta) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%IniTwist_eta,1))); mask1 = .TRUE.
+    OutData%IniTwist_eta = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%IniTwist_eta))-1 ),mask1,OutData%IniTwist_eta)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%IniTwist_eta)
   ENDIF
   IF ( ALLOCATED(OutData%stiff0) ) THEN
   ALLOCATE(mask3(SIZE(OutData%stiff0,1),SIZE(OutData%stiff0,2),SIZE(OutData%stiff0,3))); mask3 = .TRUE.

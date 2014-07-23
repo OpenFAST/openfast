@@ -48,7 +48,7 @@
 
    IF(BladeInputFileData%format_index .EQ. 1) THEN
        DO i=1,BladeInputFileData%station_total
-           READ(UnIn,*) BladeInputFileData%station_eta(i)
+           READ(UnIn,*) BladeInputFileData%station_eta(i),BladeInputFileData%IniTwist_eta(i)
            DO j=1,6
                CALL ReadAry(UnIn,BldFile,BladeInputFileData%stiff0(j,:,i),6,'siffness_matrix',&
                        'Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)

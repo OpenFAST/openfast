@@ -68,6 +68,7 @@ typedef BeamDyn/BD    OutputType  MeshType  PointMesh - - - "" -
 typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
 typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
 typedef BeamDyn/BD    BladeInputData    ReKi     station_eta     {:}    -     -    "Station location in eta [0,1]"
+typedef BeamDyn/BD    BladeInputData    ReKi     IniTwist_eta    {:}    -     -    "Station location in eta [0,1]"
 typedef BeamDyn/BD    BladeInputData    ReKi     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
 typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
 # ..... Input file data..............................................................................
