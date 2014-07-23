@@ -89,6 +89,7 @@ INCLUDE 'ComputeIniNodalPosition.f90'
 INCLUDE 'CrossProduct.f90'
 INCLUDE 'CrvExtractCrv.f90'
 INCLUDE 'ComputeIniNodalCrv.f90'
+INCLUDE 'ComputeIniNodalTwist.f90'
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
@@ -139,6 +140,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_w(:)
    REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
+   REAL(ReKi),ALLOCATABLE  :: IniTwist_Nodal(:)
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    CHARACTER(LEN(ErrMsg))       :: ErrMsg2
 
@@ -171,6 +173,12 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
    p%uuN0(:,:) = 0.0D0
 
+   CALL AllocAry(IniTwist_Nodal,(p%node_elem-1)*p%elem_total+1,'IniTwist_Nodal',ErrStat2,ErrMsg2)
+   IniTwist_Nodal(:) = 0.0D0
+   CALL ComputeIniNodalTwist(p%member_length,InputFileData%InpBl%station_eta,InputFileData%InpBl%IniTwist_eta,&
+                            &p%node_elem,p%elem_total,InputFileData%InpBl%station_total,&
+                            &IniTwist_Nodal,ErrStat2,ErrMsg2)
+
    CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
    temp_GLL(:) = 0.0D0
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
@@ -186,7 +194,8 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
        DO j=1,p%node_elem
 !           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1) ! 3-Point-on-a-circle interpolation
            CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_Pos)   ! Quadratic interpolation given 3 points
-           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+!           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+           temp_phi = IniTwist_Nodal((i-1)*(p%node_elem-1)+j)
 !           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV) ! 3-Point-on-a-circle interpolation
            CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
            temp_id2 = (j-1)*p%dof_node
@@ -207,6 +216,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   p%uuN0(24,1)= 0.81028671777792349
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
+   DEALLOCATE(IniTwist_Nodal)
 
    CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
    temp_ratio(:,:) = 0.0D0
