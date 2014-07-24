@@ -34,6 +34,8 @@
 
    CALL ReadVar(UnIn,BldFile,BladeInputFileData%station_total,'station_total','Number of blade input stations',ErrStat2,ErrMsg2,UnEc)
 
+   CALL AllocAry(BladeInputFileData%IniTwist_eta,BladeInputFileData%station_total,'Initial twist angle at stations',ErrStat2,ErrMsg2)
+   BladeInputFileData%IniTwist_eta(:) = 0.0D0 
    CALL AllocAry(BladeInputFileData%stiff0,6,6,BladeInputFileData%station_total,'Cross-sectional 6 by 6 stiffness matrix',ErrStat2,ErrMsg2)
    BladeInputFileData%stiff0(:,:,:) = 0.0D0 
    CALL AllocAry(BladeInputFileData%mass0,6,6,BladeInputFileData%station_total,'Cross-sectional 6 by 6 mass matrix',ErrStat2,ErrMsg2)

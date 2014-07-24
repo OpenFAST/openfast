@@ -214,6 +214,9 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   p%uuN0(12,1)= 1.21338673221741544 !1.2133871423399105 !1.21338673221741544
 !   p%uuN0(18,1)= 0.81028671777792349 !0.79565168817258936 !0.81028671777792349
 !   p%uuN0(24,1)= 0.81028671777792349
+!   DO i=1,3
+!       WRITE(*,*) "IniTwist_Nodal:",i,IniTwist_Nodal(i)
+!   ENDDO
    DEALLOCATE(temp_GLL)
    DEALLOCATE(temp_w)
    DEALLOCATE(IniTwist_Nodal)
@@ -286,16 +289,17 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   DO i=1,InputFileData%member_total+1
 !       WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
 !   ENDDO
-   DO i=1,InputFiledata%member_total
-       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
-       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
-       DO j=1,p%node_elem
-           WRITE(*,*) "Nodal Position:",j
-           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
-           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
-       ENDDO
-   ENDDO
+!   DO i=1,InputFiledata%member_total
+!       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
+!       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
+!       DO j=1,p%node_elem
+!           WRITE(*,*) "Nodal Position:",j
+!           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
+!           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
+!       ENDDO
+!   ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
+!   STOP
 !   WRITE(*,*) "node_elem: ", p%node_elem
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
