@@ -1114,7 +1114,12 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
  !   NTables = number of airfoil data tables
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '# of tables' )
+   IF ( IOS < 0 ) THEN
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '# of tables', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+   END IF
+   
 
    READ(LINE,*,ERR=205) p%AirFoil%NTables( NFOILID )
 
@@ -1180,45 +1185,100 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
  ! Read in airfoil data table identification array
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'multi-table metric' )
+   IF ( IOS < 0 ) then
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'multi-table metric', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    READ(LINE,*,ERR=205)  (p%AirFoil%MulTabMet ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
  ! Read in four lines that are no longer used
  ! These are retained for future USE and backwards compatibility only
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '5th line' )
+   IF ( IOS < 0 ) then
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '5th line', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '6th line' )
+   IF ( IOS < 0 ) then
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '6th line', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '7th line' )
+   IF ( IOS < 0 ) then
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '7th line', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '8th line' )
+   IF ( IOS < 0 ) then
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , '8th line', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
 
  ! Read Beddoes stall parameters
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'Angle of zero lift (AOL)' )
+   IF ( IOS < 0 ) THEN
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'Angle of zero lift (AOL)', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%AOL( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNA' )
+   IF ( IOS < 0 ) THEN
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNA', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CNA   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNS' )
+   IF ( IOS < 0 ) THEN
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNS', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CNS   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNSL' )
+   IF ( IOS < 0 ) THEN 
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CNSL', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CNSL  ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'AOD' )
+   IF ( IOS < 0 ) THEN
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'AOD', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%AOD   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
    READ(NUNIT,'( A )',IOSTAT=IOS) LINE
-   IF ( IOS < 0 ) CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CDO' )
+   IF ( IOS < 0 ) THEN
+      CALL PremEOF ( Trim(p%AirFoil%FOILNM(NFOILID)) , 'CDO', .TRUE., ErrMessLcl )
+      close(NUNIT)
+      CALL SetErrStat( ErrID_Fatal, ErrMessLcl, ErrStat, ErrMess, 'READFL')
+      RETURN
+   END IF
    IF (p%DSTALL) READ(LINE,*,ERR=205)  (O%Beddoes%CDO   ( NFOILID, K ), K = 1, p%AirFoil%NTables(NFOILID))
 
  ! Convert angles to radians
@@ -1256,17 +1316,28 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
 
       DO IPHI = 1, p%AirFoil%NTables(NFOILID)
         IF ( ABS( O%AirFoil%AL( NFOILID, I ) ) > 185.) THEN
-           CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
-                           ' Angle of attack exceeds 185 degrees.')
+            CALL SetErrStat( ErrID_Fatal, 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
+                           ' Angle of attack exceeds 185 degrees.', ErrStat, ErrMess, 'READFL')   
+            CLOSE(NUNIT)
+            RETURN
+
         ELSEIF (ABS( O%AirFoil%CL( NFOILID, I, IPHI ) ) > 3. ) THEN
-           CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
-                           ' Coefficient of Lift exceeds 3.0.')
+            CALL SetErrStat( ErrID_Fatal, 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
+                           ' Coefficient of Lift exceeds 3.0.', ErrStat, ErrMess, 'READFL')   
+            CLOSE(NUNIT)
+            RETURN
         ELSEIF (ABS( O%AirFoil%CD( NFOILID, I, IPHI ) ) > 3. ) THEN
-           CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
-                           ' Coefficient of Drag exceeds 3.0.')
+            CALL SetErrStat( ErrID_Fatal, 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
+                           ' Coefficient of Drag exceeds 3.0.', ErrStat, ErrMess, 'READFL')   
+            CLOSE(NUNIT)
+            RETURN
         ELSEIF (ABS( O%AirFoil%CM( NFOILID, I, IPHI ) ) > 3. ) THEN
-           CALL ProgAbort( 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
-                           ' Coefficient of Moment exceeds 3.0.')
+            CALL SetErrStat( ErrID_Fatal, 'Probable error in airfoil data table number '//TRIM(Int2LStr(NFOILID))// &
+                           ' Coefficient of Moment exceeds 3.0.', ErrStat, ErrMess, 'READFL')   
+            CLOSE(NUNIT)
+            RETURN
+           
+           
         ENDIF
       ENDDO ! IPHI
 
@@ -1301,7 +1372,8 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
          IF (CLPosPI(IPHI) /= CLNegPI(IPHI) .OR. &
              CDPosPI(IPHI) /= CDNegPI(IPHI) .OR. &
              CMPosPI(IPHI) /= CMNegPI(IPHI)) THEN
-            CALL ProgAbort( ' The airfoil data at +180 deg is different from -180 deg in file :'//Trim(P%AirFoil%FOILNM(NFOILID)) )
+            CALL SetErrStat( ErrID_Fatal, ' The airfoil data at +180 deg is different from -180 deg in file :'//Trim(P%AirFoil%FOILNM(NFOILID)), ErrStat, ErrMess, 'READFL')            
+            return
          ENDIF
       END Do ! IPHI
    ENDIF
@@ -1319,7 +1391,9 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
 END DO !NUMFOIL
 RETURN
 
-205 CALL ProgAbort( ' Error reading line: "'//TRIM(Line)//'" in file : "'//TRIM(P%AirFoil%FOILNM(NFOILID))//'"' )
+205 CALL SetErrStat( ErrID_Fatal, ' Error reading line: "'//TRIM(Line)//'" in file : "'//TRIM(P%AirFoil%FOILNM(NFOILID))//'"', ErrStat, ErrMess, 'READFL')   
+   CLOSE(NUNIT)
+   RETURN
 
 RETURN
 END SUBROUTINE READFL
