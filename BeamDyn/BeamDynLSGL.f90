@@ -194,8 +194,9 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
        DO j=1,p%node_elem
 !           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1) ! 3-Point-on-a-circle interpolation
            CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_Pos)   ! Quadratic interpolation given 3 points
-!           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-           temp_phi = IniTwist_Nodal((i-1)*(p%node_elem-1)+j)
+           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
+WRITE(*,*) "temp_phi:",temp_phi
+!           temp_phi = IniTwist_Nodal((i-1)*(p%node_elem-1)+j)
 !           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV) ! 3-Point-on-a-circle interpolation
            CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
            temp_id2 = (j-1)*p%dof_node
@@ -299,7 +300,6 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !       ENDDO
 !   ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
-!   STOP
 !   WRITE(*,*) "node_elem: ", p%node_elem
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
@@ -312,7 +312,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 !   ENDDO
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
-!   STOP
+   STOP
    
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
