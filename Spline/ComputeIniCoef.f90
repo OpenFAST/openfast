@@ -1,4 +1,4 @@
-   SUBROUTINE ComputeIniCoef(kp_coord,tang_vec,member_total,Coef)
+   SUBROUTINE ComputeIniCoef(member_total,kp_coord,tang_vec,Coef)
 
    REAL(ReKi),    INTENT(IN   ):: kp_coord(:,:)
    REAL(ReKi),    INTENT(IN   ):: tang_vec(:,:)
@@ -8,10 +8,8 @@
    REAL(ReKi)    :: K(4*member_total,4*member_total)
    REAL(ReKi)    :: RHS(4*member_total)
    REAL(ReKi)    :: sol_temp(4*member_total)
-   REAL(ReKi)    :: temp
    REAL(ReKi)    :: d
    INTEGER(IntKi):: indx(4*member_total)
-   INTEGER(IntKi):: temp_id1
    INTEGER(IntKi):: i
    INTEGER(IntKi):: j
    INTEGER(IntKi):: k
