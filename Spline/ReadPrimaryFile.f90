@@ -58,12 +58,14 @@
    temp_int = InputFileData%member_total+1
    CALL AllocAry(InputFileData%kp_coordinate,temp_int,3,'Key point coordinates input array',ErrStat2,ErrMsg2)
    InputFileData%kp_coordinate(:,:) = 0.0D0
+   CALL AllocAry(InputFileData%initial_twist,temp_int,'Initial twist angle',ErrStat2,ErrMsg2)
+   InputFileData%initial_twist(:) = 0.0D0
    CALL AllocAry(InputFileData%tangent_vector,2,3,'Tangent vector at start/end key points',ErrStat2,ErrMsg2)
    InputFileData%tangent_vector(:,:) = 0.0D0
 
    DO i=1,temp_int
        READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                    InputFileData%kp_coordinate(i,1)
+                    InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(i)
        IF(UnEc>0) THEN
            IF(i==1) WRITE(UnEc,'(/,A,/)') 'Key points coordinates and initial twist angle'
            WRITE(UnEc,'(/,A,/)') InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&

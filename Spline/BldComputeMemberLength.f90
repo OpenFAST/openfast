@@ -5,7 +5,6 @@
    REAL(ReKi),    INTENT(  OUT):: member_length(:,:)
    REAL(ReKi),    INTENT(  OUT):: total_length
 
-   REAL(ReKi)                  :: sample_step
    REAL(ReKi)                  :: eta0
    REAL(ReKi)                  :: eta1
    REAL(ReKi)                  :: temp_pos0(3)

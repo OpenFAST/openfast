@@ -21,7 +21,7 @@
 !**********************************************************************************************************************************
 PROGRAM MAIN
 
-   USE BeamDyn
+   USE BeamDyn_SP
    USE BeamDyn_Types
 
    USE NWTC_Library
@@ -287,7 +287,7 @@ END PROGRAM MAIN
 !SUBROUTINE BD_InputSolve( u, y, p, ErrStat, ErrMsg)
 SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
  
-   USE BeamDyn
+   USE BeamDyn_SP
    USE BeamDyn_Types
 
    ! Module1 Derived-types variables; see Registry_Module1.txt for details
