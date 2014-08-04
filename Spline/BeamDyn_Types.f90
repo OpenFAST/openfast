@@ -110,6 +110,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: order_elem 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: initial_twist 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tangent_vector 
     TYPE(BladeInputData)  :: InpBl 
     CHARACTER(1024)  :: BldFile 
     LOGICAL  :: Echo 
@@ -1827,6 +1828,21 @@ IF (ALLOCATED(SrcinputfileData%initial_twist)) THEN
    END IF
    DstinputfileData%initial_twist = SrcinputfileData%initial_twist
 ENDIF
+IF (ALLOCATED(SrcinputfileData%tangent_vector)) THEN
+   i1_l = LBOUND(SrcinputfileData%tangent_vector,1)
+   i1_u = UBOUND(SrcinputfileData%tangent_vector,1)
+   i2_l = LBOUND(SrcinputfileData%tangent_vector,2)
+   i2_u = UBOUND(SrcinputfileData%tangent_vector,2)
+   IF (.NOT.ALLOCATED(DstinputfileData%tangent_vector)) THEN 
+      ALLOCATE(DstinputfileData%tangent_vector(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copyinputfile: Error allocating DstinputfileData%tangent_vector.'
+         RETURN
+      END IF
+   END IF
+   DstinputfileData%tangent_vector = SrcinputfileData%tangent_vector
+ENDIF
       CALL BD_Copybladeinputdata( SrcinputfileData%InpBl, DstinputfileData%InpBl, CtrlCode, ErrStat, ErrMsg )
    DstinputfileData%BldFile = SrcinputfileData%BldFile
    DstinputfileData%Echo = SrcinputfileData%Echo
@@ -1846,6 +1862,9 @@ IF (ALLOCATED(inputfileData%kp_coordinate)) THEN
 ENDIF
 IF (ALLOCATED(inputfileData%initial_twist)) THEN
    DEALLOCATE(inputfileData%initial_twist)
+ENDIF
+IF (ALLOCATED(inputfileData%tangent_vector)) THEN
+   DEALLOCATE(inputfileData%tangent_vector)
 ENDIF
   CALL BD_Destroybladeinputdata( inputfileData%InpBl, ErrStat, ErrMsg )
  END SUBROUTINE BD_Destroyinputfile
@@ -1891,6 +1910,7 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! order_elem
   Re_BufSz    = Re_BufSz    + SIZE( InData%kp_coordinate )  ! kp_coordinate 
   Re_BufSz    = Re_BufSz    + SIZE( InData%initial_twist )  ! initial_twist 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%tangent_vector )  ! tangent_vector 
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_InpBl_Buf  ) ! InpBl
   IF(ALLOCATED(Db_InpBl_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_InpBl_Buf  ) ! InpBl
@@ -1912,6 +1932,10 @@ ENDIF
   IF ( ALLOCATED(InData%initial_twist) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%initial_twist))-1 ) =  PACK(InData%initial_twist ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%initial_twist)
+  ENDIF
+  IF ( ALLOCATED(InData%tangent_vector) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tangent_vector))-1 ) =  PACK(InData%tangent_vector ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%tangent_vector)
   ENDIF
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, OnlySize ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) THEN
@@ -1982,6 +2006,12 @@ ENDIF
     OutData%initial_twist = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%initial_twist))-1 ),mask1,OutData%initial_twist)
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%initial_twist)
+  ENDIF
+  IF ( ALLOCATED(OutData%tangent_vector) ) THEN
+  ALLOCATE(mask2(SIZE(OutData%tangent_vector,1),SIZE(OutData%tangent_vector,2))); mask2 = .TRUE.
+    OutData%tangent_vector = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tangent_vector))-1 ),mask2,OutData%tangent_vector)
+  DEALLOCATE(mask2)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%tangent_vector)
   ENDIF
  ! first call BD_Packbladeinputdata to get correctly sized buffers for unpacking
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, OutData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 

@@ -1,18 +1,13 @@
-   SUBROUTINE ComputeIniNodalCrv(EndP1,EndP2,MidP,phi,eta,cc)
+   SUBROUTINE ComputeIniNodalCrv(e1,phi,cc)
    !-----------------------------------------------------
    ! This subroutine computes initial CRV parameters
    ! given geometry information
    !-----------------------------------------------------
 
-   REAL(ReKi),INTENT(IN   ):: EndP1(:)    ! Position vector of End Point 1
-   REAL(ReKi),INTENT(IN   ):: EndP2(:)    ! Position vector of End Point 2
-   REAL(ReKi),INTENT(IN   ):: MidP(:)     ! Position vector of Mid Point
-   REAL(ReKi),INTENT(IN   ):: eta         ! Nondimensional coordinate, [-1,1]
+   REAL(ReKi),INTENT(IN   ):: e1(:)       ! Unit tangent vector
    REAL(ReKi),INTENT(IN   ):: phi         ! Initial twist angle
    REAL(ReKi),INTENT(  OUT):: cc(:)       ! Initial Crv Parameter
 
-   REAL(ReKi):: hpx(3)                    ! Derivatives of second-order shape function 
-   REAL(ReKi):: e1(3)                     ! Unit tangent vector
    REAL(ReKi):: e2(3)                     ! Unit normal vector
    REAL(ReKi):: e3(3)                     ! Unit e3 = e1 * e2, cross-product
    REAL(ReKi):: Rr(3,3)                   ! Initial rotation matrix
@@ -21,18 +16,8 @@
    REAL(ReKi):: Delta
    INTEGER(IntKi):: i
 
-   hpx = 0.0D0
-   hpx(1) = 0.5D0*(2.0D0*eta - 1.0D0)
-   hpx(2) = -2.0D0*eta
-   hpx(3) = 0.5D0*(2.0D0*eta + 1.0D0)
 
    Rr = 0.0D0
-
-   e1 = 0.0D0
-   DO i=1,3
-       e1(i) = hpx(1)*EndP1(i) + hpx(2)* MidP(i) + hpx(3)*EndP2(i) 
-   ENDDO
-   e1 = e1/Norm(e1)
    DO i=1,3
        Rr(i,1) = e1(i)
    ENDDO
