@@ -22,7 +22,7 @@ CONTAINS
 
 
 !=======================================================================
-SUBROUTINE CohSpecVMat( LC, NSize )
+SUBROUTINE CohSpecVMat( NSize )
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -35,7 +35,6 @@ IMPLICIT                      NONE
 
    ! Passed variables
 
-REAL(ReKi),   INTENT(IN)   :: LC             ! IEC coherency scale parameter
 INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
 
    ! Internal variables
@@ -56,12 +55,10 @@ INTEGER                    :: I
 INTEGER                    :: IFreq
 INTEGER                    :: II             ! The index of point I
 INTEGER                    :: Indx
-INTEGER                    :: IVec           ! wind component, 1=u, 2=v, 3=w
+INTEGER                    :: IVec, IVec_End ! wind component, 1=u, 2=v, 3=w
 INTEGER                    :: IY             ! The index of the y-value of point I
 INTEGER                    :: IZ             ! Index of the z-value of point I
 INTEGER                    :: Stat
-
-LOGICAL                    :: IdentityCoh
 
 
 
@@ -93,7 +90,6 @@ V(:,:,:) = 0.0_ReKi    ! initialize the velocity matrix
 !---------------------------------------------------------------------------------
 
 IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
-   InCohB(:)    = 0.12/LC
    DistZMExp(:) = 1.0
 ENDIF
 
@@ -142,15 +138,15 @@ POINT_J:       DO JZ=1,IZ
 
                      IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM  .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
                         DistU(Indx) = Dist(Indx)/UHub
-!                           TRH(Indx) = EXP( -InCDec(IVec)*SQRT( ( p_grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
+!                           TRH(Indx) = EXP( -p_met%InCDec(IVec)*SQRT( ( p_grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
                         UM       = 0.5*( U(IZ) + U(JZ) )
                         ZM       = 0.5*( p_grid%Z(IZ) + p_grid%Z(JZ) )
 
                         DistU(Indx)     = Dist(Indx)/UM
-                        DistZMExp(Indx) = ( Dist(Indx)/ZM )**COHEXP     ! Note: 0**0 = 1
+                        DistZMExp(Indx) = ( Dist(Indx)/ZM )**p_met%COHEXP     ! Note: 0**0 = 1
 
-!                       TRH(Indx) = EXP( -InCDec(IVec) * DistZMExp*SQRT( ( p_grid%Freq(IFreq)* DistU )**2 + (InCohB(IVec)*Dist)**2 ) )
+!                       TRH(Indx) = EXP( -p_met%InCDec(IVec) * DistZMExp*SQRT( ( p_grid%Freq(IFreq)* DistU )**2 + (p_met%InCohB(IVec)*Dist)**2 ) )
                      ENDIF !SpecModel
 
                   ENDDO    ! JY
@@ -173,14 +169,13 @@ IF ( COH_OUT ) THEN
 
 ENDIF
 
-DO IVec = 1,3
+IF ( ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) ) THEN
+   IVec_End = 1
+ELSE
+   IVec_End = 3
+END IF
 
-   IF ( ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) .AND. ( IVec /= 1 ) ) THEN
-         ! There is no coherence defined for the v or w component of the IEC spectral models
-      IdentityCoh = .TRUE.
-   ELSE
-      IdentityCoh = .FALSE.
-   ENDIF
+DO IVec = 1,IVec_End
 
    CALL WrScr ( '    '//Comp(IVec)//'-component matrices' )
 
@@ -193,31 +188,44 @@ DO IVec = 1,3
       !---------------------------------------------------
       ! Calculate the coherence and Veers' H matrix (CSDs)
       !---------------------------------------------------
-      IF (.NOT. IdentityCoh) THEN
+         ! -----------------------------------------------
+         ! Create the coherence matrix for this frequency
+         ! -----------------------------------------------
 
-            ! -----------------------------------------------
-            ! Create the coherence matrix for this frequency
-            ! -----------------------------------------------
+      DO II=1,p_grid%NPoints
+         DO JJ=1,II
 
-         DO II=1,p_grid%NPoints
-            DO JJ=1,II
+               JJ1       = JJ - 1
+               Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
-                  JJ1       = JJ - 1
-                  Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+               TRH(Indx) = EXP( -1.0 * p_met%InCDec(IVec) * DistZMExp(Indx)* &
+                           SQRT( (p_grid%Freq(IFreq)*DistU(Indx) )**2 + (p_met%InCohB(IVec)*Dist(Indx))**2 ) )
 
-                  TRH(Indx) = EXP( -1.0 * InCDec(IVec) * DistZMExp(Indx)* &
-                              SQRT( (p_grid%Freq(IFreq)*DistU(Indx) )**2 + (InCohB(IVec)*Dist(Indx))**2 ) )
-
-            ENDDO ! JJ
-         ENDDO ! II
-
-      END IF      
+         ENDDO ! JJ
+      ENDDO ! II
       
-      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize )
-
+      CALL Coh2H(    IVec, IFreq, TRH, S,              p_grid%NPoints, NSize )
+      CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p_grid%NPoints )
    ENDDO !IFreq
 
 ENDDO !IVec
+
+
+   ! this is for identity coherence:
+DO IVec = IVec_End+1,3
+     
+      ! -----------------------------------------------------------------------------------
+      !  The coherence is the Identity (as is Cholesky Factorization); 
+      !    the Veers' H matrix calculated in EyeCoh2H:
+      ! -----------------------------------------------------------------------------------
+      
+   DO IFREQ = 1,p_grid%NumFreq
+      CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p_grid%NPoints )   
+      CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p_grid%NPoints )
+   ENDDO !IFreq
+      
+END DO
+
 
 IF (COH_OUT)  CLOSE( UC )
 
@@ -230,7 +238,7 @@ RETURN
 
 END SUBROUTINE CohSpecVMat
 !=======================================================================
-SUBROUTINE CohSpecVMat_API( LC, NSize)
+SUBROUTINE CohSpecVMat_API( NSize)
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -243,7 +251,6 @@ IMPLICIT                      NONE
 
    ! Passed variables
 
-REAL(ReKi),   INTENT(IN)   :: LC             ! IEC coherency scale parameter
 INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
 
    ! Internal variables
@@ -325,11 +332,6 @@ ENDIF
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
-
-IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API) THEN
-   InCohB(:)    = 0.12/LC
-
-ENDIF
 
          II = 0
 POINT_I: DO IZ=1,p_grid%ZLim   !NumGrid_Z
@@ -576,16 +578,159 @@ character(1024)                  :: ErrMsg
 
 END SUBROUTINE Coh2Coeffs
 !=======================================================================
+SUBROUTINE EyeCoh2H( IVec, IFreq, TRH, S, NPoints )
 
-SUBROUTINE GetDefaultCoh(WS,Ht)
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
+INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
+INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
+INTEGER(IntKi),   INTENT(IN)     :: NPoints                                  ! Size of dimension 2 of S
+
+integer                          :: Indx, J, I
+
+!NPoints = SIZE(S,2)
+
+      ! -----------------------------------------------------------------------------------
+      !  The coherence is the Identity (as is Cholesky); the Veers' H matrix is as follows:
+      ! -----------------------------------------------------------------------------------
+
+   Indx = 1
+   DO J = 1,NPoints ! The column number
+
+         ! The diagonal entries of the matrix:
+
+      TRH(Indx) = SQRT( ABS( S(IFreq,J,IVec) ) )
+
+         ! The off-diagonal values:
+      Indx = Indx + 1
+      DO I = J+1,NPoints ! The row number
+         TRH(Indx) = 0.0
+         Indx = Indx + 1
+      ENDDO ! I
+   ENDDO ! J
+
+END SUBROUTINE EyeCoh2H
+!=======================================================================
+SUBROUTINE Coh2H( IVec, IFreq, TRH, S, NPoints, NSize )
+
+use NWTC_LAPACK
+USE TSMods, only: COH_OUT, UC, p_grid
+
+
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
+INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
+INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
+INTEGER(IntKi),   INTENT(IN)     :: NPoints                                  ! Size of dimension 2 of S
+INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of TRH = NPoints*(NPoints+1)/2
+
+
+integer                          :: Indx, J, I, Stat
+character(1024)                  :: ErrMsg
+
+         
+   IF (COH_OUT) THEN
+!     IF (IFreq == 1 .OR. IFreq == p_grid%NumFreq) THEN
+         WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p_grid%Freq(IFreq), TRH(1:NSize)
+!     ENDIF
+   ENDIF
+
+      ! -------------------------------------------------------------
+      ! Calculate the Cholesky factorization for the coherence matrix
+      ! -------------------------------------------------------------
+
+   CALL LAPACK_pptrf( 'L', NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
+
+   IF ( Stat /= ErrID_None ) THEN
+      CALL WrScr(ErrMsg)
+      IF (Stat >= AbortErrLev) &
+      CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
+                     TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p_grid%Freq(IFreq)))//' Hz)'//&
+                  '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
+                  'Check the input file for invalid physical properties or modify the coherence exponent '//&
+                  'or grid spacing.')
+   ENDIF
+
+      ! -------------------------------------------------------------
+      ! Create the lower triangular matrix, H, from Veer's method
+      ! -------------------------------------------------------------
+
+   Indx = 1
+   DO J = 1,NPoints  ! Column
+      DO I = J,NPoints ! Row
+
+            ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
+
+         TRH(Indx) = TRH(Indx) * SQRT( ABS( S(IFreq,I,IVec) ) )
+
+         Indx = Indx + 1
+
+      ENDDO !I
+   ENDDO !J
+
+END SUBROUTINE Coh2H
+!=======================================================================
+SUBROUTINE H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, NPoints )
+
+
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(IN)     :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
+INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
+INTEGER(IntKi),   INTENT(IN)     :: NPoints                                  ! Size of dimension 2 of V
+
+
+REAL(ReKi)                       :: CPh                                      ! Cosine of the random phase
+REAL(ReKi)                       :: SPh                                      ! Sine of the random phase
+INTEGER                          :: IF1                                      ! Index to real part of vector
+INTEGER                          :: IF2                                      ! Index to complex part of vector
+
+integer                          :: Indx, J, I, Stat
+character(1024)                  :: ErrMsg
+
+
+   ! -------------------------------------------------------------
+   ! Calculate the correlated fourier coefficients.
+   ! -------------------------------------------------------------
+
+   IF2      = IFreq*2
+   IF1      = IF2 - 1
+
+   DO J=1,NPoints
+
+         ! Apply a random phase to each of the columns of H to
+         ! produce random phases in the wind component.
+         ! Then sum each of the rows into the vector V.
+         
+      CPh   = COS( PhaseAngles(J,IFreq,IVec) )
+      SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
+
+      Indx = NPoints*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
+      DO I=J,NPoints
+
+         V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
+         V(IF2,I,IVec) = V(IF2,I,IVec) + TRH(Indx)*SPh  !Imaginary part
+
+         Indx = Indx + 1      !H(I,J)
+
+      ENDDO ! I
+   ENDDO ! J
+
+END SUBROUTINE H2Coeffs
+!=======================================================================
+
+
+SUBROUTINE GetDefaultCoh(WS,Ht, InCDec, InCohB )
    ! These numbers come from Neil's analysis
 
-   USE                     TSMods, ONLY : InCDec
-   USE                     TSMods, ONLY : InCohB
-   USE                     TSMods, ONLY : RICH_NO
+   USE                     TSMods, ONLY : p_met
    USE                     TSMods, ONLY : TurbModel, SpecModel
-!   USE                     TSMods, ONLY : UHub
 
+   REAL(ReKi), INTENT(  OUT)            :: InCDec(3)         ! default coherence decrement
+   REAL(ReKi), INTENT(  OUT)            :: InCohB(3)         ! default coherence parameter B
+   
+   
 !   REAL(ReKi), PARAMETER                :: a =  0.007697495  !coeffs for WF_xxD best-fit equations
 !   REAL(ReKi), PARAMETER                :: b =  0.451759656  !coeffs for WF_xxD best-fit equations
 !   REAL(ReKi), PARAMETER                :: c =  6.559106387  !coeffs for WF_xxD best-fit equations
@@ -593,7 +738,9 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
 !   REAL(ReKi), PARAMETER                :: e = -1.19488521   !coeffs for WF_xxD best-fit equations
 !   REAL(ReKi), PARAMETER                :: f =  0.005529328  !coeffs for WF_xxD best-fit equations
 !   REAL(ReKi), PARAMETER                :: g =  0.059157163  !coeffs for WF_xxD best-fit equations
-   REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS category coherence decrements
+
+
+REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS category coherence decrements
    REAL(ReKi), INTENT(IN)               :: Ht         !Height, usually hub height
    REAL(ReKi)                           :: Ht1        !Height, set to bounds of the individual models
    REAL(ReKi)                           :: Ht2        !Height squared
@@ -608,14 +755,14 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
    INTEGER                              :: Ri_Cat
 
 
-      IF (RICH_NO <= 0.00 ) THEN
-         IF ( RICH_NO <= - 1.0 ) THEN
+      IF (p_met%RICH_NO <= 0.00 ) THEN
+         IF ( p_met%RICH_NO <= - 1.0 ) THEN
             Ri_Cat = 1
          ELSE
             Ri_Cat = 2
          ENDIF
-      ELSEIF (RICH_NO <= 0.25 ) THEN
-         IF (RICH_NO <= 0.10 ) THEN
+      ELSEIF (p_met%RICH_NO <= 0.25 ) THEN
+         IF (p_met%RICH_NO <= 0.10 ) THEN
             Ri_Cat = 3
          ELSE
             Ri_Cat = 4
@@ -634,20 +781,20 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/  3.1322E+00,  2.2819E-03,  2.9214E+00, -5.2203E-04,  1.1877E+00, &
                                       -5.7605E-02,  3.7233E-06, -3.5021E-01, -1.7555E-03,  3.9712E-04 /)    !W  5
                      IF  ( WS <= 4.0 ) THEN !      WS <=  4
-                        RI1 = MAX( 0.0, MIN( RICH_NO, 1.0 ) )
+                        RI1 = MAX( 0.0, MIN( p_met%RICH_NO, 1.0 ) )
                         coeffs(:,1) = (/  4.8350E+00, -4.0113E-02,  7.8134E+00, -2.0069E-05, -1.9518E-01, &
                                          -1.4009E-01,  2.3195E-06,  8.2029E-02, -7.4979E-04,  6.1186E-04 /) !U  3
                         coeffs(:,2) = (/  3.2587E+00, -5.9086E-02,  9.7426E+00,  5.7360E-04,  2.1274E-01, &
                                          -1.6398E-01, -8.3786E-07,  6.6896E-02, -3.5254E-03,  6.4833E-04 /) !V  3
                      ELSE                   !  4 < WS <=  6
-                        RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                        RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                         coeffs(:,1) = (/  9.2474E+00, -4.9849E-02,  6.0887E+00, -5.9124E-04,  4.4312E-02, &
                                          -1.1966E-01,  5.2652E-06, -1.0373E-01,  4.0480E-03,  5.5761E-04 /) !U  5
                         coeffs(:,2) = (/  3.6355E+00,  1.7701E-02,  4.2165E+00, -5.8828E-04,  9.5592E-02, &
                                          -6.5313E-02,  3.3875E-06, -1.7981E-02, -1.6375E-03,  3.0423E-04 /) !V  5
                      ENDIF
                   ELSE                      ! 6  < WS <=  8
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.1795E+01, -7.5393E-02,  9.5279E+00, -3.4922E-04, -5.8973E-01, &
                                       -1.6753E-01,  4.4267E-06,  2.1797E-01,  7.7887E-04,  7.4912E-04 /)    !U  7
                      coeffs(:,2) = (/  1.7730E+00,  9.6577E-02,  8.1310E+00, -1.2028E-03,  3.0145E-02, &
@@ -657,7 +804,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                   ENDIF
                ELSE ! 8.0 < WS <= 14.0
                   IF     (WS <= 10.0) THEN  !  8 < WS <= 10
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  8.4674E+00,  1.2922E-01,  8.6170E+00, -3.3048E-03, -3.1928E-02, &
                                       -1.2515E-01,  1.8209E-05,  2.9087E-01, -9.3031E-03,  5.0706E-04 /)    !U  9
                      coeffs(:,2) = (/  2.8145E+00,  1.0257E-01,  4.2987E+00, -1.4901E-03,  4.9698E-02, &
@@ -665,7 +812,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/  2.4952E+00,  5.8000E-02,  1.9851E+00, -9.4027E-04, -4.0135E-02, &
                                       -1.8377E-02,  4.3320E-06, -1.0441E-01,  3.6831E-03,  8.6637E-05 /)    !W  9
                   ELSEIF (WS <= 12.0) THEN  ! 10 < WS <= 12
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.2473E+01,  3.2270E-02,  1.4508E+01, -2.2856E-03, -1.4652E+00, &
                                       -2.4114E-01,  1.4919E-05,  5.5578E-01, -8.5528E-04,  1.0273E-03 /)    !U  11
                      coeffs(:,2) = (/  1.0882E+00,  1.9425E-01,  8.1533E+00, -2.5574E-03,  4.3113E-01, &
@@ -673,7 +820,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/  5.0280E-01,  1.1637E-01,  4.0130E+00, -1.2034E-03, -2.7592E-01, &
                                       -3.8744E-02,  3.4213E-06, -1.5144E-02,  2.4042E-03,  4.7818E-05 /)    !W  11
                   ELSE                      ! 12 < WS <= 14.0
-                     RI1 = MAX( -1.0, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  8.6311E+00,  2.5614E-01,  1.1165E+01, -5.1685E-03,  3.0895E+00, &
                                       -1.9190E-01,  2.7162E-05, -2.6513E-01, -3.6479E-02,  8.8431E-04 /)    !U  13
                      coeffs(:,2) = (/  1.2842E+00,  2.4007E-01,  5.3653E+00, -3.2589E-03,  3.4715E+00, &
@@ -685,7 +832,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             ELSE ! WS > 14
                IF (WS <= 20.0 ) THEN
                   IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
-                     RI1 = MAX( -1.0, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.3972E-01,  6.3486E-01,  1.7576E+01, -1.0017E-02,  2.8458E+00, &
                                       -2.5233E-01,  4.6539E-05, -1.8899E-01, -2.6717E-02,  9.5173E-04 /)    !U  15
                      coeffs(:,2) = (/ -7.1243E+00,  5.6768E-01,  1.2886E+01, -7.3277E-03,  3.7880E+00, &
@@ -693,7 +840,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/ -1.1004E+01,  5.3470E-01,  5.3118E+00, -5.8999E-03,  1.9009E+00, &
                                       -2.4063E-02,  2.1755E-05, -4.5798E-01,  1.6885E-02, -3.9974E-04 /)    !W  15
                   ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -6.9650E+00,  8.8636E-01,  2.3467E+01, -1.1973E-02, -4.3750E+00, &
                                       -3.5519E-01,  5.0414E-05,  9.1789E-01,  9.8340E-03,  1.5885E-03 /)    !U  17
                      coeffs(:,2) = (/  5.5495E-03,  3.2906E-01,  1.4609E+01, -4.1635E-03, -2.1246E+00, &
@@ -701,7 +848,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/ -1.3195E+00,  2.0022E-01,  2.3490E+00, -2.1308E-03,  3.5582E+00, &
                                        1.4379E-02,  7.6830E-06, -7.6155E-01, -2.4660E-02, -2.0199E-04 /)    !W  17
                   ELSE                      ! 18 < WS <= 20
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -1.3985E+01,  1.3161E+00,  3.4773E+01, -1.9237E-02, -1.9845E+00, &
                                       -5.5817E-01,  8.8310E-05,  1.7142E+00, -4.2907E-02,  2.3932E-03 /)    !U  19
                      coeffs(:,2) = (/ -1.2400E+01,  8.6854E-01,  1.9923E+01, -1.1557E-02, -1.0441E+00, &
@@ -711,7 +858,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                   ENDIF
                ELSE ! WS > 20
                   IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -2.4317E+01,  1.8176E+00,  5.3359E+01, -2.5973E-02,  6.0349E+00, &
                                       -7.9927E-01,  1.1558E-04,  1.5926E+00, -1.5005E-01,  3.1688E-03 /)    !U  21
                      coeffs(:,2) = (/  8.0459E+00,  1.8058E-01,  1.9426E+01, -3.6730E-03, -9.9717E-01, &
@@ -719,7 +866,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/ -2.3544E+01,  1.1403E+00,  8.3526E+00, -1.4511E-02,  7.2014E+00, &
                                        5.0216E-02,  5.9947E-05, -1.0659E+00, -7.4769E-02, -9.8390E-04 /)    !W  21
                   ELSEIF (WS <= 24.0) THEN  ! 22 < WS <= 24
-                     RI1 = MAX( 0.0, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( 0.0, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -3.5790E+01,  1.5374E+00,  1.1322E+02, -1.6884E-02, -1.7767E+01, &
                                       -1.8122E+00,  6.8247E-05,  7.2101E+00,  3.5536E-02,  7.9269E-03 /)    !U  23
                      coeffs(:,2) = (/ -7.2883E+01,  2.8210E+00,  8.6392E+01, -3.1084E-02, -2.4938E+01, &
@@ -727,7 +874,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/ -3.2844E+01,  1.2683E+00,  3.2032E+01, -1.3197E-02, -1.1129E+01, &
                                       -3.6741E-01,  4.2852E-05,  4.1336E+00,  2.4775E-02,  1.8431E-03 /)    !W  23
                   ELSE                      ! 24 < WS
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  2.2906E+01,  9.3209E-02,  1.5448E+01, -5.7421E-03, -8.9114E+00, &
                                       -3.1547E-02,  4.0144E-05,  5.4544E-01,  5.3557E-02, -3.1299E-04 /)    !U  25
                      coeffs(:,2) = (/ -1.1903E+01,  1.1104E+00,  1.7962E+01, -1.6045E-02, -9.2458E+00, &
@@ -791,7 +938,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             HT1 = MAX( 25.0, MIN( Ht, 50.0 ) )
 
             IF ( WS <= 14.0 ) THEN
-               RI1 = MAX( -1.0, MIN( RICH_NO, 1.0 ) )
+               RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
                IF ( WS <= 8.0 ) THEN
                   IF     (WS <= 4.0 ) THEN  !      WS <=  4
                      coeffs(:,1) = (/  8.1767E+00, -3.1018E-01,  3.3055E-01,  4.4232E-03,  4.6550E-01, &
@@ -842,7 +989,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             ELSE ! WS > 14
                IF (WS <= 20.0 ) THEN
                   IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
-                     RI1 = MAX( -1.0, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  2.9459E+01, -7.3181E-01,  9.4613E+00,  9.2172E-03,  6.1086E+00, &
                                       -4.9990E-01, -2.9994E-05, -6.9606E-01, -8.5076E-03,  8.1330E-03 /)   !U  15
                      coeffs(:,2) = (/  1.7540E+01, -2.6071E-01,  9.3639E+00,  1.3341E-03,  9.4294E+00, &
@@ -850,7 +997,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/  1.2792E+01, -4.6469E-01,  4.6350E+00,  1.0633E-02,  1.8523E+00, &
                                       -3.2417E-01, -8.5038E-05, -2.2253E-01, -7.3351E-04,  5.4781E-03 /)   !W  15
                   ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
-                     RI1 = MAX( -1.0, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.7775E+01,  4.5287E-01,  1.6417E+01, -2.3724E-02,  5.8998E+00, &
                                       -5.3502E-01,  2.6202E-04, -9.9466E-02,  4.1386E-02,  4.5663E-03 /)   !U  17
                      coeffs(:,2) = (/  1.2022E+01,  2.4246E-01,  1.3875E+01, -1.1725E-02,  5.1917E+00, &
@@ -858,7 +1005,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                      coeffs(:,3) = (/  1.2680E+01, -1.4768E-01,  7.1498E+00, -3.0341E-03,  1.9747E+00, &
                                       -3.8374E-01,  7.0412E-05,  2.2297E-01,  5.9943E-02,  5.3514E-03 /)   !W  17
                   ELSE                      ! 18 < WS <= 20
-                     RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  3.1187E+01, -6.8540E-01,  7.1288E+00,  1.1923E-02,  8.8547E+00, &
                                        6.3133E-02, -9.4673E-05, -2.5710E+00, -5.4077E-02, -1.2797E-04 /)   !U  19
                      coeffs(:,2) = (/  1.2664E+01,  9.1858E-02,  1.9050E+01, -2.8868E-03,  7.2969E+00, &
@@ -867,7 +1014,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                                       -4.3958E-01, -2.5936E-05, -3.0848E-01, -6.3381E-02,  5.1204E-03 /)   !W  19
                   ENDIF
                ELSE ! WS > 20
-                  RI1 = MAX( -0.5, MIN( RICH_NO, 1.0 ) )
+                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
                   IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
                      coeffs(:,1) = (/  2.5165E+01, -7.7660E-02,  1.9692E+01, -1.1794E-02,  9.8635E+00, &
                                       -2.5520E-01,  2.0573E-04, -4.9850E+00,  1.1272E-01,  1.3267E-03 /)   !U  21
@@ -952,7 +1099,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             HT1 = MAX( 5.0, MIN( Ht, 35.0 ) )
             IF ( WS <= 14.0 ) THEN
                IF ( WS <= 10 ) THEN
-                  RI1 = MAX( -0.5, MIN( RICH_NO, 0.15 ) )
+                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.15 ) )
                   IF  ( WS <=  8.0 ) THEN   !      WS <= 8
                      coeffs(:,1) = (/  1.6715E+01, -3.8639E-01,  7.1817E+00,  1.5550E-03, -1.4293E+00, &
                                       -2.0350E-01,  8.5532E-06, -3.4710E+00, -1.9743E-02, -3.9949E-04 /) !Upw_U 7
@@ -965,7 +1112,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                                        2.1810E-01,  1.1718E-04,  7.7287E+01, -1.3828E-01, -9.6568E-03 /) !Upw_V 9
                   ENDIF
                ELSE
-                  RI1 = MAX( -0.5, MIN( RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
                   IF  ( WS <= 12.0 ) THEN   ! 10 < WS <= 12
                      coeffs(:,1) = (/  1.3539E+01, -8.4892E-02, -1.9237E+00, -1.1485E-03, -4.0840E-01, &
                                        3.0956E-01,  2.4048E-05, -1.1523E+00,  9.6877E-03, -4.0606E-03 /) !Upw_U 11
@@ -979,7 +1126,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
                   ENDIF
                ENDIF
             ELSE
-               RI1 = MAX( -0.5, MIN( RICH_NO, 0.05 ) )
+               RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
                IF  ( WS  <= 18.0 ) THEN
                   IF ( WS <= 16.0 ) THEN   ! 14 < WS <= 16
                      coeffs(:,1) = (/  1.4646E+01, -1.5023E-01, -9.7543E-01, -3.5607E-03,  4.8663E+00, &
@@ -1033,26 +1180,26 @@ SUBROUTINE GetDefaultCoh(WS,Ht)
             HT1 = MAX( 5.0, MIN( Ht, 35.0 ) )
             IF ( WS <= 12.0 ) THEN
                IF     ( WS <=  8.0 ) THEN  !      WS <= 8
-                  RI1 = MAX( -0.5, MIN( RICH_NO, 0.15 ) )
+                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.15 ) )
                   coeffs(:,1) = (/  1.0310E+01, -6.4824E-03, -1.3258E+00, -2.7238E-03, -6.8515E+00, &
                                     3.1602E-02,  5.5982E-05, -8.4777E+00,  2.1506E-02,  4.9745E-04 /) !Dwn_U 7
                   coeffs(:,2) = (/  6.9491E+00, -1.3378E-01,  1.7961E-01, -4.9439E-04, -1.8140E+00, &
                                    -4.2321E-02,  4.4962E-05, -3.6939E+00, -8.9465E-03,  4.7867E-04 /) !Dwn_V 7
                ELSEIF ( WS <= 10.0 ) THEN  !  8 < WS <= 10
-                  RI1 = MAX( -0.5, MIN( RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
                   coeffs(:,1) = (/  9.7420E+00,  6.1610E-02,  5.6636E-02, -5.5949E-03, -1.3014E+00, &
                                     2.0655E-01,  8.9989E-05, -1.9837E+00,  5.4957E-03, -3.5496E-03 /) !Dwn_U 9
                   coeffs(:,2) = (/  7.1063E+00, -1.7021E-01,  1.2560E+00, -4.2616E-04,  9.0937E-01, &
                                    -1.3022E-01,  4.7976E-05,  2.1302E-01, -4.3159E-04,  1.5443E-03 /) !Dwn_V 9
                ELSE                        ! 10 < WS <= 12
-                  RI1 = MAX( -0.5, MIN( RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
                   coeffs(:,1) = (/  1.0869E+01, -9.1393E-03, -1.1695E+00, -3.3725E-03,  3.2199E-01, &
                                     7.2692E-02,  7.0565E-05,  6.9573E-01,  2.5360E-02,  1.0187E-03 /) !Dwn_U 11
                   coeffs(:,2) = (/  6.9882E+00, -1.3517E-01, -3.0492E-01, -4.6775E-04,  4.6897E-01, &
                                    -2.0102E-03,  3.3908E-05,  1.4604E-02,  1.1729E-02, -6.2775E-05 /) !Dwn_V 11
                ENDIF
             ELSE
-               RI1 = MAX( -0.5, MIN( RICH_NO, 0.05 ) )
+               RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
                IF     ( WS <= 14.0 ) THEN  ! 12 < WS <= 14
                   coeffs(:,1) = (/  1.1105E+01,  5.3789E-02, -9.4253E-02, -5.4203E-03, -1.0114E+00, &
                                     1.1421E-01,  7.6110E-05, -1.2654E+00,  1.5121E-02, -2.9055E-03 /) !Dwn_U 13
@@ -1107,15 +1254,13 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
 
    USE                     TSMods, ONLY : p_grid
    USE                     TSMods, ONLY : RefHt                           ! This is needed for the HYDRO spectral models.
-   USE                     TSMods, ONLY : RICH_NO
+   USE                     TSMods, ONLY : p_met
    USE                     TSMods, ONLY : TurbModel, SpecModel
    USE                     TSMods, ONLY : UHub
-   USE                     TSMods, ONLY : Ustar
    USE                     TSMods, ONLY : UVskip                                   ! Flag to determine if UV cross-feed term should be skipped or used
    USE                     TSMods, ONLY : UWskip                                   ! Flag to determine if UW cross-feed term should be skipped or used
    USE                     TSMods, ONLY : VWskip                                   ! Flag to determine if VW cross-feed term should be skipped or used
    USE                     TSMods, ONLY : WindProfileType
-   USE                     TSMods, ONLY : zL
    
    use tsmods, only: p_RandNum
    use tsmods, only: OtherSt_RandNum
@@ -1135,7 +1280,7 @@ use TurbSim_Types
 
    Z(2) = p_grid%HubHt + 0.5*p_grid%RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
-   V(:) = getWindSpeed(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   V(:) = getVelocityProfile(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
    Shr = ( V(2)-V(1) ) / p_grid%GridHeight    ! dv/dz
 
@@ -1143,20 +1288,20 @@ use TurbSim_Types
 
    SELECT CASE ( SpecModel )
       CASE ( SpecModel_GP_LLJ )
-         ZLtmp  = MIN( MAX( ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
-         UStar2 = MIN( MAX( UStar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
+         ZLtmp  = MIN( MAX( p_met%ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p_met%Ustar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
       CASE ( SpecModel_NWTCUP )
-         ZLtmp  = MIN( MAX( ZL,    REAL(-0.5,ReKi) ), REAL(3.5,ReKi) )  !Limit the observed values of z/L
-         UStar2 = MIN( MAX( UStar, REAL( 0.2,ReKi) ), REAL(1.4,ReKi) )  !Limit the observed values of u*
+         ZLtmp  = MIN( MAX( p_met%ZL,    REAL(-0.5,ReKi) ), REAL(3.5,ReKi) )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p_met%Ustar, REAL( 0.2,ReKi) ), REAL(1.4,ReKi) )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
 !      CASE ( 'WF_UPW' )
 !      CASE ( 'WF_07D' )
 !      CASE ( 'WF_14D' )
 
       CASE DEFAULT
-         ZLtmp  = ZL
-         Ustar2 = UStar*Ustar
+         ZLtmp  = p_met%ZL
+         Ustar2 = p_met%Ustar*p_met%Ustar
    END SELECT
 
    !-------------------------------------------------------------------------------------------------
@@ -1170,9 +1315,9 @@ use TurbSim_Types
 
          IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
             IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
-               UW =  0.0399 - 0.00371*Uhub - 0.00182*RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
+               UW =  0.0399 - 0.00371*Uhub - 0.00182*p_met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
             ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
-               UW = 0.00668 - 0.00184*Uhub + 0.000709*RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
+               UW = 0.00668 - 0.00184*Uhub + 0.000709*p_met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
             ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
                UW = -0.0216 + 0.00319*Uhub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
             ELSE                           ! 54 m
@@ -1190,7 +1335,7 @@ use TurbSim_Types
       CASE ( SpecModel_NWTCUP )
 
          IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
-            UW = 0.165 - 0.0232*UHub - 0.0129*RICH_NO + 1.337*Ustar2 - 0.758*SHR
+            UW = 0.165 - 0.0232*UHub - 0.0129*p_met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
          ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
             UW = 0.00279 - 0.00139*UHub + 1.074*Ustar2 + 0.179*SHR
          ELSE                          ! 15m data
@@ -1242,7 +1387,7 @@ use TurbSim_Types
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6326 ) UV = -UV
          ELSE                           ! 54 m
-            UV = 0.162 - 0.0123*Uhub + 0.00784*RICH_NO + 1.024*Ustar2
+            UV = 0.162 - 0.0123*Uhub + 0.00784*p_met%RICH_NO + 1.024*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6191 ) UV = -UV
          ENDIF
@@ -1251,9 +1396,9 @@ use TurbSim_Types
 
             ! Get the magnitude and add the sign
          IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
-            UV = 0.669 - 0.0300*UHub - 0.0911*RICH_NO + 1.421*Ustar2 - 1.393*SHR
+            UV = 0.669 - 0.0300*UHub - 0.0911*p_met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
          ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
-            UV = 1.521 - 0.00635*UHub - 0.2200*RICH_NO + 3.214*Ustar2 - 3.858*SHR
+            UV = 1.521 - 0.00635*UHub - 0.2200*p_met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
          ELSE                          ! 15m data
             UV = 0.462 - 0.01400*UHub + 1.277*Ustar2
          ENDIF
@@ -1299,19 +1444,19 @@ use TurbSim_Types
       CASE ( SpecModel_GP_LLJ )
 
          IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
-            VW =  0.0528  - 0.00210*Uhub - 0.00531*RICH_NO - 0.519*Shr + 0.283*Ustar2
+            VW =  0.0528  - 0.00210*Uhub - 0.00531*p_met%RICH_NO - 0.519*Shr + 0.283*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.2999 ) VW = -VW
          ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
-            VW =  0.0482  - 0.00264*Uhub - 0.00391*RICH_NO - 0.240*Shr + 0.265*Ustar2
+            VW =  0.0482  - 0.00264*Uhub - 0.00391*p_met%RICH_NO - 0.240*Shr + 0.265*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3061 ) VW = -VW
          ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
-            VW =  0.0444  - 0.00249*Uhub - 0.00403*RICH_NO - 0.141*Shr + 0.250*Ustar2
+            VW =  0.0444  - 0.00249*Uhub - 0.00403*p_met%RICH_NO - 0.141*Shr + 0.250*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3041 ) VW = -VW
          ELSE                           ! 54 m
-            VW =  0.0443  - 0.00261*Uhub - 0.00371*RICH_NO - 0.107*Shr + 0.226*Ustar2
+            VW =  0.0443  - 0.00261*Uhub - 0.00371*p_met%RICH_NO - 0.107*Shr + 0.226*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3111 ) VW = -VW
          ENDIF
@@ -1319,9 +1464,9 @@ use TurbSim_Types
       CASE ( SpecModel_NWTCUP )
 
          IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
-            VW = 0.174 + 0.00154*UHub - 0.0270*RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
+            VW = 0.174 + 0.00154*UHub - 0.0270*p_met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
          ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
-            VW = 0.120 + 0.00283*UHub - 0.0227*RICH_NO + 0.306*Ustar2 - 0.825*Shr
+            VW = 0.120 + 0.00283*UHub - 0.0227*p_met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
          ELSE                          ! 15m data
             VW = 0.0165 + 0.00833*UHub                 + 0.224*Ustar2
          ENDIF
@@ -1362,8 +1507,8 @@ END SUBROUTINE GetDefaultRS
 !=======================================================================
 FUNCTION getUstarARY(WS, Ht)
 
-   USE                                  TSMods, ONLY: UstarDiab      ! Diabatic u*0
-   USE                                  TSMods, ONLY: RICH_NO        ! Richardson number
+USE TSMods, only: p_met
+
    USE                                  TSMods, ONLY: UstarOffset
    USE                                  TSMods, ONLY: UstarSlope
    USE                                  TSMods, ONLY: profileZmax
@@ -1404,34 +1549,34 @@ FUNCTION getUstarARY(WS, Ht)
 
             tmpZ = Ht(Zindx)      !ustar is constant below 50 meters, and we don't want to extrapolate too high (last measurement is at 116 m)
 
-            getUstarARY(  IZ) = ( 0.045355367 +  4.47275E-8*tmpZ**3)                                                &
-                              + ( 0.511491978 -  0.09691157*LOG(tmpZ) - 199.226951/tmpZ**2           ) * WS(Zindx)  &
-                              + (-0.00396447  - 55.7818832/tmpZ**2                                   ) * RICH_NO    &
-                              + (-5.35764429  +  0.102002162*tmpZ/LOG(tmpZ) + 25.30585136/SQRT(tmpZ) ) * UstarDiab
+            getUstarARY(  IZ) = ( 0.045355367 +  4.47275E-8*tmpZ**3)                                                      &
+                              + ( 0.511491978 -  0.09691157*LOG(tmpZ) - 199.226951/tmpZ**2           ) * WS(Zindx)        &
+                              + (-0.00396447  - 55.7818832/tmpZ**2                                   ) * p_met%RICH_NO    &
+                              + (-5.35764429  +  0.102002162*tmpZ/LOG(tmpZ) + 25.30585136/SQRT(tmpZ) ) * p_met%UstarDiab
          ENDDO
 
       ELSE ! All are above the max height so we'll use the old relationship at all heights
-         getUstarARY(:) = 0.17454 + 0.72045*UstarDiab**1.36242
+         getUstarARY(:) = 0.17454 + 0.72045*p_met%UstarDiab**1.36242
       ENDIF
 
    ELSE ! All are below the min height so we'll use the diabatic Ustar value
-      getUstarARY(:) = UstarDiab
+      getUstarARY(:) = p_met%UstarDiab
    ENDIF
 
    getUstarARY = UstarSlope * getUstarARY(:) + UstarOffset  ! These terms are used to make the ustar profile match the rotor-disk averaged value and input hub u'w'
 
 END FUNCTION
 !=======================================================================
-FUNCTION getUstarDiab(u_ref, z_ref)
+FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL, ZJetMax)
 
-   USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
-   USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
-   USE                                  TSMods, ONLY: ZL             ! M-O stability parameter
 
    IMPLICIT                              NONE
 
    REAL(ReKi),   INTENT(IN)           :: u_ref                       ! Wind speed at reference height
    REAL(ReKi),   INTENT(IN)           :: z_ref                       ! Reference height
+   REAL(ReKi),   INTENT(IN)           :: z0                          ! Surface roughness length -- It must be > 0 (which we've already checked for)
+   REAL(ReKi),   INTENT(IN)           :: ZJetMax                     ! Height of the low-level jet
+   REAL(ReKi),   INTENT(IN)           :: ZL                          ! M-O stability parameter
 
    REAL(ReKi)                         :: tmp                         ! a temporary value
    REAL(ReKi)                         :: psiM
@@ -1456,13 +1601,11 @@ END FUNCTION
 !=======================================================================
 FUNCTION getZLARY(WS, Ht)
 
-   USE                                  TSMods, ONLY: RICH_NO        ! Richardson number
-   USE                                  TSMods, ONLY: L              ! Rotor-disk averaged L
+use TSMods, only: p_met
+
    USE                                  TSMods, ONLY: profileZmax
    USE                                  TSMods, ONLY: profileZmin
-   USE                                  TSMods, ONLY: UstarDiab      ! Diabatic u*0
    USE                                  TSMods, ONLY: WindProfileType
-   USE                                  TSMods, ONLY: ZL             ! Rotor-disk averaged z/L
    USE                                  TSMods, ONLY: ZLOffset       ! Offset to align profile with rotor-disk averaged z/L
 
    IMPLICIT                              NONE
@@ -1501,16 +1644,16 @@ FUNCTION getZLARY(WS, Ht)
             ENDIF  !L is constant below 50 meters, and we don't want to extrapolate too high (last measurement is at 116 m)
 
             IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
-               IF ( Rich_No >= 0 ) THEN
-                  getZLary( IZ) =                     - 0.352464*Rich_No + 0.005272*WS(Zindx) + 0.465838
+               IF ( p_met%Rich_No >= 0 ) THEN
+                  getZLary( IZ) =                     - 0.352464*p_met%Rich_No + 0.005272*WS(Zindx) + 0.465838
                ELSE
-                  getZLary( IZ) =  0.004034*Ht(Zindx) + 0.809494*Rich_No - 0.008298*WS(Zindx) - 0.386632
+                  getZLary( IZ) =  0.004034*Ht(Zindx) + 0.809494*p_met%Rich_No - 0.008298*WS(Zindx) - 0.386632
                ENDIF !Rich_NO
             ELSE
-               IF ( Rich_No >= 0 ) THEN
-                  getZLary( IZ) =  0.003068*Ht(Zindx) + 1.140264*Rich_No + 0.036726*WS(Zindx) - 0.407269
+               IF ( p_met%Rich_No >= 0 ) THEN
+                  getZLary( IZ) =  0.003068*Ht(Zindx) + 1.140264*p_met%Rich_No + 0.036726*WS(Zindx) - 0.407269
                ELSE
-                  getZLary( IZ) =  0.003010*Ht(Zindx) + 0.942617*Rich_No                     - 0.221886
+                  getZLary( IZ) =  0.003010*Ht(Zindx) + 0.942617*p_met%Rich_No                     - 0.221886
                ENDIF
             ENDIF
             getZLary( IZ) = MIN( getZLary( IZ), 1.0 )
@@ -1519,11 +1662,11 @@ FUNCTION getZLARY(WS, Ht)
          ENDDO
 
       ELSE ! All are above the max height so instead of extrapolating, we'll use ZL at all heights
-         getZLary(:) = ZL
+         getZLary(:) = p_met%ZL
       ENDIF
 
    ELSE ! All are below the min height so we'll keep L constant (as is the case in the surface layer)
-      getZLary(:) = Ht(:) / L
+      getZLary(:) = Ht(:) / p_met%L
    ENDIF
 
    getZLARY = getZLARY(:) + ZLOffset  ! This offset term is used to make the zl profile match the rotor-disk averaged value
@@ -1607,7 +1750,7 @@ SELECT CASE ( SpecModel )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
       ELSE
-         CALL Spec_GPLLJ   ( Ht, Ucmp, ZL,     Ustar,     Work )
+         CALL Spec_GPLLJ   ( Ht, Ucmp, p_met%ZL,     p_met%Ustar,     Work )
       ENDIF
    CASE ( SpecModel_IECKAI )
       CALL Spec_IECKAI  ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Work )
@@ -1995,7 +2138,7 @@ SUBROUTINE CalcIECScalingParams( p_IEC )
 ! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
 ! calculates SigmaIEC, Lambda, IntegralScale, Lc
 use TurbSim_Types
-use TSMods, only: UHub, p_grid, Fc, z0, SpecModel
+use TSMods, only: UHub, p_grid, p_met, SpecModel
 
    TYPE(IEC_ParameterType), INTENT(INOUT) :: p_IEC                       ! parameters for IEC models
       
@@ -2078,8 +2221,9 @@ use TSMods, only: UHub, p_grid, Fc, z0, SpecModel
       ENDIF
 
       p_IEC%LC = 3.5*p_IEC%Lambda(1)
+      p_met%IncDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
 
-   ELSE !IF (p_IEC%IECedition == 3 )
+   ELSE !IF (p_IEC%IECedition == 3 ) THEN
       
          ! section 6.3.1.3 Eq. 9      
          
@@ -2090,13 +2234,17 @@ use TSMods, only: UHub, p_grid, Fc, z0, SpecModel
       ENDIF
 
       p_IEC%LC = 8.1*p_IEC%Lambda(1)
+      p_met%IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
 
    ENDIF
+   
+   p_met%InCohB(:)    = 0.12/p_IEC%LC
+         
    
       ! Set Lambda for Modified von Karman model:
 
    IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
-      z0 = FindZ0(p_grid%HubHt, p_IEC%SigmaIEC(1), UHub, Fc)
+      p_met%z0 = FindZ0(p_grid%HubHt, p_IEC%SigmaIEC(1), UHub, p_met%Fc)
       CALL ScaleMODVKM(p_grid%HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
    ENDIF   
 
@@ -2154,7 +2302,7 @@ IF ( WrFile(FileExt_CTS) ) THEN
         SpecModel == SpecModel_WF_07D .OR. &
         SpecModel == SpecModel_WF_14D ) THEN
       
-      IF ( Rich_No <= -0.05 ) THEN
+      IF ( p_met%RICH_NO <= -0.05 ) THEN
          CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, 'TS_ValidateInput')
          WrFile(FileExt_CTS) = .FALSE.      
       ELSEIF ( .NOT. ( WrFile(FileExt_BTS) .OR. WrFile(FileExt_WND) ) ) THEN

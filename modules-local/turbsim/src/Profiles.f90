@@ -25,13 +25,6 @@ use ts_errors
 
    IMPLICIT                NONE
 
-      ! Create interface for a generic getWindSpeed that actually uses specific routines.
-
-   INTERFACE getWindSpeed
-      MODULE PROCEDURE getVelocity
-      MODULE PROCEDURE getVelocityProfile
-   END INTERFACE
-
 
 CONTAINS
 
@@ -119,7 +112,7 @@ SUBROUTINE GetChebCoefs(u_inp, z_inp)
    ! This subroutine determines what Chebyshev Coefficients will be used
    ! for the jet wind speed and wind direction profiles
 
-USE TSMods, only: ZJetMax, UJetMax, ChebyCoef_WS, Rich_No, UStar, p_grid, ChebyCoef_WD
+USE TSMods, only: ZJetMax, UJetMax, ChebyCoef_WS, p_met, p_grid, ChebyCoef_WD
 
 IMPLICIT                   NONE
 
@@ -144,8 +137,8 @@ INTEGER                 :: I                 ! A loop counter
       UJetMax = u_inp
 
       DO I=1,11
-         ChebyCoef_WS(I) = UJetMax*UH_coef(1,I) + Rich_No*UH_coef(2,I) &
-                           + Ustar*UH_coef(3,I) +         UH_coef(4,I)
+         ChebyCoef_WS(I) = UJetMax*UH_coef(1,I) + p_met%Rich_No*UH_coef(2,I) &
+                           + p_met%Ustar*UH_coef(3,I) +         UH_coef(4,I)
       ENDDO
 
    ELSE
@@ -153,17 +146,17 @@ INTEGER                 :: I                 ! A loop counter
          ! Calculate the coefficients without UJetMax
 
       DO I=1,11
-         ChebyCoef_WS(I) = Rich_No*UH_coef(2,I) + Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
+         ChebyCoef_WS(I) = p_met%Rich_No*UH_coef(2,I) + p_met%Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
       ENDDO
 
-      Utmp1              = getWindSpeed(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')
+      Utmp1              = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')
 
          ! Now calculate the coefficients with just UJetMax term
 
       ChebyCoef_tmp(:)   = ChebyCoef_WS(:)
       ChebyCoef_WS(:)    = UH_coef(1,:)
 
-      Utmp2              = getWindSpeed(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
+      Utmp2              = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
       UJetMax            = (u_inp - Utmp1)/Utmp2
 
          ! Get the final coefficients, using the computed UJetMax
@@ -172,12 +165,12 @@ INTEGER                 :: I                 ! A loop counter
    ENDIF
 
    DO I=1,11
-      ChebyCoef_WD(I)    = UJetMax*WD_coef(1,I) + Rich_No*WD_coef(2,I) &
-                           + Ustar*WD_coef(3,I) +         WD_coef(4,I)
+      ChebyCoef_WD(I)    = UJetMax*WD_coef(1,I) + p_met%Rich_No*WD_coef(2,I) &
+                           + p_met%Ustar*WD_coef(3,I) +         WD_coef(4,I)
    ENDDO
 
 !print *, 'UJetMax wind speed at ', ZJetMax, ' m: ', UJetMax, 'm/s'
-!Utmp1 = getWindSpeed(u_inp, z_inp, ZJetMax, 999.9, PROFILE_TYPE='JET')
+!Utmp1 = getVelocity(u_inp, z_inp, ZJetMax, 999.9, PROFILE_TYPE='JET')
 !print *, "Calc'd  wind speed at ", ZJetMax, ' m: ', Utmp1, 'm/s'
 
 RETURN
@@ -198,15 +191,12 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
    USE                                  TSMods, ONLY: p_grid         ! Grid information (HubHt)
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
-   USE                                  TSMods, ONLY: PLExp          ! Power law exponent
    USE                                  TSMods, ONLY: URef           ! The input wind speed at the reference height (URef is being overwritten for some reason)
    USE                                  TSMods, ONLY: U_Usr          ! User-defined wind speeds
-   USE                                  TSMods, ONLY: Ustar          ! Friction or shear velocity
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
-   USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
+   USE                                  TSMods, ONLY: p_met          ! Met data
    USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
-   USE                                  TSMods, ONLY: ZL             ! M-O stability parameter
 
    IMPLICIT                              NONE
 
@@ -250,7 +240,7 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
       CASE ( 'LOG' )
 
             DO J = 1,SIZE(Ht)
-               getVelocityProfile(J) = getLogWindSpeed( Ht(J), z_Ref, U_Ref, ZL, Z0)
+               getVelocityProfile(J) = getLogWindSpeed( Ht(J), z_Ref, U_Ref, p_met%ZL, p_met%Z0)
             END DO
             
             
@@ -260,12 +250,12 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
                ! Calculate the windspeed.
                ! z_Ref and U_Ref both get modified consistently, therefore z_Ref is used instead of RefHt.
                !print *, z_Ref,RefHt,U_Ref,Ustar ! Need to include H_ref from TSmods for this print statement to work.
-               getVelocityProfile(:) = LOG(Ht(:)/z_Ref)*Ustar/0.41+U_Ref
+               getVelocityProfile(:) = LOG(Ht(:)/z_Ref)*p_met%Ustar/0.41+U_Ref
 
       CASE ( 'PL' )
 
 !         IF ( z_Ref > 0.0 .AND. Ht > 0.0 ) THEN
-            getVelocityProfile(:) = U_Ref*( Ht(:)/z_Ref )**PLExp
+            getVelocityProfile(:) = U_Ref*( Ht(:)/z_Ref )**p_met%PLExp
 
 !         ENDIF
      CASE ( 'API' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
@@ -310,9 +300,9 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
             IF ( Ht(I) == z_Ref ) THEN
                getVelocityProfile(I) = U_Ref
             ELSEIF ( ABS( Ht(I)-z_Ref ) <= 0.5*RotorDiam ) THEN
-               getVelocityProfile(I) = U_Ref*( Ht(I)/z_Ref )**PLExp
-            ELSEIF ( Ht(I) > 0.0 .AND. z_Ref > 0.0 .AND. .NOT. EqualRealNos(z_Ref, Z0) ) THEN !Check that we don't have an invalid domain
-               getVelocityProfile(I) = U_Ref*LOG( Ht(I)/Z0 )/LOG( z_Ref/Z0 )
+               getVelocityProfile(I) = U_Ref*( Ht(I)/z_Ref )**p_met%PLExp
+            ELSEIF ( Ht(I) > 0.0 .AND. z_Ref > 0.0 .AND. .NOT. EqualRealNos(z_Ref, p_met%Z0) ) THEN !Check that we don't have an invalid domain
+               getVelocityProfile(I) = U_Ref*LOG( Ht(I)/p_met%Z0 )/LOG( z_Ref/p_met%Z0 )
             ELSE
                getVelocityProfile(I) = 0.0
             ENDIF
@@ -444,15 +434,12 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
    USE                                  TSMods, ONLY: p_grid         ! grid information (hub ht)
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
-   USE                                  TSMods, ONLY: PLExp          ! Power law exponent
    USE                                  TSMods, ONLY: URef           ! The input wind speed at the reference height (URef is being overwritten for some reason)
    USE                                  TSMods, ONLY: U_Usr          ! User-defined wind speeds
-   USE                                  TSMods, ONLY: Ustar          ! Friction or shear velocity
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
-   USE                                  TSMods, ONLY: z0             ! Surface roughness length -- It must be > 0 (which we've already checked for)
+   USE                                  TSMods, ONLY: p_met          ! Surface roughness length must be > 0 (which we've already checked for)
    USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
-   USE                                  TSMods, ONLY: ZL             ! M-O stability parameter
    IMPLICIT                              NONE
 
    REAL(ReKi),   INTENT(IN)           :: U_Ref                       ! Wind speed at reference height
@@ -482,7 +469,7 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
 
       X0=U_Ref
       !========================
-   ! IF Z0 <= 0.0    CALL ProgAbort('The surface roughness must be a positive number')
+   ! IF p_met%Z0 <= 0.0    CALL ProgAbort('The surface roughness must be a positive number')
 
    IF ( p_IEC%IEC_WindType == IEC_EWM50 ) THEN
       getVelocity = p_IEC%VRef*( Ht/p_grid%HubHt )**0.11                      ! [IEC 61400-1 6.3.2.1 (14)]
@@ -503,19 +490,19 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
 
       CASE ( 'LOG', 'L' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
-         getVelocity = getLogWindSpeed(Ht, z_Ref, U_Ref, ZL, Z0)
+         getVelocity = getLogWindSpeed(Ht, z_Ref, U_Ref, p_met%ZL, p_met%Z0)
 
       CASE ( 'H2L', 'H' )
                ! Calculate the windspeed.
                ! z_Ref and U_Ref both get modified consistently, therefore z_Ref is used instead of RefHt.
                !print *, z_Ref,RefHt,U_Ref,Ustar ! need to include H_ref from TSmods for this print statement to work.
-               getVelocity = LOG(Ht/z_Ref)*Ustar/0.41+U_Ref
+               getVelocity = LOG(Ht/z_Ref)*p_met%Ustar/0.41+U_Ref
 
 
       CASE ( 'PL', 'P' )  ! POWER LAW, commented by Y. Guo on April 16 2013
 
          IF ( z_Ref > 0.0 .AND. Ht > 0.0 ) THEN
-            getVelocity = U_Ref*( Ht/z_Ref )**PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
+            getVelocity = U_Ref*( Ht/z_Ref )**p_met%PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
          ELSE
             getVelocity = 0.0
          ENDIF
@@ -566,9 +553,9 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
          IF ( Ht == z_Ref ) THEN
             getVelocity = U_Ref
          ELSEIF ( ABS( Ht-z_Ref ) <= 0.5*RotorDiam ) THEN
-            getVelocity = U_Ref*( Ht/z_Ref )**PLExp                ! [IEC 61400-1 6.3.1.2 (10)]
-         ELSEIF ( Ht > 0.0 .AND. z_Ref > 0.0 .AND. .NOT. EqualRealNos(z_Ref, Z0) ) THEN !Check that we don't have an invalid domain
-            getVelocity = U_Ref*LOG( Ht/Z0 )/LOG( z_Ref/Z0 )
+            getVelocity = U_Ref*( Ht/z_Ref )**p_met%PLExp                ! [IEC 61400-1 6.3.1.2 (10)]
+         ELSEIF ( Ht > 0.0 .AND. z_Ref > 0.0 .AND. .NOT. EqualRealNos(z_Ref, p_met%Z0) ) THEN !Check that we don't have an invalid domain
+            getVelocity = U_Ref*LOG( Ht/p_met%Z0 )/LOG( z_Ref/p_met%Z0 )
          ELSE
             getVelocity = 0.0
          ENDIF
@@ -615,8 +602,8 @@ function getLogWindSpeed(Ht, z_Ref, U_Ref, ZL, Z0)
             psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
          ENDIF
 
-!            IF ( Ustar > 0. ) THEN
-!               getVelocity = ( UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
+!            IF ( p_met%Ustar > 0. ) THEN
+!               getVelocity = ( p_met%UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
 !            ELSE
             !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
          getLogWindSpeed = U_Ref*( LOG( Ht / Z0 ) - psiM )/( LOG( z_Ref / Z0 ) - psiM )

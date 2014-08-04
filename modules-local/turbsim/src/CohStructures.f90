@@ -49,14 +49,14 @@ use TSMods
       !   TmpPLExp = PLExp 
       !   PLExp    = MIN( 2.0, 1.35*PLExp )        ! Increase the shear of the background (?)
 
-         p_CohStr%ScaleVel =                     getWindSpeed(UHub,p_grid%HubHt,p_grid%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   ! Velocity at the top of the wave
-         p_CohStr%ScaleVel = p_CohStr%ScaleVel - getWindSpeed(UHub,p_grid%HubHt,p_grid%Zbottom,                  p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   ! Shear across the wave
+         p_CohStr%ScaleVel =                     getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   ! Velocity at the top of the wave
+         p_CohStr%ScaleVel = p_CohStr%ScaleVel - getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom,                  p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   ! Shear across the wave
          p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
       
       !   PLExp = TmpPLExp
       ENDIF
 
-      p_CohStr%Uwave = getWindSpeed(UHub,p_grid%HubHt,p_grid%Zbottom+0.5*p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)                 ! WindSpeed at center of wave
+      p_CohStr%Uwave = getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+0.5*p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)                 ! WindSpeed at center of wave
 
    !BONNIE: MAYBE WE SHOULDN'T OPEN THIS FILE UNTIL WE NEED TO WRITE TO IT
       IF (p_CohStr%ScaleVel < 0. ) THEN
@@ -225,7 +225,7 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
    SELECT CASE ( SpecModel )
 
       CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
-         y_CohStr%lambda = -0.000904*Rich_No + 0.000562*WindSpeed + 0.001389
+         y_CohStr%lambda = -0.000904*p_met%Rich_No + 0.000562*WindSpeed + 0.001389
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          IF ( SpecModel == SpecModel_NONE ) THEN
@@ -244,19 +244,19 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
          CALL RndTcohLLJ( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
 
       CASE ( SpecModel_WF_UPW )
-        y_CohStr%lambda = 0.000529*WindSpeed + 0.000365*Rich_No - 0.000596
+        y_CohStr%lambda = 0.000529*WindSpeed + 0.000365*p_met%Rich_No - 0.000596
         y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_UPW )
 
       CASE ( SpecModel_WF_07D )
-         y_CohStr%lambda = 0.000813*WindSpeed - 0.002642*Rich_No + 0.002676
+         y_CohStr%lambda = 0.000813*WindSpeed - 0.002642*p_met%Rich_No + 0.002676
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_07D )
 
       CASE ( SpecModel_WF_14D )
-         y_CohStr%lambda = 0.001003*WindSpeed - 0.00254*Rich_No - 0.000984
+         y_CohStr%lambda = 0.001003*WindSpeed - 0.00254*p_met%Rich_No - 0.000984
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_14D )
@@ -467,7 +467,7 @@ use TS_RandNum
    p_CohStr%ScaleWid = p_grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
    p_CohStr%Zbottom  = p_grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
-   p_CohStr%Uwave    = getWindSpeed(UHub,p_grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)                 ! WindSpeed at center of wave
+   p_CohStr%Uwave    = getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)                 ! WindSpeed at center of wave
    
    !-------------------------
    ! compute ScaleVel:
@@ -478,8 +478,8 @@ use TS_RandNum
       p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
       p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
    ELSE
-      p_CohStr%ScaleVel =  getWindSpeed(UHub,p_grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType) &  ! Velocity at the top of the wave
-                         - getWindSpeed(UHub,p_grid%HubHt,p_CohStr%Zbottom,                  p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)    ! Shear across the wave
+      p_CohStr%ScaleVel =  getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType) &  ! Velocity at the top of the wave
+                         - getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom,                  p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)    ! Shear across the wave
       p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
       
       
@@ -519,7 +519,7 @@ use TS_RandNum
                ! Increase the Scaling Velocity for computing U,V,W in AeroDyn
                ! These numbers are based on LIST/ART data (58m-level sonic anemometer)
 
-            y_CohStr%CTKE =  0.616055*Rich_No - 0.242143*p_CohStr%Uwave + 23.921801*p_CohStr%WSig - 11.082978
+            y_CohStr%CTKE =  0.616055*p_met%Rich_No - 0.242143*p_CohStr%Uwave + 23.921801*p_CohStr%WSig - 11.082978
             
                ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
             CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum )
@@ -530,7 +530,7 @@ use TS_RandNum
                   y_CohStr%CTKE = y_CohStr%CTKE + ( 0.11749127 * (y_CohStr%CTKE**1.369025) - 7.5976449 )
                ENDIF
 
-               IF ( y_CohStr%CTKE >= 30.0 .AND. Rich_No >= 0.0 .AND. Rich_No <= 0.05 ) THEN
+               IF ( y_CohStr%CTKE >= 30.0 .AND. p_met%Rich_No >= 0.0 .AND. p_met%Rich_No <= 0.05 ) THEN
                   CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, y_CohStr%CTKE )
                ENDIF
             ENDIF
@@ -539,22 +539,22 @@ use TS_RandNum
                
       CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
 
-         y_CohStr%CTKE = pkCTKE_LLJ(p_grid%Zbottom+0.5*p_CohStr%ScaleWid)
+         y_CohStr%CTKE = pkCTKE_LLJ( p_grid%Zbottom+0.5*p_CohStr%ScaleWid, p_met%ZL, p_met%UStar )
                
       CASE ( SpecModel_WF_UPW )
-         y_CohStr%CTKE = -2.964523*Rich_No - 0.207382*p_CohStr%Uwave + 25.640037*p_CohStr%WSig - 10.832925
+         y_CohStr%CTKE = -2.964523*p_met%Rich_No - 0.207382*p_CohStr%Uwave + 25.640037*p_CohStr%WSig - 10.832925
                
       CASE ( SpecModel_WF_07D )
-         y_CohStr%CTKE = 9.276618*Rich_No + 6.557176*Ustar + 3.779539*p_CohStr%WSig - 0.106633
+         y_CohStr%CTKE = 9.276618*p_met%Rich_No + 6.557176*p_met%Ustar + 3.779539*p_CohStr%WSig - 0.106633
 
-         IF ( (Rich_No > -0.025) .AND. (Rich_No < 0.05) .AND. (UStar > 1.0) .AND. (UStar < 1.56) ) THEN
+         IF ( (p_met%Rich_No > -0.025) .AND. (p_met%Rich_No < 0.05) .AND. (p_met%Ustar > 1.0) .AND. (p_met%Ustar < 1.56) ) THEN
             CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpRndNum )  ! Add a random residual
             y_CohStr%CTKE = y_CohStr%CTKE + TmpRndNum
          ENDIF
                
                
       CASE ( SpecModel_WF_14D )
-         y_CohStr%CTKE = 1.667367*Rich_No - 0.003063*p_CohStr%Uwave + 19.653682*p_CohStr%WSig - 11.808237
+         y_CohStr%CTKE = 1.667367*p_met%Rich_No - 0.003063*p_CohStr%Uwave + 19.653682*p_CohStr%WSig - 11.808237
                
       CASE DEFAULT   ! This case should not happen            
          CALL TS_Abort( 'Invalid turbulence model in coherent structure analysis.' )            
@@ -591,10 +591,8 @@ use TS_RandNum
          
 END SUBROUTINE CohStr_WriteCTS
 !=======================================================================
-FUNCTION pkCTKE_LLJ(Ht)
+FUNCTION pkCTKE_LLJ(Ht, ZL, UStar)
 
-USE              TSMods, ONLY: ZL
-USE              TSMods, ONLY: UStar
    use tsmods, only: p_RandNum
    use tsmods, only: OtherSt_RandNum
    
@@ -602,12 +600,17 @@ use TurbSim_Types
 
 IMPLICIT                 NONE
 
+REAL(ReKi), INTENT(IN)   :: Ht                                       ! The height at the billow center
+REAL(ReKi), INTENT(IN)   :: ZL                                       ! The height at the billow center
+REAL(ReKi), INTENT(IN)   :: Ustar                                    ! The height at the billow center
+
+
 REAL(ReKi)               :: A                                        ! A constant/offset term in the pkCTKE calculation
 REAL(ReKi)               :: A_uSt                                    ! The scaling term for Ustar
 REAL(ReKi)               :: A_zL                                     ! The scaling term for z/L
-REAL(ReKi), INTENT(IN)   :: Ht                                       ! The height at the billow center
 REAL(ReKi)               :: pkCTKE_LLJ                               ! The max CTKE expected for LLJ coh structures
 REAL(ReKi)               :: rndCTKE                                  ! The random residual
+
 REAL(ReKi), PARAMETER    :: RndParms(5) = (/0.252510525, -0.67391279, 2.374794977, 1.920555797, -0.93417558/) ! parameters for the Pearson IV random residual
 REAL(ReKi), PARAMETER    :: z_Ary(4)    = (/54., 67., 85., 116./)    ! Aneomoeter heights
 
@@ -641,7 +644,7 @@ INTEGER                  :: Zindx_mn (1)
          CALL TS_Abort( 'Error in pkCTKE_LLJ():: Height index is invalid.' )
    END SELECT
 
-   CALL RndPearsonIV( p_RandNum, OtherSt_RandNum, rndCTKE, RndParms, (/REAL(-10.,ReKi), REAL(17.5,ReKi)/) )
+   CALL RndPearsonIV( p_RandNum, OtherSt_RandNum, rndCTKE, RndParms, (/ -10.0_ReKi, 17.5_ReKi /) )
 
    pkCTKE_LLJ = MAX(0.0, A + A_uSt*UStar + A_zL*ZL + rndCTKE)
 

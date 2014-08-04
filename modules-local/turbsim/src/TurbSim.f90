@@ -563,9 +563,9 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 IF (SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (SpecModel == SpecModel_API) THEN
-        CALL CohSpecVMat_API(p_IEC%LC, NSize) 
+        CALL CohSpecVMat_API( NSize) 
     ELSE
-        CALL CohSpecVMat(p_IEC%LC, NSize)
+        CALL CohSpecVMat( NSize)
     ENDIF
 ENDIF
 

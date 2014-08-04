@@ -347,10 +347,10 @@ ELSE
 !      Pr_il(3) = MIN(10.0,  3.6709e-011*( (nzl)**(-0.96751))*(ustar_loc**(-11.48936))*exp( 5.06644*(nzl)+26.26320*ustar_loc))
 !      Pr_ih(3) = MIN( 5.0, 13.53430*    ( (nzl)**(-0.14450))*(ustar_loc**(  1.32560))*exp( 1.66323*(nzl)- 4.28085*ustar_loc))
 
-   tmpZIL = ( ABS(ZI / L) )**Exp23
-   HtZI   = Ht / ZI
+   tmpZIL = ( ABS(p_met%ZI / p_met%L) )**Exp23
+   HtZI   = Ht / p_met%ZI
 
-   tmpZIU = ZI / Ucmp
+   tmpZIU = p_met%ZI / Ucmp
    tmpZU  = Ht / Ucmp
    HtZI2  = (1.0 - HtZI)**2
    UDen   = 1.0 + 15.0*HtZI
@@ -463,11 +463,11 @@ REAL(ReKi)            :: ZL_tmp   ! Disk-averaged z/l, limited by the observed r
 INTEGER               :: I        ! DO LOOP counter
 INTEGER               :: IC       ! DO LOOP counter
 
-uStar2 = Ustar * Ustar
+uStar2 = p_met%Ustar * p_met%Ustar
 
-IF (zL >= 0) THEN
+IF (p_met%zL >= 0) THEN
 
-   zl_tmp = max( min(zl, REAL(3.5,ReKi) ), REAL(0.005,ReKi) )
+   zl_tmp = max( min(p_met%zl, 3.5_ReKi ), 0.005_ReKi )
 
       ! Calculate NEUTRAL/STABLE spectral estimates
 
@@ -530,8 +530,8 @@ IF (zL >= 0) THEN
 ELSE
       ! Calculate UNSTABLE spectral estimates
 
-   zl_tmp    = abs( min( max( zl  ,REAL(-0.5,ReKi) ),REAL( -0.025,ReKi) ) )
-   ustar_tmp =      max( min(ustar,REAL( 1.4,ReKi) ),REAL(  0.2  ,ReKi) )
+   zl_tmp    = abs( min( max( p_met%zl  ,REAL(-0.5,ReKi) ),REAL( -0.025,ReKi) ) )
+   ustar_tmp =      max( min(p_met%ustar,REAL( 1.4,ReKi) ),REAL(  0.2  ,ReKi) )
 
    fr_il(1)  =   0.08825035*(zl_tmp**(-0.08806865))*(ustar_tmp**(-0.26295052))*exp( 1.74135233*zl_tmp + 1.86785832*ustar_tmp)
    fr_ih(1)  =   1.34307411*(zl_tmp**(-0.55126969))*(ustar_tmp**(-0.07034031))*exp( 0.40185202*zl_tmp - 0.55083463*ustar_tmp)
@@ -564,10 +564,10 @@ ELSE
    Pr_il(3)  = MAX( MIN( Pr_il(3), REAL(7.0 ,ReKi) ), REAL(1.0 ,ReKi)  )
    Pr_ih(3)  = MAX( MIN( Pr_ih(3), REAL(1.0 ,ReKi) ), REAL(0.3 ,ReKi)  )
 
-   tmpZIL = (-ZI / L)**Exp23
-   HtZI   = Ht / ZI
+   tmpZIL = (-p_met%ZI / p_met%L)**Exp23
+   HtZI   = Ht / p_met%ZI
 
-   tmpZIU = ZI / Ucmp
+   tmpZIU = p_met%ZI / Ucmp
    tmpZU  = Ht / Ucmp
    HtZI2  = (1.0 - HtZI)**2
    UDen   = 1.0 + 15.0*HtZI
@@ -732,14 +732,14 @@ REAL(ReKi)            :: VDen
 
 INTEGER               :: I        ! DO LOOP counter
 
-uStar2 = Ustar * Ustar
+uStar2 = p_met%Ustar * p_met%Ustar
 
-IF (zL >= 0) THEN
+IF (p_met%zL >= 0) THEN
 
    ! Calculate NEUTRAL/STABLE spectral estimates
 
-   phiM   =  1.0 + 4.7*(zL)            ! = q
-   phiE   = (1.0 + 2.5*(zL)**0.6)**Exp3
+   phiM   =  1.0 + 4.7*(p_met%zL)            ! = q
+   phiE   = (1.0 + 2.5*(p_met%zL)**0.6)**Exp3
 
    tmpPhi = uStar2 * ( (phiE / phiM)**Exp2 )
    tmpF   = Ht / (Ucmp * phiM)
@@ -756,12 +756,12 @@ IF (zL >= 0) THEN
 
 ELSE
    ! Calculate UNSTABLE spectral estimates
-   tmpZIL = (- ZI / L)**Exp2
-   HtZI   = Ht / ZI
+   tmpZIL = (- p_met%ZI / p_met%L)**Exp2
+   HtZI   = Ht / p_met%ZI
 
    HtZI2  = (1.0 - HtZI)**2
    tmpZU  = Ht / Ucmp
-   tmpZIU = ZI / Ucmp
+   tmpZIU = p_met%ZI / Ucmp
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
@@ -838,7 +838,7 @@ INTEGER               :: I                      ! DO LOOP counter
 
 !print *, Ustar
 !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
-Sigma_U2=4.5*Ustar*Ustar*EXP(-2*Ht/RefHt)
+Sigma_U2=4.5*p_met%Ustar*p_met%Ustar*EXP(-2*Ht/RefHt)
 Sigma_V2=0.5*Sigma_U2
 Sigma_W2=0.2*Sigma_U2
 
@@ -967,7 +967,7 @@ IF ( ALLOCATED( Sigma_USR ) ) THEN
       ENDDO
    ENDIF
 ELSE
-    Sigma = Ustar*2.15 !bjj: BONNIE, make sure this is defined, or else define ustar for this model...
+    Sigma = p_met%Ustar*2.15 !bjj: BONNIE, make sure this is defined, or else define ustar for this model...
 ENDIF
 
 
@@ -1059,19 +1059,19 @@ REAL(ReKi), PARAMETER :: ZL_MinObs  = -1.00
 INTEGER               :: I                       ! Loop counter
 
 
-Ustar2 = Ustar*Ustar
+Ustar2 = p_met%Ustar*p_met%Ustar
 
-IF ( ZL < 0 ) THEN
+IF ( p_met%ZL < 0 ) THEN
       ! BEGIN UNSTABLE FLOW LOOP
 
    ! Unstable high-frequency range scaling...
 
-   X = - MAX( ZL, ZL_MinObs)
+   X = - MAX( p_met%ZL, ZL_MinObs)
 
    Num    = 0.691114  + 0.0791666*X    ! was "Original" Puo_ih =
    Den    = 0.77991   + 0.1761624  / ( 1.0 + EXP( -(X - 0.0405364) / (-0.0184402) ) ) ! was "Measured" Pum_ih =
    Pur_ih = 0.10 * ( Num / Den )
-   IF (ZI > ZI_UVlimit) Pur_ih = (ZI / ZI_UVlimit) * Pur_ih
+   IF (p_met%ZI > ZI_UVlimit) Pur_ih = (p_met%ZI / ZI_UVlimit) * Pur_ih
 
    Num    = 0.421958 * EXP( 0.20739895*X )
    Den    = 0.5247865 + 0.0419204 / ( 1.0 + EXP( -(X - 0.0434172) / (-0.0179269) ) )
@@ -1084,17 +1084,17 @@ IF ( ZL < 0 ) THEN
    Num    = 0.047465  + 0.0132692*X
    Den    = 0.0599494 - 0.0139033*EXP(-X / 0.02603846)
    fur_ih = 1.75 * ( Num / Den )
-   IF (ZI > ZI_UVlimit) fur_ih = (ZI / ZI_UVlimit)*fur_ih
+   IF (p_met%ZI > ZI_UVlimit) fur_ih = (p_met%ZI / ZI_UVlimit)*fur_ih
 
    Num    = 0.18377384 * EXP( 0.2995136*X )
    Den    = 0.1581509  + 0.09501906*X
    fvr_ih = 1.50 * ( Num / Den )
-   IF (ZI > ZI_UVlimit) fvr_ih = (ZI / ZI_UVlimit)*fvr_ih
+   IF (p_met%ZI > ZI_UVlimit) fvr_ih = (p_met%ZI / ZI_UVlimit)*fvr_ih
 
    Num    = 0.3419874 + 0.24985029 * EXP(-X / 0.02619489)
    Den    = 0.451295  + 0.2355227*X
    fwr_ih = 2.0 * ( Num / Den )
-   IF (ZI > ZI_Wlimit) fwr_ih = 0.35*(ZI / ZI_Wlimit)*fwr_ih
+   IF (p_met%ZI > ZI_Wlimit) fwr_ih = 0.35*(p_met%ZI / ZI_Wlimit)*fwr_ih
 
 
    ! Unstable low-frequency range scaling...
@@ -1118,18 +1118,18 @@ IF ( ZL < 0 ) THEN
    Num    = 0.369625 + 1.0772852*EXP( -X / 0.0210098 )
    !Den    = 0.759259 - 0.1448362*X calculated previously
    fvr_il = 2.25 * ( Num / Den )
-   IF (ZI > ZI_UVlimit) fvr_il = (ZI / ZI_UVlimit)*fvr_il
+   IF (p_met%ZI > ZI_UVlimit) fvr_il = (p_met%ZI / ZI_UVlimit)*fvr_il
 
    Num    = 3.39482 * EXP( 0.279914*X )
    Den    = 4.59769 + 12.58881*EXP( -X / 0.03351852 )
    fwr_il = 2.25 * ( Num / Den )
-   IF (ZI > ZI_Wlimit) fwr_il=4.0*(ZI / ZI_Wlimit)*fwr_il
+   IF (p_met%ZI > ZI_Wlimit) fwr_il=4.0*(p_met%ZI / ZI_Wlimit)*fwr_il
 
-   HtZI  = Ht / ZI
+   HtZI  = Ht / p_met%ZI
    HtZI2 = (1.0 - HtZI)**2
-   ZInL  = ( ZI / ( -L ) )**Exp2
+   ZInL  = ( p_met%ZI / ( -p_met%L ) )**Exp2
    HtU   = Ht / Ucmp
-   ZIU   = ZI / Ucmp
+   ZIU   = p_met%ZI / Ucmp
    UDen  = 1.0 + 15.0*HtZI
    VDen  = 1.0 +  2.8*HtZI
    UDen2 = HtZI2 / UDen**Exp2
@@ -1185,7 +1185,7 @@ IF ( ZL < 0 ) THEN
 
 ELSE ! ZL >= 0    ! BEGIN STABLE FLOW LOOP
 
-      X = MIN(ZL, ZL_MaxObs)
+      X = MIN(p_met%ZL, ZL_MaxObs)
 
    ! Get stable spectral peaks
 
@@ -1377,16 +1377,16 @@ INTEGER               :: I                       ! Loop counter
 
 
 
-Ustar2 = Ustar*Ustar
+Ustar2 = p_met%Ustar*p_met%Ustar
 
-IF (ZL < 0) THEN
+IF (p_met%ZL < 0) THEN
 
 
       ! Get Unstable spectral peaks
 
    ! Unstable high-frequency range scaling...
 
-   X = - MAX( ZL, ZL_MinObs )
+   X = - MAX( p_met%ZL, ZL_MinObs )
 
    Num    = 0.598894  + 0.282106  * EXP(-X / 0.0594047)
    Den    = 0.600977  + 9.137681  / (1.0 + EXP( -(X + 0.830756) / (-0.252026) ))
@@ -1411,19 +1411,19 @@ IF (ZL < 0) THEN
    Num    = 0.7697576 * EXP( -X / 3.8408779 ) - 0.561527 * EXP( -X / 0.1684403 ) ! was Num = Beta4(X,A0,A1,A2,A3)
    Den    = 0.512356  - 0.044946  / (1.0 + EXP( -(X - 0.066061) / (-0.0121168) ))
    fwr_oh = 1.75 * (Num / Den)
-   IF (ZI < 1350.0 ) fwr_oh = (ZI / 1350.0) * fwr_oh
+   IF (p_met%ZI < 1350.0 ) fwr_oh = (p_met%ZI / 1350.0) * fwr_oh
 
       ! Unstable low-frequency range scaling ...
 
    Num    = 0.796264 + 0.316895 / (1.0 + EXP( -(X - 0.082483) / 0.027480 ))
    Den    = 0.07616  + EXP(0.303919 * X * 0.390906)   ! was Den = 0.07616 + EXP(0.303919*X)**0.390906
    Pur_ol = 4.0 * (Num / Den)
-   IF (ZI < 1600.0) Pur_ol = (ZI / 1600.0) * Pur_ol
+   IF (p_met%ZI < 1600.0) Pur_ol = (p_met%ZI / 1600.0) * Pur_ol
 
    Num    = 0.812483 + 0.1332134 * X
    Den    = 0.104132 + EXP(0.714674 * X * 0.495370)   ! was Den = 0.104132 + EXP(0.714674*X)**0.495370
    Pvr_ol = Num / Den
-   Pvr_ol = (ZI / 1600.0)*Pvr_ol
+   Pvr_ol = (p_met%ZI / 1600.0)*Pvr_ol
 
    Num    = 0.371298  + 0.0425447 * X
    Den    = 0.0004375 + EXP(0.4145751 * X * 0.6091557)   ! was Den = 0.0004375 + EXP(0.4145751*X)**0.6091557
@@ -1432,7 +1432,7 @@ IF (ZL < 0) THEN
    Num    = 0.859809 * EXP(0.157999 * X)
    Den    = 0.81459 + 0.021942 * X
    fur_ol = 1.5 * (Num / Den)
-   IF (ZI > 1850.0) fur_ol = 2.6 * (ZI / 1850.0) * fur_ol
+   IF (p_met%ZI > 1850.0) fur_ol = 2.6 * (p_met%ZI / 1850.0) * fur_ol
 
    !A0 =  0.8121775
    !A1 =  4.122E+15
@@ -1441,7 +1441,7 @@ IF (ZL < 0) THEN
    Num    = 0.8121775 * EXP( -X / 4.122E+15 ) - 0.594909 * EXP( -X / 0.0559581 ) ! was Num = BETA4(X,A0,A1,A2,A3)
    Den    = 0.72535  - 0.0256291 * X
    fvr_ol = 3.0 * (Num / Den)
-   fvr_ol = (ZI / 1600.0) * fvr_ol
+   fvr_ol = (p_met%ZI / 1600.0) * fvr_ol
 
    Num    = 6.05669  * EXP(-0.97418 * X)
    Den    = 3.418386 + 9.58012 / (1.0 + EXP( -(X - 0.0480283) / (-0.022657) ))
@@ -1460,9 +1460,9 @@ IF (ZL < 0) THEN
    Den    = 0.0171463 + 0.188081 / (1.0 + EXP( -(X + 0.711851) / 0.688910))
    fvr_wk = 3.0 * (Num / Den)
 
-   HtZI  = Ht / ZI
+   HtZI  = Ht / p_met%ZI
    HtZI2 = (1.0 - HtZI)**2
-   ZInL  = ( ZI / (-L) )**Exp2
+   ZInL  = ( p_met%ZI / (-p_met%L) )**Exp2
    UDen  = 1.0 + 15.0 * HtZI
    VDen  = 1.0 +  2.8 * HtZI
    UDen2 = HtZI2 / UDen**Exp2
@@ -1473,7 +1473,7 @@ IF (ZL < 0) THEN
       ! Calculate f,fi,fru,frv
 
       F   = p_grid%Freq(I)*Ht / Ucmp
-      Fi  = p_grid%Freq(I)*ZI / Ucmp
+      Fi  = p_grid%Freq(I)*p_met%ZI / Ucmp
       Fw  = SQRT( (F**2 + (0.3*HtZI**2)) / (F**2 + 0.0225) )
 
       Ustar2F = Ustar2 / p_grid%Freq(I)
@@ -1531,7 +1531,7 @@ ELSE  ! ZL >= 0
 
    ! Stable high-frequency (wake) range scaling...
 
-   X      = MIN( ZL, ZL_MaxObs )
+   X      = MIN( p_met%ZL, ZL_MaxObs )
 
    Num    = 0.149471 + 0.028528 * &
             EXP( -EXP( -( (X - 0.003580) / 0.0018863 ) ) - ( (X - 0.0035802) / 0.0018863) + 1.0)

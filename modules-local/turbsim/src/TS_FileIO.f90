@@ -726,7 +726,7 @@ URef       = -999.9
       RefHt = p_grid%HubHt
       CALL GetUSR( UI, InFile, 37, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
       IF (ErrStat >= AbortErrLev) RETURN
-      URef = getWindSpeed(URef, RefHt, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
+      URef = getVelocity(URef, RefHt, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
    
@@ -750,20 +750,20 @@ SELECT CASE ( SpecModel )
    CASE (SpecModel_WF_UPW, SpecModel_WF_07D, SpecModel_WF_14D, SpecModel_NWTCUP)
       IF ( KHtest ) THEN
          UseDefault = .TRUE.
-         PLExp      = 0.3
+         p_met%PLExp      = 0.3
       ELSE
          UseDefault = .FALSE.             ! This case needs the Richardson number to get a default
-         PLExp      = 0.
+         p_met%PLExp      = 0.
       ENDIF
 
    CASE DEFAULT
       UseDefault = .TRUE.
-      PLExp      = PowerLawExp( RICH_NO )  ! These cases do not use the Richardson number to get a default
+      p_met%PLExp      = PowerLawExp( p_met%Rich_No )  ! These cases do not use the Richardson number to get a default
 
 END SELECT
 getPLExp = .NOT. UseDefault
 
-CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law exponent", US, UseDefault, &
+CALL ReadRVarDefault( UI, InFile, p_met%PLExp, "the power law exponent", "Power law exponent", US, UseDefault, &
                IGNORE=( ((INDEX( 'JLUHA', WindProfileType(1:1) ) > 0.)) .OR. &
                          p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) )
 
@@ -771,8 +771,8 @@ CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law ex
       getPLExp = .FALSE.
 
       IF ( KHtest ) THEN
-         IF ( PLExp /= 0.3 ) THEN
-            PLExp = 0.3
+         IF ( p_met%PLExp /= 0.3 ) THEN
+            p_met%PLExp = 0.3
             CALL TS_Warn  ( 'Overwriting the power law exponent for KH test.', -1 )
          ENDIF
       ENDIF
@@ -784,25 +784,25 @@ CALL ReadRVarDefault( UI, InFile, PLExp, "the power law exponent", "Power law ex
 UseDefault = .TRUE.
 SELECT CASE ( SpecModel )
    CASE (SpecModel_SMOOTH)
-      Z0 = 0.010
+      p_met%Z0 = 0.010
    CASE (SpecModel_GP_LLJ )
-      Z0 = 0.005
+      p_met%Z0 = 0.005
    CASE (SpecModel_WF_UPW )
-      Z0 = 0.018
+      p_met%Z0 = 0.018
    CASE (SpecModel_NWTCUP )
-      Z0 = 0.021
+      p_met%Z0 = 0.021
    CASE (SpecModel_WF_07D )
-      Z0 = 0.233
+      p_met%Z0 = 0.233
    CASE (SpecModel_WF_14D )
-      Z0 = 0.064
+      p_met%Z0 = 0.064
    CASE DEFAULT !IEC values
-      Z0 = 0.030 ! Represents smooth, homogenous terrain
+      p_met%Z0 = 0.030 ! Represents smooth, homogenous terrain
 END SELECT
 
-CALL ReadRVarDefault( UI, InFile, Z0, "the roughness length", "Surface roughness length [m]", US, UseDefault, &
+CALL ReadRVarDefault( UI, InFile, p_met%Z0, "the roughness length", "Surface roughness length [m]", US, UseDefault, &
                        IGNORE=SpecModel==SpecModel_TIDAL)
 
-   IF ( Z0 <= 0.0 ) THEN
+   IF ( p_met%Z0 <= 0.0 ) THEN
       CALL TS_Abort ( 'The surface roughness length must be a positive number or "default".')
    ENDIF
 
@@ -822,20 +822,20 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. SpecModel /= SpecModel_IECVKM .AND. Spe
       ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------
 
    UseDefault = .TRUE.
-   Latitude   = 45.0
+   p_met%Latitude   = 45.0
 
-   CALL ReadRVarDefault( UI, InFile, Latitude, "the site latitude", "Site latitude [degrees]", US, UseDefault)
+   CALL ReadRVarDefault( UI, InFile, p_met%Latitude, "Latitude", "Site latitude [degrees]", US, UseDefault)
 
-      IF ( ABS(Latitude) < 5.0 .OR. ABS(Latitude) > 90.0 ) THEN
+      IF ( ABS(p_met%Latitude) < 5.0 .OR. ABS(p_met%Latitude) > 90.0 ) THEN
          CALL TS_Abort( 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.' )
       ENDIF
 
-   Fc = 2.0 * Omega * SIN( ABS(Latitude*D2R) )  ! Calculate Coriolis parameter from latitude
+   p_met%Fc = 2.0 * Omega * SIN( ABS(p_met%Latitude*D2R) )  ! Calculate Coriolis parameter from latitude
 
 ELSE
 
-   Latitude = 0.0                               !Not used in IEC specs
-   Fc = 0.0
+   p_met%Latitude = 0.0                               !Not used in IEC specs
+   p_met%Fc = 0.0
 
 ENDIF    ! Not IECKAI and Not IECVKM
 
@@ -850,18 +850,18 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
       ! ------------ Read in the gradient Richardson number, RICH_NO. ---------------------------------------------
 
-   CALL ReadVar( UI, InFile, RICH_NO, "the gradient Richardson number", "Gradient Richardson number")
+   CALL ReadVar( UI, InFile, p_met%Rich_No, "the gradient Richardson number", "Gradient Richardson number")
 
    IF ( KHtest ) THEN
-      IF ( RICH_NO /= 0.02 ) THEN
-         RICH_NO = 0.02
+      IF ( p_met%Rich_No /= 0.02 ) THEN
+         p_met%Rich_No = 0.02
          CALL TS_Warn ( 'Overwriting the Richardson Number for KH test.', -1 )
       ENDIF
    ENDIF
 
    IF ( SpecModel == SpecModel_USER .OR. SpecModel == SpecModel_USRVKM ) THEN
-      IF ( RICH_NO /= 0.0 ) THEN
-         RICH_NO = 0.0
+      IF ( p_met%Rich_No /= 0.0 ) THEN
+         p_met%Rich_No = 0.0
          CALL TS_Warn ( 'Overwriting the Richardson Number for the '//TRIM(TurbModel)//' model.', -1 )
       ENDIF
    ENDIF
@@ -872,58 +872,58 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
    IF ( SpecModel == SpecModel_NWTCUP ) THEN
          ! Calculate disk averaged Z/L from turbine layer Ri for NWTC/LIST experiment
 
-      RICH_NO = MIN( MAX( RICH_NO, REAL(-1.0,ReKi) ), REAL(1.0,ReKi) )  ! Ensure that: -1 <= RICH_NO <= 1
+      p_met%Rich_No = MIN( MAX( p_met%Rich_No, REAL(-1.0,ReKi) ), REAL(1.0,ReKi) )  ! Ensure that: -1 <= RICH_NO <= 1
 
-      IF ( RICH_NO <= -0.1 ) THEN
-         ZL = -0.254 + 1.047*RICH_NO
-      ELSEIF ( RICH_NO < 0 ) THEN
-         ZL = 10.369*RICH_NO/(1.0 - 19.393*RICH_NO)
-      ELSE  !( RICH_NO < 0.155 ) THEN
-         ZL = 2.535*MIN( RICH_NO, REAL(0.155, ReKi) ) / (1.0 - 6.252*MIN( RICH_NO, REAL(0.155,ReKi) ))
+      IF ( p_met%Rich_No <= -0.1 ) THEN
+         p_met%ZL = -0.254 + 1.047*p_met%Rich_No
+      ELSEIF ( p_met%Rich_No < 0 ) THEN
+         p_met%ZL = 10.369*p_met%Rich_No/(1.0 - 19.393*p_met%Rich_No)
+      ELSE  !( p_met%Rich_No < 0.155 ) THEN
+         p_met%ZL = 2.535*MIN( p_met%Rich_No, 0.155_ReKi ) / (1.0 - 6.252*MIN( p_met%Rich_No, 0.155_ReKi ))
       ENDIF
 
 
    ELSEIF (SpecModel == SpecModel_GP_LLJ) THEN
 
-      RICH_NO = MIN( MAX( RICH_NO, REAL(-1.0,ReKi) ), REAL(1.0,ReKi) )  ! Ensure that: -1 <= RICH_NO <= 1
+      p_met%Rich_No = MIN( MAX( p_met%Rich_No, -1.0_ReKi ), 1.0_ReKi )  ! Ensure that: -1 <= RICH_NO <= 1
 
-      IF ( RICH_NO <= -0.1 ) THEN
-         ZL = -0.047 + 1.054*RICH_NO
-      ELSEIF ( RICH_NO < 0 ) THEN
-         ZL = 2.213*RICH_NO/(1.0 - 4.698*RICH_NO)
+      IF ( p_met%Rich_No <= -0.1 ) THEN
+         p_met%ZL = -0.047 + 1.054*p_met%Rich_No
+      ELSEIF ( p_met%Rich_No < 0 ) THEN
+         p_met%ZL = 2.213*p_met%Rich_No/(1.0 - 4.698*p_met%Rich_No)
       ELSE  !( RICH_NO < 0.1367 ) THEN
-         ZL = 3.132*MIN( RICH_NO, REAL(0.1367,ReKi) ) / (1.0 - 6.762*MIN( RICH_NO, REAL(0.1367,ReKi) ))
+         p_met%ZL = 3.132*MIN( p_met%Rich_No, 0.1367_ReKi ) / (1.0 - 6.762*MIN( p_met%Rich_No, 0.1367_ReKi ))
       ENDIF
 
    ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181-189.
 
-      IF ( RICH_NO <= 0.0 ) THEN
-         ZL = RICH_NO
-         !PhiM = (1.0 - 16.0*ZL)**-0.25
-      ELSEIF ( RICH_NO < 0.16667 ) THEN
-         ZL = MIN( RICH_NO / ( 1.0 - 5.0*RICH_NO ), REAL(1.0,ReKi) )  ! The MIN() will take care of rounding issues.
-         !PhiM = (1.0 + 5.0*ZL)
+      IF ( p_met%Rich_No <= 0.0 ) THEN
+         p_met%ZL = p_met%Rich_No
+         !PhiM = (1.0 - 16.0*p_met%ZL)**-0.25
+      ELSEIF ( p_met%Rich_No < 0.16667 ) THEN
+         p_met%ZL = MIN( p_met%Rich_No / ( 1.0 - 5.0*p_met%Rich_No ), REAL(1.0,ReKi) )  ! The MIN() will take care of rounding issues.
+         !PhiM = (1.0 + 5.0*p_met%ZL)
       ELSE
-         ZL = 1.0
+         p_met%ZL = 1.0
       ENDIF
 
    ENDIF !SpecModels
 
-   ZL = MIN( ZL, REAL(1.0,ReKi) )
+   p_met%ZL = MIN( p_met%ZL, REAL(1.0,ReKi) )
 
       ! ***** Calculate M-O length scale, L [meters] *****
       ! L should be constant in the surface layer
 
-   IF ( ZL /= 0.0 ) THEN
-        L = p_grid%HubHt / ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
+   IF ( p_met%ZL /= 0.0 ) THEN
+      p_met%L = p_grid%HubHt / p_met%ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
    ELSE
-      L = HUGE( L )
+      p_met%L = HUGE( p_met%L )
    ENDIF
 
       ! ***** Calculate power law exponent, if needed *****
 
    IF ( getPLExp ) THEN
-      PLExp = PowerLawExp( RICH_NO )
+      p_met%PLExp = PowerLawExp( p_met%Rich_No )
    ENDIF
 
       ! ------------ Read in the shear/friction velocity, Ustar, first calculating UstarDiab ------------------------
@@ -939,25 +939,25 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    UseDefault = .TRUE.
 
-   UstarDiab  = getUstarDiab(URef, RefHt)
-   Ustar      = UstarDiab
+   p_met%UstarDiab  = getUstarDiab(URef, RefHt, p_met%z0, p_met%ZL, ZJetMax)
+   p_met%Ustar      = p_met%UstarDiab
 
    SELECT CASE ( SpecModel )
 
       CASE (SpecModel_WF_UPW)
 
-         IF ( ZL < 0.0 ) THEN
-            Ustar = 1.162 * UstarDiab**( 2.0 / 3.0 )
+         IF ( p_met%ZL < 0.0 ) THEN
+            p_met%Ustar = 1.162 * p_met%UstarDiab**( 2.0 / 3.0 )
          ELSE ! Include the neutral case to avoid strange discontinuities
-            Ustar = 0.911 * UstarDiab**( 2.0 / 3.0 )
+            p_met%Ustar = 0.911 * p_met%UstarDiab**( 2.0 / 3.0 )
          ENDIF
 
       CASE ( SpecModel_WF_07D, SpecModel_WF_14D  )
 
-         IF ( ZL < 0.0 ) THEN
-            Ustar = 1.484 * UstarDiab**( 2.0 / 3.0 )
+         IF ( p_met%ZL < 0.0 ) THEN
+            p_met%Ustar = 1.484 * p_met%UstarDiab**( 2.0 / 3.0 )
          ELSE ! Include the neutral case with the stable one to avoid strange discontinuities
-            Ustar = 1.370 * UstarDiab**( 2.0 / 3.0 )
+            p_met%Ustar = 1.370 * p_met%UstarDiab**( 2.0 / 3.0 )
          ENDIF
 
       CASE (SpecModel_GP_LLJ )
@@ -965,24 +965,24 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          IF ( URef < 0 ) THEN ! (1) We can't get a wind speed because Uref was default
             UseDefault = .FALSE. ! We'll calculate the default value later
          ELSE
-            Ustar = 0.17454 + 0.72045*UstarDiab**1.36242
+            p_met%Ustar = 0.17454 + 0.72045*p_met%UstarDiab**1.36242
          ENDIF
 
       CASE ( SpecModel_NWTCUP  )
-         UStar = 0.2716 + 0.7573*UstarDiab**1.2599
+         p_met%Ustar = 0.2716 + 0.7573*p_met%UstarDiab**1.2599
 
       CASE ( SpecModel_TIDAL , SpecModel_RIVER )
          ! Use a constant drag coefficient for the HYDRO spectral models.
-         UStar = Uref*0.05 ! This corresponds to a drag coefficient of 0.0025.
-         !UStar = Uref*0.04 ! This corresponds to a drag coefficient of 0.0016.
+         p_met%Ustar = Uref*0.05 ! This corresponds to a drag coefficient of 0.0025.
+         !p_met%Ustar = Uref*0.04 ! This corresponds to a drag coefficient of 0.0016.
 
    END SELECT
 
-   CALL ReadRVarDefault( UI, InFile, UStar, "the friction or shear velocity", "Friction or shear velocity [m/s]", US, UseDefault )
+   CALL ReadRVarDefault( UI, InFile, p_met%Ustar, "the friction or shear velocity", "Friction or shear velocity [m/s]", US, UseDefault )
 
    IF ( Uref < 0.0 .AND. UseDefault ) THEN  ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
       CALL TS_Abort( 'The reference wind speed and friction velocity cannot both be "default."')
-   ELSEIF (UStar <= 0) THEN
+   ELSEIF (p_met%Ustar <= 0) THEN
       CALL TS_Abort( 'The friction velocity must be a positive number.')
    ENDIF
 
@@ -991,7 +991,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    IF ( WindProfileType(1:1) == 'J' ) THEN
       IF ( ZJetMax < 0 ) THEN ! Calculate a default value
-         ZJetMax = -14.820561*Rich_No + 56.488123*zl + 166.499069*uStar + 188.253377
+         ZJetMax = -14.820561*p_met%Rich_No + 56.488123*p_met%ZL + 166.499069*p_met%Ustar + 188.253377
          ZJetMax = 1.9326*ZJetMax - 252.7267  ! Correct with the residual
 
          CALL RndJetHeight( p_RandNum, OtherSt_RandNum, tmp ) ! Add a random amount
@@ -1007,9 +1007,9 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
          IF (UJetMax + tmp > 0 ) UJetMax = UJetMax + tmp
 
-         CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and uStar
+         CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p_met%Ustar
 
-         URef = getWindSpeed(UJetMax, ZJetMax, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+         URef = getVelocity(UJetMax, ZJetMax, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
       ELSE
          CALL GetChebCoefs(URef, RefHt)
@@ -1017,44 +1017,44 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    ENDIF !Jet wind profile
 
-   UHub = getWindSpeed(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   UHub = getVelocity(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
-         ! ***** Get uStar- and zl-profile values, if required, and determine offsets *****
+         ! ***** Get p_met%Ustar- and zl-profile values, if required, and determine offsets *****
       IF ( TmpUstarD == 0.0 ) THEN
-         TmpUstarD = Ustar
+         TmpUstarD = p_met%Ustar
       ELSE
          IF ( TmpUstarD < 0.0 ) THEN  ! If > 0, we've already calculated these things...
-            UstarDiab = getUstarDiab(URef, RefHt) !bjj: is this problematic for anything else?
-            TmpUary   = getWindSpeed(URef, RefHt, TmpZary, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+            p_met%UstarDiab = getUstarDiab(URef, RefHt, p_met%z0, p_met%ZL, ZJetMax) !bjj: is this problematic for anything else?
+            TmpUary   = getVelocityProfile(URef, RefHt, TmpZary, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
             TmpUstar  = getUstarARY( TmpUary,     TmpZary )
             TmpUstarD = SUM(TmpUstar) / SIZE(TmpUstar)    ! The average of those 3 points
          ENDIF
-         UstarOffset = Ustar - TmpUstarD
+         UstarOffset = p_met%Ustar - TmpUstarD
          TmpUstar(:) = TmpUstar(:) + UstarOffset
       ENDIF
 
       TmpZLary = getZLARY(TmpUary, TmpZary)
-      zlOffset = zL - SUM(TmpZLary) / SIZE(TmpUstar)
+      zlOffset = p_met%ZL - SUM(TmpZLary) / SIZE(TmpUstar)
 
 
       ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
 
    UseDefault = .TRUE.
-   IF ( ZL >= 0.0 .AND. SpecModel /= SpecModel_GP_LLJ ) THEN  !We must calculate ZI for stable GP_LLJ. z/L profile can change signs so ZI must be defined for spectra.
-      ZI = 0.0
+   IF ( p_met%ZL >= 0.0 .AND. SpecModel /= SpecModel_GP_LLJ ) THEN  !We must calculate ZI for stable GP_LLJ. z/L profile can change signs so ZI must be defined for spectra.
+      p_met%ZI = 0.0
    ELSE
-      IF ( Ustar < UstarDiab ) THEN
-         ZI = ( 0.04 * Uref ) / ( 1.0E-4 * LOG10( RefHt / Z0 ) )  !for "very" windy days
+      IF ( p_met%Ustar < p_met%UstarDiab ) THEN
+         p_met%ZI = ( 0.04 * Uref ) / ( 1.0E-4 * LOG10( RefHt / p_met%Z0 ) )  !for "very" windy days
       ELSE
          !Should Wind Farm models use the other definition since that was what was used in creating those models?
-         ZI = Ustar / (6.0 * Fc)
+         p_met%ZI = p_met%Ustar / (6.0 * p_met%Fc)
       ENDIF
    ENDIF
 
-   CALL ReadRVarDefault( UI, InFile, ZI, "the mixing layer depth", "Mixing layer depth [m]", US, UseDefault, &
-                                                                  IGNORE=(ZL>=0. .AND. SpecModel /= SpecModel_GP_LLJ) )
+   CALL ReadRVarDefault( UI, InFile, p_met%ZI, "the mixing layer depth", "Mixing layer depth [m]", US, UseDefault, &
+                                                                  IGNORE=(p_met%ZL>=0. .AND. SpecModel /= SpecModel_GP_LLJ) )
 
-      IF ( ( ZL < 0.0 ) .AND. ( ZI <= 0.0 ) ) THEN
+      IF ( ( p_met%ZL < 0.0 ) .AND. ( p_met%ZI <= 0.0 ) ) THEN
          CALL TS_Abort ( 'The mixing layer depth must be a positive number for unstable flows.')
       ENDIF
 
@@ -1076,7 +1076,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
       TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
 
       IF ( TmpUstarD /= 0.0 ) THEN
-         UstarSlope  = 3.0*(Ustar -  SQRT( ABS(PC_UW) ) ) / TmpUstarD
+         UstarSlope  = 3.0*(p_met%Ustar -  SQRT( ABS(PC_UW) ) ) / TmpUstarD
          UstarOffset = SQRT( ABS(PC_UW) ) - UstarSlope*(TmpUstar(2) - UstarOffset)
       ELSE
          UstarSlope  = 0.0
@@ -1095,60 +1095,60 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
                                             "Mean hub v'w' Reynolds stress", US, UseDefault, IGNORESTR = VWskip )
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
-   CALL GetDefaultCoh( UHub, p_grid%HubHt )
+   CALL GetDefaultCoh( UHub, p_grid%HubHt, p_met%IncDec, p_met%InCohB )
 
    UseDefault = .TRUE.
-   InCVar(1) = InCDec(1)
-   InCVar(2) = InCohB(1)
+   InCVar(1) = p_met%InCDec(1)
+   InCVar(2) = p_met%InCohB(1)
 
    CALL ReadRAryDefault( UI, InFile, InCVar, "the u-component coherence parameters", &
                                              "u-component coherence parameters", US, UseDefault)
-   InCDec(1) = InCVar(1)
-   InCohB(1) = InCVar(2)
+   p_met%InCDec(1) = InCVar(1)
+   p_met%InCohB(1) = InCVar(2)
 
-      IF ( InCDec(1) <= 0.0 ) THEN
+      IF ( p_met%InCDec(1) <= 0.0 ) THEN
          CALL TS_Abort ( 'The u-component coherence decrement must be a positive number.')
       ENDIF
 
       ! ------------ Read in the v component coherence decrement (coh-squared def), InCDec(2) = InCDecV ----------
 
    UseDefault = .TRUE.
-   InCVar(1) = InCDec(2)
-   InCVar(2) = InCohB(2)
+   InCVar(1) = p_met%InCDec(2)
+   InCVar(2) = p_met%InCohB(2)
 
    CALL ReadRAryDefault( UI, InFile, InCVar, "the v-component coherence parameters",  &
                                              "v-component coherence parameters", US, UseDefault)
 
-   InCDec(2) = InCVar(1)
-   InCohB(2) = InCVar(2)
+   p_met%InCDec(2) = InCVar(1)
+   p_met%InCohB(2) = InCVar(2)
 
-      IF ( InCDec(2) <= 0.0 ) THEN
+      IF ( p_met%InCDec(2) <= 0.0 ) THEN
          CALL TS_Abort ( 'The v-component coherence decrement must be a positive number.')
       ENDIF
 
       ! ------------ Read in the w component coherence decrement (coh-squared def), InCDec(3) = InCDecW -------
 
    UseDefault = .TRUE.
-   InCVar(1) = InCDec(3)
-   InCVar(2) = InCohB(3)
+   InCVar(1) = p_met%InCDec(3)
+   InCVar(2) = p_met%InCohB(3)
 
    CALL ReadRAryDefault( UI, InFile, InCVar, "the w-component coherence parameters", &
                                              "w-component coherence parameters", US, UseDefault)
 
-   InCDec(3) = InCVar(1)
-   InCohB(3) = InCVar(2)
+   p_met%InCDec(3) = InCVar(1)
+   p_met%InCohB(3) = InCVar(2)
 
-      IF ( InCDec(3) <= 0.0 ) THEN
+      IF ( p_met%InCDec(3) <= 0.0 ) THEN
          CALL TS_Abort ( 'The w-component coherence decrement must be a positive number.')
       ENDIF
 
          ! ------------ Read in the coherence exponent, COHEXP -----------------------------------
 
    UseDefault = .TRUE.
-   CohExp     = 0.0    ! was 0.25
-   CALL ReadRVarDefault( UI, InFile, CohExp, "the coherence exponent", "Coherence exponent", US, UseDefault)
+   p_met%CohExp     = 0.0    ! was 0.25
+   CALL ReadRVarDefault( UI, InFile, p_met%CohExp, "the coherence exponent", "Coherence exponent", US, UseDefault)
 
-      IF ( COHEXP < 0.0 ) THEN
+      IF ( p_met%COHEXP < 0.0 ) THEN
          CALL TS_Abort ( 'The coherence exponent must be non-negative.')
       ENDIF
 
@@ -1282,24 +1282,22 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
 ELSE  ! IECVKM or IECKAI models
 
-   RICH_NO = 0.0                       ! Richardson Number in neutral conditions
-   COHEXP  = 0.0                       ! Coherence exponent
-
+   p_met%Rich_No = 0.0                       ! Richardson Number in neutral conditions
+   p_met%COHEXP  = 0.0                       ! Coherence exponent
    
-   
-   IF ( p_IEC%IECedition == 3 ) THEN
-      IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
-   ELSE
-      IncDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
-   ENDIF
-
+   !IF ( p_IEC%IECedition == 3 ) THEN
+   !   p_met%IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
+   !ELSE
+   !   p_met%IncDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
+   !ENDIF
+   !
 
       ! The following variables are not used in the IEC calculations
 
-   ZL      = 0.0                       ! M-O z/L parameter
-   L       = 0.0                       ! M-O length scale
-   Ustar   = 0.0                       ! Shear or friction velocity
-   ZI      = 0.0                       ! Mixing layer depth
+   p_met%ZL      = 0.0                       ! M-O z/L parameter
+   p_met%L       = 0.0                       ! M-O length scale
+   p_met%Ustar   = 0.0                       ! Shear or friction velocity
+   p_met%ZI      = 0.0                       ! Mixing layer depth
    PC_UW   = 0.0                       ! u'w' x-axis correlation coefficient
    PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
    PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
@@ -1316,7 +1314,7 @@ ELSE  ! IECVKM or IECKAI models
 
       ! Calculate wind speed at hub height
 
-   UHub    = getWindSpeed(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   UHub    = getVelocity(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
 
 ENDIF
@@ -2015,8 +2013,8 @@ INTEGER                     :: UATWR                                ! I/O unit f
       WRITE (UBFFW)   INT(  -99          , B2Ki )               ! -99 = New Bladed format
       WRITE (UBFFW)   INT(    4          , B2Ki )               ! 4 = improved von karman (but needed for next 7 inputs)
       WRITE (UBFFW)   INT(    3          , B4Ki )               ! 3 = number of wind components
-      WRITE (UBFFW)  REAL( Latitude      , SiKi )               ! Latitude (degrees)
-      WRITE (UBFFW)  REAL(   z0          , SiKi )               ! Roughness length (m)
+      WRITE (UBFFW)  REAL( p_met%Latitude      , SiKi )               ! Latitude (degrees)
+      WRITE (UBFFW)  REAL( p_met%Z0            , SiKi )               ! Roughness length (m)
       WRITE (UBFFW)  REAL( Ztmp          , SiKi )               ! Reference Height (m) ( Z(1) + GridHeight / 2.0 )
       WRITE (UBFFW)  REAL( 100.0*TI(1)   , SiKi )               ! Longitudinal turbulence intensity (%)
       WRITE (UBFFW)  REAL( 100.0*TI(2)   , SiKi )               ! Lateral turbulence intensity (%)
@@ -2538,6 +2536,7 @@ use TSMods
    REAL(ReKi)              ::  SVFA                                  ! Sine of the vertical flow angle
    REAL(ReKi)              ::  CHFA                                  ! Cosine of the horizontal flow angle
    REAL(ReKi)              ::  SHFA                                  ! Sine of the horizontal flow angle
+      
    
    REAL(ReKi)              ::  UTmp                                  ! The best fit of observed peak Uh at het height vs jet height
    REAL(ReKi)              ::  U_zb                                  ! The velocity at the bottom of the rotor disk (for estimating log fit)
@@ -2613,10 +2612,10 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
       WRITE (US,FormStr)       "Characteristic value of hub turbulence intensity", 100.0*p_IEC%TurbInt,              "%"
                                                                                                               
    ELSE   ! ModVKM                                                                                                    
-      WRITE (US,FormStr1)      "Boundary layer depth                            ", NINT(h),                   " m"
-      WRITE (US,FormStr)       "Site Latitude                                   ", Latitude,                  " degs"
+!bjj this is never set in TurbSim:       WRITE (US,FormStr1)      "Boundary layer depth                            ", NINT(h),                   " m"
+      WRITE (US,FormStr)       "Site Latitude                                   ", p_met%Latitude,                  " degs"
       WRITE (US,FormStr)       "Hub mean streamwise velocity                    ", UHub,                      " m/s"
-      WRITE (US,FormStr)       "Hub local u*                                    ", UStar,                     " m/s" !BONNIE: is this LOCAL? of Disk-avg
+      WRITE (US,FormStr)       "Hub local u*                                    ", p_met%Ustar,                     " m/s" !BONNIE: is this LOCAL? of Disk-avg
       WRITE (US,FormStr)       "Target IEC Turbulence Intensity                 ", 100.0*p_IEC%TurbInt,             "%"
       WRITE (US,FormStr)       "Target IEC u-component standard deviation       ", p_IEC%SigmaIEC(1),         " m/s"
       WRITE (US,FormStr)       "u-component integral scale                      ", p_IEC%Lambda(1),                 " m"
@@ -2626,7 +2625,7 @@ IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
    ENDIF                                                                                                      
    WRITE (US,FormStr)          "Gradient Richardson number                      ", 0.0,                       ""
 
-! Ustar = SigmaIEC/2.15 ! Value based on equating original Kaimal spectrum with IEC formulation
+! p_met%Ustar = SigmaIEC/2.15 ! Value based on equating original Kaimal spectrum with IEC formulation
 
 ELSEIF ( SpecModel == SpecModel_TIDAL ) THEN
    WRITE (US,FormStr2)         "Gradient Richardson number                      ", "N/A"
@@ -2634,11 +2633,11 @@ ELSEIF ( SpecModel == SpecModel_TIDAL ) THEN
    
 ELSE   
  
-   WRITE (US,FormStr)          "Gradient Richardson number                      ", RICH_NO,                   ""
-   WRITE (US,FormStr)          "Monin-Obukhov (M-O) z/L parameter               ", ZL,                        ""
+   WRITE (US,FormStr)          "Gradient Richardson number                      ", p_met%Rich_No,                   ""
+   WRITE (US,FormStr)          "Monin-Obukhov (M-O) z/L parameter               ", p_met%ZL,                        ""
                                                                                                               
-   IF ( ZL /= 0.0 ) THEN                                                                                      
-      WRITE (US,FormStr)       "Monin-Obukhov (M-O) length scale                ", L,                         " m"
+   IF ( .not. EqualRealNos( p_met%ZL, 0.0_ReKi ) ) THEN                                                                                      
+      WRITE (US,FormStr)       "Monin-Obukhov (M-O) length scale                ", p_met%L,                         " m"
    ELSE                                                                                                       
       WRITE (US,FormStr2)      "Monin-Obukhov (M-O) length scale                ", "Infinite"                 
    ENDIF                                                                                                      
@@ -2648,66 +2647,71 @@ ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
 
 
 HalfRotDiam = 0.5*p_grid%RotorDiameter
-U_zt        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the top of rotor
-U_zb        = getWindSpeed(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the bottom of the rotor
+U_zt        = getVelocity(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the top of rotor
+U_zb        = getVelocity(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the bottom of the rotor
       
 WRITE(US,'()')   ! A BLANK LINE
 
 SELECT CASE ( TRIM(WindProfileType) )
-   CASE ('JET','J')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = p_grid%RotorDiameter/2
+   CASE ('JET')
+      p_met%PLexp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = p_grid%RotorDiameter/2
       UTmp  = 0.0422*ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Low-level jet"      
       WRITE (US,FormStr)       "Jet height                                      ",  ZJetMax,                  " m"
       WRITE (US,FormStr)       "Jet wind speed                                  ",  UJetMax,                  " m/s"
       WRITE (US,FormStr)       "Upper limit of observed jet wind speed          ",  UTmp,                     " m/s"
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
+      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  p_met%PLexp,                    ""
       
       IF ( UTmp < UJetMax ) THEN
          CALL TS_Warn( 'The computed jet wind speed is larger than the ' &
                      //'maximum observed jet wind speed at this height.', -1 )
       ENDIF            
                     
-   CASE ('LOG','L')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  
+   CASE ('LOG')
+      p_met%PLexp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Logarithmic"      
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
+      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  p_met%PLexp,                    ""
 
-   CASE ('H2L','H')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) ) 
+   CASE ('H2L')
+      p_met%PLexp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) ) 
       
       WRITE (US,FormStr2)      "Velocity profile type                           ", "Logarithmic (H2L)"      
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
+      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  p_met%PLexp,                    ""
 
-   CASE ('PL','P')
+   CASE ('PL')
       WRITE (US,FormStr2)      "Wind profile type                               ", "Power law"      
-      WRITE (US,FormStr)       "Power law exponent                              ",  PLExp,                    ""
+      WRITE (US,FormStr)       "Power law exponent                              ",  p_met%PLExp,                    ""
       
-   CASE ('USR','U')
-      PLExp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  
+   CASE ('USR')
+      p_met%PLexp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  
 
       WRITE (US,FormStr2)      "Wind profile type                               ", "Linear interpolation of user-defined profile"
-      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  PLExp,                    ""
+      WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  p_met%PLexp,                    ""
                                
+   CASE ('API')
+!bjj : fix me:!!! 
+      WRITE (US,FormStr2)      "Wind profile type                               ", "API"
+
+      
    CASE DEFAULT                
       WRITE (US,FormStr2)      "Wind profile type                               ", "Power law on rotor disk, logarithmic elsewhere"
-      WRITE (US,FormStr)       "Power law exponent                              ",  PLExp,                    ""
+      WRITE (US,FormStr)       "Power law exponent                              ",  p_met%PLExp,                    ""
       
 END SELECT
 
 WRITE(US,FormStr)              "Mean shear across rotor disk                    ", (U_zt-U_zb)/p_grid%RotorDiameter, " (m/s)/m"
 WRITE(US,FormStr)              "Assumed rotor diameter                          ", p_grid%RotorDiameter,             " m"      
-WRITE(US,FormStr)              "Surface roughness length                        ", z0,                        " m"      
+WRITE(US,FormStr)              "Surface roughness length                        ", p_met%Z0,                        " m"      
 WRITE(US,'()')                                                                                                 ! A BLANK LINE
 WRITE(US,FormStr1)             "Number of time steps in the FFT                 ", p_grid%NumSteps,                  ""       
 WRITE(US,FormStr1)             "Number of time steps output                     ", p_grid%NumOutSteps,               ""          
 
 IF (KHtest) THEN
    WRITE(US,"(/'KH Billow Test Parameters:' / )") ! HEADER
-   WRITE(US,FormStr)           "Gradient Richardson number                      ", RICH_NO,                   ""
-   WRITE(US,FormStr)           "Power law exponent                              ", PLexp,                     ""
+   WRITE(US,FormStr)           "Gradient Richardson number                      ", p_met%Rich_No,                   ""
+   WRITE(US,FormStr)           "Power law exponent                              ", p_met%PLexp,                     ""
    WRITE(US,FormStr)           "Length of coherent structures                   ", p_grid%UsableTime / 2.0,          " s"
    WRITE(US,FormStr)           "Minimum coherent TKE                            ", 30.0,                      " (m/s)^2"
 ENDIF
@@ -2885,7 +2889,7 @@ ENDIF
       CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, HH_HFlowAng, VFlowAng, V_Inertial, UH)      
       
       WRITE (UAHH,'(F8.3,3F8.2,3F8.3,F8.2)')  Time, UH, -1.0*R2D*ATAN2( V_Inertial(2) , V_Inertial(1) ), &
-                                                    V_Inertial(3), 0.0, PLExp, 0.0, 0.0 
+                                                    V_Inertial(3), 0.0, p_met%PLExp, 0.0, 0.0 
 !bjj: Should we output instantaneous horizontal shear, instead of 0?  
 !     Should the power law exponent be an instantaneous value, too?
 !                                                   
@@ -3585,13 +3589,13 @@ use TSMods
       p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) THEN
       WRITE (US,"(  A10, 2X, 'Power law exponent' )"                 )  'N/A'   
    ELSE
-      WRITE (US,"( F10.3 , 2X , 'Power law exponent' )"              )  PLExp
+      WRITE (US,"( F10.3 , 2X , 'Power law exponent' )"              )  p_met%PLExp
    END IF      
       
    IF ( SpecModel==SpecModel_TIDAL  ) THEN
       WRITE (US,"(  A10, 2X, 'Surface roughness length [m]' )"       )  'N/A'   
    ELSE      
-      WRITE (US,"( F10.3 , 2X , 'Surface roughness length [m]' )"    )  Z0
+      WRITE (US,"( F10.3 , 2X , 'Surface roughness length [m]' )"    )  p_met%Z0
    END IF
         
 !..................................................................................................................................
@@ -3602,7 +3606,7 @@ IF ( SpecModel == SpecModel_IECKAI .OR. SpecModel == SpecModel_IECVKM .OR. SpecM
 WRITE (US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
    
    IF ( SpecModel /= SpecModel_IECKAI .AND. SpecModel /= SpecModel_IECVKM .AND. SpecModel /= SpecModel_API ) THEN
-      WRITE (US,"( F10.3 , 2X , 'Site latitude [degrees]' )"    )  Latitude      
+      WRITE (US,"( F10.3 , 2X , 'Site latitude [degrees]' )"    )  p_met%Latitude      
    ELSE
       WRITE (US,"( A10 , 2X , 'Site latitude [degrees]' )"    )  'N/A'            
    END IF
@@ -3616,7 +3620,7 @@ IF ( SpecModel == SpecModel_ModVKM ) RETURN
         SpecModel /= SpecModel_API    .AND. & 
         SpecModel /= SpecModel_ModVKM .AND. & 
         SpecModel /= SpecModel_TIDAL   ) THEN
-      WRITE (US,"( F10.3 , 2X , 'Gradient Richardson number' )")  RICH_NO
+      WRITE (US,"( F10.3 , 2X , 'Gradient Richardson number' )")  p_met%Rich_No
    ELSE
       WRITE (US,"(   a10 , 2X , 'Gradient Richardson number' )")  'N/A'
    END IF
@@ -3625,12 +3629,12 @@ IF ( SpecModel == SpecModel_ModVKM ) RETURN
         SpecModel /= SpecModel_IECVKM .AND. & 
         SpecModel /= SpecModel_API    .AND. & 
         SpecModel /= SpecModel_ModVKM  ) THEN
-      WRITE (US,"( F10.3 , 2X , 'Friction or shear velocity [m/s]' )")  UStar
+      WRITE (US,"( F10.3 , 2X , 'Friction or shear velocity [m/s]' )")  p_met%Ustar
       
-      IF (ZL>=0. .AND. SpecModel /= SpecModel_GP_LLJ) THEN
+      IF (p_met%ZL>=0. .AND. SpecModel /= SpecModel_GP_LLJ) THEN
          WRITE (US,'(   A10 , 2X , "Mixing layer depth [m]" )'       )  'N/A'
       ELSE         
-         WRITE (US,"( F10.3 , 2X , 'Mixing layer depth [m]' )"       )  ZI
+         WRITE (US,"( F10.3 , 2X , 'Mixing layer depth [m]' )"       )  p_met%ZI
       END IF
 
    ELSE
@@ -3657,10 +3661,10 @@ IF ( SpecModel == SpecModel_ModVKM ) RETURN
    END IF
    
    do i=1,3
-      WRITE (US,"( '(',F9.3,',',G10.3,')',2X , A,'-component coherence parameters' )")  InCDec(i), InCohB(i), Comp(i)
+      WRITE (US,"( '(',F9.3,',',G10.3,')',2X , A,'-component coherence parameters' )")  p_met%InCDec(i), p_met%InCohB(i), Comp(i)
    end do
    
-   WRITE (US,'( F10.3 , 2X , "Coherence exponent" )' )  CohExp
+   WRITE (US,'( F10.3 , 2X , "Coherence exponent" )' )  p_met%CohExp
    
 !..................................................................................................................................
 !***
