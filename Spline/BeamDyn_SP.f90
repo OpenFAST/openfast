@@ -199,7 +199,7 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
 
    DO i=1,InputFileData%member_total
        DO j=1,3
-           temp_Coef(i,1:4) = SP_Coef(i,1:4,j)
+           temp_Coef(j,1:4) = SP_Coef(i,1:4,j)
        ENDDO
        temp_twist(1) = InputFileData%initial_twist(i)
        temp_twist(2) = InputFileData%initial_twist(i+1)

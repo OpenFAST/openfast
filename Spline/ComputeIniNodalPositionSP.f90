@@ -11,9 +11,12 @@
    temp = (eta + 1.0D0)/2.0D0
    DO i=1,3
        PosiVec(i) = Coef(i,1) + Coef(i,2)*temp + Coef(i,3)*temp*temp + Coef(i,4)*temp*temp*temp 
+!       WRITE(*,*) "Coef",i,Coef(i,1:4)
        e1(i) = Coef(i,2) + 2.0D0*Coef(i,3)*temp + 3.0D0*Coef(i,4)*temp*temp
    ENDDO
+!   WRITE(*,*) "e1",e1(:)
    e1(:) = e1(:)/Norm(e1)
+!   WRITE(*,*) "e1",e1(:)
 
 
    END SUBROUTINE ComputeIniNodalPositionSP
