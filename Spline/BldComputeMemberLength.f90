@@ -15,7 +15,7 @@
    INTEGER(IntKi)              :: j
    INTEGER(IntKi)              :: k
 
-   sample_total = 1001
+   sample_total = 13
    sample_step = 1.0D0/(sample_total-1)
 
    DO i=1,member_total
