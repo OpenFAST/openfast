@@ -312,7 +312,7 @@ WRITE(*,*) "temp_phi:",temp_phi
 !   ENDDO
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
-   STOP
+!   STOP
    
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
@@ -348,7 +348,8 @@ WRITE(*,*) "temp_phi:",temp_phi
 !This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
 !      p%F_ext(p%dof_total-3) = -1.0E+05
-      p%F_ext(p%dof_total-3) = 6.0E+02
+!      p%F_ext(p%dof_total-3) = 6.0E+02
+      p%F_ext(p%dof_total-3) = -4.0E+06
 !------------------
 !END input
 !------------------

@@ -102,7 +102,7 @@ PROGRAM MAIN
    Allocate(BD_Output(1))
    Allocate(BD_OutputTimes(1))
 
-   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
+   BD_InitInput%InputFile = 'Twist.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
 
    CALL BeamDyn_Init( BD_InitInput        &
