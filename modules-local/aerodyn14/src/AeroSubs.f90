@@ -369,8 +369,9 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       !----------------------------------------------------------------------------------------------
       P%TwrProps%PJM_Version = .FALSE.
 
-      P%TwrProps%TwrPotent = .FALSE.     ! We don't want to read the tower file!
-      P%TwrProps%TwrShadow = .FALSE.     ! We don't want to read the tower file!
+      P%TwrProps%TwrPotent   = .FALSE.     ! We don't want to read the tower file!
+      P%TwrProps%TwrShadow   = .FALSE.     ! We don't want to read the tower file!
+      P%TwrProps%CalcTwrAero = .FALSE.     ! We don't want to read the tower file!
 
          ! Read in the tower shadow deficit
       IF ( INDEX( 'FTft', Line(:1) ) > 0 )  THEN
