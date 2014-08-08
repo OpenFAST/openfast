@@ -112,7 +112,7 @@ SUBROUTINE GetChebCoefs(u_inp, z_inp)
    ! This subroutine determines what Chebyshev Coefficients will be used
    ! for the jet wind speed and wind direction profiles
 
-USE TSMods, only: ZJetMax, UJetMax, ChebyCoef_WS, p_met, p_grid, ChebyCoef_WD
+USE TSMods, only: p_met, p_grid
 
 IMPLICIT                   NONE
 
@@ -129,16 +129,16 @@ INTEGER                 :: I                 ! A loop counter
 
       ! Let's calculate the wind speed at the jet height
 
-   CALL get_coefs(ZJetMax, UH_coef, WD_coef)
+   CALL get_coefs(p_met%ZJetMax, UH_coef, WD_coef)
 
 
-   IF ( z_inp == ZJetMax ) THEN
+   IF ( z_inp == p_met%ZJetMax ) THEN
 
-      UJetMax = u_inp
+      p_met%UJetMax = u_inp
 
       DO I=1,11
-         ChebyCoef_WS(I) = UJetMax*UH_coef(1,I) + p_met%Rich_No*UH_coef(2,I) &
-                           + p_met%Ustar*UH_coef(3,I) +         UH_coef(4,I)
+         p_met%ChebyCoef_WS(I) = p_met%UJetMax*UH_coef(1,I) + p_met%Rich_No*UH_coef(2,I) &
+                               + p_met%Ustar  *UH_coef(3,I) +               UH_coef(4,I)
       ENDDO
 
    ELSE
@@ -146,27 +146,27 @@ INTEGER                 :: I                 ! A loop counter
          ! Calculate the coefficients without UJetMax
 
       DO I=1,11
-         ChebyCoef_WS(I) = p_met%Rich_No*UH_coef(2,I) + p_met%Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
+         p_met%ChebyCoef_WS(I) = p_met%Rich_No*UH_coef(2,I) + p_met%Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
       ENDDO
 
-      Utmp1              = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')
+      Utmp1                    = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')
 
          ! Now calculate the coefficients with just UJetMax term
 
-      ChebyCoef_tmp(:)   = ChebyCoef_WS(:)
-      ChebyCoef_WS(:)    = UH_coef(1,:)
+      ChebyCoef_tmp(:)         = p_met%ChebyCoef_WS(:)
+      p_met%ChebyCoef_WS(:)    = UH_coef(1,:)
 
-      Utmp2              = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
-      UJetMax            = (u_inp - Utmp1)/Utmp2
+      Utmp2                    = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
+      p_met%UJetMax            = (u_inp - Utmp1)/Utmp2
 
          ! Get the final coefficients, using the computed UJetMax
-      ChebyCoef_WS(:)    = UJetMax*ChebyCoef_WS(:) + ChebyCoef_tmp(:)
+      p_met%ChebyCoef_WS(:)    = p_met%UJetMax*p_met%ChebyCoef_WS(:) + ChebyCoef_tmp(:)
 
    ENDIF
 
    DO I=1,11
-      ChebyCoef_WD(I)    = UJetMax*WD_coef(1,I) + p_met%Rich_No*WD_coef(2,I) &
-                           + p_met%Ustar*WD_coef(3,I) +         WD_coef(4,I)
+      p_met%ChebyCoef_WD(I)    = p_met%UJetMax*WD_coef(1,I) + p_met%Rich_No*WD_coef(2,I) &
+                               + p_met%Ustar*WD_coef(3,I) +                 WD_coef(4,I)
    ENDDO
 
 !print *, 'UJetMax wind speed at ', ZJetMax, ' m: ', UJetMax, 'm/s'
@@ -181,8 +181,6 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
 
    ! Determine the wind speed at a given height, with reference wind speed.
 
-   USE                                  TSMods, ONLY: ChebyCoef_WD   ! Chebyshev coefficients (must be defined before calling this function!)
-   USE                                  TSMods, ONLY: ChebyCoef_WS   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: RefHt          ! The reference height (RefHt is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
@@ -196,7 +194,6 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
    USE                                  TSMods, ONLY: p_met          ! Met data
-   USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
 
    IMPLICIT                              NONE
 
@@ -235,7 +232,7 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
 
       CASE ( 'JET' )
 
-         CALL ChebyshevVals( ChebyCoef_WS, Ht, getVelocityProfile, MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
+         CALL ChebyshevVals( p_met%ChebyCoef_WS, Ht, getVelocityProfile, MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
 
       CASE ( 'LOG' )
 
@@ -317,14 +314,13 @@ FUNCTION getDirectionProfile( Ht, profile_type)
 
    ! Determine the wind speed at a given height, with reference wind speed.
 
-   USE                                  TSMods, ONLY: ChebyCoef_WD   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: RefHt          ! The reference height (z_Ref is being overwritten for some reason)
    USE                                  TSMods, ONLY: NumUSRz        ! Number of user-defined heights
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
-   USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
    USE                                  TSMods, ONLY: p_grid         ! grid information (hub height)
+   USE                                  TSMods, ONLY: p_met          ! met information (coefficients)
 
    IMPLICIT                              NONE
 
@@ -352,12 +348,12 @@ FUNCTION getDirectionProfile( Ht, profile_type)
       CASE ( 'JET' )
 
             ! Calculate the wind direction at this height
-         CALL ChebyshevVals( ChebyCoef_WD, Ht(:), getDirectionProfile(:), MinZ, MaxZ )
+         CALL ChebyshevVals( p_met%ChebyCoef_WD, Ht(:), getDirectionProfile(:), MinZ, MaxZ )
 
             ! Compute the wind direction at hub height & the jet height
          tmpHt(1) = p_grid%HubHt
-         tmpHt(2) = ZJetMax
-         CALL ChebyshevVals( ChebyCoef_WD, tmpHt, tmpWS(1:2), MinZ, MaxZ )
+         tmpHt(2) = p_met%ZJetMax
+         CALL ChebyshevVals( p_met%ChebyCoef_WD, tmpHt, tmpWS(1:2), MinZ, MaxZ )
 
             ! Make sure none of the directions are more than 45 degrees from the direction at the jet height
          IF ( ABS(tmpWS(1) - tmpWS(2) ) > 45. ) THEN  ! The direction at the hub height
@@ -424,9 +420,6 @@ END FUNCTION getDirectionProfile
 FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
 
    ! Determine the wind speed at a given height, with reference wind speed.
-
-   USE                                  TSMods, ONLY: ChebyCoef_WD   ! Chebyshev coefficients (must be defined before calling this function!)
-   USE                                  TSMods, ONLY: ChebyCoef_WS   ! Chebyshev coefficients (must be defined before calling this function!)
    USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: RefHt          ! The reference height (z_Ref is being overwritten for some reason)
    USE                                  TSMods, ONLY: IEC_EWM1       ! IEC Extreme 1-yr wind speed model
@@ -439,7 +432,6 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    USE                                  TSMods, ONLY: WindDir_USR    ! User-defined wind directions
    USE                                  TSMods, ONLY: Z_Usr          ! User-defined heights
    USE                                  TSMods, ONLY: p_met          ! Surface roughness length must be > 0 (which we've already checked for)
-   USE                                  TSMods, ONLY: ZJetMax        ! Height of the low-level jet
    IMPLICIT                              NONE
 
    REAL(ReKi),   INTENT(IN)           :: U_Ref                       ! Wind speed at reference height
@@ -485,7 +477,7 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
       CASE ( 'JET', 'J' )
 
          tmpHt(1) = Ht
-         CALL ChebyshevVals( ChebyCoef_WS, tmpHt(1:1), tmpWS(1:1), MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
+         CALL ChebyshevVals( p_met%ChebyCoef_WS, tmpHt(1:1), tmpWS(1:1), MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
          getVelocity = tmpWS(1)
 
       CASE ( 'LOG', 'L' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.

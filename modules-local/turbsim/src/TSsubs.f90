@@ -935,10 +935,10 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
 
 
          CASE ( SpecModel_NWTCUP, SpecModel_USRVKM )
-            HT1 = MAX( 25.0, MIN( Ht, 50.0 ) )
+            HT1 = MAX( 25.0_ReKi, MIN( Ht, 50.0_ReKi ) )
 
             IF ( WS <= 14.0 ) THEN
-               RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
+               RI1 = MAX( -1.0_ReKi, MIN( p_met%RICH_NO, 1.0_ReKi ) )
                IF ( WS <= 8.0 ) THEN
                   IF     (WS <= 4.0 ) THEN  !      WS <=  4
                      coeffs(:,1) = (/  8.1767E+00, -3.1018E-01,  3.3055E-01,  4.4232E-03,  4.6550E-01, &
@@ -1096,10 +1096,10 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                END SELECT
 
          CASE ( SpecModel_WF_UPW )
-            HT1 = MAX( 5.0, MIN( Ht, 35.0 ) )
+            HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
             IF ( WS <= 14.0 ) THEN
                IF ( WS <= 10 ) THEN
-                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.15 ) )
+                  RI1 = MAX( -0.5_ReKi, MIN( p_met%RICH_NO, 0.15_ReKi ) )
                   IF  ( WS <=  8.0 ) THEN   !      WS <= 8
                      coeffs(:,1) = (/  1.6715E+01, -3.8639E-01,  7.1817E+00,  1.5550E-03, -1.4293E+00, &
                                       -2.0350E-01,  8.5532E-06, -3.4710E+00, -1.9743E-02, -3.9949E-04 /) !Upw_U 7
@@ -1177,7 +1177,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             InCohB(3)     = 10.0*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
 
          CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
-            HT1 = MAX( 5.0, MIN( Ht, 35.0 ) )
+            HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
             IF ( WS <= 12.0 ) THEN
                IF     ( WS <=  8.0 ) THEN  !      WS <= 8
                   RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.15 ) )
@@ -1248,7 +1248,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
 
 END SUBROUTINE GetDefaultCoh
 !=======================================================================
-SUBROUTINE GetDefaultRS( UW, UV, VW )
+SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
    ! This subroutine is used to get the default values of the Reynolds
    !  stresses.
 
@@ -1257,9 +1257,6 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    USE                     TSMods, ONLY : p_met
    USE                     TSMods, ONLY : TurbModel, SpecModel
    USE                     TSMods, ONLY : UHub
-   USE                     TSMods, ONLY : UVskip                                   ! Flag to determine if UV cross-feed term should be skipped or used
-   USE                     TSMods, ONLY : UWskip                                   ! Flag to determine if UW cross-feed term should be skipped or used
-   USE                     TSMods, ONLY : VWskip                                   ! Flag to determine if VW cross-feed term should be skipped or used
    USE                     TSMods, ONLY : WindProfileType
    
    use tsmods, only: p_RandNum
@@ -1267,9 +1264,16 @@ SUBROUTINE GetDefaultRS( UW, UV, VW )
    
 use TurbSim_Types
    
-   REAL(ReKi), INTENT(INOUT)           :: UW  ! PC_UW
-   REAL(ReKi), INTENT(OUT)             :: UV  ! PC_UV
-   REAL(ReKi), INTENT(OUT)             :: VW  ! PC_VW
+   REAL(ReKi), INTENT(OUT)             :: UW      ! PC_UW
+   REAL(ReKi), INTENT(OUT)             :: UV      ! PC_UV
+   REAL(ReKi), INTENT(OUT)             :: VW      ! PC_VW
+   LOGICAL,    INTENT(OUT)             :: UWskip  
+   LOGICAL,    INTENT(OUT)             :: UVskip  
+   LOGICAL,    INTENT(OUT)             :: VWskip  
+   
+   REAL(ReKi), INTENT(IN)              :: TmpUstarHub 
+   
+   
    REAL(ReKi)                          :: rndSgn
    REAL(ReKi)                          :: SignProb
    REAL(ReKi)                          :: Shr
@@ -1277,7 +1281,8 @@ use TurbSim_Types
    REAL(ReKi)                          :: V(2)
    REAL(ReKi)                          :: Z(2)
    REAL(ReKi)                          :: ZLtmp
-
+            
+   
    Z(2) = p_grid%HubHt + 0.5*p_grid%RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
    V(:) = getVelocityProfile(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
@@ -1307,12 +1312,15 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    ! default UW Reynolds stress
    !-------------------------------------------------------------------------------------------------
-
+   UWskip     = .FALSE.
+   
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
    SELECT CASE ( SpecModel )
 
       CASE ( SpecModel_GP_LLJ )
 
+         UW = TmpUstarHub**2        
+      
          IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
             IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
                UW =  0.0399 - 0.00371*Uhub - 0.00182*p_met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
@@ -1355,7 +1363,7 @@ use TurbSim_Types
 
       CASE ( SpecModel_USER )
          UW = 0.0
-         UWskip = .true.
+         p_met%UWskip = .true.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
          UW = -Ustar2*(1-p_grid%HubHt/RefHt)
@@ -1368,6 +1376,7 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    ! default UV Reynolds stress
    !-------------------------------------------------------------------------------------------------
+   UVskip     = .FALSE.
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
    SELECT CASE ( SpecModel )
@@ -1437,6 +1446,7 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    ! default VW Reynolds stress
    !-------------------------------------------------------------------------------------------------
+   VWskip     = .FALSE.
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
    SELECT CASE ( SpecModel )
@@ -1505,12 +1515,10 @@ use TurbSim_Types
 RETURN
 END SUBROUTINE GetDefaultRS
 !=======================================================================
-FUNCTION getUstarARY(WS, Ht)
+FUNCTION getUstarARY(WS, Ht, UStarOffset, UstarSlope)
 
 USE TSMods, only: p_met
 
-   USE                                  TSMods, ONLY: UstarOffset
-   USE                                  TSMods, ONLY: UstarSlope
    USE                                  TSMods, ONLY: profileZmax
    USE                                  TSMods, ONLY: profileZmin
 
@@ -1519,6 +1527,8 @@ USE TSMods, only: p_met
 
    REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height at which ustar is defined
    REAL(ReKi),   INTENT(IN)           :: WS(:)                       ! Wind speed(s) at heights, Ht
+   REAL(ReKi),   INTENT(IN)           :: UStarOffset                 ! A scaling/offset value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
+   REAL(ReKi),   INTENT(IN)           :: UstarSlope                  ! A scaling/slope value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
 
    REAL(ReKi)                         :: tmpZ                        ! a temporary value
    REAL(ReKi)                         :: getUstarARY(SIZE(Ht))       ! the array of ustar values
@@ -1599,19 +1609,21 @@ END FUNCTION
 
 
 !=======================================================================
-FUNCTION getZLARY(WS, Ht)
-
-use TSMods, only: p_met
+FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset)
 
    USE                                  TSMods, ONLY: profileZmax
    USE                                  TSMods, ONLY: profileZmin
    USE                                  TSMods, ONLY: WindProfileType
-   USE                                  TSMods, ONLY: ZLOffset       ! Offset to align profile with rotor-disk averaged z/L
 
    IMPLICIT                              NONE
 
+   
    REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height at which local z/L is defined
    REAL(ReKi),   INTENT(IN)           :: WS(:)                       ! Wind speed(s) at heights, Ht
+   REAL(ReKi),   INTENT(IN)           :: RichNo                      ! Richardson Number
+   REAL(ReKi),   INTENT(IN)           :: ZL                          ! z/L, an alternate measure of stability (M-O) for RichNo
+   REAL(ReKi),   INTENT(IN)           :: L                           ! L, M-O length
+   REAL(ReKi),   INTENT(IN)           :: ZLOffset                    ! Offset to align profile with rotor-disk averaged z/L 
 
    REAL(ReKi)                         :: tmpZ                        ! a temporary value
    REAL(ReKi)                         :: getZLary(SIZE(Ht))          ! the array of z/L values
@@ -1644,17 +1656,17 @@ use TSMods, only: p_met
             ENDIF  !L is constant below 50 meters, and we don't want to extrapolate too high (last measurement is at 116 m)
 
             IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
-               IF ( p_met%Rich_No >= 0 ) THEN
-                  getZLary( IZ) =                     - 0.352464*p_met%Rich_No + 0.005272*WS(Zindx) + 0.465838
+               IF ( RichNo >= 0 ) THEN
+                  getZLary( IZ) =                     - 0.352464*RichNo + 0.005272*WS(Zindx) + 0.465838
                ELSE
-                  getZLary( IZ) =  0.004034*Ht(Zindx) + 0.809494*p_met%Rich_No - 0.008298*WS(Zindx) - 0.386632
-               ENDIF !Rich_NO
+                  getZLary( IZ) =  0.004034*Ht(Zindx) + 0.809494*RichNo - 0.008298*WS(Zindx) - 0.386632
+               ENDIF !RichNo
             ELSE
-               IF ( p_met%Rich_No >= 0 ) THEN
-                  getZLary( IZ) =  0.003068*Ht(Zindx) + 1.140264*p_met%Rich_No + 0.036726*WS(Zindx) - 0.407269
+               IF ( RichNo >= 0 ) THEN
+                  getZLary( IZ) =  0.003068*Ht(Zindx) + 1.140264*RichNo + 0.036726*WS(Zindx) - 0.407269
                ELSE
-                  getZLary( IZ) =  0.003010*Ht(Zindx) + 0.942617*p_met%Rich_No                     - 0.221886
-               ENDIF
+                  getZLary( IZ) =  0.003010*Ht(Zindx) + 0.942617*RichNo                      - 0.221886
+               ENDIF 
             ENDIF
             getZLary( IZ) = MIN( getZLary( IZ), 1.0 )
             getZLary( IZ) = getZLary(IZ) * tmpZ
@@ -1662,11 +1674,11 @@ use TSMods, only: p_met
          ENDDO
 
       ELSE ! All are above the max height so instead of extrapolating, we'll use ZL at all heights
-         getZLary(:) = p_met%ZL
+         getZLary(:) = ZL
       ENDIF
 
    ELSE ! All are below the min height so we'll keep L constant (as is the case in the surface layer)
-      getZLary(:) = Ht(:) / p_met%L
+      getZLary(:) = Ht(:) / L
    ENDIF
 
    getZLARY = getZLARY(:) + ZLOffset  ! This offset term is used to make the zl profile match the rotor-disk averaged value

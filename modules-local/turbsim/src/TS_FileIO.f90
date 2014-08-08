@@ -73,16 +73,9 @@ CHARACTER(1)      :: Line1           ! The first character of an input line
 !Echo = .FALSE.       ! Do not echo the input into a separate file
 
    !==========================================================
-   ! Initialize temporary variables
+   ! Open input file
    !==========================================================
-TmpUary    = (/ 0.0, 0.0, 0.0 /)
-TmpUstarD  = 0.0
-TmpUstar   = (/ 0.0, 0.0, 0.0 /)
-UstarOffset= 0.0
-UstarSlope = 1.0
-zlOffset   = 0.0
 
-   ! Open input file.
 CALL GetNewUnit( UI, ErrStat, ErrMsg)
 CALL OpenFInpFile( UI, InFile, ErrStat, ErrMsg )
 IF (ErrStat >= AbortErrLev) RETURN
@@ -190,7 +183,7 @@ CALL ReadVar( UI, InFile, WrFile(FileExt_CTS), "WrACT", "Output coherent time se
 
    ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
 
-CALL ReadVar( UI, InFile, Clockwise, "Clockwise", "Clockwise rotation when looking downwind?")
+CALL ReadVar( UI, InFile, p_grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?")
 
 
    ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
@@ -733,12 +726,12 @@ URef       = -999.9
    ! ------------ Read in the jet height -------------------------------------------------------------
 
 UseDefault = .FALSE.
-ZJetMax    = -999.9
+p_met%ZJetMax    = -999.9
 
-CALL ReadRVarDefault( UI, InFile, ZJetMax, "the jet height", "Jet height [m]", US, UseDefault, IGNORE=WindProfileType(1:1) /= 'J')
+CALL ReadRVarDefault( UI, InFile, p_met%ZJetMax, "the jet height", "Jet height [m]", US, UseDefault, IGNORE=WindProfileType(1:1) /= 'J')
 
    IF ( WindProfileType(1:1) == 'J' .AND. .NOT. UseDefault ) THEN
-      IF ( ZJetMax <  70.0 .OR. ZJetMax > 490.0 )  THEN
+      IF ( p_met%ZJetMax <  70.0 .OR. p_met%ZJetMax > 490.0 )  THEN
          CALL TS_Abort ( 'The height of the maximum jet wind speed must be between 70 and 490 m.' )
       ENDIF
    ENDIF
@@ -939,7 +932,7 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
    UseDefault = .TRUE.
 
-   p_met%UstarDiab  = getUstarDiab(URef, RefHt, p_met%z0, p_met%ZL, ZJetMax)
+   p_met%UstarDiab  = getUstarDiab(URef, RefHt, p_met%z0, p_met%ZL, p_met%ZJetMax)
    p_met%Ustar      = p_met%UstarDiab
 
    SELECT CASE ( SpecModel )
@@ -961,7 +954,6 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          ENDIF
 
       CASE (SpecModel_GP_LLJ )
-         TmpUstarD  = -1.0
          IF ( URef < 0 ) THEN ! (1) We can't get a wind speed because Uref was default
             UseDefault = .FALSE. ! We'll calculate the default value later
          ELSE
@@ -990,26 +982,26 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
          ! ***** Calculate wind speed at hub height *****
 
    IF ( WindProfileType(1:1) == 'J' ) THEN
-      IF ( ZJetMax < 0 ) THEN ! Calculate a default value
-         ZJetMax = -14.820561*p_met%Rich_No + 56.488123*p_met%ZL + 166.499069*p_met%Ustar + 188.253377
-         ZJetMax = 1.9326*ZJetMax - 252.7267  ! Correct with the residual
+      IF ( p_met%ZJetMax < 0 ) THEN ! Calculate a default value
+         p_met%ZJetMax = -14.820561*p_met%Rich_No + 56.488123*p_met%ZL + 166.499069*p_met%Ustar + 188.253377
+         p_met%ZJetMax =   1.9326  *p_met%ZJetMax - 252.7267  ! Correct with the residual
 
          CALL RndJetHeight( p_RandNum, OtherSt_RandNum, tmp ) ! Add a random amount
 
-         ZJetMax = MIN( MAX(ZJetMax + tmp, REAL(70.,ReKi) ), REAL(490.,ReKi) )
+         p_met%ZJetMax = MIN( MAX(p_met%ZJetMax + tmp, 70.0_ReKi ), 490.0_ReKi )
       ENDIF
 
       IF ( URef < 0 ) THEN ! Calculate a default value
 
-         UJetMax = MAX( -21.5515 + 6.6827*LOG(ZJetMax), REAL(5.0,ReKi) ) !Jet max must be at least 5 m/s (occurs ~50 m); shouldn't happen, but just in case....
+         p_met%UJetMax = MAX( -21.5515_ReKi + 6.6827_ReKi*LOG(p_met%ZJetMax), 5.0_ReKi ) !Jet max must be at least 5 m/s (occurs ~50 m); shouldn't happen, but just in case....
 
-         CALL Rnd3ParmNorm( p_RandNum, OtherSt_RandNum, tmp, REAL(0.1076,ReKi), REAL(-0.1404,ReKi), REAL(3.6111,ReKi),  REAL(-15.,ReKi), REAL(20.,ReKi) )
+         CALL Rnd3ParmNorm( p_RandNum, OtherSt_RandNum, tmp, 0.1076_ReKi, -0.1404_ReKi, 3.6111_ReKi,  -15.0_ReKi, 20.0_ReKi )
 
-         IF (UJetMax + tmp > 0 ) UJetMax = UJetMax + tmp
+         IF (p_met%UJetMax + tmp > 0 ) p_met%UJetMax = p_met%UJetMax + tmp
 
-         CALL GetChebCoefs( UJetMax, ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p_met%Ustar
+         CALL GetChebCoefs( p_met%UJetMax, p_met%ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p_met%Ustar
 
-         URef = getVelocity(UJetMax, ZJetMax, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+         URef = getVelocity(p_met%UJetMax, p_met%ZJetMax, RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
       ELSE
          CALL GetChebCoefs(URef, RefHt)
@@ -1020,21 +1012,26 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
    UHub = getVelocity(URef, RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 
          ! ***** Get p_met%Ustar- and zl-profile values, if required, and determine offsets *****
-      IF ( TmpUstarD == 0.0 ) THEN
-         TmpUstarD = p_met%Ustar
+      IF ( SpecModel /= SpecModel_GP_LLJ ) THEN
+         p_met%UstarSlope = 1.0_ReKi         
+
+         TmpUary   = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+         TmpUstar  = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+         
+         p_met%UstarOffset= 0.0_ReKi
       ELSE
-         IF ( TmpUstarD < 0.0 ) THEN  ! If > 0, we've already calculated these things...
-            p_met%UstarDiab = getUstarDiab(URef, RefHt, p_met%z0, p_met%ZL, ZJetMax) !bjj: is this problematic for anything else?
-            TmpUary   = getVelocityProfile(URef, RefHt, TmpZary, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
-            TmpUstar  = getUstarARY( TmpUary,     TmpZary )
-            TmpUstarD = SUM(TmpUstar) / SIZE(TmpUstar)    ! The average of those 3 points
-         ENDIF
-         UstarOffset = p_met%Ustar - TmpUstarD
-         TmpUstar(:) = TmpUstar(:) + UstarOffset
+         p_met%UstarSlope = 1.0_ReKi         
+         p_met%UstarDiab = getUstarDiab(URef, RefHt, p_met%z0, p_met%ZL, p_met%ZJetMax) !bjj: is this problematic for anything else?
+
+         TmpUary   = getVelocityProfile(URef, RefHt, TmpZary, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)                  
+         TmpUstar  = getUstarARY( TmpUary,     TmpZary, 0.0_ReKi, p_met%UstarSlope )
+            
+         p_met%UstarOffset = p_met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
+         TmpUstar(:) = TmpUstar(:) + p_met%UstarOffset
       ENDIF
 
-      TmpZLary = getZLARY(TmpUary, TmpZary)
-      zlOffset = p_met%ZL - SUM(TmpZLary) / SIZE(TmpUstar)
+      TmpZLary = getZLARY(TmpUary, TmpZary, p_met%Rich_No, p_met%ZL, p_met%L, 0.0_ReKi)
+      p_met%zlOffset = p_met%ZL - SUM(TmpZLary) / SIZE(TmpZLary)
 
 
       ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
@@ -1060,39 +1057,35 @@ IF ( SpecModel /= SpecModel_IECKAI .AND. &
 
 
       ! Get the default mean Reynolds stresses
-   UWskip     = .FALSE.
-   UVskip     = .FALSE.
-   VWskip     = .FALSE.
-   PC_UW      = TmpUstar(2)**2   ! Used only for GP-LLJ in GetDefaultRS()
 
-   CALL GetDefaultRS(  PC_UW, PC_UV, PC_VW )
+   CALL GetDefaultRS(  p_met%PC_UW, p_met%PC_UV, p_met%PC_VW, p_met%UWskip, p_met%UVskip, p_met%VWskip, TmpUStar(2) )
 
 
        ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
    UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, PC_UW, "the mean hub u'w' Reynolds stress", &
-                                            "Mean hub u'w' Reynolds stress", US, UseDefault, IGNORESTR = UWskip )
-   IF (.NOT. UWskip) THEN
+   CALL ReadRVarDefault( UI, InFile, p_met%PC_UW, "the mean hub u'w' Reynolds stress", &
+                                            "Mean hub u'w' Reynolds stress", US, UseDefault, IGNORESTR = p_met%UWskip )
+   IF (.NOT. p_met%UWskip) THEN
       TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
 
       IF ( TmpUstarD /= 0.0 ) THEN
-         UstarSlope  = 3.0*(p_met%Ustar -  SQRT( ABS(PC_UW) ) ) / TmpUstarD
-         UstarOffset = SQRT( ABS(PC_UW) ) - UstarSlope*(TmpUstar(2) - UstarOffset)
+         p_met%UstarSlope  = 3.0*(p_met%Ustar -  SQRT( ABS(p_met%PC_UW) ) ) / TmpUstarD
+         p_met%UstarOffset = SQRT( ABS(p_met%PC_UW) ) - p_met%UstarSlope*(TmpUstar(2) - p_met%UstarOffset)
       ELSE
-         UstarSlope  = 0.0
-         UstarOffset = SQRT( ABS(PC_UW) )
+         p_met%UstarSlope  = 0.0
+         p_met%UstarOffset = SQRT( ABS(p_met%PC_UW) )
       ENDIF
    ENDIF
 
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
    UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, PC_UV, "the mean hub u'v' Reynolds stress", &
-                                            "Mean hub u'v' Reynolds stress", US, UseDefault, IGNORESTR = UVskip )
+   CALL ReadRVarDefault( UI, InFile, p_met%PC_UV, "the mean hub u'v' Reynolds stress", &
+                                            "Mean hub u'v' Reynolds stress", US, UseDefault, IGNORESTR = p_met%UVskip )
 
       ! ------------ Read in the mean hub v'w' Reynolds stress, PC_VW ---------------------------------------------
    UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, PC_VW, "the mean hub v'w' Reynolds stress", &
-                                            "Mean hub v'w' Reynolds stress", US, UseDefault, IGNORESTR = VWskip )
+   CALL ReadRVarDefault( UI, InFile, p_met%PC_VW, "the mean hub v'w' Reynolds stress", &
+                                            "Mean hub v'w' Reynolds stress", US, UseDefault, IGNORESTR = p_met%VWskip )
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
    CALL GetDefaultCoh( UHub, p_grid%HubHt, p_met%IncDec, p_met%InCohB )
@@ -1298,13 +1291,13 @@ ELSE  ! IECVKM or IECKAI models
    p_met%L       = 0.0                       ! M-O length scale
    p_met%Ustar   = 0.0                       ! Shear or friction velocity
    p_met%ZI      = 0.0                       ! Mixing layer depth
-   PC_UW   = 0.0                       ! u'w' x-axis correlation coefficient
-   PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
-   PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
+   p_met%PC_UW   = 0.0                       ! u'w' x-axis correlation coefficient
+   p_met%PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
+   p_met%PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
 
-   UWskip  = .TRUE.
-   UVskip  = .TRUE.
-   VWskip  = .TRUE.
+   p_met%UWskip  = .TRUE.
+   p_met%UVskip  = .TRUE.
+   p_met%VWskip  = .TRUE.
    
    
    IF ( p_IEC%NumTurbInp .AND. p_IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
@@ -2042,7 +2035,7 @@ INTEGER                     :: UATWR                                ! I/O unit f
 
          ! Compute parameters for ordering output for FF AeroDyn files. (This is for BLADED compatibility.)
 
-      IF ( Clockwise )  THEN
+      IF ( p_grid%Clockwise )  THEN
          CFirst = p_grid%NumGrid_Y
          CLast  = 1
          CStep  = -1
@@ -2655,15 +2648,15 @@ WRITE(US,'()')   ! A BLANK LINE
 SELECT CASE ( TRIM(WindProfileType) )
    CASE ('JET')
       p_met%PLexp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = p_grid%RotorDiameter/2
-      UTmp  = 0.0422*ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
+      UTmp  = 0.0422*p_met%ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
       
       WRITE (US,FormStr2)      "Wind profile type                               ", "Low-level jet"      
-      WRITE (US,FormStr)       "Jet height                                      ",  ZJetMax,                  " m"
-      WRITE (US,FormStr)       "Jet wind speed                                  ",  UJetMax,                  " m/s"
-      WRITE (US,FormStr)       "Upper limit of observed jet wind speed          ",  UTmp,                     " m/s"
+      WRITE (US,FormStr)       "Jet height                                      ",  p_met%ZJetMax,                  " m"
+      WRITE (US,FormStr)       "Jet wind speed                                  ",  p_met%UJetMax,                  " m/s"
+      WRITE (US,FormStr)       "Upper limit of observed jet wind speed          ",        UTmp,                     " m/s"
       WRITE (US,FormStr)       "Equivalent power law exponent across rotor disk ",  p_met%PLexp,                    ""
       
-      IF ( UTmp < UJetMax ) THEN
+      IF ( UTmp < p_met%UJetMax ) THEN
          CALL TS_Warn( 'The computed jet wind speed is larger than the ' &
                      //'maximum observed jet wind speed at this height.', -1 )
       ENDIF            
@@ -3504,7 +3497,7 @@ use TSMods
    WRITE (US,"( L10 , 2X , 'Output tower data?' )"                        )  WrFile(FileExt_TWR)
    WRITE (US,"( L10 , 2X , 'Output formatted FF files?' )"                )  WrFile(FileExt_UVW)
    WRITE (US,"( L10 , 2X , 'Output coherent turbulence time step file?' )")  WrFile(FileExt_CTS)
-   WRITE (US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )" )  Clockwise   
+   WRITE (US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )" )  p_grid%Clockwise   
    
    SELECT CASE ( p_IEC%ScaleIEC )
       CASE (0)
@@ -3582,7 +3575,7 @@ use TSMods
    IF ( WindProfileType /= 'JET' ) THEN
       WRITE (US,"(  A10, 2X, 'Jet height [m]' )"                     )  'N/A'   
    ELSE
-      WRITE (US,"( F10.3, 2X, 'Jet height [m]' )"                    ) ZJetMax 
+      WRITE (US,"( F10.3, 2X, 'Jet height [m]' )"                    ) p_met%ZJetMax 
    END IF      
       
    IF ( INDEX( 'JLUHA', WindProfileType(1:1) ) > 0. .OR. &
@@ -3642,20 +3635,20 @@ IF ( SpecModel == SpecModel_ModVKM ) RETURN
       WRITE (US,'(   A10 , 2X , "Mixing layer depth [m]" )'          )  'N/A'
    END IF
 
-   IF (.NOT. UWskip) THEN
-      WRITE (US,'( F10.3 , 2X , "Mean hub u''w'' Reynolds stress" )' )  PC_UW
+   IF (.NOT. p_met%UWskip) THEN
+      WRITE (US,'( F10.3 , 2X , "Mean hub u''w'' Reynolds stress" )' )  p_met%PC_UW
    ELSE
       WRITE (US,'(   A10 , 2X , "Mean hub u''w'' Reynolds stress" )' )  'N/A'
    END IF
    
-   IF (.NOT. UVskip) THEN
-      WRITE (US,'( F10.3 , 2X , "Mean hub u''v'' Reynolds stress" )' )  PC_UV
+   IF (.NOT. p_met%UVskip) THEN
+      WRITE (US,'( F10.3 , 2X , "Mean hub u''v'' Reynolds stress" )' )  p_met%PC_UV
    ELSE
       WRITE (US,'(   A10 , 2X , "Mean hub u''v'' Reynolds stress" )' )  'N/A'
    END IF
 
-   IF (.NOT. VWskip) THEN
-      WRITE (US,'( F10.3 , 2X , "Mean hub v''w'' Reynolds stress" )' )  PC_VW
+   IF (.NOT. p_met%VWskip) THEN
+      WRITE (US,'( F10.3 , 2X , "Mean hub v''w'' Reynolds stress" )' )  p_met%PC_VW
    ELSE   
       WRITE (US,'(   A10 , 2X , "Mean hub v''w'' Reynolds stress" )' )  'N/A'
    END IF

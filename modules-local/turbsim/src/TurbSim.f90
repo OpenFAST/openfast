@@ -342,8 +342,8 @@ IF ( SpecModel == SpecModel_GP_LLJ) THEN
    CALL AllocAry(Ustar_profile, p_grid%ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
-   ZL_profile(:)    = getZLARY(    U, p_grid%Z )
-   Ustar_profile(:) = getUstarARY( U, p_grid%Z )
+   ZL_profile(:)    = getZLARY(    U, p_grid%Z, p_met%Rich_No, p_met%ZL, p_met%L, p_met%ZLOffset )
+   Ustar_profile(:) = getUstarARY( U, p_grid%Z, p_met%UStarOffset, p_met%UStarSlope )
    
 END IF
 
@@ -394,8 +394,8 @@ IF (DEBUG_OUT) THEN
       WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
       WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( IY, IY=0,10 )
       WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
-      WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( ChebyCoef_WS(IY), IY=1,11 )
-      WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( ChebyCoef_WD(IY), IY=1,11 )   
+      WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( p_met%ChebyCoef_WS(IY), IY=1,11 )
+      WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( p_met%ChebyCoef_WD(IY), IY=1,11 )   
    ENDIF
 ENDIF
 
@@ -669,16 +669,16 @@ CASE (SpecModel_GP_LLJ, &
          WSum2 = WSum2 * INumSteps  !These "sums" are now "means"
             
             !BJJ: this is for v=alpha1, w=alpha2, u=alpha3 using derivation equations
-         UWMax = ( PC_UW - UWsum ) / USum2                                             !alpha23
-         VWMax = ( USum2*(PC_VW - VWsum - UWMax*UVsum) - PC_UW*(PC_UV - UVsum) ) / &   !alpha12
-                 ( USum2*(WSum2 + UWMax*UWsum) - UWsum*PC_UW )
-         UVMax = ( PC_UV - UVsum - VWMax*UWsum) / USum2                                !alpha13         
+         UWMax = ( p_met%PC_UW - UWsum ) / USum2                                                         !alpha23
+         VWMax = ( USum2*(p_met%PC_VW - VWsum - UWMax*UVsum) - p_met%PC_UW*(p_met%PC_UV - UVsum) ) / &   !alpha12
+                 ( USum2*(WSum2 + UWMax*UWsum) - UWsum*p_met%PC_UW )
+         UVMax = ( p_met%PC_UV - UVsum - VWMax*UWsum) / USum2                                            !alpha13         
          
                   
             ! if we enter "none" for any of the Reynolds-stress terms, don't scale that component:
-         IF (UWskip) UWMax = 0.0
-         IF (UVskip) UVMax = 0.0
-         IF (VWskip) VWMax = 0.0
+         IF (p_met%UWskip) UWMax = 0.0
+         IF (p_met%UVskip) UVMax = 0.0
+         IF (p_met%VWskip) VWMax = 0.0
          
             !bjj: I'm implementing limits on the range of values here so that the spectra don't get too
             !     out of whack.  We'll display a warning in this case.
