@@ -23,7 +23,6 @@
    ErrMsg = ''
 
    CALL ReadPrimaryFile(InputFileName,InputFileData,OutFileRoot,UnEcho,ErrStat2,ErrMsg2)
-WRITE(*,*) "AFTER ReadPrimary File"
    CALL ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
    
    END SUBROUTINE BeamDyn_ReadInput
