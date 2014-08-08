@@ -147,7 +147,6 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    CALL DispNVD( BeamDyn_Ver )
 
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
-WRITE(*,*) "DEBUG"
 
    CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
    p%gravity(:) = 0.0D0
@@ -197,7 +196,8 @@ WRITE(*,*) "DEBUG"
    temp_w(:) = 0.0D0
    CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
    DEALLOCATE(temp_w)
-
+WRITE(*,*) "08AUG14, stop here"
+STOP
 !   DO i=1,p%elem_total
 !       DO j=1,3
 !           temp_Coef(j,1:4) = SP_Coef(i,1:4,j)
