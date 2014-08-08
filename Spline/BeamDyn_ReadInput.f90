@@ -2,8 +2,8 @@
 
    ! Passed Variables:
    CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
-   TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
    CHARACTER(*),                 INTENT(IN   )  :: OutFileRoot     ! Name of the input file
+   TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! The error message, if an error occurred
 
@@ -15,7 +15,7 @@
    INTEGER(IntKi)                               :: UnEcho
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
-   CHARACTER(1024)                        :: BldFile ! File that contains the blade information (specified in the primary input file)
+   CHARACTER(1024)                              :: BldFile ! File that contains the blade information (specified in the primary input file)
 
    INTEGER(IntKi)     :: i
 
@@ -23,7 +23,7 @@
    ErrMsg = ''
 
    CALL ReadPrimaryFile(InputFileName,InputFileData,OutFileRoot,UnEcho,ErrStat2,ErrMsg2)
-
+WRITE(*,*) "AFTER ReadPrimary File"
    CALL ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
    
    END SUBROUTINE BeamDyn_ReadInput

@@ -71,6 +71,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_GL 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_GL 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: gravity 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: segment_length 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: member_length 
     REAL(ReKi)  :: blade_length 
     INTEGER(IntKi)  :: node_elem 
@@ -106,15 +107,15 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_InputFile  =======
   TYPE, PUBLIC :: BD_InputFile
+    INTEGER(IntKi)  :: analysis_type 
     INTEGER(IntKi)  :: member_total 
+    INTEGER(IntKi)  :: kp_total 
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: kp_member 
     INTEGER(IntKi)  :: order_elem 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: initial_twist 
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tangent_vector 
     TYPE(BladeInputData)  :: InpBl 
     CHARACTER(1024)  :: BldFile 
     LOGICAL  :: Echo 
-    LOGICAL  :: ini_curv 
   END TYPE BD_InputFile
 ! =======================
 CONTAINS
@@ -912,6 +913,21 @@ IF (ALLOCATED(SrcParamData%gravity)) THEN
    END IF
    DstParamData%gravity = SrcParamData%gravity
 ENDIF
+IF (ALLOCATED(SrcParamData%segment_length)) THEN
+   i1_l = LBOUND(SrcParamData%segment_length,1)
+   i1_u = UBOUND(SrcParamData%segment_length,1)
+   i2_l = LBOUND(SrcParamData%segment_length,2)
+   i2_u = UBOUND(SrcParamData%segment_length,2)
+   IF (.NOT.ALLOCATED(DstParamData%segment_length)) THEN 
+      ALLOCATE(DstParamData%segment_length(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%segment_length.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%segment_length = SrcParamData%segment_length
+ENDIF
 IF (ALLOCATED(SrcParamData%member_length)) THEN
    i1_l = LBOUND(SrcParamData%member_length,1)
    i1_u = UBOUND(SrcParamData%member_length,1)
@@ -957,6 +973,9 @@ ENDIF
 IF (ALLOCATED(ParamData%gravity)) THEN
    DEALLOCATE(ParamData%gravity)
 ENDIF
+IF (ALLOCATED(ParamData%segment_length)) THEN
+   DEALLOCATE(ParamData%segment_length)
+ENDIF
 IF (ALLOCATED(ParamData%member_length)) THEN
    DEALLOCATE(ParamData%member_length)
 ENDIF
@@ -1000,6 +1019,7 @@ ENDIF
   Re_BufSz    = Re_BufSz    + SIZE( InData%Stif0_GL )  ! Stif0_GL 
   Re_BufSz    = Re_BufSz    + SIZE( InData%Mass0_GL )  ! Mass0_GL 
   Re_BufSz    = Re_BufSz    + SIZE( InData%gravity )  ! gravity 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%segment_length )  ! segment_length 
   Re_BufSz    = Re_BufSz    + SIZE( InData%member_length )  ! member_length 
   Re_BufSz   = Re_BufSz   + 1  ! blade_length
   Int_BufSz  = Int_BufSz  + 1  ! node_elem
@@ -1027,6 +1047,10 @@ ENDIF
   IF ( ALLOCATED(InData%gravity) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%gravity))-1 ) =  PACK(InData%gravity ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%gravity)
+  ENDIF
+  IF ( ALLOCATED(InData%segment_length) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%segment_length))-1 ) =  PACK(InData%segment_length ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%segment_length)
   ENDIF
   IF ( ALLOCATED(InData%member_length) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%member_length))-1 ) =  PACK(InData%member_length ,.TRUE.)
@@ -1106,6 +1130,12 @@ ENDIF
     OutData%gravity = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%gravity))-1 ),mask1,OutData%gravity)
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%gravity)
+  ENDIF
+  IF ( ALLOCATED(OutData%segment_length) ) THEN
+  ALLOCATE(mask2(SIZE(OutData%segment_length,1),SIZE(OutData%segment_length,2))); mask2 = .TRUE.
+    OutData%segment_length = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%segment_length))-1 ),mask2,OutData%segment_length)
+  DEALLOCATE(mask2)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%segment_length)
   ENDIF
   IF ( ALLOCATED(OutData%member_length) ) THEN
   ALLOCATE(mask2(SIZE(OutData%member_length,1),SIZE(OutData%member_length,2))); mask2 = .TRUE.
@@ -1798,7 +1828,22 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   DstinputfileData%analysis_type = SrcinputfileData%analysis_type
    DstinputfileData%member_total = SrcinputfileData%member_total
+   DstinputfileData%kp_total = SrcinputfileData%kp_total
+IF (ALLOCATED(SrcinputfileData%kp_member)) THEN
+   i1_l = LBOUND(SrcinputfileData%kp_member,1)
+   i1_u = UBOUND(SrcinputfileData%kp_member,1)
+   IF (.NOT.ALLOCATED(DstinputfileData%kp_member)) THEN 
+      ALLOCATE(DstinputfileData%kp_member(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copyinputfile: Error allocating DstinputfileData%kp_member.'
+         RETURN
+      END IF
+   END IF
+   DstinputfileData%kp_member = SrcinputfileData%kp_member
+ENDIF
    DstinputfileData%order_elem = SrcinputfileData%order_elem
 IF (ALLOCATED(SrcinputfileData%kp_coordinate)) THEN
    i1_l = LBOUND(SrcinputfileData%kp_coordinate,1)
@@ -1815,38 +1860,9 @@ IF (ALLOCATED(SrcinputfileData%kp_coordinate)) THEN
    END IF
    DstinputfileData%kp_coordinate = SrcinputfileData%kp_coordinate
 ENDIF
-IF (ALLOCATED(SrcinputfileData%initial_twist)) THEN
-   i1_l = LBOUND(SrcinputfileData%initial_twist,1)
-   i1_u = UBOUND(SrcinputfileData%initial_twist,1)
-   IF (.NOT.ALLOCATED(DstinputfileData%initial_twist)) THEN 
-      ALLOCATE(DstinputfileData%initial_twist(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_Copyinputfile: Error allocating DstinputfileData%initial_twist.'
-         RETURN
-      END IF
-   END IF
-   DstinputfileData%initial_twist = SrcinputfileData%initial_twist
-ENDIF
-IF (ALLOCATED(SrcinputfileData%tangent_vector)) THEN
-   i1_l = LBOUND(SrcinputfileData%tangent_vector,1)
-   i1_u = UBOUND(SrcinputfileData%tangent_vector,1)
-   i2_l = LBOUND(SrcinputfileData%tangent_vector,2)
-   i2_u = UBOUND(SrcinputfileData%tangent_vector,2)
-   IF (.NOT.ALLOCATED(DstinputfileData%tangent_vector)) THEN 
-      ALLOCATE(DstinputfileData%tangent_vector(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'BD_Copyinputfile: Error allocating DstinputfileData%tangent_vector.'
-         RETURN
-      END IF
-   END IF
-   DstinputfileData%tangent_vector = SrcinputfileData%tangent_vector
-ENDIF
       CALL BD_Copybladeinputdata( SrcinputfileData%InpBl, DstinputfileData%InpBl, CtrlCode, ErrStat, ErrMsg )
    DstinputfileData%BldFile = SrcinputfileData%BldFile
    DstinputfileData%Echo = SrcinputfileData%Echo
-   DstinputfileData%ini_curv = SrcinputfileData%ini_curv
  END SUBROUTINE BD_Copyinputfile
 
  SUBROUTINE BD_Destroyinputfile( inputfileData, ErrStat, ErrMsg )
@@ -1857,14 +1873,11 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(inputfileData%kp_member)) THEN
+   DEALLOCATE(inputfileData%kp_member)
+ENDIF
 IF (ALLOCATED(inputfileData%kp_coordinate)) THEN
    DEALLOCATE(inputfileData%kp_coordinate)
-ENDIF
-IF (ALLOCATED(inputfileData%initial_twist)) THEN
-   DEALLOCATE(inputfileData%initial_twist)
-ENDIF
-IF (ALLOCATED(inputfileData%tangent_vector)) THEN
-   DEALLOCATE(inputfileData%tangent_vector)
 ENDIF
   CALL BD_Destroybladeinputdata( inputfileData%InpBl, ErrStat, ErrMsg )
  END SUBROUTINE BD_Destroyinputfile
@@ -1906,11 +1919,12 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Int_BufSz  = Int_BufSz  + 1  ! analysis_type
   Int_BufSz  = Int_BufSz  + 1  ! member_total
+  Int_BufSz  = Int_BufSz  + 1  ! kp_total
+  Int_BufSz   = Int_BufSz   + SIZE( InData%kp_member )  ! kp_member 
   Int_BufSz  = Int_BufSz  + 1  ! order_elem
   Re_BufSz    = Re_BufSz    + SIZE( InData%kp_coordinate )  ! kp_coordinate 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%initial_twist )  ! initial_twist 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%tangent_vector )  ! tangent_vector 
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_InpBl_Buf  ) ! InpBl
   IF(ALLOCATED(Db_InpBl_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_InpBl_Buf  ) ! InpBl
@@ -1921,21 +1935,21 @@ ENDIF
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%analysis_type )
+  Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%member_total )
   Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%kp_total )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(InData%kp_member) ) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%kp_member))-1 ) = PACK(InData%kp_member ,.TRUE.)
+    Int_Xferred   = Int_Xferred   + SIZE(InData%kp_member)
+  ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%order_elem )
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(InData%kp_coordinate) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%kp_coordinate))-1 ) =  PACK(InData%kp_coordinate ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%kp_coordinate)
-  ENDIF
-  IF ( ALLOCATED(InData%initial_twist) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%initial_twist))-1 ) =  PACK(InData%initial_twist ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%initial_twist)
-  ENDIF
-  IF ( ALLOCATED(InData%tangent_vector) ) THEN
-    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tangent_vector))-1 ) =  PACK(InData%tangent_vector ,.TRUE.)
-    Re_Xferred   = Re_Xferred   + SIZE(InData%tangent_vector)
   ENDIF
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, OnlySize ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) THEN
@@ -1991,8 +2005,18 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  OutData%analysis_type = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
   OutData%member_total = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
+  OutData%kp_total = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(OutData%kp_member) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%kp_member,1))); mask1 = .TRUE.
+    OutData%kp_member = UNPACK(IntKiBuf( Int_Xferred:Re_Xferred+(SIZE(OutData%kp_member))-1 ),mask1,OutData%kp_member)
+  DEALLOCATE(mask1)
+    Int_Xferred   = Int_Xferred   + SIZE(OutData%kp_member)
+  ENDIF
   OutData%order_elem = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   IF ( ALLOCATED(OutData%kp_coordinate) ) THEN
@@ -2000,18 +2024,6 @@ ENDIF
     OutData%kp_coordinate = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%kp_coordinate))-1 ),mask2,OutData%kp_coordinate)
   DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%kp_coordinate)
-  ENDIF
-  IF ( ALLOCATED(OutData%initial_twist) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%initial_twist,1))); mask1 = .TRUE.
-    OutData%initial_twist = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%initial_twist))-1 ),mask1,OutData%initial_twist)
-  DEALLOCATE(mask1)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%initial_twist)
-  ENDIF
-  IF ( ALLOCATED(OutData%tangent_vector) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%tangent_vector,1),SIZE(OutData%tangent_vector,2))); mask2 = .TRUE.
-    OutData%tangent_vector = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tangent_vector))-1 ),mask2,OutData%tangent_vector)
-  DEALLOCATE(mask2)
-    Re_Xferred   = Re_Xferred   + SIZE(OutData%tangent_vector)
   ENDIF
  ! first call BD_Packbladeinputdata to get correctly sized buffers for unpacking
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, OutData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
