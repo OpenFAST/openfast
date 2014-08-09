@@ -180,8 +180,8 @@ CALL Spec_IECKAI ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Spec )
 
    ! Compute some parameters that are independent of frequency.
 
-Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( URef/Ref_WS )**Exp3
-Scale2 = 320.0*( URef/Ref_WS )**2*( Ht/Ref_Ht )**Exp4   !bjj: I'm not liking how URef and Ht are not necessarially defined at the same node (URef from input file, Ht from wherever)
+Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( p_met%URef/Ref_WS )**Exp3
+Scale2 = 320.0*( p_met%URef/Ref_WS )**2*( Ht/Ref_Ht )**Exp4   !bjj: I'm not liking how URef and Ht are not necessarially defined at the same node (URef from input file, Ht from wherever)
 
 DO I=1,p_grid%NumFreq
 
@@ -651,29 +651,29 @@ SUBROUTINE Spec_UserSpec ( Spec )
 
    DO I=1,p_grid%NumFreq
 
-      IF ( p_grid%Freq(I) <= Freq_USR(1) ) THEN
-         Spec(I,1) = Uspec_USR(1)
-         Spec(I,2) = Vspec_USR(1)
-         Spec(I,3) = Wspec_USR(1)
-      ELSEIF ( p_grid%Freq(I) >= Freq_USR(NumUSRf) ) THEN
-         Spec(I,1) = Uspec_USR(NumUSRf)
-         Spec(I,2) = Vspec_USR(NumUSRf)
-         Spec(I,3) = Wspec_USR(NumUSRf)
+      IF ( p_grid%Freq(I) <= p_met%USR_Freq(1) ) THEN
+         Spec(I,1) = p_met%USR_Uspec(1)
+         Spec(I,2) = p_met%USR_Vspec(1)
+         Spec(I,3) = p_met%USR_Wspec(1)
+      ELSEIF ( p_grid%Freq(I) >= p_met%USR_Freq(p_met%NumUSRf) ) THEN
+         Spec(I,1) = p_met%USR_Uspec(p_met%NumUSRf)
+         Spec(I,2) = p_met%USR_Vspec(p_met%NumUSRf)
+         Spec(I,3) = p_met%USR_Wspec(p_met%NumUSRf)
       ELSE
 
             ! Find the two points between which the frequency lies
 
-         DO J=(Indx+1),NumUSRf
-            IF ( p_grid%Freq(I) <= Freq_USR(J) ) THEN
+         DO J=(Indx+1),p_met%NumUSRf
+            IF ( p_grid%Freq(I) <= p_met%USR_Freq(J) ) THEN
                Indx = J-1
 
                   ! Let's just do a linear interpolation for now
 
-               Tmp  = (p_grid%Freq(I) - Freq_USR(Indx)) / ( Freq_USR(Indx) - Freq_USR(J) )
+               Tmp  = (p_grid%Freq(I) - p_met%USR_Freq(Indx)) / ( p_met%USR_Freq(Indx) - p_met%USR_Freq(J) )
 
-               Spec(I,1) = Tmp * ( Uspec_USR(Indx) - Uspec_USR(J) ) + Uspec_USR(Indx)
-               Spec(I,2) = Tmp * ( Vspec_USR(Indx) - Vspec_USR(J) ) + Vspec_USR(Indx)
-               Spec(I,3) = Tmp * ( Wspec_USR(Indx) - Wspec_USR(J) ) + Wspec_USR(Indx)
+               Spec(I,1) = Tmp * ( p_met%USR_Uspec(Indx) - p_met%USR_Uspec(J) ) + p_met%USR_Uspec(Indx)
+               Spec(I,2) = Tmp * ( p_met%USR_Vspec(Indx) - p_met%USR_Vspec(J) ) + p_met%USR_Vspec(Indx)
+               Spec(I,3) = Tmp * ( p_met%USR_Wspec(Indx) - p_met%USR_Wspec(J) ) + p_met%USR_Wspec(Indx)
 
                EXIT
             ENDIF
@@ -838,7 +838,7 @@ INTEGER               :: I                      ! DO LOOP counter
 
 !print *, Ustar
 !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
-Sigma_U2=4.5*p_met%Ustar*p_met%Ustar*EXP(-2*Ht/RefHt)
+Sigma_U2=4.5*p_met%Ustar*p_met%Ustar*EXP(-2*Ht/p_met%RefHt)
 Sigma_V2=0.5*Sigma_U2
 Sigma_W2=0.2*Sigma_U2
 
@@ -930,15 +930,15 @@ REAL(ReKi)            :: Tmp
 INTEGER               :: I
 
    ! Define isotropic integral scale.
-IF ( ALLOCATED( L_USR ) ) THEN
-   IF ( Ht <= Z_USR(1) ) THEN
-      Lvk = L_USR(1)   ! Extrapolation: nearest neighbor for heights below minimum height specified
-   ELSEIF ( Ht >= Z_USR(NumUSRz) ) THEN
-      Lvk = L_USR(NumUSRz)  ! Extrapolation: nearest neighbor for heights above maximum height specified
+IF ( ALLOCATED( p_met%USR_L ) ) THEN
+   IF ( Ht <= p_met%USR_Z(1) ) THEN
+      Lvk = p_met%USR_L(1)   ! Extrapolation: nearest neighbor for heights below minimum height specified
+   ELSEIF ( Ht >= p_met%USR_Z(p_met%NumUSRz) ) THEN
+      Lvk = p_met%USR_L(p_met%NumUSRz)  ! Extrapolation: nearest neighbor for heights above maximum height specified
    ELSE !Interpolation: linear between user-defined height/integral scale curves
-      DO I=2,NumUSRz
-         IF ( Ht <= Z_USR(I) ) THEN
-            Lvk = (Ht - Z_USR(I-1)) * ( L_USR(I-1) - L_USR(I) ) / ( Z_USR(I-1) - Z_USR(I) ) + L_USR(I-1)
+      DO I=2,p_met%NumUSRz
+         IF ( Ht <= p_met%USR_Z(I) ) THEN
+            Lvk = (Ht - p_met%USR_Z(I-1)) * ( p_met%USR_L(I-1) - p_met%USR_L(I) ) / ( p_met%USR_Z(I-1) - p_met%USR_Z(I) ) + p_met%USR_L(I-1)
             EXIT
          ENDIF
       ENDDO
@@ -953,15 +953,15 @@ ELSE
 ENDIF
 
    ! Define isotropic integral scale.
-IF ( ALLOCATED( Sigma_USR ) ) THEN
-   IF ( Ht <= Z_USR(1) ) THEN
-      Sigma = Sigma_USR(1)
-   ELSEIF ( Ht >= Z_USR(NumUSRz) ) THEN
-      Sigma = Sigma_USR(NumUSRz)
+IF ( ALLOCATED( p_met%USR_Sigma ) ) THEN
+   IF ( Ht <= p_met%USR_Z(1) ) THEN
+      Sigma = p_met%USR_Sigma(1)
+   ELSEIF ( Ht >= p_met%USR_Z(p_met%NumUSRz) ) THEN
+      Sigma = p_met%USR_Sigma(p_met%NumUSRz)
    ELSE
-      DO I=2,NumUSRz
-         IF ( Ht <= Z_USR(I) ) THEN
-            Sigma = (Ht - Z_USR(I-1)) * ( Sigma_USR(I-1) - Sigma_USR(I) ) / ( Z_USR(I-1) - Z_USR(I) ) + Sigma_USR(I-1)
+      DO I=2,p_met%NumUSRz
+         IF ( Ht <= p_met%USR_Z(I) ) THEN
+            Sigma = (Ht - p_met%USR_Z(I-1)) * ( p_met%USR_Sigma(I-1) - p_met%USR_Sigma(I) ) / ( p_met%USR_Z(I-1) - p_met%USR_Z(I) ) + p_met%USR_Sigma(I-1)
             EXIT
          ENDIF
       ENDDO
@@ -979,12 +979,12 @@ DO I=1,p_grid%NumFreq
    FLU2      = ( p_grid%Freq(I)*L1_U )**2
    Tmp       = 1.0 + 71.0*FLU2
 
-   Spec(I,1) = (StdScale(1)**2)*2.0*SigmaL1_U/Tmp**Exp1
+   Spec(I,1) = (p_met%USR_StdScale(1)**2)*2.0*SigmaL1_U/Tmp**Exp1
    Spec(I,2) = SigmaL1_U*( 1.0 + 189.0*FLU2 )/Tmp**Exp2
    Spec(I,3) = Spec(I,2)
 
-   Spec(I,2) = (StdScale(2)**2)*Spec(I,2)
-   Spec(I,3) = (StdScale(3)**2)*Spec(I,3)
+   Spec(I,2) = (p_met%USR_StdScale(2)**2)*Spec(I,2)
+   Spec(I,3) = (p_met%USR_StdScale(3)**2)*Spec(I,3)
 
 ENDDO ! I
 

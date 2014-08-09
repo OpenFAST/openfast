@@ -41,7 +41,7 @@ use TSMods
       p_CohStr%ScaleWid = p_grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
       p_CohStr%Zbottom  = p_grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
 
-      IF ( KHtest ) THEN      
+      IF ( p_met%KHtest ) THEN      
             ! for LES test case....
          p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
          p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
@@ -222,13 +222,13 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
 
       ! Compute the mean interarrival time and the expected length of events
 
-   SELECT CASE ( SpecModel )
+   SELECT CASE ( p_met%SpecModel )
 
       CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
          y_CohStr%lambda = -0.000904*p_met%Rich_No + 0.000562*WindSpeed + 0.001389
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         IF ( SpecModel == SpecModel_NONE ) THEN
+         IF ( p_met%SpecModel == SpecModel_NONE ) THEN
             y_CohStr%ExpectedTime = 600.0
          ELSE
             CALL RndModLogNorm( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
@@ -285,7 +285,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
    TStartNext = rn / 2.0
 
-   IF ( KHtest ) THEN
+   IF ( p_met%KHtest ) THEN
       y_CohStr%ExpectedTime = p_grid%UsableTime     / 2                 ! When testing, add coherent events for half of the record
       TStartNext            = y_CohStr%ExpectedTime / 2                 ! When testing, start about a quarter of the way into the record
    ENDIF
@@ -337,7 +337,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
       TEnd = TStartNext + p_CohStr%EventLen( NewEvent )
 
 
-      IF ( KHtest ) THEN
+      IF ( p_met%KHtest ) THEN
          TStartNext   = p_grid%UsableTime + TStartNext !TEnd + PtrTail%delt ! Add the events right after each other
       ELSE
 
@@ -365,7 +365,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
       ! Next, we start concatenating events until there is no space or we exceed the expected time
 
-   IF ( SpecModel /= SpecModel_NONE ) THEN
+   IF ( p_met%SpecModel /= SpecModel_NONE ) THEN
 
       NumCompared = 0
 
@@ -473,7 +473,7 @@ use TS_RandNum
    ! compute ScaleVel:
    !-------------------------
 
-   IF ( KHtest ) THEN      
+   IF ( p_met%KHtest ) THEN      
          ! for LES test case....
       p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
       p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
@@ -507,11 +507,11 @@ use TS_RandNum
    ! compute maximum predicted CTKE:
    !-------------------------
          
-   SELECT CASE ( SpecModel )
+   SELECT CASE ( p_met%SpecModel )
          
       CASE ( SpecModel_NWTCUP,  SpecModel_NONE, SpecModel_USRVKM )
             
-         IF (KHtest) THEN
+         IF (p_met%KHtest) THEN
             y_CohStr%CTKE = 30.0 !Scale for large coherence
             CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, y_CohStr%CTKE )
          ELSE    
@@ -535,7 +535,7 @@ use TS_RandNum
                ENDIF
             ENDIF
                   
-         ENDIF !KHTest
+         ENDIF !p_met%KHtest
                
       CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
 

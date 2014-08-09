@@ -150,6 +150,11 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  UnOut                           ! unit for output files
 
+
+CHARACTER(200)          :: InFile = 'TurbSim.inp'           ! Root name of the I/O files.
+
+
+
 INTEGER(IntKi)          :: ErrStat     ! allocation status
 CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
 
@@ -177,22 +182,22 @@ CALL DispNVD
 
 
    ! Check for command line arguments.
-
+InFile = 'TurbSim.inp'  ! default name for input file
 CALL CheckArgs( InFile )
 
 
    ! Open input file and summary file.
 
-CALL GetFiles
+CALL GetFiles( InFile )
 
 
    ! Get input parameters.
 
-CALL GetInput(ErrStat, ErrMsg)
+CALL GetInput(InFile, ErrStat, ErrMsg)
 CALL CheckError()
 
 CALL WrSum_EchoInputs() 
-call WrSum_UserInput(US)
+call WrSum_UserInput(p_met,US)
 
 call TS_ValidateInput(ErrStat, ErrMsg)
 CALL CheckError()
@@ -320,9 +325,9 @@ CALL AllocAry(U,     p_grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrM
 CALL CheckError()
 
 IF ( WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( URef, RefHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   U = getVelocityProfile( p_met%URef, p_met%RefHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
 ELSE 
-   U = getVelocityProfile( UHub,  p_grid%HubHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) 
+   U = getVelocityProfile(       UHub,  p_grid%HubHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) 
 ENDIF
 
    ! Wind Direction:
@@ -333,17 +338,17 @@ IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
    WindDir_profile = getDirectionProfile(p_grid%Z, WindProfileType)
 END IF
 
-IF ( SpecModel == SpecModel_GP_LLJ) THEN
+IF ( p_met%SpecModel == SpecModel_GP_LLJ) THEN
 
       ! Allocate the arrays for the z/l and ustar profile
       
-   CALL AllocAry(ZL_profile,    p_grid%ZLim, 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
+   CALL AllocAry(p_met%ZL_profile,    p_grid%ZLim, 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
    CALL CheckError()
-   CALL AllocAry(Ustar_profile, p_grid%ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
+   CALL AllocAry(p_met%Ustar_profile, p_grid%ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
-   ZL_profile(:)    = getZLARY(    U, p_grid%Z, p_met%Rich_No, p_met%ZL, p_met%L, p_met%ZLOffset )
-   Ustar_profile(:) = getUstarARY( U, p_grid%Z, p_met%UStarOffset, p_met%UStarSlope )
+   p_met%ZL_profile(:)    = getZLARY(    U, p_grid%Z, p_met%Rich_No, p_met%ZL, p_met%L, p_met%ZLOffset )
+   p_met%Ustar_profile(:) = getUstarARY( U, p_grid%Z, p_met%UStarOffset, p_met%UStarSlope )
    
 END IF
 
@@ -361,10 +366,7 @@ END IF
 
 
   
-IF ( ( SpecModel  == SpecModel_IECKAI ) .OR. &
-     ( SpecModel  == SpecModel_IECVKM ) .OR. &
-     ( SpecModel  == SpecModel_MODVKM ) .OR. &
-     ( SpecModel  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
+IF ( p_met%IsIECModel )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
 
       ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
       ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
@@ -422,7 +424,7 @@ ENDIF
 
    ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
 
-IF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN
+IF ( p_met%SpecModel == SpecModel_TIDAL .OR. p_met%SpecModel == SpecModel_RIVER ) THEN
       ! Calculate the shear, DUDZ, for all heights.
    ALLOCATE ( DUDZ(p_grid%ZLim) , STAT=AllocStat ) ! Shear
    DUDZ(1)=(U(2)-U(1))/(p_grid%Z(2)-p_grid%Z(1))
@@ -441,14 +443,14 @@ DO IZ=1,p_grid%ZLim
          ! The continuous, one-sided PSDs are evaluated at discrete
          ! points and the results are stored in the "Work" matrix.
 
-      IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM ) THEN
+      IF ( p_met%SpecModel == SpecModel_IECKAI .or. p_met%SpecModel == SpecModel_IECVKM ) THEN
          CALL PSDcal( p_grid%HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
          
-      ELSEIF ( SpecModel == SpecModel_TIDAL .OR. SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
+      ELSEIF ( p_met%SpecModel == SpecModel_TIDAL .OR. p_met%SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
          CALL PSDCal( p_grid%Z(IZ) , U(IZ), UShr=DUDZ(IZ) )
          
-      ELSEIF ( ALLOCATED( ZL_profile ) ) THEN
-         CALL PSDcal( p_grid%Z(IZ), U(IZ), ZL_loc=ZL_profile(IZ), UStar_loc=Ustar_profile(IZ) )
+      ELSEIF ( ALLOCATED( p_met%ZL_profile ) ) THEN
+         CALL PSDcal( p_grid%Z(IZ), U(IZ), ZL_loc=p_met%ZL_profile(IZ), UStar_loc=p_met%Ustar_profile(IZ) )
          
       ELSE
          CALL PSDcal( p_grid%Z(IZ), U(IZ) )
@@ -516,19 +518,19 @@ ENDIF
 IF ( ALLOCATED( Work  ) )  DEALLOCATE( Work  )
 
 IF ( ALLOCATED( DUDZ            ) )  DEALLOCATE( DUDZ            )
-IF ( ALLOCATED( Z_USR           ) )  DEALLOCATE( Z_USR           )
-IF ( ALLOCATED( U_USR           ) )  DEALLOCATE( U_USR           )
-IF ( ALLOCATED( WindDir_USR     ) )  DEALLOCATE( WindDir_USR     )
-IF ( ALLOCATED( Sigma_USR       ) )  DEALLOCATE( Sigma_USR       )
-IF ( ALLOCATED( L_USR           ) )  DEALLOCATE( L_USR           )
+IF ( ALLOCATED( p_met%USR_Z           ) )  DEALLOCATE( p_met%USR_Z           )
+IF ( ALLOCATED( p_met%USR_U           ) )  DEALLOCATE( p_met%USR_U           )
+IF ( ALLOCATED( p_met%USR_WindDir     ) )  DEALLOCATE( p_met%USR_WindDir     )
+IF ( ALLOCATED( p_met%USR_Sigma       ) )  DEALLOCATE( p_met%USR_Sigma       )
+IF ( ALLOCATED( p_met%USR_L           ) )  DEALLOCATE( p_met%USR_L           )
 
-IF ( ALLOCATED( ZL_profile      ) )  DEALLOCATE( ZL_profile      )
-IF ( ALLOCATED( Ustar_profile   ) )  DEALLOCATE( Ustar_profile   )
+IF ( ALLOCATED( p_met%ZL_profile      ) )  DEALLOCATE( p_met%ZL_profile      )
+IF ( ALLOCATED( p_met%Ustar_profile   ) )  DEALLOCATE( p_met%Ustar_profile   )
 
-IF ( ALLOCATED( Freq_USR   ) )  DEALLOCATE( Freq_USR   )
-IF ( ALLOCATED( Uspec_USR  ) )  DEALLOCATE( Uspec_USR  )
-IF ( ALLOCATED( Vspec_USR  ) )  DEALLOCATE( Vspec_USR  )
-IF ( ALLOCATED( Wspec_USR  ) )  DEALLOCATE( Wspec_USR  )
+IF ( ALLOCATED( p_met%USR_Freq   ) )  DEALLOCATE( p_met%USR_Freq   )
+IF ( ALLOCATED( p_met%USR_Uspec  ) )  DEALLOCATE( p_met%USR_Uspec  )
+IF ( ALLOCATED( p_met%USR_Vspec  ) )  DEALLOCATE( p_met%USR_Vspec  )
+IF ( ALLOCATED( p_met%USR_Wspec  ) )  DEALLOCATE( p_met%USR_Wspec  )
 
 
    ! Allocate memory for random number array
@@ -561,8 +563,8 @@ CALL CheckError()
 CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 
-IF (SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
-    IF (SpecModel == SpecModel_API) THEN
+IF (p_met%SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
+    IF (p_met%SpecModel == SpecModel_API) THEN
         CALL CohSpecVMat_API( NSize) 
     ELSE
         CALL CohSpecVMat( NSize)
@@ -628,7 +630,7 @@ CALL CheckError()
 
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
-SELECT CASE ( SpecModel )
+SELECT CASE ( p_met%SpecModel )
 !MLB: There does not seem to be a CASE for TurbModel=="API".
       
 CASE (SpecModel_GP_LLJ, &
@@ -803,7 +805,7 @@ IF ( WrFile(FileExt_CTS) ) THEN
          
       ! Write the number of separate events to the summary file
 
-   IF (KHtest) THEN
+   IF (p_met%KHtest) THEN
       WRITE ( US,'(/)' )
    ELSE
       WRITE ( US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda

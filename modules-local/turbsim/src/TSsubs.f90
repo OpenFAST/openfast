@@ -88,8 +88,7 @@ V(:,:,:) = 0.0_ReKi    ! initialize the velocity matrix
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
-
-IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
+IF ( p_met%IsIECModel ) THEN
    DistZMExp(:) = 1.0
 ENDIF
 
@@ -136,7 +135,7 @@ POINT_J:       DO JZ=1,IZ
                         Dist(Indx)= SQRT( ( dY )**2  + ( p_grid%Z(IZ) - p_grid%Z(JZ) )**2 )
                      END IF
 
-                     IF ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM  .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) THEN
+                     IF ( p_met%IsIECModel ) THEN
                         DistU(Indx) = Dist(Indx)/UHub
 !                           TRH(Indx) = EXP( -p_met%InCDec(IVec)*SQRT( ( p_grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
@@ -169,7 +168,7 @@ IF ( COH_OUT ) THEN
 
 ENDIF
 
-IF ( ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) ) THEN
+IF ( p_met%IsIECmodel ) THEN
    IVec_End = 1
 ELSE
    IVec_End = 3
@@ -396,7 +395,7 @@ ENDIF
 
 DO IVec = 1,3
 
-   IF ( ( SpecModel == SpecModel_IECKAI .or. SpecModel == SpecModel_IECVKM .OR. SpecModel == SpecModel_MODVKM .OR. SpecModel == SpecModel_API ) .AND. ( IVec /= 1 ) ) THEN
+   IF ( p_met%IsIECModel .AND. ( IVec /= 1 ) ) THEN
          ! There is no coherence defined for the v or w component of the IEC spectral models
       IdentityCoh = .TRUE.
    ELSE
@@ -435,7 +434,7 @@ DO IVec = 1,3
                   TEMP_Z=Coef_AlphaZ*p_grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
-                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/URef)
+                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p_met%URef)
 
 
             ENDDO ! JJ
@@ -725,7 +724,7 @@ SUBROUTINE GetDefaultCoh(WS,Ht, InCDec, InCohB )
    ! These numbers come from Neil's analysis
 
    USE                     TSMods, ONLY : p_met
-   USE                     TSMods, ONLY : TurbModel, SpecModel
+   USE                     TSMods, ONLY : TurbModel
 
    REAL(ReKi), INTENT(  OUT)            :: InCDec(3)         ! default coherence decrement
    REAL(ReKi), INTENT(  OUT)            :: InCohB(3)         ! default coherence parameter B
@@ -771,7 +770,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             Ri_Cat = 5
       ENDIF
 
-      SELECT CASE ( SpecModel )
+      SELECT CASE ( p_met%SpecModel )
 
          CASE ( SpecModel_GP_LLJ )
             HT1 = MAX( 60.0, MIN( Ht, 100.0 ) )
@@ -1253,9 +1252,8 @@ SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
    !  stresses.
 
    USE                     TSMods, ONLY : p_grid
-   USE                     TSMods, ONLY : RefHt                           ! This is needed for the HYDRO spectral models.
    USE                     TSMods, ONLY : p_met
-   USE                     TSMods, ONLY : TurbModel, SpecModel
+   USE                     TSMods, ONLY : TurbModel
    USE                     TSMods, ONLY : UHub
    USE                     TSMods, ONLY : WindProfileType
    
@@ -1291,7 +1289,7 @@ use TurbSim_Types
 
 !BJJ: check the ranges of our best-fit parameters, using domains of measured values
 
-   SELECT CASE ( SpecModel )
+   SELECT CASE ( p_met%SpecModel )
       CASE ( SpecModel_GP_LLJ )
          ZLtmp  = MIN( MAX( p_met%ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
          UStar2 = MIN( MAX( p_met%Ustar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
@@ -1315,7 +1313,7 @@ use TurbSim_Types
    UWskip     = .FALSE.
    
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( SpecModel )
+   SELECT CASE ( p_met%SpecModel )
 
       CASE ( SpecModel_GP_LLJ )
 
@@ -1366,7 +1364,7 @@ use TurbSim_Types
          p_met%UWskip = .true.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
-         UW = -Ustar2*(1-p_grid%HubHt/RefHt)
+         UW = -Ustar2*(1-p_grid%HubHt/p_met%RefHt) 
       CASE DEFAULT
 
          UW = -Ustar2
@@ -1379,7 +1377,7 @@ use TurbSim_Types
    UVskip     = .FALSE.
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( SpecModel )
+   SELECT CASE ( p_met%SpecModel )
 
       CASE ( SpecModel_GP_LLJ )
 
@@ -1449,7 +1447,7 @@ use TurbSim_Types
    VWskip     = .FALSE.
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( SpecModel )
+   SELECT CASE ( p_met%SpecModel )
 
       CASE ( SpecModel_GP_LLJ )
 
@@ -1606,7 +1604,74 @@ FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL, ZJetMax)
 
 END FUNCTION
 !=======================================================================
+SUBROUTINE Calc_MO_zL(SpecModel, Rich_No, HubHt, ZL, L )
 
+! this routine calculates the M-O z/L and L parameters using
+!  Rich_No, SpecModel, and HubHt
+
+   use TurbSim_Types
+   IMPLICIT NONE
+                
+   REAL(ReKi)    , intent(in)               :: HubHt                                    ! Hub height
+   REAL(ReKi)    , intent(in)               :: RICH_NO                                  ! Gradient Richardson number                
+   REAL(ReKi)    , intent(  out)            :: L                                        ! M-O length
+   REAL(ReKi)    , intent(  out)            :: ZL                                       ! A measure of stability
+   
+   INTEGER(IntKi), intent(in)               :: SpecModel                                ! Integer value of spectral model (see SpecModel enum)
+   
+
+      ! ***** Calculate M-O z/L parameter   :  z/L is a number in (-inf, 1] *****
+
+   IF ( SpecModel == SpecModel_NWTCUP ) THEN
+         ! Calculate disk averaged Z/L from turbine layer Ri for NWTC/LIST experiment
+
+      IF ( RICH_NO <= -0.1 ) THEN
+         ZL = -0.254 + 1.047*RICH_NO
+      ELSEIF ( RICH_NO < 0 ) THEN
+         ZL = 10.369*RICH_NO/(1.0 - 19.393*RICH_NO)
+      ELSE  !( RICH_NO < 0.155 ) THEN
+         ZL = 2.535*MIN( RICH_NO, 0.155_ReKi ) / (1.0 - 6.252*MIN( RICH_NO, 0.155_ReKi ))
+      ENDIF
+
+
+   ELSEIF (SpecModel == SpecModel_GP_LLJ) THEN
+
+      IF ( RICH_NO <= -0.1 ) THEN
+         ZL = -0.047 + 1.054*RICH_NO
+      ELSEIF ( RICH_NO < 0 ) THEN
+         ZL = 2.213*RICH_NO/(1.0 - 4.698*RICH_NO)
+      ELSE  !( RICH_NO < 0.1367 ) THEN
+         ZL = 3.132*MIN( RICH_NO, 0.1367_ReKi ) / (1.0 - 6.762*MIN( RICH_NO, 0.1367_ReKi ))
+      ENDIF
+
+   ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181-189.
+
+      IF ( RICH_NO <= 0.0 ) THEN
+         ZL = RICH_NO
+         !PhiM = (1.0 - 16.0*ZL)**-0.25
+      ELSEIF ( RICH_NO < 0.16667 ) THEN
+         ZL = MIN(RICH_NO / ( 1.0 - 5.0*RICH_NO ), 1.0_ReKi )  ! The MIN() will take care of rounding issues.
+         !PhiM = (1.0 + 5.0*ZL)
+      ELSE
+         ZL = 1.0
+      ENDIF
+
+   ENDIF !SpecModels
+
+   ZL = MIN( ZL, 1.0_ReKi )
+
+   
+      ! ***** Calculate M-O length scale, L [meters] *****
+      ! L should be constant in the surface layer
+
+   IF ( .NOT. EqualRealNos(ZL , 0.0_ReKi) ) THEN
+      L = HubHt / ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
+   ELSE
+      L = HUGE( L )
+   ENDIF
+
+
+END SUBROUTINE Calc_MO_zL
 
 !=======================================================================
 FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset)
@@ -1703,12 +1768,12 @@ REAL(ReKi), INTENT(IN) :: Ri_No                ! Richardson Number
 REAL(ReKi)             :: PowerLawExp          ! Power Law exponent for particular model
 
 
-IF ( KHtest ) THEN
+IF ( p_met%KHtest ) THEN
    PowerLawExp = 0.3
    RETURN
 ENDIF
 
-SELECT CASE ( SpecModel )
+SELECT CASE ( p_met%SpecModel )
 
    CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
       IF ( Ri_No > 0.0 ) THEN
@@ -1729,7 +1794,7 @@ SELECT CASE ( SpecModel )
       PowerLawExp = 0.143
 
    CASE DEFAULT
-      IF ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) THEN
+      IF ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 .OR. p_IEC%IEC_WindType == IEC_EWM100 ) THEN
          PowerLawExp = 0.11         ! [IEC 61400-1 6.3.2.1 (14)]
       ELSEIF ( p_IEC%IECstandard == 3 ) THEN
          PowerLawExp = 0.14         ! [IEC 61400-3 Page 22 (3)]
@@ -1744,9 +1809,8 @@ END FUNCTION PowerLawExp
 !=======================================================================
 SUBROUTINE PSDcal ( Ht, Ucmp, UShr, ZL_loc, Ustar_loc)
 
+use TSMods, only: p_met, p_IEC, Work, TurbModel
    ! This routine calls the appropriate spectral model.
-
-USE                                TSMods
 
 IMPLICIT                            NONE
 
@@ -1757,7 +1821,7 @@ REAL(ReKi), INTENT(IN), OPTIONAL :: UShr           ! Shear (du/dz)
 REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
 
-SELECT CASE ( SpecModel )
+SELECT CASE ( p_met%SpecModel )
    CASE ( SpecModel_GP_LLJ )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
@@ -1775,7 +1839,7 @@ SELECT CASE ( SpecModel )
    CASE ( SpecModel_SMOOTH )
       CALL Spec_SMOOTH   ( Ht, Ucmp, Work )
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-      CALL Spec_TIDAL  ( Ht, UShr, Work, SpecModel )
+      CALL Spec_TIDAL  ( Ht, UShr, Work, p_met%SpecModel )
    CASE ( SpecModel_USER )
       CALL Spec_UserSpec   ( Work )
    CASE ( SpecModel_USRVKM )
@@ -1808,6 +1872,7 @@ END SUBROUTINE PSDcal
 
 
 
+!=======================================================================
 SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 
 ! Assumes that these variables are set:
@@ -2150,7 +2215,7 @@ SUBROUTINE CalcIECScalingParams( p_IEC )
 ! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
 ! calculates SigmaIEC, Lambda, IntegralScale, Lc
 use TurbSim_Types
-use TSMods, only: UHub, p_grid, p_met, SpecModel
+use TSMods, only: UHub, p_grid, p_met
 
    TYPE(IEC_ParameterType), INTENT(INOUT) :: p_IEC                       ! parameters for IEC models
       
@@ -2203,7 +2268,7 @@ use TSMods, only: UHub, p_grid, p_met, SpecModel
                   p_IEC%Vave        = 0.2*p_IEC%Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
                   p_IEC%SigmaIEC(1) = p_IEC%ETMc * p_IEC%TurbInt15 * ( 0.072 * &
                                      ( p_IEC%Vave / p_IEC%ETMc + 3.0) * (Uhub / p_IEC%ETMc - 4.0)+10.0 )       ! [IEC-1 Ed3 6.3.2.3 (19)]
-               CASE ( IEC_EWM1, IEC_EWM50 )
+               CASE ( IEC_EWM1, IEC_EWM50, IEC_EWM100 )
                   p_IEC%Vave        = 0.2*p_IEC%Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
                   p_IEC%SigmaIEC(1) = 0.11*Uhub                                                                ! [IEC-1 Ed3 6.3.2.1 (16)]
                CASE DEFAULT 
@@ -2220,6 +2285,7 @@ use TSMods, only: UHub, p_grid, p_met, SpecModel
 
    ENDIF
 
+   ! note PLExp for IEC is set elsewhere
    
       ! IEC turbulence scale parameter, Lambda(1), and IEC coherency scale parameter, LC
 
@@ -2255,7 +2321,7 @@ use TSMods, only: UHub, p_grid, p_met, SpecModel
    
       ! Set Lambda for Modified von Karman model:
 
-   IF ( MVK .AND. SpecModel  == SpecModel_MODVKM ) THEN
+   IF ( MVK .AND. p_met%SpecModel  == SpecModel_MODVKM ) THEN
       p_met%z0 = FindZ0(p_grid%HubHt, p_IEC%SigmaIEC(1), UHub, p_met%Fc)
       CALL ScaleMODVKM(p_grid%HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
    ENDIF   
@@ -2264,7 +2330,7 @@ use TSMods, only: UHub, p_grid, p_met, SpecModel
       ! Sigma for v and w components and
       ! Integral scales (which depend on lambda)
    
-   IF ( SpecModel == SpecModel_IECVKM ) THEN
+   IF ( p_met%SpecModel == SpecModel_IECVKM ) THEN
       
       p_IEC%SigmaIEC(2)      =  1.0*p_IEC%SigmaIEC(1)
       p_IEC%SigmaIEC(3)      =  1.0*p_IEC%SigmaIEC(1)
@@ -2307,12 +2373,12 @@ ErrMsg  = ""
 IF ( WrFile(FileExt_CTS) ) THEN
    
       ! models where coherent structures apply:
-   IF ( SpecModel == SpecModel_GP_LLJ .OR. &
-        SpecModel == SpecModel_NWTCUP .OR. &
-        SpecModel == SpecModel_SMOOTH .OR. &
-        SpecModel == SpecModel_WF_UPW .OR. &
-        SpecModel == SpecModel_WF_07D .OR. &
-        SpecModel == SpecModel_WF_14D ) THEN
+   IF ( p_met%SpecModel == SpecModel_GP_LLJ .OR. &
+        p_met%SpecModel == SpecModel_NWTCUP .OR. &
+        p_met%SpecModel == SpecModel_SMOOTH .OR. &
+        p_met%SpecModel == SpecModel_WF_UPW .OR. &
+        p_met%SpecModel == SpecModel_WF_07D .OR. &
+        p_met%SpecModel == SpecModel_WF_14D ) THEN
       
       IF ( p_met%RICH_NO <= -0.05 ) THEN
          CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, 'TS_ValidateInput')
@@ -2332,7 +2398,7 @@ ENDIF !WrAct
 
       ! Warn if EWM is used with incompatible times
       
-IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 ) .AND. & 
+IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 .OR. p_IEC%IEC_WindType == IEC_EWM100) .AND. & 
       ABS( 600.0_ReKi - MAX(p_grid%AnalysisTime,p_grid%UsableTime) ) > 90.0_ReKi ) THEN
    CALL SetErrStat( ErrID_Warn, 'The EWM parameters are valid for 10-min simulations only.', ErrStat, ErrMsg, 'TS_ValidateInput')   
 ENDIF        
