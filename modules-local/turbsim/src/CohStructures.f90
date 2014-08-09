@@ -49,14 +49,14 @@ use TSMods
       !   TmpPLExp = PLExp 
       !   PLExp    = MIN( 2.0, 1.35*PLExp )        ! Increase the shear of the background (?)
 
-         p_CohStr%ScaleVel =                     getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   ! Velocity at the top of the wave
-         p_CohStr%ScaleVel = p_CohStr%ScaleVel - getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom,                  p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   ! Shear across the wave
+         p_CohStr%ScaleVel =                     getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter)   ! Velocity at the top of the wave
+         p_CohStr%ScaleVel = p_CohStr%ScaleVel - getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom,                  p_grid%RotorDiameter)   ! Shear across the wave
          p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
       
       !   PLExp = TmpPLExp
       ENDIF
 
-      p_CohStr%Uwave = getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+0.5*p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)                 ! WindSpeed at center of wave
+      p_CohStr%Uwave = getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+0.5*p_CohStr%ScaleWid,p_grid%RotorDiameter)                 ! WindSpeed at center of wave
 
    !BONNIE: MAYBE WE SHOULDN'T OPEN THIS FILE UNTIL WE NEED TO WRITE TO IT
       IF (p_CohStr%ScaleVel < 0. ) THEN
@@ -467,7 +467,7 @@ use TS_RandNum
    p_CohStr%ScaleWid = p_grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
    p_CohStr%Zbottom  = p_grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
-   p_CohStr%Uwave    = getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)                 ! WindSpeed at center of wave
+   p_CohStr%Uwave    = getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_grid%RotorDiameter)                 ! WindSpeed at center of wave
    
    !-------------------------
    ! compute ScaleVel:
@@ -478,8 +478,8 @@ use TS_RandNum
       p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
       p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
    ELSE
-      p_CohStr%ScaleVel =  getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType) &  ! Velocity at the top of the wave
-                         - getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom,                  p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)    ! Shear across the wave
+      p_CohStr%ScaleVel =  getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter) &  ! Velocity at the top of the wave
+                         - getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom,                  p_grid%RotorDiameter)    ! Shear across the wave
       p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
       
       

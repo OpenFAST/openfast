@@ -25,11 +25,8 @@ MODULE TS_FileIO
    use TSSubs
    use ts_errors
    use TS_RandNum
-
    
    IMPLICIT                NONE
-
-
 
 CONTAINS
 
@@ -645,24 +642,24 @@ CALL ReadRVarDefault( UI, InFile, p_IEC%ETMc, "the ETM c parameter", 'IEC Extrem
 UseDefault = .TRUE.         ! Calculate the default value
 SELECT CASE ( p_met%SpecModel )
    CASE ( SpecModel_GP_LLJ )
-      WindProfileType = 'JET'
+      p_met%WindProfileType = 'JET'
    CASE ( SpecModel_IECKAI,SpecModel_IECVKM,SpecModel_MODVKM )
-      WindProfileType = 'IEC'
+      p_met%WindProfileType = 'IEC'
    CASE ( SpecModel_TIDAL )
-      WindProfileType = 'H2L'
+      p_met%WindProfileType = 'H2L'
    CASE ( SpecModel_USRVKM )
-      WindProfileType = 'USR'
+      p_met%WindProfileType = 'USR'
    CASE ( SpecModel_API )
-      WindProfileType = 'API'  ! ADDED BY YG
+      p_met%WindProfileType = 'API'  ! ADDED BY YG
    CASE DEFAULT
-      WindProfileType = 'IEC'
+      p_met%WindProfileType = 'IEC'
 END SELECT
 
-CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Wind profile type", US, UseDefault ) !converts WindProfileType to upper case
+CALL ReadCVarDefault( UI, InFile, p_met%WindProfileType, "the wind profile type", "Wind profile type", US, UseDefault ) !converts WindProfileType to upper case
 
       ! Make sure the variable is valid for this turbulence model
 
-   SELECT CASE ( TRIM(WindProfileType) )
+   SELECT CASE ( TRIM(p_met%WindProfileType) )
       CASE ( 'JET' )
          IF ( p_met%SpecModel /= SpecModel_GP_LLJ ) THEN
             CALL TS_Abort( 'The jet wind profile is available with the GP_LLJ spectral model only.')
@@ -684,14 +681,14 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
          CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' )
    END SELECT
 
-   IF ( p_met%SpecModel == SpecModel_TIDAL .AND. TRIM(WindProfileType) /= "H2L" ) THEN
-      WindProfileType = 'H2L'
+   IF ( p_met%SpecModel == SpecModel_TIDAL .AND. TRIM(p_met%WindProfileType) /= "H2L" ) THEN
+      p_met%WindProfileType = 'H2L'
       CALL TS_Warn  ( 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', -1)
    ENDIF
 
    IF ( p_met%KHtest ) THEN
-      IF ( TRIM(WindProfileType) /= 'IEC' .AND. TRIM(WindProfileType) /= 'PL' ) THEN
-         WindProfileType = 'IEC'
+      IF ( TRIM(p_met%WindProfileType) /= 'IEC' .AND. TRIM(p_met%WindProfileType) /= 'PL' ) THEN
+         p_met%WindProfileType = 'IEC'
          CALL TS_Warn  ( 'Overwriting wind profile type for the KH test.', -1)
       ENDIF
    ENDIF
@@ -701,7 +698,7 @@ CALL ReadCVarDefault( UI, InFile, WindProfileType, "the wind profile type", "Win
 
 CALL ReadVar( UI, InFile, p_met%RefHt, "the reference height", "Reference height [m]")
 
-   IF ( p_met%RefHt <=  0.0 .AND. WindProfileType(1:1) /= 'U' )  THEN
+   IF ( p_met%RefHt <=  0.0 .AND. p_met%WindProfileType(1:1) /= 'U' )  THEN
       CALL TS_Abort ( 'The reference height must be greater than zero.' )
    ENDIF
 
@@ -710,7 +707,7 @@ CALL ReadVar( UI, InFile, p_met%RefHt, "the reference height", "Reference height
 
 UseDefault = .FALSE.
 p_met%URef       = -999.9
-IsUnusedParameter = p_IEC%IEC_WindType > IEC_ETM  .OR. WindProfileType(1:1) == 'U' ! p_IEC%IEC_WindType > IEC_ETM == EWM models
+IsUnusedParameter = p_IEC%IEC_WindType > IEC_ETM  .OR. p_met%WindProfileType(1:1) == 'U' ! p_IEC%IEC_WindType > IEC_ETM == EWM models
 
 ! If we specify a Ustar (i.e. if Ustar /= "default") then we can enter "default" here,
 ! otherwise, we get circular logic...
@@ -720,16 +717,16 @@ IsUnusedParameter = p_IEC%IEC_WindType > IEC_ETM  .OR. WindProfileType(1:1) == '
 
    p_met%NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
 
-   IF ( ( WindProfileType(1:1) /= 'J' .OR. .NOT. UseDefault) .AND. .NOT. IsUnUsedParameter ) THEN
+   IF ( ( p_met%WindProfileType(1:1) /= 'J' .OR. .NOT. UseDefault) .AND. .NOT. IsUnUsedParameter ) THEN
       IF ( p_met%URef <=  0.0 )  THEN
          CALL TS_Abort ( 'The reference wind speed must be greater than zero.' )
       ENDIF
 
-   ELSEIF ( WindProfileType(1:1) == 'U' ) THEN ! for user-defined wind profiles, we overwrite RefHt and URef because they don't mean anything otherwise
+   ELSEIF ( p_met%WindProfileType(1:1) == 'U' ) THEN ! for user-defined wind profiles, we overwrite RefHt and URef because they don't mean anything otherwise
       p_met%RefHt = p_grid%HubHt
       CALL GetUSR( UI, InFile, 37, p_met, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
       IF (ErrStat >= AbortErrLev) RETURN
-      p_met%URef = getVelocity(p_met%URef, p_met%RefHt, p_met%RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) !This is UHub
+      p_met%URef = getVelocity(p_met%URef, p_met%RefHt, p_met%RefHt, p_grid%RotorDiameter) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
    
@@ -737,7 +734,7 @@ IsUnusedParameter = p_IEC%IEC_WindType > IEC_ETM  .OR. WindProfileType(1:1) == '
 
 UseDefault = .FALSE.
 p_met%ZJetMax    = -999.9
-IsUnUsedParameter = WindProfileType(1:1) /= 'J'
+IsUnUsedParameter = p_met%WindProfileType(1:1) /= 'J'
 CALL ReadRVarDefault( UI, InFile, p_met%ZJetMax, "the jet height", "Jet height [m]", US, UseDefault, IGNORE=IsUnusedParameter)
 
    IF ( .NOT. IsUnusedParameter .AND. .NOT. UseDefault ) THEN
@@ -765,7 +762,7 @@ SELECT CASE ( p_met%SpecModel )
 
 END SELECT
 getPLExp = .NOT. UseDefault
-IsUnusedParameter = INDEX( 'JLUHA', WindProfileType(1:1) ) > 0 .OR. p_IEC%IEC_WindType > IEC_ETM  !i.e. PL or IEC
+IsUnusedParameter = INDEX( 'JLUHA', p_met%WindProfileType(1:1) ) > 0 .OR. p_IEC%IEC_WindType > IEC_ETM  !i.e. PL or IEC
 
 CALL ReadRVarDefault( UI, InFile, p_met%PLExp, "the power law exponent", "Power law exponent", US, UseDefault, IGNORE=IsUnusedParameter)
 
@@ -940,7 +937,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
 
          ! ***** Calculate wind speed at hub height *****
 
-   IF ( WindProfileType(1:1) == 'J' ) THEN
+   IF ( p_met%WindProfileType(1:1) == 'J' ) THEN
       IF ( p_met%ZJetMax < 0 ) THEN ! Calculate a default value
          p_met%ZJetMax = -14.820561*p_met%Rich_No + 56.488123*p_met%ZL + 166.499069*p_met%Ustar + 188.253377
          p_met%ZJetMax =   1.9326  *p_met%ZJetMax - 252.7267  ! Correct with the residual
@@ -960,7 +957,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
 
          CALL GetChebCoefs( p_met%UJetMax, p_met%ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p_met%Ustar
 
-         p_met%URef = getVelocity(p_met%UJetMax, p_met%ZJetMax, p_met%RefHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+         p_met%URef = getVelocity(p_met%UJetMax, p_met%ZJetMax, p_met%RefHt, p_grid%RotorDiameter)
 
       ELSE
          CALL GetChebCoefs(p_met%URef, p_met%RefHt)
@@ -968,7 +965,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
 
    ENDIF !Jet wind profile
 
-   UHub = getVelocity(p_met%URef, p_met%RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   UHub = getVelocity(p_met%URef, p_met%RefHt, p_grid%HubHt, p_grid%RotorDiameter)
 
          ! ***** Get p_met%Ustar- and zl-profile values, if required, and determine offsets *****
       IF ( p_met%SpecModel /= SpecModel_GP_LLJ ) THEN
@@ -982,14 +979,14 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
          p_met%UstarSlope = 1.0_ReKi         
          p_met%UstarDiab = getUstarDiab(p_met%URef, p_met%RefHt, p_met%z0, p_met%ZL, p_met%ZJetMax) !bjj: is this problematic for anything else?
 
-         TmpUary   = getVelocityProfile(p_met%URef, p_met%RefHt, TmpZary, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)                  
+         TmpUary   = getVelocityProfile(p_met%URef, p_met%RefHt, TmpZary, p_grid%RotorDiameter)                  
          TmpUstar  = getUstarARY( TmpUary,     TmpZary, 0.0_ReKi, p_met%UstarSlope )
             
          p_met%UstarOffset = p_met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
          TmpUstar(:) = TmpUstar(:) + p_met%UstarOffset
       ENDIF
 
-      TmpZLary = getZLARY(TmpUary, TmpZary, p_met%Rich_No, p_met%ZL, p_met%L, 0.0_ReKi)
+      TmpZLary = getZLARY(TmpUary, TmpZary, p_met%Rich_No, p_met%ZL, p_met%L, 0.0_ReKi, p_met%WindProfileType)
       p_met%zlOffset = p_met%ZL - SUM(TmpZLary) / SIZE(TmpZLary)
 
 
@@ -1266,7 +1263,7 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
 
       ! Calculate wind speed at hub height
 
-   UHub    = getVelocity(p_met%URef, p_met%RefHt, p_grid%HubHt, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   UHub    = getVelocity(p_met%URef, p_met%RefHt, p_grid%HubHt, p_grid%RotorDiameter)
 
 
 ENDIF
@@ -1910,6 +1907,8 @@ INTEGER                     :: AllocStat
 INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
 INTEGER                     :: UATWR                                ! I/O unit for AeroDyn tower data (*.twr file).
 
+CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
+
 
       ! Put normalizing factors into the summary file.  The user can use them to
       ! tell a simulation program how to rescale the data.
@@ -2337,7 +2336,7 @@ USE TurbSim_Types
 
 IMPLICIT                NONE
 
-TYPE(TurbSim_GridParameterType), INTENT(IN)          :: p_grid
+TYPE(Grid_ParameterType), INTENT(IN)          :: p_grid
 REAL(ReKi),                      INTENT(IN)          :: V          (:,:,:)                       ! The Velocities to write to a file
 
 
@@ -2465,6 +2464,7 @@ use TSMods
    INTEGER,    INTENT(IN) :: US
    TYPE(IEC_ParameterType), INTENT(IN) :: p_IEC                       ! parameters for IEC models   
    REAL(ReKi), INTENT(IN)  ::  GridVertCenter                  ! Position of vertical "middle" grid point (to determine if it is the hub height)
+CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
 
    
    ! local variables:   
@@ -2586,12 +2586,12 @@ ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
 
 
 HalfRotDiam = 0.5*p_grid%RotorDiameter
-U_zt        = getVelocity(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the top of rotor
-U_zb        = getVelocity(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,p_grid%RotorDiameter,PROFILE_TYPE=WindProfileType)   !Velocity at the bottom of the rotor
+U_zt        = getVelocity(UHub,p_grid%HubHt,p_grid%HubHt+HalfRotDiam,p_grid%RotorDiameter)   !Velocity at the top of rotor
+U_zb        = getVelocity(UHub,p_grid%HubHt,p_grid%HubHt-HalfRotDiam,p_grid%RotorDiameter)   !Velocity at the bottom of the rotor
       
 WRITE(US,'()')   ! A BLANK LINE
 
-SELECT CASE ( TRIM(WindProfileType) )
+SELECT CASE ( TRIM(p_met%WindProfileType) )
    CASE ('JET')
       p_met%PLexp = LOG( U_zt/U_zb ) / LOG( (p_grid%HubHt+HalfRotDiam)/(p_grid%HubHt-HalfRotDiam) )  !TmpReal = p_grid%RotorDiameter/2
       UTmp  = 0.0422*p_met%ZJetMax+10.1979 ! Best fit of observed peak Uh at jet height vs jet height
@@ -3070,7 +3070,8 @@ REAL(ReKi)                   ::  UH_TI                           ! TI of the hor
 
 INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
-   CHARACTER(*),PARAMETER  :: FormStr2 = "(6X,A,' component: ',F8.3,' m/s')"        ! String used to store format specifiers.
+   CHARACTER(200)            :: FormStr                                  ! String used to store format specifiers.
+   CHARACTER(*),PARAMETER    :: FormStr2 = "(6X,A,' component: ',F8.3,' m/s')"        ! String used to store format specifiers.
 
 
    ! Initialize statistical quantities for hub-height turbulence parameters.
@@ -3514,22 +3515,22 @@ use TSMods
       WRITE (US,"(  A10, 2X, 'IEC Extreme Turbulence Model (ETM) ""c"" parameter [m/s]' )")  'N/A'   
    END IF      
 
-   WRITE (US,"(   A10 , 2X , 'Wind profile type' )"                  )  WindProfileType   
+   WRITE (US,"(   A10 , 2X , 'Wind profile type' )"                  )  p_met%WindProfileType   
    WRITE (US,"( F10.3 , 2X , 'Reference height [m]' )"               )  p_met%RefHt  !BJJ: TODO: check if refht makes sense (or is used) for USR profile.
-   IF ( WindProfileType == 'USR' ) THEN
+   IF ( p_met%WindProfileType == 'USR' ) THEN
       WRITE (US,"(  A10, 2X, 'Reference wind speed [m/s]' )"         )  'N/A'   
    ELSE
       WRITE (US,"( F10.3 , 2X , 'Reference wind speed [m/s]' )"      )  p_met%URef
    END IF
    
       
-   IF ( WindProfileType == 'JET' ) THEN
+   IF ( p_met%WindProfileType == 'JET' ) THEN
       WRITE (US,"( F10.3, 2X, 'Jet height [m]' )"                    ) p_met%ZJetMax 
    ELSE
       WRITE (US,"(  A10, 2X, 'Jet height [m]' )"                     )  'N/A'   
    END IF      
       
-   IF ( INDEX( 'JLUHA', WindProfileType(1:1) ) > 0   ) THEN
+   IF ( INDEX( 'JLUHA', p_met%WindProfileType(1:1) ) > 0   ) THEN
       WRITE (US,"(  A10, 2X, 'Power law exponent' )"                 )  'N/A'   
    ELSE
       WRITE (US,"( F10.3 , 2X , 'Power law exponent' )"              )  p_met%PLExp

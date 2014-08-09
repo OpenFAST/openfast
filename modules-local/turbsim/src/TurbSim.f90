@@ -152,6 +152,7 @@ INTEGER                 ::  UnOut                           ! unit for output fi
 
 
 CHARACTER(200)          :: InFile = 'TurbSim.inp'           ! Root name of the I/O files.
+CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
 
 
 
@@ -324,18 +325,18 @@ ENDIF
 CALL AllocAry(U,     p_grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
 CALL CheckError()
 
-IF ( WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( p_met%URef, p_met%RefHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+IF ( p_met%WindProfileType(1:3) == 'API' )  THEN
+   U = getVelocityProfile( p_met%URef, p_met%RefHt, p_grid%Z, p_grid%RotorDiameter)
 ELSE 
-   U = getVelocityProfile(       UHub,  p_grid%HubHt, p_grid%Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType) 
+   U = getVelocityProfile(       UHub,  p_grid%HubHt, p_grid%Z, p_grid%RotorDiameter) 
 ENDIF
 
    ! Wind Direction:
-IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
+IF ( INDEX( 'JU', p_met%WindProfileType(1:1) ) > 0 ) THEN
    CALL AllocAry(WindDir_profile, p_grid%ZLim, 'WindDir_profile (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
    CALL CheckError()
    
-   WindDir_profile = getDirectionProfile(p_grid%Z, WindProfileType)
+   WindDir_profile = getDirectionProfile(p_grid%Z)
 END IF
 
 IF ( p_met%SpecModel == SpecModel_GP_LLJ) THEN
@@ -347,13 +348,13 @@ IF ( p_met%SpecModel == SpecModel_GP_LLJ) THEN
    CALL AllocAry(p_met%Ustar_profile, p_grid%ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
-   p_met%ZL_profile(:)    = getZLARY(    U, p_grid%Z, p_met%Rich_No, p_met%ZL, p_met%L, p_met%ZLOffset )
+   p_met%ZL_profile(:)    = getZLARY(    U, p_grid%Z, p_met%Rich_No, p_met%ZL, p_met%L, p_met%ZLOffset, p_met%WindProfileType )
    p_met%Ustar_profile(:) = getUstarARY( U, p_grid%Z, p_met%UStarOffset, p_met%UStarSlope )
    
 END IF
 
 
-IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
+IF ( INDEX( 'JU', p_met%WindProfileType(1:1) ) > 0 ) THEN
    IF (p_grid%ExtraHubPT) THEN    
       JZ = p_grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
    ELSE
@@ -392,7 +393,7 @@ IF (DEBUG_OUT) THEN
    CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
          
    !bjj: This doesn't need to be part of the summary file, so put it in the debug file
-   IF (WindProfileType(1:1) == 'J' ) THEN
+   IF (p_met%WindProfileType(1:1) == 'J' ) THEN
       WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
       WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( IY, IY=0,10 )
       WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
@@ -565,10 +566,11 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 IF (p_met%SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (p_met%SpecModel == SpecModel_API) THEN
-        CALL CohSpecVMat_API( NSize) 
+        CALL CohSpecVMat_API( NSize, ErrStat, ErrMsg) 
     ELSE
-        CALL CohSpecVMat( NSize)
+        CALL CohSpecVMat( NSize, ErrStat, ErrMsg)
     ENDIF
+    CALL CheckError()
 ENDIF
 
 

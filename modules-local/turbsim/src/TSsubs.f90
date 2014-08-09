@@ -22,7 +22,7 @@ CONTAINS
 
 
 !=======================================================================
-SUBROUTINE CohSpecVMat( NSize )
+SUBROUTINE CohSpecVMat( NSize, ErrStat, ErrMsg )
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -60,28 +60,29 @@ INTEGER                    :: IY             ! The index of the y-value of point
 INTEGER                    :: IZ             ! Index of the z-value of point I
 INTEGER                    :: Stat
 
+INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
 
+
+INTEGER(IntKi), INTENT(OUT)   :: ErrStat
+CHARACTER(*),   INTENT(OUT)   :: ErrMsg
+
+INTEGER(IntKi)                :: ErrStat2
+CHARACTER(MaxMsgLen)          :: ErrMsg2
 
 ! ------------ arrays allocated -------------------------
 Stat = 0.
+UC = -1
+ErrStat = ErrID_None
+ErrMsg  = ""
 
-IF ( .NOT. ALLOCATED( Dist ) ) ALLOCATE( Dist(NSize),      STAT=Stat )
+CALL AllocAry( Dist,      NSize,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+CALL AllocAry( DistU,     NSize,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+CALL AllocAry( DistZMExp, NSize, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+IF (ErrStat >= AbortErrLev) THEN
+   CALL Cleanup()
+   RETURN
+END IF
 
-IF ( Stat /= 0 ) THEN
-   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist coherence array.')
-ENDIF
-
-IF ( .NOT. ALLOCATED( DistU     ) ) ALLOCATE( DistU(NSize),     STAT=Stat )
-
-IF ( Stat /= 0 )  THEN
-   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the turbulence DistU coherence array.')
-ENDIF
-
-IF ( .NOT. ALLOCATED( DistZMExp ) ) ALLOCATE( DistZMExp(NSize), STAT=Stat )
-
-IF ( Stat /= 0 )  THEN
-   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the turbulence DistZMExp coherence array.')
-ENDIF
 
 V(:,:,:) = 0.0_ReKi    ! initialize the velocity matrix
 
@@ -157,14 +158,19 @@ POINT_J:       DO JZ=1,IZ
 IF ( COH_OUT ) THEN
 
       ! Write the coherence for three frequencies, for debugging purposes
-
-      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh' )
-!      WRITE( UC, '(A4,X,3(A16),2(A11))' ) 'Comp','Distance', 'Avg Height', 'Avg Wind Speed', 'c(F1)','c(F2)'
-
-      WRITE( UC, '(A4,X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
-      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance',     Dist(:)
-      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance/U',   DistU(:)
-      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) '(r/Z)^CohExp', DistZMExp(:)
+      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+      
+      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+         
+      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance',     Dist(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance/U',   DistU(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) '(r/Z)^CohExp', DistZMExp(:)
 
 ENDIF
 
@@ -203,7 +209,7 @@ DO IVec = 1,IVec_End
          ENDDO ! JJ
       ENDDO ! II
       
-      CALL Coh2H(    IVec, IFreq, TRH, S,              p_grid%NPoints, NSize )
+      CALL Coh2H(    IVec, IFreq, TRH, S,              p_grid%NPoints, NSize, UC )
       CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p_grid%NPoints )
    ENDDO !IFreq
 
@@ -225,19 +231,23 @@ DO IVec = IVec_End+1,3
       
 END DO
 
-
-IF (COH_OUT)  CLOSE( UC )
-
-IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
-IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
-IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
-
+CALL Cleanup()
 
 RETURN
+!............................................
+CONTAINS
+   SUBROUTINE Cleanup()
 
+      IF (COH_OUT .AND. UC > 0)  CLOSE( UC )
+
+      IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
+      IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
+      IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
+   END SUBROUTINE Cleanup
+!............................................
 END SUBROUTINE CohSpecVMat
 !=======================================================================
-SUBROUTINE CohSpecVMat_API( NSize)
+SUBROUTINE CohSpecVMat_API( NSize, ErrStat, ErrMsg)
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -274,7 +284,15 @@ INTEGER                    :: IY             ! The index of the y-value of point
 INTEGER                    :: IZ             ! Index of the z-value of point I
 INTEGER                    :: Stat
 
+INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
+
 LOGICAL                    :: IdentityCoh
+
+INTEGER(IntKi), INTENT(OUT)   :: ErrStat
+CHARACTER(*),   INTENT(OUT)   :: ErrMsg
+
+INTEGER(IntKi)                :: ErrStat2
+CHARACTER(MaxMsgLen)          :: ErrMsg2
 
 
 !REAL :: Coef_QX=1.00
@@ -296,37 +314,26 @@ REAL :: Coef_2=100.0!32.8
 REAL :: TEMP_Y, TEMP_Z
 
 
+! initialize variables
+ErrStat = ErrID_None
+ErrMsg  = ""
+UC      = -1
 
 V(:,:,:) = 0.0    ! initialize the velocity matrix
 
 ! ------------ arrays allocated -------------------------
 Stat = 0.
 
-!mlb IF ( .NOT. ALLOCATED( Dist ) ) ALLOCATE( Dist(NSize),      STAT=Stat )
-!mlb IF ( Stat /= 0 ) THEN
-!mlb    CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist coherence array.')
-!mlb ENDIF
-IF ( .NOT. ALLOCATED( Dist_Y ) ) ALLOCATE(Dist_Y(NSize),      STAT=Stat )
-IF ( Stat /= 0 ) THEN
-   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist_Y coherence array.')
-ENDIF
-IF ( .NOT. ALLOCATED( Dist_Z ) ) ALLOCATE( Dist_Z(NSize),      STAT=Stat )
-IF ( Stat /= 0 ) THEN
-   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist_Z coherence array.')
-ENDIF
-!mlb: IF ( .NOT. ALLOCATED( Dist_Z12 ) ) ALLOCATE( Dist_Z12(NSize),      STAT=Stat )
-!mlb:
-!mlb: IF ( Stat /= 0 ) THEN
-!mlb:    CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Dist_Z12 coherence array.')
-IF ( .NOT. ALLOCATED( Z1Z2 ) ) ALLOCATE( Z1Z2(NSize),      STAT=Stat )
+CALL AllocAry( Dist_Y, NSize, 'Dist_Y coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+CALL AllocAry( Dist_Z, NSize, 'Dist_Z coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+!CALL AllocAry( Dist_Z12, NSize, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+CALL AllocAry( Z1Z2, NSize, 'Z1Z2 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
 
-IF ( Stat /= 0 ) THEN
-   CALL TS_Abort('Error allocating '//TRIM( Int2LStr( ReKi*NSize/1024**2 ) )//' MB for the Z1Z2 coherence array.')
-ENDIF
+IF (ErrStat >= AbortErrLev) THEN
+   CALL Cleanup()
+   RETURN
+END IF
 
-
-
-!! Initialize the velocity matrix  !V(:,:,:) = 0.0 - done outside the subroutine
 
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
@@ -376,21 +383,22 @@ POINT_J:       DO JZ=1,IZ
       ENDDO             ! IY
    ENDDO POINT_I        ! IZ
 
-!IF ( COH_OUT ) THEN
-IF ( .TRUE. ) THEN
+IF ( COH_OUT ) THEN
 
       ! Write the coherence for three frequencies, for debugging purposes
-
-      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh' )
-!      WRITE( UC, '(A4,X,3(A16),2(A11))' ) 'Comp','Distance', 'Avg Height', 'Avg Wind Speed', 'c(F1)','c(F2)'
-
-      WRITE( UC, '(A4,X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
-!MLB: Dist is never set or, apparently, used.
-!mlb      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance',     Dist(:)
-      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Y',   Dist_Y(:)
-      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Z', Dist_Z(:)
-!mlb      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Z12', Dist_Z12(:)
-      WRITE( UC,   '(5X,A16,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
+      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+      
+      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      
+      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Y',   Dist_Y(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Z', Dist_Z(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
 ENDIF
 
 DO IVec = 1,3
@@ -442,26 +450,32 @@ DO IVec = 1,3
       END IF
       
          
-      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize )
+      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, UC )
          
 
    ENDDO !IFreq
 
 ENDDO !IVec
 
-IF (COH_OUT)  CLOSE( UC )
 
-!mlb IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
-IF ( ALLOCATED( Dist_Y    ) ) DEALLOCATE( Dist_Y     )
-IF ( ALLOCATED( Dist_Z ) ) DEALLOCATE( Dist_Z )
-!mlb IF ( ALLOCATED( Dist_Z12 ) ) DEALLOCATE( Dist_Z12 )
-IF ( ALLOCATED( Z1Z2 ) ) DEALLOCATE( Z1Z2 )
+CALL Cleanup()
 CALL WrScr( ' Two-dimensional API coherence matrix is generated!' )
-RETURN
 
+RETURN
+!............................................
+CONTAINS
+   SUBROUTINE Cleanup()
+
+      IF (COH_OUT .AND. UC > 0)  CLOSE( UC )
+
+      IF ( ALLOCATED( Dist_Y ) ) DEALLOCATE( Dist_Y )
+      IF ( ALLOCATED( Dist_Z ) ) DEALLOCATE( Dist_Z )
+      IF ( ALLOCATED( Z1Z2   ) ) DEALLOCATE( Z1Z2 )
+   END SUBROUTINE Cleanup
+!............................................
 END SUBROUTINE CohSpecVMat_API
 !=======================================================================
-SUBROUTINE Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize )
+SUBROUTINE Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, UC )
 
 use NWTC_LAPACK
 USE TSMods
@@ -474,6 +488,7 @@ REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! A
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
 INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of dimension 2 of Matrix
+INTEGER(IntKi),   INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
 
 
 REAL(ReKi)                       :: CPh                                      ! Cosine of the random phase
@@ -610,10 +625,10 @@ integer                          :: Indx, J, I
 
 END SUBROUTINE EyeCoh2H
 !=======================================================================
-SUBROUTINE Coh2H( IVec, IFreq, TRH, S, NPoints, NSize )
+SUBROUTINE Coh2H( IVec, IFreq, TRH, S, NPoints, NSize, UC )
 
 use NWTC_LAPACK
-USE TSMods, only: COH_OUT, UC, p_grid
+USE TSMods, only: COH_OUT,  p_grid
 
 
 REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
@@ -622,7 +637,7 @@ INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! l
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
 INTEGER(IntKi),   INTENT(IN)     :: NPoints                                  ! Size of dimension 2 of S
 INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of TRH = NPoints*(NPoints+1)/2
-
+INTEGER(IntKi),   INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
 
 integer                          :: Indx, J, I, Stat
 character(1024)                  :: ErrMsg
@@ -1255,7 +1270,6 @@ SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
    USE                     TSMods, ONLY : p_met
    USE                     TSMods, ONLY : TurbModel
    USE                     TSMods, ONLY : UHub
-   USE                     TSMods, ONLY : WindProfileType
    
    use tsmods, only: p_RandNum
    use tsmods, only: OtherSt_RandNum
@@ -1283,7 +1297,7 @@ use TurbSim_Types
    
    Z(2) = p_grid%HubHt + 0.5*p_grid%RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
-   V(:) = getVelocityProfile(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter, PROFILE_TYPE=WindProfileType)
+   V(:) = getVelocityProfile(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter)
 
    Shr = ( V(2)-V(1) ) / p_grid%GridHeight    ! dv/dz
 
@@ -1674,11 +1688,10 @@ SUBROUTINE Calc_MO_zL(SpecModel, Rich_No, HubHt, ZL, L )
 END SUBROUTINE Calc_MO_zL
 
 !=======================================================================
-FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset)
+FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset, WindProfileType)
 
    USE                                  TSMods, ONLY: profileZmax
    USE                                  TSMods, ONLY: profileZmin
-   USE                                  TSMods, ONLY: WindProfileType
 
    IMPLICIT                              NONE
 
@@ -1690,6 +1703,8 @@ FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset)
    REAL(ReKi),   INTENT(IN)           :: L                           ! L, M-O length
    REAL(ReKi),   INTENT(IN)           :: ZLOffset                    ! Offset to align profile with rotor-disk averaged z/L 
 
+   CHARACTER(*), INTENT(IN)           :: WindProfileType
+   
    REAL(ReKi)                         :: tmpZ                        ! a temporary value
    REAL(ReKi)                         :: getZLary(SIZE(Ht))          ! the array of z/L values
 
@@ -1884,7 +1899,7 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 use TSMods
 use FFT_Module, only: PSF
 
-   TYPE(TurbSim_GridParameterType), INTENT(INOUT) :: p_grid
+   TYPE(Grid_ParameterType), INTENT(INOUT) :: p_grid
    INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
    INTEGER                        , INTENT(  OUT) :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
    INTEGER                        , INTENT(  OUT) :: NSize                           ! Size of the spectral matrix at each frequency
@@ -2153,7 +2168,7 @@ END SUBROUTINE
 SUBROUTINE TimeSeriesScaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, HubFactor)
 
 
-   TYPE(TurbSim_GridParameterType), INTENT(IN)     ::  p_grid                          ! parameters defining TurbSim's grid (including time/frequency)
+   TYPE(Grid_ParameterType), INTENT(IN)     ::  p_grid                          ! parameters defining TurbSim's grid (including time/frequency)
    REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        ! velocity 
    REAL(ReKi),                      INTENT(IN)     ::  TargetSigma(3)                  ! target standard deviations
    REAL(ReKi),                      INTENT(  OUT)  ::  ActualSigma(3)                  ! actual standard deviations

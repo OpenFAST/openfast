@@ -112,6 +112,8 @@ SUBROUTINE GetChebCoefs(u_inp, z_inp)
    ! This subroutine determines what Chebyshev Coefficients will be used
    ! for the jet wind speed and wind direction profiles
 
+   ! valid only for jet WindProfileType
+   
 USE TSMods, only: p_met, p_grid
 
 IMPLICIT                   NONE
@@ -149,14 +151,14 @@ INTEGER                 :: I                 ! A loop counter
          p_met%ChebyCoef_WS(I) = p_met%Rich_No*UH_coef(2,I) + p_met%Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
       ENDDO
 
-      Utmp1                    = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')
+      Utmp1                    = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter)
 
          ! Now calculate the coefficients with just UJetMax term
 
       ChebyCoef_tmp(:)         = p_met%ChebyCoef_WS(:)
       p_met%ChebyCoef_WS(:)    = UH_coef(1,:)
 
-      Utmp2                    = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter, PROFILE_TYPE='JET')       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
+      Utmp2                    = getVelocity(u_inp, z_inp, z_inp, p_grid%RotorDiameter)       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
       p_met%UJetMax            = (u_inp - Utmp1)/Utmp2
 
          ! Get the final coefficients, using the computed UJetMax
@@ -177,7 +179,7 @@ RETURN
 END SUBROUTINE GetChebCoefs
 !=======================================================================
 
-FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
+FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam )
 
 
    ! Determine the wind speed at a given height, with reference wind speed.
@@ -200,7 +202,6 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-   CHARACTER(*), INTENT(IN)           :: profile_type                ! String that determines what profile is to be used
 
    INTEGER                            :: I
    INTEGER                            :: Indx
@@ -222,7 +223,7 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    ENDIF
 
 
-   SELECT CASE ( TRIM(profile_type) )
+   SELECT CASE ( TRIM(p_met%WindProfileType) )
 
       CASE ( 'JET' )
 
@@ -304,7 +305,7 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
 RETURN
 END FUNCTION getVelocityProfile
 !=======================================================================
-FUNCTION getDirectionProfile( Ht, profile_type)
+FUNCTION getDirectionProfile( Ht )
 
    ! Determine the wind speed at a given height, with reference wind speed.
 
@@ -320,7 +321,6 @@ FUNCTION getDirectionProfile( Ht, profile_type)
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-   CHARACTER(*), INTENT(IN)           :: profile_type                ! String that determines what profile is to be used
 
    REAL(ReKi)                         :: tmpHt(2)
    REAL(ReKi)                         :: tmpWS(2)
@@ -333,7 +333,7 @@ FUNCTION getDirectionProfile( Ht, profile_type)
 !   REAL(ReKi)                         :: ZRef
 
 
-   SELECT CASE ( TRIM(profile_type) )
+   SELECT CASE ( TRIM(p_met%WindProfileType) )
 
       CASE ( 'JET' )
 
@@ -407,7 +407,7 @@ FUNCTION getDirectionProfile( Ht, profile_type)
 RETURN
 END FUNCTION getDirectionProfile
 !=======================================================================
-FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
+FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
 
    ! Determine the wind speed at a given height, with reference wind speed.
    use TurbSim_Types
@@ -427,7 +427,6 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-   CHARACTER(*), INTENT(IN)           :: profile_type                     ! String that determines what profile is to be used
 
 !   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
 !   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
@@ -459,7 +458,7 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam, profile_type )
    ENDIF
 
 
-   SELECT CASE ( TRIM(profile_type) )
+   SELECT CASE ( TRIM(p_met%WindProfileType) )
 
       CASE ( 'JET', 'J' )
 
