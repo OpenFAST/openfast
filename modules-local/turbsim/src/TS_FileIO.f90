@@ -71,6 +71,12 @@ CHARACTER(99)     :: Line                 ! An input line
 CHARACTER(1)      :: Line1                ! The first character of an input line
 
 
+CHARACTER( 23)               :: IECeditionStr_p (3) = &   ! strings for the 
+                                (/'IEC 61400-1 Ed. 1: 1993', &
+                                  'IEC 61400-1 Ed. 2: 1999', &
+                                  'IEC 61400-1 Ed. 3: 2005'/)            ! The string description of the IEC 61400-1 standard being used
+
+
 !UnEc = US
 !Echo = .FALSE.       ! Do not echo the input into a separate file
 
@@ -326,58 +332,58 @@ CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2" )
 
    ! ------------ Read in the turbulence model. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
+CALL ReadVar( UI, InFile, p_met%TurbModel, "the spectral model", "spectral model")
 
-   TurbModel = ADJUSTL( TurbModel )
-   CALL Conv2UC( TurbModel )
+   p_met%TurbModel = ADJUSTL( p_met%TurbModel )
+   CALL Conv2UC( p_met%TurbModel )
 
-   SELECT CASE ( TRIM(TurbModel) )
+   SELECT CASE ( TRIM(p_met%TurbModel) )
       CASE ( 'IECKAI' )
-         TMName = 'IEC Kaimal'
-         p_met%SpecModel = SpecModel_IECKAI
+         p_met%TMName = 'IEC Kaimal'
+         p_met%TurbModel_ID = SpecModel_IECKAI
       CASE ( 'IECVKM' )
-         TMName = 'IEC von Karman'
-         p_met%SpecModel = SpecModel_IECVKM
+         p_met%TMName = 'IEC von Karman'
+         p_met%TurbModel_ID = SpecModel_IECVKM
       CASE ( 'TIDAL' )
-         TMName = 'Tidal Channel Turbulence'
-         p_met%SpecModel = SpecModel_TIDAL
+         p_met%TMName = 'Tidal Channel Turbulence'
+         p_met%TurbModel_ID = SpecModel_TIDAL
       CASE ( 'RIVER' )
-         TMName = 'River Turbulence'
-         p_met%SpecModel = SpecModel_RIVER
+         p_met%TMName = 'River Turbulence'
+         p_met%TurbModel_ID = SpecModel_RIVER
       CASE ( 'SMOOTH' )
-         TMName = 'RISO Smooth Terrain'
-         p_met%SpecModel = SpecModel_SMOOTH
+         p_met%TMName = 'RISO Smooth Terrain'
+         p_met%TurbModel_ID = SpecModel_SMOOTH
       CASE ( 'WF_UPW' )
-         TMName = 'NREL Wind Farm Upwind'
-         p_met%SpecModel = SpecModel_WF_UPW
+         p_met%TMName = 'NREL Wind Farm Upwind'
+         p_met%TurbModel_ID = SpecModel_WF_UPW
       CASE ( 'WF_07D' )
-         TMName = 'NREL 7D Spacing Wind Farm'
-         p_met%SpecModel = SpecModel_WF_07D
+         p_met%TMName = 'NREL 7D Spacing Wind Farm'
+         p_met%TurbModel_ID = SpecModel_WF_07D
       CASE ( 'WF_14D' )
-         TMName = 'NREL 14D Spacing Wind Farm'
-         p_met%SpecModel = SpecModel_WF_14D
+         p_met%TMName = 'NREL 14D Spacing Wind Farm'
+         p_met%TurbModel_ID = SpecModel_WF_14D
       CASE ( 'NONE'   )
-         TMName = 'Steady wind components'
-         p_met%SpecModel = SpecModel_NONE
+         p_met%TMName = 'Steady wind components'
+         p_met%TurbModel_ID = SpecModel_NONE
       CASE ( 'MODVKM' )
-         TMName = 'Modified von Karman'
-         p_met%SpecModel = SpecModel_MODVKM
+         p_met%TMName = 'Modified von Karman'
+         p_met%TurbModel_ID = SpecModel_MODVKM
       CASE ( 'API' )
-         TMName = 'API'
-         p_met%SpecModel = SpecModel_API
+         p_met%TMName = 'API'
+         p_met%TurbModel_ID = SpecModel_API
       CASE ( 'NWTCUP' )
-         TMName = 'NREL National Wind Technology Center'
-         p_met%SpecModel = SpecModel_NWTCUP
+         p_met%TMName = 'NREL National Wind Technology Center'
+         p_met%TurbModel_ID = SpecModel_NWTCUP
       CASE ( 'GP_LLJ' )
-         TMName = 'Great Plains Low-Level Jet'
-         p_met%SpecModel = SpecModel_GP_LLJ
+         p_met%TMName = 'Great Plains Low-Level Jet'
+         p_met%TurbModel_ID = SpecModel_GP_LLJ
       CASE ( 'USRVKM' )
-         TMName = 'von Karman model with user-defined specifications'
-         p_met%SpecModel = SpecModel_USRVKM
+         p_met%TMName = 'von Karman model with user-defined specifications'
+         p_met%TurbModel_ID = SpecModel_USRVKM
       CASE ( 'USRINP' )
-         TMName = 'User-input '
+         p_met%TMName = 'User-input '
          CALL GetUSRspec("UsrSpec.inp", ErrStat, ErrMsg)      ! bjj: before documenting, please fix this hard-coded name!
-         p_met%SpecModel = SpecModel_USER
+         p_met%TurbModel_ID = SpecModel_USER
       CASE DEFAULT
 !BONNIE: add the UsrVKM model to this list when the model is complete as well as USRINP
          CALL TS_Abort ( 'The turbulence model must be "IECKAI", "IECVKM", "SMOOTH",' &
@@ -386,7 +392,7 @@ CALL ReadVar( UI, InFile, TurbModel, "the spectral model", "spectral model")
       END SELECT  ! TurbModel
       IF (ErrStat >= AbortErrLev) RETURN
 
-p_met%IsIECModel = p_met%SpecModel == SpecModel_IECKAI .or. p_met%SpecModel == SpecModel_IECVKM .OR. p_met%SpecModel == SpecModel_MODVKM .OR. p_met%SpecModel == SpecModel_API
+p_met%IsIECModel = p_met%TurbModel_ID == SpecModel_IECKAI .or. p_met%TurbModel_ID == SpecModel_IECVKM .OR. p_met%TurbModel_ID == SpecModel_MODVKM .OR. p_met%TurbModel_ID == SpecModel_API
       
 
    ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
@@ -409,7 +415,7 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
 
          CALL CheckIOS( IOS, InFile, 'the IEC edition number', NumType )
 
-         IF ( p_IEC%IECedition < 1 .OR. p_IEC%IECedition > SIZE(IECeditionSTR) ) THEN
+         IF ( p_IEC%IECedition < 1 .OR. p_IEC%IECedition > 3 ) THEN
             CALL TS_Abort( 'Invalid IEC edition number.' )
          ENDIF
 
@@ -423,7 +429,7 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
       SELECT CASE ( p_IEC%IECstandard )
          CASE ( 1 )
             IF (p_IEC%IECedition < 1 ) THEN  ! Set up the default
-               IF ( p_met%SpecModel == SpecModel_IECVKM .OR. p_met%SpecModel == SpecModel_USRVKM ) THEN
+               IF ( p_met%TurbModel_ID == SpecModel_IECVKM .OR. p_met%TurbModel_ID == SpecModel_USRVKM ) THEN
                   p_IEC%IECedition = 2   ! The von Karman model is not specified in edition 3 of the -1 standard
                ELSE
                   p_IEC%IECedition = 3
@@ -433,6 +439,7 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
                   CALL TS_Abort( 'The IEC edition number must be 2 or 3' )
                ENDIF
             ENDIF
+            p_IEC%IECeditionSTR = IECeditionStr_p(p_IEC%IECedition)
 
          CASE ( 2 )
                ! The scaling is the same as 64100-1, Ed. 2 with "A" or user-specified turbulence
@@ -441,13 +448,13 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
             ELSE
                CALL TS_Abort( ' The edition number cannot be specified for the 61400-2 standard.')
             ENDIF
-            IECeditionSTR(p_IEC%IECedition) = 'IEC 61400-2 Ed. 2: 2005'
+            p_IEC%IECeditionSTR = 'IEC 61400-2 Ed. 2: 2005'
 
          CASE ( 3 )
                ! The scaling for 61400-3 (Offshore) is the same as 61400-1 except it has a different power law exponent
             IF (p_IEC%IECedition < 1 ) THEN  ! Set up the default
 
-               IF ( p_met%SpecModel /= SpecModel_IECKAI ) THEN
+               IF ( p_met%TurbModel_ID /= SpecModel_IECKAI ) THEN
                   CALL TS_Abort( ' The von Karman model is not valid for the 61400-3 standard.')
                ENDIF
                p_IEC%IECedition = 3   ! This is the edition of the -1 standard
@@ -455,7 +462,7 @@ CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the
             ELSE
                CALL TS_Abort( ' The edition number cannot be specified for the 61400-3 standard.')
             ENDIF
-            IECeditionSTR(p_IEC%IECedition) = 'IEC 61400-3 Ed. 1: 2006'
+            p_IEC%IECeditionSTR = 'IEC 61400-3 Ed. 1: 2006'
 
          CASE DEFAULT
             CALL TS_Abort( 'The number of the IEC 61400-x standard must be 1, 2, or 3.')
@@ -510,7 +517,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
                IF ( p_IEC%IECstandard == 2 ) THEN
                   CALL TS_Abort (' The IEC 61400-2 turbulence characteristic must be either "A" or a real number.' )
                ELSEIF ( p_IEC%IECedition < 3 ) THEN
-                  CALL TS_Abort (' The turbulence characteristic for '//TRIM(IECeditionSTR(p_IEC%IECedition) )// &
+                  CALL TS_Abort (' The turbulence characteristic for '//TRIM(p_IEC%IECeditionSTR )// &
                                   ' must be either "A", "B", or a real number.' )
                ENDIF
             CASE DEFAULT
@@ -529,7 +536,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
       IF ( Line(1:6) == 'KHTEST' ) THEN
          p_met%KHtest = .TRUE.
 
-         IF ( p_met%SpecModel /= SpecModel_NWTCUP ) THEN
+         IF ( p_met%TurbModel_ID /= SpecModel_NWTCUP ) THEN
             CALL TS_Abort( 'The KH test can be used with the "NWTCUP" spectral model only.' )
          ENDIF
 
@@ -556,7 +563,7 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbul
 
 CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type")
 
-   IF ( p_met%IsIECModel .AND. p_met%SpecModel /= SpecModel_MODVKM  ) THEN
+   IF ( p_met%IsIECModel .AND. p_met%TurbModel_ID /= SpecModel_MODVKM  ) THEN
 
       CALL Conv2UC( Line )
 
@@ -640,7 +647,7 @@ CALL ReadRVarDefault( UI, InFile, p_IEC%ETMc, "the ETM c parameter", 'IEC Extrem
    ! ------------ Read in the wind profile type -----------------------------------------------------------------
 
 UseDefault = .TRUE.         ! Calculate the default value
-SELECT CASE ( p_met%SpecModel )
+SELECT CASE ( p_met%TurbModel_ID )
    CASE ( SpecModel_GP_LLJ )
       p_met%WindProfileType = 'JET'
    CASE ( SpecModel_IECKAI,SpecModel_IECVKM,SpecModel_MODVKM )
@@ -661,7 +668,7 @@ CALL ReadCVarDefault( UI, InFile, p_met%WindProfileType, "the wind profile type"
 
    SELECT CASE ( TRIM(p_met%WindProfileType) )
       CASE ( 'JET' )
-         IF ( p_met%SpecModel /= SpecModel_GP_LLJ ) THEN
+         IF ( p_met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN
             CALL TS_Abort( 'The jet wind profile is available with the GP_LLJ spectral model only.')
          ENDIF
       CASE ( 'LOG')
@@ -671,7 +678,7 @@ CALL ReadCVarDefault( UI, InFile, p_met%WindProfileType, "the wind profile type"
          ENDIF
       CASE ( 'PL'  )
       CASE ( 'H2L' )
-         IF ( p_met%SpecModel /= SpecModel_TIDAL ) THEN
+         IF ( p_met%TurbModel_ID /= SpecModel_TIDAL ) THEN
             CALL TS_Abort(  'The "H2L" mean profile type should be used only with the "TIDAL" spectral model.' )
          ENDIF
       CASE ( 'IEC' )
@@ -681,7 +688,7 @@ CALL ReadCVarDefault( UI, InFile, p_met%WindProfileType, "the wind profile type"
          CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' )
    END SELECT
 
-   IF ( p_met%SpecModel == SpecModel_TIDAL .AND. TRIM(p_met%WindProfileType) /= "H2L" ) THEN
+   IF ( p_met%TurbModel_ID == SpecModel_TIDAL .AND. TRIM(p_met%WindProfileType) /= "H2L" ) THEN
       p_met%WindProfileType = 'H2L'
       CALL TS_Warn  ( 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', -1)
    ENDIF
@@ -746,7 +753,7 @@ CALL ReadRVarDefault( UI, InFile, p_met%ZJetMax, "the jet height", "Jet height [
 
    ! ------------ Read in the power law exponent, PLExp ---------------------------------------------
 
-SELECT CASE ( p_met%SpecModel )
+SELECT CASE ( p_met%TurbModel_ID )
    CASE (SpecModel_WF_UPW, SpecModel_WF_07D, SpecModel_WF_14D, SpecModel_NWTCUP)
       IF ( p_met%KHtest ) THEN
          UseDefault = .TRUE.
@@ -781,7 +788,7 @@ CALL ReadRVarDefault( UI, InFile, p_met%PLExp, "the power law exponent", "Power 
    ! ------------ Read in the surface roughness length, Z0 (that's z-zero) ---------------------------------------------
 
 UseDefault = .TRUE.
-SELECT CASE ( p_met%SpecModel )
+SELECT CASE ( p_met%TurbModel_ID )
    CASE (SpecModel_SMOOTH)
       p_met%Z0 = 0.010
    CASE (SpecModel_GP_LLJ )
@@ -797,7 +804,7 @@ SELECT CASE ( p_met%SpecModel )
    CASE DEFAULT !IEC values
       p_met%Z0 = 0.030 ! Represents smooth, homogenous terrain
 END SELECT
-IsUnusedParameter = p_met%SpecModel==SpecModel_TIDAL
+IsUnusedParameter = p_met%TurbModel_ID==SpecModel_TIDAL
 
 CALL ReadRVarDefault( UI, InFile, p_met%Z0, "the roughness length", "Surface roughness length [m]", US, UseDefault, &
                        IGNORE=IsUnusedParameter)
@@ -812,7 +819,7 @@ CALL ReadRVarDefault( UI, InFile, p_met%Z0, "the roughness length", "Surface rou
    ! Read the meteorological boundary conditions for non-IEC models. !
    !=================================================================================
 
-IF ( .NOT. p_met%IsIECModel .OR. p_met%SpecModel == SpecModel_MODVKM  ) THEN  
+IF ( .NOT. p_met%IsIECModel .OR. p_met%TurbModel_ID == SpecModel_MODVKM  ) THEN  
 
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1" )
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2" )
@@ -856,17 +863,17 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
       ENDIF
    ENDIF
 
-   IF ( p_met%SpecModel == SpecModel_USER .OR. p_met%SpecModel == SpecModel_USRVKM ) THEN
+   IF ( p_met%TurbModel_ID == SpecModel_USER .OR. p_met%TurbModel_ID == SpecModel_USRVKM ) THEN
       IF ( p_met%Rich_No /= 0.0 ) THEN
          p_met%Rich_No = 0.0
-         CALL TS_Warn ( 'Overwriting the Richardson Number for the '//TRIM(TurbModel)//' model.', -1 )
+         CALL TS_Warn ( 'Overwriting the Richardson Number for the '//TRIM(p_met%TurbModel)//' model.', -1 )
       ENDIF
-   ELSEIF ( p_met%SpecModel == SpecModel_NWTCUP .or. p_met%SpecModel == SpecModel_GP_LLJ) THEN
+   ELSEIF ( p_met%TurbModel_ID == SpecModel_NWTCUP .or. p_met%TurbModel_ID == SpecModel_GP_LLJ) THEN
       p_met%Rich_No = MIN( MAX( p_met%Rich_No, REAL(-1.0,ReKi) ), REAL(1.0,ReKi) )  ! Ensure that: -1 <= RICH_NO <= 1
    ENDIF
 
       ! now that we have Rich_No, we can calculate ZL and L
-   CALL Calc_MO_zL(p_met%SpecModel, p_met%Rich_No, p_grid%HubHt, p_met%ZL, p_met%L )
+   CALL Calc_MO_zL(p_met%TurbModel_ID, p_met%Rich_No, p_grid%HubHt, p_met%ZL, p_met%L )
 
    
       ! ***** Calculate power law exponent, if needed *****
@@ -891,7 +898,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
    p_met%UstarDiab  = getUstarDiab(p_met%URef, p_met%RefHt, p_met%z0, p_met%ZL, p_met%ZJetMax)
    p_met%Ustar      = p_met%UstarDiab
 
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
 
       CASE (SpecModel_WF_UPW)
 
@@ -968,7 +975,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
    UHub = getVelocity(p_met%URef, p_met%RefHt, p_grid%HubHt, p_grid%RotorDiameter)
 
          ! ***** Get p_met%Ustar- and zl-profile values, if required, and determine offsets *****
-      IF ( p_met%SpecModel /= SpecModel_GP_LLJ ) THEN
+      IF ( p_met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN
          p_met%UstarSlope = 1.0_ReKi         
 
          TmpUary   = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
@@ -993,7 +1000,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
       ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
 
    UseDefault = .TRUE.
-   IF ( p_met%ZL >= 0.0 .AND. p_met%SpecModel /= SpecModel_GP_LLJ ) THEN  !We must calculate ZI for stable GP_LLJ. z/L profile can change signs so ZI must be defined for spectra.
+   IF ( p_met%ZL >= 0.0 .AND. p_met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN  !We must calculate ZI for stable GP_LLJ. z/L profile can change signs so ZI must be defined for spectra.
       p_met%ZI = 0.0
    ELSE
       IF ( p_met%Ustar < p_met%UstarDiab ) THEN
@@ -1005,7 +1012,7 @@ IF ( .NOT. p_met%IsIECModel  ) THEN
    ENDIF
 
    CALL ReadRVarDefault( UI, InFile, p_met%ZI, "the mixing layer depth", "Mixing layer depth [m]", US, UseDefault, &
-                                                                  IGNORE=(p_met%ZL>=0. .AND. p_met%SpecModel /= SpecModel_GP_LLJ) )
+                                                                  IGNORE=(p_met%ZL>=0. .AND. p_met%TurbModel_ID /= SpecModel_GP_LLJ) )
 
       IF ( ( p_met%ZL < 0.0 ) .AND. ( p_met%ZI <= 0.0 ) ) THEN
          CALL TS_Abort ( 'The mixing layer depth must be a positive number for unstable flows.')
@@ -1257,8 +1264,8 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
    
    
    IF ( p_IEC%NumTurbInp .AND. p_IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
-      TurbModel = 'NONE'
-      p_met%SpecModel = SpecModel_NONE
+      p_met%TurbModel = 'NONE'
+      p_met%TurbModel_ID = SpecModel_NONE
    ENDIF
 
       ! Calculate wind speed at hub height
@@ -1314,7 +1321,6 @@ END SUBROUTINE GetFiles
 SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, ErrStat, ErrMsg)
 
    USE                                   TSMods, ONLY: p_grid
-   USE                                   TSMods, ONLY: TurbModel         ! Type of turbulence model
    IMPLICIT                              NONE
 
    TYPE(Meteorology_ParameterType), intent(inout) :: p_met
@@ -1393,7 +1399,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, ErrStat, ErrMsg)
    CALL AllocAry(p_met%USR_WindDir, p_met%NumUSRz, 'USR_WindDir (user-defined wind direction)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
 
-   IF ( p_met%SpecModel == SpecModel_USRVKM ) THEN
+   IF ( p_met%TurbModel_ID == SpecModel_USRVKM ) THEN
       ReadSigL = .TRUE.
 
       CALL AllocAry(p_met%USR_Sigma, p_met%NumUSRz, 'USR_Sigma (user-defined sigma)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
@@ -1498,7 +1504,7 @@ END SUBROUTINE GetUSR
 !=======================================================================
 SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
 
-   USE                                   TSMods, ONLY: p_met,TurbModel          ! Type of turbulence model
+   USE                                   TSMods, ONLY: p_met          ! Type of turbulence model
 
    IMPLICIT                              NONE
 
@@ -2453,18 +2459,12 @@ END SUBROUTINE WrSum_UserInput
 !=======================================================================
 SUBROUTINE WrSum_SpecModel(US, p_IEC, GridVertCenter )
 
-!USE TSMods, only: FormStr
-!USE TSMods, only: TMName
-!
-!USE TSMods, only: IEC_NTM
-!USE TSMods, only: IECeditionSTR
 use TSMods
 
 
-   INTEGER,    INTENT(IN) :: US
+   INTEGER,                 INTENT(IN) :: US
    TYPE(IEC_ParameterType), INTENT(IN) :: p_IEC                       ! parameters for IEC models   
-   REAL(ReKi), INTENT(IN)  ::  GridVertCenter                  ! Position of vertical "middle" grid point (to determine if it is the hub height)
-CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
+   REAL(ReKi),              INTENT(IN) ::  GridVertCenter             ! Position of vertical "middle" grid point (to determine if it is the hub height)
 
    
    ! local variables:   
@@ -2484,6 +2484,7 @@ CHARACTER(200)               :: FormStr                                  ! Strin
    INTEGER                 :: iz, jz                                 ! loop counters
    LOGICAL                 ::  HubPr                                 ! Flag to indicate if the hub height is to be printed separately in the summary file
 
+   CHARACTER(200)          :: FormStr                                ! String used to store format specifiers.
    CHARACTER(*),PARAMETER  :: FormStr1 = "('   ',A,' =' ,I9  ,A)"    ! String used to store format specifiers.
    CHARACTER(*),PARAMETER  :: FormStr2 = "('   ',A,' =  ',A)"        ! String used to store format specifiers.
    
@@ -2492,7 +2493,7 @@ CHARACTER(200)               :: FormStr                                  ! Strin
    
    
    WRITE (US,"( // 'Turbulence Simulation Scaling Parameter Summary:' / )")
-   WRITE (US,    "('   Turbulence model used                            =  ' , A )")  TRIM(TMName)
+   WRITE (US,    "('   Turbulence model used                            =  ' , A )")  TRIM(p_met%TMName)
 
    FormStr  = "('   ',A,' =' ,F9.3,A)"
    
@@ -2500,10 +2501,10 @@ CHARACTER(200)               :: FormStr                                  ! Strin
    
       ! Write out a parameter summary to the summary file.
 
-IF ( ( p_met%SpecModel  == SpecModel_IECKAI ) .OR. &
-     ( p_met%SpecModel  == SpecModel_IECVKM ) .OR. &
-     ( p_met%SpecModel  == SpecModel_MODVKM ) .OR. &
-     ( p_met%SpecModel  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
+IF ( ( p_met%TurbModel_ID  == SpecModel_IECKAI ) .OR. &
+     ( p_met%TurbModel_ID  == SpecModel_IECVKM ) .OR. &
+     ( p_met%TurbModel_ID  == SpecModel_MODVKM ) .OR. &
+     ( p_met%TurbModel_ID  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
       
       
    IF ( p_IEC%NumTurbInp ) THEN
@@ -2518,9 +2519,9 @@ IF ( ( p_met%SpecModel  == SpecModel_IECKAI ) .OR. &
       ENDIF
    ENDIF      
    
-   WRITE (US,FormStr2)         "IEC standard                                    ", IECeditionSTR(p_IEC%IECedition)
+   WRITE (US,FormStr2)         "IEC standard                                    ", p_IEC%IECeditionSTR
    
-   IF ( p_met%SpecModel  /= SpecModel_MODVKM ) THEN
+   IF ( p_met%TurbModel_ID  /= SpecModel_MODVKM ) THEN
       ! Write out a parameter summary to the summary file.
 
       WRITE (US,FormStr)       "Mean wind speed at hub height                   ", UHub,                      " m/s"
@@ -2541,10 +2542,10 @@ IF ( ( p_met%SpecModel  == SpecModel_IECKAI ) .OR. &
       WRITE (US,FormStr)       "Characteristic value of standard deviation      ", p_IEC%SigmaIEC(1),          " m/s"
       WRITE (US,FormStr)       "Turbulence scale                                ", p_IEC%Lambda(1),            " m"
                                                                                                               
-      IF ( p_met%SpecModel  == SpecModel_IECKAI )  THEN                                                                     
+      IF ( p_met%TurbModel_ID  == SpecModel_IECKAI )  THEN                                                                     
          WRITE (US,FormStr)    "u-component integral scale                      ", p_IEC%IntegralScale(1),     " m"
          WRITE (US,FormStr)    "Coherency scale                                 ", p_IEC%LC,                   " m"
-      ELSEIF ( p_met%SpecModel  == SpecModel_IECVKM )  THEN                                                                 
+      ELSEIF ( p_met%TurbModel_ID  == SpecModel_IECVKM )  THEN                                                                 
          WRITE (US,FormStr)    "Isotropic integral scale                        ", p_IEC%IntegralScale(1),     " m"
       ENDIF                                                                                                   
                                                                                                               
@@ -2566,7 +2567,7 @@ IF ( ( p_met%SpecModel  == SpecModel_IECKAI ) .OR. &
 
 ! p_met%Ustar = SigmaIEC/2.15 ! Value based on equating original Kaimal spectrum with IEC formulation
 
-ELSEIF ( p_met%SpecModel == SpecModel_TIDAL ) THEN
+ELSEIF ( p_met%TurbModel_ID == SpecModel_TIDAL ) THEN
    WRITE (US,FormStr2)         "Gradient Richardson number                      ", "N/A"
    WRITE (US,FormStr)          "Mean velocity at hub height                     ", UHub,                      " m/s"     
    
@@ -2814,7 +2815,7 @@ USE TSMods
    WRITE (UAHH,"( '!' )")
    WRITE (UAHH,"( '! The requested statistics for this data were:' )")
    WRITE (UAHH,"( '!    Mean Total Wind Speed = ' , F8.3 , ' m/s' )")  UHub
-IF ( p_met%SpecModel == SpecModel_IECKAI .OR. p_met%SpecModel == SpecModel_IECVKM .OR. p_met%SpecModel == SpecModel_MODVKM ) THEN
+IF ( p_met%TurbModel_ID == SpecModel_IECKAI .OR. p_met%TurbModel_ID == SpecModel_IECVKM .OR. p_met%TurbModel_ID == SpecModel_MODVKM ) THEN
    WRITE (UAHH,"( '!    Turbulence Intensity  = ' , F8.3 , '%' )")  100.0*TurbInt
 ENDIF
    WRITE (UAHH,"( '!' )")
@@ -3474,11 +3475,11 @@ use TSMods
 
 !..................................................................................................................................
    WRITE (US,"( // 'Meteorological Boundary Conditions:' / )")
-   WRITE (US, "( 4X , A6 , 2X , '"//TRIM( TMName )//" spectral model' )")  TurbModel
+   WRITE (US, "( 4X , A6 , 2X , '"//TRIM( p_met%TMName )//" spectral model' )")  p_met%TurbModel
    IF (p_IEC%IECstandard > 0) then
-      WRITE (US,"( 7X, I3, 2X, 'IEC standard: ', A )")  p_IEC%IECstandard, TRIM(IECeditionSTR(p_IEC%IECedition))
+      WRITE (US,"( 7X, I3, 2X, 'IEC standard: ', A )")  p_IEC%IECstandard, TRIM(p_IEC%IECeditionSTR)
       IF (p_IEC%NumTurbInp) THEN
-         WRITE (US,"( F10.3 , 2X , 'Percent turbulence intensity, ', A )")  p_IEC%PerTurbInt, TRIM(IECeditionSTR(p_IEC%IECedition))
+         WRITE (US,"( F10.3 , 2X , 'Percent turbulence intensity, ', A )")  p_IEC%PerTurbInt, TRIM(p_IEC%IECeditionSTR)
       ELSE
          WRITE (US,"( 9X , A1 , 2X , 'IEC turbulence characteristic' )"  )  p_IEC%IECTurbC   
       END IF
@@ -3536,7 +3537,7 @@ use TSMods
       WRITE (US,"( F10.3 , 2X , 'Power law exponent' )"              )  p_met%PLExp
    END IF      
       
-   IF ( p_met%SpecModel==SpecModel_TIDAL  ) THEN
+   IF ( p_met%TurbModel_ID==SpecModel_TIDAL  ) THEN
       WRITE (US,"(  A10, 2X, 'Surface roughness length [m]' )"       )  'N/A'   
    ELSE      
       WRITE (US,"( F10.3 , 2X , 'Surface roughness length [m]' )"    )  p_met%Z0
@@ -3544,38 +3545,32 @@ use TSMods
         
 !..................................................................................................................................
 !***
-IF ( p_met%SpecModel == SpecModel_IECKAI .OR. p_met%SpecModel == SpecModel_IECVKM .OR. p_met%SpecModel == SpecModel_API ) RETURN  
+IF ( p_met%TurbModel_ID == SpecModel_IECKAI .OR. p_met%TurbModel_ID == SpecModel_IECVKM .OR. p_met%TurbModel_ID == SpecModel_API ) RETURN  
 !***
 
 WRITE (US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
    
-   IF ( p_met%SpecModel /= SpecModel_IECKAI .AND. p_met%SpecModel /= SpecModel_IECVKM .AND. p_met%SpecModel /= SpecModel_API ) THEN
+   IF ( p_met%TurbModel_ID /= SpecModel_IECKAI .AND. p_met%TurbModel_ID /= SpecModel_IECVKM .AND. p_met%TurbModel_ID /= SpecModel_API ) THEN
       WRITE (US,"( F10.3 , 2X , 'Site latitude [degrees]' )"    )  p_met%Latitude      
    ELSE
       WRITE (US,"( A10 , 2X , 'Site latitude [degrees]' )"    )  'N/A'            
    END IF
 
 !***
-IF ( p_met%SpecModel == SpecModel_ModVKM ) RETURN  
+IF ( p_met%TurbModel_ID == SpecModel_ModVKM ) RETURN  
 !***
 
-   IF ( p_met%SpecModel /= SpecModel_IECKAI .AND. & 
-        p_met%SpecModel /= SpecModel_IECVKM .AND. & 
-        p_met%SpecModel /= SpecModel_API    .AND. & 
-        p_met%SpecModel /= SpecModel_ModVKM .AND. & 
-        p_met%SpecModel /= SpecModel_TIDAL   ) THEN
+   IF ( .NOT. p_met%IsIECModel .AND. & 
+        p_met%TurbModel_ID /= SpecModel_TIDAL   ) THEN
       WRITE (US,"( F10.3 , 2X , 'Gradient Richardson number' )")  p_met%Rich_No
    ELSE
       WRITE (US,"(   a10 , 2X , 'Gradient Richardson number' )")  'N/A'
    END IF
    
-   IF ( p_met%SpecModel /= SpecModel_IECKAI .AND. & 
-        p_met%SpecModel /= SpecModel_IECVKM .AND. & 
-        p_met%SpecModel /= SpecModel_API    .AND. & 
-        p_met%SpecModel /= SpecModel_ModVKM  ) THEN
+   IF ( .NOT. p_met%IsIECModel  ) THEN
       WRITE (US,"( F10.3 , 2X , 'Friction or shear velocity [m/s]' )")  p_met%Ustar
       
-      IF (p_met%ZL>=0. .AND. p_met%SpecModel /= SpecModel_GP_LLJ) THEN
+      IF (p_met%ZL>=0. .AND. p_met%TurbModel_ID /= SpecModel_GP_LLJ) THEN
          WRITE (US,'(   A10 , 2X , "Mixing layer depth [m]" )'       )  'N/A'
       ELSE         
          WRITE (US,"( F10.3 , 2X , 'Mixing layer depth [m]' )"       )  p_met%ZI

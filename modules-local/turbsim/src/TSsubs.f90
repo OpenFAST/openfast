@@ -125,7 +125,7 @@ POINT_J:       DO JZ=1,IZ
 
                      IF ( .NOT. PeriodicY ) THEN
                         Dist(Indx)= SQRT( ( p_grid%Y(I) - p_grid%Y(J) )**2  + ( p_grid%Z(IZ) - p_grid%Z(JZ) )**2 )
-                     ELSE
+                     ELSE 
                         dY = p_grid%Y(I) - p_grid%Y(J)
                         IF (dY > 0.5*p_grid%GridWidth ) THEN
                            dY = dY - p_grid%GridWidth - p_grid%GridRes_Y
@@ -739,7 +739,6 @@ SUBROUTINE GetDefaultCoh(WS,Ht, InCDec, InCohB )
    ! These numbers come from Neil's analysis
 
    USE                     TSMods, ONLY : p_met
-   USE                     TSMods, ONLY : TurbModel
 
    REAL(ReKi), INTENT(  OUT)            :: InCDec(3)         ! default coherence decrement
    REAL(ReKi), INTENT(  OUT)            :: InCohB(3)         ! default coherence parameter B
@@ -785,7 +784,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             Ri_Cat = 5
       ENDIF
 
-      SELECT CASE ( p_met%SpecModel )
+      SELECT CASE ( p_met%TurbModel_ID )
 
          CASE ( SpecModel_GP_LLJ )
             HT1 = MAX( 60.0, MIN( Ht, 100.0 ) )
@@ -1268,7 +1267,6 @@ SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
 
    USE                     TSMods, ONLY : p_grid
    USE                     TSMods, ONLY : p_met
-   USE                     TSMods, ONLY : TurbModel
    USE                     TSMods, ONLY : UHub
    
    use tsmods, only: p_RandNum
@@ -1303,7 +1301,7 @@ use TurbSim_Types
 
 !BJJ: check the ranges of our best-fit parameters, using domains of measured values
 
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
       CASE ( SpecModel_GP_LLJ )
          ZLtmp  = MIN( MAX( p_met%ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
          UStar2 = MIN( MAX( p_met%Ustar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
@@ -1327,7 +1325,7 @@ use TurbSim_Types
    UWskip     = .FALSE.
    
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
@@ -1391,7 +1389,7 @@ use TurbSim_Types
    UVskip     = .FALSE.
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
@@ -1461,7 +1459,7 @@ use TurbSim_Types
    VWskip     = .FALSE.
 
    CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
@@ -1788,7 +1786,7 @@ IF ( p_met%KHtest ) THEN
    RETURN
 ENDIF
 
-SELECT CASE ( p_met%SpecModel )
+SELECT CASE ( p_met%TurbModel_ID )
 
    CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
       IF ( Ri_No > 0.0 ) THEN
@@ -1824,7 +1822,7 @@ END FUNCTION PowerLawExp
 !=======================================================================
 SUBROUTINE PSDcal ( Ht, Ucmp, UShr, ZL_loc, Ustar_loc)
 
-use TSMods, only: p_met, p_IEC, Work, TurbModel
+use TSMods, only: p_met, p_IEC, Work
    ! This routine calls the appropriate spectral model.
 
 IMPLICIT                            NONE
@@ -1836,7 +1834,7 @@ REAL(ReKi), INTENT(IN), OPTIONAL :: UShr           ! Shear (du/dz)
 REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
 
-SELECT CASE ( p_met%SpecModel )
+SELECT CASE ( p_met%TurbModel_ID )
    CASE ( SpecModel_GP_LLJ )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
@@ -1854,7 +1852,7 @@ SELECT CASE ( p_met%SpecModel )
    CASE ( SpecModel_SMOOTH )
       CALL Spec_SMOOTH   ( Ht, Ucmp, Work )
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-      CALL Spec_TIDAL  ( Ht, UShr, Work, p_met%SpecModel )
+      CALL Spec_TIDAL  ( Ht, UShr, Work, p_met%TurbModel_ID )
    CASE ( SpecModel_USER )
       CALL Spec_UserSpec   ( Work )
    CASE ( SpecModel_USRVKM )
@@ -1871,11 +1869,11 @@ SELECT CASE ( p_met%SpecModel )
       IF (MVK) THEN
  !        CALL Mod_vKrm( Ht, Ucmp, Work )
       ELSE
-         CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( TurbModel )//'", not availible.' )
+         CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p_met%TurbModel )//'", not availible.' )
       ENDIF
 
    CASE DEFAULT
-      CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( TurbModel )//'", not availible.' )
+      CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p_met%TurbModel )//'", not availible.' )
 END SELECT
 
 
@@ -2336,7 +2334,7 @@ use TSMods, only: UHub, p_grid, p_met
    
       ! Set Lambda for Modified von Karman model:
 
-   IF ( MVK .AND. p_met%SpecModel  == SpecModel_MODVKM ) THEN
+   IF ( MVK .AND. p_met%TurbModel_ID  == SpecModel_MODVKM ) THEN
       p_met%z0 = FindZ0(p_grid%HubHt, p_IEC%SigmaIEC(1), UHub, p_met%Fc)
       CALL ScaleMODVKM(p_grid%HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
    ENDIF   
@@ -2345,7 +2343,7 @@ use TSMods, only: UHub, p_grid, p_met
       ! Sigma for v and w components and
       ! Integral scales (which depend on lambda)
    
-   IF ( p_met%SpecModel == SpecModel_IECVKM ) THEN
+   IF ( p_met%TurbModel_ID == SpecModel_IECVKM ) THEN
       
       p_IEC%SigmaIEC(2)      =  1.0*p_IEC%SigmaIEC(1)
       p_IEC%SigmaIEC(3)      =  1.0*p_IEC%SigmaIEC(1)
@@ -2388,12 +2386,12 @@ ErrMsg  = ""
 IF ( WrFile(FileExt_CTS) ) THEN
    
       ! models where coherent structures apply:
-   IF ( p_met%SpecModel == SpecModel_GP_LLJ .OR. &
-        p_met%SpecModel == SpecModel_NWTCUP .OR. &
-        p_met%SpecModel == SpecModel_SMOOTH .OR. &
-        p_met%SpecModel == SpecModel_WF_UPW .OR. &
-        p_met%SpecModel == SpecModel_WF_07D .OR. &
-        p_met%SpecModel == SpecModel_WF_14D ) THEN
+   IF ( p_met%TurbModel_ID == SpecModel_GP_LLJ .OR. &
+        p_met%TurbModel_ID == SpecModel_NWTCUP .OR. &
+        p_met%TurbModel_ID == SpecModel_SMOOTH .OR. &
+        p_met%TurbModel_ID == SpecModel_WF_UPW .OR. &
+        p_met%TurbModel_ID == SpecModel_WF_07D .OR. &
+        p_met%TurbModel_ID == SpecModel_WF_14D ) THEN
       
       IF ( p_met%RICH_NO <= -0.05 ) THEN
          CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, 'TS_ValidateInput')
@@ -2404,7 +2402,7 @@ IF ( WrFile(FileExt_CTS) ) THEN
       ENDIF      
       
    ELSE
-      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(TurbModel)//' model.', ErrStat, ErrMsg, 'TS_ValidateInput')
+      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(p_met%TurbModel)//' model.', ErrStat, ErrMsg, 'TS_ValidateInput')
       WrFile(FileExt_CTS) = .FALSE.      
    END IF
       

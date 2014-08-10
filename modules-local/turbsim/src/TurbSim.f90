@@ -339,7 +339,7 @@ IF ( INDEX( 'JU', p_met%WindProfileType(1:1) ) > 0 ) THEN
    WindDir_profile = getDirectionProfile(p_grid%Z)
 END IF
 
-IF ( p_met%SpecModel == SpecModel_GP_LLJ) THEN
+IF ( p_met%TurbModel_ID == SpecModel_GP_LLJ) THEN
 
       ! Allocate the arrays for the z/l and ustar profile
       
@@ -425,7 +425,7 @@ ENDIF
 
    ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
 
-IF ( p_met%SpecModel == SpecModel_TIDAL .OR. p_met%SpecModel == SpecModel_RIVER ) THEN
+IF ( p_met%TurbModel_ID == SpecModel_TIDAL .OR. p_met%TurbModel_ID == SpecModel_RIVER ) THEN
       ! Calculate the shear, DUDZ, for all heights.
    ALLOCATE ( DUDZ(p_grid%ZLim) , STAT=AllocStat ) ! Shear
    DUDZ(1)=(U(2)-U(1))/(p_grid%Z(2)-p_grid%Z(1))
@@ -444,10 +444,10 @@ DO IZ=1,p_grid%ZLim
          ! The continuous, one-sided PSDs are evaluated at discrete
          ! points and the results are stored in the "Work" matrix.
 
-      IF ( p_met%SpecModel == SpecModel_IECKAI .or. p_met%SpecModel == SpecModel_IECVKM ) THEN
+      IF ( p_met%TurbModel_ID == SpecModel_IECKAI .or. p_met%TurbModel_ID == SpecModel_IECVKM ) THEN
          CALL PSDcal( p_grid%HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
          
-      ELSEIF ( p_met%SpecModel == SpecModel_TIDAL .OR. p_met%SpecModel == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
+      ELSEIF ( p_met%TurbModel_ID == SpecModel_TIDAL .OR. p_met%TurbModel_ID == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
          CALL PSDCal( p_grid%Z(IZ) , U(IZ), UShr=DUDZ(IZ) )
          
       ELSEIF ( ALLOCATED( p_met%ZL_profile ) ) THEN
@@ -564,8 +564,8 @@ CALL CheckError()
 CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 
-IF (p_met%SpecModel /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
-    IF (p_met%SpecModel == SpecModel_API) THEN
+IF (p_met%TurbModel_ID /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
+    IF (p_met%TurbModel_ID == SpecModel_API) THEN
         CALL CohSpecVMat_API( NSize, ErrStat, ErrMsg) 
     ELSE
         CALL CohSpecVMat( NSize, ErrStat, ErrMsg)
@@ -632,7 +632,7 @@ CALL CheckError()
 
    ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
-SELECT CASE ( p_met%SpecModel )
+SELECT CASE ( p_met%TurbModel_ID )
 !MLB: There does not seem to be a CASE for TurbModel=="API".
       
 CASE (SpecModel_GP_LLJ, &

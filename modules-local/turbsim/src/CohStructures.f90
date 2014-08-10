@@ -222,13 +222,13 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
 
       ! Compute the mean interarrival time and the expected length of events
 
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
 
       CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
          y_CohStr%lambda = -0.000904*p_met%Rich_No + 0.000562*WindSpeed + 0.001389
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         IF ( p_met%SpecModel == SpecModel_NONE ) THEN
+         IF ( p_met%TurbModel_ID == SpecModel_NONE ) THEN
             y_CohStr%ExpectedTime = 600.0
          ELSE
             CALL RndModLogNorm( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
@@ -365,7 +365,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
       ! Next, we start concatenating events until there is no space or we exceed the expected time
 
-   IF ( p_met%SpecModel /= SpecModel_NONE ) THEN
+   IF ( p_met%TurbModel_ID /= SpecModel_NONE ) THEN
 
       NumCompared = 0
 
@@ -507,7 +507,7 @@ use TS_RandNum
    ! compute maximum predicted CTKE:
    !-------------------------
          
-   SELECT CASE ( p_met%SpecModel )
+   SELECT CASE ( p_met%TurbModel_ID )
          
       CASE ( SpecModel_NWTCUP,  SpecModel_NONE, SpecModel_USRVKM )
             
