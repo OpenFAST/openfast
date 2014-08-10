@@ -33,54 +33,22 @@ use TS_RandNum
 
 CONTAINS
 
-SUBROUTINE CohStr_Open()
-use TSMods
-!this routine is replicated in CohStr_WriteCTS()
-   
-
-      p_CohStr%ScaleWid = p_grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
-      p_CohStr%Zbottom  = p_grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
-
-      IF ( p_met%KHtest ) THEN      
-            ! for LES test case....
-         p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
-         p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
-      ELSE
-      !   TmpPLExp = PLExp 
-      !   PLExp    = MIN( 2.0, 1.35*PLExp )        ! Increase the shear of the background (?)
-
-         p_CohStr%ScaleVel =                     getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter)   ! Velocity at the top of the wave
-         p_CohStr%ScaleVel = p_CohStr%ScaleVel - getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom,                  p_grid%RotorDiameter)   ! Shear across the wave
-         p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
-      
-      !   PLExp = TmpPLExp
-      ENDIF
-
-      p_CohStr%Uwave = getVelocity(UHub,p_grid%HubHt,p_grid%Zbottom+0.5*p_CohStr%ScaleWid,p_grid%RotorDiameter)                 ! WindSpeed at center of wave
-
-   !BONNIE: MAYBE WE SHOULDN'T OPEN THIS FILE UNTIL WE NEED TO WRITE TO IT
-      IF (p_CohStr%ScaleVel < 0. ) THEN
-         CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', US )
-         WrFile(FileExt_CTS) = .FALSE.
-      ENDIF
-            
-END SUBROUTINE CohStr_Open
 !=======================================================================
-SUBROUTINE CohStr_ReadEventFile( ScaleWid, ScaleVel, CTKE, TSclFact, ErrStat, ErrMsg )
+SUBROUTINE CohStr_ReadEventFile( p_CohStr, CTKE, TSclFact, ErrStat, ErrMsg )
 
       ! This subroutine reads the events definitions from the event data file
-
-   USE                     TSMods
 
 
    IMPLICIT                NONE
 
 
       ! Passed Variables
+      
+TYPE(CohStr_ParameterType), INTENT(INOUT) :: p_CohStr
 
 REAL(ReKi),                      INTENT(IN)    :: CTKE           ! Predicted maximum CTKE
-REAL(ReKi),                      INTENT(INOUT) :: ScaleVel       ! The shear we're scaling for
-REAL(ReKi),                      INTENT(IN)    :: ScaleWid       ! The height of the wave we're scaling with
+!REAL(ReKi),                      INTENT(INOUT) :: ScaleVel       ! The shear we're scaling for
+!REAL(ReKi),                      INTENT(IN)    :: ScaleWid       ! The height of the wave we're scaling with
 REAL(ReKi),                      INTENT(  OUT) :: TsclFact       ! Scale factor for time (h/U0) in coherent turbulence events
 INTEGER(IntKi),                  intent(  out) :: ErrStat        ! Error level
 CHARACTER(*),                    intent(  out) :: ErrMsg         ! Message describing error
@@ -146,8 +114,10 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
       
             ! Read the last header lines
 
-      CALL ReadCom( Un, p_CohStr%CTEventFile, 'the fourth header line')  ! A blank line
-      CALL ReadCom( Un, p_CohStr%CTEventFile, 'the fifth header line')   ! The column heading lines
+      CALL ReadCom( Un, p_CohStr%CTEventFile, 'the fourth header line', ErrStat2, ErrMsg2) ! A blank line
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')  
+      CALL ReadCom( Un, p_CohStr%CTEventFile, 'the fifth header line', ErrStat2, ErrMsg2) ! The column heading lines
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')   
 
 
             ! Read the event definitions and scale times by TScale
@@ -157,20 +127,22 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
          READ ( Un, *, IOSTAT=IOS )  p_CohStr%EventID(I),  p_CohStr%EventTS(I), p_CohStr%EventLen(I), p_CohStr%pkCTKE(I)
 
          IF ( IOS /= 0 )  THEN
-            CALL TS_Abort ( 'Error reading event '//TRIM( Int2LStr( I ) )//' from the coherent event data file.' )
+            CALL SetErrStat(ErrID_Fatal, 'Error reading event '//TRIM( Int2LStr( I ) )//' from the coherent event data file.', ErrStat, ErrMsg, 'CohStr_ReadEventFile')
+            CLOSE(UN)
+            RETURN
          ENDIF
          MaxEvtCTKE = MAX( MaxEvtCTKE, p_CohStr%pkCTKE(I) )
 
       ENDDO
 
       IF ( MaxEvtCTKE > 0.0 ) THEN
-            ScaleVel = MAX( ScaleVel, SQRT( CTKE / MaxEvtCTKE ) )
+            p_CohStr%ScaleVel = MAX( p_CohStr%ScaleVel, SQRT( CTKE / MaxEvtCTKE ) )
             ! Calculate the Velocity Scale Factor, based on the requested maximum CTKE
       ENDIF
 
          ! Calculate the TimeScaleFactor, based on the Zm_max in the Events file.
 
-      TSclFact = ScaleWid / (ScaleVel * p_CohStr%Zm_max)
+      TSclFact = p_CohStr%ScaleWid / (p_CohStr%ScaleVel * p_CohStr%Zm_max)
 
          ! Scale the time based on TSclFact
 
@@ -180,7 +152,7 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
    ELSE
 
-      TSclFact = ScaleWid / (ScaleVel * p_CohStr%Zm_max)
+      TSclFact = p_CohStr%ScaleWid / (p_CohStr%ScaleVel * p_CohStr%Zm_max)
 
    ENDIF  ! FileNum > 0
 
@@ -188,18 +160,21 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
 END SUBROUTINE CohStr_ReadEventFile
 !=======================================================================
-SUBROUTINE CohStr_CalcEvents( WindSpeed, Height )
+SUBROUTINE CohStr_CalcEvents( p_met, p_RandNum, p_grid, p_cohStr, Height, OtherSt_RandNum, y_cohStr )
 
       ! This subroutine calculates what events to use and when to use them.
       ! It computes the number of timesteps in the file, NumCTt.
 
-   USE                         TSMods
-
    IMPLICIT                    NONE
 
       ! passed variables
-REAL(ReKi), INTENT(IN)      :: WindSpeed           ! Hub height wind speed
-REAL(ReKi), INTENT(IN)      :: Height              ! Height for expected length PDF equation
+TYPE(Meteorology_ParameterType), INTENT(IN)     :: p_met               ! parameters for TurbSim
+TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RandNum           ! parameters for random numbers
+TYPE(Grid_ParameterType)       , INTENT(IN)     :: p_grid              ! parameters for grid (specify grid/frequency size)
+TYPE(CohStr_ParameterType)     , INTENT(IN)     :: p_CohStr            ! parameters for coherent structures
+REAL(ReKi),                      INTENT(IN)     :: Height              ! Height for expected length PDF equation
+TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
+TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
 
       ! local variables
 REAL(ReKi)                  :: iA                  ! Variable used to calculate IAT
@@ -225,7 +200,7 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
    SELECT CASE ( p_met%TurbModel_ID )
 
       CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
-         y_CohStr%lambda = -0.000904*p_met%Rich_No + 0.000562*WindSpeed + 0.001389
+         y_CohStr%lambda = -0.000904*p_met%Rich_No + 0.000562*p_CohStr%Uwave + 0.001389
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          IF ( p_met%TurbModel_ID == SpecModel_NONE ) THEN
@@ -238,25 +213,25 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
          iA     =        0.001797800 + (7.17399E-10)*Height**3.021144723
          iB     =  EXP(-10.590340100 - (4.92440E-05)*Height**2.5)
          iC     = SQRT(  3.655013599 + (8.91203E-06)*Height**3  )
-         y_CohStr%lambda = iA + iB*MIN( (WindSpeed**iC), HUGE(iC) )  ! lambda = iA + iB*(WindSpeed**iC)
+         y_CohStr%lambda = iA + iB*MIN( (p_CohStr%Uwave**iC), HUGE(iC) )  ! lambda = iA + iB*(WindSpeed**iC)
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcohLLJ( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
 
       CASE ( SpecModel_WF_UPW )
-        y_CohStr%lambda = 0.000529*WindSpeed + 0.000365*p_met%Rich_No - 0.000596
+        y_CohStr%lambda = 0.000529*p_CohStr%Uwave + 0.000365*p_met%Rich_No - 0.000596
         y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_UPW )
 
       CASE ( SpecModel_WF_07D )
-         y_CohStr%lambda = 0.000813*WindSpeed - 0.002642*p_met%Rich_No + 0.002676
+         y_CohStr%lambda = 0.000813*p_CohStr%Uwave - 0.002642*p_met%Rich_No + 0.002676
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_07D )
 
       CASE ( SpecModel_WF_14D )
-         y_CohStr%lambda = 0.001003*WindSpeed - 0.00254*p_met%Rich_No - 0.000984
+         y_CohStr%lambda = 0.001003*p_CohStr%Uwave - 0.00254*p_met%Rich_No - 0.000984
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
          CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_14D )
@@ -445,9 +420,17 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 END SUBROUTINE CohStr_CalcEvents
 !=======================================================================
 !> This subroutine writes the coherent events CTS file
-SUBROUTINE CohStr_WriteCTS(ErrStat, ErrMsg)
-use TSMods
+SUBROUTINE CohStr_WriteCTS(p_met, p_RandNum, p_grid, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrMsg)
 use TS_RandNum
+use TSMods, only: RootName, uhub, us, wrfile
+
+   TYPE(Meteorology_ParameterType), INTENT(IN)     :: p_met               ! parameters for TurbSim
+   TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RandNum           ! parameters for random numbers
+   TYPE(Grid_ParameterType)       , INTENT(IN)     :: p_grid              ! parameters for grid (specify grid/frequency size)
+   TYPE(CohStr_ParameterType)     , INTENT(INOUT)  :: p_CohStr             ! parameters for coherent structures
+   TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
+   TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
+
 
    INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
@@ -566,11 +549,11 @@ use TS_RandNum
    !-------------------------
    ! Read and allocate coherent event start times and lengths, calculate TSclFact:
    !-------------------------   
-   CALL CohStr_ReadEventFile( p_CohStr%ScaleWid, p_CohStr%ScaleVel, y_CohStr%CTKE, TSclFact, ErrStat, ErrMsg )
+   CALL CohStr_ReadEventFile( p_CohStr, y_CohStr%CTKE, TSclFact, ErrStat, ErrMsg ) !p_CohStr%%ScaleWid, p_CohStr%ScaleVel
    IF (ErrStat >= AbortErrLev) RETURN
 
    
-   CALL CohStr_CalcEvents( p_CohStr%Uwave,  p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid) 
+   CALL CohStr_CalcEvents( p_met, p_RandNum, p_grid, p_CohStr,  p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr) 
          
 
    !-------------------------

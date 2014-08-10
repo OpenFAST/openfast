@@ -1820,9 +1820,9 @@ END SELECT
 RETURN
 END FUNCTION PowerLawExp
 !=======================================================================
-SUBROUTINE PSDcal ( Ht, Ucmp, UShr, ZL_loc, Ustar_loc)
+SUBROUTINE PSDcal ( Ht, Ucmp, SSVS, UShr, ZL_loc, Ustar_loc )
 
-use TSMods, only: p_met, p_IEC, Work
+use TSMods, only: p_met, p_IEC
    ! This routine calls the appropriate spectral model.
 
 IMPLICIT                            NONE
@@ -1833,36 +1833,37 @@ REAL(ReKi), INTENT(IN)           :: Ucmp           ! Velocity
 REAL(ReKi), INTENT(IN), OPTIONAL :: UShr           ! Shear (du/dz)
 REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
+REAL(ReKi), INTENT(INOUT)        :: SSVS(:,:)      ! the single-sided velocity component spectrum (NumFreq,3)
 
 SELECT CASE ( p_met%TurbModel_ID )
    CASE ( SpecModel_GP_LLJ )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
-         CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, Work )
+         CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, SSVS )
       ELSE
-         CALL Spec_GPLLJ   ( Ht, Ucmp, p_met%ZL,     p_met%Ustar,     Work )
+         CALL Spec_GPLLJ   ( Ht, Ucmp, p_met%ZL,     p_met%Ustar,     SSVS )
       ENDIF
    CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Work )
+      CALL Spec_IECKAI  ( p_IEC%SigmaIEC, p_IEC%IntegralScale, SSVS )
    CASE ( SpecModel_IECVKM )
-      CALL Spec_IECVKM  ( p_IEC%SigmaIEC(1), p_IEC%IntegralScale, Work )
+      CALL Spec_IECVKM  ( p_IEC%SigmaIEC(1), p_IEC%IntegralScale, SSVS )
    CASE ( SpecModel_API )
-      CALL Spec_API ( Ht, Work )
+      CALL Spec_API ( Ht, SSVS )
    CASE (SpecModel_NWTCUP)
-      CALL Spec_NWTCUP  ( Ht, Ucmp, Work )
+      CALL Spec_NWTCUP  ( Ht, Ucmp, SSVS )
    CASE ( SpecModel_SMOOTH )
-      CALL Spec_SMOOTH   ( Ht, Ucmp, Work )
+      CALL Spec_SMOOTH   ( Ht, Ucmp, SSVS )
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-      CALL Spec_TIDAL  ( Ht, UShr, Work, p_met%TurbModel_ID )
+      CALL Spec_TIDAL  ( Ht, UShr, SSVS, p_met%TurbModel_ID )
    CASE ( SpecModel_USER )
-      CALL Spec_UserSpec   ( Work )
+      CALL Spec_UserSpec   ( SSVS )
    CASE ( SpecModel_USRVKM )
-      CALL Spec_vonKrmn   ( Ht, Ucmp, Work )
+      CALL Spec_vonKrmn   ( Ht, Ucmp, SSVS )
    CASE (SpecModel_WF_UPW)
-      CALL Spec_WF_UPW  ( Ht, Ucmp, Work )
+      CALL Spec_WF_UPW  ( Ht, Ucmp, SSVS )
    CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
-      CALL Spec_WF_DW ( Ht, Ucmp, Work )
+      CALL Spec_WF_DW ( Ht, Ucmp, SSVS )
    CASE ( SpecModel_NONE )
-      Work(:,:) = 0.0
+      SSVS(:,:) = 0.0
 !bjj TEST: CALL Spec_Test ( Ht, Ucmp, Work )
 
    CASE ( SpecModel_MODVKM )

@@ -128,6 +128,7 @@ REAL(ReKi)              :: v3(3)                            ! temporary 3-compon
 REAL(ReKi)              ::  ActualSigma(3)                  ! actual standard deviations at the hub
 REAL(ReKi)              ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
 
+REAL(ReKi), ALLOCATABLE :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
 
 
 INTEGER                 ::  AllocStat                       ! The status of allocating space for variables
@@ -150,9 +151,10 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  UnOut                           ! unit for output files
 
+INTEGER(IntKi)          :: UP                               ! I/O unit for PSD debugging file.
 
 CHARACTER(200)          :: InFile = 'TurbSim.inp'           ! Root name of the I/O files.
-CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
+CHARACTER(200)          :: FormStr                          ! String used to store format specifiers.
 
 
 
@@ -386,9 +388,11 @@ CALL WrSum_SpecModel( US, p_IEC, p_grid%Z(NumGrid_Z2) )
 
 IF (DEBUG_OUT) THEN
    ! If we are going to generate debug output, open the debug file.
-
-   CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg' )
-         
+   !UD = -1
+   !CALL GetNewUnit( UD, ErrStat, ErrMsg )
+   CALL OpenFOutFile ( UD, TRIM( RootName)//'.dbg', ErrStat, ErrMsg )
+      CALL CheckError()      
+   
    !bjj: This doesn't need to be part of the summary file, so put it in the debug file
    IF (p_met%WindProfileType(1:1) == 'J' ) THEN
       WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
@@ -406,13 +410,17 @@ ENDIF
 CALL AllocAry( S,    p_grid%NumFreq,p_grid%NPoints,3, 'S (turbulence PSD)',ErrStat, ErrMsg )
 CALL CheckError()
 
-   !  Allocate the work array.
+   !  Allocate the array to hold the single-sided velocity spectrum.
 
-CALL AllocAry( Work, p_grid%NumFreq,3,             'Work',              ErrStat, ErrMsg )
+CALL AllocAry( SSVS, p_grid%NumFreq,3,             'Work',              ErrStat, ErrMsg )
 CALL CheckError()
 
 IF (PSD_OUT) THEN
-   CALL OpenFOutFile ( UP, TRIM( RootName )//'.psd')
+   UP = -1
+   CALL GetNewUnit( UP, ErrStat, ErrMsg )   
+   CALL OpenFOutFile ( UP, TRIM( RootName )//'.psd', ErrStat, ErrMsg)
+   CALL CheckError()
+   
    WRITE (UP,"(A)")  'PSDs '
    FormStr = "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p_grid%NumFreq ) )//"('"//TAB//"',G10.4) )"
    WRITE (UP, FormStr)  'Comp','Ht', p_grid%Freq(:)
@@ -442,23 +450,23 @@ DO IZ=1,p_grid%ZLim
          ! points and the results are stored in the "Work" matrix.
 
       IF ( p_met%TurbModel_ID == SpecModel_IECKAI .or. p_met%TurbModel_ID == SpecModel_IECVKM ) THEN
-         CALL PSDcal( p_grid%HubHt, UHub)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
+         CALL PSDcal( p_grid%HubHt, UHub, SSVS)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
          
       ELSEIF ( p_met%TurbModel_ID == SpecModel_TIDAL .OR. p_met%TurbModel_ID == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
-         CALL PSDCal( p_grid%Z(IZ) , U(IZ), UShr=DUDZ(IZ) )
+         CALL PSDCal( p_grid%Z(IZ) , U(IZ), SSVS, UShr=DUDZ(IZ) )
          
       ELSEIF ( ALLOCATED( p_met%ZL_profile ) ) THEN
-         CALL PSDcal( p_grid%Z(IZ), U(IZ), ZL_loc=p_met%ZL_profile(IZ), UStar_loc=p_met%Ustar_profile(IZ) )
+         CALL PSDcal( p_grid%Z(IZ), U(IZ), SSVS, ZL_loc=p_met%ZL_profile(IZ), UStar_loc=p_met%Ustar_profile(IZ) )
          
       ELSE
-         CALL PSDcal( p_grid%Z(IZ), U(IZ) )
+         CALL PSDcal( p_grid%Z(IZ), U(IZ), SSVS )
       ENDIF               
 
       IF ( PSD_OUT ) THEN
          !IF ( ABS(Ht - p_grid%HubHt) < Tolerance ) THEN
-            WRITE( UP, FormStr ) 1, p_grid%Z(IZ), Work(:,1)
-            WRITE( UP, FormStr ) 2, p_grid%Z(IZ), Work(:,2)
-            WRITE( UP, FormStr ) 3, p_grid%Z(IZ), Work(:,3)
+            WRITE( UP, FormStr ) 1, p_grid%Z(IZ), SSVS(:,1)
+            WRITE( UP, FormStr ) 2, p_grid%Z(IZ), SSVS(:,2)
+            WRITE( UP, FormStr ) 3, p_grid%Z(IZ), SSVS(:,3)
          !ENDIF
       ENDIF      
       
@@ -468,9 +476,9 @@ DO IZ=1,p_grid%ZLim
             TotalW = 0.0
 
             DO IFreq=1,p_grid%NumFreq
-               TotalU = TotalU + Work(IFreq,1)
-               TotalV = TotalV + Work(IFreq,2)
-               TotalW = TotalW + Work(IFreq,3)
+               TotalU = TotalU + SSVS(IFreq,1)
+               TotalV = TotalV + SSVS(IFreq,2)
+               TotalW = TotalW + SSVS(IFreq,3)
             ENDDO ! IFreq
 
             Total  = SQRT( TotalU*TotalU + TotalV*TotalV )
@@ -496,7 +504,7 @@ DO IZ=1,p_grid%ZLim
             Indx = Indx + 1
  
             DO IFreq=1,p_grid%NumFreq
-               S(IFreq,Indx,IVec) = Work(IFreq,IVec)*HalfDelF
+               S(IFreq,Indx,IVec) = SSVS(IFreq,IVec)*HalfDelF
             ENDDO ! IFreq
 
          ENDDO !IY
@@ -507,13 +515,11 @@ DO IZ=1,p_grid%ZLim
 
 ENDDO ! IZ
 
-IF ( PSD_OUT ) THEN
-   CLOSE( UP )
-ENDIF
+IF ( PSD_OUT .AND. UP > 0) CLOSE( UP )
 
    ! Deallocate memory for work array 
 
-IF ( ALLOCATED( Work  ) )  DEALLOCATE( Work  )
+IF ( ALLOCATED( SSVS  ) )  DEALLOCATE( SSVS  )
 
 IF ( ALLOCATED( DUDZ            ) )  DEALLOCATE( DUDZ            )
 IF ( ALLOCATED( p_met%USR_Z           ) )  DEALLOCATE( p_met%USR_Z           )
@@ -798,7 +804,7 @@ IF ( ALLOCATED( WindDir_profile ) )  DEALLOCATE( WindDir_profile )
    
 IF ( WrFile(FileExt_CTS) ) THEN
    
-   CALL CohStr_WriteCTS(ErrStat, ErrMsg)
+   CALL CohStr_WriteCTS(p_met, p_RandNum, p_grid, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrMsg)
    CALL CheckError()
    
          
@@ -907,9 +913,7 @@ IF ( ALLOCATED( p_grid%Z        ) )  DEALLOCATE( p_grid%Z        )
 IF ( ALLOCATED( p_grid%IYmax    ) )  DEALLOCATE( p_grid%IYmax    )
 
 
-IF (DEBUG_OUT) THEN
-   CLOSE( UD )       ! Close the debugging file
-ENDIF
+IF (DEBUG_OUT) CLOSE( UD )       ! Close the debugging file
 
 WRITE ( US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p_grid%TimeStep)
 IF ( WrFile(FileExt_CTS) .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
