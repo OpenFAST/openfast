@@ -71,7 +71,7 @@ CHARACTER(99)     :: Line                 ! An input line
 CHARACTER(1)      :: Line1                ! The first character of an input line
 
 
-CHARACTER( 23)               :: IECeditionStr_p (3) = &   ! strings for the 
+CHARACTER( 23), PARAMETER  :: IECeditionStr_p (3) = &   ! strings for the 
                                 (/'IEC 61400-1 Ed. 1: 1993', &
                                   'IEC 61400-1 Ed. 2: 1999', &
                                   'IEC 61400-1 Ed. 3: 2005'/)            ! The string description of the IEC 61400-1 standard being used
@@ -308,9 +308,9 @@ p_grid%RotorDiameter = MIN( p_grid%GridWidth, p_grid%GridHeight )
 
    ! ------------ Read in the vertical flow angle. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, VFlowAng, "tVFlowAng", "Vertical flow angle [degrees]")
+CALL ReadVar( UI, InFile, p_met%VFlowAng, "tVFlowAng", "Vertical flow angle [degrees]")
 
-   IF ( ABS( VFlowAng ) > 45.0 )  THEN
+   IF ( ABS( p_met%VFlowAng ) > 45.0 )  THEN
       CALL TS_Abort ( 'The vertical flow angle must not exceed +/- 45 degrees.' )
    ENDIF
 
@@ -318,7 +318,7 @@ CALL ReadVar( UI, InFile, VFlowAng, "tVFlowAng", "Vertical flow angle [degrees]"
 
    ! ------------ Read in the horizontal flow angle. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]")
+CALL ReadVar( UI, InFile, p_met%HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]")
 
 
 
@@ -2519,7 +2519,7 @@ IF ( ( p_met%TurbModel_ID  == SpecModel_IECKAI ) .OR. &
       ENDIF
    ENDIF      
    
-   WRITE (US,FormStr2)         "IEC standard                                    ", p_IEC%IECeditionSTR
+   WRITE (US,FormStr2)         "IEC standard                                    ", TRIM(p_IEC%IECeditionSTR)
    
    IF ( p_met%TurbModel_ID  /= SpecModel_MODVKM ) THEN
       ! Write out a parameter summary to the summary file.
@@ -2662,8 +2662,8 @@ ENDIF
 WRITE(US,"(//,'Mean Flow Angles:',/)")
 
 FormStr = "(3X,A,F6.1,' degrees')"
-WRITE(US,FormStr)  'Vertical   =', VFlowAng
-WRITE(US,FormStr)  'Horizontal =', HFlowAng
+WRITE(US,FormStr)  'Vertical   =', p_met%VFlowAng
+WRITE(US,FormStr)  'Horizontal =', p_met%HFlowAng
 
 
 WRITE(US,"(/'Mean Wind Speed Profile:')")
@@ -2686,10 +2686,10 @@ ENDIF
 
    ! Get the angles to rotate the wind components from streamwise orientation to the X-Y-Z grid at the Hub
             
-CVFA = COS( VFlowAng*D2R )
-SVFA = SIN( VFlowAng*D2R ) 
-CHFA = COS( HFlowAng*D2R )
-SHFA = SIN( HFlowAng*D2R )
+CVFA = COS( p_met%VFlowAng*D2R )
+SVFA = SIN( p_met%VFlowAng*D2R ) 
+CHFA = COS( p_met%HH_HFlowAng*D2R )
+SHFA = SIN( p_met%HH_HFlowAng*D2R )
 
 HubPr = ( ABS( p_grid%HubHt - GridVertCenter ) > Tolerance )     !If the hub height is not on the z-grid, print it, too.
 
@@ -2715,10 +2715,10 @@ DO IZ = p_grid%NumGrid_Z,1, -1
          ENDIF
       ELSE
          IF ( ALLOCATED( p_met%ZL_profile ) ) THEN
-            WRITE(US,FormStr)  p_grid%Z(JZ), U(JZ), HFlowAng, U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA, &
+            WRITE(US,FormStr)  p_grid%Z(JZ), U(JZ), p_met%HH_HFlowAng, U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA, &   ! HH_HFlowAng = HFlowAng
                               p_met%ZL_profile(JZ), p_met%Ustar_profile(JZ)
          ELSE
-            WRITE(US,FormStr)  p_grid%Z(JZ), U(JZ), HFlowAng, U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA
+            WRITE(US,FormStr)  p_grid%Z(JZ), U(JZ), p_met%HH_HFlowAng, U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA
          ENDIF
       ENDIF
    
@@ -2737,10 +2737,10 @@ DO IZ = p_grid%NumGrid_Z,1, -1
       ENDIF
    ELSE
       IF ( ALLOCATED( p_met%ZL_profile ) ) THEN
-         WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
+         WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), p_met%HH_HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &  ! HH_HFlowAng = HFlowAng
                             p_met%ZL_profile(IZ), p_met%Ustar_profile(IZ)
       ELSE
-         WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
+         WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), p_met%HH_HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
       ENDIF
    ENDIF                
 
@@ -2763,10 +2763,10 @@ DO IZ = p_grid%NumGrid_Z,p_grid%ZLim
          ENDIF
       ELSE
          IF ( ALLOCATED( p_met%ZL_profile ) ) THEN
-            WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
+            WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), p_met%HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
                                p_met%ZL_profile(IZ), p_met%Ustar_profile(IZ)
          ELSE
-            WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
+            WRITE(US,FormStr)  p_grid%Z(IZ), U(IZ), p_met%HFlowAng, U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
          ENDIF
       ENDIF                
    ENDIF
@@ -2799,11 +2799,11 @@ USE TSMods
 
    
    
-   CHFA = COS( HH_HFlowAng*D2R )
-   SHFA = SIN( HH_HFlowAng*D2R )
+   CHFA = COS( p_met%HH_HFlowAng*D2R )
+   SHFA = SIN( p_met%HH_HFlowAng*D2R )
 
-   CVFA = COS( VFlowAng*D2R )
-   SVFA = SIN( VFlowAng*D2R )
+   CVFA = COS( p_met%VFlowAng*D2R )
+   SVFA = SIN( p_met%VFlowAng*D2R )
 
    CALL GetNewUnit( UAHH, ErrStat, ErrMsg)
    CALL OpenFOutFile ( UAHH, TRIM( RootName)//'.hh', ErrStat, ErrMsg )
@@ -2826,7 +2826,7 @@ ENDIF
       
       Time = p_grid%TimeStep*( IT - 1 )
             
-      CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, HH_HFlowAng, VFlowAng, V_Inertial, UH)      
+      CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, p_met%HH_HFlowAng, p_met%VFlowAng, V_Inertial, UH)      
       
       WRITE (UAHH,'(F8.3,3F8.2,3F8.3,F8.2)')  Time, UH, -1.0*R2D*ATAN2( V_Inertial(2) , V_Inertial(1) ), &
                                                     V_Inertial(3), 0.0, p_met%PLExp, 0.0, 0.0 
@@ -2880,7 +2880,7 @@ USE TSMods
       
       Time = p_grid%TimeStep*( IT - 1 )
       
-      CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, HH_HFlowAng, VFlowAng, V_Inertial, UH, UT)
+      CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, p_met%HH_HFlowAng, p_met%VFlowAng, V_Inertial, UH, UT)
       CALL CalculateStresses(      V(IT,p_grid%HubIndx,:), uv, uw, vw, TKE, CTKE )
       
       WRITE (UGTP)  REAL(Time,SiKi), REAL(V_Inertial(1),SiKi), REAL(UH,SiKi), REAL(UT,SiKi), &      
@@ -2943,7 +2943,7 @@ USE TSMods
       
       Time = p_grid%TimeStep*( IT - 1 )
       
-      CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, HH_HFlowAng, VFlowAng, V_Inertial, UH, UT)
+      CALL CalculateWindComponents(V(IT,p_grid%HubIndx,:), UHub, p_met%HH_HFlowAng, p_met%VFlowAng, V_Inertial, UH, UT)
       CALL CalculateStresses(      V(IT,p_grid%HubIndx,:), uv, uw, vw, TKE, CTKE )
       
                              
@@ -3137,11 +3137,11 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
    UZTmp   =      0.0
    UZTmp2  =      0.0
 
-   CHFA = COS( HH_HFlowAng*D2R )
-   SHFA = SIN( HH_HFlowAng*D2R )
+   CHFA = COS( p_met%HH_HFlowAng*D2R )
+   SHFA = SIN( p_met%HH_HFlowAng*D2R )
 
-   CVFA = COS( VFlowAng*D2R )
-   SVFA = SIN( VFlowAng*D2R )
+   CVFA = COS( p_met%VFlowAng*D2R )
+   SVFA = SIN( p_met%VFlowAng*D2R )
 
    DO IT=1,p_grid%NumSteps
 
@@ -3469,8 +3469,8 @@ use TSMods
    WRITE (US,"( F10.3 , 2X , 'Hub height [m]' )"                        )  p_grid%HubHt  
    WRITE (US,"( F10.3 , 2X , 'Grid height [m]' )"                       )  p_grid%GridHeight
    WRITE (US,"( F10.3 , 2X , 'Grid width [m]' )"                        )  p_grid%GridWidth
-   WRITE (US,"( F10.3 , 2X , 'Vertical flow angle [degrees]' )"         )  VFlowAng
-   WRITE (US,"( F10.3 , 2X , 'Horizontal flow angle [degrees]' )"       )  HFlowAng
+   WRITE (US,"( F10.3 , 2X , 'Vertical flow angle [degrees]' )"         )  p_met%VFlowAng
+   WRITE (US,"( F10.3 , 2X , 'Horizontal flow angle [degrees]' )"       )  p_met%HFlowAng
    
 
 !..................................................................................................................................

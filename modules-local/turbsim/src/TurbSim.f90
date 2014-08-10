@@ -337,7 +337,17 @@ IF ( INDEX( 'JU', p_met%WindProfileType(1:1) ) > 0 ) THEN
    CALL CheckError()
    
    WindDir_profile = getDirectionProfile(p_grid%Z)
+   
+   IF (p_grid%ExtraHubPT) THEN    
+      JZ = p_grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
+   ELSE
+      JZ = NumGrid_Z2
+   ENDIF
+   p_met%HH_HFlowAng = WindDir_profile(JZ)
+ELSE
+   p_met%HH_HFlowAng = p_met%HFlowAng
 END IF
+
 
 IF ( p_met%TurbModel_ID == SpecModel_GP_LLJ) THEN
 
@@ -352,19 +362,6 @@ IF ( p_met%TurbModel_ID == SpecModel_GP_LLJ) THEN
    p_met%Ustar_profile(:) = getUstarARY( U, p_grid%Z, p_met%UStarOffset, p_met%UStarSlope )
    
 END IF
-
-
-IF ( INDEX( 'JU', p_met%WindProfileType(1:1) ) > 0 ) THEN
-   IF (p_grid%ExtraHubPT) THEN    
-      JZ = p_grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
-   ELSE
-      JZ = NumGrid_Z2
-   ENDIF
-   HH_HFlowAng = WindDir_profile(JZ)   
-ELSE
-   HH_HFlowAng = HFlowAng
-END IF
-
 
   
 IF ( p_met%IsIECModel )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
@@ -769,7 +766,7 @@ DO IZ=1,p_grid%ZLim
    IF ( ALLOCATED( WindDir_profile ) ) THEN  ! The horizontal flow angle changes with height
       this_HFlowAng = WindDir_profile(IZ)
    ELSE
-      this_HFlowAng = HFlowAng
+      this_HFlowAng = p_met%HH_HFlowAng
    ENDIF      
 
   DO IY=1,p_grid%IYmax(IZ)  
@@ -782,7 +779,7 @@ DO IZ=1,p_grid%ZLim
             ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
             
          v3 = V(IT,II,:)
-         CALL CalculateWindComponents( v3, U(IZ), this_HFlowAng, VFlowAng, V(IT,II,:) )
+         CALL CalculateWindComponents( v3, U(IZ), this_HFlowAng, p_met%VFlowAng, V(IT,II,:) )
                         
       ENDDO ! IT
   ENDDO ! IY

@@ -186,7 +186,6 @@ FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam )
 
    use TurbSim_Types
    
-   USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
    USE                                  TSMods, ONLY: p_grid         ! Grid information (HubHt)
    USE                                  TSMods, ONLY: p_met          ! Met data
@@ -309,7 +308,6 @@ FUNCTION getDirectionProfile( Ht )
 
    ! Determine the wind speed at a given height, with reference wind speed.
 
-   USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: p_grid         ! grid information (hub height)
    USE                                  TSMods, ONLY: p_met          ! met information (coefficients)
 
@@ -359,7 +357,7 @@ FUNCTION getDirectionProfile( Ht )
             ! add the mean flow angle. (Note that the Chebyshev profile is cw looking upwind,
             ! but the horizontal angle is ccw looking upwind)
 
-            getDirectionProfile(I) = HFlowAng - (getDirectionProfile(I) - tmpWS(1)) ! This is the counter-clockwise angle of the wind
+            getDirectionProfile(I) = p_met%HFlowAng - (getDirectionProfile(I) - tmpWS(1)) ! This is the counter-clockwise angle of the wind
          ENDDO
 
 
@@ -394,13 +392,14 @@ FUNCTION getDirectionProfile( Ht )
 
             ENDIF
 
-            getDirectionProfile(J) = HFlowAng + getDirectionProfile(J)  ! This is the counter-clockwise angle of the wind
-
          ENDDO
+         
+!bjj: TODO: See if we can get this to have direction of HFlowAng at hub height.
+         getDirectionProfile = p_met%HFlowAng + getDirectionProfile  ! This is the counter-clockwise angle of the wind
 
       CASE DEFAULT   
 
-         getDirectionProfile = HFlowAng
+         getDirectionProfile = p_met%HFlowAng
    
    END SELECT
 
@@ -412,7 +411,6 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
    ! Determine the wind speed at a given height, with reference wind speed.
    use TurbSim_Types
    
-   USE                                  TSMods, ONLY: HFlowAng       ! The horizontal flow angle of the mean wind speed at hub height
    USE                                  TSMods, ONLY: p_IEC          ! Type of IEC wind
    USE                                  TSMods, ONLY: p_grid         ! grid information (hub ht)
    USE                                  TSMods, ONLY: p_met          ! Surface roughness length must be > 0 (which we've already checked for)
