@@ -109,18 +109,21 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    INTEGER(IntKi)          :: i                ! do-loop counter
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
+   INTEGER(IntKi)          :: m                ! do-loop counter
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
    REAL(ReKi)              :: temp_EP1(3)
    REAL(ReKi)              :: temp_EP2(3)
    REAL(ReKi)              :: temp_MID(3)
-   REAL(ReKi)              :: temp_Coef(3,4)
-   REAL(ReKi)              :: temp_twist(2)
-   REAL(ReKi)              :: temp_phi
+   REAL(ReKi)              :: temp_Coef(4,4)
+   REAL(ReKi)              :: temp66(6,6)
+   REAL(ReKi)              :: temp_twist
+   REAL(ReKi)              :: eta
    REAL(ReKi)              :: temp_POS(3)
    REAL(ReKi)              :: temp_e1(3)
    REAL(ReKi)              :: temp_CRV(3)
+   REAL(ReKi),PARAMETER    :: EPS = 1.0D-10
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_w(:)
@@ -196,32 +199,52 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    temp_w(:) = 0.0D0
    CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
    DEALLOCATE(temp_w)
-WRITE(*,*) "08AUG14, stop here"
-STOP
-!   DO i=1,p%elem_total
-!       DO j=1,3
-!           temp_Coef(j,1:4) = SP_Coef(i,1:4,j)
-!       ENDDO
-!       temp_twist(1) = InputFileData%initial_twist(i)
-!       temp_twist(2) = InputFileData%initial_twist(i+1)
-!       DO j=1,p%node_elem
-!           CALL ComputeIniNodalPositionSP(temp_Coef,temp_GLL(j),temp_POS,temp_e1)
-!           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-!           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV)
-!           temp_id2 = (j-1)*p%dof_node 
-!           p%uuN0(temp_id2+1,i) = temp_POS(1)
-!           p%uuN0(temp_id2+2,i) = temp_POS(2)
-!           p%uuN0(temp_id2+3,i) = temp_POS(3)
-!           p%uuN0(temp_id2+4,i) = temp_CRV(1)
-!           p%uuN0(temp_id2+5,i) = temp_CRV(2)
-!           p%uuN0(temp_id2+6,i) = temp_CRV(3)
-!       ENDDO
-!       DO j=1,p%ngp
-!           CALL ComputeIniNodalPositionSP(temp_Coef,temp_GL(j),temp_POS,temp_e1)
-!           temp_id2 = (i-1)*p%ngp+j+1
-!           temp_L2(1:3,temp_id2) = temp_POS(1:3)
-!       ENDDO
-!   ENDDO
+
+   DO i=1,p%elem_total
+       IF(i == 1) THEN
+           temp_id = 0
+       ELSE
+           temp_id = temp_id + InputFileData%kp_member(i-1) - 1
+       ENDIF
+       DO j=1,p%node_elem
+           eta = (temp_GLL(j) + 1.0D0)/2.0D0
+           DO k=1,InputFileData%kp_member(i)-1
+               temp_id2 = temp_id + k
+               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+                   DO m=1,4
+                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                   ENDDO
+                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
+                   temp_id2 = (j-1)*p%dof_node 
+                   p%uuN0(temp_id2+1,i) = temp_POS(1)
+                   p%uuN0(temp_id2+2,i) = temp_POS(2)
+                   p%uuN0(temp_id2+3,i) = temp_POS(3)
+                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
+                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
+                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
+                   EXIT
+               ENDIF
+           ENDDO
+       ENDDO
+       DO j=1,p%ngp
+           eta = (temp_GL(j) + 1.0D0)/2.0D0
+           DO k=1,InputFileData%kp_member(i)-1
+               temp_id2 = temp_id + k
+               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+                   DO m=1,4
+                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                   ENDDO
+                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   temp_id2 = (i-1)*p%ngp+j+1
+                   temp_L2(1:3,temp_id2) = temp_POS(1:3)
+                   EXIT
+               ENDIF
+           ENDDO
+       ENDDO
+   ENDDO
    temp_L2(1:3,1) = p%uuN0(1:3,1)
    temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
 
@@ -254,18 +277,26 @@ STOP
    CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2) 
    p%Mass0_GL(:,:,:) = 0.0D0
    DO i=1,p%elem_total
-       DO j=1,p%node_elem-1
+       DO j=1,p%ngp
            temp_id = (i-1)*p%ngp+j
            DO k=1,InputFileData%InpBl%station_total
-               IF(temp_ratio(j,i) <= InputFileData%InpBl%station_eta(k)) THEN
-                   IF(temp_ratio(j,i) == InputFileData%InpBl%station_eta(k)) THEN
+               IF(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
+                   IF(ABS(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k)) <= EPS) THEN
                        p%Stif0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%stiff0(1:6,1:6,k)
                        p%Mass0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%mass0(1:6,1:6,k)
                    ELSE 
-                       p%Stif0_GL(1:6,1:6,temp_id) = 0.5D0*(InputFileData%InpBl%stiff0(1:6,1:6,k-1)+&
-                                                            InputFileData%InpBl%stiff0(1:6,1:6,k))
-                       p%Mass0_GL(1:6,1:6,temp_id) = 0.5D0*(InputFileData%InpBl%mass0(1:6,1:6,k-1)+&
-                                                            InputFileData%InpBl%mass0(1:6,1:6,k))
+                       temp66(:,:) = 0.0D0
+                       temp66(1:6,1:6) = (InputFileData%InpBl%stiff0(1:6,1:6,k)-InputFileData%InpBl%stiff0(1:6,1:6,k-1)) / &
+                                         (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
+                       p%Stif0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                                                     InputFileData%InpBl%stiff0(1:6,1:6,k-1) - &
+                                                     temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
+                       temp66(:,:) = 0.0D0
+                       temp66(1:6,1:6) = (InputFileData%InpBl%mass0(1:6,1:6,k)-InputFileData%InpBl%mass0(1:6,1:6,k-1)) / &
+                                         (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
+                       p%Mass0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                                                     InputFileData%InpBl%mass0(1:6,1:6,k-1) - &
+                                                     temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
                    ENDIF
                    EXIT
                ENDIF
@@ -279,9 +310,10 @@ STOP
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
    WRITE(*,*) "gravity = ", p%gravity
-   WRITE(*,*) "temp_GL: ", temp_GLL(:)
-   DO i=1,InputFileData%member_total+1
-       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
+   DO i=1,InputFileData%member_total
+       DO j=1,InputFileData%kp_member(i)
+           WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(j,:)
+       ENDDO
    ENDDO
    DO i=1,InputFiledata%member_total
        WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
@@ -298,12 +330,10 @@ STOP
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,2)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
    WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
    WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
    STOP
    ! Define parameters here:
 
