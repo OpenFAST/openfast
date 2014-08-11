@@ -21,7 +21,7 @@
 
        K(1,3) = 2.0D0
        RHS(1) = 0.0D0
-       DO j=1,kp_member-1
+       DO j=1,kp_member-2
            temp_id1 = (j-1)*4
            K(temp_id1+2,temp_id1+1) = 1.0D0
            K(temp_id1+3,temp_id1+1:temp_id1+4) = 1.0D0
