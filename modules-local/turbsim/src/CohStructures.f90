@@ -160,7 +160,7 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
 END SUBROUTINE CohStr_ReadEventFile
 !=======================================================================
-SUBROUTINE CohStr_CalcEvents( p_met, p_RandNum, p_grid, p_cohStr, Height, OtherSt_RandNum, y_cohStr )
+SUBROUTINE CohStr_CalcEvents( p_met, p_RNG, p_grid, p_cohStr, Height, OtherSt_RandNum, y_cohStr )
 
       ! This subroutine calculates what events to use and when to use them.
       ! It computes the number of timesteps in the file, NumCTt.
@@ -169,7 +169,7 @@ SUBROUTINE CohStr_CalcEvents( p_met, p_RandNum, p_grid, p_cohStr, Height, OtherS
 
       ! passed variables
 TYPE(Meteorology_ParameterType), INTENT(IN)     :: p_met               ! parameters for TurbSim
-TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RandNum           ! parameters for random numbers
+TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RNG           ! parameters for random numbers
 TYPE(Grid_ParameterType)       , INTENT(IN)     :: p_grid              ! parameters for grid (specify grid/frequency size)
 TYPE(CohStr_ParameterType)     , INTENT(IN)     :: p_CohStr            ! parameters for coherent structures
 REAL(ReKi),                      INTENT(IN)     :: Height              ! Height for expected length PDF equation
@@ -206,7 +206,7 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
          IF ( p_met%TurbModel_ID == SpecModel_NONE ) THEN
             y_CohStr%ExpectedTime = 600.0
          ELSE
-            CALL RndModLogNorm( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
+            CALL RndModLogNorm( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
          ENDIF
 
       CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER) ! HYDRO: added 'TIDAL' and 'RIVER' to the spectral models that get handled this way.
@@ -216,25 +216,25 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
          y_CohStr%lambda = iA + iB*MIN( (p_CohStr%Uwave**iC), HUGE(iC) )  ! lambda = iA + iB*(WindSpeed**iC)
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcohLLJ( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
+         CALL RndTcohLLJ( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
 
       CASE ( SpecModel_WF_UPW )
         y_CohStr%lambda = 0.000529*p_CohStr%Uwave + 0.000365*p_met%Rich_No - 0.000596
         y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_UPW )
+         CALL RndTcoh_WF( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_UPW )
 
       CASE ( SpecModel_WF_07D )
          y_CohStr%lambda = 0.000813*p_CohStr%Uwave - 0.002642*p_met%Rich_No + 0.002676
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_07D )
+         CALL RndTcoh_WF( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_07D )
 
       CASE ( SpecModel_WF_14D )
          y_CohStr%lambda = 0.001003*p_CohStr%Uwave - 0.00254*p_met%Rich_No - 0.000984
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcoh_WF( p_RandNum, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_14D )
+         CALL RndTcoh_WF( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_14D )
 
       CASE DEFAULT
          !This should not happen
@@ -256,7 +256,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
    y_CohStr%EventTimeSum = 0.0 
 
-   CALL RndExp(p_RandNum, OtherSt_RandNum, rn, y_CohStr%lambda)                            ! Assume the last event ended at time zero
+   CALL RndExp(p_RNG, OtherSt_RandNum, rn, y_CohStr%lambda)                            ! Assume the last event ended at time zero
 
    TStartNext = rn / 2.0
 
@@ -273,7 +273,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
    DO WHILE ( TStartNext < p_grid%UsableTime .AND. y_CohStr%EventTimeSum < y_CohStr%ExpectedTime )
 
-      CALL RndUnif( p_RandNum, OtherSt_RandNum, rn )
+      CALL RndUnif( p_RNG, OtherSt_RandNum, rn )
 
       NewEvent = INT( rn*( p_CohStr%NumEvents - 1.0 ) ) + 1
       NewEvent = MAX( 1, MIN( NewEvent, p_CohStr%NumEvents ) ) ! take care of possible rounding issues....
@@ -318,7 +318,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
          DO WHILE ( TStartNext <= TEnd )
 
-            CALL RndExp(p_RandNum, OtherSt_RandNum, rn, y_CohStr%lambda)    ! compute the interarrival time
+            CALL RndExp(p_RNG, OtherSt_RandNum, rn, y_CohStr%lambda)    ! compute the interarrival time
             TStartNext        = TStartNext + rn !+ EventLen( NewEvent )
 
          ENDDO
@@ -346,7 +346,7 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
       DO WHILE ( y_CohStr%EventTimeSum < y_CohStr%ExpectedTime .AND. NumCompared < y_CohStr%NumCTEvents )
 
-         CALL RndUnif( p_RandNum, OtherSt_RandNum, rn )
+         CALL RndUnif( p_RNG, OtherSt_RandNum, rn )
 
          NewEvent = INT( rn*( p_CohStr%NumEvents - 1.0 ) ) + 1
          NewEvent = MAX( 1, MIN( NewEvent, p_CohStr%NumEvents ) )    ! take care of possible rounding issues....
@@ -420,20 +420,21 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 END SUBROUTINE CohStr_CalcEvents
 !=======================================================================
 !> This subroutine writes the coherent events CTS file
-SUBROUTINE CohStr_WriteCTS(p_met, p_RandNum, p_grid, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrMsg)
+SUBROUTINE CohStr_WriteCTS(p_met, p_RNG, p_grid, p_CohStr, OtherSt_RandNum, y_CohStr, RootName, ErrStat, ErrMsg)
 use TS_RandNum
-use TSMods, only: RootName, uhub, us, wrfile
+use TSMods, only: uhub, us, p
 
    TYPE(Meteorology_ParameterType), INTENT(IN)     :: p_met               ! parameters for TurbSim
-   TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RandNum           ! parameters for random numbers
+   TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RNG               ! parameters for random numbers
    TYPE(Grid_ParameterType)       , INTENT(IN)     :: p_grid              ! parameters for grid (specify grid/frequency size)
-   TYPE(CohStr_ParameterType)     , INTENT(INOUT)  :: p_CohStr             ! parameters for coherent structures
+   TYPE(CohStr_ParameterType)     , INTENT(INOUT)  :: p_CohStr            ! parameters for coherent structures
    TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
    TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
 
 
-   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
-   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+   INTEGER(IntKi),                  intent(  out) :: ErrStat              ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg               ! Message describing error
+   CHARACTER(*),                    intent(in   ) :: RootName             ! Rootname of output file
 
 
    
@@ -469,7 +470,7 @@ use TSMods, only: RootName, uhub, us, wrfile
          ! If the coherent structures do not cover the whole disk, increase the shear
 
       IF ( p_CohStr%DistScl < 1.0 ) THEN ! Increase the shear by up to two when the wave is half the size of the disk...
-         CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum ) !returns TmpRndNum, a random variate
+         CALL RndUnif( p_RNG, OtherSt_RandNum, TmpRndNum ) !returns TmpRndNum, a random variate
          p_CohStr%ScaleVel = p_CohStr%ScaleVel * ( 1.0 + TmpRndNum * (1 - p_CohStr%DistScl) / p_CohStr%DistScl )
       ENDIF
 
@@ -481,7 +482,7 @@ use TSMods, only: RootName, uhub, us, wrfile
 
    IF (p_CohStr%ScaleVel < 0. ) THEN
       CALL TS_Warn( ' A coherent turbulence time step file cannot be generated with negative shear.', US )
-      WrFile(FileExt_CTS) = .FALSE.
+      p%WrFile(FileExt_CTS) = .FALSE.
       RETURN
    ENDIF
       
@@ -496,7 +497,7 @@ use TSMods, only: RootName, uhub, us, wrfile
             
          IF (p_met%KHtest) THEN
             y_CohStr%CTKE = 30.0 !Scale for large coherence
-            CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, y_CohStr%CTKE )
+            CALL RndNWTCpkCTKE( p_RNG, OtherSt_RandNum, y_CohStr%CTKE )
          ELSE    
                
                ! Increase the Scaling Velocity for computing U,V,W in AeroDyn
@@ -505,7 +506,7 @@ use TSMods, only: RootName, uhub, us, wrfile
             y_CohStr%CTKE =  0.616055*p_met%Rich_No - 0.242143*p_CohStr%Uwave + 23.921801*p_CohStr%WSig - 11.082978
             
                ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
-            CALL RndUnif( p_RandNum, OtherSt_RandNum, TmpRndNum )
+            CALL RndUnif( p_RNG, OtherSt_RandNum, TmpRndNum )
             y_CohStr%CTKE = MAX( y_CohStr%CTKE + (2.0 * TmpRndNum - 1.0) * 6.0, 0.0 )
 
             IF ( y_CohStr%CTKE > 0.0 ) THEN
@@ -514,7 +515,7 @@ use TSMods, only: RootName, uhub, us, wrfile
                ENDIF
 
                IF ( y_CohStr%CTKE >= 30.0 .AND. p_met%Rich_No >= 0.0 .AND. p_met%Rich_No <= 0.05 ) THEN
-                  CALL RndNWTCpkCTKE( p_RandNum, OtherSt_RandNum, y_CohStr%CTKE )
+                  CALL RndNWTCpkCTKE( p_RNG, OtherSt_RandNum, y_CohStr%CTKE )
                ENDIF
             ENDIF
                   
@@ -531,7 +532,7 @@ use TSMods, only: RootName, uhub, us, wrfile
          y_CohStr%CTKE = 9.276618*p_met%Rich_No + 6.557176*p_met%Ustar + 3.779539*p_CohStr%WSig - 0.106633
 
          IF ( (p_met%Rich_No > -0.025) .AND. (p_met%Rich_No < 0.05) .AND. (p_met%Ustar > 1.0) .AND. (p_met%Ustar < 1.56) ) THEN
-            CALL RndpkCTKE_WFTA( p_RandNum, OtherSt_RandNum, TmpRndNum )  ! Add a random residual
+            CALL RndpkCTKE_WFTA( p_RNG, OtherSt_RandNum, TmpRndNum )  ! Add a random residual
             y_CohStr%CTKE = y_CohStr%CTKE + TmpRndNum
          ENDIF
                
@@ -553,7 +554,7 @@ use TSMods, only: RootName, uhub, us, wrfile
    IF (ErrStat >= AbortErrLev) RETURN
 
    
-   CALL CohStr_CalcEvents( p_met, p_RandNum, p_grid, p_CohStr,  p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr) 
+   CALL CohStr_CalcEvents( p_met, p_RNG, p_grid, p_CohStr,  p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr) 
          
 
    !-------------------------
@@ -576,7 +577,7 @@ END SUBROUTINE CohStr_WriteCTS
 !=======================================================================
 FUNCTION pkCTKE_LLJ(Ht, ZL, UStar)
 
-   use tsmods, only: p_RandNum
+   use tsmods, only: p
    use tsmods, only: OtherSt_RandNum
    
 use TurbSim_Types
@@ -627,7 +628,7 @@ INTEGER                  :: Zindx_mn (1)
          CALL TS_Abort( 'Error in pkCTKE_LLJ():: Height index is invalid.' )
    END SELECT
 
-   CALL RndPearsonIV( p_RandNum, OtherSt_RandNum, rndCTKE, RndParms, (/ -10.0_ReKi, 17.5_ReKi /) )
+   CALL RndPearsonIV( p%RNG, OtherSt_RandNum, rndCTKE, RndParms, (/ -10.0_ReKi, 17.5_ReKi /) )
 
    pkCTKE_LLJ = MAX(0.0, A + A_uSt*UStar + A_zL*ZL + rndCTKE)
 
@@ -667,7 +668,7 @@ TYPE (Event), POINTER   :: PtrCurr  => NULL()     ! Pointer to the current event
 
 
    CALL GetNewUnit( UnOut )
-   CALL OpenFOutFile ( UnOut, TRIM( RootName )//'.cts' ) 
+   CALL OpenFOutFile ( UnOut, TRIM( p%RootName )//'.cts' ) 
 
    CALL GetNewUnit( UnIn )
    

@@ -89,29 +89,29 @@ V(:,:,:) = 0.0_ReKi    ! initialize the velocity matrix
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
-IF ( p_met%IsIECModel ) THEN
+IF ( p%met%IsIECModel ) THEN
    DistZMExp(:) = 1.0
 ENDIF
 
          II = 0
-POINT_I: DO IZ=1,p_grid%ZLim   !NumGrid_Z
-            DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
+POINT_I: DO IZ=1,p%grid%ZLim   !NumGrid_Z
+            DO IY=1,p%grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > p_grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
+               IF (II > p%grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
-                  DO JY=1,p_grid%IYmax(JZ) !NumGrid_Y
+                  DO JY=1,p%grid%IYmax(JZ) !NumGrid_Y
 
                      JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
 
                      IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
 
-                     IF ( IZ > p_grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
-                        I = p_grid%YLim
-                        IF ( JZ > p_grid%NumGrid_Z ) THEN
-                           J = p_grid%YLim
+                     IF ( IZ > p%grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
+                        I = p%grid%YLim
+                        IF ( JZ > p%grid%NumGrid_Z ) THEN
+                           J = p%grid%YLim
                         ELSE
                            J = JY
                         ENDIF
@@ -121,32 +121,32 @@ POINT_J:       DO JZ=1,IZ
                      ENDIF
 
                      JJ1       = JJ - 1
-                     Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                     Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
                      IF ( .NOT. PeriodicY ) THEN
-                        Dist(Indx)= SQRT( ( p_grid%Y(I) - p_grid%Y(J) )**2  + ( p_grid%Z(IZ) - p_grid%Z(JZ) )**2 )
+                        Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(IZ) - p%grid%Z(JZ) )**2 )
                      ELSE 
-                        dY = p_grid%Y(I) - p_grid%Y(J)
-                        IF (dY > 0.5*p_grid%GridWidth ) THEN
-                           dY = dY - p_grid%GridWidth - p_grid%GridRes_Y
-                        ELSE IF (dY < -0.5*p_grid%GridWidth ) THEN
-                           dY = dY + p_grid%GridWidth + p_grid%GridRes_Y
+                        dY = p%grid%Y(I) - p%grid%Y(J)
+                        IF (dY > 0.5*p%grid%GridWidth ) THEN
+                           dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
+                        ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
+                           dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
                         END IF
 
-                        Dist(Indx)= SQRT( ( dY )**2  + ( p_grid%Z(IZ) - p_grid%Z(JZ) )**2 )
+                        Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(IZ) - p%grid%Z(JZ) )**2 )
                      END IF
 
-                     IF ( p_met%IsIECModel ) THEN
+                     IF ( p%met%IsIECModel ) THEN
                         DistU(Indx) = Dist(Indx)/UHub
-!                           TRH(Indx) = EXP( -p_met%InCDec(IVec)*SQRT( ( p_grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
+!                           TRH(Indx) = EXP( -p%met%InCDec(IVec)*SQRT( ( p%grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
                         UM       = 0.5*( U(IZ) + U(JZ) )
-                        ZM       = 0.5*( p_grid%Z(IZ) + p_grid%Z(JZ) )
+                        ZM       = 0.5*( p%grid%Z(IZ) + p%grid%Z(JZ) )
 
                         DistU(Indx)     = Dist(Indx)/UM
-                        DistZMExp(Indx) = ( Dist(Indx)/ZM )**p_met%COHEXP     ! Note: 0**0 = 1
+                        DistZMExp(Indx) = ( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1
 
-!                       TRH(Indx) = EXP( -p_met%InCDec(IVec) * DistZMExp*SQRT( ( p_grid%Freq(IFreq)* DistU )**2 + (p_met%InCohB(IVec)*Dist)**2 ) )
+!                       TRH(Indx) = EXP( -p%met%InCDec(IVec) * DistZMExp*SQRT( ( p%grid%Freq(IFreq)* DistU )**2 + (p%met%InCohB(IVec)*Dist)**2 ) )
                      ENDIF !SpecModel
 
                   ENDDO    ! JY
@@ -160,7 +160,7 @@ IF ( COH_OUT ) THEN
       ! Write the coherence for three frequencies, for debugging purposes
       CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
       
-      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh', ErrStat2, ErrMsg2 )
+      CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -174,7 +174,7 @@ IF ( COH_OUT ) THEN
 
 ENDIF
 
-IF ( p_met%IsIECmodel ) THEN
+IF ( p%met%IsIECmodel ) THEN
    IVec_End = 1
 ELSE
    IVec_End = 3
@@ -188,7 +188,7 @@ DO IVec = 1,IVec_End
    ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
    !---------------------------------------------------------------------------------
 
-   DO IFREQ = 1,p_grid%NumFreq
+   DO IFREQ = 1,p%grid%NumFreq
 
       !---------------------------------------------------
       ! Calculate the coherence and Veers' H matrix (CSDs)
@@ -197,20 +197,20 @@ DO IVec = 1,IVec_End
          ! Create the coherence matrix for this frequency
          ! -----------------------------------------------
 
-      DO II=1,p_grid%NPoints
+      DO II=1,p%grid%NPoints
          DO JJ=1,II
 
                JJ1       = JJ - 1
-               Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+               Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
-               TRH(Indx) = EXP( -1.0 * p_met%InCDec(IVec) * DistZMExp(Indx)* &
-                           SQRT( (p_grid%Freq(IFreq)*DistU(Indx) )**2 + (p_met%InCohB(IVec)*Dist(Indx))**2 ) )
+               TRH(Indx) = EXP( -1.0 * p%met%InCDec(IVec) * DistZMExp(Indx)* &
+                           SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
 
          ENDDO ! JJ
       ENDDO ! II
       
-      CALL Coh2H(    IVec, IFreq, TRH, S,              p_grid%NPoints, NSize, UC )
-      CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p_grid%NPoints )
+      CALL Coh2H(    IVec, IFreq, TRH, S,              p%grid%NPoints, NSize, UC )
+      CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
    ENDDO !IFreq
 
 ENDDO !IVec
@@ -224,9 +224,9 @@ DO IVec = IVec_End+1,3
       !    the Veers' H matrix calculated in EyeCoh2H:
       ! -----------------------------------------------------------------------------------
       
-   DO IFREQ = 1,p_grid%NumFreq
-      CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p_grid%NPoints )   
-      CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p_grid%NPoints )
+   DO IFREQ = 1,p%grid%NumFreq
+      CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p%grid%NPoints )   
+      CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
    ENDDO !IFreq
       
 END DO
@@ -340,24 +340,24 @@ END IF
 !---------------------------------------------------------------------------------
 
          II = 0
-POINT_I: DO IZ=1,p_grid%ZLim   !NumGrid_Z
-            DO IY=1,p_grid%IYmax(IZ) !NumGrid_Y
+POINT_I: DO IZ=1,p%grid%ZLim   !NumGrid_Z
+            DO IY=1,p%grid%IYmax(IZ) !NumGrid_Y
 
                II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > p_grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
+               IF (II > p%grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
 
                JJ = 0
 POINT_J:       DO JZ=1,IZ
-                  DO JY=1,p_grid%IYmax(JZ) !NumGrid_Y
+                  DO JY=1,p%grid%IYmax(JZ) !NumGrid_Y
 
                      JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
 
                      IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
 
-                     IF ( IZ > p_grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
-                        I = p_grid%YLim
-                        IF ( JZ > p_grid%NumGrid_Z ) THEN
-                           J = p_grid%YLim
+                     IF ( IZ > p%grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
+                        I = p%grid%YLim
+                        IF ( JZ > p%grid%NumGrid_Z ) THEN
+                           J = p%grid%YLim
                         ELSE
                            J = JY
                         ENDIF
@@ -367,13 +367,13 @@ POINT_J:       DO JZ=1,IZ
                      ENDIF
 
                      JJ1       = JJ - 1
-                     Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                     Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
-                         Dist_Y(Indx)= ABS( p_grid%Y(I) - p_grid%Y(J) )
+                         Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
 
-                         Dist_Z(Indx)= ABS( p_grid%Z(IZ) - p_grid%Z(JZ) )
+                         Dist_Z(Indx)= ABS( p%grid%Z(IZ) - p%grid%Z(JZ) )
 !mlb                         Dist_Z12(Indx)=ABS(Z(IZ)*Z(JZ))
-                         Z1Z2(Indx) = p_grid%Z(IZ)*p_grid%Z(JZ)
+                         Z1Z2(Indx) = p%grid%Z(IZ)*p%grid%Z(JZ)
 
 
 
@@ -388,7 +388,7 @@ IF ( COH_OUT ) THEN
       ! Write the coherence for three frequencies, for debugging purposes
       CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
       
-      CALL OpenFOutFile( UC, TRIM(RootName)//'.coh', ErrStat2, ErrMsg2 )
+      CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -403,7 +403,7 @@ ENDIF
 
 DO IVec = 1,3
 
-   IF ( p_met%IsIECModel .AND. ( IVec /= 1 ) ) THEN
+   IF ( p%met%IsIECModel .AND. ( IVec /= 1 ) ) THEN
          ! There is no coherence defined for the v or w component of the IEC spectral models
       IdentityCoh = .TRUE.
    ELSE
@@ -416,7 +416,7 @@ DO IVec = 1,3
    ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
    !---------------------------------------------------------------------------------
 
-   DO IFREQ = 1,p_grid%NumFreq
+   DO IFREQ = 1,p%grid%NumFreq
 
       !---------------------------------------------------
       ! Calculate the coherence and Veers' H matrix (CSDs)
@@ -428,21 +428,21 @@ DO IVec = 1,3
             ! Create the coherence matrix for this frequency
             ! -----------------------------------------------
 
-         DO II=1,p_grid%NPoints
+         DO II=1,p%grid%NPoints
             DO JJ=1,II
 
                   JJ1       = JJ - 1
-                  Indx      = p_grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                  Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
 !mlb: THis is where to look for the error.
 
-!mlb                  TEMP_Y=Coef_AlphaY*p_grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
-!mlb                  TEMP_Z=Coef_AlphaZ*p_grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-                  TEMP_Y=Coef_AlphaY*p_grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
-                  TEMP_Z=Coef_AlphaZ*p_grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
+!mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
+!mlb                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
+                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
+                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
-                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p_met%URef)
+                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p%met%URef)
 
 
             ENDDO ! JJ
@@ -506,7 +506,7 @@ character(1024)                  :: ErrMsg
             ! -----------------------------------------------------------------------------------
 
          Indx = 1
-         DO J = 1,p_grid%NPoints ! The column number
+         DO J = 1,p%grid%NPoints ! The column number
 
                ! The diagonal entries of the matrix:
 
@@ -514,7 +514,7 @@ character(1024)                  :: ErrMsg
 
                ! The off-diagonal values:
             Indx = Indx + 1
-            DO I = J+1,p_grid%NPoints ! The row number
+            DO I = J+1,p%grid%NPoints ! The row number
                TRH(Indx) = 0.0
                Indx = Indx + 1
             ENDDO ! I
@@ -523,8 +523,8 @@ character(1024)                  :: ErrMsg
       ELSE
 
          IF (COH_OUT) THEN
-!            IF (IFreq == 1 .OR. IFreq == p_grid%NumFreq) THEN
-               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p_grid%Freq(IFreq), TRH(1:NSize)
+!            IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
+               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:NSize)
 !            ENDIF
          ENDIF
 
@@ -532,13 +532,13 @@ character(1024)                  :: ErrMsg
             ! Calculate the Cholesky factorization for the coherence matrix
             ! -------------------------------------------------------------
 
-         CALL LAPACK_pptrf( 'L', p_grid%NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
+         CALL LAPACK_pptrf( 'L', p%grid%NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
 
          IF ( Stat /= ErrID_None ) THEN
             CALL WrScr(ErrMsg)
             IF (Stat >= AbortErrLev) &
             CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
-                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p_grid%Freq(IFreq)))//' Hz)'//&
+                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p%grid%Freq(IFreq)))//' Hz)'//&
                         '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
                         'Check the input file for invalid physical properties or modify the coherence exponent '//&
                         'or grid spacing.')
@@ -549,8 +549,8 @@ character(1024)                  :: ErrMsg
             ! -------------------------------------------------------------
 
          Indx = 1
-         DO J = 1,p_grid%NPoints  ! Column
-            DO I = J,p_grid%NPoints ! Row
+         DO J = 1,p%grid%NPoints  ! Column
+            DO I = J,p%grid%NPoints ! Row
 
                   ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
 
@@ -570,7 +570,7 @@ character(1024)                  :: ErrMsg
       IF2      = IFreq*2
       IF1      = IF2 - 1
 
-      DO J=1,p_grid%NPoints
+      DO J=1,p%grid%NPoints
 
             ! Apply a random phase to each of the columns of H to
             ! produce random phases in the wind component.
@@ -579,8 +579,8 @@ character(1024)                  :: ErrMsg
          CPh   = COS( PhaseAngles(J,IFreq,IVec) )
          SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
 
-         Indx  = p_grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
-         DO I=J,p_grid%NPoints
+         Indx  = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
+         DO I=J,p%grid%NPoints
 
             V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
             V(IF2,I,IVec) = V(IF2,I,IVec) + TRH(Indx)*SPh  !Imaginary part
@@ -628,7 +628,7 @@ END SUBROUTINE EyeCoh2H
 SUBROUTINE Coh2H( IVec, IFreq, TRH, S, NPoints, NSize, UC )
 
 use NWTC_LAPACK
-USE TSMods, only: COH_OUT,  p_grid
+USE TSMods, only: COH_OUT,  p
 
 
 REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
@@ -644,8 +644,8 @@ character(1024)                  :: ErrMsg
 
          
    IF (COH_OUT) THEN
-!     IF (IFreq == 1 .OR. IFreq == p_grid%NumFreq) THEN
-         WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p_grid%Freq(IFreq), TRH(1:NSize)
+!     IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
+         WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:NSize)
 !     ENDIF
    ENDIF
 
@@ -659,7 +659,7 @@ character(1024)                  :: ErrMsg
       CALL WrScr(ErrMsg)
       IF (Stat >= AbortErrLev) &
       CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
-                     TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p_grid%Freq(IFreq)))//' Hz)'//&
+                     TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p%grid%Freq(IFreq)))//' Hz)'//&
                   '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
                   'Check the input file for invalid physical properties or modify the coherence exponent '//&
                   'or grid spacing.')
@@ -738,7 +738,7 @@ END SUBROUTINE H2Coeffs
 SUBROUTINE GetDefaultCoh(WS,Ht, InCDec, InCohB )
    ! These numbers come from Neil's analysis
 
-   USE                     TSMods, ONLY : p_met
+   USE                     TSMods, ONLY : p
 
    REAL(ReKi), INTENT(  OUT)            :: InCDec(3)         ! default coherence decrement
    REAL(ReKi), INTENT(  OUT)            :: InCohB(3)         ! default coherence parameter B
@@ -768,14 +768,14 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
    INTEGER                              :: Ri_Cat
 
 
-      IF (p_met%RICH_NO <= 0.00 ) THEN
-         IF ( p_met%RICH_NO <= - 1.0 ) THEN
+      IF (p%met%RICH_NO <= 0.00 ) THEN
+         IF ( p%met%RICH_NO <= - 1.0 ) THEN
             Ri_Cat = 1
          ELSE
             Ri_Cat = 2
          ENDIF
-      ELSEIF (p_met%RICH_NO <= 0.25 ) THEN
-         IF (p_met%RICH_NO <= 0.10 ) THEN
+      ELSEIF (p%met%RICH_NO <= 0.25 ) THEN
+         IF (p%met%RICH_NO <= 0.10 ) THEN
             Ri_Cat = 3
          ELSE
             Ri_Cat = 4
@@ -784,7 +784,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             Ri_Cat = 5
       ENDIF
 
-      SELECT CASE ( p_met%TurbModel_ID )
+      SELECT CASE ( p%met%TurbModel_ID )
 
          CASE ( SpecModel_GP_LLJ )
             HT1 = MAX( 60.0, MIN( Ht, 100.0 ) )
@@ -794,20 +794,20 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/  3.1322E+00,  2.2819E-03,  2.9214E+00, -5.2203E-04,  1.1877E+00, &
                                       -5.7605E-02,  3.7233E-06, -3.5021E-01, -1.7555E-03,  3.9712E-04 /)    !W  5
                      IF  ( WS <= 4.0 ) THEN !      WS <=  4
-                        RI1 = MAX( 0.0, MIN( p_met%RICH_NO, 1.0 ) )
+                        RI1 = MAX( 0.0, MIN( p%met%RICH_NO, 1.0 ) )
                         coeffs(:,1) = (/  4.8350E+00, -4.0113E-02,  7.8134E+00, -2.0069E-05, -1.9518E-01, &
                                          -1.4009E-01,  2.3195E-06,  8.2029E-02, -7.4979E-04,  6.1186E-04 /) !U  3
                         coeffs(:,2) = (/  3.2587E+00, -5.9086E-02,  9.7426E+00,  5.7360E-04,  2.1274E-01, &
                                          -1.6398E-01, -8.3786E-07,  6.6896E-02, -3.5254E-03,  6.4833E-04 /) !V  3
                      ELSE                   !  4 < WS <=  6
-                        RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                        RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                         coeffs(:,1) = (/  9.2474E+00, -4.9849E-02,  6.0887E+00, -5.9124E-04,  4.4312E-02, &
                                          -1.1966E-01,  5.2652E-06, -1.0373E-01,  4.0480E-03,  5.5761E-04 /) !U  5
                         coeffs(:,2) = (/  3.6355E+00,  1.7701E-02,  4.2165E+00, -5.8828E-04,  9.5592E-02, &
                                          -6.5313E-02,  3.3875E-06, -1.7981E-02, -1.6375E-03,  3.0423E-04 /) !V  5
                      ENDIF
                   ELSE                      ! 6  < WS <=  8
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.1795E+01, -7.5393E-02,  9.5279E+00, -3.4922E-04, -5.8973E-01, &
                                       -1.6753E-01,  4.4267E-06,  2.1797E-01,  7.7887E-04,  7.4912E-04 /)    !U  7
                      coeffs(:,2) = (/  1.7730E+00,  9.6577E-02,  8.1310E+00, -1.2028E-03,  3.0145E-02, &
@@ -817,7 +817,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                   ENDIF
                ELSE ! 8.0 < WS <= 14.0
                   IF     (WS <= 10.0) THEN  !  8 < WS <= 10
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  8.4674E+00,  1.2922E-01,  8.6170E+00, -3.3048E-03, -3.1928E-02, &
                                       -1.2515E-01,  1.8209E-05,  2.9087E-01, -9.3031E-03,  5.0706E-04 /)    !U  9
                      coeffs(:,2) = (/  2.8145E+00,  1.0257E-01,  4.2987E+00, -1.4901E-03,  4.9698E-02, &
@@ -825,7 +825,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/  2.4952E+00,  5.8000E-02,  1.9851E+00, -9.4027E-04, -4.0135E-02, &
                                       -1.8377E-02,  4.3320E-06, -1.0441E-01,  3.6831E-03,  8.6637E-05 /)    !W  9
                   ELSEIF (WS <= 12.0) THEN  ! 10 < WS <= 12
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.2473E+01,  3.2270E-02,  1.4508E+01, -2.2856E-03, -1.4652E+00, &
                                       -2.4114E-01,  1.4919E-05,  5.5578E-01, -8.5528E-04,  1.0273E-03 /)    !U  11
                      coeffs(:,2) = (/  1.0882E+00,  1.9425E-01,  8.1533E+00, -2.5574E-03,  4.3113E-01, &
@@ -833,7 +833,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/  5.0280E-01,  1.1637E-01,  4.0130E+00, -1.2034E-03, -2.7592E-01, &
                                       -3.8744E-02,  3.4213E-06, -1.5144E-02,  2.4042E-03,  4.7818E-05 /)    !W  11
                   ELSE                      ! 12 < WS <= 14.0
-                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  8.6311E+00,  2.5614E-01,  1.1165E+01, -5.1685E-03,  3.0895E+00, &
                                       -1.9190E-01,  2.7162E-05, -2.6513E-01, -3.6479E-02,  8.8431E-04 /)    !U  13
                      coeffs(:,2) = (/  1.2842E+00,  2.4007E-01,  5.3653E+00, -3.2589E-03,  3.4715E+00, &
@@ -845,7 +845,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             ELSE ! WS > 14
                IF (WS <= 20.0 ) THEN
                   IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
-                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.3972E-01,  6.3486E-01,  1.7576E+01, -1.0017E-02,  2.8458E+00, &
                                       -2.5233E-01,  4.6539E-05, -1.8899E-01, -2.6717E-02,  9.5173E-04 /)    !U  15
                      coeffs(:,2) = (/ -7.1243E+00,  5.6768E-01,  1.2886E+01, -7.3277E-03,  3.7880E+00, &
@@ -853,7 +853,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/ -1.1004E+01,  5.3470E-01,  5.3118E+00, -5.8999E-03,  1.9009E+00, &
                                       -2.4063E-02,  2.1755E-05, -4.5798E-01,  1.6885E-02, -3.9974E-04 /)    !W  15
                   ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -6.9650E+00,  8.8636E-01,  2.3467E+01, -1.1973E-02, -4.3750E+00, &
                                       -3.5519E-01,  5.0414E-05,  9.1789E-01,  9.8340E-03,  1.5885E-03 /)    !U  17
                      coeffs(:,2) = (/  5.5495E-03,  3.2906E-01,  1.4609E+01, -4.1635E-03, -2.1246E+00, &
@@ -861,7 +861,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/ -1.3195E+00,  2.0022E-01,  2.3490E+00, -2.1308E-03,  3.5582E+00, &
                                        1.4379E-02,  7.6830E-06, -7.6155E-01, -2.4660E-02, -2.0199E-04 /)    !W  17
                   ELSE                      ! 18 < WS <= 20
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -1.3985E+01,  1.3161E+00,  3.4773E+01, -1.9237E-02, -1.9845E+00, &
                                       -5.5817E-01,  8.8310E-05,  1.7142E+00, -4.2907E-02,  2.3932E-03 /)    !U  19
                      coeffs(:,2) = (/ -1.2400E+01,  8.6854E-01,  1.9923E+01, -1.1557E-02, -1.0441E+00, &
@@ -871,7 +871,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                   ENDIF
                ELSE ! WS > 20
                   IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -2.4317E+01,  1.8176E+00,  5.3359E+01, -2.5973E-02,  6.0349E+00, &
                                       -7.9927E-01,  1.1558E-04,  1.5926E+00, -1.5005E-01,  3.1688E-03 /)    !U  21
                      coeffs(:,2) = (/  8.0459E+00,  1.8058E-01,  1.9426E+01, -3.6730E-03, -9.9717E-01, &
@@ -879,7 +879,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/ -2.3544E+01,  1.1403E+00,  8.3526E+00, -1.4511E-02,  7.2014E+00, &
                                        5.0216E-02,  5.9947E-05, -1.0659E+00, -7.4769E-02, -9.8390E-04 /)    !W  21
                   ELSEIF (WS <= 24.0) THEN  ! 22 < WS <= 24
-                     RI1 = MAX( 0.0, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( 0.0, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/ -3.5790E+01,  1.5374E+00,  1.1322E+02, -1.6884E-02, -1.7767E+01, &
                                       -1.8122E+00,  6.8247E-05,  7.2101E+00,  3.5536E-02,  7.9269E-03 /)    !U  23
                      coeffs(:,2) = (/ -7.2883E+01,  2.8210E+00,  8.6392E+01, -3.1084E-02, -2.4938E+01, &
@@ -887,7 +887,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/ -3.2844E+01,  1.2683E+00,  3.2032E+01, -1.3197E-02, -1.1129E+01, &
                                       -3.6741E-01,  4.2852E-05,  4.1336E+00,  2.4775E-02,  1.8431E-03 /)    !W  23
                   ELSE                      ! 24 < WS
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  2.2906E+01,  9.3209E-02,  1.5448E+01, -5.7421E-03, -8.9114E+00, &
                                       -3.1547E-02,  4.0144E-05,  5.4544E-01,  5.3557E-02, -3.1299E-04 /)    !U  25
                      coeffs(:,2) = (/ -1.1903E+01,  1.1104E+00,  1.7962E+01, -1.6045E-02, -9.2458E+00, &
@@ -951,7 +951,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             HT1 = MAX( 25.0_ReKi, MIN( Ht, 50.0_ReKi ) )
 
             IF ( WS <= 14.0 ) THEN
-               RI1 = MAX( -1.0_ReKi, MIN( p_met%RICH_NO, 1.0_ReKi ) )
+               RI1 = MAX( -1.0_ReKi, MIN( p%met%RICH_NO, 1.0_ReKi ) )
                IF ( WS <= 8.0 ) THEN
                   IF     (WS <= 4.0 ) THEN  !      WS <=  4
                      coeffs(:,1) = (/  8.1767E+00, -3.1018E-01,  3.3055E-01,  4.4232E-03,  4.6550E-01, &
@@ -1002,7 +1002,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             ELSE ! WS > 14
                IF (WS <= 20.0 ) THEN
                   IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
-                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  2.9459E+01, -7.3181E-01,  9.4613E+00,  9.2172E-03,  6.1086E+00, &
                                       -4.9990E-01, -2.9994E-05, -6.9606E-01, -8.5076E-03,  8.1330E-03 /)   !U  15
                      coeffs(:,2) = (/  1.7540E+01, -2.6071E-01,  9.3639E+00,  1.3341E-03,  9.4294E+00, &
@@ -1010,7 +1010,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/  1.2792E+01, -4.6469E-01,  4.6350E+00,  1.0633E-02,  1.8523E+00, &
                                       -3.2417E-01, -8.5038E-05, -2.2253E-01, -7.3351E-04,  5.4781E-03 /)   !W  15
                   ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
-                     RI1 = MAX( -1.0, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  1.7775E+01,  4.5287E-01,  1.6417E+01, -2.3724E-02,  5.8998E+00, &
                                       -5.3502E-01,  2.6202E-04, -9.9466E-02,  4.1386E-02,  4.5663E-03 /)   !U  17
                      coeffs(:,2) = (/  1.2022E+01,  2.4246E-01,  1.3875E+01, -1.1725E-02,  5.1917E+00, &
@@ -1018,7 +1018,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                      coeffs(:,3) = (/  1.2680E+01, -1.4768E-01,  7.1498E+00, -3.0341E-03,  1.9747E+00, &
                                       -3.8374E-01,  7.0412E-05,  2.2297E-01,  5.9943E-02,  5.3514E-03 /)   !W  17
                   ELSE                      ! 18 < WS <= 20
-                     RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                      coeffs(:,1) = (/  3.1187E+01, -6.8540E-01,  7.1288E+00,  1.1923E-02,  8.8547E+00, &
                                        6.3133E-02, -9.4673E-05, -2.5710E+00, -5.4077E-02, -1.2797E-04 /)   !U  19
                      coeffs(:,2) = (/  1.2664E+01,  9.1858E-02,  1.9050E+01, -2.8868E-03,  7.2969E+00, &
@@ -1027,7 +1027,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                                       -4.3958E-01, -2.5936E-05, -3.0848E-01, -6.3381E-02,  5.1204E-03 /)   !W  19
                   ENDIF
                ELSE ! WS > 20
-                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 1.0 ) )
+                  RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 1.0 ) )
                   IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
                      coeffs(:,1) = (/  2.5165E+01, -7.7660E-02,  1.9692E+01, -1.1794E-02,  9.8635E+00, &
                                       -2.5520E-01,  2.0573E-04, -4.9850E+00,  1.1272E-01,  1.3267E-03 /)   !U  21
@@ -1112,7 +1112,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
             IF ( WS <= 14.0 ) THEN
                IF ( WS <= 10 ) THEN
-                  RI1 = MAX( -0.5_ReKi, MIN( p_met%RICH_NO, 0.15_ReKi ) )
+                  RI1 = MAX( -0.5_ReKi, MIN( p%met%RICH_NO, 0.15_ReKi ) )
                   IF  ( WS <=  8.0 ) THEN   !      WS <= 8
                      coeffs(:,1) = (/  1.6715E+01, -3.8639E-01,  7.1817E+00,  1.5550E-03, -1.4293E+00, &
                                       -2.0350E-01,  8.5532E-06, -3.4710E+00, -1.9743E-02, -3.9949E-04 /) !Upw_U 7
@@ -1125,7 +1125,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                                        2.1810E-01,  1.1718E-04,  7.7287E+01, -1.3828E-01, -9.6568E-03 /) !Upw_V 9
                   ENDIF
                ELSE
-                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 0.05 ) )
                   IF  ( WS <= 12.0 ) THEN   ! 10 < WS <= 12
                      coeffs(:,1) = (/  1.3539E+01, -8.4892E-02, -1.9237E+00, -1.1485E-03, -4.0840E-01, &
                                        3.0956E-01,  2.4048E-05, -1.1523E+00,  9.6877E-03, -4.0606E-03 /) !Upw_U 11
@@ -1139,7 +1139,7 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
                   ENDIF
                ENDIF
             ELSE
-               RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
+               RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 0.05 ) )
                IF  ( WS  <= 18.0 ) THEN
                   IF ( WS <= 16.0 ) THEN   ! 14 < WS <= 16
                      coeffs(:,1) = (/  1.4646E+01, -1.5023E-01, -9.7543E-01, -3.5607E-03,  4.8663E+00, &
@@ -1193,26 +1193,26 @@ REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS catego
             HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
             IF ( WS <= 12.0 ) THEN
                IF     ( WS <=  8.0 ) THEN  !      WS <= 8
-                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.15 ) )
+                  RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 0.15 ) )
                   coeffs(:,1) = (/  1.0310E+01, -6.4824E-03, -1.3258E+00, -2.7238E-03, -6.8515E+00, &
                                     3.1602E-02,  5.5982E-05, -8.4777E+00,  2.1506E-02,  4.9745E-04 /) !Dwn_U 7
                   coeffs(:,2) = (/  6.9491E+00, -1.3378E-01,  1.7961E-01, -4.9439E-04, -1.8140E+00, &
                                    -4.2321E-02,  4.4962E-05, -3.6939E+00, -8.9465E-03,  4.7867E-04 /) !Dwn_V 7
                ELSEIF ( WS <= 10.0 ) THEN  !  8 < WS <= 10
-                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 0.05 ) )
                   coeffs(:,1) = (/  9.7420E+00,  6.1610E-02,  5.6636E-02, -5.5949E-03, -1.3014E+00, &
                                     2.0655E-01,  8.9989E-05, -1.9837E+00,  5.4957E-03, -3.5496E-03 /) !Dwn_U 9
                   coeffs(:,2) = (/  7.1063E+00, -1.7021E-01,  1.2560E+00, -4.2616E-04,  9.0937E-01, &
                                    -1.3022E-01,  4.7976E-05,  2.1302E-01, -4.3159E-04,  1.5443E-03 /) !Dwn_V 9
                ELSE                        ! 10 < WS <= 12
-                  RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 0.05 ) )
                   coeffs(:,1) = (/  1.0869E+01, -9.1393E-03, -1.1695E+00, -3.3725E-03,  3.2199E-01, &
                                     7.2692E-02,  7.0565E-05,  6.9573E-01,  2.5360E-02,  1.0187E-03 /) !Dwn_U 11
                   coeffs(:,2) = (/  6.9882E+00, -1.3517E-01, -3.0492E-01, -4.6775E-04,  4.6897E-01, &
                                    -2.0102E-03,  3.3908E-05,  1.4604E-02,  1.1729E-02, -6.2775E-05 /) !Dwn_V 11
                ENDIF
             ELSE
-               RI1 = MAX( -0.5, MIN( p_met%RICH_NO, 0.05 ) )
+               RI1 = MAX( -0.5, MIN( p%met%RICH_NO, 0.05 ) )
                IF     ( WS <= 14.0 ) THEN  ! 12 < WS <= 14
                   coeffs(:,1) = (/  1.1105E+01,  5.3789E-02, -9.4253E-02, -5.4203E-03, -1.0114E+00, &
                                     1.1421E-01,  7.6110E-05, -1.2654E+00,  1.5121E-02, -2.9055E-03 /) !Dwn_U 13
@@ -1265,11 +1265,9 @@ SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
    ! This subroutine is used to get the default values of the Reynolds
    !  stresses.
 
-   USE                     TSMods, ONLY : p_grid
-   USE                     TSMods, ONLY : p_met
+   USE                     TSMods, ONLY : p
    USE                     TSMods, ONLY : UHub
    
-   use tsmods, only: p_RandNum
    use tsmods, only: OtherSt_RandNum
    
 use TurbSim_Types
@@ -1293,30 +1291,30 @@ use TurbSim_Types
    REAL(ReKi)                          :: ZLtmp
             
    
-   Z(2) = p_grid%HubHt + 0.5*p_grid%RotorDiameter    ! top of the grid
-   Z(1) = Z(2) - p_grid%GridHeight     ! bottom of the grid
-   V(:) = getVelocityProfile(UHub, p_grid%HubHt, Z, p_grid%RotorDiameter)
+   Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
+   Z(1) = Z(2) - p%grid%GridHeight     ! bottom of the grid
+   V(:) = getVelocityProfile(UHub, p%grid%HubHt, Z, p%grid%RotorDiameter)
 
-   Shr = ( V(2)-V(1) ) / p_grid%GridHeight    ! dv/dz
+   Shr = ( V(2)-V(1) ) / p%grid%GridHeight    ! dv/dz
 
 !BJJ: check the ranges of our best-fit parameters, using domains of measured values
 
-   SELECT CASE ( p_met%TurbModel_ID )
+   SELECT CASE ( p%met%TurbModel_ID )
       CASE ( SpecModel_GP_LLJ )
-         ZLtmp  = MIN( MAX( p_met%ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
-         UStar2 = MIN( MAX( p_met%Ustar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
+         ZLtmp  = MIN( MAX( p%met%ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p%met%Ustar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
       CASE ( SpecModel_NWTCUP )
-         ZLtmp  = MIN( MAX( p_met%ZL,    REAL(-0.5,ReKi) ), REAL(3.5,ReKi) )  !Limit the observed values of z/L
-         UStar2 = MIN( MAX( p_met%Ustar, REAL( 0.2,ReKi) ), REAL(1.4,ReKi) )  !Limit the observed values of u*
+         ZLtmp  = MIN( MAX( p%met%ZL,    REAL(-0.5,ReKi) ), REAL(3.5,ReKi) )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p%met%Ustar, REAL( 0.2,ReKi) ), REAL(1.4,ReKi) )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
 !      CASE ( 'WF_UPW' )
 !      CASE ( 'WF_07D' )
 !      CASE ( 'WF_14D' )
 
       CASE DEFAULT
-         ZLtmp  = p_met%ZL
-         Ustar2 = p_met%Ustar*p_met%Ustar
+         ZLtmp  = p%met%ZL
+         Ustar2 = p%met%Ustar*p%met%Ustar
    END SELECT
 
    !-------------------------------------------------------------------------------------------------
@@ -1324,19 +1322,19 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    UWskip     = .FALSE.
    
-   CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( p_met%TurbModel_ID )
+   CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
+   SELECT CASE ( p%met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
          UW = TmpUstarHub**2        
       
          IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
-            IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
-               UW =  0.0399 - 0.00371*Uhub - 0.00182*p_met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
-            ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
-               UW = 0.00668 - 0.00184*Uhub + 0.000709*p_met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
-            ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
+            IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
+               UW =  0.0399 - 0.00371*Uhub - 0.00182*p%met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
+            ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
+               UW = 0.00668 - 0.00184*Uhub + 0.000709*p%met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
+            ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
                UW = -0.0216 + 0.00319*Uhub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
             ELSE                           ! 54 m
                UW = -0.0373 + 0.00675*Uhub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
@@ -1352,9 +1350,9 @@ use TurbSim_Types
 
       CASE ( SpecModel_NWTCUP )
 
-         IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
-            UW = 0.165 - 0.0232*UHub - 0.0129*p_met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
-         ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
+         IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
+            UW = 0.165 - 0.0232*UHub - 0.0129*p%met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
+         ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
             UW = 0.00279 - 0.00139*UHub + 1.074*Ustar2 + 0.179*SHR
          ELSE                          ! 15m data
             UW = -0.1310 + 0.0239*UHub + 0.556*Ustar2
@@ -1373,10 +1371,10 @@ use TurbSim_Types
 
       CASE ( SpecModel_USER )
          UW = 0.0
-         p_met%UWskip = .true.
+         p%met%UWskip = .true.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
-         UW = -Ustar2*(1-p_grid%HubHt/p_met%RefHt) 
+         UW = -Ustar2*(1-p%grid%HubHt/p%met%RefHt) 
       CASE DEFAULT
 
          UW = -Ustar2
@@ -1388,25 +1386,25 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    UVskip     = .FALSE.
 
-   CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( p_met%TurbModel_ID )
+   CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
+   SELECT CASE ( p%met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
-         IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
+         IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
             UV = 0.199 - 0.0167*Uhub + 0.0115*ZLtmp + 1.143*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6527 ) UV = -UV
-         ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
+         ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
             UV = 0.190 - 0.0156*Uhub + 0.00931*ZLtmp + 1.101*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6394 ) UV = -UV
-         ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
+         ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
             UV = 0.178 - 0.0141*Uhub + 0.00709*ZLtmp + 1.072*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6326 ) UV = -UV
          ELSE                           ! 54 m
-            UV = 0.162 - 0.0123*Uhub + 0.00784*p_met%RICH_NO + 1.024*Ustar2
+            UV = 0.162 - 0.0123*Uhub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6191 ) UV = -UV
          ENDIF
@@ -1414,10 +1412,10 @@ use TurbSim_Types
       CASE ( SpecModel_NWTCUP )
 
             ! Get the magnitude and add the sign
-         IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
-            UV = 0.669 - 0.0300*UHub - 0.0911*p_met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
-         ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
-            UV = 1.521 - 0.00635*UHub - 0.2200*p_met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
+         IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
+            UV = 0.669 - 0.0300*UHub - 0.0911*p%met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
+         ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
+            UV = 1.521 - 0.00635*UHub - 0.2200*p%met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
          ELSE                          ! 15m data
             UV = 0.462 - 0.01400*UHub + 1.277*Ustar2
          ENDIF
@@ -1458,35 +1456,35 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    VWskip     = .FALSE.
 
-   CALL  RndUnif( p_RandNum, OtherSt_RandNum, rndSgn )
-   SELECT CASE ( p_met%TurbModel_ID )
+   CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
+   SELECT CASE ( p%met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
-         IF ( p_grid%HubHt >= 100.5 ) THEN     ! 116m
-            VW =  0.0528  - 0.00210*Uhub - 0.00531*p_met%RICH_NO - 0.519*Shr + 0.283*Ustar2
+         IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
+            VW =  0.0528  - 0.00210*Uhub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.2999 ) VW = -VW
-         ELSEIF ( p_grid%HubHt >= 76.0 ) THEN  ! 85 m
-            VW =  0.0482  - 0.00264*Uhub - 0.00391*p_met%RICH_NO - 0.240*Shr + 0.265*Ustar2
+         ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
+            VW =  0.0482  - 0.00264*Uhub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3061 ) VW = -VW
-         ELSEIF ( p_grid%HubHt >= 60.5 ) THEN  ! 67 m
-            VW =  0.0444  - 0.00249*Uhub - 0.00403*p_met%RICH_NO - 0.141*Shr + 0.250*Ustar2
+         ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
+            VW =  0.0444  - 0.00249*Uhub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3041 ) VW = -VW
          ELSE                           ! 54 m
-            VW =  0.0443  - 0.00261*Uhub - 0.00371*p_met%RICH_NO - 0.107*Shr + 0.226*Ustar2
+            VW =  0.0443  - 0.00261*Uhub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3111 ) VW = -VW
          ENDIF
 
       CASE ( SpecModel_NWTCUP )
 
-         IF ( p_grid%HubHt > 47.0 ) THEN      ! 58m data
-            VW = 0.174 + 0.00154*UHub - 0.0270*p_met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
-         ELSEIF ( p_grid%HubHt >= 26.0 ) THEN ! 37m data
-            VW = 0.120 + 0.00283*UHub - 0.0227*p_met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
+         IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
+            VW = 0.174 + 0.00154*UHub - 0.0270*p%met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
+         ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
+            VW = 0.120 + 0.00283*UHub - 0.0227*p%met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
          ELSE                          ! 15m data
             VW = 0.0165 + 0.00833*UHub                 + 0.224*Ustar2
          ENDIF
@@ -1527,7 +1525,7 @@ END SUBROUTINE GetDefaultRS
 !=======================================================================
 FUNCTION getUstarARY(WS, Ht, UStarOffset, UstarSlope)
 
-USE TSMods, only: p_met
+USE TSMods, only: p
 
    USE                                  TSMods, ONLY: profileZmax
    USE                                  TSMods, ONLY: profileZmin
@@ -1571,16 +1569,16 @@ USE TSMods, only: p_met
 
             getUstarARY(  IZ) = ( 0.045355367 +  4.47275E-8*tmpZ**3)                                                      &
                               + ( 0.511491978 -  0.09691157*LOG(tmpZ) - 199.226951/tmpZ**2           ) * WS(Zindx)        &
-                              + (-0.00396447  - 55.7818832/tmpZ**2                                   ) * p_met%RICH_NO    &
-                              + (-5.35764429  +  0.102002162*tmpZ/LOG(tmpZ) + 25.30585136/SQRT(tmpZ) ) * p_met%UstarDiab
+                              + (-0.00396447  - 55.7818832/tmpZ**2                                   ) * p%met%RICH_NO    &
+                              + (-5.35764429  +  0.102002162*tmpZ/LOG(tmpZ) + 25.30585136/SQRT(tmpZ) ) * p%met%UstarDiab
          ENDDO
 
       ELSE ! All are above the max height so we'll use the old relationship at all heights
-         getUstarARY(:) = 0.17454 + 0.72045*p_met%UstarDiab**1.36242
+         getUstarARY(:) = 0.17454 + 0.72045*p%met%UstarDiab**1.36242
       ENDIF
 
    ELSE ! All are below the min height so we'll use the diabatic Ustar value
-      getUstarARY(:) = p_met%UstarDiab
+      getUstarARY(:) = p%met%UstarDiab
    ENDIF
 
    getUstarARY = UstarSlope * getUstarARY(:) + UstarOffset  ! These terms are used to make the ustar profile match the rotor-disk averaged value and input hub u'w'
@@ -1781,12 +1779,12 @@ REAL(ReKi), INTENT(IN) :: Ri_No                ! Richardson Number
 REAL(ReKi)             :: PowerLawExp          ! Power Law exponent for particular model
 
 
-IF ( p_met%KHtest ) THEN
+IF ( p%met%KHtest ) THEN
    PowerLawExp = 0.3
    RETURN
 ENDIF
 
-SELECT CASE ( p_met%TurbModel_ID )
+SELECT CASE ( p%met%TurbModel_ID )
 
    CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
       IF ( Ri_No > 0.0 ) THEN
@@ -1807,9 +1805,9 @@ SELECT CASE ( p_met%TurbModel_ID )
       PowerLawExp = 0.143
 
    CASE DEFAULT
-      IF ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 .OR. p_IEC%IEC_WindType == IEC_EWM100 ) THEN
+      IF ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. p%IEC%IEC_WindType == IEC_EWM100 ) THEN
          PowerLawExp = 0.11         ! [IEC 61400-1 6.3.2.1 (14)]
-      ELSEIF ( p_IEC%IECstandard == 3 ) THEN
+      ELSEIF ( p%IEC%IECstandard == 3 ) THEN
          PowerLawExp = 0.14         ! [IEC 61400-3 Page 22 (3)]
       ELSE
          PowerLawExp = 0.2          ! [IEC 61400-1 6.3.1.2 (10)]
@@ -1822,7 +1820,7 @@ END FUNCTION PowerLawExp
 !=======================================================================
 SUBROUTINE PSDcal ( Ht, Ucmp, SSVS, UShr, ZL_loc, Ustar_loc )
 
-use TSMods, only: p_met, p_IEC
+use TSMods, only: p
    ! This routine calls the appropriate spectral model.
 
 IMPLICIT                            NONE
@@ -1835,17 +1833,17 @@ REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
 REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
 REAL(ReKi), INTENT(INOUT)        :: SSVS(:,:)      ! the single-sided velocity component spectrum (NumFreq,3)
 
-SELECT CASE ( p_met%TurbModel_ID )
+SELECT CASE ( p%met%TurbModel_ID )
    CASE ( SpecModel_GP_LLJ )
       IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
          CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, SSVS )
       ELSE
-         CALL Spec_GPLLJ   ( Ht, Ucmp, p_met%ZL,     p_met%Ustar,     SSVS )
+         CALL Spec_GPLLJ   ( Ht, Ucmp, p%met%ZL,     p%met%Ustar,     SSVS )
       ENDIF
    CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( p_IEC%SigmaIEC, p_IEC%IntegralScale, SSVS )
+      CALL Spec_IECKAI  ( p%IEC%SigmaIEC, p%IEC%IntegralScale, SSVS )
    CASE ( SpecModel_IECVKM )
-      CALL Spec_IECVKM  ( p_IEC%SigmaIEC(1), p_IEC%IntegralScale, SSVS )
+      CALL Spec_IECVKM  ( p%IEC%SigmaIEC(1), p%IEC%IntegralScale, SSVS )
    CASE ( SpecModel_API )
       CALL Spec_API ( Ht, SSVS )
    CASE (SpecModel_NWTCUP)
@@ -1853,7 +1851,7 @@ SELECT CASE ( p_met%TurbModel_ID )
    CASE ( SpecModel_SMOOTH )
       CALL Spec_SMOOTH   ( Ht, Ucmp, SSVS )
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-      CALL Spec_TIDAL  ( Ht, UShr, SSVS, p_met%TurbModel_ID )
+      CALL Spec_TIDAL  ( Ht, UShr, SSVS, p%met%TurbModel_ID )
    CASE ( SpecModel_USER )
       CALL Spec_UserSpec   ( SSVS )
    CASE ( SpecModel_USRVKM )
@@ -1870,11 +1868,11 @@ SELECT CASE ( p_met%TurbModel_ID )
       IF (MVK) THEN
  !        CALL Mod_vKrm( Ht, Ucmp, Work )
       ELSE
-         CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p_met%TurbModel )//'", not availible.' )
+         CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.' )
       ENDIF
 
    CASE DEFAULT
-      CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p_met%TurbModel )//'", not availible.' )
+      CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.' )
 END SELECT
 
 
@@ -1996,7 +1994,7 @@ use FFT_Module, only: PSF
    
    ! Finally, let's deal with the tower "lollipop" points:
    
-   IF ( WrFile(FileExt_TWR) ) THEN
+   IF ( p%WrFile(FileExt_TWR) ) THEN
 
          ! Compute the number of points between the bottom of the grid and the ground 
          ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
@@ -2020,7 +2018,7 @@ use FFT_Module, only: PSF
 
          CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', US)  
 
-         WrFile(FileExt_TWR) = .FALSE.
+         p%WrFile(FileExt_TWR) = .FALSE.
 
       ENDIF
 
@@ -2064,7 +2062,7 @@ use FFT_Module, only: PSF
 
    ENDIF
 
-   IF ( WrFile(FileExt_TWR) ) THEN
+   IF ( p%WrFile(FileExt_TWR) ) THEN
 
       p_grid%Y(p_grid%YLim) = 0.0
    
@@ -2225,14 +2223,20 @@ SUBROUTINE TimeSeriesScaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, 
 
 END SUBROUTINE TimeSeriesScaling_IEC
 !=======================================================================
-SUBROUTINE CalcIECScalingParams( p_IEC )
+SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_ID )
 ! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
 ! calculates SigmaIEC, Lambda, IntegralScale, Lc
 use TurbSim_Types
-use TSMods, only: UHub, p_grid, p_met
 
    TYPE(IEC_ParameterType), INTENT(INOUT) :: p_IEC                       ! parameters for IEC models
-      
+   REAL(ReKi)             , INTENT(IN)    :: HubHt                       ! Hub-height
+   REAL(ReKi)             , INTENT(IN)    :: UHub                        ! Hub-height (total) wind speed (m/s)
+   
+   REAL(ReKi)             , INTENT(OUT)   :: InCDec     (3)              ! Contains the coherence decrements
+   REAL(ReKi)             , INTENT(OUT)   :: InCohB     (3)              ! Contains the coherence b/L (offset) parameters
+   INTEGER(IntKi)         , INTENT(IN)    :: TurbModel_ID                ! Integer value of spectral model (see SpecModel enum)      
+   
+   
    IF ( p_IEC%NumTurbInp )  THEN
    
          ! user specified a particular percent TI:
@@ -2260,7 +2264,7 @@ use TSMods, only: UHub, p_grid, p_met
             ENDIF
 
             p_IEC%SigmaIEC(1) = p_IEC%TurbInt15*( ( 15.0 + p_IEC%SigmaSlope*UHub ) / ( p_IEC%SigmaSlope + 1.0 ) )
-            p_IEC%TurbInt  = p_IEC%SigmaIEC(1)/UHub
+            p_IEC%TurbInt     = p_IEC%SigmaIEC(1)/UHub
          
          CASE ( 3 )
 
@@ -2306,45 +2310,46 @@ use TSMods, only: UHub, p_grid, p_met
    IF ( p_IEC%IECedition == 2 ) THEN  
       
          ! section 6.3.1.3 Eq. 9
-      IF ( p_grid%HubHt < 30.0 )  THEN
-         p_IEC%Lambda(1) = 0.7*p_grid%HubHt
+      IF ( HubHt < 30.0 )  THEN
+         p_IEC%Lambda(1) = 0.7*HubHt
       ELSE
          p_IEC%Lambda(1) = 21.0
       ENDIF
 
       p_IEC%LC = 3.5*p_IEC%Lambda(1)
-      p_met%IncDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
+      InCDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
 
    ELSE !IF (p_IEC%IECedition == 3 ) THEN
       
          ! section 6.3.1.3 Eq. 9      
          
-      IF ( p_grid%HubHt < 60.0 )  THEN
-         p_IEC%Lambda(1) = 0.7*p_grid%HubHt
+      IF ( HubHt < 60.0 )  THEN
+         p_IEC%Lambda(1) = 0.7*HubHt
       ELSE
          p_IEC%Lambda(1) = 42.0
       ENDIF
 
       p_IEC%LC = 8.1*p_IEC%Lambda(1)
-      p_met%IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
+      InCDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
 
    ENDIF
    
-   p_met%InCohB(:)    = 0.12/p_IEC%LC
+   InCohB(:)    = 0.12/p_IEC%LC
          
    
       ! Set Lambda for Modified von Karman model:
-
-   IF ( MVK .AND. p_met%TurbModel_ID  == SpecModel_MODVKM ) THEN
-      p_met%z0 = FindZ0(p_grid%HubHt, p_IEC%SigmaIEC(1), UHub, p_met%Fc)
-      CALL ScaleMODVKM(p_grid%HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
+#ifdef MVK
+!bjj: this will probably need to be rethought with TurbSim v2.0
+   IF ( MVK .AND. TurbModel_ID  == SpecModel_MODVKM ) THEN
+      p%met%z0 = FindZ0(HubHt, p_IEC%SigmaIEC(1), UHub, p%met%Fc)
+      CALL ScaleMODVKM(HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
    ENDIF   
-
+#endif
    
       ! Sigma for v and w components and
       ! Integral scales (which depend on lambda)
    
-   IF ( p_met%TurbModel_ID == SpecModel_IECVKM ) THEN
+   IF ( TurbModel_ID == SpecModel_IECVKM ) THEN
       
       p_IEC%SigmaIEC(2)      =  1.0*p_IEC%SigmaIEC(1)
       p_IEC%SigmaIEC(3)      =  1.0*p_IEC%SigmaIEC(1)
@@ -2384,27 +2389,27 @@ ErrMsg  = ""
 
 
 !BONNIE: UPPER LIMIT ON RICH_NO?
-IF ( WrFile(FileExt_CTS) ) THEN
+IF ( p%WrFile(FileExt_CTS) ) THEN
    
       ! models where coherent structures apply:
-   IF ( p_met%TurbModel_ID == SpecModel_GP_LLJ .OR. &
-        p_met%TurbModel_ID == SpecModel_NWTCUP .OR. &
-        p_met%TurbModel_ID == SpecModel_SMOOTH .OR. &
-        p_met%TurbModel_ID == SpecModel_WF_UPW .OR. &
-        p_met%TurbModel_ID == SpecModel_WF_07D .OR. &
-        p_met%TurbModel_ID == SpecModel_WF_14D ) THEN
+   IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ .OR. &
+        p%met%TurbModel_ID == SpecModel_NWTCUP .OR. &
+        p%met%TurbModel_ID == SpecModel_SMOOTH .OR. &
+        p%met%TurbModel_ID == SpecModel_WF_UPW .OR. &
+        p%met%TurbModel_ID == SpecModel_WF_07D .OR. &
+        p%met%TurbModel_ID == SpecModel_WF_14D ) THEN
       
-      IF ( p_met%RICH_NO <= -0.05 ) THEN
+      IF ( p%met%RICH_NO <= -0.05 ) THEN
          CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, 'TS_ValidateInput')
-         WrFile(FileExt_CTS) = .FALSE.      
-      ELSEIF ( .NOT. ( WrFile(FileExt_BTS) .OR. WrFile(FileExt_WND) ) ) THEN
+         p%WrFile(FileExt_CTS) = .FALSE.      
+      ELSEIF ( .NOT. ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) ) THEN
          CALL SetErrStat( ErrID_Info, 'AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.', ErrStat, ErrMsg, 'TS_ValidateInput')
-         WrFile(FileExt_BTS) = .TRUE.
+         p%WrFile(FileExt_BTS) = .TRUE.
       ENDIF      
       
    ELSE
-      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(p_met%TurbModel)//' model.', ErrStat, ErrMsg, 'TS_ValidateInput')
-      WrFile(FileExt_CTS) = .FALSE.      
+      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'TS_ValidateInput')
+      p%WrFile(FileExt_CTS) = .FALSE.      
    END IF
       
 ENDIF !WrAct
@@ -2412,24 +2417,24 @@ ENDIF !WrAct
 
       ! Warn if EWM is used with incompatible times
       
-IF ( ( p_IEC%IEC_WindType == IEC_EWM1 .OR. p_IEC%IEC_WindType == IEC_EWM50 .OR. p_IEC%IEC_WindType == IEC_EWM100) .AND. & 
-      ABS( 600.0_ReKi - MAX(p_grid%AnalysisTime,p_grid%UsableTime) ) > 90.0_ReKi ) THEN
+IF ( ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. p%IEC%IEC_WindType == IEC_EWM100) .AND. & 
+      ABS( 600.0_ReKi - MAX(p%grid%AnalysisTime,p%grid%UsableTime) ) > 90.0_ReKi ) THEN
    CALL SetErrStat( ErrID_Warn, 'The EWM parameters are valid for 10-min simulations only.', ErrStat, ErrMsg, 'TS_ValidateInput')   
 ENDIF        
 
 
       ! Warn if Periodic is used with incompatible settings
       
-IF ( p_grid%Periodic .AND. .NOT. EqualRealNos(p_grid%AnalysisTime, p_grid%UsableTime) ) THEN
+IF ( p%grid%Periodic .AND. .NOT. EqualRealNos(p%grid%AnalysisTime, p%grid%UsableTime) ) THEN
    CALL SetErrStat( ErrID_Warn, 'Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', ErrStat, ErrMsg, 'TS_ValidateInput')  
-   p_grid%Periodic = .FALSE.
+   p%grid%Periodic = .FALSE.
 END IF
 
 
    ! Warn if tower points are output but grid is not:
-IF ( WrFile(FileExt_TWR) .AND. .NOT. ( WrFile(FileExt_WND) .OR. WrFile(FileExt_BTS)) ) THEN 
+IF ( p%WrFile(FileExt_TWR) .AND. .NOT. ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)) ) THEN 
    CALL SetErrStat( ErrID_Info, 'TurbSim .bts file will be generated to contain the tower points.', ErrStat, ErrMsg, 'TS_ValidateInput')  
-   WrFile(FileExt_BTS) = .TRUE.
+   p%WrFile(FileExt_BTS) = .TRUE.
 END IF
 
 

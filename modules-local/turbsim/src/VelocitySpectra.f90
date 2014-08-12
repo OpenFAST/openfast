@@ -35,7 +35,7 @@ CONTAINS
 SUBROUTINE Spec_IECKAI ( SigmaIEC, L_K, Spec )
 
 
-USE                     TSMods, ONLY: Uhub, p_grid
+USE                     TSMods, ONLY: Uhub, p
 
 IMPLICIT                NONE
 
@@ -65,8 +65,8 @@ DO IVec = 1,3
 
    L_over_U(IVec) = 6.0*L_over_U(IVec)
 
-   DO I = 1,p_grid%NumFreq
-      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + L_over_U(IVec)*p_grid%Freq(I) )**Exp1
+   DO I = 1,p%grid%NumFreq
+      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + L_over_U(IVec)*p%grid%Freq(I) )**Exp1
    ENDDO !I
 
 ENDDO !IVec
@@ -110,9 +110,9 @@ INTEGER               :: I
 L1_U   = IntegralScale(1)/UHub
 SigmaL1_U = 2.0*SigmaIEC_u*SigmaIEC_u*L1_U
 
-DO I=1,p_grid%NumFreq
+DO I=1,p%grid%NumFreq
 
-   FLU2      = ( p_grid%Freq(I)*L1_U )**2
+   FLU2      = ( p%grid%Freq(I)*L1_U )**2
    Tmp       = 1.0 + 71.0*FLU2
 
    Spec(I,1) = 2.0*SigmaL1_U/Tmp**Exp1
@@ -168,7 +168,7 @@ INTEGER               :: I
 
    ! calculate the spectra for the v and w components using IECKAI model
    ! because API doesn't specify a spectra for those components
-CALL Spec_IECKAI ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Spec )
+CALL Spec_IECKAI ( p%IEC%SigmaIEC, p%IEC%IntegralScale, Spec )
 
    ! Define u-component integral scale.
 !CALL WrScr ('Calling Froya/API wind spectrum.............')
@@ -180,18 +180,18 @@ CALL Spec_IECKAI ( p_IEC%SigmaIEC, p_IEC%IntegralScale, Spec )
 
    ! Compute some parameters that are independent of frequency.
 
-Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( p_met%URef/Ref_WS )**Exp3
-Scale2 = 320.0*( p_met%URef/Ref_WS )**2*( Ht/Ref_Ht )**Exp4   !bjj: I'm not liking how URef and Ht are not necessarially defined at the same node (URef from input file, Ht from wherever)
+Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( p%met%URef/Ref_WS )**Exp3
+Scale2 = 320.0*( p%met%URef/Ref_WS )**2*( Ht/Ref_Ht )**Exp4   !bjj: I'm not liking how URef and Ht are not necessarially defined at the same node (URef from input file, Ht from wherever)
 
-DO I=1,p_grid%NumFreq
+DO I=1,p%grid%NumFreq
 
 
-!mlb    Tmp1      = 172.0*p_grid%Freq(I)*(Ht/10.0)**Exp2*(UHr_10/10.0)**Exp3
+!mlb    Tmp1      = 172.0*p%grid%Freq(I)*(Ht/10.0)**Exp2*(UHr_10/10.0)**Exp3
 !mlb    Tmp2       = (1.0+Tmp1**Exp1)**(5.0/3.0/Exp1)
 !mlb 
 !mlb    Spec(I,1) = 320.0*(UHr_10/10.0)**2*(Ht/10.0)**Exp4/Tmp2
 
-   Temp      = Scale1*p_grid%Freq(I)
+   Temp      = Scale1*p%grid%Freq(I)
    Spec(I,1) = Scale2/( 1.0 + Temp**N )**Exp5
 
 ENDDO ! I
@@ -307,15 +307,15 @@ IF (zL_loc >= 0) THEN
 
 
    DO IC = 1,3  ! Wind components
-      DO I = 1,p_grid%NumFreq
-         tmpX  = p_grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
+      DO I = 1,p%grid%NumFreq
+         tmpX  = p%grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
          X_l   = tmpX/fr_il(ic)
          X_h   = tmpX/fr_ih(ic)
 
          ps_l  = (Pr_il(ic)*scales(1,ic)*X_l*tmpPhi) / (1.0 + scales(2,ic)*X_l**Exp53);
          ps_h  = (Pr_ih(ic)*scales(1,ic)*X_h*tmpPhi) / (1.0 + scales(2,ic)*X_h**Exp53);
 
-         Spec(I,IC) = (ps_l + ps_h)*uStar2/p_grid%Freq(I)
+         Spec(I,IC) = (ps_l + ps_h)*uStar2/p%grid%Freq(I)
       ENDDO
    ENDDO
 
@@ -347,19 +347,19 @@ ELSE
 !      Pr_il(3) = MIN(10.0,  3.6709e-011*( (nzl)**(-0.96751))*(ustar_loc**(-11.48936))*exp( 5.06644*(nzl)+26.26320*ustar_loc))
 !      Pr_ih(3) = MIN( 5.0, 13.53430*    ( (nzl)**(-0.14450))*(ustar_loc**(  1.32560))*exp( 1.66323*(nzl)- 4.28085*ustar_loc))
 
-   tmpZIL = ( ABS(p_met%ZI / p_met%L) )**Exp23
-   HtZI   = Ht / p_met%ZI
+   tmpZIL = ( ABS(p%met%ZI / p%met%L) )**Exp23
+   HtZI   = Ht / p%met%ZI
 
-   tmpZIU = p_met%ZI / Ucmp
+   tmpZIU = p%met%ZI / Ucmp
    tmpZU  = Ht / Ucmp
    HtZI2  = (1.0 - HtZI)**2
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
-   DO I=1,p_grid%NumFreq
-      fi      = p_grid%Freq(I)*tmpZIU
-      tmpF    = p_grid%Freq(I)*tmpZU                ! reduced frequency
-      Ustar2F = uStar2/p_grid%Freq(I)               ! Normalizing term
+   DO I=1,p%grid%NumFreq
+      fi      = p%grid%Freq(I)*tmpZIU
+      tmpF    = p%grid%Freq(I)*tmpZU                ! reduced frequency
+      Ustar2F = uStar2/p%grid%Freq(I)               ! Normalizing term
 
          ! u component
 
@@ -463,11 +463,11 @@ REAL(ReKi)            :: ZL_tmp   ! Disk-averaged z/l, limited by the observed r
 INTEGER               :: I        ! DO LOOP counter
 INTEGER               :: IC       ! DO LOOP counter
 
-uStar2 = p_met%Ustar * p_met%Ustar
+uStar2 = p%met%Ustar * p%met%Ustar
 
-IF (p_met%zL >= 0) THEN
+IF (p%met%zL >= 0) THEN
 
-   zl_tmp = max( min(p_met%zl, 3.5_ReKi ), 0.005_ReKi )
+   zl_tmp = max( min(p%met%zl, 3.5_ReKi ), 0.005_ReKi )
 
       ! Calculate NEUTRAL/STABLE spectral estimates
 
@@ -509,15 +509,15 @@ IF (p_met%zL >= 0) THEN
 
 
    DO IC = 1,3  ! Wind components
-      DO I = 1,p_grid%NumFreq
-         tmpX  = p_grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
+      DO I = 1,p%grid%NumFreq
+         tmpX  = p%grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
          X_l   = tmpX/fr_il(ic)
          X_h   = tmpX/fr_ih(ic)
 
          ps_l  = (Pr_il(ic)*scales(1,ic)*X_l*tmpPhi) / (1.0 + scales(2,ic)*X_l**Exp53);
          ps_h  = (Pr_ih(ic)*scales(1,ic)*X_h*tmpPhi) / (1.0 + scales(2,ic)*X_h**Exp53);
 
-         Spec(I,IC) = (ps_l + ps_h)*uStar2/p_grid%Freq(I)
+         Spec(I,IC) = (ps_l + ps_h)*uStar2/p%grid%Freq(I)
       ENDDO
    ENDDO
 
@@ -530,8 +530,8 @@ IF (p_met%zL >= 0) THEN
 ELSE
       ! Calculate UNSTABLE spectral estimates
 
-   zl_tmp    = abs( min( max( p_met%zl  ,REAL(-0.5,ReKi) ),REAL( -0.025,ReKi) ) )
-   ustar_tmp =      max( min(p_met%ustar,REAL( 1.4,ReKi) ),REAL(  0.2  ,ReKi) )
+   zl_tmp    = abs( min( max( p%met%zl  ,REAL(-0.5,ReKi) ),REAL( -0.025,ReKi) ) )
+   ustar_tmp =      max( min(p%met%ustar,REAL( 1.4,ReKi) ),REAL(  0.2  ,ReKi) )
 
    fr_il(1)  =   0.08825035*(zl_tmp**(-0.08806865))*(ustar_tmp**(-0.26295052))*exp( 1.74135233*zl_tmp + 1.86785832*ustar_tmp)
    fr_ih(1)  =   1.34307411*(zl_tmp**(-0.55126969))*(ustar_tmp**(-0.07034031))*exp( 0.40185202*zl_tmp - 0.55083463*ustar_tmp)
@@ -564,20 +564,20 @@ ELSE
    Pr_il(3)  = MAX( MIN( Pr_il(3), REAL(7.0 ,ReKi) ), REAL(1.0 ,ReKi)  )
    Pr_ih(3)  = MAX( MIN( Pr_ih(3), REAL(1.0 ,ReKi) ), REAL(0.3 ,ReKi)  )
 
-   tmpZIL = (-p_met%ZI / p_met%L)**Exp23
-   HtZI   = Ht / p_met%ZI
+   tmpZIL = (-p%met%ZI / p%met%L)**Exp23
+   HtZI   = Ht / p%met%ZI
 
-   tmpZIU = p_met%ZI / Ucmp
+   tmpZIU = p%met%ZI / Ucmp
    tmpZU  = Ht / Ucmp
    HtZI2  = (1.0 - HtZI)**2
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
-   DO I=1,p_grid%NumFreq
-      fi      = p_grid%Freq(I)*tmpZIU
+   DO I=1,p%grid%NumFreq
+      fi      = p%grid%Freq(I)*tmpZIU
 
-      tmpF    = p_grid%Freq(I)*tmpZU                ! reduced frequency
-      Ustar2F = uStar2/p_grid%Freq(I)               ! Normalizing term
+      tmpF    = p%grid%Freq(I)*tmpZU                ! reduced frequency
+      Ustar2F = uStar2/p%grid%Freq(I)               ! Normalizing term
 
          ! u component
 
@@ -649,31 +649,31 @@ SUBROUTINE Spec_UserSpec ( Spec )
 
    Indx = 1;
 
-   DO I=1,p_grid%NumFreq
+   DO I=1,p%grid%NumFreq
 
-      IF ( p_grid%Freq(I) <= p_met%USR_Freq(1) ) THEN
-         Spec(I,1) = p_met%USR_Uspec(1)
-         Spec(I,2) = p_met%USR_Vspec(1)
-         Spec(I,3) = p_met%USR_Wspec(1)
-      ELSEIF ( p_grid%Freq(I) >= p_met%USR_Freq(p_met%NumUSRf) ) THEN
-         Spec(I,1) = p_met%USR_Uspec(p_met%NumUSRf)
-         Spec(I,2) = p_met%USR_Vspec(p_met%NumUSRf)
-         Spec(I,3) = p_met%USR_Wspec(p_met%NumUSRf)
+      IF ( p%grid%Freq(I) <= p%met%USR_Freq(1) ) THEN
+         Spec(I,1) = p%met%USR_Uspec(1)
+         Spec(I,2) = p%met%USR_Vspec(1)
+         Spec(I,3) = p%met%USR_Wspec(1)
+      ELSEIF ( p%grid%Freq(I) >= p%met%USR_Freq(p%met%NumUSRf) ) THEN
+         Spec(I,1) = p%met%USR_Uspec(p%met%NumUSRf)
+         Spec(I,2) = p%met%USR_Vspec(p%met%NumUSRf)
+         Spec(I,3) = p%met%USR_Wspec(p%met%NumUSRf)
       ELSE
 
             ! Find the two points between which the frequency lies
 
-         DO J=(Indx+1),p_met%NumUSRf
-            IF ( p_grid%Freq(I) <= p_met%USR_Freq(J) ) THEN
+         DO J=(Indx+1),p%met%NumUSRf
+            IF ( p%grid%Freq(I) <= p%met%USR_Freq(J) ) THEN
                Indx = J-1
 
                   ! Let's just do a linear interpolation for now
 
-               Tmp  = (p_grid%Freq(I) - p_met%USR_Freq(Indx)) / ( p_met%USR_Freq(Indx) - p_met%USR_Freq(J) )
+               Tmp  = (p%grid%Freq(I) - p%met%USR_Freq(Indx)) / ( p%met%USR_Freq(Indx) - p%met%USR_Freq(J) )
 
-               Spec(I,1) = Tmp * ( p_met%USR_Uspec(Indx) - p_met%USR_Uspec(J) ) + p_met%USR_Uspec(Indx)
-               Spec(I,2) = Tmp * ( p_met%USR_Vspec(Indx) - p_met%USR_Vspec(J) ) + p_met%USR_Vspec(Indx)
-               Spec(I,3) = Tmp * ( p_met%USR_Wspec(Indx) - p_met%USR_Wspec(J) ) + p_met%USR_Wspec(Indx)
+               Spec(I,1) = Tmp * ( p%met%USR_Uspec(Indx) - p%met%USR_Uspec(J) ) + p%met%USR_Uspec(Indx)
+               Spec(I,2) = Tmp * ( p%met%USR_Vspec(Indx) - p%met%USR_Vspec(J) ) + p%met%USR_Vspec(Indx)
+               Spec(I,3) = Tmp * ( p%met%USR_Wspec(Indx) - p%met%USR_Wspec(J) ) + p%met%USR_Wspec(Indx)
 
                EXIT
             ENDIF
@@ -732,22 +732,22 @@ REAL(ReKi)            :: VDen
 
 INTEGER               :: I        ! DO LOOP counter
 
-uStar2 = p_met%Ustar * p_met%Ustar
+uStar2 = p%met%Ustar * p%met%Ustar
 
-IF (p_met%zL >= 0) THEN
+IF (p%met%zL >= 0) THEN
 
    ! Calculate NEUTRAL/STABLE spectral estimates
 
-   phiM   =  1.0 + 4.7*(p_met%zL)            ! = q
-   phiE   = (1.0 + 2.5*(p_met%zL)**0.6)**Exp3
+   phiM   =  1.0 + 4.7*(p%met%zL)            ! = q
+   phiE   = (1.0 + 2.5*(p%met%zL)**0.6)**Exp3
 
    tmpPhi = uStar2 * ( (phiE / phiM)**Exp2 )
    tmpF   = Ht / (Ucmp * phiM)
 
-   DO I = 1,p_grid%NumFreq
-      tmpX  = p_grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
+   DO I = 1,p%grid%NumFreq
+      tmpX  = p%grid%Freq(I)*tmpF             ! reduced frequency divided by q (q = phiM here)
       tmpXX = tmpX**Exp1
-      tmpN  = tmpPhi / p_grid%Freq(I) * tmpX  ! normalization factor used to obtain power spectrum components
+      tmpN  = tmpPhi / p%grid%Freq(I) * tmpX  ! normalization factor used to obtain power spectrum components
 
       Spec(I,1) = tmpN * (79.0) / (1.0 + 263.0*tmpXX)
       Spec(I,2) = tmpN * (13.0) / (1.0 +  32.0*tmpXX)
@@ -756,21 +756,21 @@ IF (p_met%zL >= 0) THEN
 
 ELSE
    ! Calculate UNSTABLE spectral estimates
-   tmpZIL = (- p_met%ZI / p_met%L)**Exp2
-   HtZI   = Ht / p_met%ZI
+   tmpZIL = (- p%met%ZI / p%met%L)**Exp2
+   HtZI   = Ht / p%met%ZI
 
    HtZI2  = (1.0 - HtZI)**2
    tmpZU  = Ht / Ucmp
-   tmpZIU = p_met%ZI / Ucmp
+   tmpZIU = p%met%ZI / Ucmp
    UDen   = 1.0 + 15.0*HtZI
    VDen   = 1.0 +  2.8*HtZI
 
-   DO I = 1,p_grid%NumFreq
+   DO I = 1,p%grid%NumFreq
 
-      Fi   = p_grid%Freq(I)*tmpZIU
-      tmpF = p_grid%Freq(I)*tmpZU                ! reduced frequency
+      Fi   = p%grid%Freq(I)*tmpZIU
+      tmpF = p%grid%Freq(I)*tmpZU                ! reduced frequency
 
-      Ustar2F = uStar2/p_grid%Freq(I)
+      Ustar2F = uStar2/p%grid%Freq(I)
 
       ! u component
       Fr   = tmpF / UDen
@@ -838,7 +838,7 @@ INTEGER               :: I                      ! DO LOOP counter
 
 !print *, Ustar
 !Sigma_U2=(TurbIntH20*U(IZ))**2 ! A fixed value of the turbulence intensity.  Do we want to implement this?
-Sigma_U2=4.5*p_met%Ustar*p_met%Ustar*EXP(-2*Ht/p_met%RefHt)
+Sigma_U2=4.5*p%met%Ustar*p%met%Ustar*EXP(-2*Ht/p%met%RefHt)
 Sigma_V2=0.5*Sigma_U2
 Sigma_W2=0.2*Sigma_U2
 
@@ -855,8 +855,8 @@ END SELECT
 
 tmpvec = tmpa*(/Sigma_U2, Sigma_V2, Sigma_W2/)/Shr_DuDz
 
-DO I = 1,p_grid%NumFreq
-   tmpX  = (p_grid%Freq(I)/Shr_DuDz)**Exp1
+DO I = 1,p%grid%NumFreq
+   tmpX  = (p%grid%Freq(I)/Shr_DuDz)**Exp1
    Spec(I,1) = tmpvec(1) / (1.0 + tmpb(1)*tmpX)
    Spec(I,2) = tmpvec(2) / (1.0 + tmpb(2)*tmpX)
    Spec(I,3) = tmpvec(3) / (1.0 + tmpb(3)*tmpX)
@@ -891,9 +891,9 @@ DO IVec = 1,3
    ENDDO !I
    !I = INT( NumFreq/2 )
    I = INT( 100 )
-   Spec( I, IVec ) = 1/p_grid%Freq(1)
+   Spec( I, IVec ) = 1/p%grid%Freq(1)
 
-   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(p_grid%Freq(I)))//' Hz.' )
+   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(p%grid%Freq(I)))//' Hz.' )
 
 ENDDO !IVec
 
@@ -930,15 +930,15 @@ REAL(ReKi)            :: Tmp
 INTEGER               :: I
 
    ! Define isotropic integral scale.
-IF ( ALLOCATED( p_met%USR_L ) ) THEN
-   IF ( Ht <= p_met%USR_Z(1) ) THEN
-      Lvk = p_met%USR_L(1)   ! Extrapolation: nearest neighbor for heights below minimum height specified
-   ELSEIF ( Ht >= p_met%USR_Z(p_met%NumUSRz) ) THEN
-      Lvk = p_met%USR_L(p_met%NumUSRz)  ! Extrapolation: nearest neighbor for heights above maximum height specified
+IF ( ALLOCATED( p%met%USR_L ) ) THEN
+   IF ( Ht <= p%met%USR_Z(1) ) THEN
+      Lvk = p%met%USR_L(1)   ! Extrapolation: nearest neighbor for heights below minimum height specified
+   ELSEIF ( Ht >= p%met%USR_Z(p%met%NumUSRz) ) THEN
+      Lvk = p%met%USR_L(p%met%NumUSRz)  ! Extrapolation: nearest neighbor for heights above maximum height specified
    ELSE !Interpolation: linear between user-defined height/integral scale curves
-      DO I=2,p_met%NumUSRz
-         IF ( Ht <= p_met%USR_Z(I) ) THEN
-            Lvk = (Ht - p_met%USR_Z(I-1)) * ( p_met%USR_L(I-1) - p_met%USR_L(I) ) / ( p_met%USR_Z(I-1) - p_met%USR_Z(I) ) + p_met%USR_L(I-1)
+      DO I=2,p%met%NumUSRz
+         IF ( Ht <= p%met%USR_Z(I) ) THEN
+            Lvk = (Ht - p%met%USR_Z(I-1)) * ( p%met%USR_L(I-1) - p%met%USR_L(I) ) / ( p%met%USR_Z(I-1) - p%met%USR_Z(I) ) + p%met%USR_L(I-1)
             EXIT
          ENDIF
       ENDDO
@@ -953,38 +953,38 @@ ELSE
 ENDIF
 
    ! Define isotropic integral scale.
-IF ( ALLOCATED( p_met%USR_Sigma ) ) THEN
-   IF ( Ht <= p_met%USR_Z(1) ) THEN
-      Sigma = p_met%USR_Sigma(1)
-   ELSEIF ( Ht >= p_met%USR_Z(p_met%NumUSRz) ) THEN
-      Sigma = p_met%USR_Sigma(p_met%NumUSRz)
+IF ( ALLOCATED( p%met%USR_Sigma ) ) THEN
+   IF ( Ht <= p%met%USR_Z(1) ) THEN
+      Sigma = p%met%USR_Sigma(1)
+   ELSEIF ( Ht >= p%met%USR_Z(p%met%NumUSRz) ) THEN
+      Sigma = p%met%USR_Sigma(p%met%NumUSRz)
    ELSE
-      DO I=2,p_met%NumUSRz
-         IF ( Ht <= p_met%USR_Z(I) ) THEN
-            Sigma = (Ht - p_met%USR_Z(I-1)) * ( p_met%USR_Sigma(I-1) - p_met%USR_Sigma(I) ) / ( p_met%USR_Z(I-1) - p_met%USR_Z(I) ) + p_met%USR_Sigma(I-1)
+      DO I=2,p%met%NumUSRz
+         IF ( Ht <= p%met%USR_Z(I) ) THEN
+            Sigma = (Ht - p%met%USR_Z(I-1)) * ( p%met%USR_Sigma(I-1) - p%met%USR_Sigma(I) ) / ( p%met%USR_Z(I-1) - p%met%USR_Z(I) ) + p%met%USR_Sigma(I-1)
             EXIT
          ENDIF
       ENDDO
    ENDIF
 ELSE
-    Sigma = p_met%Ustar*2.15 !bjj: BONNIE, make sure this is defined, or else define ustar for this model...
+    Sigma = p%met%Ustar*2.15 !bjj: BONNIE, make sure this is defined, or else define ustar for this model...
 ENDIF
 
 
 L1_U   = Lvk/Ucmp
 SigmaL1_U = 2.0*Sigma*Sigma*L1_U
 
-DO I=1,p_grid%NumFreq
+DO I=1,p%grid%NumFreq
 
-   FLU2      = ( p_grid%Freq(I)*L1_U )**2
+   FLU2      = ( p%grid%Freq(I)*L1_U )**2
    Tmp       = 1.0 + 71.0*FLU2
 
-   Spec(I,1) = (p_met%USR_StdScale(1)**2)*2.0*SigmaL1_U/Tmp**Exp1
+   Spec(I,1) = (p%met%USR_StdScale(1)**2)*2.0*SigmaL1_U/Tmp**Exp1
    Spec(I,2) = SigmaL1_U*( 1.0 + 189.0*FLU2 )/Tmp**Exp2
    Spec(I,3) = Spec(I,2)
 
-   Spec(I,2) = (p_met%USR_StdScale(2)**2)*Spec(I,2)
-   Spec(I,3) = (p_met%USR_StdScale(3)**2)*Spec(I,3)
+   Spec(I,2) = (p%met%USR_StdScale(2)**2)*Spec(I,2)
+   Spec(I,3) = (p%met%USR_StdScale(3)**2)*Spec(I,3)
 
 ENDDO ! I
 
@@ -1059,19 +1059,19 @@ REAL(ReKi), PARAMETER :: ZL_MinObs  = -1.00
 INTEGER               :: I                       ! Loop counter
 
 
-Ustar2 = p_met%Ustar*p_met%Ustar
+Ustar2 = p%met%Ustar*p%met%Ustar
 
-IF ( p_met%ZL < 0 ) THEN
+IF ( p%met%ZL < 0 ) THEN
       ! BEGIN UNSTABLE FLOW LOOP
 
    ! Unstable high-frequency range scaling...
 
-   X = - MAX( p_met%ZL, ZL_MinObs)
+   X = - MAX( p%met%ZL, ZL_MinObs)
 
    Num    = 0.691114  + 0.0791666*X    ! was "Original" Puo_ih =
    Den    = 0.77991   + 0.1761624  / ( 1.0 + EXP( -(X - 0.0405364) / (-0.0184402) ) ) ! was "Measured" Pum_ih =
    Pur_ih = 0.10 * ( Num / Den )
-   IF (p_met%ZI > ZI_UVlimit) Pur_ih = (p_met%ZI / ZI_UVlimit) * Pur_ih
+   IF (p%met%ZI > ZI_UVlimit) Pur_ih = (p%met%ZI / ZI_UVlimit) * Pur_ih
 
    Num    = 0.421958 * EXP( 0.20739895*X )
    Den    = 0.5247865 + 0.0419204 / ( 1.0 + EXP( -(X - 0.0434172) / (-0.0179269) ) )
@@ -1084,17 +1084,17 @@ IF ( p_met%ZL < 0 ) THEN
    Num    = 0.047465  + 0.0132692*X
    Den    = 0.0599494 - 0.0139033*EXP(-X / 0.02603846)
    fur_ih = 1.75 * ( Num / Den )
-   IF (p_met%ZI > ZI_UVlimit) fur_ih = (p_met%ZI / ZI_UVlimit)*fur_ih
+   IF (p%met%ZI > ZI_UVlimit) fur_ih = (p%met%ZI / ZI_UVlimit)*fur_ih
 
    Num    = 0.18377384 * EXP( 0.2995136*X )
    Den    = 0.1581509  + 0.09501906*X
    fvr_ih = 1.50 * ( Num / Den )
-   IF (p_met%ZI > ZI_UVlimit) fvr_ih = (p_met%ZI / ZI_UVlimit)*fvr_ih
+   IF (p%met%ZI > ZI_UVlimit) fvr_ih = (p%met%ZI / ZI_UVlimit)*fvr_ih
 
    Num    = 0.3419874 + 0.24985029 * EXP(-X / 0.02619489)
    Den    = 0.451295  + 0.2355227*X
    fwr_ih = 2.0 * ( Num / Den )
-   IF (p_met%ZI > ZI_Wlimit) fwr_ih = 0.35*(p_met%ZI / ZI_Wlimit)*fwr_ih
+   IF (p%met%ZI > ZI_Wlimit) fwr_ih = 0.35*(p%met%ZI / ZI_Wlimit)*fwr_ih
 
 
    ! Unstable low-frequency range scaling...
@@ -1118,33 +1118,33 @@ IF ( p_met%ZL < 0 ) THEN
    Num    = 0.369625 + 1.0772852*EXP( -X / 0.0210098 )
    !Den    = 0.759259 - 0.1448362*X calculated previously
    fvr_il = 2.25 * ( Num / Den )
-   IF (p_met%ZI > ZI_UVlimit) fvr_il = (p_met%ZI / ZI_UVlimit)*fvr_il
+   IF (p%met%ZI > ZI_UVlimit) fvr_il = (p%met%ZI / ZI_UVlimit)*fvr_il
 
    Num    = 3.39482 * EXP( 0.279914*X )
    Den    = 4.59769 + 12.58881*EXP( -X / 0.03351852 )
    fwr_il = 2.25 * ( Num / Den )
-   IF (p_met%ZI > ZI_Wlimit) fwr_il=4.0*(p_met%ZI / ZI_Wlimit)*fwr_il
+   IF (p%met%ZI > ZI_Wlimit) fwr_il=4.0*(p%met%ZI / ZI_Wlimit)*fwr_il
 
-   HtZI  = Ht / p_met%ZI
+   HtZI  = Ht / p%met%ZI
    HtZI2 = (1.0 - HtZI)**2
-   ZInL  = ( p_met%ZI / ( -p_met%L ) )**Exp2
+   ZInL  = ( p%met%ZI / ( -p%met%L ) )**Exp2
    HtU   = Ht / Ucmp
-   ZIU   = p_met%ZI / Ucmp
+   ZIU   = p%met%ZI / Ucmp
    UDen  = 1.0 + 15.0*HtZI
    VDen  = 1.0 +  2.8*HtZI
    UDen2 = HtZI2 / UDen**Exp2
    VDen2 = HtZI2 / VDen**Exp2
 
 
-   DO I = 1,p_grid%NumFreq
+   DO I = 1,p%grid%NumFreq
 
-         F   = p_grid%Freq(I) * HtU
-         Fi  = p_grid%Freq(I) * ZIU
+         F   = p%grid%Freq(I) * HtU
+         Fi  = p%grid%Freq(I) * ZIU
 
          ! Bonnie: These () around 0.3 HtZI are incorrect as compared to the original SMOOTH model. (For now, leave as is since parameters were-supposedly-calculated with this formulation)
          Fw  = SQRT( (F**2 + (0.3*HtZI**2) ) / (F**2 + 0.0225) )
 
-         Ustar2F = Ustar2 / p_grid%Freq(I)
+         Ustar2F = Ustar2 / p%grid%Freq(I)
 
       ! CALCULATE UNSTABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
@@ -1185,7 +1185,7 @@ IF ( p_met%ZL < 0 ) THEN
 
 ELSE ! ZL >= 0    ! BEGIN STABLE FLOW LOOP
 
-      X = MIN(p_met%ZL, ZL_MaxObs)
+      X = MIN(p%met%ZL, ZL_MaxObs)
 
    ! Get stable spectral peaks
 
@@ -1256,14 +1256,14 @@ ELSE ! ZL >= 0    ! BEGIN STABLE FLOW LOOP
 
       phiEQ = (phiE / q)**Exp2
 
-      DO I = 1,p_grid%NumFreq
+      DO I = 1,p%grid%NumFreq
 
          ! CALCULATE Reduced Frequency, f
 
-         f  = p_grid%Freq(I) * Ht / Ucmp
+         f  = p%grid%Freq(I) * Ht / Ucmp
          fq = f / q     ! was XU = f/qu, XV = f/qv, XW = f/qw
 
-         Ustar2F = Ustar2 / p_grid%Freq(I)
+         Ustar2F = Ustar2 / p%grid%Freq(I)
 
          ! CALCULATE NEUTRAL/STABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
@@ -1377,16 +1377,16 @@ INTEGER               :: I                       ! Loop counter
 
 
 
-Ustar2 = p_met%Ustar*p_met%Ustar
+Ustar2 = p%met%Ustar*p%met%Ustar
 
-IF (p_met%ZL < 0) THEN
+IF (p%met%ZL < 0) THEN
 
 
       ! Get Unstable spectral peaks
 
    ! Unstable high-frequency range scaling...
 
-   X = - MAX( p_met%ZL, ZL_MinObs )
+   X = - MAX( p%met%ZL, ZL_MinObs )
 
    Num    = 0.598894  + 0.282106  * EXP(-X / 0.0594047)
    Den    = 0.600977  + 9.137681  / (1.0 + EXP( -(X + 0.830756) / (-0.252026) ))
@@ -1411,19 +1411,19 @@ IF (p_met%ZL < 0) THEN
    Num    = 0.7697576 * EXP( -X / 3.8408779 ) - 0.561527 * EXP( -X / 0.1684403 ) ! was Num = Beta4(X,A0,A1,A2,A3)
    Den    = 0.512356  - 0.044946  / (1.0 + EXP( -(X - 0.066061) / (-0.0121168) ))
    fwr_oh = 1.75 * (Num / Den)
-   IF (p_met%ZI < 1350.0 ) fwr_oh = (p_met%ZI / 1350.0) * fwr_oh
+   IF (p%met%ZI < 1350.0 ) fwr_oh = (p%met%ZI / 1350.0) * fwr_oh
 
       ! Unstable low-frequency range scaling ...
 
    Num    = 0.796264 + 0.316895 / (1.0 + EXP( -(X - 0.082483) / 0.027480 ))
    Den    = 0.07616  + EXP(0.303919 * X * 0.390906)   ! was Den = 0.07616 + EXP(0.303919*X)**0.390906
    Pur_ol = 4.0 * (Num / Den)
-   IF (p_met%ZI < 1600.0) Pur_ol = (p_met%ZI / 1600.0) * Pur_ol
+   IF (p%met%ZI < 1600.0) Pur_ol = (p%met%ZI / 1600.0) * Pur_ol
 
    Num    = 0.812483 + 0.1332134 * X
    Den    = 0.104132 + EXP(0.714674 * X * 0.495370)   ! was Den = 0.104132 + EXP(0.714674*X)**0.495370
    Pvr_ol = Num / Den
-   Pvr_ol = (p_met%ZI / 1600.0)*Pvr_ol
+   Pvr_ol = (p%met%ZI / 1600.0)*Pvr_ol
 
    Num    = 0.371298  + 0.0425447 * X
    Den    = 0.0004375 + EXP(0.4145751 * X * 0.6091557)   ! was Den = 0.0004375 + EXP(0.4145751*X)**0.6091557
@@ -1432,7 +1432,7 @@ IF (p_met%ZL < 0) THEN
    Num    = 0.859809 * EXP(0.157999 * X)
    Den    = 0.81459 + 0.021942 * X
    fur_ol = 1.5 * (Num / Den)
-   IF (p_met%ZI > 1850.0) fur_ol = 2.6 * (p_met%ZI / 1850.0) * fur_ol
+   IF (p%met%ZI > 1850.0) fur_ol = 2.6 * (p%met%ZI / 1850.0) * fur_ol
 
    !A0 =  0.8121775
    !A1 =  4.122E+15
@@ -1441,7 +1441,7 @@ IF (p_met%ZL < 0) THEN
    Num    = 0.8121775 * EXP( -X / 4.122E+15 ) - 0.594909 * EXP( -X / 0.0559581 ) ! was Num = BETA4(X,A0,A1,A2,A3)
    Den    = 0.72535  - 0.0256291 * X
    fvr_ol = 3.0 * (Num / Den)
-   fvr_ol = (p_met%ZI / 1600.0) * fvr_ol
+   fvr_ol = (p%met%ZI / 1600.0) * fvr_ol
 
    Num    = 6.05669  * EXP(-0.97418 * X)
    Den    = 3.418386 + 9.58012 / (1.0 + EXP( -(X - 0.0480283) / (-0.022657) ))
@@ -1460,23 +1460,23 @@ IF (p_met%ZL < 0) THEN
    Den    = 0.0171463 + 0.188081 / (1.0 + EXP( -(X + 0.711851) / 0.688910))
    fvr_wk = 3.0 * (Num / Den)
 
-   HtZI  = Ht / p_met%ZI
+   HtZI  = Ht / p%met%ZI
    HtZI2 = (1.0 - HtZI)**2
-   ZInL  = ( p_met%ZI / (-p_met%L) )**Exp2
+   ZInL  = ( p%met%ZI / (-p%met%L) )**Exp2
    UDen  = 1.0 + 15.0 * HtZI
    VDen  = 1.0 +  2.8 * HtZI
    UDen2 = HtZI2 / UDen**Exp2
    VDen2 = HtZI2 / VDen**Exp2
 
-   DO I = 1,p_grid%NumFreq
+   DO I = 1,p%grid%NumFreq
 
       ! Calculate f,fi,fru,frv
 
-      F   = p_grid%Freq(I)*Ht / Ucmp
-      Fi  = p_grid%Freq(I)*p_met%ZI / Ucmp
+      F   = p%grid%Freq(I)*Ht / Ucmp
+      Fi  = p%grid%Freq(I)*p%met%ZI / Ucmp
       Fw  = SQRT( (F**2 + (0.3*HtZI**2)) / (F**2 + 0.0225) )
 
-      Ustar2F = Ustar2 / p_grid%Freq(I)
+      Ustar2F = Ustar2 / p%grid%Freq(I)
 
          ! CALCULATE UNSTABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
@@ -1531,7 +1531,7 @@ ELSE  ! ZL >= 0
 
    ! Stable high-frequency (wake) range scaling...
 
-   X      = MIN( p_met%ZL, ZL_MaxObs )
+   X      = MIN( p%met%ZL, ZL_MaxObs )
 
    Num    = 0.149471 + 0.028528 * &
             EXP( -EXP( -( (X - 0.003580) / 0.0018863 ) ) - ( (X - 0.0035802) / 0.0018863) + 1.0)
@@ -1617,12 +1617,12 @@ ELSE  ! ZL >= 0
 
    tmp    = (phiE / q)**Exp2
 
-   DO I = 1,p_grid%NumFreq
+   DO I = 1,p%grid%NumFreq
 
-      F       = p_grid%Freq(I) * Ht / Ucmp    ! Reduced frequency
+      F       = p%grid%Freq(I) * Ht / Ucmp    ! Reduced frequency
 
       Fq      = F / q
-      Ustar2F = Ustar2 / p_grid%Freq(I)
+      Ustar2F = Ustar2 / p%grid%Freq(I)
 
          ! CALCULATE NEUTRAL/STABLE LONGITUDINAL SPECTRAL COMPONENT, nSu(n)/(u*)^2, then multiply by (u*)^2/n
 
