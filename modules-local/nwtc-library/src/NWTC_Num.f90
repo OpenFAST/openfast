@@ -54,7 +54,7 @@ MODULE NWTC_Num
    !  SUBROUTINE LocateStp             ( XVal, XAry, Ind, AryLen )
    !  FUNCTION   Mean                  ( Ary, AryLen )                                                ! Function to calculate the mean value of a vector array.
    !  SUBROUTINE MPi2Pi                ( Angle )
-   !  SUBROUTINE Zero2TwoPi            ( Angle )   
+   !  FUNCTION   PSF                   ( N, NumPrimes )                                               ! This routine factors the number N into its primes.  
    !  SUBROUTINE RegCubicSplineInit    ( AryLen, XAry, YAry, DelX, Coef )                             ! Calculate coefficients for regularly spaced array to use cubic splines.
    !  SUBROUTINE RegCubicSplineInitM   ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )                    ! Interpolate using cubic splines for multiple tables of regularly space data.
    !  FUNCTION   RegCubicSplineInterp  ( X, AryLen, XAry, YAry, DelX, Coef )                          ! Interpolate a regularly spaced array using cubic splines.
@@ -1957,7 +1957,85 @@ CONTAINS
 
    RETURN
    END SUBROUTINE MPi2Pi
+   
 !=======================================================================
+   FUNCTION PSF ( Npsf, NumPrimes )
+
+    ! This routine factors the number N into its primes.  If any of those
+    ! prime factors is greater than the NumPrimes'th prime, a point is added to N
+    ! and the new number is factored.  This process is repeated until no
+    ! prime factors are greater than the NumPrimes'th prime.
+
+    IMPLICIT                 NONE
+
+    !Passed variables
+    INTEGER,     INTENT(IN)   :: Npsf                   ! Initial number we're trying to factor.
+    INTEGER,     INTENT(IN)   :: NumPrimes              ! Number of unique primes.
+    INTEGER                   :: PSF                    ! The smallest number at least as large as Npsf, that is the product of small factors when we return.
+
+    !Other variables
+    INTEGER                   :: IPR                    ! A counter for the NPrime array
+    INTEGER, PARAMETER        :: NFact = 9              ! The number of prime numbers (the first NFact primes)
+    INTEGER                   :: NP                     ! A temp variable to determine if NPr divides NTR
+    INTEGER                   :: NPr                    ! A small prime number
+    INTEGER                   :: NT                     ! A temp variable to determine if NPr divides NTR: INT( NTR / NPr )
+    INTEGER                   :: NTR                    ! The number we're trying to factor in each iteration
+    INTEGER, PARAMETER        :: NPrime(NFact) = (/ 2, 3, 5, 7, 11, 13, 17, 19, 23 /) ! The first 9 prime numbers
+                              
+    LOGICAL                   :: DividesN1(NFact)       ! Does this factor divide NTR-1?
+
+
+
+    DividesN1(:) = .FALSE.                              ! We need to check all of the primes the first time through
+
+    PSF = Npsf
+
+    DO
+           ! First:  Factor NTR into its primes.
+
+       NTR = PSF
+
+       DO IPR=1,MIN( NumPrimes, NFact ) 
+
+           IF ( DividesN1(IPR) ) THEN
+
+                   ! If P divides N-1, then P cannot divide N.
+
+               DividesN1(IPR) = .FALSE.               ! This prime number does not divide psf; We'll check it next time.
+
+           ELSE
+
+               NPr = NPrime(IPR)                      ! The small prime number we will try to find the the factorization of NTR
+
+               DO
+                   NT = NTR/NPr                       ! Doing some modular arithmetic to see if
+                   NP = NT*NPr                        ! MOD( NTR, NPr ) == 0, i.e. if NPr divides NTR
+
+                   IF ( NP /= NTR )  EXIT             ! There aren't any more of this prime number in the factorization
+
+                   NTR = NT                           ! This is the new number we need to get factors for
+                   DividesN1(IPR) = .TRUE.            ! This prime number divides psf, so we won't check it next time (on Npsf+1).
+
+               ENDDO
+
+               IF ( NTR .EQ. 1 )  RETURN              ! We've found all the prime factors, so we're finished
+
+           ENDIF !  DividesN1
+
+       ENDDO ! IPR
+
+           ! Second:  There is at least one prime larger than NPrime(NumPrimes).  Add
+           !          a point to NTR and factor again.
+
+       PSF = PSF + 1
+
+    ENDDO
+
+
+    RETURN
+    END FUNCTION PSF   
+   
+!=======================================================================         
    SUBROUTINE RegCubicSplineInit ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 
 
