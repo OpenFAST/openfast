@@ -614,48 +614,24 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-
-!   DO i=1,3
-!       x%q(i) = u(1)%PointMesh%TranslationDisp(i,1)
-!       x%q(i+3) = 0.0D0
-!       x%dqdt(i) = u(1)%PointMesh%TranslationVel(i,1)
-!       x%dqdt(i+3) = 0.0D0
-!   ENDDO
-
-!   temp_pp(:) = 0.0D0
-!   temp_qq(:) = 0.0D0
-!   temp_rr(:) = 0.0D0
-!   x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
-!   DO i=1,3
-!       temp_pp(i) = x%q(i+3)
-!   ENDDO
-!   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
-!   DO i=1,3
-!       x%q(i+3) = temp_rr(i)
-!   ENDDO
-!   IF(ABS(x%q(5)) .GT. 4.0D0) THEN
-!       x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
-!   ENDIF
-!   x%dqdt(5) = -3.1415926D0/3.0D0
-
-   DO i=2,p%node_total
-       temp_id = (i-1)*6
-       temp_pp(:) = 0.0D0
-       temp_qq(:) = 0.0D0
-       temp_rr(:) = 0.0D0
-       DO j=1,3
-           temp_pp(j) = x%q(temp_id+3+j)
+   IF(p%analysis_type == 2) THEN
+       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       DO i=2,p%node_total
+           temp_id = (i-1)*6
+           temp_pp(:) = 0.0D0
+           temp_qq(:) = 0.0D0
+           temp_rr(:) = 0.0D0
+           DO j=1,3
+               temp_pp(j) = x%q(temp_id+3+j)
+           ENDDO
+           CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+           DO j=1,3
+               x%q(temp_id+3+j) = temp_rr(j)
+           ENDDO
        ENDDO
-       CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
-       DO j=1,3
-           x%q(temp_id+3+j) = temp_rr(j)
-       ENDDO
-!       IF(ABS(x%q(temp_id+5)) .GT. 4.0D0) THEN
-!           temp = -4.0D0*ATAN(x%q(temp_id+5)/4.0D0)
-!           x%q(temp_id+5) = -4.0D0*TAN((temp+2.0D0*3.1415926D0)/4.0D0)
-!       ENDIF
-   ENDDO
+   ELSEIF(p%analysis_type == 1) THEN
+!       CALL BeamDyn_Static
+   ENDIF
 
    END SUBROUTINE BeamDyn_UpdateStates
 

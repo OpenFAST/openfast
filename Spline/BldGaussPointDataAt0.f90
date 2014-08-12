@@ -2,14 +2,14 @@
    !----------------------------------------------------------------------------------------
    ! This subroutine computes initial Gauss point values: uu0, E10, and Stif
    !----------------------------------------------------------------------------------------
-   REAL(ReKi),    INTENT(IN):: hhx(:)         ! Shape function
-   REAL(ReKi),    INTENT(IN):: hpx(:)         ! Derivative of shape function
-   REAL(ReKi),    INTENT(IN):: Nuu0(:)        ! Element initial nodal position array
-   REAL(ReKi),    INTENT(IN):: Nrr0(:)        ! Element initial nodal relative rotation array
-   REAL(ReKi), INTENT(INOUT):: uu0(:)         ! Initial position array at Gauss point
-   REAL(ReKi), INTENT(INOUT):: E10(:)         ! E10 = x_0^\prime at Gauss point
-   INTEGER(IntKi),INTENT(IN):: node_elem      ! Number of node in one element
-   INTEGER(IntKi),INTENT(IN):: dof_node       ! DoF per node (=6)
+   REAL(ReKi),    INTENT(IN   ):: hhx(:)         ! Shape function
+   REAL(ReKi),    INTENT(IN   ):: hpx(:)         ! Derivative of shape function
+   REAL(ReKi),    INTENT(IN   ):: Nuu0(:)        ! Element initial nodal position array
+   REAL(ReKi),    INTENT(IN   ):: Nrr0(:)        ! Element initial nodal relative rotation array
+   INTEGER(IntKi),INTENT(IN   ):: node_elem      ! Number of node in one element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node       ! DoF per node (=6)
+   REAL(ReKi),    INTENT(  OUT):: uu0(:)         ! Initial position array at Gauss point
+   REAL(ReKi),    INTENT(  OUT):: E10(:)         ! E10 = x_0^\prime at Gauss point
 
    ! Local variables
    REAL(ReKi):: hhi,hpi,rot0_temp(3),rotu_temp(3),rot_temp(3)
