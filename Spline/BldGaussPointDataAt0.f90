@@ -12,8 +12,16 @@
    REAL(ReKi),    INTENT(  OUT):: E10(:)         ! E10 = x_0^\prime at Gauss point
 
    ! Local variables
-   REAL(ReKi):: hhi,hpi,rot0_temp(3),rotu_temp(3),rot_temp(3)
-   INTEGER(IntKi):: inode,temp_id,temp_id2,i,j
+   REAL(ReKi)                  :: hhi
+   REAL(ReKi)                  :: hpi
+   REAL(ReKi)                  :: rot0_temp(3)
+   REAL(ReKi)                  :: rotu_temp(3)
+   REAL(ReKi)                  :: rot_temp(3)
+   INTEGER(IntKi)              :: inode
+   INTEGER(IntKi)              :: temp_id
+   INTEGER(IntKi)              :: temp_id2
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: j
    
    uu0 = 0.0D0
    E10 = 0.0D0
