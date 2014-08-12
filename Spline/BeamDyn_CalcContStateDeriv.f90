@@ -3,22 +3,22 @@
 ! Routine for computing derivatives of continuous states.
 !........................................................................................................................
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BD_ContinuousStateType), INTENT(  OUT)  :: xdot        ! Continuous state derivatives at t
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   ):: t           ! Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(IN   ):: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   ):: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   ):: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   ):: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   ):: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT):: OtherState  ! Other/optimization states
+   TYPE(BD_ContinuousStateType), INTENT(  OUT):: xdot        ! Continuous state derivatives at t
+   INTEGER(IntKi),               INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   REAL(ReKi),ALLOCATABLE:: qddot(:)    ! Second time derivative of state q
-   REAL(ReKi),ALLOCATABLE:: qdot(:)     ! First time derivative of state q
-   INTEGER(IntKi):: allo_stat        
-   INTEGER(IntKi):: j 
+   REAL(ReKi),                     ALLOCATABLE:: qddot(:)    ! Second time derivative of state q
+   REAL(ReKi),                     ALLOCATABLE:: qdot(:)     ! First time derivative of state q
+   INTEGER(IntKi)                             :: allo_stat        
+   INTEGER(IntKi)                             :: j 
  
 
    allo_stat = 0  
