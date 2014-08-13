@@ -76,7 +76,15 @@ INCLUDE 'ElementMatrix_Force.f90'
 INCLUDE 'GenerateDynamicElement_Force.f90'
 INCLUDE 'DynamicSolution_Force.f90'
 INCLUDE 'ComputeIniCoef.F90'
-INCLUDE 'ComputeIniNodalPositionSP.F90'
+INCLUDE 'ComputeIniNodalPositionSP.f90'
+
+INCLUDE 'BeamDyn_Static.f90'
+INCLUDE 'BeamDyn_StaticSolution.f90'
+INCLUDE 'BeamDyn_GenerateStaticElement.f90'
+INCLUDE 'BeamDyn_StaticElementMatrix.f90'
+INCLUDE 'BeamDyn_StaticElasticForce.f90'
+INCLUDE 'UpdateConfiguration.f90'
+INCLUDE 'OuterProduct.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -150,6 +158,7 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    CALL DispNVD( BeamDyn_Ver )
 
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
+   p%analysis_type  = InputFileData%analysis_type
 
    CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
    p%gravity(:) = 0.0D0
@@ -174,7 +183,8 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    p%segment_length(:,:) = 0.0D0
    p%blade_length = 0.0D0
 
-   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,p%segment_length,p%member_length,p%blade_length)
+   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
+                               p%segment_length,p%member_length,p%blade_length)
    p%elem_total = InputFileData%member_total
    p%node_elem  = InputFileData%order_elem + 1       ! node per element
    p%ngp        = p%node_elem - 1
@@ -334,7 +344,7 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
    WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
    WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
    WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
-   STOP
+!   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
@@ -630,7 +640,10 @@ INCLUDE 'ComputeIniNodalPositionSP.F90'
            ENDDO
        ENDDO
    ELSEIF(p%analysis_type == 1) THEN
-!       CALL BeamDyn_Static
+       CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+DO i=5,0,-1            
+WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
+ENDDO
    ENDIF
 
    END SUBROUTINE BeamDyn_UpdateStates
