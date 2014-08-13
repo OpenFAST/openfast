@@ -718,8 +718,7 @@ REAL(ReKi)                       :: SPh                                      ! S
 INTEGER                          :: IF1                                      ! Index to real part of vector
 INTEGER                          :: IF2                                      ! Index to complex part of vector
 
-integer                          :: Indx, J, I, Stat
-character(1024)                  :: ErrMsg
+integer                          :: Indx, J, I
 
 
    ! -------------------------------------------------------------
@@ -781,7 +780,7 @@ SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, ErrStat, ErrMsg )
    INTEGER(IntKi)                   :: IPoint                        ! loop counter for grid points
    
    INTEGER(IntKi)                   :: ErrStat2                      ! Error level (local)
-   CHARACTER(MaxMsgLen)             :: ErrMsg2                       ! Message describing error (local)
+  !CHARACTER(MaxMsgLen)             :: ErrMsg2                       ! Message describing error (local)
    
 
    ! initialize variables
@@ -2222,7 +2221,7 @@ use TSMods
    REAL(ReKi)                                     :: DelF                            ! Delta frequency
    INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
-   INTEGER                                        :: NumSteps4                       ! one-fourth the number of steps
+  !INTEGER                                        :: NumSteps4                       ! one-fourth the number of steps
    
    INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
@@ -2483,15 +2482,54 @@ SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
    
 END SUBROUTINE
 !=======================================================================
-SUBROUTINE TimeSeriesScaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, HubFactor)
+!> Scale the velocity aligned along the sreamwise direction.
+!!
+SUBROUTINE TimeSeriesScaling(p, V, US)
 
 
-   TYPE(Grid_ParameterType), INTENT(IN)     ::  p_grid                          ! parameters defining TurbSim's grid (including time/frequency)
-   REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        ! velocity 
-   REAL(ReKi),                      INTENT(IN)     ::  TargetSigma(3)                  ! target standard deviations
-   REAL(ReKi),                      INTENT(  OUT)  ::  ActualSigma(3)                  ! actual standard deviations
-   REAL(ReKi),                      INTENT(  OUT)  ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
-   INTEGER(IntKi),                  INTENT(In   )  ::  ScaleIEC                        ! scaling method: 1=use only 1 factor; 2=scale each individual point
+   TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
+   REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        !< velocity, aligned along the streamwise direction without mean values added 
+   INTEGER(IntKi)                 , INTENT(IN)     ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+
+   
+      ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
+
+   SELECT CASE ( p%met%TurbModel_ID )
+   !MLB: There does not seem to be a CASE for TurbModel=="API".
+      
+   CASE (SpecModel_GP_LLJ, &
+         SpecModel_NWTCUP, &
+         SpecModel_SMOOTH, &
+         SpecModel_WF_UPW, &
+         SpecModel_WF_07D, &
+         SpecModel_WF_14D, &
+         SpecModel_USRVKM, &
+         SpecModel_TIDAL,  &
+         SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
+               
+   
+      CALL TimeSeriesScaling_ReynoldsStress(p, V, US)
+
+
+   CASE ( SpecModel_IECKAI , SpecModel_IECVKM )
+
+      CALL TimeSeriesScaling_IEC(p, V, US)
+                       
+   END SELECT   
+   
+END SUBROUTINE TimeSeriesScaling
+!=======================================================================
+!> This routine scales the time series so that the output has the exact
+!! statistics desired. This scaling has the effect of changing the amplitude
+!! of the target spectra to account for discretizing the spectra over a 
+!! finite length of time.
+SUBROUTINE TimeSeriesScaling_IEC(p, V, US)
+
+
+   TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
+   REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        !< velocity, aligned along the streamwise direction without mean values added 
+   INTEGER(IntKi)                 , INTENT(IN)     ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+   
    
    REAL(DbKi)                                      ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
    REAL(DbKi)                                      ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
@@ -2502,47 +2540,186 @@ SUBROUTINE TimeSeriesScaling_IEC(p_grid, V, ScaleIEC, TargetSigma, ActualSigma, 
    INTEGER(IntKi)                                  ::  IVec                            ! loop counter (wind component)
    
    
+   REAL(ReKi)                                      ::  ActualSigma(3)                  ! actual standard deviations
+   REAL(ReKi)                                      ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
+   
+   IF (p%IEC%ScaleIEC < 1) RETURN
+   
    DO IVec = 1,3
       CGridSum  = 0.0
       CGridSum2 = 0.0
                            
-      DO IT=1,p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-         CGridSum  = CGridSum  + V( IT, p_grid%HubIndx, IVec )
-         CGridSum2 = CGridSum2 + V( IT, p_grid%HubIndx, IVec )* V( IT, p_grid%HubIndx, IVec )
+      DO IT=1,p%grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+         CGridSum  = CGridSum  + V( IT, p%grid%HubIndx, IVec )
+         CGridSum2 = CGridSum2 + V( IT, p%grid%HubIndx, IVec )* V( IT, p%grid%HubIndx, IVec )
       ENDDO ! IT
                
-      UGridMean          = CGridSum/p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-      ActualSigma(IVec)  = SQRT( ABS( (CGridSum2/p_grid%NumSteps) - UGridMean*UGridMean ) )
+      UGridMean          = CGridSum/p%grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+      ActualSigma(IVec)  = SQRT( ABS( (CGridSum2/p%grid%NumSteps) - UGridMean*UGridMean ) )
             
 
-      HubFactor(IVec) = TargetSigma(IVec)/ActualSigma(IVec)
+      HubFactor(IVec) = p%IEC%SigmaIEC(IVec)/ActualSigma(IVec)  ! factor = Target / actual
                   
-      IF (ScaleIEC == 1 .OR. IVec > 1) THEN ! v and w have no coherence, thus all points have same std, so we'll save some calculations
+      IF (p%IEC%ScaleIEC == 1 .OR. IVec > 1) THEN ! v and w have no coherence, thus all points have same std, so we'll save some calculations
                
          V(:,:,IVec) =     HubFactor(IVec) * V(:,:,IVec)
                
       ELSE  ! Scale each point individually
                
-         DO Indx = 1,p_grid%NPoints             
+         DO Indx = 1,p%grid%NPoints             
             CGridSum  = 0.0
             CGridSum2 = 0.0
                                     
-            DO IT=1,p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+            DO IT=1,p%grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
                CGridSum  = CGridSum  + V( IT, Indx, IVec )
                CGridSum2 = CGridSum2 + V( IT, Indx, IVec )* V( IT, Indx, IVec )
             ENDDO ! IT
                   
-            UGridMean = CGridSum/p_grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
-            UGridSig  = SQRT( ABS( (CGridSum2/p_grid%NumSteps) - UGridMean*UGridMean ) )
+            UGridMean = CGridSum/p%grid%NumSteps !BJJ: NumOutSteps  -- scale to the output value?
+            UGridSig  = SQRT( ABS( (CGridSum2/p%grid%NumSteps) - UGridMean*UGridMean ) )
             
-            V(:,Indx,IVec) = (TargetSigma(IVec) / UGridSig) * V(:,Indx,IVec)   
+            V(:,Indx,IVec) = (p%IEC%SigmaIEC(IVec) / UGridSig) * V(:,Indx,IVec)   
          ENDDO ! Indx
                
       ENDIF            
 
    ENDDO !IVec   
+   
+   IF (US > 0 ) THEN
+      WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
+      WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
+      WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
+         
+      DO IVec = 1,3
+         WRITE( US, "(5X,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p%IEC%SigmaIEC(IVec), &
+                                                           ActualSigma(IVec), HubFactor(IVec) 
+      END DO
+   END IF
+   
 
 END SUBROUTINE TimeSeriesScaling_IEC
+!=======================================================================
+!> This routine performs a linear combination of the uncorrelated zero-mean
+!! velocity aligned along the streamwise direction to obtain the desired 
+!! Reynolds Stress values at the hub.
+SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, US)
+
+      ! passed variables
+   TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
+   REAL(ReKi),                  INTENT(INOUT)  ::  V(:,:,:)          !< velocity, aligned along the streamwise direction without mean values added
+   INTEGER(IntKi)             , INTENT(IN)     ::  US                !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+
+      ! local variables
+   REAL(DbKi)                                  ::  UVsum             ! The sum of the u'v' Reynolds stress component at the hub
+   REAL(DbKi)                                  ::  UWsum             ! The sum of the u'w' Reynolds stress component at the hub
+   REAL(DbKi)                                  ::  VWsum             ! The sum of the v'w' Reynolds stress component at the hub
+   REAL(DbKi)                                  ::  UUsum             ! The sum of the u'u' Reynolds stress component at the hub
+   REAL(DbKi)                                  ::  VVsum             ! The sum of the v'v' Reynolds stress component at the hub
+   REAL(DbKi)                                  ::  WWsum             ! The sum of the w'w' Reynolds stress component at the hub
+                                               
+   REAL(ReKi)                                  ::  UVmean            ! The mean u'v' Reynolds stress component at the hub
+   REAL(ReKi)                                  ::  UWmean            ! The mean u'w' Reynolds stress component at the hub
+   REAL(ReKi)                                  ::  VWmean            ! The mean v'w' Reynolds stress component at the hub
+   REAL(ReKi)                                  ::  UUmean            ! The mean u'u' Reynolds stress component at the hub
+  !REAL(ReKi)                                  ::  VVmean            ! The mean v'v' Reynolds stress component at the hub
+   REAL(ReKi)                                  ::  WWmean            ! The mean w'w' Reynolds stress component at the hub
+                                               
+   REAL(ReKi)                                  ::  alpha_uw          ! The coefficient of the u component added to the w component for correlation
+   REAL(ReKi)                                  ::  alpha_uv          ! The coefficient of the u component added to the v component for correlation
+   REAL(ReKi)                                  ::  alpha_wv          ! The coefficient of the w component added to the v component for correlation
+               
+   REAL(ReKi)                                  ::  u_indept          ! temporary copy of the uncorrelated u component of the velocity
+   REAL(ReKi)                                  ::  v_indept          ! temporary copy of the uncorrelated v component of the velocity
+   REAL(ReKi)                                  ::  w_indept          ! temporary copy of the uncorrelated w component of the velocity
+   
+   
+   REAL(ReKi)                                  ::  INumSteps         ! Multiplicative Inverse of the Number of time Steps
+   
+   INTEGER(IntKi)                              ::  ITime             ! loop counter for time step/frequency 
+   INTEGER(IntKi)                              ::  IPoint            ! loop counter for grid points
+   
+   
+      !...................
+      ! Calculate coefficients for obtaining "correct" Reynold's stresses at the hub
+      !...................
+            
+      ! compute mean values:            
+   UWsum = 0.0_DbKi
+   UVsum = 0.0_DbKi
+   VWsum = 0.0_DbKi
+   UUSum = 0.0_DbKi
+   VVSum = 0.0_DbKi
+   WWSum = 0.0_DbKi
+                           
+   DO ITime = 1,p%grid%NumSteps
+      UWsum = UWsum + V(ITime,p%grid%HubIndx,1) * V(ITime,p%grid%HubIndx,3)
+      UVsum = UVsum + V(ITime,p%grid%HubIndx,1) * V(ITime,p%grid%HubIndx,2)
+      VWsum = VWsum + V(ITime,p%grid%HubIndx,2) * V(ITime,p%grid%HubIndx,3)
+      UUSum = UUSum + V(ITime,p%grid%HubIndx,1) * V(ITime,p%grid%HubIndx,1)
+      !VVSum = VVSum + V(ITime,p%grid%HubIndx,2) * V(ITime,p%grid%HubIndx,2)
+      WWSum = WWSum + V(ITime,p%grid%HubIndx,3) * V(ITime,p%grid%HubIndx,3)
+   ENDDO
+         
+   INumSteps   = 1.0/p%grid%NumSteps
+         
+   UWmean = UWsum * INumSteps  
+   UVmean = UVsum * INumSteps  
+   VWmean = VWsum * INumSteps  
+   UUmean = UUSum * INumSteps  
+   !VVmean = VVSum * INumSteps  
+   WWmean = WWSum * INumSteps  
+            
+      !BJJ: this is for v=alpha1, w=alpha2, u=alpha3 using derivation equations
+   alpha_uw = ( p%met%PC_UW - UWmean ) / UUmean                                                              !alpha23
+   alpha_wv = ( UUmean*(p%met%PC_VW - VWmean - alpha_uw*UVmean) - p%met%PC_UW*(p%met%PC_UV - UVmean) ) / &   !alpha12
+               ( UUmean*(WWmean + alpha_uw*UWmean) - UWmean*p%met%PC_UW )
+   alpha_uv = ( p%met%PC_UV - UVmean - alpha_wv*UWmean) / UUmean                                             !alpha13         
+         
+                  
+      ! if we enter "none" for any of the Reynolds-stress terms, don't scale that component:
+   IF (p%met%UWskip) alpha_uw = 0.0_ReKi
+   IF (p%met%UVskip) alpha_uv = 0.0_ReKi
+   IF (p%met%VWskip) alpha_wv = 0.0_ReKi
+         
+      !bjj: I'm implementing limits on the range of values here so that the spectra don't get too
+      !     out of whack.  We'll display a warning in this case.
+            
+   IF ( ABS(alpha_uw) > 1.0 .OR. ABS(alpha_uv) > 1.0 .OR. ABS(alpha_wv) > 1.0 ) THEN
+      CALL TS_Warn( "Scaling terms exceed 1.0.  Reynolds stresses may be affected.", -1)
+            
+      alpha_uw = MAX( MIN( alpha_uw, 1.0_ReKi ), -1.0_ReKi )
+      alpha_uv = MAX( MIN( alpha_uv, 1.0_ReKi ), -1.0_ReKi )
+      alpha_wv = MAX( MIN( alpha_wv, 1.0_ReKi ), -1.0_ReKi )
+                        
+   ENDIF
+                                    
+      ! calculate the correlated time series:
+            
+   DO IPoint = 1,p%grid%NPoints
+      DO ITime = 1, p%grid%NumSteps
+         u_indept = V(ITime,IPoint,1)
+         v_indept = V(ITime,IPoint,2)
+         w_indept = V(ITime,IPoint,3)
+                  
+            ! equation 16 [PC_UW] in TurbSim user's guide v1.50
+         V(ITime,IPoint,2) = alpha_uv*u_indept + v_indept + alpha_wv*w_indept 
+         V(ITime,IPoint,3) = alpha_uw*u_indept +                     w_indept
+               
+      ENDDO          
+   ENDDO   
+   
+   IF ( US > 0 ) THEN
+         
+      WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )
+      WRITE( US, "(3X,               'Cross-Component  Scaling Factor')" )
+      WRITE( US, "(3X,               '---------------  --------------')" )
+      WRITE( US, "(3X,A,2X,E14.5)" ) "u'w'           ", alpha_uw
+      WRITE( US, "(3X,A,2X,E14.5)" ) "u'v'           ", alpha_uv
+      WRITE( US, "(3X,A,2X,E14.5)" ) "v'w'           ", alpha_wv
+         
+   END IF    
+         
+END SUBROUTINE TimeSeriesScaling_ReynoldsStress
 !=======================================================================
 SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_ID )
 ! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
@@ -2692,6 +2869,52 @@ use TurbSim_Types
 
 END SUBROUTINE CalcIECScalingParams
 !=======================================================================
+SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
+
+      ! passed variables
+   TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
+   REAL(ReKi),                  INTENT(INOUT)  ::  V(:,:,:)          !< velocity, on input: aligned along with the mean velocity without mean values added
+                                                                     !! on output, aligned in the inertial reference frame with mean velocities added
+   REAL(ReKi),                  INTENT(IN)     ::  U       (:)       !< profile of steady wind speed
+   REAL(ReKi),                  INTENT(IN)     ::  HWindDir(:)       !< profile of horizontal wind direction
+                                                                                                                                          
+      ! local variables                                                                     
+   REAL(ReKi)                                  ::  v3(3)             ! temporary 3-component array containing velocity
+   INTEGER(IntKi)                              ::  ITime             ! loop counter for time step 
+   INTEGER(IntKi)                              ::  IPoint            ! loop counter for grid points
+   INTEGER(IntKi)                              ::  IY                ! An index for the Y position of a point I
+   INTEGER(IntKi)                              ::  IZ                ! An index for the Z position of a point I
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+   !..............................................................................
+   ! Add mean wind to u' components and rotate to inertial reference  
+   !  frame coordinate system
+   !..............................................................................
+   IPoint = 0
+   DO IZ=1,p%grid%ZLim   
+
+     DO IY=1,p%grid%IYmax(IZ)  
+
+         IPoint = IPoint + 1
+
+         DO ITime=1,p%grid%NumSteps
+
+               ! Add mean wind speed to the streamwise component and
+               ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
+            
+            v3 = V(ITime,IPoint,:)
+            CALL CalculateWindComponents( v3, U(IZ), HWindDir(IZ), p%met%VFlowAng, V(ITime,IPoint,:) )
+                        
+         ENDDO ! ITime
+         
+     ENDDO ! IY
+   ENDDO ! IZ   
+                                                                     
+                                                                     
+END SUBROUTINE
+!=======================================================================
 SUBROUTINE TS_ValidateInput(ErrStat, ErrMsg)
 
 use TSMods
@@ -2700,7 +2923,7 @@ use TSMods
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
-   CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+  !CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
    
 
 

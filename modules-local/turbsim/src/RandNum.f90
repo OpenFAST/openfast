@@ -916,33 +916,36 @@ RandUnifNum = RN(1)
 END SUBROUTINE RndUnif
 
 !======================================================================
-SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NPoints, NumFreq, ErrStat, ErrMsg)
+SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NPoints, NumFreq, US, ErrStat, ErrMsg)
 
-USE                        Ran_Lux_Mod
+USE  Ran_Lux_Mod
 
 IMPLICIT NONE
 
-TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p                        ! parameters for random number generation
-TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt                  ! other states for random number generation
-INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
-CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
+TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p                                !< parameters for random number generation
+TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt                          !< other states for random number generation
+INTEGER(IntKi)              , INTENT(IN)    ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat                          !< error level/status
+CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg                           !< error message
+                                                                                
+INTEGER(IntKi)              , INTENT(IN   ) :: NPoints                          !< number of points being simulated
+INTEGER(IntKi)              , INTENT(IN   ) :: NumFreq                          !< number of frequencies being simulated
 
-INTEGER(IntKi)              , INTENT(IN   ) :: NPoints              ! number of points being simulated
-INTEGER(IntKi)              , INTENT(IN   ) :: NumFreq                  ! number of frequencies being simulated
+REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(NPoints,NumFreq,3)   !< random phases
 
-REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(NPoints,NumFreq,3)   ! random phases
+! local variables
 
+REAL(ReKi), ALLOCATABLE                     :: RandNum(:)                       ! contains the uniformly-distributed random numbers for all the points and frequencies
 
-
-REAL(ReKi), ALLOCATABLE                     :: RandNum(:)          ! contains the uniformly-distributed random numbers for all the points and frequencies
-
-INTEGER(IntKi)                              :: Indx                ! holds the next index in the RandNum array for the SNLWnd3d generator
-INTEGER(IntKi)                              :: IVec                ! loop counter (=number of wind components = 3)
-INTEGER(IntKi)                              :: IFreq               ! loop counter (=number of frequencies)
-INTEGER(IntKi)                              :: J                   ! loop counter (=number of points on grid)
-INTEGER(IntKi)                              :: NumPointsFreq       ! number of points * number of frequency, or 1/3 the size of RandNum
+INTEGER(IntKi)                              :: Indx                             ! holds the next index in the RandNum array for the SNLWnd3d generator
+INTEGER(IntKi)                              :: IVec                             ! loop counter (=number of wind components = 3)
+INTEGER(IntKi)                              :: IFreq                            ! loop counter (=number of frequencies)
+INTEGER(IntKi)                              :: J                                ! loop counter (=number of points on grid)
+INTEGER(IntKi)                              :: NumPointsFreq                    ! number of points * number of frequency, or 1/3 the size of RandNum
 
 INTEGER                                     :: LuxLevelOut, InitSeed
+CHARACTER(20)                               :: NextSeedText
+
 
 ! get the uniformly distributed random numbers:
 
@@ -960,6 +963,7 @@ INTEGER                                     :: LuxLevelOut, InitSeed
       RETURN
    END IF
 
+   
       ! Let's go ahead and get all the random numbers we will need for the entire
       ! run.  This (hopefully) will be faster than getting them one at a time,
       ! but it will use more memory.
@@ -977,7 +981,8 @@ INTEGER                                     :: LuxLevelOut, InitSeed
 
       CALL RANDOM_SEED ( GET = OtherSt%nextSeed(:) )  ! bjj: 16-jul-2014: without the (:), I get an "internal compiler error" here using Intel(R) Visual Fortran Compiler XE 12.1.3.300 [Intel(R) 64]
 
-
+      NextSeedText = ' Harvested seed #'
+      
    ELSEIF ( p%pRNG == pRNG_RANLUX ) THEN ! RNG_type == 'RANLUX'
 
       CALL RanLux ( RandNum )
@@ -985,6 +990,7 @@ INTEGER                                     :: LuxLevelOut, InitSeed
       CALL RLuxAT ( LuxLevelOut, InitSeed, OtherSt%nextSeed(1), OtherSt%nextSeed(2) ) !luxury level, seed, nextSeed
       
       !InitSeed = p%RandSeed(1)????
+      NextSeedText = ' K'
 
    ELSE
  
@@ -996,6 +1002,8 @@ INTEGER                                     :: LuxLevelOut, InitSeed
          Indx = Indx + NumPointsFreq
       ENDDO
 
+      NextSeedText = ' Next seed #'
+      
    ENDIF
          
 ! set them to the range 0-2pi and   
@@ -1012,6 +1020,16 @@ INTEGER                                     :: LuxLevelOut, InitSeed
    ENDDO !IVec         
                            
    call cleanup()
+   
+   IF ( US > 0 ) THEN
+   
+      WRITE(US,"(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)")
+
+      DO J = 1,SIZE( OtherSt%nextSeed  )
+         WRITE(US,"(I13,A,I2)")  OtherSt%nextSeed(J), TRIM(NextSeedText), J
+      END DO
+            
+   END IF
    
 contains
    subroutine cleanup()

@@ -80,9 +80,6 @@ IMPLICIT                   NONE
 REAL(DbKi)              ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
 REAL(DbKi)              ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
 
-REAL(ReKi)              ::  UVMax                           ! Maximum u'v' Reynolds Stress at the hub
-REAL(ReKi)              ::  UWMax                           ! Maximum u'w' Reynolds Stress at the hub
-REAL(ReKi)              ::  VWMax                           ! Maximum v'w' Reynolds Stress at the hub
 
 REAL(ReKi)              ::  USig                            ! Standard deviation of the u-component wind speed at the hub
 REAL(ReKi)              ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
@@ -91,13 +88,7 @@ REAL(ReKi)              ::  UXSig                           ! Standard deviation
 
 
 
-REAL(ReKi)              ::  UVsum                           ! The sum of the u'v' Reynolds stress component at the hub
-REAL(ReKi)              ::  UWsum                           ! The sum of the u'w' Reynolds stress component at the hub
-REAL(ReKi)              ::  VWsum                           ! The sum of the v'w' Reynolds stress component at the hub
 
-REAL(DbKi)              ::  USum2                           ! The sum of the squared u-component wind speed at the hub
-REAL(DbKi)              ::  VSum2                           ! The sum of the squared v-component wind speed at the hub
-REAL(DbKi)              ::  WSum2                           ! The sum of the squared w-component wind speed at the hub
 REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
 
 REAL(ReKi)              ::  UGridMean                       ! Average wind speed at the points surrounding the hub
@@ -106,28 +97,18 @@ REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensit
 
 
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
-REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
-REAL(ReKi)              ::  TmpW                            ! Temporarily holds the value of the w component
 REAL(ReKi)              ::  TmpY                            ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  TmpZ                            ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
 
 
-REAL(ReKi)              :: v3(3)                            ! temporary 3-component array containing velocity
-REAL(ReKi)              ::  ActualSigma(3)                  ! actual standard deviations at the hub
-REAL(ReKi)              ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
 
 
-INTEGER                 ::  I                               ! A loop counter
-INTEGER                 ::  II                              ! An index for points in the velocity matrix
-INTEGER                 ::  Indx                            ! An index for points in the velocity matrix
 INTEGER                 ::  IT                              ! Index for time step
-INTEGER                 ::  IVec                            ! Index for u-, v-, or w-wind component
 INTEGER                 ::  IY                              ! An index for the Y position of a point I
-INTEGER                 ::  IZ                              ! An index for the Z position of a point I
 INTEGER                 ::  JZ                              ! An index for the Z position of a point J
 INTEGER                 ::  NSize                           ! Size of the spectral matrix at each frequency
 
@@ -338,7 +319,7 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
 END IF
 
   
-IF ( p%met%IsIECModel )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
+IF ( p%met%IsIECModel )  THEN  
 
       ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
       ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
@@ -390,19 +371,19 @@ CALL CheckError()
 CALL CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
 
 
-IF ( ALLOCATED( p%met%USR_Z           ) )  DEALLOCATE( p%met%USR_Z           )
-IF ( ALLOCATED( p%met%USR_U           ) )  DEALLOCATE( p%met%USR_U           )
-IF ( ALLOCATED( p%met%USR_WindDir     ) )  DEALLOCATE( p%met%USR_WindDir     )
-IF ( ALLOCATED( p%met%USR_Sigma       ) )  DEALLOCATE( p%met%USR_Sigma       )
-IF ( ALLOCATED( p%met%USR_L           ) )  DEALLOCATE( p%met%USR_L           )
+IF ( ALLOCATED( p%met%USR_Z         ) )  DEALLOCATE( p%met%USR_Z           )
+IF ( ALLOCATED( p%met%USR_U         ) )  DEALLOCATE( p%met%USR_U           )
+IF ( ALLOCATED( p%met%USR_WindDir   ) )  DEALLOCATE( p%met%USR_WindDir     )
+IF ( ALLOCATED( p%met%USR_Sigma     ) )  DEALLOCATE( p%met%USR_Sigma       )
+IF ( ALLOCATED( p%met%USR_L         ) )  DEALLOCATE( p%met%USR_L           )
 
-IF ( ALLOCATED( p%met%ZL_profile      ) )  DEALLOCATE( p%met%ZL_profile      )
-IF ( ALLOCATED( p%met%Ustar_profile   ) )  DEALLOCATE( p%met%Ustar_profile   )
+IF ( ALLOCATED( p%met%ZL_profile    ) )  DEALLOCATE( p%met%ZL_profile      )
+IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile   )
 
-IF ( ALLOCATED( p%met%USR_Freq   ) )  DEALLOCATE( p%met%USR_Freq   )
-IF ( ALLOCATED( p%met%USR_Uspec  ) )  DEALLOCATE( p%met%USR_Uspec  )
-IF ( ALLOCATED( p%met%USR_Vspec  ) )  DEALLOCATE( p%met%USR_Vspec  )
-IF ( ALLOCATED( p%met%USR_Wspec  ) )  DEALLOCATE( p%met%USR_Wspec  )
+IF ( ALLOCATED( p%met%USR_Freq      ) )  DEALLOCATE( p%met%USR_Freq   )
+IF ( ALLOCATED( p%met%USR_Uspec     ) )  DEALLOCATE( p%met%USR_Uspec  )
+IF ( ALLOCATED( p%met%USR_Vspec     ) )  DEALLOCATE( p%met%USR_Vspec  )
+IF ( ALLOCATED( p%met%USR_Wspec     ) )  DEALLOCATE( p%met%USR_Wspec  )
 
 
    ! Allocate memory for random number array
@@ -410,19 +391,12 @@ IF ( ALLOCATED( p%met%USR_Wspec  ) )  DEALLOCATE( p%met%USR_Wspec  )
 CALL AllocAry( PhaseAngles, p%grid%NPoints, p%grid%NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
 CALL CheckError()
 
-CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, ErrStat, ErrMsg)
+
+   ! Get the phase angles
+CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, US, ErrStat, ErrMsg)
 CALL CheckError()
 
-WRITE(US,"(//,'Harvested Random Seeds after Generation of the Random Numbers:',/)")
-
-DO I = 1,SIZE( OtherSt_RandNum%nextSeed  )
-   WRITE(US,"(I13,' Harvested seed #',I2)")  OtherSt_RandNum%nextSeed (I), I
-END DO
-
-IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)
-
-
-   
+IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)  
 
 CALL AllocAry( V, p%grid%NumSteps, p%grid%NPoints, 3, 'V (velocity)', ErrStat, ErrMsg) !  Allocate the array that contains the velocities.
 CALL CheckError()
@@ -456,109 +430,9 @@ CALL Coeffs2TimeSeries( V, p%grid%NumSteps, p%grid%NPoints, ErrStat, ErrMsg)
 CALL CheckError()
 
 
-   ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
-
-SELECT CASE ( p%met%TurbModel_ID )
-!MLB: There does not seem to be a CASE for TurbModel=="API".
-      
-CASE (SpecModel_GP_LLJ, &
-      SpecModel_NWTCUP, &
-      SpecModel_SMOOTH, &
-      SpecModel_WF_UPW, &
-      SpecModel_WF_07D, &
-      SpecModel_WF_14D, &
-      SpecModel_USRVKM, &
-      SpecModel_TIDAL,  &
-      SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
-               
-   
-            ! Calculate coefficients for obtaining "correct" Reynold's stresses at the hub
-         UWsum = 0.0
-         UVsum = 0.0
-         VWsum = 0.0
-         USum2 = 0.0
-         VSum2 = 0.0
-         WSum2 = 0.0
-         
-         INumSteps   = 1.0/p%grid%NumSteps
-         
-         
-         DO IT = 1,p%grid%NumSteps
-            UWsum = UWsum + V(IT,p%grid%HubIndx,1) * V(IT,p%grid%HubIndx,3)
-            UVsum = UVsum + V(IT,p%grid%HubIndx,1) * V(IT,p%grid%HubIndx,2)
-            VWsum = VWsum + V(IT,p%grid%HubIndx,2) * V(IT,p%grid%HubIndx,3)
-            USum2 = USum2 + V(IT,p%grid%HubIndx,1) * V(IT,p%grid%HubIndx,1)
-            VSum2 = VSum2 + V(IT,p%grid%HubIndx,2) * V(IT,p%grid%HubIndx,2)
-            WSum2 = WSum2 + V(IT,p%grid%HubIndx,3) * V(IT,p%grid%HubIndx,3)
-         ENDDO
-         UWsum = UWsum * INumSteps  !These "sums" are now "means"
-         UVsum = UVsum * INumSteps  !These "sums" are now "means"
-         VWsum = VWsum * INumSteps  !These "sums" are now "means"
-         USum2 = USum2 * INumSteps  !These "sums" are now "means"
-         VSum2 = VSum2 * INumSteps  !These "sums" are now "means"
-         WSum2 = WSum2 * INumSteps  !These "sums" are now "means"
-            
-            !BJJ: this is for v=alpha1, w=alpha2, u=alpha3 using derivation equations
-         UWMax = ( p%met%PC_UW - UWsum ) / USum2                                                         !alpha23
-         VWMax = ( USum2*(p%met%PC_VW - VWsum - UWMax*UVsum) - p%met%PC_UW*(p%met%PC_UV - UVsum) ) / &   !alpha12
-                 ( USum2*(WSum2 + UWMax*UWsum) - UWsum*p%met%PC_UW )
-         UVMax = ( p%met%PC_UV - UVsum - VWMax*UWsum) / USum2                                            !alpha13         
-         
-                  
-            ! if we enter "none" for any of the Reynolds-stress terms, don't scale that component:
-         IF (p%met%UWskip) UWMax = 0.0
-         IF (p%met%UVskip) UVMax = 0.0
-         IF (p%met%VWskip) VWMax = 0.0
-         
-            !bjj: I'm implementing limits on the range of values here so that the spectra don't get too
-            !     out of whack.  We'll display a warning in this case.
-            
-         IF ( ABS(UWMax) > 1.0 .OR. ABS(UVMax) > 1.0 .OR. ABS(VWMax) > 1.0 ) THEN
-            CALL TS_Warn( "Scaling terms exceed 1.0.  Reynolds stresses may be affected.", -1)
-         ENDIF
-         
-         UWMax = MAX( MIN( UWMax, 1.0 ), -1.0 )
-         UVMax = MAX( MIN( UVMax, 1.0 ), -1.0 )
-         VWMax = MAX( MIN( VWMax, 1.0 ), -1.0 )
-                  
-         DO Indx = 1,p%grid%NPoints
-            DO IT = 1, p%grid%NumSteps
-               TmpU = V(IT,Indx,1)
-               TmpV = V(IT,Indx,2)
-               TmpW = V(IT,Indx,3)
-                  
-                  !BJJ: this is for v=alpha1, w=alpha2, u=alpha3
-               V(IT,Indx,2) = UVMax*TmpU + TmpV + VWmax*TmpW 
-               V(IT,Indx,3) = UWmax*TmpU +              TmpW
-            ENDDO          
-         ENDDO
-
-         WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )
-         WRITE( US, "(3X,'Cross-Component  Scaling Factor')" )
-         WRITE( US, "(3X,'---------------  --------------')" )
-         FormStr = "(3X,A,2X,E14.5)"
-         WRITE( US, FormStr ) "u'w'           ", UWmax
-         WRITE( US, FormStr ) "u'v'           ", UVmax
-         WRITE( US, FormStr ) "v'w'           ", VWmax
-
-   CASE ( SpecModel_IECKAI , SpecModel_IECVKM )
-
-      IF (p%IEC%ScaleIEC > 0) THEN
-
-         CALL TimeSeriesScaling_IEC(p%grid, V, p%IEC%ScaleIEC, p%IEC%SigmaIEC, ActualSigma, HubFactor)
-         
-         WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
-         WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
-         WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
-         
-         DO IVec = 1,3
-            WRITE( US, "(5X,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p%IEC%SigmaIEC(IVec), &
-                                                             ActualSigma(IVec), HubFactor(IVec) 
-         END DO
-           
-      ENDIF !ScaleIEC
-
-END SELECT
+   ! Scale time series (if desired) for cross-component correlation or IEC statistics:
+CALL TimeSeriesScaling(p, V, US)
+CALL CheckError()
 
 
 
@@ -584,36 +458,18 @@ END IF
    ! Write statistics of the run to the summary file:
 CALL WrSum_Stats(V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 CALL CheckError()
-p_CohStr%WSig=WSig
 
 !..............................................................................
 ! Add mean wind to u' components and rotate to inertial reference  
 !  frame coordinate system
 !..............................................................................
-II = 0
-DO IZ=1,p%grid%ZLim   
-
-  DO IY=1,p%grid%IYmax(IZ)  
-
-      II = II + 1
-
-      DO IT=1,p%grid%NumSteps
-
-            ! Add mean wind speed to the streamwise component and
-            ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
-            
-         v3 = V(IT,II,:)
-         CALL CalculateWindComponents( v3, U(IZ), HWindDir(IZ), p%met%VFlowAng, V(IT,II,:) )
-                        
-      ENDDO ! IT
-  ENDDO ! IY
-ENDDO ! IZ
+CALL AddMeanAndRotate(p, V, U, HWindDir)
 
 TmpU = MAX( ABS(MAXVAL(U)-p%UHub), ABS(MINVAL(U)-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files
 
    ! Deallocate memory for the matrix of the steady, u-component winds.
 
-IF ( ALLOCATED( U               ) )  DEALLOCATE( U               )
+IF ( ALLOCATED( U        ) )  DEALLOCATE( U        )
 IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 
 !..............................................................................
@@ -621,7 +477,8 @@ IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 !..............................................................................
    
 IF ( p%WrFile(FileExt_CTS) ) THEN
-   
+   p_CohStr%WSig=WSig
+
    CALL CohStr_WriteCTS(p%met, p%RNG, p%grid, p_CohStr, OtherSt_RandNum, y_CohStr, p%RootName, ErrStat, ErrMsg)
    CALL CheckError()
    
