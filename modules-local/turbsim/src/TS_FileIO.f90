@@ -3405,7 +3405,84 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
 END SUBROUTINE WrSum_Stats
 !=======================================================================
+!> Calculate the mean velocity and turbulence intensity of the U-component
+!! of the interpolated hub point for comparison with InflowWind output.
+SUBROUTINE WrSum_InterpolatedHubStats(p, V, US, NumGrid_Y2, NumGrid_Z2)
 
+      ! passed variables:
+   TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
+   REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        !< velocity, aligned along the streamwise direction without mean values added 
+   INTEGER(IntKi)                 , INTENT(IN)     ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+   INTEGER                        , INTENT(IN)     :: NumGrid_Y2                       !< Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
+   INTEGER                        , INTENT(IN)     :: NumGrid_Z2                       !< Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
+
+      ! local variables:
+REAL(DbKi)              ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
+REAL(DbKi)              ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
+
+REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
+REAL(ReKi)              ::  TmpY                            ! Temp variable for interpolated hub point
+REAL(ReKi)              ::  TmpZ                            ! Temp variable for interpolated hub point
+REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for interpolated hub point
+REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
+
+REAL(ReKi)              ::  UGridMean                       ! Average wind speed at the points surrounding the hub
+REAL(ReKi)              ::  UGridSig                        ! Standard deviation of the wind speed at the points surrounding the hub
+REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensity of the points surrounding the hub
+
+INTEGER                 ::  ZHi_YHi                         ! Index for interpolation of hub point, if necessary
+INTEGER                 ::  ZHi_YLo                         ! Index for interpolation of hub point, if necessary
+INTEGER                 ::  ZLo_YHi                         ! Index for interpolation of hub point, if necessary
+INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
+INTEGER                 ::  IT                              ! Index for time step
+
+      
+CHARACTER(200)          :: FormStr                          ! String used to store format specifiers.
+      
+   
+      ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
+
+   ! Note that this uses the InflowWind interpolation scheme, which may be updated some day so that it doesn't
+   ! depend on which dimension we interpolate first.
+      
+   
+      ! Get points for bi-linear interpolation
+   ZLo_YLo   = ( NumGrid_Z2 - 1 )*p%grid%NumGrid_Y + NumGrid_Y2
+   ZHi_YLo   = ( NumGrid_Z2     )*p%grid%NumGrid_Y + NumGrid_Y2
+   ZLo_YHi   = ( NumGrid_Z2 - 1 )*p%grid%NumGrid_Y + NumGrid_Y2 + 1
+   ZHi_YHi   = ( NumGrid_Z2     )*p%grid%NumGrid_Y + NumGrid_Y2 + 1
+    
+   TmpZ      = (p%grid%HubHt - p%grid%Z(NumGrid_Z2))/p%grid%GridRes_Z
+   TmpY      = ( 0.0  - p%grid%Y(NumGrid_Y2))/p%grid%GridRes_Y
+   CGridSum  = 0.0
+   CGridSum2 = 0.0
+
+   DO IT=1,p%grid%NumSteps
+         
+   ! Interpolate within the grid for this time step.
+
+      Tmp_YL_Z  = ( V( IT, ZHi_YLo, 1 ) - V( IT, ZLo_YLo, 1 ) )*TmpZ + V( IT, ZLo_YLo, 1 )
+      Tmp_YH_Z  = ( V( IT, ZHi_YHi, 1 ) - V( IT, ZLo_YHi, 1 ) )*TmpZ + V( IT, ZLo_YHi, 1 )
+      TmpV      = ( Tmp_YH_Z - Tmp_YL_Z )*TmpY + Tmp_YL_Z
+
+      CGridSum  = CGridSum  + TmpV
+      CGridSum2 = CGridSum2 + TmpV*TmpV
+   ENDDO ! IT
+
+   UGridMean = CGridSum/p%grid%NumSteps
+   UGridSig  = SQRT( ABS( (CGridSum2/p%grid%NumSteps) - UGridMean*UGridMean ) )
+   UGridTI   = 100.0*UGridSig/UGridMean
+
+
+      ! Put the average statistics of the four center points in the summary file.
+
+   WRITE (US,"(//,'U-component (X) statistics from the interpolated hub point:',/)")
+   WRITE(US,"(3X,A,' =',F9.4,A)")  'Mean' , UGridMean, ' m/s'
+   WRITE(US,"(3X,A,' =',F9.4,A)")  'TI  ' , UGridTI  , ' %'
+
+
+END SUBROUTINE WrSum_InterpolatedHubStats
+!=======================================================================
 SUBROUTINE WrSum_EchoInputs()
 
 use TSMods

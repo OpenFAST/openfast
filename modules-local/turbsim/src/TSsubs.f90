@@ -2484,7 +2484,7 @@ END SUBROUTINE
 !=======================================================================
 !> Scale the velocity aligned along the sreamwise direction.
 !!
-SUBROUTINE TimeSeriesScaling(p, V, US)
+SUBROUTINE ScaleTimeSeries(p, V, US)
 
 
    TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
@@ -2517,7 +2517,7 @@ SUBROUTINE TimeSeriesScaling(p, V, US)
                        
    END SELECT   
    
-END SUBROUTINE TimeSeriesScaling
+END SUBROUTINE ScaleTimeSeries
 !=======================================================================
 !> This routine scales the time series so that the output has the exact
 !! statistics desired. This scaling has the effect of changing the amplitude

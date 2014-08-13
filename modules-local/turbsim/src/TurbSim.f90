@@ -77,8 +77,6 @@ IMPLICIT                   NONE
 
    ! Declare local variables
 
-REAL(DbKi)              ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
-REAL(DbKi)              ::  CGridSum2                       ! The sums of the squared velocity components at the points surrouding the hub 
 
 
 REAL(ReKi)              ::  USig                            ! Standard deviation of the u-component wind speed at the hub
@@ -114,10 +112,6 @@ INTEGER                 ::  NSize                           ! Size of the spectr
 
 INTEGER                 ::  NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
 INTEGER                 ::  NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
-INTEGER                 ::  ZHi_YHi                         ! Index for interpolation of hub point, if necessary
-INTEGER                 ::  ZHi_YLo                         ! Index for interpolation of hub point, if necessary
-INTEGER                 ::  ZLo_YHi                         ! Index for interpolation of hub point, if necessary
-INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  UnOut                           ! unit for output files
 
 
@@ -431,7 +425,7 @@ CALL CheckError()
 
 
    ! Scale time series (if desired) for cross-component correlation or IEC statistics:
-CALL TimeSeriesScaling(p, V, US)
+CALL ScaleTimeSeries(p, V, US)
 CALL CheckError()
 
 
@@ -506,54 +500,7 @@ ENDIF !WrACT
 
 IF ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)  )  THEN 
 
-      ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
-
-   IF (p%grid%ExtraHubPT) THEN
-
-         ! Get points for bi-linear interpolation
-      ZLo_YLo   = ( NumGrid_Z2 - 1 )*p%grid%NumGrid_Y + NumGrid_Y2
-      ZHi_YLo   = ( NumGrid_Z2     )*p%grid%NumGrid_Y + NumGrid_Y2
-      ZLo_YHi   = ( NumGrid_Z2 - 1 )*p%grid%NumGrid_Y + NumGrid_Y2 + 1
-      ZHi_YHi   = ( NumGrid_Z2     )*p%grid%NumGrid_Y + NumGrid_Y2 + 1
-    
-      TmpZ      = (p%grid%HubHt - p%grid%Z(NumGrid_Z2))/p%grid%GridRes_Z
-      TmpY      = ( 0.0  - p%grid%Y(NumGrid_Y2))/p%grid%GridRes_Y
-      CGridSum  = 0.0
-      CGridSum2 = 0.0
-
-      DO IT=1,p%grid%NumSteps
-         
-      ! Interpolate within the grid for this time step.
-
-         Tmp_YL_Z  = ( V( IT, ZHi_YLo, 1 ) - V( IT, ZLo_YLo, 1 ) )*TmpZ + V( IT, ZLo_YLo, 1 )
-         Tmp_YH_Z  = ( V( IT, ZHi_YHi, 1 ) - V( IT, ZLo_YHi, 1 ) )*TmpZ + V( IT, ZLo_YHi, 1 )
-         TmpV      = ( Tmp_YH_Z - Tmp_YL_Z )*TmpY + Tmp_YL_Z
-
-         CGridSum  = CGridSum  + TmpV
-         CGridSum2 = CGridSum2 + TmpV*TmpV
-      ENDDO ! IT
-
-      UGridMean = CGridSum/p%grid%NumSteps
-      UGridSig  = SQRT( ABS( (CGridSum2/p%grid%NumSteps) - UGridMean*UGridMean ) )
-      UGridTI   = 100.0*UGridSig/UGridMean
-
-      FormStr = "(//,'U-component (X) statistics from the interpolated hub point:',/)"
-
-   ELSE
-
-      UGridMean = UXBar
-      UGridTI = 100.0*UXSig/UXBar      
-      FormStr = "(//,'U-component (X) statistics from the hub grid point:',/)"
-
-   ENDIF
-
-      ! Put the average statistics of the four center points in the summary file.
-
-   WRITE (US,FormStr)
-
-   FormStr = "(3X,A,' =',F9.4,A)"
-   WRITE(US,FormStr)  'Mean' , UGridMean, ' m/s'
-   WRITE(US,FormStr)  'TI  ' , UGridTI  , ' %'
+   CALL WrSum_InterpolatedHubStats(p, V, US, NumGrid_Y2, NumGrid_Z2)
 
    IF ( p%WrFile(FileExt_BTS) ) THEN
       CALL WrBinTURBSIM(V, p%RootName, ErrStat, ErrMsg)
