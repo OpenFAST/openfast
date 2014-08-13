@@ -80,6 +80,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: node_total 
     INTEGER(IntKi)  :: dof_total 
     INTEGER(IntKi)  :: ngp 
+    INTEGER(IntKi)  :: analysis_type 
     REAL(DbKi)  :: dt 
   END TYPE BD_ParameterType
 ! =======================
@@ -950,6 +951,7 @@ ENDIF
    DstParamData%node_total = SrcParamData%node_total
    DstParamData%dof_total = SrcParamData%dof_total
    DstParamData%ngp = SrcParamData%ngp
+   DstParamData%analysis_type = SrcParamData%analysis_type
    DstParamData%dt = SrcParamData%dt
  END SUBROUTINE BD_CopyParam
 
@@ -1028,6 +1030,7 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! node_total
   Int_BufSz  = Int_BufSz  + 1  ! dof_total
   Int_BufSz  = Int_BufSz  + 1  ! ngp
+  Int_BufSz  = Int_BufSz  + 1  ! analysis_type
   Db_BufSz   = Db_BufSz   + 1  ! dt
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
@@ -1069,6 +1072,8 @@ ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%dof_total )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%ngp )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%analysis_type )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%dt )
   Db_Xferred   = Db_Xferred   + 1
@@ -1156,6 +1161,8 @@ ENDIF
   OutData%dof_total = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%ngp = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  OutData%analysis_type = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%dt = DbKiBuf ( Db_Xferred )
   Db_Xferred   = Db_Xferred   + 1
