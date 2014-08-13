@@ -1890,7 +1890,7 @@ USE TSMods, only: p
 
 END FUNCTION
 !=======================================================================
-FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL, ZJetMax)
+FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL)
 
 
    IMPLICIT                              NONE
@@ -1898,7 +1898,6 @@ FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL, ZJetMax)
    REAL(ReKi),   INTENT(IN)           :: u_ref                       ! Wind speed at reference height
    REAL(ReKi),   INTENT(IN)           :: z_ref                       ! Reference height
    REAL(ReKi),   INTENT(IN)           :: z0                          ! Surface roughness length -- It must be > 0 (which we've already checked for)
-   REAL(ReKi),   INTENT(IN)           :: ZJetMax                     ! Height of the low-level jet
    REAL(ReKi),   INTENT(IN)           :: ZL                          ! M-O stability parameter
 
    REAL(ReKi)                         :: tmp                         ! a temporary value
@@ -2211,7 +2210,7 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 
 use TSMods
 
-   TYPE(Grid_ParameterType), INTENT(INOUT) :: p_grid
+   TYPE(Grid_ParameterType),        INTENT(INOUT) :: p_grid
    INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
    INTEGER                        , INTENT(  OUT) :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
    INTEGER                        , INTENT(  OUT) :: NSize                           ! Size of the spectral matrix at each frequency
@@ -2236,21 +2235,28 @@ use TSMods
    
       ! Calculate Total time and NumSteps.
       ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
-      ! Make sure it is a multiple of 4 too.
+!bjj: I have no idea why this is necessary, so I'm removing it for now:      ! Make sure it is a multiple of 4 too.
 
    IF ( p_grid%Periodic ) THEN
       p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
-      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
-      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
+!bjj rm:     NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
+!bjj rm:     p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
       p_grid%NumOutSteps = p_grid%NumSteps
    ELSE
       p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth/p%UHub )/p_grid%TimeStep )
       p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
-      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
-      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
+!bjj rm:      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
+!bjj rm:      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
    END IF
 
-
+   IF (p%grid%NumSteps < 2 )  THEN
+      CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
+                       'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, 'CreateGrid' )
+      RETURN
+   END IF
+   
    p_grid%NumFreq     = p_grid%NumSteps/2
    DelF        = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
       

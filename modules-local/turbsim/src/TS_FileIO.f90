@@ -895,7 +895,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
    UseDefault = .TRUE.
 
-   p%met%UstarDiab  = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL, p%met%ZJetMax)
+   p%met%UstarDiab  = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL)
    p%met%Ustar      = p%met%UstarDiab
 
    SELECT CASE ( p%met%TurbModel_ID )
@@ -984,7 +984,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          p%met%UstarOffset= 0.0_ReKi
       ELSE
          p%met%UstarSlope = 1.0_ReKi         
-         p%met%UstarDiab = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL, p%met%ZJetMax) !bjj: is this problematic for anything else?
+         p%met%UstarDiab = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL) !bjj: is this problematic for anything else?
 
          TmpUary   = getVelocityProfile(p%met%URef, p%met%RefHt, TmpZary, p%grid%RotorDiameter)                  
          TmpUstar  = getUstarARY( TmpUary,     TmpZary, 0.0_ReKi, p%met%UstarSlope )

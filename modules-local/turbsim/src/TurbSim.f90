@@ -192,11 +192,6 @@ call WrSum_UserInput(p%met,US)
 call TS_ValidateInput(ErrStat, ErrMsg)
 CALL CheckError()
 
-   ! Determine if coherent turbulence should be generated
-
-
-
-
 
    ! Open appropriate output files.  We will open formatted FF files later, if requested.
    ! Mention the files in the summary file.
@@ -291,9 +286,9 @@ IF ( ANY (p%WrFile) )  THEN
    ENDIF
 
 ELSE
-
-   CALL TS_Abort ( 'You have requested no output.' )
-
+   ErrStat = ErrID_Fatal
+   ErrMsg  = 'You have requested no output.'
+   CALL CheckError()
 ENDIF
 
 
@@ -302,13 +297,6 @@ ENDIF
 CALL CreateGrid( p%grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 CALL CheckError()
       
-
-!bjj: why is this here???? just for the ifft?
-IF ( p%grid%NumSteps < 8 )  THEN
-   CALL TS_Abort ( 'Too few (less than 8) time steps.  Increase the usable length of the time series or decrease the time step.' )
-ENDIF
-
-
 
    !  Wind speed:
 CALL AllocAry(U,     p%grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
