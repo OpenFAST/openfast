@@ -1,56 +1,66 @@
-------- InflowWind v3.00.* INPUT FILE ------------------------------------------------
-This is a sample wind inflow input file.
+------- InflowWind v3.00.* INPUT FILE -------------------------------------------------------------------------
+This is a sample Inflow-Wind input file.
 ---------------------------------------------------------------------------------------------------------------
-False               Echo            - Echo input data to <RootName>.ech (flag)
-  6                 WindType        - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined)
- 0.0                PropogationDir  - Direction of wind propogation (timestepping)
-===================Parameters for Steady Wind Conditions [used only for WindType = 1] -----------------------------
- 10.0               HWindSpeed      - Horizontal windspeed
- 90.0               RefHt           - Reference height for horizontal wind speed
-  0.14              PLexp           - Power law exponent
----------------   Parameters for Uniform wind file   [used only for WindType = 2] -------------------------------
-""                  Filename        - Filename of time series data for uniform wind field.
- 90.0               RefHt           - Reference height for horizontal wind speed
----------------   Parameters for Binary TurbSim Full-Field files   [used only for WindType = 3]---------------------------
-""                  Filename        - Name of the Full field wind file to use (.bts)
----------------   Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4]------------------
-""                  FilenameRoot    - Name of the Full field wind file to use (.wnd, .sum)
- T                  TowerFile       - Have tower file (.twr) [flag]
----------------   Parameters for coherent turbulence (only used with Full-Field files) [Only used with WindType = 3 or 4]----------
- F                  CoherentTurb    - Use coherent turbulence
-""                  CTTSFilename    - Name of coherent turbulence file
-""                  Path            - Path to coherent turbulence binary data files
-===================   Parameters for HAWC-format binary files  [Only used with WindType = 5]===================
+False                Echo           - Echo input data to <RootName>.ech (flag)
+  6                  WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined)
+ 0.0                 PropogationDir - Direction of wind propogation (meteorological direction)
+ 9                   WindVelList    - Number of points to output the wind velocity at
+ 0,1,2,3,4,5,6,7,8,9 WindVxiList    - Coordinate list in inertial X direction (m)
+ 0,1,2,3,4,5,6,7,8,9 WindVyiList    - Coordinate list in inertial Y direction (m)
+ 0,1,2,3,4,5,6,7,8,9 WindVziList    - Coordinate list in inertial Z direction (m)
+================== Parameters for Steady Wind Conditions [used only for WindType = 1] =========================
+ 10.0                HWindSpeed     - Horizontal windspeed
+ 90.0                RefHt          - Reference height for horizontal wind speed
+  0.14               PLexp          - Power law exponent
+================== Parameters for Uniform wind file   [used only for WindType = 2] ============================
+""                   Filename       - Filename of time series data for uniform wind field.
+ 90.0                RefHt          - Reference height for horizontal wind speed
+================== Parameters for Binary TurbSim Full=Field files   [used only for WindType = 3] ==============
+""                   Filename       - Name of the Full field wind file to use (.bts)
+================== Parameters for Binary Bladed=style Full=Field files   [used only for WindType = 4] =========
+""                   FilenameRoot   - Name of the Full field wind file to use (.wnd, .sum)
+ T                   TowerFile      - Have tower file (.twr) [flag]
+================== Parameters for coherent turbulence [Only used with WindType = 3 or 4] ======================
+ F                   CoherentTurb   - Use coherent turbulence
+""                   CTTSFilename   - Name of coherent turbulence file
+""                   Path           - Path to coherent turbulence binary data files
+================== Parameters for HAWC-format binary files  [Only used with WindType = 5] =====================
 "D:\DATA\Collaborations_Meetings\RisoeExchange\MannModel\wasp\Output\basic_5u.bin"    FileName_u      - name of the file containing the u-component fluctuating wind
 "D:\DATA\Collaborations_Meetings\RisoeExchange\MannModel\wasp\Output\basic_5v.bin"    FileName_v      - name of the file containing the v-component fluctuating wind
 "D:\DATA\Collaborations_Meetings\RisoeExchange\MannModel\wasp\Output\basic_5w.bin"    FileName_w      - name of the file containing the w-component fluctuating wind
- 64                 nx              - number of grids in the x direction (in the 3 files above)
- 32                 ny              - number of grids in the y direction (in the 3 files above)
- 32                 nz              - number of grids in the z direction (in the 3 files above)
- 16                 dx              - distance (in meters) between points in the x direction
-  3                 dy              - distance (in meters) between points in the y direction
-  3                 dz              - distance (in meters) between points in the z direction
- 50                 RefHt           - reference height; the height (in meters) of the vertical center of the grid
+ 64                  nx             - number of grids in the x direction (in the 3 files above)
+ 32                  ny             - number of grids in the y direction (in the 3 files above)
+ 32                  nz             - number of grids in the z direction (in the 3 files above)
+ 16                  dx             - distance (in meters) between points in the x direction
+  3                  dy             - distance (in meters) between points in the y direction
+  3                  dz             - distance (in meters) between points in the z direction
+ 50                  RefHt          - reference height; the height (in meters) of the vertical center of the grid
   -------------   Scaling parameters for turbulence   ---------------------------------------------------------
-    1               ScaleMethod     - Turbulence scaling method   [0 = none, 1 = direct scaling, 2 = calculate scaling factor based on a desired standard deviation]
-    1.0             SFx             - Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
-    1.0             SFy             - Turbulence scaling factor for the y direction (-)   [ScaleMethod=1]
-    1.0             SFz             - Turbulence scaling factor for the z direction (-)   [ScaleMethod=1]
-   12.0             SigmaFx         - Turbulence standard deviation to calculate scaling from in x direction (m/s)    [ScaleMethod=2]
-    8.0             SigmaFy         - Turbulence standard deviation to calculate scaling from in y direction (m/s)    [ScaleMethod=2]
-    2.0             SigmaFz         - Turbulence standard deviation to calculate scaling from in z direction (m/s)    [ScaleMethod=2]
-                    TStart
-                    TEnd
-  -------------   mean wind profile parameters (added to HAWC-format files)   ---------------------------------
-  5.0               URef            - Mean u-component wind speed at the reference height [m/s]
- PL                 WindProfileType - Wind profile type ("LOG"=logarithmic,"PL"=power law, or "UD"=user defined)
-  0                 PLExp           - Power law exponent [-] (used for PL wind profile type only)
-  0.03              Z0              - Surface roughness length [m] (used for LG wind profile type only)
----------------------- OUTPUT --------------------------------------------------
+    1                ScaleMethod    - Turbulence scaling method   [0 = none, 1 = direct scaling, 2 = calculate scaling factor based on a desired standard deviation]
+    1.0              SFx            - Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
+    1.0              SFy            - Turbulence scaling factor for the y direction (-)   [ScaleMethod=1]
+    1.0              SFz            - Turbulence scaling factor for the z direction (-)   [ScaleMethod=1]
+   12.0              SigmaFx        - Turbulence standard deviation to calculate scaling from in x direction (m/s)    [ScaleMethod=2]
+    8.0              SigmaFy        - Turbulence standard deviation to calculate scaling from in y direction (m/s)    [ScaleMethod=2]
+    2.0              SigmaFz        - Turbulence standard deviation to calculate scaling from in z direction (m/s)    [ScaleMethod=2]
+    0.0              TStart         -
+    0.0              TEnd           -
+  -------------   Mean wind profile parameters (added to HAWC-format files)   ---------------------------------
+  5.0                URef           - Mean u-component wind speed at the reference height [m/s]
+ PL                  WindProfile    - Wind profile type ("LOG"=logarithmic,"PL"=power law, or "UD"=user defined)
+  0                  PLExp          - Power law exponent [-] (used for PL wind profile type only)
+  0.03               Z0             - Surface roughness length [m] (used for LG wind profile type only)
+====================== OUTPUT ==================================================
 True          SumPrint     - Print summary data to <RootName>.sum (flag) (currently unused)
               OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
-"GenPwr"                  - Electrical generator power and torque
-"GenTq"                   - Electrical generator power and torque
-"HSSBrTq"                 - High-speed shaft brake torque
+"Wind1VelX,Wind1VelY,Wind1VelZ"     - Wind velocity at point WindVxiList(1),WindVyiList(1),WindVziList(1).  X, Y, and Z direction components.
+"Wind2VelX,Wind2VelY,Wind2VelZ"     - Wind velocity at point WindVxiList(2),WindVyiList(2),WindVziList(2).  X, Y, and Z direction components.
+"Wind3VelX,Wind3VelY,Wind3VelZ"     - Wind velocity at point WindVxiList(3),WindVyiList(3),WindVziList(3).  X, Y, and Z direction components.
+"Wind4VelX,Wind4VelY,Wind4VelZ"     - Wind velocity at point WindVxiList(4),WindVyiList(4),WindVziList(4).  X, Y, and Z direction components.
+"Wind5VelX,Wind5VelY,Wind5VelZ"     - Wind velocity at point WindVxiList(5),WindVyiList(5),WindVziList(5).  X, Y, and Z direction components.
+"Wind6VelX,Wind6VelY,Wind6VelZ"     - Wind velocity at point WindVxiList(6),WindVyiList(6),WindVziList(6).  X, Y, and Z direction components.
+"Wind7VelX,Wind7VelY,Wind7VelZ"     - Wind velocity at point WindVxiList(7),WindVyiList(7),WindVziList(7).  X, Y, and Z direction components.
+"Wind8VelX,Wind8VelY,Wind8VelZ"     - Wind velocity at point WindVxiList(8),WindVyiList(8),WindVziList(8).  X, Y, and Z direction components.
+"Wind9VelX,Wind9VelY,Wind9VelZ"     - Wind velocity at point WindVxiList(9),WindVyiList(9),WindVziList(9).  X, Y, and Z direction components.
 END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
 ---------------------------------------------------------------------------------------------------------------
