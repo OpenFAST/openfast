@@ -22,11 +22,11 @@ CONTAINS
 
 
 !=======================================================================
-SUBROUTINE CohSpecVMat( NSize, ErrStat, ErrMsg )
+!> This subroutine computes the coherence between two points on the grid,
+!! forms the cross spectrum matrix, and returns the complex
+!! Fourier coefficients of the simulated velocity (wind speed).
+SUBROUTINE CalcFourierCoeffs( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg )
 
-   ! This subroutine computes the coherence between two points on the grid.
-   ! It stores the symmetric coherence matrix, packed into variable "Matrix"
-   ! This replaces what formerly was the "ExCoDW" matrix.
 
 USE                           TSMods
 USE NWTC_LAPACK
@@ -35,16 +35,25 @@ IMPLICIT                      NONE
 
    ! Passed variables
 
-INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
+INTEGER,       INTENT(IN)     :: NSize                        !< Size of dimension 2 of Matrix
+REAL(ReKi),    INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi),    INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),    INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),    INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi),INTENT(OUT)    :: ErrStat
+CHARACTER(*),  INTENT(OUT)    :: ErrMsg
 
    ! Internal variables
 
+REAL(ReKi), ALLOCATABLE    :: TRH (:)        ! The transfer function matrix.  
 REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE    :: DistU(:)
 REAL(ReKi), ALLOCATABLE    :: DistZMExp(:)
 REAL(ReKi)                 :: dY             ! the lateral distance between two points
 REAL(ReKi)                 :: UM             ! The mean wind speed of the two points
 REAL(ReKi)                 :: ZM             ! The mean height of the two points
+
+
 
 INTEGER                    :: J
 INTEGER                    :: JJ             ! Index of point J
@@ -61,13 +70,9 @@ INTEGER                    :: IZ             ! Index of the z-value of point I
 INTEGER                    :: Stat
 
 INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
-
-
-INTEGER(IntKi), INTENT(OUT)   :: ErrStat
-CHARACTER(*),   INTENT(OUT)   :: ErrMsg
-
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
+
 
 ! ------------ arrays allocated -------------------------
 Stat = 0.
@@ -75,9 +80,10 @@ UC = -1
 ErrStat = ErrID_None
 ErrMsg  = ""
 
-CALL AllocAry( Dist,      NSize,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
-CALL AllocAry( DistU,     NSize,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
-CALL AllocAry( DistZMExp, NSize, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+CALL AllocAry( Dist,      NSize,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( DistU,     NSize,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( DistZMExp, NSize, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( TRH,       NSize,       'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
 IF (ErrStat >= AbortErrLev) THEN
    CALL Cleanup()
    RETURN
@@ -137,8 +143,8 @@ POINT_J:       DO JZ=1,IZ
                      END IF
 
                      IF ( p%met%IsIECModel ) THEN
-                        DistU(Indx) = Dist(Indx)/UHub
-!                           TRH(Indx) = EXP( -p%met%InCDec(IVec)*SQRT( ( p%grid%Freq(IFreq) * Dist / UHub )**2 + (0.12*Dist/LC)**2 ) )
+                        DistU(Indx) = Dist(Indx)/p%UHub
+!                           TRH(Indx) = EXP( -p%met%InCDec(IVec)*SQRT( ( p%grid%Freq(IFreq) * Dist / p%UHub )**2 + (0.12*Dist/LC)**2 ) )
                      ELSE
                         UM       = 0.5*( U(IZ) + U(JZ) )
                         ZM       = 0.5*( p%grid%Z(IZ) + p%grid%Z(JZ) )
@@ -158,10 +164,10 @@ POINT_J:       DO JZ=1,IZ
 IF ( COH_OUT ) THEN
 
       ! Write the coherence for three frequencies, for debugging purposes
-      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
       
       CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat')
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
             RETURN
@@ -243,11 +249,16 @@ CONTAINS
       IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
       IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
       IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
+      IF ( ALLOCATED( TRH       ) ) DEALLOCATE( TRH       )
    END SUBROUTINE Cleanup
 !............................................
-END SUBROUTINE CohSpecVMat
+END SUBROUTINE CalcFourierCoeffs
 !=======================================================================
-SUBROUTINE CohSpecVMat_API( NSize, ErrStat, ErrMsg)
+!> This subroutine computes the coherence between two points on the grid,
+!! using the API coherence function. It then
+!! forms the cross spectrum matrix and returns the complex
+!! Fourier coefficients of the simulated velocity (wind speed).
+SUBROUTINE CalcFourierCoeffs_API( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg)
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
@@ -260,36 +271,41 @@ IMPLICIT                      NONE
 
    ! Passed variables
 
-INTEGER,      INTENT(IN)   :: NSize          ! Size of dimension 2 of Matrix
+REAL(ReKi),     INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi),     INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),     INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),     INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi), INTENT(IN)     :: NSize                        !< Size of dimension 2 of Matrix
+INTEGER(IntKi), INTENT(OUT)    :: ErrStat
+CHARACTER(*),   INTENT(OUT)    :: ErrMsg
 
    ! Internal variables
 
 !REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
-REAL(ReKi), ALLOCATABLE    :: Dist_Y(:)        ! The Y distance between points
-REAL(ReKi), ALLOCATABLE    :: Dist_Z(:)        ! The Z distance between points
+REAL(ReKi), ALLOCATABLE      :: Dist_Y(:)        ! The Y distance between points
+REAL(ReKi), ALLOCATABLE      :: Dist_Z(:)        ! The Z distance between points
 !mlb REAL(ReKi), ALLOCATABLE    :: Dist_Z12(:)        ! The distance between points (not really a distance!)
-REAL(ReKi), ALLOCATABLE    :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
+REAL(ReKi), ALLOCATABLE      :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
+REAL(ReKi), ALLOCATABLE      :: TRH (:)        ! The transfer function matrix.
 
-INTEGER                    :: J
-INTEGER                    :: JJ             ! Index of point J
-INTEGER                    :: JJ1
-INTEGER                    :: JY             ! Index of y-value of point J
-INTEGER                    :: JZ             ! Index of z-value of point J
-INTEGER                    :: I
-INTEGER                    :: IFreq
-INTEGER                    :: II             ! The index of point I
-INTEGER                    :: Indx
-INTEGER                    :: IVec           ! wind component, 1=u, 2=v, 3=w
-INTEGER                    :: IY             ! The index of the y-value of point I
-INTEGER                    :: IZ             ! Index of the z-value of point I
-INTEGER                    :: Stat
+INTEGER                      :: J
+INTEGER                      :: JJ             ! Index of point J
+INTEGER                      :: JJ1
+INTEGER                      :: JY             ! Index of y-value of point J
+INTEGER                      :: JZ             ! Index of z-value of point J
+INTEGER                      :: I
+INTEGER                      :: IFreq
+INTEGER                      :: II             ! The index of point I
+INTEGER                      :: Indx
+INTEGER                      :: IVec           ! wind component, 1=u, 2=v, 3=w
+INTEGER                      :: IY             ! The index of the y-value of point I
+INTEGER                      :: IZ             ! Index of the z-value of point I
+INTEGER                      :: Stat
 
 INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
 
 LOGICAL                    :: IdentityCoh
 
-INTEGER(IntKi), INTENT(OUT)   :: ErrStat
-CHARACTER(*),   INTENT(OUT)   :: ErrMsg
 
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
@@ -324,10 +340,11 @@ V(:,:,:) = 0.0    ! initialize the velocity matrix
 ! ------------ arrays allocated -------------------------
 Stat = 0.
 
-CALL AllocAry( Dist_Y, NSize, 'Dist_Y coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
-CALL AllocAry( Dist_Z, NSize, 'Dist_Z coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
-!CALL AllocAry( Dist_Z12, NSize, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
-CALL AllocAry( Z1Z2, NSize, 'Z1Z2 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+CALL AllocAry( Dist_Y,    NSize, 'Dist_Y coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( Dist_Z,    NSize, 'Dist_Z coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+!CALL AllocAry( Dist_Z12, NSize, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( Z1Z2,      NSize,   'Z1Z2 coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( TRH,       NSize,    'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
 
 IF (ErrStat >= AbortErrLev) THEN
    CALL Cleanup()
@@ -386,10 +403,10 @@ POINT_J:       DO JZ=1,IZ
 IF ( COH_OUT ) THEN
 
       ! Write the coherence for three frequencies, for debugging purposes
-      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
       
       CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohSpecVMat_API')
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
             RETURN
@@ -470,10 +487,11 @@ CONTAINS
 
       IF ( ALLOCATED( Dist_Y ) ) DEALLOCATE( Dist_Y )
       IF ( ALLOCATED( Dist_Z ) ) DEALLOCATE( Dist_Z )
-      IF ( ALLOCATED( Z1Z2   ) ) DEALLOCATE( Z1Z2 )
+      IF ( ALLOCATED( Z1Z2   ) ) DEALLOCATE( Z1Z2   )
+      IF ( ALLOCATED( TRH    ) ) DEALLOCATE( TRH    )
    END SUBROUTINE Cleanup
 !............................................
-END SUBROUTINE CohSpecVMat_API
+END SUBROUTINE CalcFourierCoeffs_API
 !=======================================================================
 SUBROUTINE Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, UC )
 
@@ -481,7 +499,7 @@ use NWTC_LAPACK
 USE TSMods
 
 LOGICAL,          INTENT(IN)     :: IdentityCoh
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (length is >= NSize).
 REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),       INTENT(IN)     :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
@@ -594,7 +612,7 @@ END SUBROUTINE Coh2Coeffs
 !=======================================================================
 SUBROUTINE EyeCoh2H( IVec, IFreq, TRH, S, NPoints )
 
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (length is >= NSize).
 REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
@@ -631,7 +649,7 @@ use NWTC_LAPACK
 USE TSMods, only: COH_OUT,  p
 
 
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (size >= NumSteps).
 REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
@@ -687,7 +705,7 @@ END SUBROUTINE Coh2H
 SUBROUTINE H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, NPoints )
 
 
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (NumSteps).
+REAL(ReKi),       INTENT(IN)     :: TRH         (:)                          ! The transfer function  matrix (length is >= NSize).
 REAL(ReKi),       INTENT(IN)     :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
@@ -733,8 +751,296 @@ character(1024)                  :: ErrMsg
 
 END SUBROUTINE H2Coeffs
 !=======================================================================
+!> This routine takes the Fourier coefficients and converts them to velocity
+!! note that the resulting time series has zero mean.
+SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, ErrStat, ErrMsg )
 
 
+   USE FFT_Module
+
+   IMPLICIT NONE 
+   
+
+   ! passed variables
+   INTEGER(IntKi),   INTENT(IN)     :: NumSteps                     !< Size of dimension 1 of V (number of time steps)
+   INTEGER(IntKi),   INTENT(IN)     :: NPoints                      !< Size of dimension 2 of V (number of grid points)
+
+   REAL(ReKi),       INTENT(INOUT)  :: V     (NumSteps,NPoints,3)   !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+
+   INTEGER(IntKi),   intent(  out)  :: ErrStat                      !< Error level
+   CHARACTER(*),     intent(  out)  :: ErrMsg                       !< Message describing error
+   
+   
+   ! local variables
+   TYPE(FFT_DataType)               :: FFT_Data                      ! data for applying FFT
+   REAL(ReKi)                       :: Work ( NumSteps )             ! working array to hold coefficients of fft  !bjj: is this going to use too much stack space?
+
+   
+   INTEGER(IntKi)                   :: ITime                         ! loop counter for time step/frequency 
+   INTEGER(IntKi)                   :: IVec                          ! loop counter for velocity components
+   INTEGER(IntKi)                   :: IPoint                        ! loop counter for grid points
+   
+   INTEGER(IntKi)                   :: ErrStat2                      ! Error level (local)
+   CHARACTER(MaxMsgLen)             :: ErrMsg2                       ! Message describing error (local)
+   
+
+   ! initialize variables
+
+ErrStat = ErrID_None
+ErrMsg  = ""
+   
+   
+   !  Allocate the FFT working storage and initialize its variables
+
+CALL InitFFT( NumSteps, FFT_Data, ErrStat=ErrStat2 )
+   CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+   ! Get the stationary-point time series.
+
+CALL WrScr ( ' Generating time series for all points:' )
+
+DO IVec=1,3
+
+   CALL WrScr ( '    '//Comp(IVec)//'-component' )
+
+   DO IPoint=1,NPoints    !NTotB
+
+         ! Overwrite the first point with zero.  This sets the real (and 
+         ! imaginary) part of the steady-state value to zero so that we 
+         ! can add in the mean value later.
+
+      Work(1) = 0.0_ReKi
+
+      DO ITime = 2,NumSteps-1
+         Work(ITime) = V(ITime-1, IPoint, IVec)
+      ENDDO ! ITime
+
+         ! Now, let's add a complex zero to the end to set the power in the Nyquist
+         ! frequency to zero.
+
+      Work(NumSteps) = 0.0
+
+
+         ! perform FFT
+
+      CALL ApplyFFT( Work, FFT_Data, ErrStat2 )
+         IF (ErrStat2 /= ErrID_None ) THEN
+            CALL SetErrStat(ErrStat2, 'Error in ApplyFFT for point '//TRIM(Num2LStr(IPoint))//'.', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
+            IF (ErrStat >= AbortErrLev) EXIT
+         END IF
+        
+      V(:,IPoint,IVec) = Work(1:NumSteps)
+
+   ENDDO ! IPoint
+
+ENDDO ! IVec 
+
+CALL Cleanup()
+
+RETURN
+CONTAINS
+!...........................................
+SUBROUTINE Cleanup()
+
+   CALL ExitFFT( FFT_Data, ErrStat2 )
+   CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
+
+   END SUBROUTINE Cleanup
+END SUBROUTINE Coeffs2TimeSeries
+!=======================================================================
+!> This routine calculates the two-sided Fourier amplitudes of the frequencies
+!! note that the resulting time series has zero mean.
+SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
+
+use TurbSim_Types
+
+   TYPE(TurbSim_ParameterType),  INTENT(in)     :: p                            !< TurbSim parameters
+   REAL(ReKi),                   INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+   REAL(ReKi),                   INTENT(  OUT)  :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+
+   INTEGER(IntKi),               INTENT(  out)  :: ErrStat                      !< Error level
+   CHARACTER(*),                 INTENT(  out)  :: ErrMsg                       !< Message describing error
+   
+   
+   ! local variables
+   
+   INTEGER(IntKi)                   :: IFreq                            ! Index for frequency
+   INTEGER(IntKi)                   :: IY                               ! loop counter for lateral position
+   INTEGER(IntKi)                   :: IZ                               ! loop counter for height
+   INTEGER(IntKi)                   :: FirstPointAtThisHeight           ! index of the first grid point at a particular height
+   
+   INTEGER(IntKi)                   :: IVec                             ! loop counter for velocity components
+   INTEGER(IntKi)                   :: IPoint                           ! loop counter for grid points
+   
+   REAL(ReKi),   ALLOCATABLE        :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
+   REAL(ReKi),   ALLOCATABLE        :: DUDZ (:)                         ! The steady u-component wind shear for the grid (ZLim) [used in Hydro models only].
+   
+   REAL(ReKi)                       ::  HalfDelF                        ! half of the delta frequency, used to discretize the continuous PSD at each point
+   
+   
+   INTEGER(IntKi)                   :: UP                               ! I/O unit for PSD debugging file.
+   REAL(ReKi)                       :: HorVar                           ! Variables used when DEBUG_OUT is set
+   REAL(ReKi)                       :: Total                            ! Variables used when DEBUG_OUT is set
+   REAL(ReKi)                       :: TotalU                           ! Variables used when DEBUG_OUT is set             
+   REAL(ReKi)                       :: TotalV                           ! Variables used when DEBUG_OUT is set
+   REAL(ReKi)                       :: TotalW                           ! Variables used when DEBUG_OUT is set
+   
+   
+   INTEGER(IntKi)                   :: ErrStat2                         ! Error level (local)
+   CHARACTER(MaxMsgLen)             :: ErrMsg2                          ! Message describing error (local)
+   CHARACTER(200)                   :: FormStr                          ! String used to store format specifiers.
+   
+
+      ! initialize variables
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+   IF (PSD_OUT) THEN
+      UP = -1
+      CALL GetNewUnit( UP, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+      CALL OpenFOutFile ( UP, TRIM( p%RootName )//'.psd', ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF   
+      
+      WRITE (UP,"(A)")  'PSDs '
+      WRITE (UP, "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p%grid%NumFreq ) )//"('"//TAB//"',G10.4) )")  'Comp','Ht', p%grid%Freq(:)
+      FormStr  = "( I4,"//TRIM( Int2LStr( p%grid%NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
+   ENDIF
+
+
+      !  Allocate the array to hold the single-sided velocity spectrum.
+
+   CALL AllocAry( SSVS, p%grid%NumFreq,3, 'SSVS', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+
+      ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
+
+   IF ( p%met%TurbModel_ID == SpecModel_TIDAL .OR. p%met%TurbModel_ID == SpecModel_RIVER ) THEN
+         ! Calculate the shear, DUDZ, for all heights.
+      CALL AllocAry( DUDZ, p%grid%ZLim, 'DUDZ', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF   
+
+      DUDZ(1)  =(U(2)-U(1)) / (p%grid%Z(2)-p%grid%Z(1))
+      DUDZ(p%grid%ZLim) = (U(p%grid%ZLim)-U(p%grid%ZLim-1)) / (p%grid%Z(p%grid%ZLim)-p%grid%Z(p%grid%ZLim-1))
+      DO IZ = 2,p%grid%ZLim-1
+         DUDZ(IZ)=(U(IZ+1)-U(IZ-1))/(p%grid%Z(IZ+1)-p%grid%Z(IZ-1))
+      ENDDO
+   
+   ENDIF
+
+
+      ! Calculate the single point Power Spectral Densities. 
+
+   HalfDelF = 0.5*p%grid%Freq(1)   
+   FirstPointAtThisHeight = 0   ! The index for numbering the points on the grid
+   DO IZ=1,p%grid%ZLim
+
+            ! The continuous, one-sided PSDs are evaluated at discrete
+            ! points and the results are stored in the "Work" matrix.
+
+         IF ( p%met%TurbModel_ID == SpecModel_IECKAI .or. p%met%TurbModel_ID == SpecModel_IECVKM ) THEN
+            CALL PSDcal( p%grid%HubHt, p%UHub, SSVS)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
+         
+         ELSEIF ( p%met%TurbModel_ID == SpecModel_TIDAL .OR. p%met%TurbModel_ID == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
+            CALL PSDCal( p%grid%Z(IZ) , U(IZ), SSVS, UShr=DUDZ(IZ) )
+         
+         ELSEIF ( ALLOCATED( p%met%ZL_profile ) ) THEN
+            CALL PSDcal( p%grid%Z(IZ), U(IZ), SSVS, ZL_loc=p%met%ZL_profile(IZ), UStar_loc=p%met%Ustar_profile(IZ) )
+         
+         ELSE
+            CALL PSDcal( p%grid%Z(IZ), U(IZ), SSVS )
+         ENDIF               
+
+         IF ( PSD_OUT ) THEN
+            !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
+               WRITE( UP, FormStr ) 1, p%grid%Z(IZ), SSVS(:,1)
+               WRITE( UP, FormStr ) 2, p%grid%Z(IZ), SSVS(:,2)
+               WRITE( UP, FormStr ) 3, p%grid%Z(IZ), SSVS(:,3)
+            !ENDIF
+         ENDIF      
+      
+         IF (DEBUG_OUT) THEN
+               TotalU = 0.0
+               TotalV = 0.0
+               TotalW = 0.0
+
+               DO IFreq=1,p%grid%NumFreq
+                  TotalU = TotalU + SSVS(IFreq,1)
+                  TotalV = TotalV + SSVS(IFreq,2)
+                  TotalW = TotalW + SSVS(IFreq,3)
+               ENDDO ! IFreq
+
+               Total  = SQRT( TotalU*TotalU + TotalV*TotalV )
+               TotalU = TotalU*p%grid%Freq(1)
+               TotalV = TotalV*p%grid%Freq(1)
+               TotalW = TotalW*p%grid%Freq(1)
+               HorVar = Total *p%grid%Freq(1)
+
+               WRITE(UD,*)  'At H=', p%grid%Z(IZ)
+               WRITE(UD,*)  '   TotalU=', TotalU, '  TotalV=', TotalV, '  TotalW=', TotalW, ' (m/s^2)'
+               WRITE(UD,*)  '   HorVar=',HorVar,' (m/s^2)', '   HorSigma=',SQRT(HorVar),' (m/s)'
+         ENDIF
+
+
+            ! Discretize the continuous PSD and store it in matrix "S"
+           
+         DO IVec=1,3
+         
+            IPoint = FirstPointAtThisHeight
+
+            DO IY=1,p%grid%IYmax(IZ)   
+          
+               IPoint = IPoint + 1
+ 
+               DO IFreq=1,p%grid%NumFreq
+                  S(IFreq,IPoint,IVec) = SSVS(IFreq,IVec)*HalfDelF
+               ENDDO ! IFreq
+
+            ENDDO !IY
+
+         ENDDO ! IVec
+
+         FirstPointAtThisHeight = FirstPointAtThisHeight + p%grid%IYmax(IZ)     ! The next starting index at height IZ + 1
+
+   ENDDO ! IZ
+
+
+   CALL Cleanup()
+   RETURN
+   
+CONTAINS 
+!....................................
+   SUBROUTINE Cleanup()
+
+      IF ( PSD_OUT .AND. UP > 0) CLOSE( UP )
+   
+   
+      IF ( ALLOCATED( SSVS  ) )  DEALLOCATE( SSVS  )
+      IF ( ALLOCATED( DUDZ  ) )  DEALLOCATE( DUDZ  )
+
+   END SUBROUTINE Cleanup
+END SUBROUTINE CalcTargetPSD
+!=======================================================================
 SUBROUTINE GetDefaultCoh(WS,Ht, InCDec, InCohB )
    ! These numbers come from Neil's analysis
 
@@ -1266,7 +1572,6 @@ SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
    !  stresses.
 
    USE                     TSMods, ONLY : p
-   USE                     TSMods, ONLY : UHub
    
    use tsmods, only: OtherSt_RandNum
    
@@ -1293,7 +1598,7 @@ use TurbSim_Types
    
    Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p%grid%GridHeight     ! bottom of the grid
-   V(:) = getVelocityProfile(UHub, p%grid%HubHt, Z, p%grid%RotorDiameter)
+   V(:) = getVelocityProfile(p%UHub, p%grid%HubHt, Z, p%grid%RotorDiameter)
 
    Shr = ( V(2)-V(1) ) / p%grid%GridHeight    ! dv/dz
 
@@ -1331,13 +1636,13 @@ use TurbSim_Types
       
          IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
             IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
-               UW =  0.0399 - 0.00371*Uhub - 0.00182*p%met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
+               UW =  0.0399 - 0.00371*p%UHub - 0.00182*p%met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
             ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
-               UW = 0.00668 - 0.00184*Uhub + 0.000709*p%met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
+               UW = 0.00668 - 0.00184*p%UHub + 0.000709*p%met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
             ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
-               UW = -0.0216 + 0.00319*Uhub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
+               UW = -0.0216 + 0.00319*p%UHub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
             ELSE                           ! 54 m
-               UW = -0.0373 + 0.00675*Uhub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
+               UW = -0.0373 + 0.00675*p%UHub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
             ENDIF
             UW = MAX(UW,0.0)
 
@@ -1351,11 +1656,11 @@ use TurbSim_Types
       CASE ( SpecModel_NWTCUP )
 
          IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
-            UW = 0.165 - 0.0232*UHub - 0.0129*p%met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
+            UW = 0.165 - 0.0232*p%UHub - 0.0129*p%met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
          ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
-            UW = 0.00279 - 0.00139*UHub + 1.074*Ustar2 + 0.179*SHR
+            UW = 0.00279 - 0.00139*p%UHub + 1.074*Ustar2 + 0.179*SHR
          ELSE                          ! 15m data
-            UW = -0.1310 + 0.0239*UHub + 0.556*Ustar2
+            UW = -0.1310 + 0.0239*p%UHub + 0.556*Ustar2
          ENDIF
          UW = MAX(UW,0.0)
 
@@ -1392,19 +1697,19 @@ use TurbSim_Types
       CASE ( SpecModel_GP_LLJ )
 
          IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
-            UV = 0.199 - 0.0167*Uhub + 0.0115*ZLtmp + 1.143*Ustar2
+            UV = 0.199 - 0.0167*p%UHub + 0.0115*ZLtmp + 1.143*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6527 ) UV = -UV
          ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
-            UV = 0.190 - 0.0156*Uhub + 0.00931*ZLtmp + 1.101*Ustar2
+            UV = 0.190 - 0.0156*p%UHub + 0.00931*ZLtmp + 1.101*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6394 ) UV = -UV
          ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
-            UV = 0.178 - 0.0141*Uhub + 0.00709*ZLtmp + 1.072*Ustar2
+            UV = 0.178 - 0.0141*p%UHub + 0.00709*ZLtmp + 1.072*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6326 ) UV = -UV
          ELSE                           ! 54 m
-            UV = 0.162 - 0.0123*Uhub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
+            UV = 0.162 - 0.0123*p%UHub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
             UV = MAX(UV,0.0)
             IF ( rndSgn < 0.6191 ) UV = -UV
          ENDIF
@@ -1413,11 +1718,11 @@ use TurbSim_Types
 
             ! Get the magnitude and add the sign
          IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
-            UV = 0.669 - 0.0300*UHub - 0.0911*p%met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
+            UV = 0.669 - 0.0300*p%UHub - 0.0911*p%met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
          ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
-            UV = 1.521 - 0.00635*UHub - 0.2200*p%met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
+            UV = 1.521 - 0.00635*p%UHub - 0.2200*p%met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
          ELSE                          ! 15m data
-            UV = 0.462 - 0.01400*UHub + 1.277*Ustar2
+            UV = 0.462 - 0.01400*p%UHub + 1.277*Ustar2
          ENDIF
          UV = MAX(UV,0.0)
          IF (UV > 0) THEN !i.e. not equal to zero
@@ -1462,19 +1767,19 @@ use TurbSim_Types
       CASE ( SpecModel_GP_LLJ )
 
          IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
-            VW =  0.0528  - 0.00210*Uhub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
+            VW =  0.0528  - 0.00210*p%UHub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.2999 ) VW = -VW
          ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
-            VW =  0.0482  - 0.00264*Uhub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
+            VW =  0.0482  - 0.00264*p%UHub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3061 ) VW = -VW
          ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
-            VW =  0.0444  - 0.00249*Uhub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
+            VW =  0.0444  - 0.00249*p%UHub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3041 ) VW = -VW
          ELSE                           ! 54 m
-            VW =  0.0443  - 0.00261*Uhub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
+            VW =  0.0443  - 0.00261*p%UHub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
             VW = MAX(VW,0.0)
             IF ( rndSgn < 0.3111 ) VW = -VW
          ENDIF
@@ -1482,11 +1787,11 @@ use TurbSim_Types
       CASE ( SpecModel_NWTCUP )
 
          IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
-            VW = 0.174 + 0.00154*UHub - 0.0270*p%met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
+            VW = 0.174 + 0.00154*p%UHub - 0.0270*p%met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
          ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
-            VW = 0.120 + 0.00283*UHub - 0.0227*p%met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
+            VW = 0.120 + 0.00283*p%UHub - 0.0227*p%met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
          ELSE                          ! 15m data
-            VW = 0.0165 + 0.00833*UHub                 + 0.224*Ustar2
+            VW = 0.0165 + 0.00833*p%UHub                 + 0.224*Ustar2
          ENDIF
          VW = MAX(VW,0.0)
          IF (VW > 0) THEN !i.e. not equal to zero
@@ -1840,26 +2145,37 @@ SELECT CASE ( p%met%TurbModel_ID )
       ELSE
          CALL Spec_GPLLJ   ( Ht, Ucmp, p%met%ZL,     p%met%Ustar,     SSVS )
       ENDIF
+      
    CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( p%IEC%SigmaIEC, p%IEC%IntegralScale, SSVS )
+      CALL Spec_IECKAI  ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
+      
    CASE ( SpecModel_IECVKM )
-      CALL Spec_IECVKM  ( p%IEC%SigmaIEC(1), p%IEC%IntegralScale, SSVS )
+      CALL Spec_IECVKM  ( p%UHub, p%IEC%SigmaIEC(1), p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
+      
    CASE ( SpecModel_API )
       CALL Spec_API ( Ht, SSVS )
+      
    CASE (SpecModel_NWTCUP)
       CALL Spec_NWTCUP  ( Ht, Ucmp, SSVS )
+      
    CASE ( SpecModel_SMOOTH )
       CALL Spec_SMOOTH   ( Ht, Ucmp, SSVS )
+      
    CASE ( SpecModel_TIDAL, SpecModel_RIVER )
       CALL Spec_TIDAL  ( Ht, UShr, SSVS, p%met%TurbModel_ID )
+      
    CASE ( SpecModel_USER )
       CALL Spec_UserSpec   ( SSVS )
+      
    CASE ( SpecModel_USRVKM )
       CALL Spec_vonKrmn   ( Ht, Ucmp, SSVS )
+      
    CASE (SpecModel_WF_UPW)
       CALL Spec_WF_UPW  ( Ht, Ucmp, SSVS )
+      
    CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
       CALL Spec_WF_DW ( Ht, Ucmp, SSVS )
+      
    CASE ( SpecModel_NONE )
       SSVS(:,:) = 0.0
 !bjj TEST: CALL Spec_Test ( Ht, Ucmp, Work )
@@ -1894,7 +2210,6 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 !  NumGrid_Z
 
 use TSMods
-use FFT_Module, only: PSF
 
    TYPE(Grid_ParameterType), INTENT(INOUT) :: p_grid
    INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
@@ -1929,7 +2244,7 @@ use FFT_Module, only: PSF
       p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
       p_grid%NumOutSteps = p_grid%NumSteps
    ELSE
-      p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth/UHub )/p_grid%TimeStep )
+      p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth/p%UHub )/p_grid%TimeStep )
       p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
       NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
       p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps

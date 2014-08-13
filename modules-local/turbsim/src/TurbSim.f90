@@ -58,7 +58,6 @@ PROGRAM TurbSim
    ! --------------------------------------------------------------------------------------------------------
 
 
-USE                        FFT_Module
 USE                        ModifiedvKrm_mod
 USE                        TSMods
 USE                        TSsubs
@@ -107,7 +106,6 @@ REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensit
 
 
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
-REAL(ReKi)              ::  HalfDelF                           ! half of the delta frequency, used to discretize the continuous PSD at each point
 REAL(ReKi)              ::  INumSteps                       ! Multiplicative Inverse of the Number of time Steps
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
 REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
@@ -117,23 +115,13 @@ REAL(ReKi)              ::  TmpZ                            ! Temp variable for 
 REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for interpolated hub point
 REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
 
-REAL(ReKi)              ::  HorVar                          ! Variables used when DEBUG_OUT is set
-REAL(ReKi)              ::  Total                           ! Variables used when DEBUG_OUT is set
-REAL(ReKi)              ::  TotalU                          ! Variables used when DEBUG_OUT is set             
-REAL(ReKi)              ::  TotalV                          ! Variables used when DEBUG_OUT is set
-REAL(ReKi)              ::  TotalW                          ! Variables used when DEBUG_OUT is set
 
-REAL(ReKi)              :: this_HFlowAng                    ! Horizontal flow angle.
 REAL(ReKi)              :: v3(3)                            ! temporary 3-component array containing velocity
 REAL(ReKi)              ::  ActualSigma(3)                  ! actual standard deviations at the hub
 REAL(ReKi)              ::  HubFactor(3)                    ! factor used to scale standard deviations at the hub point
 
-REAL(ReKi), ALLOCATABLE :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
 
-
-INTEGER                 ::  AllocStat                       ! The status of allocating space for variables
 INTEGER                 ::  I                               ! A loop counter
-INTEGER                 ::  IFreq                           ! Index for frequency
 INTEGER                 ::  II                              ! An index for points in the velocity matrix
 INTEGER                 ::  Indx                            ! An index for points in the velocity matrix
 INTEGER                 ::  IT                              ! Index for time step
@@ -151,12 +139,18 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  UnOut                           ! unit for output files
 
-INTEGER(IntKi)          :: UP                               ! I/O unit for PSD debugging file.
 
-CHARACTER(200)          :: InFile = 'TurbSim.inp'           ! Root name of the I/O files.
+CHARACTER(200)          :: InFile                           ! Name of the TurbSim input file.
 CHARACTER(200)          :: FormStr                          ! String used to store format specifiers.
 
 
+REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi), ALLOCATABLE          :: U           (:)                          ! The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)                          ! A profile of horizontal wind angle (measure of wind direction with height)
+
+!TYPE( TurbSim_ParameterType )    :: p
 
 INTEGER(IntKi)          :: ErrStat     ! allocation status
 CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
@@ -166,22 +160,15 @@ CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
 !    Time = TIMEF() ! Initialize the Wall Clock Time counter
 !BONNIE:*****************************   
 
-!Beep = .FALSE.
-!print *, B1Ki, B2Ki, B4Ki, B8Ki
-!print *, SiKi, DbKi, QuKi, ReKi 
 
-   ! Initialize the Pi constants from NWTC_Library
-   
-CALL NWTC_Init
 
-   ! Set the version number.
-
-CALL SetVersion
+   ! ... Initialize NWTC Library (open console, set pi constants) ...
+CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )       
 
 
    ! Print out program name, version, and date.
 
-CALL DispNVD
+CALL DispNVD(TurbSim_Ver)
 
 
    ! Check for command line arguments.
@@ -330,25 +317,22 @@ CALL CheckError()
 IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
    U = getVelocityProfile( p%met%URef, p%met%RefHt, p%grid%Z, p%grid%RotorDiameter)
 ELSE 
-   U = getVelocityProfile(       UHub,  p%grid%HubHt, p%grid%Z, p%grid%RotorDiameter) 
+   U = getVelocityProfile(   p%UHub,  p%grid%HubHt, p%grid%Z, p%grid%RotorDiameter) 
 ENDIF
 
    ! Wind Direction:
-IF ( INDEX( 'JU', p%met%WindProfileType(1:1) ) > 0 ) THEN
-   CALL AllocAry(WindDir_profile, p%grid%ZLim, 'WindDir_profile (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
-   CALL CheckError()
+CALL AllocAry(HWindDir, p%grid%ZLim, 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
+CALL CheckError()
    
-   WindDir_profile = getDirectionProfile(p%grid%Z)
+HWindDir = getDirectionProfile(p%grid%Z)
    
-   IF (p%grid%ExtraHubPT) THEN    
-      JZ = p%grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
-   ELSE
-      JZ = NumGrid_Z2
-   ENDIF
-   p%met%HH_HFlowAng = WindDir_profile(JZ)
+IF (p%grid%ExtraHubPT) THEN    
+   JZ = p%grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
 ELSE
-   p%met%HH_HFlowAng = p%met%HFlowAng
-END IF
+   JZ = NumGrid_Z2
+ENDIF
+p%met%HH_HFlowAng = HWindDir(JZ)
+
 
 
 IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
@@ -372,7 +356,7 @@ IF ( p%met%IsIECModel )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
       ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
       ! IECTurbC = A, B, or C or from user specified quantity.
       
-   CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID)
+   CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID)
                   
 ELSE
     p%IEC%SigmaIEC = 0
@@ -381,7 +365,7 @@ ELSE
     p%IEC%LC = 0.0    ! The length scale is not defined for the non-IEC models
 ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
    
-CALL WrSum_SpecModel( US, p%IEC, p%grid%Z(NumGrid_Z2) )
+CALL WrSum_SpecModel( US, U, HWindDir, p%IEC, p%grid%Z(NumGrid_Z2) )
 
 
 
@@ -410,118 +394,14 @@ ENDIF
 CALL AllocAry( S,    p%grid%NumFreq,p%grid%NPoints,3, 'S (turbulence PSD)',ErrStat, ErrMsg )
 CALL CheckError()
 
-   !  Allocate the array to hold the single-sided velocity spectrum.
-
-CALL AllocAry( SSVS, p%grid%NumFreq,3,             'Work',              ErrStat, ErrMsg )
-CALL CheckError()
-
-IF (PSD_OUT) THEN
-   UP = -1
-   CALL GetNewUnit( UP, ErrStat, ErrMsg )   
-   CALL OpenFOutFile ( UP, TRIM( p%RootName )//'.psd', ErrStat, ErrMsg)
-   CALL CheckError()
-   
-   WRITE (UP,"(A)")  'PSDs '
-   FormStr = "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p%grid%NumFreq ) )//"('"//TAB//"',G10.4) )"
-   WRITE (UP, FormStr)  'Comp','Ht', p%grid%Freq(:)
-   FormStr = "( I4,"//TRIM( Int2LStr( p%grid%NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
-ENDIF
 
 
-   ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
 
-IF ( p%met%TurbModel_ID == SpecModel_TIDAL .OR. p%met%TurbModel_ID == SpecModel_RIVER ) THEN
-      ! Calculate the shear, DUDZ, for all heights.
-   ALLOCATE ( DUDZ(p%grid%ZLim) , STAT=AllocStat ) ! Shear
-   DUDZ(1)=(U(2)-U(1))/(p%grid%Z(2)-p%grid%Z(1))
-   DUDZ(p%grid%ZLim)=(U(p%grid%ZLim)-U(p%grid%ZLim-1))/(p%grid%Z(p%grid%ZLim)-p%grid%Z(p%grid%ZLim-1))
-   DO I = 2,p%grid%ZLim-1
-      DUDZ(I)=(U(I+1)-U(I-1))/(p%grid%Z(I+1)-p%grid%Z(I-1))
-   ENDDO
-ENDIF
+! Calculate the single-point power spectral densities
 
-   ! Calculate the single point Power Spectral Densities. 
-
-HalfDelF = 0.5*p%grid%Freq(1)   
-JZ = 0   ! The index for numbering the points on the grid
-DO IZ=1,p%grid%ZLim
-
-         ! The continuous, one-sided PSDs are evaluated at discrete
-         ! points and the results are stored in the "Work" matrix.
-
-      IF ( p%met%TurbModel_ID == SpecModel_IECKAI .or. p%met%TurbModel_ID == SpecModel_IECVKM ) THEN
-         CALL PSDcal( p%grid%HubHt, UHub, SSVS)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
-         
-      ELSEIF ( p%met%TurbModel_ID == SpecModel_TIDAL .OR. p%met%TurbModel_ID == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
-         CALL PSDCal( p%grid%Z(IZ) , U(IZ), SSVS, UShr=DUDZ(IZ) )
-         
-      ELSEIF ( ALLOCATED( p%met%ZL_profile ) ) THEN
-         CALL PSDcal( p%grid%Z(IZ), U(IZ), SSVS, ZL_loc=p%met%ZL_profile(IZ), UStar_loc=p%met%Ustar_profile(IZ) )
-         
-      ELSE
-         CALL PSDcal( p%grid%Z(IZ), U(IZ), SSVS )
-      ENDIF               
-
-      IF ( PSD_OUT ) THEN
-         !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
-            WRITE( UP, FormStr ) 1, p%grid%Z(IZ), SSVS(:,1)
-            WRITE( UP, FormStr ) 2, p%grid%Z(IZ), SSVS(:,2)
-            WRITE( UP, FormStr ) 3, p%grid%Z(IZ), SSVS(:,3)
-         !ENDIF
-      ENDIF      
-      
-      IF (DEBUG_OUT) THEN
-            TotalU = 0.0
-            TotalV = 0.0
-            TotalW = 0.0
-
-            DO IFreq=1,p%grid%NumFreq
-               TotalU = TotalU + SSVS(IFreq,1)
-               TotalV = TotalV + SSVS(IFreq,2)
-               TotalW = TotalW + SSVS(IFreq,3)
-            ENDDO ! IFreq
-
-            Total  = SQRT( TotalU*TotalU + TotalV*TotalV )
-            TotalU = TotalU*p%grid%Freq(1)
-            TotalV = TotalV*p%grid%Freq(1)
-            TotalW = TotalW*p%grid%Freq(1)
-            HorVar = Total *p%grid%Freq(1)
-
-            WRITE(UD,*)  'At H=', p%grid%Z(IZ)
-            WRITE(UD,*)  '   TotalU=', TotalU, '  TotalV=', TotalV, '  TotalW=', TotalW, ' (m/s^2)'
-            WRITE(UD,*)  '   HorVar=',HorVar,' (m/s^2)', '   HorSigma=',SQRT(HorVar),' (m/s)'
-      ENDIF
+CALL CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
 
 
-         ! Discretize the continuous PSD and store it in matrix "S"
-           
-      DO IVec=1,3
-         
-         Indx = JZ
-
-         DO IY=1,p%grid%IYmax(IZ)   
-          
-            Indx = Indx + 1
- 
-            DO IFreq=1,p%grid%NumFreq
-               S(IFreq,Indx,IVec) = SSVS(IFreq,IVec)*HalfDelF
-            ENDDO ! IFreq
-
-         ENDDO !IY
-
-      ENDDO ! IVec
-
-      JZ = JZ + p%grid%IYmax(IZ)     ! The next starting index at height IZ + 1
-
-ENDDO ! IZ
-
-IF ( PSD_OUT .AND. UP > 0) CLOSE( UP )
-
-   ! Deallocate memory for work array 
-
-IF ( ALLOCATED( SSVS  ) )  DEALLOCATE( SSVS  )
-
-IF ( ALLOCATED( DUDZ            ) )  DEALLOCATE( DUDZ            )
 IF ( ALLOCATED( p%met%USR_Z           ) )  DEALLOCATE( p%met%USR_Z           )
 IF ( ALLOCATED( p%met%USR_U           ) )  DEALLOCATE( p%met%USR_U           )
 IF ( ALLOCATED( p%met%USR_WindDir     ) )  DEALLOCATE( p%met%USR_WindDir     )
@@ -555,8 +435,6 @@ IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)
 
 
    
-CALL AllocAry( TRH, MAX(p%grid%NumSteps,NSize), 'TRH (transfer-function matrix)', ErrStat, ErrMsg) !  Allocate the transfer-function matrix.
-CALL CheckError()
 
 CALL AllocAry( V, p%grid%NumSteps, p%grid%NPoints, 3, 'V (velocity)', ErrStat, ErrMsg) !  Allocate the array that contains the velocities.
 CALL CheckError()
@@ -569,9 +447,9 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 IF (p%met%TurbModel_ID /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (p%met%TurbModel_ID == SpecModel_API) THEN
-        CALL CohSpecVMat_API( NSize, ErrStat, ErrMsg) 
+        CALL CalcFourierCoeffs_API( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg) 
     ELSE
-        CALL CohSpecVMat( NSize, ErrStat, ErrMsg)
+        CALL CalcFourierCoeffs( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg)
     ENDIF
     CALL CheckError()
 ENDIF
@@ -579,57 +457,14 @@ ENDIF
 
    ! Deallocate the Freq, S, and RandPhases arrays and the spectral matrix
 
-IF ( ALLOCATED( p%grid%Freq        ) )  DEALLOCATE( p%grid%Freq        )
+IF ( ALLOCATED( p%grid%Freq ) )  DEALLOCATE( p%grid%Freq )
 IF ( ALLOCATED( S           ) )  DEALLOCATE( S           )
 IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
 
-   !  Allocate the FFT working storage and initialize its variables
 
-CALL InitFFT( p%grid%NumSteps, FFT_Data, ErrStat=ErrStat )
-CALL CheckError()
-
-
-   ! Get the stationary-point time series.
-
-CALL WrScr ( ' Generating time series for all points:' )
-
-DO IVec=1,3
-
-   CALL WrScr ( '    '//Comp(IVec)//'-component' )
-
-   DO Indx=1,p%grid%NPoints    !NTotB
-
-         ! Overwrite the first point with zero.  This sets the real (and 
-         ! imaginary) part of the steady-state value to zero so that we 
-         ! can add in the mean value later.
-
-      TRH(1)=0.0
-
-      DO IT=2,p%grid%NumSteps-1
-         TRH(IT) = V(IT-1,Indx,IVec)
-      ENDDO ! IT
-
-         ! Now, let's add a complex zero to the end to set the power in the Nyquist
-         ! frequency to zero.
-
-      TRH(p%grid%NumSteps) = 0.0
-
-
-         ! perform FFT
-
-      CALL ApplyFFT( TRH, FFT_Data, ErrStat )
-      CALL CheckError()
-        
-      V(1:p%grid%NumSteps,Indx,IVec) = TRH(1:p%grid%NumSteps)
-
-   ENDDO ! Indx
-
-ENDDO ! IVec
-
-   ! Deallocate the TRH array and the FFT working storage.
-IF ( ALLOCATED( TRH  ) )  DEALLOCATE( TRH  )
-
-CALL ExitFFT(FFT_Data, ErrStat )
+   ! Create the time series:
+   
+CALL Coeffs2TimeSeries( V, p%grid%NumSteps, p%grid%NPoints, ErrStat, ErrMsg)
 CALL CheckError()
 
 
@@ -729,7 +564,8 @@ CASE (SpecModel_GP_LLJ, &
          WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
          
          DO IVec = 1,3
-            WRITE( US, "(2X,3x,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p%IEC%SigmaIEC(IVec), ActualSigma(IVec), HubFactor(IVec)
+            WRITE( US, "(5X,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p%IEC%SigmaIEC(IVec), &
+                                                             ActualSigma(IVec), HubFactor(IVec) 
          END DO
            
       ENDIF !ScaleIEC
@@ -743,22 +579,22 @@ END SELECT
 !..............................................................................
 
 IF ( p%WrFile(FileExt_HH) )  THEN
-   CALL WrHH_ADtxtfile(p%RootName, p%IEC%TurbInt, ErrStat, ErrMsg)   
+   CALL WrHH_ADtxtfile(V, p%RootName, p%IEC%TurbInt, ErrStat, ErrMsg)   
    CALL CheckError()
 END IF
 
 IF ( p%WrFile(FileExt_BIN) )  THEN
-   CALL WrHH_binary(p%RootName, ErrStat, ErrMsg)
+   CALL WrHH_binary(V, p%RootName, ErrStat, ErrMsg)
    CALL CheckError()
 END IF
 
 IF ( p%WrFile(FileExt_DAT) )  THEN
-   CALL WrHH_text( p%RootName, ErrStat, ErrMsg )   
+   CALL WrHH_text(V,  p%RootName, ErrStat, ErrMsg )   
    CALL CheckError()
 END IF
 
    ! Write statistics of the run to the summary file:
-CALL WrSum_Stats(USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
+CALL WrSum_Stats(V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 CALL CheckError()
 p_CohStr%WSig=WSig
 
@@ -768,12 +604,6 @@ p_CohStr%WSig=WSig
 !..............................................................................
 II = 0
 DO IZ=1,p%grid%ZLim   
-
-   IF ( ALLOCATED( WindDir_profile ) ) THEN  ! The horizontal flow angle changes with height
-      this_HFlowAng = WindDir_profile(IZ)
-   ELSE
-      this_HFlowAng = p%met%HH_HFlowAng
-   ENDIF      
 
   DO IY=1,p%grid%IYmax(IZ)  
 
@@ -785,18 +615,18 @@ DO IZ=1,p%grid%ZLim
             ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
             
          v3 = V(IT,II,:)
-         CALL CalculateWindComponents( v3, U(IZ), this_HFlowAng, p%met%VFlowAng, V(IT,II,:) )
+         CALL CalculateWindComponents( v3, U(IZ), HWindDir(IZ), p%met%VFlowAng, V(IT,II,:) )
                         
       ENDDO ! IT
   ENDDO ! IY
 ENDDO ! IZ
 
-TmpU = MAX( ABS(MAXVAL(U)-UHub), ABS(MINVAL(U)-UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files
+TmpU = MAX( ABS(MAXVAL(U)-p%UHub), ABS(MINVAL(U)-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files
 
    ! Deallocate memory for the matrix of the steady, u-component winds.
 
 IF ( ALLOCATED( U               ) )  DEALLOCATE( U               )
-IF ( ALLOCATED( WindDir_profile ) )  DEALLOCATE( WindDir_profile )
+IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 
 !..............................................................................
 ! Are we generating a coherent turbulent timestep file?
@@ -881,7 +711,7 @@ IF ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)  )  THEN
    WRITE(US,FormStr)  'TI  ' , UGridTI  , ' %'
 
    IF ( p%WrFile(FileExt_BTS) ) THEN
-      CALL WrBinTURBSIM(p%RootName, ErrStat, ErrMsg)
+      CALL WrBinTURBSIM(V, p%RootName, ErrStat, ErrMsg)
       CALL CheckError()
    END IF   
    
@@ -891,7 +721,7 @@ IF ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)  )  THEN
          ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
          ! in this BLADED-style binary output.  TmpU is |V-UHub|
       USig = MAX(USig,0.05*TmpU)
-      CALL WrBinBLADED(USig, VSig, WSig, ErrStat, ErrMsg)
+      CALL WrBinBLADED(V, USig, VSig, WSig, ErrStat, ErrMsg)
       CALL CheckError()
    ENDIF
    
@@ -901,7 +731,7 @@ ENDIF
    ! Are we generating FF formatted files?
 
 IF ( p%WrFile(FileExt_UVW) )  THEN
-   CALL WrFormattedFF(p%RootName, p%grid, V)
+   CALL WrFormattedFF(p%RootName, p%grid, p%UHub, V)
 ENDIF ! ( WrFile(FileExt_UVW) )
 
 

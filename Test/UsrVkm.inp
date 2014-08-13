@@ -41,7 +41,7 @@ default             Z0              - Surface roughness length [m] (or "default"
 
 --------Non-IEC Meteorological Boundary Conditions------------
 default             Latitude        - Site latitude [degrees] (or "default")
-0.05                RICH_NO         - Gradient Richardson number
+0.00                RICH_NO         - Gradient Richardson number
 default             UStar           - Friction or shear velocity [m/s] (or "default")
 default             ZI              - Mixing layer depth [m] (or "default")
 default             PC_UW           - Hub mean u'w' Reynolds stress [(m/s)^2] (or "default")

@@ -32,18 +32,18 @@ CONTAINS
 !=======================================================================
 !> This subroutine defines the Kaimal PSD model as specified by IEC 61400-1, 2nd Ed. & 3rd Ed.
 !! the use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECKAI ( SigmaIEC, L_K, Spec )
+SUBROUTINE Spec_IECKAI ( UHub, SigmaIEC, L_K, Freq, NumFreq, Spec )
 
-
-USE                     TSMods, ONLY: Uhub, p
 
 IMPLICIT                NONE
 
       ! Passed variables
-
-REAL(ReKi),INTENT(IN   ) :: SigmaIEC (3)              !<  Input: sigma for 3 wind components specified by the IEC
-REAL(ReKi),INTENT(IN   ) :: L_k      (3)              !<  Input: L_k (integral scale parameter) for 3 wind components specified by the IEC
-REAL(ReKi),INTENT(INOUT) :: Spec     (:,:)            !<  Output: target spectrum
+INTEGER(IntKi),             INTENT(IN   )  :: NumFreq                   !<  Input: Number of frequencies      
+REAL(ReKi),                 INTENT(IN   )  :: SigmaIEC (3)              !<  Input: sigma for 3 wind components specified by the IEC
+REAL(ReKi),                 INTENT(IN   )  :: L_k      (3)              !<  Input: L_k (integral scale parameter) for 3 wind components specified by the IEC
+REAL(ReKi),                 INTENT(IN   )  :: UHub                      !<  Input: mean wind speed at hub height
+REAL(ReKi),                 INTENT(IN   )  :: Freq     (NumFreq)        !<  Input: frequency array
+REAL(ReKi),                 INTENT(INOUT)  :: Spec     (NumFreq,3)      !<  Output: target spectrum
 
    ! Internal variables
 
@@ -65,8 +65,8 @@ DO IVec = 1,3
 
    L_over_U(IVec) = 6.0*L_over_U(IVec)
 
-   DO I = 1,p%grid%NumFreq
-      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + L_over_U(IVec)*p%grid%Freq(I) )**Exp1
+   DO I = 1,NumFreq
+      Spec(I,IVec) = SigmaLU(IVec) / ( 1.0 + L_over_U(IVec)*Freq(I) )**Exp1
    ENDDO !I
 
 ENDDO !IVec
@@ -77,7 +77,7 @@ END SUBROUTINE Spec_IECKAI
 !=======================================================================
 !> This subroutine defines the von Karman PSD model as specified by IEC 61400-1 (2nd Ed).
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_IECVKM ( SigmaIEC_u, IntegralScale, Spec )
+SUBROUTINE Spec_IECVKM ( UHub, SigmaIEC_u, IntegralScale, Freq, NumFreq, Spec )
 
 USE                     TSMods
 
@@ -85,9 +85,12 @@ IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN   ) :: SigmaIEC_u              !<  Input: target standard deviation for u component
-REAL(ReKi),INTENT(IN   ) :: IntegralScale (3)       !<  Input: integral scale parameter, L (isotropic, so we only care about the 1st one)
-REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
+INTEGER(IntKi),             INTENT(IN   )  :: NumFreq                   !<  Input: Number of frequencies      
+REAL(ReKi),                 INTENT(IN   )  :: SigmaIEC_u                !<  Input: target standard deviation for u component
+REAL(ReKi),                 INTENT(IN   )  :: IntegralScale (3)         !<  Input: integral scale parameter, L (isotropic, so we only care about the 1st one)
+REAL(ReKi),                 INTENT(IN   )  :: UHub                      !<  Input: mean wind speed at hub height
+REAL(ReKi),                 INTENT(IN   )  :: Freq     (NumFreq)        !<  Input: frequency array
+REAL(ReKi),                 INTENT(INOUT)  :: Spec     (NumFreq,3)      !<  Output: target spectrum
 
 
       ! Internal variables
@@ -110,9 +113,9 @@ INTEGER               :: I
 L1_U   = IntegralScale(1)/UHub
 SigmaL1_U = 2.0*SigmaIEC_u*SigmaIEC_u*L1_U
 
-DO I=1,p%grid%NumFreq
+DO I=1,NumFreq
 
-   FLU2      = ( p%grid%Freq(I)*L1_U )**2
+   FLU2      = ( Freq(I)*L1_U )**2
    Tmp       = 1.0 + 71.0*FLU2
 
    Spec(I,1) = 2.0*SigmaL1_U/Tmp**Exp1
@@ -168,14 +171,14 @@ INTEGER               :: I
 
    ! calculate the spectra for the v and w components using IECKAI model
    ! because API doesn't specify a spectra for those components
-CALL Spec_IECKAI ( p%IEC%SigmaIEC, p%IEC%IntegralScale, Spec )
+CALL Spec_IECKAI ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, Spec )
 
    ! Define u-component integral scale.
 !CALL WrScr ('Calling Froya/API wind spectrum.............')
-!mlb L1_U   = 3.5*Lambda/UHub
-!mlb SigmaL1_U = 2.0*SigmaIEC(1)*UHub*L1_U
+!mlb L1_U   = 3.5*Lambda/p%UHub
+!mlb SigmaL1_U = 2.0*SigmaIEC(1)*p%UHub*L1_U
 
-!mlb CALL ROOT_SEARCHING(X0,X,UHub,Ht,Ht)
+!mlb CALL ROOT_SEARCHING(X0,X,p%UHub,Ht,Ht)
 !mlb UHr_10=X;
 
    ! Compute some parameters that are independent of frequency.

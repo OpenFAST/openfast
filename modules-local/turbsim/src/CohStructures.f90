@@ -422,7 +422,7 @@ END SUBROUTINE CohStr_CalcEvents
 !> This subroutine writes the coherent events CTS file
 SUBROUTINE CohStr_WriteCTS(p_met, p_RNG, p_grid, p_CohStr, OtherSt_RandNum, y_CohStr, RootName, ErrStat, ErrMsg)
 use TS_RandNum
-use TSMods, only: uhub, us, p
+use TSMods, only: us, p
 
    TYPE(Meteorology_ParameterType), INTENT(IN)     :: p_met               ! parameters for TurbSim
    TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RNG               ! parameters for random numbers
@@ -451,7 +451,7 @@ use TSMods, only: uhub, us, p
    p_CohStr%ScaleWid = p_grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
    p_CohStr%Zbottom  = p_grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
-   p_CohStr%Uwave    = getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_grid%RotorDiameter)                 ! WindSpeed at center of wave
+   p_CohStr%Uwave    = getVelocity(p%UHub,p_grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_grid%RotorDiameter)                 ! WindSpeed at center of wave
    
    !-------------------------
    ! compute ScaleVel:
@@ -462,8 +462,8 @@ use TSMods, only: uhub, us, p
       p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
       p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
    ELSE
-      p_CohStr%ScaleVel =  getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter) &  ! Velocity at the top of the wave
-                         - getVelocity(UHub,p_grid%HubHt,p_CohStr%Zbottom,                  p_grid%RotorDiameter)    ! Shear across the wave
+      p_CohStr%ScaleVel =  getVelocity(p%UHub,p_grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p_grid%RotorDiameter) &  ! Velocity at the top of the wave
+                         - getVelocity(p%UHub,p_grid%HubHt,p_CohStr%Zbottom,                  p_grid%RotorDiameter)    ! Shear across the wave
       p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
       
       
@@ -683,7 +683,7 @@ ENDIF
 
    WRITE (UnOut, "( A14,   ' = FileType')")     p_CohStr%CTExt
    WRITE (UnOut, "( G14.7, ' = ScaleVel')")     p_CohStr%ScaleVel
-   WRITE (UnOut, "( G14.7, ' = MHHWindSpeed')") UHub
+   WRITE (UnOut, "( G14.7, ' = MHHWindSpeed')") p%UHub
    WRITE (UnOut, "( G14.7, ' = Ymax')")         p_CohStr%ScaleWid*p_CohStr%Ym_max/p_CohStr%Zm_max
    WRITE (UnOut, "( G14.7, ' = Zmax')")         p_CohStr%ScaleWid
    WRITE (UnOut, "( G14.7, ' = DistScl')")      p_CohStr%DistScl
