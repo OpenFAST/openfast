@@ -56,7 +56,7 @@
 
    i = 1
    piter = 0
-   niter = 100
+   niter = 20
    DO WHILE(i .NE. 0)
        k=i
        DO j=1,k
@@ -67,6 +67,7 @@
            CALL BeamDyn_StaticSolution(p%uuN0,x%q,p%Mass0_GL,p%Stif0_GL,p%gravity,u_temp,&
                                        p%node_elem,p%dof_node,p%elem_total,&
                                        p%dof_total,p%node_total,p%ngp,niter,piter)
+           IF(niter .EQ. piter) EXIT
        ENDDO
        IF(piter .LT. niter) THEN
            i=0

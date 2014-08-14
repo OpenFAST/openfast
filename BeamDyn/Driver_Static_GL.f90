@@ -102,7 +102,7 @@ PROGRAM MAIN
    Allocate(BD_Output(1))
    Allocate(BD_OutputTimes(1))
 
-   BD_InitInput%InputFile = 'Twist.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
 
    CALL BeamDyn_Init( BD_InitInput        &
@@ -164,6 +164,7 @@ n=1
 	F_total = BD_Parameter%F_ext	!DEFINES DUMMY VARIABLE TO CUT LOAD IN HALF, NJ 3/18/2014
 	DO WHILE (n .NE. 0)  
     k=n
+!IF(n == 4) STOP
 		DO i=1,k
           BD_Parameter%F_ext=F_total/n*i
 		   CALL StaticSolutionGL(BD_Parameter%uuN0, BD_OtherState%uuNf,&

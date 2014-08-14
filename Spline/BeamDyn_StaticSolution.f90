@@ -26,7 +26,7 @@
    REAL(ReKi)                      :: feqv(dof_total-6)
    REAL(ReKi)                      :: Eref
    REAL(ReKi)                      :: Enorm
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-10
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-20
    REAL(ReKi)                      :: d
    INTEGER(IntKi)                  :: indx(dof_total-6)
    INTEGER(IntKi)                  :: i
@@ -40,11 +40,18 @@
        RHS(:)     = 0.0D0
        CALL BeamDyn_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
                                           elem_total,node_elem,dof_node,ngp,StifK,RHS)
+!       DO j=1,18
+!          WRITE(*,*) "elf",j,RHS(j)
+!       ENDDO
+!STOP
        DO j=1,node_total
            temp_id = (j-1)*dof_node
            RHS(temp_id+1:temp_id+3) = RHS(temp_id+1:temp_id+3) + u%Pointload%Force(1:3,j)
            RHS(temp_id+4:temp_id+6) = RHS(temp_id+4:temp_id+6) + u%Pointload%Moment(1:3,j)
        ENDDO
+!       DO j=1,18
+!          WRITE(*,*) "elf",j,RHS(j)
+!       ENDDO
 
        feqv(:) = 0.0D0
        DO j=1,dof_total-6
