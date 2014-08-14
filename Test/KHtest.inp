@@ -1,6 +1,7 @@
----------TurbSim v1.07.* Input File------------------------
+---------TurbSim v2.00.* Input File------------------------
 for Certification Test #6 (NWTCUP Spectrum with K-H test, formatted FF files).
 ---------Runtime Options-----------------------------------
+False         Echo            - Echo input data to <RootName>.ech (flag)
      123456   RandSeed1       - First random seed  (-2147483648 to 2147483647)
 "RanLux"      RandSeed2       - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
 False         WrBHHTP         - Output hub-height turbulence parameters in binary form?  (Generates RootName.bin)
@@ -27,15 +28,16 @@ False         Clockwise       - Clockwise rotation looking downwind? (used only 
           0   HFlowAng        - Horizontal mean flow (skew) angle [degrees]
 
 --------Meteorological Boundary Conditions-------------------
-"NWTCUP"      TurbModel       - Turbulence model ("IECKAI"=Kaimal, "IECVKM"=von Karman, "GP_LLJ", "NWTCUP", "SMOOTH", "WF_UPW", "WF_07D", "WF_14D", "TIDAL", or "NONE")
+"NWTCUP"      TurbModel       - Turbulence model ("IECKAI","IECVKM","GP_LLJ","NWTCUP","SMOOTH","WF_UPW","WF_07D","WF_14D","TIDAL","API","USRINP","TIMESR", or "NONE")
+"unused"      UserFile        - Name of the file that contains inputs for user-defined spectra or time series inputs (used only for "USRINP" and "TIMESR" models)
           1   IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
 "KHtest"      IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP model, not used for other models)
 "NTM"         IEC_WindType    - IEC turbulence type ("NTM"=normal, "xETM"=extreme turbulence, "xEWM1"=extreme 1-year wind, "xEWM50"=extreme 50-year wind, where x=wind turbine class 1, 2, or 3)
 "default"     ETMc            - IEC Extreme Turbulence Model "c" parameter [m/s]
-"default"     WindProfileType - Wind profile type ("JET";"LOG"=logarithmic;"PL"=power law;"H2L"=Log law for TIDAL spectral model;"IEC"=PL on rotor disk, LOG elsewhere; or "default")
+"default"     WindProfileType - Velocity profile type ("JET";"LOG"=logarithmic;"PL"=power law;"H2L"=Log law for TIDAL spectral model;"API"=API profile;"IEC"=PL on rotor disk, LOG elsewhere; or "default")
          37   RefHt           - Height of the reference velocity (URef) [m]
-         13   URef            - Mean (total) velocity at the reference height [m/s] (or "default" for JET wind profile)
-        350   ZJetMax         - Jet height [m] (used only for JET wind profile, valid 70-490 m)
+         13   URef            - Mean (total) velocity at the reference height [m/s] (or "default" for JET velocity profile)
+        350   ZJetMax         - Jet height [m] (used only for JET velocity profile, valid 70-490 m)
 "default"     PLExp           - Power law exponent [-] (or "default")
 "default"     Z0              - Surface roughness length [m] (or "default")
 
@@ -47,9 +49,9 @@ False         Clockwise       - Clockwise rotation looking downwind? (used only 
 "default"     PC_UW           - Hub mean u'w' Reynolds stress (or "default" or "none")
 "default"     PC_UV           - Hub mean u'v' Reynolds stress (or "default" or "none")
 "default"     PC_VW           - Hub mean v'w' Reynolds stress (or "default" or "none")
-"default"     IncDec1         - u-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
-"default"     IncDec2         - v-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
-"default"     IncDec3         - w-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
+"default"     InCDec1         - u-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
+"default"     InCDec2         - v-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
+"default"     InCDec3         - w-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
 "default"     CohExp          - Coherence exponent (or "default")
 
 --------Coherent Turbulence Scaling Parameters-------------------

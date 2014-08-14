@@ -31,537 +31,487 @@ MODULE TS_FileIO
 CONTAINS
 
 !=======================================================================
-SUBROUTINE GetInput(InFile, ErrStat, ErrMsg)
+!> This subroutine reads parameters from the primary TurbSim input file.
+!> It validates most of the meteorology data (because it is used to 
+!> calculate default values later in the routine)
+SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
 
 
   ! This subroutine is used to read parameters from the input file.
 
-USE                  TSMods
-
-IMPLICIT             NONE
-
-CHARACTER(*), INTENT(IN) :: InFile  ! name of the primary TurbSim input file
-
-
-INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
-CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
-
-
-
-   ! Local variables
-
-REAL(ReKi)        :: InCVar     (2)       ! Contains the coherence parameters (used for input)
-REAL(ReKi)        :: tmp                  ! variable for estimating Ustar
-REAL(ReKi)        :: TmpUary (3)          !Temporary vector to store windSpeed(z) values
-REAL(ReKi)        :: TmpUstar(3)          !Temporary vector to store ustar(z) values
-REAL(ReKi)        :: TmpUstarD            !Temporary ustarD value
-REAL(ReKi)        :: TmpZary (3)          !Temporary vector to store height(z) values
-REAL(ReKi)        :: TmpZLary(3)          !Temporary vector to store zL(z) values
-
-INTEGER           :: IOS                  ! I/O status
-INTEGER           :: TmpIndex             ! Contains the index number when searching for substrings
-INTEGER           :: UI                   ! I/O unit for input file.
-
-LOGICAL           :: getPLExp             ! Whether the power law exponent needs to be calculated
-LOGICAL           :: Randomize            ! Whether to randomize the coherent turbulence scaling
-LOGICAL           :: UseDefault           ! Whether or not to use a default value
-LOGICAL           :: IsUnusedParameter    ! Whether or not this variable will be ignored
-
-CHARACTER(99)     :: Line                 ! An input line
-CHARACTER(1)      :: Line1                ! The first character of an input line
-
-
-CHARACTER( 23), PARAMETER  :: IECeditionStr_p (3) = &   ! strings for the 
-                                (/'IEC 61400-1 Ed. 1: 1993', &
-                                  'IEC 61400-1 Ed. 2: 1999', &
-                                  'IEC 61400-1 Ed. 3: 2005'/)            ! The string description of the IEC 61400-1 standard being used
-
-
-!UnEc = US
-!Echo = .FALSE.       ! Do not echo the input into a separate file
-
-   !==========================================================
-   ! Open input file
-   !==========================================================
-
-CALL GetNewUnit( UI, ErrStat, ErrMsg)
-CALL OpenFInpFile( UI, InFile, ErrStat, ErrMsg )
-IF (ErrStat >= AbortErrLev) RETURN
-
-CALL WrScr1(' Reading the input file "'//TRIM(InFile)//'".' )
-
-   !==========================================================
-   ! Read the runtime options.
-   !==========================================================
-
-CALL ReadCom( UI, InFile, "File Heading Line 1" )
-CALL ReadCom( UI, InFile, "File Heading Line 2" )
-CALL ReadCom( UI, InFile, "Runtime Options Heading" )
-
-
-   ! ---------- Read Random seed 1 -----------------------
-
-CALL ReadVar( UI, InFile, p%RNG%RandSeed(1), "RandSeed(1)", "Random seed #1")
-
-
-   ! ---------- Read Random seed 2 -----------------------
-
-CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2")
-
-   ! Check if alternate random number generator is to be used
-
-   READ (Line,*,IOSTAT=IOS) Line1
-
-   CALL Conv2UC( Line1 )
-
-   IF ( (Line1 == 'T') .OR.  (Line1 == 'F') ) THEN
-      CALL TS_Abort (' Invalid RNG type. ')
-   ENDIF
-
-   READ (Line,*,IOSTAT=IOS)  p%RNG%RandSeed(2)
-
-   IF (IOS == 0) THEN
-
-      p%RNG%RNG_type = "NORMAL"
-      p%RNG%pRNG = pRNG_INTRINSIC
-
-   ELSE
-
-      p%RNG%RNG_type = ADJUSTL( Line )
-      CALL Conv2UC( p%RNG%RNG_type )
-
-      IF ( p%RNG%RNG_type == "RANLUX") THEN
-         p%RNG%pRNG = pRNG_RANLUX
-      ELSE IF ( p%RNG%RNG_type == "RNSNLW") THEN
-         p%RNG%pRNG = pRNG_SNLW3
-      ELSE
-         CALL TS_Abort( 'Invalid alternative random number generator.' )
-      ENDIF
-
-   ENDIF
-
-   ! Initialize the RNG (for computing "default" values that contain random variates)
-
-CALL RandNum_Init(p%RNG, OtherSt_RandNum, ErrStat, ErrMsg)
-
-
-   ! --------- Read the flag for writing the binary HH (GenPro) turbulence parameters. -------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_BIN), "WrBHHTP", "Output binary HH turbulence parameters? [RootName.bin]")
-
-
-   ! --------- Read the flag for writing the formatted turbulence parameters. ----------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_DAT), "WrFHHTP", "Output formatted turbulence parameters? [RootName.dat]")
-
-
-
-   ! ---------- Read the flag for writing the AeroDyn HH files. -------------------------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_HH), "WrADHH", "Output AeroDyn HH files? [RootName.hh]")
-
-
-   ! ---------- Read the flag for writing the AeroDyn FF files. ---------------------------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_BTS), "WrADFF", "Output AeroDyn FF files? [RootName.bts]")
-
-
-   ! ---------- Read the flag for writing the BLADED FF files. -----------------------------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_WND) , "WrBLFF", "Output BLADED FF files? [RootName.wnd]")
-
-
-
-   ! ---------- Read the flag for writing the AeroDyn tower files. --------------------------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_TWR), "WrADTWR", "Output tower data? [RootName.twr]")
-
-
-   ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_UVW), "WrFMTFF", "Output formatted FF files? [RootName.u, .v, .w]")
-
-
-
-   ! ---------- Read the flag for writing coherent time series files. --------------------------------------
-
-CALL ReadVar( UI, InFile, p%WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]")
-
-
-
-   ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?")
-
-
-   ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
-CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
-               "Scale IEC turbulence models to specified standard deviation?")
-
-   IF ( p%IEC%ScaleIEC > 2 .OR. p%IEC%ScaleIEC < 0 ) CALL TS_Abort ( 'The value for parameter ScaleIEC must be 0, 1, or 2.' )
-
-
-   !==================================================================================
-   ! Read the turbine/model specifications.
-   !===================================================================================
-
-CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 1" )
-CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2" )
-!READ (UI,'(/)')
-
-
-   ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%NumGrid_Z, "NumGrid_Z", "Vertical grid-point matrix dimension")
-
-   IF ( p%grid%NumGrid_Z < 2 )  THEN
-      CALL TS_Abort ( 'The matrix must be >= 2x2.' )
-   ENDIF
-
-
-   ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%NumGrid_Y, "NumGrid_Y", "Horizontal grid-point matrix dimension")
-
-   IF ( p%grid%NumGrid_Y < 2 )  THEN
-      CALL TS_Abort ( 'The matrix must be >= 2x2.' )
-   ENDIF
-
-
-
-   ! ------------ Read in the time step. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%TimeStep, "TimeStep", "Time step [seconds]")
-
-   IF ( p%grid%TimeStep <=  0.0 )  THEN
-      CALL TS_Abort ( 'The time step must be greater than zero.' )
-   ENDIF
-
-
-
-   ! ------------ Read in the analysis time. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%AnalysisTime, "AnalysisTime", "Analysis time [seconds]")
-
-   IF ( p%grid%AnalysisTime <=  0.0 )  THEN
-      CALL TS_Abort ( 'The analysis time must be greater than zero.' )
-   ENDIF
-
-
-
-   ! ------------ Read in the usable time. ---------------------------------------------
-CALL ReadVar( UI, InFile, Line, "UsableTime", "Usable output time [seconds]")
-
-   READ( Line, *, IOSTAT=IOS) p%grid%UsableTime
-   
-   IF ( IOS /= 0 ) THEN ! Line didn't contian a number
-      CALL Conv2UC( Line )
-      IF ( TRIM(Line) == 'ALL' ) THEN
-         p%grid%Periodic   = .TRUE.
-         p%grid%UsableTime = p%grid%AnalysisTime
-      ELSE
-         CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
-      END IF
-   
-   ELSE
-      IF ( p%grid%UsableTime <=  0.0 )  THEN
-         CALL TS_Abort ( 'The usable output time must be a number greater than zero (or the string "ALL").' )
-      ENDIF
-      p%grid%Periodic = .FALSE.
-   END IF
-   
-
-   ! ------------ Read in the hub height. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%HubHt, "HubHt", "Hub height [m]")
-
-   IF ( p%grid%HubHt <=  0.0 )  THEN
-      CALL TS_Abort ( 'The hub height must be greater than zero.' )
-   ENDIF
-
-
-
-   ! ------------ Read in the grid height. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%GridHeight, "GridHeight", "Grid height [m]")
-
-   IF ( 0.5*p%grid%GridHeight > p%grid%HubHt  )THEN
-      CALL TS_Abort( 'The hub must be higher than half of the grid height.')
-   ENDIF
-
-
-
-   ! ------------ Read in the grid width. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%grid%GridWidth, "GridWidth", "Grid width [m]")
-
-   IF ( p%grid%GridWidth <=  0.0 )  THEN
-      CALL TS_Abort ( 'The grid width must be greater than zero.' )
-   ENDIF
-
-
-
-   ! ***** Calculate the diameter of the rotor disk *****
-
-p%grid%RotorDiameter = MIN( p%grid%GridWidth, p%grid%GridHeight )
-
-
-   ! ------------ Read in the vertical flow angle. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%met%VFlowAng, "tVFlowAng", "Vertical flow angle [degrees]")
-
-   IF ( ABS( p%met%VFlowAng ) > 45.0 )  THEN
-      CALL TS_Abort ( 'The vertical flow angle must not exceed +/- 45 degrees.' )
-   ENDIF
-
-
-
-   ! ------------ Read in the horizontal flow angle. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%met%HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]")
-
-
-
-   !==========================================================
-   ! Read the meteorological boundary conditions.
-   !==========================================================
-
-CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 1" )
-CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2" )
-
-
-   ! ------------ Read in the turbulence model. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%met%TurbModel, "the spectral model", "spectral model")
-
-   p%met%TurbModel = ADJUSTL( p%met%TurbModel )
-   CALL Conv2UC( p%met%TurbModel )
-
-   SELECT CASE ( TRIM(p%met%TurbModel) )
-      CASE ( 'IECKAI' )
-         p%met%TMName = 'IEC Kaimal'
-         p%met%TurbModel_ID = SpecModel_IECKAI
-      CASE ( 'IECVKM' )
-         p%met%TMName = 'IEC von Karman'
-         p%met%TurbModel_ID = SpecModel_IECVKM
-      CASE ( 'TIDAL' )
-         p%met%TMName = 'Tidal Channel Turbulence'
-         p%met%TurbModel_ID = SpecModel_TIDAL
-      CASE ( 'RIVER' )
-         p%met%TMName = 'River Turbulence'
-         p%met%TurbModel_ID = SpecModel_RIVER
-      CASE ( 'SMOOTH' )
-         p%met%TMName = 'RISO Smooth Terrain'
-         p%met%TurbModel_ID = SpecModel_SMOOTH
-      CASE ( 'WF_UPW' )
-         p%met%TMName = 'NREL Wind Farm Upwind'
-         p%met%TurbModel_ID = SpecModel_WF_UPW
-      CASE ( 'WF_07D' )
-         p%met%TMName = 'NREL 7D Spacing Wind Farm'
-         p%met%TurbModel_ID = SpecModel_WF_07D
-      CASE ( 'WF_14D' )
-         p%met%TMName = 'NREL 14D Spacing Wind Farm'
-         p%met%TurbModel_ID = SpecModel_WF_14D
-      CASE ( 'NONE'   )
-         p%met%TMName = 'Steady wind components'
-         p%met%TurbModel_ID = SpecModel_NONE
-      CASE ( 'MODVKM' )
-         p%met%TMName = 'Modified von Karman'
-         p%met%TurbModel_ID = SpecModel_MODVKM
-      CASE ( 'API' )
-         p%met%TMName = 'API'
-         p%met%TurbModel_ID = SpecModel_API
-      CASE ( 'NWTCUP' )
-         p%met%TMName = 'NREL National Wind Technology Center'
-         p%met%TurbModel_ID = SpecModel_NWTCUP
-      CASE ( 'GP_LLJ' )
-         p%met%TMName = 'Great Plains Low-Level Jet'
-         p%met%TurbModel_ID = SpecModel_GP_LLJ
-      CASE ( 'USRVKM' )
-         p%met%TMName = 'von Karman model with user-defined specifications'
-         p%met%TurbModel_ID = SpecModel_USRVKM
-      CASE ( 'USRINP' )
-         p%met%TMName = 'User-input '
-         CALL GetUSRspec("UsrSpec.inp", ErrStat, ErrMsg)      ! bjj: before documenting, please fix this hard-coded name!
-         p%met%TurbModel_ID = SpecModel_USER
-      CASE DEFAULT
-!BONNIE: add the UsrVKM model to this list when the model is complete as well as USRINP
-         CALL TS_Abort ( 'The turbulence model must be "IECKAI", "IECVKM", "SMOOTH",' &
-                    //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "API", or "NONE".' )
-
-      END SELECT  ! TurbModel
-      IF (ErrStat >= AbortErrLev) RETURN
-
-p%met%IsIECModel = p%met%TurbModel_ID == SpecModel_IECKAI .or. p%met%TurbModel_ID == SpecModel_IECVKM .OR. p%met%TurbModel_ID == SpecModel_MODVKM .OR. p%met%TurbModel_ID == SpecModel_API
+   IMPLICIT             NONE
+
+   CHARACTER(*),                 INTENT(IN)    :: InFile             !< name of the primary TurbSim input file
+   TYPE(TurbSim_ParameterType),  INTENT(INOUT) ::  p                 !< TurbSim's parameters
+   TYPE(CohStr_ParameterType),   INTENT(INOUT) :: p_CohStr           !< parameters for coherent structures
+   TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum    !< other states for random numbers (next seed, etc)
+
+
+   INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat            !< allocation status
+   CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg             !< error message
+
+
+
+      ! Local variables
+
+   REAL(ReKi)                    :: InCVar     (2)                   ! Contains the coherence parameters (used for input)
+   REAL(ReKi)                    :: tmp                              ! variable for estimating Ustar
+   REAL(ReKi)                    :: TmpUary (3)                      !Temporary vector to store windSpeed(z) values
+   REAL(ReKi)                    :: TmpUstar(3)                      !Temporary vector to store ustar(z) values
+   REAL(ReKi)                    :: TmpUstarD                        !Temporary ustarD value
+   REAL(ReKi)                    :: TmpZary (3)                      !Temporary vector to store height(z) values
+   REAL(ReKi)                    :: TmpZLary(3)                      !Temporary vector to store zL(z) values
+                              
+   INTEGER                       :: IOS                              ! I/O status
+   INTEGER                       :: TmpIndex                         ! Contains the index number when searching for substrings
+   INTEGER                       :: UI                               ! I/O unit for input file
+   INTEGER                       :: UnEc                             ! I/O unit for echo file
+                              
+   LOGICAL                       :: getPLExp                         ! Whether the power law exponent needs to be calculated
+   LOGICAL                       :: Randomize                        ! Whether to randomize the coherent turbulence scaling
+   LOGICAL                       :: UseDefault                       ! Whether or not to use a default value
+   LOGICAL                       :: IsUnusedParameter                ! Whether or not this variable will be ignored
+                              
+   CHARACTER(200)                :: Line                             ! An input line
+   CHARACTER(1)                  :: Line1                            ! The first character of an input line
+
+   INTEGER(IntKi)                :: ErrStat2                         ! Temporary Error status
+   INTEGER(IntKi)                :: I                                ! Loop counter (number of times file has been read)
+
+   LOGICAL                       :: Echo                             ! Determines if an echo file should be written
+   CHARACTER(MaxMsgLen)          :: ErrMsg2                          ! Temporary Error message
+   CHARACTER(1024)               :: PriPath                          ! Path name of the primary file
+
+   CHARACTER(1024)               :: UserInputFile   
+
+      ! Initialize some variables:
+   ErrStat = ErrID_None
+   ErrMsg  = ""
       
+   UnEc = -1
+   Echo = .FALSE.   
+   CALL GetPath( InFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
+        
+   
+   !===============================================================================================================================
+   ! Open input file
+   !===============================================================================================================================
 
-   ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
+   CALL GetNewUnit( UI, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      
+   CALL OpenFInpFile( UI, InFile, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
-CALL ReadVar( UI, InFile, Line, "the number of the IEC standard", "Number of the IEC standard")
+   CALL WrScr1(' Reading the input file "'//TRIM(InFile)//'".' )
 
-   IF ( p%met%IsIECModel ) THEN  !bjj: SpecModel==SpecModel_MODVKM is not in the IEC standard
+   ! Read the lines up/including to the "Echo" simulation control variable
+   ! If echo is FALSE, don't write these lines to the echo file. 
+   ! If Echo is TRUE, rewind and write on the second try.
+   
+   I = 1 !set the number of times we've read the file
+   DO 
+   !-------------------------- HEADER ---------------------------------------------
+   
+   
+      !===============================================================================================================================
+      ! Read the runtime options.
+      !===============================================================================================================================
 
-      CALL Conv2UC( LINE )
+      CALL ReadCom( UI, InFile, "File Heading Line 1",    ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      
+      CALL ReadCom( UI, InFile, "File Heading Line 2",    ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      
+      CALL ReadCom( UI, InFile, "Runtime Options Heading",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+                  
+      CALL ReadVar( UI, InFile, Echo, 'Echo', 'Echo switch', ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF   
+         
+         
+      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
+   
+         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
+      
+      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
+      
+      
+      CALL OpenEcho ( UnEc, TRIM(p%RootName)//'.ech', ErrStat2, ErrMsg2, TurbSim_Ver )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF   
+      
+      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(TurbSim_Ver%Name)//' primary input file "'//TRIM( InFile )//'":'
+      
+      REWIND( UI, IOSTAT=ErrStat2 )  
+         IF (ErrStat2 /= 0_IntKi ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InFile)//'".', ErrStat, ErrMsg, 'ReadInputFile')    
+            RETURN
+         END IF         
+                  
+   END DO
+   
+         
+   
+      ! RandSeed(1)
+   CALL ReadVar( UI, InFile, p%RNG%RandSeed(1), "RandSeed(1)", "Random seed #1",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      IF ( (Line(1:1) == 'T') .OR.  (Line(1:1) == 'F') ) THEN
-         CALL TS_Abort ( 'The number of the IEC standard must be either "1", "2", or "3"' &
-                          // ' with an optional IEC 61400-1 edition number ("1-ED2").' )
-      ENDIF
+      ! RandSeed(2)
+   CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
-      TmpIndex = INDEX(Line, "-ED")
+         !  Check if alternate random number generator is to be used >>>>>>>>>>>>>>>>
 
-      IF ( TmpIndex > 0 ) THEN
-         READ ( Line(TmpIndex+3:),*,IOSTAT=IOS ) p%IEC%IECedition
-
-         CALL CheckIOS( IOS, InFile, 'the IEC edition number', NumType )
-
-         IF ( p%IEC%IECedition < 1 .OR. p%IEC%IECedition > 3 ) THEN
-            CALL TS_Abort( 'Invalid IEC edition number.' )
-         ENDIF
-
-         Line = Line(1:TmpIndex-1)
-      ELSE
-         p%IEC%IECedition = 0
-      ENDIF
-
-      READ ( Line,*,IOSTAT=IOS ) p%IEC%IECstandard
-
-      SELECT CASE ( p%IEC%IECstandard )
-         CASE ( 1 )
-            IF (p%IEC%IECedition < 1 ) THEN  ! Set up the default
-               IF ( p%met%TurbModel_ID == SpecModel_IECVKM .OR. p%met%TurbModel_ID == SpecModel_USRVKM ) THEN
-                  p%IEC%IECedition = 2   ! The von Karman model is not specified in edition 3 of the -1 standard
-               ELSE
-                  p%IEC%IECedition = 3
-               ENDIF
-            ELSE
-               IF ( p%IEC%IECedition < 2 ) THEN
-                  CALL TS_Abort( 'The IEC edition number must be 2 or 3' )
-               ENDIF
-            ENDIF
-            p%IEC%IECeditionSTR = IECeditionStr_p(p%IEC%IECedition)
-
-         CASE ( 2 )
-               ! The scaling is the same as 64100-1, Ed. 2 with "A" or user-specified turbulence
-            IF (p%IEC%IECedition < 1 ) THEN  ! Set up the default
-               p%IEC%IECedition = 2
-            ELSE
-               CALL TS_Abort( ' The edition number cannot be specified for the 61400-2 standard.')
-            ENDIF
-            p%IEC%IECeditionSTR = 'IEC 61400-2 Ed. 2: 2005'
-
-         CASE ( 3 )
-               ! The scaling for 61400-3 (Offshore) is the same as 61400-1 except it has a different power law exponent
-            IF (p%IEC%IECedition < 1 ) THEN  ! Set up the default
-
-               IF ( p%met%TurbModel_ID /= SpecModel_IECKAI ) THEN
-                  CALL TS_Abort( ' The von Karman model is not valid for the 61400-3 standard.')
-               ENDIF
-               p%IEC%IECedition = 3   ! This is the edition of the -1 standard
-
-            ELSE
-               CALL TS_Abort( ' The edition number cannot be specified for the 61400-3 standard.')
-            ENDIF
-            p%IEC%IECeditionSTR = 'IEC 61400-3 Ed. 1: 2006'
-
-         CASE DEFAULT
-            CALL TS_Abort( 'The number of the IEC 61400-x standard must be 1, 2, or 3.')
-
-      END SELECT
-
-   ELSE ! NOT IEC
-      p%IEC%IECstandard = 0
-      p%IEC%IECedition  = 0
-   ENDIF ! IEC
-
-   ! ------------ Read in the IEC turbulence characteristic. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, Line, "the IEC turbulence characteristic", "IEC turbulence characteristic")
-
-   IF ( p%met%IsIECModel ) THEN
-
-      READ (Line,*,IOSTAT=IOS) Line1
+      READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
 
       CALL Conv2UC( Line1 )
-
       IF ( (Line1 == 'T') .OR.  (Line1 == 'F') ) THEN
-         CALL TS_Abort ( 'The IEC turbulence characteristic must be either "A", "B", "C", or a real number.')
+         CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid RNG type.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL Cleanup()
+         RETURN
       ENDIF
 
-      ! Check to see if the entry was a number.
+      READ (Line,*,IOSTAT=ErrStat2)  p%RNG%RandSeed(2)
 
-      READ (Line,*,IOSTAT=IOS)  p%IEC%PerTurbInt
-
-      IF ( IOS == 0 )  THEN
-
-         ! Let's use turbulence value.
-
-         p%IEC%NumTurbInp = .TRUE.         
-         p%IEC%IECTurbC = ""
-
+      IF (ErrStat2 == 0) THEN ! the user entered a number
+         p%RNG%RNG_type = "NORMAL"
+         p%RNG%pRNG = pRNG_INTRINSIC
       ELSE
 
-         ! Let's use one of the standard turbulence values (A or B or C).
+         p%RNG%RNG_type = ADJUSTL( Line )
+         CALL Conv2UC( p%RNG%RNG_type )
 
-         p%IEC%NumTurbInp = .FALSE.
-         p%IEC%IECTurbC   = ADJUSTL( Line )
-         CALL Conv2UC(  p%IEC%IECTurbC )
-
-         SELECT CASE ( p%IEC%IECTurbC )
-            CASE ( 'A' )
-            CASE ( 'B' )
-               IF ( p%IEC%IECstandard == 2 ) THEN
-                  CALL TS_Abort (' The IEC 61400-2 turbulence characteristic must be either "A" or a real number.' )
-               ENDIF
-            CASE ( 'C' )
-               IF ( p%IEC%IECstandard == 2 ) THEN
-                  CALL TS_Abort (' The IEC 61400-2 turbulence characteristic must be either "A" or a real number.' )
-               ELSEIF ( p%IEC%IECedition < 3 ) THEN
-                  CALL TS_Abort (' The turbulence characteristic for '//TRIM(p%IEC%IECeditionSTR )// &
-                                  ' must be either "A", "B", or a real number.' )
-               ENDIF
-            CASE DEFAULT
-               CALL TS_Abort ( 'The IEC turbulence characteristic must be either "A", "B", "C", or a real number.' )
-         END SELECT  ! IECTurbC
+         IF ( p%RNG%RNG_type == "RANLUX") THEN
+            p%RNG%pRNG = pRNG_RANLUX
+         ELSE IF ( p%RNG%RNG_type == "RNSNLW") THEN
+            p%RNG%pRNG = pRNG_SNLW3
+         ELSE
+            CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, 'ReadInputFile')
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
       ENDIF
       
-      p%met%KHtest = .FALSE.
+      !<<<<<<<<<<<<<<<<<<<<<< end rng
 
-   ELSE  !not IECKAI and not IECVKM and not MODVKM
 
-      Line = ADJUSTL( Line )
-      CALL Conv2UC( Line )
+      ! --------- Read the flag for writing the binary HH (GenPro) turbulence parameters. -------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_BIN), "WrBHHTP", "Output binary HH turbulence parameters? [RootName.bin]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      IF ( Line(1:6) == 'KHTEST' ) THEN
-         p%met%KHtest = .TRUE.
+      ! --------- Read the flag for writing the formatted turbulence parameters. ----------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_DAT), "WrFHHTP", "Output formatted turbulence parameters? [RootName.dat]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-         IF ( p%met%TurbModel_ID /= SpecModel_NWTCUP ) THEN
-            CALL TS_Abort( 'The KH test can be used with the "NWTCUP" spectral model only.' )
-         ENDIF
+      ! ---------- Read the flag for writing the AeroDyn HH files. -------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_HH), "WrADHH", "Output AeroDyn HH files? [RootName.hh]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for writing the AeroDyn FF files. ---------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_BTS), "WrADFF", "Output AeroDyn FF files? [RootName.bts]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for writing the BLADED FF files. -----------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_WND) , "WrBLFF", "Output BLADED FF files? [RootName.wnd]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for writing the AeroDyn tower files. --------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_TWR), "WrADTWR", "Output tower data? [RootName.twr]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_UVW), "WrFMTFF", "Output formatted FF files? [RootName.u, .v, .w]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for writing coherent time series files. --------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
+   CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
+                  "Scale IEC turbulence models to specified standard deviation?",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      
+      ! we'll check the errors before going to the next section of the input file
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   !===============================================================================================================================
+   ! Read the turbine/model specifications.
+   !===============================================================================================================================
+
+   CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 1",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      
+   CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%NumGrid_Z, "NumGrid_Z", "Vertical grid-point matrix dimension [-]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%NumGrid_Y, "NumGrid_Y", "Horizontal grid-point matrix dimension [-]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the time step. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%TimeStep, "TimeStep", "Time step [seconds]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the analysis time. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%AnalysisTime, "AnalysisTime", "Analysis time [seconds]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the usable time. ---------------------------------------------
+   CALL ReadVar( UI, InFile, Line, "UsableTime", "Usable output time [seconds]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! Check if usable time is "ALL" (for periodic files) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+         READ( Line, *, IOSTAT=ErrStat2) p%grid%UsableTime
+   
+         IF ( ErrStat2 /= 0 ) THEN ! Line didn't contian a number
+            CALL Conv2UC( Line )
+            IF ( TRIM(Line) == 'ALL' ) THEN
+               p%grid%Periodic   = .TRUE.
+               p%grid%UsableTime = p%grid%AnalysisTime
+            ELSE
+               CALL SetErrStat( ErrID_Fatal, 'The usable output time must be a number greater than zero (or the string "ALL").', &
+                                ErrStat, ErrMsg, 'ReadInputFile' )
+               CALL Cleanup()
+               RETURN
+            END IF
+         ELSE
+            p%grid%Periodic = .FALSE.
+         END IF
+      ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end check for UsableTime = "ALL" (periodic)
+
+      ! ------------ Read in the hub height. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%HubHt, "HubHt", "Hub height [m]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the grid height. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%GridHeight, "GridHeight", "Grid height [m]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the grid width. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%grid%GridWidth, "GridWidth", "Grid width [m]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the vertical flow angle. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%met%VFlowAng, "VFlowAng", "Vertical flow angle [degrees]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the horizontal flow angle. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%met%HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+
+!..................................................................................................................................
+!  Do some error checking on the runtime options and turbine/model specifications before we read the meteorology data
+!..................................................................................................................................
+
+   IF ( p%IEC%ScaleIEC > 2 .OR. p%IEC%ScaleIEC < 0 ) CALL SetErrStat( ErrID_Fatal, 'The value for parameter ScaleIEC must be 0, 1, or 2.',    ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%NumGrid_Z < 2 )                       CALL SetErrStat( ErrID_Fatal, 'The matrix must be >= 2x2.',                              ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%NumGrid_Y < 2 )                       CALL SetErrStat( ErrID_Fatal, 'The matrix must be >= 2x2.',                              ErrStat, ErrMsg, 'ReadInputFile') 
+   IF ( 0.5*p%grid%GridHeight > p%grid%HubHt  )      CALL SetErrStat( ErrID_Fatal, 'The hub must be higher than half of the grid height.',    ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%GridWidth <=  0.0_ReKi )              CALL SetErrStat( ErrID_Fatal, 'The grid width must be greater than zero.',               ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%HubHt <=  0.0 )                       CALL SetErrStat( ErrID_Fatal, 'The hub height must be greater than zero.',               ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%AnalysisTime <=  0.0 )                CALL SetErrStat( ErrID_Fatal, 'The analysis time must be greater than zero.',            ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%TimeStep <=  0.0 )                    CALL SetErrStat( ErrID_Fatal, 'The time step must be greater than zero.',                ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( ABS( p%met%VFlowAng ) > 45.0 )               CALL SetErrStat( ErrID_Fatal, 'The vertical flow angle must not exceed +/- 45 degrees.', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%grid%UsableTime <=  0.0 )                  CALL SetErrStat( ErrID_Fatal, 'The usable output time must be a number greater than zero'&
+                                                                                                                   //' or the string "ALL".', ErrStat, ErrMsg, 'ReadInputFile')
+      
+!..................................................................................................................................
+!  initialize secondary parameters that will be used to calculate default values in the meteorological boundary conditions section
+!..................................................................................................................................
+      ! Initialize the RNG (for computing "default" values that contain random variates)
+   CALL RandNum_Init(p%RNG, OtherSt_RandNum, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+            
+   ! ***** Calculate the diameter of the rotor disk *****
+   p%grid%RotorDiameter = MIN( p%grid%GridWidth, p%grid%GridHeight )
+   
+      ! we'll check the errors before going to the next section of the input file
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   !===============================================================================================================================
+   ! Read the meteorological boundary conditions.
+   !===============================================================================================================================
+   
+   CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 1",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      
+   CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the turbulence model. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%met%TurbModel, "TurbModel", "spectral model",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+         ! Verify turbulence model is valid (for default values later) >>>>>>>>>>>>>>>>>>>>>>
+      p%met%TurbModel = ADJUSTL( p%met%TurbModel )
+      CALL Conv2UC( p%met%TurbModel )
+
+      p%met%IsIECModel = .FALSE.
+      SELECT CASE ( TRIM(p%met%TurbModel) )
+         CASE ( 'IECKAI' )
+            p%met%TMName = 'IEC Kaimal'
+            p%met%TurbModel_ID = SpecModel_IECKAI
+            p%met%IsIECModel = .TRUE.
+         CASE ( 'IECVKM' )
+            p%met%TMName = 'IEC von Karman'
+            p%met%TurbModel_ID = SpecModel_IECVKM
+            p%met%IsIECModel = .TRUE.
+         CASE ( 'TIDAL' )
+            p%met%TMName = 'Tidal Channel Turbulence'
+            p%met%TurbModel_ID = SpecModel_TIDAL
+         CASE ( 'RIVER' )
+            p%met%TMName = 'River Turbulence'
+            p%met%TurbModel_ID = SpecModel_RIVER
+         CASE ( 'SMOOTH' )
+            p%met%TMName = 'RISO Smooth Terrain'
+            p%met%TurbModel_ID = SpecModel_SMOOTH
+         CASE ( 'WF_UPW' )
+            p%met%TMName = 'NREL Wind Farm Upwind'
+            p%met%TurbModel_ID = SpecModel_WF_UPW
+         CASE ( 'WF_07D' )
+            p%met%TMName = 'NREL 7D Spacing Wind Farm'
+            p%met%TurbModel_ID = SpecModel_WF_07D
+         CASE ( 'WF_14D' )
+            p%met%TMName = 'NREL 14D Spacing Wind Farm'
+            p%met%TurbModel_ID = SpecModel_WF_14D
+         CASE ( 'NONE'   )
+            p%met%TMName = 'Steady wind components'
+            p%met%TurbModel_ID = SpecModel_NONE
+         CASE ( 'MODVKM' )
+            p%met%TMName = 'Modified von Karman'
+            p%met%TurbModel_ID = SpecModel_MODVKM
+            p%met%IsIECModel = .TRUE.
+         CASE ( 'API' )
+            p%met%TMName = 'API'
+            p%met%TurbModel_ID = SpecModel_API
+            p%met%IsIECModel = .TRUE.
+         CASE ( 'NWTCUP' )
+            p%met%TMName = 'NREL National Wind Technology Center'
+            p%met%TurbModel_ID = SpecModel_NWTCUP
+         CASE ( 'GP_LLJ' )
+            p%met%TMName = 'Great Plains Low-Level Jet'
+            p%met%TurbModel_ID = SpecModel_GP_LLJ
+         CASE ( 'USRVKM' )
+            p%met%TMName = 'von Karman model with user-defined specifications'
+            p%met%TurbModel_ID = SpecModel_USRVKM
+         CASE ( 'USRINP' )
+            p%met%TMName = 'User-input uniform spectra'
+            p%met%TurbModel_ID = SpecModel_USER
+         CASE ( 'TIMESR' )
+            p%met%TMName = 'User-input time series'
+            p%met%TurbModel_ID = SpecModel_TimeSer                        
+         CASE DEFAULT
+   !BONNIE: todo: add the UsrVKM model to this list when the model is complete as well as USRINP
+            CALL SetErrStat( ErrID_Fatal, 'The turbulence model must be one of the following: "IECKAI", "IECVKM", "SMOOTH",' &
+                       //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "RIVER", "API", "USRINP", "TIMESR" "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
+            CALL Cleanup()
+            RETURN
+
+         END SELECT  ! TurbModel
+      
+         ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end TurbModel verification
+         
+!bjj: todo: verify that the API model sets the parameters for IECKAI as well (because it's using IECKAI for the v and w components)
+
+      ! ------------ Read in the UserInputFile------------------- ---------------------------------------------
+   CALL ReadVar( UI, InFile, UserInputFile, "UserInputFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   !UserInputFile = "UsrSpec.inp"
+   IF ( PathIsRelative( UserInputFile ) ) UserInputFile = TRIM(PriPath)//TRIM(UserInputFile)
+
+      ! Read the inputs from the user input file: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      IF (p%met%TurbModel_ID == SpecModel_USER) THEN
+            CALL GetUSRspec(UserInputFile, p, UnEc, ErrStat2, ErrMsg2)
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      END IF
+      ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+      ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
+   CALL ReadVar( UI, InFile, Line, "IECstandard", "Number of the IEC standard",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      ! Process this line for IEC standard & edition & IECeditionStr >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      CALL ProcessLine_IECstandard( Line, p%met%IsIECModel, p%met%TurbModel_ID, p%IEC%IECstandard, p%IEC%IECedition, p%IEC%IECeditionStr, ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF         
+      ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end processing of IECstandard input variable
+
+      ! ------------ Read in the IEC turbulence characteristic. ---------------------------------------------
+   CALL ReadVar( UI, InFile, Line, "IECturbc", "IEC turbulence characteristic",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! Process this line for NumTurbInp, IECPerTurbInt, IECTurbC, and KHtest >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      CALL ProcessLine_IECTurbc(Line, p%met%IsIECModel, p%IEC%IECstandard, p%IEC%IECedition, p%IEC%IECeditionStr, &
+                                p%IEC%NumTurbInp, p%IEC%IECTurbC, p%IEC%PerTurbInt, p%met%KHtest, ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+!*** TO DO: fix this (move it somewhere more appropriate)
+      IF (p%met%KHtest) THEN
+         IF ( p%met%TurbModel_ID /= SpecModel_NWTCUP ) CALL SetErrStat( ErrID_Fatal, 'The KH test can be used with the "NWTCUP" spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
 
          IF ( .NOT. p%WrFile(FileExt_CTS) ) THEN
             CALL WRScr( ' Coherent turbulence time step files must be generated when using the "KHTEST" option.' )
             p%WrFile(FileExt_CTS)  = .TRUE.
          ENDIF
-
-      ELSE
-         p%met%KHtest = .FALSE.
-      ENDIF
-
-
-         ! These variables are not used for non-IEC turbulence
-
-      p%IEC%IECedition = 0
-      p%IEC%NumTurbInp = .FALSE.
-      p%IEC%PerTurbInt = 0.0
-
-   ENDIF
-
+      END IF
+      ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end processing of IECturbc input variable
    
    ! ------------ Read in the IEC wind turbulence type ---------------------------------------------
-
-CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type")
+CALL ReadVar( UI, InFile, Line, "IEC_WindType", "IEC turbulence type",ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ) THEN
 
@@ -635,10 +585,11 @@ CALL ReadVar( UI, InFile, Line, "the IEC turbulence type", "IEC turbulence type"
 
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
 UseDefault = .TRUE.
-p%IEC%ETMc = 2;
-CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "the ETM c parameter", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', US, &
-                      UseDefault, IGNORE=(p%IEC%IEC_WindType /= IEC_ETM ))
-
+p%IEC%ETMc = 2.0_ReKi;
+CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "ETMc", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', UnEc, &
+                      UseDefault, ErrStat2, ErrMsg2, IGNORE=(p%IEC%IEC_WindType /= IEC_ETM ))
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   
    IF ( p%IEC%ETMc <= 0. ) THEN
       CALL TS_Abort('The ETM "c" parameter must be a positive number');
    ENDIF
@@ -662,7 +613,8 @@ SELECT CASE ( p%met%TurbModel_ID )
       p%met%WindProfileType = 'IEC'
 END SELECT
 
-CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "the wind profile type", "Wind profile type", US, UseDefault ) !converts WindProfileType to upper case
+CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Wind profile type", UnEc, UseDefault, ErrStat2, ErrMsg2) !converts WindProfileType to upper case
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! Make sure the variable is valid for this turbulence model
 
@@ -703,7 +655,8 @@ CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "the wind profile type"
 
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
 
-CALL ReadVar( UI, InFile, p%met%RefHt, "the reference height", "Reference height [m]")
+CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( p%met%RefHt <=  0.0 .AND. p%met%WindProfileType(1:1) /= 'U' )  THEN
       CALL TS_Abort ( 'The reference height must be greater than zero.' )
@@ -719,8 +672,9 @@ IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1
 ! If we specify a Ustar (i.e. if Ustar /= "default") then we can enter "default" here,
 ! otherwise, we get circular logic...
 
-   CALL ReadRVarDefault( UI, InFile, p%met%URef, "the reference wind speed", "Reference wind speed [m/s]", US, UseDefault, &
+   CALL ReadRVarDefault( UI, InFile, p%met%URef, "URef", "Reference wind speed [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                      IGNORE=IsUnusedParameter ) ! p%IEC%IEC_WindType > IEC_ETM == EWM models
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    p%met%NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
 
@@ -731,7 +685,7 @@ IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1
 
    ELSEIF ( p%met%WindProfileType(1:1) == 'U' ) THEN ! for user-defined wind profiles, we overwrite RefHt and URef because they don't mean anything otherwise
       p%met%RefHt = p%grid%HubHt
-      CALL GetUSR( UI, InFile, 37, p%met, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 37
+      CALL GetUSR( UI, InFile, 39, p%met, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 39
       IF (ErrStat >= AbortErrLev) RETURN
       p%met%URef = getVelocity(p%met%URef, p%met%RefHt, p%met%RefHt, p%grid%RotorDiameter) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
@@ -742,7 +696,8 @@ IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1
 UseDefault = .FALSE.
 p%met%ZJetMax    = -999.9
 IsUnUsedParameter = p%met%WindProfileType(1:1) /= 'J'
-CALL ReadRVarDefault( UI, InFile, p%met%ZJetMax, "the jet height", "Jet height [m]", US, UseDefault, IGNORE=IsUnusedParameter)
+CALL ReadRVarDefault( UI, InFile, p%met%ZJetMax, "ZJetMax", "Jet height [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( .NOT. IsUnusedParameter .AND. .NOT. UseDefault ) THEN
       IF ( p%met%ZJetMax <  70.0 .OR. p%met%ZJetMax > 490.0 )  THEN
@@ -771,7 +726,8 @@ END SELECT
 getPLExp = .NOT. UseDefault
 IsUnusedParameter = INDEX( 'JLUHA', p%met%WindProfileType(1:1) ) > 0 .OR. p%IEC%IEC_WindType > IEC_ETM  !i.e. PL or IEC
 
-CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "the power law exponent", "Power law exponent", US, UseDefault, IGNORE=IsUnusedParameter)
+CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "PLExp", "Power law exponent", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( .NOT. IsUnusedParameter .AND. .NOT. UseDefault ) THEN  ! We didn't use a default (we entered a number on the line)
       getPLExp = .FALSE.
@@ -806,8 +762,9 @@ SELECT CASE ( p%met%TurbModel_ID )
 END SELECT
 IsUnusedParameter = p%met%TurbModel_ID==SpecModel_TIDAL
 
-CALL ReadRVarDefault( UI, InFile, p%met%Z0, "the roughness length", "Surface roughness length [m]", US, UseDefault, &
+CALL ReadRVarDefault( UI, InFile, p%met%Z0, "Z0", "Surface roughness length [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                        IGNORE=IsUnusedParameter)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( p%met%Z0 <= 0.0 ) THEN
       CALL TS_Abort ( 'The surface roughness length must be a positive number or "default".')
@@ -815,14 +772,17 @@ CALL ReadRVarDefault( UI, InFile, p%met%Z0, "the roughness length", "Surface rou
 
       
    
-   !=================================================================================
+   !===============================================================================================================================
    ! Read the meteorological boundary conditions for non-IEC models. !
-   !=================================================================================
+   !===============================================================================================================================
 
 IF ( .NOT. p%met%IsIECModel .OR. p%met%TurbModel_ID == SpecModel_MODVKM  ) THEN  
 
-   CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1" )
-   CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2" )
+   CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1", ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+   CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2", ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
 
 
@@ -831,7 +791,8 @@ IF ( .NOT. p%met%IsIECModel .OR. p%met%TurbModel_ID == SpecModel_MODVKM  ) THEN
    UseDefault = .TRUE.
    p%met%Latitude   = 45.0
 
-   CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", US, UseDefault)
+   CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( ABS(p%met%Latitude) < 5.0 .OR. ABS(p%met%Latitude) > 90.0 ) THEN
          CALL TS_Abort( 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.' )
@@ -854,7 +815,8 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
       ! ------------ Read in the gradient Richardson number, RICH_NO. ---------------------------------------------
 
-   CALL ReadVar( UI, InFile, p%met%Rich_No, "the gradient Richardson number", "Gradient Richardson number")
+   CALL ReadVar( UI, InFile, p%met%Rich_No, "RICH_NO", "Gradient Richardson number",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( p%met%KHtest ) THEN
       IF ( p%met%Rich_No /= 0.02 ) THEN
@@ -933,7 +895,9 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
    END SELECT
 
-   CALL ReadRVarDefault( UI, InFile, p%met%Ustar, "the friction or shear velocity", "Friction or shear velocity [m/s]", US, UseDefault )
+   CALL ReadRVarDefault( UI, InFile, p%met%Ustar, "UStar", "Friction or shear velocity [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
 
    IF ( p%met%Uref < 0.0 .AND. UseDefault ) THEN  ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
       CALL TS_Abort( 'The reference wind speed and friction velocity cannot both be "default."')
@@ -1011,8 +975,9 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       ENDIF
    ENDIF
 
-   CALL ReadRVarDefault( UI, InFile, p%met%ZI, "the mixing layer depth", "Mixing layer depth [m]", US, UseDefault, &
+   CALL ReadRVarDefault( UI, InFile, p%met%ZI, "ZI", "Mixing layer depth [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                                                                   IGNORE=(p%met%ZL>=0. .AND. p%met%TurbModel_ID /= SpecModel_GP_LLJ) )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( ( p%met%ZL < 0.0 ) .AND. ( p%met%ZI <= 0.0 ) ) THEN
          CALL TS_Abort ( 'The mixing layer depth must be a positive number for unstable flows.')
@@ -1026,8 +991,10 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
        ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
    UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "the mean hub u'w' Reynolds stress", &
-                                            "Mean hub u'w' Reynolds stress", US, UseDefault, IGNORESTR = p%met%UWskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "PC_UW", &
+                                            "Mean hub u'w' Reynolds stress", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UWskip )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
    IF (.NOT. p%met%UWskip) THEN
       TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
 
@@ -1042,13 +1009,15 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
    UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "the mean hub u'v' Reynolds stress", &
-                                            "Mean hub u'v' Reynolds stress", US, UseDefault, IGNORESTR = p%met%UVskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "PC_UV", &
+                                            "Mean hub u'v' Reynolds stress", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UVskip )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the mean hub v'w' Reynolds stress, PC_VW ---------------------------------------------
    UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "the mean hub v'w' Reynolds stress", &
-                                            "Mean hub v'w' Reynolds stress", US, UseDefault, IGNORESTR = p%met%VWskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "PC_VW", &
+                                            "Mean hub v'w' Reynolds stress", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%VWskip )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
    CALL GetDefaultCoh( p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
@@ -1057,8 +1026,10 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    InCVar(1) = p%met%InCDec(1)
    InCVar(2) = p%met%InCohB(1)
 
-   CALL ReadRAryDefault( UI, InFile, InCVar, "the u-component coherence parameters", &
-                                             "u-component coherence parameters", US, UseDefault)
+   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec1", &
+                                             "u-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   
    p%met%InCDec(1) = InCVar(1)
    p%met%InCohB(1) = InCVar(2)
 
@@ -1072,8 +1043,9 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    InCVar(1) = p%met%InCDec(2)
    InCVar(2) = p%met%InCohB(2)
 
-   CALL ReadRAryDefault( UI, InFile, InCVar, "the v-component coherence parameters",  &
-                                             "v-component coherence parameters", US, UseDefault)
+   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec2",  &
+                                             "v-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    p%met%InCDec(2) = InCVar(1)
    p%met%InCohB(2) = InCVar(2)
@@ -1088,8 +1060,9 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    InCVar(1) = p%met%InCDec(3)
    InCVar(2) = p%met%InCohB(3)
 
-   CALL ReadRAryDefault( UI, InFile, InCVar, "the w-component coherence parameters", &
-                                             "w-component coherence parameters", US, UseDefault)
+   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec3", &
+                                             "w-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    p%met%InCDec(3) = InCVar(1)
    p%met%InCohB(3) = InCVar(2)
@@ -1102,28 +1075,34 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
    UseDefault = .TRUE.
    p%met%CohExp     = 0.0    ! was 0.25
-   CALL ReadRVarDefault( UI, InFile, p%met%CohExp, "the coherence exponent", "Coherence exponent", US, UseDefault)
+   CALL ReadRVarDefault( UI, InFile, p%met%CohExp, "CohExp", "Coherence exponent", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( p%met%COHEXP < 0.0 ) THEN
          CALL TS_Abort ( 'The coherence exponent must be non-negative.')
       ENDIF
 
 
-         !=================================================================================
-         ! Read the Coherent Turbulence Scaling Parameters, if necessary.  !
-         !=================================================================================
+   !===============================================================================================================================
+   ! Read the Coherent Turbulence Scaling Parameters, if necessary.  
+   !===============================================================================================================================
 
    IF ( p%WrFile(FileExt_CTS) ) THEN
 
-      CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 1" )
-      CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 2" )
+      CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 1", ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 2", ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
 
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
 
-      CALL ReadVar( UI, InFile, p_CohStr%CTEventPath, "the path of the coherent turbulence events", "Coherence events path")
+      CALL ReadVar( UI, InFile, p_CohStr%CTEventPath, "CTEventPath", "Coherence events path",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      CALL ReadVar( UI, InFile, Line, "the event file type", "Event file type")
+      CALL ReadVar( UI, InFile, Line, "CTEventFile", "Event file type",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
 
       IF ( p%met%KHtest ) THEN
@@ -1155,31 +1134,25 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
 
          ! ------------ Read the Randomization Flag, Randomize -----------------------------------
-
-      CALL ReadVar( UI, InFile, Randomize, "the randomization flag", "Randomize CT Scaling")
-
+      CALL ReadVar( UI, InFile, Randomize, "Randomize", "Randomize CT Scaling",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( p%met%KHtest ) THEN
          Randomize = .FALSE.
          CALL WrScr( ' Billow will cover rotor disk for KH test. ' )
       ENDIF
 
-
-
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
-
-      CALL ReadVar( UI, InFile, p_CohStr%DistScl, "the disturbance scale", "Disturbance scale")
-
+      CALL ReadVar( UI, InFile, p_CohStr%DistScl, "DistScl", "Disturbance scale",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
          ! ------------ Read the Lateral Fractional Location of tower centerline in wave, CTLy ----------
-
-      CALL ReadVar( UI, InFile, p_CohStr%CTLy, "the fractional location of tower centerline from right", &
-                           "Location of tower centerline")
+      CALL ReadVar( UI, InFile, p_CohStr%CTLy, "CTLy", "Location of tower centerline",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
          ! ------------ Read the Vertical Fraction Location of hub in wave, CTLz ------------------------
-
-      CALL ReadVar( UI, InFile, p_CohStr%CTLz, "the fractional location of hub height from the bottom", &
-                     "Location of hub height")
+      CALL ReadVar( UI, InFile, p_CohStr%CTLz, "CTLz", "Location of hub height",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( p%met%KHtest ) THEN
             p_CohStr%DistScl = 1.0
@@ -1229,7 +1202,8 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
 
-      CALL ReadVar( UI, InFile, p_CohStr%CTStartTime, "the minimum start time for coherent structures", "CTS Start Time")
+      CALL ReadVar( UI, InFile, p_CohStr%CTStartTime, "CTStartTime", "CTS Start Time",ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       p_CohStr%CTStartTime = MAX( p_CohStr%CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
 
@@ -1241,13 +1215,6 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
    p%met%Rich_No = 0.0                       ! Richardson Number in neutral conditions
    p%met%COHEXP  = 0.0                       ! Coherence exponent
    
-   !IF ( p%IEC%IECedition == 3 ) THEN
-   !   p%met%IncDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
-   !ELSE
-   !   p%met%IncDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
-   !ENDIF
-   !
-
       ! The following variables are not used in the IEC calculations
 
    p%met%ZL      = 0.0                       ! M-O z/L parameter
@@ -1276,15 +1243,29 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
 ENDIF
 
 
+IF ( p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
+   CALL ReadUSRTimeSeries(UserInputFile, p, UnEc, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+END IF
+
+
    ! Done reading the input file.
 
-CLOSE (UI)
-
+CALL Cleanup()
 
 RETURN
-END SUBROUTINE GetInput
+CONTAINS
+!.........................................
+SUBROUTINE Cleanup()
+   
+      IF ( UI   > 0 ) CLOSE( UI)
+      IF ( UnEc > 0 ) CLOSE( UnEc )
+   
+   END SUBROUTINE Cleanup   
+!.........................................
+END SUBROUTINE ReadInputFile
 !=======================================================================
-SUBROUTINE GetFiles(InFile, RootName, DescStr)
+SUBROUTINE OpenSummaryFile(RootName, DescStr)
 
   ! This subroutine is used to open the summary output file.
 
@@ -1292,12 +1273,10 @@ USE              TSMods
 
 IMPLICIT         NONE
 
-CHARACTER(*), INTENT(IN)  :: InFile    ! name of the primary TurbSim input file
-CHARACTER(*), INTENT(OUT) :: RootName  ! rootname of the primary TurbSim input file
+CHARACTER(*), INTENT(IN)  :: RootName  ! rootname of the primary TurbSim input file
 CHARACTER(*), INTENT(OUT) :: DescStr   ! string describing time TurbSim files were generated
 
 
-CALL GetRoot( InFile, RootName )
 
 
    ! Open summary file.
@@ -1318,7 +1297,7 @@ DescStr = 'This full-field file was '//TRIM(DescStr)
 
 
 RETURN
-END SUBROUTINE GetFiles
+END SUBROUTINE OpenSummaryFile
 !=======================================================================
 SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, ErrStat, ErrMsg)
 
@@ -1504,15 +1483,18 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, ErrStat, ErrMsg)
 
 END SUBROUTINE GetUSR
 !=======================================================================
-SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
+!> Read the input file for user-defined spectra.
+SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
 
-   USE                                   TSMods, ONLY: p          ! Type of turbulence model
+   IMPLICIT NONE
 
-   IMPLICIT                              NONE
+   TYPE(TurbSim_ParameterType),     INTENT(INOUT) :: p                              !< Simulation parameters
+   INTEGER(IntKi),                  INTENT(IN   ) :: UnEc                           !< Echo file unit number
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat                        !< Error level
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg                         !< Message describing error
+   CHARACTER(*),                    INTENT(IN)    :: FileName                       !< Name of the input file
 
-   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
-   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
-   CHARACTER(*), INTENT(IN)           :: FileName                       ! Name of the input file
+      ! local variables
    CHARACTER(200)                     :: LINE
 
    REAL(ReKi)                         :: Freq_USR_Tmp
@@ -1536,47 +1518,51 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
    
       ! --------- Open the file ---------------
 
-   CALL GetNewUnit( USpec, ErrStat, ErrMsg )
-   CALL OpenFInpFile( USpec, FileName, ErrStat, ErrMsg )
-   IF (ErrStat >= AbortErrLev) RETURN
+   CALL GetNewUnit( USpec, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSR')
+      
+   CALL OpenFInpFile( USpec, FileName, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSR')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
 
    CALL WrScr1(' Reading the user-defined spectra input file "'//TRIM(FileName)//'".' )
 
 
       ! --------- Read the comment lines at the beginning of the file ---------------
    DO I=1,3
-      READ ( USpec, '(A)', IOSTAT=IOAstat ) LINE
-
-      IF ( IOAstat /= 0 ) THEN
-         CALL SetErrStat(ErrID_Fatal, 'Could not read entire input file for user-defined spectra.' , ErrStat, ErrMsg, 'GetUSR')
-         CALL Cleanup()
-         RETURN
-      ENDIF
+      CALL ReadCom( USpec, FileName, "user-spectra header line #"//TRIM(Num2LStr(I)), ErrStat2, ErrMsg2, UnEc)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
    ENDDO
 
 
       ! ---------- Read the size of the arrays --------------------------------------------
-   CALL ReadVar( USpec, FileName, p%met%NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra", ErrStat2, ErrMsg2 )
+   CALL ReadVar( USpec, FileName, p%met%NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-
-   IF ( p%met%NumUSRf < 3 ) THEN
-      CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, 'GetUSR')
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-   DO I=1,3
-         ! ---------- Read the scaling for the arrays --------------------------------------------
-      CALL ReadVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-
-      IF ( SpecScale(I) <= 0. ) THEN
-         CALL SetErrStat(ErrID_Fatal, 'The scaling value for the user-defined spectra must be positive.' , ErrStat, ErrMsg, 'GetUSR')
+      IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
       ENDIF
-   ENDDO
 
+
+   DO I=1,3
+         ! ---------- Read the scaling for the arrays --------------------------------------------
+      CALL ReadVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+
+   ENDDO
+      
+   IF ( p%met%NumUSRf < 3    ) CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, 'GetUSR')
+   IF ( ANY(SpecScale <= 0.) ) CALL SetErrStat(ErrID_Fatal, 'The scaling value for the user-defined spectra must be positive.' , ErrStat, ErrMsg, 'GetUSR')
+   
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF   
+   
       ! Allocate the data arrays
    CALL AllocAry( p%met%USR_Freq,  p%met%NumUSRf, 'USR_Freq (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
    CALL AllocAry( p%met%USR_Uspec, p%met%NumUSRf, 'USR_Uspec (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
@@ -1591,7 +1577,7 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
 
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
-      CALL ReadCom( USpec, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2 )
+      CALL ReadCom( USpec, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
    ENDDO
 
@@ -1665,6 +1651,7 @@ SUBROUTINE GetUSRSpec(FileName,ErrStat,ErrMsg)
       ! --------- Close the file ---------------------------------------
 
    CALL Cleanup()
+   RETURN
    
 CONTAINS
    SUBROUTINE Cleanup()
@@ -1677,7 +1664,184 @@ CONTAINS
 END SUBROUTINE GetUSRSpec
 
 !=======================================================================
-SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEch, Def, IGNORE )
+!> Read the input file for user-defined time series
+SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
+
+   IMPLICIT NONE
+
+   TYPE(TurbSim_ParameterType),     INTENT(INOUT) :: p                              !< Simulation parameters
+   INTEGER(IntKi),                  INTENT(IN   ) :: UnEc                           !< Echo file unit number
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat                        !< Error level
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg                         !< Message describing error
+   CHARACTER(*),                    INTENT(IN)    :: FileName                       !< Name of the input file
+
+      ! local variables
+   INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 15          ! Number of lines in the input file before the time series start. IMPORTANT:  any changes to the number of lines in the header must be reflected here
+      
+   INTEGER(IntKi)                                 :: UnIn                           ! unit number for reading input file
+   INTEGER(IntKi)                                 :: I                              ! loop counter
+   INTEGER(IntKi)                                 :: IPoint                         ! loop counter on number of points
+   INTEGER(IntKi)                                 :: IVec                           ! loop counter on velocity components being read
+   INTEGER(IntKi)                                 :: nComp                          ! number of velocity components that may be contained in the file
+   INTEGER(IntKi)                                 :: ErrStat2                       ! Error level (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                        ! Message describing error (local)
+   
+   CHARACTER(200)                                 :: FormStr          
+   CHARACTER(1)                                   :: tmpChar          
+   real(reKi)                                     :: tmpAry(3)
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! --------- Open the file ---------------
+
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      
+   CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+
+   CALL WrScr1(' Reading the user-defined time-series input file "'//TRIM(FileName)//'".' )
+   
+   IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(TurbSim_Ver%Name)//' user time-series input file "'//TRIM( FileName )//'":'
+
+   
+   do i=1,3
+      CALL ReadCom( UnIn, FileName, "Header #"//TRIM(Num2Lstr(i))//"for user time-series input", ErrStat2, ErrMsg2, UnEc )   
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   end do
+      
+   CALL ReadVar( UnIn, FileName, p%usr%containsW, 'containsW', 'Does the time series contain w component velocities?', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         
+   CALL ReadVar( UnIn, FileName, p%usr%nPoints, 'nPoints', 'Number of time series points contained in this file', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+         
+   IF ( p%usr%nPoints < 1 ) THEN
+      CALL SetErrStat(ErrID_Fatal, 'user time-series input: nPoints must be at least 1.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL Cleanup()
+      RETURN
+   END IF
+      
+   CALL AllocAry(p%usr%PointID, p%usr%nPoints, 'PointID', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%Pointyi, p%usr%nPoints, 'Pointyi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%Pointzi, p%usr%nPoints, 'Pointzi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+      
+   do i=1,2
+      CALL ReadCom( UnIn, FileName, "Point location header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   end do
+      
+   do i=1,p%usr%nPoints
+      CALL ReadAry( UnIn, FileName, TmpAry, 3, "point"//trim(Num2Lstr(i)), "locations of points", ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   end do
+      
+   do i=1,3
+      CALL ReadCom( UnIn, FileName, "Time Series header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   end do      
+      
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF      
+      
+      
+   !.......
+         ! find out how many rows there are to the end of the file
+   p%usr%NTimes   = -1
+   ErrStat2 = 0
+   
+   DO WHILE ( ErrStat2 == 0 )
+      
+     p%usr%NTimes = p%usr%NTimes + 1
+     READ(UnIn, *, IOSTAT=ErrStat2) tmpAry(1)
+      
+   END DO
+   
+   IF (p%usr%NTimes < 2) THEN
+      CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+      ! now rewind and skip the first few lines. 
+   REWIND( UnIn, IOSTAT=ErrStat2 )  
+      IF (ErrStat2 /= 0_IntKi ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, 'ReadUSRTimeSeries')   
+         CALL Cleanup()
+      END IF 
+
+      !IMPORTANT: any changes to the number of lines in the header must be reflected in NumLinesBeforeTS
+   DO I=1,NumLinesBeforeTS         
+      READ( UnIn, '(A)', IOSTAT=ErrStat2 ) TmpChar   ! I'm going to ignore this error because we should have caught any issues the first time we read the file.      
+   END DO
+   
+   !.......
+
+   if (p%usr%containsW) then
+      nComp = 3
+   else
+      nComp = 2
+   end if
+   
+   
+   
+   CALL AllocAry(p%usr%t, p%usr%nTimes,                       't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+   
+      
+   DO i=1,p%usr%nTimes
+      READ( UnIn, *, IOSTAT=ErrStat2 ) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
+      IF (ErrStat2 /=0) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL Cleanup()
+         RETURN
+      END IF      
+   END DO   
+   
+   IF (UnEc > 0 ) THEN
+      FormStr = '('//trim(num2lstr(1+nComp*p%usr%nTimes))//'(F13.4," "))'
+      DO i=1,p%usr%nTimes
+         WRITE( UnEc, FormStr) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
+      END DO
+   END IF      
+      
+   CALL Cleanup()
+   RETURN
+   
+CONTAINS
+!...............................................
+   SUBROUTINE Cleanup()
+   
+      CLOSE( UnIn )
+   
+   
+   END SUBROUTINE Cleanup
+!...............................................
+END SUBROUTINE ReadUSRTimeSeries 
+!=======================================================================
+SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEc, Def, ErrStat, ErrMsg, IGNORE )
 
 
       ! This routine reads a single character variable from the next line of the input file.
@@ -1687,7 +1851,9 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEch, Def, 
 
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: UnEch                                           ! I/O unit for echo/summary file.
+   INTEGER, INTENT(IN)          :: UnEc                                           ! I/O unit for echo/summary file.
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                         ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                          ! Error message
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether to ignore this input
@@ -1701,7 +1867,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEch, Def, 
       ! Local declarations:
 
 
-   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr )
+   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr, ErrStat, ErrMsg, UnEc)
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
@@ -1728,7 +1894,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEch, Def, 
    RETURN
 END SUBROUTINE ReadCVarDefault ! ( UnIn, Fil, RealVar, VarName, VarDescr )
 !=======================================================================
-SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEch, Def, IGNORE )
+SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEc, Def, ErrStat, ErrMsg, IGNORE )
 
       ! This routine reads a real array from the next line of the input file.
       ! The input is allowed to be "default"
@@ -1738,7 +1904,9 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEch, Def, 
    REAL(ReKi), INTENT(INOUT)    :: RealAry (:)                                     ! Real variable being read.
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: UnEch                                           ! I/O unit for echo/summary file.
+   INTEGER, INTENT(IN)          :: UnEc                                           ! I/O unit for echo/summary file.
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                         ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                          ! Error message
 
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
@@ -1753,7 +1921,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEch, Def, 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
 
 
-   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr ) !Maybe I should read this in explicitly...
+   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr, ErrStat, ErrMsg, UnEc)  !Maybe I should read this in explicitly...
 
    IF ( PRESENT(IGNORE) ) THEN
       IF ( IGNORE ) THEN
@@ -1792,7 +1960,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEch, Def, 
 
 END SUBROUTINE ReadRAryDefault
 !=======================================================================
-SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEch, Def, IGNORE, IGNORESTR )
+SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, ErrStat, ErrMsg, IGNORE, IGNORESTR )
 
       ! This routine reads a single real variable from the next line of the input file.
       ! The input is allowed to be "default"
@@ -1802,8 +1970,11 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEch, Def, 
    REAL(ReKi), INTENT(INOUT)    :: RealVar                                         ! Real variable being read.
 
    INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: UnEch                                           ! I/O unit for echo/summary file.
+   INTEGER, INTENT(IN)          :: UnEc                                            ! I/O unit for echo/summary file.
 
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                         ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                          ! Error message
+      
    LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
    LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
    LOGICAL, INTENT(OUT),OPTIONAL:: IGNORESTR                                       ! whether or not user requested to ignore this input
@@ -1818,7 +1989,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEch, Def, 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
 
 
-   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr )
+   CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
 
    IF ( PRESENT(IGNORE) ) THEN
 
@@ -1876,69 +2047,78 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEch, Def, 
    RETURN
 END SUBROUTINE ReadRVarDefault
 !=======================================================================
+!> This routine writes the velocity grid to a binary file.
+!! The file has a .wnd extension; scaling information is written in a summary
+!! file. A tower file with extension .twr is generated if requested, too.
+SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
-SUBROUTINE WrBinBLADED(V, USig, VSig, WSig, ErrStat, ErrMsg)
+   IMPLICIT                    NONE
 
-USE                         TSMods
-
-
-IMPLICIT                    NONE
-
-   REAL(ReKi),       INTENT(IN)    :: V     (:,:,:)                 !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-   REAL(ReKi),       INTENT(IN)    :: USig                          !< Standard deviation of U
-   REAL(ReKi),       INTENT(IN)    :: VSig                          !< Standard deviation of V
-   REAL(ReKi),       INTENT(IN)    :: WSig                          !< Standard deviation of W
-   INTEGER(IntKi),   intent(  out) :: ErrStat                       !< Error level
-   CHARACTER(*),     intent(  out) :: ErrMsg                        !< Message describing error
-
-
-REAL(ReKi)                  :: U_C1                          ! Scale for converting BLADED U data
-REAL(ReKi)                  :: U_C2                          ! Offset for converting BLADED U data
-REAL(ReKi)                  :: V_C                           ! Scale for converting BLADED V data
-REAL(ReKi)                  :: W_C                           ! Scale for converting BLADED W data
-REAL(ReKi)                  :: TI(3)                         ! Turbulence intensity for scaling data
-REAL(ReKi)                  :: ZTmp                          ! This is the vertical center of the grid
-
-INTEGER(B4Ki)               :: CFirst
-INTEGER(B4Ki)               :: CLast
-INTEGER(B4Ki)               :: CStep
-INTEGER(B4Ki)               :: I
-INTEGER(B4Ki)               :: II
-INTEGER(B4Ki)               :: IT
-INTEGER(B4Ki)               :: IY
-INTEGER(B4Ki)               :: IZ
-
-INTEGER(B4Ki)               :: IP
-INTEGER(B2Ki)               :: TmpVarray(3*p%grid%NumGrid_Y*p%grid%NumGrid_Z) ! This array holds the normalized velocities before being written to the binary file
-INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities
-
-INTEGER                     :: AllocStat
-INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
-INTEGER                     :: UATWR                                ! I/O unit for AeroDyn tower data (*.twr file).
-
-CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
+   TYPE(TurbSim_ParameterType),     INTENT(IN)    :: p                             !< TurbSim's parameters
+   REAL(ReKi),                      INTENT(IN)    :: V     (:,:,:)                 !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+   REAL(ReKi),                      INTENT(IN)    :: USig                          !< Standard deviation of U
+   REAL(ReKi),                      INTENT(IN)    :: VSig                          !< Standard deviation of V
+   REAL(ReKi),                      INTENT(IN)    :: WSig                          !< Standard deviation of W
+   INTEGER(IntKi)                 , INTENT(IN)    :: US                            !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                       !< Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                        !< Message describing error
 
 
+   REAL(ReKi)                  :: NewUSig                       ! Value of USig that will be used to scale values in the file
+   
+   REAL(ReKi)                  :: U_C1                          ! Scale for converting BLADED U data
+   REAL(ReKi)                  :: U_C2                          ! Offset for converting BLADED U data
+   REAL(ReKi)                  :: V_C                           ! Scale for converting BLADED V data
+   REAL(ReKi)                  :: W_C                           ! Scale for converting BLADED W data
+   REAL(ReKi)                  :: TI(3)                         ! Turbulence intensity for scaling data
+   REAL(ReKi)                  :: TmpU                          ! Max value of |V(:,:,1)-UHub|
+
+   INTEGER(B4Ki)               :: CFirst
+   INTEGER(B4Ki)               :: CLast
+   INTEGER(B4Ki)               :: CStep
+   INTEGER(B4Ki)               :: I
+   INTEGER(B4Ki)               :: II
+   INTEGER(B4Ki)               :: IT
+   INTEGER(B4Ki)               :: IY
+   INTEGER(B4Ki)               :: IZ
+
+   INTEGER(B4Ki)               :: IP
+   INTEGER(B2Ki)               :: TmpVarray(3*p%grid%NumGrid_Y*p%grid%NumGrid_Z) ! This array holds the normalized velocities before being written to the binary file
+   INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities
+
+   INTEGER                     :: AllocStat
+   INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
+   INTEGER                     :: UATWR                                ! I/O unit for AeroDyn tower data (*.twr file).
+
+   CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
+
+
+   
+      ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
+      ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
+      ! in this BLADED-style binary output.  TmpU is |V-UHub|
+   TmpU    = MAX( ABS(MAXVAL(V(:,:,1))-p%UHub), ABS(MINVAL(V(:,:,1))-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files         
+   NewUSig = MAX(USig,0.05*TmpU)
+   
+   
       ! Put normalizing factors into the summary file.  The user can use them to
       ! tell a simulation program how to rescale the data.
 
-   TI(1)  = MAX(100.0*Tolerance, USig) / p%UHub
-   TI(2)  = MAX(100.0*Tolerance, VSig) / p%UHub
-   TI(3)  = MAX(100.0*Tolerance, WSig) / p%UHub
+   TI(1)  = MAX(100.0*Tolerance, NewUSig) / p%UHub
+   TI(2)  = MAX(100.0*Tolerance, VSig)    / p%UHub
+   TI(3)  = MAX(100.0*Tolerance, WSig)    / p%UHub
 
    WRITE (US,"(//,'Normalizing Parameters for Binary Data (approximate statistics):',/)")
 
    FormStr = "(3X,A,' =',F9.4,A)"
-   WRITE (US,FormStr)  'UBar ', p%UHub, ' m/s'
+   WRITE (US,FormStr)  'UBar ', p%UHub,      ' m/s'
    WRITE (US,FormStr)  'TI(u)', 100.0*TI(1), ' %'
    WRITE (US,FormStr)  'TI(v)', 100.0*TI(2), ' %'
    WRITE (US,FormStr)  'TI(w)', 100.0*TI(3), ' %'
 
-   Ztmp  = ( p%grid%HubHt - p%grid%GridHeight / 2.0 - p%grid%Z(1) )  ! This is the grid offset
-
    WRITE (US,'()')
-   WRITE (US,FormStr)  'Height Offset', Ztmp,        ' m'
-   WRITE (US,FormStr)  'Grid Base    ', p%grid%Z(1), ' m'
+   WRITE (US,FormStr)  'Height Offset', ( p%grid%HubHt - p%grid%GridHeight / 2.0 - p%grid%Z(1) ),  ' m'
+   WRITE (US,FormStr)  'Grid Base    ', p%grid%Z(1),                                               ' m'
    
    WRITE (US,'()'   )
    WRITE (US,'( A)' ) 'Creating a PERIODIC output file.'
@@ -1951,8 +2131,6 @@ CHARACTER(200)               :: FormStr                                  ! Strin
    W_C  = 1000.0/( p%UHub*TI(3) )
 
 
-   ZTmp     = p%grid%Z(1) + p%grid%GridHeight/2.0  !This is the vertical center of the grid
-
    IF ( p%WrFile(FileExt_WND) )  THEN
 
       CALL GetNewUnit( UBFFW )
@@ -1963,34 +2141,34 @@ CHARACTER(200)               :: FormStr                                  ! Strin
 
                ! Put header information into the binary data file.
 
-      WRITE (UBFFW)   INT(  -99          , B2Ki )               ! -99 = New Bladed format
-      WRITE (UBFFW)   INT(    4          , B2Ki )               ! 4 = improved von karman (but needed for next 7 inputs)
-      WRITE (UBFFW)   INT(    3          , B4Ki )               ! 3 = number of wind components
-      WRITE (UBFFW)  REAL( p%met%Latitude      , SiKi )               ! Latitude (degrees)
-      WRITE (UBFFW)  REAL( p%met%Z0            , SiKi )               ! Roughness length (m)
-      WRITE (UBFFW)  REAL( Ztmp          , SiKi )               ! Reference Height (m) ( Z(1) + GridHeight / 2.0 )
-      WRITE (UBFFW)  REAL( 100.0*TI(1)   , SiKi )               ! Longitudinal turbulence intensity (%)
-      WRITE (UBFFW)  REAL( 100.0*TI(2)   , SiKi )               ! Lateral turbulence intensity (%)
-      WRITE (UBFFW)  REAL( 100.0*TI(3)   , SiKi )               ! Vertical turbulence intensity (%)
+      WRITE (UBFFW)   INT(  -99                                , B2Ki )     ! -99 = New Bladed format
+      WRITE (UBFFW)   INT(    4                                , B2Ki )     ! 4 = improved von karman (but needed for next 7 inputs)
+      WRITE (UBFFW)   INT(    3                                , B4Ki )     ! 3 = number of wind components
+      WRITE (UBFFW)  REAL( p%met%Latitude                      , SiKi )     ! Latitude (degrees)
+      WRITE (UBFFW)  REAL( p%met%Z0                            , SiKi )     ! Roughness length (m)
+      WRITE (UBFFW)  REAL( p%grid%Z(1) + p%grid%GridHeight/2.0 , SiKi )     ! Reference Height (m) ( Z(1) + GridHeight / 2.0 ) !This is the vertical center of the grid
+      WRITE (UBFFW)  REAL( 100.0*TI(1)                         , SiKi )     ! Longitudinal turbulence intensity (%)
+      WRITE (UBFFW)  REAL( 100.0*TI(2)                         , SiKi )     ! Lateral turbulence intensity (%)
+      WRITE (UBFFW)  REAL( 100.0*TI(3)                         , SiKi )     ! Vertical turbulence intensity (%)
 
-      WRITE (UBFFW)  REAL( p%grid%GridRes_Z     , SiKi )               ! grid spacing in vertical direction, in m
-      WRITE (UBFFW)  REAL( p%grid%GridRes_Y     , SiKi )               ! grid spacing in lateral direction, in m
-      WRITE (UBFFW)  REAL( p%grid%TimeStep*p%UHub , SiKi )               ! grid spacing in longitudinal direciton, in m
-      WRITE (UBFFW)   INT( p%grid%NumOutSteps/2 , B4Ki )               ! half the number of points in alongwind direction
-      WRITE (UBFFW)  REAL( p%UHub          , SiKi )               ! the mean wind speed in m/s
-      WRITE (UBFFW)  REAL( 0             , SiKi )               ! the vertical length scale of the longitudinal component in m
-      WRITE (UBFFW)  REAL( 0             , SiKi )               ! the lateral length scale of the longitudinal component in m
-      WRITE (UBFFW)  REAL( 0             , SiKi )               ! the longitudinal length scale of the longitudinal component in m
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! an unused integer
-      WRITE (UBFFW)   INT( p%RNG%RandSeed(1)   , B4Ki )               ! the random number seed
-      WRITE (UBFFW)   INT( p%grid%NumGrid_Z     , B4Ki )               ! the number of grid points vertically
-      WRITE (UBFFW)   INT( p%grid%NumGrid_Y     , B4Ki )               ! the number of grid points laterally
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! the vertical length scale of the lateral component, not used
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! the lateral length scale of the lateral component, not used
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! the longitudinal length scale of the lateral component, not used
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! the vertical length scale of the vertical component, not used
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! the lateral length scale of the vertical component, not used
-      WRITE (UBFFW)   INT( 0             , B4Ki )               ! the longitudinal length scale of the vertical component, not used
+      WRITE (UBFFW)  REAL( p%grid%GridRes_Z                    , SiKi )     ! grid spacing in vertical direction, in m
+      WRITE (UBFFW)  REAL( p%grid%GridRes_Y                    , SiKi )     ! grid spacing in lateral direction, in m
+      WRITE (UBFFW)  REAL( p%grid%TimeStep*p%UHub              , SiKi )     ! grid spacing in longitudinal direciton, in m
+      WRITE (UBFFW)   INT( p%grid%NumOutSteps/2                , B4Ki )     ! half the number of points in alongwind direction
+      WRITE (UBFFW)  REAL( p%UHub                              , SiKi )     ! the mean wind speed in m/s
+      WRITE (UBFFW)  REAL( 0                                   , SiKi )     ! the vertical length scale of the longitudinal component in m
+      WRITE (UBFFW)  REAL( 0                                   , SiKi )     ! the lateral length scale of the longitudinal component in m
+      WRITE (UBFFW)  REAL( 0                                   , SiKi )     ! the longitudinal length scale of the longitudinal component in m
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! an unused integer
+      WRITE (UBFFW)   INT( p%RNG%RandSeed(1)                   , B4Ki )     ! the random number seed
+      WRITE (UBFFW)   INT( p%grid%NumGrid_Z                    , B4Ki )     ! the number of grid points vertically
+      WRITE (UBFFW)   INT( p%grid%NumGrid_Y                    , B4Ki )     ! the number of grid points laterally
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the vertical length scale of the lateral component, not used
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the lateral length scale of the lateral component, not used
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the longitudinal length scale of the lateral component, not used
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the vertical length scale of the vertical component, not used
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the lateral length scale of the vertical component, not used
+      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the longitudinal length scale of the vertical component, not used
 
 
          ! Compute parameters for ordering output for FF AeroDyn files. (This is for BLADED compatibility.)
@@ -2025,7 +2203,7 @@ CHARACTER(200)               :: FormStr                                  ! Strin
             ENDDO ! IY
          ENDDO ! IZ
 
-         WRITE ( UBFFW )  TmpVarray(:) ! bjj: We cannot write the array including time because of stack overflow errors.. otherwise use compile option to put this on the heap instead of the stack
+         WRITE ( UBFFW )  TmpVarray ! bjj: We cannot write the array including time because of stack overflow errors.. otherwise use compile option to put this on the heap instead of the stack?
 
       ENDDO ! IT
 
@@ -2058,15 +2236,15 @@ CHARACTER(200)               :: FormStr                                  ! Strin
          CALL WrScr ( ' Generating tower binary time-series file "'//TRIM( p%RootName )//'.twr"' )
 
 
-         WRITE (UATWR)  REAL( p%grid%GridRes_Z     ,   SiKi )         ! grid spacing in vertical direction, in m
+         WRITE (UATWR)  REAL( p%grid%GridRes_Z       ,   SiKi )         ! grid spacing in vertical direction, in m
          WRITE (UATWR)  REAL( p%grid%TimeStep*p%UHub ,   SiKi )         ! grid spacing in longitudinal direciton, in m
-         WRITE (UATWR)  REAL( p%grid%Z(1)          ,   SiKi )         ! The vertical location of the highest tower grid point in m
-         WRITE (UATWR)   INT( p%grid%NumOutSteps   ,   B4Ki )         ! The number of points in alongwind direction
-         WRITE (UATWR)   INT( IZ ,                     B4Ki )         ! the number of grid points vertically
-         WRITE (UATWR)  REAL( p%UHub ,            SiKi )         ! the mean wind speed in m/s
-         WRITE (UATWR)  REAL( 100.0*TI(1),             SiKi )         ! Longitudinal turbulence intensity
-         WRITE (UATWR)  REAL( 100.0*TI(2),             SiKi )         ! Lateral turbulence intensity
-         WRITE (UATWR)  REAL( 100.0*TI(3),             SiKi )         ! Vertical turbulence intensity
+         WRITE (UATWR)  REAL( p%grid%Z(1)            ,   SiKi )         ! The vertical location of the highest tower grid point in m
+         WRITE (UATWR)   INT( p%grid%NumOutSteps     ,   B4Ki )         ! The number of points in alongwind direction
+         WRITE (UATWR)   INT( IZ ,                       B4Ki )         ! the number of grid points vertically
+         WRITE (UATWR)  REAL( p%UHub ,                   SiKi )         ! the mean wind speed in m/s
+         WRITE (UATWR)  REAL( 100.0*TI(1),               SiKi )         ! Longitudinal turbulence intensity
+         WRITE (UATWR)  REAL( 100.0*TI(2),               SiKi )         ! Lateral turbulence intensity
+         WRITE (UATWR)  REAL( 100.0*TI(3),               SiKi )         ! Vertical turbulence intensity
 
 
          ALLOCATE ( TmpTWRarray( 3*(p%grid%NPoints-I+2) ) , STAT=AllocStat )
@@ -2106,49 +2284,49 @@ CHARACTER(200)               :: FormStr                                  ! Strin
 
 END SUBROUTINE WrBinBLADED
 !=======================================================================
-SUBROUTINE WrBinTURBSIM(V, RootName, ErrStat, ErrMsg)
+!> This routine writes the velocity grid to a binary file.
+!! The file has a .bts extension.
+!=======================================================================
+SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
-USE                       TSMods
+   IMPLICIT                  NONE
 
+      ! passed variables
+   TYPE(TurbSim_ParameterType),     INTENT(IN)     :: p                             !< TurbSim's parameters
+   REAL(ReKi),                      INTENT(IN)     :: V     (:,:,:)                 !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+   INTEGER(IntKi),                  intent(  out)  :: ErrStat                       !< Error level
+   CHARACTER(*),                    intent(  out)  :: ErrMsg                        !< Message describing error
 
-IMPLICIT                  NONE
+      ! local variables
+   REAL(SiKi), PARAMETER     :: IntMax   =  32767.0
+   REAL(SiKi), PARAMETER     :: IntMin   = -32768.0
+   REAL(SiKi), PARAMETER     :: IntRng   = IntMax - IntMin ! Max Range of 2-byte integer
 
-   REAL(ReKi),       INTENT(IN)    :: V     (:,:,:)                 !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-   INTEGER(IntKi),   intent(  out) :: ErrStat                       !< Error level
-   CHARACTER(*),     intent(  out) :: ErrMsg                        !< Message describing error
-   CHARACTER(*),     intent(in   ) :: RootName                      !< Rootname of output file
+   REAL(SiKi)                :: UOff                       ! Offset for the U component
+   REAL(SiKi)                :: UScl                       ! Slope  for the U component
+   REAL(ReKi)                :: VMax(3)                    ! Maximum value of the 3 wind components
+   REAL(ReKi)                :: VMin(3)                    ! Minimum value of the 3 wind components
+   REAL(SiKi)                :: VOff                       ! Offset for the V component
+   REAL(SiKi)                :: VScl                       ! Slope  for the V component
+   REAL(SiKi)                :: WOff                       ! Offset for the W component
+   REAL(SiKi)                :: WScl                       ! Slope  for the W component
 
+   INTEGER, PARAMETER        :: DecRound  = 3              ! Number of decimal places to round to
+   INTEGER(B2Ki)             :: FileID                     ! File ID, determines specific output format (if periodic or not)
+   INTEGER                   :: IC                         ! counter for the velocity component of V
+   INTEGER                   :: II                         ! counter for the point on the grid/tower
+   INTEGER                   :: IT                         ! counter for the timestep
+   INTEGER(B4Ki)             :: LenDesc                    ! Length of the description string
+   INTEGER(B4Ki)             :: NumGrid                    ! Number of points on the grid
+   INTEGER(B4Ki)             :: NumTower                   ! Number of points on the tower
+   INTEGER(B4Ki)             :: TwrStart                   ! First index of a tower point
+   INTEGER(B4Ki)             :: TwrTop                     ! The index of top of the tower (it could be on the grid instead of at the end)
 
-REAL(SiKi), PARAMETER     :: IntMax   =  32767.0
-REAL(SiKi), PARAMETER     :: IntMin   = -32768.0
-REAL(SiKi), PARAMETER     :: IntRng   = IntMax - IntMin ! Max Range of 2-byte integer
+   INTEGER(B4Ki)             :: IP
+   INTEGER(B2Ki),ALLOCATABLE :: TmpVarray(:)               ! This array holds the normalized velocities before being written to the binary file
 
-REAL(SiKi)                :: UOff                       ! Offset for the U component
-REAL(SiKi)                :: UScl                       ! Slope  for the U component
-REAL(ReKi)                :: VMax(3)                    ! Maximum value of the 3 wind components
-REAL(ReKi)                :: VMin(3)                    ! Minimum value of the 3 wind components
-REAL(SiKi)                :: VOff                       ! Offset for the V component
-REAL(SiKi)                :: VScl                       ! Slope  for the V component
-REAL(SiKi)                :: WOff                       ! Offset for the W component
-REAL(SiKi)                :: WScl                       ! Slope  for the W component
-
-INTEGER, PARAMETER        :: DecRound  = 3              ! Number of decimal places to round to
-INTEGER(B2Ki)             :: FileID                     ! File ID, determines specific output format (if periodic or not)
-INTEGER                   :: IC                         ! counter for the velocity component of V
-INTEGER                   :: II                         ! counter for the point on the grid/tower
-INTEGER                   :: IT                         ! counter for the timestep
-INTEGER(B4Ki)             :: LenDesc                    ! Length of the description string
-INTEGER(B4Ki)             :: NumGrid                    ! Number of points on the grid
-INTEGER(B4Ki)             :: NumTower                   ! Number of points on the tower
-INTEGER(B4Ki)             :: TwrStart                   ! First index of a tower point
-INTEGER(B4Ki)             :: TwrTop                     ! The index of top of the tower (it could be on the grid instead of at the end)
-
-INTEGER(B4Ki)             :: IP
-INTEGER(B2Ki),ALLOCATABLE :: TmpVarray(:)               ! This array holds the normalized velocities before being written to the binary file
-
-INTEGER                   :: AllocStat
-INTEGER                   :: UAFFW                      ! I/O unit for AeroDyn FF data (*.bts file).
-
+   INTEGER                   :: AllocStat
+   INTEGER                   :: UAFFW                      ! I/O unit for AeroDyn FF data (*.bts file).
 
 
 
@@ -2285,11 +2463,11 @@ INTEGER                   :: UAFFW                      ! I/O unit for AeroDyn F
 
    ENDDO
 
-      ALLOCATE ( TmpVarray( 3*(p%grid%NumGrid_Z*p%grid%NumGrid_Y + NumTower) ) , STAT=AllocStat )
+   ALLOCATE ( TmpVarray( 3*(p%grid%NumGrid_Z*p%grid%NumGrid_Y + NumTower) ) , STAT=AllocStat )
 
-      IF ( AllocStat /= 0 )  THEN
-         CALL TS_Abort ( 'Error allocating memory for temporary wind speed array.' )
-      ENDIF
+   IF ( AllocStat /= 0 )  THEN
+      CALL TS_Abort ( 'Error allocating memory for temporary wind speed array.' )
+   ENDIF
 
       ! Loop through time.
 
@@ -2447,7 +2625,8 @@ SUBROUTINE WrSum_UserInput( p_met, US  )
          DO I=p_met%NumUSRz,1,-1
             WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X, 3(4X,F7.2,3X), 3X,F10.2 )")  &
                                 p_met%USR_Z(I), p_met%USR_U(I), p_met%USR_WindDir(I), &
-                                p_met%USR_Sigma(I)*p_met%USR_StdScale(1), p_met%USR_Sigma(I)*p_met%USR_StdScale(2), p_met%USR_Sigma(I)*p_met%USR_StdScale(3), p_met%USR_L(I)      
+                                p_met%USR_Sigma(I)*p_met%USR_StdScale(1), p_met%USR_Sigma(I)*p_met%USR_StdScale(2), &
+                                p_met%USR_Sigma(I)*p_met%USR_StdScale(3), p_met%USR_L(I)      
          ENDDO   
       ELSE
          WRITE (US,"(A)") '  Height   Wind Speed   Horizontal Angle'
@@ -3134,7 +3313,7 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
    DO IT=1,p%grid%NumSteps
 
          ! Calculate longitudinal (UTmp), lateral (VTmp), and upward (WTmp)
-         ! values for hub station, as well as rotated (XTmp, YTmp, ZTmp) 
+         ! values for hub station, as well as rotated (UXTmp, UYTmp, UZTmp) 
          ! components applying specified flow angles.
 
          ! Add mean wind speed to the streamwise component
@@ -3692,7 +3871,222 @@ IF ( .NOT. p%WrFile(FileExt_CTS) ) RETURN
 !..................................................................................................................................
    
 END SUBROUTINE WrSum_EchoInputs
+!=======================================================================
+!> This subroutine processes the user input from the IECstandard line
+!! and splits it into the standard and edition being used
+SUBROUTINE ProcessLine_IECstandard(Line, IsIECModel, TurbModel_ID, IECstandard, IECedition, IECeditionStr, ErrStat, ErrMsg )
 
+   CHARACTER(*),   INTENT(INOUT) :: Line                !< on entry, the line from the input file. may be modified in this routine
+   LOGICAL,        INTENT(IN   ) :: IsIECModel          !< Flag to indicate if this is an IEC model
+   INTEGER(IntKi), INTENT(IN   ) :: TurbModel_ID        !< Turbulence model identifier 
+   INTEGER(IntKi), INTENT(  OUT) :: IECedition          !< IEC edition
+   INTEGER(IntKi), INTENT(  OUT) :: IECstandard         !< IEC standard
+   CHARACTER(*),   INTENT(  OUT) :: IECeditionStr       !< string describing the IEC standard/edition being used
+   
+   INTEGER(IntKi), intent(  out) :: ErrStat             !< Error level
+   CHARACTER(*),   intent(  out) :: ErrMsg              !< Message describing error
+   
+   INTEGER(IntKi)                :: IOS                 ! local error code
+   INTEGER(IntKi)                :: TmpIndex            ! index into string
+   CHARACTER(*), PARAMETER       :: IECstandardErrMsg = 'The IECstandard input parameter must be either "1", "2", or "3"' &
+                                   // ' with an optional IEC 61400-1 edition number ("1-ED2"). If specified, the edition number must be "2" or "3".'
+   
+   CHARACTER( 23), PARAMETER     :: IECeditionStr_p (3) = &   ! strings for the 
+                                   (/'IEC 61400-1 Ed. 1: 1993', &
+                                     'IEC 61400-1 Ed. 2: 1999', &
+                                     'IEC 61400-1 Ed. 3: 2005'/)            ! The string description of the IEC 61400-1 standard being used
+
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF ( .NOT. IsIECModel ) THEN  !bjj: SpecModel==SpecModel_MODVKM is not in the IEC standard
+      IECstandard   = 0
+      IECedition    = 0
+      IECeditionStr = ""
+      RETURN
+   ENDIF ! IEC   
+   
+   
+      ! Did the line contain "T" or "F", which could be interpreted by Fortran as a number?
+   CALL Conv2UC( LINE )
+   IF ( (Line(1:1) == 'T') .OR.  (Line(1:1) == 'F') ) THEN
+      CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg, ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+      RETURN
+   ENDIF
+
+   
+      ! Did the user enter an edition number?
+   TmpIndex = INDEX(Line, "-ED")
+   IF ( TmpIndex > 0 ) THEN
+      READ ( Line(TmpIndex+3:),*,IOSTAT=IOS ) IECedition
+
+      IF (IOS /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg, ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+         RETURN
+      END IF
+         
+      IF ( IECedition < 1 .OR. IECedition > 3 ) THEN
+         CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg, ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+         RETURN
+      ENDIF
+
+      Line = Line(1:TmpIndex-1)
+   ELSE
+      IECedition = 0
+   ENDIF
+
+      ! What standard did the user enter?   
+   READ ( Line,*,IOSTAT=IOS ) IECstandard
+
+   SELECT CASE ( IECstandard )
+         
+   CASE ( 1 ) ! use the IEC 64100-1 standard, either edition 2 or 3
+      IF (IECedition < 1 ) THEN  ! Set up the default
+         IF ( TurbModel_ID == SpecModel_IECVKM .OR. TurbModel_ID == SpecModel_USRVKM ) THEN
+            IECedition = 2   ! The von Karman model is not specified in edition 3 of the -1 standard
+         ELSE
+            IECedition = 3
+         ENDIF
+      ELSE
+         IF ( IECedition < 2 ) THEN
+            CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg, ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+            RETURN                  
+         ENDIF
+      ENDIF
+      IECeditionSTR = IECeditionStr_p(IECedition)
+
+   CASE ( 2 ) ! use the IEC 64100-2 (small turbine) standard, which the same as 64100-1, Ed. 2 with "A" or user-specified turbulence
+      IF (IECedition < 1 ) THEN  ! Set up the default
+         IECedition = 2    ! This is the edition of the -1 standard
+      ELSE
+         CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg//' The edition number cannot be specified for the 61400-2 standard.', ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+         RETURN                  
+      ENDIF
+      IECeditionSTR = 'IEC 61400-2 Ed. 2: 2005'
+
+   CASE ( 3 ) ! Use the IEC 61400-3 (Offshore) standard, which is the same as 61400-1 except it has a different power law exponent
+      IF (IECedition < 1 ) THEN  ! Set up the default
+
+         IF ( TurbModel_ID /= SpecModel_IECKAI ) THEN
+            CALL SetErrStat(ErrID_Fatal, ' The Kaimal model (IECKAI) is the only turbulence model valid for the 61400-3 standard.', ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+            RETURN                  
+         ENDIF
+         IECedition = 3    ! This is the edition of the -1 standard
+
+      ELSE
+         CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg//' The edition number cannot be specified for the 61400-3 standard.', ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+         RETURN                  
+      ENDIF
+      IECeditionSTR = 'IEC 61400-3 Ed. 1: 2006'
+
+   CASE DEFAULT
+      CALL SetErrStat(ErrID_Fatal, IECstandardErrMsg, ErrStat, ErrMsg, 'ProcessLine_IECstandard')
+      RETURN                  
+
+   END SELECT
+END SUBROUTINE ProcessLine_IECstandard
+!=======================================================================
+!> This subroutine processes the user input from the IECturbc line
+!! and splits it into the NumTurbInp, IECTurbC, and KHtest variables.
+SUBROUTINE ProcessLine_IECturbc(Line, IsIECModel, IECstandard, IECedition, IECeditionStr, NumTurbInp, IECTurbC, PerTurbInt, KHtest, ErrStat, ErrMsg)
+   REAL(ReKi)  ,   INTENT(  OUT) :: PerTurbInt          !< Percent Turbulence Intensity
+   
+   INTEGER(IntKi), INTENT(IN   ) :: IECedition          !< IEC edition
+   INTEGER(IntKi), INTENT(IN   ) :: IECstandard         !< IEC standard
+   
+   LOGICAL,        INTENT(IN   ) :: IsIECModel          !< Flag to indicate if this is an IEC model
+   LOGICAL,        INTENT(  OUT) :: NumTurbInp          !< Flag to indicate if turbulence is user-specified (as opposed to IEC standard A, B, or C)
+   LOGICAL,        INTENT(  OUT) :: KHtest              !< Flag to indicate that turbulence should be extreme, to demonstrate effect of KH billows
+   
+   CHARACTER(*),   INTENT(IN   ) :: IECeditionStr       !< string describing the IEC standard/edition being used
+   CHARACTER(1),   INTENT(  OUT) :: IECTurbC            !< IEC turbulence characteristic
+   CHARACTER(*),   INTENT(INOUT) :: Line                !< on entry, the line from the input file. may be modified in this routine
+   
+   !INTEGER(IntKi), INTENT(IN   ) :: TurbModel_ID        !< Turbulence model identifier 
+   
+   INTEGER(IntKi), intent(  out) :: ErrStat             !< Error level
+   CHARACTER(*),   intent(  out) :: ErrMsg              !< Message describing error
+   
+   INTEGER(IntKi)                :: IOS                 ! local error code
+   INTEGER(IntKi)                :: TmpIndex            ! index into string
+   CHARACTER(*), PARAMETER       :: IECstandardErrMsg = 'The IECstandard input parameter must be either "1", "2", or "3"' &
+                                   // ' with an optional IEC 61400-1 edition number ("1-ED2"). If specified, the edition number must be "2" or "3".'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF ( IsIECModel ) THEN
+      KHtest = .FALSE.
+      
+      READ (Line,*,IOSTAT=IOS) IECTurbC
+
+      CALL Conv2UC( IECTurbC )
+
+      IF ( (IECTurbC == 'T') .OR.  (IECTurbC == 'F') ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence characteristic must be either "A", "B", "C", or a real number.', ErrStat, ErrMsg, 'ProcessLine_IECturbc')
+         RETURN
+      ENDIF
+
+      ! Check to see if the entry was a number.
+
+      READ (Line,*,IOSTAT=IOS)  PerTurbInt
+
+      IF ( IOS == 0 )  THEN
+
+         ! Let's use turbulence value.
+
+         NumTurbInp = .TRUE.         
+         IECTurbC = ""
+
+      ELSE
+
+         ! Let's use one of the standard turbulence values (A or B or C).
+
+         NumTurbInp = .FALSE.
+         PerTurbInt = 0.0           ! will be set later if necessary
+         
+         IECTurbC   = ADJUSTL( Line )
+         CALL Conv2UC(  IECTurbC )
+         SELECT CASE ( IECTurbC )
+         CASE ( 'A' )
+         CASE ( 'B' )
+            IF ( IECstandard == 2 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'The IEC 61400-2 turbulence characteristic must be either "A" or a real number.', ErrStat, ErrMsg, 'ProcessLine_IECturbc')
+            ENDIF
+         CASE ( 'C' )
+            IF ( IECstandard == 2 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'The IEC 61400-2 turbulence characteristic must be either "A" or a real number.', ErrStat, ErrMsg, 'ProcessLine_IECturbc')
+            ELSEIF ( IECedition < 3 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'The turbulence characteristic for '//TRIM(IECeditionSTR )// &
+                                 ' must be either "A", "B", or a real number.', ErrStat, ErrMsg, 'ProcessLine_IECturbc')
+            ENDIF
+         CASE DEFAULT
+            CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence characteristic must be either "A", "B", "C", or a real number.', ErrStat, ErrMsg, 'ProcessLine_IECturbc')
+         END SELECT  ! IECTurbC
+
+      ENDIF
+      
+      
+
+   ELSE  
+
+      Line = ADJUSTL( Line )
+      CALL Conv2UC( Line )
+
+      KHtest = ( Line(1:6) == 'KHTEST' )
+
+         ! These variables are not used for non-IEC turbulence
+
+      NumTurbInp = .FALSE.
+      PerTurbInt = 0.0
+      IECTurbC   = ""
+      
+   ENDIF   
+   
+   
+END SUBROUTINE ProcessLine_IECturbc
 
 !=======================================================================
 END MODULE TS_FileIO

@@ -150,15 +150,16 @@ CALL DispNVD(TurbSim_Ver)
 InFile = 'TurbSim.inp'  ! default name for input file
 CALL CheckArgs( InFile )
 
+CALL GetRoot( InFile, p%RootName )
 
    ! Open input file and summary file.
 
-CALL GetFiles( InFile, p%RootName, p%DescStr )
+CALL OpenSummaryFile( p%RootName, p%DescStr )
 
 
    ! Get input parameters.
 
-CALL GetInput(InFile, ErrStat, ErrMsg)
+CALL ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
 CALL CheckError()
 
 CALL WrSum_EchoInputs() 
@@ -459,7 +460,6 @@ CALL CheckError()
 !..............................................................................
 CALL AddMeanAndRotate(p, V, U, HWindDir)
 
-TmpU = MAX( ABS(MAXVAL(U)-p%UHub), ABS(MINVAL(U)-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files
 
    ! Deallocate memory for the matrix of the steady, u-component winds.
 
@@ -503,17 +503,19 @@ IF ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)  )  THEN
    CALL WrSum_InterpolatedHubStats(p, V, US, NumGrid_Y2, NumGrid_Z2)
 
    IF ( p%WrFile(FileExt_BTS) ) THEN
-      CALL WrBinTURBSIM(V, p%RootName, ErrStat, ErrMsg)
+      CALL WrBinTURBSIM(p, V, ErrStat, ErrMsg)
       CALL CheckError()
    END IF   
+   
    
    IF ( p%WrFile(FileExt_WND) ) THEN
 
          ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
          ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
          ! in this BLADED-style binary output.  TmpU is |V-UHub|
+      TmpU = MAX( ABS(MAXVAL(V(:,:,1))-p%UHub), ABS(MINVAL(V(:,:,1))-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files         
       USig = MAX(USig,0.05*TmpU)
-      CALL WrBinBLADED(V, USig, VSig, WSig, ErrStat, ErrMsg)
+      CALL WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
       CALL CheckError()
    ENDIF
    
