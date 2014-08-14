@@ -91,6 +91,10 @@ INCLUDE 'CrvExtractCrv.f90'
 INCLUDE 'ComputeIniNodalCrv.f90'
 INCLUDE 'ComputeIniNodalTwist.f90'
 
+INCLUDE 'ComputeIniCoef.F90'
+INCLUDE 'ComputeIniNodalPositionSP.f90'
+INCLUDE 'ComputeSectionProperty.f90'
+
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -126,101 +130,130 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
    INTEGER(IntKi)          :: i                ! do-loop counter
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
+   INTEGER(IntKi)          :: m                ! do-loop counter
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
    REAL(ReKi)              :: temp_EP1(3)
    REAL(ReKi)              :: temp_EP2(3)
    REAL(ReKi)              :: temp_MID(3)
-   REAL(ReKi)              :: temp_twist(2)
-   REAL(ReKi)              :: temp_phi
+   REAL(ReKi)              :: temp_Coef(4,4)
+   REAL(ReKi)              :: temp66(6,6)
+   REAL(ReKi)              :: temp_twist
+   REAL(ReKi)              :: eta
    REAL(ReKi)              :: temp_POS(3)
-   REAL(ReKi)              :: temp_CRV(3)
    REAL(ReKi)              :: temp_e1(3)
+   REAL(ReKi)              :: temp_CRV(3)
+   REAL(ReKi),PARAMETER    :: EPS = 1.0D-10
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_w(:)
    REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
-   REAL(ReKi),ALLOCATABLE  :: IniTwist_Nodal(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_L2(:,:)
+   REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
-   CHARACTER(LEN(ErrMsg))       :: ErrMsg2
+   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
 
-      ! Initialize ErrStat
+   REAL(ReKi)             :: TmpPos(3)
 
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
+  ! Initialize ErrStat
 
-      ! Initialize the NWTC Subroutine Library
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
-      CALL NWTC_Init( )
 
-      ! Display the module information
+   ! Initialize the NWTC Subroutine Library
 
-      CALL DispNVD( BeamDyn_Ver )
-      
+   CALL NWTC_Init( )
+
+   ! Display the module information
+
+   CALL DispNVD( BeamDyn_Ver )
+
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
-      
+   p%analysis_type  = InputFileData%analysis_type
+
+   CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
+   p%gravity(:) = 0.0D0
+!   p%gravity(1) = InitInp%gravity(3)
+!   p%gravity(2) = InitInp%gravity(1)
+!   p%gravity(3) = InitInp%gravity(2)
+
+   CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
+   SP_Coef(:,:,:) = 0.0D0
+
+   temp_id = 0
+   temp_id2 = 0
+   DO i=1,InputFileData%member_total
+       IF(i == 1) temp_id = 1 
+       temp_id2= temp_id + InputFileData%kp_member(i) - 1
+       CALL ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(temp_id:temp_id2,1:4),SP_Coef(temp_id:temp_id2-1,1:4,1:4))
+       temp_id = temp_id2
+   ENDDO
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
    p%member_length(:,:) = 0.0D0
+   CALL AllocAry(p%segment_length,InputFileData%kp_total-1,3,'segment length array',ErrStat2,ErrMsg2)
+   p%segment_length(:,:) = 0.0D0
    p%blade_length = 0.0D0
-   
-   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_coordinate,p%member_length,p%blade_length)
+
+   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
+                               p%segment_length,p%member_length,p%blade_length)
    p%elem_total = InputFileData%member_total
    p%node_elem  = InputFileData%order_elem + 1       ! node per element
    p%ngp        = p%node_elem - 1
    p%dof_node   = 6
    temp_int     = p%node_elem * p%dof_node
-   
+
    CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
    p%uuN0(:,:) = 0.0D0
-
-   CALL AllocAry(IniTwist_Nodal,(p%node_elem-1)*p%elem_total+1,'IniTwist_Nodal',ErrStat2,ErrMsg2)
-   IniTwist_Nodal(:) = 0.0D0
-   CALL ComputeIniNodalTwist(p%member_length,InputFileData%InpBl%station_eta,InputFileData%InpBl%IniTwist_eta,&
-                            &p%node_elem,p%elem_total,InputFileData%InpBl%station_total,&
-                            &IniTwist_Nodal,ErrStat2,ErrMsg2)
 
    CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
    temp_GLL(:) = 0.0D0
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
    temp_w(:) = 0.0D0
    CALL BeamDyn_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
-   DO i=1,InputFileData%member_total
-       temp_id = (i-1)*2
-       temp_EP1(1:3) = InputFileData%kp_coordinate(temp_id+1,1:3)
-       temp_MID(1:3) = InputFileData%kp_coordinate(temp_id+2,1:3)
-       temp_EP2(1:3) = InputFileData%kp_coordinate(temp_id+3,1:3)
-       temp_twist(1) = InputFileData%initial_twist(i)
-       temp_twist(2) = InputFileData%initial_twist(i+1)
+   DEALLOCATE(temp_w)
+
+   CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2) 
+   temp_L2(:,:) = 0.0D0
+   CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2) 
+   temp_GL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
+   temp_w(:) = 0.0D0
+   CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
+   DEALLOCATE(temp_w)
+
+   DO i=1,p%elem_total
+       IF(i == 1) THEN
+           temp_id = 0
+       ELSE
+           temp_id = temp_id + InputFileData%kp_member(i-1) - 1
+       ENDIF
        DO j=1,p%node_elem
-!           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_POS,temp_e1) ! 3-Point-on-a-circle interpolation
-           CALL ComputeIniNodalPosition(temp_EP1,temp_EP2,temp_MID,temp_GLL(j),temp_Pos)   ! Quadratic interpolation given 3 points
-           temp_phi = temp_twist(1) + (temp_twist(2)-temp_twist(1))*(temp_GLL(j)+1.0D0)/2.0D0
-WRITE(*,*) "temp_phi:",temp_phi
-!           temp_phi = IniTwist_Nodal((i-1)*(p%node_elem-1)+j)
-!           CALL ComputeIniNodalCrv(temp_e1,temp_phi,temp_CRV) ! 3-Point-on-a-circle interpolation
-           CALL ComputeIniNodalCrv(temp_EP1,temp_EP2,temp_MID,temp_phi,temp_GLL(j),temp_CRV)
-           temp_id2 = (j-1)*p%dof_node
-           p%uuN0(temp_id2+1,i) = temp_POS(1)
-           p%uuN0(temp_id2+2,i) = temp_POS(2)
-           p%uuN0(temp_id2+3,i) = temp_POS(3)
-           p%uuN0(temp_id2+4,i) = temp_CRV(1)
-           p%uuN0(temp_id2+5,i) = temp_CRV(2)
-           p%uuN0(temp_id2+6,i) = temp_CRV(3)
-!           p%uuN0(temp_id2+4,i) = 0 !temp_CRV(1) 
-!           p%uuN0(temp_id2+5,i) = 0 !temp_CRV(2)
-!           p%uuN0(temp_id2+6,i) = 0 !temp_CRV(3)
+           eta = (temp_GLL(j) + 1.0D0)/2.0D0
+           DO k=1,InputFileData%kp_member(i)-1
+               temp_id2 = temp_id + k
+               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+                   DO m=1,4
+                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                   ENDDO
+                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
+                   temp_id2 = (j-1)*p%dof_node 
+                   p%uuN0(temp_id2+1,i) = temp_POS(1)
+                   p%uuN0(temp_id2+2,i) = temp_POS(2)
+                   p%uuN0(temp_id2+3,i) = temp_POS(3)
+                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
+                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
+                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
+                   EXIT
+               ENDIF
+           ENDDO
        ENDDO
    ENDDO
-!   p%uuN0(6,1) = 1.64039390858428802 !1.6568526243622832 
-!   p%uuN0(12,1)= 1.21338673221741544 !1.2133871423399105 !1.21338673221741544
-!   p%uuN0(18,1)= 0.81028671777792349 !0.79565168817258936 !0.81028671777792349
-!   p%uuN0(24,1)= 0.81028671777792349
-!   DO i=1,3
-!       WRITE(*,*) "IniTwist_Nodal:",i,IniTwist_Nodal(i)
-!   ENDDO
+
    DEALLOCATE(temp_GLL)
-   DEALLOCATE(temp_w)
-   DEALLOCATE(IniTwist_Nodal)
 
    CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
    temp_ratio(:,:) = 0.0D0
@@ -283,35 +316,31 @@ WRITE(*,*) "temp_phi:",temp_phi
    
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
-!   WRITE(*,*) "temp_GL: ", temp_GLL(:)
-!   DO i=1,InputFileData%member_total*2+1
-!       WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(i,:)
-!   ENDDO
-!   DO i=1,InputFileData%member_total+1
-!       WRITE(*,*) "initial_twist:", InputFileData%initial_twist(i)
-!   ENDDO
-!   DO i=1,InputFiledata%member_total
-!       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
+   WRITE(*,*) "gravity = ", p%gravity
+   DO i=1,InputFileData%member_total
+       DO j=1,InputFileData%kp_member(i)
+           WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(j,:)
+       ENDDO
+   ENDDO
+   DO i=1,InputFiledata%member_total
+       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
 !       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
-!       DO j=1,p%node_elem
-!           WRITE(*,*) "Nodal Position:",j
-!           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
-!           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
-!       ENDDO
-!   ENDDO
+       DO j=1,p%node_elem
+           WRITE(*,*) "Nodal Position:",j
+           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
+           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
+       ENDDO
+   ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
-!   WRITE(*,*) "node_elem: ", p%node_elem
+   WRITE(*,*) "node_elem: ", p%node_elem
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-!   DO i=1,p%elem_total
-!       DO j=1,p%ngp
-!           WRITE(*,*) "Stiff0_GL at: ",(i-1)*p%ngp+j,p%Stif0_GL(4,:,(i-1)*p%ngp+j)
-!       ENDDO
-!   ENDDO
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,3)
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,4)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
+   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
+   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
 !   STOP
    
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
@@ -320,7 +349,7 @@ WRITE(*,*) "temp_phi:",temp_phi
 
       ! Define parameters here:
 
-      p%niter = 40
+      p%niter = 20
       p%piter = 0 !ADDED NEW VARIABLE TO TRACK NUMBER OF ITERATIONS FOR CONDITIONAL STATEMENTS, NJ 3/18/2014
 
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
@@ -348,8 +377,8 @@ WRITE(*,*) "temp_phi:",temp_phi
 !This is the input (composite beam under tip shear force) used for Example 2 in AIAA 2014 SciTech, designed by Nick Johnson
 !-------------------
 !      p%F_ext(p%dof_total-3) = -1.0E+05
-!      p%F_ext(p%dof_total-3) = 6.0E+02
-      p%F_ext(p%dof_total-3) = -4.0E+06
+      p%F_ext(p%dof_total-4) = 6.0E+02
+!      p%F_ext(p%dof_total-3) = -4.0E+06
 !------------------
 !END input
 !------------------

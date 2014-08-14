@@ -36,6 +36,10 @@
 !       ENDDO
 
        RHS = RHS + F_ext
+!DO j=1,18
+!WRITE(*,*) "elf",j,RHS(j)
+!ENDDO
+!STOP
        
        feqv = 0.0D0
        errf = 0.0D0
@@ -73,6 +77,10 @@
        ENDIF
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
+!DO j=1,18
+!WRITE(*,*) "uuNf",j,uuNf(j)
+!ENDDO
+!IF(i==2) STOP
 !       DO j=1,node_total
 !           DO k=1,dof_node
 !               WRITE(*,*) "uuNf",k," = ", uuNf((j-1)*dof_node+k)

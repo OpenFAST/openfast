@@ -1,57 +1,62 @@
-   SUBROUTINE BldComputeMemberLength(member_total,kp_coordinate,member_length,total_length)
+   SUBROUTINE BldComputeMemberLength(member_total,kp_member,Coef,seg_length,member_length,total_length)
 
    INTEGER(IntKi),INTENT(IN   ):: member_total
-   REAL(ReKi),    INTENT(IN   ):: kp_coordinate(:,:)
-
+   INTEGER(IntKi),INTENT(IN   ):: kp_member(:)
+   REAL(ReKi),    INTENT(IN   ):: Coef(:,:,:)
+   REAL(ReKi),    INTENT(  OUT):: seg_length(:,:)
    REAL(ReKi),    INTENT(  OUT):: member_length(:,:)
    REAL(ReKi),    INTENT(  OUT):: total_length
 
+   REAL(ReKi)                  :: eta0
+   REAL(ReKi)                  :: eta1
+   REAL(ReKi)                  :: temp_pos0(3)
+   REAL(ReKi)                  :: temp_pos1(3)
+   REAL(ReKi)                  :: sample_step
+   REAL(ReKi)                  :: temp
+   INTEGER(IntKi)              :: sample_total
    INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: j
+   INTEGER(IntKi)              :: k
+   INTEGER(IntKi)              :: m
+   INTEGER(IntKi)              :: n
    INTEGER(IntKi)              :: temp_id
-   REAL(ReKi)                  :: temp_area
-   REAL(ReKi)                  :: x1
-   REAL(ReKi)                  :: x2
-   REAL(ReKi)                  :: x3
-   REAL(ReKi)                  :: y1
-   REAL(ReKi)                  :: y2
-   REAL(ReKi)                  :: y3
-   REAL(ReKi)                  :: z1
-   REAL(ReKi)                  :: z2
-   REAL(ReKi)                  :: z3
-   REAL(ReKi),        PARAMETER:: eps = 1.0D-10
 
-   x1 = 0.0D0
-   x2 = 0.0D0
-   x3 = 0.0D0
-   y1 = 0.0D0
-   y2 = 0.0D0
-   y3 = 0.0D0
-   z1 = 0.0D0
-   z2 = 0.0D0
-   z3 = 0.0D0
-   temp_area = 0.0D0
+   sample_total = 101
+   sample_step = 1.0D0/(sample_total-1)
 
-
+   temp_id = 0
    DO i=1,member_total
-       temp_id = (i - 1)*2+1
-       x1 = kp_coordinate(temp_id+0,1)
-       x2 = kp_coordinate(temp_id+1,1)
-       x3 = kp_coordinate(temp_id+2,1)
-       y1 = kp_coordinate(temp_id+0,2)
-       y2 = kp_coordinate(temp_id+1,2)
-       y3 = kp_coordinate(temp_id+2,2)
-       z1 = kp_coordinate(temp_id+0,3)
-       z2 = kp_coordinate(temp_id+1,3)
-       z3 = kp_coordinate(temp_id+2,3)
-       temp_area = ABS(x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2))
-       IF(temp_area <= eps) THEN
-           member_length(i,1) = SQRT((x1-x3)**2+(y1-y3)**2+(z1-z3)**2)
-       ELSE
-           member_length(i,1) = MemberArcLength(x1,x2,x3,y1,y2,y3,z1,z2,z3)
-       ENDIF
+       DO m=1,kp_member(i)-1
+           temp_id = temp_id + 1
+           DO j=1,sample_total-1
+               eta0 = (j-1)*sample_step
+               eta1 = j*sample_step
+               DO k=1,3
+                   temp_pos0(k) = Coef(temp_id,1,k) + Coef(temp_id,2,k)*eta0 + Coef(temp_id,3,k)*eta0*eta0 + Coef(temp_id,4,k)*eta0*eta0*eta0
+                   temp_pos1(k) = Coef(temp_id,1,k) + Coef(temp_id,2,k)*eta1 + Coef(temp_id,3,k)*eta1*eta1 + Coef(temp_id,4,k)*eta1*eta1*eta1
+               ENDDO
+               temp_pos1(:) = temp_pos1(:) - temp_pos0(:)
+               seg_length(temp_id,1) = seg_length(temp_id,1) + SQRT(DOT_PRODUCT(temp_pos1,temp_pos1))
+               member_length(i,1) = member_length(i,1) + SQRT(DOT_PRODUCT(temp_pos1,temp_pos1))
+           ENDDO
+       ENDDO
        total_length = total_length + member_length(i,1)
    ENDDO
 
+   temp_id = 0
+   DO i=1,member_total
+       temp = 0.0D0
+       DO j=1,kp_member(i)-1
+           temp_id = temp_id + 1
+           IF(j == 1) THEN 
+               seg_length(temp_id,2) = 0.0D0
+           ELSE
+               seg_length(temp_id,2) = seg_length(temp_id-1,3)
+           ENDIF
+           temp = temp + seg_length(temp_id,1)
+           seg_length(temp_id,3) = temp/member_length(i,1)     
+       ENDDO    
+   ENDDO
 
    DO i=1,member_total
        member_length(i,2) = member_length(i,1)/total_length

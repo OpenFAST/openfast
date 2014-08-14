@@ -35,7 +35,6 @@
    UnEc = -1
 
    CALL GetNewUnit(UnIn,ErrStat,ErrMsg)
-
    CALL OpenFInpFile(UnIn,InputFile,ErrStat2,ErrMsg2)
 
    !-------------------------- HEADER ---------------------------------------------
@@ -49,47 +48,39 @@
        CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
    ENDIF
    IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
-!'Data from BeamDyn primary input file "'//TRIM( InputFile)//'":'
-
+   CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,InputFile,InputFileData%kp_total,"kp_total", "Total number of key point",ErrStat2,ErrMsg2,UnEc)
+   CALL AllocAry(InputFileData%kp_member,InputFileData%member_total,'Number of key point in each member',ErrStat2,ErrMsg2)
+   InputFileData%kp_member(:) = 0
+   CALL AllocAry(InputFileData%kp_coordinate,InputFileData%kp_total,4,'Key point coordinates input array',ErrStat2,ErrMsg2)
+   InputFileData%kp_coordinate(:,:) = 0.0D0
+   temp_int = 0
+   DO i=1,InputFileData%member_total
+       READ(UnIn,*) j,InputFileData%kp_member(j)
+       temp_int = temp_int + InputFileData%kp_member(j)
+   ENDDO
+   IF( temp_int .NE. InputFileData%kp_total+InputFileData%member_total-1) THEN
+       WRITE(*,*) "Error in input file: geometry1"
+       STOP
+   ENDIF
    CALL ReadCom(UnIn,InputFile,'key point x,y,z locations and initial twist angles',ErrStat2,ErrMsg2,UnEc)
    CALL ReadCom(UnIn,InputFile,'key point and initial twist units',ErrStat2,ErrMsg2,UnEc)
-
-   temp_int = 2*InputFileData%member_total+1
-   CALL AllocAry(InputFileData%kp_coordinate,temp_int,3,'Key point coordinates input array',ErrStat2,ErrMsg2)
-   CALL AllocAry(InputFileData%initial_twist,InputFileData%member_total+1,'Key point initial twist array',ErrStat2,ErrMsg2)
-   InputFileData%kp_coordinate(:,:) = 0.0D0
-   InputFileData%initial_twist(:)   = 0.0D0
-
-   j = 0
-   DO i=1,temp_int
-       IF(MOD(i,2) .NE. 0) THEN
-           j = j + 1
-           READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                        InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(j)
-       ELSE
-           READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                        InputFileData%kp_coordinate(i,1)
-       ENDIF
-!       IF(MOD(i,2)==0) THEN
-!           IF(InputFileData%initial_twist(i)/=270.0) THEN
-!               WRITE(*,*) "Incorrect initial twist angle at mid point:",i
-!           ENDIF
-!       ENDIF
+   DO i=1,InputFileData%kp_total
+       READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
+                    InputFileData%kp_coordinate(i,1),InputFileData%kp_coordinate(i,4)
        IF(UnEc>0) THEN
            IF(i==1) WRITE(UnEc,'(/,A,/)') 'Key points coordinates and initial twist angle'
            WRITE(UnEc,'(/,A,/)') InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                                 InputFileData%kp_coordinate(i,1),InputFileData%initial_twist(i)
+                                 InputFileData%kp_coordinate(i,1),InputFileData%kp_coordinate(i,4)
        ENDIF
    ENDDO
-
    !---------------------- MESH PARAMETER -----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Mesh Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,InputFileData%order_elem,"order_elem","Order of basis function",&
                 ErrStat2,ErrMsg2,UnEc)
-   
    !---------------------- BLADE PARAMETER ----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )

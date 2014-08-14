@@ -2,9 +2,9 @@
 Test Format 1
 ---------------------- BLADE PARAMETERS --------------------------------------
 2   station_total    - Number of blade input stations (-)
-1   format_index     - Format index: 1-6 by 6 matrices; 2-sectional properties
+1   format_index     - Format index: 1-6 by 6 matrices; 2-sectional properties; 3-Principal values
 ---------------------- DISTRIBUTED PROPERTIES---------------------------------
-0  0.0					
+0					
 1.00000e+007	0.00E+00	0.00E+00	0.00E+00	0.00E+00	0.00E+00
 0.00E+00	4.16667e+006	0.00E+00	0.00E+00	0.00E+00	0.00E+00
 0.00E+00	0.00E+00	4.16667e+006	0.00E+00	0.00E+00	0.00E+00
@@ -19,7 +19,7 @@ Test Format 1
 0.00E+00	0.00E+00	0.00E+00	0.00E+00	0.00E+00	0.00E+00
 0.00E+00	0.00E+00	0.00E+00	0.00E+00	0.00E+00	0.00E+00
 
-1  90.0					
+1					
 1.00000e+007	0.00E+00	0.00E+00	0.00E+00	0.00E+00	0.00E+00
 0.00E+00	4.16667e+006	0.00E+00	0.00E+00	0.00E+00	0.00E+00
 0.00E+00	0.00E+00	4.16667e+006	0.00E+00	0.00E+00	0.00E+00
