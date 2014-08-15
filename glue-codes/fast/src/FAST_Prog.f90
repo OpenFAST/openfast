@@ -28,9 +28,10 @@ PROGRAM FAST
 !
 ! noted compilation switches:
 !   SOLVE_OPTION_1_BEFORE_2 (uses a different order for solving input-output relationships)
-!   OUTPUT_ADDEDMASS        (outputs a file called "AddedMassMatrix.out" that contains HydroDyn's added-mass matrix.
+!   OUTPUT_ADDEDMASS        (outputs a file called "<RootName>.AddedMass" that contains HydroDyn's added-mass matrix.
 !   OUTPUT_JACOBIAN
-!   FPE_TRAP_ENABLED        (uses IEEE_ARITHMETIC for setting NaN and Inf in NWTC_Library; not compatible with gfortran)
+!   FPE_TRAP_ENABLED        (use with gfortran when checking for floating point exceptions)
+!   OUTPUT_INPUTMESHES
 !.................................................................................................
 
 
@@ -714,10 +715,14 @@ LOGICAL                               :: calcJacobian                           
                         , x_IceF, xd_IceF, z_IceF &
                         , IceD%x, IceD%xd, IceD%z &
                         )           
-      
+   
+#ifdef OUTPUT_INPUTMESHES
+   CALL WriteInputMeshesToFile( ED_Input(1), SD_Input(1), HD_Input(1), MAP_Input(1), AD_Input(1), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat, ErrMsg) 
+#else
       IF (p_FAST%WrGraphics) THEN
-         CALL WriteInputMeshesToFile( ED_Input(1), SD_Input(1), HD_Input(1), MAP_Input(1), AD_Input(1), TRIM(p_FAST%OutFileRoot)//'_InputMeshes.bin', ErrStat, ErrMsg) 
+         CALL WriteInputMeshesToFile( ED_Input(1), SD_Input(1), HD_Input(1), MAP_Input(1), AD_Input(1), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat, ErrMsg) 
       END IF 
+#endif
 
       !----------------------------------------------------------------------------------------
       ! Check to see if we should output data this time step:
