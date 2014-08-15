@@ -380,23 +380,24 @@ INCLUDE 'OuterProduct.f90'
                    ,NNodes           = p%node_total           &
                    ,Force            = .TRUE. &
                    ,Moment           = .TRUE. &
-                   ,nScalars        = 0                      &
+                   ,nScalars        = 0                     &
                    ,ErrStat         = ErrStat               &
                    ,ErrMess         = ErrMsg                )
 
    temp_int = p%ngp * p%elem_total + 2
-   CALL MeshCreate( BlankMesh        = u%DistrLoad            &
-                   ,IOS              = COMPONENT_INPUT        &
-                   ,NNodes           = temp_int               &
+   CALL MeshCreate( BlankMesh        = u%DistrLoad          &
+                   ,IOS              = COMPONENT_INPUT      &
+                   ,NNodes           = temp_int             &
                    ,Force            = .TRUE. &
                    ,Moment           = .TRUE. &
-                   ,nScalars        = 0                      &
+                   ,nScalars        = 0                     &
                    ,ErrStat         = ErrStat               &
                    ,ErrMess         = ErrMsg                )
 
+   temp_int = p%node_elem*p%elem_total
    CALL MeshCreate( BlankMesh        = y%BldMotion        &
                    ,IOS              = COMPONENT_OUTPUT   &
-                   ,NNodes           = p%node_total       &
+                   ,NNodes           = temp_int           &
                    ,TranslationDisp  = .TRUE.             &
                    ,Orientation      = .TRUE.             &
                    ,TranslationVel   = .TRUE.             &
@@ -485,8 +486,7 @@ INCLUDE 'OuterProduct.f90'
                     ,ErrMess = ErrMsg          )
 
    CALL MeshCopy ( SrcMesh  = u%PointLoad      &
-                 , DestMesh = y%BldForce       &
-                 , CtrlCode = MESH_SIBLING     &
+                 , DestMesh = y%BldForce       & , CtrlCode = MESH_SIBLING     &
                  , Force           = .TRUE.    &
                  , Moment          = .TRUE.    &
                  , ErrStat  = ErrStat          &
@@ -669,7 +669,10 @@ ENDDO
    TYPE(BD_ContinuousStateType):: xdot
    INTEGER(IntKi):: i
    INTEGER(IntKi):: temp_id
+   INTEGER(IntKi):: temp_id2
    REAL(ReKi):: cc(3)
+   REAL(ReKi):: cc0(3)
+   REAL(ReKi):: temp_cc(3)
    REAL(ReKi):: temp_R(3,3)
    REAL(ReKi):: temp_Force(p%dof_total)
    ! Initialize ErrStat
@@ -682,31 +685,48 @@ ENDDO
    !y%dqdt = x%dqdt
 
    ! assume system is aligned with x-axis
-   DO i=1,p%node_total
-       temp_id = (i-1)*p%dof_node
-       y%BldMotion%TranslationDisp(1:3,i) = x%q(temp_id+1:temp_id+3)
-       y%BldMotion%TranslationVel(1:3,i) = x%dqdt(temp_id+1:temp_id+3)
-       y%BldMotion%RotationVel(1:3,i) = x%dqdt(temp_id+4:temp_id+6)
-       cc(1:3) = x%q(temp_id+4:temp_id+6)
-       CALL CrvMatrixR(cc,temp_R)
-       y%BldMotion%Orientation(1:3,1:3,i) = temp_R(1:3,1:3)
+!   DO i=1,p%node_total
+!       temp_id = (i-1)*p%dof_node
+!       y%BldMotion%TranslationDisp(1:3,i) = x%q(temp_id+1:temp_id+3)
+!       y%BldMotion%TranslationVel(1:3,i) = x%dqdt(temp_id+1:temp_id+3)
+!       y%BldMotion%RotationVel(1:3,i) = x%dqdt(temp_id+4:temp_id+6)
+!       cc(1:3) = x%q(temp_id+4:temp_id+6)
+!       CALL CrvMatrixR(cc,temp_R)
+!       y%BldMotion%Orientation(1:3,1:3,i) = temp_R(1:3,1:3)
+!   ENDDO
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp_id2= (i-1)*p%node_elem+j
+           y%BldMotion%TranslationDisp(1:3,temp_id2) = x%q(temp_id+1:temp_id+3)
+           y%BldMotion%TranslationVel(1:3,temp_id2) = x%dqdt(temp_id+1:temp_id+3)
+           y%BldMotion%RotationVel(1:3,temp_id2) = x%dqdt(temp_id+4:temp_id+6)
+           cc(1:3) = x%q(temp_id+4:temp_id+6)
+           temp_id = (j-1)*p%dof_node
+           cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
+           CALL CrvCompose(temp_cc,cc0,cc,0)
+           CALL CrvMatrixR(temp_cc,temp_R)
+           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
+       ENDDO
    ENDDO
 
-   CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg)
-   DO i=1,p%node_total
-       temp_id = (i-1)*p%dof_node
-       y%BldMotion%TranslationAcc(1:3,i) = xdot%dqdt(temp_id+1:temp_id+3)
-       y%BldMotion%RotationAcc(1:3,i) = xdot%dqdt(temp_id+4:temp_id+6)
-   ENDDO
+   IF(p%analysis_type .EQ. 2) THEN
+       CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg)
+       DO i=1,p%node_total
+           temp_id = (i-1)*p%dof_node
+           y%BldMotion%TranslationAcc(1:3,i) = xdot%dqdt(temp_id+1:temp_id+3)
+           y%BldMotion%RotationAcc(1:3,i) = xdot%dqdt(temp_id+4:temp_id+6)
+       ENDDO
 
-   CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-                             &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                             &xdot%dqdt,temp_Force)
-   DO i=1,p%node_total
-       temp_id = (i-1)*p%dof_node
-       y%BldForce%Force(1:3,i) = temp_Force(temp_id+1:temp_id+3)
-       y%BldForce%Moment(1:3,i) = temp_Force(temp_id+4:temp_id+6)
-   ENDDO
+       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                                 &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                 &xdot%dqdt,temp_Force)
+       DO i=1,p%node_total
+           temp_id = (i-1)*p%dof_node
+           y%BldForce%Force(1:3,i) = temp_Force(temp_id+1:temp_id+3)
+           y%BldForce%Moment(1:3,i) = temp_Force(temp_id+4:temp_id+6)
+       ENDDO
+   ENDIF
 
    END SUBROUTINE BeamDyn_CalcOutput
 

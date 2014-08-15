@@ -129,7 +129,8 @@ PROGRAM MAIN
     OPEN(unit = QiDisUnit, file = 'QiDisp_Static.out', status = 'REPLACE',ACTION = 'WRITE')
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
-   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
+   BD_InitInput%InputFile = 'Twist.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
    BD_InitInput%gravity(1) = 0.0D0 !-9.80665
@@ -312,14 +313,17 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
    u%RootMotion%Orientation(3,3,:) = 1.0D0
    u%RootMotion%RotationVel(:,:)   = 0.0D0
    u%RootMotion%RotationAcc(:,:)   = 0.0D0
-
-   ! Point mesh: PointLoad
-   u%PointLoad%Force(2,p%node_total)  = 6.0D+02
-   u%PointLoad%Moment(:,:) = 0.0D0
+                     
+   u%PointLoad%Force(3,p%node_total)  = -40.0D+03!6.0D+02
+   u%PointLoad%Moment(:,:)  = 0.0D+02
+!   u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad
-   u%DistrLoad%Force(:,:)  = 0.0D0
-   u%DistrLoad%Moment(:,:) = 0.0D0
+   DO i = 1, p%ngp*p%elem_total+2
+!       u%DistrLoad%Force(:,i)  = 0.0D0
+       u%DistrLoad%Force(2,i)  = 1.0D+03
+       u%DistrLoad%Moment(:,i) = 0.0D0
+   ENDDO
 
    ut = t
 
