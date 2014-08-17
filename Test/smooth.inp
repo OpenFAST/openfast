@@ -7,7 +7,7 @@ False         Echo            - Echo input data to <RootName>.ech (flag)
 True          WrBHHTP         - Output hub-height turbulence parameters in binary form?  (Generates RootName.bin)
 False         WrFHHTP         - Output hub-height turbulence parameters in formatted form?  (Generates RootName.dat)
 False         WrADHH          - Output hub-height time-series data in AeroDyn form?  (Generates RootName.hh)
-False         WrADFF          - Output full-field time-series data in TurbSim/AeroDyn form? (Generates RootName.bts)
+TRUE False         WrADFF          - Output full-field time-series data in TurbSim/AeroDyn form? (Generates RootName.bts)
 True          WrBLFF          - Output full-field time-series data in BLADED/AeroDyn form?  (Generates RootName.wnd)
 False         WrADTWR         - Output tower time-series data? (Generates RootName.twr)
 False         WrFMTFF         - Output full-field time-series data in formatted (readable) form?  (Generates RootName.u, RootName.v, RootName.w)
@@ -28,7 +28,7 @@ False         Clockwise       - Clockwise rotation looking downwind? (used only 
           0   HFlowAng        - Horizontal mean flow (skew) angle [degrees]
 
 --------Meteorological Boundary Conditions-------------------
-"SMOOTH"      TurbModel       - Turbulence model ("IECKAI","IECVKM","GP_LLJ","NWTCUP","SMOOTH","WF_UPW","WF_07D","WF_14D","TIDAL","API","USRINP","TIMESR", or "NONE")
+"ieckai"      TurbModel       - Turbulence model ("IECKAI","IECVKM","GP_LLJ","NWTCUP","SMOOTH","WF_UPW","WF_07D","WF_14D","TIDAL","API","USRINP","TIMESR", or "NONE")
 "unused"      UserFile        - Name of the file that contains inputs for user-defined spectra or time series inputs (used only for "USRINP" and "TIMESR" models)
           1   IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
 "A"           IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP model, not used for other models)
@@ -46,9 +46,9 @@ False         Clockwise       - Clockwise rotation looking downwind? (used only 
        0.05   RICH_NO         - Gradient Richardson number
 "default"     UStar           - Friction or shear velocity [m/s] (or "default")
 "default"     ZI              - Mixing layer depth [m] (or "default")
-"default"     PC_UW           - Hub mean u'w' Reynolds stress (or "default" or "none")
-"default"     PC_UV           - Hub mean u'v' Reynolds stress (or "default" or "none")
-"default"     PC_VW           - Hub mean v'w' Reynolds stress (or "default" or "none")
+none "default"     PC_UW           - Hub mean u'w' Reynolds stress (or "default" or "none")
+none "default"     PC_UV           - Hub mean u'v' Reynolds stress (or "default" or "none")
+none "default"     PC_VW           - Hub mean v'w' Reynolds stress (or "default" or "none")
 "default"     InCDec1         - u-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
 "default"     InCDec2         - v-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
 "default"     InCDec3         - w-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")

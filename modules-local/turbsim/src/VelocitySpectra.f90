@@ -626,8 +626,75 @@ RETURN
 
 END SUBROUTINE Spec_NWTCUP
 !=======================================================================
-!> This routine linearly interpolates an input file that specifies the
+!> This routine gets 
 !! velocity spectra for each of 3 wind components (u,v,w)
+SUBROUTINE Spec_TimeSer ( p, Ht, Spec )
+
+   USE TurbSim_Types
+
+         ! Passed variables
+   TYPE(TurbSim_ParameterType), INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                  INTENT(IN   ) :: Ht                      !< Input: height for which spectra are requested
+   REAL(ReKi),                  INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum (Frequency, component)
+
+         ! Local variables
+   REAL(ReKi)                                 :: Tmp                     ! scale for linear interpolation
+   INTEGER(IntKi)                             :: i, j, iPoint, Indx      ! loop counters
+   
+   
+!bjj: fix me!!! (make use of containsW and height
+  ! DO j=1,p%grid%NumFreq
+      
+      !Spec(:,:) = p%usr%S(:,1,:)
+            
+      
+      
+      
+      
+   Indx = 1
+   iPoint = 1
+
+   DO I=1,p%grid%NumFreq
+
+      IF ( p%grid%Freq(I) <= p%usr%f(1) ) THEN
+         Spec(I,:) = p%usr%S(1,iPoint,:)
+      ELSEIF ( p%grid%Freq(I) >= p%usr%f(p%usr%nFreq) ) THEN
+         Spec(I,:) = p%usr%S(p%usr%nFreq,iPoint,:)
+      ELSE
+
+            ! Find the two points between which the frequency lies
+
+         DO J=(Indx+1),p%usr%nFreq
+            IF ( p%grid%Freq(I) <= p%usr%f(J) ) THEN
+               Indx = J-1
+
+                  ! Let's just do a linear interpolation for now
+
+               Tmp  = (p%grid%Freq(I) - p%usr%f(Indx)) / ( p%usr%f(Indx) - p%usr%f(J) )
+
+               Spec(I,:) = Tmp * ( p%usr%S(Indx,iPoint,:) - p%usr%S(J,iPoint,:) ) + p%usr%S(Indx,iPoint,:)
+
+               EXIT
+            ENDIF
+         ENDDO ! J
+
+      ENDIF
+
+   ENDDO ! I
+
+   RETURN      
+      
+      
+      
+      
+      
+      
+   !END DO
+   
+END SUBROUTINE Spec_TimeSer
+!=======================================================================
+!> This routine linearly interpolates data from an input file that 
+!! specifies the velocity spectra for each of 3 wind components (u,v,w)
 SUBROUTINE Spec_UserSpec ( Spec )
 
 
@@ -655,13 +722,9 @@ SUBROUTINE Spec_UserSpec ( Spec )
    DO I=1,p%grid%NumFreq
 
       IF ( p%grid%Freq(I) <= p%met%USR_Freq(1) ) THEN
-         Spec(I,1) = p%met%USR_Uspec(1)
-         Spec(I,2) = p%met%USR_Vspec(1)
-         Spec(I,3) = p%met%USR_Wspec(1)
+         Spec(I,:) = p%met%USR_Spec(1,:)
       ELSEIF ( p%grid%Freq(I) >= p%met%USR_Freq(p%met%NumUSRf) ) THEN
-         Spec(I,1) = p%met%USR_Uspec(p%met%NumUSRf)
-         Spec(I,2) = p%met%USR_Vspec(p%met%NumUSRf)
-         Spec(I,3) = p%met%USR_Wspec(p%met%NumUSRf)
+         Spec(I,:) = p%met%USR_Spec(p%met%NumUSRf,:)
       ELSE
 
             ! Find the two points between which the frequency lies
@@ -674,9 +737,7 @@ SUBROUTINE Spec_UserSpec ( Spec )
 
                Tmp  = (p%grid%Freq(I) - p%met%USR_Freq(Indx)) / ( p%met%USR_Freq(Indx) - p%met%USR_Freq(J) )
 
-               Spec(I,1) = Tmp * ( p%met%USR_Uspec(Indx) - p%met%USR_Uspec(J) ) + p%met%USR_Uspec(Indx)
-               Spec(I,2) = Tmp * ( p%met%USR_Vspec(Indx) - p%met%USR_Vspec(J) ) + p%met%USR_Vspec(Indx)
-               Spec(I,3) = Tmp * ( p%met%USR_Wspec(Indx) - p%met%USR_Wspec(J) ) + p%met%USR_Wspec(Indx)
+               Spec(I,:) = Tmp * ( p%met%USR_Spec(Indx,:) - p%met%USR_Spec(J,:) ) + p%met%USR_Spec(Indx,:)
 
                EXIT
             ENDIF

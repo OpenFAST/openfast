@@ -62,7 +62,6 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
    REAL(ReKi)                    :: TmpZary (3)                      !Temporary vector to store height(z) values
    REAL(ReKi)                    :: TmpZLary(3)                      !Temporary vector to store zL(z) values
                               
-   INTEGER                       :: IOS                              ! I/O status
    INTEGER                       :: TmpIndex                         ! Contains the index number when searching for substrings
    INTEGER                       :: UI                               ! I/O unit for input file
    INTEGER                       :: UnEc                             ! I/O unit for echo file
@@ -82,7 +81,7 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
    CHARACTER(MaxMsgLen)          :: ErrMsg2                          ! Temporary Error message
    CHARACTER(1024)               :: PriPath                          ! Path name of the primary file
 
-   CHARACTER(1024)               :: UserInputFile   
+   CHARACTER(1024)               :: UserFile   
 
       ! Initialize some variables:
    ErrStat = ErrID_None
@@ -178,7 +177,7 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
       END IF
 
          !  Check if alternate random number generator is to be used >>>>>>>>>>>>>>>>
-
+print *, line
       READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
 
       CALL Conv2UC( Line1 )
@@ -202,7 +201,7 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
             p%RNG%pRNG = pRNG_RANLUX
          ELSE IF ( p%RNG%RNG_type == "RNSNLW") THEN
             p%RNG%pRNG = pRNG_SNLW3
-         ELSE
+         ELSE         
             CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, 'ReadInputFile')
             CALL Cleanup()
             RETURN
@@ -456,15 +455,15 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
          
 !bjj: todo: verify that the API model sets the parameters for IECKAI as well (because it's using IECKAI for the v and w components)
 
-      ! ------------ Read in the UserInputFile------------------- ---------------------------------------------
-   CALL ReadVar( UI, InFile, UserInputFile, "UserInputFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
+      ! ------------ Read in the UserFile------------------- ---------------------------------------------
+   CALL ReadVar( UI, InFile, UserFile, "UserFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   !UserInputFile = "UsrSpec.inp"
-   IF ( PathIsRelative( UserInputFile ) ) UserInputFile = TRIM(PriPath)//TRIM(UserInputFile)
+   !UserFile = "UsrSpec.inp"
+   IF ( PathIsRelative( UserFile ) ) UserFile = TRIM(PriPath)//TRIM(UserFile)
 
       ! Read the inputs from the user input file: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       IF (p%met%TurbModel_ID == SpecModel_USER) THEN
-            CALL GetUSRspec(UserInputFile, p, UnEc, ErrStat2, ErrMsg2)
+            CALL GetUSRspec(UserFile, p, UnEc, ErrStat2, ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
       END IF
       ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1244,8 +1243,18 @@ ENDIF
 
 
 IF ( p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
-   CALL ReadUSRTimeSeries(UserInputFile, p, UnEc, ErrStat2, ErrMsg2)
+
+   CALL ReadUSRTimeSeries(UserFile, p, UnEc, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      
+   CALL TimeSeriesToSpectra( p, ErrStat, ErrMsg )
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+print *, 'after fft'      
 END IF
 
 
@@ -1495,8 +1504,6 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(IN)    :: FileName                       !< Name of the input file
 
       ! local variables
-   CHARACTER(200)                     :: LINE
-
    REAL(ReKi)                         :: Freq_USR_Tmp
    REAL(ReKi)                         :: U_USR_Tmp
    REAL(ReKi)                         :: V_USR_Tmp
@@ -1564,10 +1571,8 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    ENDIF   
    
       ! Allocate the data arrays
-   CALL AllocAry( p%met%USR_Freq,  p%met%NumUSRf, 'USR_Freq (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( p%met%USR_Uspec, p%met%NumUSRf, 'USR_Uspec (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( p%met%USR_Vspec, p%met%NumUSRf, 'USR_Vspec (user-defined v spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( p%met%USR_Wspec, p%met%NumUSRf, 'USR_Wspec (user-defined w spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( p%met%USR_Freq, p%met%NumUSRf,  'USR_Freq (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry( p%met%USR_Spec, p%met%NumUSRf,3,'USR_Uspec (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1584,7 +1589,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
       ! ---------- Read the data lines --------------------------------------
    DO I=1,p%met%NumUSRf
 
-      READ( USpec, *, IOSTAT=IOAstat ) p%met%USR_Freq(I), p%met%USR_Uspec(I), p%met%USR_Vspec(I), p%met%USR_Wspec(I)
+      READ( USpec, *, IOSTAT=IOAstat ) p%met%USR_Freq(I), p%met%USR_Spec(I,1), p%met%USR_Spec(I,2), p%met%USR_Spec(I,3)
 
       IF ( IOAstat /= 0 ) THEN
          CALL SetErrStat(ErrID_Fatal, 'Could not read entire user-defined spectra on line '//Int2LStr(I)//'.' , ErrStat, ErrMsg, 'GetUSR')
@@ -1592,9 +1597,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
          RETURN
       ENDIF
 
-      IF ( ( p%met%USR_Uspec(I) <= REAL( 0., ReKi ) ) .OR. &
-           ( p%met%USR_Vspec(I) <= REAL( 0., ReKi ) ) .OR. &
-           ( p%met%USR_Wspec(I) <= REAL( 0., ReKi ) ) ) THEN
+      IF ( ANY( p%met%USR_Spec(I,:) <=  0._ReKi ) ) THEN
 
          CALL SetErrStat(ErrID_Fatal, 'The spectra must contain positive numbers.' , ErrStat, ErrMsg, 'GetUSR')
          CALL Cleanup()
@@ -1606,9 +1609,9 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
 
          ! Scale by the factors earlier in the input file
 
-      p%met%USR_Uspec(I) = p%met%USR_Uspec(I)*SpecScale(1)
-      p%met%USR_Vspec(I) = p%met%USR_Vspec(I)*SpecScale(2)
-      p%met%USR_Wspec(I) = p%met%USR_Wspec(I)*SpecScale(3)
+      p%met%USR_Spec(I,1) = p%met%USR_Spec(I,1)*SpecScale(1)
+      p%met%USR_Spec(I,2) = p%met%USR_Spec(I,2)*SpecScale(2)
+      p%met%USR_Spec(I,3) = p%met%USR_Spec(I,3)*SpecScale(3)
 
    ENDDO
 
@@ -1629,21 +1632,21 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
          ENDDO
 
          Freq_USR_Tmp    = p%met%USR_Freq(I)
-         U_USR_Tmp       = p%met%USR_Uspec(I)
-         V_USR_Tmp       = p%met%USR_Vspec(I)
-         W_USR_Tmp       = p%met%USR_Wspec(I)
+         U_USR_Tmp       = p%met%USR_Spec(I,1)
+         V_USR_Tmp       = p%met%USR_Spec(I,2)
+         W_USR_Tmp       = p%met%USR_Spec(I,3)
 
          DO J=I,Indx+1,-1
-            p%met%USR_Freq(J)    = p%met%USR_Freq(J-1)
-            p%met%USR_Uspec(J)   = p%met%USR_Uspec(J-1)
-            p%met%USR_Vspec(J)   = p%met%USR_Vspec(J-1)
-            p%met%USR_Wspec(J)   = p%met%USR_Wspec(J-1)
+            p%met%USR_Freq(J)   = p%met%USR_Freq(J-1)
+            p%met%USR_Spec(J,1) = p%met%USR_Spec(J-1,1)
+            p%met%USR_Spec(J,2) = p%met%USR_Spec(J-1,2)
+            p%met%USR_Spec(J,3) = p%met%USR_Spec(J-1,3)
          ENDDO
 
-         p%met%USR_Freq(Indx)    = Freq_USR_Tmp
-         p%met%USR_Uspec(I)      = U_USR_Tmp
-         p%met%USR_Vspec(I)      = V_USR_Tmp
-         p%met%USR_Wspec(I)      = W_USR_Tmp
+         p%met%USR_Freq(Indx)   = Freq_USR_Tmp
+         p%met%USR_Spec(I,1)    = U_USR_Tmp
+         p%met%USR_Spec(I,2)    = V_USR_Tmp
+         p%met%USR_Spec(I,3)    = W_USR_Tmp
 
       ENDIF
    ENDDO
@@ -1676,7 +1679,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(IN)    :: FileName                       !< Name of the input file
 
       ! local variables
-   INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 15          ! Number of lines in the input file before the time series start. IMPORTANT:  any changes to the number of lines in the header must be reflected here
+   INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 10          ! Number of lines in the input file before the time series start (need to add nPoint lines). IMPORTANT:  any changes to the number of lines in the header must be reflected here
       
    INTEGER(IntKi)                                 :: UnIn                           ! unit number for reading input file
    INTEGER(IntKi)                                 :: I                              ! loop counter
@@ -1767,6 +1770,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
          ! find out how many rows there are to the end of the file
    p%usr%NTimes   = -1
    ErrStat2 = 0
+      
    
    DO WHILE ( ErrStat2 == 0 )
       
@@ -1774,6 +1778,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
      READ(UnIn, *, IOSTAT=ErrStat2) tmpAry(1)
       
    END DO
+      
    
    IF (p%usr%NTimes < 2) THEN
       CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
@@ -1789,7 +1794,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       END IF 
 
       !IMPORTANT: any changes to the number of lines in the header must be reflected in NumLinesBeforeTS
-   DO I=1,NumLinesBeforeTS         
+   DO I=1,NumLinesBeforeTS + p%usr%nPoints        
       READ( UnIn, '(A)', IOSTAT=ErrStat2 ) TmpChar   ! I'm going to ignore this error because we should have caught any issues the first time we read the file.      
    END DO
    
@@ -1821,12 +1826,23 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    END DO   
    
    IF (UnEc > 0 ) THEN
-      FormStr = '('//trim(num2lstr(1+nComp*p%usr%nTimes))//'(F13.4," "))'
+      FormStr = '('//trim(num2lstr(1+nComp*p%usr%nPoints))//'(F13.4," "))'
       DO i=1,p%usr%nTimes
          WRITE( UnEc, FormStr) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
       END DO
    END IF      
-      
+
+   
+      ! a little bit of error checking:
+   DO i = 2,p%usr%nTimes
+      IF (.NOT. EqualRealNos( p%usr%t(i-1) + p%grid%TimeStep, p%usr%t(i) ) ) THEN
+         call SetErrStat(ErrID_Fatal, 'the delta time in the file must be constant and must be equal to input file variable TimeStep.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         EXIT
+      END IF
+   END DO
+   
+   
+   
    CALL Cleanup()
    RETURN
    
@@ -3615,9 +3631,7 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  IT                              ! Index for time step
 
-      
-CHARACTER(200)          :: FormStr                          ! String used to store format specifiers.
-      
+            
    
       ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
 
@@ -4010,7 +4024,6 @@ SUBROUTINE ProcessLine_IECturbc(Line, IsIECModel, IECstandard, IECedition, IECed
    CHARACTER(*),   intent(  out) :: ErrMsg              !< Message describing error
    
    INTEGER(IntKi)                :: IOS                 ! local error code
-   INTEGER(IntKi)                :: TmpIndex            ! index into string
    CHARACTER(*), PARAMETER       :: IECstandardErrMsg = 'The IECstandard input parameter must be either "1", "2", or "3"' &
                                    // ' with an optional IEC 61400-1 edition number ("1-ED2"). If specified, the edition number must be "2" or "3".'
 

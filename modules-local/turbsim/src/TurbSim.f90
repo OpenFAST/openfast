@@ -89,23 +89,14 @@ REAL(ReKi)              ::  UXSig                           ! Standard deviation
 
 REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
 
-REAL(ReKi)              ::  UGridMean                       ! Average wind speed at the points surrounding the hub
-REAL(ReKi)              ::  UGridSig                        ! Standard deviation of the wind speed at the points surrounding the hub
-REAL(ReKi)              ::  UGridTI                         ! Turbulent Intensity of the points surrounding the hub
-
 
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
 REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
-REAL(ReKi)              ::  TmpV                            ! Temporarily holds the value of the v component
-REAL(ReKi)              ::  TmpY                            ! Temp variable for interpolated hub point
-REAL(ReKi)              ::  TmpZ                            ! Temp variable for interpolated hub point
-REAL(ReKi)              ::  Tmp_YL_Z                        ! Temp variable for interpolated hub point
-REAL(ReKi)              ::  Tmp_YH_Z                        ! Temp variable for interpolated hub point
 
 
-
-
-INTEGER                 ::  IT                              ! Index for time step
+#ifdef DEBUG_TS
+INTEGER                 ::  IFreq ! for debugging                              
+#endif
 INTEGER                 ::  IY                              ! An index for the Y position of a point I
 INTEGER                 ::  JZ                              ! An index for the Z position of a point J
 INTEGER                 ::  NSize                           ! Size of the spectral matrix at each frequency
@@ -116,7 +107,6 @@ INTEGER                 ::  UnOut                           ! unit for output fi
 
 
 CHARACTER(200)          :: InFile                           ! Name of the TurbSim input file.
-CHARACTER(200)          :: FormStr                          ! String used to store format specifiers.
 
 
 REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
@@ -358,9 +348,6 @@ ENDIF
 CALL AllocAry( S,    p%grid%NumFreq,p%grid%NPoints,3, 'S (turbulence PSD)',ErrStat, ErrMsg )
 CALL CheckError()
 
-
-
-
 ! Calculate the single-point power spectral densities
 
 CALL CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
@@ -376,9 +363,7 @@ IF ( ALLOCATED( p%met%ZL_profile    ) )  DEALLOCATE( p%met%ZL_profile      )
 IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile   )
 
 IF ( ALLOCATED( p%met%USR_Freq      ) )  DEALLOCATE( p%met%USR_Freq   )
-IF ( ALLOCATED( p%met%USR_Uspec     ) )  DEALLOCATE( p%met%USR_Uspec  )
-IF ( ALLOCATED( p%met%USR_Vspec     ) )  DEALLOCATE( p%met%USR_Vspec  )
-IF ( ALLOCATED( p%met%USR_Wspec     ) )  DEALLOCATE( p%met%USR_Wspec  )
+IF ( ALLOCATED( p%met%USR_Spec      ) )  DEALLOCATE( p%met%USR_Spec   )
 
 
    ! Allocate memory for random number array
@@ -390,6 +375,19 @@ CALL CheckError()
    ! Get the phase angles
 CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, US, ErrStat, ErrMsg)
 CALL CheckError()
+
+!>>>>>> bjj fixme todo remove
+if (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
+   PhaseAngles(1,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,1,:)   
+END IF
+
+#ifdef DEBUG_TS
+DO iFreq=1, p%grid%NumFreq
+   WRITE( 73, '(7(F15.6," "))') iFreq*(1.0/p%grid%AnalysisTime), ( S(iFreq,1,iY), phaseAngles(1,iFreq,iY), iY=1,3 )
+END DO
+#endif
+!<<<<<<<<<< bjj fixme todo remove
+
 
 IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)  
 
@@ -570,7 +568,7 @@ SUBROUTINE CheckError()
    IF (ErrStat /= ErrID_None) THEN
    
       IF (ErrStat >= AbortErrLev) THEN
-         CALL TS_end()
+         CALL TS_end(p)
          CALL TS_Abort( TRIM(ErrMSg) )
       ELSE
          CALL WrScr(TRIM(ErrMsg))

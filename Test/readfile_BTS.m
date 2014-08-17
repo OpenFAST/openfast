@@ -1,9 +1,9 @@
-function [velocity, twrVelocity, y, z, zTwr, nz, ny, dz, dy, dt, zHub, z1,mffws] = readTSgrid(ADFileName,fileFmt)
-%[velocity, twrVelocity, y, z, zTwr, nz, ny, dz, dy, dt, zHub, z1,mffws] = readTSgrid(ADFileName,fileFmt)
+function [velocity, twrVelocity, y, z, zTwr, nz, ny, dz, dy, dt, zHub, z1,mffws] = readfile_BTS(FileName,fileFmt)
+%[velocity, twrVelocity, y, z, zTwr, nz, ny, dz, dy, dt, zHub, z1,mffws] = readfile_BTS(FileName,fileFmt)
 % Author: Bonnie Jonkman, National Renewable Energy Laboratory
 %
 % Input:
-%  ADFileName    - string: contains file name to open
+%  FileName      - string: contains file name (.bts extension) to open
 %  fileFmt       - string: optional, contains format of grid points.
 %
 % Output:
@@ -25,7 +25,7 @@ if ( nargin < 2 )
 end
 nffc = 3;
 
-fid  = fopen( ADFileName );
+fid  = fopen( FileName );
 
 if fid > 0
     %----------------------------        
@@ -59,7 +59,7 @@ if fid > 0
     asciiINT = fread( fid, nchar, 'int8' ); % the ASCII integer representation of the character string
     asciiSTR = char( asciiINT' );
 
-    disp( ['Reading from the file ' ADFileName ' with heading: ' ] );
+    disp( ['Reading from the file ' FileName ' with heading: ' ] );
     disp( ['   "' asciiSTR '".' ] ) ;
 
     %-------------------------        
@@ -122,8 +122,7 @@ if fid > 0
 
     fclose(fid);
 else
-    fclose(fid);
-    error(['Could not open the wind file: ' ADFileName]) ;
+    error(['Could not open the wind file: ' FileName]) ;
 end
 
 

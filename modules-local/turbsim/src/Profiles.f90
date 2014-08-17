@@ -114,7 +114,7 @@ SUBROUTINE GetChebCoefs(u_inp, z_inp)
 
    ! valid only for jet WindProfileType
    
-USE TSMods, only: p 
+USE TSMods, only: p !bjj: this needs work to avoid overwriting p% variables passed as subroutine parameters
 
 IMPLICIT                   NONE
 

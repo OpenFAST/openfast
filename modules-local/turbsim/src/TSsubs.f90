@@ -45,31 +45,31 @@ CHARACTER(*),  INTENT(OUT)    :: ErrMsg
 
    ! Internal variables
 
-REAL(ReKi), ALLOCATABLE    :: TRH (:)        ! The transfer function matrix.  
-REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
-REAL(ReKi), ALLOCATABLE    :: DistU(:)
-REAL(ReKi), ALLOCATABLE    :: DistZMExp(:)
-REAL(ReKi)                 :: dY             ! the lateral distance between two points
-REAL(ReKi)                 :: UM             ! The mean wind speed of the two points
-REAL(ReKi)                 :: ZM             ! The mean height of the two points
+REAL(ReKi), ALLOCATABLE       :: TRH (:)        ! The transfer function matrix.  
+REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
+REAL(ReKi), ALLOCATABLE       :: DistU(:)
+REAL(ReKi), ALLOCATABLE       :: DistZMExp(:)
+REAL(ReKi)                    :: dY             ! the lateral distance between two points
+REAL(ReKi)                    :: UM             ! The mean wind speed of the two points
+REAL(ReKi)                    :: ZM             ! The mean height of the two points
 
 
 
-INTEGER                    :: J
-INTEGER                    :: JJ             ! Index of point J
-INTEGER                    :: JJ1
-INTEGER                    :: JY             ! Index of y-value of point J
-INTEGER                    :: JZ             ! Index of z-value of point J
-INTEGER                    :: I
-INTEGER                    :: IFreq
-INTEGER                    :: II             ! The index of point I
-INTEGER                    :: Indx
-INTEGER                    :: IVec, IVec_End ! wind component, 1=u, 2=v, 3=w
-INTEGER                    :: IY             ! The index of the y-value of point I
-INTEGER                    :: IZ             ! Index of the z-value of point I
-INTEGER                    :: Stat
-
-INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
+INTEGER                       :: J
+INTEGER                       :: JJ             ! Index of point J
+INTEGER                       :: JJ1
+INTEGER                       :: JY             ! Index of y-value of point J
+INTEGER                       :: JZ             ! Index of z-value of point J
+INTEGER                       :: I
+INTEGER                       :: IFreq
+INTEGER                       :: II             ! The index of point I
+INTEGER                       :: Indx
+INTEGER                       :: IVec, IVec_End ! wind component, 1=u, 2=v, 3=w
+INTEGER                       :: IY             ! The index of the y-value of point I
+INTEGER                       :: IZ             ! Index of the z-value of point I
+INTEGER                       :: Stat
+                              
+INTEGER                       :: UC             ! I/O unit for Coherence debugging file.
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
 
@@ -90,7 +90,6 @@ IF (ErrStat >= AbortErrLev) THEN
 END IF
 
 
-V(:,:,:) = 0.0_ReKi    ! initialize the velocity matrix
 
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
@@ -185,6 +184,7 @@ IF ( p%met%IsIECmodel ) THEN
 ELSE
    IVec_End = 3
 END IF
+V(:,:,:) = 0.0_ReKi    ! initialize the matrix (will contain coefficients at the end of this routine)
 
 DO IVec = 1,IVec_End
 
@@ -755,7 +755,7 @@ END SUBROUTINE H2Coeffs
 SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, ErrStat, ErrMsg )
 
 
-   USE FFT_Module
+   USE NWTC_FFTPACK
 
    IMPLICIT NONE 
    
@@ -824,7 +824,12 @@ DO IVec=1,3
 
       Work(NumSteps) = 0.0
 
-
+#ifdef DEBUG_TS      
+if (IPoint==1      ) then
+ write(74,'('//trim(num2lstr(NumSteps))//'(F15.6," "))') Work
+ write(74,'('//trim(num2lstr(NumSteps))//'(F15.6," "))') V(:, IPoint, IVec)
+end if
+#endif
          ! perform FFT
 
       CALL ApplyFFT( Work, FFT_Data, ErrStat2 )
@@ -833,7 +838,7 @@ DO IVec=1,3
             IF (ErrStat >= AbortErrLev) EXIT
          END IF
         
-      V(:,IPoint,IVec) = Work(1:NumSteps)
+      V(:,IPoint,IVec) = Work
 
    ENDDO ! IPoint
 
@@ -2165,6 +2170,9 @@ SELECT CASE ( p%met%TurbModel_ID )
    CASE ( SpecModel_USER )
       CALL Spec_UserSpec   ( SSVS )
       
+   CASE ( SpecModel_TimeSer )   
+      CALL Spec_TimeSer   ( p, Ht, SSVS )
+      
    CASE ( SpecModel_USRVKM )
       CALL Spec_vonKrmn   ( Ht, Ucmp, SSVS )
       
@@ -2256,8 +2264,8 @@ use TSMods
       RETURN
    END IF
    
-   p_grid%NumFreq     = p_grid%NumSteps/2
-   DelF        = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
+   p_grid%NumFreq = p_grid%NumSteps/2
+   DelF           = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
       
    
    CALL AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat2, ErrMsg2)
@@ -2480,7 +2488,7 @@ SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
    TKE  = 0.5*(v(1)*v(1) + v(2)*v(2) + v(3)*v(3))
    CTKE = 0.5*SQRT(uv*uv + uw*uw + vw*vw)
    
-END SUBROUTINE
+END SUBROUTINE CalculateStresses
 !=======================================================================
 !> Scale the velocity aligned along the sreamwise direction.
 !!
@@ -2913,7 +2921,7 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
    ENDDO ! IZ   
                                                                      
                                                                      
-END SUBROUTINE
+END SUBROUTINE AddMeanAndRotate
 !=======================================================================
 SUBROUTINE TS_ValidateInput(ErrStat, ErrMsg)
 
@@ -2985,9 +2993,215 @@ END IF
 
 END SUBROUTINE TS_ValidateInput
 !=======================================================================
-SUBROUTINE TS_End()
+SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
+
+   USE NWTC_FFTPACK
+      
+   ! passed variables
+   TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p
+
+   INTEGER(IntKi),              intent(  out)  :: ErrStat                      !< Error level
+   CHARACTER(*),                intent(  out)  :: ErrMsg                       !< Message describing error
+   
+   
+   ! local variables
+   TYPE(FFT_DataType)                          :: FFT_Data                     ! data for applying FFT
+   real(reki),         allocatable             :: work (:)                     ! working array for converting fourier coefficients to spectra
+   real(reki)                                  :: Re, Im                       ! real and imaginary parts of complex variable returned from fft
+   
+   INTEGER(IntKi)                              :: Indx                         ! generic index
+   INTEGER(IntKi)                              :: iFreq                        ! loop counter for frequency 
+   INTEGER(IntKi)                              :: iVec                         ! loop counter for velocity components
+   INTEGER(IntKi)                              :: iPoint                       ! loop counter for grid points
+   INTEGER(IntKi)                              :: NumSteps                     ! number of time steps
+   INTEGER(IntKi)                              :: nComp                        ! number of velocity components
+         
+   INTEGER(IntKi)                              :: ErrStat2                     ! Error level (local)
+   CHARACTER(MaxMsgLen)                        :: ErrMsg2                      ! error message (local)
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+  
+      ! BJJ: consider putting the call to PSF in the reading part
+   p%usr%nFreq  = PSF ( p%usr%NTimes/2, 9, .TRUE.)
+   NumSteps     = p%usr%nFreq*2
+   
+
+print *, 'NTimes   =', p%usr%NTimes
+print *, 'NumFreq  =', p%usr%nFreq   
+print *, 'NumSteps =', NumSteps   
 
    
+   if (p%usr%containsW) then
+      nComp = 3
+   else
+      nComp = 2
+   end if   
+
+   
+   CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%f,          p%usr%nFreq ,                    'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(work,             NumSteps,                        'work',       ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   
+      ! calculate and remove the mean wind components:         
+   DO iVec = 1,nComp
+      DO iPoint = 1, p%usr%NPoints
+         p%usr%meanU(iPoint,iVec) = SUM( p%usr%v(:,iPoint,iVec) ) / p%usr%NTimes
+         p%usr%v(:,iPoint,iVec)   =      p%usr%v(:,iPoint,iVec) -   p%usr%meanU(iPoint,iVec)
+      END DO
+   END DO
+               
+   
+   ! compute forward fft to get real and imaginary parts      
+   ! S = Re^2 + Im^2 
+   ! PhaseAngle = acos( Re / S )
+   
+   
+   CALL InitFFT( NumSteps, FFT_Data, NormalizeIn=.TRUE., ErrStat=ErrStat2 )
+      CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'TimeSeriesToSpectra' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      
+   ! Get the stationary-point time series.
+   DO iVec=1,nComp
+      DO iPoint=1,p%usr%NPoints    
+
+         work = p%usr%v(:,iPoint,iVec)
+         
+            ! perform forward FFT
+
+         CALL ApplyFFT_f( work, FFT_Data, ErrStat2 )
+            IF (ErrStat2 /= ErrID_None ) THEN
+               CALL SetErrStat(ErrStat2, 'Error in ApplyFFT_f for point '//TRIM(Num2LStr(iPoint))//'.', ErrStat, ErrMsg, 'TimeSeriesToSpectra' )
+               IF (ErrStat >= AbortErrLev) EXIT
+            END IF
+            
+
+        
+            
+         DO iFreq = 1,p%usr%nFreq-1
+            Indx = iFreq*2
+            Re = work(Indx)
+            Im = work(Indx+1)
+            
+            p%usr%S(          iFreq,iPoint,iVec) = Re**2 + Im**2
+            
+            IF ( p%usr%S( iFreq,iPoint,iVec) /= 0.0_ReKi ) THEN
+               p%usr%PhaseAngles(iFreq,iPoint,iVec) = atan2( Im, Re ) ! this gives us the angles in range -pi to pi
+               if ( p%usr%PhaseAngles(iFreq,iPoint,iVec) < 0.0_ReKi  ) then ! we want it in the range 0 to 2pi
+                  p%usr%PhaseAngles(iFreq,iPoint,iVec) = TwoPi + p%usr%PhaseAngles(iFreq,iPoint,iVec)
+               end if
+            
+               !   ! get phase angle in range 0-pi
+               !p%usr%PhaseAngles(iFreq,iPoint,iVec) = acos( Re / SQRT(p%usr%S( iFreq,iPoint,iVec)) )
+               !   !bjj: get in correct quadrant; phase angle in range 0-2pi
+               !if (Im < 0.0_ReKi) then
+               !      p%usr%PhaseAngles(iFreq,iPoint,iVec) = TwoPi - p%usr%PhaseAngles(iFreq,iPoint,iVec)
+               !end if               
+            ELSE
+               p%usr%PhaseAngles(iFreq,iPoint,iVec) = 0.0_ReKi
+            END IF                     
+         END DO
+                           
+         p%usr%S(          p%usr%nFreq,iPoint,iVec) = 0.0_ReKi !work(p%usr%nFreq)**2  ! this frequency doesn't seem to get used in the code, so I'm going to set it to zero. work(p%usr%nFreq)**2 is not the value we want.
+         p%usr%PhaseAngles(p%usr%nFreq,iPoint,iVec) = 0.0_ReKi         
+
+#ifdef DEBUG_TS         
+WRITE( 75, '('//trim(num2lstr(NumSteps))//'(F15.6," "))') work
+#endif
+
+      ENDDO ! IPoint
+   ENDDO ! IVec 
+   
+   ! calculate associated frequencies:
+   p%usr%f(1) = 1.0_ReKi / ( (NumSteps -1) * ( p%usr%t(2) - p%usr%t(1) ) )
+   do iFreq=2,p%usr%nFreq
+      p%usr%f(iFreq) = p%usr%f(1) * iFreq
+   end do
+   
+   p%usr%S = p%usr%S*2.0_ReKi/p%usr%f(1)  ! make this the single-sided velocity spectra we're using in the rest of the code
+   
+   
+#ifdef DEBUG_TS         
+DO iFreq=1,p%usr%nFreq
+   WRITE( 72, '('//trim(num2lstr(1+2*nComp*p%usr%nPoints))//'(F15.6," "))') p%usr%f(iFreq), ( (p%usr%S(iFreq,iPoint,iVec), p%usr%phaseAngles(iFreq,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
+END DO
+#endif
+
+
+CALL Cleanup()
+
+RETURN
+CONTAINS
+!...........................................
+   SUBROUTINE Cleanup()
+
+   CALL ExitFFT( FFT_Data, ErrStat2 )         
+   CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, 'TimeSeriesToSpectra' )
+   
+   IF ( ALLOCATED(work) ) DEALLOCATE(work)
+
+   END SUBROUTINE Cleanup   
+            
+END SUBROUTINE TimeSeriesToSpectra
+!=======================================================================
+SUBROUTINE TS_End(p)
+
+
+   TYPE(TurbSim_ParameterType), INTENT(INOUT) ::  p                 !< parameters 
+
+!bjj: todo: add more; make sure everything is deallocated here; make sure files are closed, too.   
+         
+   IF ( ALLOCATED( p%grid%Y            ) )  DEALLOCATE( p%grid%Y            )
+   IF ( ALLOCATED( p%grid%Z            ) )  DEALLOCATE( p%grid%Z            )
+   IF ( ALLOCATED( p%grid%IYmax        ) )  DEALLOCATE( p%grid%IYmax        )
+   IF ( ALLOCATED( p%grid%Freq         ) )  DEALLOCATE( p%grid%Freq         )
+   
+   IF ( ALLOCATED( p%met%ZL_profile    ) )  DEALLOCATE( p%met%ZL_profile    )
+   IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile )
+   
+   IF ( ALLOCATED( p%met%USR_Z         ) )  DEALLOCATE( p%met%USR_Z         )
+   IF ( ALLOCATED( p%met%USR_U         ) )  DEALLOCATE( p%met%USR_U         )
+   IF ( ALLOCATED( p%met%USR_WindDir   ) )  DEALLOCATE( p%met%USR_WindDir   )
+   IF ( ALLOCATED( p%met%USR_Sigma     ) )  DEALLOCATE( p%met%USR_Sigma     )
+   IF ( ALLOCATED( p%met%USR_L         ) )  DEALLOCATE( p%met%USR_L         )
+   
+   IF ( ALLOCATED( p%met%USR_Freq      ) )  DEALLOCATE( p%met%USR_Freq      )
+   IF ( ALLOCATED( p%met%USR_Spec      ) )  DEALLOCATE( p%met%USR_Spec      )
+                                                                                        
+   IF ( ALLOCATED( p%usr%pointID       ) )  DEALLOCATE( p%usr%pointID       )
+   IF ( ALLOCATED( p%usr%pointyi       ) )  DEALLOCATE( p%usr%pointyi       )
+   IF ( ALLOCATED( p%usr%pointzi       ) )  DEALLOCATE( p%usr%pointzi       )
+   IF ( ALLOCATED( p%usr%t             ) )  DEALLOCATE( p%usr%t             )
+   IF ( ALLOCATED( p%usr%v             ) )  DEALLOCATE( p%usr%v             )
+
+   IF ( ALLOCATED( p%usr%meanU         ) )  DEALLOCATE( p%usr%meanU         )
+   IF ( ALLOCATED( p%usr%f             ) )  DEALLOCATE( p%usr%f             )
+   IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S             )
+   IF ( ALLOCATED( p%usr%phaseAngles   ) )  DEALLOCATE( p%usr%phaseAngles   )
+   
+   
+   !IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)  
+   !
+   !
+   !IF ( ALLOCATED( p_CohStr%EventID   ) )  DEALLOCATE( p_CohStr%EventID   )
+   !IF ( ALLOCATED( p_CohStr%EventTS   ) )  DEALLOCATE( p_CohStr%EventTS   )
+   !IF ( ALLOCATED( p_CohStr%EventLen  ) )  DEALLOCATE( p_CohStr%EventLen  )
+   !IF ( ALLOCATED( p_CohStr%pkCTKE    ) )  DEALLOCATE( p_CohStr%pkCTKE    )   
+   !   
 
 END SUBROUTINE TS_END
 !=======================================================================

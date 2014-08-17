@@ -10,8 +10,8 @@ function CompareBTSfiles(FileName1,FileName2)
     fprintf( '%2s%10s = %s\n', '','File 2 ', FileName2);
     fprintf( '\n' );
     
-    [velocity_1, twrVelocity_1, y_1, z_1, zTwr_1, nz_1, ny_1, dz_1, dy_1, dt_1] = readTSgrid(FileName1);
-    [velocity_2, twrVelocity_2, y_2, z_2, zTwr_2, nz_2, ny_2, dz_2, dy_2, dt_2] = readTSgrid(FileName2);
+    [velocity_1, twrVelocity_1, y_1, z_1, zTwr_1, nz_1, ny_1, dz_1, dy_1, dt_1] = readfile_BTS(FileName1);
+    [velocity_2, twrVelocity_2, y_2, z_2, zTwr_2, nz_2, ny_2, dz_2, dy_2, dt_2] = readfile_BTS(FileName2);
     
 %     tOffset_1 = 0.5*(y_1(ny_1) - y_1(1))/;
     if isempty(zTwr_1)
