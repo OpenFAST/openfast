@@ -26,7 +26,8 @@
    REAL(ReKi)                      :: feqv(dof_total-6)
    REAL(ReKi)                      :: Eref
    REAL(ReKi)                      :: Enorm
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-10
+   REAL(ReKi)                      :: temp
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
    REAL(ReKi)                      :: d
    INTEGER(IntKi)                  :: indx(dof_total-6)
    INTEGER(IntKi)                  :: i
@@ -72,6 +73,8 @@
            ui(j+6) = ui_temp(j)
        ENDDO
 
+       temp = Norm(feqv)
+       WRITE(13,*) i,temp 
        piter=i !! ADDED BY NJ 3/18/14
        IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
        IF(i .GT. 1) THEN
