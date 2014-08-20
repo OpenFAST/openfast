@@ -422,6 +422,7 @@ INCLUDE 'OuterProduct.f90'
                                  ,ErrMess  = ErrMsg           )
    ENDDO
 
+   temp_int = p%ngp * p%elem_total + 2
    DO i=1,temp_int-1
        CALL MeshConstructElement( Mesh     = u%DistrLoad      &
                                  ,Xelement = ELEMENT_LINE2    &
@@ -431,7 +432,8 @@ INCLUDE 'OuterProduct.f90'
                                  ,ErrMess  = ErrMsg           )
    ENDDO
 
-   DO i=1,p%node_total-1
+   temp_int = p%node_elem*p%elem_total
+   DO i=1,temp_int-1
        CALL MeshConstructElement( Mesh     = y%BldMotion      &
                                  ,Xelement = ELEMENT_LINE2    &
                                  ,P1       = i                &
@@ -454,13 +456,21 @@ INCLUDE 'OuterProduct.f90'
        DO j=1,p%node_elem
            temp_id = (j-1) * p%dof_node
            TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+           temp_id = (i-1)*(p%node_elem-1)+j
            CALL MeshPositionNode ( Mesh    = u%PointLoad  &
-                                  ,INode   = i            &
+                                  ,INode   = temp_id      &
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat      &
                                   ,ErrMess = ErrMsg       )
+       ENDDO
+   ENDDO
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (j-1)*p%dof_node
+           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+           temp_id = (i-1)*p%node_elem+j
            CALL MeshPositionNode ( Mesh    = y%BldMotion  &
-                                  ,INode   = i            &
+                                  ,INode   = temp_id      &
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat      &
                                   ,ErrMess = ErrMsg       )
@@ -669,6 +679,7 @@ ENDDO
 
    TYPE(BD_ContinuousStateType):: xdot
    INTEGER(IntKi):: i
+   INTEGER(IntKi):: j
    INTEGER(IntKi):: temp_id
    INTEGER(IntKi):: temp_id2
    REAL(ReKi):: cc(3)
@@ -696,19 +707,19 @@ ENDDO
 !       y%BldMotion%Orientation(1:3,1:3,i) = temp_R(1:3,1:3)
 !   ENDDO
    DO i=1,p%elem_total
-!       DO j=1,p%node_elem
-!           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-!           temp_id2= (i-1)*p%node_elem+j
-!           y%BldMotion%TranslationDisp(1:3,temp_id2) = x%q(temp_id+1:temp_id+3)
-!           y%BldMotion%TranslationVel(1:3,temp_id2) = x%dqdt(temp_id+1:temp_id+3)
-!           y%BldMotion%RotationVel(1:3,temp_id2) = x%dqdt(temp_id+4:temp_id+6)
-!           cc(1:3) = x%q(temp_id+4:temp_id+6)
-!           temp_id = (j-1)*p%dof_node
-!           cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
-!           CALL CrvCompose(temp_cc,cc0,cc,0)
-!           CALL CrvMatrixR(temp_cc,temp_R)
-!           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
-!       ENDDO
+       DO j=1,p%node_elem
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp_id2= (i-1)*p%node_elem+j
+           y%BldMotion%TranslationDisp(1:3,temp_id2) = x%q(temp_id+1:temp_id+3)
+           y%BldMotion%TranslationVel(1:3,temp_id2) = x%dqdt(temp_id+1:temp_id+3)
+           y%BldMotion%RotationVel(1:3,temp_id2) = x%dqdt(temp_id+4:temp_id+6)
+           cc(1:3) = x%q(temp_id+4:temp_id+6)
+           temp_id = (j-1)*p%dof_node
+           cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
+           CALL CrvCompose(temp_cc,cc0,cc,0)
+           CALL CrvMatrixR(temp_cc,temp_R)
+           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
+       ENDDO
    ENDDO
 
    IF(p%analysis_type .EQ. 2) THEN

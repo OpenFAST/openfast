@@ -349,7 +349,7 @@ SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 
       ! Define parameters here:
 
-      p%niter = 20
+      p%niter = 100
       p%piter = 0 !ADDED NEW VARIABLE TO TRACK NUMBER OF ITERATIONS FOR CONDITIONAL STATEMENTS, NJ 3/18/2014
 
       ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)

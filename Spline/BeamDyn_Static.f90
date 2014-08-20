@@ -56,7 +56,7 @@
 
    i = 1
    piter = 0
-   niter = 20
+   niter = 100
    DO WHILE(i .NE. 0)
        k=i
        DO j=1,k
