@@ -85,6 +85,9 @@ INCLUDE 'BeamDyn_StaticElementMatrix.f90'
 INCLUDE 'BeamDyn_StaticElasticForce.f90'
 INCLUDE 'UpdateConfiguration.f90'
 INCLUDE 'OuterProduct.f90'
+INCLUDE 'GenerateStaticElement_Force.f90'
+INCLUDE 'StaticSolution_Force.f90'
+INCLUDE 'ElementMatrixStatic_Force.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -525,12 +528,12 @@ INCLUDE 'OuterProduct.f90'
    ENDDO
 
    DO i = 1, u%DistrLoad%ElemTable(ELEMENT_LINE2)%nelem
-          j = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
-          k = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
-          u%DistrLoad%Force(:,j)  = 0.0D0
-          u%DistrLoad%Force(:,k)  = 0.0D0
-          u%DistrLoad%Moment(:,j) = 0.0D0
-          u%DistrLoad%Moment(:,k) = 0.0D0
+       j = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+       k = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+       u%DistrLoad%Force(:,j)  = 0.0D0
+       u%DistrLoad%Force(:,k)  = 0.0D0
+       u%DistrLoad%Moment(:,j) = 0.0D0
+       u%DistrLoad%Moment(:,k) = 0.0D0
    ENDDO
 
    ! Define initial guess for the system outputs here:
@@ -652,9 +655,9 @@ INCLUDE 'OuterProduct.f90'
        ENDDO
    ELSEIF(p%analysis_type == 1) THEN
        CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-DO i=5,0,-1            
-WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
-ENDDO
+!DO i=5,0,-1            
+!WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
+!ENDDO
    ENDIF
 
    END SUBROUTINE BeamDyn_UpdateStates
@@ -692,20 +695,6 @@ ENDDO
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   ! see Eqs. (12), (13)  in Gasmi et al. (2013)
-   !y%q    = x%q
-   !y%dqdt = x%dqdt
-
-   ! assume system is aligned with x-axis
-!   DO i=1,p%node_total
-!       temp_id = (i-1)*p%dof_node
-!       y%BldMotion%TranslationDisp(1:3,i) = x%q(temp_id+1:temp_id+3)
-!       y%BldMotion%TranslationVel(1:3,i) = x%dqdt(temp_id+1:temp_id+3)
-!       y%BldMotion%RotationVel(1:3,i) = x%dqdt(temp_id+4:temp_id+6)
-!       cc(1:3) = x%q(temp_id+4:temp_id+6)
-!       CALL CrvMatrixR(cc,temp_R)
-!       y%BldMotion%Orientation(1:3,1:3,i) = temp_R(1:3,1:3)
-!   ENDDO
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
@@ -713,6 +702,7 @@ ENDDO
            y%BldMotion%TranslationDisp(1:3,temp_id2) = x%q(temp_id+1:temp_id+3)
            y%BldMotion%TranslationVel(1:3,temp_id2) = x%dqdt(temp_id+1:temp_id+3)
            y%BldMotion%RotationVel(1:3,temp_id2) = x%dqdt(temp_id+4:temp_id+6)
+
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
@@ -723,22 +713,30 @@ ENDDO
    ENDDO
 
    IF(p%analysis_type .EQ. 2) THEN
-       CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg)
-       DO i=1,p%node_total
-           temp_id = (i-1)*p%dof_node
-           y%BldMotion%TranslationAcc(1:3,i) = xdot%dqdt(temp_id+1:temp_id+3)
-           y%BldMotion%RotationAcc(1:3,i) = xdot%dqdt(temp_id+4:temp_id+6)
-       ENDDO
+       CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
+       DO i=1,p%elem_total
+           DO j=1,p%node_elem
+               temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+               temp_id2= (i-1)*p%node_elem+j
 
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = xdot%dqdt(temp_id+1:temp_id+3)
+               y%BldMotion%RotationAcc(1:3,temp_id2) = xdot%dqdt(temp_id+4:temp_id+6)
+
+           ENDDO
+       ENDDO
        CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                                  &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                 &xdot%dqdt,temp_Force)
-       DO i=1,p%node_total
-           temp_id = (i-1)*p%dof_node
-           y%BldForce%Force(1:3,i) = temp_Force(temp_id+1:temp_id+3)
-           y%BldForce%Moment(1:3,i) = temp_Force(temp_id+4:temp_id+6)
-       ENDDO
+                                 &xdot%dqdt,p%analysis_type,temp_Force)
+   ELSEIF(p%analysis_type .EQ. 1) THEN
+       CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                 &p%analysis_type,temp_Force)
    ENDIF
+   DO i=1,p%node_total
+       temp_id = (i-1)*p%dof_node
+       y%BldForce%Force(1:3,i) = temp_Force(temp_id+1:temp_id+3)
+       y%BldForce%Moment(1:3,i) = temp_Force(temp_id+4:temp_id+6)
+   ENDDO
 
    END SUBROUTINE BeamDyn_CalcOutput
 

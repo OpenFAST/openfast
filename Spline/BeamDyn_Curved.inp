@@ -15,7 +15,7 @@ kp_xb  kp_yb   kp_zb    initial_twist
 16.853     0.0     55.557   0.0
 29.2893    0.0     70.7107   0.0       - Key point coordinates and initial twist (-)
 ---------------------- MESH PARAMETER ------------------------------------------
-7    order_elem    - Order of interpolation (basis) function (-)
+10    order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
 "Test_Curved.inp"    BldFile - Name of file containing properties for blade 
 

@@ -1,6 +1,6 @@
-   SUBROUTINE DynamicSolution_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,time,&
+   SUBROUTINE StaticSolution_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                    &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
-                                   &qddot,analysis_type,Force)
+                                   &analysis_type,Force)
    !***************************************************************************************
    ! This subroutine calls other subroutines to apply the force, build the beam element 
    ! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
@@ -12,8 +12,7 @@
    REAL(ReKi),INTENT(IN):: gravity(:) ! 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
-   REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
-   REAL(DbKi),INTENT(IN):: time ! Current time
+   REAL(ReKi),INTENT(IN):: vvN(:) ! Displacement of Mass 1: m
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per element
    INTEGER(IntKi),INTENT(IN):: elem_total ! Total number of elements
@@ -21,13 +20,10 @@
    INTEGER(IntKi),INTENT(IN):: node_total ! Total number of nodes
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN):: analysis_type ! Number of Gauss points
-   REAL(ReKi),INTENT(IN):: qddot(:) ! Second time derivative of state "q"
    
    REAL(ReKi),INTENT(OUT):: Force(:)
 
    ! Local variables
-   
-   REAL(ReKi):: MassM(dof_total,dof_total) 
    REAL(ReKi):: RHS(dof_total) 
    REAL(ReKi):: F_PointLoad(dof_total)  
    REAL(ReKi):: d 
@@ -37,10 +33,9 @@
 
 
    RHS = 0.0D0
-   MassM = 0.0D0
 
-   CALL GenerateDynamicElement_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
-                                     elem_total,node_elem,dof_node,ngp,RHS,MassM)
+   CALL GenerateStaticElement_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+                                     elem_total,node_elem,dof_node,ngp,RHS)
    DO j=1,node_total
        temp_id = (j-1)*dof_node
        F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
@@ -49,10 +44,6 @@
    RHS(:) = RHS(:) + F_PointLoad(:)
    
    Force(:) = 0.0D0
-   IF(analysis_type .EQ. 1) THEN
-       Force(:) = RHS(:)
-   ELSEIF (analysis_type .EQ. 2) THEN
-       Force(:) = RHS(:) - MATMUL(MassM,qddot)
-   ENDIF
+   Force(:) = RHS(:)
    
-   END SUBROUTINE DynamicSolution_Force
+   END SUBROUTINE StaticSolution_Force

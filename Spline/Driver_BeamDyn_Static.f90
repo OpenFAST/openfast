@@ -190,9 +190,6 @@ PROGRAM MAIN
       CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
 
 
-!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-!                             BD_ConstraintState, &
-!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
 
 
@@ -227,8 +224,18 @@ PROGRAM MAIN
 
       t_global = REAL(n_t_global+1,DbKi) * dt_global + t_initial
 
+     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                             BD_ConstraintState, &
+                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
    ENDDO
 
+   WRITE(QiDisUnit,6000) t_global,&
+!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+!                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
+                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
+                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
 
    ! calculate final time normalized rms error
 
