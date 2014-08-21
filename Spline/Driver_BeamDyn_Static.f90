@@ -230,12 +230,12 @@ PROGRAM MAIN
    ENDDO
 
    WRITE(QiDisUnit,6000) t_global,&
-!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total)!,&
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
-                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
-                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
+!                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
+!                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
 
    ! calculate final time normalized rms error
 

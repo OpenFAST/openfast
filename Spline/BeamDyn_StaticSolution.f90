@@ -27,7 +27,7 @@
    REAL(ReKi)                      :: Eref
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: temp
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
    REAL(ReKi)                      :: d
    INTEGER(IntKi)                  :: indx(dof_total-6)
    INTEGER(IntKi)                  :: i
@@ -76,15 +76,26 @@
        temp = Norm(feqv)
        WRITE(13,*) i,temp 
        piter=i !! ADDED BY NJ 3/18/14
-       IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
+!       IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
+!       IF(i .GT. 1) THEN
+!           Enorm = 0.0D0 
+!           Enorm = SQRT(DOT_PRODUCT(ui_temp,feqv))
+!           IF(Enorm .LE. Eref) RETURN
+!       ENDIF
+       IF(i==1) Eref = TOLF * DOT_PRODUCT(ui_temp,feqv)
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
-           Enorm = SQRT(DOT_PRODUCT(ui_temp,feqv))
-           IF(Enorm .LE. Eref) RETURN
+           Enorm = DOT_PRODUCT(ui_temp,feqv)
+           IF(Enorm .GT. Eref/TOLF) THEN
+               WRITE(*,*) "Solution is diverging, exit N-R"
+               piter=niter 
+           ELSEIF(Enorm .LE. Eref) THEN
+               RETURN
+           ENDIF
        ENDIF
            
        CALL UpdateConfiguration(ui,uuNf,node_total,dof_node)
-       IF(i==niter) THEN
+       IF(i==niter .OR. piter==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            EXIT !! USE EXIT INSTEAD OF STOP, NJ 3/18/2014
        ENDIF
