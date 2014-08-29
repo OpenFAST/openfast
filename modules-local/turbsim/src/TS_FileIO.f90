@@ -1687,7 +1687,6 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    INTEGER(IntKi)                                 :: I, J                           ! loop counters
    INTEGER(IntKi)                                 :: IPoint                         ! loop counter on number of points
    INTEGER(IntKi)                                 :: IVec                           ! loop counter on velocity components being read
-   INTEGER(IntKi)                                 :: nComp                          ! number of velocity components that may be contained in the file
    INTEGER(IntKi)                                 :: ErrStat2                       ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                        ! Message describing error (local)
    
@@ -1721,7 +1720,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
          CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
    end do
       
-   CALL ReadVar( UnIn, FileName, p%usr%containsW, 'containsW', 'Does the time series contain w component velocities?', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadVar( UnIn, FileName, p%usr%nComp, 'nComp', 'How many velocity components will be input? (1=u component only; 2=u&v components; 3=u,v,and w)', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
          
    CALL ReadVar( UnIn, FileName, p%usr%nPoints, 'nPoints', 'Number of time series points contained in this file', ErrStat2, ErrMsg2, UnEc )
@@ -1806,17 +1805,16 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    END DO
    
    !.......
-
-   if (p%usr%containsW) then
-      nComp = 3
-   else
-      nComp = 2
-   end if
+   
+   if (p%usr%nComp < 1 .OR. p%usr%nComp > 3) then
+      CALL SetErrStat( ErrID_Fatal, 'Number of velocity components in file must be 1, 2 or 3.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')   
+      CALL Cleanup()
+   END IF 
    
    
    
-   CALL AllocAry(p%usr%t, p%usr%nTimes,                       't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
-   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%t, p%usr%nTimes,                             't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, p%usr%nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1824,7 +1822,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
       
    DO i=1,p%usr%nTimes
-      READ( UnIn, *, IOSTAT=ErrStat2 ) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
+      READ( UnIn, *, IOSTAT=ErrStat2 ) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
       IF (ErrStat2 /=0) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
          CALL Cleanup()
@@ -1833,9 +1831,9 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    END DO   
    
    IF (UnEc > 0 ) THEN
-      FormStr = '('//trim(num2lstr(1+nComp*p%usr%nPoints))//'(F13.4," "))'
+      FormStr = '('//trim(num2lstr(1+p%usr%nComp*p%usr%nPoints))//'(F13.4," "))'
       DO i=1,p%usr%nTimes
-         WRITE( UnEc, FormStr) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
+         WRITE( UnEc, FormStr) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
       END DO
    END IF      
 

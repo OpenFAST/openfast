@@ -3047,19 +3047,12 @@ print *, 'NTimes   =', p%usr%NTimes
 print *, 'NumFreq  =', p%usr%nFreq   
 print *, 'NumSteps =', NumSteps   
 
-   
-   if (p%usr%containsW) then
-      nComp = 3
-   else
-      nComp = 2
-   end if   
-
-   
-   CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%f,          p%usr%nFreq ,                    'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(work,             NumSteps,                        'work',       ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+      
+   CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,p%usr%nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%f,          p%usr%nFreq ,                          'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(work,             NumSteps,                              'work',       ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()

@@ -642,7 +642,7 @@ SUBROUTINE Spec_TimeSer ( p, Ht, LastIndex, Spec )
    INTEGER(IntKi)                             :: i                       ! loop counters
    
          
-!bjj: fix me!!! (make use of containsW and height                              
+!bjj: fix me!!! (make use of nComp and height                              
       
    InCoord(2) = Ht
    
@@ -650,7 +650,7 @@ SUBROUTINE Spec_TimeSer ( p, Ht, LastIndex, Spec )
       
       InCoord(1) = p%grid%Freq(i)
       
-         ! this routine will return 0 for Spec(:,3) if p%usr%containsW is false
+         ! this routine will return 0 for Spec(:,p%usr%nComp+1:3) [if p%usr%nComp < 3]
       CALL UserSpec_Interp2D( InCoord, p%usr, LastIndex, Spec(I,:) )
       
    ENDDO ! I
