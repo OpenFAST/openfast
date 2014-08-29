@@ -177,7 +177,7 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
       END IF
 
          !  Check if alternate random number generator is to be used >>>>>>>>>>>>>>>>
-print *, line
+
       READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
 
       CALL Conv2UC( Line1 )
@@ -1254,7 +1254,7 @@ IF ( p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
       
    CALL TimeSeriesToSpectra( p, ErrStat, ErrMsg )
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
-print *, 'after fft'      
+
 END IF
 
 
@@ -1511,9 +1511,9 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    REAL(ReKi)                         :: SpecScale (3)
 
    INTEGER                            :: I
+   INTEGER, PARAMETER                 :: iPoint = 1 ! spectra are input for only one point 
    INTEGER                            :: Indx
    INTEGER                            :: J
-   INTEGER                            :: IOAstat                        ! Input/Output/Allocate status
    INTEGER                            :: USpec                          ! I/O unit for user-defined spectra
 
    
@@ -1547,7 +1547,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
 
 
       ! ---------- Read the size of the arrays --------------------------------------------
-   CALL ReadVar( USpec, FileName, p%met%NumUSRf, "NumUSRf", "Number of frequencies in the user-defined spectra", ErrStat2, ErrMsg2, UnEc )
+   CALL ReadVar( USpec, FileName, p%usr%nFreq, "nFreq", "Number of frequencies in the user-defined spectra", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -1562,7 +1562,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
 
    ENDDO
       
-   IF ( p%met%NumUSRf < 3    ) CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, 'GetUSR')
+   IF ( p%usr%nFreq < 3      ) CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, 'GetUSR')
    IF ( ANY(SpecScale <= 0.) ) CALL SetErrStat(ErrID_Fatal, 'The scaling value for the user-defined spectra must be positive.' , ErrStat, ErrMsg, 'GetUSR')
    
    IF (ErrStat >= AbortErrLev) THEN
@@ -1571,14 +1571,16 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    ENDIF   
    
       ! Allocate the data arrays
-   CALL AllocAry( p%met%USR_Freq, p%met%NumUSRf,  'USR_Freq (user-defined frequencies)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry( p%met%USR_Spec, p%met%NumUSRf,3,'USR_Uspec (user-defined u spectra)' , ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-
+   CALL AllocAry( p%usr%f,      p%usr%nFreq,    'f (user-defined frequencies)'  ,ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'GetUSR')
+   CALL AllocAry( p%usr%S,      p%usr%nFreq,1,3,'S (user-defined spectra)'      ,ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'GetUSR')
+   CALL AllocAry( p%usr%pointzi, iPoint        , 'pointzi (user-defined spectra',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'GetUSR')   
+   
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
    END IF
    
+   p%usr%pointzi = 0.0_ReKi ! we don't care what this is; it's only potentially used so we can use the same interpolation routine as the user time-series input
 
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
@@ -1587,66 +1589,66 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    ENDDO
 
       ! ---------- Read the data lines --------------------------------------
-   DO I=1,p%met%NumUSRf
+   DO I=1,p%usr%nFreq
 
-      READ( USpec, *, IOSTAT=IOAstat ) p%met%USR_Freq(I), p%met%USR_Spec(I,1), p%met%USR_Spec(I,2), p%met%USR_Spec(I,3)
+      READ( USpec, *, IOSTAT=ErrStat2 ) p%usr%f(I), p%usr%S(I,iPoint,1), p%usr%S(I,iPoint,2), p%usr%S(I,iPoint,3)
 
-      IF ( IOAstat /= 0 ) THEN
+      IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat(ErrID_Fatal, 'Could not read entire user-defined spectra on line '//Int2LStr(I)//'.' , ErrStat, ErrMsg, 'GetUSR')
          CALL Cleanup()
          RETURN
       ENDIF
 
-      IF ( ANY( p%met%USR_Spec(I,:) <=  0._ReKi ) ) THEN
+      IF ( ANY( p%usr%S(I,iPoint,:) <=  0._ReKi ) ) THEN
 
          CALL SetErrStat(ErrID_Fatal, 'The spectra must contain positive numbers.' , ErrStat, ErrMsg, 'GetUSR')
          CALL Cleanup()
          RETURN
          
-!      ELSEIF ( p%met%USR_Freq(I) <= REAL( 0., ReKi ) ) THEN
+!      ELSEIF ( p%usr%f(I) <= REAL( 0., ReKi ) ) THEN
 !         CALL TS_Abort( 'The frequencies must be a positive number.' );
       ENDIF
 
          ! Scale by the factors earlier in the input file
 
-      p%met%USR_Spec(I,1) = p%met%USR_Spec(I,1)*SpecScale(1)
-      p%met%USR_Spec(I,2) = p%met%USR_Spec(I,2)*SpecScale(2)
-      p%met%USR_Spec(I,3) = p%met%USR_Spec(I,3)*SpecScale(3)
+      p%usr%S(I,iPoint,1) = p%usr%S(I,iPoint,1)*SpecScale(1)
+      p%usr%S(I,iPoint,2) = p%usr%S(I,iPoint,2)*SpecScale(2)
+      p%usr%S(I,iPoint,3) = p%usr%S(I,iPoint,3)*SpecScale(3)
 
    ENDDO
 
       ! ------- Sort the arrays by frequency -----------------------------------
-   DO I=2,p%met%NumUSRf
-      IF ( p%met%USR_Freq(I) < p%met%USR_Freq(I-1) ) THEN
+   DO I=2,p%usr%nFreq
+      IF ( p%usr%f(I) < p%usr%f(I-1) ) THEN
 
          Indx = 1
          DO J=I-2,1,-1
-            IF ( p%met%USR_Freq(I) > p%met%USR_Freq(J) ) THEN
+            IF ( p%usr%f(I) > p%usr%f(J) ) THEN
                Indx = J+1
                EXIT
-            ELSEIF ( EqualRealNos( p%met%USR_Freq(I), p%met%USR_Freq(J) ) ) THEN
+            ELSEIF ( EqualRealNos( p%usr%f(I), p%usr%f(J) ) ) THEN
                CALL SetErrStat(ErrID_Fatal, 'Error: user-defined spectra must contain unique frequencies.' , ErrStat, ErrMsg, 'GetUSR')
                CALL Cleanup()
                RETURN
             ENDIF
          ENDDO
 
-         Freq_USR_Tmp    = p%met%USR_Freq(I)
-         U_USR_Tmp       = p%met%USR_Spec(I,1)
-         V_USR_Tmp       = p%met%USR_Spec(I,2)
-         W_USR_Tmp       = p%met%USR_Spec(I,3)
+         Freq_USR_Tmp    = p%usr%f(I)
+         U_USR_Tmp       = p%usr%S(I,iPoint,1)
+         V_USR_Tmp       = p%usr%S(I,iPoint,2)
+         W_USR_Tmp       = p%usr%S(I,iPoint,3)
 
          DO J=I,Indx+1,-1
-            p%met%USR_Freq(J)   = p%met%USR_Freq(J-1)
-            p%met%USR_Spec(J,1) = p%met%USR_Spec(J-1,1)
-            p%met%USR_Spec(J,2) = p%met%USR_Spec(J-1,2)
-            p%met%USR_Spec(J,3) = p%met%USR_Spec(J-1,3)
+            p%usr%f(J)          = p%usr%f(J-1)
+            p%usr%S(J,iPoint,1) = p%usr%S(J-1,iPoint,1)
+            p%usr%S(J,iPoint,2) = p%usr%S(J-1,iPoint,2)
+            p%usr%S(J,iPoint,3) = p%usr%S(J-1,iPoint,3)
          ENDDO
 
-         p%met%USR_Freq(Indx)   = Freq_USR_Tmp
-         p%met%USR_Spec(I,1)    = U_USR_Tmp
-         p%met%USR_Spec(I,2)    = V_USR_Tmp
-         p%met%USR_Spec(I,3)    = W_USR_Tmp
+         p%usr%f(Indx)       = Freq_USR_Tmp
+         p%usr%S(I,iPoint,1) = U_USR_Tmp
+         p%usr%S(I,iPoint,2) = V_USR_Tmp
+         p%usr%S(I,iPoint,3) = W_USR_Tmp
 
       ENDIF
    ENDDO
@@ -1682,7 +1684,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 10          ! Number of lines in the input file before the time series start (need to add nPoint lines). IMPORTANT:  any changes to the number of lines in the header must be reflected here
       
    INTEGER(IntKi)                                 :: UnIn                           ! unit number for reading input file
-   INTEGER(IntKi)                                 :: I                              ! loop counter
+   INTEGER(IntKi)                                 :: I, J                           ! loop counters
    INTEGER(IntKi)                                 :: IPoint                         ! loop counter on number of points
    INTEGER(IntKi)                                 :: IVec                           ! loop counter on velocity components being read
    INTEGER(IntKi)                                 :: nComp                          ! number of velocity components that may be contained in the file
@@ -1753,8 +1755,12 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    do i=1,p%usr%nPoints
       CALL ReadAry( UnIn, FileName, TmpAry, 3, "point"//trim(Num2Lstr(i)), "locations of points", ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         
+      p%usr%Pointyi = TmpAry(2)
+      p%usr%Pointzi = TmpAry(3)         
    end do
       
+         
    do i=1,3
       CALL ReadCom( UnIn, FileName, "Time Series header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
          CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
@@ -1779,6 +1785,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       
    END DO
       
+   CALL WrScr( '   Found '//TRIM(Num2LStr(p%usr%NTimes))//' lines of time-series data.' )
    
    IF (p%usr%NTimes < 2) THEN
       CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
@@ -1832,6 +1839,28 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       END DO
    END IF      
 
+   
+   !.........................................................
+   ! a little bit of error checking:
+   !.........................................................
+
+   !bjj: verify that the locations are okay; for now, we're going to make sure they are unique and that the z values are in increasing order.
+   do i=2,p%usr%nPoints
+      do j=1,i-1
+         IF ( EqualRealNos( p%usr%Pointyi(i), p%usr%Pointyi(j) ) .AND. EqualRealNos( p%usr%Pointzi(i), p%usr%Pointzi(j) ) ) THEN
+            CALL SetErrStat(ErrID_Fatal, 'Locations of points specified in the user time-series input file must be unique.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+            CALL Cleanup()
+            RETURN
+         END IF
+      end do
+      !bjj: fix this in the future. Currently the interpolation routine won't work if z is not ordered properly. Also, interpolation doesn't take y into account, so we may want to fix that.
+      IF ( p%usr%Pointzi(i) < p%usr%Pointzi(i-1) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'The current implementation of user time-series input requires that the points be entered in the order of increasing height.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL Cleanup()
+         RETURN
+      END IF      
+   end do
+   
    
       ! a little bit of error checking:
    DO i = 2,p%usr%nTimes
@@ -2228,7 +2257,7 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
       
       ! Now write tower data file if necessary:
       IF ( p%WrFile(FileExt_TWR) ) THEN
-         IF ( p%grid%ExtraHubPT ) THEN
+         IF ( .NOT. p%grid%HubOnGrid ) THEN
             IZ = p%grid%ZLim - p%grid%NumGrid_Z - 1
             I  = p%grid%NumGrid_Z*p%grid%NumGrid_Y + 2
          ELSE
@@ -2418,7 +2447,7 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
       TwrStart = NumGrid + 1
 
-      IF ( p%grid%ExtraHubPT ) THEN
+      IF ( .NOT. p%grid%HubOnGrid ) THEN
          TwrStart = TwrStart + 1
       ENDIF
 
@@ -2454,13 +2483,13 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
    WRITE (UAFFW)   INT( p%grid%NumGrid_Z          , B4Ki )          ! the number of grid points vertically
    WRITE (UAFFW)   INT( p%grid%NumGrid_Y          , B4Ki )          ! the number of grid points laterally
-   WRITE (UAFFW)   INT( NumTower           , B4Ki )          ! the number of tower points
+   WRITE (UAFFW)   INT( NumTower                  , B4Ki )          ! the number of tower points
    WRITE (UAFFW)   INT( p%grid%NumOutSteps        , B4Ki )          ! the number of time steps
 
    WRITE (UAFFW)  REAL( p%grid%GridRes_Z          , SiKi )          ! grid spacing in vertical direction, in m
    WRITE (UAFFW)  REAL( p%grid%GridRes_Y          , SiKi )          ! grid spacing in lateral direction, in m
    WRITE (UAFFW)  REAL( p%grid%TimeStep           , SiKi )          ! grid spacing in delta time, in m/s
-   WRITE (UAFFW)  REAL( p%UHub               , SiKi )          ! the mean wind speed in m/s at hub height
+   WRITE (UAFFW)  REAL( p%UHub                    , SiKi )          ! the mean wind speed in m/s at hub height
    WRITE (UAFFW)  REAL( p%grid%HubHt              , SiKi )          ! the hub height, in m
    WRITE (UAFFW)  REAL( p%grid%Z(1)               , SiKi )          ! the height of the grid bottom, in m
 

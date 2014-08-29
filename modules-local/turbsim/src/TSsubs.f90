@@ -877,6 +877,7 @@ use TurbSim_Types
    INTEGER(IntKi)                   :: IY                               ! loop counter for lateral position
    INTEGER(IntKi)                   :: IZ                               ! loop counter for height
    INTEGER(IntKi)                   :: FirstPointAtThisHeight           ! index of the first grid point at a particular height
+   INTEGER(IntKi)                   :: LastIndex(2)                     ! Index for the last (Freq, Ht) used in models that interpolate/extrapolate user-input spectra or time series
    
    INTEGER(IntKi)                   :: IVec                             ! loop counter for velocity components
    INTEGER(IntKi)                   :: IPoint                           ! loop counter for grid points
@@ -884,7 +885,7 @@ use TurbSim_Types
    REAL(ReKi),   ALLOCATABLE        :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
    REAL(ReKi),   ALLOCATABLE        :: DUDZ (:)                         ! The steady u-component wind shear for the grid (ZLim) [used in Hydro models only].
    
-   REAL(ReKi)                       ::  HalfDelF                        ! half of the delta frequency, used to discretize the continuous PSD at each point
+   REAL(ReKi)                       :: HalfDelF                         ! half of the delta frequency, used to discretize the continuous PSD at each point
    
    
    INTEGER(IntKi)                   :: UP                               ! I/O unit for PSD debugging file.
@@ -960,21 +961,71 @@ use TurbSim_Types
    DO IZ=1,p%grid%ZLim
 
             ! The continuous, one-sided PSDs are evaluated at discrete
-            ! points and the results are stored in the "Work" matrix.
+            ! points and the results are stored in the "SSVS" matrix.
 
-         IF ( p%met%TurbModel_ID == SpecModel_IECKAI .or. p%met%TurbModel_ID == SpecModel_IECVKM ) THEN
-            CALL PSDcal( p%grid%HubHt, p%UHub, SSVS)   ! Added by Y.G.  !!!! only hub height is acceptable !!!!
+            
+         SELECT CASE ( p%met%TurbModel_ID )
          
-         ELSEIF ( p%met%TurbModel_ID == SpecModel_TIDAL .OR. p%met%TurbModel_ID == SpecModel_RIVER ) THEN ! HydroTurbSim specific.
-            CALL PSDCal( p%grid%Z(IZ) , U(IZ), SSVS, UShr=DUDZ(IZ) )
-         
-         ELSEIF ( ALLOCATED( p%met%ZL_profile ) ) THEN
-            CALL PSDcal( p%grid%Z(IZ), U(IZ), SSVS, ZL_loc=p%met%ZL_profile(IZ), UStar_loc=p%met%Ustar_profile(IZ) )
-         
-         ELSE
-            CALL PSDcal( p%grid%Z(IZ), U(IZ), SSVS )
-         ENDIF               
+            CASE ( SpecModel_IECKAI )
+               CALL Spec_IECKAI  ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
+      
+            CASE ( SpecModel_IECVKM )
+               CALL Spec_IECVKM  ( p%UHub, p%IEC%SigmaIEC(1), p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
+      
+            CASE ( SpecModel_API )
+               CALL Spec_API ( p%grid%Z(IZ), SSVS )
+      
+            CASE ( SpecModel_GP_LLJ )
+               IF ( ALLOCATED( p%met%ZL_profile ) ) THEN !.AND. ALLOCATED( p%met%Ustar_profile ) )  THEN               
+                  CALL Spec_GPLLJ   ( p%grid%Z(IZ), U(IZ), p%met%ZL_profile(IZ), p%met%Ustar_profile(IZ), SSVS )
+               ELSE
+                  CALL Spec_GPLLJ   ( p%grid%Z(IZ), U(IZ), p%met%ZL,             p%met%Ustar,             SSVS )
+               ENDIF
+                  
+            CASE (SpecModel_NWTCUP)
+               CALL Spec_NWTCUP  ( p%grid%Z(IZ), U(IZ), SSVS )
+      
+            CASE ( SpecModel_SMOOTH )
+               CALL Spec_SMOOTH   ( p%grid%Z(IZ), U(IZ), SSVS )
+      
+            CASE ( SpecModel_TIDAL, SpecModel_RIVER )
+               CALL Spec_TIDAL  ( p%grid%Z(IZ), DUDZ(IZ), SSVS, p%met%TurbModel_ID )
+            
+            CASE ( SpecModel_USER )
+               CALL Spec_UserSpec   ( p, SSVS )
+      
+            CASE ( SpecModel_TimeSer )   
+               CALL Spec_TimeSer   ( p, p%grid%Z(IZ), LastIndex, SSVS )
+      
+            CASE ( SpecModel_USRVKM )
+               CALL Spec_vonKrmn   ( p%grid%Z(IZ), U(IZ), SSVS )
+      
+            CASE (SpecModel_WF_UPW)
+               CALL Spec_WF_UPW  ( p%grid%Z(IZ), U(IZ), SSVS )
+      
+            CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
+               CALL Spec_WF_DW ( p%grid%Z(IZ), U(IZ), SSVS )
+      
+            CASE ( SpecModel_NONE )
+               SSVS(:,:) = 0.0
+         !bjj TEST: CALL Spec_Test ( p%grid%Z(IZ), U(IZ), Work )
 
+            CASE ( SpecModel_MODVKM )
+               IF (MVK) THEN
+          !        CALL Mod_vKrm( p%grid%Z(IZ), U(IZ), Work )
+               ELSE
+                  CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
+                  CALL Cleanup()
+                  RETURN
+               ENDIF
+
+            CASE DEFAULT
+               CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
+               CALL Cleanup()
+               RETURN
+         END SELECT            
+            
+                                                                            
          IF ( PSD_OUT ) THEN
             !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
                WRITE( UP, FormStr ) 1, p%grid%Z(IZ), SSVS(:,1)
@@ -983,28 +1034,6 @@ use TurbSim_Types
             !ENDIF
          ENDIF      
       
-         IF (DEBUG_OUT) THEN
-               TotalU = 0.0
-               TotalV = 0.0
-               TotalW = 0.0
-
-               DO IFreq=1,p%grid%NumFreq
-                  TotalU = TotalU + SSVS(IFreq,1)
-                  TotalV = TotalV + SSVS(IFreq,2)
-                  TotalW = TotalW + SSVS(IFreq,3)
-               ENDDO ! IFreq
-
-               Total  = SQRT( TotalU*TotalU + TotalV*TotalV )
-               TotalU = TotalU*p%grid%Freq(1)
-               TotalV = TotalV*p%grid%Freq(1)
-               TotalW = TotalW*p%grid%Freq(1)
-               HorVar = Total *p%grid%Freq(1)
-
-               WRITE(UD,*)  'At H=', p%grid%Z(IZ)
-               WRITE(UD,*)  '   TotalU=', TotalU, '  TotalV=', TotalV, '  TotalW=', TotalW, ' (m/s^2)'
-               WRITE(UD,*)  '   HorVar=',HorVar,' (m/s^2)', '   HorSigma=',SQRT(HorVar),' (m/s)'
-         ENDIF
-
 
             ! Discretize the continuous PSD and store it in matrix "S"
            
@@ -1063,16 +1092,16 @@ SUBROUTINE GetDefaultCoh(WS,Ht, InCDec, InCohB )
 !   REAL(ReKi), PARAMETER                :: g =  0.059157163  !coeffs for WF_xxD best-fit equations
 
 
-REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS category coherence decrements
-   REAL(ReKi), INTENT(IN)               :: Ht         !Height, usually hub height
-   REAL(ReKi)                           :: Ht1        !Height, set to bounds of the individual models
-   REAL(ReKi)                           :: Ht2        !Height squared
-   REAL(ReKi)                           :: Ht3        !Height cubed
-   REAL(ReKi), INTENT(IN)               :: WS         !Wind speed, usually = UHub
-   REAL(ReKi)                           :: WS1        !Wind speed, set to bounds of individual models
-   REAL(ReKi)                           :: RI1        !RICH_NO, set to bounds of individual models
-   REAL(ReKi)                           :: RI2        !RICH_NO squared
-   REAL(ReKi)                           :: RI3        !RICH_NO  cubed
+   REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS category coherence decrements
+   REAL(ReKi), INTENT(IN)               :: Ht                !Height, usually hub height
+   REAL(ReKi)                           :: Ht1               !Height, set to bounds of the individual models
+   REAL(ReKi)                           :: Ht2               !Height squared
+   REAL(ReKi)                           :: Ht3               !Height cubed
+   REAL(ReKi), INTENT(IN)               :: WS                !Wind speed, usually = UHub
+   REAL(ReKi)                           :: WS1               !Wind speed, set to bounds of individual models
+   REAL(ReKi)                           :: RI1               !RICH_NO, set to bounds of individual models
+   REAL(ReKi)                           :: RI2               !RICH_NO squared
+   REAL(ReKi)                           :: RI3               !RICH_NO  cubed
 
    INTEGER                              :: I
    INTEGER                              :: Ri_Cat
@@ -2126,88 +2155,9 @@ END SELECT
 RETURN
 END FUNCTION PowerLawExp
 !=======================================================================
-SUBROUTINE PSDcal ( Ht, Ucmp, SSVS, UShr, ZL_loc, Ustar_loc )
-
-use TSMods, only: p
-   ! This routine calls the appropriate spectral model.
-
-IMPLICIT                            NONE
-
-
-REAL(ReKi), INTENT(IN)           :: Ht             ! Height
-REAL(ReKi), INTENT(IN)           :: Ucmp           ! Velocity
-REAL(ReKi), INTENT(IN), OPTIONAL :: UShr           ! Shear (du/dz)
-REAL(ReKi), INTENT(IN), OPTIONAL :: Ustar_loc      ! Local ustar
-REAL(ReKi), INTENT(IN), OPTIONAL :: ZL_loc         ! Local Z/L
-REAL(ReKi), INTENT(INOUT)        :: SSVS(:,:)      ! the single-sided velocity component spectrum (NumFreq,3)
-
-SELECT CASE ( p%met%TurbModel_ID )
-   CASE ( SpecModel_GP_LLJ )
-      IF ( PRESENT(Ustar_loc) .AND. PRESENT(ZL_loc) ) THEN
-         CALL Spec_GPLLJ   ( Ht, Ucmp, ZL_loc, Ustar_loc, SSVS )
-      ELSE
-         CALL Spec_GPLLJ   ( Ht, Ucmp, p%met%ZL,     p%met%Ustar,     SSVS )
-      ENDIF
-      
-   CASE ( SpecModel_IECKAI )
-      CALL Spec_IECKAI  ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
-      
-   CASE ( SpecModel_IECVKM )
-      CALL Spec_IECVKM  ( p%UHub, p%IEC%SigmaIEC(1), p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
-      
-   CASE ( SpecModel_API )
-      CALL Spec_API ( Ht, SSVS )
-      
-   CASE (SpecModel_NWTCUP)
-      CALL Spec_NWTCUP  ( Ht, Ucmp, SSVS )
-      
-   CASE ( SpecModel_SMOOTH )
-      CALL Spec_SMOOTH   ( Ht, Ucmp, SSVS )
-      
-   CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-      CALL Spec_TIDAL  ( Ht, UShr, SSVS, p%met%TurbModel_ID )
-      
-   CASE ( SpecModel_USER )
-      CALL Spec_UserSpec   ( SSVS )
-      
-   CASE ( SpecModel_TimeSer )   
-      CALL Spec_TimeSer   ( p, Ht, SSVS )
-      
-   CASE ( SpecModel_USRVKM )
-      CALL Spec_vonKrmn   ( Ht, Ucmp, SSVS )
-      
-   CASE (SpecModel_WF_UPW)
-      CALL Spec_WF_UPW  ( Ht, Ucmp, SSVS )
-      
-   CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
-      CALL Spec_WF_DW ( Ht, Ucmp, SSVS )
-      
-   CASE ( SpecModel_NONE )
-      SSVS(:,:) = 0.0
-!bjj TEST: CALL Spec_Test ( Ht, Ucmp, Work )
-
-   CASE ( SpecModel_MODVKM )
-      IF (MVK) THEN
- !        CALL Mod_vKrm( Ht, Ucmp, Work )
-      ELSE
-         CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.' )
-      ENDIF
-
-   CASE DEFAULT
-      CALL TS_Abort ( 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.' )
-END SELECT
-
-
-
-RETURN
-END SUBROUTINE PSDcal
-!=======================================================================
-
-
-
-
-!=======================================================================
-SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
+!> This routine creates the grid (cartesian + other points) that are
+!!  to be simulated.
+SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, ErrStat, ErrMsg )
 
 ! Assumes that these variables are set:
 !  GridHeight
@@ -2215,17 +2165,19 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
 !  NumGrid_Y
 !  NumGrid_Z
 
-use TSMods
-
    TYPE(Grid_ParameterType),        INTENT(INOUT) :: p_grid
    INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
    INTEGER                        , INTENT(  OUT) :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
    INTEGER                        , INTENT(  OUT) :: NSize                           ! Size of the spectral matrix at each frequency
+   
+   REAL(ReKi)                     , INTENT(IN   ) :: UHub                            ! Mean wind speed at hub, used only when usable time is not "ALL" (i.e., periodic flag is false) 
+   LOGICAL                        , INTENT(INOUT) :: AddTower                        ! Value of p%WrFile(FileExt_TWR) [determines if tower points should be generarated]
+
    INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    
    ! local variables:
-   REAL(ReKi)                                     :: TmpReal                         ! A temporary variable holding a Z (height) value, and other misc. variables
+   REAL(ReKi)                                     :: LastHeight                      ! A temporary variable holding a Z (height) value, and other misc. variables
    REAL(ReKi)                                     :: DelF                            ! Delta frequency
    INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
@@ -2251,14 +2203,14 @@ use TSMods
 !bjj rm:     p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
       p_grid%NumOutSteps = p_grid%NumSteps
    ELSE
-      p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth/p%UHub )/p_grid%TimeStep )
+      p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth / UHub )/p_grid%TimeStep )
       p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
       p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
 !bjj rm:      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
 !bjj rm:      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
    END IF
 
-   IF (p%grid%NumSteps < 2 )  THEN
+   IF (p_grid%NumSteps < 2 )  THEN
       CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
                        'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, 'CreateGrid' )
       RETURN
@@ -2298,11 +2250,11 @@ use TSMods
 
    IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
       p_grid%ExtraTwrPT = .TRUE.
-      p_grid%ExtraHubPT = .TRUE.
+      p_grid%HubOnGrid  = .FALSE.
    ELSEIF ( ABS((NumGrid_Z2-1)*p_grid%GridRes_Z + p_grid%Zbottom - p_grid%HubHt) > Tolerance ) THEN
-      p_grid%ExtraHubPT = .TRUE.
+      p_grid%HubOnGrid = .FALSE.
    ELSE
-      p_grid%ExtraHubPT = .FALSE.
+      p_grid%HubOnGrid = .TRUE.
    ENDIF
 
    p_grid%NPoints    = p_grid%NumGrid_Y*p_grid%NumGrid_Z                ! Number of points in the regular grid
@@ -2310,7 +2262,7 @@ use TSMods
    
    ! Then, let's deal with the hub point:
    
-   IF (p_grid%ExtraHubPT) THEN
+   IF ( .NOT. p_grid%HubOnGrid ) THEN
       p_grid%NPoints = p_grid%NPoints + 1                               ! Add the hub point if necessary
       p_grid%ZLim = p_grid%NumGrid_Z+1
       p_grid%YLim = p_grid%NumGrid_Y+1
@@ -2322,7 +2274,7 @@ use TSMods
    
    ! Finally, let's deal with the tower "lollipop" points:
    
-   IF ( p%WrFile(FileExt_TWR) ) THEN
+   IF ( AddTower ) THEN
 
          ! Compute the number of points between the bottom of the grid and the ground 
          ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
@@ -2338,15 +2290,14 @@ use TSMods
          p_grid%ZLim = p_grid%ZLim + IZ
          p_grid%NPoints = p_grid%NPoints + IZ                       ! Add the number of tower points
 
-         IF ( .NOT. p_grid%ExtraHubPT ) THEN
+         IF ( p_grid%HubOnGrid ) THEN
             p_grid%YLim = p_grid%YLim + 1
          ENDIF
 
       ELSE
 
-         CALL TS_Warn ( ' There are no extra tower data points below the grid. Tower output will be turned off.', US)  
-
-         p%WrFile(FileExt_TWR) = .FALSE.
+         CALL SetErrStat(ErrID_Warn, ' There are no extra tower data points below the grid. Tower output will be turned off.',ErrStat,ErrMsg,'CreateGrid')
+         AddTower = .FALSE. !bjj: change this so it doesn't actually modify this variable
 
       ENDIF
 
@@ -2372,7 +2323,7 @@ use TSMods
       p_grid%IYmax(IZ) = p_grid%NumGrid_Y           ! Number of lateral points at this height
    ENDDO
 
-   IF (p_grid%ExtraHubPT) THEN
+   IF ( .NOT. p_grid%HubOnGrid ) THEN
 
       p_grid%Y(p_grid%NumGrid_Y+1)     = 0.0
       p_grid%Z(p_grid%NumGrid_Z+1)     = p_grid%HubHt
@@ -2390,19 +2341,19 @@ use TSMods
 
    ENDIF
 
-   IF ( p%WrFile(FileExt_TWR) ) THEN
+   IF ( AddTower ) THEN !p%WrFile(FileExt_TWR)
 
       p_grid%Y(p_grid%YLim) = 0.0
-   
-      TmpReal  = p_grid%Z(1)
-
+         
       IF ( p_grid%ExtraTwrPT ) THEN 
-         TmpReal = TmpReal + p_grid%GridRes_Z
+         LastHeight =  p_grid%Z(1) + p_grid%GridRes_Z 
+      ELSE
+         LastHeight  = p_grid%Z(1)
       ENDIF
 
       DO IZ = FirstTwrPt,p_grid%ZLim
-         p_grid%Z(IZ)     = TmpReal - p_grid%GridRes_Z
-         TmpReal   = p_grid%Z(IZ)
+         p_grid%Z(IZ) = LastHeight - p_grid%GridRes_Z
+         LastHeight   = p_grid%Z(IZ)
 
          p_grid%IYmax(IZ) = 1                 ! The number of lateral points at this height
       ENDDO
@@ -2410,7 +2361,41 @@ use TSMods
    ENDIF   
          
 END SUBROUTINE CreateGrid
+!=======================================================================
+!> This routine calculates the wind components in the Inertial reference
+!!  frame.
+SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, US, ErrStat, ErrMsg )
 
+
+   TYPE(TurbSim_ParameterType),  INTENT(IN   ) :: p                                              !< parameters for TurbSim
+   TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum                                !< other states for random number generation
+   INTEGER(IntKi)              , INTENT(IN   ) :: US                                             !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+   INTEGER(IntKi)  ,             INTENT(  OUT) :: ErrStat                                        !< error level/status
+   CHARACTER(*) ,                INTENT(  OUT) :: ErrMsg                                         !< error message
+                                                                                              
+   REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(p%grid%NPoints,p%grid%NumFreq,3)   !< phases
+
+      ! local variables
+   INTEGER(IntKi)                              :: iPoint                                         ! points that have phases defined already 
+   
+
+      ! generate random phases for all the points
+      
+      ! bjj: todo: don't generate the angles for user-specified time-series points, which have phases already
+   CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, US, ErrStat, ErrMsg)
+
+   
+   IF (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
+      
+         ! note: setting the phase angles this way assumes that p%usr%f(1) = p%grid%f(1) [i.e., TMax, AnalysisTime are equal]; however, the simulated
+         ! time series may have more frequencies and/or smaller time step than the user time-series input file.
+      DO iPoint=1,p%usr%nPoints
+         PhaseAngles(iPoint,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,iPoint,:)
+      END DO
+      
+   END IF   
+
+END SUBROUTINE SetPhaseAngles
 !=======================================================================
 !> This routine calculates the wind components in the Inertial reference
 !!  frame.
@@ -2729,8 +2714,8 @@ SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, US)
          
 END SUBROUTINE TimeSeriesScaling_ReynoldsStress
 !=======================================================================
-SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_ID )
-! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType
+SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_ID, IsIECModel )
+! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType, IsIECModel
 ! calculates SigmaIEC, Lambda, IntegralScale, Lc
 use TurbSim_Types
 
@@ -2741,7 +2726,27 @@ use TurbSim_Types
    REAL(ReKi)             , INTENT(OUT)   :: InCDec     (3)              ! Contains the coherence decrements
    REAL(ReKi)             , INTENT(OUT)   :: InCohB     (3)              ! Contains the coherence b/L (offset) parameters
    INTEGER(IntKi)         , INTENT(IN)    :: TurbModel_ID                ! Integer value of spectral model (see SpecModel enum)      
+   LOGICAL                , INTENT(IN)    :: IsIECModel                  ! Determines if this is actually an IEC model, or if we just set the values to 0 and return      
    
+      
+   
+   IF ( .NOT. IsIECModel )  THEN  
+      
+       p_IEC%SigmaIEC = 0
+       p_IEC%Lambda = 0
+       p_IEC%IntegralScale = 0
+       p_IEC%LC = 0.0    ! The length scale is not defined for the non-IEC models
+    
+       RETURN
+       
+   ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
+   
+   
+   
+      ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
+      ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
+      ! IECTurbC = A, B, or C or from user specified quantity.
+
    
    IF ( p_IEC%NumTurbInp )  THEN
    
@@ -3178,10 +3183,7 @@ SUBROUTINE TS_End(p)
    IF ( ALLOCATED( p%met%USR_WindDir   ) )  DEALLOCATE( p%met%USR_WindDir   )
    IF ( ALLOCATED( p%met%USR_Sigma     ) )  DEALLOCATE( p%met%USR_Sigma     )
    IF ( ALLOCATED( p%met%USR_L         ) )  DEALLOCATE( p%met%USR_L         )
-   
-   IF ( ALLOCATED( p%met%USR_Freq      ) )  DEALLOCATE( p%met%USR_Freq      )
-   IF ( ALLOCATED( p%met%USR_Spec      ) )  DEALLOCATE( p%met%USR_Spec      )
-                                                                                        
+                                                                                           
    IF ( ALLOCATED( p%usr%pointID       ) )  DEALLOCATE( p%usr%pointID       )
    IF ( ALLOCATED( p%usr%pointyi       ) )  DEALLOCATE( p%usr%pointyi       )
    IF ( ALLOCATED( p%usr%pointzi       ) )  DEALLOCATE( p%usr%pointzi       )

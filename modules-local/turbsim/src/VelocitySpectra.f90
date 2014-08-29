@@ -626,33 +626,69 @@ RETURN
 
 END SUBROUTINE Spec_NWTCUP
 !=======================================================================
-!> This routine gets 
-!! velocity spectra for each of 3 wind components (u,v,w)
-SUBROUTINE Spec_TimeSer ( p, Ht, Spec )
+!> This routine gets velocity spectra for each of 3 wind components (u,v,w)
+!! by 2-D interpolation.
+SUBROUTINE Spec_TimeSer ( p, Ht, LastIndex, Spec )
 
    USE TurbSim_Types
 
          ! Passed variables
    TYPE(TurbSim_ParameterType), INTENT(IN   ) :: p                       !< Input: turbsim parameters
    REAL(ReKi),                  INTENT(IN   ) :: Ht                      !< Input: height for which spectra are requested
+   INTEGER(IntKi),              INTENT(INOUT) :: LastIndex(2)            !< Index for the last (Freq, Ht) used
    REAL(ReKi),                  INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum (Frequency, component)
-
          ! Local variables
-   REAL(ReKi)                                 :: Tmp                     ! scale for linear interpolation
-   INTEGER(IntKi)                             :: i, j, iPoint, Indx      ! loop counters
+   REAL(ReKi)                                 :: InCoord(2)              ! Arranged as (Freq, Ht)
+   INTEGER(IntKi)                             :: i                       ! loop counters
    
+         
+!bjj: fix me!!! (make use of containsW and height                              
+      
+   InCoord(2) = Ht
    
-!bjj: fix me!!! (make use of containsW and height
-  ! DO j=1,p%grid%NumFreq
+   DO I=1,p%grid%NumFreq
       
-      !Spec(:,:) = p%usr%S(:,1,:)
-            
+      InCoord(1) = p%grid%Freq(i)
       
+         ! this routine will return 0 for Spec(:,3) if p%usr%containsW is false
+      CALL UserSpec_Interp2D( InCoord, p%usr, LastIndex, Spec(I,:) )
       
+   ENDDO ! I
+
+   RETURN      
       
+                        
       
-   Indx = 1
-   iPoint = 1
+   !END DO
+   
+END SUBROUTINE Spec_TimeSer
+!=======================================================================
+!> This routine linearly interpolates data from an input file that 
+!! specifies the velocity spectra for each of 3 wind components (u,v,w)
+SUBROUTINE Spec_UserSpec ( p, Spec )
+
+
+   USE                     TSMods
+
+   IMPLICIT                NONE
+
+         ! Passed variables
+   type(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum
+
+      ! Internal variables
+
+   REAL(ReKi)            :: Tmp
+
+
+   INTEGER               :: I
+   INTEGER               :: Indx
+   INTEGER               :: J
+   INTEGER,PARAMETER     :: iPoint = 1
+
+      ! --------- Interpolate to the desired frequencies ---------------
+
+   Indx = 1;
 
    DO I=1,p%grid%NumFreq
 
@@ -682,75 +718,101 @@ SUBROUTINE Spec_TimeSer ( p, Ht, Spec )
 
    ENDDO ! I
 
-   RETURN      
-      
-      
-      
-      
-      
-      
-   !END DO
-   
-END SUBROUTINE Spec_TimeSer
-!=======================================================================
-!> This routine linearly interpolates data from an input file that 
-!! specifies the velocity spectra for each of 3 wind components (u,v,w)
-SUBROUTINE Spec_UserSpec ( Spec )
-
-
-   USE                     TSMods
-
-   IMPLICIT                NONE
-
-         ! Passed variables
-
-   REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !< Output: target spectrum
-
-      ! Internal variables
-
-   REAL(ReKi)            :: Tmp
-
-
-   INTEGER               :: I
-   INTEGER               :: Indx
-   INTEGER               :: J
-
-      ! --------- Interpolate to the desired frequencies ---------------
-
-   Indx = 1;
-
-   DO I=1,p%grid%NumFreq
-
-      IF ( p%grid%Freq(I) <= p%met%USR_Freq(1) ) THEN
-         Spec(I,:) = p%met%USR_Spec(1,:)
-      ELSEIF ( p%grid%Freq(I) >= p%met%USR_Freq(p%met%NumUSRf) ) THEN
-         Spec(I,:) = p%met%USR_Spec(p%met%NumUSRf,:)
-      ELSE
-
-            ! Find the two points between which the frequency lies
-
-         DO J=(Indx+1),p%met%NumUSRf
-            IF ( p%grid%Freq(I) <= p%met%USR_Freq(J) ) THEN
-               Indx = J-1
-
-                  ! Let's just do a linear interpolation for now
-
-               Tmp  = (p%grid%Freq(I) - p%met%USR_Freq(Indx)) / ( p%met%USR_Freq(Indx) - p%met%USR_Freq(J) )
-
-               Spec(I,:) = Tmp * ( p%met%USR_Spec(Indx,:) - p%met%USR_Spec(J,:) ) + p%met%USR_Spec(Indx,:)
-
-               EXIT
-            ENDIF
-         ENDDO ! J
-
-      ENDIF
-
-   ENDDO ! I
-
    RETURN
 
 
 END SUBROUTINE Spec_UserSpec
+
+!=======================================================================
+!< This routine linearly interpolates the p%usr spectral data. It is
+!! set for a 2-d interpolation on frequency and height of the input point.
+!! p%usr%f and p%usr%pointzi must be in increasing order. Each dimension
+!! may contain only 1 value.
+SUBROUTINE UserSpec_Interp2D( InCoord, p_usr, LastIndex, OutSpec )
+
+   USE TurbSim_Types
+
+      ! I/O variables
+
+   REAL(ReKi),                     INTENT(IN   ) :: InCoord(2)                                   !< Arranged as (Freq, Ht)
+   TYPE(UserTSSpec_ParameterType), INTENT(IN   ) :: p_usr                                        !<
+   INTEGER(IntKi),                 INTENT(INOUT) :: LastIndex(2)                                 !< Index for the last (Freq, Ht) used
+   REAL(ReKi),                     INTENT(  OUT) :: OutSpec(3)                                   !< The interpolated resulting PSD from each component of p%usr%S(:,:,1-3)
+
+
+      ! Local variables
+   
+   INTEGER(IntKi)                                :: I                                            ! loop counter                                 
+   INTEGER(IntKi)                                :: Indx_Lo(2)                                   ! index associated with lower bound of dimension 1,2 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
+   INTEGER(IntKi)                                :: Indx_Hi(2)                                   ! index associated with upper bound of dimension 1,2 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
+   REAL(ReKi)                                    :: Pos_Lo(2)                                    ! coordinate value with lower bound of dimension 1,2 
+   REAL(ReKi)                                    :: Pos_Hi(2)                                    ! coordinate value with upper bound of dimension 1,2 
+                                                 
+   REAL(ReKi)                                    :: isopc(2)                                     ! isoparametric coordinates 
+                                                                                                 
+   REAL(ReKi)                                    :: N(4)                                         ! size 2^n
+   REAL(ReKi)                                    :: u(4)                                         ! size 2^n
+   
+   
+         
+      ! find the indices into the arrays representing coordinates of each dimension:
+      !  (by using LocateStp, we do not require equally spaced frequencies or points)
+               
+   CALL LocateStp( InCoord(1), p_usr%f,       LastIndex(1), p_usr%nFreq   )
+   CALL LocateStp( InCoord(2), p_usr%pointzi, LastIndex(2), p_usr%nPoints )
+   
+   Indx_Lo = LastIndex  ! at this point, 0 <= Indx_Lo(i) <= n(i) for all i
+   
+   
+   ! Frequency (indx 1)
+   IF (Indx_Lo(1) == 0) THEN
+      Indx_Lo(1) = 1
+   ELSEIF (Indx_Lo(1) == p_usr%nFreq ) THEN
+      Indx_Lo(1) = max( p_usr%nFreq - 1, 1 )                ! make sure it's a valid index
+   END IF     
+   Indx_Hi(1) = min( Indx_Lo(1) + 1 , p_usr%nFreq )         ! make sure it's a valid index
+
+   ! Height (indx 2)
+   IF (Indx_Lo(2) == 0) THEN
+      Indx_Lo(2) = 1
+   ELSEIF (Indx_Lo(2) == p_usr%nPoints ) THEN
+      Indx_Lo(2) = max( p_usr%nPoints - 1, 1 )              ! make sure it's a valid index
+   END IF     
+   Indx_Hi(2) = min( Indx_Lo(2) + 1 , p_usr%nPoints )       ! make sure it's a valid index
+      
+         
+      ! calculate the bounding box; the positions of all dimensions:
+      
+   pos_Lo(1) = p_usr%f( Indx_Lo(1) )
+   pos_Hi(1) = p_usr%f( Indx_Hi(1) )
+      
+   ! bjj: work to fix this!!! z needs to be in increasing order
+   pos_Lo(2) = p_usr%pointzi( Indx_Lo(2) )
+   pos_Hi(2) = p_usr%pointzi (Indx_Hi(2) )
+               
+   
+      ! 2-D linear interpolation:
+      
+   CALL IsoparametricCoords( InCoord, pos_Lo, pos_Hi, isopc )      ! Calculate iospc
+   
+   N(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )
+   N(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )
+   N(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )
+   N(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )
+   N     = N / REAL( SIZE(N), ReKi )  ! normalize
+            
+      
+   do i = 1,size(p_usr%S,3)
+      u(1)  = p_usr%S( Indx_Hi(1), Indx_Lo(2), i )
+      u(2)  = p_usr%S( Indx_Hi(1), Indx_Hi(2), i )
+      u(3)  = p_usr%S( Indx_Lo(1), Indx_Hi(2), i )
+      u(4)  = p_usr%S( Indx_Lo(1), Indx_Lo(2), i )
+            
+      OutSpec(i) = SUM ( N * u )                   
+   end do
+   
+         
+END SUBROUTINE UserSpec_Interp2D
 !=======================================================================
 !> This subroutine defines the 3-D turbulence spectrum that can be expected over flat,
 !! homogeneous terrain as developed by RISO authors Hojstrup, Olesen, and Larsen.

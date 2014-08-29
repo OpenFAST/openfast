@@ -84,21 +84,13 @@ REAL(ReKi)              ::  VSig                            ! Standard deviation
 REAL(ReKi)              ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
 REAL(ReKi)              ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
 
-
-
-
 REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
-
-
 REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
-REAL(ReKi)              ::  TmpU                            ! Temporarily holds the value of the u component
-
 
 #ifdef DEBUG_TS
 INTEGER                 ::  IFreq ! for debugging                              
 #endif
 INTEGER                 ::  IY                              ! An index for the Y position of a point I
-INTEGER                 ::  JZ                              ! An index for the Z position of a point J
 INTEGER                 ::  NSize                           ! Size of the spectral matrix at each frequency
 
 INTEGER                 ::  NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
@@ -258,11 +250,20 @@ ELSE
 ENDIF
 
 
+!..................................................................................................................................
+! Define the spatial grid
+!..................................................................................................................................
 
    ! Define the other parameters for the time series.
-CALL CreateGrid( p%grid, NumGrid_Y2, NumGrid_Z2, NSize, ErrStat, ErrMsg )
+CALL CreateGrid( p%grid, NumGrid_Y2, NumGrid_Z2, NSize, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
 CALL CheckError()
       
+CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel)                  
+
+
+!..................................................................................................................................
+! Calculate mean velocity and direction profiles:
+!..................................................................................................................................
 
    !  Wind speed:
 CALL AllocAry(U,     p%grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
@@ -274,19 +275,22 @@ ELSE
    U = getVelocityProfile(   p%UHub,  p%grid%HubHt, p%grid%Z, p%grid%RotorDiameter) 
 ENDIF
 
+
    ! Wind Direction:
 CALL AllocAry(HWindDir, p%grid%ZLim, 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
 CALL CheckError()
    
 HWindDir = getDirectionProfile(p%grid%Z)
    
-IF (p%grid%ExtraHubPT) THEN    
-   JZ = p%grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
+IF ( .NOT. p%grid%HubOnGrid ) THEN    
+   p%met%HH_HFlowAng = HWindDir( p%grid%NumGrid_Z+1 ) ! This is the index of the Hub-height parameters if the hub height is not on the grid
 ELSE
-   JZ = NumGrid_Z2
+   p%met%HH_HFlowAng = HWindDir( NumGrid_Z2 )
 ENDIF
-p%met%HH_HFlowAng = HWindDir(JZ)
 
+!..................................................................................................................................
+! Calculate remaining parameters required for simulation:
+!..................................................................................................................................
 
 
 IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
@@ -303,25 +307,8 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
    
 END IF
 
-  
-IF ( p%met%IsIECModel )  THEN  
-
-      ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
-      ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
-      ! IECTurbC = A, B, or C or from user specified quantity.
-      
-   CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID)
-                  
-ELSE
-    p%IEC%SigmaIEC = 0
-    p%IEC%Lambda = 0
-    p%IEC%IntegralScale = 0
-    p%IEC%LC = 0.0    ! The length scale is not defined for the non-IEC models
-ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
-   
+           
 CALL WrSum_SpecModel( US, U, HWindDir, p%IEC, p%grid%Z(NumGrid_Z2) )
-
-
 
 
 IF (DEBUG_OUT) THEN
@@ -341,16 +328,15 @@ IF (DEBUG_OUT) THEN
    ENDIF
 ENDIF
 
-
-
-   !  Allocate the turbulence PSD array.
+!..................................................................................................................................
+! Get the single-point power spectral densities
+!..................................................................................................................................
 
 CALL AllocAry( S,    p%grid%NumFreq,p%grid%NPoints,3, 'S (turbulence PSD)',ErrStat, ErrMsg )
 CALL CheckError()
 
-! Calculate the single-point power spectral densities
-
 CALL CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
+CALL CheckError()
 
 
 IF ( ALLOCATED( p%met%USR_Z         ) )  DEALLOCATE( p%met%USR_Z           )
@@ -362,35 +348,34 @@ IF ( ALLOCATED( p%met%USR_L         ) )  DEALLOCATE( p%met%USR_L           )
 IF ( ALLOCATED( p%met%ZL_profile    ) )  DEALLOCATE( p%met%ZL_profile      )
 IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile   )
 
-IF ( ALLOCATED( p%met%USR_Freq      ) )  DEALLOCATE( p%met%USR_Freq   )
-IF ( ALLOCATED( p%met%USR_Spec      ) )  DEALLOCATE( p%met%USR_Spec   )
+!IF ( ALLOCATED( p%usr%f            ) )  DEALLOCATE( p%usr%f               ) bjj: do we need to keep these for phase angles?
+IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S               )
 
-
-   ! Allocate memory for random number array
-
+!..................................................................................................................................
+! Get the phase angles
+!..................................................................................................................................
+   
 CALL AllocAry( PhaseAngles, p%grid%NPoints, p%grid%NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
 CALL CheckError()
-
-
-   ! Get the phase angles
-CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, US, ErrStat, ErrMsg)
+        
+CALL SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, US, ErrStat, ErrMsg )
 CALL CheckError()
 
-!>>>>>> bjj fixme todo remove
-if (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
-   PhaseAngles(1,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,1,:)   
-END IF
 
 #ifdef DEBUG_TS
 DO iFreq=1, p%grid%NumFreq
    WRITE( 73, '(7(F15.6," "))') iFreq*(1.0/p%grid%AnalysisTime), ( S(iFreq,1,iY), phaseAngles(1,iFreq,iY), iY=1,3 )
 END DO
 #endif
-!<<<<<<<<<< bjj fixme todo remove
 
 
-IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)  
+IF ( ALLOCATED(OtherSt_RandNum%nextSeed ) ) DEALLOCATE( OtherSt_RandNum%nextSeed )  
+IF ( ALLOCATED(p%usr%PhaseAngles        ) ) DEALLOCATE( p%usr%PhaseAngles        )  
+IF ( ALLOCATED(p%usr%f                  ) ) DEALLOCATE( p%usr%f                  ) ! bjj: do we need to keep these for phase angles or should we destroy earlier?
 
+!..................................................................................................................................
+! Get the Fourier Coefficients
+!..................................................................................................................................
 CALL AllocAry( V, p%grid%NumSteps, p%grid%NPoints, 3, 'V (velocity)', ErrStat, ErrMsg) !  Allocate the array that contains the velocities.
 CALL CheckError()
 
@@ -416,22 +401,22 @@ IF ( ALLOCATED( p%grid%Freq ) )  DEALLOCATE( p%grid%Freq )
 IF ( ALLOCATED( S           ) )  DEALLOCATE( S           )
 IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
 
-
-   ! Create the time series:
-   
+!..................................................................................................................................
+! Create the time series
+!..................................................................................................................................  
 CALL Coeffs2TimeSeries( V, p%grid%NumSteps, p%grid%NPoints, ErrStat, ErrMsg)
 CALL CheckError()
 
-
-   ! Scale time series (if desired) for cross-component correlation or IEC statistics:
+!..................................................................................................................................
+! Scale time series (if desired) for cross-component correlation or IEC statistics:
+!..................................................................................................................................  
 CALL ScaleTimeSeries(p, V, US)
 CALL CheckError()
 
 
-
-!..............................................................................
+!..................................................................................................................................
 ! Write hub-height output files (before adding mean and rotating final results)
-!..............................................................................
+!..................................................................................................................................
 
 IF ( p%WrFile(FileExt_HH) )  THEN
    CALL WrHH_ADtxtfile(V, p%RootName, p%IEC%TurbInt, ErrStat, ErrMsg)   
@@ -452,10 +437,10 @@ END IF
 CALL WrSum_Stats(V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 CALL CheckError()
 
-!..............................................................................
+!..................................................................................................................................
 ! Add mean wind to u' components and rotate to inertial reference  
 !  frame coordinate system
-!..............................................................................
+!..................................................................................................................................
 CALL AddMeanAndRotate(p, V, U, HWindDir)
 
 
@@ -464,10 +449,9 @@ CALL AddMeanAndRotate(p, V, U, HWindDir)
 IF ( ALLOCATED( U        ) )  DEALLOCATE( U        )
 IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 
-!..............................................................................
-! Are we generating a coherent turbulent timestep file?
-!..............................................................................
-   
+!..................................................................................................................................
+! Generate coherent turbulence if desired:
+!..................................................................................................................................   
 IF ( p%WrFile(FileExt_CTS) ) THEN
    p_CohStr%WSig=WSig
 
@@ -487,37 +471,28 @@ IF ( p%WrFile(FileExt_CTS) ) THEN
    WRITE ( US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
    WRITE ( US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
    WRITE ( US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
-
    
-
 ENDIF !WrACT
 
-!..............................................................................
-! Are we generating FF AeroDyn/BLADED files OR Tower Files?
-!..............................................................................
+!..................................................................................................................................
+! Generate output files:
+!..................................................................................................................................
 
-IF ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)  )  THEN 
-
+   ! Are we generating FF files?
+IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
    CALL WrSum_InterpolatedHubStats(p, V, US, NumGrid_Y2, NumGrid_Z2)
 
+      
    IF ( p%WrFile(FileExt_BTS) ) THEN
       CALL WrBinTURBSIM(p, V, ErrStat, ErrMsg)
       CALL CheckError()
    END IF   
    
-   
-   IF ( p%WrFile(FileExt_WND) ) THEN
-
-         ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
-         ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
-         ! in this BLADED-style binary output.  TmpU is |V-UHub|
-      TmpU = MAX( ABS(MAXVAL(V(:,:,1))-p%UHub), ABS(MINVAL(V(:,:,1))-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files         
-      USig = MAX(USig,0.05*TmpU)
+   IF ( p%WrFile(FileExt_WND) ) THEN      
       CALL WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
       CALL CheckError()
-   ENDIF
-   
-ENDIF
+   END IF
+END IF
 
 
    ! Are we generating FF formatted files?
@@ -527,7 +502,12 @@ IF ( p%WrFile(FileExt_UVW) )  THEN
 ENDIF ! ( WrFile(FileExt_UVW) )
 
 
-   ! Deallocate the temporary V, Y, Z, and IYmax arrays.
+
+!..................................................................................................................................
+! End:
+!..................................................................................................................................
+
+   ! Deallocate the V, Y, Z, and IYmax arrays.
 
 IF ( ALLOCATED( V               ) )  DEALLOCATE( V               )
 IF ( ALLOCATED( p%grid%Y        ) )  DEALLOCATE( p%grid%Y        )
@@ -563,7 +543,7 @@ CALL NormStop
 
 
 CONTAINS
-!...........................................................
+!..................................................................................................................................
 SUBROUTINE CheckError()
    IF (ErrStat /= ErrID_None) THEN
    
