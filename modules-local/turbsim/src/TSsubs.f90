@@ -2181,7 +2181,9 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
    REAL(ReKi)                                     :: DelF                            ! Delta frequency
    INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
-  !INTEGER                                        :: NumSteps4                       ! one-fourth the number of steps
+   INTEGER                                        :: NTwrPts                         ! number of tower points
+   
+   INTEGER                                        :: NumSteps2                       ! one-half the number of steps
    
    INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
@@ -2194,29 +2196,35 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
    
       ! Calculate Total time and NumSteps.
       ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
-!bjj: I have no idea why this is necessary, so I'm removing it for now:      ! Make sure it is a multiple of 4 too.
+!bjj: I have no idea why this is necessary, so I'm removing it for now:      ! Make sure it is a multiple of 2 too.
 
    IF ( p_grid%Periodic ) THEN
       p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
-      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
-!bjj rm:     NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
-!bjj rm:     p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+
+         ! make sure NumSteps is an even number and a product of small primes
+      NumSteps2          = ( p_grid%NumSteps - 1 )/2 + 1
+      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9 )  ! >= 2*NumSteps2 = NumSteps + 1 - MOD(NumSteps-1,2) >= NumSteps
+      !p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  
+      
       p_grid%NumOutSteps = p_grid%NumSteps
    ELSE
       p_grid%NumOutSteps = CEILING( ( p_grid%UsableTime + p_grid%GridWidth / UHub )/p_grid%TimeStep )
       p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
-      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
-!bjj rm:      NumSteps4   = ( p_grid%NumSteps - 1 )/4 + 1
-!bjj rm:      p_grid%NumSteps    = 4*PSF( NumSteps4 , 9 )  ! >= 4*NumSteps4 = NumOutSteps + 3 - MOD(NumOutSteps-1,4) >= NumOutSteps
+      
+         ! make sure NumSteps is an even number and a product of small primes      
+!      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
+      NumSteps2          = ( p_grid%NumSteps - 1 )/2 + 1
+      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9 )  ! >= 2*NumSteps2 = NumOutSteps + 1 - MOD(NumOutSteps-1,2) >= NumOutSteps
+      
    END IF
 
-   IF (p_grid%NumSteps < 2 )  THEN
-      CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
-                       'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, 'CreateGrid' )
-      RETURN
-   END IF
+   !IF (p_grid%NumSteps < 2 )  THEN
+   !   CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
+   !                    'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, 'CreateGrid' )
+   !   RETURN
+   !END IF
    
-   p_grid%NumFreq = p_grid%NumSteps/2
+   p_grid%NumFreq = p_grid%NumSteps / 2
    DelF           = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
       
    
@@ -2235,7 +2243,7 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
    p_grid%GridRes_Y = p_grid%GridWidth  / REAL( p_grid%NumGrid_Y - 1, ReKi )
    p_grid%GridRes_Z = p_grid%GridHeight / REAL( p_grid%NumGrid_Z - 1, ReKi )      
 
-   p_grid%Zbottom = p_grid%HubHt + 0.5*p_grid%RotorDiameter                             ! height of the highest grid points
+   p_grid%Zbottom = p_grid%HubHt + 0.5*p_grid%RotorDiameter                                ! height of the highest grid points
    p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(p_grid%NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
    IF ( p_grid%Zbottom <= 0.0 ) THEN
@@ -2262,13 +2270,25 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
    
    ! Then, let's deal with the hub point:
    
-   IF ( .NOT. p_grid%HubOnGrid ) THEN
-      p_grid%NPoints = p_grid%NPoints + 1                               ! Add the hub point if necessary
-      p_grid%ZLim = p_grid%NumGrid_Z+1
-      p_grid%YLim = p_grid%NumGrid_Y+1
+   IF ( p_grid%HubOnGrid ) THEN
+      p_grid%ZLim      = p_grid%NumGrid_Z
+      p_grid%YLim      = p_grid%NumGrid_Y
+      
+      p_grid%HubIndx_Y = NumGrid_Y2
+      p_grid%HubIndx_Z = NumGrid_Z2
+      
+      p_grid%HubIndx = p_grid%NumGrid_Y*( p_grid%HubIndx_Z - 1 ) + p_grid%HubIndx_Y      
+      
    ELSE
-      p_grid%ZLim = p_grid%NumGrid_Z
-      p_grid%YLim = p_grid%NumGrid_Y
+      p_grid%NPoints   = p_grid%NPoints + 1                               ! Add the hub point if necessary
+                       
+      p_grid%ZLim      = p_grid%NumGrid_Z+1
+      p_grid%YLim      = p_grid%NumGrid_Y+1
+      
+      p_grid%HubIndx_Y = p_grid%NumGrid_Z+1
+      p_grid%HubIndx_Z = p_grid%NumGrid_Y+1
+      
+      p_grid%HubIndx   = p_grid%NPoints                  
    ENDIF
 
    
@@ -2279,16 +2299,16 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
          ! Compute the number of points between the bottom of the grid and the ground 
          ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
  
-      IZ = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
+      NTwrPts = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
 
       IF ( p_grid%ExtraTwrPT ) THEN 
-         IZ = IZ + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
+         NTwrPts = NTwrPts + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
       ENDIF
 
-      IF ( IZ > 0 ) THEN
+      IF ( NTwrPts > 0 ) THEN
 
-         p_grid%ZLim = p_grid%ZLim + IZ
-         p_grid%NPoints = p_grid%NPoints + IZ                       ! Add the number of tower points
+         p_grid%ZLim = p_grid%ZLim + NTwrPts
+         p_grid%NPoints = p_grid%NPoints + NTwrPts                       ! Add the number of tower points
 
          IF ( p_grid%HubOnGrid ) THEN
             p_grid%YLim = p_grid%YLim + 1
@@ -2323,21 +2343,18 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
       p_grid%IYmax(IZ) = p_grid%NumGrid_Y           ! Number of lateral points at this height
    ENDDO
 
-   IF ( .NOT. p_grid%HubOnGrid ) THEN
+   
+   IF ( p_grid%HubOnGrid ) THEN
+
+      FirstTwrPt = p_grid%NumGrid_Z + 1              ! The start of tower points, if they exist
+      
+   ELSE
 
       p_grid%Y(p_grid%NumGrid_Y+1)     = 0.0
       p_grid%Z(p_grid%NumGrid_Z+1)     = p_grid%HubHt
       p_grid%IYmax(p_grid%NumGrid_Z+1) = 1
 
-      p_grid%HubIndx = p_grid%NumGrid_Y*p_grid%NumGrid_Z + 1
-
       FirstTwrPt = p_grid%NumGrid_Z + 2              ! The start of tower points, if they exist
-
-   ELSE
-
-      p_grid%HubIndx = p_grid%NumGrid_Y*(NumGrid_Z2-1) + NumGrid_Y2
-
-      FirstTwrPt = p_grid%NumGrid_Z + 1              ! The start of tower points, if they exist
 
    ENDIF
 
@@ -2387,8 +2404,8 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, US, ErrStat, ErrMsg 
    
    IF (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
       
-         ! note: setting the phase angles this way assumes that p%usr%f(1) = p%grid%f(1) [i.e., TMax, AnalysisTime are equal]; however, the simulated
-         ! time series may have more frequencies and/or smaller time step than the user time-series input file.
+         ! note: setting the phase angles this way assumes that p%usr%f(1:p%usr%nFreq) = p%grid%f(1:p%usr%nFreq) [i.e., TMax, AnalysisTime are equal]; 
+         ! however, the simulated time series may have more frequencies and/or smaller time step than the user time-series input file.
       DO iPoint=1,p%usr%nPoints
          PhaseAngles(iPoint,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,iPoint,:)
       END DO

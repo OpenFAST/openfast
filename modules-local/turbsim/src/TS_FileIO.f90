@@ -2687,14 +2687,13 @@ SUBROUTINE WrSum_UserInput( p_met, US  )
 
 END SUBROUTINE WrSum_UserInput
 !=======================================================================
-SUBROUTINE WrSum_SpecModel(US, U, HWindDir, p_IEC, GridVertCenter )
+SUBROUTINE WrSum_SpecModel(US, U, HWindDir, p_IEC  )
 
 use TSMods
 
 
    INTEGER,                 INTENT(IN) :: US
    TYPE(IEC_ParameterType), INTENT(IN) :: p_IEC                      ! parameters for IEC models   
-   REAL(ReKi),              INTENT(IN) :: GridVertCenter             ! Position of vertical "middle" grid point (to determine if it is the hub height)
    REAL(ReKi),              INTENT(IN) :: HWindDir(:)                ! profile of horizontal wind direction
    REAL(ReKi),              INTENT(IN) :: U       (:)                ! profile of steady wind speed
 
@@ -2923,7 +2922,7 @@ SVFA = SIN( p%met%VFlowAng*D2R )
 CHFA = COS( p%met%HH_HFlowAng*D2R )
 SHFA = SIN( p%met%HH_HFlowAng*D2R )
 
-HubPr = ( ABS( p%grid%HubHt - GridVertCenter ) > Tolerance )     !If the hub height is not on the z-grid, print it, too.
+HubPr = .NOT. p%grid%HubOnGrid     !If the hub height is not on the z-grid, print it, too.
 
 
    ! Write out the grid points & the hub
@@ -2931,21 +2930,21 @@ HubPr = ( ABS( p%grid%HubHt - GridVertCenter ) > Tolerance )     !If the hub hei
 DO IZ = p%grid%NumGrid_Z,1, -1
    
    IF ( HubPr  .AND. ( p%grid%Z(IZ) < p%grid%HubHt ) ) THEN
-   
-      JZ = p%grid%NumGrid_Z+1  ! This is the index of the Hub-height parameters if the hub height is not on the grid
-      
-      CHFA = COS( HWindDir(JZ)*D2R )
-      SHFA = SIN( HWindDir(JZ)*D2R )
+         
+      CHFA = COS( HWindDir(p%grid%HubIndx_Z)*D2R )
+      SHFA = SIN( HWindDir(p%grid%HubIndx_Z)*D2R )
          
       IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
             
-         WRITE(US,FormStr)  p%grid%Z(JZ), U(JZ), HWindDir(JZ), U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA, &
-                           p%met%ZL_profile(JZ), p%met%Ustar_profile(JZ)
+         WRITE(US,FormStr)  p%grid%Z(p%grid%HubIndx_Z), U(p%grid%HubIndx_Z), HWindDir(p%grid%HubIndx_Z), &
+                            U(p%grid%HubIndx_Z)*CHFA*CVFA, U(p%grid%HubIndx_Z)*SHFA*CVFA, U(p%grid%HubIndx_Z)*SVFA, &
+                            p%met%ZL_profile(p%grid%HubIndx_Z), p%met%Ustar_profile(p%grid%HubIndx_Z)
       ELSE
-         WRITE(US,FormStr)  p%grid%Z(JZ), U(JZ), HWindDir(JZ), U(JZ)*CHFA*CVFA, U(JZ)*SHFA*CVFA, U(JZ)*SVFA
+         WRITE(US,FormStr)  p%grid%Z(p%grid%HubIndx_Z), U(p%grid%HubIndx_Z), HWindDir(p%grid%HubIndx_Z), &
+                            U(p%grid%HubIndx_Z)*CHFA*CVFA, U(p%grid%HubIndx_Z)*SHFA*CVFA, U(p%grid%HubIndx_Z)*SVFA
       ENDIF
    
-      HubPr = .FALSE.
+      HubPr = .FALSE. ! we've printed the hub values, so we don't need to check this anymore
    ENDIF
    
    CHFA = COS( HWindDir(IZ)*D2R )

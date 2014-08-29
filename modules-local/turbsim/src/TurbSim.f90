@@ -282,11 +282,7 @@ CALL CheckError()
    
 HWindDir = getDirectionProfile(p%grid%Z)
    
-IF ( .NOT. p%grid%HubOnGrid ) THEN    
-   p%met%HH_HFlowAng = HWindDir( p%grid%NumGrid_Z+1 ) ! This is the index of the Hub-height parameters if the hub height is not on the grid
-ELSE
-   p%met%HH_HFlowAng = HWindDir( NumGrid_Z2 )
-ENDIF
+p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx_Z )
 
 !..................................................................................................................................
 ! Calculate remaining parameters required for simulation:
@@ -308,7 +304,7 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
 END IF
 
            
-CALL WrSum_SpecModel( US, U, HWindDir, p%IEC, p%grid%Z(NumGrid_Z2) )
+CALL WrSum_SpecModel( US, U, HWindDir, p%IEC )
 
 
 IF (DEBUG_OUT) THEN
@@ -415,6 +411,12 @@ CALL CheckError()
 
 
 !..................................................................................................................................
+! Write statistics of the run to the summary file:
+!..................................................................................................................................
+CALL WrSum_Stats(V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
+CALL CheckError()
+
+!..................................................................................................................................
 ! Write hub-height output files (before adding mean and rotating final results)
 !..................................................................................................................................
 
@@ -432,10 +434,6 @@ IF ( p%WrFile(FileExt_DAT) )  THEN
    CALL WrHH_text(V,  p%RootName, ErrStat, ErrMsg )   
    CALL CheckError()
 END IF
-
-   ! Write statistics of the run to the summary file:
-CALL WrSum_Stats(V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
-CALL CheckError()
 
 !..................................................................................................................................
 ! Add mean wind to u' components and rotate to inertial reference  
