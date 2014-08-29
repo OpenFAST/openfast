@@ -25,23 +25,22 @@ CONTAINS
 !> This subroutine computes the coherence between two points on the grid,
 !! forms the cross spectrum matrix, and returns the complex
 !! Fourier coefficients of the simulated velocity (wind speed).
-SUBROUTINE CalcFourierCoeffs( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg )
+SUBROUTINE CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
 
 
-USE                           TSMods
 USE NWTC_LAPACK
 
 IMPLICIT                      NONE
 
    ! Passed variables
 
-INTEGER,       INTENT(IN)     :: NSize                        !< Size of dimension 2 of Matrix
-REAL(ReKi),    INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
-REAL(ReKi),    INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),    INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),    INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-INTEGER(IntKi),INTENT(OUT)    :: ErrStat
-CHARACTER(*),  INTENT(OUT)    :: ErrMsg
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
+REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
    ! Internal variables
 
@@ -80,10 +79,10 @@ UC = -1
 ErrStat = ErrID_None
 ErrMsg  = ""
 
-CALL AllocAry( Dist,      NSize,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-CALL AllocAry( DistU,     NSize,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-CALL AllocAry( DistZMExp, NSize, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-CALL AllocAry( TRH,       NSize,       'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( DistZMExp, p%grid%NPacked, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+CALL AllocAry( TRH,       p%grid%NPacked,       'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
 IF (ErrStat >= AbortErrLev) THEN
    CALL Cleanup()
    RETURN
@@ -172,10 +171,10 @@ IF ( COH_OUT ) THEN
             RETURN
          END IF
          
-      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance',     Dist(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance/U',   DistU(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) '(r/Z)^CohExp', DistZMExp(:)
+      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,p%grid%NPacked)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance',     Dist(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance/U',   DistU(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '(r/Z)^CohExp', DistZMExp(:)
 
 ENDIF
 
@@ -215,7 +214,7 @@ DO IVec = 1,IVec_End
          ENDDO ! JJ
       ENDDO ! II
       
-      CALL Coh2H(    IVec, IFreq, TRH, S,              p%grid%NPoints, NSize, UC )
+      CALL Coh2H(    p, IVec, IFreq, TRH, S, UC )
       CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
    ENDDO !IFreq
 
@@ -258,26 +257,25 @@ END SUBROUTINE CalcFourierCoeffs
 !! using the API coherence function. It then
 !! forms the cross spectrum matrix and returns the complex
 !! Fourier coefficients of the simulated velocity (wind speed).
-SUBROUTINE CalcFourierCoeffs_API( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg)
+SUBROUTINE CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
 
    ! This subroutine computes the coherence between two points on the grid.
    ! It stores the symmetric coherence matrix, packed into variable "Matrix"
    ! This replaces what formerly was the "ExCoDW" matrix.
 
-USE                           TSMods
 USE NWTC_LAPACK
 
 IMPLICIT                      NONE
 
    ! Passed variables
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
 
-REAL(ReKi),     INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
-REAL(ReKi),     INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),     INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),     INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-INTEGER(IntKi), INTENT(IN)     :: NSize                        !< Size of dimension 2 of Matrix
-INTEGER(IntKi), INTENT(OUT)    :: ErrStat
-CHARACTER(*),   INTENT(OUT)    :: ErrMsg
+REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
    ! Internal variables
 
@@ -340,11 +338,11 @@ V(:,:,:) = 0.0    ! initialize the velocity matrix
 ! ------------ arrays allocated -------------------------
 Stat = 0.
 
-CALL AllocAry( Dist_Y,    NSize, 'Dist_Y coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-CALL AllocAry( Dist_Z,    NSize, 'Dist_Z coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-!CALL AllocAry( Dist_Z12, NSize, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-CALL AllocAry( Z1Z2,      NSize,   'Z1Z2 coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-CALL AllocAry( TRH,       NSize,    'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( Dist_Y,    p%grid%NPacked, 'Dist_Y coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( Dist_Z,    p%grid%NPacked, 'Dist_Z coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+!CALL AllocAry( Dist_Z12, p%grid%NPacked, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( Z1Z2,      p%grid%NPacked,   'Z1Z2 coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+CALL AllocAry( TRH,       p%grid%NPacked,    'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
 
 IF (ErrStat >= AbortErrLev) THEN
    CALL Cleanup()
@@ -412,10 +410,10 @@ IF ( COH_OUT ) THEN
             RETURN
          END IF
       
-      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,NSize)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Y',   Dist_Y(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Distance_Z', Dist_Z(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(NSize)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
+      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,p%grid%NPacked)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance_Y',   Dist_Y(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance_Z', Dist_Z(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
 ENDIF
 
 DO IVec = 1,3
@@ -467,7 +465,7 @@ DO IVec = 1,3
       END IF
       
          
-      CALL Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, UC )
+      CALL Coh2Coeffs( p, IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, UC )
          
 
    ENDDO !IFreq
@@ -493,20 +491,19 @@ CONTAINS
 !............................................
 END SUBROUTINE CalcFourierCoeffs_API
 !=======================================================================
-SUBROUTINE Coh2Coeffs( IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, NSize, UC )
+SUBROUTINE Coh2Coeffs( p, IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, UC )
 
 use NWTC_LAPACK
-USE TSMods
 
-LOGICAL,          INTENT(IN)     :: IdentityCoh
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (length is >= NSize).
-REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),       INTENT(IN)     :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
-INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
-INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
-INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of dimension 2 of Matrix
-INTEGER(IntKi),   INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
+LOGICAL,                     INTENT(IN)     :: IdentityCoh
+REAL(ReKi),                  INTENT(INOUT)  :: TRH         (:)              ! The transfer function  matrix (length is >= NSize).
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          ! The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi),              INTENT(IN)     :: IVec                         ! loop counter (=number of wind components)
+INTEGER(IntKi),              INTENT(IN)     :: IFreq                        ! loop counter (=number of frequencies)
+INTEGER(IntKi),              INTENT(IN)     :: UC                           ! unit number for optional coherence debugging file
 
 
 REAL(ReKi)                       :: CPh                                      ! Cosine of the random phase
@@ -542,7 +539,7 @@ character(1024)                  :: ErrMsg
 
          IF (COH_OUT) THEN
 !            IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
-               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:NSize)
+               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
 !            ENDIF
          ENDIF
 
@@ -612,7 +609,7 @@ END SUBROUTINE Coh2Coeffs
 !=======================================================================
 SUBROUTINE EyeCoh2H( IVec, IFreq, TRH, S, NPoints )
 
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (length is >= NSize).
+REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (length is >= p%grid%NPacked).
 REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
@@ -643,19 +640,17 @@ integer                          :: Indx, J, I
 
 END SUBROUTINE EyeCoh2H
 !=======================================================================
-SUBROUTINE Coh2H( IVec, IFreq, TRH, S, NPoints, NSize, UC )
+SUBROUTINE Coh2H( p, IVec, IFreq, TRH, S, UC )
 
 use NWTC_LAPACK
-USE TSMods, only: COH_OUT,  p
+USE TSMods, only: COH_OUT
 
-
-REAL(ReKi),       INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (size >= NumSteps).
-REAL(ReKi),       INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
-INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
-INTEGER(IntKi),   INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
-INTEGER(IntKi),   INTENT(IN)     :: NPoints                                  ! Size of dimension 2 of S
-INTEGER(IntKi),   INTENT(IN)     :: NSize                                    ! Size of TRH = NPoints*(NPoints+1)/2
-INTEGER(IntKi),   INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                                        ! TurbSim parameters
+REAL(ReKi),                  INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (size >= NumSteps).
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
+INTEGER(IntKi),              INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
+INTEGER(IntKi),              INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
+INTEGER(IntKi),              INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
 
 integer                          :: Indx, J, I, Stat
 character(1024)                  :: ErrMsg
@@ -663,7 +658,7 @@ character(1024)                  :: ErrMsg
          
    IF (COH_OUT) THEN
 !     IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
-         WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(NSize)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:NSize)
+         WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
 !     ENDIF
    ENDIF
 
@@ -671,7 +666,7 @@ character(1024)                  :: ErrMsg
       ! Calculate the Cholesky factorization for the coherence matrix
       ! -------------------------------------------------------------
 
-   CALL LAPACK_pptrf( 'L', NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
+   CALL LAPACK_pptrf( 'L', p%grid%NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
 
    IF ( Stat /= ErrID_None ) THEN
       CALL WrScr(ErrMsg)
@@ -688,8 +683,8 @@ character(1024)                  :: ErrMsg
       ! -------------------------------------------------------------
 
    Indx = 1
-   DO J = 1,NPoints  ! Column
-      DO I = J,NPoints ! Row
+   DO J = 1,p%grid%NPoints  ! Column
+      DO I = J,p%grid%NPoints ! Row
 
             ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
 
@@ -705,7 +700,7 @@ END SUBROUTINE Coh2H
 SUBROUTINE H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, NPoints )
 
 
-REAL(ReKi),       INTENT(IN)     :: TRH         (:)                          ! The transfer function  matrix (length is >= NSize).
+REAL(ReKi),       INTENT(IN)     :: TRH         (:)                          ! The transfer function  matrix (length is >= p%grid%NPacked).
 REAL(ReKi),       INTENT(IN)     :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),       INTENT(INOUT)  :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
 INTEGER(IntKi),   INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
@@ -860,8 +855,6 @@ END SUBROUTINE Coeffs2TimeSeries
 !> This routine calculates the two-sided Fourier amplitudes of the frequencies
 !! note that the resulting time series has zero mean.
 SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
-
-use TurbSim_Types
 
    TYPE(TurbSim_ParameterType),  INTENT(in)     :: p                            !< TurbSim parameters
    REAL(ReKi),                   INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
@@ -2157,7 +2150,7 @@ END FUNCTION PowerLawExp
 !=======================================================================
 !> This routine creates the grid (cartesian + other points) that are
 !!  to be simulated.
-SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, ErrStat, ErrMsg )
+SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
 
 ! Assumes that these variables are set:
 !  GridHeight
@@ -2166,9 +2159,6 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
 !  NumGrid_Z
 
    TYPE(Grid_ParameterType),        INTENT(INOUT) :: p_grid
-   INTEGER                        , INTENT(  OUT) :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
-   INTEGER                        , INTENT(  OUT) :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
-   INTEGER                        , INTENT(  OUT) :: NSize                           ! Size of the spectral matrix at each frequency
    
    REAL(ReKi)                     , INTENT(IN   ) :: UHub                            ! Mean wind speed at hub, used only when usable time is not "ALL" (i.e., periodic flag is false) 
    LOGICAL                        , INTENT(INOUT) :: AddTower                        ! Value of p%WrFile(FileExt_TWR) [determines if tower points should be generarated]
@@ -2182,6 +2172,8 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
    INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
    INTEGER                                        :: NTwrPts                         ! number of tower points
+   INTEGER                                        :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
+   INTEGER                                        :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
    
    INTEGER                                        :: NumSteps2                       ! one-half the number of steps
    
@@ -2323,7 +2315,7 @@ SUBROUTINE CreateGrid( p_grid, NumGrid_Y2, NumGrid_Z2, NSize, UHub, AddTower, Er
 
    ENDIF
 
-   NSize   = p_grid%NPoints*( p_grid%NPoints + 1 )/2   
+   p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
    
    
    CALL AllocAry(p_grid%Z,     p_grid%ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')

@@ -90,11 +90,9 @@ REAL(ReKi)              ::  CPUtime                         ! Contains the numbe
 #ifdef DEBUG_TS
 INTEGER                 ::  IFreq ! for debugging                              
 #endif
-INTEGER                 ::  IY                              ! An index for the Y position of a point I
-INTEGER                 ::  NSize                           ! Size of the spectral matrix at each frequency
 
-INTEGER                 ::  NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
-INTEGER                 ::  NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
+INTEGER                 ::  IY                              ! An index for the Y position of a point I
+
 INTEGER                 ::  UnOut                           ! unit for output files
 
 
@@ -255,7 +253,7 @@ ENDIF
 !..................................................................................................................................
 
    ! Define the other parameters for the time series.
-CALL CreateGrid( p%grid, NumGrid_Y2, NumGrid_Z2, NSize, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
+CALL CreateGrid( p%grid, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
 CALL CheckError()
       
 CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel)                  
@@ -383,9 +381,9 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 IF (p%met%TurbModel_ID /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
     IF (p%met%TurbModel_ID == SpecModel_API) THEN
-        CALL CalcFourierCoeffs_API( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg) 
+        CALL CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, ErrStat, ErrMsg) 
     ELSE
-        CALL CalcFourierCoeffs( NSize, U, PhaseAngles, S, V, ErrStat, ErrMsg)
+        CALL CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
     ENDIF
     CALL CheckError()
 ENDIF
@@ -453,7 +451,7 @@ IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 IF ( p%WrFile(FileExt_CTS) ) THEN
    p_CohStr%WSig=WSig
 
-   CALL CohStr_WriteCTS(p%met, p%RNG, p%grid, p_CohStr, OtherSt_RandNum, y_CohStr, p%RootName, ErrStat, ErrMsg)
+   CALL CohStr_WriteCTS(p, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrMsg)
    CALL CheckError()
    
          
@@ -478,7 +476,7 @@ ENDIF !WrACT
 
    ! Are we generating FF files?
 IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
-   CALL WrSum_InterpolatedHubStats(p, V, US, NumGrid_Y2, NumGrid_Z2)
+   CALL WrSum_InterpolatedHubStats(p, V, US)
 
       
    IF ( p%WrFile(FileExt_BTS) ) THEN

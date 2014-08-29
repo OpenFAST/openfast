@@ -2712,7 +2712,7 @@ use TSMods
    REAL(ReKi)              ::  U_zb                                  ! The velocity at the bottom of the rotor disk (for estimating log fit)
    REAL(DbKi)              ::  U_zt                                  ! The velocity at the top of the rotor disk (for estimating log fit)
       
-   INTEGER                 :: iz, jz                                 ! loop counters
+   INTEGER                 :: iz                                     ! loop counter
    LOGICAL                 ::  HubPr                                 ! Flag to indicate if the hub height is to be printed separately in the summary file
 
    CHARACTER(200)          :: FormStr                                ! String used to store format specifiers.
@@ -3630,14 +3630,12 @@ END SUBROUTINE WrSum_Stats
 !=======================================================================
 !> Calculate the mean velocity and turbulence intensity of the U-component
 !! of the interpolated hub point for comparison with InflowWind output.
-SUBROUTINE WrSum_InterpolatedHubStats(p, V, US, NumGrid_Y2, NumGrid_Z2)
+SUBROUTINE WrSum_InterpolatedHubStats(p, V, US)
 
       ! passed variables:
    TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
    REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        !< velocity, aligned along the streamwise direction without mean values added 
    INTEGER(IntKi)                 , INTENT(IN)     ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
-   INTEGER                        , INTENT(IN)     :: NumGrid_Y2                       !< Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
-   INTEGER                        , INTENT(IN)     :: NumGrid_Z2                       !< Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
 
       ! local variables:
 REAL(DbKi)              ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
@@ -3659,6 +3657,8 @@ INTEGER                 ::  ZLo_YHi                         ! Index for interpol
 INTEGER                 ::  ZLo_YLo                         ! Index for interpolation of hub point, if necessary
 INTEGER                 ::  IT                              ! Index for time step
 
+INTEGER                 ::  IZ_Lo, IY_Lo                    ! Index for lower bound of box surrounding hub point
+
             
    
       ! Calculate mean value & turb intensity of U-component of the interpolated hub point (for comparison w/ AeroDyn output)
@@ -3666,15 +3666,18 @@ INTEGER                 ::  IT                              ! Index for time ste
    ! Note that this uses the InflowWind interpolation scheme, which may be updated some day so that it doesn't
    ! depend on which dimension we interpolate first.
       
+   IY_Lo = INT(   0.5_ReKi * p%grid%GridWidth     / p%grid%GridRes_Y ) + 1
+   IZ_Lo = INT( ( p%grid%HubHt - p%grid%Zbottom ) / p%grid%GridRes_Z ) + 1     
    
-      ! Get points for bi-linear interpolation
-   ZLo_YLo   = ( NumGrid_Z2 - 1 )*p%grid%NumGrid_Y + NumGrid_Y2
-   ZHi_YLo   = ( NumGrid_Z2     )*p%grid%NumGrid_Y + NumGrid_Y2
-   ZLo_YHi   = ( NumGrid_Z2 - 1 )*p%grid%NumGrid_Y + NumGrid_Y2 + 1
-   ZHi_YHi   = ( NumGrid_Z2     )*p%grid%NumGrid_Y + NumGrid_Y2 + 1
+   
+      ! Get points for bi-linear interpolation  ( indx @ (iy,iz) is (iz-1)*numgrid_y + iy, assuming a full grid (needs to be modified for user-defined spectra)
+   ZLo_YLo   = ( IZ_Lo - 1 )*p%grid%NumGrid_Y + IY_Lo
+   ZHi_YLo   = ( IZ_Lo     )*p%grid%NumGrid_Y + IY_Lo
+   ZLo_YHi   = ( IZ_Lo - 1 )*p%grid%NumGrid_Y + IY_Lo + 1
+   ZHi_YHi   = ( IZ_Lo     )*p%grid%NumGrid_Y + IY_Lo + 1
     
-   TmpZ      = (p%grid%HubHt - p%grid%Z(NumGrid_Z2))/p%grid%GridRes_Z
-   TmpY      = ( 0.0  - p%grid%Y(NumGrid_Y2))/p%grid%GridRes_Y
+   TmpZ      = (p%grid%HubHt - p%grid%Z(IZ_Lo))/p%grid%GridRes_Z
+   TmpY      = ( 0.0_ReKi    - p%grid%Y(IY_Lo))/p%grid%GridRes_Y
    CGridSum  = 0.0
    CGridSum2 = 0.0
 
