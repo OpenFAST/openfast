@@ -2896,17 +2896,17 @@ DO JZ = p%grid%NumGrid_Z,1, -1
    
    IF ( HubPr  .AND. ( p%grid%Z(IZ) < p%grid%HubHt ) ) THEN
          
-      CHFA = COS( HWindDir(p%grid%HubIndx_Z)*D2R )
-      SHFA = SIN( HWindDir(p%grid%HubIndx_Z)*D2R )
+      CHFA = COS( HWindDir(p%grid%HubIndx)*D2R )
+      SHFA = SIN( HWindDir(p%grid%HubIndx)*D2R )
          
       IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
             
-         WRITE(US,FormStr)  p%grid%Z(p%grid%HubIndx_Z), U(p%grid%HubIndx_Z), HWindDir(p%grid%HubIndx_Z), &
-                            U(p%grid%HubIndx_Z)*CHFA*CVFA, U(p%grid%HubIndx_Z)*SHFA*CVFA, U(p%grid%HubIndx_Z)*SVFA, &
-                            p%met%ZL_profile(p%grid%HubIndx_Z), p%met%Ustar_profile(p%grid%HubIndx_Z)
+         WRITE(US,FormStr)  p%grid%Z(p%grid%HubIndx), U(p%grid%HubIndx), HWindDir(p%grid%HubIndx), &
+                            U(p%grid%HubIndx)*CHFA*CVFA, U(p%grid%HubIndx)*SHFA*CVFA, U(p%grid%HubIndx)*SVFA, &
+                            p%met%ZL_profile(p%grid%HubIndx), p%met%Ustar_profile(p%grid%HubIndx)
       ELSE
-         WRITE(US,FormStr)  p%grid%Z(p%grid%HubIndx_Z), U(p%grid%HubIndx_Z), HWindDir(p%grid%HubIndx_Z), &
-                            U(p%grid%HubIndx_Z)*CHFA*CVFA, U(p%grid%HubIndx_Z)*SHFA*CVFA, U(p%grid%HubIndx_Z)*SVFA
+         WRITE(US,FormStr)  p%grid%Z(p%grid%HubIndx), U(p%grid%HubIndx), HWindDir(p%grid%HubIndx), &
+                            U(p%grid%HubIndx)*CHFA*CVFA, U(p%grid%HubIndx)*SHFA*CVFA, U(p%grid%HubIndx)*SVFA
       ENDIF
    
       HubPr = .FALSE. ! we've printed the hub values, so we don't need to check this anymore

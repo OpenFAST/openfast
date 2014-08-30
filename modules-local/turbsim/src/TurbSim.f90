@@ -102,7 +102,7 @@ CHARACTER(200)          :: InFile                           ! Name of the TurbSi
 REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
-REAL(ReKi), ALLOCATABLE          :: U           (:)                          ! The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi), ALLOCATABLE          :: U           (:)                          ! The steady u-component wind speeds for the grid (NPOints).
 REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)                          ! A profile of horizontal wind angle (measure of wind direction with height)
 
 !TYPE( TurbSim_ParameterType )    :: p
@@ -253,7 +253,7 @@ ENDIF
 !..................................................................................................................................
 
    ! Define the other parameters for the time series.
-CALL CreateGrid( p%grid, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
+CALL CreateGrid( p%grid, p%usr, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
 CALL CheckError()
       
 CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel)                  

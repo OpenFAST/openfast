@@ -238,7 +238,7 @@ IMPLICIT                      NONE
    ! Passed variables
 TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
 
-REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
@@ -792,7 +792,7 @@ END SUBROUTINE Coeffs2TimeSeries
 SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
 
    TYPE(TurbSim_ParameterType),  INTENT(in)     :: p                            !< TurbSim parameters
-   REAL(ReKi),                   INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+   REAL(ReKi),                   INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
    REAL(ReKi),                   INTENT(  OUT)  :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
 
    INTEGER(IntKi),               INTENT(  out)  :: ErrStat                      !< Error level
@@ -2109,7 +2109,7 @@ END FUNCTION PowerLawExp
 !=======================================================================
 !> This routine creates the grid (cartesian + other points) that are
 !!  to be simulated.
-SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
+SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
 
 ! Assumes that these variables are set:
 !  GridHeight
@@ -2118,6 +2118,7 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
 !  NumGrid_Z
 
    TYPE(Grid_ParameterType),        INTENT(INOUT) :: p_grid
+   TYPE(UserTSSpec_ParameterType),  INTENT(INOUT) :: p_usr
    
    REAL(ReKi)                     , INTENT(IN   ) :: UHub                            ! Mean wind speed at hub, used only when usable time is not "ALL" (i.e., periodic flag is false) 
    LOGICAL                        , INTENT(INOUT) :: AddTower                        ! Value of p%WrFile(FileExt_TWR) [determines if tower points should be generarated]
@@ -2126,22 +2127,23 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    
    ! local variables:
-   REAL(ReKi)                                     :: LastHeight                      ! A temporary variable holding a Z (height) value, and other misc. variables
    REAL(ReKi)                                     :: DelF                            ! Delta frequency
-   INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
-   INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
-   INTEGER                                        :: NTwrPts                         ! number of extra tower points
-   INTEGER                                        :: NTwrIndx                        ! number of tower points to be placed in output file
+   INTEGER(IntKi)                                 :: IY, IZ, IFreq                   ! loop counters 
+   INTEGER(IntKi)                                 :: NTwrPts                         ! number of extra tower points
+   INTEGER(IntKi)                                 :: NTwrIndx                        ! number of tower points to be placed in output file
    
-   INTEGER                                        :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
-   INTEGER                                        :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
-   INTEGER(IntKi)                                 :: FirstTwrIndx                    ! Index of the first lolipop tower point in the V matrix
+   INTEGER(IntKi)                                 :: TmpIndex                        ! temporary index
+      
+   INTEGER(IntKi)                                 :: HubIndx_Y                       ! Index into Y dimension of grid for hub location
+   INTEGER(IntKi)                                 :: HubIndx_Z                       ! Index into Z dimension of grid for hub location
    
+   INTEGER(IntKi)                                 :: NumSteps2                       ! one-half the number of steps
+   INTEGER(IntKi)                                 :: iPoint                          ! loop counter for points
    
-   INTEGER                                        :: NumSteps2                       ! one-half the number of steps
-   INTEGER                                        :: IPoint                          ! loop counter for points
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+   
+   LOGICAL                                        :: GenerateExtraHubPoint
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2195,69 +2197,29 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    
    
    !.....................................................
-   ! Now, figure out the points in space (y-z grid)
+   ! Now, figure out the points in space:
+   !  1) user-specified time-series points
+   !  2) regularly spaced y-z grid
+   !  3) hub point
+   !  4) lollipop-stick tower points
    !.....................................................
-      
-   ! the rectangular grid:
-      
+   
+   ! start by determining how many points will be in the output files
+   ! (1) the full-field grid:
    p_grid%GridRes_Y = p_grid%GridWidth  / REAL( p_grid%NumGrid_Y - 1, ReKi )
    p_grid%GridRes_Z = p_grid%GridHeight / REAL( p_grid%NumGrid_Z - 1, ReKi )      
 
    p_grid%Zbottom = p_grid%HubHt + 0.5*p_grid%RotorDiameter                                ! height of the highest grid points
    p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(p_grid%NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
-   IF ( p_grid%Zbottom <= 0.0 ) THEN
+   IF ( p_grid%Zbottom <= 0.0_ReKi ) THEN
       CALL SetErrStat(ErrID_Fatal,'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
                       'Adjust the appropriate values in the input file.',ErrStat,ErrMsg,'CreateGrid')
       RETURN
-   ENDIF
+   ENDIF   
+   
 
-      ! These are the hub indicies, unless the hub is an extra point
-   NumGrid_Y2 = INT( ( p_grid%NumGrid_Y + 1 ) / 2 )                    
-   NumGrid_Z2 = INT( Tolerance + ( p_grid%HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
-   
-   
-   ! how many points are there?
-      
-   IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
-      p_grid%HubOnGrid  = .FALSE.
-   ELSEIF ( ABS((NumGrid_Z2-1)*p_grid%GridRes_Z + p_grid%Zbottom - p_grid%HubHt) > Tolerance ) THEN
-      p_grid%HubOnGrid = .FALSE.
-   ELSE
-      p_grid%HubOnGrid = .TRUE.
-   ENDIF
-
-   p_grid%NPoints    = p_grid%NumGrid_Y*p_grid%NumGrid_Z                ! Number of points in the regular grid
-
-   
-      
-   ! Then, let's deal with the hub point:
-   
-   IF ( p_grid%HubOnGrid ) THEN
-      p_grid%ZLim      = p_grid%NumGrid_Z
-      p_grid%YLim      = p_grid%NumGrid_Y
-      
-      p_grid%HubIndx_Y = NumGrid_Y2
-      p_grid%HubIndx_Z = NumGrid_Z2
-      
-      p_grid%HubIndx = p_grid%NumGrid_Y*( p_grid%HubIndx_Z - 1 ) + p_grid%HubIndx_Y      
-      
-   ELSE
-      p_grid%NPoints   = p_grid%NPoints + 1                               ! Add the hub point if necessary
-                       
-      p_grid%ZLim      = p_grid%NumGrid_Z+1
-      p_grid%YLim      = p_grid%NumGrid_Y+1
-      
-      p_grid%HubIndx_Y = p_grid%NumGrid_Z+1
-      p_grid%HubIndx_Z = p_grid%NumGrid_Y+1
-      
-      p_grid%HubIndx   = p_grid%NPoints                  
-   ENDIF
-
-   
-   ! Finally, let's deal with the tower "lollipop" points:
-      
-      
+   ! (2) the tower points:   
    IF ( AddTower ) THEN
 
       IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
@@ -2265,122 +2227,268 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
       ELSE
          p_grid%ExtraTwrPT = .FALSE.
       END IF
-      
-      
+         
          ! Compute the number of points between the bottom of the grid and the ground 
          ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
  
       NTwrPts  = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
       NTwrIndx = NTwrPts + 1
-      
+
+      IF ( NTwrPts < 1 ) THEN        
+         CALL SetErrStat(ErrID_Warn, ' There are no extra tower data points below the grid. Tower output will be turned off.',ErrStat,ErrMsg,'CreateGrid')
+         AddTower = .FALSE.  ! bjj: change this so it doesn't actually modify this variable inside this routine???
+         NTwrPts  = 0
+         NTwrIndx = 0
+      ENDIF
+            
       IF ( p_grid%ExtraTwrPT ) THEN 
          NTwrPts = NTwrPts + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
       ENDIF
-
-      FirstTwrIndx = p_grid%NPoints + 1
-      IF ( NTwrPts > 0 ) THEN
-         
-         p_grid%ZLim    = p_grid%ZLim + NTwrPts
-         p_grid%NPoints = p_grid%NPoints + NTwrPts                       ! Add the number of tower points
-
-         IF ( p_grid%HubOnGrid ) THEN
-            p_grid%YLim = p_grid%YLim + 1  !bjj: what is this????
-         ENDIF
-
-      ELSE
-        
-         CALL SetErrStat(ErrID_Warn, ' There are no extra tower data points below the grid. Tower output will be turned off.',ErrStat,ErrMsg,'CreateGrid')
-         AddTower = .FALSE. !bjj: change this so it doesn't actually modify this variable
-      ENDIF
-
-   ENDIF
-
-   p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
-   
-   
-   CALL AllocAry(p_grid%Z,         p_grid%NPoints, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%Y,         p_grid%NPoints, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-
-   CALL AllocAry(p_grid%GridPtIndx,p_grid%NumGrid_Y*p_grid%NumGrid_Z,            'GridPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                                      'TwrPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   
-   IF (ErrStat >= AbortErrLev) RETURN
-   
-   
-   !...............
-      
-   
-   ! .................
-      ! Initialize cartesian Y,Z values of the grid.
-
-   IPoint = 1
-   DO IZ = 1,p_grid%NumGrid_Z
-      
-      DO IY = 1,p_grid%NumGrid_Y
-         p_grid%Y(IPoint)          = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
-         p_grid%Z(IPoint)          =      p_grid%Zbottom    + p_grid%GridRes_Z*( IZ - 1 )        
-         p_grid%GridPtIndx(IPoint) = IPoint
-         
-         IPoint = IPoint + 1
-      ENDDO
-      
-   ENDDO
-
-   
-   IF ( p_grid%HubOnGrid ) THEN
-
-      FirstTwrPt = p_grid%NumGrid_Z + 1              ! The start of tower points, if they exist
       
    ELSE
-
-      p_grid%Y(IPoint)          = 0.0_ReKi
-      p_grid%Z(IPoint)          = p_grid%HubHt        
-         
-      IPoint = IPoint + 1
-      
-
-      FirstTwrPt = p_grid%NumGrid_Z + 2              ! The start of tower points, if they exist
-
-   ENDIF
+      NTwrPts  = 0
+      NTwrIndx = 0
+   ENDIF   
    
-      
-   IF ( AddTower ) THEN !p%WrFile(FileExt_TWR)
+         ! we will set these index arrays to point to the grid/tower points or user-specified points
+   CALL AllocAry(p_grid%GridPtIndx,p_grid%NumGrid_Y*p_grid%NumGrid_Z, 'GridPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                          'TwrPtIndx',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')   
+   IF (ErrStat >= AbortErrLev) RETURN
 
-         ! set up array of indices
-      IF ( p_grid%ExtraTwrPt ) THEN
-         DO IZ = 1,NTwrIndx
-            p_grid%TwrPtIndx(IZ) = FirstTwrIndx + IZ - 1
-         END DO         
+   
+   !...............
+   ! Now, let's see how many points we're going to simulate
+   !..............
+   
+      ! here's our first estimate of how many points there will be. Later we will add a point for the hub if    
+      ! necessary and subtract points from the grid or tower that are duplicates of the user-specified ones.   
+   p_grid%NPoints =  p_usr%NPoints                       &   ! (1) the user-specified time-series points
+                   + p_grid%NumGrid_Y*p_grid%NumGrid_Z   &   ! (2) the rectangular grid
+                   + NTwrPts                                 ! (4) the tower points (the stick of the lollipop)
+   
+   ! Check if any of the user-specified time-series points are duplicated elsewhere:
+   p_grid%GridPtIndx = 0
+   p_grid%TwrPtIndx  = 0
+   
+   DO iPoint = 1,p_usr%NPoints
+      
+         ! Is this point on the regularly-spaced grid?   
+      TmpIndex = IndexOnGrid( p_grid, p_usr%pointyi(iPoint), p_usr%pointzi(iPoint) )
+      
+      IF ( TmpIndex > 0 ) THEN
+         p_grid%GridPtIndx( TmpIndex ) = iPoint
+         ! it's a duplicate of a point on the rectangular grid, so subtract one from NPoints:
+         p_grid%NPoints = p_grid%NPoints - 1
       ELSE
-         p_grid%TwrPtIndx(1)  = INT(p_grid%NumGrid_Y / 2) + 1
-         DO IZ = 2,NTwrIndx
-            p_grid%TwrPtIndx(IZ) = FirstTwrIndx + IZ - 2
-         END DO
+            ! Is this point on the tower?   
+         IF ( NTwrPts > 0 ) THEN
+            TmpIndex = IndexOnTower( p_grid, p_usr%pointyi(iPoint), p_usr%pointzi(iPoint) )
+            
+            IF ( TmpIndex > 0 ) THEN
+               p_grid%TwrPtIndx( TmpIndex ) = iPoint    
+               
+               ! it's a duplicate of a tower point, so subtract one from NPoints:
+               p_grid%NPoints = p_grid%NPoints - 1               
+            END IF                
+         END IF  ! NTwrPts > 0 
+         
       END IF
       
-      !...........
-      ! set up spatial locations
-               
-      IF ( p_grid%ExtraTwrPT ) THEN 
-         LastHeight =  p_grid%Z(1) + p_grid%GridRes_Z 
+   END DO
+   
+         
+   ! (2) the rectangular grid:
+      
+                 
+   ! (3) the hub point:
+         
+   IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
+      
+      p_grid%HubOnGrid  = .FALSE.
+      
+   ELSE
+         ! This is the hub Z index if it falls on the grid
+      HubIndx_Z = INT( Tolerance + ( p_grid%HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
+      
+      IF ( ABS((HubIndx_Z-1)*p_grid%GridRes_Z + p_grid%Zbottom - p_grid%HubHt) > Tolerance ) THEN
+         p_grid%HubOnGrid = .FALSE.
       ELSE
-         LastHeight  = p_grid%Z(1)
-      ENDIF
+         p_grid%HubOnGrid = .TRUE.
+      END IF
+      
+   END IF
 
-      DO IZ = FirstTwrPt,p_grid%ZLim
-         
-         p_grid%Y(IPoint)          = 0.0_ReKi
-         p_grid%Z(IPoint)          = LastHeight - p_grid%GridRes_Z        
-         
-         IPoint = IPoint + 1
-         
-         LastHeight   = p_grid%Z(IPoint)
+   p_grid%HubIndx = 0
+   IF ( .NOT. p_grid%HubOnGrid ) THEN
+      GenerateExtraHubPoint = .TRUE.      
+      ! Is it a user-defined point?
+      DO iPoint=1,p_usr%NPoints
+         IF ( EqualRealNos( p_usr%pointyi(iPoint), 0.0_ReKi ) .AND. EqualRealNos( p_usr%pointzi(iPoint), p_grid%HubHt ) ) THEN
+            p_grid%HubIndx = iPoint
+            GenerateExtraHubPoint = .FALSE.
+            EXIT  ! we found it
+         END IF         
+      END DO                  
+   ELSE
+      GenerateExtraHubPoint = .FALSE.
+   END IF
+   
+   IF (GenerateExtraHubPoint) p_grid%NPoints = p_grid%NPoints + 1  
 
-      ENDDO
+   p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
+
+   
+   ! we now know how many points there are going to be, so let's create the arrays that contains their locations and finish updating our index arrays
+   
+   CALL AllocAry(p_grid%Y, p_grid%NPoints, 'Y (lateral locations of the grid points)',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Z, p_grid%NPoints, 'Z (vertical locations of the grid points)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   IF (ErrStat >= AbortErrLev) RETURN
+   
+   ! (1) User-defined points 
+   DO iPoint = 1,p_usr%NPoints
+      p_grid%y(iPoint) = p_usr%pointyi(iPoint)
+      p_grid%z(iPoint) = p_usr%pointzi(iPoint)
+   END DO
+   
+   ! (2) rectangular y-z grid:
+   iPoint = p_usr%NPoints
+   DO IZ = 1,p_grid%NumGrid_Z
+      DO IY = 1,p_grid%NumGrid_Y
+         
+         TmpIndex = (IZ-1)*p_grid%NumGrid_Z + IY
+         
+         IF ( p_grid%GridPtIndx(TmpIndex) < 1 ) THEN ! we didn't find this grid point in the set of user-defined points, so create a new point
+            iPoint = iPoint + 1
+            
+            p_grid%Y(iPoint)            = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
+            p_grid%Z(iPoint)            =      p_grid%Zbottom    + p_grid%GridRes_Z*( IZ - 1 )        
+            p_grid%GridPtIndx(TmpIndex) = iPoint            
+         END IF
+         
+      END DO
+   END DO   
+   
+   ! note: GridPtIndx should be completely set now.
+   
+   ! (3) hub point:
+         
+   IF ( p_grid%HubOnGrid ) THEN
+            
+      HubIndx_Y = INT( ( p_grid%NumGrid_Y + 1 ) / 2 ) ! the center point      
+      p_grid%HubIndx   = p_grid%GridPtIndx( p_grid%NumGrid_Y*( HubIndx_Z - 1 ) + HubIndx_Y )           
+      
+   ELSEIF ( GenerateExtraHubPoint ) THEN
+      iPoint = iPoint + 1  
+      
+      p_grid%Y(iPoint) = 0.0_ReKi
+      p_grid%Z(iPoint) = p_grid%HubHt        
+      p_grid%HubIndx   = iPoint
+      
+   ! ELSE -> HubIndx is set already
+   ENDIF
+
+   
+   ! (4) Finally, let's deal with the tower "lollipop" points:  
+      
+   IF ( AddTower ) THEN !p%WrFile(FileExt_TWR)
+      
+      IF ( .NOT. p_grid%ExtraTwrPT ) THEN
+         p_grid%TwrPtIndx(1)  = p_grid%GridPtIndx( INT(p_grid%NumGrid_Y / 2) + 1 ) ! center y location on bottom height
+      END IF
+      
+      
+      DO IZ = 1,NTwrIndx
+         IF ( p_grid%TwrPtIndx(IZ) == 0 ) THEN
+            iPoint = iPoint + 1
+            
+            p_grid%Y(iPoint)     = 0.0_ReKi
+            p_grid%Z(iPoint)     = p_grid%ZBottom - (IZ-1)*p_grid%GridRes_Z        
+            p_grid%TwrPtIndx(IZ) = iPoint
+            
+         END IF
+      END DO     
 
    ENDIF   
          
 END SUBROUTINE CreateGrid
+!=======================================================================
+!> This routine determines if a point at location (y,z) is
+!! on the regularly-spaced y-z grid. If it does, it returns the
+!! index of the point on the grid. If it does not, it returns -1.
+FUNCTION IndexOnGrid( p_grid, y, z )
+
+   TYPE(Grid_ParameterType),        INTENT(IN) :: p_grid          !< grid parameters
+   REAL(ReKi),                      INTENT(IN) :: y               !< y position of point we're querying
+   REAL(ReKi),                      INTENT(IN) :: z               !< z position of point we're querying
+   
+   INTEGER(IntKi)                              :: IndexOnGrid     !< Index on regularly spaced grid
+   
+      ! local variables
+   INTEGER(IntKi)                              :: YIndx           !  Index on regularly spaced grid
+   INTEGER(IntKi)                              :: ZIndx           !  Index on regularly spaced grid
+   INTEGER(IntKi)                              :: y1              !  left-most location on grid
+
+      
+   y1 = -0.5_ReKi * p_grid%GridWidth
+      
+   ZIndx = INT( Tolerance + ( z - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
+            
+   IF ( .NOT. EqualRealNos( p_grid%Zbottom + (ZIndx-1)*p_grid%GridRes_Z , z) ) THEN
+      IndexOnGrid = -1
+      RETURN
+   END IF
+   
+   
+   
+   YIndx = INT( Tolerance + ( y - y1             ) / p_grid%GridRes_Y ) + 1 
+   
+   IF ( .NOT. EqualRealNos( y1 + (YIndx-1)*p_grid%GridRes_Y , y) ) THEN
+      IndexOnGrid = -1
+      RETURN
+   END IF
+   
+   IF ( YIndx < 1 .OR. YIndx > p_grid%NumGrid_Y .OR. &
+        ZIndx < 1 .OR. ZIndx > p_grid%NumGrid_Z ) THEN
+      IndexOnGrid = -1
+      RETURN
+   END IF
+      
+   
+   IndexOnGrid = (ZIndx-1)*p_grid%NumGrid_Y + YIndx
+
+END FUNCTION IndexOnGrid
+!=======================================================================
+!> This routine determines if a point at location (y,z) is
+!! on the regularly-spaced y-z grid. If it does, it returns the
+!! index of the point on the grid. If it does not, it returns -1.
+FUNCTION IndexOnTower( p_grid, y, z )
+
+   TYPE(Grid_ParameterType),        INTENT(IN) :: p_grid          !< grid parameters
+   REAL(ReKi),                      INTENT(IN) :: y               !< y position of point we're querying
+   REAL(ReKi),                      INTENT(IN) :: z               !< z position of point we're querying
+   
+   INTEGER(IntKi)                              :: IndexOnTower    !< Index on regularly spaced tower points
+   
+      ! local variables
+   INTEGER(IntKi)                              :: ZIndx           !  Index on regularly spaced grid
+
+      
+   IF ( .NOT. EqualRealNos( 0.0_ReKi , y) ) THEN
+      IndexOnTower = -1
+      RETURN
+   END IF   
+      
+   ZIndx = INT( Tolerance + ( p_grid%Zbottom - z ) / p_grid%GridRes_Z ) + 1 
+            
+   IF ( zIndx < 0 .OR. .NOT. EqualRealNos( p_grid%Zbottom - (ZIndx-1)*p_grid%GridRes_Z , z) ) THEN
+      IndexOnTower = -1
+      RETURN
+   END IF           
+   
+   IndexOnTower = ZIndx
+
+
+END FUNCTION IndexOnTower
 !=======================================================================
 !> This routine calculates the wind components in the Inertial reference
 !!  frame.
