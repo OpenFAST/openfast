@@ -949,7 +949,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          p%met%UstarSlope = 1.0_ReKi         
          p%met%UstarDiab = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL) !bjj: is this problematic for anything else?
 
-         TmpUary   = getVelocityProfile(p%met%URef, p%met%RefHt, TmpZary, p%grid%RotorDiameter)                  
+         TmpUary   = getVelocityProfile(p, p%met%URef, p%met%RefHt, TmpZary, p%grid%RotorDiameter)                  
          TmpUstar  = getUstarARY( TmpUary,     TmpZary, 0.0_ReKi, p%met%UstarSlope )
             
          p%met%UstarOffset = p%met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
@@ -1254,6 +1254,10 @@ IF ( p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
       
    CALL TimeSeriesToSpectra( p, ErrStat, ErrMsg )
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+      
+ELSE
+   
+   p%usr%nPoints = 0
 
 END IF
 
@@ -1851,6 +1855,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
             RETURN
          END IF
       end do
+      
       !bjj: fix this in the future. Currently the interpolation routine won't work if z is not ordered properly. Also, interpolation doesn't take y into account, so we may want to fix that.
       IF ( p%usr%Pointzi(i) < p%usr%Pointzi(i-1) ) THEN
          CALL SetErrStat(ErrID_Fatal, 'The current implementation of user time-series input requires that the points be entered in the order of increasing height.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
@@ -2119,7 +2124,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
    INTEGER(B4Ki)               :: CFirst
    INTEGER(B4Ki)               :: CLast
    INTEGER(B4Ki)               :: CStep
-   INTEGER(B4Ki)               :: I
    INTEGER(B4Ki)               :: II
    INTEGER(B4Ki)               :: IT
    INTEGER(B4Ki)               :: IY
@@ -2127,8 +2131,8 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
    INTEGER(B4Ki)               :: IP
    INTEGER(B2Ki)               :: TmpVarray(3*p%grid%NumGrid_Y*p%grid%NumGrid_Z) ! This array holds the normalized velocities before being written to the binary file
-   INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities
-
+   INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities   
+   
    INTEGER                     :: AllocStat
    INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
    INTEGER                     :: UATWR                                ! I/O unit for AeroDyn tower data (*.twr file).
@@ -2252,26 +2256,12 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
       CLOSE ( UBFFW )
 
-      
+      !.......................................................
       ! Now write tower data file if necessary:
+      !.......................................................      
+      
       IF ( p%WrFile(FileExt_TWR) ) THEN
-         IF ( .NOT. p%grid%HubOnGrid ) THEN
-            IZ = p%grid%ZLim - p%grid%NumGrid_Z - 1
-            I  = p%grid%NumGrid_Z*p%grid%NumGrid_Y + 2
-         ELSE
-            IZ = p%grid%ZLim - p%grid%NumGrid_Z
-            I  = p%grid%NumGrid_Z*p%grid%NumGrid_Y + 1
-         ENDIF
-
-         IF ( p%grid%ExtraTwrPT ) THEN
-            IY = I
-            I  = I + 1
-         ELSE
-            IZ = IZ + 1
-            IY = (p%grid%NumGrid_Y / 2) + 1      !The grid location of the top tower point
-         ENDIF
-
-         
+                           
          CALL GetNewUnit( UATWR )
          CALL OpenBOutFile ( UATWR, TRIM( p%RootName )//'.twr', ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -2283,14 +2273,14 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
          WRITE (UATWR)  REAL( p%grid%TimeStep*p%UHub ,   SiKi )         ! grid spacing in longitudinal direciton, in m
          WRITE (UATWR)  REAL( p%grid%Z(1)            ,   SiKi )         ! The vertical location of the highest tower grid point in m
          WRITE (UATWR)   INT( p%grid%NumOutSteps     ,   B4Ki )         ! The number of points in alongwind direction
-         WRITE (UATWR)   INT( IZ ,                       B4Ki )         ! the number of grid points vertically
+         WRITE (UATWR)   INT( SIZE(p%grid%TwrPtIndx) ,   B4Ki )         ! the number of grid points vertically
          WRITE (UATWR)  REAL( p%UHub ,                   SiKi )         ! the mean wind speed in m/s
          WRITE (UATWR)  REAL( 100.0*TI(1),               SiKi )         ! Longitudinal turbulence intensity
          WRITE (UATWR)  REAL( 100.0*TI(2),               SiKi )         ! Lateral turbulence intensity
          WRITE (UATWR)  REAL( 100.0*TI(3),               SiKi )         ! Vertical turbulence intensity
 
 
-         ALLOCATE ( TmpTWRarray( 3*(p%grid%NPoints-I+2) ) , STAT=AllocStat )
+         ALLOCATE ( TmpTWRarray( 3*SIZE(p%grid%TwrPtIndx) ) , STAT=AllocStat ) 
 
          IF ( AllocStat /= 0 )  THEN
             CALL TS_Abort ( 'Error allocating memory for temporary tower wind speed array.' )
@@ -2299,15 +2289,11 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
          DO IT=1,p%grid%NumOutSteps
 
-            TmpTWRarray(1) = NINT( U_C1*V(IT,IY,1) - U_C2 , B2Ki )
-            TmpTWRarray(2) = NINT( V_C *V(IT,IY,2)        , B2Ki )
-            TmpTWRarray(3) = NINT( W_C *V(IT,IY,3)        , B2Ki )
-
-            IP = 4
-            DO II = I,p%grid%NPoints    ! This assumes we have points in a single line along the center of the hub
-               TmpTWRarray(IP  ) = NINT( U_C1*V(IT,II,1) - U_C2 , B2Ki )
-               TmpTWRarray(IP+1) = NINT( V_C *V(IT,II,2)        , B2Ki )
-               TmpTWRarray(IP+2) = NINT( W_C *V(IT,II,3)        , B2Ki )
+            IP = 1
+            DO II = 1,SIZE(p%grid%TwrPtIndx)
+               TmpTWRarray(IP  ) = NINT( U_C1*V(IT,p%grid%TwrPtIndx(II),1) - U_C2 , B2Ki )
+               TmpTWRarray(IP+1) = NINT( V_C *V(IT,p%grid%TwrPtIndx(II),2)        , B2Ki )
+               TmpTWRarray(IP+2) = NINT( W_C *V(IT,p%grid%TwrPtIndx(II),3)        , B2Ki )
 
                IP = IP + 3
             ENDDO    ! II
@@ -2362,8 +2348,6 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
    INTEGER(B4Ki)             :: LenDesc                    ! Length of the description string
    INTEGER(B4Ki)             :: NumGrid                    ! Number of points on the grid
    INTEGER(B4Ki)             :: NumTower                   ! Number of points on the tower
-   INTEGER(B4Ki)             :: TwrStart                   ! First index of a tower point
-   INTEGER(B4Ki)             :: TwrTop                     ! The index of top of the tower (it could be on the grid instead of at the end)
 
    INTEGER(B4Ki)             :: IP
    INTEGER(B2Ki),ALLOCATABLE :: TmpVarray(:)               ! This array holds the normalized velocities before being written to the binary file
@@ -2443,20 +2427,7 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
    IF ( p%WrFile(FileExt_TWR) ) THEN
 
-      TwrStart = NumGrid + 1
-
-      IF ( .NOT. p%grid%HubOnGrid ) THEN
-         TwrStart = TwrStart + 1
-      ENDIF
-
-      IF ( p%grid%ExtraTwrPT ) THEN
-         TwrTop   = TwrStart
-         TwrStart = TwrStart + 1
-      ELSE
-         TwrTop = INT(p%grid%NumGrid_Y / 2) + 1      ! The top tower point is on the grid where Z = 1
-      ENDIF
-
-      NumTower = p%grid%NPoints - TwrStart + 2
+      NumTower = SIZE(p%grid%TwrPtIndx)
 
    ELSE
 
@@ -2534,17 +2505,11 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
             ! Write out the tower data in binary form
 
-            ! Value at the top of the tower (bottom of grid)
-         TmpVarray(IP)   =  NINT( Max( Min( REAL(UScl*V(IT,TwrTop,1) + UOff, SiKi), IntMax ),IntMin) , B2Ki )
-         TmpVarray(IP+1) =  NINT( Max( Min( REAL(VScl*V(IT,TwrTop,2) + VOff, SiKi), IntMax ),IntMin) , B2Ki )
-         TmpVarray(IP+2) =  NINT( Max( Min( REAL(WScl*V(IT,TwrTop,3) + Woff, SiKi), IntMax ),IntMin) , B2Ki )
-
-         IP = IP + 3
-         DO II=TwrStart,p%grid%NPoints
+         DO II=1,SIZE(p%grid%TwrPtIndx)
                 ! Values of tower data
-            TmpVarray(IP)   =  NINT( Max( Min( REAL(UScl*V(IT,II,1) + UOff, SiKi), IntMax ),IntMin) , B2Ki )
-            TmpVarray(IP+1) =  NINT( Max( Min( REAL(VScl*V(IT,II,2) + VOff, SiKi), IntMax ),IntMin) , B2Ki )
-            TmpVarray(IP+2) =  NINT( Max( Min( REAL(WScl*V(IT,II,3) + Woff, SiKi), IntMax ),IntMin) , B2Ki )
+            TmpVarray(IP)   =  NINT( Max( Min( REAL(UScl*V(IT,p%grid%TwrPtIndx(II),1) + UOff, SiKi), IntMax ),IntMin) , B2Ki )
+            TmpVarray(IP+1) =  NINT( Max( Min( REAL(VScl*V(IT,p%grid%TwrPtIndx(II),2) + VOff, SiKi), IntMax ),IntMin) , B2Ki )
+            TmpVarray(IP+2) =  NINT( Max( Min( REAL(WScl*V(IT,p%grid%TwrPtIndx(II),3) + Woff, SiKi), IntMax ),IntMin) , B2Ki )
 
             IP = IP + 3
          ENDDO ! II

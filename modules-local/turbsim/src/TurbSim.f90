@@ -268,9 +268,9 @@ CALL AllocAry(U,     p%grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrM
 CALL CheckError()
 
 IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( p%met%URef, p%met%RefHt, p%grid%Z, p%grid%RotorDiameter)
+   U = getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z, p%grid%RotorDiameter)
 ELSE 
-   U = getVelocityProfile(   p%UHub,  p%grid%HubHt, p%grid%Z, p%grid%RotorDiameter) 
+   U = getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z, p%grid%RotorDiameter) 
 ENDIF
 
 

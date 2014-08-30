@@ -1624,7 +1624,7 @@ use TurbSim_Types
    
    Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
    Z(1) = Z(2) - p%grid%GridHeight     ! bottom of the grid
-   V(:) = getVelocityProfile(p%UHub, p%grid%HubHt, Z, p%grid%RotorDiameter)
+   V(:) = getVelocityProfile(p, p%UHub, p%grid%HubHt, Z, p%grid%RotorDiameter)
 
    Shr = ( V(2)-V(1) ) / p%grid%GridHeight    ! dv/dz
 
@@ -2171,9 +2171,13 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    REAL(ReKi)                                     :: DelF                            ! Delta frequency
    INTEGER                                        :: IY, IZ, IFreq                   ! loop counters 
    INTEGER                                        :: FirstTwrPt                      ! Z index of first tower point
-   INTEGER                                        :: NTwrPts                         ! number of tower points
+   INTEGER                                        :: NTwrPts                         ! number of extra tower points
+   INTEGER                                        :: NTwrIndx                        ! number of tower points to be placed in output file
+   
    INTEGER                                        :: NumGrid_Y2                      ! Y Index of the hub (or the nearest point left the hub if hub does not fall on the grid)
    INTEGER                                        :: NumGrid_Z2                      ! Z Index of the hub (or the nearest point below the hub if hub does not fall on the grid) 
+   INTEGER(IntKi)                                 :: FirstTwrIndx                    ! Index of the first lolipop tower point in the V matrix
+   
    
    INTEGER                                        :: NumSteps2                       ! one-half the number of steps
    
@@ -2184,7 +2188,9 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    ErrMsg  = ""
    
    
-   ! First, let's deal with the frequencies:
+   !.....................................................
+   ! First, let's deal with time and frequencies:
+   !.....................................................
    
       ! Calculate Total time and NumSteps.
       ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
@@ -2221,17 +2227,20 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
       
    
    CALL AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   IF (ErrStat >= AbortErrLev) RETURN
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+      IF (ErrStat >= AbortErrLev) RETURN
 
    DO IFreq=1,p_grid%NumFreq
       p_grid%Freq(IFreq) = IFreq*DelF
    ENDDO 
    
    
-   ! Then, let's deal with the rectangular grid:
-   
-   
+   !.....................................................
+   ! Now, figure out the points in space (y-z grid)
+   !.....................................................
+      
+   ! the rectangular grid:
+      
    p_grid%GridRes_Y = p_grid%GridWidth  / REAL( p_grid%NumGrid_Y - 1, ReKi )
    p_grid%GridRes_Z = p_grid%GridHeight / REAL( p_grid%NumGrid_Z - 1, ReKi )      
 
@@ -2239,17 +2248,19 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(p_grid%NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
 
    IF ( p_grid%Zbottom <= 0.0 ) THEN
-      CALL TS_Abort ( 'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
-                      'Adjust the appropriate values in the input file.' )
+      CALL SetErrStat(ErrID_Fatal,'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
+                      'Adjust the appropriate values in the input file.',ErrStat,ErrMsg,'CreateGrid')
+      RETURN
    ENDIF
 
-   NumGrid_Y2 = INT( ( p_grid%NumGrid_Y + 1 ) / 2 )                    ! These are the hub indicies, unless the hub is an extra point
+      ! These are the hub indicies, unless the hub is an extra point
+   NumGrid_Y2 = INT( ( p_grid%NumGrid_Y + 1 ) / 2 )                    
    NumGrid_Z2 = INT( Tolerance + ( p_grid%HubHt - p_grid%Zbottom ) / p_grid%GridRes_Z ) + 1 
    
-   p_grid%ExtraTwrPT = .FALSE.
-
+   
+   ! how many points are there?
+      
    IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
-      p_grid%ExtraTwrPT = .TRUE.
       p_grid%HubOnGrid  = .FALSE.
    ELSEIF ( ABS((NumGrid_Z2-1)*p_grid%GridRes_Z + p_grid%Zbottom - p_grid%HubHt) > Tolerance ) THEN
       p_grid%HubOnGrid = .FALSE.
@@ -2260,6 +2271,7 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%NPoints    = p_grid%NumGrid_Y*p_grid%NumGrid_Z                ! Number of points in the regular grid
 
    
+      
    ! Then, let's deal with the hub point:
    
    IF ( p_grid%HubOnGrid ) THEN
@@ -2285,32 +2297,41 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
 
    
    ! Finally, let's deal with the tower "lollipop" points:
-   
+      
+      
    IF ( AddTower ) THEN
 
+      IF ( MOD(p_grid%NumGrid_Y, 2) == 0 ) THEN
+         p_grid%ExtraTwrPT = .TRUE.
+      ELSE
+         p_grid%ExtraTwrPT = .FALSE.
+      END IF
+      
+      
          ! Compute the number of points between the bottom of the grid and the ground 
          ! ( but we don't want to be on the ground, just more than "Tolerance" from it )
  
-      NTwrPts = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
-
+      NTwrPts  = INT( ( p_grid%Zbottom - Tolerance ) / p_grid%GridRes_Z )
+      NTwrIndx = NTwrPts + 1
+      
       IF ( p_grid%ExtraTwrPT ) THEN 
          NTwrPts = NTwrPts + 1  ! Let's add the point on the bottom of the grid so tower interpolation is easier in AeroDyn
       ENDIF
 
+      FirstTwrIndx = p_grid%NPoints + 1
       IF ( NTwrPts > 0 ) THEN
-
-         p_grid%ZLim = p_grid%ZLim + NTwrPts
+         
+         p_grid%ZLim    = p_grid%ZLim + NTwrPts
          p_grid%NPoints = p_grid%NPoints + NTwrPts                       ! Add the number of tower points
 
          IF ( p_grid%HubOnGrid ) THEN
-            p_grid%YLim = p_grid%YLim + 1
+            p_grid%YLim = p_grid%YLim + 1  !bjj: what is this????
          ENDIF
 
       ELSE
-
+        
          CALL SetErrStat(ErrID_Warn, ' There are no extra tower data points below the grid. Tower output will be turned off.',ErrStat,ErrMsg,'CreateGrid')
          AddTower = .FALSE. !bjj: change this so it doesn't actually modify this variable
-
       ENDIF
 
    ENDIF
@@ -2318,16 +2339,23 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
    
    
-   CALL AllocAry(p_grid%Z,     p_grid%ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%Y,     p_grid%YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%IYmax, p_grid%ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
-
+   CALL AllocAry(p_grid%Z,         p_grid%ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Y,         p_grid%YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%IYmax,     p_grid%ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
+   CALL AllocAry(p_grid%GridPtIndx,p_grid%NumGrid_Y*p_grid%NumGrid_Z,            'GridPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                                       'TwrPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   
    IF (ErrStat >= AbortErrLev) RETURN
    
+   
+   !...............
+      
+   
+   ! .................
       ! Initialize cartesian Y,Z values of the grid.
 
    DO IY = 1,p_grid%NumGrid_Y
-      p_grid%Y(IY)    = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
+      p_grid%Y(IY)     = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
    ENDDO
 
    DO IZ = 1,p_grid%NumGrid_Z
@@ -2349,10 +2377,26 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
       FirstTwrPt = p_grid%NumGrid_Z + 2              ! The start of tower points, if they exist
 
    ENDIF
-
+   
+      
    IF ( AddTower ) THEN !p%WrFile(FileExt_TWR)
 
-      p_grid%Y(p_grid%YLim) = 0.0
+         ! set up array of indices
+      IF ( p_grid%ExtraTwrPt ) THEN
+         DO IZ = 1,NTwrIndx
+            p_grid%TwrPtIndx(IZ) = FirstTwrIndx + IZ - 1
+         END DO         
+      ELSE
+         p_grid%TwrPtIndx(1)  = INT(p_grid%NumGrid_Y / 2) + 1
+         DO IZ = 2,NTwrIndx
+            p_grid%TwrPtIndx(IZ) = FirstTwrIndx + IZ - 2
+         END DO
+      END IF
+      
+      !...........
+      ! set up spatial locations
+      
+      p_grid%Y(p_grid%YLim) = 0.0  !is this okay if we have an even number of points????/
          
       IF ( p_grid%ExtraTwrPT ) THEN 
          LastHeight =  p_grid%Z(1) + p_grid%GridRes_Z 
@@ -3176,6 +3220,8 @@ SUBROUTINE TS_End(p)
    IF ( ALLOCATED( p%grid%Z            ) )  DEALLOCATE( p%grid%Z            )
    IF ( ALLOCATED( p%grid%IYmax        ) )  DEALLOCATE( p%grid%IYmax        )
    IF ( ALLOCATED( p%grid%Freq         ) )  DEALLOCATE( p%grid%Freq         )
+   IF ( ALLOCATED( p%grid%TwrPtIndx    ) )  DEALLOCATE( p%grid%TwrPtIndx    )
+   IF ( ALLOCATED( p%grid%GridPtIndx   ) )  DEALLOCATE( p%grid%GridPtIndx   )
    
    IF ( ALLOCATED( p%met%ZL_profile    ) )  DEALLOCATE( p%met%ZL_profile    )
    IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile )

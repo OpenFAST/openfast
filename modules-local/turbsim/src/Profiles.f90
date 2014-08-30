@@ -179,33 +179,32 @@ RETURN
 END SUBROUTINE GetChebCoefs
 !=======================================================================
 
-FUNCTION getVelocityProfile(U_Ref, z_Ref, Ht, RotorDiam )
+FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht, RotorDiam )
 
 
    ! Determine the wind speed at a given height, with reference wind speed.
 
    use TurbSim_Types
    
-   USE                                  TSMods, ONLY: p          ! Type of IEC wind, grid information (HubHt) and met data
-
    IMPLICIT                              NONE
 
-   REAL(ReKi),   INTENT(IN)           :: U_Ref                       ! Wind speed at reference height
-   REAL(ReKi),   INTENT(IN)           :: z_Ref                       ! Reference height
-   REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height where wind speed should be calculated
-   REAL(ReKi),   INTENT(IN)           :: RotorDiam                   ! Diameter of rotor disk (meters)
-   REAL(ReKi)                         :: getVelocityProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
+   TYPE(TurbSim_ParameterType),INTENT(IN) :: p
+   REAL(ReKi),                 INTENT(IN) :: U_Ref                       ! Wind speed at reference height
+   REAL(ReKi),                 INTENT(IN) :: z_Ref                       ! Reference height
+   REAL(ReKi),                 INTENT(IN) :: Ht(:)                       ! Height where wind speed should be calculated
+   REAL(ReKi),                 INTENT(IN) :: RotorDiam                   ! Diameter of rotor disk (meters)
+   REAL(ReKi)                             :: getVelocityProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
 
-   REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
-   REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
+   REAL(SiKi),   PARAMETER                :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
+   REAL(SiKi),   PARAMETER                :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
 
-   INTEGER                            :: I
-   INTEGER                            :: Indx
-   INTEGER                            :: J
+   INTEGER                                :: I
+   INTEGER                                :: Indx
+   INTEGER                                :: J
 
-!   REAL                               :: C_factor
-!   REAL(ReKi)                         :: ZRef
+!   REAL                                   :: C_factor
+!   REAL(ReKi)                             :: ZRef
 
 
    IF ( p%IEC%IEC_WindType == IEC_EWM50 ) THEN

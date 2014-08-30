@@ -642,7 +642,7 @@ SUBROUTINE Spec_TimeSer ( p, Ht, LastIndex, Spec )
    INTEGER(IntKi)                             :: i                       ! loop counters
    
          
-!bjj: fix me!!! (make use of nComp and height                              
+!bjj: fix me!!! (make use of nComp and height )                             
       
    InCoord(2) = Ht
    
