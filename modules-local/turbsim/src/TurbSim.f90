@@ -91,7 +91,7 @@ REAL(ReKi)              ::  CPUtime                         ! Contains the numbe
 INTEGER                 ::  IFreq ! for debugging                              
 #endif
 
-INTEGER                 ::  IY                              ! An index for the Y position of a point I
+INTEGER                 ::  IY  , I                         ! An index for the Y position of a point I
 
 INTEGER                 ::  UnOut                           ! unit for output files
 
@@ -264,7 +264,7 @@ CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCoh
 !..................................................................................................................................
 
    !  Wind speed:
-CALL AllocAry(U,     p%grid%ZLim, 'u (steady, u-component winds)', ErrStat, ErrMsg )
+CALL AllocAry(U,     SIZE(p%grid%Z), 'u (steady, u-component winds)', ErrStat, ErrMsg )
 CALL CheckError()
 
 IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
@@ -275,12 +275,12 @@ ENDIF
 
 
    ! Wind Direction:
-CALL AllocAry(HWindDir, p%grid%ZLim, 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
+CALL AllocAry(HWindDir, SIZE(p%grid%Z), 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
 CALL CheckError()
    
 HWindDir = getDirectionProfile(p%grid%Z)
    
-p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx_Z )
+p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx )
 
 !..................................................................................................................................
 ! Calculate remaining parameters required for simulation:
@@ -291,9 +291,9 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
 
       ! Allocate the arrays for the z/l and ustar profile
       
-   CALL AllocAry(p%met%ZL_profile,    p%grid%ZLim, 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
+   CALL AllocAry(p%met%ZL_profile,    SIZE(p%grid%Z), 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
    CALL CheckError()
-   CALL AllocAry(p%met%Ustar_profile, p%grid%ZLim, 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
+   CALL AllocAry(p%met%Ustar_profile, SIZE(p%grid%Z), 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
    p%met%ZL_profile(:)    = getZLARY(    U, p%grid%Z, p%met%Rich_No, p%met%ZL, p%met%L, p%met%ZLOffset, p%met%WindProfileType )
@@ -315,10 +315,10 @@ IF (DEBUG_OUT) THEN
    !bjj: This doesn't need to be part of the summary file, so put it in the debug file
    IF (p%met%WindProfileType(1:1) == 'J' ) THEN
       WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
-      WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( IY, IY=0,10 )
+      WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( I, I=0,10 )
       WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
-      WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( p%met%ChebyCoef_WS(IY), IY=1,11 )
-      WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( p%met%ChebyCoef_WD(IY), IY=1,11 )   
+      WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( p%met%ChebyCoef_WS(I), I=1,11 )
+      WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( p%met%ChebyCoef_WD(I), I=1,11 )   
    ENDIF
 ENDIF
 
@@ -386,6 +386,8 @@ IF (p%met%TurbModel_ID /= SpecModel_NONE) THEN                         ! MODIFIE
         CALL CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
     ENDIF
     CALL CheckError()
+ELSE
+   V = 0.0_ReKi
 ENDIF
 
 
@@ -508,7 +510,6 @@ ENDIF ! ( WrFile(FileExt_UVW) )
 IF ( ALLOCATED( V               ) )  DEALLOCATE( V               )
 IF ( ALLOCATED( p%grid%Y        ) )  DEALLOCATE( p%grid%Y        )
 IF ( ALLOCATED( p%grid%Z        ) )  DEALLOCATE( p%grid%Z        )
-IF ( ALLOCATED( p%grid%IYmax    ) )  DEALLOCATE( p%grid%IYmax    )
 
 
 IF (DEBUG_OUT) CLOSE( UD )       ! Close the debugging file

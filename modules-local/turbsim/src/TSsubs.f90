@@ -35,7 +35,7 @@ IMPLICIT                      NONE
    ! Passed variables
 
 TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
-REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (ZLim).
+REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
@@ -55,17 +55,11 @@ REAL(ReKi)                    :: ZM             ! The mean height of the two poi
 
 
 INTEGER                       :: J
-INTEGER                       :: JJ             ! Index of point J
 INTEGER                       :: JJ1
-INTEGER                       :: JY             ! Index of y-value of point J
-INTEGER                       :: JZ             ! Index of z-value of point J
 INTEGER                       :: I
 INTEGER                       :: IFreq
-INTEGER                       :: II             ! The index of point I
 INTEGER                       :: Indx
 INTEGER                       :: IVec, IVec_End ! wind component, 1=u, 2=v, 3=w
-INTEGER                       :: IY             ! The index of the y-value of point I
-INTEGER                       :: IZ             ! Index of the z-value of point I
 INTEGER                       :: Stat
                               
 INTEGER                       :: UC             ! I/O unit for Coherence debugging file.
@@ -97,67 +91,41 @@ IF ( p%met%IsIECModel ) THEN
    DistZMExp(:) = 1.0
 ENDIF
 
-         II = 0
-POINT_I: DO IZ=1,p%grid%ZLim   !NumGrid_Z
-            DO IY=1,p%grid%IYmax(IZ) !NumGrid_Y
+POINT_I: DO I=1,p%grid%NPoints
 
-               II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > p%grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
+POINT_J:    DO J=1,I  ! The coherence matrix is symmetric so we're going to stop at I
 
-               JJ = 0
-POINT_J:       DO JZ=1,IZ
-                  DO JY=1,p%grid%IYmax(JZ) !NumGrid_Y
+               JJ1       = J - 1
+               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
-                     JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
+               IF ( .NOT. PeriodicY ) THEN
+                  Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+               ELSE 
+                  dY = p%grid%Y(I) - p%grid%Y(J)
+                  IF (dY > 0.5*p%grid%GridWidth ) THEN
+                     dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
+                  ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
+                     dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
+                  END IF
 
-                     IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
+                  Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+               END IF
 
-                     IF ( IZ > p%grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
-                        I = p%grid%YLim
-                        IF ( JZ > p%grid%NumGrid_Z ) THEN
-                           J = p%grid%YLim
-                        ELSE
-                           J = JY
-                        ENDIF
-                     ELSE
-                        I = IY
-                        J = JY
-                     ENDIF
-
-                     JJ1       = JJ - 1
-                     Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
-
-                     IF ( .NOT. PeriodicY ) THEN
-                        Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(IZ) - p%grid%Z(JZ) )**2 )
-                     ELSE 
-                        dY = p%grid%Y(I) - p%grid%Y(J)
-                        IF (dY > 0.5*p%grid%GridWidth ) THEN
-                           dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
-                        ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
-                           dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
-                        END IF
-
-                        Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(IZ) - p%grid%Z(JZ) )**2 )
-                     END IF
-
-                     IF ( p%met%IsIECModel ) THEN
-                        DistU(Indx) = Dist(Indx)/p%UHub
+               IF ( p%met%IsIECModel ) THEN
+                  DistU(Indx) = Dist(Indx)/p%UHub
 !                           TRH(Indx) = EXP( -p%met%InCDec(IVec)*SQRT( ( p%grid%Freq(IFreq) * Dist / p%UHub )**2 + (0.12*Dist/LC)**2 ) )
-                     ELSE
-                        UM       = 0.5*( U(IZ) + U(JZ) )
-                        ZM       = 0.5*( p%grid%Z(IZ) + p%grid%Z(JZ) )
+               ELSE
+                  UM       = 0.5*( U(I) + U(J) )
+                  ZM       = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
 
-                        DistU(Indx)     = Dist(Indx)/UM
-                        DistZMExp(Indx) = ( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1
+                  DistU(Indx)     = Dist(Indx)/UM
+                  DistZMExp(Indx) = ( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1
 
 !                       TRH(Indx) = EXP( -p%met%InCDec(IVec) * DistZMExp*SQRT( ( p%grid%Freq(IFreq)* DistU )**2 + (p%met%InCohB(IVec)*Dist)**2 ) )
-                     ENDIF !SpecModel
+               ENDIF !SpecModel
 
-                  ENDDO    ! JY
-            ENDDO POINT_J  ! JZ
-
-      ENDDO             ! IY
-   ENDDO POINT_I        ! IZ
+         ENDDO POINT_J  
+      ENDDO POINT_I        
 
 IF ( COH_OUT ) THEN
 
@@ -202,17 +170,17 @@ DO IVec = 1,IVec_End
          ! Create the coherence matrix for this frequency
          ! -----------------------------------------------
 
-      DO II=1,p%grid%NPoints
-         DO JJ=1,II
+      DO I=1,p%grid%NPoints
+         DO J=1,I
 
-               JJ1       = JJ - 1
-               Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+               JJ1       = J - 1
+               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
                TRH(Indx) = EXP( -1.0 * p%met%InCDec(IVec) * DistZMExp(Indx)* &
                            SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
 
-         ENDDO ! JJ
-      ENDDO ! II
+         ENDDO ! J
+      ENDDO ! I
       
       CALL Coh2H(    p, IVec, IFreq, TRH, S, UC )
       CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
@@ -287,17 +255,11 @@ REAL(ReKi), ALLOCATABLE      :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
 REAL(ReKi), ALLOCATABLE      :: TRH (:)        ! The transfer function matrix.
 
 INTEGER                      :: J
-INTEGER                      :: JJ             ! Index of point J
 INTEGER                      :: JJ1
-INTEGER                      :: JY             ! Index of y-value of point J
-INTEGER                      :: JZ             ! Index of z-value of point J
 INTEGER                      :: I
 INTEGER                      :: IFreq
-INTEGER                      :: II             ! The index of point I
 INTEGER                      :: Indx
 INTEGER                      :: IVec           ! wind component, 1=u, 2=v, 3=w
-INTEGER                      :: IY             ! The index of the y-value of point I
-INTEGER                      :: IZ             ! Index of the z-value of point I
 INTEGER                      :: Stat
 
 INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
@@ -354,49 +316,22 @@ END IF
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
 
-         II = 0
-POINT_I: DO IZ=1,p%grid%ZLim   !NumGrid_Z
-            DO IY=1,p%grid%IYmax(IZ) !NumGrid_Y
+POINT_I: DO I=1,p%grid%NPoints
+POINT_J:    DO J=1,I
 
-               II = II + 1                            ! Index of point I: S(I)  !equivalent to II = ( IZ - 1 )*NumGrid_Y + IY
-               IF (II > p%grid%NPoints) EXIT POINT_I            ! Don't go past the end of the array; this exits the IZ loop
+               JJ1       = J - 1
+               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of packed V matrix, coherence between points I & J
 
-               JJ = 0
-POINT_J:       DO JZ=1,IZ
-                  DO JY=1,p%grid%IYmax(JZ) !NumGrid_Y
+               Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
 
-                     JJ = JJ + 1                      ! Index of point J: S(J)  !equivalent to JJ = ( JZ - 1 )*NumGrid_Y + JY
-
-                     IF ( JJ > II )  EXIT POINT_J     ! The coherence matrix is symmetric
-
-                     IF ( IZ > p%grid%NumGrid_Z ) THEN       ! Get the correct location if we're using an extra point for the hub
-                        I = p%grid%YLim
-                        IF ( JZ > p%grid%NumGrid_Z ) THEN
-                           J = p%grid%YLim
-                        ELSE
-                           J = JY
-                        ENDIF
-                     ELSE
-                        I = IY
-                        J = JY
-                     ENDIF
-
-                     JJ1       = JJ - 1
-                     Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
-
-                         Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
-
-                         Dist_Z(Indx)= ABS( p%grid%Z(IZ) - p%grid%Z(JZ) )
-!mlb                         Dist_Z12(Indx)=ABS(Z(IZ)*Z(JZ))
-                         Z1Z2(Indx) = p%grid%Z(IZ)*p%grid%Z(JZ)
+               Dist_Z(Indx)= ABS( p%grid%Z(I) - p%grid%Z(J) )
+!mlb           Dist_Z12(Indx)=ABS(Z(I)*Z(J))
+               Z1Z2(Indx) = p%grid%Z(I)*p%grid%Z(J)
 
 
 
-                  ENDDO    ! JY
-            ENDDO POINT_J  ! JZ
-
-      ENDDO             ! IY
-   ENDDO POINT_I        ! IZ
+         ENDDO POINT_J  
+      ENDDO POINT_I 
 
 IF ( COH_OUT ) THEN
 
@@ -443,11 +378,11 @@ DO IVec = 1,3
             ! Create the coherence matrix for this frequency
             ! -----------------------------------------------
 
-         DO II=1,p%grid%NPoints
-            DO JJ=1,II
+         DO I=1,p%grid%NPoints
+            DO J=1,I
 
-                  JJ1       = JJ - 1
-                  Indx      = p%grid%NPoints*JJ1 - JJ*JJ1/2 + II   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+                  JJ1       = J - 1
+                  Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
 !mlb: THis is where to look for the error.
 
@@ -867,16 +802,14 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    ! local variables
    
    INTEGER(IntKi)                   :: IFreq                            ! Index for frequency
-   INTEGER(IntKi)                   :: IY                               ! loop counter for lateral position
-   INTEGER(IntKi)                   :: IZ                               ! loop counter for height
-   INTEGER(IntKi)                   :: FirstPointAtThisHeight           ! index of the first grid point at a particular height
    INTEGER(IntKi)                   :: LastIndex(2)                     ! Index for the last (Freq, Ht) used in models that interpolate/extrapolate user-input spectra or time series
    
    INTEGER(IntKi)                   :: IVec                             ! loop counter for velocity components
    INTEGER(IntKi)                   :: IPoint                           ! loop counter for grid points
    
    REAL(ReKi),   ALLOCATABLE        :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
-   REAL(ReKi),   ALLOCATABLE        :: DUDZ (:)                         ! The steady u-component wind shear for the grid (ZLim) [used in Hydro models only].
+   REAL(ReKi)                       :: DUDZ                             ! The steady u-component wind shear for the grid  [used in Hydro models only].
+   REAL(ReKi)                       :: ZTmp, UTmp                       ! temporary height and velocity used for finite difference calculations
    
    REAL(ReKi)                       :: HalfDelF                         ! half of the delta frequency, used to discretize the continuous PSD at each point
    
@@ -900,6 +833,154 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    ErrMsg  = ""
 
 
+      !  Allocate the array to hold the single-sided velocity spectrum.
+
+   CALL AllocAry( SSVS, p%grid%NumFreq,3, 'SSVS', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+
+
+      ! Calculate the single point Power Spectral Densities. 
+
+   HalfDelF = 0.5*p%grid%Freq(1) 
+   
+   
+   SELECT CASE ( p%met%TurbModel_ID )
+      CASE ( SpecModel_IECKAI ) ! IECKAI has uniform spectra (does not vary with height or velocity)
+         CALL Spec_IECKAI  ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
+      
+         DO IVec=1,3
+            DO IFreq=1,p%grid%NumFreq
+               S(IFreq,:,IVec) = SSVS(IFreq,IVec)*HalfDelF
+            END DO ! IFreq
+         END DO ! IVec
+
+      
+      CASE ( SpecModel_IECVKM )  ! IECVKM has uniform spectra (does not vary with height or velocity)
+         CALL Spec_IECVKM  ( p%UHub, p%IEC%SigmaIEC(1), p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
+   
+         DO IVec=1,3
+            DO IFreq=1,p%grid%NumFreq
+               S(IFreq,:,IVec) = SSVS(IFreq,IVec)*HalfDelF
+            END DO ! IFreq
+         END DO ! IVec       
+         
+                        
+      CASE ( SpecModel_API )
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_API ( p%grid%Z(IPoint), SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO             
+      
+         
+      CASE ( SpecModel_GP_LLJ )
+         IF ( ALLOCATED( p%met%ZL_profile ) ) THEN !.AND. ALLOCATED( p%met%Ustar_profile ) )  THEN  
+            DO IPoint=1,p%grid%NPoints
+               CALL Spec_GPLLJ   ( p%grid%Z(IPoint), U(IPoint), p%met%ZL_profile(IPoint), p%met%Ustar_profile(IPoint), SSVS )
+               S(:,IPoint,:) = SSVS*HalfDelF               
+            ENDDO          
+         ELSE
+            DO IPoint=1,p%grid%NPoints
+               CALL Spec_GPLLJ   ( p%grid%Z(IPoint), U(IPoint), p%met%ZL,                 p%met%Ustar,                 SSVS )
+               S(:,IPoint,:) = SSVS*HalfDelF               
+            ENDDO          
+         ENDIF
+                  
+         
+      CASE (SpecModel_NWTCUP)
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_NWTCUP  ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO         
+         
+      
+      CASE ( SpecModel_SMOOTH )
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_SMOOTH   ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO         
+         
+      
+      CASE ( SpecModel_TIDAL, SpecModel_RIVER )
+         DO IPoint=1,p%grid%NPoints
+            ZTmp = p%grid%Z(IPoint) + p%grid%GridRes_Z
+            UTmp = getVelocity(p%UHub, p%grid%HubHt, ZTmp, p%grid%RotorDiameter)
+            DUDZ = ( UTmp - U(IPoint) ) / p%grid%GridRes_Z
+            CALL Spec_TIDAL  ( p%grid%Z(IPoint), DUDZ, SSVS, p%met%TurbModel_ID )
+         
+                  ! Discretize the continuous PSD and store it in matrix "S"
+           
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO 
+            
+         
+      CASE ( SpecModel_USER ) ! currently is uniform spectra
+         CALL Spec_UserSpec   ( p, SSVS )
+      
+         DO IVec=1,3
+            DO IFreq=1,p%grid%NumFreq
+               S(IFreq,:,IVec) = SSVS(IFreq,IVec)*HalfDelF
+            END DO ! IFreq
+         END DO ! IVec         
+         
+         
+      CASE ( SpecModel_TimeSer )   
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_TimeSer   ( p, p%grid%Z(IPoint), LastIndex, SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO             
+      
+         
+      CASE ( SpecModel_USRVKM )
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_vonKrmn   ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO       
+         
+         
+      CASE (SpecModel_WF_UPW)
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_WF_UPW  ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO       
+         
+         
+      CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
+         DO IPoint=1,p%grid%NPoints
+            CALL Spec_WF_DW ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            S(:,IPoint,:) = SSVS*HalfDelF               
+         ENDDO       
+         
+         
+      CASE ( SpecModel_NONE )
+         S = 0.0_ReKi ! whole matrix is zero
+   !bjj TEST: CALL Spec_Test ( p%grid%Z(IPoint), U(IPoint), Work )
+
+      CASE ( SpecModel_MODVKM )
+         IF (MVK) THEN
+         !  DO IPoint=1,p%grid%NPoints
+         !     CALL Mod_vKrm( p%grid%Z(IPoint), U(IPoint), Work )
+         !     S(:,IPoint,:) = SSVS*HalfDelF               
+         !  ENDDO       
+         ELSE
+            CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
+            CALL Cleanup()
+            RETURN
+         ENDIF
+
+      CASE DEFAULT
+         CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
+         CALL Cleanup()
+         RETURN
+      END SELECT          
+   
+         
+         
+   
    IF (PSD_OUT) THEN
       UP = -1
       CALL GetNewUnit( UP, ErrStat2, ErrMsg2 )
@@ -914,142 +995,21 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
       WRITE (UP,"(A)")  'PSDs '
       WRITE (UP, "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p%grid%NumFreq ) )//"('"//TAB//"',G10.4) )")  'Comp','Ht', p%grid%Freq(:)
       FormStr  = "( I4,"//TRIM( Int2LStr( p%grid%NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
-   ENDIF
-
-
-      !  Allocate the array to hold the single-sided velocity spectrum.
-
-   CALL AllocAry( SSVS, p%grid%NumFreq,3, 'SSVS', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! Allocate and initialize the DUDZ array for MHK models (TIDAL and RIVER)
-
-   IF ( p%met%TurbModel_ID == SpecModel_TIDAL .OR. p%met%TurbModel_ID == SpecModel_RIVER ) THEN
-         ! Calculate the shear, DUDZ, for all heights.
-      CALL AllocAry( DUDZ, p%grid%ZLim, 'DUDZ', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF   
-
-      DUDZ(1)  =(U(2)-U(1)) / (p%grid%Z(2)-p%grid%Z(1))
-      DUDZ(p%grid%ZLim) = (U(p%grid%ZLim)-U(p%grid%ZLim-1)) / (p%grid%Z(p%grid%ZLim)-p%grid%Z(p%grid%ZLim-1))
-      DO IZ = 2,p%grid%ZLim-1
-         DUDZ(IZ)=(U(IZ+1)-U(IZ-1))/(p%grid%Z(IZ+1)-p%grid%Z(IZ-1))
-      ENDDO
-   
-   ENDIF
-
-
-      ! Calculate the single point Power Spectral Densities. 
-
-   HalfDelF = 0.5*p%grid%Freq(1)   
-   FirstPointAtThisHeight = 0   ! The index for numbering the points on the grid
-   DO IZ=1,p%grid%ZLim
-
-            ! The continuous, one-sided PSDs are evaluated at discrete
-            ! points and the results are stored in the "SSVS" matrix.
-
-            
-         SELECT CASE ( p%met%TurbModel_ID )
-         
-            CASE ( SpecModel_IECKAI )
-               CALL Spec_IECKAI  ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
       
-            CASE ( SpecModel_IECVKM )
-               CALL Spec_IECVKM  ( p%UHub, p%IEC%SigmaIEC(1), p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, SSVS )
-      
-            CASE ( SpecModel_API )
-               CALL Spec_API ( p%grid%Z(IZ), SSVS )
-      
-            CASE ( SpecModel_GP_LLJ )
-               IF ( ALLOCATED( p%met%ZL_profile ) ) THEN !.AND. ALLOCATED( p%met%Ustar_profile ) )  THEN               
-                  CALL Spec_GPLLJ   ( p%grid%Z(IZ), U(IZ), p%met%ZL_profile(IZ), p%met%Ustar_profile(IZ), SSVS )
-               ELSE
-                  CALL Spec_GPLLJ   ( p%grid%Z(IZ), U(IZ), p%met%ZL,             p%met%Ustar,             SSVS )
-               ENDIF
-                  
-            CASE (SpecModel_NWTCUP)
-               CALL Spec_NWTCUP  ( p%grid%Z(IZ), U(IZ), SSVS )
-      
-            CASE ( SpecModel_SMOOTH )
-               CALL Spec_SMOOTH   ( p%grid%Z(IZ), U(IZ), SSVS )
-      
-            CASE ( SpecModel_TIDAL, SpecModel_RIVER )
-               CALL Spec_TIDAL  ( p%grid%Z(IZ), DUDZ(IZ), SSVS, p%met%TurbModel_ID )
-            
-            CASE ( SpecModel_USER )
-               CALL Spec_UserSpec   ( p, SSVS )
-      
-            CASE ( SpecModel_TimeSer )   
-               CALL Spec_TimeSer   ( p, p%grid%Z(IZ), LastIndex, SSVS )
-      
-            CASE ( SpecModel_USRVKM )
-               CALL Spec_vonKrmn   ( p%grid%Z(IZ), U(IZ), SSVS )
-      
-            CASE (SpecModel_WF_UPW)
-               CALL Spec_WF_UPW  ( p%grid%Z(IZ), U(IZ), SSVS )
-      
-            CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
-               CALL Spec_WF_DW ( p%grid%Z(IZ), U(IZ), SSVS )
-      
-            CASE ( SpecModel_NONE )
-               SSVS(:,:) = 0.0
-         !bjj TEST: CALL Spec_Test ( p%grid%Z(IZ), U(IZ), Work )
-
-            CASE ( SpecModel_MODVKM )
-               IF (MVK) THEN
-          !        CALL Mod_vKrm( p%grid%Z(IZ), U(IZ), Work )
-               ELSE
-                  CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-
-            CASE DEFAULT
-               CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
-               CALL Cleanup()
-               RETURN
-         END SELECT            
-            
+      DO IPoint=1,p%grid%NPoints           
                                                                             
-         IF ( PSD_OUT ) THEN
-            !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
-               WRITE( UP, FormStr ) 1, p%grid%Z(IZ), SSVS(:,1)
-               WRITE( UP, FormStr ) 2, p%grid%Z(IZ), SSVS(:,2)
-               WRITE( UP, FormStr ) 3, p%grid%Z(IZ), SSVS(:,3)
-            !ENDIF
-         ENDIF      
+         !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
+            WRITE( UP, FormStr ) 1, p%grid%Z(IPoint), S(:,IPoint,1)/HalfDelF
+            WRITE( UP, FormStr ) 2, p%grid%Z(IPoint), S(:,IPoint,2)/HalfDelF
+            WRITE( UP, FormStr ) 3, p%grid%Z(IPoint), S(:,IPoint,3)/HalfDelF
+         !ENDIF
       
-
-            ! Discretize the continuous PSD and store it in matrix "S"
-           
-         DO IVec=1,3
-         
-            IPoint = FirstPointAtThisHeight
-
-            DO IY=1,p%grid%IYmax(IZ)   
-          
-               IPoint = IPoint + 1
- 
-               DO IFreq=1,p%grid%NumFreq
-                  S(IFreq,IPoint,IVec) = SSVS(IFreq,IVec)*HalfDelF
-               ENDDO ! IFreq
-
-            ENDDO !IY
-
-         ENDDO ! IVec
-
-         FirstPointAtThisHeight = FirstPointAtThisHeight + p%grid%IYmax(IZ)     ! The next starting index at height IZ + 1
-
-   ENDDO ! IZ
-
+      ENDDO ! IPoint
+   
+      CLOSE( UP )
+   ENDIF
+   
+   
 
    CALL Cleanup()
    RETURN
@@ -1062,7 +1022,6 @@ CONTAINS
    
    
       IF ( ALLOCATED( SSVS  ) )  DEALLOCATE( SSVS  )
-      IF ( ALLOCATED( DUDZ  ) )  DEALLOCATE( DUDZ  )
 
    END SUBROUTINE Cleanup
 END SUBROUTINE CalcTargetPSD
@@ -2180,9 +2139,9 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    
    
    INTEGER                                        :: NumSteps2                       ! one-half the number of steps
-   
-   INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
-   CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
+   INTEGER                                        :: IPoint                          ! loop counter for points
+   INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2339,11 +2298,11 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%NPacked   = p_grid%NPoints*( p_grid%NPoints + 1 )/2    ! number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
    
    
-   CALL AllocAry(p_grid%Z,         p_grid%ZLim, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%Y,         p_grid%YLim, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%IYmax,     p_grid%ZLim, 'IYmax (horizontal locations at each height)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid') !  Allocate the array of vertical locations of the grid points.
+   CALL AllocAry(p_grid%Z,         p_grid%NPoints, 'Z (vertical locations of the grid points)',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Y,         p_grid%NPoints, 'Y (lateral locations of the grid points)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+
    CALL AllocAry(p_grid%GridPtIndx,p_grid%NumGrid_Y*p_grid%NumGrid_Z,            'GridPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                                       'TwrPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                                      'TwrPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
    
    IF (ErrStat >= AbortErrLev) RETURN
    
@@ -2354,13 +2313,17 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
    ! .................
       ! Initialize cartesian Y,Z values of the grid.
 
-   DO IY = 1,p_grid%NumGrid_Y
-      p_grid%Y(IY)     = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
-   ENDDO
-
+   IPoint = 1
    DO IZ = 1,p_grid%NumGrid_Z
-      p_grid%Z(IZ)     = p_grid%Zbottom + p_grid%GridRes_Z*( IZ - 1 )
-      p_grid%IYmax(IZ) = p_grid%NumGrid_Y           ! Number of lateral points at this height
+      
+      DO IY = 1,p_grid%NumGrid_Y
+         p_grid%Y(IPoint)          = -0.5*p_grid%GridWidth  + p_grid%GridRes_Y*( IY - 1 )
+         p_grid%Z(IPoint)          =      p_grid%Zbottom    + p_grid%GridRes_Z*( IZ - 1 )        
+         p_grid%GridPtIndx(IPoint) = IPoint
+         
+         IPoint = IPoint + 1
+      ENDDO
+      
    ENDDO
 
    
@@ -2370,9 +2333,11 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
       
    ELSE
 
-      p_grid%Y(p_grid%NumGrid_Y+1)     = 0.0
-      p_grid%Z(p_grid%NumGrid_Z+1)     = p_grid%HubHt
-      p_grid%IYmax(p_grid%NumGrid_Z+1) = 1
+      p_grid%Y(IPoint)          = 0.0_ReKi
+      p_grid%Z(IPoint)          = p_grid%HubHt        
+         
+      IPoint = IPoint + 1
+      
 
       FirstTwrPt = p_grid%NumGrid_Z + 2              ! The start of tower points, if they exist
 
@@ -2395,9 +2360,7 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
       
       !...........
       ! set up spatial locations
-      
-      p_grid%Y(p_grid%YLim) = 0.0  !is this okay if we have an even number of points????/
-         
+               
       IF ( p_grid%ExtraTwrPT ) THEN 
          LastHeight =  p_grid%Z(1) + p_grid%GridRes_Z 
       ELSE
@@ -2405,10 +2368,14 @@ SUBROUTINE CreateGrid( p_grid, UHub, AddTower, ErrStat, ErrMsg )
       ENDIF
 
       DO IZ = FirstTwrPt,p_grid%ZLim
-         p_grid%Z(IZ) = LastHeight - p_grid%GridRes_Z
-         LastHeight   = p_grid%Z(IZ)
+         
+         p_grid%Y(IPoint)          = 0.0_ReKi
+         p_grid%Z(IPoint)          = LastHeight - p_grid%GridRes_Z        
+         
+         IPoint = IPoint + 1
+         
+         LastHeight   = p_grid%Z(IPoint)
 
-         p_grid%IYmax(IZ) = 1                 ! The number of lateral points at this height
       ENDDO
 
    ENDIF   
@@ -2948,8 +2915,6 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
    REAL(ReKi)                                  ::  v3(3)             ! temporary 3-component array containing velocity
    INTEGER(IntKi)                              ::  ITime             ! loop counter for time step 
    INTEGER(IntKi)                              ::  IPoint            ! loop counter for grid points
-   INTEGER(IntKi)                              ::  IY                ! An index for the Y position of a point I
-   INTEGER(IntKi)                              ::  IZ                ! An index for the Z position of a point I
                                                                      
                                                                      
                                                                      
@@ -2958,25 +2923,19 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
    ! Add mean wind to u' components and rotate to inertial reference  
    !  frame coordinate system
    !..............................................................................
-   IPoint = 0
-   DO IZ=1,p%grid%ZLim   
+   DO IPoint=1,p%grid%Npoints   
 
-     DO IY=1,p%grid%IYmax(IZ)  
+      DO ITime=1,p%grid%NumSteps
 
-         IPoint = IPoint + 1
-
-         DO ITime=1,p%grid%NumSteps
-
-               ! Add mean wind speed to the streamwise component and
-               ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
+            ! Add mean wind speed to the streamwise component and
+            ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
             
-            v3 = V(ITime,IPoint,:)
-            CALL CalculateWindComponents( v3, U(IZ), HWindDir(IZ), p%met%VFlowAng, V(ITime,IPoint,:) )
+         v3 = V(ITime,IPoint,:)
+         CALL CalculateWindComponents( v3, U(IPoint), HWindDir(IPoint), p%met%VFlowAng, V(ITime,IPoint,:) )
                         
-         ENDDO ! ITime
+      ENDDO ! ITime
          
-     ENDDO ! IY
-   ENDDO ! IZ   
+   ENDDO ! IPoint   
                                                                      
                                                                      
 END SUBROUTINE AddMeanAndRotate
@@ -3218,7 +3177,6 @@ SUBROUTINE TS_End(p)
          
    IF ( ALLOCATED( p%grid%Y            ) )  DEALLOCATE( p%grid%Y            )
    IF ( ALLOCATED( p%grid%Z            ) )  DEALLOCATE( p%grid%Z            )
-   IF ( ALLOCATED( p%grid%IYmax        ) )  DEALLOCATE( p%grid%IYmax        )
    IF ( ALLOCATED( p%grid%Freq         ) )  DEALLOCATE( p%grid%Freq         )
    IF ( ALLOCATED( p%grid%TwrPtIndx    ) )  DEALLOCATE( p%grid%TwrPtIndx    )
    IF ( ALLOCATED( p%grid%GridPtIndx   ) )  DEALLOCATE( p%grid%GridPtIndx   )

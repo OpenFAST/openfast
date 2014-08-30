@@ -2188,34 +2188,34 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
                ! Put header information into the binary data file.
 
-      WRITE (UBFFW)   INT(  -99                                , B2Ki )     ! -99 = New Bladed format
-      WRITE (UBFFW)   INT(    4                                , B2Ki )     ! 4 = improved von karman (but needed for next 7 inputs)
-      WRITE (UBFFW)   INT(    3                                , B4Ki )     ! 3 = number of wind components
-      WRITE (UBFFW)  REAL( p%met%Latitude                      , SiKi )     ! Latitude (degrees)
-      WRITE (UBFFW)  REAL( p%met%Z0                            , SiKi )     ! Roughness length (m)
-      WRITE (UBFFW)  REAL( p%grid%Z(1) + p%grid%GridHeight/2.0 , SiKi )     ! Reference Height (m) ( Z(1) + GridHeight / 2.0 ) !This is the vertical center of the grid
-      WRITE (UBFFW)  REAL( 100.0*TI(1)                         , SiKi )     ! Longitudinal turbulence intensity (%)
-      WRITE (UBFFW)  REAL( 100.0*TI(2)                         , SiKi )     ! Lateral turbulence intensity (%)
-      WRITE (UBFFW)  REAL( 100.0*TI(3)                         , SiKi )     ! Vertical turbulence intensity (%)
+      WRITE (UBFFW)   INT(  -99                                   , B2Ki )     ! -99 = New Bladed format
+      WRITE (UBFFW)   INT(    4                                   , B2Ki )     ! 4 = improved von karman (but needed for next 7 inputs)
+      WRITE (UBFFW)   INT(    3                                   , B4Ki )     ! 3 = number of wind components
+      WRITE (UBFFW)  REAL( p%met%Latitude                         , SiKi )     ! Latitude (degrees)
+      WRITE (UBFFW)  REAL( p%met%Z0                               , SiKi )     ! Roughness length (m)
+      WRITE (UBFFW)  REAL( p%grid%Zbottom + p%grid%GridHeight/2.0 , SiKi )     ! Reference Height (m) ( Z(1) + GridHeight / 2.0 ) !This is the vertical center of the grid
+      WRITE (UBFFW)  REAL( 100.0*TI(1)                            , SiKi )     ! Longitudinal turbulence intensity (%)
+      WRITE (UBFFW)  REAL( 100.0*TI(2)                            , SiKi )     ! Lateral turbulence intensity (%)
+      WRITE (UBFFW)  REAL( 100.0*TI(3)                            , SiKi )     ! Vertical turbulence intensity (%)
 
-      WRITE (UBFFW)  REAL( p%grid%GridRes_Z                    , SiKi )     ! grid spacing in vertical direction, in m
-      WRITE (UBFFW)  REAL( p%grid%GridRes_Y                    , SiKi )     ! grid spacing in lateral direction, in m
-      WRITE (UBFFW)  REAL( p%grid%TimeStep*p%UHub              , SiKi )     ! grid spacing in longitudinal direciton, in m
-      WRITE (UBFFW)   INT( p%grid%NumOutSteps/2                , B4Ki )     ! half the number of points in alongwind direction
-      WRITE (UBFFW)  REAL( p%UHub                              , SiKi )     ! the mean wind speed in m/s
-      WRITE (UBFFW)  REAL( 0                                   , SiKi )     ! the vertical length scale of the longitudinal component in m
-      WRITE (UBFFW)  REAL( 0                                   , SiKi )     ! the lateral length scale of the longitudinal component in m
-      WRITE (UBFFW)  REAL( 0                                   , SiKi )     ! the longitudinal length scale of the longitudinal component in m
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! an unused integer
-      WRITE (UBFFW)   INT( p%RNG%RandSeed(1)                   , B4Ki )     ! the random number seed
-      WRITE (UBFFW)   INT( p%grid%NumGrid_Z                    , B4Ki )     ! the number of grid points vertically
-      WRITE (UBFFW)   INT( p%grid%NumGrid_Y                    , B4Ki )     ! the number of grid points laterally
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the vertical length scale of the lateral component, not used
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the lateral length scale of the lateral component, not used
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the longitudinal length scale of the lateral component, not used
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the vertical length scale of the vertical component, not used
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the lateral length scale of the vertical component, not used
-      WRITE (UBFFW)   INT( 0                                   , B4Ki )     ! the longitudinal length scale of the vertical component, not used
+      WRITE (UBFFW)  REAL( p%grid%GridRes_Z                       , SiKi )     ! grid spacing in vertical direction, in m
+      WRITE (UBFFW)  REAL( p%grid%GridRes_Y                       , SiKi )     ! grid spacing in lateral direction, in m
+      WRITE (UBFFW)  REAL( p%grid%TimeStep*p%UHub                 , SiKi )     ! grid spacing in longitudinal direciton, in m
+      WRITE (UBFFW)   INT( p%grid%NumOutSteps/2                   , B4Ki )     ! half the number of points in alongwind direction
+      WRITE (UBFFW)  REAL( p%UHub                                 , SiKi )     ! the mean wind speed in m/s
+      WRITE (UBFFW)  REAL( 0                                      , SiKi )     ! the vertical length scale of the longitudinal component in m
+      WRITE (UBFFW)  REAL( 0                                      , SiKi )     ! the lateral length scale of the longitudinal component in m
+      WRITE (UBFFW)  REAL( 0                                      , SiKi )     ! the longitudinal length scale of the longitudinal component in m
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! an unused integer
+      WRITE (UBFFW)   INT( p%RNG%RandSeed(1)                      , B4Ki )     ! the random number seed
+      WRITE (UBFFW)   INT( p%grid%NumGrid_Z                       , B4Ki )     ! the number of grid points vertically
+      WRITE (UBFFW)   INT( p%grid%NumGrid_Y                       , B4Ki )     ! the number of grid points laterally
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the vertical length scale of the lateral component, not used
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the lateral length scale of the lateral component, not used
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the longitudinal length scale of the lateral component, not used
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the vertical length scale of the vertical component, not used
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the lateral length scale of the vertical component, not used
+      WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the longitudinal length scale of the vertical component, not used
 
 
          ! Compute parameters for ordering output for FF AeroDyn files. (This is for BLADED compatibility.)
@@ -2242,9 +2242,9 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
                II = ( IZ - 1 )*p%grid%NumGrid_Y + IY
 
-               TmpVarray(IP)   = NINT( U_C1*V(IT,II,1) - U_C2, B2Ki )  ! Put the data into a temp array so that the WRITE() command works faster
-               TmpVarray(IP+1) = NINT( V_C *V(IT,II,2)       , B2Ki )
-               TmpVarray(IP+2) = NINT( W_C *V(IT,II,3)       , B2Ki )
+               TmpVarray(IP)   = NINT( U_C1*V(IT,p%grid%GridPtIndx(II),1) - U_C2, B2Ki )  ! Put the data into a temp array so that the WRITE() command works faster
+               TmpVarray(IP+1) = NINT( V_C *V(IT,p%grid%GridPtIndx(II),2)       , B2Ki )
+               TmpVarray(IP+2) = NINT( W_C *V(IT,p%grid%GridPtIndx(II),3)       , B2Ki )
 
                IP = IP + 3;
             ENDDO ! IY
@@ -2271,7 +2271,7 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
 
          WRITE (UATWR)  REAL( p%grid%GridRes_Z       ,   SiKi )         ! grid spacing in vertical direction, in m
          WRITE (UATWR)  REAL( p%grid%TimeStep*p%UHub ,   SiKi )         ! grid spacing in longitudinal direciton, in m
-         WRITE (UATWR)  REAL( p%grid%Z(1)            ,   SiKi )         ! The vertical location of the highest tower grid point in m
+         WRITE (UATWR)  REAL( p%grid%ZBottom         ,   SiKi )         ! The vertical location of the highest tower grid point in m
          WRITE (UATWR)   INT( p%grid%NumOutSteps     ,   B4Ki )         ! The number of points in alongwind direction
          WRITE (UATWR)   INT( SIZE(p%grid%TwrPtIndx) ,   B4Ki )         ! the number of grid points vertically
          WRITE (UATWR)  REAL( p%UHub ,                   SiKi )         ! the mean wind speed in m/s
@@ -2423,7 +2423,7 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
       ! Find the first tower point
 
-   NumGrid  = p%grid%NumGrid_Y*p%grid%NumGrid_Z
+   NumGrid  = SIZE(p%grid%GridPtIndx) !p%grid%NumGrid_Y*p%grid%NumGrid_Z
 
    IF ( p%WrFile(FileExt_TWR) ) THEN
 
@@ -2477,7 +2477,7 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
    ENDDO
 
-   ALLOCATE ( TmpVarray( 3*(p%grid%NumGrid_Z*p%grid%NumGrid_Y + NumTower) ) , STAT=AllocStat )
+   ALLOCATE ( TmpVarray( 3*(NumGrid + NumTower) ) , STAT=AllocStat )
 
    IF ( AllocStat /= 0 )  THEN
       CALL TS_Abort ( 'Error allocating memory for temporary wind speed array.' )
@@ -2493,9 +2493,9 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
       DO II=1,NumGrid
 
-         TmpVarray(IP)   =  NINT( Max( Min( REAL(UScl*V(IT,II,1) + UOff, SiKi), IntMax ),IntMin) , B2Ki )
-         TmpVarray(IP+1) =  NINT( Max( Min( REAL(VScl*V(IT,II,2) + VOff, SiKi), IntMax ),IntMin) , B2Ki )
-         TmpVarray(IP+2) =  NINT( Max( Min( REAL(WScl*V(IT,II,3) + Woff, SiKi), IntMax ),IntMin) , B2Ki )
+         TmpVarray(IP)   =  NINT( Max( Min( REAL(UScl*V(IT,p%grid%GridPtIndx(II),1) + UOff, SiKi), IntMax ),IntMin) , B2Ki )
+         TmpVarray(IP+1) =  NINT( Max( Min( REAL(VScl*V(IT,p%grid%GridPtIndx(II),2) + VOff, SiKi), IntMax ),IntMin) , B2Ki )
+         TmpVarray(IP+2) =  NINT( Max( Min( REAL(WScl*V(IT,p%grid%GridPtIndx(II),3) + Woff, SiKi), IntMax ),IntMin) , B2Ki )
 
          IP = IP + 3
       ENDDO ! II
@@ -2578,9 +2578,9 @@ INTEGER                      :: UFFF                                     ! I/O u
 
       WRITE (UFFF,"(I14,I6,F11.3,F11.3,F15.3,F11.2,F10.2)")  p_grid%NumGrid_Y, p_grid%NumGrid_Z, p_grid%GridRes_Y, p_grid%GridRes_Z, p_grid%TimeStep, p_grid%HubHt, UHub
       WRITE (UFFF,"(/,' Z Coordinates (m):')")
-      WRITE (UFFF,FormStr5)  ( p_grid%Z(IZ)-p_grid%HubHt, IZ=1,p_grid%NumGrid_Z )
+      WRITE (UFFF,FormStr5)  ( p_grid%Z(p_grid%GridPtIndx(IZ))-p_grid%HubHt, IZ=1,p_grid%NPoints,p_grid%NumGrid_Y )
       WRITE (UFFF,"(/,' Y Coordinates (m):')")
-      WRITE (UFFF,FormStr5)  ( p_grid%Y(IY), IY=1,p_grid%NumGrid_Y )
+      WRITE (UFFF,FormStr5)  ( p_grid%Y(p_grid%GridPtIndx(IY)), IY=1,p_grid%NumGrid_Y )
 
          ! Write out elapsed time & hub-level value before component grid.
 
@@ -2593,7 +2593,7 @@ INTEGER                      :: UFFF                                     ! I/O u
             II = ( p_grid%NumGrid_Z - IZ )*p_grid%NumGrid_Y
 
             DO IY=1,p_grid%NumGrid_Y  ! From the left to the right
-               ZRow(IY) = V(IT,II+IY,IVec)
+               ZRow(IY) = V(IT, p_grid%GridPtIndx(II+IY) ,IVec)
             ENDDO ! IY
 
             WRITE (UFFF,FormStr5)  ( ZRow(IY), IY=1,p_grid%NumGrid_Y )
@@ -2675,7 +2675,7 @@ use TSMods
    REAL(ReKi)              ::  U_zb                                  ! The velocity at the bottom of the rotor disk (for estimating log fit)
    REAL(DbKi)              ::  U_zt                                  ! The velocity at the top of the rotor disk (for estimating log fit)
       
-   INTEGER                 :: iz                                     ! loop counter
+   INTEGER                 :: iz, jz                                 ! loop counter/indices of points
    LOGICAL                 ::  HubPr                                 ! Flag to indicate if the hub height is to be printed separately in the summary file
 
    CHARACTER(200)          :: FormStr                                ! String used to store format specifiers.
@@ -2890,7 +2890,9 @@ HubPr = .NOT. p%grid%HubOnGrid     !If the hub height is not on the z-grid, prin
 
    ! Write out the grid points & the hub
 
-DO IZ = p%grid%NumGrid_Z,1, -1
+DO JZ = p%grid%NumGrid_Z,1, -1
+   
+   IZ = p%grid%GridPtIndx( (JZ-1)*p%grid%NumGrid_Y+1 )
    
    IF ( HubPr  .AND. ( p%grid%Z(IZ) < p%grid%HubHt ) ) THEN
          
@@ -2920,25 +2922,23 @@ DO IZ = p%grid%NumGrid_Z,1, -1
       WRITE(US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
    ENDIF
 
-ENDDO ! IZ
+ENDDO ! JZ
    
-   ! Write out the tower points
+   ! Write out the tower points   
+DO JZ = 2, SIZE(p%grid%TwrPtIndx)
+   IZ =  p%grid%TwrPtIndx(JZ)
    
-DO IZ = p%grid%NumGrid_Z,p%grid%ZLim
+   CHFA = COS( HWindDir(IZ)*D2R )
+   SHFA = SIN( HWindDir(IZ)*D2R )
 
-   IF ( p%grid%Z(IZ) < p%grid%Z(1) ) THEN
-      CHFA = COS( HWindDir(IZ)*D2R )
-      SHFA = SIN( HWindDir(IZ)*D2R )
-
-      IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
-         WRITE(US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                              p%met%ZL_profile(IZ), p%met%Ustar_profile(IZ)
-      ELSE
-         WRITE(US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-      ENDIF
+   IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
+      WRITE(US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
+                           p%met%ZL_profile(IZ), p%met%Ustar_profile(IZ)
+   ELSE
+      WRITE(US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
    ENDIF
 
-ENDDO ! IZ
+ENDDO ! JZ
 
 
 END SUBROUTINE WrSum_SpecModel
@@ -3553,6 +3553,8 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
          DO IY=1,p%grid%NumGrid_Y
 
             II   = (IZ-1)*p%grid%NumGrid_Y+IY
+            II   = p%grid%GridPtIndx(II)
+            
             SumS = 0.0
 
             DO IT=1,p%grid%NumSteps
@@ -3563,7 +3565,7 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
          ENDDO ! IY
 
-         WRITE(US,"(F9.2,1X,"//TRIM(Num2LStr(p%grid%NumGrid_Y))//"F8.3)") p%grid%Z(IZ), SDary(1:p%grid%NumGrid_Y)
+         WRITE(US,"(F9.2,1X,"//TRIM(Num2LStr(p%grid%NumGrid_Y))//"F8.3)") p%grid%Z( p%grid%GridPtIndx((IZ-1)*p%grid%NumGrid_Y+1) ), SDary(1:p%grid%NumGrid_Y)
 
          IF ( IVec == 1 ) THEN
             UTmp = UTmp + SUM( SDary )
@@ -3634,13 +3636,13 @@ INTEGER                 ::  IZ_Lo, IY_Lo                    ! Index for lower bo
    
    
       ! Get points for bi-linear interpolation  ( indx @ (iy,iz) is (iz-1)*numgrid_y + iy, assuming a full grid (needs to be modified for user-defined spectra)
-   ZLo_YLo   = ( IZ_Lo - 1 )*p%grid%NumGrid_Y + IY_Lo
-   ZHi_YLo   = ( IZ_Lo     )*p%grid%NumGrid_Y + IY_Lo
-   ZLo_YHi   = ( IZ_Lo - 1 )*p%grid%NumGrid_Y + IY_Lo + 1
-   ZHi_YHi   = ( IZ_Lo     )*p%grid%NumGrid_Y + IY_Lo + 1
+   ZLo_YLo   = p%grid%GridPtIndx( ( IZ_Lo - 1 )*p%grid%NumGrid_Y + IY_Lo     )
+   ZHi_YLo   = p%grid%GridPtIndx( ( IZ_Lo     )*p%grid%NumGrid_Y + IY_Lo     )
+   ZLo_YHi   = p%grid%GridPtIndx( ( IZ_Lo - 1 )*p%grid%NumGrid_Y + IY_Lo + 1 )
+   ZHi_YHi   = p%grid%GridPtIndx( ( IZ_Lo     )*p%grid%NumGrid_Y + IY_Lo + 1 )
     
-   TmpZ      = (p%grid%HubHt - p%grid%Z(IZ_Lo))/p%grid%GridRes_Z
-   TmpY      = ( 0.0_ReKi    - p%grid%Y(IY_Lo))/p%grid%GridRes_Y
+   TmpZ      = (p%grid%HubHt - p%grid%Z(p%grid%GridPtIndx((IZ_Lo-1)*p%grid%NumGrid_Y + 1)))/p%grid%GridRes_Z
+   TmpY      = ( 0.0_ReKi    - p%grid%Y(p%grid%GridPtIndx( IY_Lo                        )))/p%grid%GridRes_Y
    CGridSum  = 0.0
    CGridSum2 = 0.0
 

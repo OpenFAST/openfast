@@ -413,7 +413,7 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
    REAL(ReKi),   INTENT(IN)           :: z_Ref                       ! Reference height
    REAL(ReKi),   INTENT(IN)           :: Ht                          ! Height where wind speed should be calculated
    REAL(ReKi),   INTENT(IN)           :: RotorDiam                   ! Diameter of rotor disk (meters)
-   REAL(ReKi)                         :: getVelocity             ! This function, approximate wind speed at Ht
+   REAL(ReKi)                         :: getVelocity                 ! This function, approximate wind speed at Ht
 
    REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
    REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
