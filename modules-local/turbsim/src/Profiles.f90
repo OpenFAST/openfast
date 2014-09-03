@@ -20,7 +20,7 @@
 MODULE TS_Profiles
 
    USE                     NWTC_Library   
-   
+   USE                     TurbSim_Types
 use ts_errors
 
    IMPLICIT                NONE
@@ -151,14 +151,14 @@ INTEGER                 :: I                 ! A loop counter
          p%met%ChebyCoef_WS(I) = p%met%Rich_No*UH_coef(2,I) + p%met%Ustar*UH_coef(3,I) + UH_coef(4,I) ! +UJetMax*UH_coef(1,I)
       ENDDO
 
-      Utmp1                    = getVelocity(u_inp, z_inp, z_inp, p%grid%RotorDiameter)
+      Utmp1                    = getVelocity(p, u_inp, z_inp, z_inp)
 
          ! Now calculate the coefficients with just UJetMax term
 
       ChebyCoef_tmp(:)         = p%met%ChebyCoef_WS(:)
       p%met%ChebyCoef_WS(:)    = UH_coef(1,:)
 
-      Utmp2                    = getVelocity(u_inp, z_inp, z_inp, p%grid%RotorDiameter)       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
+      Utmp2                    = getVelocity(p, u_inp, z_inp, z_inp)       ! This uses the ChebyCoef_WS values, & ignores the first 2 inputs
       p%met%UJetMax            = (u_inp - Utmp1)/Utmp2
 
          ! Get the final coefficients, using the computed UJetMax
@@ -172,19 +172,17 @@ INTEGER                 :: I                 ! A loop counter
    ENDDO
 
 !print *, 'UJetMax wind speed at ', ZJetMax, ' m: ', UJetMax, 'm/s'
-!Utmp1 = getVelocity(u_inp, z_inp, ZJetMax, 999.9, PROFILE_TYPE='JET')
+!Utmp1 = getVelocity(p, u_inp, z_inp, ZJetMax, 999.9, PROFILE_TYPE='JET')
 !print *, "Calc'd  wind speed at ", ZJetMax, ' m: ', Utmp1, 'm/s'
 
 RETURN
 END SUBROUTINE GetChebCoefs
 !=======================================================================
 
-FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht, RotorDiam )
+FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht )
 
 
    ! Determine the wind speed at a given height, with reference wind speed.
-
-   use TurbSim_Types
    
    IMPLICIT                              NONE
 
@@ -192,7 +190,6 @@ FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht, RotorDiam )
    REAL(ReKi),                 INTENT(IN) :: U_Ref                       ! Wind speed at reference height
    REAL(ReKi),                 INTENT(IN) :: z_Ref                       ! Reference height
    REAL(ReKi),                 INTENT(IN) :: Ht(:)                       ! Height where wind speed should be calculated
-   REAL(ReKi),                 INTENT(IN) :: RotorDiam                   ! Diameter of rotor disk (meters)
    REAL(ReKi)                             :: getVelocityProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
 
    REAL(SiKi),   PARAMETER                :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
@@ -246,6 +243,14 @@ FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht, RotorDiam )
             getVelocityProfile(:) = U_Ref*( Ht(:)/z_Ref )**p%met%PLExp
 
 !         ENDIF
+
+      CASE ( 'TS' )
+
+            DO J = 1,SIZE(Ht)
+               getVelocityProfile(J) =  getTimeSeriesWindSpeed(p, Ht(J) )   
+            END DO
+         
+
      CASE ( 'API' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
      ! sample to write to screen.CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
@@ -287,7 +292,7 @@ FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht, RotorDiam )
          DO I=1,SIZE(getVelocityProfile)
             IF ( Ht(I) == z_Ref ) THEN
                getVelocityProfile(I) = U_Ref
-            ELSEIF ( ABS( Ht(I)-z_Ref ) <= 0.5*RotorDiam ) THEN
+            ELSEIF ( ABS( Ht(I)-z_Ref ) <= 0.5*p%grid%RotorDiameter ) THEN
                getVelocityProfile(I) = U_Ref*( Ht(I)/z_Ref )**p%met%PLExp
             ELSEIF ( Ht(I) > 0.0 .AND. z_Ref > 0.0 .AND. .NOT. EqualRealNos(z_Ref, p%met%Z0) ) THEN !Check that we don't have an invalid domain
                getVelocityProfile(I) = U_Ref*LOG( Ht(I)/p%met%Z0 )/LOG( z_Ref/p%met%Z0 )
@@ -301,29 +306,29 @@ FUNCTION getVelocityProfile(p, U_Ref, z_Ref, Ht, RotorDiam )
 RETURN
 END FUNCTION getVelocityProfile
 !=======================================================================
-FUNCTION getDirectionProfile( Ht )
+FUNCTION getDirectionProfile( p, Ht )
 
    ! Determine the wind speed at a given height, with reference wind speed.
 
-   USE                                  TSMods, ONLY: p         ! bjj fix
    IMPLICIT                              NONE
 
-   REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height where wind speed should be calculated
-   REAL(ReKi)                         :: getDirectionProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
+   TYPE(TurbSim_ParameterType),INTENT(IN) :: P
+   REAL(ReKi),                 INTENT(IN) :: Ht(:)                           ! Height where wind speed should be calculated
+   REAL(ReKi)                             :: getDirectionProfile(SIZE(Ht))   ! This function, approximate wind speed at Ht
+                                          
+   REAL(SiKi),   PARAMETER                :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
+   REAL(SiKi),   PARAMETER                :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-   REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
-   REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
 
-
-   REAL(ReKi)                         :: tmpHt(2)
-   REAL(ReKi)                         :: tmpWS(2)
-
-   INTEGER                            :: I
-   INTEGER                            :: Indx
-   INTEGER                            :: J
-
-!   REAL                               :: C_factor
-!   REAL(ReKi)                         :: ZRef
+   REAL(ReKi)                             :: tmpHt(2)
+   REAL(ReKi)                             :: tmpWS(2)
+                                          
+   INTEGER                                :: I
+   INTEGER                                :: Indx
+   INTEGER                                :: J
+                                          
+!   REAL                                   :: C_factor
+!   REAL(ReKi)                             :: ZRef
 
 
    SELECT CASE ( TRIM(p%met%WindProfileType) )
@@ -401,31 +406,30 @@ FUNCTION getDirectionProfile( Ht )
 RETURN
 END FUNCTION getDirectionProfile
 !=======================================================================
-FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
+FUNCTION getVelocity(p, U_Ref, z_Ref, Ht )
 
    ! Determine the wind speed at a given height, with reference wind speed.
    use TurbSim_Types
    
-   USE                                  TSMods, ONLY: p          !bjj fix
    IMPLICIT                              NONE
 
-   REAL(ReKi),   INTENT(IN)           :: U_Ref                       ! Wind speed at reference height
-   REAL(ReKi),   INTENT(IN)           :: z_Ref                       ! Reference height
-   REAL(ReKi),   INTENT(IN)           :: Ht                          ! Height where wind speed should be calculated
-   REAL(ReKi),   INTENT(IN)           :: RotorDiam                   ! Diameter of rotor disk (meters)
-   REAL(ReKi)                         :: getVelocity                 ! This function, approximate wind speed at Ht
-
-   REAL(SiKi),   PARAMETER            :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
-   REAL(SiKi),   PARAMETER            :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
-
-
-!   REAL(ReKi)                         :: psiM                        ! The diabatic term for the log wind profile
-!   REAL(ReKi)                         :: tmp                         ! A temporary variable for calculating psiM
-   REAL(ReKi)                         :: tmpHt(2)
-   REAL(ReKi)                         :: tmpWS(2)
-
-   INTEGER                            :: I
-   INTEGER                            :: Indx
+   TYPE(TurbSim_ParameterType), INTENT(IN) :: P
+   REAL(ReKi),                  INTENT(IN) :: U_Ref                       ! Wind speed at reference height
+   REAL(ReKi),                  INTENT(IN) :: z_Ref                       ! Reference height
+   REAL(ReKi),                  INTENT(IN) :: Ht                          ! Height where wind speed should be calculated
+   REAL(ReKi)                              :: getVelocity                 ! This function, approximate wind speed at Ht
+                                           
+   REAL(SiKi),   PARAMETER                 :: MinZ = 3.                   ! lower bound (height) for Cheby polynomial
+   REAL(SiKi),   PARAMETER                 :: MaxZ = 500.                 ! upper bound (height) for Cheby polynomial
+                                           
+                                           
+!   REAL(ReKi)                              :: psiM                        ! The diabatic term for the log wind profile
+!   REAL(ReKi)                              :: tmp                         ! A temporary variable for calculating psiM
+   REAL(ReKi)                              :: tmpHt(2)
+   REAL(ReKi)                              :: tmpWS(2)
+                                           
+   INTEGER                                 :: I
+   INTEGER                                 :: Indx
 
    !REAL(ReKi)                   :: U0_1HR                        ! Wind speed at reference height in 1hr time duration, added by Y.G. ON April 16 2013
 !   REAL                         :: C_factor                       ! Factor to convert wind speed from 10-min to 1 hr, added by Y.G. ON April 16 2013
@@ -451,24 +455,24 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
 
    SELECT CASE ( TRIM(p%met%WindProfileType) )
 
-      CASE ( 'JET', 'J' )
+      CASE ( 'JET' )
 
          tmpHt(1) = Ht
          CALL ChebyshevVals( p%met%ChebyCoef_WS, tmpHt(1:1), tmpWS(1:1), MinZ, MaxZ ) ! We originally calculated the coeffs for 3-500 m in height
          getVelocity = tmpWS(1)
 
-      CASE ( 'LOG', 'L' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+      CASE ( 'LOG' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
          getVelocity = getLogWindSpeed(Ht, z_Ref, U_Ref, p%met%ZL, p%met%Z0)
 
-      CASE ( 'H2L', 'H' )
+      CASE ( 'H2L' )
                ! Calculate the windspeed.
                ! z_Ref and U_Ref both get modified consistently, therefore z_Ref is used instead of RefHt.
                !print *, z_Ref,RefHt,U_Ref,Ustar ! need to include H_ref from TSmods for this print statement to work.
                getVelocity = LOG(Ht/z_Ref)*p%met%Ustar/0.41+U_Ref
 
 
-      CASE ( 'PL', 'P' )  ! POWER LAW, commented by Y. Guo on April 16 2013
+      CASE ( 'PL' )  ! POWER LAW, commented by Y. Guo on April 16 2013
 
          IF ( z_Ref > 0.0 .AND. Ht > 0.0 ) THEN
             getVelocity = U_Ref*( Ht/z_Ref )**p%met%PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
@@ -476,7 +480,7 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
             getVelocity = 0.0
          ENDIF
 
-      CASE ( 'USR', 'U' )
+      CASE ( 'USR' )
 
          IF ( Ht <= p%met%USR_Z(1) ) THEN
             getVelocity = p%met%USR_U(1)
@@ -497,7 +501,12 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
 
          ENDIF
 
-      CASE ( 'API', 'A' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+      CASE ( 'TS' )
+
+         getVelocity =  getTimeSeriesWindSpeed(p, Ht)
+ 
+         
+      CASE ( 'API' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
 
 !MLB: We can exclude this logic by forcing the user to enter the 1-hour mean wind speed.
 !     If we add the API stuff to the main version of TurbSim, we may want to eliminate that requirement, but we will have to
@@ -521,7 +530,7 @@ FUNCTION getVelocity(U_Ref, z_Ref, Ht, RotorDiam )
 
          IF ( Ht == z_Ref ) THEN
             getVelocity = U_Ref
-         ELSEIF ( ABS( Ht-z_Ref ) <= 0.5*RotorDiam ) THEN
+         ELSEIF ( ABS( Ht-z_Ref ) <= 0.5*p%grid%RotorDiameter ) THEN
             getVelocity = U_Ref*( Ht/z_Ref )**p%met%PLExp                ! [IEC 61400-1 6.3.1.2 (10)]
          ELSEIF ( Ht > 0.0 .AND. z_Ref > 0.0 .AND. .NOT. EqualRealNos(z_Ref, p%met%Z0) ) THEN !Check that we don't have an invalid domain
             getVelocity = U_Ref*LOG( Ht/p%met%Z0 )/LOG( z_Ref/p%met%Z0 )
@@ -536,13 +545,46 @@ RETURN
 END FUNCTION getVelocity
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!! This routine calculates the wind speed at Ht assuming a logarithmic wind profile and inputs z_Ref, U_Ref, Z/L and Z0
+!> This routine calculates the wind speed at Ht by linearly interpolating the mean wind speed at the points from the user-input
+!! time series.
+function getTimeSeriesWindSpeed(p, Ht)
+
+   TYPE(TurbSim_ParameterType),INTENT(IN) :: p                         !< parameters
+   REAL(ReKi),                 INTENT(IN) :: Ht                        !< height at which wind speed is requested [m]
+   REAL(ReKi)                             :: getTimeSeriesWindSpeed    !< the calculated wind speed at Ht
+
+   INTEGER(IntKi)                         :: IZ, IZm1
+   
+   
+   
+   IF ( Ht <= p%usr%pointzi(1) ) THEN
+      getTimeSeriesWindSpeed = p%usr%meanU(1,1)
+   ELSEIF ( Ht >= p%usr%pointzi(p%usr%NPoints) ) THEN
+      getTimeSeriesWindSpeed = p%usr%meanU(p%usr%NPoints,1)
+   ELSE
+      ! Find the two points between which the height lies
+
+      DO IZ=2,p%usr%NPoints
+         IF ( Ht <= p%usr%pointzi(IZ) ) THEN
+            IZm1 = IZ-1
+
+            ! Let's just do a linear interpolation for now
+            getTimeSeriesWindSpeed = (Ht - p%usr%pointzi(IZm1)) * ( p%usr%meanU(IZm1,1) - p%usr%meanU(IZ,1) ) / ( p%usr%pointzi(IZm1) - p%usr%pointzi(IZ) ) + p%usr%meanU(IZm1,1)
+            EXIT
+         ENDIF
+      ENDDO
+
+   ENDIF       
+
+end function getTimeSeriesWindSpeed
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates the wind speed at Ht assuming a logarithmic wind profile and inputs z_Ref, U_Ref, Z/L and Z0
 !!
 !!      U_{ref}*( LOG( Ht / Z0 ) - psiM )/( LOG( z_Ref / Z0 ) - psiM )
 !! where
 !!      psiM is a function of Z/L
 !! In neutral conditions, psiM is 0 and we get the IEC log wind profile.
-
 function getLogWindSpeed(Ht, z_Ref, U_Ref, ZL, Z0)
 
    REAL(ReKi),             INTENT(IN) :: Ht                 !< height at which wind speed is requested [m]
@@ -572,7 +614,7 @@ function getLogWindSpeed(Ht, z_Ref, U_Ref, ZL, Z0)
          ENDIF
 
 !            IF ( p%met%Ustar > 0. ) THEN
-!               getVelocity = ( p%met%UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
+!               getLogWindSpeed = ( p%met%UstarDiab / 0.4 ) * ( LOG( Ht / Z0 ) - psiM )
 !            ELSE
             !In neutral conditions, psiM is 0 and we get the IEC log wind profile:
          getLogWindSpeed = U_Ref*( LOG( Ht / Z0 ) - psiM )/( LOG( z_Ref / Z0 ) - psiM )

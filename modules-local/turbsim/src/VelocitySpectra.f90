@@ -524,11 +524,6 @@ IF (p%met%zL >= 0) THEN
       ENDDO
    ENDDO
 
-!print *, fr_il
-!print *, fr_ih
-!print *, Pr_il
-!print *, Pr_ih
-!print *, zl_tmp, Ustar
 
 ELSE
       ! Calculate UNSTABLE spectral estimates

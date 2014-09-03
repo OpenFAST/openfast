@@ -379,16 +379,25 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
       ! ------------ Read in the turbulence model. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%TurbModel, "TurbModel", "spectral model",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
       
-         ! Verify turbulence model is valid (for default values later) >>>>>>>>>>>>>>>>>>>>>>
+      ! ------------ Read in the UserFile------------------- ---------------------------------------------
+   CALL ReadVar( UI, InFile, UserFile, "UserFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   !UserFile = "UsrSpec.inp"
+   IF ( PathIsRelative( UserFile ) ) UserFile = TRIM(PriPath)//TRIM(UserFile)
+
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF   
+   
+         ! Verify turbulence model is valid (used for default values later) and read supplemental files 
+         !  for user-defined spectra or time-series >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       p%met%TurbModel = ADJUSTL( p%met%TurbModel )
       CALL Conv2UC( p%met%TurbModel )
 
       p%met%IsIECModel = .FALSE.
+      p%usr%nPoints = 0
       SELECT CASE ( TRIM(p%met%TurbModel) )
          CASE ( 'IECKAI' )
             p%met%TMName = 'IEC Kaimal'
@@ -439,11 +448,27 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
          CASE ( 'USRINP' )
             p%met%TMName = 'User-input uniform spectra'
             p%met%TurbModel_ID = SpecModel_USER
+            
+            CALL GetUSRspec(UserFile, p, UnEc, ErrStat2, ErrMsg2)
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+            
          CASE ( 'TIMESR' )
             p%met%TMName = 'User-input time series'
-            p%met%TurbModel_ID = SpecModel_TimeSer                        
+            p%met%TurbModel_ID = SpecModel_TimeSer 
+            
+            CALL ReadUSRTimeSeries(UserFile, p, UnEc, ErrStat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+               
+            CALL TimeSeriesToSpectra( p, ErrStat2, ErrMsg2 )
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+
+print *, 'check the default values of all the rest of the inputs for the TIMESR model!!!'                  
          CASE DEFAULT
-   !BONNIE: todo: add the UsrVKM model to this list when the model is complete as well as USRINP
+   !BONNIE: todo: add the UsrVKM model to this list when the model is complete 
             CALL SetErrStat( ErrID_Fatal, 'The turbulence model must be one of the following: "IECKAI", "IECVKM", "SMOOTH",' &
                        //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "RIVER", "API", "USRINP", "TIMESR" "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
             CALL Cleanup()
@@ -454,19 +479,6 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
          ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end TurbModel verification
          
 !bjj: todo: verify that the API model sets the parameters for IECKAI as well (because it's using IECKAI for the v and w components)
-
-      ! ------------ Read in the UserFile------------------- ---------------------------------------------
-   CALL ReadVar( UI, InFile, UserFile, "UserFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   !UserFile = "UsrSpec.inp"
-   IF ( PathIsRelative( UserFile ) ) UserFile = TRIM(PriPath)//TRIM(UserFile)
-
-      ! Read the inputs from the user input file: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-      IF (p%met%TurbModel_ID == SpecModel_USER) THEN
-            CALL GetUSRspec(UserFile, p, UnEc, ErrStat2, ErrMsg2)
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-      END IF
-      ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
       ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
    CALL ReadVar( UI, InFile, Line, "IECstandard", "Number of the IEC standard",ErrStat2, ErrMsg2, UnEc)
@@ -590,7 +602,7 @@ CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "ETMc", 'IEC Extreme Turbulence Mo
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
    
    IF ( p%IEC%ETMc <= 0. ) THEN
-      CALL TS_Abort('The ETM "c" parameter must be a positive number');
+      CALL SetErrStat( ErrID_Fatal, 'The ETM "c" parameter must be a positive number', ErrStat, ErrMsg, 'ReadInputFile')
    ENDIF
 
    
@@ -598,6 +610,13 @@ CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "ETMc", 'IEC Extreme Turbulence Mo
 
 UseDefault = .TRUE.         ! Calculate the default value
 SELECT CASE ( p%met%TurbModel_ID )
+   CASE ( SpecModel_TimeSer )
+      IF ( p%usr%NPoints > 1 ) THEN
+         p%met%WindProfileType = 'TS'
+      ELSE
+         p%met%WindProfileType = 'PL'
+PRINT *, 'check default wind profile for time-series spectral model.'         
+      END IF
    CASE ( SpecModel_GP_LLJ )
       p%met%WindProfileType = 'JET'
    CASE ( SpecModel_IECKAI,SpecModel_IECVKM,SpecModel_MODVKM )
@@ -620,38 +639,46 @@ CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Win
    SELECT CASE ( TRIM(p%met%WindProfileType) )
       CASE ( 'JET' )
          IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN
-            CALL TS_Abort( 'The jet wind profile is available with the GP_LLJ spectral model only.')
+            CALL SetErrStat( ErrID_Fatal, 'The jet wind profile is available with the GP_LLJ spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
          ENDIF
       CASE ( 'LOG')
          IF (p%IEC%IEC_WindType /= IEC_NTM ) THEN
-            CALL TS_Abort( ' The IEC turbulence type must be NTM for the logarithmic wind profile.' )
+            CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence type must be NTM for the logarithmic wind profile.', ErrStat, ErrMsg, 'ReadInputFile')
 !bjj check that IEC_WindType == IEC_NTM for non-IEC
          ENDIF
       CASE ( 'PL'  )
       CASE ( 'H2L' )
          IF ( p%met%TurbModel_ID /= SpecModel_TIDAL ) THEN
-            CALL TS_Abort(  'The "H2L" mean profile type should be used only with the "TIDAL" spectral model.' )
+            CALL SetErrStat( ErrID_Fatal, 'The "H2L" mean profile type should be used only with the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
          ENDIF
       CASE ( 'IEC' )
       CASE ( 'USR' )
+      CASE ( 'TS' )
+         IF ( p%met%TurbModel_ID /= SpecModel_TimeSer ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'The "TS" mean profile type is valid only with the "TIMESR" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
+         ENDIF 
       CASE ( 'API' )   ! ADDED BY Y.GUO
       CASE DEFAULT
-         CALL TS_Abort( 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' )
+         CALL SetErrStat( ErrID_Fatal, 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' , ErrStat, ErrMsg, 'ReadInputFile')
    END SELECT
 
    IF ( p%met%TurbModel_ID == SpecModel_TIDAL .AND. TRIM(p%met%WindProfileType) /= "H2L" ) THEN
       p%met%WindProfileType = 'H2L'
-      CALL TS_Warn  ( 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', -1)
+      CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
    ENDIF
 
    IF ( p%met%KHtest ) THEN
       IF ( TRIM(p%met%WindProfileType) /= 'IEC' .AND. TRIM(p%met%WindProfileType) /= 'PL' ) THEN
          p%met%WindProfileType = 'IEC'
-         CALL TS_Warn  ( 'Overwriting wind profile type for the KH test.', -1)
+         CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type for the KH test.', ErrStat, ErrMsg, 'ReadInputFile')         
       ENDIF
    ENDIF
 
-
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF         
+   
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
 
 CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
@@ -686,7 +713,7 @@ IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1
       p%met%RefHt = p%grid%HubHt
       CALL GetUSR( UI, InFile, 39, p%met, ErrStat, ErrMsg ) !Read the last several lines of the file, then return to line 39
       IF (ErrStat >= AbortErrLev) RETURN
-      p%met%URef = getVelocity(p%met%URef, p%met%RefHt, p%met%RefHt, p%grid%RotorDiameter) !This is UHub
+      p%met%URef = getVelocity(p, p%met%URef, p%met%RefHt, p%met%RefHt) !This is UHub
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
 
    
@@ -927,7 +954,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          CALL GetChebCoefs( p%met%UJetMax, p%met%ZJetMax ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p%met%Ustar
 
-         p%met%URef = getVelocity(p%met%UJetMax, p%met%ZJetMax, p%met%RefHt, p%grid%RotorDiameter)
+         p%met%URef = getVelocity(p, p%met%UJetMax, p%met%ZJetMax, p%met%RefHt)
 
       ELSE
          CALL GetChebCoefs(p%met%URef, p%met%RefHt)
@@ -935,7 +962,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
    ENDIF !Jet wind profile
 
-   p%UHub = getVelocity(p%met%URef, p%met%RefHt, p%grid%HubHt, p%grid%RotorDiameter)
+   p%UHub = getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt)
 
          ! ***** Get p%met%Ustar- and zl-profile values, if required, and determine offsets *****
       IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN
@@ -949,7 +976,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          p%met%UstarSlope = 1.0_ReKi         
          p%met%UstarDiab = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL) !bjj: is this problematic for anything else?
 
-         TmpUary   = getVelocityProfile(p, p%met%URef, p%met%RefHt, TmpZary, p%grid%RotorDiameter)                  
+         TmpUary   = getVelocityProfile(p, p%met%URef, p%met%RefHt, TmpZary)                  
          TmpUstar  = getUstarARY( TmpUary,     TmpZary, 0.0_ReKi, p%met%UstarSlope )
             
          p%met%UstarOffset = p%met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
@@ -1019,8 +1046,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
-   CALL GetDefaultCoh( p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
-
+   CALL GetDefaultCoh( p%met%TurbModel_ID, p%met%RICH_NO, p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
    UseDefault = .TRUE.
    InCVar(1) = p%met%InCDec(1)
    InCVar(2) = p%met%InCohB(1)
@@ -1033,7 +1059,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    p%met%InCohB(1) = InCVar(2)
 
       IF ( p%met%InCDec(1) <= 0.0 ) THEN
-         CALL TS_Abort ( 'The u-component coherence decrement must be a positive number.')
+         CALL SetErrStat( ErrID_Fatal, 'The u-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
       ENDIF
 
       ! ------------ Read in the v component coherence decrement (coh-squared def), InCDec(2) = InCDecV ----------
@@ -1050,7 +1076,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    p%met%InCohB(2) = InCVar(2)
 
       IF ( p%met%InCDec(2) <= 0.0 ) THEN
-         CALL TS_Abort ( 'The v-component coherence decrement must be a positive number.')
+         CALL SetErrStat( ErrID_Fatal, 'The v-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
       ENDIF
 
       ! ------------ Read in the w component coherence decrement (coh-squared def), InCDec(3) = InCDecW -------
@@ -1067,7 +1093,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    p%met%InCohB(3) = InCVar(2)
 
       IF ( p%met%InCDec(3) <= 0.0 ) THEN
-         CALL TS_Abort ( 'The w-component coherence decrement must be a positive number.')
+         CALL SetErrStat( ErrID_Fatal, 'The w-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
       ENDIF
 
          ! ------------ Read in the coherence exponent, COHEXP -----------------------------------
@@ -1078,7 +1104,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( p%met%COHEXP < 0.0 ) THEN
-         CALL TS_Abort ( 'The coherence exponent must be non-negative.')
+         CALL SetErrStat( ErrID_Fatal, 'The coherence exponent must be non-negative.', ErrStat, ErrMsg, 'ReadInputFile')
       ENDIF
 
 
@@ -1236,30 +1262,12 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
 
       ! Calculate wind speed at hub height
 
-   p%UHub    = getVelocity(p%met%URef, p%met%RefHt, p%grid%HubHt, p%grid%RotorDiameter)
+   p%UHub    = getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt)
 
 
 ENDIF
 
 
-IF ( p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
-
-   CALL ReadUSRTimeSeries(UserFile, p, UnEc, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      
-   CALL TimeSeriesToSpectra( p, ErrStat, ErrMsg )
-      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
-      
-ELSE
-   
-   p%usr%nPoints = 0
-
-END IF
 
 
    ! Done reading the input file.
@@ -2781,8 +2789,8 @@ ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
 
 
 HalfRotDiam = 0.5*p%grid%RotorDiameter
-U_zt        = getVelocity(p%UHub,p%grid%HubHt,p%grid%HubHt+HalfRotDiam,p%grid%RotorDiameter)   !Velocity at the top of rotor
-U_zb        = getVelocity(p%UHub,p%grid%HubHt,p%grid%HubHt-HalfRotDiam,p%grid%RotorDiameter)   !Velocity at the bottom of the rotor
+U_zt        = getVelocity(p, p%UHub,p%grid%HubHt, p%grid%HubHt+HalfRotDiam)   !Velocity at the top of rotor
+U_zb        = getVelocity(p, p%UHub,p%grid%HubHt, p%grid%HubHt-HalfRotDiam)   !Velocity at the bottom of the rotor
       
 WRITE(US,'()')   ! A BLANK LINE
 
@@ -2986,6 +2994,8 @@ USE TSMods
    WRITE (UAHH,"( '!    Mean Total Wind Speed = ' , F8.3 , ' m/s' )")  p%UHub
 IF ( p%met%TurbModel_ID == SpecModel_IECKAI .OR. p%met%TurbModel_ID == SpecModel_IECVKM .OR. p%met%TurbModel_ID == SpecModel_MODVKM ) THEN
    WRITE (UAHH,"( '!    Turbulence Intensity  = ' , F8.3 , '%' )")  100.0*TurbInt
+ELSE
+   WRITE (UAHH,"( '!' )")
 ENDIF
    WRITE (UAHH,"( '!' )")
    WRITE (UAHH,"( '!   Time  HorSpd  WndDir  VerSpd  HorShr  VerShr  LnVShr  GstSpd' )")

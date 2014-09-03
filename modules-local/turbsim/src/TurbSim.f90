@@ -268,9 +268,9 @@ CALL AllocAry(U,     SIZE(p%grid%Z), 'u (steady, u-component winds)', ErrStat, E
 CALL CheckError()
 
 IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z, p%grid%RotorDiameter)
+   U = getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z)
 ELSE 
-   U = getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z, p%grid%RotorDiameter) 
+   U = getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z) 
 ENDIF
 
 
@@ -278,7 +278,7 @@ ENDIF
 CALL AllocAry(HWindDir, SIZE(p%grid%Z), 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
 CALL CheckError()
    
-HWindDir = getDirectionProfile(p%grid%Z)
+HWindDir = getDirectionProfile(p, p%grid%Z)
    
 p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx )
 

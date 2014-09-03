@@ -467,7 +467,7 @@ use TSMods, only: us
    p_CohStr%ScaleWid = p%grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
    p_CohStr%Zbottom  = p%grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
-   p_CohStr%Uwave    = getVelocity(p%UHub,p%grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p%grid%RotorDiameter)                 ! WindSpeed at center of wave
+   p_CohStr%Uwave    = getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid)                 ! WindSpeed at center of wave
    
    !-------------------------
    ! compute ScaleVel:
@@ -478,9 +478,9 @@ use TSMods, only: us
       p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
       p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
    ELSE
-      p_CohStr%ScaleVel =  getVelocity(p%UHub,p%grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid,p%grid%RotorDiameter) &  ! Velocity at the top of the wave
-                         - getVelocity(p%UHub,p%grid%HubHt,p_CohStr%Zbottom,                  p%grid%RotorDiameter)    ! Shear across the wave
-      p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                                               ! U0 is half the difference between the top and bottom of the billow
+      p_CohStr%ScaleVel =  getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid) &  ! Velocity at the top of the wave
+                         - getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom                  )    ! Shear across the wave
+      p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                    ! U0 is half the difference between the top and bottom of the billow
       
       
          ! If the coherent structures do not cover the whole disk, increase the shear
