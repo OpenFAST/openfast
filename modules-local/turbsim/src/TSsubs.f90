@@ -3256,7 +3256,7 @@ WRITE( 75, '('//trim(num2lstr(NumSteps))//'(F15.6," "))') work
    
 #ifdef DEBUG_TS         
 DO iFreq=1,p%usr%nFreq
-   WRITE( 72, '('//trim(num2lstr(1+2*nComp*p%usr%nPoints))//'(F15.6," "))') p%usr%f(iFreq), ( (p%usr%S(iFreq,iPoint,iVec), p%usr%phaseAngles(iFreq,iPoint,iVec), iVec=1,nComp), iPoint=1,p%usr%nPoints )
+   WRITE( 72, '('//trim(num2lstr(1+2*p%usr%nComp*p%usr%nPoints))//'(F15.6," "))') p%usr%f(iFreq), ( (p%usr%S(iFreq,iPoint,iVec), p%usr%phaseAngles(iFreq,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
 END DO
 #endif
 
