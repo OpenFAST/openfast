@@ -19,12 +19,10 @@
 !**********************************************************************************************************************************
 MODULE TS_VelocitySpectra
 
-   USE                     NWTC_Library   
-use ts_errors
+   USE  TurbSim_Types
+use ts_errors   
    
    IMPLICIT                NONE
-
-
 
 CONTAINS
 
@@ -35,25 +33,25 @@ CONTAINS
 SUBROUTINE Spec_IECKAI ( UHub, SigmaIEC, L_K, Freq, NumFreq, Spec )
 
 
-IMPLICIT                NONE
+   IMPLICIT                NONE
 
-      ! Passed variables
-INTEGER(IntKi),             INTENT(IN   )  :: NumFreq                   !<  Input: Number of frequencies      
-REAL(ReKi),                 INTENT(IN   )  :: SigmaIEC (3)              !<  Input: sigma for 3 wind components specified by the IEC
-REAL(ReKi),                 INTENT(IN   )  :: L_k      (3)              !<  Input: L_k (integral scale parameter) for 3 wind components specified by the IEC
-REAL(ReKi),                 INTENT(IN   )  :: UHub                      !<  Input: mean wind speed at hub height
-REAL(ReKi),                 INTENT(IN   )  :: Freq     (NumFreq)        !<  Input: frequency array
-REAL(ReKi),                 INTENT(INOUT)  :: Spec     (NumFreq,3)      !<  Output: target spectrum
+         ! Passed variables
+   INTEGER(IntKi),             INTENT(IN   )  :: NumFreq                   !<  Input: Number of frequencies      
+   REAL(ReKi),                 INTENT(IN   )  :: SigmaIEC (3)              !<  Input: sigma for 3 wind components specified by the IEC
+   REAL(ReKi),                 INTENT(IN   )  :: L_k      (3)              !<  Input: L_k (integral scale parameter) for 3 wind components specified by the IEC
+   REAL(ReKi),                 INTENT(IN   )  :: UHub                      !<  Input: mean wind speed at hub height
+   REAL(ReKi),                 INTENT(IN   )  :: Freq     (NumFreq)        !<  Input: frequency array
+   REAL(ReKi),                 INTENT(INOUT)  :: Spec     (NumFreq,3)      !<  Output: target spectrum
 
-   ! Internal variables
+      ! Internal variables
 
-REAL(ReKi),PARAMETER  :: Exp1    = 5.0/3.0
+   REAL(ReKi),PARAMETER  :: Exp1    = 5.0/3.0
 
-REAL(ReKi)            :: L_over_U      (3)
-REAL(ReKi)            :: SigmaLU (3)
+   REAL(ReKi)            :: L_over_U      (3)
+   REAL(ReKi)            :: SigmaLU (3)
 
-INTEGER               :: I
-INTEGER               :: IVec
+   INTEGER               :: I
+   INTEGER               :: IVec
 
 
 
@@ -79,30 +77,28 @@ END SUBROUTINE Spec_IECKAI
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
 SUBROUTINE Spec_IECVKM ( UHub, SigmaIEC_u, IntegralScale, Freq, NumFreq, Spec )
 
-USE                     TSMods
+   IMPLICIT                NONE
 
-IMPLICIT                NONE
+         ! Passed variables
 
-      ! Passed variables
-
-INTEGER(IntKi),             INTENT(IN   )  :: NumFreq                   !<  Input: Number of frequencies      
-REAL(ReKi),                 INTENT(IN   )  :: SigmaIEC_u                !<  Input: target standard deviation for u component
-REAL(ReKi),                 INTENT(IN   )  :: IntegralScale (3)         !<  Input: integral scale parameter, L (isotropic, so we only care about the 1st one)
-REAL(ReKi),                 INTENT(IN   )  :: UHub                      !<  Input: mean wind speed at hub height
-REAL(ReKi),                 INTENT(IN   )  :: Freq     (NumFreq)        !<  Input: frequency array
-REAL(ReKi),                 INTENT(INOUT)  :: Spec     (NumFreq,3)      !<  Output: target spectrum
+   INTEGER(IntKi),               INTENT(IN   )  :: NumFreq                   !<  Input: Number of frequencies      
+   REAL(ReKi),                   INTENT(IN   )  :: SigmaIEC_u                !<  Input: target standard deviation for u component
+   REAL(ReKi),                   INTENT(IN   )  :: IntegralScale (3)         !<  Input: integral scale parameter, L (isotropic, so we only care about the 1st one)
+   REAL(ReKi),                   INTENT(IN   )  :: UHub                      !<  Input: mean wind speed at hub height
+   REAL(ReKi),                   INTENT(IN   )  :: Freq     (NumFreq)        !<  Input: frequency array
+   REAL(ReKi),                   INTENT(  OUT)  :: Spec     (NumFreq,3)      !<  Output: target spectrum
 
 
-      ! Internal variables
+         ! Internal variables
 
-REAL(ReKi),PARAMETER  :: Exp1 =  5.0/6.0
-REAL(ReKi),PARAMETER  :: Exp2 = 11.0/6.0
-REAL(ReKi)            :: FLU2
-REAL(ReKi)            :: L1_U
-REAL(ReKi)            :: SigmaL1_U
-REAL(ReKi)            :: Tmp
+   REAL(ReKi),PARAMETER  :: Exp1 =  5.0/6.0
+   REAL(ReKi),PARAMETER  :: Exp2 = 11.0/6.0
+   REAL(ReKi)            :: FLU2
+   REAL(ReKi)            :: L1_U
+   REAL(ReKi)            :: SigmaL1_U
+   REAL(ReKi)            :: Tmp
 
-INTEGER               :: I
+   INTEGER               :: I
 
 
    ! Set up scaling values.
@@ -130,19 +126,18 @@ END SUBROUTINE Spec_IECVKM
 !> This subroutine defines the API-BULLET-IN recommended extreme wind spectrum
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
 !! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
-SUBROUTINE Spec_API ( Ht, Spec )
+SUBROUTINE Spec_API ( p, Ht, Spec )
 
    ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
    !       and then overwrites the u-component spectrum with the API model.
 
 
-USE                     TSMods
-
 IMPLICIT                NONE
 
       ! Passed variables
-REAL(ReKi),INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored !bjj: is this true????
-REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN)    :: Ht                      !<  Input: Height (Should be HubHt), value ignored !bjj: is this true????
+   REAL(ReKi),                   INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
 
 !REAL(ReKi),INTENT(IN) :: URef ! Added by YG
 !REAL(ReKi),INTENT(IN)           :: RefHt                       ! Reference height
@@ -207,19 +202,18 @@ END SUBROUTINE Spec_API
 !> This subroutine defines the 3-D turbulence spectrum that can be expected over terrain
 !! and heights similiar to the LLLJP project as developed by Neil Kelley & Bonnie Jonkman at NREL.
 !! The use of this subroutine requires that variables have the units of meters and seconds.
-SUBROUTINE Spec_GPLLJ ( Ht, Ucmp, ZL_tmp, UStar_tmp, Spec )
-
-USE                     TSMods
+SUBROUTINE Spec_GPLLJ ( p, Ht, Ucmp, ZL_tmp, UStar_tmp, Spec )
 
 IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN)    :: Ht                      !< Height (local)
-REAL(ReKi),INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity (local)
-REAL(ReKi),INTENT(IN)    :: Ustar_tmp               !< Local ustar
-REAL(ReKi),INTENT(IN)    :: ZL_tmp                  !< Local z/l
-REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !<  Output: target spectrum
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN)    :: Ht                      !< Height (local)
+   REAL(ReKi),                   INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity (local)
+   REAL(ReKi),                   INTENT(IN)    :: Ustar_tmp               !< Local ustar
+   REAL(ReKi),                   INTENT(IN)    :: ZL_tmp                  !< Local z/l
+   REAL(ReKi),                   INTENT(  OUT) :: Spec   (:,:)            !<  Output: target spectrum
 
 
    ! Internal variables
@@ -411,18 +405,17 @@ END SUBROUTINE Spec_GPLLJ
 !! over terrain and heights similiar to the NWTC LIST project as developed
 !! by Neil Kelley & Bonnie Jonkman at NREL. The use of this subroutine
 !! requires that variables have the units of meters and seconds.
-SUBROUTINE Spec_NWTCUP ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_NWTCUP ( p, Ht, Ucmp, Spec )
 
-
-USE                     TSMods
 
 IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN)    :: Ht                      !< Height (local)
-REAL(ReKi),INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity (local)
-REAL(ReKi),INTENT(INOUT) :: Spec   (:,:)            !< Output: target spectrum
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN   ) :: Ht                      !< Height (local)
+   REAL(ReKi),                   INTENT(IN   ) :: Ucmp                    !< Longitudinal Velocity (local)
+   REAL(ReKi),                   INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum
 
 
 
@@ -663,8 +656,6 @@ END SUBROUTINE Spec_TimeSer
 SUBROUTINE Spec_UserSpec ( p, Spec )
 
 
-   USE                     TSMods
-
    IMPLICIT                NONE
 
          ! Passed variables
@@ -812,46 +803,45 @@ END SUBROUTINE UserSpec_Interp2D
 !> This subroutine defines the 3-D turbulence spectrum that can be expected over flat,
 !! homogeneous terrain as developed by RISO authors Hojstrup, Olesen, and Larsen.
 !! The use of this subroutine requires that variables have the units of meters and seconds.
-SUBROUTINE Spec_SMOOTH ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_SMOOTH ( p, Ht, Ucmp, Spec )
 
-
-USE                     TSMods
 
 IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN)    :: Ht                      !< Height
-REAL(ReKi),INTENT(IN)    :: Ucmp                    !< Longitudinal Velocity
-REAL(ReKi),INTENT(INOUT) :: Spec     (:,:)          !< output: target spectra
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN   ) :: Ht                      !< Height
+   REAL(ReKi),                   INTENT(IN   ) :: Ucmp                    !< Longitudinal Velocity
+   REAL(ReKi),                   INTENT(  OUT) :: Spec     (:,:)          !< output: target spectra
 
    ! Internal variables
 
-REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
-REAL(ReKi), PARAMETER :: Exp2  = 2.0 / 3.0
-REAL(ReKi), PARAMETER :: Exp3  = 3.0 / 2.0
-REAL(ReKi)            :: fi       ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: fr       ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: HtZI     ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: HtZI2    ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: phiE
-REAL(ReKi)            :: phiM     ! Non-Dimensional Wind Shear
-REAL(ReKi)            :: ps_h
-REAL(ReKi)            :: ps_l
-REAL(ReKi)            :: tmpF     ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpN     ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpX     ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpXX    ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpPhi   ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpZIL   ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpZIU   ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpZU    ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: UDen
-REAL(ReKi)            :: uStar2   ! Temporary variable holding Ustar-squared
-REAL(ReKi)            :: Ustar2F
-REAL(ReKi)            :: VDen
+   REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
+   REAL(ReKi), PARAMETER :: Exp2  = 2.0 / 3.0
+   REAL(ReKi), PARAMETER :: Exp3  = 3.0 / 2.0
+   REAL(ReKi)            :: fi       ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: fr       ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: HtZI     ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: HtZI2    ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: phiE
+   REAL(ReKi)            :: phiM     ! Non-Dimensional Wind Shear
+   REAL(ReKi)            :: ps_h
+   REAL(ReKi)            :: ps_l
+   REAL(ReKi)            :: tmpF     ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpN     ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpX     ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpXX    ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpPhi   ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpZIL   ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpZIU   ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpZU    ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: UDen
+   REAL(ReKi)            :: uStar2   ! Temporary variable holding Ustar-squared
+   REAL(ReKi)            :: Ustar2F
+   REAL(ReKi)            :: VDen
 
-INTEGER               :: I        ! DO LOOP counter
+   INTEGER               :: I        ! DO LOOP counter
 
 uStar2 = p%met%Ustar * p%met%Ustar
 
@@ -929,31 +919,30 @@ END SUBROUTINE Spec_SMOOTH
 !! The fit is based on data from Puget Sound, estimated by L. Kilcher.
 !! The use of this subroutine requires that variables have the units of meters and seconds.
 !! Note that this model does not require height.
-SUBROUTINE Spec_TIDAL ( Ht, Shr_DuDz, Spec, SpecModel )
-
-USE                     TSMods
+SUBROUTINE Spec_TIDAL ( p, Ht, Shr_DuDz, Spec, SpecModel )
 
 IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      !< Height (dz)
-REAL(ReKi),INTENT(IN) :: Shr_DuDz                !< Shear (du/dz)
-INTEGER,   INTENT(IN) :: SpecModel               !< SpecModel (SpecModel_TIDAL .OR. SpecModel_RIVER)
-REAL(ReKi),INTENT(OUT):: Spec     (:,:)          !< output: target spectra
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN   ) :: Ht                      !< Height (dz)
+   REAL(ReKi),                   INTENT(IN   ) :: Shr_DuDz                !< Shear (du/dz)
+   INTEGER(IntKi),               INTENT(IN   ) :: SpecModel               !< SpecModel (SpecModel_TIDAL .OR. SpecModel_RIVER)
+   REAL(ReKi),                   INTENT(  OUT) :: Spec     (:,:)          !< output: target spectra
 
    ! Internal variables
 
-REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
-REAL(ReKi)            :: Sigma_U2               ! Standard Deviation of U velocity, squared.
-REAL(ReKi)            :: Sigma_V2               ! Standard Deviation of V velocity, squared.
-REAL(ReKi)            :: Sigma_W2               ! Standard Deviation of W velocity, squared.
+   REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
+   REAL(ReKi)            :: Sigma_U2               ! Standard Deviation of U velocity, squared.
+   REAL(ReKi)            :: Sigma_V2               ! Standard Deviation of V velocity, squared.
+   REAL(ReKi)            :: Sigma_W2               ! Standard Deviation of W velocity, squared.
 
-REAL(ReKi)            :: tmpX                   ! Temporary variable for calculation of Spec
-REAL(ReKi)            :: tmpvec(3)              ! Temporary vector for calculation of Spec
-REAL(ReKi)            :: tmpa (3)               ! Spectra coefficients
-REAL(ReKi)            :: tmpb (3)               ! Spectra coefficients
-INTEGER               :: I                      ! DO LOOP counter
+   REAL(ReKi)            :: tmpX                   ! Temporary variable for calculation of Spec
+   REAL(ReKi)            :: tmpvec(3)              ! Temporary vector for calculation of Spec
+   REAL(ReKi)            :: tmpa (3)               ! Spectra coefficients
+   REAL(ReKi)            :: tmpb (3)               ! Spectra coefficients
+   INTEGER               :: I                      ! DO LOOP counter
 
 
 
@@ -988,16 +977,14 @@ END SUBROUTINE Spec_TIDAL
 !=======================================================================
 !> This routine is just a test function to see if we get the requested
 !! spectra from the TurbSim code.
-SUBROUTINE Spec_Test ( Spec )
-
-
-USE                     TSMods
+SUBROUTINE Spec_Test ( Spec, Freq )
 
 IMPLICIT                NONE
 
       ! Passed variables
+   REAL(ReKi),                   intent(  out) :: Spec   (:,:)            !< Output: target spectrum
+   REAL(ReKi),                   INTENT(IN   ) :: Freq(:)
 
-REAL(ReKi), intent(out) :: Spec   (:,:)            !< Output: target spectrum
 
 INTEGER               :: I
 INTEGER               :: IVec
@@ -1012,9 +999,9 @@ DO IVec = 1,3
    ENDDO !I
    !I = INT( NumFreq/2 )
    I = INT( 100 )
-   Spec( I, IVec ) = 1/p%grid%Freq(1)
+   Spec( I, IVec ) = 1/Freq(1)
 
-   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(p%grid%Freq(I)))//' Hz.' )
+   call WrScr( 'Test Spectra: sine wave with frequency '//trim(num2lstr(Freq(I)))//' Hz.' )
 
 ENDDO !IVec
 
@@ -1024,17 +1011,17 @@ END SUBROUTINE Spec_Test
 !=======================================================================
 !> This subroutine defines the von Karman PSD model.
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
-SUBROUTINE Spec_vonKrmn ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_vonKrmn ( p, Ht, Ucmp, Spec )
 
-USE                     TSMods
 
 IMPLICIT                NONE
 
       ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht    ! local height
-REAL(ReKi),INTENT(IN) :: Ucmp  ! local wind speed
-REAL(ReKi)            :: Spec     (:,:)
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN   ) :: Ht                      !< local height
+   REAL(ReKi),                   INTENT(IN   ) :: Ucmp                    !< local wind speed
+   REAL(ReKi),                   INTENT(  OUT) :: Spec     (:,:)          !< Target spectra  
 
       ! Internal variables
 
@@ -1117,18 +1104,16 @@ END SUBROUTINE Spec_vonKrmn
 !! National Laboratory in Denmark.  The RISO model has been adjusted to reflect the different spectral scaling present
 !! in the flow upwind of a large wind park.  The scaling is based on measurements made by the National Renewable Energy
 !! Laboratory (NREL) in San Gorgonio Pass, California.
-SUBROUTINE Spec_WF_UPW ( Ht, Ucmp, Spec )
-
-
-USE                     TSMods
+SUBROUTINE Spec_WF_UPW ( p, Ht, Ucmp, Spec )
 
 IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Height   ( input )
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Velocity ( input )
-REAL(ReKi),INTENT(out):: Spec     (:,:)          ! Target velocity spectra ( output )
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN   ) :: Ht                      !< Height   ( input )
+   REAL(ReKi),                   INTENT(IN   ) :: Ucmp                    !< Velocity ( input )
+   REAL(ReKi),                   INTENT(  out) :: Spec     (:,:)          !< Target velocity spectra ( output )
 
    ! Internal variables
 
@@ -1433,68 +1418,68 @@ END SUBROUTINE Spec_WF_UPW
 !> This subroutine defines the 3-D turbulence spectrum that can be expected to exist (7 to 14 rotor diameters) 
 !! downstream of a large, multi-row wind park.  The scaling is based on measurements made by the National 
 !! Renewable Energy Laboratory (NREL) in San Gorgonio Pass, California.
-SUBROUTINE Spec_WF_DW ( Ht, Ucmp, Spec )
+SUBROUTINE Spec_WF_DW ( p, Ht, Ucmp, Spec )
 
-USE                     TSMods
 
 IMPLICIT                NONE
 
    ! Passed variables
 
-REAL(ReKi),INTENT(IN) :: Ht                      ! Height   ( input )
-REAL(ReKi),INTENT(IN) :: Ucmp                    ! Velocity ( input )
-REAL(ReKi),INTENT(out):: Spec     (:,:)          ! Target velocity spectra ( output )
+   TYPE(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(IN   ) :: Ht                      !< Height   ( input )
+   REAL(ReKi),                   INTENT(IN   ) :: Ucmp                    !< Velocity ( input )
+   REAL(ReKi),                   INTENT(  out) :: Spec     (:,:)          !< Target velocity spectra ( output )
 
    ! Internal variables
 
-REAL(ReKi)            :: A0
-REAL(ReKi)            :: A1
-REAL(ReKi)            :: A2
-REAL(ReKi)            :: A3
-REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
-REAL(ReKi), PARAMETER :: Exp2  = 2.0 / 3.0
-REAL(ReKi), PARAMETER :: Exp3  = 3.0 / 2.0
-REAL(ReKi)            :: den                     ! Denominator (replaces Pum_oh, Pum_ol, fum_oh, fum_ol, Pvm_oh)
-REAL(ReKi)            :: F                       ! Reduced frequency
-REAL(ReKi)            :: Fi
-REAL(ReKi)            :: fur_oh
-REAL(ReKi)            :: fur_ol
-REAL(ReKi)            :: fvr_oh
-REAL(ReKi)            :: fvr_ol
-REAL(ReKi)            :: fvr_wk
-REAL(ReKi)            :: Fw
-REAL(ReKi)            :: fwr_oh
-REAL(ReKi)            :: fwr_ol
-REAL(ReKi)            :: Fq                      ! reduced frequency / q
-REAL(ReKi)            :: HtZI                    ! Height / ZI     -- used to avoid recalculation
-REAL(ReKi)            :: HtZI2                   ! (1.0 - Height / ZI)^2
-REAL(ReKi)            :: num                     ! Numerator   (replaces Puo_oh, Puo_ol, fuo_oh, fuo_ol, Pvo_wk)
-REAL(ReKi)            :: phiE
-REAL(ReKi)            :: phiM
-REAL(ReKi)            :: Ps_h
-REAL(ReKi)            :: Ps_l
-REAL(ReKi)            :: Ps_wk
-REAL(ReKi)            :: Pur_oh                  ! High Frequency Range
-REAL(ReKi)            :: Pur_ol                  ! Low Frequency Range
-REAL(ReKi)            :: Pvr_oh
-REAL(ReKi)            :: Pvr_ol
-REAL(ReKi)            :: Pvr_wk
-REAL(ReKi)            :: Pwr_oh
-REAL(ReKi)            :: Pwr_ol
-REAL(ReKi)            :: q
-REAL(ReKi)            :: tmp                     ! holds calculation common to several formulae
-REAL(ReKi)            :: UDen                    !
-REAL(ReKi)            :: UDen2                   !
-REAL(ReKi)            :: Ustar2                  ! Ustar**2
-REAL(ReKi)            :: Ustar2F                 ! Ustar**2 / Frequency
-REAL(ReKi)            :: VDen                    !
-REAL(ReKi)            :: VDen2                   !
-REAL(ReKi)            :: X                       ! Temporary variable
-REAL(ReKi)            :: ZInL                    ! ZI / -L         -- used to avoid recalculation
-REAL(ReKi), PARAMETER :: ZL_MaxObs =  0.4        ! The largest z/L value where the spectral peak scaling should work.
-REAL(ReKi), PARAMETER :: ZL_MinObs = -1.0        ! The smallest z/L value where the spectral peak scaling should work.
+   REAL(ReKi)            :: A0
+   REAL(ReKi)            :: A1
+   REAL(ReKi)            :: A2
+   REAL(ReKi)            :: A3
+   REAL(ReKi), PARAMETER :: Exp1  = 5.0 / 3.0
+   REAL(ReKi), PARAMETER :: Exp2  = 2.0 / 3.0
+   REAL(ReKi), PARAMETER :: Exp3  = 3.0 / 2.0
+   REAL(ReKi)            :: den                     ! Denominator (replaces Pum_oh, Pum_ol, fum_oh, fum_ol, Pvm_oh)
+   REAL(ReKi)            :: F                       ! Reduced frequency
+   REAL(ReKi)            :: Fi
+   REAL(ReKi)            :: fur_oh
+   REAL(ReKi)            :: fur_ol
+   REAL(ReKi)            :: fvr_oh
+   REAL(ReKi)            :: fvr_ol
+   REAL(ReKi)            :: fvr_wk
+   REAL(ReKi)            :: Fw
+   REAL(ReKi)            :: fwr_oh
+   REAL(ReKi)            :: fwr_ol
+   REAL(ReKi)            :: Fq                      ! reduced frequency / q
+   REAL(ReKi)            :: HtZI                    ! Height / ZI     -- used to avoid recalculation
+   REAL(ReKi)            :: HtZI2                   ! (1.0 - Height / ZI)^2
+   REAL(ReKi)            :: num                     ! Numerator   (replaces Puo_oh, Puo_ol, fuo_oh, fuo_ol, Pvo_wk)
+   REAL(ReKi)            :: phiE
+   REAL(ReKi)            :: phiM
+   REAL(ReKi)            :: Ps_h
+   REAL(ReKi)            :: Ps_l
+   REAL(ReKi)            :: Ps_wk
+   REAL(ReKi)            :: Pur_oh                  ! High Frequency Range
+   REAL(ReKi)            :: Pur_ol                  ! Low Frequency Range
+   REAL(ReKi)            :: Pvr_oh
+   REAL(ReKi)            :: Pvr_ol
+   REAL(ReKi)            :: Pvr_wk
+   REAL(ReKi)            :: Pwr_oh
+   REAL(ReKi)            :: Pwr_ol
+   REAL(ReKi)            :: q
+   REAL(ReKi)            :: tmp                     ! holds calculation common to several formulae
+   REAL(ReKi)            :: UDen                    !
+   REAL(ReKi)            :: UDen2                   !
+   REAL(ReKi)            :: Ustar2                  ! Ustar**2
+   REAL(ReKi)            :: Ustar2F                 ! Ustar**2 / Frequency
+   REAL(ReKi)            :: VDen                    !
+   REAL(ReKi)            :: VDen2                   !
+   REAL(ReKi)            :: X                       ! Temporary variable
+   REAL(ReKi)            :: ZInL                    ! ZI / -L         -- used to avoid recalculation
+   REAL(ReKi), PARAMETER :: ZL_MaxObs =  0.4        ! The largest z/L value where the spectral peak scaling should work.
+   REAL(ReKi), PARAMETER :: ZL_MinObs = -1.0        ! The smallest z/L value where the spectral peak scaling should work.
 
-INTEGER               :: I                       ! Loop counter
+   INTEGER               :: I                       ! Loop counter
 
 
 

@@ -19,7 +19,8 @@
 !**********************************************************************************************************************************
 MODULE TS_CohStructures
 
-   USE                     NWTC_Library   
+   USE TurbSim_Types
+   
 use ts_errors
 use TS_Profiles
 use TS_RandNum
@@ -174,7 +175,7 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
 END SUBROUTINE CohStr_ReadEventFile
 !=======================================================================
-SUBROUTINE CohStr_CalcEvents( p_met, p_RNG, p_grid, p_cohStr, e_CohStr, Height, OtherSt_RandNum, y_cohStr )
+SUBROUTINE CohStr_CalcEvents( p, p_cohStr, e_CohStr, Height, OtherSt_RandNum, y_cohStr, ErrStat, ErrMsg )
 
       ! This subroutine calculates what events to use and when to use them.
       ! It computes the number of timesteps in the file, NumCTt.
@@ -182,14 +183,14 @@ SUBROUTINE CohStr_CalcEvents( p_met, p_RNG, p_grid, p_cohStr, e_CohStr, Height, 
    IMPLICIT                    NONE
 
       ! passed variables
-TYPE(Meteorology_ParameterType), INTENT(IN)     :: p_met               ! parameters for TurbSim
-TYPE(RandNum_ParameterType)    , INTENT(IN)     :: p_RNG           ! parameters for random numbers
-TYPE(Grid_ParameterType)       , INTENT(IN)     :: p_grid              ! parameters for grid (specify grid/frequency size)
-TYPE(CohStr_ParameterType)     , INTENT(IN)     :: p_CohStr            ! parameters for coherent structures
-TYPE(CohStr_EventType)         , INTENT(IN)     :: e_CohStr            ! parameters for coherent structure events
-REAL(ReKi),                      INTENT(IN)     :: Height              ! Height for expected length PDF equation
-TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
-TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
+   TYPE(TurbSim_ParameterType),     INTENT(IN)     :: P
+   TYPE(CohStr_ParameterType)     , INTENT(IN)     :: p_CohStr            ! parameters for coherent structures
+   TYPE(CohStr_EventType)         , INTENT(IN)     :: e_CohStr            ! parameters for coherent structure events
+   REAL(ReKi),                      INTENT(IN)     :: Height              ! Height for expected length PDF equation
+   TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
+   TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat ! Error level
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg  ! Message describing error
 
       ! local variables
 REAL(ReKi)                  :: iA                  ! Variable used to calculate IAT
@@ -200,7 +201,7 @@ REAL(ReKi)                  :: TEnd                ! End time for the current ev
 REAL(ReKi)                  :: TStartNext   = 0.0  ! temporary start time for next event
 REAL(ReKi)                  :: MaxCTKE             ! Maximum CTKE of events we've picked
 
-INTEGER                     :: IStat               ! Status of memory allocation
+INTEGER                     :: ErrStat2            ! temp error status
 INTEGER                     :: NewEvent            ! event number of the new event
 INTEGER                     :: NumCompared         ! Number of events we've compared
 
@@ -210,18 +211,21 @@ TYPE(Event), POINTER        :: PtrCurr  => NULL()  ! Pointer to the current even
 TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted into the list
 
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
       ! Compute the mean interarrival time and the expected length of events
 
-   SELECT CASE ( p_met%TurbModel_ID )
+   SELECT CASE ( p%met%TurbModel_ID )
 
       CASE ( SpecModel_NWTCUP, SpecModel_NONE, SpecModel_USRVKM )
-         y_CohStr%lambda = -0.000904*p_met%Rich_No + 0.000562*p_CohStr%Uwave + 0.001389
+         y_CohStr%lambda = -0.000904*p%met%Rich_No + 0.000562*p_CohStr%Uwave + 0.001389
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         IF ( p_met%TurbModel_ID == SpecModel_NONE ) THEN
+         IF ( p%met%TurbModel_ID == SpecModel_NONE ) THEN
             y_CohStr%ExpectedTime = 600.0
          ELSE
-            CALL RndModLogNorm( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
+            CALL RndModLogNorm( p%RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
          ENDIF
 
       CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER) ! HYDRO: added 'TIDAL' and 'RIVER' to the spectral models that get handled this way.
@@ -231,37 +235,37 @@ TYPE(Event), POINTER        :: PtrNew   => NULL()  ! A new event to be inserted 
          y_CohStr%lambda = iA + iB*MIN( (p_CohStr%Uwave**iC), HUGE(iC) )  ! lambda = iA + iB*(WindSpeed**iC)
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcohLLJ( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
+         CALL RndTcohLLJ( p%RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, Height )
 
       CASE ( SpecModel_WF_UPW )
-        y_CohStr%lambda = 0.000529*p_CohStr%Uwave + 0.000365*p_met%Rich_No - 0.000596
+        y_CohStr%lambda = 0.000529*p_CohStr%Uwave + 0.000365*p%met%Rich_No - 0.000596
         y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcoh_WF( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_UPW )
+         CALL RndTcoh_WF( p%RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_UPW )
 
       CASE ( SpecModel_WF_07D )
-         y_CohStr%lambda = 0.000813*p_CohStr%Uwave - 0.002642*p_met%Rich_No + 0.002676
+         y_CohStr%lambda = 0.000813*p_CohStr%Uwave - 0.002642*p%met%Rich_No + 0.002676
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcoh_WF( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_07D )
+         CALL RndTcoh_WF( p%RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_07D )
 
       CASE ( SpecModel_WF_14D )
-         y_CohStr%lambda = 0.001003*p_CohStr%Uwave - 0.00254*p_met%Rich_No - 0.000984
+         y_CohStr%lambda = 0.001003*p_CohStr%Uwave - 0.00254*p%met%Rich_No - 0.000984
          y_CohStr%lambda = 1.0 / y_CohStr%lambda
 
-         CALL RndTcoh_WF( p_RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_14D )
+         CALL RndTcoh_WF( p%RNG, OtherSt_RandNum, y_CohStr%ExpectedTime, SpecModel_WF_14D )
 
       CASE DEFAULT
          !This should not happen
 
    END SELECT
 
-   y_CohStr%ExpectedTime = y_CohStr%ExpectedTime * ( p_grid%UsableTime - p_CohStr%CTStartTime ) / 600.0  ! Scale for use with the amount of time we've been given
+   y_CohStr%ExpectedTime = y_CohStr%ExpectedTime * ( p%grid%UsableTime - p_CohStr%CTStartTime ) / 600.0_ReKi  ! Scale for use with the amount of time we've been given
 
 
 !BONNIE: PERHAPS WE SHOULD JUST PUT IN A CHECK THAT TURNS OFF THE COHERENT TIME STEP FILE IF THE
 !        CTSTARTTIME IS LESS THAN THE USABLETIME... MAYBE WHEN WE'RE READING THE INPUT FILE...
-y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occurs if CTStartTime = 0
+y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, 0.0_ReKi )  ! This occurs if CTStartTime = 0
 
       ! We start by adding events at random times
 
@@ -271,12 +275,12 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
    y_CohStr%EventTimeSum = 0.0 
 
-   CALL RndExp(p_RNG, OtherSt_RandNum, rn, y_CohStr%lambda)                            ! Assume the last event ended at time zero
+   CALL RndExp(p%RNG, OtherSt_RandNum, rn, y_CohStr%lambda)                            ! Assume the last event ended at time zero
 
    TStartNext = rn / 2.0
 
-   IF ( p_met%KHtest ) THEN
-      y_CohStr%ExpectedTime = p_grid%UsableTime     / 2                 ! When testing, add coherent events for half of the record
+   IF ( p%met%KHtest ) THEN
+      y_CohStr%ExpectedTime = p%grid%UsableTime     / 2                 ! When testing, add coherent events for half of the record
       TStartNext            = y_CohStr%ExpectedTime / 2                 ! When testing, start about a quarter of the way into the record
    ENDIF
 
@@ -286,9 +290,9 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
    IF ( TStartNext > 0 ) y_CohStr%NumCTt = y_CohStr%NumCTt + 1          ! Add a point before the first event
 
-   DO WHILE ( TStartNext < p_grid%UsableTime .AND. y_CohStr%EventTimeSum < y_CohStr%ExpectedTime )
+   DO WHILE ( TStartNext < p%grid%UsableTime .AND. y_CohStr%EventTimeSum < y_CohStr%ExpectedTime )
 
-      CALL RndUnif( p_RNG, OtherSt_RandNum, rn )
+      CALL RndUnif( p%RNG, OtherSt_RandNum, rn )
 
       NewEvent = INT( rn*( e_CohStr%NumEvents - 1 ) ) + 1
       NewEvent = MAX( 1, MIN( NewEvent, e_CohStr%NumEvents ) ) ! take care of possible rounding issues....
@@ -296,20 +300,22 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
       IF ( .NOT. ASSOCIATED ( y_CohStr%PtrHead ) ) THEN
 
-         ALLOCATE ( y_CohStr%PtrHead, STAT=IStat )             ! The pointer %Next is nullified in allocation
+         ALLOCATE ( y_CohStr%PtrHead, STAT=ErrStat2 )             ! The pointer %Next is nullified in allocation
 
-         IF ( IStat /= 0 ) THEN
-            CALL TS_Abort ( 'Error allocating memory for new event.' )
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for new event.' , ErrStat, ErrMsg, 'CohStr_CalcEvents')
+            RETURN
          ENDIF
 
          y_CohStr%PtrTail => y_CohStr%PtrHead
 
       ELSE
 
-         ALLOCATE ( y_CohStr%PtrTail%Next, STAT=IStat )     ! The pointer PtrTail%Next%Next is nullified in allocation
+         ALLOCATE ( y_CohStr%PtrTail%Next, STAT=ErrStat2 )     ! The pointer PtrTail%Next%Next is nullified in allocation
 
-         IF ( IStat /= 0 ) THEN
-            CALL TS_Abort ( 'Error allocating memory for new event.' )
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for new event.' , ErrStat, ErrMsg, 'CohStr_CalcEvents')
+            RETURN
          ENDIF
 
          y_CohStr%PtrTail => y_CohStr%PtrTail%Next                   ! Move the pointer to point to the last record in the list
@@ -327,13 +333,13 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
       TEnd = TStartNext + e_CohStr%EventLen( NewEvent )
 
 
-      IF ( p_met%KHtest ) THEN
-         TStartNext   = p_grid%UsableTime + TStartNext !TEnd + PtrTail%delt ! Add the events right after each other
+      IF ( p%met%KHtest ) THEN
+         TStartNext   = p%grid%UsableTime + TStartNext !TEnd + PtrTail%delt ! Add the events right after each other
       ELSE
 
          DO WHILE ( TStartNext <= TEnd )
 
-            CALL RndExp(p_RNG, OtherSt_RandNum, rn, y_CohStr%lambda)    ! compute the interarrival time
+            CALL RndExp(p%RNG, OtherSt_RandNum, rn, y_CohStr%lambda)    ! compute the interarrival time
             TStartNext        = TStartNext + rn !+ EventLen( NewEvent )
 
          ENDDO
@@ -355,13 +361,13 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
 
       ! Next, we start concatenating events until there is no space or we exceed the expected time
 
-   IF ( p_met%TurbModel_ID /= SpecModel_NONE ) THEN
+   IF ( p%met%TurbModel_ID /= SpecModel_NONE ) THEN
 
       NumCompared = 0
 
       DO WHILE ( y_CohStr%EventTimeSum < y_CohStr%ExpectedTime .AND. NumCompared < y_CohStr%NumCTEvents )
 
-         CALL RndUnif( p_RNG, OtherSt_RandNum, rn )
+         CALL RndUnif( p%RNG, OtherSt_RandNum, rn )
 
          NewEvent = INT( rn*( e_CohStr%NumEvents - 1.0 ) ) + 1
          NewEvent = MAX( 1, MIN( NewEvent, e_CohStr%NumEvents ) )    ! take care of possible rounding issues....
@@ -382,17 +388,17 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, REAL(0.0,ReKi) )  ! This occ
             IF ( ASSOCIATED( PtrCurr%Next ) ) THEN
                TStartNext = PtrCurr%Next%TStart
             ELSE !We're starting after the last event in the record
-               TStartNext = p_grid%UsableTime + 0.5 * e_CohStr%EventLen( NewEvent )  ! We can go a little beyond the end...
+               TStartNext = p%grid%UsableTime + 0.5 * e_CohStr%EventLen( NewEvent )  ! We can go a little beyond the end...
             ENDIF
 
             IF ( TStartNext - (PtrCurr%TStart + e_CohStr%EventLen( PtrCurr%EventNum ) + PtrCurr%delt) > e_CohStr%EventLen( NewEvent ) ) THEN
 
                Inserted = .TRUE.
 
-               ALLOCATE ( PtrNew, STAT=IStat )           ! The pointer %Next is nullified in allocation
+               ALLOCATE ( PtrNew, STAT=ErrStat2 )           ! The pointer %Next is nullified in allocation
 
-               IF ( IStat /= 0 ) THEN
-                  CALL TS_Abort ( 'Error allocating memory for new event.' )
+               IF ( ErrStat2 /= 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for new event.' , ErrStat, ErrMsg, 'CohStr_CalcEvents')
                ENDIF
 
                PtrNew%EventNum      = NewEvent
@@ -436,8 +442,6 @@ END SUBROUTINE CohStr_CalcEvents
 !=======================================================================
 !> This subroutine writes the coherent events CTS file
 SUBROUTINE CohStr_WriteCTS(p, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrMsg)
-use TS_RandNum
-use TSMods, only: us
 
    TYPE(TurbSim_ParameterType),     INTENT(INOUT)  :: p                   ! parameters for TurbSim (out only b/c it doesn't generate file for certain cases...)
    TYPE(CohStr_ParameterType)     , INTENT(INOUT)  :: p_CohStr            ! parameters for coherent structures
@@ -451,6 +455,7 @@ use TSMods, only: us
 
       ! local variables
    type(CohStr_EventType)                         :: e_CohStr             ! coherent structure events
+   REAL(ReKi)                                     :: TmpVel                          ! A temporary variable holding a velocity
    REAL(ReKi)                                     :: TmpRndNum                       ! A temporary variable holding a random variate
    REAL(ReKi)                                     :: TsclFact                        ! Scale factor for time (h/U0) in coherent turbulence events
 
@@ -467,7 +472,8 @@ use TSMods, only: us
    p_CohStr%ScaleWid = p%grid%RotorDiameter * p_CohStr%DistScl           !  This is the scaled height of the coherent event data set
    p_CohStr%Zbottom  = p%grid%HubHt - p_CohStr%CTLz*p_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
-   p_CohStr%Uwave    = getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid)                 ! WindSpeed at center of wave
+   CALL getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom + 0.5*p_CohStr%ScaleWid, p_CohStr%Uwave, ErrStat2, ErrMsg2)                 ! p_CohStr%Uwave =WindSpeed at center of wave
+      CALL SetErrStat(  ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS')
    
    !-------------------------
    ! compute ScaleVel:
@@ -478,9 +484,14 @@ use TSMods, only: us
       p_CohStr%ScaleVel = p_CohStr%ScaleWid * KHT_LES_dT /  KHT_LES_Zm    
       p_CohStr%ScaleVel = 50 * p_CohStr%ScaleVel                  ! We want 25 hz bandwidth so multiply by 50
    ELSE
-      p_CohStr%ScaleVel =  getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid) &  ! Velocity at the top of the wave
-                         - getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom                  )    ! Shear across the wave
-      p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel                                                    ! U0 is half the difference between the top and bottom of the billow
+      
+      CALL getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom,                   TmpVel,            ErrStat2, ErrMsg2)    ! Velocity at bottom of billow
+         CALL SetErrStat(  ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS') 
+      CALL getVelocity(p, p%UHub,p%grid%HubHt,p_CohStr%Zbottom+p_CohStr%ScaleWid, p_CohStr%ScaleVel, ErrStat2, ErrMsg2)    ! Velocity at the top of the billow
+         CALL SetErrStat(  ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS')
+            
+      p_CohStr%ScaleVel =  p_CohStr%ScaleVel - TmpVel   ! Shear across the wave
+      p_CohStr%ScaleVel = 0.5 * p_CohStr%ScaleVel       ! U0 is half the difference between the top and bottom of the billow
       
       
          ! If the coherent structures do not cover the whole disk, increase the shear
@@ -539,7 +550,7 @@ use TSMods, only: us
                
       CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
 
-         y_CohStr%CTKE = pkCTKE_LLJ( p%grid%Zbottom+0.5*p_CohStr%ScaleWid, p%met%ZL, p%met%UStar )
+         y_CohStr%CTKE = pkCTKE_LLJ( p, OtherSt_RandNum, p%grid%Zbottom+0.5*p_CohStr%ScaleWid, p%met%ZL, p%met%UStar )
                
       CASE ( SpecModel_WF_UPW )
          y_CohStr%CTKE = -2.964523*p%met%Rich_No - 0.207382*p_CohStr%Uwave + 25.640037*p_CohStr%WSig - 10.832925
@@ -573,8 +584,12 @@ use TSMods, only: us
          RETURN
       END IF
    
-   CALL CohStr_CalcEvents( p%met, p%RNG, p%grid, p_CohStr,  e_CohStr, p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr) 
-         
+   CALL CohStr_CalcEvents( p, p_CohStr,  e_CohStr, p_CohStr%Zbottom+0.5*p_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr, ErrStat2, ErrMsg2) 
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS')
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
    !-------------------------
    ! Write the file:
@@ -599,31 +614,30 @@ CONTAINS
          
 END SUBROUTINE CohStr_WriteCTS
 !=======================================================================
-FUNCTION pkCTKE_LLJ(Ht, ZL, UStar)
-
-   use tsmods, only: p
-   use tsmods, only: OtherSt_RandNum
+FUNCTION pkCTKE_LLJ(p, OtherSt_RandNum, Ht, ZL, UStar)
    
-use TurbSim_Types
+   IMPLICIT                 NONE
 
-IMPLICIT                 NONE
+   TYPE(TurbSim_ParameterType),     INTENT(IN   ):: p                   ! parameters
+   TYPE(RandNum_OtherStateType),    INTENT(INOUT):: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
+   REAL(ReKi),                      INTENT(IN)   :: Ht                  ! The height at the billow center
+   REAL(ReKi),                      INTENT(IN)   :: ZL                  ! The height at the billow center
+   REAL(ReKi),                      INTENT(IN)   :: Ustar               ! The height at the billow center
+   
+   ! local variables
 
-REAL(ReKi), INTENT(IN)   :: Ht                                       ! The height at the billow center
-REAL(ReKi), INTENT(IN)   :: ZL                                       ! The height at the billow center
-REAL(ReKi), INTENT(IN)   :: Ustar                                    ! The height at the billow center
+   REAL(ReKi)               :: A                                        ! A constant/offset term in the pkCTKE calculation
+   REAL(ReKi)               :: A_uSt                                    ! The scaling term for Ustar
+   REAL(ReKi)               :: A_zL                                     ! The scaling term for z/L
+   REAL(ReKi)               :: pkCTKE_LLJ                               ! The max CTKE expected for LLJ coh structures
+   REAL(ReKi)               :: rndCTKE                                  ! The random residual
 
+   REAL(ReKi), PARAMETER    :: RndParms(5) = (/0.252510525, -0.67391279, 2.374794977, 1.920555797, -0.93417558/) ! parameters for the Pearson IV random residual
+   REAL(ReKi), PARAMETER    :: z_Ary(4)    = (/54., 67., 85., 116./)    ! Aneomoeter heights
 
-REAL(ReKi)               :: A                                        ! A constant/offset term in the pkCTKE calculation
-REAL(ReKi)               :: A_uSt                                    ! The scaling term for Ustar
-REAL(ReKi)               :: A_zL                                     ! The scaling term for z/L
-REAL(ReKi)               :: pkCTKE_LLJ                               ! The max CTKE expected for LLJ coh structures
-REAL(ReKi)               :: rndCTKE                                  ! The random residual
+   INTEGER                  :: Zindx_mn (1)
 
-REAL(ReKi), PARAMETER    :: RndParms(5) = (/0.252510525, -0.67391279, 2.374794977, 1.920555797, -0.93417558/) ! parameters for the Pearson IV random residual
-REAL(ReKi), PARAMETER    :: z_Ary(4)    = (/54., 67., 85., 116./)    ! Aneomoeter heights
-
-INTEGER                  :: Zindx_mn (1)
-
+   
 
    Zindx_mn = MINLOC( ABS(z_Ary-Ht) )
 

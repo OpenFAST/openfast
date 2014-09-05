@@ -59,13 +59,15 @@ PROGRAM TurbSim
 
 
 USE                        ModifiedvKrm_mod
-USE                        TSMods
 USE                        TSsubs
 USE TS_FileIO
    USE TS_RandNum
    USE TS_Profiles
    USE TS_VelocitySpectra
 use TS_CohStructures
+
+
+
 
 !BONNIE:*****************************
 ! USE    IFPORT, ONLY: TIMEF ! Wall Clock Time
@@ -77,6 +79,10 @@ IMPLICIT                   NONE
 
    ! Declare local variables
 
+TYPE(CohStr_ParameterType)       :: p_CohStr
+TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum             ! other states for random numbers (next seed, etc)
+TYPE(CohStr_OutputType)          :: y_CohStr
+TYPE( TurbSim_ParameterType )    :: p
 
 
 REAL(ReKi)              ::  USig                            ! Standard deviation of the u-component wind speed at the hub
@@ -115,7 +121,7 @@ CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
 !    Time = TIMEF() ! Initialize the Wall Clock Time counter
 !BONNIE:*****************************   
 
-
+p%US = -1
 
    ! ... Initialize NWTC Library (open console, set pi constants) ...
 CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )       
@@ -134,18 +140,18 @@ CALL GetRoot( InFile, p%RootName )
 
    ! Open input file and summary file.
 
-CALL OpenSummaryFile( p%RootName, p%DescStr )
-
+CALL OpenSummaryFile( p%RootName, p%US, p%DescStr, ErrStat, ErrMsg )
+CALL CheckError()
 
    ! Get input parameters.
 
 CALL ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
 CALL CheckError()
 
-CALL WrSum_EchoInputs() 
-call WrSum_UserInput(p%met,US)
+CALL WrSum_EchoInputs(p, p_CohStr) 
+call WrSum_UserInput(p%met,p%US)
 
-call TS_ValidateInput(ErrStat, ErrMsg)
+call TS_ValidateInput(p, ErrStat, ErrMsg)
 CALL CheckError()
 
 
@@ -155,7 +161,7 @@ CALL CheckError()
 IF ( ANY (p%WrFile) )  THEN
    CALL GetNewUnit( UnOut )
 
-   WRITE (US,"( // 'You have requested that the following file(s) be generated:' / )")
+   WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
    CALL WrScr1  ( ' You have requested that the following file(s) be generated:' )
 
    IF ( p%WrFile(FileExt_BIN) )  THEN   
@@ -165,7 +171,7 @@ IF ( ANY (p%WrFile) )  THEN
       CLOSE(UnOut)
       CALL CheckError()
       
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".bin (a binary hub-height turbulence-parameter file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (a binary hub-height turbulence-parameter file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.bin (a binary hub-height turbulence-parameter file)' )
 
    ENDIF
@@ -176,7 +182,7 @@ IF ( ANY (p%WrFile) )  THEN
       CLOSE( UnOut )
       CALL CheckError()
       
-      WRITE (US, "( 3X ,'"//TRIM( p%RootName)//".dat (a formatted turbulence-parameter file)' )")  
+      WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (a formatted turbulence-parameter file)' )")  
       CALL WrScr ( '     '//TRIM( p%RootName)//'.dat (a formatted turbulence-parameter file)' )
 
    ENDIF
@@ -187,7 +193,7 @@ IF ( ANY (p%WrFile) )  THEN
       CLOSE( UnOut )
       CALL CheckError()
       
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".hh  (an AeroDyn hub-height file)' )")
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (an AeroDyn hub-height file)' )")
       CALL WrScr ( '    '//TRIM( p%RootName)//'.hh  (an AeroDyn hub-height file)' )
 
    ENDIF
@@ -198,7 +204,7 @@ IF ( ANY (p%WrFile) )  THEN
       CLOSE( UnOut )
       CALL CheckError()
 
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".bts (an AeroDyn/TurbSim full-field wind file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (an AeroDyn/TurbSim full-field wind file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.bts (an AeroDyn/TurbSim full-field wind file)' )
 
    ENDIF
@@ -209,7 +215,7 @@ IF ( ANY (p%WrFile) )  THEN
       CLOSE(UnOut)
       CALL CheckError()
 
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".wnd (an AeroDyn/BLADED full-field wnd file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (an AeroDyn/BLADED full-field wnd file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.wnd (an AeroDyn/BLADED full-field wnd file)' )
 
    ENDIF
@@ -220,24 +226,24 @@ IF ( ANY (p%WrFile) )  THEN
       CLOSE(UnOut)       
       CALL CheckError()
 
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".twr (a binary tower file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (a binary tower file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.twr (a binary tower file)' )
 
    ENDIF
 
    IF ( p%WrFile(FileExt_CTS) ) THEN      
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".cts (a coherent turbulence time step file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (a coherent turbulence time step file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.cts (a coherent turbulence time step file)' )
    ENDIF
 
    IF ( p%WrFile(FileExt_UVW) )  THEN
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".u (a formatted full-field U-component file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (a formatted full-field U-component file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.u (a formatted full-field U-component file)' )
 
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".v (a formatted full-field V-component file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (a formatted full-field V-component file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.v (a formatted full-field V-component file)' )
 
-      WRITE (US,"( 3X ,'"//TRIM( p%RootName)//".w (a formatted full-field W-component file)' )")  
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (a formatted full-field W-component file)' )")  
       CALL WrScr ( '    '//TRIM( p%RootName)//'.w (a formatted full-field W-component file)' )
    ENDIF
 
@@ -268,17 +274,18 @@ CALL AllocAry(U,     SIZE(p%grid%Z), 'u (steady, u-component winds)', ErrStat, E
 CALL CheckError()
 
 IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
-   U = getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z)
+   CALL getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z, U, ErrStat, ErrMsg)
 ELSE 
-   U = getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z) 
+   CALL getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z, U, ErrStat, ErrMsg) 
 ENDIF
-
+CALL CheckError()
 
    ! Wind Direction:
 CALL AllocAry(HWindDir, SIZE(p%grid%Z), 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
 CALL CheckError()
    
-HWindDir = getDirectionProfile(p, p%grid%Z)
+CALL getDirectionProfile(p, p%grid%Z, HWindDir, ErrStat, ErrMsg)
+CALL CheckError()
    
 p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx )
 
@@ -297,13 +304,13 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
    CALL CheckError()
 
    p%met%ZL_profile(:)    = getZLARY(    U, p%grid%Z, p%met%Rich_No, p%met%ZL, p%met%L, p%met%ZLOffset, p%met%WindProfileType )
-   p%met%Ustar_profile(:) = getUstarARY( U, p%grid%Z, p%met%UStarOffset, p%met%UStarSlope )
+   p%met%Ustar_profile(:) = getUstarARY( p, U, p%grid%Z, p%met%UStarOffset, p%met%UStarSlope )
    
 END IF
 
            
-CALL WrSum_SpecModel( US, U, HWindDir, p%IEC )
-
+CALL WrSum_SpecModel( p, U, HWindDir, ErrStat, ErrMsg )
+CALL CheckError()
 
 IF (DEBUG_OUT) THEN
    ! If we are going to generate debug output, open the debug file.
@@ -352,7 +359,7 @@ IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S               )
 CALL AllocAry( PhaseAngles, p%grid%NPoints, p%grid%NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
 CALL CheckError()
         
-CALL SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, US, ErrStat, ErrMsg )
+CALL SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
 CALL CheckError()
 
 
@@ -406,14 +413,14 @@ CALL CheckError()
 !..................................................................................................................................
 ! Scale time series (if desired) for cross-component correlation or IEC statistics:
 !..................................................................................................................................  
-CALL ScaleTimeSeries(p, V, US)
+CALL ScaleTimeSeries(p, V, ErrStat, ErrMsg)
 CALL CheckError()
 
 
 !..................................................................................................................................
 ! Write statistics of the run to the summary file:
 !..................................................................................................................................
-CALL WrSum_Stats(V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
+CALL WrSum_Stats(p, V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
 CALL CheckError()
 
 !..................................................................................................................................
@@ -421,17 +428,17 @@ CALL CheckError()
 !..................................................................................................................................
 
 IF ( p%WrFile(FileExt_HH) )  THEN
-   CALL WrHH_ADtxtfile(V, p%RootName, p%IEC%TurbInt, ErrStat, ErrMsg)   
+   CALL WrHH_ADtxtfile(p, V, p%IEC%TurbInt, ErrStat, ErrMsg)   
    CALL CheckError()
 END IF
 
 IF ( p%WrFile(FileExt_BIN) )  THEN
-   CALL WrHH_binary(V, p%RootName, ErrStat, ErrMsg)
+   CALL WrHH_binary(p, V, ErrStat, ErrMsg)
    CALL CheckError()
 END IF
 
 IF ( p%WrFile(FileExt_DAT) )  THEN
-   CALL WrHH_text(V,  p%RootName, ErrStat, ErrMsg )   
+   CALL WrHH_text(p, V, ErrStat, ErrMsg )   
    CALL CheckError()
 END IF
 
@@ -460,15 +467,15 @@ IF ( p%WrFile(FileExt_CTS) ) THEN
       ! Write the number of separate events to the summary file
 
    IF (p%met%KHtest) THEN
-      WRITE ( US,'(/)' )
+      WRITE ( p%US,'(/)' )
    ELSE
-      WRITE ( US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda
+      WRITE ( p%US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda
    ENDIF
 
-   WRITE ( US, '(A,I8)'   )            'Number of coherent events            = ', y_CohStr%NumCTEvents_separate
-   WRITE ( US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
-   WRITE ( US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
-   WRITE ( US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
+   WRITE ( p%US, '(A,I8)'   )            'Number of coherent events            = ', y_CohStr%NumCTEvents_separate
+   WRITE ( p%US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
+   WRITE ( p%US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
+   WRITE ( p%US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
    
 ENDIF !WrACT
 
@@ -478,7 +485,7 @@ ENDIF !WrACT
 
    ! Are we generating FF files?
 IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
-   CALL WrSum_InterpolatedHubStats(p, V, US)
+   CALL WrSum_InterpolatedHubStats(p, V)
 
       
    IF ( p%WrFile(FileExt_BTS) ) THEN
@@ -487,7 +494,7 @@ IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
    END IF   
    
    IF ( p%WrFile(FileExt_WND) ) THEN      
-      CALL WrBinBLADED(p, V, USig, VSig, WSig, US, ErrStat, ErrMsg)
+      CALL WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       CALL CheckError()
    END IF
 END IF
@@ -514,9 +521,9 @@ IF ( ALLOCATED( p%grid%Z        ) )  DEALLOCATE( p%grid%Z        )
 
 IF (DEBUG_OUT) CLOSE( UD )       ! Close the debugging file
 
-WRITE ( US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p%grid%TimeStep)
+WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p%grid%TimeStep)
 IF ( p%WrFile(FileExt_CTS) .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
-   WRITE ( US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0 / (2.0 * y_CohStr%EventTimeStep)
+   WRITE ( p%US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0 / (2.0 * y_CohStr%EventTimeStep)
 ENDIF
 
 
@@ -524,7 +531,7 @@ ENDIF
 
 CALL CPU_TIME ( CPUtime )
 
-WRITE (US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2LStr( CPUtime ) )
+WRITE (p%US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2LStr( CPUtime ) )
 
 !BONNIE: ****************************
 !Time = TIMEF()
@@ -532,8 +539,8 @@ WRITE (US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2LSt
 !WRITE (US,"(//,'BONNIE TEST.  ',A,' seconds for completion.')")  TRIM( Flt2LStr( CPUtime ) )
 !END BONNIE ************************************
 
-CLOSE ( US )
-
+CLOSE ( p%US )
+p%US = -1
 
 CALL WrScr1  ( ' Processing complete.  '//TRIM( Num2LStr( CPUtime ) )//' CPU seconds used.' )
 CALL NormStop
@@ -546,7 +553,12 @@ SUBROUTINE CheckError()
    
       IF (ErrStat >= AbortErrLev) THEN
          CALL TS_end(p)
-         CALL TS_Abort( TRIM(ErrMSg) )
+         
+         WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(ErrMSg)
+         WRITE (p%US, "('ABORTING PROGRAM.')" )
+         
+         CALL ProgAbort ( TRIM(ErrMSg), .FALSE., 5.0_ReKi )
+         
       ELSE
          CALL WrScr(TRIM(ErrMsg))
       END IF

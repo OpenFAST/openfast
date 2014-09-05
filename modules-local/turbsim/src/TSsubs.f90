@@ -90,42 +90,43 @@ END IF
 IF ( p%met%IsIECModel ) THEN
    DistZMExp(:) = 1.0
 ENDIF
+Indx=1
+DO J=1,p%grid%NPoints
 
-POINT_I: DO I=1,p%grid%NPoints
+   DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
 
-POINT_J:    DO J=1,I  ! The coherence matrix is symmetric so we're going to stop at I
+      !JJ1       = J - 1
+      !Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of array, coherence between points I & J
 
-               JJ1       = J - 1
-               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+      IF ( .NOT. PeriodicY ) THEN
+         Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+      ELSE 
+         dY = p%grid%Y(I) - p%grid%Y(J)
+         IF (dY > 0.5*p%grid%GridWidth ) THEN
+            dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
+         ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
+            dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
+         END IF
 
-               IF ( .NOT. PeriodicY ) THEN
-                  Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
-               ELSE 
-                  dY = p%grid%Y(I) - p%grid%Y(J)
-                  IF (dY > 0.5*p%grid%GridWidth ) THEN
-                     dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
-                  ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
-                     dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
-                  END IF
+         Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+      END IF
 
-                  Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
-               END IF
-
-               IF ( p%met%IsIECModel ) THEN
-                  DistU(Indx) = Dist(Indx)/p%UHub
+      IF ( p%met%IsIECModel ) THEN
+         DistU(Indx) = Dist(Indx)/p%UHub
 !                           TRH(Indx) = EXP( -p%met%InCDec(IVec)*SQRT( ( p%grid%Freq(IFreq) * Dist / p%UHub )**2 + (0.12*Dist/LC)**2 ) )
-               ELSE
-                  UM       = 0.5*( U(I) + U(J) )
-                  ZM       = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
+      ELSE
+         UM       = 0.5*( U(I) + U(J) )
+         ZM       = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
 
-                  DistU(Indx)     = Dist(Indx)/UM
-                  DistZMExp(Indx) = ( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1
+         DistU(Indx)     = Dist(Indx)/UM
+         DistZMExp(Indx) = ( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1
 
 !                       TRH(Indx) = EXP( -p%met%InCDec(IVec) * DistZMExp*SQRT( ( p%grid%Freq(IFreq)* DistU )**2 + (p%met%InCohB(IVec)*Dist)**2 ) )
-               ENDIF !SpecModel
+      ENDIF !SpecModel
+      Indx = Indx + 1
 
-         ENDDO POINT_J  
-      ENDDO POINT_I        
+   END DO ! I  
+END DO ! J        
 
 IF ( COH_OUT ) THEN
 
@@ -149,7 +150,8 @@ ENDIF
 IF ( p%met%IsIECmodel ) THEN
    IVec_End = 1
 ELSEIF (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
-   IVec_End = 0  ! no coherence for any component -- fix this after more checking
+   IVec_End = 1  ! no coherence for any component -- fix this after more checking
+print *, 'check coherence with TimeSer model'   
 ELSE
    IVec_End = 3
 END IF
@@ -171,20 +173,42 @@ DO IVec = 1,IVec_End
          ! -----------------------------------------------
          ! Create the coherence matrix for this frequency
          ! -----------------------------------------------
+      Indx = 1
+      DO J = 1,p%usr%NPoints-1
+      
+         TRH(Indx) =  1.0_ReKi
+         Indx = Indx + 1
+      
+         DO I=J+1,p%grid%NPoints
+            TRH(Indx) = 0.0_ReKi
+            Indx = Indx + 1
+         END DO
+      
+      END DO !I
 
-      DO I=1,p%grid%NPoints
-         DO J=1,I
+         
+      DO J=max(1, p%usr%NPoints),p%grid%NPoints
+         DO I=J,p%grid%NPoints
 
-               JJ1       = J - 1
-               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+               !JJ1       = J - 1
+               !Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix TRH, coherence between points I & J
 
                TRH(Indx) = EXP( -1.0 * p%met%InCDec(IVec) * DistZMExp(Indx)* &
                            SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
+               
+               Indx = Indx  + 1
 
-         ENDDO ! J
-      ENDDO ! I
+         ENDDO ! I
+      ENDDO ! J
       
-      CALL Coh2H(    p, IVec, IFreq, TRH, S, UC )
+!call wrmatrix( trh, 77, 'ES15.5' )
+
+      CALL Coh2H(    p, IVec, IFreq, TRH, S, UC, ErrStat2, ErrMsg2 )       
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
       CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
    ENDDO !IFreq
 
@@ -261,12 +285,10 @@ INTEGER                      :: JJ1
 INTEGER                      :: I
 INTEGER                      :: IFreq
 INTEGER                      :: Indx
-INTEGER                      :: IVec           ! wind component, 1=u, 2=v, 3=w
+INTEGER                      :: IVec, IVec_End           ! wind component, 1=u, 2=v, 3=w
 INTEGER                      :: Stat
 
 INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
-
-LOGICAL                    :: IdentityCoh
 
 
 INTEGER(IntKi)                :: ErrStat2
@@ -297,7 +319,6 @@ ErrStat = ErrID_None
 ErrMsg  = ""
 UC      = -1
 
-V(:,:,:) = 0.0    ! initialize the velocity matrix
 
 ! ------------ arrays allocated -------------------------
 Stat = 0.
@@ -318,22 +339,20 @@ END IF
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
 
-POINT_I: DO I=1,p%grid%NPoints
-POINT_J:    DO J=1,I
+DO I=1,p%grid%NPoints
+   DO J=1,I
 
-               JJ1       = J - 1
-               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of packed V matrix, coherence between points I & J
+      JJ1       = J - 1
+      Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of packed V matrix, coherence between points I & J
 
-               Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
+      Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
 
-               Dist_Z(Indx)= ABS( p%grid%Z(I) - p%grid%Z(J) )
+      Dist_Z(Indx)= ABS( p%grid%Z(I) - p%grid%Z(J) )
 !mlb           Dist_Z12(Indx)=ABS(Z(I)*Z(J))
-               Z1Z2(Indx) = p%grid%Z(I)*p%grid%Z(J)
+      Z1Z2(Indx) = p%grid%Z(I)*p%grid%Z(J)
 
-
-
-         ENDDO POINT_J  
-      ENDDO POINT_I 
+   END DO !J   
+END DO !I 
 
 IF ( COH_OUT ) THEN
 
@@ -353,14 +372,11 @@ IF ( COH_OUT ) THEN
       WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
 ENDIF
 
-DO IVec = 1,3
 
-   IF ( p%met%IsIECModel .AND. ( IVec /= 1 ) ) THEN
-         ! There is no coherence defined for the v or w component of the IEC spectral models
-      IdentityCoh = .TRUE.
-   ELSE
-      IdentityCoh = .FALSE.
-   ENDIF
+IVec_End = 1
+V(:,:,:) = 0.0_ReKi    ! initialize the matrix (will contain coefficients at the end of this routine)
+
+DO IVec = 1,IVec_End
 
    CALL WrScr ( '    '//Comp(IVec)//'-component matrices' )
 
@@ -374,38 +390,55 @@ DO IVec = 1,3
       ! Calculate the coherence and Veers' H matrix (CSDs)
       !---------------------------------------------------
       
-      IF (.NOT. IdentityCoh) THEN
-
             ! -----------------------------------------------
             ! Create the coherence matrix for this frequency
             ! -----------------------------------------------
 
-         DO I=1,p%grid%NPoints
-            DO J=1,I
+      DO I=1,p%grid%NPoints
+         DO J=1,I
 
-                  JJ1       = J - 1
-                  Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
+               JJ1       = J - 1
+               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
 
 !mlb: THis is where to look for the error.
 
 !mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
 !mlb                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
-                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
+               TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
+               TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
-                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p%met%URef)
+               TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p%met%URef)
 
 
-            ENDDO ! JJ
-         ENDDO ! II
-      END IF
+         ENDDO ! J
+      ENDDO ! I
       
-         
-      CALL Coh2Coeffs( p, IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, UC )
-         
-
+      CALL Coh2H(    p, IVec, IFreq, TRH, S, UC, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      
+      CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
    ENDDO !IFreq
+
+ENDDO !IVec
+
+
+   ! this is for identity coherence:
+DO IVec = IVec_End+1,3
+     
+      ! -----------------------------------------------------------------------------------
+      !  The coherence is the Identity (as is Cholesky Factorization); 
+      !    the Veers' H matrix calculated in EyeCoh2H:
+      ! -----------------------------------------------------------------------------------
+      
+   DO IFREQ = 1,p%grid%NumFreq
+      CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p%grid%NPoints )   
+      CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
+   ENDDO !IFreq               
 
 ENDDO !IVec
 
@@ -427,122 +460,6 @@ CONTAINS
    END SUBROUTINE Cleanup
 !............................................
 END SUBROUTINE CalcFourierCoeffs_API
-!=======================================================================
-SUBROUTINE Coh2Coeffs( p, IdentityCoh, IVec, IFreq, TRH, S, PhaseAngles, V, UC )
-
-use NWTC_LAPACK
-
-TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
-LOGICAL,                     INTENT(IN)     :: IdentityCoh
-REAL(ReKi),                  INTENT(INOUT)  :: TRH         (:)              ! The transfer function  matrix (length is >= NSize).
-REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          ! The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
-INTEGER(IntKi),              INTENT(IN)     :: IVec                         ! loop counter (=number of wind components)
-INTEGER(IntKi),              INTENT(IN)     :: IFreq                        ! loop counter (=number of frequencies)
-INTEGER(IntKi),              INTENT(IN)     :: UC                           ! unit number for optional coherence debugging file
-
-
-REAL(ReKi)                       :: CPh                                      ! Cosine of the random phase
-REAL(ReKi)                       :: SPh                                      ! Sine of the random phase
-INTEGER                          :: IF1                                      ! Index to real part of vector
-INTEGER                          :: IF2                                      ! Index to complex part of vector
-
-integer                          :: Indx, J, I, Stat
-character(1024)                  :: ErrMsg
-
-      IF (IdentityCoh) THEN
-
-            ! -----------------------------------------------------------------------------------
-            !  The coherence is the Identity (as is Cholesky); the Veers' H matrix is as follows:
-            ! -----------------------------------------------------------------------------------
-
-         Indx = 1
-         DO J = 1,p%grid%NPoints ! The column number
-
-               ! The diagonal entries of the matrix:
-
-            TRH(Indx) = SQRT( ABS( S(IFreq,J,IVec) ) )
-
-               ! The off-diagonal values:
-            Indx = Indx + 1
-            DO I = J+1,p%grid%NPoints ! The row number
-               TRH(Indx) = 0.0
-               Indx = Indx + 1
-            ENDDO ! I
-         ENDDO ! J
-
-      ELSE
-
-         IF (COH_OUT) THEN
-!            IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
-               WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
-!            ENDIF
-         ENDIF
-
-            ! -------------------------------------------------------------
-            ! Calculate the Cholesky factorization for the coherence matrix
-            ! -------------------------------------------------------------
-
-         CALL LAPACK_pptrf( 'L', p%grid%NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
-
-         IF ( Stat /= ErrID_None ) THEN
-            CALL WrScr(ErrMsg)
-            IF (Stat >= AbortErrLev) &
-            CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
-                           TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p%grid%Freq(IFreq)))//' Hz)'//&
-                        '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
-                        'Check the input file for invalid physical properties or modify the coherence exponent '//&
-                        'or grid spacing.')
-         ENDIF
-
-            ! -------------------------------------------------------------
-            ! Create the lower triangular matrix, H, from Veer's method
-            ! -------------------------------------------------------------
-
-         Indx = 1
-         DO J = 1,p%grid%NPoints  ! Column
-            DO I = J,p%grid%NPoints ! Row
-
-                  ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
-
-               TRH(Indx) = TRH(Indx) * SQRT( ABS( S(IFreq,I,IVec) ) )
-
-               Indx = Indx + 1
-
-            ENDDO !I
-         ENDDO !J
-
-      ENDIF !IdentityCoh
-
-      ! -------------------------------------------------------------
-      ! Calculate the correlated fourier coefficients.
-      ! -------------------------------------------------------------
-
-      IF2      = IFreq*2
-      IF1      = IF2 - 1
-
-      DO J=1,p%grid%NPoints
-
-            ! Apply a random phase to each of the columns of H to
-            ! produce random phases in the wind component.
-            ! Then sum each of the rows into the vector V.
-         
-         CPh   = COS( PhaseAngles(J,IFreq,IVec) )
-         SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
-
-         Indx  = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
-         DO I=J,p%grid%NPoints
-
-            V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
-            V(IF2,I,IVec) = V(IF2,I,IVec) + TRH(Indx)*SPh  !Imaginary part
-
-            Indx = Indx + 1      !H(I,J)
-
-         ENDDO ! I
-      ENDDO ! J
-
-END SUBROUTINE Coh2Coeffs
 !=======================================================================
 SUBROUTINE EyeCoh2H( IVec, IFreq, TRH, S, NPoints )
 
@@ -577,10 +494,9 @@ integer                          :: Indx, J, I
 
 END SUBROUTINE EyeCoh2H
 !=======================================================================
-SUBROUTINE Coh2H( p, IVec, IFreq, TRH, S, UC )
+SUBROUTINE Coh2H( p, IVec, IFreq, TRH, S, UC, ErrStat, ErrMsg )
 
 use NWTC_LAPACK
-USE TSMods, only: COH_OUT
 
 TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                                        ! TurbSim parameters
 REAL(ReKi),                  INTENT(INOUT)  :: TRH         (:)                          ! The transfer function  matrix (size >= NumSteps).
@@ -589,8 +505,11 @@ INTEGER(IntKi),              INTENT(IN)     :: IVec                             
 INTEGER(IntKi),              INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
 INTEGER(IntKi),              INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
 
-integer                          :: Indx, J, I, Stat
-character(1024)                  :: ErrMsg
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+
+
+integer                          :: Indx, J, I, NPts
 
          
    IF (COH_OUT) THEN
@@ -601,36 +520,73 @@ character(1024)                  :: ErrMsg
 
       ! -------------------------------------------------------------
       ! Calculate the Cholesky factorization for the coherence matrix
-      ! -------------------------------------------------------------
+      ! -------------------------------------------------------------      
+   IF ( p%usr%NPoints > 0 ) THEN
+      J = p%usr%NPoints
+      Indx = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
+      NPts = p%grid%NPoints - p%usr%NPoints + 1
+   ELSE
+      Indx = 1
+      NPts = p%grid%NPoints
+   END IF
+         
+   CALL LAPACK_pptrf( 'L', NPts, TRH(Indx:), ErrStat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
 
-   CALL LAPACK_pptrf( 'L', p%grid%NPoints, TRH, Stat, ErrMsg )  ! 'L'ower triangular 'TRH' matrix (packed form), of order 'NPoints'; returns Stat
-
-   IF ( Stat /= ErrID_None ) THEN
-      CALL WrScr(ErrMsg)
-      IF (Stat >= AbortErrLev) &
-      CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
-                     TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p%grid%Freq(IFreq)))//' Hz)'//&
-                  '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
-                  'Check the input file for invalid physical properties or modify the coherence exponent '//&
-                  'or grid spacing.')
+   IF ( ErrStat /= ErrID_None ) THEN
+      IF (ErrStat < AbortErrLev) then
+         CALL WrScr(ErrMsg)
+      ELSE
+         RETURN
+         !CALL TS_Abort('Error '//TRIM(Int2LStr(Stat))//' in the Cholesky factorization occurred at frequency '//&
+         !               TRIM(Int2LStr(IFreq))//' ('//TRIM(Num2LStr(p%grid%Freq(IFreq)))//' Hz)'//&
+         !            '. The '//Comp(IVec)//'-component coherence matrix cannot be factored.  '//&
+         !            'Check the input file for invalid physical properties or modify the coherence exponent '//&
+         !            'or grid spacing.')
+      END IF      
    ENDIF
 
       ! -------------------------------------------------------------
       ! Create the lower triangular matrix, H, from Veer's method
       ! -------------------------------------------------------------
 
+   !!!!!!!!!!!!!!!!!!!!!!!!
+   !!bjj fix this
+   !!!!!!!!!!!!!!!!!!!!!!!!
+   
    Indx = 1
-   DO J = 1,p%grid%NPoints  ! Column
-      DO I = J,p%grid%NPoints ! Row
+   DO J = 1,p%usr%NPoints-1  ! Column               
+      !Indx = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
+      
+      TRH(Indx) =  SQRT( ABS( S(IFreq,J,IVec) ) )
+      Indx = Indx + 1
+      
+      DO I=J+1,p%grid%NPoints
+         TRH(Indx) = 0.0_ReKi
+         Indx = Indx + 1
+      END DO
+      
+   END DO !J
+         
+   DO J = max(1,p%usr%NPoints),p%grid%NPoints  ! Column
+      
+      TRH(Indx) =  TRH(Indx) * SQRT( ABS( S(IFreq,J,IVec) ) )
+      Indx = Indx + 1      
+      
+      DO I = J+1,p%grid%NPoints ! Row
 
             ! S(IFreq,I,IVec) should never be less than zero, but the ABS makes sure...
-
-         TRH(Indx) = TRH(Indx) * SQRT( ABS( S(IFreq,I,IVec) ) )
+            !Indx = NPoints*(J-1) - J*(J-1)/2 + I !Index of H(I,J)
+            
+!         TRH(Indx) = TRH(Indx) * SQRT( ABS( S(IFreq,I,IVec) ) )
+         TRH(Indx) = TRH(Indx) * SQRT( SQRT( ABS( S(IFreq,I,IVec) * S(IFreq,J,IVec) ) ) )
 
          Indx = Indx + 1
 
       ENDDO !I
    ENDDO !J
+   
+   
+   
 
 END SUBROUTINE Coh2H
 !=======================================================================
@@ -669,7 +625,7 @@ integer                          :: Indx, J, I
       CPh   = COS( PhaseAngles(J,IFreq,IVec) )
       SPh   = SIN( PhaseAngles(J,IFreq,IVec) )
 
-      Indx = NPoints*(J-1) - J*(J-1)/2 + J !Index of H(I,J)
+      Indx = NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
       DO I=J,NPoints
 
          V(IF1,I,IVec) = V(IF1,I,IVec) + TRH(Indx)*CPh  !Real part
@@ -874,7 +830,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
                         
       CASE ( SpecModel_API )
          DO IPoint=1,p%grid%NPoints
-            CALL Spec_API ( p%grid%Z(IPoint), SSVS )
+            CALL Spec_API ( p, p%grid%Z(IPoint), SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO             
       
@@ -882,12 +838,12 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
       CASE ( SpecModel_GP_LLJ )
          IF ( ALLOCATED( p%met%ZL_profile ) ) THEN !.AND. ALLOCATED( p%met%Ustar_profile ) )  THEN  
             DO IPoint=1,p%grid%NPoints
-               CALL Spec_GPLLJ   ( p%grid%Z(IPoint), U(IPoint), p%met%ZL_profile(IPoint), p%met%Ustar_profile(IPoint), SSVS )
+               CALL Spec_GPLLJ   ( p, p%grid%Z(IPoint), U(IPoint), p%met%ZL_profile(IPoint), p%met%Ustar_profile(IPoint), SSVS )
                S(:,IPoint,:) = SSVS*HalfDelF               
             ENDDO          
          ELSE
             DO IPoint=1,p%grid%NPoints
-               CALL Spec_GPLLJ   ( p%grid%Z(IPoint), U(IPoint), p%met%ZL,                 p%met%Ustar,                 SSVS )
+               CALL Spec_GPLLJ   ( p, p%grid%Z(IPoint), U(IPoint), p%met%ZL,                 p%met%Ustar,                 SSVS )
                S(:,IPoint,:) = SSVS*HalfDelF               
             ENDDO          
          ENDIF
@@ -895,14 +851,14 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
       CASE (SpecModel_NWTCUP)
          DO IPoint=1,p%grid%NPoints
-            CALL Spec_NWTCUP  ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            CALL Spec_NWTCUP  ( p, p%grid%Z(IPoint), U(IPoint), SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO         
          
       
       CASE ( SpecModel_SMOOTH )
          DO IPoint=1,p%grid%NPoints
-            CALL Spec_SMOOTH   ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            CALL Spec_SMOOTH   ( P, p%grid%Z(IPoint), U(IPoint), SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO         
          
@@ -910,9 +866,12 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
       CASE ( SpecModel_TIDAL, SpecModel_RIVER )
          DO IPoint=1,p%grid%NPoints
             ZTmp = p%grid%Z(IPoint) + p%grid%GridRes_Z
-            UTmp = getVelocity(p, p%UHub, p%grid%HubHt, ZTmp)
+            
+            CALL getVelocity(p, p%UHub,p%grid%HubHt, ZTmp, UTmp, ErrStat2, ErrMsg2)   !get velocity Utmp at height ZTmp
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD')            
+            
             DUDZ = ( UTmp - U(IPoint) ) / p%grid%GridRes_Z
-            CALL Spec_TIDAL  ( p%grid%Z(IPoint), DUDZ, SSVS, p%met%TurbModel_ID )
+            CALL Spec_TIDAL  ( p, p%grid%Z(IPoint), DUDZ, SSVS, p%met%TurbModel_ID )
          
                   ! Discretize the continuous PSD and store it in matrix "S"
            
@@ -930,8 +889,16 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          END DO ! IVec         
          
          
-      CASE ( SpecModel_TimeSer )   
-         DO IPoint=1,p%grid%NPoints
+      CASE ( SpecModel_TimeSer ) 
+         
+         DO IPoint=1,p%usr%NPoints
+            S(1:p%usr%nFreq,IPoint,:) = p%usr%S(:,IPoint,:)*HalfDelF 
+         END DO
+         if (p%usr%nFreq < p%grid%NumFreq) then
+            S(p%usr%nFreq+1:, : , :) = 0.0_ReKi  !bjj: fill this in another way for extrapolation (use different model??)
+         end if
+         
+         DO IPoint=1+p%usr%NPoints,p%grid%NPoints
             CALL Spec_TimeSer   ( p, p%grid%Z(IPoint), LastIndex, SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO             
@@ -939,33 +906,33 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
       CASE ( SpecModel_USRVKM )
          DO IPoint=1,p%grid%NPoints
-            CALL Spec_vonKrmn   ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            CALL Spec_vonKrmn   ( P, p%grid%Z(IPoint), U(IPoint), SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO       
          
          
       CASE (SpecModel_WF_UPW)
          DO IPoint=1,p%grid%NPoints
-            CALL Spec_WF_UPW  ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            CALL Spec_WF_UPW  ( p, p%grid%Z(IPoint), U(IPoint), SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO       
          
          
       CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
          DO IPoint=1,p%grid%NPoints
-            CALL Spec_WF_DW ( p%grid%Z(IPoint), U(IPoint), SSVS )
+            CALL Spec_WF_DW ( p, p%grid%Z(IPoint), U(IPoint), SSVS )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO       
          
          
       CASE ( SpecModel_NONE )
          S = 0.0_ReKi ! whole matrix is zero
-   !bjj TEST: CALL Spec_Test ( p%grid%Z(IPoint), U(IPoint), Work )
+   !bjj TEST: CALL Spec_Test ( p%grid%Z(IPoint), U(IPoint), SSVS )
 
       CASE ( SpecModel_MODVKM )
          IF (MVK) THEN
          !  DO IPoint=1,p%grid%NPoints
-         !     CALL Mod_vKrm( p%grid%Z(IPoint), U(IPoint), Work )
+         !     CALL Mod_vKrm( p%grid%Z(IPoint), U(IPoint), SSVS )
          !     S(:,IPoint,:) = SSVS*HalfDelF               
          !  ENDDO       
          ELSE
@@ -1538,54 +1505,57 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
 !                                               3.357892649*WS1**0.1198781 /)
             InCohB(1:2)   = (/ 4.49289e-05+0.004933460/WS1, &
                                 0.00158053+0.014268899/WS1 /)
-            InCDec(3)     =  0.4*InCDec(1)  !cohA(w) = cohA(u)/2.5, number derived from histograms of u/w for NWTC and LLLJP data
-            InCohB(3)     = 10.0*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
+            InCDec(3)     =  0.4_ReKi*InCDec(1)  !cohA(w) = cohA(u)/2.5, number derived from histograms of u/w for NWTC and LLLJP data
+            InCohB(3)     = 10.0_ReKi*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
 
          CASE ( SpecModel_USER )
             InCDec = (/   WS, HUGE(InCohB(1)), HUGE(InCohB(1)) /)
-            InCohB = (/0.0  , 0.0            , 0.0             /)
+            InCohB = 0.0_ReKi ! entire array is zero
 
          CASE DEFAULT   ! includes CASE ( 'SMOOTH' )
 
-            InCDec = (/   WS, 0.75*WS, 0.75*WS /)  ! The davenport exponential parameter indicates that coh(v) ~ coh(w) in NWTC and LLLJP data
-            InCohB = (/0.0  , 0.0    , 0.0     /)
+            InCDec = (/1.0_ReKi,   0.75_ReKi,  0.75_ReKi /)*WS  ! The davenport exponential parameter indicates that coh(v) ~ coh(w) in NWTC and LLLJP data
+            InCohB = 0.0_ReKi ! entire array is zero
 
       END SELECT
 
 END SUBROUTINE GetDefaultCoh
 !=======================================================================
-SUBROUTINE GetDefaultRS( UW, UV, VW, UWskip, UVskip, VWskip, TmpUstarHub )
+SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
    ! This subroutine is used to get the default values of the Reynolds
    !  stresses.
+   ! sets p%met%PC_UW,  p%met%PC_UV,  p%met%PC_VW and
+   !      p%met%UWskip, p%met%UVskip, p%met%VWskip
 
-   USE                     TSMods, ONLY : p
    
-   use tsmods, only: OtherSt_RandNum
-   
-use TurbSim_Types
-   
-   REAL(ReKi), INTENT(OUT)             :: UW      ! PC_UW
-   REAL(ReKi), INTENT(OUT)             :: UV      ! PC_UV
-   REAL(ReKi), INTENT(OUT)             :: VW      ! PC_VW
-   LOGICAL,    INTENT(OUT)             :: UWskip  
-   LOGICAL,    INTENT(OUT)             :: UVskip  
-   LOGICAL,    INTENT(OUT)             :: VWskip  
-   
-   REAL(ReKi), INTENT(IN)              :: TmpUstarHub 
+   TYPE(TurbSim_ParameterType),     INTENT(INOUT)  :: p                   ! TurbSim parameters
+   TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
+                                    
+   REAL(ReKi),                      INTENT(IN)    :: TmpUstarHub 
+   INTEGER(IntKi),                  intent(  out) :: ErrStat              ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg               ! Message describing error
    
    
-   REAL(ReKi)                          :: rndSgn
-   REAL(ReKi)                          :: SignProb
-   REAL(ReKi)                          :: Shr
-   REAL(ReKi)                          :: Ustar2
-   REAL(ReKi)                          :: V(2)
-   REAL(ReKi)                          :: Z(2)
-   REAL(ReKi)                          :: ZLtmp
+   REAL(ReKi)                                     :: rndSgn
+   REAL(ReKi)                                     :: SignProb
+   REAL(ReKi)                                     :: Shr
+   REAL(ReKi)                                     :: Ustar2
+   REAL(ReKi)                                     :: V(2)
+   REAL(ReKi)                                     :: Z(2)
+   REAL(ReKi)                                     :: ZLtmp
             
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    
    Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
-   Z(1) = Z(2) - p%grid%GridHeight     ! bottom of the grid
-   V(:) = getVelocityProfile(p, p%UHub, p%grid%HubHt, Z)
+   Z(1) = Z(2) - p%grid%GridHeight                   ! bottom of the grid   !bjj: this isn't correct, is it???? fix todo
+   CALL getVelocityProfile(p, p%UHub, p%grid%HubHt, Z, V, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetDefaultRS')
 
    Shr = ( V(2)-V(1) ) / p%grid%GridHeight    ! dv/dz
 
@@ -1593,12 +1563,12 @@ use TurbSim_Types
 
    SELECT CASE ( p%met%TurbModel_ID )
       CASE ( SpecModel_GP_LLJ )
-         ZLtmp  = MIN( MAX( p%met%ZL,    REAL(-1.00,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of z/L
-         UStar2 = MIN( MAX( p%met%Ustar, REAL( 0.15,ReKi) ), REAL(1.0,ReKi) )  !Limit the observed values of u*
+         ZLtmp  = MIN( MAX( p%met%ZL,    -1.00_ReKi ), 1.0_ReKi )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p%met%Ustar,  0.15_ReKi ), 1.0_ReKi )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
       CASE ( SpecModel_NWTCUP )
-         ZLtmp  = MIN( MAX( p%met%ZL,    REAL(-0.5,ReKi) ), REAL(3.5,ReKi) )  !Limit the observed values of z/L
-         UStar2 = MIN( MAX( p%met%Ustar, REAL( 0.2,ReKi) ), REAL(1.4,ReKi) )  !Limit the observed values of u*
+         ZLtmp  = MIN( MAX( p%met%ZL,    -0.5_ReKi ), 3.5_ReKi )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p%met%Ustar,  0.2_ReKi ), 1.4_ReKi )  !Limit the observed values of u*
          Ustar2 = Ustar2*Ustar2
 !      CASE ( 'WF_UPW' )
 !      CASE ( 'WF_07D' )
@@ -1612,71 +1582,71 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    ! default UW Reynolds stress
    !-------------------------------------------------------------------------------------------------
-   UWskip     = .FALSE.
+   p%met%UWskip     = .FALSE.
    
    CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
    SELECT CASE ( p%met%TurbModel_ID )
 
       CASE ( SpecModel_GP_LLJ )
 
-         UW = TmpUstarHub**2        
+         p%met%PC_UW = TmpUstarHub**2        
       
-         IF (UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume UW contains magnitude of value we want
+         IF (p%met%PC_UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume p%met%PC_UW contains magnitude of value we want
             IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
-               UW =  0.0399 - 0.00371*p%UHub - 0.00182*p%met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
+               p%met%PC_UW =  0.0399 - 0.00371*p%UHub - 0.00182*p%met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
             ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
-               UW = 0.00668 - 0.00184*p%UHub + 0.000709*p%met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
+               p%met%PC_UW = 0.00668 - 0.00184*p%UHub + 0.000709*p%met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
             ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
-               UW = -0.0216 + 0.00319*p%UHub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
+               p%met%PC_UW = -0.0216 + 0.00319*p%UHub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
             ELSE                           ! 54 m
-               UW = -0.0373 + 0.00675*p%UHub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
+               p%met%PC_UW = -0.0373 + 0.00675*p%UHub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
             ENDIF
-            UW = MAX(UW,0.0)
+            p%met%PC_UW = MAX(p%met%PC_UW,0.0)
 
          ENDIF
 
-         IF (UW > 0) THEN
-            SignProb = 0.765 + 0.57/PI * ATAN( 0.78511*LOG(UW)+3.42584)
-            IF (rndSgn <= SignProb) UW = -UW
+         IF (p%met%PC_UW > 0) THEN
+            SignProb = 0.765 + 0.57/PI * ATAN( 0.78511*LOG(p%met%PC_UW)+3.42584)
+            IF (rndSgn <= SignProb) p%met%PC_UW = -p%met%PC_UW
          ENDIF
 
       CASE ( SpecModel_NWTCUP )
 
          IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
-            UW = 0.165 - 0.0232*p%UHub - 0.0129*p%met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
+            p%met%PC_UW = 0.165 - 0.0232*p%UHub - 0.0129*p%met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
          ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
-            UW = 0.00279 - 0.00139*p%UHub + 1.074*Ustar2 + 0.179*SHR
+            p%met%PC_UW = 0.00279 - 0.00139*p%UHub + 1.074*Ustar2 + 0.179*SHR
          ELSE                          ! 15m data
-            UW = -0.1310 + 0.0239*p%UHub + 0.556*Ustar2
+            p%met%PC_UW = -0.1310 + 0.0239*p%UHub + 0.556*Ustar2
          ENDIF
-         UW = MAX(UW,0.0)
+         p%met%PC_UW = MAX(p%met%PC_UW,0.0)
 
-         IF (UW > 0) THEN !i.e. not equal to zero
-            SignProb = 0.765 + 0.57/PI * ATAN( 0.88356*LOG(UW)+2.47668)
-            IF (rndSgn <= SignProb) UW = -UW
+         IF (p%met%PC_UW > 0) THEN !i.e. not equal to zero
+            SignProb = 0.765 + 0.57/PI * ATAN( 0.88356*LOG(p%met%PC_UW)+2.47668)
+            IF (rndSgn <= SignProb) p%met%PC_UW = -p%met%PC_UW
          ENDIF
 
       CASE ( SpecModel_WF_14D )
 
-         UW = -Ustar2
-         IF ( rndSgn > 0.9937 )  UW = -UW
+         p%met%PC_UW = -Ustar2
+         IF ( rndSgn > 0.9937 )  p%met%PC_UW = -p%met%PC_UW
 
       CASE ( SpecModel_USER )
-         UW = 0.0
+         p%met%PC_UW = 0.0
          p%met%UWskip = .true.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
-         UW = -Ustar2*(1-p%grid%HubHt/p%met%RefHt) 
+         p%met%PC_UW = -Ustar2*(1-p%grid%HubHt/p%met%RefHt) 
       CASE DEFAULT
 
-         UW = -Ustar2
+         p%met%PC_UW = -Ustar2
 
    END SELECT
 
    !-------------------------------------------------------------------------------------------------
    ! default UV Reynolds stress
    !-------------------------------------------------------------------------------------------------
-   UVskip     = .FALSE.
+   p%met%UVskip     = .FALSE.
 
    CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
    SELECT CASE ( p%met%TurbModel_ID )
@@ -1684,61 +1654,61 @@ use TurbSim_Types
       CASE ( SpecModel_GP_LLJ )
 
          IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
-            UV = 0.199 - 0.0167*p%UHub + 0.0115*ZLtmp + 1.143*Ustar2
-            UV = MAX(UV,0.0)
-            IF ( rndSgn < 0.6527 ) UV = -UV
+            p%met%PC_UV = 0.199 - 0.0167*p%UHub + 0.0115*ZLtmp + 1.143*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6527 ) p%met%PC_UV = -p%met%PC_UV
          ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
-            UV = 0.190 - 0.0156*p%UHub + 0.00931*ZLtmp + 1.101*Ustar2
-            UV = MAX(UV,0.0)
-            IF ( rndSgn < 0.6394 ) UV = -UV
+            p%met%PC_UV = 0.190 - 0.0156*p%UHub + 0.00931*ZLtmp + 1.101*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6394 ) p%met%PC_UV = -p%met%PC_UV
          ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
-            UV = 0.178 - 0.0141*p%UHub + 0.00709*ZLtmp + 1.072*Ustar2
-            UV = MAX(UV,0.0)
-            IF ( rndSgn < 0.6326 ) UV = -UV
+            p%met%PC_UV = 0.178 - 0.0141*p%UHub + 0.00709*ZLtmp + 1.072*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6326 ) p%met%PC_UV = -p%met%PC_UV
          ELSE                           ! 54 m
-            UV = 0.162 - 0.0123*p%UHub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
-            UV = MAX(UV,0.0)
-            IF ( rndSgn < 0.6191 ) UV = -UV
+            p%met%PC_UV = 0.162 - 0.0123*p%UHub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6191 ) p%met%PC_UV = -p%met%PC_UV
          ENDIF
 
       CASE ( SpecModel_NWTCUP )
 
             ! Get the magnitude and add the sign
          IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
-            UV = 0.669 - 0.0300*p%UHub - 0.0911*p%met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
+            p%met%PC_UV = 0.669 - 0.0300*p%UHub - 0.0911*p%met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
          ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
-            UV = 1.521 - 0.00635*p%UHub - 0.2200*p%met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
+            p%met%PC_UV = 1.521 - 0.00635*p%UHub - 0.2200*p%met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
          ELSE                          ! 15m data
-            UV = 0.462 - 0.01400*p%UHub + 1.277*Ustar2
+            p%met%PC_UV = 0.462 - 0.01400*p%UHub + 1.277*Ustar2
          ENDIF
-         UV = MAX(UV,0.0)
-         IF (UV > 0) THEN !i.e. not equal to zero
-            SignProb = 0.33 + 0.64/PI * ATAN( -0.374775*LOG(UV)-0.205681)
-            IF (rndSgn <= SignProb) UV = -UV
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF (p%met%PC_UV > 0) THEN !i.e. not equal to zero
+            SignProb = 0.33 + 0.64/PI * ATAN( -0.374775*LOG(p%met%PC_UV)-0.205681)
+            IF (rndSgn <= SignProb) p%met%PC_UV = -p%met%PC_UV
          ENDIF
 
       CASE ( SpecModel_WF_UPW )
 
-         UV = 0.0202 + 0.890*Ustar2 - 2.461*Shr
-         UV = MAX(UV,0.0)
-         IF ( rndSgn < 0.7315 ) UV = -UV
+         p%met%PC_UV = 0.0202 + 0.890*Ustar2 - 2.461*Shr
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF ( rndSgn < 0.7315 ) p%met%PC_UV = -p%met%PC_UV
 
       CASE ( SpecModel_WF_07D )
 
-         UV = 0.5040 + 0.177*Ustar2
-         UV = MAX(UV,0.0)
-         IF ( rndSgn < 0.7355 ) UV = -UV
+         p%met%PC_UV = 0.5040 + 0.177*Ustar2
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF ( rndSgn < 0.7355 ) p%met%PC_UV = -p%met%PC_UV
 
       CASE ( SpecModel_WF_14D )
 
-         UV = 0.0430 + 0.258*Ustar2
-         UV = MAX(UV,0.0)
-         IF ( rndSgn < 0.4423 ) UV = -UV
+         p%met%PC_UV = 0.0430 + 0.258*Ustar2
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF ( rndSgn < 0.4423 ) p%met%PC_UV = -p%met%PC_UV
 
       CASE DEFAULT
 
-         UV  = 0.0
-         UVskip = .TRUE.  !use whatever comes our way from the random phases
+         p%met%PC_UV  = 0.0
+         p%met%UVskip = .TRUE.  !use whatever comes our way from the random phases
 
    END SELECT
 
@@ -1746,7 +1716,7 @@ use TurbSim_Types
    !-------------------------------------------------------------------------------------------------
    ! default VW Reynolds stress
    !-------------------------------------------------------------------------------------------------
-   VWskip     = .FALSE.
+   p%met%VWskip     = .FALSE.
 
    CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
    SELECT CASE ( p%met%TurbModel_ID )
@@ -1754,60 +1724,60 @@ use TurbSim_Types
       CASE ( SpecModel_GP_LLJ )
 
          IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
-            VW =  0.0528  - 0.00210*p%UHub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
-            VW = MAX(VW,0.0)
-            IF ( rndSgn < 0.2999 ) VW = -VW
+            p%met%PC_VW =  0.0528  - 0.00210*p%UHub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.2999 ) p%met%PC_VW = -p%met%PC_VW
          ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
-            VW =  0.0482  - 0.00264*p%UHub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
-            VW = MAX(VW,0.0)
-            IF ( rndSgn < 0.3061 ) VW = -VW
+            p%met%PC_VW =  0.0482  - 0.00264*p%UHub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.3061 ) p%met%PC_VW = -p%met%PC_VW
          ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
-            VW =  0.0444  - 0.00249*p%UHub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
-            VW = MAX(VW,0.0)
-            IF ( rndSgn < 0.3041 ) VW = -VW
+            p%met%PC_VW =  0.0444  - 0.00249*p%UHub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.3041 ) p%met%PC_VW = -p%met%PC_VW
          ELSE                           ! 54 m
-            VW =  0.0443  - 0.00261*p%UHub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
-            VW = MAX(VW,0.0)
-            IF ( rndSgn < 0.3111 ) VW = -VW
+            p%met%PC_VW =  0.0443  - 0.00261*p%UHub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.3111 ) p%met%PC_VW = -p%met%PC_VW
          ENDIF
 
       CASE ( SpecModel_NWTCUP )
 
          IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
-            VW = 0.174 + 0.00154*p%UHub - 0.0270*p%met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
+            p%met%PC_VW = 0.174 + 0.00154*p%UHub - 0.0270*p%met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
          ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
-            VW = 0.120 + 0.00283*p%UHub - 0.0227*p%met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
+            p%met%PC_VW = 0.120 + 0.00283*p%UHub - 0.0227*p%met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
          ELSE                          ! 15m data
-            VW = 0.0165 + 0.00833*p%UHub                 + 0.224*Ustar2
+            p%met%PC_VW = 0.0165 + 0.00833*p%UHub                 + 0.224*Ustar2
          ENDIF
-         VW = MAX(VW,0.0)
-         IF (VW > 0) THEN !i.e. not equal to zero
-            SignProb = 0.725 + 0.65/PI * ATAN( 0.654886*LOG(VW)+1.777198)
-            IF (rndSgn <= SignProb) VW = -VW
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF (p%met%PC_VW > 0) THEN !i.e. not equal to zero
+            SignProb = 0.725 + 0.65/PI * ATAN( 0.654886*LOG(p%met%PC_VW)+1.777198)
+            IF (rndSgn <= SignProb) p%met%PC_VW = -p%met%PC_VW
          ENDIF
 
       CASE ( SpecModel_WF_UPW )
 
-         VW = 0.0263 + 0.273*Ustar2 - 0.684*Shr
-         VW = MAX(VW,0.0)
-         IF ( rndSgn < 0.3139 ) VW = -VW
+         p%met%PC_VW = 0.0263 + 0.273*Ustar2 - 0.684*Shr
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF ( rndSgn < 0.3139 ) p%met%PC_VW = -p%met%PC_VW
 
       CASE ( SpecModel_WF_07D )
 
-         VW = 0.241 + 0.118*Ustar2
-         VW = MAX(VW,0.0)
-         IF ( rndSgn < 0.0982 ) VW = -VW
+         p%met%PC_VW = 0.241 + 0.118*Ustar2
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF ( rndSgn < 0.0982 ) p%met%PC_VW = -p%met%PC_VW
 
       CASE ( SpecModel_WF_14D )
 
-         VW =-0.0224 + 0.159*Ustar2
-         VW = MAX(VW,0.0)
-         IF ( rndSgn < 0.8436 ) VW = -VW
+         p%met%PC_VW =-0.0224 + 0.159*Ustar2
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF ( rndSgn < 0.8436 ) p%met%PC_VW = -p%met%PC_VW
 
       CASE DEFAULT
 
-         VW  = 0.0
-         VWskip = .TRUE.  !use whatever comes our way from the random phases
+         p%met%PC_VW  = 0.0
+         p%met%VWskip = .TRUE.  !use whatever comes our way from the random phases
 
    END SELECT
 
@@ -1815,30 +1785,25 @@ use TurbSim_Types
 RETURN
 END SUBROUTINE GetDefaultRS
 !=======================================================================
-FUNCTION getUstarARY(WS, Ht, UStarOffset, UstarSlope)
-
-USE TSMods, only: p
-
-   USE                                  TSMods, ONLY: profileZmax
-   USE                                  TSMods, ONLY: profileZmin
-
+FUNCTION getUstarARY(p, WS, Ht, UStarOffset, UstarSlope)
 
    IMPLICIT                              NONE
 
-   REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height at which ustar is defined
-   REAL(ReKi),   INTENT(IN)           :: WS(:)                       ! Wind speed(s) at heights, Ht
-   REAL(ReKi),   INTENT(IN)           :: UStarOffset                 ! A scaling/offset value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
-   REAL(ReKi),   INTENT(IN)           :: UstarSlope                  ! A scaling/slope value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
+   TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
+   REAL(ReKi),                  INTENT(IN)     :: Ht(:)                       ! Height at which ustar is defined
+   REAL(ReKi),                  INTENT(IN)     :: WS(:)                       ! Wind speed(s) at heights, Ht
+   REAL(ReKi),                  INTENT(IN)     :: UStarOffset                 ! A scaling/offset value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
+   REAL(ReKi),                  INTENT(IN)     :: UstarSlope                  ! A scaling/slope value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
 
-   REAL(ReKi)                         :: tmpZ                        ! a temporary value
-   REAL(ReKi)                         :: getUstarARY(SIZE(Ht))       ! the array of ustar values
-
-   INTEGER                            :: IZ
-   INTEGER                            :: Zindx
-   INTEGER                            :: Zindx_mn (1)
-   INTEGER                            :: Zindx_mx (1)
-
-   LOGICAL                            :: mask(SIZE(Ht))
+   REAL(ReKi)                                  :: tmpZ                        ! a temporary value
+   REAL(ReKi)                                  :: getUstarARY(SIZE(Ht))       ! the array of ustar values
+                                               
+   INTEGER(IntKi)                              :: IZ
+   INTEGER(IntKi)                              :: Zindx
+   INTEGER(IntKi)                              :: Zindx_mn (1)
+   INTEGER(IntKi)                              :: Zindx_mx (1)
+                                               
+   LOGICAL                                     :: mask(SIZE(Ht))
 
    mask = Ht.GE.profileZmin
    IF ( ANY(mask) ) THEN
@@ -1977,9 +1942,6 @@ END SUBROUTINE Calc_MO_zL
 !=======================================================================
 FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset, WindProfileType)
 
-   USE                                  TSMods, ONLY: profileZmax
-   USE                                  TSMods, ONLY: profileZmin
-
    IMPLICIT                              NONE
 
    
@@ -2053,60 +2015,55 @@ FUNCTION getZLARY(WS, Ht, RichNo, ZL, L, ZLOffset, WindProfileType)
 
 END FUNCTION getZLARY
 !=======================================================================
+!< This function calculates the default power law exponent.
+FUNCTION PowerLawExp( p )
+
+! necessary requirements: 
+! Rich_No, KHtest, TurbModel_ID, IEC_WindType, IECstandard
 
 
+   IMPLICIT                 NONE
 
+   TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
+   REAL(ReKi)             :: PowerLawExp          ! Power Law exponent for particular model
 
-FUNCTION PowerLawExp( Ri_No )
+   IF ( p%met%KHtest ) THEN
+      PowerLawExp = 0.3
+      RETURN
+   ENDIF
 
-   ! This function calculates the power law exponent for the wind turbulence models
-   ! WF_UPW, WF_07D, and WF_14D
+   SELECT CASE ( p%met%TurbModel_ID )
 
-USE                      TSMods
+      CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
+         IF ( p%met%RICH_NO > 0.0 ) THEN
+            PowerLawExp = 0.14733
+         ELSE
+            PowerLawExp = 0.087687698 + 0.059641545*EXP(p%met%RICH_NO/0.04717783)
+         ENDIF
 
-IMPLICIT                 NONE
+      CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
+         IF ( p%met%RICH_NO > 0.04 ) THEN
+            PowerLawExp = 0.17903
+         ELSE
+            PowerLawExp = 0.127704032 + 0.031228952*EXP(p%met%RICH_NO/0.0805173)
+         ENDIF
 
-REAL(ReKi), INTENT(IN) :: Ri_No                ! Richardson Number
-REAL(ReKi)             :: PowerLawExp          ! Power Law exponent for particular model
+      CASE (SpecModel_SMOOTH, SpecModel_GP_LLJ, SpecModel_TIDAL, SpecModel_RIVER)
+         ! A 1/7 power law seems to work ok for HYDRO spectral models also...
+         PowerLawExp = 0.143
 
+      CASE DEFAULT
+         IF ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. p%IEC%IEC_WindType == IEC_EWM100 ) THEN
+            PowerLawExp = 0.11         ! [IEC 61400-1 6.3.2.1 (14)]
+         ELSEIF ( p%IEC%IECstandard == 3 ) THEN
+            PowerLawExp = 0.14         ! [IEC 61400-3 Page 22 (3)]
+         ELSE
+            PowerLawExp = 0.2          ! [IEC 61400-1 6.3.1.2 (10)]
+         ENDIF
 
-IF ( p%met%KHtest ) THEN
-   PowerLawExp = 0.3
+   END SELECT
+
    RETURN
-ENDIF
-
-SELECT CASE ( p%met%TurbModel_ID )
-
-   CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
-      IF ( Ri_No > 0.0 ) THEN
-         PowerLawExp = 0.14733
-      ELSE
-         PowerLawExp = 0.087687698 + 0.059641545*EXP(Ri_No/0.04717783)
-      ENDIF
-
-   CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
-      IF ( Ri_No > 0.04 ) THEN
-         PowerLawExp = 0.17903
-      ELSE
-         PowerLawExp = 0.127704032 + 0.031228952*EXP(Ri_No/0.0805173)
-      ENDIF
-
-   CASE (SpecModel_SMOOTH, SpecModel_GP_LLJ, SpecModel_TIDAL, SpecModel_RIVER)
-      ! A 1/7 power law seems to work ok for HYDRO spectral models also...
-      PowerLawExp = 0.143
-
-   CASE DEFAULT
-      IF ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. p%IEC%IEC_WindType == IEC_EWM100 ) THEN
-         PowerLawExp = 0.11         ! [IEC 61400-1 6.3.2.1 (14)]
-      ELSEIF ( p%IEC%IECstandard == 3 ) THEN
-         PowerLawExp = 0.14         ! [IEC 61400-3 Page 22 (3)]
-      ELSE
-         PowerLawExp = 0.2          ! [IEC 61400-1 6.3.1.2 (10)]
-      ENDIF
-
-END SELECT
-
-RETURN
 END FUNCTION PowerLawExp
 !=======================================================================
 !> This routine creates the grid (cartesian + other points) that are
@@ -2494,12 +2451,11 @@ END FUNCTION IndexOnTower
 !=======================================================================
 !> This routine calculates the wind components in the Inertial reference
 !!  frame.
-SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, US, ErrStat, ErrMsg )
+SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
 
 
    TYPE(TurbSim_ParameterType),  INTENT(IN   ) :: p                                              !< parameters for TurbSim
    TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum                                !< other states for random number generation
-   INTEGER(IntKi)              , INTENT(IN   ) :: US                                             !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
    INTEGER(IntKi)  ,             INTENT(  OUT) :: ErrStat                                        !< error level/status
    CHARACTER(*) ,                INTENT(  OUT) :: ErrMsg                                         !< error message
                                                                                               
@@ -2512,7 +2468,7 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, US, ErrStat, ErrMsg 
       ! generate random phases for all the points
       
       ! bjj: todo: don't generate the angles for user-specified time-series points, which have phases already
-   CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, US, ErrStat, ErrMsg)
+   CALL RndPhases(p%RNG, OtherSt_RandNum, PhaseAngles, p%grid%NPoints, p%grid%NumFreq, p%US, ErrStat, ErrMsg)
 
    
    IF (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
@@ -2607,13 +2563,17 @@ END SUBROUTINE CalculateStresses
 !=======================================================================
 !> Scale the velocity aligned along the sreamwise direction.
 !!
-SUBROUTINE ScaleTimeSeries(p, V, US)
+SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
 
 
    TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
    REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        !< velocity, aligned along the streamwise direction without mean values added 
-   INTEGER(IntKi)                 , INTENT(IN)     ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+   INTEGER(IntKi),                  intent(  out)  :: ErrStat                     !< Error level
+   CHARACTER(*),                    intent(  out)  :: ErrMsg                      !< Message describing error
 
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
       ! Crossfeed cross-axis components to u', v', w' components and scale IEC models if necessary
 
@@ -2631,12 +2591,12 @@ SUBROUTINE ScaleTimeSeries(p, V, US)
          SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
                
    
-      CALL TimeSeriesScaling_ReynoldsStress(p, V, US)
+      CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
 
 
    CASE ( SpecModel_IECKAI , SpecModel_IECVKM )
 
-      CALL TimeSeriesScaling_IEC(p, V, US)
+      CALL TimeSeriesScaling_IEC(p, V)
                        
    END SELECT   
    
@@ -2646,12 +2606,11 @@ END SUBROUTINE ScaleTimeSeries
 !! statistics desired. This scaling has the effect of changing the amplitude
 !! of the target spectra to account for discretizing the spectra over a 
 !! finite length of time.
-SUBROUTINE TimeSeriesScaling_IEC(p, V, US)
+SUBROUTINE TimeSeriesScaling_IEC(p, V)
 
 
    TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
    REAL(ReKi),                      INTENT(INOUT)  ::  V(:,:,:)                        !< velocity, aligned along the streamwise direction without mean values added 
-   INTEGER(IntKi)                 , INTENT(IN)     ::  US                              !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
    
    
    REAL(DbKi)                                      ::  CGridSum                        ! The sums of the velocity components at the points surrounding the hub (or at the hub if it's on the grid)
@@ -2708,13 +2667,13 @@ SUBROUTINE TimeSeriesScaling_IEC(p, V, US)
 
    ENDDO !IVec   
    
-   IF (US > 0 ) THEN
-      WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
-      WRITE( US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
-      WRITE( US, "(2X,'---------  ------------------  ---------------------  --------------')" )
+   IF (p%US > 0 ) THEN
+      WRITE( p%US, "(//,'Scaling statistics from the hub grid point:',/)" )                  
+      WRITE( p%US, "(2X,'Component  Target Sigma (m/s)  Simulated Sigma (m/s)  Scaling Factor')" )
+      WRITE( p%US, "(2X,'---------  ------------------  ---------------------  --------------')" )
          
       DO IVec = 1,3
-         WRITE( US, "(5X,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p%IEC%SigmaIEC(IVec), &
+         WRITE( p%US, "(5X,A,7x,f11.3,9x,f12.3,11x,f10.3)") Comp(IVec)//"'", p%IEC%SigmaIEC(IVec), &
                                                            ActualSigma(IVec), HubFactor(IVec) 
       END DO
    END IF
@@ -2725,13 +2684,15 @@ END SUBROUTINE TimeSeriesScaling_IEC
 !> This routine performs a linear combination of the uncorrelated zero-mean
 !! velocity aligned along the streamwise direction to obtain the desired 
 !! Reynolds Stress values at the hub.
-SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, US)
+SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
 
       ! passed variables
    TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
    REAL(ReKi),                  INTENT(INOUT)  ::  V(:,:,:)          !< velocity, aligned along the streamwise direction without mean values added
-   INTEGER(IntKi)             , INTENT(IN)     ::  US                !< unit number of file in which to print a summary of the scaling used. If < 1, will not print summary.
+   INTEGER(IntKi),              intent(  out)  :: ErrStat            !< Error level
+   CHARACTER(*),                intent(  out)  :: ErrMsg             !< Message describing error
 
+   
       ! local variables
    REAL(DbKi)                                  ::  UVsum             ! The sum of the u'v' Reynolds stress component at the hub
    REAL(DbKi)                                  ::  UWsum             ! The sum of the u'w' Reynolds stress component at the hub
@@ -2761,6 +2722,9 @@ SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, US)
    INTEGER(IntKi)                              ::  ITime             ! loop counter for time step/frequency 
    INTEGER(IntKi)                              ::  IPoint            ! loop counter for grid points
    
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
       !...................
       ! Calculate coefficients for obtaining "correct" Reynold's stresses at the hub
@@ -2808,7 +2772,8 @@ SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, US)
       !     out of whack.  We'll display a warning in this case.
             
    IF ( ABS(alpha_uw) > 1.0 .OR. ABS(alpha_uv) > 1.0 .OR. ABS(alpha_wv) > 1.0 ) THEN
-      CALL TS_Warn( "Scaling terms exceed 1.0.  Reynolds stresses may be affected.", -1)
+      ErrStat = ErrID_Info
+      ErrMsg  = "Scaling terms exceed 1.0.  Reynolds stresses may be affected."
             
       alpha_uw = MAX( MIN( alpha_uw, 1.0_ReKi ), -1.0_ReKi )
       alpha_uv = MAX( MIN( alpha_uv, 1.0_ReKi ), -1.0_ReKi )
@@ -2831,14 +2796,14 @@ SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, US)
       ENDDO          
    ENDDO   
    
-   IF ( US > 0 ) THEN
+   IF ( p%US > 0 ) THEN
          
-      WRITE( US, "(//,'Scaling statistics from the hub grid point:',/)" )
-      WRITE( US, "(3X,               'Cross-Component  Scaling Factor')" )
-      WRITE( US, "(3X,               '---------------  --------------')" )
-      WRITE( US, "(3X,A,2X,E14.5)" ) "u'w'           ", alpha_uw
-      WRITE( US, "(3X,A,2X,E14.5)" ) "u'v'           ", alpha_uv
-      WRITE( US, "(3X,A,2X,E14.5)" ) "v'w'           ", alpha_wv
+      WRITE( p%US, "(//,'Scaling statistics from the hub grid point:',/)" )
+      WRITE( p%US, "(3X,               'Cross-Component  Scaling Factor')" )
+      WRITE( p%US, "(3X,               '---------------  --------------')" )
+      WRITE( p%US, "(3X,A,2X,E14.5)" ) "u'w'           ", alpha_uw
+      WRITE( p%US, "(3X,A,2X,E14.5)" ) "u'v'           ", alpha_uv
+      WRITE( p%US, "(3X,A,2X,E14.5)" ) "v'w'           ", alpha_wv
          
    END IF    
          
@@ -3050,9 +3015,9 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
                                                                      
 END SUBROUTINE AddMeanAndRotate
 !=======================================================================
-SUBROUTINE TS_ValidateInput(ErrStat, ErrMsg)
+SUBROUTINE TS_ValidateInput(P, ErrStat, ErrMsg)
 
-use TSMods
+   TYPE(TurbSim_ParameterType), INTENT(INOUT)     ::  p                              !< parameters 
 
    INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
@@ -3282,6 +3247,12 @@ SUBROUTINE TS_End(p)
 
    TYPE(TurbSim_ParameterType), INTENT(INOUT) ::  p                 !< parameters 
 
+   
+   IF (p%US > 0) THEN
+      CLOSE( p%US )
+      p%US = -1
+   END IF
+   
 !bjj: todo: add more; make sure everything is deallocated here; make sure files are closed, too.   
          
    IF ( ALLOCATED( p%grid%Y            ) )  DEALLOCATE( p%grid%Y            )
