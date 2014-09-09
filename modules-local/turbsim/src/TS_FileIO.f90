@@ -3171,7 +3171,7 @@ SUBROUTINE WrHH_text(p, V, ErrStat, ErrMsg)
 
 END SUBROUTINE WrHH_text
 !=======================================================================
-SUBROUTINE WrSum_Stats(p, V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
+SUBROUTINE WrSum_Stats(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
 
 TYPE(TurbSim_ParameterType), INTENT(IN   )   :: p                                ! parameters
@@ -3179,8 +3179,6 @@ REAL(ReKi),                  INTENT(IN   )   :: V           (:,:,:)             
 REAL(ReKi),                  INTENT(  OUT)   ::  USig                            ! Standard deviation of the u-component wind speed at the hub
 REAL(ReKi),                  INTENT(  OUT)   ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
 REAL(ReKi),                  INTENT(  OUT)   ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
-REAL(ReKi),                  INTENT(  OUT)   ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
-REAL(DbKi),                  INTENT(  OUT)   ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
                              
 INTEGER(IntKi),              intent(  out)   :: ErrStat                          ! Error level
 CHARACTER(*),                intent(  out)   :: ErrMsg                           ! Message describing error
@@ -3199,6 +3197,7 @@ REAL(DbKi)                   ::  UTmp2                           ! The instantan
 REAL(DbKi)                   ::  UTSum2                          ! The sum of the squared total wind speed at the hub
 REAL(DbKi)                   ::  UTTmp                           ! The instantaneous total wind speed at the hub
 REAL(DbKi)                   ::  UTTmp2                          ! The instantaneous squared total wind speed at the hub
+REAL(DbKi)                   ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
 REAL(DbKi)                   ::  UXSum                           ! The sum of the U-component (u rotated) wind speed at the hub
 REAL(DbKi)                   ::  UXSum2                          ! The sum of the squared U-component (u rotated) wind speed at the hub
 REAL(DbKi)                   ::  UXTmp                           ! The instantaneous U-component (u rotated) wind speed at the hub
@@ -3252,6 +3251,7 @@ REAL(ReKi)                   ::  UWcor                           ! The u-w cross
 REAL(ReKi)                   ::  UWsum                           ! The sum of the u'w' Reynolds stress component at the hub
 REAL(ReKi)                   ::  UXmax                           ! Maximum U-component (X-direction) wind speed at the hub
 REAL(ReKi)                   ::  UXmin                           ! Minimum U-component wind speed at the hub
+REAL(ReKi)                   ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
 REAL(ReKi)                   ::  UYmax                           ! Maximum V-component (Y-direction) wind speed at the hub
 REAL(ReKi)                   ::  UYmin                           ! Minimum V-component wind speed at the hub
 REAL(ReKi)                   ::  UYSig                           ! Standard deviation of the V-component wind speed at the hub

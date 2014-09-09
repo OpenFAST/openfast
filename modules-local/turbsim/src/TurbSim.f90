@@ -1,7 +1,7 @@
 !=======================================================================
 PROGRAM TurbSim
 
-   ! A turbulence simulator developed by contractors and staff at the
+   ! A turbulence simulator developed at the
    ! National Renewable Energy Laboratory, Golden, Colorado
    !
    ! v1.0a-bjj       15-Mar-2004  B. Jonkman  
@@ -16,17 +16,10 @@ PROGRAM TurbSim
    ! v1.50           25-Sep-2009  B. Jonkman  (NWTC subs v1.01.09)
    ! V1.06.00        21-Sep-2012  L. Kilcher & B. Jonkman (NWTC Library v1.04.01)
    ! v1.07.00a-bjj    9-Jul-2014  B. Jonkman  (NWTC Library v1.04.02a-bjj)
+   ! v2.00.00a-bjj      Oct-2014  B. Jonkman  (NWTC Library 2.0)
    !
    ! This program simulates a full field of turbulent winds at points in space
    ! in a rectangular Cartesian plane perpendicular to the mean wind direction.
-   ! It emulates, as closely as possible, the specifications of the IEC
-   ! Document 61400-1 with a choice of the Kaimal or von Karman spectral models.
-   ! It also includes spectral models of smooth terrain, complex terrain, and 
-   ! flow in and around a wind farm.
-   !
-   ! This program is based upon, and includes, code developed by Paul Veers
-   ! of Sandia National Laboratories (SNLWIND), Neil Kelley of NREL
-   ! (SNLWIND-3D and SNLWIND-IEC) and Marshall Buhl, also of NREL (SNWIND).
    !
    ! Example usage:  at a command prompt, type 
    !     turbsim turbsim.inp
@@ -38,23 +31,25 @@ PROGRAM TurbSim
    ! The grid of points on the Cartesian plane is numbered in the following way (notice that the first 
    ! height starts at the bottom of the grid): 
    !
-   !               Y(1)                        Y(2)             Y(3)             ... Y(NumGrid_Y)
-   !              -------------------------------------------------------------------------------------------
-   ! Z(NumGrid_Z):|V(NumGrid_Y*(NumGrid_Z-1)+1) ...                                  V(NumGrid_Y*NumGrid_Z) |
-   ! ...          |...                                                                                      |
-   ! Z(2)        :|V(NumGrid_Y + 1)            V(NumGrid_Y + 2) V(NumGrid_Y + 3) ... V(2*NumGrid_Y)         |
-   ! Z(1)        :|V(1)                        V(2)             V(3)             ... V(NumGrid_Y)           |
-   !              -------------------------------------------------------------------------------------------
+   !               Yb(1)                                    Yb(2)                        Yb(3)                         ... Yb(NumGrid_Y)
+   !              --------------------------------------------------------------------------------------------------------------------------------------------
+   ! Zb(NumGrid_Z):|V(GridPtIndx(NumGrid_Y*(NumGrid_Z-1)+1)) ...                                                           V(GridPtIndx(NumGrid_Z*NumGrid_Y)) |
+   ! ...           |...                                                                                                                                       |
+   ! Zb(2)        :|V(GridPtIndx(NumGrid_Y +             1)) V(GridPtIndx(NumGrid_Y + 2)) V(GridPtIndx(NumGrid_Y + 3)) ... V(GridPtIndx(        2*NumGrid_Y)) |
+   ! Zb(1)        :|V(GridPtIndx(                        1)) V(GridPtIndx(            2)) V(GridPtIndx(            3)) ... V(GridPtIndx(          NumGrid_Y)) |
+   !              --------------------------------------------------------------------------------------------------------------------------------------------
    ! 
-   ! Z(i) < Z(i+1) for all integers i, 1 <= i < NumGrid_Z
-   ! Y(j) < Y(j+1) for all integers j, 1 <= j < NumGrid_Y
+   ! Zb(i) < Zb(i+1) for all integers i, 1 <= i < NumGrid_Z
+   ! Yb(j) < Yb(j+1) for all integers j, 1 <= j < NumGrid_Y
+   ! note that the Y and Z arrays used in the code are NOT necessarially in the order of Yb and Zb described here.
    !
    ! If an extra hub point is necessary because the point does not fall on the grid, 
-   ! then it is added immediately following the regular grid points, i.e. 
-   ! Hub point = NumGrid_Y * NumGrid_Z + 1.
+   ! then it is added immediately following the regular grid points.
    !
    ! If the tower wind file output is selected, those extra points (in a single vertical 
-   ! line) are added at the end, after the hub point.
+   ! line) are added at the end, at the end (after the grid and hub point).
+   !
+   ! Any user-defined time-series points are stored at the BEGINNING, before the grid points.
    ! --------------------------------------------------------------------------------------------------------
 
 
@@ -64,53 +59,31 @@ USE TS_Profiles
 use TS_CohStructures
 
 
-
-
-!BONNIE:*****************************
-! USE    IFPORT, ONLY: TIMEF ! Wall Clock Time
-!BONNIE:*****************************    
-
-
 IMPLICIT                   NONE
 
 
    ! Declare local variables
 
-TYPE(CohStr_ParameterType)       :: p_CohStr
-TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum             ! other states for random numbers (next seed, etc)
-TYPE(CohStr_OutputType)          :: y_CohStr
-TYPE( TurbSim_ParameterType )    :: p
+TYPE( TurbSim_ParameterType )    :: p                       ! TurbSim parameters
+TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum         ! other states for random numbers (next seed, etc)
+TYPE(CohStr_ParameterType)       :: p_CohStr                ! parameter for coherent structures
+TYPE(CohStr_OutputType)          :: y_CohStr                ! output from coherent structure calculations
 
+REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)     ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)     ! The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)     ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi), ALLOCATABLE          :: U           (:)         ! The steady u-component wind speeds for the grid (NPOints).
+REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)         ! A profile of horizontal wind angle (measure of wind direction with height)
 
-REAL(ReKi)              ::  USig                            ! Standard deviation of the u-component wind speed at the hub
-REAL(ReKi)              ::  VSig                            ! Standard deviation of the v-component wind speed at the hub
-REAL(ReKi)              ::  WSig                            ! Standard deviation of the w-component wind speed at the hub
-REAL(ReKi)              ::  UXSig                           ! Standard deviation of the U-component wind speed at the hub
+REAL(ReKi)                       :: CPUtime                 ! Contains the number of seconds since the start of the program
 
-REAL(DbKi)              ::  UXBar                           ! The mean U-component (u rotated; x-direction) wind speed at the hub
-REAL(ReKi)              ::  CPUtime                         ! Contains the number of seconds since the start of the program
+REAL(ReKi)                       ::  USig                   ! Standard deviation of the u-component wind speed at the hub (used for scaling WND files)
+REAL(ReKi)                       ::  VSig                   ! Standard deviation of the v-component wind speed at the hub (used for scaling WND files)
+REAL(ReKi)                       ::  WSig                   ! Standard deviation of the w-component wind speed at the hub (used for scaling WND files)
 
-#ifdef DEBUG_TS
-INTEGER                 ::  IFreq ! for debugging                              
-#endif
-
-INTEGER                 ::  IY  , I                         ! An index for the Y position of a point I
-
-
-
-CHARACTER(200)          :: InFile                           ! Name of the TurbSim input file.
-
-
-REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)                      ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)                      ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
-REAL(ReKi), ALLOCATABLE          :: U           (:)                          ! The steady u-component wind speeds for the grid (NPOints).
-REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)                          ! A profile of horizontal wind angle (measure of wind direction with height)
-
-!TYPE( TurbSim_ParameterType )    :: p
-
-INTEGER(IntKi)          :: ErrStat     ! allocation status
-CHARACTER(MaxMsgLen)    :: ErrMsg      ! error message
+INTEGER(IntKi)                   :: ErrStat                 ! allocation status
+CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
+CHARACTER(200)                   :: InFile                  ! Name of the TurbSim input file.
 
 
 !BONNIE:*****************************
@@ -206,22 +179,6 @@ END IF
 CALL WrSum_SpecModel( p, U, HWindDir, ErrStat, ErrMsg )
 CALL CheckError()
 
-IF (DEBUG_OUT) THEN
-   ! If we are going to generate debug output, open the debug file.
-   !UD = -1
-   !CALL GetNewUnit( UD, ErrStat, ErrMsg )
-   CALL OpenFOutFile ( UD, TRIM( p%RootName)//'.dbg', ErrStat, ErrMsg )
-      CALL CheckError()      
-   
-   !bjj: This doesn't need to be part of the summary file, so put it in the debug file
-   IF (p%met%WindProfileType(1:1) == 'J' ) THEN
-      WRITE(UD,"(//'Jet wind profile Chebyshev coefficients:' / )") 
-      WRITE(UD,"( 3X,'Order: ',11(1X,I10) )")  ( I, I=0,10 )
-      WRITE(UD,"( 3X,'------ ',11(1X,'----------') )")
-      WRITE(UD,"( 3X,'Speed: ',11(1X,E10.3) )")  ( p%met%ChebyCoef_WS(I), I=1,11 )
-      WRITE(UD,"( 3X,'Angle: ',11(1X,E10.3) )")  ( p%met%ChebyCoef_WD(I), I=1,11 )   
-   ENDIF
-ENDIF
 
 !..................................................................................................................................
 ! Get the single-point power spectral densities
@@ -255,13 +212,6 @@ CALL CheckError()
         
 CALL SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
 CALL CheckError()
-
-
-#ifdef DEBUG_TS
-DO iFreq=1, p%grid%NumFreq
-   WRITE( 73, '(7(F15.6," "))') iFreq*(1.0/p%grid%AnalysisTime), ( S(iFreq,1,iY), phaseAngles(1,iFreq,iY), iY=1,3 )
-END DO
-#endif
 
 
 IF ( ALLOCATED(OtherSt_RandNum%nextSeed ) ) DEALLOCATE( OtherSt_RandNum%nextSeed )  
@@ -314,7 +264,7 @@ CALL CheckError()
 !..................................................................................................................................
 ! Write statistics of the run to the summary file:
 !..................................................................................................................................
-CALL WrSum_Stats(p, V, USig, VSig, WSig, UXBar, UXSig, ErrStat, ErrMsg)
+CALL WrSum_Stats(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 CALL CheckError()
 
 !..................................................................................................................................
@@ -418,17 +368,9 @@ ENDIF
 
 CALL CPU_TIME ( CPUtime )
 WRITE (p%US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2LStr( CPUtime ) )
+CALL WrScr1  (  ' Processing complete.  '//TRIM( Num2LStr( CPUtime ) )//' CPU seconds used.' )
 
-!BONNIE: ****************************
-!Time = TIMEF()
-!PRINT *, Time
-!WRITE (US,"(//,'BONNIE TEST.  ',A,' seconds for completion.')")  TRIM( Flt2LStr( CPUtime ) )
-!END BONNIE ************************************
-
-CALL TS_End( p )
-
-
-CALL WrScr1  ( ' Processing complete.  '//TRIM( Num2LStr( CPUtime ) )//' CPU seconds used.' )
+CALL TS_End( p, OtherSt_RandNum )
 CALL NormStop
 
 
@@ -438,10 +380,18 @@ SUBROUTINE CheckError()
    IF (ErrStat /= ErrID_None) THEN
    
       IF (ErrStat >= AbortErrLev) THEN
-         CALL TS_end(p)
+
+         IF (ALLOCATED(PhaseAngles)) DEALLOCATE(PhaseAngles)
+         IF (ALLOCATED(S          )) DEALLOCATE(S          )
+         IF (ALLOCATED(V          )) DEALLOCATE(V          )
+         IF (ALLOCATED(U          )) DEALLOCATE(U          )
+         IF (ALLOCATED(HWindDir   )) DEALLOCATE(HWindDir   )
+         
          
          WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(ErrMSg)
          WRITE (p%US, "('ABORTING PROGRAM.')" )
+
+         CALL TS_end(p, OtherSt_RandNum)
          
          CALL ProgAbort ( TRIM(ErrMSg), .FALSE., 5.0_ReKi )
          

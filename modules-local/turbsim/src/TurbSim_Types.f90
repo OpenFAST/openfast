@@ -6,12 +6,9 @@ use NWTC_Library
 TYPE(ProgDesc), PARAMETER    :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.00a-bjj', '29-Aug-2014' )
 
 LOGICAL,    PARAMETER        :: COH_OUT   = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
-LOGICAL,    PARAMETER        :: DEBUG_OUT = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 LOGICAL,    PARAMETER        :: PSD_OUT   = .FALSE. !                     ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 LOGICAL,    PARAMETER        :: MVK       = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 LOGICAL,    PARAMETER        :: PeriodicY = .FALSE. !.TRUE.
-
-INTEGER,    PARAMETER        :: UD       = 20                            ! I/O unit for debugging data.
 
 
    INTEGER(IntKi), PARAMETER :: MaxMsgLen = 1024 ! Maximum length of error messages

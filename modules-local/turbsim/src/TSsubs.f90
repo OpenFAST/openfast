@@ -725,12 +725,6 @@ DO IVec=1,3
 
       Work(NumSteps) = 0.0
 
-#ifdef DEBUG_TS      
-if (IPoint==1      ) then
- write(74,'('//trim(num2lstr(NumSteps))//'(F15.6," "))') Work
- write(74,'('//trim(num2lstr(NumSteps))//'(F15.6," "))') V(:, IPoint, IVec)
-end if
-#endif
          ! perform FFT
 
       CALL ApplyFFT( Work, FFT_Data, ErrStat2 )
@@ -785,13 +779,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    REAL(ReKi)                       :: HalfDelF                         ! half of the delta frequency, used to discretize the continuous PSD at each point
    
    
-   INTEGER(IntKi)                   :: UP                               ! I/O unit for PSD debugging file.
-   REAL(ReKi)                       :: HorVar                           ! Variables used when DEBUG_OUT is set
-   REAL(ReKi)                       :: Total                            ! Variables used when DEBUG_OUT is set
-   REAL(ReKi)                       :: TotalU                           ! Variables used when DEBUG_OUT is set             
-   REAL(ReKi)                       :: TotalV                           ! Variables used when DEBUG_OUT is set
-   REAL(ReKi)                       :: TotalW                           ! Variables used when DEBUG_OUT is set
-   
+   INTEGER(IntKi)                   :: UP                               ! I/O unit for PSD debugging file.   
    
    INTEGER(IntKi)                   :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)             :: ErrMsg2                          ! Message describing error (local)
@@ -2089,10 +2077,6 @@ print *, 'NumSteps =', NumSteps
          p%usr%S(          p%usr%nFreq,iPoint,iVec) = 0.0_ReKi !work(p%usr%nFreq)**2  ! this frequency doesn't seem to get used in the code, so I'm going to set it to zero. work(p%usr%nFreq)**2 is not the value we want.
          p%usr%PhaseAngles(p%usr%nFreq,iPoint,iVec) = 0.0_ReKi         
 
-#ifdef DEBUG_TS         
-WRITE( 75, '('//trim(num2lstr(NumSteps))//'(F15.6," "))') work
-#endif
-
       ENDDO ! IPoint
    ENDDO ! IVec 
    
@@ -2103,18 +2087,11 @@ WRITE( 75, '('//trim(num2lstr(NumSteps))//'(F15.6," "))') work
    end do
    
    p%usr%S = p%usr%S*2.0_ReKi/p%usr%f(1)  ! make this the single-sided velocity spectra we're using in the rest of the code
-   
-   
-#ifdef DEBUG_TS         
-DO iFreq=1,p%usr%nFreq
-   WRITE( 72, '('//trim(num2lstr(1+2*p%usr%nComp*p%usr%nPoints))//'(F15.6," "))') p%usr%f(iFreq), ( (p%usr%S(iFreq,iPoint,iVec), p%usr%phaseAngles(iFreq,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
-END DO
-#endif
+      
 
+   CALL Cleanup()
 
-CALL Cleanup()
-
-RETURN
+   RETURN
 CONTAINS
 !...........................................
    SUBROUTINE Cleanup()
@@ -2128,10 +2105,12 @@ CONTAINS
             
 END SUBROUTINE TimeSeriesToSpectra
 !=======================================================================
-SUBROUTINE TS_End(p)
+SUBROUTINE TS_End(p, OtherSt_RandNum)
 
 
-   TYPE(TurbSim_ParameterType), INTENT(INOUT) ::  p                 !< parameters 
+   TYPE(TurbSim_ParameterType),  INTENT(INOUT) :: p                 !< parameters 
+!   TYPE(CohStr_ParameterType),   INTENT(INOUT) :: p_CohStr          !< parameters for coherent structures
+   TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum   !< other states for random numbers (next seed, etc)
 
    
    IF (p%US > 0) THEN
@@ -2139,15 +2118,14 @@ SUBROUTINE TS_End(p)
       p%US = -1
    END IF
    
-   IF (DEBUG_OUT) CLOSE( UD )       ! Close the debugging file
       
 !bjj: todo: add more; make sure everything is deallocated here; make sure files are closed, too.   
          
    IF ( ALLOCATED( p%grid%Y            ) )  DEALLOCATE( p%grid%Y            )
    IF ( ALLOCATED( p%grid%Z            ) )  DEALLOCATE( p%grid%Z            )
-   IF ( ALLOCATED( p%grid%Freq         ) )  DEALLOCATE( p%grid%Freq         )
-   IF ( ALLOCATED( p%grid%TwrPtIndx    ) )  DEALLOCATE( p%grid%TwrPtIndx    )
    IF ( ALLOCATED( p%grid%GridPtIndx   ) )  DEALLOCATE( p%grid%GridPtIndx   )
+   IF ( ALLOCATED( p%grid%TwrPtIndx    ) )  DEALLOCATE( p%grid%TwrPtIndx    )
+   IF ( ALLOCATED( p%grid%Freq         ) )  DEALLOCATE( p%grid%Freq         )
    
    IF ( ALLOCATED( p%met%ZL_profile    ) )  DEALLOCATE( p%met%ZL_profile    )
    IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile )
@@ -2169,15 +2147,11 @@ SUBROUTINE TS_End(p)
    IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S             )
    IF ( ALLOCATED( p%usr%phaseAngles   ) )  DEALLOCATE( p%usr%phaseAngles   )
    
+   IF ( ALLOCATED( p%RNG%RandSeedAry   ) )  DEALLOCATE( p%RNG%RandSeedAry   )
    
-   !IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)  
-   !
-   !
-   !IF ( ALLOCATED( p_CohStr%EventID   ) )  DEALLOCATE( p_CohStr%EventID   )
-   !IF ( ALLOCATED( p_CohStr%EventTS   ) )  DEALLOCATE( p_CohStr%EventTS   )
-   !IF ( ALLOCATED( p_CohStr%EventLen  ) )  DEALLOCATE( p_CohStr%EventLen  )
-   !IF ( ALLOCATED( p_CohStr%pkCTKE    ) )  DEALLOCATE( p_CohStr%pkCTKE    )   
-   !   
+   
+   IF (ALLOCATED(OtherSt_RandNum%nextSeed) ) DEALLOCATE(OtherSt_RandNum%nextSeed)  
+         
 
 END SUBROUTINE TS_END
 !=======================================================================

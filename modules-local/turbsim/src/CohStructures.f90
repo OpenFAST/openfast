@@ -724,13 +724,7 @@ SUBROUTINE CohStr_WriteEvents( RootName, p_CohStr, e_CohStr, y_CohStr, TScale, U
 
    UnIn = -1
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-   
-   
-IF (DEBUG_OUT) THEN
-   WRITE (UD,'(/,A)' ) 'Computed Coherent Events'
-   WRITE (UD,*) 'Event#     Start Time        End Time'
-ENDIF
-
+      
 
       ! Write event data to the time step output file (opened at the beginnig)
 
@@ -808,10 +802,6 @@ ENDIF
          ! Add one (delta time) space between events
 
       CurrentTime = CurrentTime + deltaTime*TScale
-
-IF (DEBUG_OUT) THEN
-   WRITE ( UD,'(I6, 2(2x,F14.5))' ) PtrCurr%EventNum, PtrCurr%TStart, CurrentTime
-ENDIF
 
       PtrPrev => PtrCurr
       PtrCurr => PtrCurr%Next
