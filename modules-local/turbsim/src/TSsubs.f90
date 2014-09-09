@@ -1751,185 +1751,7 @@ SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
    END IF    
          
 END SUBROUTINE TimeSeriesScaling_ReynoldsStress
-!=======================================================================
-SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_ID, IsIECModel, ErrStat, ErrMsg )
-! REQUires these be set prior to calling:NumTurbInp, IECedition, IECTurbC, IEC_WindType, IsIECModel
-! calculates SigmaIEC, Lambda, IntegralScale, Lc
 
-   TYPE(IEC_ParameterType), INTENT(INOUT) :: p_IEC                       ! parameters for IEC models
-   REAL(ReKi)             , INTENT(IN)    :: HubHt                       ! Hub-height
-   REAL(ReKi)             , INTENT(IN)    :: UHub                        ! Hub-height (total) wind speed (m/s)
-   
-   REAL(ReKi)             , INTENT(OUT)   :: InCDec     (3)              ! Contains the coherence decrements
-   REAL(ReKi)             , INTENT(OUT)   :: InCohB     (3)              ! Contains the coherence b/L (offset) parameters
-   INTEGER(IntKi)         , INTENT(IN)    :: TurbModel_ID                ! Integer value of spectral model (see SpecModel enum)      
-   LOGICAL                , INTENT(IN)    :: IsIECModel                  ! Determines if this is actually an IEC model, or if we just set the values to 0 and return      
-   INTEGER(IntKi),          intent(  out) :: ErrStat                       !< Error level
-   CHARACTER(*),            intent(  out) :: ErrMsg                        !< Message describing error
-   
-      
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   IF ( .NOT. IsIECModel )  THEN  
-      
-       p_IEC%SigmaIEC = 0
-       p_IEC%Lambda = 0
-       p_IEC%IntegralScale = 0
-       p_IEC%LC = 0.0    ! The length scale is not defined for the non-IEC models
-    
-       RETURN
-       
-   ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', 'API', or 'MODVKM'
-   
-   
-   
-      ! If IECKAI or IECVKM spectral models are specified, determine turb intensity 
-      ! and slope of Sigma wrt wind speed from IEC turbulence characteristic, 
-      ! IECTurbC = A, B, or C or from user specified quantity.
-
-   
-   IF ( p_IEC%NumTurbInp )  THEN
-   
-         ! user specified a particular percent TI:
-         
-      p_IEC%TurbInt     = 0.01*p_IEC%PerTurbInt
-      p_IEC%SigmaIEC(1) = p_IEC%TurbInt*UHub
-      
-      ! bjj: note Vave isn't set in this case, but we only print it to the summary file (and use it) if .not. NumTurbInp      
-
-   ELSE
-
-      
-      SELECT CASE (p_IEC%IECedition)
-
-         CASE ( 2 )
-
-            IF ( p_IEC%IECTurbC  == 'A' ) THEN
-               p_IEC%TurbInt15  = 0.18
-               p_IEC%SigmaSlope = 2.0
-            ELSEIF ( p_IEC%IECTurbC  == 'B' ) THEN
-               p_IEC%TurbInt15  = 0.16
-               p_IEC%SigmaSlope = 3.0
-            ELSE   ! We should never get here, but just to be complete...
-               ErrStat = ErrID_Fatal
-               ErrMsg =  'CalcIECScalingParams: Invalid IEC turbulence characteristic.'
-               RETURN
-            ENDIF
-
-            p_IEC%SigmaIEC(1) = p_IEC%TurbInt15*( ( 15.0 + p_IEC%SigmaSlope*UHub ) / ( p_IEC%SigmaSlope + 1.0 ) )
-            p_IEC%TurbInt     = p_IEC%SigmaIEC(1)/UHub
-         
-         CASE ( 3 )
-
-            IF ( p_IEC%IECTurbC == 'A' ) THEN
-               p_IEC%TurbInt15  = 0.16
-            ELSEIF ( p_IEC%IECTurbC == 'B' ) THEN
-               p_IEC%TurbInt15  = 0.14
-            ELSEIF ( p_IEC%IECTurbC == 'C' ) THEN
-               p_IEC%TurbInt15  = 0.12
-            ELSE   ! We should never get here, but just to be complete...
-               ErrStat = ErrID_Fatal
-               ErrMsg =  'CalcIECScalingParams: Invalid IEC turbulence characteristic.'
-               RETURN
-            ENDIF  
-
-                   
-            SELECT CASE ( p_IEC%IEC_WindType )
-               CASE ( IEC_NTM )
-                  p_IEC%SigmaIEC(1) = p_IEC%TurbInt15*( 0.75*UHub + 5.6 )                                      ! [IEC-1 Ed3 6.3.1.3 (11)]
-               CASE ( IEC_ETM )
-                  p_IEC%Vave        = 0.2*p_IEC%Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
-                  p_IEC%SigmaIEC(1) = p_IEC%ETMc * p_IEC%TurbInt15 * ( 0.072 * &
-                                     ( p_IEC%Vave / p_IEC%ETMc + 3.0) * (Uhub / p_IEC%ETMc - 4.0)+10.0 )       ! [IEC-1 Ed3 6.3.2.3 (19)]
-               CASE ( IEC_EWM1, IEC_EWM50, IEC_EWM100 )
-                  p_IEC%Vave        = 0.2*p_IEC%Vref                                                           ! [IEC-1 Ed3 6.3.1.1 ( 9)]
-                  p_IEC%SigmaIEC(1) = 0.11*Uhub                                                                ! [IEC-1 Ed3 6.3.2.1 (16)]
-               CASE DEFAULT 
-                  ErrStat = ErrID_Fatal
-                  ErrMsg =  'CalcIECScalingParams: Invalid IEC wind type.'
-                  RETURN
-            END SELECT           
-            p_IEC%TurbInt  = p_IEC%SigmaIEC(1)/UHub     
-            
-         CASE DEFAULT ! Likewise, this should never happen...
-
-            ErrStat = ErrID_Fatal
-            ErrMsg =  'CalcIECScalingParams: Invalid IEC 61400-1 edition number.'
-            RETURN
-            
-         END SELECT                            
-      
-
-   ENDIF
-
-   ! note PLExp for IEC is set elsewhere
-   
-      ! IEC turbulence scale parameter, Lambda(1), and IEC coherency scale parameter, LC
-
-   IF ( p_IEC%IECedition == 2 ) THEN  
-      
-         ! section 6.3.1.3 Eq. 9
-      IF ( HubHt < 30.0 )  THEN
-         p_IEC%Lambda(1) = 0.7*HubHt
-      ELSE
-         p_IEC%Lambda(1) = 21.0
-      ENDIF
-
-      p_IEC%LC = 3.5*p_IEC%Lambda(1)
-      InCDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
-
-   ELSE !IF (p_IEC%IECedition == 3 ) THEN
-      
-         ! section 6.3.1.3 Eq. 9      
-         
-      IF ( HubHt < 60.0 )  THEN
-         p_IEC%Lambda(1) = 0.7*HubHt
-      ELSE
-         p_IEC%Lambda(1) = 42.0
-      ENDIF
-
-      p_IEC%LC = 8.1*p_IEC%Lambda(1)
-      InCDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
-
-   ENDIF
-   
-   InCohB(:)    = 0.12/p_IEC%LC
-         
-   
-      ! Set Lambda for Modified von Karman model:
-#ifdef MVK
-!bjj: this will probably need to be rethought with TurbSim v2.0
-   IF ( MVK .AND. TurbModel_ID  == SpecModel_MODVKM ) THEN
-      p%met%z0 = FindZ0(HubHt, p_IEC%SigmaIEC(1), UHub, p%met%Fc)
-      CALL ScaleMODVKM(HubHt, UHub, p_IEC%Lambda(1), p_IEC%Lambda(2), p_IEC%Lambda(3))
-   ENDIF   
-#endif
-   
-      ! Sigma for v and w components and
-      ! Integral scales (which depend on lambda)
-   
-   IF ( TurbModel_ID == SpecModel_IECVKM ) THEN
-      
-      p_IEC%SigmaIEC(2)      =  1.0*p_IEC%SigmaIEC(1)
-      p_IEC%SigmaIEC(3)      =  1.0*p_IEC%SigmaIEC(1)
-      
-      p_IEC%IntegralScale(:) =  3.5 *p_IEC%Lambda(1)   !L_k
-            
-   ELSE
-      
-      p_IEC%SigmaIEC(2)      =  0.8*p_IEC%SigmaIEC(1)
-      p_IEC%SigmaIEC(3)      =  0.5*p_IEC%SigmaIEC(1)
-            
-      p_IEC%IntegralScale(1) =  8.1 *p_IEC%Lambda(1)   !L_k
-      p_IEC%IntegralScale(2) =  2.7 *p_IEC%Lambda(1)   !L_k
-      p_IEC%IntegralScale(3) =  0.66*p_IEC%Lambda(1)   !L_k
-      
-   END IF
-   
-   
-
-END SUBROUTINE CalcIECScalingParams
 !=======================================================================
 SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
 
@@ -1975,12 +1797,13 @@ SUBROUTINE TS_ValidateInput(P, ErrStat, ErrMsg)
 
    INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
-   
+
+      ! local variables
+   INTEGER(IntKi)                                 :: UnOut                           ! unit for output files
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
-  !CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+
    
-
-
 
 ErrStat = ErrID_None
 ErrMsg  = ""
@@ -2021,8 +1844,7 @@ IF ( ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. 
 ENDIF        
 
 
-      ! Warn if Periodic is used with incompatible settings
-      
+      ! Warn if Periodic is used with incompatible settings      
 IF ( p%grid%Periodic .AND. .NOT. EqualRealNos(p%grid%AnalysisTime, p%grid%UsableTime) ) THEN
    CALL SetErrStat( ErrID_Warn, 'Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', ErrStat, ErrMsg, 'TS_ValidateInput')  
    p%grid%Periodic = .FALSE.
@@ -2036,6 +1858,116 @@ IF ( p%WrFile(FileExt_TWR) .AND. .NOT. ( p%WrFile(FileExt_WND) .OR. p%WrFile(Fil
 END IF
 
 
+
+   ! Open appropriate output files.  We will open formatted FF files later, if requested.
+   ! Mention the files in the summary file.
+
+IF ( ANY (p%WrFile) )  THEN
+   CALL GetNewUnit( UnOut )
+
+   WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
+   CALL WrScr1  (   ' You have requested that the following file(s) be generated:' )
+
+   IF ( p%WrFile(FileExt_BIN) )  THEN   
+
+!      CALL OpenBOutFile ( UnOut, TRIM( p%RootName)//'.bin', ErrStat, ErrMsg )
+      CALL OpenUOutfile ( UnOut , TRIM( p%RootName)//'.bin', ErrStat2, ErrMsg2 )  ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UnOut)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (binary hub-height turbulence-parameter file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
+
+   ENDIF
+
+   IF ( p%WrFile(FileExt_DAT) )  THEN     
+
+      CALL OpenFOutFile ( UnOut, TRIM( p%RootName)//'.dat', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UnOut )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      
+      WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (formatted turbulence-parameter file)' )")  
+      CALL WrScr   ( '     '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
+
+   ENDIF
+
+   IF ( p%WrFile(FileExt_HH) )  THEN     
+
+      CALL OpenFOutFile ( UnOut, TRIM( p%RootName)//'.hh', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UnOut )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (AeroDyn hub-height file)' )")
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
+
+   ENDIF
+
+   IF ( p%WrFile(FileExt_BTS) )  THEN
+
+      CALL OpenBOutFile ( UnOut, TRIM(p%RootName)//'.bts', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE( UnOut )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (AeroDyn/TurbSim full-field wind file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
+
+   ENDIF
+
+   IF ( p%WrFile(FileExt_WND) )  THEN
+
+      CALL OpenBOutFile ( UnOut, TRIM(p%RootName)//'.wnd', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UnOut)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (AeroDyn/BLADED full-field wnd file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
+
+   ENDIF
+   
+   IF ( p%WrFile(FileExt_TWR) .AND. p%WrFile(FileExt_WND) )  THEN
+
+      CALL OpenBOutFile ( UnOut, TRIM( p%RootName )//'.twr', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UnOut)       
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (binary tower file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
+
+   ENDIF
+
+   IF ( p%WrFile(FileExt_CTS) ) THEN      
+      CALL OpenBOutFile ( UnOut, TRIM( p%RootName )//'.cts', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
+      CLOSE(UnOut)       
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      
+      
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
+   ENDIF
+
+   IF ( p%WrFile(FileExt_UVW) )  THEN
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (formatted full-field U-component file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.u (formatted full-field U-component file)' )
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (formatted full-field V-component file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.v (formatted full-field V-component file)' )
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (formatted full-field W-component file)' )")  
+      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
+   ENDIF
+
+ELSE
+   CALL SetErrStat( ErrID_Fatal, 'You have requested no output.', ErrStat, ErrMsg, 'TS_ValidateInput')   
+ENDIF
+
+   ! WARN if using a large grid and not creating ff output files
+IF ( p%grid%NumGrid_Y*p%grid%NumGrid_Z > 250 ) THEN 
+   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
+   
+      CALL SetErrStat( ErrID_Warn, 'You are using a large number of grid points but are not generating full-field output files.'//&
+            ' The simulation will run faster if you reduce the number of points on the grid.', ErrStat, ErrMsg, 'TS_ValidateInput') 
+   END IF   
+END IF
 
 END SUBROUTINE TS_ValidateInput
 !=======================================================================
@@ -2207,6 +2139,8 @@ SUBROUTINE TS_End(p)
       p%US = -1
    END IF
    
+   IF (DEBUG_OUT) CLOSE( UD )       ! Close the debugging file
+      
 !bjj: todo: add more; make sure everything is deallocated here; make sure files are closed, too.   
          
    IF ( ALLOCATED( p%grid%Y            ) )  DEALLOCATE( p%grid%Y            )

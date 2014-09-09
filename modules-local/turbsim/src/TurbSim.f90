@@ -96,7 +96,6 @@ INTEGER                 ::  IFreq ! for debugging
 
 INTEGER                 ::  IY  , I                         ! An index for the Y position of a point I
 
-INTEGER                 ::  UnOut                           ! unit for output files
 
 
 CHARACTER(200)          :: InFile                           ! Name of the TurbSim input file.
@@ -148,107 +147,8 @@ CALL CheckError()
 CALL WrSum_EchoInputs(p, p_CohStr) 
 call WrSum_UserInput(p%met,p%US)
 
-call TS_ValidateInput(p, ErrStat, ErrMsg)
+CALL TS_ValidateInput(p, ErrStat, ErrMsg)
 CALL CheckError()
-
-
-   ! Open appropriate output files.  We will open formatted FF files later, if requested.
-   ! Mention the files in the summary file.
-
-IF ( ANY (p%WrFile) )  THEN
-   CALL GetNewUnit( UnOut )
-
-   WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
-   CALL WrScr1  ( ' You have requested that the following file(s) be generated:' )
-
-   IF ( p%WrFile(FileExt_BIN) )  THEN   
-
-!      CALL OpenBOutFile ( UnOut, TRIM( p%RootName)//'.bin', ErrStat, ErrMsg )
-      CALL OpenUOutfile ( UnOut , TRIM( p%RootName)//'.bin', ErrStat, ErrMsg )  ! just making sure it can be opened (not locked elsewhere)
-      CLOSE(UnOut)
-      CALL CheckError()
-      
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (a binary hub-height turbulence-parameter file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.bin (a binary hub-height turbulence-parameter file)' )
-
-   ENDIF
-
-   IF ( p%WrFile(FileExt_DAT) )  THEN     
-
-      CALL OpenFOutFile ( UnOut, TRIM( p%RootName)//'.dat', ErrStat, ErrMsg ) ! just making sure it can be opened (not locked elsewhere)
-      CLOSE( UnOut )
-      CALL CheckError()
-      
-      WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (a formatted turbulence-parameter file)' )")  
-      CALL WrScr ( '     '//TRIM( p%RootName)//'.dat (a formatted turbulence-parameter file)' )
-
-   ENDIF
-
-   IF ( p%WrFile(FileExt_HH) )  THEN     
-
-      CALL OpenFOutFile ( UnOut, TRIM( p%RootName)//'.hh', ErrStat, ErrMsg ) ! just making sure it can be opened (not locked elsewhere)
-      CLOSE( UnOut )
-      CALL CheckError()
-      
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (an AeroDyn hub-height file)' )")
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.hh  (an AeroDyn hub-height file)' )
-
-   ENDIF
-
-   IF ( p%WrFile(FileExt_BTS) )  THEN
-
-      CALL OpenBOutFile ( UnOut, TRIM(p%RootName)//'.bts', ErrStat, ErrMsg )
-      CLOSE( UnOut )
-      CALL CheckError()
-
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (an AeroDyn/TurbSim full-field wind file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.bts (an AeroDyn/TurbSim full-field wind file)' )
-
-   ENDIF
-
-   IF ( p%WrFile(FileExt_WND) )  THEN
-
-      CALL OpenBOutFile ( UnOut, TRIM(p%RootName)//'.wnd', ErrStat, ErrMsg )
-      CLOSE(UnOut)
-      CALL CheckError()
-
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (an AeroDyn/BLADED full-field wnd file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.wnd (an AeroDyn/BLADED full-field wnd file)' )
-
-   ENDIF
-   
-   IF ( p%WrFile(FileExt_TWR) .AND. p%WrFile(FileExt_WND) )  THEN
-
-      CALL OpenBOutFile ( UnOut, TRIM( p%RootName )//'.twr', ErrStat, ErrMsg )
-      CLOSE(UnOut)       
-      CALL CheckError()
-
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (a binary tower file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.twr (a binary tower file)' )
-
-   ENDIF
-
-   IF ( p%WrFile(FileExt_CTS) ) THEN      
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (a coherent turbulence time step file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.cts (a coherent turbulence time step file)' )
-   ENDIF
-
-   IF ( p%WrFile(FileExt_UVW) )  THEN
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (a formatted full-field U-component file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.u (a formatted full-field U-component file)' )
-
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (a formatted full-field V-component file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.v (a formatted full-field V-component file)' )
-
-      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (a formatted full-field W-component file)' )")  
-      CALL WrScr ( '    '//TRIM( p%RootName)//'.w (a formatted full-field W-component file)' )
-   ENDIF
-
-ELSE
-   ErrStat = ErrID_Fatal
-   ErrMsg  = 'You have requested no output.'
-   CALL CheckError()
-ENDIF
 
 
 !..................................................................................................................................
@@ -259,9 +159,6 @@ ENDIF
 CALL CreateGrid( p%grid, p%usr, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
 CALL CheckError()
       
-CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat, ErrMsg)                  
-CALL CheckError()
-
 !..................................................................................................................................
 ! Calculate mean velocity and direction profiles:
 !..................................................................................................................................
@@ -445,7 +342,6 @@ END IF
 !..................................................................................................................................
 CALL AddMeanAndRotate(p, V, U, HWindDir)
 
-
    ! Deallocate memory for the matrix of the steady, u-component winds.
 
 IF ( ALLOCATED( U        ) )  DEALLOCATE( U        )
@@ -477,13 +373,12 @@ IF ( p%WrFile(FileExt_CTS) ) THEN
 ENDIF !WrACT
 
 !..................................................................................................................................
-! Generate output files:
+! Generate full-field output files:
 !..................................................................................................................................
 
-   ! Are we generating FF files?
+   ! Are we generating binary FF files?
 IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
    CALL WrSum_InterpolatedHubStats(p, V)
-
       
    IF ( p%WrFile(FileExt_BTS) ) THEN
       CALL WrBinTURBSIM(p, V, ErrStat, ErrMsg)
@@ -497,8 +392,7 @@ IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
 END IF
 
 
-   ! Are we generating FF formatted files?
-
+   ! Are we generating formatted (text) FF files?
 IF ( p%WrFile(FileExt_UVW) )  THEN
    CALL WrFormattedFF(p%RootName, p%grid, p%UHub, V)
 ENDIF ! ( WrFile(FileExt_UVW) )
@@ -511,12 +405,8 @@ ENDIF ! ( WrFile(FileExt_UVW) )
 
    ! Deallocate the V, Y, Z, and IYmax arrays.
 
-IF ( ALLOCATED( V               ) )  DEALLOCATE( V               )
-IF ( ALLOCATED( p%grid%Y        ) )  DEALLOCATE( p%grid%Y        )
-IF ( ALLOCATED( p%grid%Z        ) )  DEALLOCATE( p%grid%Z        )
+IF ( ALLOCATED( V  ) )  DEALLOCATE( V )
 
-
-IF (DEBUG_OUT) CLOSE( UD )       ! Close the debugging file
 
 WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p%grid%TimeStep)
 IF ( p%WrFile(FileExt_CTS) .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
@@ -527,7 +417,6 @@ ENDIF
    ! Request CPU-time used.
 
 CALL CPU_TIME ( CPUtime )
-
 WRITE (p%US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2LStr( CPUtime ) )
 
 !BONNIE: ****************************
@@ -536,8 +425,8 @@ WRITE (p%US,"(//,'Processing complete.  ',A,' CPU seconds used.')")  TRIM( Num2L
 !WRITE (US,"(//,'BONNIE TEST.  ',A,' seconds for completion.')")  TRIM( Flt2LStr( CPUtime ) )
 !END BONNIE ************************************
 
-CLOSE ( p%US )
-p%US = -1
+CALL TS_End( p )
+
 
 CALL WrScr1  ( ' Processing complete.  '//TRIM( Num2LStr( CPUtime ) )//' CPU seconds used.' )
 CALL NormStop
@@ -559,6 +448,7 @@ SUBROUTINE CheckError()
       ELSE
          CALL WrScr(TRIM(ErrMsg))
       END IF
+      
    END IF
 END SUBROUTINE CheckError
 
