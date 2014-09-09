@@ -2575,9 +2575,7 @@ END SUBROUTINE WrBinTURBSIM
 !=======================================================================
 SUBROUTINE WrFormattedFF(RootName, p_grid, UHub, V )
 
-USE TurbSim_Types
-
-   IMPLICIT                NONE
+   IMPLICIT  NONE
 
    CHARACTER(*),                    intent(in   ) :: RootName             ! Rootname of output file
    TYPE(Grid_ParameterType),        INTENT(IN)    :: p_grid

@@ -435,9 +435,6 @@ END SUBROUTINE getDirectionProfile
 !> This subroutine sets the scalar Velocity, which contains the velocity in m/s
 !! at the height in mebers specified by the input value Ht.
 SUBROUTINE getVelocity(p, U_Ref, z_Ref, Ht, Velocity, ErrStat, ErrMsg )
-
-   ! Determine the wind speed at a given height, with reference wind speed.
-   use TurbSim_Types
    
    IMPLICIT                              NONE
 

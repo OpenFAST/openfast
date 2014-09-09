@@ -58,12 +58,9 @@ PROGRAM TurbSim
    ! --------------------------------------------------------------------------------------------------------
 
 
-USE                        ModifiedvKrm_mod
-USE                        TSsubs
+USE TSsubs
 USE TS_FileIO
-   USE TS_RandNum
-   USE TS_Profiles
-   USE TS_VelocitySpectra
+USE TS_Profiles
 use TS_CohStructures
 
 
