@@ -141,24 +141,6 @@ DO J=1,p%grid%NPoints
    END DO ! I  
 END DO ! J        
 
-IF ( COH_OUT ) THEN
-
-      ! Write the coherence for three frequencies, for debugging purposes
-      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-      
-      CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-         
-      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,p%grid%NPacked)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance',     Dist(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance/U',   DistU(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '(r/Z)^CohExp', DistZMExp(:)
-
-ENDIF
 
 IF ( p%met%IsIECmodel ) THEN
    IVec_End = 1
@@ -216,7 +198,7 @@ DO IVec = 1,IVec_End
       
 !call wrmatrix( trh, 77, 'ES15.5' )
 
-      CALL Coh2H(    p, IVec, IFreq, TRH, S, UC, ErrStat2, ErrMsg2 )       
+      CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )       
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -249,8 +231,6 @@ RETURN
 !............................................
 CONTAINS
    SUBROUTINE Cleanup()
-
-      IF (COH_OUT .AND. UC > 0)  CLOSE( UC )
 
       IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
       IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
@@ -303,6 +283,7 @@ INTEGER                      :: Stat
 
 INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
 
+LOGICAL,    PARAMETER        :: COH_OUT   = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
@@ -427,7 +408,15 @@ DO IVec = 1,IVec_End
          ENDDO ! J
       ENDDO ! I
       
-      CALL Coh2H(    p, IVec, IFreq, TRH, S, UC, ErrStat2, ErrMsg2 )
+      
+      IF (COH_OUT) THEN
+!        IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
+            WRITE( UC, '(I3,2X,F15.5,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
+!        ENDIF
+      ENDIF
+      
+      
+      CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -507,7 +496,7 @@ integer                          :: Indx, J, I
 
 END SUBROUTINE EyeCoh2H
 !=======================================================================
-SUBROUTINE Coh2H( p, IVec, IFreq, TRH, S, UC, ErrStat, ErrMsg )
+SUBROUTINE Coh2H( p, IVec, IFreq, TRH, S, ErrStat, ErrMsg )
 
 !use NWTC_LAPACK
 
@@ -516,7 +505,6 @@ REAL(ReKi),                  INTENT(INOUT)  :: TRH         (:)                  
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)                      ! The turbulence PSD array (NumFreq,NPoints,3).
 INTEGER(IntKi),              INTENT(IN)     :: IVec                                     ! loop counter (=number of wind components)
 INTEGER(IntKi),              INTENT(IN)     :: IFreq                                    ! loop counter (=number of frequencies)
-INTEGER(IntKi),              INTENT(IN)     :: UC                                       ! unit number for optional coherence debugging file
 
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
@@ -525,12 +513,6 @@ CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 integer                          :: Indx, J, I, NPts
 
          
-   IF (COH_OUT) THEN
-!     IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
-         WRITE( UC, '(I3,2X,F15.5,1X,'//INT2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
-!     ENDIF
-   ENDIF
-
       ! -------------------------------------------------------------
       ! Calculate the Cholesky factorization for the coherence matrix
       ! -------------------------------------------------------------      
@@ -777,13 +759,12 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    REAL(ReKi)                       :: ZTmp, UTmp                       ! temporary height and velocity used for finite difference calculations
    
    REAL(ReKi)                       :: HalfDelF                         ! half of the delta frequency, used to discretize the continuous PSD at each point
-   
-   
-   INTEGER(IntKi)                   :: UP                               ! I/O unit for PSD debugging file.   
+      
+   !INTEGER(IntKi)                   :: UP                               ! I/O unit for PSD debugging file.   
+   !CHARACTER(200)                   :: FormStr                          ! String used to store format specifiers for PSD debugging.
    
    INTEGER(IntKi)                   :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)             :: ErrMsg2                          ! Message describing error (local)
-   CHARACTER(200)                   :: FormStr                          ! String used to store format specifiers.
    
 
       ! initialize variables
@@ -950,36 +931,33 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
       END SELECT          
    
          
-         
-   
-   IF (PSD_OUT) THEN
-      UP = -1
-      CALL GetNewUnit( UP, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
-      CALL OpenFOutFile ( UP, TRIM( p%RootName )//'.psd', ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF   
-      
-      WRITE (UP,"(A)")  'PSDs '
-      WRITE (UP, "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p%grid%NumFreq ) )//"('"//TAB//"',G10.4) )")  'Comp','Ht', p%grid%Freq(:)
-      FormStr  = "( I4,"//TRIM( Int2LStr( p%grid%NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
-      
-      DO IPoint=1,p%grid%NPoints           
-                                                                            
-         !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
-            WRITE( UP, FormStr ) 1, p%grid%Z(IPoint), S(:,IPoint,1)/HalfDelF
-            WRITE( UP, FormStr ) 2, p%grid%Z(IPoint), S(:,IPoint,2)/HalfDelF
-            WRITE( UP, FormStr ) 3, p%grid%Z(IPoint), S(:,IPoint,3)/HalfDelF
-         !ENDIF
-      
-      ENDDO ! IPoint
-   
-      CLOSE( UP )
-   ENDIF
-   
+   !IF (PSD_OUT) THEN
+   !   UP = -1
+   !   CALL GetNewUnit( UP, ErrStat2, ErrMsg2 )
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+   !   CALL OpenFOutFile ( UP, TRIM( p%RootName )//'.psd', ErrStat2, ErrMsg2)
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+   !      IF (ErrStat >= AbortErrLev) THEN
+   !         CALL Cleanup()
+   !         RETURN
+   !      END IF   
+   !   
+   !   WRITE (UP,"(A)")  'PSDs '
+   !   WRITE (UP, "( A4,'"//TAB//"',A4,"//TRIM( Int2LStr( p%grid%NumFreq ) )//"('"//TAB//"',G10.4) )")  'Comp','Ht', p%grid%Freq(:)
+   !   FormStr  = "( I4,"//TRIM( Int2LStr( p%grid%NumFreq+1 ) )//"('"//TAB//"',G10.4) )"
+   !   
+   !   DO IPoint=1,p%grid%NPoints           
+   !                                                                         
+   !      !IF ( ABS(Ht - p%grid%HubHt) < Tolerance ) THEN
+   !         WRITE( UP, FormStr ) 1, p%grid%Z(IPoint), S(:,IPoint,1)/HalfDelF
+   !         WRITE( UP, FormStr ) 2, p%grid%Z(IPoint), S(:,IPoint,2)/HalfDelF
+   !         WRITE( UP, FormStr ) 3, p%grid%Z(IPoint), S(:,IPoint,3)/HalfDelF
+   !      !ENDIF
+   !   
+   !   ENDDO ! IPoint
+   !
+   !   CLOSE( UP )
+   !ENDIF
    
 
    CALL Cleanup()
@@ -989,9 +967,8 @@ CONTAINS
 !....................................
    SUBROUTINE Cleanup()
 
-      IF ( PSD_OUT .AND. UP > 0) CLOSE( UP )
-   
-   
+      !IF ( PSD_OUT .AND. UP > 0) CLOSE( UP )
+         
       IF ( ALLOCATED( SSVS  ) )  DEALLOCATE( SSVS  )
 
    END SUBROUTINE Cleanup
