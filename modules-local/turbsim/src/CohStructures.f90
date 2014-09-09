@@ -21,13 +21,12 @@ MODULE TS_CohStructures
 
    USE TurbSim_Types
    
-use ts_errors
-use TS_Profiles
-use TS_RandNum
+   use TS_Profiles
+   use TS_RandNum
 
+   IMPLICIT NONE
 
-   IMPLICIT                NONE
-
+   
    REAL(ReKi), PARAMETER   ::  KHT_LES_dT = 0.036335           ! The average time step in the LES test file, used here for the KH test
    REAL(ReKi), PARAMETER   ::  KHT_LES_Zm = 6.35475            ! The non-dimensional z dimension defined in LES test file, used here for the KH test
    
@@ -595,7 +594,8 @@ SUBROUTINE CohStr_WriteCTS(p, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrM
    ! Write the file:
    !-------------------------
    
-   CALL CohStr_WriteEvents ( p%RootName, p_CohStr, e_CohStr, y_CohStr, TSclFact, p%UHub )
+   CALL CohStr_WriteEvents ( p%RootName, p_CohStr, e_CohStr, y_CohStr, TSclFact, p%UHub, ErrStat2, ErrMsg2) 
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS')
 
    
    !-------------------------
@@ -662,8 +662,9 @@ FUNCTION pkCTKE_LLJ(p, OtherSt_RandNum, Ht, ZL, UStar)
          A_zL  = -0.3330
          A_uSt = 10.7640
 
-      CASE DEFAULT !This should not occur
-         CALL TS_Abort( 'Error in pkCTKE_LLJ():: Height index is invalid.' )
+      !CASE DEFAULT !This should not occur
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Error in pkCTKE_LLJ():: Height index is invalid.' 
    END SELECT
 
    CALL RndPearsonIV( p%RNG, OtherSt_RandNum, rndCTKE, RndParms, (/ -10.0_ReKi, 17.5_ReKi /) )
@@ -672,46 +673,57 @@ FUNCTION pkCTKE_LLJ(p, OtherSt_RandNum, Ht, ZL, UStar)
 
 END FUNCTION pkCTKE_LLJ
 !=======================================================================
-SUBROUTINE CohStr_WriteEvents( RootName, p_CohStr, e_CohStr, y_CohStr, TScale, UHub )
+SUBROUTINE CohStr_WriteEvents( RootName, p_CohStr, e_CohStr, y_CohStr, TScale, UHub, ErrStat, ErrMsg )
 
     ! This subroutine writes the events as calculated in CalcEvents.
 
-IMPLICIT                NONE
+   IMPLICIT                NONE
 
-      ! Passed Variables
-TYPE(CohStr_ParameterType)     , INTENT(IN   )  :: p_CohStr            ! parameters for coherent structures
-TYPE(CohStr_EventType)         , INTENT(IN   )  :: e_CohStr            ! parameters for coherent structure events
-TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
+         ! Passed Variables
+   TYPE(CohStr_ParameterType)     , INTENT(IN   )  :: p_CohStr            ! parameters for coherent structures
+   TYPE(CohStr_EventType)         , INTENT(IN   )  :: e_CohStr            ! parameters for coherent structure events
+   TYPE(CohStr_OutputType),         INTENT(INOUT)  :: y_CohStr
 
-REAL(ReKi),                      INTENT(IN)     :: TScale              ! Time scaling factor
-REAL(ReKi),                      INTENT(IN)     :: UHub                ! Mean wind speed at hub height (advection speed)
-CHARACTER(*),                    INTENT(IN)     :: RootName
+   REAL(ReKi),                      INTENT(IN)     :: TScale              ! Time scaling factor
+   REAL(ReKi),                      INTENT(IN)     :: UHub                ! Mean wind speed at hub height (advection speed)
+   CHARACTER(*),                    INTENT(IN)     :: RootName
 
+   INTEGER(IntKi),                  intent(  out)  :: ErrStat             ! Error level
+   CHARACTER(*),                    intent(  out)  :: ErrMsg              ! Message describing error
+
+ 
       ! Local Variables
 
-REAL(ReKi)              :: CurrentTime = 0.0      ! the current time (in seconds)
-REAL(ReKi)              :: CTTime                 ! Time from beginning of event file
-REAL(ReKi)              :: deltaTime = 0.0        ! difference between two time steps in the event files
+   REAL(ReKi)              :: CurrentTime = 0.0      ! the current time (in seconds)
+   REAL(ReKi)              :: CTTime                 ! Time from beginning of event file
+   REAL(ReKi)              :: deltaTime = 0.0        ! difference between two time steps in the event files
 
-INTEGER                 :: FileNum                ! File Number in the event file
-INTEGER                 :: IE                     ! Loop counter for event number
-INTEGER                 :: IStat                  ! Status of file read
-INTEGER                 :: IT                     ! Loop counter for time step
+   INTEGER                 :: FileNum                ! File Number in the event file
+   INTEGER                 :: IE                     ! Loop counter for event number
+   INTEGER                 :: IT                     ! Loop counter for time step
 
-INTEGER(IntKi)          :: UnIn                   ! I/O Unit for input file
-INTEGER(IntKi)          :: UnOut                  ! I/O Unit for output file
+   INTEGER(IntKi)          :: UnIn                   ! I/O Unit for input file
+   INTEGER(IntKi)          :: UnOut                  ! I/O Unit for output file
 
-
-
-CHARACTER(200)          :: InpFile                ! Name of the input file
-TYPE (Event), POINTER   :: PtrCurr  => NULL()     ! Pointer to the current event
-TYPE (Event), POINTER   :: PtrPrev  => NULL()     ! Pointer to the previous event (for deallocation purposes)
+   INTEGER(IntKi)          :: ErrStat2                        ! Error level (local)
+  CHARACTER(MaxMsgLen)     :: ErrMsg2                         ! Message describing error (local)
 
 
-   CALL GetNewUnit( UnOut )
-   CALL OpenFOutFile ( UnOut, TRIM( RootName )//'.cts' ) 
+   CHARACTER(200)          :: InpFile                ! Name of the input file
+   TYPE (Event), POINTER   :: PtrCurr  => NULL()     ! Pointer to the current event
+   TYPE (Event), POINTER   :: PtrPrev  => NULL()     ! Pointer to the previous event (for deallocation purposes)
 
-   CALL GetNewUnit( UnIn )
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   UnOut = -1
+   CALL GetNewUnit( UnOut, ErrStat2, ErrMsg2 )      
+   CALL OpenFOutFile ( UnOut, TRIM( RootName )//'.cts', ErrStat2, ErrMsg2 ) 
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteEvents' )
+
+   UnIn = -1
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
    
    
 IF (DEBUG_OUT) THEN
@@ -764,15 +776,22 @@ ENDIF
       WRITE ( InpFile, '(I5.5)' ) e_CohStr%EventID( PtrCurr%EventNum )
       InpFile = TRIM( p_CohStr%CTEventPath )//PathSep//'Event'//TRIM( InpFile)//'.dat'
 
-      CALL OpenFInpFile( UnIn, InpFile ) !bjj: todo: add ErrSTat2 and ErrMsg2
-
+      CALL OpenFInpFile( UnIn, InpFile, ErrStat2, ErrMsg2 ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteEvents' )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+         
 
       DO IT = 1,e_CohStr%EventTS( PtrCurr%EventNum )
 
-         READ  ( UnIn, *, IOSTAT=IStat ) FileNum, CTTime, deltaTime
+         READ  ( UnIn, *, IOSTAT=ErrStat2 ) FileNum, CTTime, deltaTime
 
-         IF (IStat /= 0) THEN
-            CALL TS_Abort( 'Error reading event file'//TRIM( InpFile ) )
+         IF (ErrStat2 /= 0) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error reading event file'//TRIM( InpFile ), ErrStat, ErrMsg, 'CohStr_WriteEvents')
+            CALL Cleanup()
+            RETURN
          ENDIF
 
          CurrentTime = PtrCurr%TStart + CTTime*TScale
@@ -797,7 +816,7 @@ ENDIF
       PtrPrev => PtrCurr
       PtrCurr => PtrCurr%Next
       
-      DEALLOCATE ( PtrPrev, STAT=IStat )  !bjj deallocate the linked list!!!!
+      DEALLOCATE ( PtrPrev, STAT=ErrStat2 )
 
    ENDDO !IE: number of events
 
@@ -821,6 +840,15 @@ ENDIF
 
    CLOSE ( UnOut )
 
+CONTAINS
+!............................
+SUBROUTINE Cleanup()
+
+   IF (UnIn  > 0) CLOSE( UnIn  )
+   IF (UnOut > 0) CLOSE( UnOut )
+
+END SUBROUTINE Cleanup
+!............................
 END SUBROUTINE CohStr_WriteEvents
 !=======================================================================
 END MODULE TS_CohStructures

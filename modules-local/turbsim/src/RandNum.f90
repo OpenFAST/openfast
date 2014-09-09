@@ -19,13 +19,10 @@
 !**********************************************************************************************************************************
 MODULE TS_RandNum
 
-   USE                     NWTC_Library   
-   USE                     Ran_Lux_Mod
-   
-use ts_errors
-USE TurbSim_Types   
+   USE TurbSim_Types   
+   USE Ran_Lux_Mod  
 
-   IMPLICIT                NONE
+   IMPLICIT NONE
 
 
    INTEGER(IntKi), PARAMETER :: pRNG_RANLUX    = 1
@@ -43,7 +40,6 @@ SUBROUTINE RandNum_Init(p, OtherSt, ErrStat, ErrMsg )
 
    ! Initialize the Random Number Generators
 
-USE                                 Ran_Lux_Mod
 
 IMPLICIT                            NONE
 
@@ -230,7 +226,7 @@ ENDDO
 
 END SUBROUTINE Rnd4ParmLogNorm
 !=======================================================================
-SUBROUTINE Rnd3ParmNorm( p, OtherSt, RandNum, A, B, C, xMin, xMax )
+SUBROUTINE Rnd3ParmNorm( p, OtherSt, RandNum, A, B, C, xMin, xMax, ErrStat, ErrMsg )
 
 ! Calculates a deviate from a distribution with pdf:
 ! f(x) = A * EXP( -0.5 * ((x-B)/C)**2 )
@@ -238,14 +234,19 @@ SUBROUTINE Rnd3ParmNorm( p, OtherSt, RandNum, A, B, C, xMin, xMax )
 ! We assume the returned values are between -1 and 1, since this is for the Cross-Correlations, unless
 ! the optional values, xMin and xMax are used
 
-IMPLICIT                            NONE
+   IMPLICIT                            NONE
 
-TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p                   ! parameters for random number generation
-TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt             ! other states for random number generation
+   TYPE(RandNum_ParameterType),  INTENT(IN   ) :: p                   ! parameters for random number generation
+   TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt             ! other states for random number generation
 
-REAL(ReKi),                   INTENT(IN)    :: A
-REAL(ReKi),                   INTENT(IN)    :: B
-REAL(ReKi),                   INTENT(IN)    :: C
+   REAL(ReKi),                   INTENT(IN)    :: A
+   REAL(ReKi),                   INTENT(IN)    :: B
+   REAL(ReKi),                   INTENT(IN)    :: C
+
+   INTEGER(IntKi),                  intent(  out) :: ErrStat                         ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
+
+
 
 REAL(ReKi)                                  :: fMAX                ! Max(f(x)) = f(B) = A
 REAL(ReKi)                                  :: Gx                  ! The function g(x) = f(x)/fMAX
@@ -259,6 +260,9 @@ REAL(ReKi),    OPTIONAL,      INTENT(IN)    :: xMin                ! The minimum
 INTEGER                                     :: Count
 INTEGER, PARAMETER                          :: MaxIter = 10000     ! Max number of iterations to converge (so we don't get an infinite loop)
 
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
 ! If A < 0 then we have a minimum value in the center of the distribution, not a maximum -- this method won't work.
 ! If A < 1/(MaxVALUE-MinVALUE), then this acceptance-rejection method won't work.
@@ -277,7 +281,9 @@ ENDIF
 
 RN = 1. / (MaxVALUE-MinVALUE)
 IF (A < RN .OR. C==0. .OR. MaxVALUE <= MinVALUE) THEN
-   CALL TS_Abort('Parameter A must at least 1/(xMax-xMin) and parameter C cannot be zero in this 3-parameter normal distribution.')
+   ErrStat = ErrID_Fatal
+   ErrMsg  = 'Rnd3ParmNorm: Parameter A must at least 1/(xMax-xMin) and parameter C cannot be zero in this 3-parameter normal distribution.'
+   RETURN
 ENDIF
 
 
@@ -333,9 +339,9 @@ REAL(ReKi)                                  :: mu_use
 
 IF ( PRESENT(mu) ) THEN
    IF (mu < 0.0) THEN
-      CALL TS_Abort ( 'Invalid mu parameter in exponential distribution.' )
+      CALL WrScr( 'RndExp: Parameter mu is negative. Using -mu for exponential distribution.')
    ENDIF
-   mu_use = mu
+   mu_use = ABS( mu )
 ELSE
    mu_use = 1.0
 ENDIF
@@ -885,8 +891,6 @@ SUBROUTINE RndUnif( p, OtherSt, RandUnifNum )
 !that the random number generator has been initialized earlier in the main
 !program.
 
-USE                                 Ran_Lux_Mod
-
 IMPLICIT                            NONE
 
 TYPE(RandNum_ParameterType),  INTENT(IN)    :: p                   ! parameters for random number generation
@@ -918,7 +922,6 @@ END SUBROUTINE RndUnif
 !======================================================================
 SUBROUTINE RndPhases(p, OtherSt, PhaseAngles, NPoints, NumFreq, US, ErrStat, ErrMsg)
 
-USE  Ran_Lux_Mod
 
 IMPLICIT NONE
 

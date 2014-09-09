@@ -21,7 +21,6 @@ MODULE TS_Profiles
 
    USE                     NWTC_Library   
    USE                     TurbSim_Types
-use ts_errors
 
    IMPLICIT                NONE
 
@@ -1199,8 +1198,137 @@ SUBROUTINE get_coefs(JetHt,UH_coef,WD_coef)
 
    RETURN
 END SUBROUTINE get_coefs
+!=======================================================================
+FUNCTION getUStarProfile(p, WS, Ht, UStarOffset, UstarSlope)
+
+   IMPLICIT                              NONE
+
+   TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
+   REAL(ReKi),                  INTENT(IN)     :: Ht(:)                       ! Height at which ustar is defined
+   REAL(ReKi),                  INTENT(IN)     :: WS(:)                       ! Wind speed(s) at heights, Ht
+   REAL(ReKi),                  INTENT(IN)     :: UStarOffset                 ! A scaling/offset value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
+   REAL(ReKi),                  INTENT(IN)     :: UstarSlope                  ! A scaling/slope value used with the Ustar_profile to ensure that the mean hub u'w' and ustar inputs agree with the profile values
+
+   REAL(ReKi)                                  :: tmpZ                        ! a temporary value
+   REAL(ReKi)                                  :: getUStarProfile(SIZE(Ht))       ! the array of ustar values
+                                               
+   INTEGER(IntKi)                              :: IZ
+   INTEGER(IntKi)                              :: Zindx
+   INTEGER(IntKi)                              :: Zindx_mn (1)
+   INTEGER(IntKi)                              :: Zindx_mx (1)
+                                               
+   LOGICAL                                     :: mask(SIZE(Ht))
+
+   mask = Ht.GE.profileZmin
+   IF ( ANY(mask) ) THEN
+      Zindx_mn = MINLOC( Ht, MASK=mask )
+
+      mask = Ht.LE.profileZmax
+      IF ( ANY(mask) ) THEN
+         Zindx_mx = MAXLOC( Ht, MASK=mask )
+
+         DO IZ = 1,SIZE(Ht)
+            IF ( Ht(IZ) < profileZmin ) THEN
+               Zindx = Zindx_mn(1)
+            ELSEIF ( Ht(IZ) > profileZmax ) THEN
+               Zindx = Zindx_mx(1)
+            ELSE
+               Zindx = IZ
+            ENDIF
+
+            tmpZ = Ht(Zindx)      !ustar is constant below 50 meters, and we don't want to extrapolate too high (last measurement is at 116 m)
+
+            getUStarProfile(  IZ) = ( 0.045355367 +  4.47275E-8*tmpZ**3)                                                      &
+                                  + ( 0.511491978 -  0.09691157*LOG(tmpZ) - 199.226951/tmpZ**2           ) * WS(Zindx)        &
+                                  + (-0.00396447  - 55.7818832/tmpZ**2                                   ) * p%met%RICH_NO    &
+                                  + (-5.35764429  +  0.102002162*tmpZ/LOG(tmpZ) + 25.30585136/SQRT(tmpZ) ) * p%met%UstarDiab
+         ENDDO
+
+      ELSE ! All are above the max height so we'll use the old relationship at all heights
+         getUStarProfile(:) = 0.17454 + 0.72045*p%met%UstarDiab**1.36242
+      ENDIF
+
+   ELSE ! All are below the min height so we'll use the diabatic Ustar value
+      getUStarProfile(:) = p%met%UstarDiab
+   ENDIF
+
+   getUStarProfile = UstarSlope * getUStarProfile(:) + UstarOffset  ! These terms are used to make the ustar profile match the rotor-disk averaged value and input hub u'w'
+
+END FUNCTION
+!=======================================================================
+FUNCTION getZLProfile(WS, Ht, RichNo, ZL, L, ZLOffset, WindProfileType)
+
+   IMPLICIT                              NONE
+
+   
+   REAL(ReKi),   INTENT(IN)           :: Ht(:)                       ! Height at which local z/L is defined
+   REAL(ReKi),   INTENT(IN)           :: WS(:)                       ! Wind speed(s) at heights, Ht
+   REAL(ReKi),   INTENT(IN)           :: RichNo                      ! Richardson Number
+   REAL(ReKi),   INTENT(IN)           :: ZL                          ! z/L, an alternate measure of stability (M-O) for RichNo
+   REAL(ReKi),   INTENT(IN)           :: L                           ! L, M-O length
+   REAL(ReKi),   INTENT(IN)           :: ZLOffset                    ! Offset to align profile with rotor-disk averaged z/L 
+
+   CHARACTER(*), INTENT(IN)           :: WindProfileType
+   
+   REAL(ReKi)                         :: tmpZ                        ! a temporary value
+   REAL(ReKi)                         :: getZLProfile(SIZE(Ht))          ! the array of z/L values
+
+   INTEGER                            :: IZ
+   INTEGER                            :: Zindx
+   INTEGER                            :: Zindx_mn (1)
+   INTEGER                            :: Zindx_mx (1)
+
+   LOGICAL                            :: mask(SIZE(Ht))
+
+   mask = Ht.GE.profileZmin
+   IF ( ANY(mask) ) THEN
+      Zindx_mn = MINLOC( Ht, MASK=mask )
+
+      mask = Ht.LE.profileZmax
+      IF ( ANY(mask) ) THEN
+         Zindx_mx = MAXLOC( Ht, MASK=mask )
+
+         DO IZ = 1,SIZE(Ht)
+            IF ( Ht(IZ) < profileZmin ) THEN
+               Zindx = Zindx_mn(1)
+               tmpZ  = Ht(IZ) / Ht(Zindx)    ! This keeps L constant below 50 m
+            ELSEIF ( Ht(IZ) > profileZmax ) THEN
+               Zindx = Zindx_mx(1)
+               tmpZ  = 1.0                   ! L changes above measurement height, but since we don't know how much, we're going to keep z/L constant
+            ELSE
+               Zindx = IZ
+               tmpZ  = 1.0
+            ENDIF  !L is constant below 50 meters, and we don't want to extrapolate too high (last measurement is at 116 m)
+
+            IF ( INDEX( 'JU', WindProfileType(1:1) ) > 0 ) THEN
+               IF ( RichNo >= 0 ) THEN
+                  getZLProfile( IZ) =                     - 0.352464*RichNo + 0.005272*WS(Zindx) + 0.465838
+               ELSE
+                  getZLProfile( IZ) =  0.004034*Ht(Zindx) + 0.809494*RichNo - 0.008298*WS(Zindx) - 0.386632
+               ENDIF !RichNo
+            ELSE
+               IF ( RichNo >= 0 ) THEN
+                  getZLProfile( IZ) =  0.003068*Ht(Zindx) + 1.140264*RichNo + 0.036726*WS(Zindx) - 0.407269
+               ELSE
+                  getZLProfile( IZ) =  0.003010*Ht(Zindx) + 0.942617*RichNo                      - 0.221886
+               ENDIF 
+            ENDIF
+            getZLProfile( IZ) = MIN( getZLProfile( IZ), 1.0 )
+            getZLProfile( IZ) = getZLProfile(IZ) * tmpZ
+
+         ENDDO
+
+      ELSE ! All are above the max height so instead of extrapolating, we'll use ZL at all heights
+         getZLProfile(:) = ZL
+      ENDIF
+
+   ELSE ! All are below the min height so we'll keep L constant (as is the case in the surface layer)
+      getZLProfile(:) = Ht(:) / L
+   ENDIF
+
+   getZLProfile = getZLProfile(:) + ZLOffset  ! This offset term is used to make the zl profile match the rotor-disk averaged value
 
 
-
+END FUNCTION getZLProfile
 !=======================================================================
 END MODULE TS_Profiles

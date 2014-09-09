@@ -23,7 +23,6 @@ MODULE TS_FileIO
 
    use TS_Profiles
    use TSSubs
-   use ts_errors
    use TS_RandNum
    
    IMPLICIT                NONE
@@ -751,7 +750,7 @@ SELECT CASE ( p%met%TurbModel_ID )
 
    CASE DEFAULT
       UseDefault = .TRUE.
-      p%met%PLExp      = PowerLawExp( p )  ! These cases do not use the Richardson number to get a default
+      p%met%PLExp      = DefaultPowerLawExp( p )  ! These cases do not use the Richardson number to get a default
 
 END SELECT
 getPLExp = .NOT. UseDefault
@@ -872,7 +871,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       ! ***** Calculate power law exponent, if needed *****
 
    IF ( getPLExp ) THEN
-      p%met%PLExp = PowerLawExp( p )
+      p%met%PLExp = DefaultPowerLawExp( p )
    ENDIF
 
       ! ------------ Read in the shear/friction velocity, Ustar, first calculating UstarDiab ------------------------
@@ -953,7 +952,8 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          p%met%UJetMax = MAX( -21.5515_ReKi + 6.6827_ReKi*LOG(p%met%ZJetMax), 5.0_ReKi ) !Jet max must be at least 5 m/s (occurs ~50 m); shouldn't happen, but just in case....
 
-         CALL Rnd3ParmNorm( p%RNG, OtherSt_RandNum, tmp, 0.1076_ReKi, -0.1404_ReKi, 3.6111_ReKi,  -15.0_ReKi, 20.0_ReKi )
+         CALL Rnd3ParmNorm( p%RNG, OtherSt_RandNum, tmp, 0.1076_ReKi, -0.1404_ReKi, 3.6111_ReKi,  -15.0_ReKi, 20.0_ReKi, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
          IF (p%met%UJetMax + tmp > 0 ) p%met%UJetMax = p%met%UJetMax + tmp
 
@@ -997,13 +997,13 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          CALL getVelocityProfile(p, p%met%URef, p%met%RefHt, TmpZary, TmpUary, ErrStat2, ErrMsg2)    ! Set TmpUary
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')         
-         TmpUstar  = getUstarARY( P, TmpUary,     TmpZary, 0.0_ReKi, p%met%UstarSlope )
+         TmpUstar  = getUStarProfile( P, TmpUary,     TmpZary, 0.0_ReKi, p%met%UstarSlope )
             
          p%met%UstarOffset = p%met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
          TmpUstar(:) = TmpUstar(:) + p%met%UstarOffset
       ENDIF
 
-      TmpZLary = getZLARY(TmpUary, TmpZary, p%met%Rich_No, p%met%ZL, p%met%L, 0.0_ReKi, p%met%WindProfileType)
+      TmpZLary = getZLProfile(TmpUary, TmpZary, p%met%Rich_No, p%met%ZL, p%met%L, 0.0_ReKi, p%met%WindProfileType)
       p%met%zlOffset = p%met%ZL - SUM(TmpZLary) / SIZE(TmpZLary)
 
 
@@ -1374,7 +1374,6 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
    INTEGER                            :: I
    INTEGER                            :: Indx
    INTEGER                            :: J
-   INTEGER                            :: IOAstat                        ! Input/Output/Allocate status
 
    LOGICAL                            :: ReadSigL                       ! Whether or not to read the last 2 columns
 
@@ -1648,7 +1647,9 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
          RETURN
          
 !      ELSEIF ( p%usr%f(I) <= REAL( 0., ReKi ) ) THEN
-!         CALL TS_Abort( 'The frequencies must be a positive number.' );
+!         CALL SetErrStat(ErrID_Fatal, 'The frequencies must be positive numbers.' , ErrStat, ErrMsg, 'GetUSRSpec')
+!         CALL Cleanup()
+!         RETURN
       ENDIF
 
          ! Scale by the factors earlier in the input file
@@ -2168,7 +2169,7 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
    INTEGER(B4Ki)               :: IP
    INTEGER(B2Ki)               :: TmpVarray(3*p%grid%NumGrid_Y*p%grid%NumGrid_Z) ! This array holds the normalized velocities before being written to the binary file
-   INTEGER(B2Ki),ALLOCATABLE   :: TmpTWRarray(:)                   ! This array holds the normalized tower velocities   
+   INTEGER(B2Ki), ALLOCATABLE  :: TmpTWRarray(:)          ! This array holds the normalized tower velocities   
    
    INTEGER                     :: AllocStat
    INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
@@ -2176,7 +2177,11 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
    CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
 
-
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      
    
       ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
       ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
@@ -2299,10 +2304,21 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       
       IF ( p%WrFile(FileExt_TWR) ) THEN
                            
-         CALL GetNewUnit( UATWR )
+         CALL GetNewUnit( UATWR, ErrStat, ErrMsg )
          CALL OpenBOutFile ( UATWR, TRIM( p%RootName )//'.twr', ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
          
+         
+      !IF ( ALLOCATED(p%grid%TwrPtIndx) ) THEN
+         ALLOCATE( TmpTwrarray( 3*SIZE(p%grid%TwrPtIndx) ), STAT=AllocStat )
+         IF ( AllocStat /= 0 ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = "WrBinBLADED: Error allocating space for temporary tower output array."
+            RETURN
+         END IF
+      !END IF
+         
+            
          CALL WrScr ( ' Generating tower binary time-series file "'//TRIM( p%RootName )//'.twr"' )
 
 
@@ -2315,13 +2331,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
          WRITE (UATWR)  REAL( 100.0*TI(1),               SiKi )         ! Longitudinal turbulence intensity
          WRITE (UATWR)  REAL( 100.0*TI(2),               SiKi )         ! Lateral turbulence intensity
          WRITE (UATWR)  REAL( 100.0*TI(3),               SiKi )         ! Vertical turbulence intensity
-
-
-         ALLOCATE ( TmpTWRarray( 3*SIZE(p%grid%TwrPtIndx) ) , STAT=AllocStat ) 
-
-         IF ( AllocStat /= 0 )  THEN
-            CALL TS_Abort ( 'Error allocating memory for temporary tower wind speed array.' )
-         ENDIF
 
 
          DO IT=1,p%grid%NumOutSteps
@@ -2341,7 +2350,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
          CLOSE ( UATWR )
 
-         IF ( ALLOCATED( TmpTWRarray) ) DEALLOCATE( TmpTWRarray )
 
       ENDIF !WrADWTR
 
@@ -2517,7 +2525,9 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
    ALLOCATE ( TmpVarray( 3*(NumGrid + NumTower) ) , STAT=AllocStat )
 
    IF ( AllocStat /= 0 )  THEN
-      CALL TS_Abort ( 'Error allocating memory for temporary wind speed array.' )
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'WrBinTURBSIM:Error allocating memory for temporary wind speed array.'
+      RETURN
    ENDIF
 
       ! Loop through time.
@@ -2563,21 +2573,21 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
 END SUBROUTINE WrBinTURBSIM
 !=======================================================================
-SUBROUTINE WrFormattedFF(RootName, p_grid, UHub, V)
+SUBROUTINE WrFormattedFF(RootName, p_grid, UHub, V )
 
 USE TurbSim_Types
 
-IMPLICIT                NONE
+   IMPLICIT                NONE
 
-CHARACTER(*),                    intent(in   ) :: RootName             ! Rootname of output file
-TYPE(Grid_ParameterType),        INTENT(IN)    :: p_grid
-REAL(ReKi),                      INTENT(IN)    :: UHub                 ! The steady hub-height velocity
-REAL(ReKi),                      INTENT(IN)    :: V       (:,:,:)      ! The Velocities to write to a file
+   CHARACTER(*),                    intent(in   ) :: RootName             ! Rootname of output file
+   TYPE(Grid_ParameterType),        INTENT(IN)    :: p_grid
+   REAL(ReKi),                      INTENT(IN)    :: UHub                 ! The steady hub-height velocity
+   REAL(ReKi),                      INTENT(IN)    :: V       (:,:,:)      ! The Velocities to write to a file
+
 
 
 REAL(ReKi), ALLOCATABLE      :: ZRow       (:)                           ! The horizontal locations of the grid points (NumGrid_Y) at each height.
 
-INTEGER                      :: AllocStat
 INTEGER                      :: II
 INTEGER                      :: IT
 INTEGER                      :: IVec
@@ -2593,12 +2603,7 @@ INTEGER                      :: UFFF                                     ! I/O u
 
       ! Allocate the array of wind speeds.
 
-   ALLOCATE ( ZRow(p_grid%NumGrid_Y) , STAT=AllocStat )
-
-   IF ( AllocStat /= 0 )  THEN
-      CALL TS_Abort ( 'Error allocating memory for array of wind speeds.' )
-   ENDIF
-
+      
    CALL GetNewUnit(UFFF)
 
    DO IVec=1,3
@@ -2629,11 +2634,7 @@ INTEGER                      :: UFFF                                     ! I/O u
 
             II = ( p_grid%NumGrid_Z - IZ )*p_grid%NumGrid_Y
 
-            DO IY=1,p_grid%NumGrid_Y  ! From the left to the right
-               ZRow(IY) = V(IT, p_grid%GridPtIndx(II+IY) ,IVec)
-            ENDDO ! IY
-
-            WRITE (UFFF,FormStr5)  ( ZRow(IY), IY=1,p_grid%NumGrid_Y )
+            WRITE (UFFF,FormStr5)  ( V(IT, p_grid%GridPtIndx(II+IY) ,IVec), IY=1,p_grid%NumGrid_Y ) ! From the left to the right
 
          ENDDO ! IZ
 
@@ -4136,4 +4137,943 @@ SUBROUTINE ProcessLine_IECturbc(Line, IsIECModel, IECstandard, IECedition, IECed
 END SUBROUTINE ProcessLine_IECturbc
 
 !=======================================================================
+SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
+   ! These numbers come from Neil's analysis
+
+   INTEGER(IntKi), INTENT(IN)               :: TurbModel_ID      ! turbulence model Identifier
+   REAL(ReKi),     INTENT(IN)               :: RICH_NO           ! Richardson Number (stability)
+   REAL(ReKi),     INTENT(IN)               :: Ht                !Height, usually hub height
+   REAL(ReKi),     INTENT(IN)               :: WS                !Wind speed, usually = UHub
+   REAL(ReKi),     INTENT(  OUT)            :: InCDec(3)         ! default coherence decrement
+   REAL(ReKi),     INTENT(  OUT)            :: InCohB(3)         ! default coherence parameter B
+   
+   
+!   REAL(ReKi), PARAMETER                :: a =  0.007697495  !coeffs for WF_xxD best-fit equations
+!   REAL(ReKi), PARAMETER                :: b =  0.451759656  !coeffs for WF_xxD best-fit equations
+!   REAL(ReKi), PARAMETER                :: c =  6.559106387  !coeffs for WF_xxD best-fit equations
+!   REAL(ReKi), PARAMETER                :: d = -0.10471942   !coeffs for WF_xxD best-fit equations
+!   REAL(ReKi), PARAMETER                :: e = -1.19488521   !coeffs for WF_xxD best-fit equations
+!   REAL(ReKi), PARAMETER                :: f =  0.005529328  !coeffs for WF_xxD best-fit equations
+!   REAL(ReKi), PARAMETER                :: g =  0.059157163  !coeffs for WF_xxD best-fit equations
+
+
+   REAL(ReKi)                           :: Coeffs(10,3)      ! coeffs for WS category coherence decrements
+   REAL(ReKi)                           :: Ht1               !Height, set to bounds of the individual models
+   REAL(ReKi)                           :: Ht2               !Height squared
+   REAL(ReKi)                           :: Ht3               !Height cubed
+   REAL(ReKi)                           :: WS1               !Wind speed, set to bounds of individual models
+   REAL(ReKi)                           :: RI1               !RICH_NO, set to bounds of individual models
+   REAL(ReKi)                           :: RI2               !RICH_NO squared
+   REAL(ReKi)                           :: RI3               !RICH_NO  cubed
+
+   INTEGER                              :: I
+   INTEGER                              :: Ri_Cat
+
+
+      IF (RICH_NO <= 0.00_ReKi ) THEN
+         IF ( RICH_NO <= - 1.0_ReKi ) THEN
+            Ri_Cat = 1
+         ELSE
+            Ri_Cat = 2
+         ENDIF
+      ELSEIF ( RICH_NO <= 0.25_ReKi ) THEN
+         IF ( RICH_NO <= 0.10_ReKi ) THEN
+            Ri_Cat = 3
+         ELSE
+            Ri_Cat = 4
+         ENDIF
+      ELSE
+            Ri_Cat = 5
+      ENDIF
+
+      SELECT CASE (  TurbModel_ID )
+
+         CASE ( SpecModel_GP_LLJ )
+            HT1 = MAX( 60.0, MIN( Ht, 100.0 ) )
+            IF ( WS <= 14.0 ) THEN
+               IF ( WS <= 8.0 ) THEN
+                  IF     ( WS <= 6.0 ) THEN
+                     coeffs(:,3) = (/  3.1322E+00,  2.2819E-03,  2.9214E+00, -5.2203E-04,  1.1877E+00, &
+                                      -5.7605E-02,  3.7233E-06, -3.5021E-01, -1.7555E-03,  3.9712E-04 /)    !W  5
+                     IF  ( WS <= 4.0 ) THEN !      WS <=  4
+                        RI1 = MAX( 0.0, MIN(  RICH_NO, 1.0 ) )
+                        coeffs(:,1) = (/  4.8350E+00, -4.0113E-02,  7.8134E+00, -2.0069E-05, -1.9518E-01, &
+                                         -1.4009E-01,  2.3195E-06,  8.2029E-02, -7.4979E-04,  6.1186E-04 /) !U  3
+                        coeffs(:,2) = (/  3.2587E+00, -5.9086E-02,  9.7426E+00,  5.7360E-04,  2.1274E-01, &
+                                         -1.6398E-01, -8.3786E-07,  6.6896E-02, -3.5254E-03,  6.4833E-04 /) !V  3
+                     ELSE                   !  4 < WS <=  6
+                        RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                        coeffs(:,1) = (/  9.2474E+00, -4.9849E-02,  6.0887E+00, -5.9124E-04,  4.4312E-02, &
+                                         -1.1966E-01,  5.2652E-06, -1.0373E-01,  4.0480E-03,  5.5761E-04 /) !U  5
+                        coeffs(:,2) = (/  3.6355E+00,  1.7701E-02,  4.2165E+00, -5.8828E-04,  9.5592E-02, &
+                                         -6.5313E-02,  3.3875E-06, -1.7981E-02, -1.6375E-03,  3.0423E-04 /) !V  5
+                     ENDIF
+                  ELSE                      ! 6  < WS <=  8
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  1.1795E+01, -7.5393E-02,  9.5279E+00, -3.4922E-04, -5.8973E-01, &
+                                      -1.6753E-01,  4.4267E-06,  2.1797E-01,  7.7887E-04,  7.4912E-04 /)    !U  7
+                     coeffs(:,2) = (/  1.7730E+00,  9.6577E-02,  8.1310E+00, -1.2028E-03,  3.0145E-02, &
+                                      -1.2282E-01,  4.6866E-06,  3.5748E-02, -2.9013E-03,  4.8368E-04 /)    !V  7
+                     coeffs(:,3) = (/  9.1695E-01,  9.1488E-02,  6.7163E+00, -1.2938E-03,  1.0315E+00, &
+                                      -1.1976E-01,  5.6039E-06, -2.0416E-01, -3.4698E-03,  6.0175E-04 /)    !W  7
+                  ENDIF
+               ELSE ! 8.0 < WS <= 14.0
+                  IF     (WS <= 10.0) THEN  !  8 < WS <= 10
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  8.4674E+00,  1.2922E-01,  8.6170E+00, -3.3048E-03, -3.1928E-02, &
+                                      -1.2515E-01,  1.8209E-05,  2.9087E-01, -9.3031E-03,  5.0706E-04 /)    !U  9
+                     coeffs(:,2) = (/  2.8145E+00,  1.0257E-01,  4.2987E+00, -1.4901E-03,  4.9698E-02, &
+                                      -3.9964E-02,  6.7640E-06,  2.2980E-01, -1.0046E-02,  1.3037E-04 /)    !V  9
+                     coeffs(:,3) = (/  2.4952E+00,  5.8000E-02,  1.9851E+00, -9.4027E-04, -4.0135E-02, &
+                                      -1.8377E-02,  4.3320E-06, -1.0441E-01,  3.6831E-03,  8.6637E-05 /)    !W  9
+                  ELSEIF (WS <= 12.0) THEN  ! 10 < WS <= 12
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  1.2473E+01,  3.2270E-02,  1.4508E+01, -2.2856E-03, -1.4652E+00, &
+                                      -2.4114E-01,  1.4919E-05,  5.5578E-01, -8.5528E-04,  1.0273E-03 /)    !U  11
+                     coeffs(:,2) = (/  1.0882E+00,  1.9425E-01,  8.1533E+00, -2.5574E-03,  4.3113E-01, &
+                                      -8.0465E-02,  1.0478E-05,  1.1640E-01, -1.1717E-02,  1.6476E-04 /)    !V  11
+                     coeffs(:,3) = (/  5.0280E-01,  1.1637E-01,  4.0130E+00, -1.2034E-03, -2.7592E-01, &
+                                      -3.8744E-02,  3.4213E-06, -1.5144E-02,  2.4042E-03,  4.7818E-05 /)    !W  11
+                  ELSE                      ! 12 < WS <= 14.0
+                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  8.6311E+00,  2.5614E-01,  1.1165E+01, -5.1685E-03,  3.0895E+00, &
+                                      -1.9190E-01,  2.7162E-05, -2.6513E-01, -3.6479E-02,  8.8431E-04 /)    !U  13
+                     coeffs(:,2) = (/  1.2842E+00,  2.4007E-01,  5.3653E+00, -3.2589E-03,  3.4715E+00, &
+                                      -6.8865E-02,  1.3756E-05, -4.8465E-01, -4.0608E-02,  3.8578E-04 /)    !V  13
+                     coeffs(:,3) = (/  4.3681E+00,  1.2251E-02,  1.3826E+00, -1.1592E-04,  3.3654E+00, &
+                                      -5.2367E-02, -4.4086E-08, -3.5254E-01, -1.6780E-02,  3.9048E-04 /)    !W  13
+                  ENDIF
+               ENDIF
+            ELSE ! WS > 14
+               IF (WS <= 20.0 ) THEN
+                  IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
+                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  1.3972E-01,  6.3486E-01,  1.7576E+01, -1.0017E-02,  2.8458E+00, &
+                                      -2.5233E-01,  4.6539E-05, -1.8899E-01, -2.6717E-02,  9.5173E-04 /)    !U  15
+                     coeffs(:,2) = (/ -7.1243E+00,  5.6768E-01,  1.2886E+01, -7.3277E-03,  3.7880E+00, &
+                                      -1.4733E-01,  3.0898E-05, -1.5056E-01, -2.9500E-02,  3.6703E-04 /)    !V  15
+                     coeffs(:,3) = (/ -1.1004E+01,  5.3470E-01,  5.3118E+00, -5.8999E-03,  1.9009E+00, &
+                                      -2.4063E-02,  2.1755E-05, -4.5798E-01,  1.6885E-02, -3.9974E-04 /)    !W  15
+                  ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/ -6.9650E+00,  8.8636E-01,  2.3467E+01, -1.1973E-02, -4.3750E+00, &
+                                      -3.5519E-01,  5.0414E-05,  9.1789E-01,  9.8340E-03,  1.5885E-03 /)    !U  17
+                     coeffs(:,2) = (/  5.5495E-03,  3.2906E-01,  1.4609E+01, -4.1635E-03, -2.1246E+00, &
+                                      -1.8887E-01,  1.6964E-05,  3.7805E-01,  1.1880E-03,  8.8265E-04 /)    !V  17
+                     coeffs(:,3) = (/ -1.3195E+00,  2.0022E-01,  2.3490E+00, -2.1308E-03,  3.5582E+00, &
+                                       1.4379E-02,  7.6830E-06, -7.6155E-01, -2.4660E-02, -2.0199E-04 /)    !W  17
+                  ELSE                      ! 18 < WS <= 20
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/ -1.3985E+01,  1.3161E+00,  3.4773E+01, -1.9237E-02, -1.9845E+00, &
+                                      -5.5817E-01,  8.8310E-05,  1.7142E+00, -4.2907E-02,  2.3932E-03 /)    !U  19
+                     coeffs(:,2) = (/ -1.2400E+01,  8.6854E-01,  1.9923E+01, -1.1557E-02, -1.0441E+00, &
+                                      -2.4593E-01,  4.9813E-05,  2.7861E-01, -8.6189E-03,  9.4314E-04 /)    !V  19
+                     coeffs(:,3) = (/ -9.3436E+00,  6.4950E-01,  1.5316E+01, -8.7208E-03,  1.7329E+00, &
+                                      -2.2411E-01,  3.6288E-05, -8.0006E-01, -2.6439E-03,  7.9293E-04 /)    !W  19
+                  ENDIF
+               ELSE ! WS > 20
+                  IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/ -2.4317E+01,  1.8176E+00,  5.3359E+01, -2.5973E-02,  6.0349E+00, &
+                                      -7.9927E-01,  1.1558E-04,  1.5926E+00, -1.5005E-01,  3.1688E-03 /)    !U  21
+                     coeffs(:,2) = (/  8.0459E+00,  1.8058E-01,  1.9426E+01, -3.6730E-03, -9.9717E-01, &
+                                      -1.8249E-01,  1.9237E-05,  4.9173E-01, -1.8255E-02,  6.9371E-04 /)    !V  21
+                     coeffs(:,3) = (/ -2.3544E+01,  1.1403E+00,  8.3526E+00, -1.4511E-02,  7.2014E+00, &
+                                       5.0216E-02,  5.9947E-05, -1.0659E+00, -7.4769E-02, -9.8390E-04 /)    !W  21
+                  ELSEIF (WS <= 24.0) THEN  ! 22 < WS <= 24
+                     RI1 = MAX( 0.0, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/ -3.5790E+01,  1.5374E+00,  1.1322E+02, -1.6884E-02, -1.7767E+01, &
+                                      -1.8122E+00,  6.8247E-05,  7.2101E+00,  3.5536E-02,  7.9269E-03 /)    !U  23
+                     coeffs(:,2) = (/ -7.2883E+01,  2.8210E+00,  8.6392E+01, -3.1084E-02, -2.4938E+01, &
+                                      -1.5898E+00,  1.0997E-04,  7.1972E+00,  1.2624E-01,  9.3084E-03 /)    !V  23
+                     coeffs(:,3) = (/ -3.2844E+01,  1.2683E+00,  3.2032E+01, -1.3197E-02, -1.1129E+01, &
+                                      -3.6741E-01,  4.2852E-05,  4.1336E+00,  2.4775E-02,  1.8431E-03 /)    !W  23
+                  ELSE                      ! 24 < WS
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  2.2906E+01,  9.3209E-02,  1.5448E+01, -5.7421E-03, -8.9114E+00, &
+                                      -3.1547E-02,  4.0144E-05,  5.4544E-01,  5.3557E-02, -3.1299E-04 /)    !U  25
+                     coeffs(:,2) = (/ -1.1903E+01,  1.1104E+00,  1.7962E+01, -1.6045E-02, -9.2458E+00, &
+                                      -4.4526E-02,  6.9880E-05,  2.8017E+00, -2.7211E-02, -8.4099E-04 /)    !V  25
+                     coeffs(:,3) = (/  6.1054E-01,  7.1841E-03,  4.2996E+00,  2.9071E-04, -2.0002E+00, &
+                                      -7.0403E-02, -2.8931E-06,  2.3943E-02,  1.8395E-02,  5.0406E-04 /)    !W  25
+                  ENDIF
+               ENDIF
+            ENDIF
+
+
+            HT2 = HT1*HT1
+            HT3 = HT1*HT2
+            RI2 = RI1*RI1
+            RI3 = RI1*RI2
+
+            DO I = 1,3
+               InCDec(I) = coeffs( 1,I) + coeffs(2,I)*Ht1 + coeffs(3,I)*RI1 &
+                                        + coeffs(4,I)*Ht2 + coeffs(5,I)*RI2 + coeffs( 6,I)*Ht1*RI1 &
+                                        + coeffs(7,I)*Ht3 + coeffs(8,I)*RI3 + coeffs( 9,I)*Ht1*RI2 &
+                                                                            + coeffs(10,I)*Ht2*RI1
+            ENDDO
+
+            WS1 = MAX(  2.0, WS )
+            SELECT CASE ( Ri_Cat )
+               CASE ( 1, 2)
+!                 InCDec   = (/            1.744591004*WS1**0.593219225, &
+!                              -0.58750092+1.937230512*WS1**0.400548383, &
+!                              -0.57833219+1.450654739*WS1**0.443191083 /)
+                  InCohB   = (/-0.00014115+0.006826264/WS1, &
+                                           0.014025749/WS1, &
+                               0.000480386+0.020982336/WS1 /)
+
+               CASE ( 3 )
+!                 InCDec   = (/            1.962126171*WS1**0.575523536, &
+!                              -2.79495117+3.698342796*WS1**0.305415750, &
+!                                          0.887573173*WS1**0.498317195 /)
+                  InCohB   = (/-0.00016838+0.009764148/WS1, &
+                                           0.018582932/WS1, &
+                               0.001865953+0.061952454/WS1 /)
+
+               CASE ( 4 )
+!                 InCDec   = (/            0.817085986*WS1**1.045777184, &
+!                                          0.599696362*WS1**1.038373995, &
+!                                          1.327586050*WS1**0.590370871 /)
+                  InCohB   = (/0.000175033+0.004195814/WS1, &
+                                           0.008479460/WS1, &
+                               0.002318082+0.027820652/WS1 /)
+
+               CASE ( 5 )
+!                 InCDec   = (/            0.959999473*WS1**0.972466847, &
+!                              0.082701643+0.867230846*WS1**0.925895412, &
+!                                          1.524380209*WS1**0.548060899 /)
+                  InCohB   = (/0.000241808+0.004267702/WS1, &
+                                           0.005408592/WS1, &
+                               0.001150319+0.010744459/WS1 /)
+               END SELECT
+
+
+         CASE ( SpecModel_NWTCUP, SpecModel_USRVKM )
+            HT1 = MAX( 25.0_ReKi, MIN( Ht, 50.0_ReKi ) )
+
+            IF ( WS <= 14.0 ) THEN
+               RI1 = MAX( -1.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
+               IF ( WS <= 8.0 ) THEN
+                  IF     (WS <= 4.0 ) THEN  !      WS <=  4
+                     coeffs(:,1) = (/  8.1767E+00, -3.1018E-01,  3.3055E-01,  4.4232E-03,  4.6550E-01, &
+                                      -2.4582E-02, -5.8568E-06, -8.7873E-02,  1.3070E-02,  3.1871E-04 /)   !U  3
+                     coeffs(:,2) = (/  5.8003E+00, -2.0838E-01,  2.8727E-01,  2.8669E-03,  6.9669E-01, &
+                                      -8.2249E-03, -2.4732E-06, -1.0826E-01,  9.9973E-03,  1.8546E-05 /)   !V  3
+                     coeffs(:,3) = (/  5.9625E+00, -2.9247E-01, -9.3269E-01,  4.4089E-03,  1.3779E-01, &
+                                       2.6993E-02, -6.1784E-06, -7.2920E-02,  1.7028E-02, -3.3753E-04 /)   !W  3
+                  ELSEIF (WS <= 6.0 ) THEN  !  4 < WS <=  6
+                     coeffs(:,1) = (/  1.2891E+01, -4.8265E-01,  3.5549E+00,  6.6099E-03,  8.2275E-01, &
+                                      -1.5913E-01, -7.9740E-06, -1.2357E-02,  3.2084E-03,  1.7145E-03 /)   !U  5
+                     coeffs(:,2) = (/  8.0267E+00, -2.5275E-01,  1.3801E+00,  3.2447E-03,  1.6004E+00, &
+                                      -3.2592E-02, -5.1265E-06, -9.8552E-02, -1.3513E-02,  2.8075E-04 /)   !V  5
+                     coeffs(:,3) = (/  7.9593E+00, -3.6336E-01,  1.4974E+00,  5.4012E-03,  9.5041E-01, &
+                                      -1.0152E-01, -1.0865E-05,  4.3121E-02, -3.2447E-03,  1.3797E-03 /)   !W  5
+                  ELSE                      ! 6  < WS <=  8
+                     coeffs(:,1) = (/  1.3702E+01, -4.4674E-01,  3.7943E+00,  5.9350E-03,  9.6026E-01, &
+                                      -1.7425E-01, -7.2917E-06, -8.8426E-02,  5.1530E-03,  2.0554E-03 /)   !U  7
+                     coeffs(:,2) = (/  9.2471E+00, -2.6247E-01,  1.4504E+00,  3.2436E-03,  1.8823E+00, &
+                                      -3.2180E-02, -5.9491E-06, -2.0100E-01, -1.7619E-02,  3.8519E-04 /)   !V  7
+                     coeffs(:,3) = (/  8.9439E+00, -3.8885E-01,  2.2175E+00,  5.6207E-03,  7.6040E-01, &
+                                      -1.3502E-01, -9.2514E-06,  1.9269E-02,  3.8862E-03,  1.7674E-03 /)   !W  7
+                  ENDIF
+               ELSE ! 8.0 < WS <= 14.0
+                  IF     (WS <= 10.0) THEN  !  8 < WS <= 10
+                     coeffs(:,1) = (/  1.9061E+01, -4.5354E-01,  7.5961E+00,  5.2422E-03,  1.5158E+00, &
+                                      -2.4908E-01, -2.5277E-06, -1.6660E-01,  1.1369E-02,  3.0156E-03 /)   !U  9
+                     coeffs(:,2) = (/  1.3362E+01, -3.3806E-01,  7.0401E+00,  4.5349E-03,  2.6798E+00, &
+                                      -2.3637E-01, -9.9075E-06, -2.2373E-01, -1.6644E-03,  2.3879E-03 /)   !V  9
+                     coeffs(:,3) = (/  8.8401E+00, -2.9945E-01,  3.7883E+00,  4.4581E-03,  2.0417E+00, &
+                                      -2.7852E-01, -7.0750E-06, -6.2618E-02,  1.4646E-02,  3.8512E-03 /)   !W  9
+                  ELSEIF (WS <= 12.0) THEN  ! 10 < WS <= 12
+                     coeffs(:,1) = (/  3.4011E+01, -1.2590E+00,  1.6320E+01,  1.9225E-02,  6.8346E+00, &
+                                      -8.8950E-01, -6.2453E-05, -2.4945E-01, -4.3892E-02,  1.2078E-02 /)   !U  11
+                     coeffs(:,2) = (/  1.7135E+01, -4.0754E-01,  1.0282E+01,  5.7832E-03,  6.3056E+00, &
+                                      -2.8536E-01, -3.0216E-05, -5.3170E-01, -5.7090E-02,  2.8463E-03 /)   !V  11
+                     coeffs(:,3) = (/  1.3002E+01, -4.8326E-01,  3.2819E+00,  7.8800E-03,  2.7094E+00, &
+                                      -2.5714E-01, -3.0117E-05, -2.1404E-01, -4.2711E-03,  4.1067E-03 /)   !W  11
+                  ELSE                      ! 12 < WS <= 14
+                     coeffs(:,1) = (/  2.6682E+01, -9.7229E-01,  1.3191E+01,  1.7604E-02, -1.3537E+00, &
+                                      -6.4082E-01, -7.8242E-05,  1.7548E-01,  9.7417E-02,  1.0259E-02 /)   !U  13
+                     coeffs(:,2) = (/  1.7083E+01, -4.7346E-01,  1.3515E+01,  7.7832E-03,  5.8633E-01, &
+                                      -6.1815E-01, -3.3752E-05, -1.7300E-01,  4.3584E-02,  8.9289E-03 /)   !V  13
+                     coeffs(:,3) = (/  1.6015E+01, -6.3912E-01,  1.3137E+01,  9.4757E-03,  2.5549E+00, &
+                                      -8.1438E-01, -1.5565E-05,  2.9244E-02,  2.2779E-02,  1.1982E-02 /)   !W  13
+                  ENDIF
+               ENDIF
+            ELSE ! WS > 14
+               IF (WS <= 20.0 ) THEN
+                  IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
+                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  2.9459E+01, -7.3181E-01,  9.4613E+00,  9.2172E-03,  6.1086E+00, &
+                                      -4.9990E-01, -2.9994E-05, -6.9606E-01, -8.5076E-03,  8.1330E-03 /)   !U  15
+                     coeffs(:,2) = (/  1.7540E+01, -2.6071E-01,  9.3639E+00,  1.3341E-03,  9.4294E+00, &
+                                      -4.2565E-01, -2.7836E-06, -6.7708E-01, -6.9127E-02,  6.2290E-03 /)   !V  15
+                     coeffs(:,3) = (/  1.2792E+01, -4.6469E-01,  4.6350E+00,  1.0633E-02,  1.8523E+00, &
+                                      -3.2417E-01, -8.5038E-05, -2.2253E-01, -7.3351E-04,  5.4781E-03 /)   !W  15
+                  ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
+                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  1.7775E+01,  4.5287E-01,  1.6417E+01, -2.3724E-02,  5.8998E+00, &
+                                      -5.3502E-01,  2.6202E-04, -9.9466E-02,  4.1386E-02,  4.5663E-03 /)   !U  17
+                     coeffs(:,2) = (/  1.2022E+01,  2.4246E-01,  1.3875E+01, -1.1725E-02,  5.1917E+00, &
+                                      -5.4329E-01,  1.1893E-04, -2.0308E-01,  6.5256E-02,  5.6597E-03 /)   !V  17
+                     coeffs(:,3) = (/  1.2680E+01, -1.4768E-01,  7.1498E+00, -3.0341E-03,  1.9747E+00, &
+                                      -3.8374E-01,  7.0412E-05,  2.2297E-01,  5.9943E-02,  5.3514E-03 /)   !W  17
+                  ELSE                      ! 18 < WS <= 20
+                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     coeffs(:,1) = (/  3.1187E+01, -6.8540E-01,  7.1288E+00,  1.1923E-02,  8.8547E+00, &
+                                       6.3133E-02, -9.4673E-05, -2.5710E+00, -5.4077E-02, -1.2797E-04 /)   !U  19
+                     coeffs(:,2) = (/  1.2664E+01,  9.1858E-02,  1.9050E+01, -2.8868E-03,  7.2969E+00, &
+                                      -4.4573E-01, -6.1033E-06, -2.0960E+00, -1.9913E-02,  4.9023E-03 /)   !V  19
+                     coeffs(:,3) = (/  2.2146E+01, -7.6940E-01,  1.1948E+01,  1.0400E-02,  5.0034E+00, &
+                                      -4.3958E-01, -2.5936E-05, -3.0848E-01, -6.3381E-02,  5.1204E-03 /)   !W  19
+                  ENDIF
+               ELSE ! WS > 20
+                  RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                  IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
+                     coeffs(:,1) = (/  2.5165E+01, -7.7660E-02,  1.9692E+01, -1.1794E-02,  9.8635E+00, &
+                                      -2.5520E-01,  2.0573E-04, -4.9850E+00,  1.1272E-01,  1.3267E-03 /)   !U  21
+                     coeffs(:,2) = (/  2.1691E+01, -3.1787E-01,  3.2327E+01, -4.5546E-03,  1.1194E+01, &
+                                      -8.0823E-01,  1.4306E-04, -4.3418E+00,  7.3163E-02,  6.3637E-03 /)   !V  21
+                     coeffs(:,3) = (/  1.4634E+01, -3.9394E-01,  1.1617E+01,  5.6387E-03,  5.4799E+00, &
+                                      -3.9011E-01, -1.0420E-05, -2.4279E+00,  6.6452E-02,  4.9504E-03 /)   !W  21
+                  ELSEIF (WS <= 24.0) THEN  ! 22 < WS <= 24
+                     coeffs(:,1) = (/  7.3816E+00,  1.0538E+00,  2.1578E+01, -3.3487E-02, -6.4986E+00, &
+                                      -8.6782E-01,  3.2397E-04,  1.1412E+00,  2.2982E-01,  1.4660E-02 /)   !U  23
+                     coeffs(:,2) = (/  6.5302E+00,  1.0524E+00,  2.4596E+01, -4.1648E-02,  4.0584E+00, &
+                                      -6.1130E-01,  4.5468E-04, -3.6547E+00,  2.3176E-01,  8.4385E-03 /)   !V  23
+                     coeffs(:,3) = (/  1.3424E+01,  2.6104E-02,  7.6014E+00, -1.2744E-02,  1.0735E+01, &
+                                       2.2086E-01,  1.9309E-04, -5.9548E+00,  8.6483E-02, -3.9550E-03 /)   !W  23
+                  ELSE                      ! 24 < WS
+                     coeffs(:,1) = (/ -1.6629E+01,  1.3094E+00, -4.4183E+00, -8.4860E-03, -1.3800E+01, &
+                                      -5.5221E-01, -5.6659E-05,  8.1834E+00, -8.2497E-03,  1.8383E-02 /)   !U  25
+                     coeffs(:,2) = (/  3.4796E+00,  7.1144E-01,  1.2153E+01, -2.7309E-02,  1.0003E+00, &
+                                      -6.3570E-01,  3.4424E-04, -8.5038E-01,  1.2822E-01,  1.3181E-02 /)   !V  25
+                     coeffs(:,3) = (/  2.7014E+00,  1.1794E-01,  2.1378E+00,  4.5539E-03,  1.6899E+00, &
+                                       1.2254E-01, -9.6940E-05, -2.3430E-01, -2.3826E-02,  5.5964E-05 /)   !W  25
+                  ENDIF
+               ENDIF
+            ENDIF
+
+            HT2 = HT1*HT1
+            HT3 = HT1*HT2
+            RI2 = RI1*RI1
+            RI3 = RI1*RI2
+
+            DO I = 1,3
+               InCDec(I) = coeffs( 1,I) + coeffs(2,I)*Ht1 + coeffs(3,I)*RI1 &
+                                        + coeffs(4,I)*Ht2 + coeffs(5,I)*RI2 + coeffs( 6,I)*Ht1*RI1 &
+                                        + coeffs(7,I)*Ht3 + coeffs(8,I)*RI3 + coeffs( 9,I)*Ht1*RI2 &
+                                                                            + coeffs(10,I)*Ht2*RI1
+            ENDDO
+
+            WS1 = MAX(  2.0, WS )
+            SELECT CASE ( Ri_Cat )
+               CASE ( 1 )
+!                 InCDec   = (/            1.623224368*WS1**1.015099356, &
+!                                          0.884720872*WS1**1.192553093, &
+!                                          1.338245093*WS1**0.841757461 /)
+                  InCohB   = (/ -2.524e-05+0.002122544/WS1, &
+                                           0.004367773*WS1**(-1.14945936), &
+                                           0.031284497*WS1**(-0.72509517) /)
+
+               CASE ( 2 )
+!                 InCDec   = (/            1.478475074*WS1**0.752442176, &
+!                                          1.310684825*WS1**0.624122449, &
+!                                          0.849106068*WS1**0.627688235 /)
+                  InCohB   = (/            0.003320615*WS1**(-1.18592214), &
+                                           0.005402681*WS1**(-0.98637053), &
+                                           0.091649927*WS1**(-1.48835650) /)
+
+               CASE ( 3 )
+!                 InCDec   = (/            1.596175944*WS1**0.674743966, &
+!                                          1.114069218*WS1**0.638049141, &
+!                                          0.473225245*WS1**0.784331891 /)
+                  InCohB   = (/            0.002387997*WS1**(-0.85956868), &
+                                           0.009481901*WS1**(-1.02518835), &
+                                           0.052147706*WS1**(-0.88949864) /)
+
+               CASE ( 4 )
+!                 InCDec   = (/            1.293345620*WS1**0.955639280, &
+!                                          1.296399839*WS1**0.838281755, &
+!                                          0.333750239*WS1**1.103784094 /)
+                  InCohB   = (/            0.002870978*WS1**(-1.07398490), &
+                                           0.002435238*WS1**(-0.68685045), &
+                                           0.125356016*WS1**(-1.34791890) /)
+
+               CASE ( 5 )
+!                 InCDec   = (/            1.325256941*WS1**1.039629269, &
+!                                          1.014004299*WS1**1.082810576, &
+!                                          0.206383058*WS1**1.435200799 /)
+                  InCohB   = (/            0.003545043*WS1**(-1.03669585), &
+                                           0.003996215*WS1**(-0.95313438), &
+                                           0.125103070*WS1**(-1.02886635) /)
+               END SELECT
+
+         CASE ( SpecModel_WF_UPW )
+            HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
+            IF ( WS <= 14.0 ) THEN
+               IF ( WS <= 10 ) THEN
+                  RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.15_ReKi ) )
+                  IF  ( WS <=  8.0 ) THEN   !      WS <= 8
+                     coeffs(:,1) = (/  1.6715E+01, -3.8639E-01,  7.1817E+00,  1.5550E-03, -1.4293E+00, &
+                                      -2.0350E-01,  8.5532E-06, -3.4710E+00, -1.9743E-02, -3.9949E-04 /) !Upw_U 7
+                     coeffs(:,2) = (/  8.4145E+00, -4.7610E-02,  3.9097E+00, -7.1412E-04,  1.8295E+01, &
+                                       2.2583E-01, -1.6965E-05,  2.0769E+01, -9.1670E-02, -8.0300E-03 /) !Upw_V 7
+                  ELSE                      !  8 < WS <= 10
+                     coeffs(:,1) = (/  1.5432E+01, -2.1254E-01,  5.3075E+00, -2.9928E-03,  2.1647E+00, &
+                                       1.1787E-02,  6.7458E-05, -9.0445E-01, -7.5941E-02, -4.7053E-03 /) !Upw_U 9
+                     coeffs(:,2) = (/  7.5921E+00,  3.3520E-02,  1.2231E+01, -7.0018E-03,  6.0889E+01, &
+                                       2.1810E-01,  1.1718E-04,  7.7287E+01, -1.3828E-01, -9.6568E-03 /) !Upw_V 9
+                  ENDIF
+               ELSE
+                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+                  IF  ( WS <= 12.0 ) THEN   ! 10 < WS <= 12
+                     coeffs(:,1) = (/  1.3539E+01, -8.4892E-02, -1.9237E+00, -1.1485E-03, -4.0840E-01, &
+                                       3.0956E-01,  2.4048E-05, -1.1523E+00,  9.6877E-03, -4.0606E-03 /) !Upw_U 11
+                     coeffs(:,2) = (/  7.7451E+00, -1.3818E-01, -9.5197E-01,  3.9610E-03,  8.3255E-01, &
+                                       7.2166E-02, -4.5012E-05, -2.0948E-01, -2.1400E-02, -2.9788E-04 /) !Upw_V 11
+                  ELSE                      ! 12 < WS <= 14
+                     coeffs(:,1) = (/  1.2857E+01, -7.9408E-03, -1.5310E+00, -4.1077E-03,  1.0496E+00, &
+                                       1.9473E-01,  7.2808E-05,  1.8380E-01, -1.6559E-02, -2.0872E-03 /) !Upw_U 13
+                     coeffs(:,2) = (/  7.2452E+00, -6.2662E-02, -2.4865E+00,  3.2123E-03, -1.0281E-01, &
+                                       1.9698E-01, -7.5745E-05, -1.1637E+00, -4.6458E-02, -2.7037E-03 /) !Upw_V 13
+                  ENDIF
+               ENDIF
+            ELSE
+               RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+               IF  ( WS  <= 18.0 ) THEN
+                  IF ( WS <= 16.0 ) THEN   ! 14 < WS <= 16
+                     coeffs(:,1) = (/  1.4646E+01, -1.5023E-01, -9.7543E-01, -3.5607E-03,  4.8663E+00, &
+                                      -9.4360E-03,  1.4932E-04,  5.9503E+00,  7.4028E-02,  5.2698E-03 /) !Upw_U 15
+                     coeffs(:,2) = (/  1.0133E+01, -3.1417E-01,  2.5400E+00,  6.6777E-03,  3.0790E+00, &
+                                      -2.5801E-01, -4.9501E-05,  2.8879E+00, -1.6722E-02,  4.8297E-03 /) !Upw_V 15
+                  ELSE                     ! 16 < WS <= 18
+                     coeffs(:,1) = (/  1.5282E+01, -2.7642E-01,  2.5903E+00,  9.8716E-03,  5.9314E-01, &
+                                      -4.2790E-01, -1.6474E-04, -7.0065E-01, -3.2694E-02,  2.4583E-03 /) !Upw_U 17
+                     coeffs(:,2) = (/  1.2464E+01, -3.4306E-01,  3.6261E+00,  5.8254E-03,  2.2592E+00, &
+                                      -1.1498E-01, -6.6196E-05,  1.3610E+00, -1.3345E-02,  1.0932E-03 /) !Upw_V 17
+                  ENDIF
+               ELSE
+                  IF ( WS <= 20.0 ) THEN   ! 18 < WS <= 20
+                     coeffs(:,1) = (/  1.5059E+01, -8.0478E-02,  8.7088E+00, -1.7854E-03,  3.9922E+00, &
+                                      -6.0268E-01,  4.3906E-05,  3.3463E+00, -6.6490E-02,  1.2290E-02 /) !Upw_U 19
+                     coeffs(:,2) = (/  1.0672E+01, -2.8104E-01,  7.8021E+00,  6.6360E-03,  2.4345E+00, &
+                                      -4.9103E-01, -8.3745E-05,  4.4084E-01, -9.2432E-02,  8.3096E-03 /) !Upw_V 19
+                  ELSE                     ! 20 < WS
+                     coeffs(:,1) = (/  1.8592E+01,  1.3888E-01,  1.6732E+01, -1.1880E-02,  2.3622E+01, &
+                                       6.8199E-01,  7.3664E-05,  4.1289E+00, -3.8604E-01, -3.0381E-02 /) !Upw_U 21
+                     coeffs(:,2) = (/  7.7137E+00,  1.2732E-01,  1.3477E+01,  1.9164E-03,  3.7133E+01, &
+                                       3.8975E-01, -2.2818E-04,  1.8816E+01, -7.5304E-01, -2.1856E-02 /) !Upw_V 21
+                  ENDIF
+               ENDIF
+            ENDIF
+
+            HT2 = HT1*HT1
+            HT3 = HT1*HT2
+            RI2 = RI1*RI1
+            RI3 = RI1*RI2
+
+            DO I = 1,2
+               InCDec(I) = coeffs( 1,I) + coeffs(2,I)*Ht1 + coeffs(3,I)*RI1 &
+                                        + coeffs(4,I)*Ht2 + coeffs(5,I)*RI2 + coeffs( 6,I)*Ht1*RI1 &
+                                        + coeffs(7,I)*Ht3 + coeffs(8,I)*RI3 + coeffs( 9,I)*Ht1*RI2 &
+                                                                            + coeffs(10,I)*Ht2*RI1
+            ENDDO
+
+            WS1 = MAX(  3.0, WS )
+!           InCDec(1:2)   = (/             5.640176786*WS1**0.269850341, &
+!                              6.059554513+18.44124731/WS1**1.5 /)
+            InCohB(1:2)   = (/ 0.000448295+0.002502915/WS1, &
+                               0.001539069+0.005954785/WS1 /)
+
+
+            InCDec(3)     =  0.4*InCDec(1)  !cohA(w) = cohA(u)/2.5, number derived from histograms of u/w for NWTC and LLLJP data
+            InCohB(3)     = 10.0*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
+
+         CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
+            HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
+            IF ( WS <= 12.0 ) THEN
+               IF     ( WS <=  8.0 ) THEN  !      WS <= 8
+                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.15 ) )
+                  coeffs(:,1) = (/  1.0310E+01, -6.4824E-03, -1.3258E+00, -2.7238E-03, -6.8515E+00, &
+                                    3.1602E-02,  5.5982E-05, -8.4777E+00,  2.1506E-02,  4.9745E-04 /) !Dwn_U 7
+                  coeffs(:,2) = (/  6.9491E+00, -1.3378E-01,  1.7961E-01, -4.9439E-04, -1.8140E+00, &
+                                   -4.2321E-02,  4.4962E-05, -3.6939E+00, -8.9465E-03,  4.7867E-04 /) !Dwn_V 7
+               ELSEIF ( WS <= 10.0 ) THEN  !  8 < WS <= 10
+                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+                  coeffs(:,1) = (/  9.7420E+00,  6.1610E-02,  5.6636E-02, -5.5949E-03, -1.3014E+00, &
+                                    2.0655E-01,  8.9989E-05, -1.9837E+00,  5.4957E-03, -3.5496E-03 /) !Dwn_U 9
+                  coeffs(:,2) = (/  7.1063E+00, -1.7021E-01,  1.2560E+00, -4.2616E-04,  9.0937E-01, &
+                                   -1.3022E-01,  4.7976E-05,  2.1302E-01, -4.3159E-04,  1.5443E-03 /) !Dwn_V 9
+               ELSE                        ! 10 < WS <= 12
+                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+                  coeffs(:,1) = (/  1.0869E+01, -9.1393E-03, -1.1695E+00, -3.3725E-03,  3.2199E-01, &
+                                    7.2692E-02,  7.0565E-05,  6.9573E-01,  2.5360E-02,  1.0187E-03 /) !Dwn_U 11
+                  coeffs(:,2) = (/  6.9882E+00, -1.3517E-01, -3.0492E-01, -4.6775E-04,  4.6897E-01, &
+                                   -2.0102E-03,  3.3908E-05,  1.4604E-02,  1.1729E-02, -6.2775E-05 /) !Dwn_V 11
+               ENDIF
+            ELSE
+               RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+               IF     ( WS <= 14.0 ) THEN  ! 12 < WS <= 14
+                  coeffs(:,1) = (/  1.1105E+01,  5.3789E-02, -9.4253E-02, -5.4203E-03, -1.0114E+00, &
+                                    1.1421E-01,  7.6110E-05, -1.2654E+00,  1.5121E-02, -2.9055E-03 /) !Dwn_U 13
+                  coeffs(:,2) = (/  7.5741E+00, -8.3945E-02,  3.7020E+00, -6.0317E-03,  3.1339E-01, &
+                                   -2.1921E-01,  1.5598E-04,  6.2478E-01,  5.9490E-02,  3.4785E-03 /) !Dwn_V 13
+               ELSE                        ! 14 < WS
+                  coeffs(:,1) = (/  1.2256E+01,  2.0131E-02,  1.9465E+00, -7.6608E-03,  1.5031E+00, &
+                                   -1.0916E-01,  1.3634E-04,  1.3451E+00, -1.6458E-02,  3.8312E-03 /) !Dwn_U 15
+                  coeffs(:,2) = (/  7.7749E+00, -2.2712E-01,  1.3675E+00,  6.7944E-03,  4.2033E-02, &
+                                   -6.8887E-02, -9.6117E-05, -1.5526E+00, -2.2357E-02, -1.5311E-03 /) !Dwn_V 15
+               ENDIF
+            ENDIF
+
+            HT2 = HT1*HT1
+            HT3 = HT1*HT2
+            RI2 = RI1*RI1
+            RI3 = RI1*RI2
+
+            DO I = 1,2
+               InCDec(I) = coeffs( 1,I) + coeffs(2,I)*Ht1 + coeffs(3,I)*RI1 &
+                                        + coeffs(4,I)*Ht2 + coeffs(5,I)*RI2 + coeffs( 6,I)*Ht1*RI1 &
+                                        + coeffs(7,I)*Ht3 + coeffs(8,I)*RI3 + coeffs( 9,I)*Ht1*RI2 &
+                                                                            + coeffs(10,I)*Ht2*RI1
+            ENDDO
+
+            WS1 = MAX(  3.0, WS )
+!           WS2 = WS1*WS1
+!           WS3 = WS2*WS1
+!           InCDec(1:2)   = (/ (a+c*WS1+e*WS2+g*WS3)/(1+b*WS1+d*WS2+f*WS3), &
+!                                               3.357892649*WS1**0.1198781 /)
+            InCohB(1:2)   = (/ 4.49289e-05+0.004933460/WS1, &
+                                0.00158053+0.014268899/WS1 /)
+            InCDec(3)     =  0.4_ReKi*InCDec(1)  !cohA(w) = cohA(u)/2.5, number derived from histograms of u/w for NWTC and LLLJP data
+            InCohB(3)     = 10.0_ReKi*InCohB(1)  !cohB(w) = cohB(u)*10, number derived from histograms of w/u for NWTC and LLLJP data
+
+         CASE ( SpecModel_USER )
+            InCDec = (/   WS, HUGE(InCohB(1)), HUGE(InCohB(1)) /)
+            InCohB = 0.0_ReKi ! entire array is zero
+
+         CASE DEFAULT   ! includes CASE ( 'SMOOTH' )
+
+            InCDec = (/1.0_ReKi,   0.75_ReKi,  0.75_ReKi /)*WS  ! The davenport exponential parameter indicates that coh(v) ~ coh(w) in NWTC and LLLJP data
+            InCohB = 0.0_ReKi ! entire array is zero
+
+      END SELECT
+
+END SUBROUTINE GetDefaultCoh
+!=======================================================================
+SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
+   ! This subroutine is used to get the default values of the Reynolds
+   !  stresses.
+   ! sets p%met%PC_UW,  p%met%PC_UV,  p%met%PC_VW and
+   !      p%met%UWskip, p%met%UVskip, p%met%VWskip
+
+   
+   TYPE(TurbSim_ParameterType),     INTENT(INOUT)  :: p                   ! TurbSim parameters
+   TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
+                                    
+   REAL(ReKi),                      INTENT(IN)    :: TmpUstarHub 
+   INTEGER(IntKi),                  intent(  out) :: ErrStat              ! Error level
+   CHARACTER(*),                    intent(  out) :: ErrMsg               ! Message describing error
+   
+   
+   REAL(ReKi)                                     :: rndSgn
+   REAL(ReKi)                                     :: SignProb
+   REAL(ReKi)                                     :: Shr
+   REAL(ReKi)                                     :: Ustar2
+   REAL(ReKi)                                     :: V(2)
+   REAL(ReKi)                                     :: Z(2)
+   REAL(ReKi)                                     :: ZLtmp
+            
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(MaxMsgLen)                           :: ErrMsg2
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+   Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
+   Z(1) = Z(2) - p%grid%GridHeight                   ! bottom of the grid   !bjj: this isn't correct, is it???? fix todo
+   CALL getVelocityProfile(p, p%UHub, p%grid%HubHt, Z, V, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetDefaultRS')
+
+   Shr = ( V(2)-V(1) ) / p%grid%GridHeight    ! dv/dz
+
+!BJJ: check the ranges of our best-fit parameters, using domains of measured values
+
+   SELECT CASE ( p%met%TurbModel_ID )
+      CASE ( SpecModel_GP_LLJ )
+         ZLtmp  = MIN( MAX( p%met%ZL,    -1.00_ReKi ), 1.0_ReKi )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p%met%Ustar,  0.15_ReKi ), 1.0_ReKi )  !Limit the observed values of u*
+         Ustar2 = Ustar2*Ustar2
+      CASE ( SpecModel_NWTCUP )
+         ZLtmp  = MIN( MAX( p%met%ZL,    -0.5_ReKi ), 3.5_ReKi )  !Limit the observed values of z/L
+         UStar2 = MIN( MAX( p%met%Ustar,  0.2_ReKi ), 1.4_ReKi )  !Limit the observed values of u*
+         Ustar2 = Ustar2*Ustar2
+!      CASE ( 'WF_UPW' )
+!      CASE ( 'WF_07D' )
+!      CASE ( 'WF_14D' )
+
+      CASE DEFAULT
+         ZLtmp  = p%met%ZL
+         Ustar2 = p%met%Ustar*p%met%Ustar
+   END SELECT
+
+   !-------------------------------------------------------------------------------------------------
+   ! default UW Reynolds stress
+   !-------------------------------------------------------------------------------------------------
+   p%met%UWskip     = .FALSE.
+   
+   CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
+   SELECT CASE ( p%met%TurbModel_ID )
+
+      CASE ( SpecModel_GP_LLJ )
+
+         p%met%PC_UW = TmpUstarHub**2        
+      
+         IF (p%met%PC_UW <= 0) THEN  !We don't have a local u* value to tie it to; otherwise, assume p%met%PC_UW contains magnitude of value we want
+            IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
+               p%met%PC_UW =  0.0399 - 0.00371*p%UHub - 0.00182*p%met%RICH_NO + 0.00251*ZLtmp - 0.402*Shr + 1.033*Ustar2
+            ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
+               p%met%PC_UW = 0.00668 - 0.00184*p%UHub + 0.000709*p%met%RICH_NO  + 0.264*Shr + 1.065*Ustar2  !magnitude
+            ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
+               p%met%PC_UW = -0.0216 + 0.00319*p%UHub  - 0.00205*ZLtmp + 0.206*Shr + 0.963*Ustar2    !magnitude
+            ELSE                           ! 54 m
+               p%met%PC_UW = -0.0373 + 0.00675*p%UHub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
+            ENDIF
+            p%met%PC_UW = MAX(p%met%PC_UW,0.0)
+
+         ENDIF
+
+         IF (p%met%PC_UW > 0) THEN
+            SignProb = 0.765 + 0.57/PI * ATAN( 0.78511*LOG(p%met%PC_UW)+3.42584)
+            IF (rndSgn <= SignProb) p%met%PC_UW = -p%met%PC_UW
+         ENDIF
+
+      CASE ( SpecModel_NWTCUP )
+
+         IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
+            p%met%PC_UW = 0.165 - 0.0232*p%UHub - 0.0129*p%met%RICH_NO + 1.337*Ustar2 - 0.758*SHR
+         ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
+            p%met%PC_UW = 0.00279 - 0.00139*p%UHub + 1.074*Ustar2 + 0.179*SHR
+         ELSE                          ! 15m data
+            p%met%PC_UW = -0.1310 + 0.0239*p%UHub + 0.556*Ustar2
+         ENDIF
+         p%met%PC_UW = MAX(p%met%PC_UW,0.0)
+
+         IF (p%met%PC_UW > 0) THEN !i.e. not equal to zero
+            SignProb = 0.765 + 0.57/PI * ATAN( 0.88356*LOG(p%met%PC_UW)+2.47668)
+            IF (rndSgn <= SignProb) p%met%PC_UW = -p%met%PC_UW
+         ENDIF
+
+      CASE ( SpecModel_WF_14D )
+
+         p%met%PC_UW = -Ustar2
+         IF ( rndSgn > 0.9937 )  p%met%PC_UW = -p%met%PC_UW
+
+      CASE ( SpecModel_USER )
+         p%met%PC_UW = 0.0
+         p%met%UWskip = .true.
+
+      CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
+         p%met%PC_UW = -Ustar2*(1-p%grid%HubHt/p%met%RefHt) 
+      CASE DEFAULT
+
+         p%met%PC_UW = -Ustar2
+
+   END SELECT
+
+   !-------------------------------------------------------------------------------------------------
+   ! default UV Reynolds stress
+   !-------------------------------------------------------------------------------------------------
+   p%met%UVskip     = .FALSE.
+
+   CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
+   SELECT CASE ( p%met%TurbModel_ID )
+
+      CASE ( SpecModel_GP_LLJ )
+
+         IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
+            p%met%PC_UV = 0.199 - 0.0167*p%UHub + 0.0115*ZLtmp + 1.143*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6527 ) p%met%PC_UV = -p%met%PC_UV
+         ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
+            p%met%PC_UV = 0.190 - 0.0156*p%UHub + 0.00931*ZLtmp + 1.101*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6394 ) p%met%PC_UV = -p%met%PC_UV
+         ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
+            p%met%PC_UV = 0.178 - 0.0141*p%UHub + 0.00709*ZLtmp + 1.072*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6326 ) p%met%PC_UV = -p%met%PC_UV
+         ELSE                           ! 54 m
+            p%met%PC_UV = 0.162 - 0.0123*p%UHub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            IF ( rndSgn < 0.6191 ) p%met%PC_UV = -p%met%PC_UV
+         ENDIF
+
+      CASE ( SpecModel_NWTCUP )
+
+            ! Get the magnitude and add the sign
+         IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
+            p%met%PC_UV = 0.669 - 0.0300*p%UHub - 0.0911*p%met%RICH_NO + 1.421*Ustar2 - 1.393*SHR
+         ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
+            p%met%PC_UV = 1.521 - 0.00635*p%UHub - 0.2200*p%met%RICH_NO + 3.214*Ustar2 - 3.858*SHR
+         ELSE                          ! 15m data
+            p%met%PC_UV = 0.462 - 0.01400*p%UHub + 1.277*Ustar2
+         ENDIF
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF (p%met%PC_UV > 0) THEN !i.e. not equal to zero
+            SignProb = 0.33 + 0.64/PI * ATAN( -0.374775*LOG(p%met%PC_UV)-0.205681)
+            IF (rndSgn <= SignProb) p%met%PC_UV = -p%met%PC_UV
+         ENDIF
+
+      CASE ( SpecModel_WF_UPW )
+
+         p%met%PC_UV = 0.0202 + 0.890*Ustar2 - 2.461*Shr
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF ( rndSgn < 0.7315 ) p%met%PC_UV = -p%met%PC_UV
+
+      CASE ( SpecModel_WF_07D )
+
+         p%met%PC_UV = 0.5040 + 0.177*Ustar2
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF ( rndSgn < 0.7355 ) p%met%PC_UV = -p%met%PC_UV
+
+      CASE ( SpecModel_WF_14D )
+
+         p%met%PC_UV = 0.0430 + 0.258*Ustar2
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         IF ( rndSgn < 0.4423 ) p%met%PC_UV = -p%met%PC_UV
+
+      CASE DEFAULT
+
+         p%met%PC_UV  = 0.0
+         p%met%UVskip = .TRUE.  !use whatever comes our way from the random phases
+
+   END SELECT
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! default VW Reynolds stress
+   !-------------------------------------------------------------------------------------------------
+   p%met%VWskip     = .FALSE.
+
+   CALL  RndUnif( p%RNG, OtherSt_RandNum, rndSgn )
+   SELECT CASE ( p%met%TurbModel_ID )
+
+      CASE ( SpecModel_GP_LLJ )
+
+         IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
+            p%met%PC_VW =  0.0528  - 0.00210*p%UHub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.2999 ) p%met%PC_VW = -p%met%PC_VW
+         ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
+            p%met%PC_VW =  0.0482  - 0.00264*p%UHub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.3061 ) p%met%PC_VW = -p%met%PC_VW
+         ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
+            p%met%PC_VW =  0.0444  - 0.00249*p%UHub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.3041 ) p%met%PC_VW = -p%met%PC_VW
+         ELSE                           ! 54 m
+            p%met%PC_VW =  0.0443  - 0.00261*p%UHub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            IF ( rndSgn < 0.3111 ) p%met%PC_VW = -p%met%PC_VW
+         ENDIF
+
+      CASE ( SpecModel_NWTCUP )
+
+         IF ( p%grid%HubHt > 47.0 ) THEN      ! 58m data
+            p%met%PC_VW = 0.174 + 0.00154*p%UHub - 0.0270*p%met%RICH_NO + 0.380*Ustar2 - 1.131*Shr - 0.00741*ZLtmp
+         ELSEIF ( p%grid%HubHt >= 26.0 ) THEN ! 37m data
+            p%met%PC_VW = 0.120 + 0.00283*p%UHub - 0.0227*p%met%RICH_NO + 0.306*Ustar2 - 0.825*Shr
+         ELSE                          ! 15m data
+            p%met%PC_VW = 0.0165 + 0.00833*p%UHub                 + 0.224*Ustar2
+         ENDIF
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF (p%met%PC_VW > 0) THEN !i.e. not equal to zero
+            SignProb = 0.725 + 0.65/PI * ATAN( 0.654886*LOG(p%met%PC_VW)+1.777198)
+            IF (rndSgn <= SignProb) p%met%PC_VW = -p%met%PC_VW
+         ENDIF
+
+      CASE ( SpecModel_WF_UPW )
+
+         p%met%PC_VW = 0.0263 + 0.273*Ustar2 - 0.684*Shr
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF ( rndSgn < 0.3139 ) p%met%PC_VW = -p%met%PC_VW
+
+      CASE ( SpecModel_WF_07D )
+
+         p%met%PC_VW = 0.241 + 0.118*Ustar2
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF ( rndSgn < 0.0982 ) p%met%PC_VW = -p%met%PC_VW
+
+      CASE ( SpecModel_WF_14D )
+
+         p%met%PC_VW =-0.0224 + 0.159*Ustar2
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         IF ( rndSgn < 0.8436 ) p%met%PC_VW = -p%met%PC_VW
+
+      CASE DEFAULT
+
+         p%met%PC_VW  = 0.0
+         p%met%VWskip = .TRUE.  !use whatever comes our way from the random phases
+
+   END SELECT
+
+
+RETURN
+END SUBROUTINE GetDefaultRS
+!=======================================================================
+!< This function calculates the default power law exponent.
+FUNCTION DefaultPowerLawExp( p )
+
+! necessary requirements: 
+! Rich_No, KHtest, TurbModel_ID, IEC_WindType, IECstandard
+
+
+   IMPLICIT                 NONE
+
+   TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                             !< parameters 
+   REAL(ReKi)                                  :: DefaultPowerLawExp             !< Default Power Law exponent for particular model
+
+   IF ( p%met%KHtest ) THEN
+      DefaultPowerLawExp = 0.3
+      RETURN
+   ENDIF
+
+   SELECT CASE ( p%met%TurbModel_ID )
+
+      CASE (SpecModel_WF_UPW, SpecModel_NWTCUP)
+         IF ( p%met%RICH_NO > 0.0 ) THEN
+            DefaultPowerLawExp = 0.14733
+         ELSE
+            DefaultPowerLawExp = 0.087687698 + 0.059641545*EXP(p%met%RICH_NO/0.04717783)
+         ENDIF
+
+      CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
+         IF ( p%met%RICH_NO > 0.04 ) THEN
+            DefaultPowerLawExp = 0.17903
+         ELSE
+            DefaultPowerLawExp = 0.127704032 + 0.031228952*EXP(p%met%RICH_NO/0.0805173)
+         ENDIF
+
+      CASE (SpecModel_SMOOTH, SpecModel_GP_LLJ, SpecModel_TIDAL, SpecModel_RIVER)
+         ! A 1/7 power law seems to work ok for HYDRO spectral models also...
+         DefaultPowerLawExp = 0.143
+
+      CASE DEFAULT
+         IF ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. p%IEC%IEC_WindType == IEC_EWM100 ) THEN
+            DefaultPowerLawExp = 0.11         ! [IEC 61400-1 6.3.2.1 (14)]
+         ELSEIF ( p%IEC%IECstandard == 3 ) THEN
+            DefaultPowerLawExp = 0.14         ! [IEC 61400-3 Page 22 (3)]
+         ELSE
+            DefaultPowerLawExp = 0.2          ! [IEC 61400-1 6.3.1.2 (10)]
+         ENDIF
+
+   END SELECT
+
+   RETURN
+END FUNCTION DefaultPowerLawExp
+!=======================================================================
+FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL)
+
+
+   IMPLICIT                              NONE
+
+   REAL(ReKi),   INTENT(IN)           :: u_ref                       ! Wind speed at reference height
+   REAL(ReKi),   INTENT(IN)           :: z_ref                       ! Reference height
+   REAL(ReKi),   INTENT(IN)           :: z0                          ! Surface roughness length -- It must be > 0 (which we've already checked for)
+   REAL(ReKi),   INTENT(IN)           :: ZL                          ! M-O stability parameter
+
+   REAL(ReKi)                         :: tmp                         ! a temporary value
+   REAL(ReKi)                         :: psiM
+   REAL(ReKi)                         :: getUstarDiab                ! the diabatic u* value (u*0)
+
+   IF ( ZL >= 0 ) THEN !& ZL < 1
+      psiM = -5.0*MIN(ZL, REAL(1.0,ReKi) )
+   ELSE
+      tmp = (1.0 - 15.0*ZL)**0.25
+
+      !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
+      psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
+
+   ENDIF
+
+   getUstarDiab = ( 0.4 * u_ref ) / ( LOG( z_ref / z0 ) - psiM )
+
+END FUNCTION
+!=======================================================================
+!> this routine calculates the M-O z/L and L parameters using
+!!  Rich_No, SpecModel, and HubHt
+SUBROUTINE Calc_MO_zL(SpecModel, Rich_No, HubHt, ZL, L )
+
+
+   IMPLICIT NONE
+                
+   REAL(ReKi)    , intent(in)               :: HubHt                                    ! Hub height
+   REAL(ReKi)    , intent(in)               :: RICH_NO                                  ! Gradient Richardson number                
+   REAL(ReKi)    , intent(  out)            :: L                                        ! M-O length
+   REAL(ReKi)    , intent(  out)            :: ZL                                       ! A measure of stability
+   
+   INTEGER(IntKi), intent(in)               :: SpecModel                                ! Integer value of spectral model (see SpecModel enum)
+   
+
+      ! ***** Calculate M-O z/L parameter   :  z/L is a number in (-inf, 1] *****
+
+   IF ( SpecModel == SpecModel_NWTCUP ) THEN
+         ! Calculate disk averaged Z/L from turbine layer Ri for NWTC/LIST experiment
+
+      IF ( RICH_NO <= -0.1 ) THEN
+         ZL = -0.254 + 1.047*RICH_NO
+      ELSEIF ( RICH_NO < 0 ) THEN
+         ZL = 10.369*RICH_NO/(1.0 - 19.393*RICH_NO)
+      ELSE  !( RICH_NO < 0.155 ) THEN
+         ZL = 2.535*MIN( RICH_NO, 0.155_ReKi ) / (1.0 - 6.252*MIN( RICH_NO, 0.155_ReKi ))
+      ENDIF
+
+
+   ELSEIF (SpecModel == SpecModel_GP_LLJ) THEN
+
+      IF ( RICH_NO <= -0.1 ) THEN
+         ZL = -0.047 + 1.054*RICH_NO
+      ELSEIF ( RICH_NO < 0 ) THEN
+         ZL = 2.213*RICH_NO/(1.0 - 4.698*RICH_NO)
+      ELSE  !( RICH_NO < 0.1367 ) THEN
+         ZL = 3.132*MIN( RICH_NO, 0.1367_ReKi ) / (1.0 - 6.762*MIN( RICH_NO, 0.1367_ReKi ))
+      ENDIF
+
+   ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181-189.
+
+      IF ( RICH_NO <= 0.0 ) THEN
+         ZL = RICH_NO
+         !PhiM = (1.0 - 16.0*ZL)**-0.25
+      ELSEIF ( RICH_NO < 0.16667 ) THEN
+         ZL = MIN(RICH_NO / ( 1.0 - 5.0*RICH_NO ), 1.0_ReKi )  ! The MIN() will take care of rounding issues.
+         !PhiM = (1.0 + 5.0*ZL)
+      ELSE
+         ZL = 1.0
+      ENDIF
+
+   ENDIF !SpecModels
+
+   ZL = MIN( ZL, 1.0_ReKi )
+
+   
+      ! ***** Calculate M-O length scale, L [meters] *****
+      ! L should be constant in the surface layer
+
+   IF ( .NOT. EqualRealNos(ZL , 0.0_ReKi) ) THEN
+      L = HubHt / ZL ! Since ZL is the average ZL over the rotor disk, we should use HubHt to estimate L instead
+   ELSE
+      L = HUGE( L )
+   ENDIF
+
+
+END SUBROUTINE Calc_MO_zL
+
+!=======================================================================
+
 END MODULE TS_FileIO

@@ -20,9 +20,8 @@
 MODULE TS_VelocitySpectra
 
    USE  TurbSim_Types
-use ts_errors   
    
-   IMPLICIT                NONE
+   IMPLICIT NONE
 
 CONTAINS
 
@@ -618,7 +617,6 @@ END SUBROUTINE Spec_NWTCUP
 !! by 2-D interpolation.
 SUBROUTINE Spec_TimeSer ( p, Ht, LastIndex, Spec )
 
-   USE TurbSim_Types
 
          ! Passed variables
    TYPE(TurbSim_ParameterType), INTENT(IN   ) :: p                       !< Input: turbsim parameters
@@ -715,8 +713,6 @@ END SUBROUTINE Spec_UserSpec
 !! p%usr%f and p%usr%pointzi must be in increasing order. Each dimension
 !! may contain only 1 value.
 SUBROUTINE UserSpec_Interp2D( InCoord, p_usr, LastIndex, OutSpec )
-
-   USE TurbSim_Types
 
       ! I/O variables
 
@@ -1418,7 +1414,7 @@ END SUBROUTINE Spec_WF_UPW
 !> This subroutine defines the 3-D turbulence spectrum that can be expected to exist (7 to 14 rotor diameters) 
 !! downstream of a large, multi-row wind park.  The scaling is based on measurements made by the National 
 !! Renewable Energy Laboratory (NREL) in San Gorgonio Pass, California.
-SUBROUTINE Spec_WF_DW ( p, Ht, Ucmp, Spec )
+SUBROUTINE Spec_WF_DW ( p, Ht, Ucmp, Spec, ErrStat, ErrMsg )
 
 
 IMPLICIT                NONE
@@ -1430,6 +1426,10 @@ IMPLICIT                NONE
    REAL(ReKi),                   INTENT(IN   ) :: Ucmp                    !< Velocity ( input )
    REAL(ReKi),                   INTENT(  out) :: Spec     (:,:)          !< Target velocity spectra ( output )
 
+   INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+   CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+   
+   
    ! Internal variables
 
    REAL(ReKi)            :: A0
@@ -1481,7 +1481,9 @@ IMPLICIT                NONE
 
    INTEGER               :: I                       ! Loop counter
 
-
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
 Ustar2 = p%met%Ustar*p%met%Ustar
 
@@ -1884,15 +1886,16 @@ CONTAINS
    REAL(ReKi),INTENT(IN) :: X           ! Function input
 
       IF ( ( X < 0.0 ) .OR. ( A <= 0.0 ) ) THEN
-        CALL TS_Abort( ' An error occurred in the Beta6 function. ' )
+         CALL SetErrStat( ErrID_Fatal, 'Invalid X or A inputs.', ErrStat, ErrMsg, 'Beta6' )
+         RETURN
       ENDIF
 
       IF ( X < A + 1.0 ) THEN
-         CALL Beta8( Beta6, A, X ) ! was CALL Beta8( GAMSER, A, X )
+         CALL Beta8( Beta6, A, X ) 
          ! Beta6 = GAMSER
       ELSE
-         CALL Beta7( Beta6, A, X)  ! was CALL Beta7( GAMMCF, A, X )
-         Beta6 = 1.0 - Beta6 ! was Beta6 = 1.0 - GAMMCF
+         CALL Beta7( Beta6, A, X)  
+         Beta6 = 1.0 - Beta6 
       ENDIF
 
    RETURN
@@ -1928,7 +1931,8 @@ CONTAINS
 
 
    IF ( X <= 0.0 ) THEN
-      CALL TS_Abort ( 'Input variable X must be positive in function Beta7()' )
+      CALL SetErrStat( ErrID_Fatal, 'Input variable X must be positive.', ErrStat, ErrMsg, 'Beta7' )
+      RETURN
    ENDIF
 
       gOld = 0.0
@@ -1966,10 +1970,12 @@ CONTAINS
       ENDDO
 
       IF ( continueIT ) THEN
-         CALL TS_Abort (' Value of A is too large or ITMAX is too small in BETA7. ' )
+         CALL SetErrStat( ErrID_Fatal, 'Value of A is too large or ITMAX is too small.', ErrStat, ErrMsg, 'Beta7' )
+         RETURN
       ENDIF
 
       GLN  = Beta9( A )
+      IF (ErrStat >= AbortErrLev) RETURN
 
       GAMMCF = EXP( -X + A*LOG( X ) - GLN ) * G
 
@@ -2020,10 +2026,13 @@ CONTAINS
          ENDDO
 
          IF ( continueIT ) THEN
-            CALL TS_Abort (' Value of A is too large or ITMAX is too small in BETA8. ' )
+            CALL SetErrStat( ErrID_Fatal, 'Value of A is too large or ITMAX is too small.', ErrStat, ErrMsg, 'BETA8' )
+            RETURN
          ENDIF
 
          GLN = Beta9( A )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
          GAMSER = Sum * EXP( -X + A * LOG(X) - GLN)
 
       ELSEIF ( X == 0.0 ) THEN
@@ -2031,8 +2040,8 @@ CONTAINS
             GAMSER = 0.0
 
       ELSE ! ( X < 0.0 )
-           CALL TS_Abort( 'Error in Subroutine Beta8.  Invalid input.' )
-
+         CALL SetErrStat( ErrID_Fatal, 'Invalid input.', ErrStat, ErrMsg, 'BETA8' )
+         RETURN
       ENDIF
 
    RETURN
@@ -2057,7 +2066,8 @@ CONTAINS
    INTEGER                :: J       ! Loop counter
 
    IF ( XX <= -4.5 ) THEN
-      CALL TS_Abort ( 'Input variable XX must be larger than -4.5 in function Beta9()' )
+      CALL SetErrStat( ErrID_Fatal, 'Input variable XX must be larger than -4.5.', ErrStat, ErrMsg, 'Beta9' )
+      RETURN      
    ENDIF
 
 
@@ -2074,7 +2084,8 @@ CONTAINS
 
 
    IF ( SER <= 0.0 ) THEN
-      CALL TS_Abort ( 'Variable SER must be larger than 0.0 in function Beta9()' )
+      CALL SetErrStat( ErrID_Fatal, 'Variable SER must be larger than 0.0.', ErrStat, ErrMsg, 'Beta9' )
+      RETURN      
    ENDIF
 
 

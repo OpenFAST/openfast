@@ -262,8 +262,8 @@ ENDIF
 CALL CreateGrid( p%grid, p%usr, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
 CALL CheckError()
       
-CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel)                  
-
+CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat, ErrMsg)                  
+CALL CheckError()
 
 !..................................................................................................................................
 ! Calculate mean velocity and direction profiles:
@@ -303,8 +303,8 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
    CALL AllocAry(p%met%Ustar_profile, SIZE(p%grid%Z), 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
    CALL CheckError()
 
-   p%met%ZL_profile(:)    = getZLARY(    U, p%grid%Z, p%met%Rich_No, p%met%ZL, p%met%L, p%met%ZLOffset, p%met%WindProfileType )
-   p%met%Ustar_profile(:) = getUstarARY( p, U, p%grid%Z, p%met%UStarOffset, p%met%UStarSlope )
+   p%met%ZL_profile(:)    = getZLProfile(       U, p%grid%Z, p%met%Rich_No, p%met%ZL, p%met%L, p%met%ZLOffset, p%met%WindProfileType )
+   p%met%Ustar_profile(:) = getUStarProfile( p, U, p%grid%Z, p%met%UStarOffset, p%met%UStarSlope )
    
 END IF
 
