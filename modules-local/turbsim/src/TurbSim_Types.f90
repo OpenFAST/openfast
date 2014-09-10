@@ -3,10 +3,10 @@ MODULE TurbSim_Types
 
 use NWTC_Library
 
-TYPE(ProgDesc), PARAMETER    :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.00a-bjj', '9-Sep-2014' )
+   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.00a-bjj', '9-Sep-2014' )
 
-LOGICAL,    PARAMETER        :: MVK       = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
-LOGICAL,    PARAMETER        :: PeriodicY = .FALSE. !.TRUE.
+   LOGICAL,        PARAMETER :: MVK         = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
+   LOGICAL,        PARAMETER :: PeriodicY   = .FALSE. !.TRUE.
 
 
    INTEGER(IntKi), PARAMETER :: MaxMsgLen = 1024 ! Maximum length of error messages
@@ -37,25 +37,23 @@ LOGICAL,    PARAMETER        :: PeriodicY = .FALSE. !.TRUE.
    
    
       ! distinct output file formats (list by extension)
-   INTEGER(IntKi), PARAMETER :: FileExt_BTS   =  1       ! .bts file         : AeroDyn FF data (binary) [WrADFF]
-   INTEGER(IntKi), PARAMETER :: FileExt_WND   =  2       ! .wnd file         : BLADED FF data (binary)  [WrBLFF]
-   INTEGER(IntKi), PARAMETER :: FileExt_HH    =  3       ! .hh file          : AeroDyn HH data (formatted) [WrADHH]
-   INTEGER(IntKi), PARAMETER :: FileExt_BIN   =  4       ! .bin file         : binary HH turbulence parameters [WrBHHTP]
-   INTEGER(IntKi), PARAMETER :: FileExt_DAT   =  5       ! .dat file         : formatted HH turbulence parameters [WrFHHTP]
-   INTEGER(IntKi), PARAMETER :: FileExt_UVW   =  6       ! .u, .v, .w files  : formatted FF data (Traditional SNLWIND-3D format) [WrFMTFF]
-   INTEGER(IntKi), PARAMETER :: FileExt_CTS   =  7       ! .cts file         : coherent turbulence
-   INTEGER(IntKi), PARAMETER :: FileExt_TWR   =  8       ! .twr file         : AeroDyn tower data (binary)
-   INTEGER(IntKi), PARAMETER :: NumFileFmt    =  8       ! TOTAL number of output file formats (used to dimension array)
+   INTEGER(IntKi), PARAMETER :: FileExt_BTS       =  1  ! .bts file         : AeroDyn FF data (binary) [WrADFF]
+   INTEGER(IntKi), PARAMETER :: FileExt_WND       =  2  ! .wnd file         : BLADED FF data (binary)  [WrBLFF]
+   INTEGER(IntKi), PARAMETER :: FileExt_HH        =  3  ! .hh file          : AeroDyn HH data (formatted) [WrADHH]
+   INTEGER(IntKi), PARAMETER :: FileExt_BIN       =  4  ! .bin file         : binary HH turbulence parameters [WrBHHTP]
+   INTEGER(IntKi), PARAMETER :: FileExt_DAT       =  5  ! .dat file         : formatted HH turbulence parameters [WrFHHTP]
+   INTEGER(IntKi), PARAMETER :: FileExt_UVW       =  6  ! .u, .v, .w files  : formatted FF data (Traditional SNLWIND-3D format) [WrFMTFF]
+   INTEGER(IntKi), PARAMETER :: FileExt_CTS       =  7  ! .cts file         : coherent turbulence
+   INTEGER(IntKi), PARAMETER :: FileExt_TWR       =  8  ! .twr file         : AeroDyn tower data (binary)
+   INTEGER(IntKi), PARAMETER :: NumFileFmt        =  8  ! TOTAL number of output file formats (used to dimension array)
    
-   
-   REAL(ReKi), PARAMETER        :: profileZmax = 140.                       ! Upper height limit for extrapolating GP_LLJ profiles of ustar and zl
-   REAL(ReKi), PARAMETER        :: profileZmin =  50.                       ! Lower height limit for extrapolating GP_LLJ profiles of ustar and zl
-   REAL(ReKi), PARAMETER        :: Omega     = 7.292116E-05                 ! Angular speed of rotation of the earth (rad/s)
-   REAL(ReKi), PARAMETER        :: Tolerance = 0.0001                       ! The largest difference between two numbers that are assumed to be equal
-
-   
-   
-   CHARACTER(1),   PARAMETER ::  Comp (3) = (/ 'u', 'v', 'w' /)  ! The names of the wind components
+      ! other parameters:
+   REAL(ReKi),     PARAMETER :: profileZmax       = 140.          ! Upper height limit for extrapolating GP_LLJ profiles of ustar and zl
+   REAL(ReKi),     PARAMETER :: profileZmin       =  50.          ! Lower height limit for extrapolating GP_LLJ profiles of ustar and zl
+   REAL(ReKi),     PARAMETER :: Omega             = 7.292116E-05  ! Angular speed of rotation of the earth (rad/s)
+   REAL(ReKi),     PARAMETER :: Tolerance         = 0.0001        ! The largest difference between two numbers that are assumed to be equal
+                   
+   CHARACTER(1),   PARAMETER ::  Comp (3) = (/ 'u', 'v', 'w' /)   ! The names of the wind components
    
    
    type :: RandNum_ParameterType
@@ -70,36 +68,16 @@ LOGICAL,    PARAMETER        :: PeriodicY = .FALSE. !.TRUE.
    type :: RandNum_OtherStateType
       INTEGER(IntKi), ALLOCATABLE     :: NextSeed   (:)                           ! The array that holds the next random seed for the 3 components.            
    end type RandNum_OtherStateType
-
-   
-            
-   TYPE                         :: Event                                    ! Coherent turbulent event to add to the background wind
-      INTEGER                   :: EventNum                                 ! The event number (index into EventID() array)
-      REAL(ReKi)                :: TStart                                   ! The time at which to add this event
-      REAL(ReKi)                :: delt                                     ! The delta time before the event begins (for interpolation in AeroDyn)
-      LOGICAL                   :: Connect2Prev = .FALSE.                   ! Whether this event is connected to the next, otherwise there is space between them
-      TYPE(Event), POINTER      :: Next         => NULL()                   ! The next event to add
-   END TYPE
-
-   
-   
+                   
    
    TYPE     :: CohStr_ParameterType   
-      REAL(ReKi)                   :: Zbottom                                  ! The height of the lowest point on the grid (before tower points are added), equal to Z(1)
-      REAL(ReKi)                   :: ScaleWid                        ! Scaling width for LE coherent turbulence (RotDiam in AeroDyn FD_Wind)
-      REAL(ReKi)                   :: ScaleVel                        ! Scaling velocity for LE coherent turbulence, U0.  2*U0 is the difference in wind speed between the top and bottom of the wave.   
-      REAL(ReKi)                   :: Uwave                           ! Wind speed at center of the k-h wave 
-      REAL(ReKi)                   :: Wsig                            ! Standard deviation of the w-component wind speed
 
       REAL(ReKi)                   :: CTLy                                     ! Fractional location of tower centerline from right (looking downwind) to left side of the dataset.
       REAL(ReKi)                   :: CTLz                                     ! Fractional location of hub height from the bottom of the dataset.
       REAL(ReKi)                   :: CTStartTime                              ! Minimum time to add coherent structures
       REAL(ReKi)                   :: DistScl                                  ! Disturbance scale for AeroDyn coherent turbulence events
    
-      REAL(ReKi)                   :: Ym_max                                   ! The nondimensional lateral width of the coherent turbulence dataset
-      REAL(ReKi)                   :: Zm_max                                   ! The nondimensional vertical height of the coherent turbulence dataset
-      
-            
+                  
       CHARACTER(200)               :: CTEventPath                              ! String used to store the name of the coherent event definition file
       CHARACTER(200)               :: CTEventFile                              ! String used to store the name of the coherent event definition file
       CHARACTER(  3)               :: CTExt                                    ! String used to determine the type of coherent structures ("dns" or "les")
@@ -107,22 +85,6 @@ LOGICAL,    PARAMETER        :: PeriodicY = .FALSE. !.TRUE.
    END TYPE CohStr_ParameterType
    
 
-   TYPE :: CohStr_OutputType
-      REAL(ReKi)                   :: CTKE                                     ! Maximum predicted Coherent Turbulent Kenetic Energy at the center of the billow
-      REAL(ReKi)                   :: lambda                                   ! The expected value of interarrival times for the Poisson process
-      INTEGER(IntKi)               :: NumCTEvents                              ! Number of events to be inserted into the .cts file
-      INTEGER(IntKi)               :: NumCTEvents_separate                     ! Number of separate events inserted into the .cts file (# events with .Connect2Prev = .false.) 
-      REAL(ReKi)                   :: ExpectedTime                             ! Amount of time the coherent structures should take
-      REAL(ReKi)                   :: EventTimeSum                             ! Amount of time the coherent structure takes
-      REAL(ReKi)                   :: EventTimeStep                            ! The average length of timesteps in output events
-   
-      INTEGER(IntKi)               :: NumCTt                                   ! Number of data points to be printed in the output coherent event timestep file
-            
-      TYPE (Event), POINTER        :: PtrHead      => NULL()                   ! Pointer to the first event
-      TYPE (Event), POINTER        :: PtrTail      => NULL()                   ! Pointer to the last event   
-   
-   END TYPE CohStr_OutputType   
-   
    
    type :: Grid_ParameterType
       
@@ -304,6 +266,7 @@ LOGICAL,    PARAMETER        :: PeriodicY = .FALSE. !.TRUE.
       TYPE(Meteorology_ParameterType)  :: met                         ! parameters for TurbSim 
       TYPE(IEC_ParameterType)          :: IEC                         ! parameters for IEC models
       TYPE(UserTSSpec_ParameterType)   :: usr                         ! parameters for user spectra or time-series input 
+      TYPE(CohStr_ParameterType)       :: CohStr                      ! parameters for coherent structures 
       
    !bjj: there probably won't be a need for this later...      
       REAL(ReKi)                       :: UHub                        ! Hub-height (total) wind speed (m/s)

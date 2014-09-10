@@ -2086,7 +2086,6 @@ SUBROUTINE TS_End(p, OtherSt_RandNum)
 
 
    TYPE(TurbSim_ParameterType),  INTENT(INOUT) :: p                 !< parameters 
-!   TYPE(CohStr_ParameterType),   INTENT(INOUT) :: p_CohStr          !< parameters for coherent structures
    TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum   !< other states for random numbers (next seed, etc)
 
    

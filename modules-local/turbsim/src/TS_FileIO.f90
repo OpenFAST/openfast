@@ -33,7 +33,7 @@ CONTAINS
 !> This subroutine reads parameters from the primary TurbSim input file.
 !> It validates most of the meteorology data (because it is used to 
 !> calculate default values later in the routine)
-SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
+SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
 
   ! This subroutine is used to read parameters from the input file.
@@ -42,7 +42,6 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
 
    CHARACTER(*),                 INTENT(IN)    :: InFile             !< name of the primary TurbSim input file
    TYPE(TurbSim_ParameterType),  INTENT(INOUT) ::  p                 !< TurbSim's parameters
-   TYPE(CohStr_ParameterType),   INTENT(INOUT) :: p_CohStr           !< parameters for coherent structures
    TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum    !< other states for random numbers (next seed, etc)
 
 
@@ -445,7 +444,7 @@ SUBROUTINE ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
             p%met%TMName = 'von Karman model with user-defined specifications'
             p%met%TurbModel_ID = SpecModel_USRVKM
          CASE ( 'USRINP' )
-            p%met%TMName = 'User-input uniform spectra'
+            p%met%TMName = 'Uniform user-input'
             p%met%TurbModel_ID = SpecModel_USER
             
             CALL GetUSRspec(UserFile, p, UnEc, ErrStat2, ErrMsg2)
@@ -1144,7 +1143,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
 
-      CALL ReadVar( UI, InFile, p_CohStr%CTEventPath, "CTEventPath", "Coherence events path",ErrStat2, ErrMsg2, UnEc)
+      CALL ReadVar( UI, InFile, p%CohStr%CTEventPath, "CTEventPath", "Coherence events path",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       CALL ReadVar( UI, InFile, Line, "CTEventFile", "Event file type",ErrStat2, ErrMsg2, UnEc)
@@ -1153,14 +1152,14 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
       IF ( p%met%KHtest ) THEN
 
-         p_CohStr%CText = 'les'
-         p_CohStr%CTEventFile = TRIM(p_CohStr%CTEventPath)//PathSep//'Events.xtm'
+         p%CohStr%CText = 'les'
+         p%CohStr%CTEventFile = TRIM(p%CohStr%CTEventPath)//PathSep//'Events.xtm'
 
          CALL WrScr( ' LES events will be used for the KH test.' )
 
       ELSE
 
-         p_CohStr%CText = Line  !This will preserve the case formatting, in case it matters.
+         p%CohStr%CText = Line  !This will preserve the case formatting, in case it matters.
 
          CALL Conv2UC( Line )
 
@@ -1168,13 +1167,13 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
              CALL RndUnif( p%RNG, OtherSt_RandNum, tmp )
 
              IF ( tmp <= 0.5 ) THEN
-                 p_CohStr%CText = 'les'
+                 p%CohStr%CText = 'les'
              ELSE
-                 p_CohStr%CText = 'dns'
+                 p%CohStr%CText = 'dns'
              ENDIF
          ENDIF
 
-         p_CohStr%CTEventFile = TRIM(p_CohStr%CTEventPath)//PathSep//'Events.'//TRIM(p_CohStr%CText)
+         p%CohStr%CTEventFile = TRIM(p%CohStr%CTEventPath)//PathSep//'Events.'//TRIM(p%CohStr%CText)
 
       ENDIF
 
@@ -1189,21 +1188,21 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       ENDIF
 
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
-      CALL ReadVar( UI, InFile, p_CohStr%DistScl, "DistScl", "Disturbance scale",ErrStat2, ErrMsg2, UnEc)
+      CALL ReadVar( UI, InFile, p%CohStr%DistScl, "DistScl", "Disturbance scale",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
          ! ------------ Read the Lateral Fractional Location of tower centerline in wave, CTLy ----------
-      CALL ReadVar( UI, InFile, p_CohStr%CTLy, "CTLy", "Location of tower centerline",ErrStat2, ErrMsg2, UnEc)
+      CALL ReadVar( UI, InFile, p%CohStr%CTLy, "CTLy", "Location of tower centerline",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
          ! ------------ Read the Vertical Fraction Location of hub in wave, CTLz ------------------------
-      CALL ReadVar( UI, InFile, p_CohStr%CTLz, "CTLz", "Location of hub height",ErrStat2, ErrMsg2, UnEc)
+      CALL ReadVar( UI, InFile, p%CohStr%CTLz, "CTLz", "Location of hub height",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( p%met%KHtest ) THEN
-            p_CohStr%DistScl = 1.0
-            p_CohStr%CTLy    = 0.5
-            p_CohStr%CTLz    = 0.5
+            p%CohStr%DistScl = 1.0
+            p%CohStr%CTLy    = 0.5
+            p%CohStr%CTLz    = 0.5
       ELSEIF ( Randomize ) THEN
 
          CALL RndUnif( p%RNG, OtherSt_RandNum, tmp )
@@ -1215,30 +1214,30 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          IF ( tmp > 0.25 .OR. p%grid%RotorDiameter <= 30.0 ) THEN
 
-            p_CohStr%DistScl = 1.0
-            p_CohStr%CTLy    = 0.5
-            p_CohStr%CTLz    = 0.5
+            p%CohStr%DistScl = 1.0
+            p%CohStr%CTLy    = 0.5
+            p%CohStr%CTLz    = 0.5
 
          ELSE
 
-            p_CohStr%DistScl = 0.5
-            p_CohStr%CTLy    = 0.5
+            p%CohStr%DistScl = 0.5
+            p%CohStr%CTLy    = 0.5
 
             IF ( tmp < 0.125 ) THEN
-               p_CohStr%CTLz = 0.0 ! The hub is on the bottom of the dataset (i.e. the billow is on the top of the disk)
+               p%CohStr%CTLz = 0.0 ! The hub is on the bottom of the dataset (i.e. the billow is on the top of the disk)
             ELSE
-               p_CohStr%CTLz = 1.0 ! The hub is on the top of the dataset
+               p%CohStr%CTLz = 1.0 ! The hub is on the top of the dataset
             ENDIF
 
          ENDIF
 
       ELSE  !Don't randomize:
 
-         IF ( p_CohStr%DistScl < 0.0 ) THEN
+         IF ( p%CohStr%DistScl < 0.0 ) THEN
             CALL SetErrStat( ErrID_Fatal, 'The disturbance scale must be a positive.', ErrStat, ErrMsg, 'ReadInputFile')         
-         ELSEIF ( p%grid%RotorDiameter <= 30.0 .AND. p_CohStr%DistScl < 1.0 ) THEN
+         ELSEIF ( p%grid%RotorDiameter <= 30.0 .AND. p%CohStr%DistScl < 1.0 ) THEN
             CALL SetErrStat( ErrID_Fatal, 'The disturbance scale must be at least 1.0 for rotor diameters less than 30.', ErrStat, ErrMsg, 'ReadInputFile')         
-         ELSEIF ( p%grid%RotorDiameter*p_CohStr%DistScl <= 15.0  ) THEN
+         ELSEIF ( p%grid%RotorDiameter*p%CohStr%DistScl <= 15.0  ) THEN
             CALL SetErrStat( ErrID_Fatal, 'The coherent turbulence must be greater than 15 meters in height.  '//&
                         'Increase the rotor diameter or the disturbance scale. ', ErrStat, ErrMsg, 'ReadInputFile')         
          ENDIF
@@ -1248,10 +1247,10 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
 
-      CALL ReadVar( UI, InFile, p_CohStr%CTStartTime, "CTStartTime", "CTS Start Time",ErrStat2, ErrMsg2, UnEc)
+      CALL ReadVar( UI, InFile, p%CohStr%CTStartTime, "CTStartTime", "CTS Start Time",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      p_CohStr%CTStartTime = MAX( p_CohStr%CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
+      p%CohStr%CTStartTime = MAX( p%CohStr%CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
 
    ENDIF    ! WrFile(FileExt_CTS)
 
@@ -3710,11 +3709,10 @@ SUBROUTINE WrSum_InterpolatedHubStats(p, V)
 
 END SUBROUTINE WrSum_InterpolatedHubStats
 !=======================================================================
-SUBROUTINE WrSum_EchoInputs(p, p_CohStr)
+SUBROUTINE WrSum_EchoInputs(p )
 
       ! passed variables:
    TYPE(TurbSim_ParameterType),     INTENT(IN)     ::  p                               !< TurbSim's parameters
-   TYPE(CohStr_ParameterType),      INTENT(IN)     ::  p_CohStr
    
    INTEGER                                         ::  I          ! loop counter
    CHARACTER(10)                                   ::  TmpStr     ! temporary string used to write output to summary file
@@ -3906,17 +3904,17 @@ IF ( .NOT. p%WrFile(FileExt_CTS) ) RETURN
       WRITE (p%US,"( // 'Coherent Turbulence Scaling Parameters:' / )")
    
 
-      IF ( LEN( TRIM(p_CohStr%CTEventPath) ) <= 10 )  THEN
-         WRITE (p%US,"( A10 , 2X , 'Name of the path containing the coherent turbulence data files' )") TRIM(p_CohStr%CTEventPath)
+      IF ( LEN( TRIM(p%CohStr%CTEventPath) ) <= 10 )  THEN
+         WRITE (p%US,"( A10 , 2X , 'Name of the path containing the coherent turbulence data files' )") TRIM(p%CohStr%CTEventPath)
       ELSE
-         WRITE (p%US,"( A, /, 12X , 'Name of the path containing the coherent turbulence data files' )") TRIM(p_CohStr%CTEventPath)
+         WRITE (p%US,"( A, /, 12X , 'Name of the path containing the coherent turbulence data files' )") TRIM(p%CohStr%CTEventPath)
       ENDIF
-      WRITE (p%US,"( 7X, A3, 2X, 'Type of coherent turbulence data files' )") TRIM(p_CohStr%CText)
+      WRITE (p%US,"( 7X, A3, 2X, 'Type of coherent turbulence data files' )") TRIM(p%CohStr%CText)
 !      WRITE (p%US,"( L10 , 2X , 'Randomize the disturbance scale and location?' )")  Randomize
-      WRITE (p%US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")  p_CohStr%DistScl
-      WRITE (p%US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")  p_CohStr%CTLy
-      WRITE (p%US,"( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )")  p_CohStr%CTLz
-      WRITE (p%US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")  p_CohStr%CTStartTime
+      WRITE (p%US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")  p%CohStr%DistScl
+      WRITE (p%US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")  p%CohStr%CTLy
+      WRITE (p%US,"( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )")  p%CohStr%CTLz
+      WRITE (p%US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")  p%CohStr%CTStartTime
             
 !..................................................................................................................................
    

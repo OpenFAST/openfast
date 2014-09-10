@@ -66,8 +66,6 @@ IMPLICIT                   NONE
 
 TYPE( TurbSim_ParameterType )    :: p                       ! TurbSim parameters
 TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum         ! other states for random numbers (next seed, etc)
-TYPE(CohStr_ParameterType)       :: p_CohStr                ! parameter for coherent structures
-TYPE(CohStr_OutputType)          :: y_CohStr                ! output from coherent structure calculations
 
 REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)     ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)     ! The turbulence PSD array (NumFreq,NPoints,3).
@@ -76,10 +74,11 @@ REAL(ReKi), ALLOCATABLE          :: U           (:)         ! The steady u-compo
 REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)         ! A profile of horizontal wind angle (measure of wind direction with height)
 
 REAL(ReKi)                       :: CPUtime                 ! Contains the number of seconds since the start of the program
+REAL(ReKi)                       :: CohStr_EventTimeStep    ! Time step from coherent structures file (for printing to summary)
 
 REAL(ReKi)                       ::  USig                   ! Standard deviation of the u-component wind speed at the hub (used for scaling WND files)
 REAL(ReKi)                       ::  VSig                   ! Standard deviation of the v-component wind speed at the hub (used for scaling WND files)
-REAL(ReKi)                       ::  WSig                   ! Standard deviation of the w-component wind speed at the hub (used for scaling WND files)
+REAL(ReKi)                       ::  WSig                   ! Standard deviation of the w-component wind speed at the hub (used for scaling WND files and CTS files)
 
 INTEGER(IntKi)                   :: ErrStat                 ! allocation status
 CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
@@ -114,10 +113,10 @@ CALL CheckError()
 
    ! Get input parameters.
 
-CALL ReadInputFile(InFile, p, p_cohStr, OtherSt_RandNum, ErrStat, ErrMsg)
+CALL ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 CALL CheckError()
 
-CALL WrSum_EchoInputs(p, p_CohStr) 
+CALL WrSum_EchoInputs(p) 
 call WrSum_UserInput(p%met,p%US)
 
 CALL TS_ValidateInput(p, ErrStat, ErrMsg)
@@ -190,7 +189,7 @@ CALL CheckError()
 CALL CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
 CALL CheckError()
 
-
+   ! we don't need these arrays any more, so deallocate to save some space
 IF ( ALLOCATED( p%met%USR_Z         ) )  DEALLOCATE( p%met%USR_Z           )
 IF ( ALLOCATED( p%met%USR_U         ) )  DEALLOCATE( p%met%USR_U           )
 IF ( ALLOCATED( p%met%USR_WindDir   ) )  DEALLOCATE( p%met%USR_WindDir     )
@@ -213,7 +212,7 @@ CALL CheckError()
 CALL SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
 CALL CheckError()
 
-
+   ! we don't need these arrays any more, so deallocate to save some space
 IF ( ALLOCATED(OtherSt_RandNum%nextSeed ) ) DEALLOCATE( OtherSt_RandNum%nextSeed )  
 IF ( ALLOCATED(p%usr%PhaseAngles        ) ) DEALLOCATE( p%usr%PhaseAngles        )  
 IF ( ALLOCATED(p%usr%f                  ) ) DEALLOCATE( p%usr%f                  ) ! bjj: do we need to keep these for phase angles or should we destroy earlier?
@@ -242,8 +241,7 @@ ELSE
 ENDIF
 
 
-   ! Deallocate the Freq, S, and RandPhases arrays and the spectral matrix
-
+   ! we don't need these arrays any more, so deallocate to save some space
 IF ( ALLOCATED( p%grid%Freq ) )  DEALLOCATE( p%grid%Freq )
 IF ( ALLOCATED( S           ) )  DEALLOCATE( S           )
 IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
@@ -301,25 +299,12 @@ IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 ! Generate coherent turbulence if desired:
 !..................................................................................................................................   
 IF ( p%WrFile(FileExt_CTS) ) THEN
-   p_CohStr%WSig=WSig
-
-   CALL CohStr_WriteCTS(p, p_CohStr, OtherSt_RandNum, y_CohStr, ErrStat, ErrMsg)
+   
+   CALL CohStr_WriteCTS(p, WSig, OtherSt_RandNum, CohStr_EventTimeStep, ErrStat, ErrMsg)
    CALL CheckError()
-   
-         
-      ! Write the number of separate events to the summary file
-
-   IF (p%met%KHtest) THEN
-      WRITE ( p%US,'(/)' )
-   ELSE
-      WRITE ( p%US,'(//A,F8.3," seconds")' ) 'Average expected time between events = ',y_CohStr%lambda
-   ENDIF
-
-   WRITE ( p%US, '(A,I8)'   )            'Number of coherent events            = ', y_CohStr%NumCTEvents_separate
-   WRITE ( p%US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
-   WRITE ( p%US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
-   WRITE ( p%US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
-   
+               
+ELSE
+   CohStr_EventTimeStep = 0.0_ReKi
 ENDIF !WrACT
 
 !..................................................................................................................................
@@ -353,14 +338,12 @@ ENDIF ! ( WrFile(FileExt_UVW) )
 ! End:
 !..................................................................................................................................
 
-   ! Deallocate the V, Y, Z, and IYmax arrays.
-
 IF ( ALLOCATED( V  ) )  DEALLOCATE( V )
 
 
-WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0 / (2.0 * p%grid%TimeStep)
-IF ( p%WrFile(FileExt_CTS) .AND. y_CohStr%EventTimeStep > 0.0 ) THEN
-   WRITE ( p%US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0 / (2.0 * y_CohStr%EventTimeStep)
+WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * p%grid%TimeStep)
+IF ( CohStr_EventTimeStep > 0.0_ReKi ) THEN
+   WRITE ( p%US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * CohStr_EventTimeStep)
 ENDIF
 
 
