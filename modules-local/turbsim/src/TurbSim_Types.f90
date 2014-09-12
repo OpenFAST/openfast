@@ -48,6 +48,8 @@ use NWTC_Library
    INTEGER(IntKi), PARAMETER :: NumFileFmt        =  8  ! TOTAL number of output file formats (used to dimension array)
    
       ! other parameters:
+   REAL(ReKi),     PARAMETER :: ZJetMax_UB        = 490.0_ReKi    ! upper bound on height where jet maximum occurs
+   REAL(ReKi),     PARAMETER :: ZJetMax_LB        =  70.0_ReKi    ! lower bound on height where jet maximum occurs
    REAL(ReKi),     PARAMETER :: profileZmax       = 140.          ! Upper height limit for extrapolating GP_LLJ profiles of ustar and zl
    REAL(ReKi),     PARAMETER :: profileZmin       =  50.          ! Lower height limit for extrapolating GP_LLJ profiles of ustar and zl
    REAL(ReKi),     PARAMETER :: Omega             = 7.292116E-05  ! Angular speed of rotation of the earth (rad/s)

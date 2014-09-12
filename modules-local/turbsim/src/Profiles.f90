@@ -225,7 +225,7 @@ SUBROUTINE getVelocityProfile(p, U_Ref, z_Ref, Ht, VelocityProfile, ErrStat, Err
    ErrMsg  = ""
 
    IF ( p%IEC%IEC_WindType == IEC_EWM50 ) THEN
-      VelocityProfile(:) = p%IEC%VRef*( Ht(:)/p%grid%HubHt )**p%met%PLExp                ! [IEC 61400-1 6.3.2.1 (14)]  !bjj: this PLExp should be set to 0.11 already, why is this hard-coded?
+      VelocityProfile(:) = p%IEC%VRef*( Ht(:)/p%grid%HubHt )**p%met%PLExp                ! [IEC 61400-1 6.3.2.1 (14)]  
       RETURN
    ELSEIF ( p%IEC%IEC_WindType == IEC_EWM1 ) THEN
       VelocityProfile(:) = 0.8*p%IEC%VRef*( Ht(:)/p%grid%HubHt )**p%met%PLExp            ! [IEC 61400-1 6.3.2.1 (14), (15)]

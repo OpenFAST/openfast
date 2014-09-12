@@ -57,14 +57,17 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    REAL(ReKi)                    :: TmpUary (3)                      !Temporary vector to store windSpeed(z) values
    REAL(ReKi)                    :: TmpUstar(3)                      !Temporary vector to store ustar(z) values
    REAL(ReKi)                    :: TmpUstarD                        !Temporary ustarD value
-   REAL(ReKi)                    :: TmpZary (3)                      !Temporary vector to store height(z) values
+   REAL(ReKi)                    :: RotorDiskHeights (3)             !Temporary vector to store height(z) values
    REAL(ReKi)                    :: TmpZLary(3)                      !Temporary vector to store zL(z) values
                               
    INTEGER                       :: TmpIndex                         ! Contains the index number when searching for substrings
    INTEGER                       :: UI                               ! I/O unit for input file
    INTEGER                       :: UnEc                             ! I/O unit for echo file
                               
-   LOGICAL                       :: getPLExp                         ! Whether the power law exponent needs to be calculated
+   LOGICAL                       :: getDefaultPLExp                  ! Whether a default PLExp needs to be calculated
+   LOGICAL                       :: getDefaultURef                   ! Whether a default URef needs to be calculated 
+   LOGICAL                       :: getDefaultZJetMax                ! Whether a default ZJetMax needs to be calculated 
+   
    LOGICAL                       :: Randomize                        ! Whether to randomize the coherent turbulence scaling
    LOGICAL                       :: UseDefault                       ! Whether or not to use a default value
    LOGICAL                       :: IsUnusedParameter                ! Whether or not this variable will be ignored
@@ -85,6 +88,9 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
       
+   p%met%NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
+   
+   
    UnEc = -1
    Echo = .FALSE.   
    CALL GetPath( InFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
@@ -247,8 +253,8 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
-   CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC, the switch for scaling IEC turbulence", &
-                  "Scale IEC turbulence models to specified standard deviation?",ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC", "Scale IEC turbulence models to specified standard deviation?",&
+                                 ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       
@@ -507,302 +513,180 @@ print *, 'check the default values of all the rest of the inputs for the TIMESR 
             CALL Cleanup()
             RETURN
          END IF
-!*** TO DO: fix this (move it somewhere more appropriate)
-      IF (p%met%KHtest) THEN
-         IF ( p%met%TurbModel_ID /= SpecModel_NWTCUP ) CALL SetErrStat( ErrID_Fatal, 'The KH test can be used with the "NWTCUP" spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
-
-         IF ( .NOT. p%WrFile(FileExt_CTS) ) THEN
-            CALL WRScr( ' Coherent turbulence time step files must be generated when using the "KHTEST" option.' )
-            p%WrFile(FileExt_CTS)  = .TRUE.
-         ENDIF
-      END IF
       ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end processing of IECturbc input variable
    
-   ! ------------ Read in the IEC wind turbulence type ---------------------------------------------
-CALL ReadVar( UI, InFile, Line, "IEC_WindType", "IEC turbulence type",ErrStat2, ErrMsg2, UnEc)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      ! ------------ Read in the IEC wind turbulence type ---------------------------------------------
+   CALL ReadVar( UI, InFile, Line, "IEC_WindType", "IEC turbulence type",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-   IF ( p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ) THEN
+   
+         ! Process this line for IECTurbE, Vref, IEC_WindType, and IEC_WindDes >>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      CALL ProcessLine_IEC_WindType(Line, p, ErrStat2, ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
+         ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end processing of IEC_WindType input variable
 
-      CALL Conv2UC( Line )
-
-      p%IEC%IECTurbE   = Line(1:1)
-
-      ! Let's see if the first character is a number (for the ETM case)
-      SELECT CASE ( p%IEC%IECTurbE )
-         CASE ('1')
-            p%IEC%Vref = 50.0
-            Line = Line(2:)
-         CASE ('2')
-            p%IEC%Vref = 42.5
-            Line = Line(2:)
-         CASE ('3')
-            p%IEC%Vref = 37.5
-            Line = Line(2:)
-         CASE DEFAULT
-               ! There's no number at the start of the string so let's move on (it's NTM).
-            p%IEC%Vref = -999.9
-            p%IEC%IECTurbE = ' '
-      END SELECT
-
-      SELECT CASE ( TRIM( Line ) )
-         CASE ( 'NTM'   )
-            p%IEC%IEC_WindType = IEC_NTM
-            p%IEC%IEC_WindDesc = 'Normal Turbulence Model'
-         CASE ( 'ETM'   )
-            p%IEC%IEC_WindType = IEC_ETM
-            p%IEC%IEC_WindDesc = 'Extreme Turbulence Model'
-         CASE ( 'EWM1'  )
-            p%IEC%IEC_WindType = IEC_EWM1
-            p%IEC%IEC_WindDesc = 'Extreme 1-Year Wind Speed Model'
-         CASE ( 'EWM50' )
-            p%IEC%IEC_WindType = IEC_EWM50
-            p%IEC%IEC_WindDesc = 'Extreme 50-Year Wind Speed Model'
-         !CASE ( 'EWM100' )
-         !   p%IEC%IEC_WindType = IEC_EWM100
-         !   p%IEC%IEC_WindDesc = 'Extreme 100-Year Wind Speed Model'
-         CASE DEFAULT
-            CALL SetErrStat( ErrID_Fatal, 'Valid entries for the IEC wind turbulence are "NTM", "xETM", "xEWM1", or "xEWM50", '// &
-                             'where x is the wind turbine class (1, 2, or 3).', ErrStat, ErrMsg, 'ReadInputFile')
-      END SELECT
-
-      IF ( p%IEC%IEC_WindType /= IEC_NTM ) THEN
-
-         IF (p%IEC%IECedition /= 3 .OR. p%IEC%IECstandard == 2) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The extreme turbulence and extreme wind speed models are available with '// &
-                         'the IEC 61400-1 Ed. 3 or 61400-3 scaling only.', ErrStat, ErrMsg, 'ReadInputFile')            
-         ENDIF
-
-         IF (p%IEC%Vref < 0. ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'A wind turbine class (1, 2, or 3) must be specified with the '// &
-                         'extreme turbulence and extreme wind types. (i.e. "1ETM")', ErrStat, ErrMsg, 'ReadInputFile')
-         ENDIF
-
-         IF ( p%IEC%NumTurbInp ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'When the turbulence intensity is entered as a percent, the IEC wind type must be "NTM".', ErrStat, ErrMsg, 'ReadInputFile')
-         ENDIF
-
-      ELSE
-
-         p%IEC%IECTurbE = ' '
-
-      ENDIF
-
-   ELSE
-      p%IEC%IEC_WindType = IEC_NTM
-   ENDIF
+     
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>         
+   ! set default ETMc, WindProfileType, Z0, CohExp, and Latitude 
+   ! for use in ReadRVarDefault, ReadRAryDefault, and ReadCVarDefault routines
+CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, which we'll have to redo later)    
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+         
 
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
-UseDefault = .TRUE.
-p%IEC%ETMc = 2.0_ReKi;
-CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "ETMc", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', UnEc, &
-                      UseDefault, ErrStat2, ErrMsg2, IGNORE=(p%IEC%IEC_WindType /= IEC_ETM ))
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   
-   IF ( p%IEC%ETMc <= 0. ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'The ETM "c" parameter must be a positive number', ErrStat, ErrMsg, 'ReadInputFile')
-   ENDIF
-
-   
+   CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "ETMc", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', UnEc, &
+                         UseDefault, ErrStat2, ErrMsg2, IGNORE=(p%IEC%IEC_WindType /= IEC_ETM ))
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      
    ! ------------ Read in the wind profile type -----------------------------------------------------------------
+   CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Wind profile type", UnEc, UseDefault, ErrStat2, ErrMsg2) !converts WindProfileType to upper case
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-UseDefault = .TRUE.         ! Calculate the default value
-SELECT CASE ( p%met%TurbModel_ID )
-   CASE ( SpecModel_TimeSer )
-      IF ( p%usr%NPoints > 1 ) THEN
-         p%met%WindProfileType = 'TS'
-      ELSE
-         p%met%WindProfileType = 'PL'
-PRINT *, 'check default wind profile for time-series spectral model.'         
-      END IF
-   CASE ( SpecModel_GP_LLJ )
-      p%met%WindProfileType = 'JET'
-   CASE ( SpecModel_IECKAI,SpecModel_IECVKM,SpecModel_MODVKM )
-      p%met%WindProfileType = 'IEC'
-   CASE ( SpecModel_TIDAL )
-      p%met%WindProfileType = 'H2L'
-   CASE ( SpecModel_USRVKM )
-      p%met%WindProfileType = 'USR'
-   CASE ( SpecModel_API )
-      p%met%WindProfileType = 'API'  ! ADDED BY YG
-   CASE DEFAULT
-      p%met%WindProfileType = 'IEC'
-END SELECT
+   ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
+   CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Wind profile type", UnEc, UseDefault, ErrStat2, ErrMsg2) !converts WindProfileType to upper case
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   ! ------------ Read in the reference wind speed. -----------------------------------------------------
+   IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1) == 'U' ! p%IEC%IEC_WindType > IEC_ETM == EWM models   
+   CALL ReadRVarDefault( UI, InFile, p%met%URef, "URef", "Reference wind speed [m/s]", UnEc, getDefaultURef, ErrStat2, ErrMsg2, &
+                     IGNORE=IsUnusedParameter ) ! p%IEC%IEC_WindType > IEC_ETM == EWM models
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      ! Make sure the variable is valid for this turbulence model
+   getDefaultURef = getDefaultURef .AND. .NOT. IsUnusedParameter
+            
+   ! ------------ Read in the jet height -------------------------------------------------------------
+   IsUnUsedParameter = TRIM(p%met%WindProfileType) /= 'JET'
+   CALL ReadRVarDefault( UI, InFile, p%met%ZJetMax, "ZJetMax", "Jet height [m]", UnEc, getDefaultZJetMax, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
+   getDefaultZJetMax = getDefaultZJetMax .AND. .NOT. IsUnusedParameter ! Jet height for 
+
+   ! ------------ Read in the power law exponent, PLExp ---------------------------------------------
+   IsUnusedParameter = (TRIM(p%met%WindProfileType) /= "PL" .AND. TRIM(p%met%WindProfileType) /= "IEC")  .OR. p%IEC%IEC_WindType > IEC_ETM
+   CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "PLExp", "Power law exponent [-]", UnEc, getDefaultPLExp, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+   getDefaultPLExp = getDefaultPLExp .AND. .NOT. IsUnusedParameter  ! we need RICH_NO before we can calculate a default for this value RICH_NO
+                      
+   ! ------------ Read in the surface roughness length, Z0 (that's z-zero) ---------------------------------------------
+   IsUnusedParameter = p%met%TurbModel_ID==SpecModel_TIDAL
+   CALL ReadRVarDefault( UI, InFile, p%met%Z0, "Z0", "Surface roughness length [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
+                                       IGNORE=IsUnusedParameter)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+!..................................................................................................................................
+!  Do some error checking on the meteorology before we read the non-IEC meteorology data
+!..................................................................................................................................   
+   IF ( p%IEC%IEC_WindType == IEC_ETM .AND. p%IEC%ETMc <= 0. ) CALL SetErrStat( ErrID_Fatal, 'The ETM "c" parameter must be a positive number', ErrStat, ErrMsg, 'ReadInputFile')
+      
+      ! Make sure WindProfileType is valid for this turbulence model
    SELECT CASE ( TRIM(p%met%WindProfileType) )
       CASE ( 'JET' )
-         IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The jet wind profile is available with the GP_LLJ spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
-         ENDIF
+         IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) CALL SetErrStat( ErrID_Fatal, 'The jet wind profile is available with the GP_LLJ spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
       CASE ( 'LOG')
-         IF (p%IEC%IEC_WindType /= IEC_NTM ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence type must be NTM for the logarithmic wind profile.', ErrStat, ErrMsg, 'ReadInputFile')
-!bjj check that IEC_WindType == IEC_NTM for non-IEC
-         ENDIF
-      CASE ( 'PL'  )
+         IF (p%IEC%IEC_WindType /= IEC_NTM ) CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence type must be NTM for the logarithmic wind profile.', ErrStat, ErrMsg, 'ReadInputFile')
+      CASE ( 'PL'  ) !this is a valid WindProfileType
       CASE ( 'H2L' )
-         IF ( p%met%TurbModel_ID /= SpecModel_TIDAL ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The "H2L" mean profile type should be used only with the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
-         ENDIF
+         IF ( p%met%TurbModel_ID /= SpecModel_TIDAL ) CALL SetErrStat( ErrID_Fatal, 'The "H2L" mean profile type can be used with only the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
       CASE ( 'IEC' )
       CASE ( 'USR' )
+         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>         
+         ! Get parameters for USR wind profile (so that we can use these parameters to get the wind speed later):
+            CALL GetUSR( UI, InFile, 42, p%met, UnEc, ErrStat2, ErrMsg2 ) !Read the last several lines of the file, then return to line 42 (end of this section of the input file)
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<         
+         
       CASE ( 'TS' )
-         IF ( p%met%TurbModel_ID /= SpecModel_TimeSer ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The "TS" mean profile type is valid only with the "TIMESR" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
-         ENDIF 
+         IF ( p%met%TurbModel_ID /= SpecModel_TimeSer ) CALL SetErrStat( ErrID_Fatal, 'The "TS" mean profile type is valid only with the "TIMESR" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
       CASE ( 'API' )   ! ADDED BY Y.GUO
+!bjj: I think we need to add some checks here??? MLB has comments about difference between RefHt and HubHt and 10 m         
       CASE DEFAULT
-         CALL SetErrStat( ErrID_Fatal, 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", or default.' , ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Fatal, 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", "TS", or default.' , ErrStat, ErrMsg, 'ReadInputFile')
    END SELECT
 
    IF ( p%met%TurbModel_ID == SpecModel_TIDAL .AND. TRIM(p%met%WindProfileType) /= "H2L" ) THEN
       p%met%WindProfileType = 'H2L'
       CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
    ENDIF
+        
 
-   IF ( p%met%KHtest ) THEN
+   IF (p%met%KHtest) THEN
+      IF ( p%met%TurbModel_ID /= SpecModel_NWTCUP ) CALL SetErrStat( ErrID_Fatal, 'The KH test can be used with the "NWTCUP" spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
+
       IF ( TRIM(p%met%WindProfileType) /= 'IEC' .AND. TRIM(p%met%WindProfileType) /= 'PL' ) THEN
-         p%met%WindProfileType = 'IEC'
          CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type for the KH test.', ErrStat, ErrMsg, 'ReadInputFile')         
+         p%met%WindProfileType = 'IEC'
+      ENDIF
+      
+      IF ( .NOT. p%WrFile(FileExt_CTS) ) THEN
+         CALL SetErrStat( ErrID_Warn, 'Coherent turbulence time step files must be generated when using the "KHTEST" option.', ErrStat, ErrMsg, 'ReadInputFile')
+         p%WrFile(FileExt_CTS)  = .TRUE.
+      ENDIF           
+      
+      IF ( .NOT. EqualRealNos(p%met%PLExp, 0.3_ReKi) ) THEN
+         CALL SetErrStat( ErrID_Warn, 'Overwriting the power law exponent for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+         p%met%PLExp = 0.3
+      ENDIF            
+   END IF
+   
+   
+   IF ( getDefaultURef .AND. TRIM(p%met%WindProfileType) /= 'JET' ) THEN
+      ! Also note that if we specify a "default for Ustar , we cannot enter "default" for URef. Otherwise, we get circular logic. Will check for that later.
+      CALL SetErrStat( ErrID_Fatal, 'URef can be "default" for only the "JET" WindProfileType.', ErrStat, ErrMsg, 'ReadInputFile')
+   END IF
+         
+   IF ( p%met%Z0 <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The surface roughness length must be a positive number or "default".', ErrStat, ErrMsg, 'ReadInputFile')
+   
+   IF ( TRIM(p%met%WindProfileType) == 'JET' .AND. .NOT. getDefaultZJetMax ) THEN
+      IF ( p%met%ZJetMax <  ZJetMax_LB .OR. p%met%ZJetMax > ZJetMax_UB )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'The height of the maximum jet wind speed must be between '//TRIM(num2lstr(ZJetMax_LB))//&
+                                       ' and '//TRIM(num2lstr(ZJetMax_UB))//' m.', ErrStat, ErrMsg, 'ReadInputFile')
       ENDIF
    ENDIF
-
+   
+      
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
-   END IF         
+   END IF   
    
-   ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
-
-CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   IF ( p%met%RefHt <=  0.0 .AND. p%met%WindProfileType(1:1) /= 'U' )  THEN
-      CALL SetErrStat( ErrID_Fatal, 'The reference height must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')
-   ENDIF
-
-
-   ! ------------ Read in the reference wind speed. -----------------------------------------------------
-
-UseDefault = .FALSE.
-p%met%URef       = -999.9
-IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1) == 'U' ! p%IEC%IEC_WindType > IEC_ETM == EWM models
-
-! If we specify a Ustar (i.e. if Ustar /= "default") then we can enter "default" here,
-! otherwise, we get circular logic...
-
-   CALL ReadRVarDefault( UI, InFile, p%met%URef, "URef", "Reference wind speed [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
-                     IGNORE=IsUnusedParameter ) ! p%IEC%IEC_WindType > IEC_ETM == EWM models
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   p%met%NumUSRz = 0  ! initialize the number of points in a user-defined wind profile
-
-   IF ( ( p%met%WindProfileType(1:1) /= 'J' .OR. .NOT. UseDefault) .AND. .NOT. IsUnUsedParameter ) THEN
-      IF ( p%met%URef <=  0.0 )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'The reference wind speed must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
-
-   ELSEIF ( p%met%WindProfileType(1:1) == 'U' ) THEN ! for user-defined wind profiles, we overwrite RefHt and URef because they don't mean anything otherwise
-      p%met%RefHt = p%grid%HubHt
-      CALL GetUSR( UI, InFile, 39, p%met, UnEc, ErrStat2, ErrMsg2 ) !Read the last several lines of the file, then return to line 39
+   !.................................................
+   ! overwrite RefHt and URef for cases where they are unused [USR wind profiles (or TS)]
+   !.................................................
+   
+      ! NOTE: return on abortErrLev before calling getVelocity
+   IF ( TRIM(p%met%WindProfileType) == 'USR' .OR. TRIM(p%met%WindProfileType) == 'TS') THEN ! for user-defined wind profiles, we overwrite RefHt and URef because they don't mean anything otherwise
+         ! Calculate URef, which is UHub:
+         ! note that the 2 "ref" values in the subroutine arguments aren't used for the USR wind profile type.
+         ! (also, we do not necessarially know PLExp, yet, so we can't call this routine when we have "PL" or "IEC" wind profile types.)
+      CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2) 
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-         IF (ErrStat >= AbortErrLev) RETURN !bjj fix this todo: call cleanup
          
-      CALL getVelocity(p, p%met%URef, p%met%RefHt, p%met%RefHt, tmp, ErrStat2, ErrMsg2) !This is UHub  
-      p%met%URef = tmp
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      p%met%RefHt = p%grid%HubHt         
+      p%met%URef  = tmp      
+   ELSEIF( p%IEC%IEC_WindType > IEC_ETM ) THEN !i.e., any of the EWM models: IEC_EWM1, IEC_EWM50, IEC_EWM100 
+      p%met%RefHt = p%grid%HubHt
+      p%met%URef  = p%IEC%VRef
+   ENDIF   
       
+      ! check that RefHt and URef are appropriate values:
+   IF ( p%met%RefHt <=  0.0 )  CALL SetErrStat( ErrID_Fatal, 'The reference height must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')         
+   IF ( .NOT. getDefaultURef ) THEN
+      IF ( p%met%URef <=  0.0 )  CALL SetErrStat( ErrID_Fatal, 'The reference wind speed must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
-
    
-   ! ------------ Read in the jet height -------------------------------------------------------------
-
-UseDefault = .FALSE.
-p%met%ZJetMax    = -999.9
-IsUnUsedParameter = p%met%WindProfileType(1:1) /= 'J'
-CALL ReadRVarDefault( UI, InFile, p%met%ZJetMax, "ZJetMax", "Jet height [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   IF ( .NOT. IsUnusedParameter .AND. .NOT. UseDefault ) THEN
-      IF ( p%met%ZJetMax <  70.0 .OR. p%met%ZJetMax > 490.0 )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'The height of the maximum jet wind speed must be between 70 and 490 m.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
-   ENDIF
-
-
-   ! ------------ Read in the power law exponent, PLExp ---------------------------------------------
-
-SELECT CASE ( p%met%TurbModel_ID )
-   CASE (SpecModel_WF_UPW, SpecModel_WF_07D, SpecModel_WF_14D, SpecModel_NWTCUP)
-      IF ( p%met%KHtest ) THEN
-         UseDefault = .TRUE.
-         p%met%PLExp      = 0.3
-      ELSE
-         UseDefault = .FALSE.             ! This case needs the Richardson number to get a default
-         p%met%PLExp      = 0.
-      ENDIF
-
-   CASE DEFAULT
-      UseDefault = .TRUE.
-      p%met%PLExp      = DefaultPowerLawExp( p )  ! These cases do not use the Richardson number to get a default
-
-END SELECT
-getPLExp = .NOT. UseDefault
-IsUnusedParameter = INDEX( 'JLUHA', p%met%WindProfileType(1:1) ) > 0 .OR. p%IEC%IEC_WindType > IEC_ETM  !i.e. PL or IEC
-
-CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "PLExp", "Power law exponent", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   IF ( .NOT. IsUnusedParameter .AND. .NOT. UseDefault ) THEN  ! We didn't use a default (we entered a number on the line)
-      getPLExp = .FALSE.
-
-      IF ( p%met%KHtest ) THEN
-         IF ( p%met%PLExp /= 0.3 ) THEN
-            p%met%PLExp = 0.3
-            CALL SetErrStat( ErrID_Warn, 'Overwriting the power law exponent for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
-         ENDIF
-      ENDIF
-   ENDIF
-
-
-   ! ------------ Read in the surface roughness length, Z0 (that's z-zero) ---------------------------------------------
-
-UseDefault = .TRUE.
-SELECT CASE ( p%met%TurbModel_ID )
-   CASE (SpecModel_SMOOTH)
-      p%met%Z0 = 0.010
-   CASE (SpecModel_GP_LLJ )
-      p%met%Z0 = 0.005
-   CASE (SpecModel_WF_UPW )
-      p%met%Z0 = 0.018
-   CASE (SpecModel_NWTCUP )
-      p%met%Z0 = 0.021
-   CASE (SpecModel_WF_07D )
-      p%met%Z0 = 0.233
-   CASE (SpecModel_WF_14D )
-      p%met%Z0 = 0.064
-   CASE DEFAULT !IEC values
-      p%met%Z0 = 0.030 ! Represents smooth, homogenous terrain
-END SELECT
-IsUnusedParameter = p%met%TurbModel_ID==SpecModel_TIDAL
-
-CALL ReadRVarDefault( UI, InFile, p%met%Z0, "Z0", "Surface roughness length [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
-                       IGNORE=IsUnusedParameter)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   IF ( p%met%Z0 <= 0.0 ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'The surface roughness length must be a positive number or "default".', ErrStat, ErrMsg, 'ReadInputFile')
-   ENDIF
-
-      
+   
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF    
    
    !===============================================================================================================================
-   ! Read the meteorological boundary conditions for non-IEC models. !
+   ! Read the meteorological boundary conditions for non-IEC models. 
    !===============================================================================================================================
 
 IF ( .NOT. p%met%IsIECModel .OR. p%met%TurbModel_ID == SpecModel_MODVKM  ) THEN  
@@ -814,13 +698,10 @@ IF ( .NOT. p%met%IsIECModel .OR. p%met%TurbModel_ID == SpecModel_MODVKM  ) THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
 
-
-      ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------
-
-   UseDefault = .TRUE.
-   p%met%Latitude   = 45.0
-
-   CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+      ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------   
+   IsUnusedParameter =  p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ! Used to caluculte z0 in ModVKM model; also used for default ZI
+   CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
+                                       IGNORE=IsUnusedParameter)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( ABS(p%met%Latitude) < 5.0 .OR. ABS(p%met%Latitude) > 90.0 ) THEN
@@ -848,286 +729,191 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    IF ( p%met%KHtest ) THEN
-      IF ( p%met%Rich_No /= 0.02 ) THEN
+      IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.02_ReKi) ) THEN
          p%met%Rich_No = 0.02
          CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
       ENDIF
    ENDIF
 
-   IF ( p%met%TurbModel_ID == SpecModel_USER .OR. p%met%TurbModel_ID == SpecModel_USRVKM ) THEN
-      IF ( p%met%Rich_No /= 0.0 ) THEN
-         p%met%Rich_No = 0.0
+   IF ( p%met%TurbModel_ID == SpecModel_USER .OR. p%met%TurbModel_ID == SpecModel_USRVKM .OR. p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
+      IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.0_ReKi) ) THEN
          CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'ReadInputFile')
+         p%met%Rich_No = 0.0
       ENDIF
    ELSEIF ( p%met%TurbModel_ID == SpecModel_NWTCUP .or. p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
       p%met%Rich_No = MIN( MAX( p%met%Rich_No, REAL(-1.0,ReKi) ), REAL(1.0,ReKi) )  ! Ensure that: -1 <= RICH_NO <= 1
    ENDIF
 
+
+   
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       ! now that we have Rich_No, we can calculate ZL and L
    CALL Calc_MO_zL(p%met%TurbModel_ID, p%met%Rich_No, p%grid%HubHt, p%met%ZL, p%met%L )
 
+      ! ***** Calculate power law exponent, if needed *****   
+   IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )            
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    
-      ! ***** Calculate power law exponent, if needed *****
-
-   IF ( getPLExp ) THEN
-      p%met%PLExp = DefaultPowerLawExp( p )
-   ENDIF
-
-      ! ------------ Read in the shear/friction velocity, Ustar, first calculating UstarDiab ------------------------
-
-         ! Set up the heights for the zl- and ustar-profile averages across the rotor disk
-      TmpZary  = (/ p%grid%HubHt-p%grid%RotorDiameter/2., p%grid%HubHt, p%grid%HubHt+p%grid%RotorDiameter/2. /)
-      IF (TmpZary(3) .GE. profileZmin .AND. TmpZary(1) .LE. profileZmax ) THEN  !set height limits so we don't extrapolate too far
-         DO TmpIndex = 1,3
-            TmpZary(TmpIndex) = MAX( MIN(TmpZary(TmpIndex), profileZmax), profileZmin)
-         ENDDO
-      ENDIF
-
-
-   UseDefault = .TRUE.
-
-   p%met%UstarDiab  = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL)
-   p%met%Ustar      = p%met%UstarDiab
-
-   SELECT CASE ( p%met%TurbModel_ID )
-
-      CASE (SpecModel_WF_UPW)
-
-         IF ( p%met%ZL < 0.0 ) THEN
-            p%met%Ustar = 1.162 * p%met%UstarDiab**( 2.0 / 3.0 )
-         ELSE ! Include the neutral case to avoid strange discontinuities
-            p%met%Ustar = 0.911 * p%met%UstarDiab**( 2.0 / 3.0 )
-         ENDIF
-
-      CASE ( SpecModel_WF_07D, SpecModel_WF_14D  )
-
-         IF ( p%met%ZL < 0.0 ) THEN
-            p%met%Ustar = 1.484 * p%met%UstarDiab**( 2.0 / 3.0 )
-         ELSE ! Include the neutral case with the stable one to avoid strange discontinuities
-            p%met%Ustar = 1.370 * p%met%UstarDiab**( 2.0 / 3.0 )
-         ENDIF
-
-      CASE (SpecModel_GP_LLJ )
-         IF ( p%met%URef < 0 ) THEN ! (1) We can't get a wind speed because Uref was default
-            UseDefault = .FALSE. ! We'll calculate the default value later
-         ELSE
-            p%met%Ustar = 0.17454 + 0.72045*p%met%UstarDiab**1.36242
-         ENDIF
-
-      CASE ( SpecModel_NWTCUP  )
-         p%met%Ustar = 0.2716 + 0.7573*p%met%UstarDiab**1.2599
-
-      CASE ( SpecModel_TIDAL , SpecModel_RIVER )
-         ! Use a constant drag coefficient for the HYDRO spectral models.
-         p%met%Ustar = p%met%Uref*0.05 ! This corresponds to a drag coefficient of 0.0025.
-         !p%met%Ustar = p%met%Uref*0.04 ! This corresponds to a drag coefficient of 0.0016.
-
-   END SELECT
-
+   
+      ! ------------ Read in the shear/friction velocity, Ustar ------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%Ustar, "UStar", "Friction or shear velocity [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-
-   IF ( p%met%Uref < 0.0 .AND. UseDefault ) THEN  ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
-      CALL SetErrStat( ErrID_Fatal, 'The reference wind speed and friction velocity cannot both be "default."', ErrStat, ErrMsg, 'ReadInputFile')
-   ELSEIF (p%met%Ustar <= 0) THEN
-      CALL SetErrStat( ErrID_Fatal, 'The friction velocity must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
-   ENDIF
-
-
-         ! ***** Calculate wind speed at hub height *****
-
-   IF ( p%met%WindProfileType(1:1) == 'J' ) THEN
-      IF ( p%met%ZJetMax < 0 ) THEN ! Calculate a default value
-         p%met%ZJetMax = -14.820561*p%met%Rich_No + 56.488123*p%met%ZL + 166.499069*p%met%Ustar + 188.253377
-         p%met%ZJetMax =   1.9326  *p%met%ZJetMax - 252.7267  ! Correct with the residual
-
-         CALL RndJetHeight( p%RNG, OtherSt_RandNum, tmp ) ! Add a random amount
-
-         p%met%ZJetMax = MIN( MAX(p%met%ZJetMax + tmp, 70.0_ReKi ), 490.0_ReKi )
-      ENDIF
-
-      IF ( p%met%URef < 0 ) THEN ! Calculate a default value
-
-         p%met%UJetMax = MAX( -21.5515_ReKi + 6.6827_ReKi*LOG(p%met%ZJetMax), 5.0_ReKi ) !Jet max must be at least 5 m/s (occurs ~50 m); shouldn't happen, but just in case....
-
-         CALL Rnd3ParmNorm( p%RNG, OtherSt_RandNum, tmp, 0.1076_ReKi, -0.1404_ReKi, 3.6111_ReKi,  -15.0_ReKi, 20.0_ReKi, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-         IF (p%met%UJetMax + tmp > 0 ) p%met%UJetMax = p%met%UJetMax + tmp
-
-         CALL GetChebCoefs( p, .TRUE. , ErrStat2, ErrMsg2 ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p%met%Ustar
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-         CALL getVelocity(p, p%met%UJetMax, p%met%ZJetMax, p%met%RefHt, tmp, ErrStat2, ErrMsg2)  
-            p%met%URef = tmp
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-         
-         
-      ELSE
-         IF ( EqualRealNos( p%met%RefHt, p%met%ZJetMax ) ) THEN
-            p%met%UJetMax = p%met%URef
-            CALL GetChebCoefs( p, .TRUE. , ErrStat2, ErrMsg2 ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p%met%Ustar
-         ELSE         
-            CALL GetChebCoefs(p, .FALSE., ErrStat2, ErrMsg2) ! also calculate p%met%UJetMax
+      IF ( UseDefault ) THEN
+         IF ( getDefaultURef ) THEN ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
+            CALL SetErrStat( ErrID_Fatal, 'The reference wind speed and friction velocity cannot both be "default."', ErrStat, ErrMsg, 'ReadInputFile')
+         ELSE
+            CALL DefaultUStar(p)
          END IF
+      END IF
+   
+      
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     
+      
+      ! We need the hub-height wind speed to calculate default Reynold's Stresses.
+      ! We have a few steps to take before we can get that wind speed:
+      
+   IF ( TRIM(p%met%WindProfileType) == 'JET' ) THEN      
+      IF ( getDefaultZJetMax ) CALL DefaultZJetMax(p, OtherSt_RandNum)       ! requires Rich_No, ZL, Ustar
+      CALL getJetCoeffs( p, getDefaultURef, OtherSt_RandNum, ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-         
-      ENDIF
+   END IF
+      
+      ! now that we know URef (in case getDefaultURef was true), set UstarDiab (used in ustar profile and default ZI):
+   p%met%UstarDiab  = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL) 
 
-   ENDIF !Jet wind profile
 
    CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
       p%UHub = tmp
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   
-   
-         ! ***** Get p%met%Ustar- and zl-profile values, if required, and determine offsets *****
-      IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN
-         p%met%UstarSlope = 1.0_ReKi         
+      
+      
+      ! We need the (local) Ustar at the hub-height; while we're at it, we'll 
+      !   calculate the UstarOffset and UstarSlope it uses:
+      
+      
+      ! Set up the heights for the zl- and ustar-profile averages across the rotor disk
+   RotorDiskHeights  = (/ p%grid%HubHt-0.5*p%grid%RotorDiameter, p%grid%HubHt, p%grid%HubHt+0.5*p%grid%RotorDiameter /)        
+   DO TmpIndex = 1,SIZE(RotorDiskHeights)  ! set height limits so we don't extrapolate too far
+      RotorDiskHeights(TmpIndex) = MAX( MIN(RotorDiskHeights(TmpIndex), profileZmax), profileZmin)
+   ENDDO
 
-         TmpUary   = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
-         TmpUstar  = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
-         
-         p%met%UstarOffset= 0.0_ReKi
-      ELSE
-         p%met%UstarSlope = 1.0_ReKi         
-         p%met%UstarDiab = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL) !bjj: is this problematic for anything else?
+   IF (p%met%TurbModel_ID == SpecModel_GP_LLJ ) THEN
+      p%met%UstarSlope = 1.0_ReKi         
 
-         CALL getVelocityProfile(p, p%met%URef, p%met%RefHt, TmpZary, TmpUary, ErrStat2, ErrMsg2)    ! Set TmpUary
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')         
-         TmpUstar  = getUStarProfile( P, TmpUary,     TmpZary, 0.0_ReKi, p%met%UstarSlope )
+      CALL getVelocityProfile(p, p%met%URef, p%met%RefHt, RotorDiskHeights, TmpUary, ErrStat2, ErrMsg2)    ! Set TmpUary
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')         
+      TmpUstar  = getUStarProfile( P, TmpUary, RotorDiskHeights, 0.0_ReKi, p%met%UstarSlope )  ! set offset to 0 here <-
             
-         p%met%UstarOffset = p%met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
-         TmpUstar(:) = TmpUstar(:) + p%met%UstarOffset
-      ENDIF
-
-      TmpZLary = getZLProfile(TmpUary, TmpZary, p%met%Rich_No, p%met%ZL, p%met%L, 0.0_ReKi, p%met%WindProfileType)
-      p%met%zlOffset = p%met%ZL - SUM(TmpZLary) / SIZE(TmpZLary)
-
-
-      ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
-
-   UseDefault = .TRUE.
-   IF ( p%met%ZL >= 0.0 .AND. p%met%TurbModel_ID /= SpecModel_GP_LLJ ) THEN  !We must calculate ZI for stable GP_LLJ. z/L profile can change signs so ZI must be defined for spectra.
-      p%met%ZI = 0.0
+      p%met%UstarOffset = p%met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
+      TmpUstar(:) = TmpUstar(:) + p%met%UstarOffset
    ELSE
-      IF ( p%met%Ustar < p%met%UstarDiab ) THEN
-         p%met%ZI = ( 0.04 * p%met%Uref ) / ( 1.0E-4 * LOG10( p%met%RefHt / p%met%Z0 ) )  !for "very" windy days
-      ELSE
-         !Should Wind Farm models use the other definition since that was what was used in creating those models?
-         p%met%ZI = p%met%Ustar / (6.0 * p%met%Fc)
-      ENDIF
+      p%met%UstarSlope = 1.0_ReKi         
+
+      TmpUary   = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+      TmpUstar  = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+         
+      p%met%UstarOffset= 0.0_ReKi      
    ENDIF
-
-   CALL ReadRVarDefault( UI, InFile, p%met%ZI, "ZI", "Mixing layer depth [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
-                                                                  IGNORE=(p%met%ZL>=0. .AND. p%met%TurbModel_ID /= SpecModel_GP_LLJ) )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-      IF ( ( p%met%ZL < 0.0 ) .AND. ( p%met%ZI <= 0.0 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The mixing layer depth must be a positive number for unstable flows.', ErrStat, ErrMsg, 'ReadInputFile')         
-      ENDIF
-
-
+                        
       ! Get the default mean Reynolds stresses
-
+      ! (requires uHub, Ustar, Rich_No, ZL, TmpUStar)
    CALL GetDefaultRS(  p, OtherSt_RandNum, TmpUStar(2), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-
-       ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
-   UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "PC_UW", &
-                                            "Mean hub u'w' Reynolds stress", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UWskip )
+      ! Default coherence parameters
+   CALL GetDefaultCoh( p%met%TurbModel_ID, p%met%RICH_NO, p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   
+      ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
+   IsUnusedParameter = p%met%ZL >= 0.0_ReKi .AND. p%met%TurbModel_ID /= SpecModel_GP_LLJ ! used for unstable flows; GP_LLJ model may have both stable and unstable flows in its ZL_Profile      
+   CALL ReadRVarDefault( UI, InFile, p%met%ZI, "ZI", "Mixing layer depth [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-   IF (.NOT. p%met%UWskip) THEN
-      TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
-
-      IF ( TmpUstarD /= 0.0 ) THEN
-         p%met%UstarSlope  = 3.0*(p%met%Ustar -  SQRT( ABS(p%met%PC_UW) ) ) / TmpUstarD
-         p%met%UstarOffset = SQRT( ABS(p%met%PC_UW) ) - p%met%UstarSlope*(TmpUstar(2) - p%met%UstarOffset)
-      ELSE
-         p%met%UstarSlope  = 0.0
-         p%met%UstarOffset = SQRT( ABS(p%met%PC_UW) )
-      ENDIF
+   IF ( IsUnusedParameter ) THEN
+      p%met%ZI = 999.9_ReKi ! set to a value > 0 that we don't care about
+   ELSE
+      IF ( UseDefault ) CALL DefaultMixingLayerDepth(p)      
    ENDIF
+   
+      
+       ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "PC_UW", "Mean hub u'w' Reynolds stress", &
+                                            UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UWskip )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
-   UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "PC_UV", &
-                                            "Mean hub u'v' Reynolds stress", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UVskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "PC_UV", "Mean hub u'v' Reynolds stress", &
+                                            UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UVskip )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the mean hub v'w' Reynolds stress, PC_VW ---------------------------------------------
-   UseDefault = .TRUE.
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "PC_VW", &
-                                            "Mean hub v'w' Reynolds stress", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%VWskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "PC_VW", "Mean hub v'w' Reynolds stress", &
+                                            UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%VWskip )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
-   CALL GetDefaultCoh( p%met%TurbModel_ID, p%met%RICH_NO, p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
-   UseDefault = .TRUE.
-   InCVar(1) = p%met%InCDec(1)
-   InCVar(2) = p%met%InCohB(1)
-
-   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec1", &
-                                             "u-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec1", "u-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   
-   p%met%InCDec(1) = InCVar(1)
-   p%met%InCohB(1) = InCVar(2)
-
-      IF ( p%met%InCDec(1) <= 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The u-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
+      IF ( .NOT. UseDefault ) THEN         
+         p%met%InCDec(1) = InCVar(1)
+         p%met%InCohB(1) = InCVar(2)
+      END IF
 
       ! ------------ Read in the v component coherence decrement (coh-squared def), InCDec(2) = InCDecV ----------
-
-   UseDefault = .TRUE.
-   InCVar(1) = p%met%InCDec(2)
-   InCVar(2) = p%met%InCohB(2)
-
-   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec2",  &
-                                             "v-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2)
+   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec2", "v-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   p%met%InCDec(2) = InCVar(1)
-   p%met%InCohB(2) = InCVar(2)
-
-      IF ( p%met%InCDec(2) <= 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The v-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
+      IF ( .NOT. UseDefault ) THEN       ! these are the values we just read in  
+         p%met%InCDec(2) = InCVar(1)
+         p%met%InCohB(2) = InCVar(2)
+      END IF
 
       ! ------------ Read in the w component coherence decrement (coh-squared def), InCDec(3) = InCDecW -------
-
-   UseDefault = .TRUE.
-   InCVar(1) = p%met%InCDec(3)
-   InCVar(2) = p%met%InCohB(3)
-
-   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec3", &
-                                             "w-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+   CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec3", "w-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-   p%met%InCDec(3) = InCVar(1)
-   p%met%InCohB(3) = InCVar(2)
-
-      IF ( p%met%InCDec(3) <= 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The w-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
+      IF ( .NOT. UseDefault ) THEN         
+         p%met%InCDec(3) = InCVar(1)
+         p%met%InCohB(3) = InCVar(2)
+      END IF
 
          ! ------------ Read in the coherence exponent, COHEXP -----------------------------------
-
-   UseDefault = .TRUE.
-   p%met%CohExp     = 0.0    ! was 0.25
    CALL ReadRVarDefault( UI, InFile, p%met%CohExp, "CohExp", "Coherence exponent", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      IF ( p%met%COHEXP < 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The coherence exponent must be non-negative.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
+      
+!..................................................................................................................................
+!  Do some error checking on the non-IEC meteorology data 
+!..................................................................................................................................         
+      
+   IF (p%met%Ustar   <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The friction velocity must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%met%ZI     <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The mixing layer depth must be a positive number for unstable flows.', ErrStat, ErrMsg, 'ReadInputFile')         
+   IF ( p%met%COHEXP <  0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The coherence exponent must be non-negative.', ErrStat, ErrMsg, 'ReadInputFile')
 
+   DO I = 1,3
+      IF ( p%met%InCDec(I) <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The '//Comp(I)//'-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
+   END DO
+           
+!..................................................................................................................................
+!  Calculate zlOffset
+!  Adjust UstarSlope and UstarOffset based on entered PC_UW
+!..................................................................................................................................     
+      TmpZLary = getZLProfile(TmpUary, RotorDiskHeights, p%met%Rich_No, p%met%ZL, p%met%L, 0.0_ReKi, p%met%WindProfileType)
+      p%met%zlOffset = p%met%ZL - SUM(TmpZLary) / SIZE(TmpZLary)
 
+         ! Modify previously calculated UstarSlope and UstarOffset based on our input (target) Reynolds' stress values
+      IF (.NOT. p%met%UWskip) THEN
+         TmpUstarD = ( TmpUstar(1)- 2.0*TmpUstar(2) + TmpUstar(3) )
+
+         IF ( .NOT. EqualRealNos( TmpUstarD, 0.0_ReKi ) ) THEN
+            p%met%UstarSlope  = 3.0*(p%met%Ustar -  SQRT( ABS(p%met%PC_UW) ) ) / TmpUstarD
+            p%met%UstarOffset = SQRT( ABS(p%met%PC_UW) ) - p%met%UstarSlope*(TmpUstar(2) - p%met%UstarOffset)
+         ELSE
+            p%met%UstarSlope  = 0.0
+            p%met%UstarOffset = SQRT( ABS(p%met%PC_UW) )
+         ENDIF
+      ENDIF   
+         
+   
    !===============================================================================================================================
    ! Read the Coherent Turbulence Scaling Parameters, if necessary.  
    !===============================================================================================================================
@@ -1182,11 +968,6 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       CALL ReadVar( UI, InFile, Randomize, "Randomize", "Randomize CT Scaling",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      IF ( p%met%KHtest ) THEN
-         Randomize = .FALSE.
-         CALL WrScr( ' Billow will cover rotor disk for KH test. ' )
-      ENDIF
-
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
       CALL ReadVar( UI, InFile, p%CohStr%DistScl, "DistScl", "Disturbance scale",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
@@ -1200,9 +981,12 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       IF ( p%met%KHtest ) THEN
-            p%CohStr%DistScl = 1.0
-            p%CohStr%CTLy    = 0.5
-            p%CohStr%CTLz    = 0.5
+         p%CohStr%DistScl = 1.0
+         p%CohStr%CTLy    = 0.5
+         p%CohStr%CTLz    = 0.5
+         Randomize = .FALSE.
+         CALL SetErrStat( ErrID_Info, 'Billow will cover rotor disk for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+            
       ELSEIF ( Randomize ) THEN
 
          CALL RndUnif( p%RNG, OtherSt_RandNum, tmp )
@@ -1275,11 +1059,16 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
    p%met%VWskip  = .TRUE.
    
    
+   
    IF ( p%IEC%NumTurbInp .AND. p%IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
       p%met%TurbModel = 'NONE'
       p%met%TurbModel_ID = SpecModel_NONE
    ENDIF
 
+      ! ***** Calculate power law exponent, if needed *****   
+   IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )
+   
+   
       ! Calculate wind speed at hub height
 
    CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
@@ -2036,6 +1825,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEc, Def, E
       READ (CharLine,*,IOSTAT=IOS)  RealAry
 
       IF (IOS /=0) THEN
+         RealAry = 0.0_ReKi                        ! set these all to 0
          READ (CharLine,*,IOSTAT=IOS)  RealAry(1)  ! Try reading only the first element
       ENDIF
 
@@ -2056,26 +1846,26 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
 
       ! Argument declarations:
 
-   REAL(ReKi), INTENT(INOUT)    :: RealVar                                         ! Real variable being read.
+   REAL(ReKi), INTENT(INOUT)      :: RealVar                                         ! Real variable being read.
+                                  
+   INTEGER, INTENT(IN)            :: UnIn                                            ! I/O unit for input file.
+   INTEGER, INTENT(IN)            :: UnEc                                            ! I/O unit for echo/summary file.
+                                  
+   INTEGER(IntKi), INTENT(OUT)    :: ErrStat                                         ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)    :: ErrMsg                                          ! Error message
+                                  
+   LOGICAL, INTENT(  OUT)         :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
+   LOGICAL, INTENT(IN),   OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
+   LOGICAL, INTENT(INOUT),OPTIONAL:: IGNORESTR                                       ! whether or not user requested to ignore this input
 
-   INTEGER, INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER, INTENT(IN)          :: UnEc                                            ! I/O unit for echo/summary file.
-
-   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                         ! Error status; if present, program does not abort on error
-   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                          ! Error message
-      
-   LOGICAL, INTENT(INOUT)       :: Def                                             ! - on input whether or not to use the default - on output, whether a default was used
-   LOGICAL, INTENT(IN), OPTIONAL:: IGNORE                                          ! whether or not to ignore this input
-   LOGICAL, INTENT(OUT),OPTIONAL:: IGNORESTR                                       ! whether or not user requested to ignore this input
-
-   CHARACTER(250)               :: CharLine                                        ! Character string being read.
-   CHARACTER( *), INTENT(IN)    :: Fil                                             ! Name of the input file.
-   CHARACTER( *), INTENT(IN)    :: VarDescr                                        ! Text string describing the variable.
-   CHARACTER( *), INTENT(IN)    :: VarName                                         ! Text string containing the variable name.
+   CHARACTER(250)                 :: CharLine                                        ! Character string being read.
+   CHARACTER( *), INTENT(IN)      :: Fil                                             ! Name of the input file.
+   CHARACTER( *), INTENT(IN)      :: VarDescr                                        ! Text string describing the variable.
+   CHARACTER( *), INTENT(IN)      :: VarName                                         ! Text string containing the variable name.
 
       ! Local declarations:
 
-   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+   INTEGER                        :: IOS                                             ! I/O status returned from the read statement.
 
 
    CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
@@ -2095,8 +1885,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
    IF ( PRESENT(IGNORESTR) ) THEN
       IF ( TRIM( CharLine ) == 'NONE' ) THEN
          IGNORESTR = .TRUE.
-         Def = .TRUE.
-         RealVar = 0.0  ! This is set for the Reynolds stress inputs, but if IGNORESTR is used for other inputs, it may need to be changed
+         Def       = .TRUE.
          RETURN
       ENDIF
    ENDIF
@@ -2104,15 +1893,8 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
    IF ( TRIM(CharLine) == 'DEFAULT' ) THEN
 
       CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
-
-      IF ( PRESENT(IGNORESTR) ) THEN
-         IF ( IGNORESTR ) THEN  !We've told it to ignore this input, by default
-            RealVar = 0.0  ! This is set for the Reynolds stress inputs, but if IGNORESTR is used for other inputs, it may need to be changed
-            RETURN
-         ENDIF
-      ENDIF
-
       Def = .TRUE.
+      RETURN
 
    ELSE
 
@@ -2125,11 +1907,9 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
       CALL CheckIOS ( IOS, Fil, VarName, NumType )
 
       Def = .FALSE.
-
-      IF ( PRESENT(IGNORESTR) ) THEN
-         IGNORESTR = .FALSE.
-      ENDIF
-
+      
+      IF ( PRESENT(IGNORESTR) ) IGNORESTR = .FALSE.
+      
    ENDIF
 
 
@@ -4134,7 +3914,100 @@ SUBROUTINE ProcessLine_IECturbc(Line, IsIECModel, IECstandard, IECedition, IECed
    
    
 END SUBROUTINE ProcessLine_IECturbc
+!=======================================================================
+!> This subroutine processes the user input from the IEC_WindType line
+!! and initializes the variables p%IEC%IECTurbE, p%IEC%Vref, 
+!! p%IEC%IEC_WindType, and p%IEC%IEC_WindDesc.
+SUBROUTINE ProcessLine_IEC_WindType(Line, p, ErrStat, ErrMsg)
+   
+   TYPE(TurbSim_ParameterType), INTENT(INOUT) :: p          !< TurbSim parameters      
+   CHARACTER(*),                INTENT(INOUT) :: Line       !< on entry, the line from the input file. may be modified in this routine
+                                                                
+   INTEGER(IntKi),              intent(  out) :: ErrStat    !< Error level
+   CHARACTER(*),                intent(  out) :: ErrMsg     !< Message describing error
+   
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+   IF ( p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ) THEN
+
+      CALL Conv2UC( Line )
+
+      p%IEC%IECTurbE   = Line(1:1)
+
+      ! Let's see if the first character is a number (for the ETM case)
+      SELECT CASE ( p%IEC%IECTurbE )
+         CASE ('1')
+            p%IEC%Vref = 50.0_ReKi
+            Line = Line(2:)
+         CASE ('2')
+            p%IEC%Vref = 42.5_ReKi
+            Line = Line(2:)
+         CASE ('3')
+            p%IEC%Vref = 37.5_ReKi
+            Line = Line(2:)
+         CASE DEFAULT
+               ! There's no number at the start of the string so let's move on (it's NTM).
+            p%IEC%Vref = -999.9_ReKi
+            p%IEC%IECTurbE = ' '
+      END SELECT
+
+      SELECT CASE ( TRIM( Line ) )
+         CASE ( 'NTM'   )
+            p%IEC%IEC_WindType = IEC_NTM
+            p%IEC%IEC_WindDesc = 'Normal Turbulence Model'
+         CASE ( 'ETM'   )
+            p%IEC%IEC_WindType = IEC_ETM
+            p%IEC%IEC_WindDesc = 'Extreme Turbulence Model'
+         CASE ( 'EWM1'  )
+            p%IEC%IEC_WindType = IEC_EWM1
+            p%IEC%IEC_WindDesc = 'Extreme 1-Year Wind Speed Model'
+         CASE ( 'EWM50' )
+            p%IEC%IEC_WindType = IEC_EWM50
+            p%IEC%IEC_WindDesc = 'Extreme 50-Year Wind Speed Model'
+         !CASE ( 'EWM100' )
+         !   p%IEC%IEC_WindType = IEC_EWM100
+         !   p%IEC%IEC_WindDesc = 'Extreme 100-Year Wind Speed Model'
+         CASE DEFAULT
+            CALL SetErrStat( ErrID_Fatal, 'Valid entries for the IEC wind turbulence are "NTM", "xETM", "xEWM1", or "xEWM50", '// &
+                             'where x is the wind turbine class (1, 2, or 3).', ErrStat, ErrMsg, 'ProcessLine_IEC_WindType')
+      END SELECT
+
+      IF ( p%IEC%IEC_WindType /= IEC_NTM ) THEN
+
+         IF (p%IEC%IECedition /= 3 .OR. p%IEC%IECstandard == 2) THEN
+            CALL SetErrStat( ErrID_Fatal, 'The extreme turbulence and extreme wind speed models are available with '// &
+                         'the IEC 61400-1 Ed. 3 or 61400-3 scaling only.', ErrStat, ErrMsg, 'ProcessLine_IEC_WindType')            
+         ENDIF
+
+         IF (p%IEC%Vref < 0. ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'A wind turbine class (1, 2, or 3) must be specified with the '// &
+                         'extreme turbulence and extreme wind types. (i.e. "1ETM")', ErrStat, ErrMsg, 'ProcessLine_IEC_WindType')
+         ENDIF
+
+         IF ( p%IEC%NumTurbInp ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'When the turbulence intensity is entered as a percent, '//&
+                             'the IEC wind type must be "NTM".', ErrStat, ErrMsg, 'ProcessLine_IEC_WindType')
+         ENDIF
+
+      ELSE
+
+         p%IEC%IECTurbE = ' '
+
+      ENDIF
+
+   ELSE
+      p%IEC%IEC_WindType = IEC_NTM
+      p%IEC%IEC_WindDesc = 'Normal turbulence'
+      p%IEC%IECTurbE     = ' '                   ! unused for non-IEC models
+      p%IEC%Vref         = -999.9_ReKi           ! unused for non-IEC models
+   ENDIF   
+   
+   
+   
+END SUBROUTINE ProcessLine_IEC_WindType
 !=======================================================================
 SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
    ! These numbers come from Neil's analysis
@@ -4662,12 +4535,13 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
 
 END SUBROUTINE GetDefaultCoh
 !=======================================================================
+!> This subroutine is used to get the default values of the Reynolds stresses.
+!! sets p%met%PC_UW,  p%met%PC_UV,  p%met%PC_VW and
+!!      p%met%UWskip, p%met%UVskip, p%met%VWskip
 SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
-   ! This subroutine is used to get the default values of the Reynolds
-   !  stresses.
-   ! sets p%met%PC_UW,  p%met%PC_UV,  p%met%PC_VW and
-   !      p%met%UWskip, p%met%UVskip, p%met%VWskip
 
+   ! Needs p%grid information; calls getVelocityProfile(), also 
+   ! depends on uHub, ZL, Rich_No, UStar
    
    TYPE(TurbSim_ParameterType),     INTENT(INOUT)  :: p                   ! TurbSim parameters
    TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
@@ -4694,7 +4568,7 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
    
    
    Z(2) = p%grid%HubHt + 0.5*p%grid%RotorDiameter    ! top of the grid
-   Z(1) = Z(2) - p%grid%GridHeight                   ! bottom of the grid   !bjj: this isn't correct, is it???? fix todo
+   Z(1) = Z(2) - p%grid%GridHeight                   ! bottom of the grid
    CALL getVelocityProfile(p, p%UHub, p%grid%HubHt, Z, V, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetDefaultRS')
 
@@ -4959,7 +4833,7 @@ FUNCTION DefaultPowerLawExp( p )
             DefaultPowerLawExp = 0.127704032 + 0.031228952*EXP(p%met%RICH_NO/0.0805173)
          ENDIF
 
-      CASE (SpecModel_SMOOTH, SpecModel_GP_LLJ, SpecModel_TIDAL, SpecModel_RIVER)
+      CASE (SpecModel_SMOOTH, SpecModel_GP_LLJ, SpecModel_TIDAL, SpecModel_RIVER, SpecModel_TimeSer )
          ! A 1/7 power law seems to work ok for HYDRO spectral models also...
          DefaultPowerLawExp = 0.143
 
@@ -5003,7 +4877,7 @@ FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL)
 
    getUstarDiab = ( 0.4 * u_ref ) / ( LOG( z_ref / z0 ) - psiM )
 
-END FUNCTION
+END FUNCTION getUstarDiab
 !=======================================================================
 !> this routine calculates the M-O z/L and L parameters using
 !!  Rich_No, SpecModel, and HubHt
@@ -5251,6 +5125,219 @@ SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_I
    
 
 END SUBROUTINE CalcIECScalingParams
+!=======================================================================
+!> Routine sets the default ETMc, WindProfileType, Z0, Latitude, CohExp.
+!! These depend on p%met%TurbModel_ID and p%usr%NPoints.
+!!
+!! URef, ZJetMax, and PLExp are initialized, but cannot calculate their 
+!! default values until the richardson number or ustar are set.
+SUBROUTINE DefaultMetBndryCndtns(p)
+
+
+TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p                            !< TurbSim parameters
+
+      ! default ETMc
+   p%IEC%ETMc = 2.0_ReKi
+
+   
+      ! default WindProfileType      
+   SELECT CASE ( p%met%TurbModel_ID )
+      CASE ( SpecModel_TimeSer )
+         IF ( p%usr%NPoints > 1 ) THEN
+            p%met%WindProfileType = 'TS'
+         ELSE
+            p%met%WindProfileType = 'PL'
+         END IF
+      CASE ( SpecModel_GP_LLJ )
+         p%met%WindProfileType = 'JET'
+               
+      CASE ( SpecModel_TIDAL )
+         p%met%WindProfileType = 'H2L'
+         
+      CASE ( SpecModel_USRVKM )
+         p%met%WindProfileType = 'USR'
+         
+      CASE ( SpecModel_API )
+         p%met%WindProfileType = 'API'  ! ADDED BY YG
+         
+      CASE DEFAULT
+         p%met%WindProfileType = 'IEC'
+   END SELECT
+
+
+      ! Initialize ZJetMax (will need to set default later)
+   p%met%ZJetMax    = 0.0_ReKi  
+   
+      ! Initialize URef (will need to set default later)
+   p%met%URef       = 0.0_ReKi  
+
+      ! Initialize PLExp (will need to set default later)
+   p%met%PLExp   = 0.0_ReKi ! DefaultPowerLawExp( p )  For some models, this routine requires RICH_NO, which we do not know, yet. We'll call DefaultPowerLawExp later for all cases
+      
+      ! Default Z0
+   SELECT CASE ( p%met%TurbModel_ID )
+      CASE (SpecModel_SMOOTH)
+         p%met%Z0 = 0.010
+      CASE (SpecModel_GP_LLJ )
+         p%met%Z0 = 0.005
+      CASE (SpecModel_WF_UPW )
+         p%met%Z0 = 0.018
+      CASE (SpecModel_NWTCUP )
+         p%met%Z0 = 0.021
+      CASE (SpecModel_WF_07D )
+         p%met%Z0 = 0.233
+      CASE (SpecModel_WF_14D )
+         p%met%Z0 = 0.064
+      CASE DEFAULT !IEC values
+         p%met%Z0 = 0.030 ! Represents smooth, homogenous terrain
+   END SELECT
+   
+      ! Default Latitude   
+   p%met%Latitude   = 45.0      
+   
+      ! Default CohExp
+   p%met%CohExp     = 0.0    ! was 0.25
+   
+   
+END SUBROUTINE DefaultMetBndryCndtns
+!=======================================================================
+!> Calculate the default mixing layer depth, ZI,
+!! based on Ustar, UstarDiab, Uref, RefHt, Z0, Fc
+SUBROUTINE DefaultMixingLayerDepth(p)
+! 
+   TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p  !< TurbSim parameters
+
+      IF ( p%met%Ustar < p%met%UstarDiab ) THEN
+         p%met%ZI = ( 0.04 * p%met%Uref ) / ( 1.0E-4 * LOG10( p%met%RefHt / p%met%Z0 ) )  !for "very" windy days
+      ELSE
+         !Should Wind Farm models use the other definition since that was what was used in creating those models?
+         p%met%ZI = p%met%Ustar / (6.0 * p%met%Fc)
+      ENDIF
+
+END SUBROUTINE DefaultMixingLayerDepth
+!=======================================================================
+!> Calculate the default UStar value, based on
+!! UstarDiab (URef, RefHt, Z0, ZL),  TurbModel_ID, ZL, URef
+SUBROUTINE DefaultUstar(p)
+
+   TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p  !< TurbSim parameters
+     
+   
+   p%met%UstarDiab  = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL)
+   SELECT CASE ( p%met%TurbModel_ID )
+
+      CASE (SpecModel_WF_UPW)
+
+         IF ( p%met%ZL < 0.0 ) THEN
+            p%met%Ustar = 1.162 * p%met%UstarDiab**( 2.0 / 3.0 )
+         ELSE ! Include the neutral case to avoid strange discontinuities
+            p%met%Ustar = 0.911 * p%met%UstarDiab**( 2.0 / 3.0 )
+         ENDIF
+
+      CASE ( SpecModel_WF_07D, SpecModel_WF_14D  )
+
+         IF ( p%met%ZL < 0.0 ) THEN
+            p%met%Ustar = 1.484 * p%met%UstarDiab**( 2.0 / 3.0 )
+         ELSE ! Include the neutral case with the stable one to avoid strange discontinuities
+            p%met%Ustar = 1.370 * p%met%UstarDiab**( 2.0 / 3.0 )
+         ENDIF
+
+      CASE (SpecModel_GP_LLJ )
+         p%met%Ustar = 0.17454 + 0.72045*p%met%UstarDiab**1.36242
+
+      CASE ( SpecModel_NWTCUP  )
+         p%met%Ustar = 0.2716 + 0.7573*p%met%UstarDiab**1.2599
+
+      CASE ( SpecModel_TIDAL , SpecModel_RIVER )
+         ! Use a constant drag coefficient for the HYDRO spectral models.
+         p%met%Ustar = p%met%Uref*0.05 ! This corresponds to a drag coefficient of 0.0025.
+         !p%met%Ustar = p%met%Uref*0.04 ! This corresponds to a drag coefficient of 0.0016.
+         
+      CASE DEFAULT
+         p%met%Ustar = p%met%UstarDiab
+
+   END SELECT
+END SUBROUTINE DefaultUstar
+!=======================================================================
+!> Calculate the default ZJetMax value, based on
+!! Rich_No, ZL, Ustar, plus A random amount
+SUBROUTINE DefaultZJetMax(p, OtherSt_RandNum)
+
+   TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p                  !< TurbSim parameters
+   TYPE(RandNum_OtherStateType),INTENT(INOUT)  :: OtherSt_RandNum    !< other states for random numbers (next seed, etc)
+   
+   REAL(ReKi)                                  :: RandomValue
+
+   
+      ! values based on Neil Kelley's analysis
+   p%met%ZJetMax = -14.820561*p%met%Rich_No + 56.488123*p%met%ZL + 166.499069*p%met%Ustar + 188.253377
+   p%met%ZJetMax =   1.9326  *p%met%ZJetMax - 252.7267  ! Correct with the residual
+
+   CALL RndJetHeight( p%RNG, OtherSt_RandNum, RandomValue ) ! Add a random amount
+
+   p%met%ZJetMax = MIN( MAX(p%met%ZJetMax + RandomValue, ZJetMax_LB ), ZJetMax_UB )
+
+END SUBROUTINE DefaultZJetMax
+!=======================================================================
+!!> Calculate the default UStar value, based on
+!!! UstarDiab, TurbModel_ID, ZL, URef
+!SUBROUTINE Default(p)
+!
+!   TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p  !< TurbSim parameters
+!
+!END SUBROUTINE Default
+
+!=======================================================================
+!< Routine to set parameters for the JET profile: UJetMax, ChebyCoef_WS, ChebyCoef_WD
+!! will also calculate default URef if requested.
+!! needs ZJetMax, RefHt, URef (unless asked to calculated here) set prior to calling
+SUBROUTINE getJetCoeffs( p, getDefaultURef, OtherSt_RandNum, ErrStat, ErrMsg )
+
+   TYPE(TurbSim_ParameterType),  INTENT(INOUT) :: p                                              !< parameters for TurbSim
+   TYPE(RandNum_OtherStateType), INTENT(INOUT) :: OtherSt_RandNum                                !< other states for random number generation
+   LOGICAL                     , INTENT(IN   ) :: getDefaultURef                                 !< determines if we also calculate a default URef
+   INTEGER(IntKi)  ,             INTENT(  OUT) :: ErrStat                                        !< error level/status
+   CHARACTER(*) ,                INTENT(  OUT) :: ErrMsg                                         !< error message
+
+      ! local variables
+   REAL(ReKi)                                  :: RandomValue
+   REAL(ReKi)                                  :: URef
+   INTEGER(IntKi)                              :: ErrStat2
+   CHARACTER(MaxMsgLen)                        :: ErrMsg2
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+   IF ( getDefaultURef ) THEN ! Calculate a default value
+
+      p%met%UJetMax = MAX( -21.5515_ReKi + 6.6827_ReKi*LOG(p%met%ZJetMax), 5.0_ReKi ) !Jet max must be at least 5 m/s (occurs ~50 m); shouldn't happen, but just in case....
+
+      CALL Rnd3ParmNorm( p%RNG, OtherSt_RandNum, RandomValue, 0.1076_ReKi, -0.1404_ReKi, 3.6111_ReKi,  -15.0_ReKi, 20.0_ReKi, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'getJetCoeffs')
+
+      IF (p%met%UJetMax + RandomValue > 0 ) p%met%UJetMax = p%met%UJetMax + RandomValue
+
+      CALL GetChebCoefs( p, .TRUE. , ErrStat2, ErrMsg2 ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p%met%Ustar
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'getJetCoeffs')
+
+      CALL getVelocity(p, p%met%UJetMax, p%met%ZJetMax, p%met%RefHt, URef, ErrStat2, ErrMsg2)  
+         p%met%URef = URef
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'getJetCoeffs')
+         
+         
+   ELSE !IF ( trim(p%met%WindProfileType) == 'JET' ) then
+         IF ( EqualRealNos( p%met%RefHt, p%met%ZJetMax ) ) THEN
+            p%met%UJetMax = p%met%URef
+            CALL GetChebCoefs( p, .TRUE. , ErrStat2, ErrMsg2 ) ! These coefficients are a function of UJetMax, ZJetMax, RICH_NO, and p%met%Ustar
+         ELSE         
+            CALL GetChebCoefs(p, .FALSE., ErrStat2, ErrMsg2) ! also calculate p%met%UJetMax
+         END IF
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'getJetCoeffs')
+         
+   ENDIF !Jet wind profile
+   
+END SUBROUTINE getJetCoeffs
 !=======================================================================
 
 END MODULE TS_FileIO
