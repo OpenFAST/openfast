@@ -100,20 +100,23 @@ END IF
 !--------------------------------------------------------------------------------
 ! Calculate the distances and other parameters that don't change with frequency
 !---------------------------------------------------------------------------------
-IF ( p%met%IsIECModel ) THEN
-   DistZMExp(:) = 1.0
-ENDIF
-Indx=1
-DO J=1,p%grid%NPoints
 
-   DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
-
-      !JJ1       = J - 1
-      !Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of array, coherence between points I & J
-
-      IF ( .NOT. PeriodicY ) THEN
+   ! Calculate Dist array (distance between points I and J)
+IF ( .NOT. PeriodicY ) THEN
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+         Indx = Indx + 1
          Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
-      ELSE 
+      END DO ! I
+   END DO ! J
+ELSE  
+   ! bjj need to test ths more!!!
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+      
+         Indx = Indx + 1
          dY = p%grid%Y(I) - p%grid%Y(J)
          IF (dY > 0.5*p%grid%GridWidth ) THEN
             dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
@@ -122,24 +125,46 @@ DO J=1,p%grid%NPoints
          END IF
 
          Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
-      END IF
 
-      IF ( p%met%IsIECModel ) THEN
+      END DO
+   END DO
+END IF
+
+
+   ! Compute the DistZMExp term, i.e., -(r/z_m)^CohExp
+IF ( p%met%IsIECModel .OR. EqualRealNos( p%met%COHEXP, 0.0_ReKi ) ) THEN
+   DistZMExp = -1.0_ReKi      ! value for entire array
+ELSE   
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+      
+         Indx            = Indx + 1
+         ZM              = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
+         DistZMExp(Indx) = -1.0_ReKi*( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1      
+      END DO ! I  
+   END DO ! J              
+END IF
+
+! Compute the DistU term, i.e., (r/u): u is uHub for IEC; u is average u for other models
+IF ( p%met%IsIECModel ) THEN
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+         Indx = Indx + 1
          DistU(Indx) = Dist(Indx)/p%UHub
-!                           TRH(Indx) = EXP( -p%met%InCDec(IVec)*SQRT( ( p%grid%Freq(IFreq) * Dist / p%UHub )**2 + (0.12*Dist/LC)**2 ) )
-      ELSE
-         UM       = 0.5*( U(I) + U(J) )
-         ZM       = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
-
-         DistU(Indx)     = Dist(Indx)/UM
-         DistZMExp(Indx) = ( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1
-
-!                       TRH(Indx) = EXP( -p%met%InCDec(IVec) * DistZMExp*SQRT( ( p%grid%Freq(IFreq)* DistU )**2 + (p%met%InCohB(IVec)*Dist)**2 ) )
-      ENDIF !SpecModel
-      Indx = Indx + 1
-
-   END DO ! I  
-END DO ! J        
+      END DO ! I  
+   END DO ! J        
+ELSE
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side      
+         Indx        = Indx + 1
+         UM          = 0.5*( U(I) + U(J) )
+         DistU(Indx) = Dist(Indx)/UM
+      END DO ! I  
+   END DO ! J 
+END IF
 
 
 IF ( p%met%IsIECmodel ) THEN
@@ -185,10 +210,7 @@ DO IVec = 1,IVec_End
       DO J=max(1, p%usr%NPoints),p%grid%NPoints
          DO I=J,p%grid%NPoints
 
-               !JJ1       = J - 1
-               !Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix TRH, coherence between points I & J
-
-               TRH(Indx) = EXP( -1.0 * p%met%InCDec(IVec) * DistZMExp(Indx)* &
+               TRH(Indx) = EXP( p%met%InCDec(IVec) * DistZMExp(Indx)* &
                            SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
                
                Indx = Indx  + 1

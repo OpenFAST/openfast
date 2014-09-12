@@ -689,93 +689,79 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    ! Read the meteorological boundary conditions for non-IEC models. 
    !===============================================================================================================================
 
-IF ( .NOT. p%met%IsIECModel .OR. p%met%TurbModel_ID == SpecModel_MODVKM  ) THEN  
-
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-
       ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------   
    IsUnusedParameter =  p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ! Used to caluculte z0 in ModVKM model; also used for default ZI
    CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                                        IGNORE=IsUnusedParameter)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-      IF ( ABS(p%met%Latitude) < 5.0 .OR. ABS(p%met%Latitude) > 90.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.', ErrStat, ErrMsg, 'ReadInputFile')
-      ENDIF
-
-   p%met%Fc = 2.0 * Omega * SIN( ABS(p%met%Latitude*D2R) )  ! Calculate Coriolis parameter from latitude
-
-ELSE
-
-   p%met%Latitude = 0.0                               !Not used in IEC specs
-   p%met%Fc = 0.0
-
-ENDIF    ! Not IECKAI and Not IECVKM
-
-
-
-
-IF ( .NOT. p%met%IsIECModel  ) THEN
-
-
+            
       ! ------------ Read in the gradient Richardson number, RICH_NO. ---------------------------------------------
-
    CALL ReadVar( UI, InFile, p%met%Rich_No, "RICH_NO", "Gradient Richardson number",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-   IF ( p%met%KHtest ) THEN
-      IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.02_ReKi) ) THEN
-         p%met%Rich_No = 0.02
-         CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  
+      
+         ! Convert RICH_NO input to value that will be used in the code:
+         
+      IF ( p%met%KHtest ) THEN
+         IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.02_ReKi) ) THEN
+            p%met%Rich_No = 0.02
+            CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+         ENDIF
+      ELSEIF ( p%met%TurbModel_ID == SpecModel_USER .OR. p%met%TurbModel_ID == SpecModel_USRVKM .OR. p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
+         IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.0_ReKi) ) THEN
+            CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'ReadInputFile')
+            p%met%Rich_No = 0.0
+         ENDIF
+      ELSEIF ( p%met%TurbModel_ID == SpecModel_NWTCUP .OR. p%met%TurbModel_ID == SpecModel_GP_LLJ ) THEN
+         p%met%Rich_No = MIN( MAX( p%met%Rich_No, -1.0_ReKi ), 1.0_ReKi )  ! Ensure that: -1 <= RICH_NO <= 1
+      ELSEIF (p%met%IsIECModel) THEN
+         p%met%Rich_No = 0.0                       ! Richardson Number in neutral conditions
       ENDIF
-   ENDIF
-
-   IF ( p%met%TurbModel_ID == SpecModel_USER .OR. p%met%TurbModel_ID == SpecModel_USRVKM .OR. p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
-      IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.0_ReKi) ) THEN
-         CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'ReadInputFile')
-         p%met%Rich_No = 0.0
-      ENDIF
-   ELSEIF ( p%met%TurbModel_ID == SpecModel_NWTCUP .or. p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
-      p%met%Rich_No = MIN( MAX( p%met%Rich_No, REAL(-1.0,ReKi) ), REAL(1.0,ReKi) )  ! Ensure that: -1 <= RICH_NO <= 1
-   ENDIF
-
-
-   
-!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                     
       ! now that we have Rich_No, we can calculate ZL and L
+      ! necessary for DefaultUStar(p)
    CALL Calc_MO_zL(p%met%TurbModel_ID, p%met%Rich_No, p%grid%HubHt, p%met%ZL, p%met%L )
-
-      ! ***** Calculate power law exponent, if needed *****   
-   IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )            
 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   
-   
+         
       ! ------------ Read in the shear/friction velocity, Ustar ------------------------
-   CALL ReadRVarDefault( UI, InFile, p%met%Ustar, "UStar", "Friction or shear velocity [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+   CALL ReadRVarDefault( UI, InFile, p%met%Ustar, "UStar", "Friction or shear velocity [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-      IF ( UseDefault ) THEN
-         IF ( getDefaultURef ) THEN ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
-            CALL SetErrStat( ErrID_Fatal, 'The reference wind speed and friction velocity cannot both be "default."', ErrStat, ErrMsg, 'ReadInputFile')
-         ELSE
-            CALL DefaultUStar(p)
-         END IF
-      END IF
+      
+      !IF ( p%met%IsIECModel ) THEN     
+      !   p%met%Ustar   = 0.0                       ! Shear or friction velocity
+      !ELSE
+         IF ( UseDefault ) THEN
+            IF ( getDefaultURef ) THEN ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
+               CALL SetErrStat( ErrID_Fatal, 'The reference wind speed and friction velocity cannot both be "default."', ErrStat, ErrMsg, 'ReadInputFile')
+            ELSE
+               CALL DefaultUStar(p)
+            END IF
+         END IF         
+      !END IF
    
       
-!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     
+!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>           
+      ! Calculate Coriolis parameter from latitude   ( Used for default ZI )      
+   p%met%Fc = 2.0 * Omega * SIN( ABS(p%met%Latitude*D2R) )  
+   
       
       ! We need the hub-height wind speed to calculate default Reynold's Stresses.
       ! We have a few steps to take before we can get that wind speed:
       
+      ! ***** Calculate power law exponent, if needed *****   
+   IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )            
+      
+      ! ***** Calculate parameters for Jet profile, if needed *****         
    IF ( TRIM(p%met%WindProfileType) == 'JET' ) THEN      
       IF ( getDefaultZJetMax ) CALL DefaultZJetMax(p, OtherSt_RandNum)       ! requires Rich_No, ZL, Ustar
-      CALL getJetCoeffs( p, getDefaultURef, OtherSt_RandNum, ErrStat2, ErrMsg2)
+      CALL getJetCoeffs( p, getDefaultURef, OtherSt_RandNum, ErrStat2, ErrMsg2) ! getDefault
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
    END IF
       
@@ -820,9 +806,15 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       ! (requires uHub, Ustar, Rich_No, ZL, TmpUStar)
    CALL GetDefaultRS(  p, OtherSt_RandNum, TmpUStar(2), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
-      ! Default coherence parameters
-   CALL GetDefaultCoh( p%met%TurbModel_ID, p%met%RICH_NO, p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
+      
+      ! Default coherence parameters and IEC scaling parameters   
+   CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat2, ErrMsg2)                  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')      
+      
+   IF ( .NOT. p%met%IsIECModel  ) THEN
+      CALL GetDefaultCoh( p%met%TurbModel_ID, p%met%RICH_NO, p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
+   END IF
+               
 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    
       ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
@@ -838,21 +830,26 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    
       
        ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "PC_UW", "Mean hub u'w' Reynolds stress", &
-                                            UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UWskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "PC_UW", "Mean hub u'w' Reynolds stress", UnEc, UseDefault, &
+                                            ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%UWskip )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "PC_UV", "Mean hub u'v' Reynolds stress", &
-                                            UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%UVskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "PC_UV", "Mean hub u'v' Reynolds stress", UnEc, UseDefault, &
+                                            ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%UVskip )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       ! ------------ Read in the mean hub v'w' Reynolds stress, PC_VW ---------------------------------------------
-   CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "PC_VW", "Mean hub v'w' Reynolds stress", &
-                                            UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORESTR = p%met%VWskip )
+   CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "PC_VW", "Mean hub v'w' Reynolds stress", UnEc, UseDefault, &
+                                            ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%VWskip )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      ! ------------ Read in the u component coherence decrement (coh-squared def), InCDec(1) = InCDecU ------------
+      
+      
+      
+      
+      
+      ! ------------ Read in the u component coherence parameters, InCDec(1) and InCohB(1) ------------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec1", "u-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
       IF ( .NOT. UseDefault ) THEN         
@@ -860,7 +857,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          p%met%InCohB(1) = InCVar(2)
       END IF
 
-      ! ------------ Read in the v component coherence decrement (coh-squared def), InCDec(2) = InCDecV ----------
+      ! ------------ Read in the v component coherence parameters, InCDec(2) and InCohB(2) ----------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec2", "v-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
       IF ( .NOT. UseDefault ) THEN       ! these are the values we just read in  
@@ -868,7 +865,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          p%met%InCohB(2) = InCVar(2)
       END IF
 
-      ! ------------ Read in the w component coherence decrement (coh-squared def), InCDec(3) = InCDecW -------
+      ! ------------ Read in the w component coherence parameters, InCDec(3) and InCohB(3) -------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec3", "w-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
       IF ( .NOT. UseDefault ) THEN         
@@ -876,17 +873,24 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          p%met%InCohB(3) = InCVar(2)
       END IF
 
-         ! ------------ Read in the coherence exponent, COHEXP -----------------------------------
+      ! ------------ Read in the coherence exponent, COHEXP -----------------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%CohExp, "CohExp", "Coherence exponent", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       
 !..................................................................................................................................
-!  Do some error checking on the non-IEC meteorology data 
+!  Do some error checking on the non-IEC meteorology data and coherence
 !..................................................................................................................................         
       
-   IF (p%met%Ustar   <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The friction velocity must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%met%ZI     <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The mixing layer depth must be a positive number for unstable flows.', ErrStat, ErrMsg, 'ReadInputFile')         
+   IF ( .NOT. p%met%IsIECModel ) THEN
+      IF ( ABS(p%met%Latitude) < 5.0 .OR. ABS(p%met%Latitude) > 90.0 ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.', ErrStat, ErrMsg, 'ReadInputFile')
+      ENDIF
+
+      IF (p%met%Ustar   <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The friction velocity must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
+      IF ( p%met%ZI     <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The mixing layer depth must be a positive number for unstable flows.', ErrStat, ErrMsg, 'ReadInputFile')         
+   END IF
+   
    IF ( p%met%COHEXP <  0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The coherence exponent must be non-negative.', ErrStat, ErrMsg, 'ReadInputFile')
 
    DO I = 1,3
@@ -913,10 +917,12 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
          ENDIF
       ENDIF   
          
+      
    
    !===============================================================================================================================
    ! Read the Coherent Turbulence Scaling Parameters, if necessary.  
    !===============================================================================================================================
+IF ( .NOT. p%met%IsIECModel  ) THEN
 
    IF ( p%WrFile(FileExt_CTS) ) THEN
 
@@ -1030,34 +1036,32 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
 
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
-
       CALL ReadVar( UI, InFile, p%CohStr%CTStartTime, "CTStartTime", "CTS Start Time",ErrStat2, ErrMsg2, UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      p%CohStr%CTStartTime = MAX( p%CohStr%CTStartTime, REAL(0.0,ReKi) ) ! A Negative start time doesn't really make sense...
+      p%CohStr%CTStartTime = MAX( p%CohStr%CTStartTime, 0.0_ReKi ) ! A Negative start time doesn't really make sense...
 
    ENDIF    ! WrFile(FileExt_CTS)
 
 
 ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
 
-   p%met%Rich_No = 0.0                       ! Richardson Number in neutral conditions
    p%met%COHEXP  = 0.0                       ! Coherence exponent
    
       ! The following variables are not used in the IEC calculations
 
-   p%met%ZL      = 0.0                       ! M-O z/L parameter
-   p%met%L       = 0.0                       ! M-O length scale
-   p%met%Ustar   = 0.0                       ! Shear or friction velocity
-   p%met%ZI      = 0.0                       ! Mixing layer depth
-   p%met%PC_UW   = 0.0                       ! u'w' x-axis correlation coefficient
-   p%met%PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
-   p%met%PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
-
-   p%met%UWskip  = .TRUE.
-   p%met%UVskip  = .TRUE.
-   p%met%VWskip  = .TRUE.
-   
+   !p%met%ZL      = 0.0                       ! M-O z/L parameter
+   !p%met%L       = 0.0                       ! M-O length scale
+   !p%met%Ustar   = 0.0                       ! Shear or friction velocity
+   !p%met%ZI      = 0.0                       ! Mixing layer depth
+   !p%met%PC_UW   = 0.0                       ! u'w' x-axis correlation coefficient
+   !p%met%PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
+   !p%met%PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
+   !
+   !p%met%UWskip  = .TRUE.
+   !p%met%UVskip  = .TRUE.
+   !p%met%VWskip  = .TRUE.
+   !
    
    
    IF ( p%IEC%NumTurbInp .AND. p%IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
@@ -1065,20 +1069,20 @@ ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
       p%met%TurbModel_ID = SpecModel_NONE
    ENDIF
 
-      ! ***** Calculate power law exponent, if needed *****   
-   IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )
+   !   ! ***** Calculate power law exponent, if needed *****   
+   !IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )
+   !
+   !
+   !   ! Calculate wind speed at hub height
+   !
+   !CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
+   !   p%UHub = tmp
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
    
-   
-      ! Calculate wind speed at hub height
 
-   CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
-      p%UHub = tmp
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   
-
-   CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat2, ErrMsg2)                  
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-            
+   !CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat2, ErrMsg2)                  
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   !         
 ENDIF
 
 
@@ -4512,7 +4516,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                                                                             + coeffs(10,I)*Ht2*RI1
             ENDDO
 
-            WS1 = MAX(  3.0, WS )
+            WS1 = MAX(  3.0_ReKi, WS )
 !           WS2 = WS1*WS1
 !           WS3 = WS2*WS1
 !           InCDec(1:2)   = (/ (a+c*WS1+e*WS2+g*WS3)/(1+b*WS1+d*WS2+f*WS3), &
@@ -4533,6 +4537,10 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
 
       END SELECT
 
+
+!      IF ( p%met%IsIECModel ) THEN we'll get the defaults from CalcIECScalingParams
+         
+         
 END SUBROUTINE GetDefaultCoh
 !=======================================================================
 !> This subroutine is used to get the default values of the Reynolds stresses.
@@ -4648,16 +4656,22 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
 
       CASE ( SpecModel_USER )
          p%met%PC_UW = 0.0
-         p%met%UWskip = .true.
+         p%met%UWskip = .TRUE.
 
       CASE ( SpecModel_TIDAL, SpecModel_RIVER ) ! HYDROTURBSIM specific.
          p%met%PC_UW = -Ustar2*(1-p%grid%HubHt/p%met%RefHt) 
+         
       CASE DEFAULT
 
          p%met%PC_UW = -Ustar2
 
    END SELECT
 
+   IF ( p%met%IsIECModel ) THEN
+      p%met%PC_UW = 0.0
+      p%met%UWskip = .TRUE.
+   END IF
+      
    !-------------------------------------------------------------------------------------------------
    ! default UV Reynolds stress
    !-------------------------------------------------------------------------------------------------
@@ -4920,14 +4934,14 @@ SUBROUTINE Calc_MO_zL(SpecModel, Rich_No, HubHt, ZL, L )
 
    ELSE ! see Businger, J.A.; Wyngaard, J.C.; Izumi, Y.; Bradley, E.F. (1971). "Flux-Profile Relationships in the Atmospheric Surface Layer." Journal of the Atmospheric Sciences (28); pp.181-189.
 
-      IF ( RICH_NO <= 0.0 ) THEN
+      IF ( RICH_NO <= 0.0_ReKi ) THEN
          ZL = RICH_NO
          !PhiM = (1.0 - 16.0*ZL)**-0.25
-      ELSEIF ( RICH_NO < 0.16667 ) THEN
-         ZL = MIN(RICH_NO / ( 1.0 - 5.0*RICH_NO ), 1.0_ReKi )  ! The MIN() will take care of rounding issues.
+      ELSEIF ( RICH_NO < 0.16667_ReKi ) THEN
+         ZL = MIN(RICH_NO / ( 1.0_ReKi - 5.0_ReKi*RICH_NO ), 1.0_ReKi )  ! The MIN() will take care of rounding issues.
          !PhiM = (1.0 + 5.0*ZL)
       ELSE
-         ZL = 1.0
+         ZL = 1.0_ReKi
       ENDIF
 
    ENDIF !SpecModels
@@ -5072,7 +5086,7 @@ SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_I
       ENDIF
 
       p_IEC%LC = 3.5*p_IEC%Lambda(1)
-      InCDec = (/  8.80, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement
+      InCDec = (/  8.80, HUGE(p_IEC%LC), HUGE(p_IEC%LC) /)   ! u-, v-, and w-component coherence decrement
 
    ELSE !IF (p_IEC%IECedition == 3 ) THEN
       
@@ -5085,7 +5099,7 @@ SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_I
       ENDIF
 
       p_IEC%LC = 8.1*p_IEC%Lambda(1)
-      InCDec = (/ 12.00, 0.0, 0.0 /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
+      InCDec = (/ 12.00, HUGE(p_IEC%LC), HUGE(p_IEC%LC) /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
 
    ENDIF
    
