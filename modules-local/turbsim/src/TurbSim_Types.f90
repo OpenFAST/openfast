@@ -11,6 +11,7 @@ use NWTC_Library
 
    INTEGER(IntKi), PARAMETER :: MaxMsgLen = 1024 ! Maximum length of error messages
 
+      ! Valid spectral models (i.e., turbulence models; values of TurbModel_ID)
    INTEGER(IntKi), PARAMETER :: SpecModel_NONE    =  0  ! No turbulence
    INTEGER(IntKi), PARAMETER :: SpecModel_IECKAI  =  1  ! IEC Kaimal
    INTEGER(IntKi), PARAMETER :: SpecModel_IECVKM  =  2  ! IEC von Karman 
@@ -28,6 +29,14 @@ use NWTC_Library
    INTEGER(IntKi), PARAMETER :: SpecModel_USER    = 14  ! User-defined spectra from file
    INTEGER(IntKi), PARAMETER :: SpecModel_TimeSer = 15  ! time series input from file
    
+      ! Spatial Coherence Models (SCMod)
+   INTEGER(IntKi), PARAMETER :: CohMod_NONE       = 0   ! no additional spatial coherence
+   INTEGER(IntKi), PARAMETER :: CohMod_GENERAL    = 1   ! General spatial coherence model using parameters input from file
+   INTEGER(IntKi), PARAMETER :: CohMod_IEC        = 2   ! Spatial coherence specified by IEC standard
+   INTEGER(IntKi), PARAMETER :: CohMod_API        = 3   ! Spatial coherence specified by API standard
+   
+   
+      ! IEC turbulence types (IEC_WindType) 
       ! bjj: note that EWM models *MUST* directly follow ETM, and EWM models must be at the end
    INTEGER(IntKi), PARAMETER :: IEC_NTM           = 1   ! Number to indicate the IEC Normal Turbulence Model
    INTEGER(IntKi), PARAMETER :: IEC_ETM           = 2   ! Number to indicate the IEC Extreme Turbulence Model
@@ -36,7 +45,7 @@ use NWTC_Library
    INTEGER(IntKi), PARAMETER :: IEC_EWM100        = 5   ! Number to indicate the IEC Extreme Wind speed Model (100-year)
    
    
-      ! distinct output file formats (list by extension)
+      ! distinct output file formats (WrFile()) (listed by extension)
    INTEGER(IntKi), PARAMETER :: FileExt_BTS       =  1  ! .bts file         : AeroDyn FF data (binary) [WrADFF]
    INTEGER(IntKi), PARAMETER :: FileExt_WND       =  2  ! .wnd file         : BLADED FF data (binary)  [WrBLFF]
    INTEGER(IntKi), PARAMETER :: FileExt_HH        =  3  ! .hh file          : AeroDyn HH data (formatted) [WrADHH]
@@ -55,7 +64,7 @@ use NWTC_Library
    REAL(ReKi),     PARAMETER :: Omega             = 7.292116E-05  ! Angular speed of rotation of the earth (rad/s)
    REAL(ReKi),     PARAMETER :: Tolerance         = 0.0001        ! The largest difference between two numbers that are assumed to be equal
                    
-   CHARACTER(1),   PARAMETER ::  Comp (3) = (/ 'u', 'v', 'w' /)   ! The names of the wind components
+   CHARACTER(1),   PARAMETER :: Comp (3) = (/ 'u', 'v', 'w' /)   ! The names of the wind components
    
    
    type :: RandNum_ParameterType

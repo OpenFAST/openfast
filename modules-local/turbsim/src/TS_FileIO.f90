@@ -802,6 +802,10 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       p%met%UstarOffset= 0.0_ReKi      
    ENDIF
                         
+   
+      ! Get the default mean spatial coherence models
+   CALL GetDefaultSCMod( p%met%TurbModel_ID, p%met%SCMod )   
+   
       ! Get the default mean Reynolds stresses
       ! (requires uHub, Ustar, Rich_No, ZL, TmpUStar)
    CALL GetDefaultRS(  p, OtherSt_RandNum, TmpUStar(2), ErrStat2, ErrMsg2 )
@@ -845,8 +849,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
       
-      
-      
+!set SCMod here!!!!      
       
       
       ! ------------ Read in the u component coherence parameters, InCDec(1) and InCohB(1) ------------
@@ -1045,44 +1048,12 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
 
 ELSE  ! IECVKM, IECKAI, MODVKM, OR API models
-
-   p%met%COHEXP  = 0.0                       ! Coherence exponent
    
-      ! The following variables are not used in the IEC calculations
-
-   !p%met%ZL      = 0.0                       ! M-O z/L parameter
-   !p%met%L       = 0.0                       ! M-O length scale
-   !p%met%Ustar   = 0.0                       ! Shear or friction velocity
-   !p%met%ZI      = 0.0                       ! Mixing layer depth
-   !p%met%PC_UW   = 0.0                       ! u'w' x-axis correlation coefficient
-   !p%met%PC_UV   = 0.0                       ! u'v' x-axis correlation coefficient
-   !p%met%PC_VW   = 0.0                       ! v'w' x-axis correlation coefficient
-   !
-   !p%met%UWskip  = .TRUE.
-   !p%met%UVskip  = .TRUE.
-   !p%met%VWskip  = .TRUE.
-   !
-   
-   
-   IF ( p%IEC%NumTurbInp .AND. p%IEC%PerTurbInt == 0.0 ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
+   IF ( p%IEC%NumTurbInp .AND. EqualRealNos( p%IEC%PerTurbInt, 0.0_ReKi ) ) THEN    ! This will produce constant winds, instead of an error when the transfer matrix is singular
       p%met%TurbModel = 'NONE'
       p%met%TurbModel_ID = SpecModel_NONE
    ENDIF
 
-   !   ! ***** Calculate power law exponent, if needed *****   
-   !IF ( getDefaultPLExp ) p%met%PLExp = DefaultPowerLawExp( p )
-   !
-   !
-   !   ! Calculate wind speed at hub height
-   !
-   !CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
-   !   p%UHub = tmp
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   
-
-   !CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat2, ErrMsg2)                  
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   !         
 ENDIF
 
 
@@ -3620,9 +3591,6 @@ SUBROUTINE WrSum_EchoInputs(p )
    END IF
         
 !..................................................................................................................................
-!***
-IF ( p%met%TurbModel_ID == SpecModel_IECKAI .OR. p%met%TurbModel_ID == SpecModel_IECVKM .OR. p%met%TurbModel_ID == SpecModel_API ) RETURN  
-!***
 
 WRITE (p%US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
    
@@ -3632,12 +3600,8 @@ WRITE (p%US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
       WRITE (p%US,"( A10 , 2X , 'Site latitude [degrees]' )"    )  'N/A'            
    END IF
 
-!***
-IF ( p%met%TurbModel_ID == SpecModel_ModVKM ) RETURN  
-!***
 
-   IF ( .NOT. p%met%IsIECModel .AND. & 
-        p%met%TurbModel_ID /= SpecModel_TIDAL   ) THEN
+   IF ( .NOT. p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_TIDAL   ) THEN
       WRITE (p%US,"( F10.3 , 2X , 'Gradient Richardson number' )")  p%met%Rich_No
    ELSE
       WRITE (p%US,"(   a10 , 2X , 'Gradient Richardson number' )")  'N/A'
@@ -3676,14 +3640,23 @@ IF ( p%met%TurbModel_ID == SpecModel_ModVKM ) RETURN
    END IF
    
    do i=1,3
-      WRITE (p%US,"( '(',F9.3,',',G10.3,')',2X , A,'-component coherence parameters' )")  p%met%InCDec(i), p%met%InCohB(i), Comp(i)
+      IF ( p%met%SCMod(i) == CohMod_General .OR. p%met%SCMod(i) == CohMod_IEC ) THEN
+         WRITE (p%US,"( '(',F9.3,',',G10.3,')',2X , A,'-component coherence parameters' )")  p%met%InCDec(i), p%met%InCohB(i), Comp(i)
+      ELSE
+         WRITE (p%US,"( A22,2X , A,'-component coherence parameters' )")  'N/A', Comp(i)         
+      END IF
    end do
    
-   WRITE (p%US,'( F10.3 , 2X , "Coherence exponent" )' )  p%met%CohExp
+   IF ( ANY(p%met%SCMod == CohMod_General) ) THEN
+      WRITE (p%US,'( F10.3 , 2X , "Coherence exponent" )' )  p%met%CohExp
+   ELSE
+      WRITE (p%US,'( A10   , 2X , "Coherence exponent" )' )  'N/A'
+   END IF
+   
    
 !..................................................................................................................................
 !***
-IF ( .NOT. p%WrFile(FileExt_CTS) ) RETURN  
+IF ( .NOT. p%WrFile(FileExt_CTS) .OR. p%met%IsIECModel ) RETURN  
 !***
       WRITE (p%US,"( // 'Coherent Turbulence Scaling Parameters:' / )")
    
@@ -3695,10 +3668,10 @@ IF ( .NOT. p%WrFile(FileExt_CTS) ) RETURN
       ENDIF
       WRITE (p%US,"( 7X, A3, 2X, 'Type of coherent turbulence data files' )") TRIM(p%CohStr%CText)
 !      WRITE (p%US,"( L10 , 2X , 'Randomize the disturbance scale and location?' )")  Randomize
-      WRITE (p%US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")  p%CohStr%DistScl
-      WRITE (p%US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")  p%CohStr%CTLy
+      WRITE (p%US,"( F10.3 , 2X , 'Disturbance scale (ratio of wave height to rotor diameter)' )")        p%CohStr%DistScl
+      WRITE (p%US,"( F10.3 , 2X , 'Fractional location of tower centerline from right' )")                p%CohStr%CTLy
       WRITE (p%US,"( F10.3 , 2X , 'Fractional location of hub height from the bottom of the dataset' )")  p%CohStr%CTLz
-      WRITE (p%US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")  p%CohStr%CTStartTime
+      WRITE (p%US,"( F10.3 , 2X , 'Minimum start time for coherent structures [seconds]' )")              p%CohStr%CTStartTime
             
 !..................................................................................................................................
    
@@ -4013,7 +3986,41 @@ SUBROUTINE ProcessLine_IEC_WindType(Line, p, ErrStat, ErrMsg)
    
 END SUBROUTINE ProcessLine_IEC_WindType
 !=======================================================================
+SUBROUTINE GetDefaultSCMod( TurbModel_ID, SCMod )
+
+   INTEGER(IntKi), INTENT(IN   )            :: TurbModel_ID      ! turbulence model Identifier
+   INTEGER(IntKi), INTENT(  OUT)            :: SCMod(3)          ! default spatial coherence model
+
+   
+   
+   SELECT CASE (TurbModel_ID)
+      CASE ( SpecModel_IECKAI, SpecModel_IECVKM, SpecModel_MODVKM )
+         SCMod(1)   = CohMod_IEC
+         SCMod(2:3) = CohMod_NONE
+      
+      CASE ( SpecModel_API )
+         SCMod(1)   = CohMod_API
+         SCMod(2:3) = CohMod_NONE
+      
+      CASE ( SpecModel_USER )
+         SCMod(1)   = CohMod_GENERAL
+         SCMod(2:3) = CohMod_NONE
+      
+      CASE ( SpecModel_None )
+         SCMod      = CohMod_NONE
+      
+      CASE DEFAULT
+         SCMod      = CohMod_GENERAL
+      
+   END SELECT
+
+
+END SUBROUTINE GetDefaultSCMod
+!=======================================================================
 SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
+! This routine should NOT be called after CalcIECScalingParams() because it will
+! incorrectly overwrite the InCDec and InCohB parameters for the IEC models.
+
    ! These numbers come from Neil's analysis
 
    INTEGER(IntKi), INTENT(IN)               :: TurbModel_ID      ! turbulence model Identifier

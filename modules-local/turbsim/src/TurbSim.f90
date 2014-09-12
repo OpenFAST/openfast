@@ -228,17 +228,22 @@ CALL CheckError()
 
 CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
+CALL CalcFourierCoeffs(  p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
 
-IF (p%met%TurbModel_ID /= SpecModel_NONE) THEN                         ! MODIFIED BY Y GUO
-    IF (p%met%TurbModel_ID == SpecModel_API) THEN
-        CALL CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, ErrStat, ErrMsg) 
-    ELSE
-        CALL CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
-    ENDIF
-    CALL CheckError()
-ELSE
-   V = 0.0_ReKi
-ENDIF
+!CALL CalcFourierCoeffs_old(  p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
+
+!IF (p%met%TurbModel_ID /= SpecModel_NONE) THEN
+!   
+!   
+!    IF (p%met%TurbModel_ID == SpecModel_API) THEN
+!        CALL CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, ErrStat, ErrMsg) 
+!    ELSE
+!        CALL CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
+!    ENDIF
+!    CALL CheckError()
+!ELSE
+!   V = 0.0_ReKi
+!ENDIF
 
 
    ! we don't need these arrays any more, so deallocate to save some space

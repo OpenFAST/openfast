@@ -34,15 +34,394 @@ MODULE TSSubs
 
 CONTAINS
 
+!=======================================================================
+!> This subroutine returns the complex Fourier coefficients (packed in a
+!! real array) of the simulated velocity (wind/water speed). It returns
+!! values FOR ONLY the velocity components that use the IEC method for
+!! computing spatial coherence; i.e., for i where SCMod(i) == CohMod_IEC
+SUBROUTINE CalcFourierCoeffs_IEC( p, U, PhaseAngles, S, V, TRH, ErrStat, ErrMsg )
 
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
+REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+
+   
+   ! Internal variables
+
+REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
+REAL(ReKi), ALLOCATABLE       :: DistU(:)
+   
+INTEGER                       :: J
+INTEGER                       :: I
+INTEGER                       :: IFreq
+INTEGER                       :: Indx
+INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
+                              
+INTEGER(IntKi)                :: ErrStat2
+CHARACTER(MaxMsgLen)          :: ErrMsg2
+   
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (.NOT. ANY(p%met%SCMod == CohMod_IEC) ) RETURN
+
+   !--------------------------------------------------------------------------------
+   ! allocate arrays
+   !--------------------------------------------------------------------------------
+   CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
+   CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   
+   !--------------------------------------------------------------------------------
+   ! Calculate the distances and other parameters that don't change with frequency
+   !---------------------------------------------------------------------------------
+
+   ! Calculate Dist array (distance between points I and J)
+   ! and the DistU term, i.e., (r/u): u is uHub for IEC   
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+         Indx = Indx + 1
+         Dist(Indx)  = SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+         DistU(Indx) = Dist(Indx)/p%UHub         
+      END DO ! I
+   END DO ! J
+   
+           
+   !--------------------------------------------------------------------------------
+   ! Calculate the fourier coefficients
+   !---------------------------------------------------------------------------------
+   
+   DO IVec = 1,3
+   
+      IF (p%met%SCMod(IVec) /= CohMod_IEC) CYCLE ! Check the next component (this one doesn't use the IEC method)
+   
+      V(:,:,IVec) = 0.0_ReKi
+
+      CALL WrScr ( '    '//Comp(IVec)//'-component matrices (IEC coherence method)' )
+
+      !--------------------------------------------------------------------------------
+      ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
+      !---------------------------------------------------------------------------------
+
+      DO IFREQ = 1,p%grid%NumFreq
+         ! -----------------------------------------------
+         ! Create the coherence matrix for this frequency
+         ! -----------------------------------------------
+         Indx = 1
+         DO J = 1,p%usr%NPoints-1  ! start with the user-defined points (which don't get added coherence)
+      
+            TRH(Indx) =  1.0_ReKi
+            Indx = Indx + 1
+      
+            DO I=J+1,p%grid%NPoints
+               TRH(Indx) = 0.0_ReKi
+               Indx = Indx + 1
+            END DO !I
+      
+         END DO !J
+
+         
+         DO J=max(1, p%usr%NPoints),p%grid%NPoints
+            DO I=J,p%grid%NPoints
+
+                  TRH(Indx) = EXP( -1.0_ReKi * p%met%InCDec(IVec) * &
+                              SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
+               
+                  Indx = Indx  + 1
+
+            ENDDO ! I
+         ENDDO ! J
+      
+         ! -----------------------------------------------
+         ! Now transform coherence to H matrix and then
+         !   use H matrix to calculate coefficients
+         ! -----------------------------------------------
+         
+         CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )       
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_IEC')
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
+         CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
+      END DO !IFreq
+
+   END DO !IVec   
+               
+   CALL Cleanup()
+   RETURN
+   
+!............................................
+CONTAINS
+   SUBROUTINE Cleanup()
+
+      IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
+      IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
+   END SUBROUTINE Cleanup
+!............................................   
+END SUBROUTINE CalcFourierCoeffs_IEC  
+!=======================================================================
+!> This subroutine returns the complex Fourier coefficients (packed in a
+!! real array) of the simulated velocity (wind/water speed). It returns
+!! values FOR ONLY the velocity components that use the general method for
+!! computing spatial coherence; i.e., for i where SCMod(i) == CohMod_GENERAL
+SUBROUTINE CalcFourierCoeffs_General( p, U, PhaseAngles, S, V, TRH, ErrStat, ErrMsg )
+
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
+REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+
+   
+   ! Internal variables
+
+REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
+REAL(ReKi), ALLOCATABLE       :: DistU(:)
+REAL(ReKi), ALLOCATABLE       :: DistZMExp(:)
+   
+REAL(ReKi)                    :: dY             ! the lateral distance between two points
+REAL(ReKi)                    :: UM             ! The mean wind speed of the two points
+REAL(ReKi)                    :: ZM             ! The mean height of the two points
+
+INTEGER                       :: J
+INTEGER                       :: I
+INTEGER                       :: IFreq
+INTEGER                       :: Indx
+INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
+                              
+INTEGER(IntKi)                :: ErrStat2
+CHARACTER(MaxMsgLen)          :: ErrMsg2
+   
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (.NOT. ANY(p%met%SCMod == CohMod_GENERAL) ) RETURN
+
+   
+   !--------------------------------------------------------------------------------
+   ! allocate arrays
+   !--------------------------------------------------------------------------------
+   CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+   CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+   CALL AllocAry( DistZMExp, p%grid%NPacked, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+      
+   !--------------------------------------------------------------------------------
+   ! Calculate the distances and other parameters that don't change with frequency
+   !---------------------------------------------------------------------------------
+
+      ! Calculate Dist array (distance between points I and J)
+   IF ( .NOT. PeriodicY ) THEN
+      Indx=0
+      DO J=1,p%grid%NPoints
+         DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+            Indx = Indx + 1
+            Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+         END DO ! I
+      END DO ! J
+   ELSE  
+      ! bjj need to test ths more!!!
+      Indx=0
+      DO J=1,p%grid%NPoints
+         DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+      
+            Indx = Indx + 1
+            dY = p%grid%Y(I) - p%grid%Y(J)
+            IF (dY > 0.5*p%grid%GridWidth ) THEN
+               dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
+            ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
+               dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
+            END IF
+
+            Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
+
+         END DO
+      END DO
+   END IF
+
+
+      ! Compute the DistZMExp term, i.e., -(r/z_m)^CohExp
+   IF ( EqualRealNos( p%met%COHEXP, 0.0_ReKi ) ) THEN
+      DistZMExp = -1.0_ReKi      ! value for entire array
+   ELSE   
+      Indx=0
+      DO J=1,p%grid%NPoints
+         DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+      
+            Indx            = Indx + 1
+            ZM              = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
+            DistZMExp(Indx) = -1.0_ReKi*( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1      
+         END DO ! I  
+      END DO ! J              
+   END IF
+
+      ! Compute the DistU term, i.e., (r/u): u is average u at points I and J
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side      
+         Indx        = Indx + 1
+         UM          = 0.5*( U(I) + U(J) )
+         DistU(Indx) = Dist(Indx)/UM
+      END DO ! I  
+   END DO ! J 
+   
+   
+   !--------------------------------------------------------------------------------
+   ! Calculate the fourier coefficients
+   !---------------------------------------------------------------------------------
+   
+   DO IVec = 1,3
+   
+      IF (p%met%SCMod(IVec) /= CohMod_GENERAL) CYCLE ! Check the next component (this one doesn't use the GENERAL method)
+   
+      V(:,:,IVec) = 0.0_ReKi
+
+      CALL WrScr ( '    '//Comp(IVec)//'-component matrices (General coherence method)' )
+
+      !--------------------------------------------------------------------------------
+      ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
+      !---------------------------------------------------------------------------------
+
+      DO IFREQ = 1,p%grid%NumFreq
+         ! -----------------------------------------------
+         ! Create the coherence matrix for this frequency
+         ! -----------------------------------------------
+   
+         Indx = 1
+         DO J = 1,p%usr%NPoints-1 ! start with user-defined points (which don't get added coherence)
+      
+            TRH(Indx) =  1.0_ReKi
+            Indx = Indx + 1
+      
+            DO I=J+1,p%grid%NPoints
+               TRH(Indx) = 0.0_ReKi
+               Indx = Indx + 1
+            END DO !I
+      
+         END DO !J
+         
+         DO J=max(1, p%usr%NPoints),p%grid%NPoints
+            DO I=J,p%grid%NPoints
+
+                  TRH(Indx) = EXP( p%met%InCDec(IVec) * DistZMExp(Indx)* &
+                              SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
+               
+                  Indx = Indx  + 1
+
+            ENDDO ! I
+         ENDDO ! J
+      
+
+         ! -----------------------------------------------
+         ! Now transform coherence to H matrix and then
+         !   use H matrix to calculate coefficients
+         ! -----------------------------------------------
+         
+         CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )       
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
+         CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
+      END DO !IFreq
+
+   END DO !IVec   
+   
+   CALL Cleanup()
+   RETURN
+!............................................
+CONTAINS
+   SUBROUTINE Cleanup()
+
+      IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
+      IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
+      IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
+   END SUBROUTINE Cleanup
+!............................................   
+END SUBROUTINE CalcFourierCoeffs_General
+!=======================================================================
+!> This subroutine returns the complex Fourier coefficients (packed in a
+!! real array) of the simulated velocity (wind/water speed).
+!! It returns the values FOR ONLY the velocity components that use identity
+!! spatial coherence; i.e., for i where SCMod(i) == CohMod_NONE
+SUBROUTINE CalcFourierCoeffs_NONE( p, U, PhaseAngles, S, V, TRH, ErrStat, ErrMsg )
+
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
+REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+
+   
+   ! Internal variables   
+INTEGER                       :: IFreq
+INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
+                                
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+      
+   !--------------------------------------------------------------------------------
+   ! Calculate the fourier coefficients
+   !---------------------------------------------------------------------------------
+   
+   DO IVec = 1,3
+   
+      IF (p%met%SCMod(IVec) /= CohMod_NONE) CYCLE ! Check the next component (this one doesn't use the identity coherence method)
+   
+      V(:,:,IVec) = 0.0_ReKi
+
+      CALL WrScr ( '    '//Comp(IVec)//'-component matrices (identity coherence)' )
+   
+   
+   ! now calculate coherence for compents that use this method
+              
+      ! -----------------------------------------------------------------------------------
+      !  The coherence is the Identity (as is Cholesky Factorization); 
+      !    the Veers' H matrix calculated in EyeCoh2H:
+      ! -----------------------------------------------------------------------------------
+      
+      DO IFREQ = 1,p%grid%NumFreq
+         CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p%grid%NPoints )   
+         CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
+      ENDDO !IFreq
+      
+   END DO ! IVec
+
+   RETURN      
+!............................................      
+END SUBROUTINE CalcFourierCoeffs_NONE
 !=======================================================================
 !> This subroutine computes the coherence between two points on the grid,
 !! forms the cross spectrum matrix, and returns the complex
 !! Fourier coefficients of the simulated velocity (wind speed).
 SUBROUTINE CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
-
-
-!USE NWTC_LAPACK
 
 IMPLICIT                      NONE
 
@@ -56,6 +435,62 @@ REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< A
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
+   ! Internal variables
+
+REAL(ReKi),                   ALLOCATABLE   :: TRH (:)        ! The transfer function matrix.  
+INTEGER(IntKi)                              :: ErrStat2
+CHARACTER(MaxMsgLen)                        :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! with no turbulence, we return all zeros
+   IF (p%met%TurbModel_ID == SpecModel_NONE) THEN
+      V = 0.0_ReKi
+      RETURN
+   END IF
+         
+      ! otherwise, we use the coherence method specified by the user
+      
+   CALL AllocAry( TRH, p%grid%NPacked, 'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   CALL CalcFourierCoeffs_IEC(     p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
+   CALL CalcFourierCoeffs_API(     p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
+   CALL CalcFourierCoeffs_General( p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
+   CALL CalcFourierCoeffs_NONE(    p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
+      
+   CALL Cleanup()
+   RETURN
+!............................................
+CONTAINS
+   SUBROUTINE Cleanup()
+      IF ( ALLOCATED( TRH ) ) DEALLOCATE( TRH )
+   END SUBROUTINE Cleanup
+!............................................
+END SUBROUTINE CalcFourierCoeffs
+
+!=======================================================================
+!> This subroutine computes the coherence between two points on the grid,
+!! forms the cross spectrum matrix, and returns the complex
+!! Fourier coefficients of the simulated velocity (wind speed).
+SUBROUTINE CalcFourierCoeffs_old( p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
+
+IMPLICIT                      NONE
+
+   ! Passed variables
+TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
+REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
+REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
+CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+
+   
    ! Internal variables
 
 REAL(ReKi), ALLOCATABLE       :: TRH (:)        ! The transfer function matrix.  
@@ -73,18 +508,14 @@ INTEGER                       :: I
 INTEGER                       :: IFreq
 INTEGER                       :: Indx
 INTEGER                       :: IVec, IVec_End ! wind component, 1=u, 2=v, 3=w
-INTEGER                       :: Stat
                               
-INTEGER                       :: UC             ! I/O unit for Coherence debugging file.
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
 
-
-! ------------ arrays allocated -------------------------
-Stat = 0.
-UC = -1
 ErrStat = ErrID_None
 ErrMsg  = ""
+! ------------ arrays allocated -------------------------
+
 
 CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
 CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
@@ -260,31 +691,25 @@ CONTAINS
       IF ( ALLOCATED( TRH       ) ) DEALLOCATE( TRH       )
    END SUBROUTINE Cleanup
 !............................................
-END SUBROUTINE CalcFourierCoeffs
+END SUBROUTINE CalcFourierCoeffs_old
 !=======================================================================
-!> This subroutine computes the coherence between two points on the grid,
-!! using the API coherence function. It then
-!! forms the cross spectrum matrix and returns the complex
-!! Fourier coefficients of the simulated velocity (wind speed).
-SUBROUTINE CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
-
-   ! This subroutine computes the coherence between two points on the grid.
-   ! It stores the symmetric coherence matrix, packed into variable "Matrix"
-   ! This replaces what formerly was the "ExCoDW" matrix.
-
-!USE NWTC_LAPACK
+!> This subroutine returns the complex Fourier coefficients (packed in a
+!! real array) of the simulated velocity (wind/water speed). It returns
+!! values FOR ONLY the velocity components that use the API method for
+!! computing spatial coherence; i.e., for i where SCMod(i) == CohMod_API
+SUBROUTINE CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, TRH, ErrStat, ErrMsg )
 
 IMPLICIT                      NONE
 
    ! Passed variables
 TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
-
-REAL(ReKi),                  INTENT(in)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
-REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
+REAL(ReKi),                  INTENT(IN   )  :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
+REAL(ReKi),                  INTENT(IN   )  :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
+REAL(ReKi),                  INTENT(IN   )  :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
-CHARACTER(*),                INTENT(OUT)    :: ErrMsg
+REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
+INTEGER(IntKi),              INTENT(  OUT)  :: ErrStat
+CHARACTER(*),                INTENT(  OUT)  :: ErrMsg
 
    ! Internal variables
 
@@ -293,84 +718,81 @@ REAL(ReKi), ALLOCATABLE      :: Dist_Y(:)        ! The Y distance between points
 REAL(ReKi), ALLOCATABLE      :: Dist_Z(:)        ! The Z distance between points
 !mlb REAL(ReKi), ALLOCATABLE    :: Dist_Z12(:)        ! The distance between points (not really a distance!)
 REAL(ReKi), ALLOCATABLE      :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
-REAL(ReKi), ALLOCATABLE      :: TRH (:)        ! The transfer function matrix.
 
 INTEGER                      :: J
-INTEGER                      :: JJ1
 INTEGER                      :: I
 INTEGER                      :: IFreq
 INTEGER                      :: Indx
-INTEGER                      :: IVec, IVec_End           ! wind component, 1=u, 2=v, 3=w
-INTEGER                      :: Stat
+INTEGER                      :: IVec            ! wind component, 1=u, 2=v, 3=w
 
-INTEGER                    :: UC             ! I/O unit for Coherence debugging file.
-
+INTEGER                      :: UC             ! I/O unit for Coherence debugging file.
 LOGICAL,    PARAMETER        :: COH_OUT   = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
 
-
-!REAL :: Coef_QX=1.00
-REAL :: Coef_QY=1.00
-REAL :: Coef_QZ=1.25
-!REAL :: Coef_PX=0.40
-REAL :: Coef_PY=0.40
-REAL :: Coef_PZ=0.50
-!REAL :: Coef_RX=0.92
-REAL :: Coef_RY=0.92
-REAL :: Coef_RZ=0.85
-!REAL :: Coef_AlphaX=2.90
-REAL :: Coef_AlphaY=45.0
-REAL :: Coef_AlphaZ=13.0
-REAL :: Coef_1=1.0!3.28
-REAL :: Coef_2=100.0!32.8
-!REAL :: Coef_2=10.0!32.8
+REAL, PARAMETER :: Coef_QX     =   1.00
+REAL, PARAMETER :: Coef_QY     =   1.00
+REAL, PARAMETER :: Coef_QZ     =   1.25
+REAL, PARAMETER :: Coef_PX     =   0.40
+REAL, PARAMETER :: Coef_PY     =   0.40
+REAL, PARAMETER :: Coef_PZ     =   0.50
+REAL, PARAMETER :: Coef_RX     =   0.92
+REAL, PARAMETER :: Coef_RY     =   0.92
+REAL, PARAMETER :: Coef_RZ     =   0.85
+REAL, PARAMETER :: Coef_AlphaX =   2.90
+REAL, PARAMETER :: Coef_AlphaY =  45.0
+REAL, PARAMETER :: Coef_AlphaZ =  13.0
+REAL, PARAMETER :: Coef_1      =   1.0 !3.28
+REAL, PARAMETER :: Coef_2      = 100.0 !32.8
+!REAL, PARAMETER :: Coef_2      =  10.0 !32.8
 
 REAL :: TEMP_Y, TEMP_Z
 
 
-! initialize variables
-ErrStat = ErrID_None
-ErrMsg  = ""
-UC      = -1
+   ! initialize variables
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   UC      = -1
+
+   IF (.NOT. ANY(p%met%SCMod == CohMod_API) ) RETURN
+
+   !--------------------------------------------------------------------------------
+   ! allocate arrays
+   !--------------------------------------------------------------------------------
+   
+   CALL AllocAry( Dist_Y,    p%grid%NPacked, 'Dist_Y coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+   CALL AllocAry( Dist_Z,    p%grid%NPacked, 'Dist_Z coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+   !CALL AllocAry( Dist_Z12, p%grid%NPacked, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+   CALL AllocAry( Z1Z2,      p%grid%NPacked,   'Z1Z2 coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
 
 
-! ------------ arrays allocated -------------------------
-Stat = 0.
+   !--------------------------------------------------------------------------------
+   ! Calculate the distances and other parameters that don't change with frequency
+   !---------------------------------------------------------------------------------
 
-CALL AllocAry( Dist_Y,    p%grid%NPacked, 'Dist_Y coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-CALL AllocAry( Dist_Z,    p%grid%NPacked, 'Dist_Z coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-!CALL AllocAry( Dist_Z12, p%grid%NPacked, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-CALL AllocAry( Z1Z2,      p%grid%NPacked,   'Z1Z2 coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-CALL AllocAry( TRH,       p%grid%NPacked,    'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+   Indx=0
+   DO J=1,p%grid%NPoints
+      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
+         Indx = Indx + 1      ! Indx = p%grid%NPoints*(J - 1) - J*(J - 1)/2 + I   !Index of packed V matrix, coherence between points I & J
 
-IF (ErrStat >= AbortErrLev) THEN
-   CALL Cleanup()
-   RETURN
-END IF
-
-
-!--------------------------------------------------------------------------------
-! Calculate the distances and other parameters that don't change with frequency
-!---------------------------------------------------------------------------------
-
-DO I=1,p%grid%NPoints
-   DO J=1,I
-
-      JJ1       = J - 1
-      Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of packed V matrix, coherence between points I & J
-
-      Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
-
-      Dist_Z(Indx)= ABS( p%grid%Z(I) - p%grid%Z(J) )
+         Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
+         Dist_Z(Indx)= ABS( p%grid%Z(I) - p%grid%Z(J) )
 !mlb           Dist_Z12(Indx)=ABS(Z(I)*Z(J))
-      Z1Z2(Indx) = p%grid%Z(I)*p%grid%Z(J)
+         Z1Z2(Indx) = p%grid%Z(I)*p%grid%Z(J)
+                  
+      END DO
+   END DO
+   
 
-   END DO !J   
-END DO !I 
-
-IF ( COH_OUT ) THEN
+   !.................
+   ! DEBUGGING
+   !.................
+IF ( COH_OUT ) THEN !debugging info...
 
       ! Write the coherence for three frequencies, for debugging purposes
       CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
@@ -388,34 +810,41 @@ IF ( COH_OUT ) THEN
       WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
 ENDIF
 
+   !--------------------------------------------------------------------------------
+   ! Calculate the fourier coefficients
+   !---------------------------------------------------------------------------------
+   
+   DO IVec = 1,1 !BJJ: note that only the u component is defined, and I don't want to look at how to change the coherence in the other components....
+   
+      IF (p%met%SCMod(IVec) /= CohMod_API) CYCLE ! Check the next component (this one doesn't use the API method)
 
-IVec_End = 1
-V(:,:,:) = 0.0_ReKi    ! initialize the matrix (will contain coefficients at the end of this routine)
-
-DO IVec = 1,IVec_End
-
-   CALL WrScr ( '    '//Comp(IVec)//'-component matrices' )
-
+      CALL WrScr ( '    '//Comp(IVec)//'-component matrices (2-dimensional API coherence method)' )
+      
    !--------------------------------------------------------------------------------
    ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
    !---------------------------------------------------------------------------------
-
-   DO IFREQ = 1,p%grid%NumFreq
-
-      !---------------------------------------------------
-      ! Calculate the coherence and Veers' H matrix (CSDs)
-      !---------------------------------------------------
       
-            ! -----------------------------------------------
-            ! Create the coherence matrix for this frequency
-            ! -----------------------------------------------
-
-      DO I=1,p%grid%NPoints
-         DO J=1,I
-
-               JJ1       = J - 1
-               Indx      = p%grid%NPoints*JJ1 - J*JJ1/2 + I   !Index of matrix ExCoDW (now Matrix), coherence between points I & J
-
+      DO IFREQ = 1,p%grid%NumFreq
+         ! -----------------------------------------------
+         ! Create the coherence matrix for this frequency
+         ! -----------------------------------------------
+   
+         Indx = 1
+         DO J = 1,p%usr%NPoints-1 ! start with user-defined points (which don't get added coherence)
+      
+            TRH(Indx) =  1.0_ReKi
+            Indx = Indx + 1
+      
+            DO I=J+1,p%grid%NPoints
+               TRH(Indx) = 0.0_ReKi
+               Indx = Indx + 1
+            END DO !I
+      
+         END DO !J
+         
+         DO J=max(1, p%usr%NPoints),p%grid%NPoints
+            DO I=J,p%grid%NPoints   
+   
 !mlb: THis is where to look for the error.
 
 !mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
@@ -425,50 +854,40 @@ DO IVec = 1,IVec_End
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
                TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p%met%URef)
-
-
+               
+               Indx = Indx  + 1                                    
+               
+            ENDDO ! I
          ENDDO ! J
-      ENDDO ! I
       
       
-      IF (COH_OUT) THEN
-!        IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
-            WRITE( UC, '(I3,2X,F15.5,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
-!        ENDIF
-      ENDIF
+   !.................
+   ! DEBUGGING
+   !.................
+         IF (COH_OUT) THEN
+   !        IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
+               WRITE( UC, '(I3,2X,F15.5,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
+   !        ENDIF
+         ENDIF
       
+         ! -----------------------------------------------
+         ! Now transform coherence to H matrix and then
+         !   use H matrix to calculate coefficients
+         ! -----------------------------------------------
       
-      CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+         CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
       
-      CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
-   ENDDO !IFreq
-
-ENDDO !IVec
-
-
-   ! this is for identity coherence:
-DO IVec = IVec_End+1,3
-     
-      ! -----------------------------------------------------------------------------------
-      !  The coherence is the Identity (as is Cholesky Factorization); 
-      !    the Veers' H matrix calculated in EyeCoh2H:
-      ! -----------------------------------------------------------------------------------
+         CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
       
-   DO IFREQ = 1,p%grid%NumFreq
-      CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p%grid%NPoints )   
-      CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
-   ENDDO !IFreq               
+      ENDDO !IFreq
+   ENDDO !IVec
 
-ENDDO !IVec
-
-
-CALL Cleanup()
-CALL WrScr( ' Two-dimensional API coherence matrix is generated!' )
+   CALL Cleanup()
 
 RETURN
 !............................................
@@ -480,7 +899,6 @@ CONTAINS
       IF ( ALLOCATED( Dist_Y ) ) DEALLOCATE( Dist_Y )
       IF ( ALLOCATED( Dist_Z ) ) DEALLOCATE( Dist_Z )
       IF ( ALLOCATED( Z1Z2   ) ) DEALLOCATE( Z1Z2   )
-      IF ( ALLOCATED( TRH    ) ) DEALLOCATE( TRH    )
    END SUBROUTINE Cleanup
 !............................................
 END SUBROUTINE CalcFourierCoeffs_API
