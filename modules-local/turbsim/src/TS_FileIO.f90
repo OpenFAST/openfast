@@ -82,7 +82,8 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    CHARACTER(MaxMsgLen)          :: ErrMsg2                          ! Temporary Error message
    CHARACTER(1024)               :: PriPath                          ! Path name of the primary file
 
-   CHARACTER(1024)               :: UserFile   
+   CHARACTER(1024)               :: UserFile                         ! Name of file containing user-defined spectra or time-series files
+   CHARACTER(1024)               :: ProfileFile                      ! Name of the file containing profile data for user-defined velocity profiles and/or USRVKM model
 
       ! Initialize some variables:
    ErrStat = ErrID_None
@@ -387,7 +388,6 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       ! ------------ Read in the UserFile------------------- ---------------------------------------------
    CALL ReadVar( UI, InFile, UserFile, "UserFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   !UserFile = "UsrSpec.inp"
    IF ( PathIsRelative( UserFile ) ) UserFile = TRIM(PriPath)//TRIM(UserFile)
 
    IF (ErrStat >= AbortErrLev) THEN
@@ -546,6 +546,12 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Wind profile type", UnEc, UseDefault, ErrStat2, ErrMsg2) !converts WindProfileType to upper case
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
+   !   ! ------------ Read in the ProfileFile------------------- ---------------------------------------------
+   !CALL ReadVar( UI, InFile, ProfileFile, "ProfileFile", 'Name of the input file for profiles used with WindProfileType="USR" or TurbModel="USRVKM"',ErrStat2, ErrMsg2, UnEc)
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   !IF ( PathIsRelative( ProfileFile ) ) ProfileFile = TRIM(PriPath)//TRIM(ProfileFile)
+   !   
+      
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
@@ -598,6 +604,9 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
          ! Get parameters for USR wind profile (so that we can use these parameters to get the wind speed later):
             CALL GetUSR( UI, InFile, 42, p%met, UnEc, ErrStat2, ErrMsg2 ) !Read the last several lines of the file, then return to line 42 (end of this section of the input file)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+               
+!ProfileFile               
+               
          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<         
          
       CASE ( 'TS' )
@@ -1734,7 +1743,7 @@ SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEc, Def, E
 
    IF ( TRIM(CharLine) == 'DEFAULT' ) THEN
 
-      CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
+!      CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
       Def = .TRUE.
 
    ELSE
@@ -1788,7 +1797,7 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEc, Def, E
 
    IF ( TRIM(CharLine) == 'DEFAULT' ) THEN
 
-      CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
+!      CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
       Def = .TRUE.
 
    ELSE
@@ -1867,7 +1876,7 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
 
    IF ( TRIM(CharLine) == 'DEFAULT' ) THEN
 
-      CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
+!      CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
       Def = .TRUE.
       RETURN
 
@@ -2638,8 +2647,11 @@ WRITE(p%US,FormStr)              "Mean shear across rotor disk                  
 WRITE(p%US,FormStr)              "Assumed rotor diameter                          ", p%grid%RotorDiameter,      " m"      
 WRITE(p%US,FormStr)              "Surface roughness length                        ", p%met%Z0,                  " m"      
 WRITE(p%US,'()')                                                                                                 ! A BLANK LINE
+WRITE(p%US,FormStr )             "Nyquist frequency of turbulent wind field       ", 0.5_ReKi / p%grid%TimeStep," Hz"
+WRITE(p%US,'()')                                                                                                 ! A BLANK LINE
 WRITE(p%US,FormStr1)             "Number of time steps in the FFT                 ", p%grid%NumSteps,           ""       
 WRITE(p%US,FormStr1)             "Number of time steps output                     ", p%grid%NumOutSteps,        ""          
+
 
 IF (p%met%KHtest) THEN
    WRITE(p%US,"(/'KH Billow Test Parameters:' / )") ! HEADER

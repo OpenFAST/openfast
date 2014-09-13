@@ -2271,7 +2271,7 @@ IF ( ANY (p%WrFile) )  THEN
    CALL GetNewUnit( UnOut )
 
    WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
-   CALL WrScr1  (   ' You have requested that the following file(s) be generated:' )
+!   CALL WrScr1  (   ' You have requested that the following file(s) be generated:' )
 
    IF ( p%WrFile(FileExt_BIN) )  THEN   
 
@@ -2281,7 +2281,7 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (binary hub-height turbulence-parameter file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
 
    ENDIF
 
@@ -2292,7 +2292,7 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
       
       WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (formatted turbulence-parameter file)' )")  
-      CALL WrScr   ( '     '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
+!      CALL WrScr   (  '    '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
 
    ENDIF
 
@@ -2303,7 +2303,7 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (AeroDyn hub-height file)' )")
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
 
    ENDIF
 
@@ -2314,7 +2314,7 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (AeroDyn/TurbSim full-field wind file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
 
    ENDIF
 
@@ -2325,7 +2325,7 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (AeroDyn/BLADED full-field wnd file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
 
    ENDIF
    
@@ -2336,7 +2336,7 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (binary tower file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
 
    ENDIF
 
@@ -2347,18 +2347,18 @@ IF ( ANY (p%WrFile) )  THEN
       
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
    ENDIF
 
    IF ( p%WrFile(FileExt_UVW) )  THEN
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (formatted full-field U-component file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.u (formatted full-field U-component file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.u (formatted full-field U-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (formatted full-field V-component file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.v (formatted full-field V-component file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.v (formatted full-field V-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (formatted full-field W-component file)' )")  
-      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
+!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
    ENDIF
 
 ELSE

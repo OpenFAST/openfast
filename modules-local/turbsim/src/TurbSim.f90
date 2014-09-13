@@ -74,7 +74,6 @@ REAL(ReKi), ALLOCATABLE          :: U           (:)         ! The steady u-compo
 REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)         ! A profile of horizontal wind angle (measure of wind direction with height)
 
 REAL(ReKi)                       :: CPUtime                 ! Contains the number of seconds since the start of the program
-REAL(ReKi)                       :: CohStr_EventTimeStep    ! Time step from coherent structures file (for printing to summary)
 
 REAL(ReKi)                       ::  USig                   ! Standard deviation of the u-component wind speed at the hub (used for scaling WND files)
 REAL(ReKi)                       ::  VSig                   ! Standard deviation of the v-component wind speed at the hub (used for scaling WND files)
@@ -230,21 +229,6 @@ CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 CALL CalcFourierCoeffs(  p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
 
-!CALL CalcFourierCoeffs_old(  p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
-
-!IF (p%met%TurbModel_ID /= SpecModel_NONE) THEN
-!   
-!   
-!    IF (p%met%TurbModel_ID == SpecModel_API) THEN
-!        CALL CalcFourierCoeffs_API( p, U, PhaseAngles, S, V, ErrStat, ErrMsg) 
-!    ELSE
-!        CALL CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg)
-!    ENDIF
-!    CALL CheckError()
-!ELSE
-!   V = 0.0_ReKi
-!ENDIF
-
 
    ! we don't need these arrays any more, so deallocate to save some space
 IF ( ALLOCATED( p%grid%Freq ) )  DEALLOCATE( p%grid%Freq )
@@ -305,11 +289,9 @@ IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
 !..................................................................................................................................   
 IF ( p%WrFile(FileExt_CTS) ) THEN
    
-   CALL CohStr_WriteCTS(p, WSig, OtherSt_RandNum, CohStr_EventTimeStep, ErrStat, ErrMsg)
+   CALL CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
    CALL CheckError()
                
-ELSE
-   CohStr_EventTimeStep = 0.0_ReKi
 ENDIF !WrACT
 
 !..................................................................................................................................
@@ -346,10 +328,10 @@ ENDIF ! ( WrFile(FileExt_UVW) )
 IF ( ALLOCATED( V  ) )  DEALLOCATE( V )
 
 
-WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * p%grid%TimeStep)
-IF ( CohStr_EventTimeStep > 0.0_ReKi ) THEN
-   WRITE ( p%US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * CohStr_EventTimeStep)
-ENDIF
+!WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * p%grid%TimeStep)
+!IF ( CohStr_EventTimeStep > 0.0_ReKi ) THEN
+!   WRITE ( p%US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * CohStr_EventTimeStep)
+!ENDIF
 
 
    ! Request CPU-time used.

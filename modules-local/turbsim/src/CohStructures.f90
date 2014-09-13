@@ -475,12 +475,11 @@ y_CohStr%ExpectedTime = MAX( y_CohStr%ExpectedTime, 0.0_ReKi )  ! This occurs if
 END SUBROUTINE CohStr_CalcEvents
 !=======================================================================
 !> This subroutine writes the coherent events CTS file
-SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, EventTS, ErrStat, ErrMsg)
+SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
 
    TYPE(TurbSim_ParameterType),     INTENT(IN   )  :: p                   ! parameters for TurbSim (out only b/c it doesn't generate file for certain cases...)
    TYPE(RandNum_OtherStateType),    INTENT(INOUT)  :: OtherSt_RandNum     ! other states for random numbers (next seed, etc)
    REAL(ReKi),                      intent(in   )  :: WSig                ! Standard deviation of the vertical component
-   REAL(ReKi),                      intent(  out)  :: EventTS             ! Event time step
 
    INTEGER(IntKi),                  intent(  out)  :: ErrStat             ! Error level
    CHARACTER(*),                    intent(  out)  :: ErrMsg              ! Message describing error
@@ -500,7 +499,6 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, EventTS, ErrStat, ErrMsg)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-   EventTS = 0.0_ReKi  ! initialize in case of error/early return
    
    y_CohStr%WSig=WSig
    
@@ -652,9 +650,11 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, EventTS, ErrStat, ErrMsg)
    WRITE ( p%US, '(A,F8.3," seconds")')  'Predicted length of coherent events  = ', y_CohStr%ExpectedTime
    WRITE ( p%US, '(A,F8.3," seconds")')  'Length of coherent events            = ', y_CohStr%EventTimeSum
    WRITE ( p%US, '(A,F8.3," (m/s)^2")')  'Maximum predicted event CTKE         = ', y_CohStr%CTKE
+IF ( y_CohStr%EventTimeStep > 0.0_ReKi ) THEN
+   WRITE ( p%US, '(A,F8.3," Hz")'     )  'Nyquist frequency of coherent events = ',  0.5_ReKi / y_CohStr%EventTimeStep
+ENDIF
       
       
-   EventTS   = y_CohStr%EventTimeStep
    !-------------------------
    ! Deallocate the coherent event arrays.
    !-------------------------
