@@ -298,7 +298,7 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
    
       V(:,:,IVec) = 0.0_ReKi
 
-      CALL WrScr ( '    '//Comp(IVec)//'-component matrices (General coherence method)' )
+      CALL WrScr ( '    '//Comp(IVec)//'-component matrices (general coherence model)' )
 
       !--------------------------------------------------------------------------------
       ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients

@@ -1,5 +1,5 @@
 ---------TurbSim v2.00.* Input File------------------------
-Example input file demonstrating user-defined shear, bot velocity and direction profiles
+Example input file demonstrating user-defined shear, both velocity and direction profiles
 ---------Runtime Options-----------------------------------
 False         Echo            - Echo input data to <RootName>.ech (flag)
 2318573       RandSeed1       - First random seed  (-2147483648 to 2147483647)
@@ -34,7 +34,8 @@ True          Clockwise       - Clockwise rotation looking downwind? (used only 
 "A"           IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP model, not used for other models)
 "NTM"         IEC_WindType    - IEC turbulence type ("NTM"=normal, "xETM"=extreme turbulence, "xEWM1"=extreme 1-year wind, "xEWM50"=extreme 50-year wind, where x=wind turbine class 1, 2, or 3)
 "default"     ETMc            - IEC Extreme Turbulence Model "c" parameter [m/s]
-"USR"         WindProfileType - Velocity profile type ("JET";"LOG"=logarithmic;"PL"=power law;"H2L"=Log law for TIDAL spectral model;"API"=API profile;"IEC"=PL on rotor disk, LOG elsewhere; or "default")
+"USR"         WindProfileType - Velocity profile type ("LOG";"PL"=power law;"JET";"H2L"=Log law for TIDAL model;"API";"USR";"TS";"IEC"=PL on rotor disk, LOG elsewhere; or "default")
+"UsrShear.profiles"      ProfileFile     - Name of the file that contains inputs profiles for WindProfileType="USR" and/or TurbModel="USRVKM" [-]
     84.2876   RefHt           - Height of the reference velocity (URef) [m]
        18.2   URef            - Mean (total) velocity at the reference height [m/s] (or "default" for JET velocity profile)
 "default"     ZJetMax         - Jet height [m] (used only for JET velocity profile, valid 70-490 m)
@@ -43,41 +44,31 @@ True          Clockwise       - Clockwise rotation looking downwind? (used only 
 
 --------Non-IEC Meteorological Boundary Conditions------------
 "default"     Latitude        - Site latitude [degrees] (or "default")
-       0.05   RICH_NO         - Gradient Richardson number
+       0.05   RICH_NO         - Gradient Richardson number [-]
 "default"     UStar           - Friction or shear velocity [m/s] (or "default")
 "default"     ZI              - Mixing layer depth [m] (or "default")
-"default"     PC_UW           - Hub mean u'w' Reynolds stress (or "default" or "none")
-"default"     PC_UV           - Hub mean u'v' Reynolds stress (or "default" or "none")
-"default"     PC_VW           - Hub mean v'w' Reynolds stress (or "default" or "none")
-"default"     InCDec1         - u-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
-"default"     InCDec2         - v-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
-"default"     InCDec3         - w-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
-"default"     CohExp          - Coherence exponent (or "default")
+"default"     PC_UW           - Hub mean u'w' Reynolds stress [m^2/s^2] (or "default" or "none")
+"default"     PC_UV           - Hub mean u'v' Reynolds stress [m^2/s^2] (or "default" or "none")
+"default"     PC_VW           - Hub mean v'w' Reynolds stress [m^2/s^2] (or "default" or "none")
+
+--------Spatial Coherence Models---------------------------------
+default       SCMod1           - u-component coherence model ("GENERAL","IEC","API","NONE", or "default")
+default       SCMod2           - v-component coherence model ("GENERAL","NONE", or "default")
+default       SCMod3           - w-component coherence model ("GENERAL","NONE", or "default")
+"default"     InCDec1          - u-component coherence parameters for general or IEC models [-, m^-1] (e.g. "10.0  0.3e-3" in quotes) (or "default")
+"default"     InCDec2          - v-component coherence parameters for general or IEC models [-, m^-1] (e.g. "10.0  0.3e-3" in quotes) (or "default")
+"default"     InCDec3          - w-component coherence parameters for general or IEC models [-, m^-1] (e.g. "10.0  0.3e-3" in quotes) (or "default")
+"default"     CohExp           - Coherence exponent for general model [-] (or "default")
 
 --------Coherent Turbulence Scaling Parameters-------------------
 "Y:\Wind\Archive\Public\Projects\KH_Billow\EventData"    CTEventPath     - Name of the path where event data files are located
 "Random"      CTEventFile     - Type of event files ("LES", "DNS", or "RANDOM")
 true          Randomize       - Randomize the disturbance scale and locations? (true/false)
-          1   DistScl         - Disturbance scale (ratio of event dataset height to rotor disk). (Ignored when Randomize = true.)
-        0.5   CTLy            - Fractional location of tower centerline from right (looking downwind) to left side of the dataset. (Ignored when Randomize = true.)
-        0.5   CTLz            - Fractional location of hub height from the bottom of the dataset. (Ignored when Randomize = true.)
+          1   DistScl         - Disturbance scale [-] (ratio of event dataset height to rotor disk). (Ignored when Randomize = true.)
+        0.5   CTLy            - Fractional location of tower centerline from right [-] (looking downwind) to left side of the dataset. (Ignored when Randomize = true.)
+        0.5   CTLz            - Fractional location of hub height from the bottom of the dataset. [-] (Ignored when Randomize = true.)
          30   CTStartTime     - Minimum start time for coherent structures in RootName.cts [seconds]
 
--------- User-Defined Profiles (Used only with USR wind profile or USRVKM spectral model) -------------------
-5                   NumUSRz         - Number of Heights
-1                   StdScale1       - u-component scaling factor for the input standard deviation (USRVKM only)
-1                   StdScale2       - v-component scaling factor for the input standard deviation (USRVKM only)
-1                   StdScale3       - w-component scaling factor for the input standard deviation (USRVKM only)
-...................................................................................
-Height    Wind Speed       Wind --Direction--
- (m)        (m/s)       (deg, cntr-clockwise )
------------------------------------------------------------------------------------
-15.0           3            00
-25.0           4            00
-35.0           5            00
-45.0           6            00
-55.0           7            00
-
-==================================================
-NOTE: Do not add or remove any lines in this file!
-==================================================
+====================================================
+! NOTE: Do not add or remove any lines in this file!
+====================================================

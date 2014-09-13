@@ -29,7 +29,7 @@ False         Clockwise       - Clockwise rotation looking downwind? (used only 
 
 --------Meteorological Boundary Conditions-------------------
 "TIMESR"      TurbModel       - Turbulence model ("IECKAI","IECVKM","GP_LLJ","NWTCUP","SMOOTH","WF_UPW","WF_07D","WF_14D","TIDAL","API","USRINP","TIMESR", or "NONE")
-"UserTimeSeries/TimeSeries_ieckai.inp" "UserTimeSeries/20140113_174000.inp"      UserFile        - Name of the file that contains inputs for user-defined spectra or time series inputs (used only for "USRINP" and "TIMESR" models)
+"UserTimeSeries/TimeSeries_smooth.inp" "UserTimeSeries/20140113_174000.inp"      UserFile        - Name of the file that contains inputs for user-defined spectra or time series inputs (used only for "USRINP" and "TIMESR" models)
           1   IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
 "A"           IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP model, not used for other models)
 "NTM"         IEC_WindType    - IEC turbulence type ("NTM"=normal, "xETM"=extreme turbulence, "xEWM1"=extreme 1-year wind, "xEWM50"=extreme 50-year wind, where x=wind turbine class 1, 2, or 3)

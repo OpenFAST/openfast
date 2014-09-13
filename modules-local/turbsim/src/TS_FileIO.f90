@@ -546,11 +546,11 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Wind profile type", UnEc, UseDefault, ErrStat2, ErrMsg2) !converts WindProfileType to upper case
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-   !   ! ------------ Read in the ProfileFile------------------- ---------------------------------------------
-   !CALL ReadVar( UI, InFile, ProfileFile, "ProfileFile", 'Name of the input file for profiles used with WindProfileType="USR" or TurbModel="USRVKM"',ErrStat2, ErrMsg2, UnEc)
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-   !IF ( PathIsRelative( ProfileFile ) ) ProfileFile = TRIM(PriPath)//TRIM(ProfileFile)
-   !   
+      ! ------------ Read in the ProfileFile------------------- ---------------------------------------------
+   CALL ReadVar( UI, InFile, ProfileFile, "ProfileFile", 'Name of the input file for profiles used with WindProfileType="USR" or TurbModel="USRVKM"',ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( PathIsRelative( ProfileFile ) ) ProfileFile = TRIM(PriPath)//TRIM(ProfileFile)
+      
       
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
@@ -602,11 +602,8 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       CASE ( 'USR' )
          !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>         
          ! Get parameters for USR wind profile (so that we can use these parameters to get the wind speed later):
-            CALL GetUSR( UI, InFile, 42, p%met, UnEc, ErrStat2, ErrMsg2 ) !Read the last several lines of the file, then return to line 42 (end of this section of the input file)
+            CALL GetUSR( ProfileFile, p%met, UnEc, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-               
-!ProfileFile               
-               
          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<         
          
       CASE ( 'TS' )
@@ -777,7 +774,11 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       ! now that we know URef (in case getDefaultURef was true), set UstarDiab (used in ustar profile and default ZI):
    p%met%UstarDiab  = getUstarDiab(p%met%URef, p%met%RefHt, p%met%z0, p%met%ZL) 
 
-
+   IF (ErrStat >= AbortErrLev) THEN  ! just in case we had a fatal error, let's check before calling getVelocity 
+      CALL Cleanup()
+      RETURN
+   END IF  
+   
    CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
       p%UHub = tmp
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
@@ -860,7 +861,43 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       
 !set SCMod here!!!!      
       
-      
+   !===============================================================================================================================
+   ! Read the spatial coherence model section. 
+   !===============================================================================================================================
+
+   CALL ReadCom( UI, InFile, "Spatial Coherence Models Heading Line 1", ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+   CALL ReadCom( UI, InFile, "Spatial Coherence Models Heading Line 2", ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+
+      ! ------------ Read in the spatial coherence models, SCMod(1), SCMod(2), SCMod(3). ---------------------------------------------   
+
+   DO I=1,3
+      CALL ReadCVarDefault ( UI, InFile, Line, "SCMod"//TRIM(Num2LStr(I)), Comp(I)//"-component coherence model", UnEc, UseDefault, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         IF ( .NOT. UseDefault ) THEN
+            SELECT CASE ( TRIM(Line) )
+               CASE("GENERAL")
+                  p%met%SCMod(I) = CohMod_GENERAL
+               CASE ("IEC")
+                  p%met%SCMod(I) = CohMod_IEC
+               CASE ("NONE")
+                  p%met%SCMod(I) = CohMod_NONE
+               CASE ("API")
+                  p%met%SCMOD(I) = CohMod_API
+                  IF (I /= 1) CALL SetErrStat( ErrID_Fatal, "API coherence model is valid only for the u-component", ErrStat, ErrMsg, 'ReadInputFile')
+               CASE DEFAULT
+                  p%met%SCMod(I) = CohMod_NONE
+                  IF (I==1) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Unknown value for SCMod'//TRIM(Num2LStr(I))//'. Valid entries are "GENERAL","IEC","API", or "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
+                  ELSE               
+                     CALL SetErrStat( ErrID_Fatal, 'Unknown value for SCMod'//TRIM(Num2LStr(I))//'. Valid entries are "GENERAL","IEC", or "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
+                  END IF 
+            END SELECT
+         END IF
+   END DO
+         
       ! ------------ Read in the u component coherence parameters, InCDec(1) and InCohB(1) ------------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec1", "u-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
@@ -1119,7 +1156,7 @@ DescStr = 'This full-field file was '//TRIM(DescStr)
 RETURN
 END SUBROUTINE OpenSummaryFile
 !=======================================================================
-SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
+SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
 
    IMPLICIT                              NONE
 
@@ -1129,55 +1166,48 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg                          ! Message describing error
    CHARACTER(*),                    INTENT(IN   ) :: FileName                        ! Name of the input file
    
-   INTEGER, INTENT(IN), OPTIONAL      :: NLines                         ! Number of lines to be skipped, if the file must be rewound
-   INTEGER, INTENT(IN)                :: U_in                           ! Input unit.  This file is assumed to be already open
    
    ! local variables
    
+   INTEGER                                        :: U_in                           ! Input unit.
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
    
-   
-   CHARACTER(200)                     :: LINE
-
-   REAL(ReKi)                         :: L_Usr_Tmp
-   REAL(ReKi)                         :: Sigma_USR_Tmp
-   REAL(ReKi)                         :: U_USR_Tmp
-   REAL(ReKi)                         :: WindDir_USR_Tmp
-   REAL(ReKi)                         :: Z_USR_Tmp
-
-   INTEGER                            :: I
-   INTEGER                            :: Indx
-   INTEGER                            :: J
-
-   LOGICAL                            :: ReadSigL                       ! Whether or not to read the last 2 columns
+   CHARACTER(200)                                 :: LINE
+                                                  
+   REAL(ReKi)                                     :: L_Usr_Tmp
+   REAL(ReKi)                                     :: Sigma_USR_Tmp
+   REAL(ReKi)                                     :: U_USR_Tmp
+   REAL(ReKi)                                     :: WindDir_USR_Tmp
+   REAL(ReKi)                                     :: Z_USR_Tmp
+                                                  
+   INTEGER                                        :: I
+   INTEGER                                        :: Indx
+   INTEGER                                        :: J
+                                                  
+   LOGICAL                                        :: ReadSigL                       ! Whether or not to read the last 2 columns
 
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-      ! Find the end of the input file, where the "User-Defined Variables" are located
-   READ ( U_in, '(A)', IOSTAT=ErrStat2 ) LINE
-
-   IF ( ErrStat2 /= 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'Could not read entire input file for user-defined variables.', ErrStat, ErrMsg, 'GetUSR')         
-   ENDIF
-
-   CALL Conv2UC ( LINE )
-
-   DO WHILE ( INDEX( LINE, 'USER-DEFINED' ) == 0 )
-
-      READ ( U_in, '(A)', IOSTAT=ErrStat2 ) LINE
-
-      IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Could not read entire input file for user-defined variables.', ErrStat, ErrMsg, 'GetUSR')         
-      ENDIF
-
-      CALL Conv2UC( LINE )
-
-   ENDDO
-
-
+   U_in = -1
+   CALL GetNewUnit( U_in, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL OpenFInpFile( U_in, FileName, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+      
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(U_in)
+      RETURN
+   END IF
+               
+   DO I=1,3
+      CALL ReadCom( U_in, FileName, "Header line "//trim(num2lstr(I))//" for user-defined profiles", ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   END DO
+   
+   
       ! ---------- Read the size of the arrays --------------------------------------------
    CALL ReadVar( U_in, FileName, p_met%NumUSRz, "NumUSRz", "Number of heights in the user-defined profiles", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
@@ -1187,7 +1217,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
    ENDIF
 
    DO I=1,3
-         ! ---------- Read the size of the arrays --------------------------------------------
+         ! ---------- Read the scaling for the standard deviations --------------------------------------------
       CALL ReadVar( U_in, FileName, p_met%USR_StdScale(I), "USR_StdScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
 
@@ -1213,6 +1243,11 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
       ReadSigL = .FALSE.
    ENDIF
 
+   IF (ErrStat >= AbortErrLev) THEN
+      CLOSE(U_in)
+      RETURN
+   END IF
+   
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
       CALL ReadCom( U_in, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2, UnEc )
@@ -1230,6 +1265,8 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
 
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Could not read entire user-defined variable list on line '//Int2LStr(I)//'.', ErrStat, ErrMsg, 'GetUSR')
+         CLOSE(U_in)
+         RETURN
       ENDIF
 
       IF ( ReadSigL ) THEN
@@ -1239,7 +1276,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
             CALL SetErrStat( ErrID_Fatal, 'The length scale must be a positive number.', ErrStat, ErrMsg, 'GetUSR')
          ENDIF
       ENDIF
-
+      
       IF ( p_met%USR_WindDir(I) > 360. ) THEN
          J = INT ( p_met%USR_WindDir(I) / 360. )
          p_met%USR_WindDir(I) = p_met%USR_WindDir(I) - J * 360.
@@ -1260,6 +1297,8 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
                EXIT
             ELSEIF ( p_met%USR_Z(I) == p_met%USR_Z(J) ) THEN
                CALL SetErrStat( ErrID_Fatal, 'User-defined values must contain unique heights.', ErrStat, ErrMsg, 'GetUSR')
+               CLOSE(U_in)
+               RETURN
             ENDIF
          ENDDO
 
@@ -1293,18 +1332,7 @@ SUBROUTINE GetUSR(U_in, FileName, NLines, p_met, UnEc, ErrStat, ErrMsg)
       ENDIF
    ENDDO
 
-      ! Rewind the file, if necessary.
-   IF ( PRESENT(NLines) ) THEN
-      REWIND( U_in , IOSTAT=ErrStat2 )
-
-      IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error rewinding the file '//TRIM(FileName)//'.', ErrStat, ErrMsg, 'GetUSR')
-      ENDIF
-
-      DO I = 1,NLines
-         CALL ReadCom( U_in, FileName, "Line "//Int2LStr(I), ErrStat2, ErrMsg2 )
-      ENDDO
-   ENDIF
+   CLOSE(U_in)
 
 END SUBROUTINE GetUSR
 !=======================================================================
@@ -3651,6 +3679,24 @@ WRITE (p%US,"( // 'Non-IEC Meteorological Boundary Conditions:' / )")
       WRITE (p%US,'(   A10 , 2X , "Mean hub v''w'' Reynolds stress" )' )  'N/A'
    END IF
    
+!..................................................................................................................................
+
+WRITE (p%US,"( // 'Spatial Coherence Models:' / )")
+   
+   do i=1,3
+      SELECT CASE (p%met%SCMod(i))
+         CASE (CohMod_GENERAL)
+            TmpStr = "GENERAL"
+         CASE (CohMod_IEC)
+            TmpStr = "IEC"
+         CASE (CohMod_NONE)
+            TmpStr = "NONE"
+         CASE (CohMod_API)
+            TmpStr = "API"
+      END SELECT
+      WRITE (p%US,'(   A10 , 2X , A, "-component coherence model" )' )  TRIM(TmpStr), Comp(i)
+   end do
+
    do i=1,3
       IF ( p%met%SCMod(i) == CohMod_General .OR. p%met%SCMod(i) == CohMod_IEC ) THEN
          WRITE (p%US,"( '(',F9.3,',',G10.3,')',2X , A,'-component coherence parameters' )")  p%met%InCDec(i), p%met%InCohB(i), Comp(i)
