@@ -655,9 +655,9 @@ INCLUDE 'ElementMatrixStatic_Force.f90'
        ENDDO
    ELSEIF(p%analysis_type == 1) THEN
        CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!DO i=5,0,-1            
-!WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
-!ENDDO
+DO i=5,0,-1            
+WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
+ENDDO
    ENDIF
 
    END SUBROUTINE BeamDyn_UpdateStates

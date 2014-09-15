@@ -322,8 +322,8 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
    u%RootMotion%RotationAcc(:,:)   = 0.0D0
                      
 !   u%PointLoad%Force(2,p%node_total)  = 4.0D+05 !6.0D+02
-   u%PointLoad%Force(3,p%node_total)  = 6.0D+02
-   u%PointLoad%Moment(:,:)  = 0.0D+02
+   u%PointLoad%Force(3,p%node_total)  = 6.0D+00
+!   u%PointLoad%Moment(1,p%node_total)  = 6.0D+02
 !   u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad
