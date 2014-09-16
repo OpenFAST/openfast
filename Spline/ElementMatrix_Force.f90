@@ -104,7 +104,7 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
-       CALL MassMatrix(mmm,mEta,rho,uuu,Mi)
+       CALL MassMatrix(mmm,mEta,rho,Mi)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        Fg(:) =  Fg(:) + DistrLoad_GL(:,igp)
 
