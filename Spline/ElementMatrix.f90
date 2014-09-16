@@ -109,7 +109,7 @@
        
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
-       CALL MassMatrix(mmm,mEta,rho,uuu,Mi)
+       CALL MassMatrix(mmm,mEta,rho,Mi)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
