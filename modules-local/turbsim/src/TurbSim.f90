@@ -70,8 +70,8 @@ TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum         ! other states for r
 REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)     ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)     ! The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)     ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
-REAL(ReKi), ALLOCATABLE          :: U           (:)         ! The steady u-component wind speeds for the grid (NPOints).
-REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)         ! A profile of horizontal wind angle (measure of wind direction with height)
+REAL(ReKi), ALLOCATABLE          :: U           (:)         ! The steady u-component wind speeds for the grid (NPoints).
+REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)         ! A profile of horizontal wind angle (NPoints) (measure of wind direction with height)
 
 REAL(ReKi)                       :: CPUtime                 ! Contains the number of seconds since the start of the program
 
@@ -116,7 +116,7 @@ CALL ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 CALL CheckError()
 
 CALL WrSum_EchoInputs(p) 
-call WrSum_UserInput(p%met,p%US)
+call WrSum_UserInput(p%met,p%usr, p%US)
 
 CALL TS_ValidateInput(p, ErrStat, ErrMsg)
 CALL CheckError()

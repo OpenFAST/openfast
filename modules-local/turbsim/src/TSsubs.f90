@@ -1192,7 +1192,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    INTEGER(IntKi)                   :: LastIndex(2)                     ! Index for the last (Freq, Ht) used in models that interpolate/extrapolate user-input spectra or time series
    
    INTEGER(IntKi)                   :: IVec                             ! loop counter for velocity components
-   INTEGER(IntKi)                   :: IPoint                           ! loop counter for grid points
+   INTEGER(IntKi)                   :: IPoint, iPointIndx               ! loop counter for grid points
    
    REAL(ReKi),   ALLOCATABLE        :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
    REAL(ReKi)                       :: DUDZ                             ! The steady u-component wind shear for the grid  [used in Hydro models only].
@@ -1313,7 +1313,14 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
       CASE ( SpecModel_TimeSer ) 
          
-         DO IPoint=1,p%usr%NPoints
+         DO iPointIndx = 1,p%usr%NPoints
+      
+            iPoint = iPointIndx
+            IF (iPointIndx == p%usr%RefPtID ) THEN
+               iPoint = p%usr%NPoints
+            ELSEIF (iPointIndx == p%usr%NPoints) THEN
+               iPoint = p%usr%RefPtID
+            END IF
             S(1:p%usr%nFreq,IPoint,:) = p%usr%S(:,IPoint,:)*HalfDelF 
          END DO
          if (p%usr%nFreq < p%grid%NumFreq) then
@@ -1445,7 +1452,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    INTEGER(IntKi)                                 :: HubIndx_Z                       ! Index into Z dimension of grid for hub location
    
    INTEGER(IntKi)                                 :: NumSteps2                       ! one-half the number of steps
-   INTEGER(IntKi)                                 :: iPoint                          ! loop counter for points
+   INTEGER(IntKi)                                 :: iPoint, iPointIndx              ! loop counter for points
    
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
@@ -1577,7 +1584,15 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%GridPtIndx = 0
    p_grid%TwrPtIndx  = 0
    
-   DO iPoint = 1,p_usr%NPoints
+   ! (2) the rectangular grid:
+   DO iPointIndx = 1,p_usr%NPoints
+      
+      iPoint = iPointIndx
+      IF (iPointIndx == p_usr%RefPtID ) THEN
+         iPoint = p_usr%NPoints
+      ELSEIF (iPointIndx == p_usr%NPoints) THEN
+         iPoint = p_usr%RefPtID
+      END IF
       
          ! Is this point on the regularly-spaced grid?   
       TmpIndex = IndexOnGrid( p_grid, p_usr%pointyi(iPoint), p_usr%pointzi(iPoint) )
@@ -1602,10 +1617,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       END IF
       
    END DO
-   
-         
-   ! (2) the rectangular grid:
-      
+                  
                  
    ! (3) the hub point:
          
@@ -1629,7 +1641,15 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    IF ( .NOT. p_grid%HubOnGrid ) THEN
       GenerateExtraHubPoint = .TRUE.      
       ! Is it a user-defined point?
-      DO iPoint=1,p_usr%NPoints
+      DO iPointIndx = 1,p_usr%NPoints
+      
+         iPoint = iPointIndx
+         IF (iPointIndx == p_usr%RefPtID ) THEN
+            iPoint = p_usr%NPoints
+         ELSEIF (iPointIndx == p_usr%NPoints) THEN
+            iPoint = p_usr%RefPtID
+         END IF
+      
          IF ( EqualRealNos( p_usr%pointyi(iPoint), 0.0_ReKi ) .AND. EqualRealNos( p_usr%pointzi(iPoint), p_grid%HubHt ) ) THEN
             p_grid%HubIndx = iPoint
             GenerateExtraHubPoint = .FALSE.
@@ -1652,10 +1672,19 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
    
    ! (1) User-defined points 
-   DO iPoint = 1,p_usr%NPoints
+   DO iPointIndx = 1,p_usr%NPoints
+      
+      iPoint = iPointIndx
+      IF (iPointIndx == p_usr%RefPtID ) THEN
+         iPoint = p_usr%NPoints
+      ELSEIF (iPointIndx == p_usr%NPoints) THEN
+         iPoint = p_usr%RefPtID
+      END IF
+      
       p_grid%y(iPoint) = p_usr%pointyi(iPoint)
-      p_grid%z(iPoint) = p_usr%pointzi(iPoint)
-   END DO
+      p_grid%z(iPoint) = p_usr%pointzi(iPoint)      
+   END DO   
+
    
    ! (2) rectangular y-z grid:
    iPoint = p_usr%NPoints
@@ -1810,7 +1839,7 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
    REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(p%grid%NPoints,p%grid%NumFreq,3)   !< phases
 
       ! local variables
-   INTEGER(IntKi)                              :: iPoint                                         ! points that have phases defined already 
+   INTEGER(IntKi)                              :: iPoint, iPointIndx                             ! points that have phases defined already 
    
 
       ! generate random phases for all the points
@@ -1823,7 +1852,14 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
       
          ! note: setting the phase angles this way assumes that p%usr%f(1:p%usr%nFreq) = p%grid%f(1:p%usr%nFreq) [i.e., TMax, AnalysisTime are equal]; 
          ! however, the simulated time series may have more frequencies and/or smaller time step than the user time-series input file.
-      DO iPoint=1,p%usr%nPoints
+      DO iPointIndx = 1,p%usr%NPoints
+      
+         iPoint = iPointIndx
+         IF (iPointIndx == p%usr%RefPtID ) THEN
+            iPoint = p%usr%NPoints
+         ELSEIF (iPointIndx == p%usr%NPoints) THEN
+            iPoint = p%usr%RefPtID
+         END IF
          PhaseAngles(iPoint,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,iPoint,:)
       END DO
       
@@ -2417,6 +2453,7 @@ print *, 'NumSteps =', NumSteps
 
       
    CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,p%usr%nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%meanDir,                 p%usr%NPoints,            'meanDir',    ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%f,          p%usr%nFreq ,                          'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
@@ -2428,6 +2465,14 @@ print *, 'NumSteps =', NumSteps
    END IF
    
    
+      ! calculate wind direction (before removing mean below):
+   p%usr%meanDir = 0.0_ReKi
+   DO iPoint = 1, p%usr%NPoints
+      p%usr%meanDir(iPoint) = p%usr%meanDir(iPoint) + atan2( p%usr%v(iFreq,iPoint,2), p%usr%v(iFreq,iPoint,1) ) !sum the angles
+   END DO
+   p%usr%meanDir = p%usr%meanDir * R2D / p%usr%nFreq ! average of the angles in degrees
+   
+   
       ! calculate and remove the mean wind components:         
    DO iVec = 1,p%usr%nComp
       DO iPoint = 1, p%usr%NPoints
@@ -2436,6 +2481,10 @@ print *, 'NumSteps =', NumSteps
       END DO
    END DO
                
+   
+
+   
+   
    
    ! compute forward fft to get real and imaginary parts      
    ! S = Re^2 + Im^2 
@@ -2552,13 +2601,13 @@ SUBROUTINE TS_End(p, OtherSt_RandNum)
    IF ( ALLOCATED( p%met%USR_Sigma     ) )  DEALLOCATE( p%met%USR_Sigma     )
    IF ( ALLOCATED( p%met%USR_L         ) )  DEALLOCATE( p%met%USR_L         )
                                                                                            
-   IF ( ALLOCATED( p%usr%pointID       ) )  DEALLOCATE( p%usr%pointID       )
    IF ( ALLOCATED( p%usr%pointyi       ) )  DEALLOCATE( p%usr%pointyi       )
    IF ( ALLOCATED( p%usr%pointzi       ) )  DEALLOCATE( p%usr%pointzi       )
    IF ( ALLOCATED( p%usr%t             ) )  DEALLOCATE( p%usr%t             )
    IF ( ALLOCATED( p%usr%v             ) )  DEALLOCATE( p%usr%v             )
 
    IF ( ALLOCATED( p%usr%meanU         ) )  DEALLOCATE( p%usr%meanU         )
+   IF ( ALLOCATED( p%usr%meanDir       ) )  DEALLOCATE( p%usr%meanDir       )
    IF ( ALLOCATED( p%usr%f             ) )  DEALLOCATE( p%usr%f             )
    IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S             )
    IF ( ALLOCATED( p%usr%phaseAngles   ) )  DEALLOCATE( p%usr%phaseAngles   )

@@ -343,14 +343,12 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
 
 
    REAL(ReKi)                             :: tmpHt(2)
-   REAL(ReKi)                             :: tmpWS(2)
+   REAL(ReKi)                             :: tmpWD(2)
+   REAL(ReKi)                             :: diff
                                           
-   INTEGER                                :: I
-   INTEGER                                :: Indx
+   INTEGER                                :: IZ, IZm1
    INTEGER                                :: J
                                           
-!   REAL                                   :: C_factor
-!   REAL(ReKi)                             :: ZRef
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -366,24 +364,24 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
             ! Compute the wind direction at hub height & the jet height
          tmpHt(1) = p%grid%HubHt
          tmpHt(2) = p%met%ZJetMax
-         CALL ChebyshevVals( p%met%ChebyCoef_WD, tmpHt, tmpWS(1:2), MinZ, MaxZ, ErrStat, ErrMsg )
+         CALL ChebyshevVals( p%met%ChebyCoef_WD, tmpHt, tmpWD(1:2), MinZ, MaxZ, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
 
             ! Make sure none of the directions are more than 45 degrees from the direction at the jet height
-         IF ( ABS(tmpWS(1) - tmpWS(2) ) > 45. ) THEN  ! The direction at the hub height
-            tmpWS(1) = tmpWS(2) + SIGN(REAL(45.,ReKi), tmpWS(1) - tmpWS(2))
+         IF ( ABS(tmpWD(1) - tmpWD(2) ) > 45. ) THEN  ! The direction at the hub height
+            tmpWD(1) = tmpWD(2) + SIGN(REAL(45.,ReKi), tmpWD(1) - tmpWD(2))
          ENDIF
 
-         DO I = 1,SIZE(DirectionProfile) ! The directions at all the heights
-            IF ( ABS(DirectionProfile(I) - tmpWS(2) ) > 45. ) THEN
-               DirectionProfile(I) = tmpWS(2) + SIGN(REAL(45.,ReKi), DirectionProfile(I) - tmpWS(2))
+         DO J = 1,SIZE(DirectionProfile) ! The directions at all the heights
+            IF ( ABS(DirectionProfile(J) - tmpWD(2) ) > 45. ) THEN
+               DirectionProfile(J) = tmpWD(2) + SIGN(REAL(45.,ReKi), DirectionProfile(J) - tmpWD(2))
             ENDIF
 
             ! Remove the hub height direction so that we have a relative direction, then
             ! add the mean flow angle. (Note that the Chebyshev profile is cw looking upwind,
             ! but the horizontal angle is ccw looking upwind)
 
-            DirectionProfile(I) = p%met%HFlowAng - (DirectionProfile(I) - tmpWS(1)) ! This is the counter-clockwise angle of the wind
+            DirectionProfile(J) = p%met%HFlowAng - (DirectionProfile(J) - tmpWD(1)) ! This is the counter-clockwise angle of the wind
          ENDDO
 
 
@@ -394,28 +392,39 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
                ! Calculate the wind direction at this height
 
             IF ( Ht(J) <= p%met%USR_Z(1) ) THEN
-               DirectionProfile(J) = p%met%USR_WindDir(1)
+               DirectionProfile(IZ) = p%met%USR_WindDir(1)
             ELSEIF ( Ht(J) >= p%met%USR_Z(p%met%NumUSRz) ) THEN
                DirectionProfile(J) = p%met%USR_WindDir(p%met%NumUSRz)
             ELSE
-               I = Indx + 1
+               
+               
+               ! Find the two points between which the height lies
 
-                  ! Let's just do a linear interpolation for now
-               !we need to check if the angle goes through 360, before we do the interpolation
-               tmpWS(1) = p%met%USR_WindDir(Indx) - p%met%USR_WindDir(I)
-               IF ( tmpWS(1) > 180. ) THEN
-                  tmpWS(1) = p%met%USR_WindDir(Indx)
-                  tmpWS(2) = p%met%USR_WindDir(I   ) + 360.
-               ELSEIF ( tmpWS(1) < -180. ) THEN
-                  tmpWS(1) = p%met%USR_WindDir(Indx) + 360.
-                  tmpWS(2) = p%met%USR_WindDir(I   )
-               ELSE
-                  tmpWS(1) = p%met%USR_WindDir(Indx)
-                  tmpWS(2) = p%met%USR_WindDir(I   )
-               ENDIF
+               DO IZ=2,p%met%NumUSRz
+                  IF ( Ht(J) <= p%met%USR_Z(IZ) ) THEN
+                     IZm1 = IZ-1
 
-               DirectionProfile(J) = (Ht(J) - p%met%USR_Z(Indx)) * ( tmpWS(1) - tmpWS(2) ) / ( p%met%USR_Z(Indx) - p%met%USR_Z(I) ) + tmpWS(1)
+                        ! Let's just do a linear interpolation for now
+                     !we need to check if the angle goes through 360, before we do the interpolation
+                     diff = p%met%USR_WindDir(IZm1) - p%met%USR_WindDir(IZ)
+                     IF ( diff > 180. ) THEN
+                        tmpWD(1) = p%met%USR_WindDir(IZm1)
+                        tmpWD(2) = p%met%USR_WindDir(IZ  ) + 360.
+                     ELSEIF ( diff < -180. ) THEN
+                        tmpWD(1) = p%met%USR_WindDir(IZm1) + 360.
+                        tmpWD(2) = p%met%USR_WindDir(IZ  )
+                     ELSE
+                        tmpWD(1) = p%met%USR_WindDir(IZm1)
+                        tmpWD(2) = p%met%USR_WindDir(IZ  )
+                     ENDIF
 
+                     DirectionProfile(J) = (Ht(J) - p%met%USR_Z(IZm1)) * ( tmpWD(1) - tmpWD(2) ) / ( p%met%USR_Z(IZm1) - p%met%USR_Z(IZ) ) + tmpWD(1)
+
+                     EXIT
+                  ENDIF
+               ENDDO
+               
+               
             ENDIF
 
          ENDDO
@@ -423,6 +432,48 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
 !bjj: TODO: See if we can get this to have direction of HFlowAng at hub height.
          DirectionProfile = p%met%HFlowAng + DirectionProfile  ! This is the counter-clockwise angle of the wind
 
+      CASE ('TS')
+         
+         DO J = 1,SIZE(Ht)
+
+               ! Calculate the wind direction at this height
+         
+            IF ( Ht(J) <= p%usr%pointzi(1) ) THEN
+               DirectionProfile(J) = p%usr%meanDir(1)
+            ELSEIF ( Ht(J) >= p%usr%pointzi(p%usr%NPoints) ) THEN
+               DirectionProfile(J) = p%usr%meanDir(p%usr%NPoints)
+            ELSE
+               ! Find the two points between which the height lies
+
+               DO IZ=2,p%usr%NPoints
+                  IF ( Ht(J) <= p%usr%pointzi(IZ) ) THEN
+                     IZm1 = IZ-1
+
+                        ! Let's just do a linear interpolation for now
+                     !we need to check if the angle goes through 360, before we do the interpolation
+                     diff = p%usr%meanDir(IZm1) - p%usr%meanDir(IZ)
+                     IF ( diff > 180. ) THEN
+                        tmpWD(1) = p%usr%meanDir(IZm1)
+                        tmpWD(2) = p%usr%meanDir(IZ  ) + 360.
+                     ELSEIF ( diff < -180. ) THEN
+                        tmpWD(1) = p%usr%meanDir(IZm1) + 360.
+                        tmpWD(2) = p%usr%meanDir(IZ  )
+                     ELSE
+                        tmpWD(1) = p%usr%meanDir(IZm1)
+                        tmpWD(2) = p%usr%meanDir(IZ  )
+                     ENDIF
+
+                     DirectionProfile(J) = (Ht(J) - p%usr%pointzi(IZm1)) * ( tmpWD(1) - tmpWD(2) ) / ( p%usr%pointzi(IZm1) - p%usr%pointzi(IZ) ) + tmpWD(1)                  
+                     EXIT
+                  ENDIF
+               ENDDO
+
+            ENDIF       
+         
+         END DO
+
+         DirectionProfile = p%met%HFlowAng + DirectionProfile  ! This is the counter-clockwise angle of the wind         
+         
       CASE DEFAULT   
 
          DirectionProfile = p%met%HFlowAng

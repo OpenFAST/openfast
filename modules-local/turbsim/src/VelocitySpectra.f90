@@ -768,8 +768,7 @@ SUBROUTINE UserSpec_Interp2D( InCoord, p_usr, LastIndex, OutSpec )
    pos_Lo(1) = p_usr%f( Indx_Lo(1) )
    pos_Hi(1) = p_usr%f( Indx_Hi(1) )
       
-   ! bjj: work to fix this!!! z needs to be in increasing order
-   pos_Lo(2) = p_usr%pointzi( Indx_Lo(2) )
+   pos_Lo(2) = p_usr%pointzi( Indx_Lo(2) )  ! note that this assumes z are in increasing order
    pos_Hi(2) = p_usr%pointzi (Indx_Hi(2) )
                
    

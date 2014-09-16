@@ -1527,7 +1527,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(IN)    :: FileName                       !< Name of the input file
 
       ! local variables
-   INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 10          ! Number of lines in the input file before the time series start (need to add nPoint lines). IMPORTANT:  any changes to the number of lines in the header must be reflected here
+   INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 11          ! Number of lines in the input file before the time series start (need to add nPoint lines). IMPORTANT:  any changes to the number of lines in the header must be reflected here
       
    INTEGER(IntKi)                                 :: UnIn                           ! unit number for reading input file
    INTEGER(IntKi)                                 :: I, J                           ! loop counters
@@ -1538,7 +1538,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
    CHARACTER(200)                                 :: FormStr          
    CHARACTER(1)                                   :: tmpChar          
-   real(reKi)                                     :: tmpAry(3)
+   real(reKi)                                     :: tmpAry(2)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1572,18 +1572,21 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CALL ReadVar( UnIn, FileName, p%usr%nPoints, 'nPoints', 'Number of time series points contained in this file', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
          
+   CALL ReadVar( UnIn, FileName, p%usr%RefPtID, 'RefPtID', 'Index of the reference point (1-nPoints)', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
    END IF
          
-   IF ( p%usr%nPoints < 1 ) THEN
-      CALL SetErrStat(ErrID_Fatal, 'user time-series input: nPoints must be at least 1.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   IF ( p%usr%RefPtID < 1 .OR. p%usr%RefPtID > p%usr%nPoints ) THEN
+      CALL SetErrStat(ErrID_Fatal, 'RefPtID must be between 1 and nPoints (inclusive).', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
       CALL Cleanup()
       RETURN
    END IF
-      
-   CALL AllocAry(p%usr%PointID, p%usr%nPoints, 'PointID', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         
+   
    CALL AllocAry(p%usr%Pointyi, p%usr%nPoints, 'Pointyi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
    CALL AllocAry(p%usr%Pointzi, p%usr%nPoints, 'Pointzi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
 
@@ -1598,11 +1601,11 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    end do
       
    do iPoint=1,p%usr%nPoints
-      CALL ReadAry( UnIn, FileName, TmpAry, 3, "point"//trim(Num2Lstr(iPoint)), "locations of points", ErrStat2, ErrMsg2, UnEc )
+      CALL ReadAry( UnIn, FileName, TmpAry, 2, "point"//trim(Num2Lstr(iPoint)), "locations of points", ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
          
-      p%usr%Pointyi(iPoint) = TmpAry(2)
-      p%usr%Pointzi(iPoint) = TmpAry(3)         
+      p%usr%Pointyi(iPoint) = TmpAry(1)
+      p%usr%Pointzi(iPoint) = TmpAry(2)         
    end do
       
          
@@ -2299,7 +2302,7 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
    WRITE (UAFFW)  REAL( p%grid%TimeStep           , SiKi )          ! grid spacing in delta time, in m/s
    WRITE (UAFFW)  REAL( p%UHub                    , SiKi )          ! the mean wind speed in m/s at hub height
    WRITE (UAFFW)  REAL( p%grid%HubHt              , SiKi )          ! the hub height, in m
-   WRITE (UAFFW)  REAL( p%grid%Z(1)               , SiKi )          ! the height of the grid bottom, in m
+   WRITE (UAFFW)  REAL( p%grid%Zbottom            , SiKi )          ! the height of the grid bottom, in m
 
    WRITE (UAFFW)  REAL( UScl                      , SiKi )          ! the U-component slope for scaling
    WRITE (UAFFW)  REAL( UOff                      , SiKi )          ! the U-component offset for scaling
@@ -2443,17 +2446,18 @@ INTEGER                      :: UFFF                                     ! I/O u
 END SUBROUTINE WrFormattedFF
 !=======================================================================
 
-SUBROUTINE WrSum_UserInput( p_met, US  )
+SUBROUTINE WrSum_UserInput( p_met, p_usr, US  )
 
 
-   TYPE(Meteorology_ParameterType), INTENT(IN)  :: p_met                       ! parameters for TurbSim 
+   TYPE(Meteorology_ParameterType), INTENT(IN)  :: p_met                       ! meteorology parameters for TurbSim 
+   TYPE(UserTSSpec_ParameterType),  INTENT(IN)  :: p_usr                       ! user-defined parameters for TurbSim 
    
    INTEGER, INTENT(IN) :: US
    integer             :: i 
 
 
    IF ( p_met%NumUSRz > 0 ) THEN
-      WRITE (US,"( // 'User-Defined profiles:' / )")
+      WRITE (US,"( // 'User-Defined Profiles:' / )")
    
       IF ( ALLOCATED( p_met%USR_L ) ) THEN
          WRITE (US,"(A)") '  Height   Wind Speed   Horizontal Angle   u Std. Dev.   v Std. Dev.   w Std. Dev.   Length Scale'
@@ -2475,8 +2479,22 @@ SUBROUTINE WrSum_UserInput( p_met, US  )
             WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X)") p_met%USR_Z(I), p_met%USR_U(I), p_met%USR_WindDir(I)      
          ENDDO   
       ENDIF
-   
+      
    ENDIF
+   
+   IF ( p_usr%nPoints > 0 ) THEN
+      WRITE (US,"( // 'Profiles from User-Defined Time-Series Input:' / )")
+   
+      WRITE (US,"(A)") '  Height   Wind Speed   Horizontal Angle'
+      WRITE (US,"(A)") '   (m)        (m/s)          (deg)      '
+      WRITE (US,"(A)") '  ------   ----------   ----------------'
+     
+      DO I=p_usr%nPoints,1,-1
+         WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X)") p_usr%pointzi(I), p_usr%meanU(I,1), p_usr%meanDir(I)      
+      END DO   
+      
+   END IF
+   
 
 END SUBROUTINE WrSum_UserInput
 !=======================================================================
@@ -3605,7 +3623,7 @@ SUBROUTINE WrSum_EchoInputs(p )
 
    WRITE (p%US,"(   A10 , 2X , 'Wind profile type' )"                  )  p%met%WindProfileType   
    WRITE (p%US,"( F10.3 , 2X , 'Reference height [m]' )"               )  p%met%RefHt  !BJJ: TODO: check if refht makes sense (or is used) for USR profile.
-   IF ( p%met%WindProfileType == 'USR' ) THEN
+   IF ( p%met%WindProfileType == 'USR' .OR. p%met%WindProfileType == 'TS' ) THEN
       WRITE (p%US,"(  A10, 2X, 'Reference wind speed [m/s]' )"         )  'N/A'   
    ELSE
       WRITE (p%US,"( F10.3 , 2X , 'Reference wind speed [m/s]' )"      )  p%met%URef
@@ -3618,7 +3636,7 @@ SUBROUTINE WrSum_EchoInputs(p )
       WRITE (p%US,"(  A10, 2X, 'Jet height [m]' )"                     )  'N/A'   
    END IF      
       
-   IF ( INDEX( 'JLUHA', p%met%WindProfileType(1:1) ) > 0   ) THEN
+   IF ( INDEX( 'JLUHAT', p%met%WindProfileType(1:1) ) > 0   ) THEN
       WRITE (p%US,"(  A10, 2X, 'Power law exponent' )"                 )  'N/A'   
    ELSE
       WRITE (p%US,"( F10.3 , 2X , 'Power law exponent' )"              )  p%met%PLExp
@@ -4719,7 +4737,7 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
          p%met%PC_UW = -Ustar2
          IF ( rndSgn > 0.9937 )  p%met%PC_UW = -p%met%PC_UW
 
-      CASE ( SpecModel_USER )
+      CASE ( SpecModel_USER, SpecModel_TimeSer )
          p%met%PC_UW = 0.0
          p%met%UWskip = .TRUE.
 

@@ -250,14 +250,15 @@ use NWTC_Library
       integer(intKi)               :: nComp                                   ! number of velocity components in the file (1=u; 2=u&v; 3=u,v,w)
       integer(intKi)               :: nFreq                                   ! number of frequencies in the calculated spectra
       integer(intKi)               :: nPoints                                 ! number of points in the time series input
+      integer(intKi)               :: RefPtID                                 ! Index of the reference point (1-nPoints)
       integer(intKi)               :: nTimes                                  ! number of rows in the time series input
-      integer(intki), allocatable  :: pointID (:)                             ! size: nPoints; not sure variable is necessary
       real(reki),     allocatable  :: pointyi (:)                             ! y position where each time series was input; size: nPoints
       real(reki),     allocatable  :: pointzi (:)                             ! z position (height) where each time series was input; size: nPoints
       real(reki),     allocatable  :: t(:)
       real(reki),     allocatable  :: v(:,:,:)                                ! velocity time series; size: nTimes, nPoints, { 2 if .not. containsW | 3 otherwise }
       
       real(reKi),     allocatable  :: meanU(:,:)                              ! mean velocity; size: nPoints, nComp
+      real(reKi),     allocatable  :: meanDir(:)                              ! mean direction; size: nPoints
       real(reKi),     allocatable  :: S(:,:,:)                                ! spectra;   size: nFreq, nPoints, nComp
       real(reKi),     allocatable  :: f(:)                                    ! frequency; size: nFreq
       real(reKi),     allocatable  :: phaseAngles(:,:,:)
