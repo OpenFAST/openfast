@@ -1,6 +1,6 @@
    SUBROUTINE ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
-                               &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                               &ngp,node_elem,dof_node,elf,elm)
+                               &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&
+                               &ngp,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
                            
    !-------------------------------------------------------------------------------
    ! This subroutine total element forces and mass matrices
@@ -16,8 +16,13 @@
    REAL(ReKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN   )    :: gravity(:) ! 
    REAL(ReKi),INTENT(IN   )    :: DistrLoad_GL(:,:) ! Nodal material properties for each element
-   REAL(ReKi),INTENT(  OUT)    :: elf(:)  ! Total element force (Fd, Fc, Fb)
-   REAL(ReKi),INTENT(  OUT)    :: elm(:,:) ! Total element mass matrix
+   REAL(ReKi),INTENT(IN   )    :: DistrLoad_GL0(:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(  OUT)    :: elf1(:)  ! Total element force (Fd, Fc, Fb)
+   REAL(ReKi),INTENT(  OUT)    :: elf2(:)  ! Total element force (Fd, Fc, Fb)
+   REAL(ReKi),INTENT(  OUT)    :: elm11(:,:) ! Total element mass matrix
+   REAL(ReKi),INTENT(  OUT)    :: elm12(:,:) ! Total element mass matrix
+   REAL(ReKi),INTENT(  OUT)    :: elm21(:,:) ! Total element mass matrix
+   REAL(ReKi),INTENT(  OUT)    :: elm22(:,:) ! Total element mass matrix
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
@@ -31,18 +36,26 @@
    REAL(ReKi)                  :: uu0(6)
    REAL(ReKi)                  :: E10(3)
    REAL(ReKi)                  :: RR0(3,3)
+   REAL(ReKi)                  :: RR00(3,3)
    REAL(ReKi)                  :: kapa(3)
+   REAL(ReKi)                  :: kapa0(3)
    REAL(ReKi)                  :: E1(3)
+   REAL(ReKi)                  :: E100(3)
    REAL(ReKi)                  :: Stif(6,6)
+   REAL(ReKi)                  :: Stif0(6,6)
    REAL(ReKi)                  :: cet
+   REAL(ReKi)                  :: cet0
    REAL(ReKi)                  :: uuu(6)
    REAL(ReKi)                  :: uuu0(6)
    REAL(ReKi)                  :: uup(3)
    REAL(ReKi)                  :: Jacobian
    REAL(ReKi)                  :: gpr
    REAL(ReKi)                  :: Fc(6)
+   REAL(ReKi)                  :: Fc0(6)
    REAL(ReKi)                  :: Fd(6)
+   REAL(ReKi)                  :: Fd0(6)
    REAL(ReKi)                  :: Fg(6)
+   REAL(ReKi)                  :: Fg0(6)
    REAL(ReKi)                  :: vvv(6)
    REAL(ReKi)                  :: vvv0(6)
    REAL(ReKi)                  :: mmm
@@ -51,7 +64,16 @@
    REAL(ReKi)                  :: mEta0(3)
    REAL(ReKi)                  :: rho0(3,3)
    REAL(ReKi)                  :: Fb(6)
+   REAL(ReKi)                  :: Fb0(6)
    REAL(ReKi)                  :: Mi(6,6)
+   REAL(ReKi)                  :: Mi0(6,6)
+   REAL(ReKi)                  :: A1(6,6)
+   REAL(ReKi)                  :: A2(6,6)
+   REAL(ReKi)                  :: A3(6,6)
+   REAL(ReKi)                  :: A4(6,6)
+   REAL(ReKi)                  :: A5(6,6)
+   REAL(ReKi)                  :: A6(6,6)
+   REAL(ReKi)                  :: A7(6,6)
 
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
@@ -86,8 +108,11 @@
    IF(allo_stat/=0) GOTO 9999
    w_temp = 0.0D0
 
-   elf = 0.0D0
-   elm = 0.0D0
+   elf1(:) = 0.0D0
+   elm11(:,:) = 0.0D0
+   elm12(:,:) = 0.0D0
+   elm21(:,:) = 0.0D0
+   elm22(:,:) = 0.0D0
 
 
    CALL BD_gen_gll_LSGL(ngp,GLL_temp,w_temp)
@@ -123,13 +148,22 @@
        CALL GyroForce(mEta0,rho0,uuu0,vvv0,Fb0)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        CALL GravityLoads(mmm,mEta0,gravity,Fg0)
+       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,mmm,mEta,rho,A1,A2,A3,A4,A5,A6,A7)
 !       Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
        Fd(:) = dt*(Fd + Fd0) + &
               &MATMUL(Mi,vvv-vvv0) + &
               &MATMUL(Mi0,vvv-vvv0) + &
               &dt*(Fb + Fb0) - &
               &dt*(DistrLoad_GL(:,igp)+Fg+DistrLoad_GL0(:,igp)+Fg0)
+
        Fc(:) = dt*(Fc + Fc0)
+
+       CALL CrvMatrixH(uuu(4:6),temp_H)
+       CALL CrvMatrixH(uuu0(4:6),temp_H0)
+       F1(1:3) = -dt*(vvv(1:3)+vvv0(1:3)) - 2.0D0*(uuu0(1:3)-uuu(1:3))
+       F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) + &
+                &MATMUL(temp_H0,uuu(4:6)-uuu0(4:6)) - &
+                &dt*(vvv(4:6)+vvv0(4:6))
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -137,7 +171,15 @@
                    temp_id1 = (i-1)*dof_node+m
                    DO n=1,dof_node
                        temp_id2 = (j-1)*dof_node+n
-                       elm(temp_id1,temp_id2) = elm(temp_id1,temp_id2) + hhx(i)*Mi(m,n)*hhx(j)*Jacobian*gw(igp)
+                       elm11(temp_id1,temp_id2) = elm11(temp_id1,temp_id2) + hhx(i)*A6(m,n)*hhx(j)*Jacobian*gw(igp)
+                       elm12(temp_id1,temp_id2) = elm12(temp_id1,temp_id2) - dt* hhx(i)*A7(m,n)*hhx(j)*Jacobian*gw(igp)
+                       elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
+                                                 &hhx(i)*(A2(m,n)-A3(m,n+dt*A5(m,n)+Qe(m,n))*hhx(j)*Jacobian*gw(igp) + &
+                                                 &hhx(i)*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
+                       elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
+                                                 &hhx(i)*(A1(m,n)+Mi0(m,n)+dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
                    ENDDO
                ENDDO
            ENDDO
@@ -146,9 +188,9 @@
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
-               elf(temp_id1) = elf(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
-               elf(temp_id1) = elf(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
-               elf(temp_id1) = elf(temp_id1) - hhx(i)*Fb(j)*Jacobian*gw(igp)
+               elf1(temp_id1) = elf1(temp_id1) - hhx(i)*F1(j)*Jacobian*gw(igp)
+               elf2(temp_id1) = elf2(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
+               elf2(temp_id1) = elf2(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
    ENDDO
@@ -160,12 +202,6 @@
    DEALLOCATE(GLL_temp)
    DEALLOCATE(w_temp)
 
-!   j=6
-!   DO i=1,18
-!       WRITE(*,*) elm(i,j+1), elm(i,j+2),elm(i,j+3),elm(i,j+4),elm(i,j+5),elm(i,j+6)
-!       WRITE(*,*) elf(i)
-!   ENDDO
-!   STOP
 
    9999 IF(allo_stat/=0) THEN
             IF(ALLOCATED(gp))  DEALLOCATE(gp)
