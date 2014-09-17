@@ -64,7 +64,7 @@ gen_f2c_interface( FILE         *fp        , // *.f90 file we are writting to
               char var_type[36] ="";
               char c_var_type[36] = "";
 
-              // Create the name of the BINC(C) type for fortran. This depends on we are comminucating a logical, integer, or real to C.
+              // Create the name of the BIND(C) type for fortran. This depends on we are comminucating a logical, integer, or real to C.
               if      ( strcmp( r->type->mapsto, "REAL(DbKi)"    )==0 ) { strcat(var_type,"REAL"   ); strcat(c_var_type,"C_DOUBLE"); }
               else if ( strcmp( r->type->mapsto, "REAL(ReKi)"    )==0 ) { strcat(var_type,"REAL"   ); strcat(c_var_type,"C_FLOAT"); }
               else if ( strcmp( r->type->mapsto, "INTEGER(IntKi)")==0 ) { strcat(var_type,"INTEGER"); strcat(c_var_type,"C_INT"   ); }
@@ -1666,6 +1666,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
   int i ;
   int ipass ;
   char nonick[NAMELEN] ;
+  char tmp[NAMELEN] ;
 
   if ( strlen(ModName->nickname) > 0 ) {
 // gen preamble
@@ -1785,8 +1786,15 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
            } else { // ipass /= 0
             if ( r->type->type_type == DERIVED ) {
                fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
+
+               // bjj: we need to make sure these types map to reals, too
+               tmp[0] = '\0' ;
+               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+               if ( must_have_real_or_double(tmp) ) checkOnlyReals( q->mapsto, r );
+
+
             } else {
-              char tmp[NAMELEN] ; tmp[0] = '\0' ;
+              tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( must_have_real_or_double(tmp) ) {
                 if ( strncmp(r->type->mapsto,"REAL",4) ) {
@@ -2077,4 +2085,31 @@ char * dimstr_c( int d )
     retval = " REGISTRY ERROR TOO MANY DIMS " ;
   }
   return(retval) ;
+}
+
+void
+checkOnlyReals( const char *q_mapsto, node_t * q) //, int recurselevel)
+{
+  node_t * r ;
+
+  if ( q->type->type_type == DERIVED )
+  {
+     if ( strcmp( q->type->name, "meshtype" ) ) // skip meshes
+     {
+        for ( r = q->type->fields ; r ; r = r->next )
+        {
+           checkOnlyReals( q_mapsto, r);
+        }
+     }
+
+  } else { // SIMPLE
+
+     if ( strncmp(q->type->mapsto,"REAL",4) )
+     {
+         fprintf(stderr,"Registry warning: %s contains a field (%s) in a derived type whose type is not real or double: %s\n",
+                q_mapsto, q->name , q->type->mapsto ) ;
+     }
+
+  }
+  return;
 }
