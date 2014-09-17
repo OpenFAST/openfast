@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #ifndef _WIN32
 # include <strings.h>
 #endif
@@ -9,7 +10,9 @@
 #include "registry.h"
 #include "data.h"
 
-int
+void gen_c_module_subs( FILE * fpIntf, node_t * ModName, char typeNamelong[], char typeName[], char CreateDestroy[] );
+
+void
 gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -22,7 +25,7 @@ gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
     fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
-    return(1) ;
+    return;//(1) ;
   }
 
   for ( r = q->fields ; r ; r = r->next )
@@ -105,7 +108,7 @@ gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong
 
 }
 
-int
+void
 gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -118,7 +121,7 @@ gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong 
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
     fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
-    return(1) ;
+    return;//(1) ;
   }
 
 fprintf(fp,"\nint\n") ;
@@ -144,7 +147,7 @@ fprintf(fp,"  int i,i1,i2,i3,i4,i5 ;\n") ;
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( r->type == NULL ) {
-      fprintf(stderr,"Registry warning generating %_Unpack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      fprintf(stderr,"Registry warning generating %s_Unpack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
       if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
@@ -251,10 +254,10 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
   fprintf(fp,"  if ( IntKiBuf != NULL ) free(IntKiBuf) ;\n") ;
   fprintf(fp,"  return(ErrStat) ;\n") ;
   fprintf(fp,"}\n") ;
-  return(0) ;
+  return;//(0) ;
 }
 
-int
+void
 gen_c_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -267,7 +270,7 @@ gen_c_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
     fprintf(stderr,"Registry warning: generating %s_Pack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
-    return(1) ;
+    return;//(1) ;
   }
 fprintf(fp,"\nint\n") ;
 fprintf(fp,"C_%s_Pack%s( float * ReKiBuf,  int * Re_BufSz ,\n",ModName->nickname,nonick) ;
@@ -290,7 +293,7 @@ fprintf(fp," // buffers to store meshes and subtypes, if any\n") ;
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( r->type == NULL ) {
-      fprintf(stderr,"Registry warning generating %_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      fprintf(stderr,"Registry warning generating %s_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
       if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED && ! r->type->usefrom ) ) {
@@ -430,10 +433,10 @@ fprintf(fp,"  IntKiBuf = NULL ;\n") ;
 fprintf(fp,"  }\n") ;
 fprintf(fp,"  return(ErrStat) ;\n") ;
 fprintf(fp,"}\n") ;
-return(0) ;
+return;//(0) ;
 }
 
-int
+void
 gen_c_module_intf( FILE * fpIntf , node_t * ModName )
 {
 //Marco put these in a template file (Template_c_Types.c) and created interfaces; 
@@ -460,7 +463,7 @@ gen_c_module_subs(fpIntf, ModName, "Output",     "Output",     "Delete");
 }
 
 
-int
+void
 gen_c_module_subs( FILE * fpIntf, node_t * ModName, char typeNamelong[], char typeName[], char CreateDestroy[] )
 {
                    
@@ -480,10 +483,10 @@ gen_c_module_subs( FILE * fpIntf, node_t * ModName, char typeNamelong[], char ty
 }
 
 
-#include "Template_c_Types.c"
+#include "Template_C_Types.c"
 #include "Template_c2f_helpers.c"
 
-int
+void
 gen_c_module( FILE * fpc , FILE * fph, node_t * ModName, FILE * fpIntf )
 {
   node_t * p, * q, * r ;
@@ -640,7 +643,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName, FILE * fpIntf )
     
       sprintf(fname,"%s_C_Types.f90",ModName->name) ;
   fprintf(stderr,"generating %s\n",fname) ;
-      if ((fpt = fopen( fname , "w" )) == NULL ) return(1) ;
+      if ((fpt = fopen( fname , "w" )) == NULL ) return;//(1) ;
       print_warning(fpt,fname,"!") ;
       for ( p = template_c_types ; *p ; p++ ) {
         strcpy(tmp1,*p) ;

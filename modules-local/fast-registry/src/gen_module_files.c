@@ -11,6 +11,7 @@
 
 #include "FAST_preamble.h"
 
+void gen_mask_alloc( FILE *fp, int ndims, char *tmp );
 
 /**
  * ============  Generate ModName INTERFACE block in ModName_Types.f90 ==================
@@ -111,7 +112,7 @@ gen_f2c_interface( FILE         *fp        , // *.f90 file we are writting to
                         nonick            ,
                         r->name           );
                 fprintf(fpIntf,"!DEC$ ATTRIBUTES DLLEXPORT:: %s_F2C_%s_%s\n", ModName->nickname ,nonick,r->name   );
-                fprintf(fpIntf,"       USE MAP_Types, only : %s_%sType_C\n", ModName->nickname, modified_mod_name );
+                fprintf(fpIntf,"       USE %s_Types, only : %s_%sType_C\n", nonick, ModName->nickname, modified_mod_name );
                 fprintf(fpIntf,"       USE , INTRINSIC :: ISO_C_Binding\n"   );
                 fprintf(fpIntf,"       IMPLICIT NONE\n");
                 fprintf(fpIntf,"!GCC$ ATTRIBUTES DLLEXPORT ::%s_F2C_%s_%s\n", ModName->nickname ,nonick,r->name   );
@@ -391,7 +392,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   return(0) ;
 }
 
-int
+void
 gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -406,7 +407,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
     fprintf(stderr,"Registry warning: generating %s_Pack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
-    return(1) ;
+    return;//(1) ;
   }
 
   fprintf(fp," SUBROUTINE %s_Pack%s( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )\n", ModName->nickname,nonick) ;
@@ -434,7 +435,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( r->type == NULL ) {
-      fprintf(stderr,"Registry warning generating %_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      fprintf(stderr,"Registry warning generating %s_Pack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
       if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED ) ) { // && ! r->type->usefrom ) ) {
@@ -555,7 +556,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
                                  r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                              r->name ) ;
 
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
-  fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
+  fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
@@ -602,7 +603,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
                         dimstr(r->ndims),
                         r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
-  fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name,r->name) ;
+  fprintf(fp,"    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 ) = Re_%s_Buf\n",r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
@@ -671,10 +672,10 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   }
 
   fprintf(fp," END SUBROUTINE %s_Pack%s\n\n", ModName->nickname,nonick ) ;
-  return(0) ;
+  return;//(0) ;
 }
 
-int
+void
 gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
@@ -689,7 +690,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
     fprintf(stderr,"Registry warning: generating %s_UnPack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
-    return(1) ;
+    return;//(1) ;
   }
 
   fprintf(fp," SUBROUTINE %s_UnPack%s( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )\n", ModName->nickname,nonick ) ;
@@ -720,7 +721,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   for ( r = q->fields ; r ; r = r->next )
   {
     if ( r->type == NULL ) {
-      fprintf(stderr,"Registry warning generating %_UnPack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+      fprintf(stderr,"Registry warning generating %s_UnPack%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       return ; // EARLY RETURN
     } else {
       if ( !strcmp( r->type->name, "meshtype" ) || (r->type->type_type == DERIVED ) ) { // && ! r->type->usefrom ) ) {
@@ -752,7 +753,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  CALL MeshPack( OutData%%%s%s, Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, ErrStat, ErrMsg , .TRUE. ) ! %s \n",
                                r->name,dimstr(r->ndims),r->name,  r->name,    r->name,                     r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
-  fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
+  fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
@@ -804,7 +805,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  CALL %s_Pack%s( Re_%s_Buf, Db_%s_Buf, Int_%s_Buf, OutData%%%s%s, ErrStat, ErrMsg, .TRUE. ) ! %s \n",
                         r->type->module->nickname,fast_interface_type_shortname(nonick2), r->name, r->name, r->name, r->name, dimstr(r->ndims),r->name ) ;
   fprintf(fp,"  IF(ALLOCATED(Re_%s_Buf)) THEN\n",r->name) ;
-  fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name,r->name) ;
+  fprintf(fp,"    Re_%s_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_%s_Buf)-1 )\n",r->name,r->name) ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE(Re_%s_Buf)\n",r->name) ;
   fprintf(fp,"  ENDIF\n" ) ;
   fprintf(fp,"  IF(ALLOCATED(Db_%s_Buf)) THEN\n",r->name) ;
@@ -925,9 +926,10 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  Db_Xferred   = Db_Xferred-1\n") ;
   fprintf(fp,"  Int_Xferred  = Int_Xferred-1\n") ;
   fprintf(fp," END SUBROUTINE %s_UnPack%s\n\n", ModName->nickname,nonick ) ;
-  return(0) ;
+  return;//(0) ;
 }
 
+void
 gen_mask_alloc( FILE *fp, int ndims, char *tmp )
 {
   if        ( ndims == 1 ) {
@@ -973,7 +975,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
     for ( r = q->fields ; r ; r = r->next )
     {
       if ( r->type == NULL ) {
-        fprintf(stderr,"Registry warning generating %_Destroy%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
+        fprintf(stderr,"Registry warning generating %s_Destroy%s: %s has no type.\n",ModName->nickname,nonick,r->name) ;
       } else {
 
   if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
@@ -1098,7 +1100,7 @@ fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j
           remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
           strcpy(dex,"") ;
           for ( j = r->ndims ; j >= 1 ; j-- ) {
-  fprintf(fp,"   DO i%d = LBOUND(u_out%s%%%s,%d), UBOUND(u_out%s%%%s,%d)\n",0,1,deref,r->name,j,deref,r->name,j  ) ;
+  fprintf(fp,"   DO i%d%d = LBOUND(u_out%s%%%s,%d), UBOUND(u_out%s%%%s,%d)\n",0,1,deref,r->name,j,deref,r->name,j  ) ;
              if ( j == r->ndims ) strcat(dex,"(") ;
              sprintf(tmp,"i%d%d",0,j) ;
              if ( j == 1 ) strcat(tmp,")") ; else strcat(tmp,",") ;
@@ -1176,7 +1178,7 @@ fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j
    }
 }
 
-int
+void
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
 {
   char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
@@ -1332,7 +1334,7 @@ fprintf(fp,"  END IF\n") ;
   fprintf(fp,"\n") ;
 }
 
-int
+void
 gen_rk4( FILE *fp , const node_t * ModName )
 {
   char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
@@ -1363,7 +1365,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
     }
   }
   if ( !founddt ) {
-    fprintf(stderr,"Registry warning: cannot generate %s_RK4. Add dt to ParameterType for this module\n") ;
+    fprintf(stderr,"Registry warning: cannot generate %s_RK4. Add dt to ParameterType for this module\n", ModName->nickname) ;
     return ;
   }
 
@@ -1469,7 +1471,7 @@ static char *argtypenames[] = { "InData", "ParamData", "ContStateData", "DiscSta
                                 "OtherStateData", "OutData", 0L } ;
 static char **argtypename ;
 
-int
+void
 gen_modname_pack( FILE *fp , const node_t * ModName )
 {
   char tmp[NAMELEN] ;
@@ -1582,7 +1584,7 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
   fprintf(fp," END SUBROUTINE %s_Pack\n\n", ModName->nickname ) ;
 }
 
-int
+void
 gen_modname_unpack( FILE *fp , const node_t * ModName )
 {
   char tmp[NAMELEN] ;
@@ -1657,7 +1659,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
 }
 
 
-int
+void
 gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
 {
   node_t * p, * q, * r ;
@@ -2008,8 +2010,8 @@ gen_module_files ( char * dirname, char * prog_ver )
   return(0) ;
 }
 
-int
-remove_nickname( char *nickname, char *src, char *dst )
+void
+remove_nickname( const char *nickname, char *src, char *dst )
 {
   char tmp[NAMELEN];
   int n ;
@@ -2023,8 +2025,8 @@ remove_nickname( char *nickname, char *src, char *dst )
   }
 }
 
-int
-append_nickname( char *nickname, char *src, char *dst )
+void
+append_nickname( const char *nickname, char *src, char *dst )
 {
   int n ;
   n = strlen(nickname) ;

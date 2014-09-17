@@ -92,5 +92,6 @@ struct sym_node
 
 sym_nodeptr sym_add() ;
 sym_nodeptr sym_get() ;
+int sym_forget();
 
 #endif

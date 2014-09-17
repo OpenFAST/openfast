@@ -37,6 +37,8 @@ For a sample main or calling program see the end of this file.
 # include <strings.h>
 #endif
 
+#include "protos.h"
+
 #define HASHSIZE 1024
 
 /*  commented out 2-29-90

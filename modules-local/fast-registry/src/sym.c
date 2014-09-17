@@ -63,6 +63,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "sym.h"
+#include "protos.h"
 
 extern sym_nodeptr symget() ;
 

@@ -2,10 +2,17 @@
 #include "registry.h"
 #include "data.h"
 
+void substitute( char * str , char * match , char * replace, char * result );
+
 int init_dim_table()   ;
 char * make_lower( char * s1 ) ;
-char * make_lower_temp( char * s1 ) ;
+char * make_lower_temp( const char * s1 ) ;
+int check_dimspecs();
+int init_parser();
+int is_a_fast_interface_type( char *str );
+int pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw );
 int reg_parse( FILE * infile ) ;
+int must_have_real_or_double( char *str );
 int set_dim_len ( char * dimspec , node_t * dim_entry ) ;
 int set_dim_order ( char * dimorder , node_t * dim_entry ) ;
 int set_dim_orient ( char * dimorient , node_t * dim_entry ) ;
@@ -21,19 +28,22 @@ int gen_state_struct ( char * fname ) ;
 #if 1
 int show_node( node_t * p ) ;
 int show_node1( node_t * p, int indent ) ;
-int show_nodelist( node_t * p ) ;
-int show_nodelist1( node_t * p , int indent ) ;
+void show_nodelist( node_t * p ) ;
+void show_nodelist1( node_t * p , int indent ) ;
 #endif
+
+void gen_c_module( FILE * fpc , FILE * fph, node_t * ModName, FILE * fpIntf );
 
 int gen_state_struct ( char * fname ) ;
 int gen_decls ( FILE * fp ,  node_t * node , int sw_ranges, int sw_point , int mask , int layer ) ;
 int gen_state_subtypes ( char * fname ) ;
 int gen_state_subtypes1 ( FILE * fp , node_t * node , int sw_ranges, int sw_point , int mask ) ;
 int print_warning( FILE * fp , char * fname, char * comment ) ;
-int close_the_file( FILE * fp, char * comment  ) ;
+void close_the_file( FILE * fp, char * comment  ) ;
 int make_entries_uniq ( char * fname ) ;
 int add_warning ( char * fname ) ;
 
+int init_modname_table();
 node_t * get_type_entry ( char * typename ) ;
 node_t * get_modname_entry ( char * modname ) ;
 node_t * get_rconfig_entry( char * name ) ;
@@ -50,6 +60,8 @@ char * my_strtok( char * s1 ) ;
 char * strtok_rentr( char * s1 , char * s2, char ** tokpos ) ;
 
 char * bdy_indicator( int bdy ) ;
+char * make_upper_case ( char * str );
+char * make_lower_case ( char * str );
 
 char * field_name( char * tmp, node_t * p , int tag ) ;
 char * field_name_bdy( char * tmp, node_t * p , int tag, int bdy  ) ;
@@ -73,8 +85,13 @@ int gen_alloc ( char * dirname ) ;
 int gen_alloc1 ( char * dirname ) ;
 int gen_alloc2 ( FILE * fp , char * structname , node_t * node, int *j, int *iguy, int *fraction, int numguys, int frac, int sw );
 
+int gen_module_files ( char * dirname, char * prog_ver );
 int gen_module_state_description ( char * dirname ) ;
 int gen_module_state_description1 ( FILE * fp , node_t * node ) ;
+
+void remove_nickname( const char *nickname, char *src, char *dst );
+void append_nickname( const char *nickname, char *src, char *dst );
+char * dimstr_c( int d );
 
 int gen_scalar_indices ( char * dirname ) ;
 int gen_scalar_indices1 ( FILE * fp, FILE ** fp2 ) ;
@@ -112,15 +129,15 @@ int gen_namelist_script ( char * dirname ) ;
 
 int gen_model_data_ord ( char * dirname ) ;
 
-int get_elem ( char * structname , char * nlstructname , char * tx , int i , node_t * p , int first_last ) ;
+void get_elem ( char * structname , char * nlstructname , char * tx , int i , node_t * p , int first_last ) ;
 
 int associated_with_4d_array( node_t * p ) ;
 
   
 /* PGI Addition to resolve non-prototype function warnings  */
 char * array_size_expression ( char *, char *, int, char *, node_t *, char * ,char * ); 
-int range_of_dimension ( char *, char * , int, node_t *, char * );
-int dimension_size_expression ( char *, char *, int, node_t *, char *);
+void range_of_dimension ( char *, char * , int, node_t *, char * );
+void dimension_size_expression ( char *, char *, int, node_t *, char *);
 int gen_alloc_count ( char *);
 int gen_alloc_count1 ( char *);
 int gen_ddt_write ( char * );
@@ -132,6 +149,7 @@ int gen_scalar_tables ( FILE *);
 int gen_scalar_tables_init ( FILE *);
 int gen_scalar_indices_init ( FILE *);
 int hash(char *);
+int create_ht( char *** p ); 
 int gen_nest_interp1 ( FILE *, node_t *, char *, int, int );
 int gen_packs_halo ( FILE *fp , node_t *p, char *shw, int xy /* 0=y,1=x */ , int pu /* 0=pack,1=unpack */, char * packname, char * commname );
 int gen_packs ( FILE *fp , node_t *p, int shw, int xy /* 0=y,1=x */ , int pu /* 0=pack,1=unpack */, char * packname, char * commname );
@@ -159,7 +177,10 @@ char * std_case( char * )  ;
 char * dimstr( int ) ;
 
 char * C_type ( char * ) ;
+char * c_types_binding( char *s );
 char * assoc_or_allocated( node_t  * r );
+int is_pointer( node_t * r );
+int has_deferred_dim( node_t * node, int noisy );
 
 #define PROTOS_H
 #endif

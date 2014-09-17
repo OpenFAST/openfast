@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #ifdef _WIN32
 # define rindex(X,Y) strrchr(X,Y)
 # define index(X,Y) strchr(X,Y)
 #else
 # include <strings.h>
+# include <sys/types.h>
+# include <unistd.h>
 #endif
 
 #include "protos.h"
@@ -163,7 +166,7 @@ dimension_with_ranges( char * refarg , char * pre ,
   return(tmp) ;
 }
 
-int
+void
 range_of_dimension ( char * r , char * tx , int i , node_t * p , char * nlstructname )
 {
    char s[NAMELEN], e[NAMELEN] ;
@@ -255,7 +258,7 @@ index_with_firstelem( char * pre , char * dref , int bdy ,  /* as defined in dat
   return(tmp) ;
 }
 
-int
+void
 get_elem ( char * structname , char * nlstructname , char * tx , int i , node_t * p , int first_last )
 {
    char dref[NAMELEN], nlstruct[NAMELEN] ;
@@ -400,7 +403,7 @@ fprintf(fp,"%s!\n", comment) ;
 return(0) ;
 }
 
-int
+void
 close_the_file( FILE * fp, char comment[] )
 {
 fprintf(fp,"%s!ENDOFREGISTRYGENERATEDFILE\n",comment) ;
@@ -620,7 +623,7 @@ array_size_expression ( char * refarg , char * pre ,
   return(tmp) ;
 }
 
-int
+void
 dimension_size_expression ( char * r , char * tx , int i , node_t * p , char * nlstructname )
 {
    char s[NAMELEN], e[NAMELEN] ;
