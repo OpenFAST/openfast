@@ -11,8 +11,8 @@
 # keyword <InflowWind[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
 ###################################################################################################################################
 
-usefrom Reg-IfW_FFWind.txt
-usefrom Reg-IfW_HHWind.txt
+usefrom IfW_FFWind.txt
+usefrom IfW_HHWind.txt
 include Registry_NWTC_Library.txt
 
 #########################
