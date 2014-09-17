@@ -18,6 +18,9 @@
 #include "data.h"
 #include "sym.h"
 
+void output_template( char * sw_modname_subst, char * sw_modnickname_subst, int force, int sw  );
+int matches( char * str , char * match );
+
 int
 main( int argc, char *argv[], char *env[] )
 {
@@ -223,7 +226,8 @@ cleanup:
 #include "Template_data.c"
 #include "Template_registry.c"
 
-output_template( char * sw_modname_subst, char * sw_modnickname_subst, int * force, int sw  ) // sw = 0, template; 1 = registry
+void
+output_template( char * sw_modname_subst, char * sw_modnickname_subst, int force, int sw  ) // sw = 0, template; 1 = registry
 {
     char ** p ;
     FILE *fp ;
@@ -264,7 +268,7 @@ output_template( char * sw_modname_subst, char * sw_modnickname_subst, int * for
 
 // would use regex for this but it does not seem to be uniformly or universally supported
 
-int
+void
 substitute( char * str , char * match , char * replace, char * result )
 {
    char * p, *q ;
@@ -322,7 +326,7 @@ matches( char * str , char * match )   // both must be null terminated
    return(1) ;
 }
 
-int
+void
 make_fortran_callable( char *str )     // make a generated C subroutine name callable by Fortran
 {
    char *p, tmp[NAMELEN] ;

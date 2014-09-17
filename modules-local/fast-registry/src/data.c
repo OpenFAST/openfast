@@ -84,15 +84,16 @@ add_node_to_end_4d ( node_t * node , node_t ** list )
 
 #if 1
 
-int
+void
 show_nodelist( node_t * p )
 {
   show_nodelist1( p , 0 ) ;
 }
 
+void
 show_nodelist1( node_t * p , int indent )
 {
-  if ( p == NULL ) return(0) ;
+  if ( p == NULL ) return;
   show_node1( p, indent) ;
   show_nodelist1( p->next, indent ) ;
 }

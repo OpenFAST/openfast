@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #ifdef _WIN32
 # define rindex(X,Y) strrchr(X,Y)
 # define index(X,Y) strchr(X,Y)
@@ -94,18 +95,21 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
         foundit = 0 ;
 
         sprintf( include_file_name , "%s", p ) ;                         // no dir
-        for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) ; *p2 = '\0' ; // drop tailing white space
+        for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {} 
+        *p2 = '\0' ; // drop tailing white space
         if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
         if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
 
         sprintf( include_file_name , "%s/%s", dir , p ) ;                      // dir/path
-        for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) ; *p2 = '\0' ;
+        for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {} 
+        *p2 = '\0' ;
         if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
         if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
 
         for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
           sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir specified with -I
-          for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) ;  *p2 = '\0' ;
+          for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}
+          *p2 = '\0' ;
           if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
           if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
         }
@@ -113,7 +117,8 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
         for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
           int drive_specified = 0 ;
           sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir munged for cigwin
-          for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) ;  *p2 = '\0' ;
+          for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}  
+          *p2 = '\0' ;
           if ( include_file_name[0] == '/' ) {
             char tmp[NAMELEN], tmp2[NAMELEN], *dr ;
             strcpy( tmp2, include_file_name ) ;
@@ -125,7 +130,8 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
             for ( dr = "abcdefmy" ; *dr ; dr++ ) {
               sprintf(tmp,"%c:%s%s",*dr,(drive_specified)?"":"/cygwin",tmp2) ;
               strcpy( include_file_name, tmp ) ;
-              for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) ;  *p2 = '\0' ;
+              for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}  
+              *p2 = '\0' ;
               if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
               if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
             }

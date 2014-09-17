@@ -114,9 +114,10 @@ make_lower( char * s1 )
 static char t[LENRING][NAMELEN] ;  
 static int tcurs = 0 ;
 char *
-make_lower_temp( char * s1 )
+make_lower_temp( const char * s1 )
 {
-  char * p, *q ;
+  const char * p;
+  char *q ;
   int state ;
   state = 0 ;
   for ( p = s1, q = t[tcurs]  ; *p ; p++, q++ )
