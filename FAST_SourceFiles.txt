@@ -5,7 +5,7 @@ Source\IfW_HHWind.f90
 Source\InflowWind.f90
 Source\InflowWind_Subs.f90
 Source\InflowWind_Types.f90
-Source\Reg-IfW_FFWind.txt
-Source\Reg-IfW_HHWind.txt
-Source\Reg-InflowWind.txt
+Source\Registry\IfW_FFWind.txt
+Source\Registry\IfW_HHWind.txt
+Source\Registry\InflowWind.txt
 
