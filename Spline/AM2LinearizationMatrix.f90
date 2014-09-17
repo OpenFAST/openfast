@@ -1,5 +1,5 @@
    SUBROUTINE AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,m00,mEta,rho,&
-                                    &A1,A2,A3,A4,A5,A6,A7,FA1)
+                                    &A1,A2,A3,A4,A5,A6,A7)
 
    REAL(ReKi),INTENT(IN   ):: uuu(:)
    REAL(ReKi),INTENT(IN   ):: vvv(:)
@@ -15,7 +15,6 @@
    REAL(ReKi),INTENT(  OUT):: A5(:,:)
    REAL(ReKi),INTENT(  OUT):: A6(:,:)
    REAL(ReKi),INTENT(  OUT):: A7(:,:)
-   REAL(ReKi),INTENT(  OUT):: FA1(:)
 
    REAL(ReKi)              :: temp_B(3,3)
    REAL(ReKi)              :: temp_B0(3,3)
@@ -38,7 +37,7 @@
 
    A7(:,:) = 0.0D0
    DO i=1,6
-       A7(i,i) = -1.0D0
+       A7(i,i) = 1.0D0
    ENDDO
 
    A1(:,:) = 0.0D0
@@ -71,9 +70,6 @@
    A5(1:3,4:6) = MATMUL(Tilde(omega),MATMUL(Tilde(omega),TRANSPOSE(Tilde(mEta))))
    A5(4:6,4:6) = MATMUL(Tilde(omega),MATMUL(rho,Tilde(omega))) - &
                 &MATMUL(Tilde(omega),Tilde(MATMUL(rho,omega)))
-
-   FA1(:) = 0.0D0
-   FA1(:) = MATMUL(A1,vvv - vvv0)
 
 
    END SUBROUTINE AM2LinearizationMatrix
