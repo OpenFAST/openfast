@@ -2003,7 +2003,7 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
  ! Reduce step size after a zero crossing
  !CH--  Put floor under ASTEP to keep it reasonable after many zero crossings
 
-   IF( NINT( SIGN(1., DAI) ) /= NINT( SIGN(1., DAI1) ) ) ASTEP = MAX( 1.0E-4, 0.5*ASTEP )
+   IF( NINT( SIGN(1.0_ReKi, DAI) ) /= NINT( SIGN(1.0_ReKi, DAI1) ) ) ASTEP = MAX( 1.0E-4, 0.5*ASTEP )
 
    AI   = AI + DELAI
    DAI1 = DELAI
@@ -2150,7 +2150,7 @@ O%LOSS = O%TIPLOSS * O%HUBLOSS
 
  ! Check for diverging CH and correct if necessary
 
-IF ( ABS( CH ) > 2. ) CH = SIGN( 2., CH )
+IF ( ABS( CH ) > 2. ) CH = SIGN( 2.0_ReKi, CH )
 
 IF ( CH < 0.96*O%LOSS ) THEN
    A2 = 0.5*( 1 - SQRT( 1.0 - CH/O%LOSS ) )
@@ -2168,9 +2168,9 @@ IF ( p%SWIRL ) THEN
       IF ( ( ABS( SPhi ) > 0.01 ) .AND. ( ABS( CPhi ) > 0.01 ) )  THEN
          A2P = SOLFACT*( CLA*SPhi - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SPhi*CPhi )
       ELSEIF ( ABS( SPhi ) > 0.01 )  THEN   ! Tangential velocity near zero, phi near 90 degrees.
-         A2P = SOLFACT*( CLA*SPhi - CDA*SIGN( 0.01, CPhi ) )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SPhi*SIGN( 0.01, CPhi ) )
+         A2P = SOLFACT*( CLA*SPhi - CDA*SIGN( 0.01_ReKi, CPhi ) )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SPhi*SIGN( 0.01_ReKi, CPhi ) )
       ELSE   ! Normal velocity near zero, phi near 0 degrees.
-         A2P = SOLFACT*( CLA*SIGN( 0.01, SPhi ) - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SIGN( 0.01, SPhi )*CPhi )
+         A2P = SOLFACT*( CLA*SIGN( 0.01_ReKi, SPhi ) - CDA*CPhi )*( 1.0 + A2P )*VNROTOR2/( 4.0*O%LOSS*SIGN( 0.01_ReKi, SPhi )*CPhi )
       ENDIF
    ELSE
       SWRLARG = 1.0 + 4.0*O%LOSS*A2*VNW*VNA*VT2_Inv
@@ -3119,7 +3119,7 @@ IF ( ABS( O%Beddoes%AFE(J,IBLADE) - AOL1 ) < 1.E-10 ) THEN
 ELSE
 
    TEMP = 2.*SQRT(ABS(O%Beddoes%FSP(J,IBLADE)/(O%Beddoes%AFE(J,IBLADE)-AOL1)))-1.
-   O%Beddoes%FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+   O%Beddoes%FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1.0_ReKi, TEMP )
    IF ( O%Beddoes%FSP(J,IBLADE) >  1.0 ) O%Beddoes%FSP(J,IBLADE) =  1.0
    IF ( O%Beddoes%FSP(J,IBLADE) < -1.0 ) O%Beddoes%FSP(J,IBLADE) = -1.0
 
@@ -3127,14 +3127,14 @@ ELSE
       O%Beddoes%FSPC(J,IBLADE) = 1.0
    ELSE
       TEMP = O%Beddoes%FSPC(J,IBLADE)/((O%Beddoes%AFE(J,IBLADE)-AOL1)*O%Beddoes%AFE(J,IBLADE))
-      O%Beddoes%FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+      O%Beddoes%FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1.0_ReKi, TEMP )
       IF ( O%Beddoes%FSPC(J,IBLADE) >  1.0 ) O%Beddoes%FSPC(J,IBLADE) =  1.0
       IF ( O%Beddoes%FSPC(J,IBLADE) < -1.0 ) O%Beddoes%FSPC(J,IBLADE) = -1.0
    ENDIF
 
 ENDIF
 
-SRFP = SQRT( ABS( O%Beddoes%FSP(J,IBLADE) ) ) * SIGN( 1., O%Beddoes%FSP(J,IBLADE) ) + 1.
+SRFP = SQRT( ABS( O%Beddoes%FSP(J,IBLADE) ) ) * SIGN( 1.0_ReKi, O%Beddoes%FSP(J,IBLADE) ) + 1.
 O%Beddoes%FK   = 0.25 * SRFP * SRFP
 O%Beddoes%CVN(J,IBLADE) = O%Beddoes%CNPOT(J,IBLADE) * ( 1. - O%Beddoes%FK )
 
@@ -3515,7 +3515,7 @@ O%Beddoes%DQP(J,IBLADE) = O%Beddoes%DQP1(J,IBLADE) * EXP(-X0/XKA) + (O%Beddoes%Q
 
 O%Beddoes%CMQ = -.25 * CNQ - (XKA*CO/3.) * (O%Beddoes%QX(J,IBLADE) - O%Beddoes%DQP(J,IBLADE))
 
-O%Beddoes%CNIQ = MIN( ABS( CNI+CNQ ), 1. ) * SIGN( 1., CNI+CNQ )
+O%Beddoes%CNIQ = MIN( ABS( CNI+CNQ ), 1. ) * SIGN( 1.0_ReKi, CNI+CNQ )
 
 O%Beddoes%XN(J,IBLADE) = O%Beddoes%OLDXN(J,IBLADE)*EXP(-.14*BS) + .3*DA*EXP(-.07*BS)
 O%Beddoes%YN(J,IBLADE) = O%Beddoes%OLDYN(J,IBLADE)*EXP(-.53*BS) + .7*DA*EXP(-.265*BS)
@@ -3675,7 +3675,7 @@ IF ( ABS( O%Beddoes%AFE(J,IBLADE) - AOL1 ) < 1.E-10 ) THEN
    O%Beddoes%FSPC(J,IBLADE) = 1.0
 ELSE
    TEMP = 2.*SQRT(ABS(O%Beddoes%FSP(J,IBLADE)/(O%Beddoes%AFE(J,IBLADE)-AOL1)))-1.
-   O%Beddoes%FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+   O%Beddoes%FSP(J,IBLADE) = TEMP * TEMP * SIGN ( 1.0_ReKi, TEMP )
    IF ( O%Beddoes%FSP(J,IBLADE) >  1.0 ) O%Beddoes%FSP(J,IBLADE) =  1.0
    IF ( O%Beddoes%FSP(J,IBLADE) < -1.0 ) O%Beddoes%FSP(J,IBLADE) = -1.0
 
@@ -3683,7 +3683,7 @@ ELSE
       O%Beddoes%FSPC(J,IBLADE) = 1.0
    ELSE
       TEMP = O%Beddoes%FSPC(J,IBLADE)/((O%Beddoes%AFE(J,IBLADE)-AOL1)*O%Beddoes%AFE(J,IBLADE))
-      O%Beddoes%FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1., TEMP )
+      O%Beddoes%FSPC(J,IBLADE) = TEMP * TEMP * SIGN ( 1.0_ReKi, TEMP )
       IF ( O%Beddoes%FSPC(J,IBLADE) >  1.0 ) O%Beddoes%FSPC(J,IBLADE) =  1.0
       IF ( O%Beddoes%FSPC(J,IBLADE) < -1.0 ) O%Beddoes%FSPC(J,IBLADE) = -1.0
    ENDIF
@@ -3704,8 +3704,8 @@ O%Beddoes%DFC(J,IBLADE)= O%Beddoes%OLDDFC(J,IBLADE) * EXP(-O%Beddoes%DS/TFE) &
 
 O%Beddoes%FP   = O%Beddoes%FSP(J,IBLADE) - O%Beddoes%DF(J,IBLADE)
 O%Beddoes%FPC  = O%Beddoes%FSPC(J,IBLADE) - O%Beddoes%DFC(J,IBLADE)
-SRFP = SQRT( ABS(O%Beddoes%FP) )  * SIGN( 1., O%Beddoes%FP ) + 1.
-SRFPC= SQRT( ABS(O%Beddoes%FPC) ) * SIGN( 1.,O%Beddoes%FPC )
+SRFP = SQRT( ABS(O%Beddoes%FP) )  * SIGN( 1.0_ReKi, O%Beddoes%FP ) + 1.
+SRFPC= SQRT( ABS(O%Beddoes%FPC) ) * SIGN( 1.0_ReKi,O%Beddoes%FPC )
 
 O%Beddoes%FK   = 0.25 * SRFP * SRFP
 O%Beddoes%CN   = O%Beddoes%CNCP * O%Beddoes%FK + O%Beddoes%CNIQ
