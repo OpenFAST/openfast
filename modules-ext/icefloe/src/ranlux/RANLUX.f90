@@ -39,10 +39,11 @@
 !Start bjj:  We want to write to the screen instead of "print *"
 !   use     NWTC_IO
 !End bjj:
+  use precision
   implicit none
 
   integer, parameter :: NSeeds = 25, MaxLev = 4, LxDflt = 3
-  real, parameter :: TwoP12 = 4096.0
+  real(ReKi), parameter :: TwoP12 = 4096.0
   integer, parameter :: IGiga = 1000000000, JSDFlt = 314159265, ITwo24 = 2 ** 24, ICons = 2147483563
   integer :: I_ranLux
   integer, parameter :: Next(NSeeds - 1) = (/ NSeeds - 1, (I_ranLux, I_ranLux = 1, NSeeds - 2) /)  ! Table look-up (faster than Mod function).
@@ -50,11 +51,11 @@
   integer :: I24 = 24, J24 = 10, In24 = 0, Kount = 0, LuxLev = LxDflt, MKount = 0 ! Initialized variables are automatically saved.
   integer, dimension(0: MaxLev) :: NDSkip = (/ 0, 24, 73, 199, 365 /) ! Initialized variables are automatically saved.
   integer, save :: NSkip, InSeed
-  real :: Carry = 0.0 ! Initialized variables are automatically saved.
-  real, save :: Seeds(NSeeds - 1), TwoM24, TwoM12
+  real(ReKi) :: Carry = 0.0 ! Initialized variables are automatically saved.
+  real(ReKi), save :: Seeds(NSeeds - 1), TwoM24, TwoM12
   logical, save :: NotYet = .TRUE.
 
-  real :: Uni
+  real(ReKi) :: Uni
 
 !bjj
   character(300) :: RanLux_str
@@ -66,10 +67,10 @@ contains
 !============================================================================
   subroutine RanLux (RVec)
     ! Default Initialization by Multiplicative Congruential
-    real, intent(out) :: RVec(:)
+    real(ReKi), intent(out) :: RVec(:)
     integer :: ISeeds(NSeeds - 1), I, IVec, JSeed, K, LEnv, LP
 
-    real :: tmpTwoM24, tmpTwoM24Seed
+    real(ReKi) :: tmpTwoM24, tmpTwoM24Seed
 
 ! start subroutine RanLux
     LEnv = Size (RVec)
@@ -106,7 +107,7 @@ contains
       Seeds = Real (ISeeds) * TwoM24
       I24 = NSeeds - 1
       J24 = 10
-      Carry = Merge (TwoM24, 0.0, Seeds(NSeeds - 1) == 0.0)
+      Carry = Merge (TwoM24, 0.0_ReKi, Seeds(NSeeds - 1) == 0.0)
     end if
 
       !bjj added to speed up later calculations (b/c I had to fix the "where" statment)
@@ -323,7 +324,7 @@ contains
     Seeds = Real (ISeeds) * TwoM24
     I24 = NSeeds - 1
     J24 = 10
-    Carry = Merge (TwoM24, 0.0, Seeds(NSeeds - 1) == 0.0)
+    Carry = Merge (TwoM24, 0.0_ReKi, Seeds(NSeeds - 1) == 0.0)
 
     ! If restarting at a break point, skip K1 + IGIGA * K2
     ! Note that this is the number of numbers delivered to the user PLUS the number skipped (if Luxury > 0) .
@@ -355,7 +356,7 @@ contains
   end subroutine RLuxGo
 !============================================================================
   function RCarry (N) result (Uni)  ! Private (in module); generates a sequence of N uniform random numbers; returns the last one.
-    real :: Uni
+    real(ReKi) :: Uni
     integer, intent(in) :: N
     integer :: Many
 ! start function RCarry
