@@ -1943,11 +1943,11 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
          ! A NEGATIVE EXPONENTIAL DlSTRIBUTION WlTH DENSITY PROPORTIONAL
          ! TO EXP(-random_exponential), USING INVERSION.
 
-         REAL  :: fn_val
-         REAL  :: Lambda
+         REAL(ReKi)  :: fn_val
+         REAL(ReKi)  :: Lambda
 
          !     Local variable
-         REAL  :: r
+         REAL(ReKi)  :: r
 
          DO
            CALL RANDOM_NUMBER(r)
@@ -1970,11 +1970,11 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
          ! A NEGATIVE EXPONENTIAL DlSTRIBUTION WlTH DENSITY PROPORTIONAL
          ! TO EXP(-random_exponential), USING INVERSION.
 
-         REAL  :: fn_val
-         REAL  :: Sigma
+         REAL(ReKi)  :: fn_val
+         REAL(ReKi)  :: Sigma
 
          !     Local variable
-         REAL  :: r
+         REAL(ReKi)  :: r
 
          DO
            CALL RANDOM_NUMBER(r)
@@ -1994,14 +1994,14 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
 
          IMPLICIT NONE
 
-         REAL :: mean
-         REAL :: var
-         REAL :: fn_val
+         REAL(ReKi) :: mean
+         REAL(ReKi) :: var
+         REAL(ReKi) :: fn_val
 
-         !Local variables
-         REAL :: k
-         REAL :: Lambda
-         REAL :: u
+         !Local variables                                                                                                                                                                     
+         REAL(ReKi) :: k
+         REAL(ReKi) :: Lambda
+         REAL(ReKi) :: u
 
          k = wbpar (mean, var)
          lambda = mean / NWTC_gamma(1+1/k)
@@ -2016,12 +2016,12 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
 
          !Calculate Weibull distribution parameters due to mean value and variance of the data
          IMPLICIT NONE
-
-         REAL :: mean
-         REAL :: var
-         REAL :: k 
-         REAL :: k1, F1, dFdk
-         REAL :: error 
+                                                                                                                                                                                       
+         REAL(ReKi) :: mean
+         REAL(ReKi) :: var
+         REAL(ReKi) :: k 
+         REAL(ReKi) :: k1, F1, dFdk
+         REAL(ReKi) :: error 
 
          INTEGER :: I
          
@@ -2053,8 +2053,8 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
         FUNCTION digamma(z) RESULT(phy)
 
          !Calculate the value of digamma function of z
-         REAL, INTENT(IN) :: z
-         REAL             :: phy
+         REAL(ReKi), INTENT(IN) :: z
+         REAL(ReKi)             :: phy
 
          phy = log(z) - 1/2/z - 1/12/z**2 + 1/120/z**4 - 1/252/z**6 + 1/240/z**8 - 5/660/z**10;
 
