@@ -59,6 +59,7 @@ PROGRAM HydroDynDriver
 !        /fpp                  because of they both have preprocessor statements
 ! ----------------------------------------------------------------------------------- 
 
+REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
 
 
    INTEGER(IntKi), PARAMETER                           :: NumInp = 1           ! Number of inputs sent to HydroDyn_UpdateStates
@@ -104,6 +105,18 @@ PROGRAM HydroDynDriver
    REAL(ReKi)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(HD_Drvr_InitInput)                            :: drvrInitInp          ! Initialization data for the driver program
+   
+   integer                                        :: StrtTime (8)                            ! Start time of simulation (including intialization)
+   integer                                        :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
+   real(ReKi)                                     :: PrevClockTime                           ! Clock time at start of simulation in seconds
+   real                                           :: UsrTime1                                ! User CPU time for simulation initialization
+   real                                           :: UsrTime2                                ! User CPU time for simulation (without intialization)
+   real                                           :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
+   real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
+   real(DbKi)                                     :: t_global                                ! Current simulation time (for global/FAST simulation)
+   real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
+   integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
+
    
    ! For testing
    LOGICAL                                            :: DoTight = .FALSE.
@@ -159,6 +172,13 @@ PROGRAM HydroDynDriver
       InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
    END IF
   
+      ! Get the current time
+   call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
+   call cpu_time ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
+   SttsTime = 1.0 ! seconds
+     ! figure out how many time steps we should go before writing screen output:      
+   n_SttsTime = MAX( 1, NINT( SttsTime / drvrInitInp%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
+    
  !BJJ: added this for IceFloe/IceDyn
    InitInData%hasIce = .FALSE.
 
@@ -269,38 +289,25 @@ PROGRAM HydroDynDriver
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
    CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, Interval, InitOutData, ErrStat, ErrMsg )
- 
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-      IF ( ErrStat >= ErrID_Fatal ) THEN
-         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-            CALL WrScr( ErrMsg )     
-         END IF
-         STOP
-      END IF
-   END IF
+   if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+      call HD_DvrCleanup()
+   end if
 
    IF ( Interval /= drvrInitInp%TimeInterval) THEN
       CALL WrScr('The HydroDyn Module attempted to change timestep interval, but this is not allowed.  The HydroDyn Module must use the Driver Interval.')
-      CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )  
-      STOP
+      call HD_DvrCleanup() 
+      
    END IF
 
 
       ! Write the gridded wave elevation data to a file
 
    IF ( drvrInitInp%WaveElevSeriesFlag )     CALL WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
-   IF ( ErrStat /= ErrID_None ) THEN 
-      CALL WrScr( ErrMsg )
-      IF ( ErrStat >= ErrID_Fatal ) THEN
-         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-            CALL WrScr( ErrMsg )     
-         END IF
-         STOP
-      END IF
-   END IF
+   if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+      call HD_DvrCleanup()
+   end if
 
    
       ! Destroy initialization data
@@ -381,7 +388,8 @@ PROGRAM HydroDynDriver
    !...............................................................................................................................
    ! Routines called in loose coupling -- the glue code may implement this in various ways
    !...............................................................................................................................
-
+   Time = 0.0
+   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, time, InitInData%TMax )
 
    DO n = 1, drvrInitInp%NSteps
 
@@ -429,96 +437,145 @@ PROGRAM HydroDynDriver
          ! Calculate outputs at n
 
       CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-         CALL WrScr( ErrMsg )
-         IF ( ErrStat >= ErrID_Fatal ) THEN
-            CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-            IF ( ErrStat /= ErrID_None ) THEN
-               CALL WrScr( ErrMsg )      
-            END IF
-            STOP
-         END IF
-      END IF
+      if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
 
       
       
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
 
       CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-         CALL WrScr( ErrMsg )
-         IF ( ErrStat >= ErrID_Fatal ) THEN
-            CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-            IF ( ErrStat /= ErrID_None ) THEN
-               CALL WrScr( ErrMsg )      
-            END IF
-            STOP
-         END IF
-      END IF     
+      if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
       
-      !-----------------------------------------------------------------------------
-      ! DEBUG - Print Mesh Information
-      !WRITE(MeshDebugFile,'("HD_MeshInfo_",I2,".txt")' )  n
-      !CALL GetNewUnit( UnMeshDebug ) 
-      !CALL OpenFOutFile ( UnMeshDebug, TRIM(MeshDebugFile), ErrStat   )  ! Open WAMIT inputs file.
-      !WRITE(UnMeshDebug,'("u(1)%Morison%DistribMesh")')
-      !CALL MeshPrintInfo ( UnMeshDebug, u(1)%Morison%DistribMesh,100)
-      !WRITE(UnMeshDebug,'("y%Morison%DistribMesh")')
-      !CALL MeshPrintInfo ( UnMeshDebug, y%Morison%DistribMesh,100)
-      !CLOSE(UnMeshDebug)
-      !-----------------------------------------------------------------------------
-      
+   
+      IF ( MOD( n + 1, n_SttsTime ) == 0 ) THEN
+
+         CALL SimStatus( TiLstPrn, PrevClockTime, time, InitInData%TMax )
+
+      ENDIF   
 
       ! Write output to a file which is managed by the driver program and not the individual modules
       ! TODO
       
    END DO
 
-   ! For Debug:  TODO  Remove when no longer needed GJH 9/30/2013 
-   !Write(AngleMsg, '(F10.4)') ,maxAngle
-   !CALL WrScr('The largest input rotation angle was: '//AngleMsg)
    
-   CALL HydroDyn_DestroyDiscState( xd_new, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-      IF ( ErrStat >= ErrID_Fatal ) THEN
-         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-            CALL WrScr( ErrMsg )      
-         END IF
-         STOP
-      END IF
-   END IF
-
-   CALL HydroDyn_DestroyContState( x_new, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-      IF ( ErrStat >= ErrID_Fatal ) THEN
-         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-            CALL WrScr( ErrMsg )      
-         END IF
-         STOP
-      END IF
-   END IF
-
 
 ! For now, finish here.
-
- 
-   !...............................................................................................................................
-   ! Routine to terminate program execution (again)
-   !...............................................................................................................................
-
-   CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN
-      CALL WrScr( ErrMsg )
-      ! TODO Add additional error handling and terminate
-   END IF
+call HD_DvrCleanup()
 
 
-CONTAINS
 
+   CONTAINS
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, ZTime, UsrTime_out )
+! This routine displays a message that gives that status of the simulation and the predicted end time of day.
+!..................................................................................................................................
+
+
+   
+
+      ! Passed variables
+
+   INTEGER   , INTENT(IN)       :: StrtTime (8)                                    ! Start time of simulation (including initialization)
+   INTEGER   , INTENT(IN)       :: SimStrtTime (8)                                 ! Start time of simulation (after initialization)
+   REAL      , INTENT(IN)       :: UsrTime1                                        ! User CPU time for simulation initialization.
+   REAL,       INTENT(IN)       :: UsrTime2                                        ! User CPU time for simulation (without intialization)
+   REAL(DbKi), INTENT(IN)       :: ZTime                                           ! The final simulation time (not necessarially TMax)
+   REAL,OPTIONAL, INTENT(OUT)   :: UsrTime_out                                     ! User CPU time for entire run - optional value returned to calling routine
+
+      ! Local variables
+
+   REAL                         :: ClckTime                                        ! Elapsed clock time for the entire run.
+   REAL                         :: ClckTimeSim                                     ! Elapsed clock time for the simulation phase of the run.
+   REAL                         :: Factor                                          ! Ratio of seconds to a specified time period.
+   REAL                         :: TRatio                                          ! Ratio of simulation time to elapsed clock time.
+   
+   REAL                         :: UsrTime                                         ! User CPU time for entire run.
+   REAL                         :: UsrTimeSim                                      ! User CPU time for simulation (not including initialization).
+   INTEGER                      :: EndTimes (8)                                    ! An array holding the ending clock time of the simulation.
+
+   CHARACTER( 8)                :: TimePer
+   CHARACTER(MaxWrScrLen)       :: BlankLine
+
+      ! Get the end times to compare with start times.
+
+   CALL DATE_AND_TIME ( VALUES=EndTimes )
+   CALL CPU_TIME ( UsrTime )
+
+
+   ! Calculate the elapsed wall-clock time in seconds.
+
+   ClckTime     = GetClockTime(StrtTime,      EndTimes)
+  !ClckTimeInit = GetClockTime(StrtTime,   SimStrtTime)
+   ClckTimeSim  = GetClockTime(SimStrtTime,   EndTimes)
+
+      ! Calculate CPU times.
+
+   UsrTime    = UsrTime - UsrTime1
+   UsrTimeSim = UsrTime - UsrTime2
+
+
+   IF ( .NOT. EqualRealNos( UsrTimeSim, 0.0 ) )  THEN
+
+      TRatio = REAL(ZTime) / UsrTimeSim
+
+      IF     ( UsrTime > SecPerDay )  THEN
+         Factor = 1.0/SecPerDay
+         TimePer = ' days'
+      ELSEIF ( UsrTime >  3600.0 )  THEN
+         Factor = 1.0/3600.0
+         TimePer = ' hours'
+      ELSEIF ( UsrTime >    60.0 )  THEN
+         Factor = 1.0/60.0
+         TimePer = ' minutes'
+      ELSE
+         Factor = 1.0
+         TimePer = ' seconds'
+      ENDIF
+
+      BlankLine = ""
+      CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
+      CALL WrScr1( ' Total Real Time:       '//TRIM( Num2LStr( Factor*ClckTime      ) )//TRIM( TimePer ) )
+      CALL WrScr ( ' Total CPU Time:        '//TRIM( Num2LStr( Factor*UsrTime       ) )//TRIM( TimePer ) )
+!     CALL WrScr ( ' ')
+!     CALL WrScr ( ' Simulation Real Time:  '//TRIM( Num2LStr( Factor*ClckTimeSim   ) )//TRIM( TimePer ) )
+      CALL WrScr ( ' Simulation CPU Time:   '//TRIM( Num2LStr( Factor*UsrTimeSim    ) )//TRIM( TimePer ) )      
+      CALL WrScr ( ' Simulated Time:        '//TRIM( Num2LStr( Factor*REAL( ZTime ) ) )//TRIM( TimePer ) )
+      CALL WrScr ( ' Time Ratio (Sim/CPU):  '//TRIM( Num2LStr( TRatio ) ) )
+
+   ENDIF
+
+   UsrTime_out = UsrTime
+   
+
+   
+   END SUBROUTINE RunTimes
+   
+   FUNCTION GetClockTime(StartClockTime, EndClockTime)
+   ! return the number of seconds between StartClockTime and EndClockTime
+   
+      REAL                         :: GetClockTime          ! Elapsed clock time for the simulation phase of the run.
+      INTEGER   , INTENT(IN)       :: StartClockTime (8)                                 ! Start time of simulation (after initialization)
+      INTEGER   , INTENT(IN)       :: EndClockTime (8)                                 ! Start time of simulation (after initialization)
+   
+   !bjj: This calculation will be wrong at certain times (e.g. if it's near midnight on the last day of the month), but to my knowledge, no one has complained...
+      GetClockTime =       0.001*( EndClockTime(8) - StartClockTime(8) ) &  ! Is the milliseconds of the second (range 0 to 999) - local time
+                     +           ( EndClockTime(7) - StartClockTime(7) ) &  ! Is the seconds of the minute (range 0 to 59) - local time
+                     +      60.0*( EndClockTime(6) - StartClockTime(6) ) &  ! Is the minutes of the hour (range 0 to 59) - local time
+                     +    3600.0*( EndClockTime(5) - StartClockTime(5) ) &  ! Is the hour of the day (range 0 to 23) - local time
+                     + SecPerDay*( EndClockTime(3) - StartClockTime(3) )    ! Is the day of the month
+   
+   
+   END FUNCTION
+
+   
 !====================================================================================================
 SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
 !     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
@@ -537,6 +594,47 @@ SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
   
    
 END SUBROUTINE CleanupEchoFile
+
+subroutine HD_DvrCleanup()
+   
+         ! Local variables
+      character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+      integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
+
+   
+      errStat2 = ErrID_None
+      errMsg2  = ""
+      
+      
+      
+      call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      call HydroDyn_DestroyContState( x_new, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      call HydroDyn_End( u(1), p, x, xd, z, OtherState, y, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
+      if (errStat) then !This assumes PRESENT(ErrID) is also .TRUE. :
+         if ( time < 0.0 ) then
+            ErrMsg = 'at initialization'
+         else if ( time > InitInData%TMax ) then
+            ErrMsg = 'after computing the solution'
+         else            
+            ErrMsg = 'at simulation time '//trim(Num2LStr(time))//' of '//trim(Num2LStr(InitInData%TMax))//' seconds'
+         end if
+                    
+         
+         CALL ProgAbort( 'HydroDyn encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
+                         //trim(GetErrStr(errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+      end if
+      
+     ! Print *, time
+      call RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, time, UsrTimeDiff )
+      call NormStop()
+      
+end subroutine HD_DvrCleanup
 
 
 SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
@@ -1166,6 +1264,133 @@ subroutine print_help()
     print '(a)', ''
 
 end subroutine print_help
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, UsrTimeSim, ZTime, TMax )
+! This routine displays a message that gives that status of the simulation.
+!..................................................................................................................................
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+   REAL(DbKi), INTENT(IN   )    :: ZTime                                           ! Current simulation time (s)
+   REAL(DbKi), INTENT(IN   )    :: TMax                                            ! Expected simulation time (s)
+   REAL(DbKi), INTENT(  OUT)    :: PrevSimTime                                     ! Previous time message was written to screen (s > 0)
+   REAL(ReKi), INTENT(  OUT)    :: PrevClockTime                                   ! Previous clock time in seconds past midnight
+   INTEGER,    INTENT(  OUT)    :: SimStrtTime (8)                                 ! An array containing the elements of the start time.
+   REAL,       INTENT(  OUT)    :: UsrTimeSim                                      ! User CPU time for simulation (without intialization)
+
+      ! Local variables.
+
+   REAL(ReKi)                   :: CurrClockTime                                   ! Current time in seconds past midnight.
+
+
+      ! How many seconds past midnight?
+
+   CALL DATE_AND_TIME ( Values=SimStrtTime )
+   CALL CPU_TIME ( UsrTimeSim )                                                    ! Initial CPU time   
+   CurrClockTime = TimeValues2Seconds( SimStrtTime )
+
+
+   CALL WrScr ( ' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )//' seconds.')
+
+
+   ! Let's save this time as the previous time for the next call to the routine
+   PrevClockTime = CurrClockTime
+   PrevSimTime   = ZTime
+
+   RETURN
+END SUBROUTINE SimStatus_FirstTime
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SimStatus( PrevSimTime, PrevClockTime, ZTime, TMax )
+! This routine displays a message that gives that status of the simulation and the predicted end time of day.
+!..................................................................................................................................
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+   REAL(DbKi), INTENT(IN)       :: ZTime                                           ! Current simulation time (s)
+   REAL(DbKi), INTENT(IN)       :: TMax                                            ! Expected simulation time (s)
+   REAL(DbKi), INTENT(INOUT)    :: PrevSimTime                                     ! Previous time message was written to screen (s > 0)
+   REAL(ReKi), INTENT(INOUT)    :: PrevClockTime                                   ! Previous clock time in seconds past midnight
+
+
+      ! Local variables.
+
+   REAL(ReKi)                   :: CurrClockTime                                   ! Current time in seconds past midnight.
+   REAL(ReKi)                   :: DeltTime                                        ! The amount of time elapsed since the last call.
+   REAL(ReKi)                   :: EndTime                                         ! Approximate time of day when simulation will complete.
+   REAL(ReKi), PARAMETER        :: InSecHr  = 1.0_ReKi/3600.0_ReKi                 ! Inverse of the number of seconds in an hour
+   REAL(ReKi), PARAMETER        :: InSecMn  = 1.0_ReKi/  60.0_ReKi                 ! Inverse of the number of seconds in a minute
+   REAL(ReKi)                   :: SimTimeLeft                                     ! Approximate clock time remaining before simulation completes
+
+   REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
+
+   INTEGER(4)                   :: EndHour                                         ! The hour when the simulations is expected to complete.
+   INTEGER(4)                   :: EndMin                                          ! The minute when the simulations is expected to complete.
+   INTEGER(4)                   :: EndSec                                          ! The second when the simulations is expected to complete.
+   INTEGER(4)                   :: TimeAry  (8)                                    ! An array containing the elements of the start time.
+
+   CHARACTER( 8)                :: ETimeStr                                        ! String containing the end time.
+
+
+   IF ( ZTime <= PrevSimTime ) RETURN
+
+
+      ! How many seconds past midnight?
+
+   CALL DATE_AND_TIME ( Values=TimeAry )
+   CurrClockTime = TimeValues2Seconds( TimeAry )
+
+      ! Calculate elapsed clock time
+
+   DeltTime = CurrClockTime - PrevClockTime
+
+
+      ! We may have passed midnight since the last revoultion.  We will assume that (ZTime - PrevSimTime) of simulation time doesn't take more than a day.
+
+   IF ( CurrClockTime < PrevClockTime )  THEN
+      DeltTime = DeltTime + SecPerDay
+   ENDIF
+
+
+      ! Estimate the end time in hours, minutes, and seconds
+
+   SimTimeLeft = REAL( ( TMax - ZTime )*DeltTime/( ZTime - PrevSimTime ), ReKi )          ! DeltTime/( ZTime - PrevSimTime ) is the delta_ClockTime divided by the delta_SimulationTime
+   EndTime  =  MOD( CurrClockTime+SimTimeLeft, SecPerDay )
+   EndHour  =  INT(   EndTime*InSecHr )
+   EndMin   =  INT( ( EndTime - REAL( 3600*EndHour ) )*InSecMn )
+   EndSec   = NINT(   EndTime - REAL( 3600*EndHour + 60*EndMin ) ) !bjj: this NINT can make the seconds say "60"
+
+   WRITE (ETimeStr,"(I2.2,2(':',I2.2))")  EndHour, EndMin, EndSec
+
+   CALL WrOver ( ' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
+                 ' seconds.  Estimated final completion at '//ETimeStr//'.'                             )
+
+
+      ! Let's save this time as the previous time for the next call to the routine
+   PrevClockTime = CurrClockTime
+   PrevSimTime   = ZTime
+
+   RETURN
+END SUBROUTINE SimStatus
+!----------------------------------------------------------------------------------------------------------------------------------
+FUNCTION TimeValues2Seconds( TimeAry )
+! This routine takes an array of time values such as that returned from
+!     CALL DATE_AND_TIME ( Values=TimeAry )
+! and converts TimeAry to the number of seconds past midnight.
+!..................................................................................................................................
+
+      ! Passed variables:
+   INTEGER, INTENT(IN)          :: TimeAry  (8)                                    ! An array containing the elements of the time
+   REAL(ReKi)                   :: TimeValues2Seconds                              ! Current time in seconds past midnight
+
+
+   TimeValues2Seconds = 3600*TimeAry(5) + 60*TimeAry(6) + TimeAry(7) + 0.001_ReKi*TimeAry(8)
+
+END FUNCTION TimeValues2Seconds
+!----------------------------------------------------------------------------------------------------------------------------------
 
 END PROGRAM HydroDynDriver
 
