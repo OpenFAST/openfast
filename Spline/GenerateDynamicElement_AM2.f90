@@ -1,42 +1,43 @@
-   SUBROUTINE GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,&
+   SUBROUTINE GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
                                         &elem_total,node_elem,dof_node,ngp,RHS,MassM)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
    !----------------------------------------------------------------------------------------
-   REAL(ReKi),INTENT(IN   )        :: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),INTENT(IN   )        :: uuN(:) ! Displacement of Mass 1: m
-   REAL(ReKi),INTENT(IN   )        :: vvN(:) ! Velocity of Mass 1: m/s
-   REAL(ReKi),INTENT(IN   )        :: uuN00(:) ! Displacement of Mass 1: m
-   REAL(ReKi),INTENT(IN   )        :: vvN00(:) ! Velocity of Mass 1: m/s
-   REAL(ReKi),INTENT(IN   )        :: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),INTENT(IN   )        :: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),INTENT(IN   )        :: gravity(:) ! Velocity of Mass 1: m/s
+   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:) ! Initial position vector
+   REAL(ReKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
+   REAL(ReKi),        INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
+   REAL(ReKi),        INTENT(IN   ):: uuN00(:) ! Displacement of Mass 1: m
+   REAL(ReKi),        INTENT(IN   ):: vvN00(:) ! Velocity of Mass 1: m/s
+   REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),        INTENT(IN   ):: gravity(:) ! Velocity of Mass 1: m/s
    TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
-   INTEGER(IntKi),INTENT(IN   )    :: elem_total ! Total number of elements
-   INTEGER(IntKi),INTENT(IN   )    :: node_elem ! Node per element
-   INTEGER(IntKi),INTENT(IN   )    :: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),INTENT(IN   )    :: ngp ! Number of Gauss points
-   REAL(ReKi),INTENT(OUT)          :: MassM(:,:) ! Mass matrix 
-   REAL(ReKi),INTENT(OUT)          :: RHS(:) ! Right hand side of the equation Ax=B  
+   TYPE(BD_InputType),INTENT(IN   ):: u0          ! Inputs at t
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   REAL(ReKi),        INTENT(  OUT):: MassM(:,:) ! Mass matrix 
+   REAL(ReKi),        INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B  
 
-   REAL(ReKi),ALLOCATABLE          :: Nuu0(:) ! Nodal initial position for each element
-   REAL(ReKi),ALLOCATABLE          :: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),ALLOCATABLE          :: Nuuu0(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),ALLOCATABLE          :: Nrr0(:) ! Nodal rotation parameters for initial position 
-   REAL(ReKi),ALLOCATABLE          :: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(ReKi),ALLOCATABLE          :: Nrrr0(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(ReKi),ALLOCATABLE          :: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
-   REAL(ReKi),ALLOCATABLE          :: Nvvv0(:) ! Nodal velocity of Mass 1: m/s for each element
-   REAL(ReKi),ALLOCATABLE          :: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),ALLOCATABLE          :: EMass0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),ALLOCATABLE          :: DistrLoad_GL(:,:) ! Nodal material properties for each element
-   REAL(ReKi),ALLOCATABLE          :: DistrLoad_GL0(:,:) ! Nodal material properties for each element
-   REAL(ReKi),ALLOCATABLE          :: elf1(:) ! Total element force (Fc, Fd, Fb)
-   REAL(ReKi),ALLOCATABLE          :: elf2(:) ! Total element force (Fc, Fd, Fb)
-   REAL(ReKi),ALLOCATABLE          :: elm11(:,:) ! Element mass matrix
-   REAL(ReKi),ALLOCATABLE          :: elm12(:,:) ! Element mass matrix
-   REAL(ReKi),ALLOCATABLE          :: elm21(:,:) ! Element mass matrix
-   REAL(ReKi),ALLOCATABLE          :: elm22(:,:) ! Element mass matrix
+   REAL(ReKi),        ALLOCATABLE  :: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),        ALLOCATABLE  :: Nuuu(:) ! Nodal displacement of Mass 1 for each element
+   REAL(ReKi),        ALLOCATABLE  :: Nuuu0(:) ! Nodal displacement of Mass 1 for each element
+   REAL(ReKi),        ALLOCATABLE  :: Nrr0(:) ! Nodal rotation parameters for initial position 
+   REAL(ReKi),        ALLOCATABLE  :: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),        ALLOCATABLE  :: Nrrr0(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),        ALLOCATABLE  :: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(ReKi),        ALLOCATABLE  :: Nvvv0(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(ReKi),        ALLOCATABLE  :: EStif0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),        ALLOCATABLE  :: EMass0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),        ALLOCATABLE  :: DistrLoad_GL(:,:) ! Nodal material properties for each element
+   REAL(ReKi),        ALLOCATABLE  :: DistrLoad_GL0(:,:) ! Nodal material properties for each element
+   REAL(ReKi),        ALLOCATABLE  :: elf1(:) ! Total element force (Fc, Fd, Fb)
+   REAL(ReKi),        ALLOCATABLE  :: elf2(:) ! Total element force (Fc, Fd, Fb)
+   REAL(ReKi),        ALLOCATABLE  :: elm11(:,:) ! Element mass matrix
+   REAL(ReKi),        ALLOCATABLE  :: elm12(:,:) ! Element mass matrix
+   REAL(ReKi),        ALLOCATABLE  :: elm21(:,:) ! Element mass matrix
+   REAL(ReKi),        ALLOCATABLE  :: elm22(:,:) ! Element mass matrix
 
    INTEGER(IntKi)                  :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                  :: rot_elem ! Rotational degrees of freedom
@@ -130,6 +131,8 @@
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
            DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
            DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           DistrLoad_GL0(1:3,j)  = u0%DistrLoad%Force(1:3,temp_id+j+1)
+           DistrLoad_GL0(4:6,j)  = u0%DistrLoad%Moment(1:3,temp_id+j+1)
        ENDDO
        
        CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
@@ -139,11 +142,13 @@
        CALL ElemNodalDispGL(vvN,node_elem,dof_node,nelem,Nvvv)
        CALL ElemNodalDispGL(vvN00,node_elem,dof_node,nelem,Nvvv0)
 
-       CALL ElementMatrix_AM2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                         &ngp,node_elem,dof_node,elf,elm)
+       CALL ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
+                             &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&
+                             &ngp,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
 
-       CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)
-       CALL AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+       CALL AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_node,&
+                              &elm11,elm12,elm21,elm22,MassM)
+       CALL AssembleRHS_AM2(nelem,dof_elem,node_elem,dof_node,elf1,elf2,RHS)
 
    ENDDO
 
