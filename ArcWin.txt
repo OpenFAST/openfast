@@ -6,7 +6,7 @@ bin\FAST_x64.exe
 bin\MAP_win32.dll
 bin\MAP_x64.dll
 bin\Registry_win32.exe
-bin\crunch_win32.exe
+bin\Crunch_win32.exe
 
 CertTest\DateTime.exe
 CertTest\Update.bat

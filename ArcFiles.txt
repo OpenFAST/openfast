@@ -105,9 +105,9 @@ CertTest\Bell.txt
 CertTest\CertTest.bat
 CertTest\DateTime.exe
 CertTest\FASTCertTestCases.xlsx
-CertTest\Pitch.ipt
+CertTest\pitch.ipt
 CertTest\PlotCertTestResults.m
-CertTest\Spd_Trq.dat
+CertTest\spd_trq.dat
 CertTest\Update.bat
 
 
