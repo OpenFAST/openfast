@@ -185,7 +185,7 @@ MODULE FAST_Types
       INTEGER(IntKi)            :: CompIce                                          ! Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}
       LOGICAL                   :: CompUserPtfmLd                                   ! Compute additional platform loading {false: none, true: user-defined from routine UserPtfmLd} (flag)
       LOGICAL                   :: CompUserTwrLd                                    ! Compute additional tower loading {false: none, true: user-defined from routine UserTwrLd} (flag)
-      
+      LOGICAL                   :: UseDWM                                           ! Use the DWM module in AeroDyn
       
          ! Input file names:
 
