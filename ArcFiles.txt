@@ -1,6 +1,8 @@
 ChangeLog.txt
 Disclaimer.txt
 
+FAST_SourceFiles.txt
+
 Samples/AeroDyn_Tower.dat
 Samples/SampleAirfoil.dat
 Samples/SampleInput_wo_TwrInfluence.ad

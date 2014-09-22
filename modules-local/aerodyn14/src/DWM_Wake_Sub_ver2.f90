@@ -31,7 +31,7 @@ MODULE DWM_Wake_Sub
    PUBLIC :: read_turbine_position
    PUBLIC :: read_upwind_result_file
    PUBLIC :: write_result_file
-   PUBLIC :: rename_FAST_output
+!   PUBLIC :: rename_FAST_output
    PUBLIC :: min_of_array
    PUBLIC :: max_of_array
    PUBLIC :: max_of_TwoNum
@@ -2698,48 +2698,49 @@ SUBROUTINE write_result_file(OS,p,y,u)
        
 END SUBROUTINE write_result_file
 
-!----------------------------------------------------------------------------------
-SUBROUTINE rename_FAST_output(OS, u, p)
-!............................................................................
-! This routine is called to rename the fast output
-!............................................................................
-    USE IFPORT
-    USE DFLIB
-    
-    TYPE(DWM_InputType),           INTENT(INOUT)  :: u           ! Inputs at Time
-    TYPE(DWM_OtherStateType),      INTENT(INOUT)  :: OS
-    TYPE(DWM_ParameterType),       INTENT(INOUT)  :: p
-    
-    CHARACTER(LEN=80) :: filename_FastOutput,filename_FastElm
-    CHARACTER(LEN=11) :: Fastprefix         = 'FastOutput_' ! Fast output file
-    CHARACTER(LEN=8)  :: FastElmprefix      = 'FastElm_'    ! Fast Elm output file
-    INTEGER           :: RESULT
-    CHARACTER(LEN=22) :: Prefix             = 'DWM-results'//trim(PathSep)
-    CHARACTER(LEN=8)  :: Turbineprefix      = 'Turbine_'
-    CHARACTER(LEN=3)  :: invetigated_turbine_index_character
-    
-    IF ( p%RTPD%SimulationOrder_index > 0 ) THEN            ! exclude the first turbine
-        
-        IF (p%RTPD%WT_index <= 9) THEN
-            write(invetigated_turbine_index_character,'(i1)') p%RTPD%WT_index
-        ELSEIF (p%RTPD%WT_index <= 99) THEN
-            write(invetigated_turbine_index_character,'(i2)') p%RTPD%WT_index
-        ELSE
-            write(invetigated_turbine_index_character,'(i3)') p%RTPD%WT_index
-        END IF
-    
-            ! Rename the FAST output wrt the turbine index
-        filename_FastOutput = trim(Prefix)//trim(Fastprefix)//trim(Turbineprefix)//trim(invetigated_turbine_index_character)//".out"
-        filename_FastElm    = trim(Prefix)//trim(FastElmprefix)//trim(Turbineprefix)//trim(invetigated_turbine_index_character)//".AD.out"
-    
-        !RESULT =rename('V80_2MW.out',filename_FastOutput)          
-        !RESULT =rename('V80_2MW.elm',filename_FastElm   )
-        
-        RESULT =rename('FAST_V80.out',filename_FastOutput)          
-        RESULT =rename('FAST_V80.elm',filename_FastElm   )
-    END IF
-
-END SUBROUTINE rename_FAST_output
+!!----------------------------------------------------------------------------------
+!!BJJ: THIS routine uses non-standard Fortran. IFPORT and DFLIB are incompatible with gfortran. Since this routine isn't used, I'm commenting it out.
+!SUBROUTINE rename_FAST_output(OS, u, p)
+!!............................................................................
+!! This routine is called to rename the fast output
+!!............................................................................
+!    USE IFPORT
+!    USE DFLIB
+!    
+!    TYPE(DWM_InputType),           INTENT(INOUT)  :: u           ! Inputs at Time
+!    TYPE(DWM_OtherStateType),      INTENT(INOUT)  :: OS
+!    TYPE(DWM_ParameterType),       INTENT(INOUT)  :: p
+!    
+!    CHARACTER(LEN=80) :: filename_FastOutput,filename_FastElm
+!    CHARACTER(LEN=11) :: Fastprefix         = 'FastOutput_' ! Fast output file
+!    CHARACTER(LEN=8)  :: FastElmprefix      = 'FastElm_'    ! Fast Elm output file
+!    INTEGER           :: RESULT
+!    CHARACTER(LEN=22) :: Prefix             = 'DWM-results'//trim(PathSep)
+!    CHARACTER(LEN=8)  :: Turbineprefix      = 'Turbine_'
+!    CHARACTER(LEN=3)  :: invetigated_turbine_index_character
+!    
+!    IF ( p%RTPD%SimulationOrder_index > 0 ) THEN            ! exclude the first turbine
+!        
+!        IF (p%RTPD%WT_index <= 9) THEN
+!            write(invetigated_turbine_index_character,'(i1)') p%RTPD%WT_index
+!        ELSEIF (p%RTPD%WT_index <= 99) THEN
+!            write(invetigated_turbine_index_character,'(i2)') p%RTPD%WT_index
+!        ELSE
+!            write(invetigated_turbine_index_character,'(i3)') p%RTPD%WT_index
+!        END IF
+!    
+!            ! Rename the FAST output wrt the turbine index
+!        filename_FastOutput = trim(Prefix)//trim(Fastprefix)//trim(Turbineprefix)//trim(invetigated_turbine_index_character)//".out"
+!        filename_FastElm    = trim(Prefix)//trim(FastElmprefix)//trim(Turbineprefix)//trim(invetigated_turbine_index_character)//".AD.out"
+!    
+!        !RESULT =rename('V80_2MW.out',filename_FastOutput)          
+!        !RESULT =rename('V80_2MW.elm',filename_FastElm   )
+!        
+!        RESULT =rename('FAST_V80.out',filename_FastOutput)          
+!        RESULT =rename('FAST_V80.elm',filename_FastElm   )
+!    END IF
+!
+!END SUBROUTINE rename_FAST_output
 
 !------------------------------------------------------------------------------------------------ 
 FUNCTION min_of_array(ary, ary_length)

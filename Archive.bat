@@ -51,7 +51,7 @@ GOTO CheckSyntax
 @ECHO Archiving %PROGNAME% for general Windows distribution.
 @ECHO -------------------------------------------------------------------------
 @ECHO.
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @SourceFiles.txt
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 @COPY ARCHTMP.exe Archive\%ARCHROOT%_v%1.exe
 @DEL ARCHTMP.zip, ARCHTMP.exe
@@ -61,7 +61,7 @@ GOTO CheckSyntax
 :: @ECHO Archiving %PROGNAME% for maintenance.
 :: @ECHO -------------------------------------------------------------------------
 :: @ECHO.
-:: @%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcMaint.txt @SourceFiles.txt
+:: @%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcMaint.txt @FAST_SourceFiles.txt
 :: @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 :: @COPY ARCHTMP.exe Archive\%ARCHROOT%_v%1_Maint.exe
 :: @DEL ARCHTMP.zip, ARCHTMP.exe
@@ -72,7 +72,7 @@ GOTO CheckSyntax
 @ECHO -------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @SourceFiles.txt
+@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
 @%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
 @COPY ARCHTMP.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
 @DEL ARCHTMP.tar, ARCHTMP.tar.gz
