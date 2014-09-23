@@ -1959,35 +1959,49 @@ CONTAINS
    END SUBROUTINE MPi2Pi
    
 !=======================================================================
-   FUNCTION PSF ( Npsf, NumPrimes )
+   FUNCTION PSF ( Npsf, NumPrimes, subtract )
 
     ! This routine factors the number N into its primes.  If any of those
-    ! prime factors is greater than the NumPrimes'th prime, a point is added to N
-    ! and the new number is factored.  This process is repeated until no
-    ! prime factors are greater than the NumPrimes'th prime.
+    ! prime factors is greater than the NumPrimes'th prime, a value of 1
+    ! is added to N and the new number is factored.  This process is 
+    ! repeated until no prime factors are greater than the NumPrimes'th 
+    ! prime.
+    !
+    ! If subract is .true., we will subtract 1 from the value of N instead
+    ! of adding it.
 
     IMPLICIT                 NONE
 
     !Passed variables
-    INTEGER,     INTENT(IN)   :: Npsf                   ! Initial number we're trying to factor.
-    INTEGER,     INTENT(IN)   :: NumPrimes              ! Number of unique primes.
-    INTEGER                   :: PSF                    ! The smallest number at least as large as Npsf, that is the product of small factors when we return.
-
+    INTEGER,         INTENT(IN) :: Npsf                   !< Initial number we're trying to factor.
+    INTEGER,         INTENT(IN) :: NumPrimes              !< Number of unique primes.
+    INTEGER                     :: PSF                    !< The smallest number at least as large as Npsf, that is the product of small factors when we return.
+                                                          !! IF subtract is present and .TRUE., PSF is the largest number not greater than Npsf that is a  product of small factors.
+    LOGICAL,OPTIONAL,INTENT(IN) :: subtract               !< if PRESENT and .TRUE., we will subtract instead of add 1 to the number when looking for the value of PSF to return.
+    
     !Other variables
-    INTEGER                   :: IPR                    ! A counter for the NPrime array
-    INTEGER, PARAMETER        :: NFact = 9              ! The number of prime numbers (the first NFact primes)
-    INTEGER                   :: NP                     ! A temp variable to determine if NPr divides NTR
-    INTEGER                   :: NPr                    ! A small prime number
-    INTEGER                   :: NT                     ! A temp variable to determine if NPr divides NTR: INT( NTR / NPr )
-    INTEGER                   :: NTR                    ! The number we're trying to factor in each iteration
-    INTEGER, PARAMETER        :: NPrime(NFact) = (/ 2, 3, 5, 7, 11, 13, 17, 19, 23 /) ! The first 9 prime numbers
+    INTEGER                     :: sign                   ! +1 or -1 
+    INTEGER                     :: IPR                    ! A counter for the NPrime array
+    INTEGER, PARAMETER          :: NFact = 9              ! The number of prime numbers (the first NFact primes)
+    INTEGER                     :: NP                     ! A temp variable to determine if NPr divides NTR
+    INTEGER                     :: NPr                    ! A small prime number
+    INTEGER                     :: NT                     ! A temp variable to determine if NPr divides NTR: INT( NTR / NPr )
+    INTEGER                     :: NTR                    ! The number we're trying to factor in each iteration
+    INTEGER, PARAMETER          :: NPrime(NFact) = (/ 2, 3, 5, 7, 11, 13, 17, 19, 23 /) ! The first 9 prime numbers
                               
-    LOGICAL                   :: DividesN1(NFact)       ! Does this factor divide NTR-1?
+    LOGICAL                     :: DividesN1(NFact)       ! Does this factor divide NTR-1?
 
 
 
     DividesN1(:) = .FALSE.                              ! We need to check all of the primes the first time through
-
+    
+    sign = 1
+    IF ( PRESENT( subtract ) ) THEN
+       IF (subtract) THEN
+          sign = -1
+       END IF
+    END IF
+    
     PSF = Npsf
 
     DO
@@ -2024,10 +2038,10 @@ CONTAINS
 
        ENDDO ! IPR
 
-           ! Second:  There is at least one prime larger than NPrime(NumPrimes).  Add
+           ! Second:  There is at least one prime larger than NPrime(NumPrimes).  Add or subtract
            !          a point to NTR and factor again.
 
-       PSF = PSF + 1
+       PSF = PSF + sign*1
 
     ENDDO
 
@@ -2936,4 +2950,38 @@ CONTAINS
    END SUBROUTINE Zero2TwoPi   
 !=======================================================================
 
+!=======================================================================
+!> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
+!! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
+!!
+SUBROUTINE IsoparametricCoords( InCoord, posLo, posHi, isopc )
+
+
+   REAL(ReKi),     INTENT(IN   )          :: InCoord(:)                             !< Coordinate values we're interpolating to; (size = number of interpolation dimensions)
+   REAL(ReKi),     INTENT(IN   )          :: posLo(:)                               !< coordinate values associated with Indx_Lo; (size = number of interpolation dimensions)
+   REAL(ReKi),     INTENT(IN   )          :: posHi(:)                               !< coordinate values associated with Indx_Hi; (size = number of interpolation dimensions)
+   REAL(ReKi),     INTENT(  OUT)          :: isopc(:)                               !< isoparametric coordinates; (position within the box)
+
+   ! local variables
+   REAL(ReKi)                             :: dx                                     ! difference between high and low coordinates in the bounding "box"
+   INTEGER(IntKi)                         :: i                                      ! loop counter
+   
+   
+   do i=1,size(isopc)
+      
+      dx = posHi(i) - posLo(i) 
+      if (EqualRealNos(dx, 0.0_ReKi)) then
+         isopc(i) = 1.0_ReKi
+      else
+         isopc(i) = ( 2.0_ReKi*InCoord(i) - posLo(i) - posHi(i) ) / dx
+            ! to verify that we don't extrapolate, make sure this is bound between -1 and 1 (effectively nearest neighbor)
+         isopc(i) = min( 1.0_ReKi, isopc(i) )
+         isopc(i) = max(-1.0_ReKi, isopc(i) )
+      end if
+      
+   end do
+            
+END SUBROUTINE IsoparametricCoords   
+!=======================================================================
+   
 END MODULE NWTC_Num

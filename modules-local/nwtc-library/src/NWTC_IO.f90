@@ -1416,35 +1416,37 @@ CONTAINS
    RETURN
    END SUBROUTINE AllRAry5 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] )
 !=======================================================================
-   SUBROUTINE CheckArgs ( InputFile, ErrStat )
+   SUBROUTINE CheckArgs ( InputFile, ErrStat, Arg2 )
 
 
       ! This subroutine is used to check for command-line arguments.
 
 
       ! Argument declarations:
-   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                      ! Error status; if present, program does not abort on error
+   INTEGER,      INTENT(  OUT),OPTIONAL :: ErrStat                                      ! Error status; if present, program does not abort on error
 
-   CHARACTER(*), INTENT(INOUT)  :: InputFile                                    ! The name of the input file specified on the command line.
-
+   CHARACTER(*), INTENT(INOUT)          :: InputFile                                    ! The name of the input file specified on the command line.
+   CHARACTER(*), INTENT(  OUT),OPTIONAL :: Arg2                                         ! an optional 2nd argument
 
       ! Local declarations:
 
-   INTEGER                      :: IArg                                         ! The argument number.
-   INTEGER                      :: NumArg                                       ! The number of arguments on the command line.
-
-   INTEGER                      :: Error                                        ! Error Status: indicates if there was an error getting an argument.
-
-   CHARACTER(LEN(InputFile))    :: Arg                                          ! A command-line argument.
-
+   INTEGER                              :: IArg                                         ! The argument number.
+   INTEGER                              :: NumArg                                       ! The number of arguments on the command line.
+                                        
+   INTEGER                              :: Error                                        ! Error Status: indicates if there was an error getting an argument.
+   LOGICAL                              :: FirstArg                                     ! flag to determine if it's the first non-switch argument
+   CHARACTER(LEN(InputFile))            :: Arg                                          ! A command-line argument.
+   
 
 
 
       ! Find out how many arguments were entered on the command line.
 
-   NumArg = COMMAND_ARGUMENT_COUNT()
+   NumArg   = COMMAND_ARGUMENT_COUNT()
+   FirstArg = .TRUE.
 
-
+   IF ( PRESENT(Arg2) ) Arg2 = ""
+   
       ! Parse them.
 
    IF ( NumArg .GT. 0 )  THEN
@@ -1480,8 +1482,13 @@ CONTAINS
                END IF
             END IF ! ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )
 
-         ELSE
+         ELSEIF ( FirstArg ) THEN
             InputFile = Arg
+            FirstArg = .FALSE.
+         ELSE   
+            IF ( PRESENT(Arg2) ) THEN
+               Arg2 = Arg
+            END IF
          END IF ! ( Arg(1:1) == SwChar )
 
       END DO ! IArg
