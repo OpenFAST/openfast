@@ -1,5 +1,5 @@
    SUBROUTINE AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,m00,mEta,rho,&
-                                    &A1,A2,A3,A4,A5,A6,A7)
+                                    &A2,A3,A4,A5,A6,A7)
 
    REAL(ReKi),INTENT(IN   ):: uuu(:)
    REAL(ReKi),INTENT(IN   ):: vvv(:)
@@ -8,7 +8,7 @@
    REAL(ReKi),INTENT(IN   ):: m00
    REAL(ReKi),INTENT(IN   ):: mEta(:)
    REAL(ReKi),INTENT(IN   ):: rho(:,:)
-   REAL(ReKi),INTENT(  OUT):: A1(:,:)
+!   REAL(ReKi),INTENT(  OUT):: A1(:,:)
    REAL(ReKi),INTENT(  OUT):: A2(:,:)
    REAL(ReKi),INTENT(  OUT):: A3(:,:)
    REAL(ReKi),INTENT(  OUT):: A4(:,:)
@@ -40,8 +40,8 @@
        A7(i,i) = 1.0D0
    ENDDO
 
-   A1(:,:) = 0.0D0
-   CALL MassMatrix(m00,mEta,rho,A1)
+!   A1(:,:) = 0.0D0
+!   CALL MassMatrix(m00,mEta,rho,A1)
 
    vel(1:3) = vvv(1:3)
    omega(1:3) = vvv(4:6)
