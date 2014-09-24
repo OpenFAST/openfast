@@ -36,7 +36,7 @@ MODULE WAMIT
   ! USE Waves_Types
    USE Conv_Radiation
    USE SS_Radiation
-   USE FFT_Module
+   USE NWTC_FFTPACK
    
    IMPLICIT NONE
    

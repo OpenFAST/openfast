@@ -2,8 +2,6 @@ Source\Conv_Radiation.f90
 Source\Conv_Radiation_Types.f90
 Source\Current.f90
 Source\Current_Types.f90
-Source\FFTMod.f90
-Source\fftpack.f
 Source\HydroDyn.f90
 Source\HydroDyn_Input.f90
 Source\HydroDyn_Output.f90
@@ -17,8 +15,10 @@ Source\WAMIT.f90
 Source\WAMIT_Interp.f90
 Source\WAMIT_Output.f90
 Source\WAMIT_Types.f90
+Source\WAMIT2_Types.f90
 Source\Waves.f90
 Source\Waves_Types.f90
+Source\Waves2_Types.f90
 
 Source\RegistryFiles\Current.txt
 Source\RegistryFiles\Waves.txt

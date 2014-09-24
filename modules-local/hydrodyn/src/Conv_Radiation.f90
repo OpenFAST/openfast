@@ -31,7 +31,7 @@ MODULE Conv_Radiation
 
    USE Conv_Radiation_Types   
    USE NWTC_Library
-   USE FFT_Module
+   USE NWTC_FFTPACK
       
    IMPLICIT NONE
    
@@ -182,7 +182,7 @@ RdtnFrmAM = .FALSE.
          !          Time  = (J-1)*RdtnDT
          !       and therefore:
          !          Omega*Time = (K-1)*(J-1)*RdtnDOmega*RdtnDT
-         !                     = (K-1)*(J-1)*Pi/(NStepRdtn-1) [see FFT_Module]
+         !                     = (K-1)*(J-1)*Pi/(NStepRdtn-1) [see NWTC_FFTPACK]
          !       or:
          !          RdtnDOmega = Pi/((NStepRdtn-1)*RdtnDT)
          !                     = Pi/RdtnTMax

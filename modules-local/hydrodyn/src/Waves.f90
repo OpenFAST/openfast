@@ -31,7 +31,7 @@ MODULE Waves
 
    USE Waves_Types   
    USE NWTC_Library
-   USE FFT_Module
+   USE NWTC_FFTPACK
       
    IMPLICIT NONE
    
@@ -1052,7 +1052,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !          Time  = (J-1)*WaveDT
       !       and therefore:
       !          Omega*Time = (K-1)*(J-1)*WaveDOmega*WaveDT
-      !                     = (K-1)*(J-1)*2*Pi/NStepWave [see FFT_Module]
+      !                     = (K-1)*(J-1)*2*Pi/NStepWave [see NWTC_FFTPACK]
       !       or:
       !          WaveDOmega = 2*Pi/(NStepWave*WaveDT)
       !                     = 2*Pi/WaveTMax
