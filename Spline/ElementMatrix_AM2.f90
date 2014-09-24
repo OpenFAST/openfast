@@ -1,6 +1,6 @@
    SUBROUTINE ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
                                &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&
-                               &ngp,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
+                               &ngp,dt,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
                            
    !-------------------------------------------------------------------------------
    ! This subroutine total element forces and mass matrices
@@ -17,6 +17,7 @@
    REAL(ReKi),INTENT(IN   )    :: gravity(:) ! 
    REAL(ReKi),INTENT(IN   )    :: DistrLoad_GL(:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN   )    :: DistrLoad_GL0(:,:) ! Nodal material properties for each element
+   REAL(DbKi),INTENT(IN   )    :: dt ! Nodal material properties for each element
    REAL(ReKi),INTENT(  OUT)    :: elf1(:)  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elf2(:)  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elm11(:,:) ! Total element mass matrix
@@ -67,7 +68,7 @@
    REAL(ReKi)                  :: Fb0(6)
    REAL(ReKi)                  :: Mi(6,6)
    REAL(ReKi)                  :: Mi0(6,6)
-   REAL(ReKi)                  :: A1(6,6)
+!   REAL(ReKi)                  :: A1(6,6)
    REAL(ReKi)                  :: A2(6,6)
    REAL(ReKi)                  :: A3(6,6)
    REAL(ReKi)                  :: A4(6,6)
@@ -109,6 +110,7 @@
    w_temp = 0.0D0
 
    elf1(:) = 0.0D0
+   elf2(:) = 0.0D0
    elm11(:,:) = 0.0D0
    elm12(:,:) = 0.0D0
    elm21(:,:) = 0.0D0
@@ -148,7 +150,7 @@
        CALL GyroForce(mEta0,rho0,uuu0,vvv0,Fb0)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        CALL GravityLoads(mmm,mEta0,gravity,Fg0)
-       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,mmm,mEta,rho,A1,A2,A3,A4,A5,A6,A7)
+       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,mmm,mEta,rho,A2,A3,A4,A5,A6,A7)
 !       Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
        Fd(:) = dt*(Fd + Fd0) + &
               &MATMUL(Mi,vvv-vvv0) + &
@@ -179,7 +181,7 @@
                                                  &hpx(i)*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
                                                  &hpx(i)*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
-                                                 &hhx(i)*(A1(m,n)+Mi0(m,n)+dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
+                                                 &hhx(i)*(Mi(m,n)+Mi0(m,n)+dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
                    ENDDO
                ENDDO
            ENDDO
