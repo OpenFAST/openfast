@@ -18,8 +18,8 @@
 !    
 !**********************************************************************************************************************************
 ! File last committed: $Date: 2014-05-27 09:58:29 -0600 (Tue, 27 May 2014) $
-! (File) Revision #: $Rev: 398 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/Morison_Output.f90 $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !**********************************************************************************************************************************
 MODULE Morison_Output
 

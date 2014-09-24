@@ -10,8 +10,8 @@
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
 # File last committed: $Date: 2014-06-17 10:14:47 -0600 (Tue, 17 Jun 2014) $
-# (File) Revision #: $Rev: 423 $
-# URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/WAMIT.txt $
+# (File) Revision #: $Rev$
+# URL: $HeadURL$
 ###################################################################################################################################
 
 # ...... Include files (definitions from NWTC Library) ............................................................................

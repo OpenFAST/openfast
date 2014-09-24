@@ -11,8 +11,8 @@
 # column 10: Units
 ###################################################################################################################################
 # File last committed: $Date: 2014-05-27 21:42:13 -0600 (Tue, 27 May 2014) $
-# (File) Revision #: $Rev: 400 $
-# URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/SS_Radiation.txt $
+# (File) Revision #: $Rev$
+# URL: $HeadURL$
 ###################################################################################################################################
 
 typedef SS_Radiation/SS_Rad   InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file" -

@@ -24,8 +24,8 @@
 !    
 !**********************************************************************************************************************************
 ! File last committed: $Date: 2014-06-30 13:54:09 -0600 (Mon, 30 Jun 2014) $
-! (File) Revision #: $Rev: 473 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/HydroDyn.f90 $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !**********************************************************************************************************************************
 MODULE HydroDyn
 

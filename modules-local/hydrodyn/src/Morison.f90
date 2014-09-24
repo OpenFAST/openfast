@@ -23,8 +23,8 @@
 !    
 !**********************************************************************************************************************************
 ! File last committed: $Date: 2014-06-30 16:21:28 -0600 (Mon, 30 Jun 2014) $
-! (File) Revision #: $Rev: 474 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/Morison.f90 $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !**********************************************************************************************************************************
 MODULE Morison
    USE Waves

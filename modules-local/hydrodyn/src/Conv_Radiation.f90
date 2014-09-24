@@ -24,8 +24,8 @@
 !    
 !**********************************************************************************************************************************
 ! File last committed: $Date: 2014-05-27 15:11:50 -0600 (Tue, 27 May 2014) $
-! (File) Revision #: $Rev: 399 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/Conv_Radiation.f90 $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !**********************************************************************************************************************************
 MODULE Conv_Radiation
 
