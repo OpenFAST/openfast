@@ -38,7 +38,7 @@ Module SubDyn
    !       this will add additional matrices to the SubDyn summary file.
    !............................
 
-   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.01.00a-rrd', '30-Jun-2014' )
+   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.01.00b-bjj', '3-Sept-2014' )
       
    ! ..... Public Subroutines ...................................................................................................
 
@@ -3512,67 +3512,6 @@ CONTAINS
   
 END SUBROUTINE EigenSolve
 !------------------------------------------------------------------------------------------------------
-#ifdef SD_OLD_CODE
-!------------------------------------------------------------------------------------------------------
-SUBROUTINE ReduceKMdofs_Old(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
-!This routine calculates Kred from K after removing constrained node DOFs from the full M and K matrices
-!Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
-
-   IMPLICIT NONE
-   
-   TYPE(SD_InitType),      INTENT(  in)  :: Init  
-   TYPE(SD_ParameterType), INTENT(  in)  :: p  
-   
-   INTEGER,                INTENT (IN)   :: TDOF            ! Size of matrix K (total DOFs)                              
-   REAL(ReKi),             INTENT(IN)    :: K(TDOF, TDOF)   ! full matrix
-   REAL(LAKi),ALLOCATABLE, INTENT(OUT)   :: Kred(:,:)       ! reduced matrix
-   INTEGER(IntKi),         INTENT( OUT)  :: ErrStat         ! Error status of the operation
-   CHARACTER(*),           INTENT( OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
-   !locals
-   INTEGER,ALLOCATABLE                   :: idx(:)                         !aux vector of indices for constrained DOF
-   REAL(ReKi)                            :: C(TDOF, TDOF), C1(TDOF, TDOF)  !aux matrices
-   INTEGER                               :: I, L  !counters
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''    
-  
-   ALLOCATE(idx(p%NReact*6), STAT = ErrStat )  !it contains indices of rows to be eliminated (row idx=column idx as well)
-   idx=0 !initialize
-   L=0 !initialize
-   DO I = 1, p%NReact*6  !Cycle on reaction DOFs
-      IF (Init%BCs(I, 2) == 1) THEN
-            idx(I)=Init%BCs(I, 1) !row/col index to eliminate
-            L=L+1 !number of DOFs to eliminate
-      ENDIF    
-   ENDDO
-  
-   ALLOCATE(Kred(TDOF-L,TDOF-L), STAT = ErrStat )  !reduced matrix
-  
-   ! The next is a trick to drop unwanted rows and cols from K
-   C=0 !INitialize
-   DO I=1,L
-      C(idx(I),:)=1
-      C(:,idx(I))=1
-   ENDDO
-  
-  C1=NaN !INitialize
-   WHERE (C.NE.1)
-      C1=K
-   ENDWHERE  
-  
-   Kred=reshape(PACK(C1,.NOT.ISNAN(C1)), (/TDOF-L,TDOF-L/))
-  
-  
-DEALLOCATE(idx)
-
-!bjj: ISNAN is non-standard Fortran. Either call IS_Nan from SysSubs,  or use a different trick to elimate rows/columns 
-!  also, I think that using WHERE puts a lot of stuff on the stack; I've had issues with it in TurbSim. If you replace it with a DO loop, you may be able to reduce stack overflow issues.
-  
-  
-END SUBROUTINE ReduceKMdofs_Old
-!------------------------------------------------------------------------------------------------------
-#endif
-!------------------------------------------------------------------------------------------------------
 SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
 !This routine calculates Kred from K after removing consstrained node DOFs from the full M and K matrices
 !Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
@@ -3593,8 +3532,9 @@ SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    
    !locals
-   INTEGER                               :: I, J, Jj       ! counters into full or reduced matrix
+   INTEGER                               :: I, J           ! counters into full or reduced matrix
    INTEGER                               :: L              ! number of DOFs to eliminate 
+
    INTEGER, ALLOCATABLE                  :: idx(:)         ! vector to map reduced matrix to full matrix
    INTEGER                               :: NReactDOFs
    INTEGER                               :: DOF_reduced
@@ -3611,14 +3551,27 @@ SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
       ErrMsg = 'ReduceKMdofs:invalid matrix sizes.'
       RETURN
    END IF
+  
+   CALL AllocAry(idx,  TDOF, 'idx',  ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'ReduceKMdofs')
+      IF (ErrStat >= AbortErrLev) THEN
+         IF (ALLOCATED(idx)) DEALLOCATE(idx)
+         RETURN
+      END IF   
    
    !........
    ! Calculate how many rows/columns need to be eliminated:
    !........
+   DO I = 1, TDOF       
+      idx(I) = I
+   END DO
+         
    L = 0
-   DO I = 1, NReactDOFs  !Cycle on reaction DOFs
+   DO I = 1, NReactDOFs  !Cycle on reaction DOFs      
       IF (Init%BCs(I, 2) == 1) THEN
          L=L+1 !number of DOFs to eliminate
+         
+         idx( Init%BCs(I, 1) ) = 0 ! Eliminate this one
       END IF    
    END DO   
    
@@ -3626,28 +3579,24 @@ SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
    ! Allocate the output matrix and the index mapping array
    !........   
    DOF_reduced = TDOF-L   
-   CALL AllocAry(Kred, DOF_reduced, DOF_reduced, 'Kred', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'ReduceKMdofs')
-   CALL AllocAry(idx,  DOF_reduced,              'idx',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'ReduceKMdofs')
-   
-   IF (ErrStat >= AbortErrLev) THEN
-      IF (ALLOCATED(idx)) DEALLOCATE(idx)
-      RETURN
-   END IF
+   CALL AllocAry(Kred, DOF_reduced, DOF_reduced, 'Kred', ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'ReduceKMdofs')
+      IF (ErrStat >= AbortErrLev) THEN
+         IF (ALLOCATED(idx)) DEALLOCATE(idx)
+         RETURN
+      END IF
    
    !........
    ! set the indices we want to keep (i.e., a mapping from reduced to full matrix)
    !........
-   Jj = 0
-   DO J = 1, NReactDOFs  !Cycle on reaction DOFs      
-      IF (Init%BCs(J, 2) /= 1) THEN !this is a row/column to keep
-         Jj = Jj + 1
-         idx(Jj) = Init%BCs(J, 2)
-      END IF ! row/column of reduced matrix
-   END DO ! row/column of full matrix
-   DO J=NReactDOFs+1,TDOF ! The rest of the matrix (if NReactDOFs < TDOF)
-      Jj = Jj + 1
-      idx(Jj) = J 
+   J  = 1   
+   DO I=1,TDOF
+      
+      idx(J) = idx(I)      
+      IF ( idx(J) /= 0 ) J = J + 1         
+                                
    END DO
+      
          
    !........
    ! Remove rows and columns from every row/column in full matrix where Init%BC(:,2) == 1,
@@ -3666,7 +3615,6 @@ SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
    DEALLOCATE(idx)
    
 END SUBROUTINE ReduceKMdofs
-!------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------
 SUBROUTINE UnReduceVRdofs(VRred,VR,rDOF,rModes, Init,p, ErrStat, ErrMsg )
 !This routine calculates augments VRred to VR for the constrained DOFs, somehow reversing what ReducedKM did for matrices
