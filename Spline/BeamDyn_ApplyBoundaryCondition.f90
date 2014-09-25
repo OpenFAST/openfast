@@ -5,8 +5,8 @@
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    
-   REAL(ReKi) :: temp_R(3,3)
-   REAL(ReKi) :: temp_rot(3)
+   REAL(ReKi)                                   :: temp_R(3,3)
+   REAL(ReKi)                                   :: temp_rot(3)
 
 
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)

@@ -21,7 +21,7 @@
    temp22= temp0
 
    Bb(:,:) = 0.0D0
-   temp33(:,:) = MATMUL(aa,TRANSPOSE(cc))
+   temp33(:,:) = OuterProduct(aa,cc)!MATMUL(aa,TRANSPOSE(cc))
 
    Bb(:,:) = temp0 * temp33(:,:) + &
             &temp1 * MATMUL(Tilde(cc),temp33) + &
