@@ -11,7 +11,9 @@
    REAL(ReKi),INTENT(IN   )    :: Nuuu0(:) ! Nodal displacement of Mass 1 for each element
    REAL(ReKi),INTENT(IN   )    :: Nrr0(:) ! Nodal rotation parameters for initial position
    REAL(ReKi),INTENT(IN   )    :: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),INTENT(IN   )    :: Nrrr0(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),INTENT(IN   )    :: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(ReKi),INTENT(IN   )    :: Nvvv0(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),INTENT(IN   )    :: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN   )    :: gravity(:) ! 
@@ -69,12 +71,22 @@
    REAL(ReKi)                  :: Mi(6,6)
    REAL(ReKi)                  :: Mi0(6,6)
 !   REAL(ReKi)                  :: A1(6,6)
+   REAL(ReKi)                  :: F1(6)
    REAL(ReKi)                  :: A2(6,6)
    REAL(ReKi)                  :: A3(6,6)
    REAL(ReKi)                  :: A4(6,6)
    REAL(ReKi)                  :: A5(6,6)
    REAL(ReKi)                  :: A6(6,6)
    REAL(ReKi)                  :: A7(6,6)
+   REAL(ReKi)                  :: Oe(6,6)
+   REAL(ReKi)                  :: Oe0(6,6)
+   REAL(ReKi)                  :: Pe(6,6)
+   REAL(ReKi)                  :: Pe0(6,6)
+   REAL(ReKi)                  :: Qe(6,6)
+   REAL(ReKi)                  :: Qe0(6,6)
+   REAL(ReKi)                  :: temp_H(3,3)
+   REAL(ReKi)                  :: temp_H0(3,3)
+   REAL(ReKi)                  :: uup0(3)
 
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
@@ -176,10 +188,10 @@
                        elm11(temp_id1,temp_id2) = elm11(temp_id1,temp_id2) + hhx(i)*A6(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm12(temp_id1,temp_id2) = elm12(temp_id1,temp_id2) - dt* hhx(i)*A7(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
-                                                 &hhx(i)*(A2(m,n)-A3(m,n+dt*A5(m,n)+Qe(m,n))*hhx(j)*Jacobian*gw(igp) + &
-                                                 &hhx(i)*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                 &hpx(i)*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                 &hpx(i)*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
+                                                 &hhx(i)*(A2(m,n)-A3(m,n)+dt*A5(m,n)+dt*Qe(m,n))*hhx(j)*Jacobian*gw(igp) + &
+                                                 &hhx(i)*dt*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*dt*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*dt*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
                                                  &hhx(i)*(Mi(m,n)+Mi0(m,n)+dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
                    ENDDO

@@ -58,6 +58,7 @@ typedef      ^            ^       ^     node_total  - - -  "Total number of node
 typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs" -
 typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
+typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 # ..... Inputs
 # ....................................................................................................................

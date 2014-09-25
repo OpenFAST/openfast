@@ -33,6 +33,8 @@
    REAL(ReKi)                      :: sol(dof_total*2)
    REAL(ReKi)                      :: d
    REAL(ReKi)                      :: temp
+   REAL(ReKi)                      :: Enorm
+   REAL(ReKi)                      :: Eref
    REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
    INTEGER(IntKi)                  :: indx(dof_total-12)
    INTEGER(IntKi)                  :: temp_id
@@ -46,9 +48,9 @@
    DO i=1,niter
        RHS(:) = 0.0D0
        MassM(:,:) = 0.0D0
-
+WRITE(*,*) "TEST"
        CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
-                                      &elem_total,node_elem,dof_node,ngp,RHS,MassM)
+                                      &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
 
        DO j=1,node_total
            temp_id = (j-1)*dof_node
@@ -75,7 +77,6 @@
 
        temp = Norm(feqv)
        sol(:) = 0.0D0
-       ui_temp(:) = 0.0D0
        DO j=1,dof_total-6
            sol(j+6) = sol_temp(j)
            sol(j+dof_total+6) = sol_temp(j+dof_total)

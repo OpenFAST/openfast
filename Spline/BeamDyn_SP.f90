@@ -89,6 +89,16 @@ INCLUDE 'GenerateStaticElement_Force.f90'
 INCLUDE 'StaticSolution_Force.f90'
 INCLUDE 'ElementMatrixStatic_Force.f90'
 
+INCLUDE 'CrvMatrixB.f90'
+INCLUDE 'AssembleStiffK_AM2.f90'
+INCLUDE 'AssembleRHS_AM2.f90'
+INCLUDE 'UpdateConfiguration_AM2.f90'
+INCLUDE 'AM2LinearizationMatrix.f90'
+INCLUDE 'ElementMatrix_AM2.f90'
+INCLUDE 'GenerateDynamicElement_AM2.f90'
+INCLUDE 'DynamicSolution_AM2.f90'
+INCLUDE 'BeamDyn_AM2.f90'
+
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
@@ -107,8 +117,7 @@ INCLUDE 'ElementMatrixStatic_Force.f90'
                                                                     !    only the output mesh is initialized)
    REAL(DbKi),                        INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
                                                                     !   (1) Mod1_UpdateStates() is called in loose coupling &
-                                                                    !   (2) Mod1_UpdateDiscState() is called in tight coupling.
-                                                                    !   Input is the suggested time from the glue code;
+                                                                    !   (2) Mod1_UpdateDiscState() is called in tight coupling.  !   Input is the suggested time from the glue code;
                                                                     !   Output is the actual coupling interval that will be used
                                                                     !   by the glue code.
    TYPE(BD_InitOutputType),           INTENT(  OUT)  :: InitOut     ! Output for initialization routine
@@ -363,6 +372,18 @@ INCLUDE 'ElementMatrixStatic_Force.f90'
    x%q = 0.0D0
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
    x%dqdt = 0.0D0
+
+   p%niter = 20
+
+! For AM2, initial Condition
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
+           temp_id2= (j-1)*p%dof_node
+           x%dqdt(temp_id+3) = p%uuN0(temp_id2+1,i)*(3.1415926D+00/3.0D0)
+       ENDDO
+   ENDDO
+!END initial condition
 
    ! Define system output initializations (set up mesh) here:
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
@@ -639,7 +660,8 @@ INCLUDE 'ElementMatrixStatic_Force.f90'
    ErrMsg  = "" 
 
    IF(p%analysis_type == 2) THEN
-       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        DO i=2,p%node_total
            temp_id = (i-1)*6
            temp_pp(:) = 0.0D0
