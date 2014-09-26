@@ -84,10 +84,13 @@ CertTest\NREL_Results\Test_002.HD.out
 CertTest\NREL_Results\Test_002.HD.sum
 
 Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_01_00.m  
+Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_02_00.m  
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_00_03.m  
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_00_05.m  
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_01_00.m  
+Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_02_00.m  
 Utilities\Simulation Toolbox\ConvertFASTversions\TemplateFiles\HDv2.01.00.dat  
+Utilities\Simulation Toolbox\ConvertFASTversions\TemplateFiles\HDv2.02.00.dat  
 Utilities\Simulation Toolbox\FAST2MATLAB\HD2Matlab.m  
 Utilities\Simulation Toolbox\FAST2MATLAB\ImportFastOut.m  
 Utilities\Simulation Toolbox\FAST2MATLAB\ParseFASTInputLine.m  

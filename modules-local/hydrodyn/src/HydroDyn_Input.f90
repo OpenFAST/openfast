@@ -31,6 +31,8 @@ MODULE HydroDyn_Input
    USE                              Waves
    USE                              Morison
    USE                              WAMIT_Output
+   USE                              WAMIT2_Output
+   USE                              Waves2_Output
    USE                              Morison_Output
    IMPLICIT                         NONE
 
@@ -631,9 +633,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       END IF
 
 
-      ! WvMnDrift      - Second order waves -- mean drift        [Flag -- only one of WvMnDrift or WvDiffQTF can be true]
+      ! WvDiffQTFF     - Second order waves -- difference forces
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Waves2%WvMnDrift, 'WvMnDrift', 'Mean drift second order forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%Waves2%WvDiffQTFF, 'WvDiffQTFF', 'Full difference QTF second order kinematic forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -641,19 +643,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       END IF
 
 
-      ! WvDiffQTF      - Second order waves -- difference forces [Flag -- only one of WvMnDrift or WvDiffQTF can be true]
+      ! WvSumQTFF      - Second order waves -- sum forces
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Waves2%WvDiffQTF, 'WvDiffQTF', 'Full difference QTF second order forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
-      ! WvSumQTF       - Second order waves -- sum forces
-
-   CALL ReadVar ( UnIn, FileName, InitInp%Waves2%WvSumQTF, 'WvSumQTF', 'Full sum QTF  second order forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%Waves2%WvSumQTFF, 'WvSumQTFF', 'Full sum QTF  second order kinematic forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -2314,10 +2306,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    LOGICAL, ALLOCATABLE                             :: foundMask(:)
    INTEGER                                          :: WaveModIn
    
+   INTEGER(IntKi)                                   :: ErrStat2
+   CHARACTER(1024)                                  :: ErrMsg2
+
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
+   ErrStat2 = ErrID_None
    ErrMsg  = ""    
+   ErrMsg2  = ""
       
      
       !-------------------------------------------------------------------------
@@ -2350,7 +2347,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    
    !IF ( .NOT. EqualRealNos(InitInp%Morison%MSL2SWL, 0.0_ReKi) ) THEN  !TODO  Alter this check when we support MSL2SWL
    !   CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0. Future versions of HydroDyn will once again support any value of MSL2SWL.'
-   !   ErrStat = ErrID_Fatal         
    !   RETURN
    !END IF
       
@@ -2361,8 +2357,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       IF ( InitInp%Waves%WaveModChr(1:2) == '1P' )  THEN                     ! The user wants to specify the phase in place of a random phase
 
-         READ (InitInp%Waves%WaveModChr(3:),*,IOSTAT=ErrStat)  InitInp%Waves%WavePhase
-         IF ( ErrStat /= ErrID_None ) THEN
+         READ (InitInp%Waves%WaveModChr(3:),*,IOSTAT=ErrStat2 )  InitInp%Waves%WavePhase
+         IF ( ErrStat2 /= ErrID_None ) THEN
             CALL CheckIOS ( ErrStat, "", 'WavePhase', NumType, .TRUE. )
             RETURN
          END IF
@@ -2377,9 +2373,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    ELSE
          ! The line below only works for 1 digit reads
-      READ( InitInp%Waves%WaveModChr, *, IOSTAT=ErrStat ) InitInp%Waves%WaveMod
+      READ( InitInp%Waves%WaveModChr, *, IOSTAT=ErrStat2 ) InitInp%Waves%WaveMod
       WaveModIn               = InitInp%Waves%WaveMod
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          CALL CheckIOS ( ErrStat, "", 'WaveMod', NumType, .TRUE. )
          RETURN
       END IF
@@ -2396,6 +2392,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       IF ( InitInp%HasWAMIT  ) THEN
          CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, or 4.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
+!ADP: This seems like a strange test on ErrStat...
       ELSE IF ( ErrStat /= ErrID_None .OR. WaveModIn /= 5)  THEN
          CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
@@ -2520,9 +2517,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ELSE                                   ! The input must have been specified numerically.
 
-         READ (InitInp%Waves%WavePkShpChr,*,IOSTAT=ErrStat)  InitInp%Waves%WavePkShp
+         READ (InitInp%Waves%WavePkShpChr,*,IOSTAT=ErrStat2)  InitInp%Waves%WavePkShp
 
-         IF ( ErrStat /= ErrID_None ) THEN
+         IF ( ErrStat2 /= ErrID_None ) THEN
             CALL CheckIOS ( ErrStat, "", 'WavePkShp', NumType, .TRUE. )
             RETURN
          END IF
@@ -2563,6 +2560,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    END IF
    
    
+        ! Copy over the first order frequency limits to the WAMIT2 module which needs them.
+   InitInp%WAMIT2%WvLowCOff  = InitInp%Waves%WvLowCOff
+   InitInp%WAMIT2%WvHiCOff   = InitInp%Waves%WvHiCOff
+
+
       ! WaveDir - Wave heading direction.
 
    IF ( ( InitInp%Waves%WaveMod > 0 ) .AND. ( InitInp%Waves%WaveMod /= 5 ) )  THEN   ! .TRUE if we have incident waves, but not GH Bladed wave data.
@@ -2618,11 +2620,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          RETURN
       ENDIF
 
-!FIXME:  These messages never get reported to the driver code.  Removing this section until that is fixed.  This is checked again in Waves module.
-!      IF ( MODULO( InitInp%Waves%WaveNDir, 2_IntKi) == 0_IntKi ) THEN
-!         InitInp%Waves%WaveNDir  = InitInp%Waves%WaveNDir + 1 
-!         CALL SetErrStat( ErrID_Warn,'WaveNDir must be odd.  Changing the value to '//Num2LStr(InitInp%Waves%WaveNDir),ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-!      ENDIF
+         ! Check that the value for WaveNDir is odd
+      IF ( MODULO( InitInp%Waves%WaveNDir, 2_IntKi) == 0_IntKi ) THEN
+         InitInp%Waves%WaveNDir  = InitInp%Waves%WaveNDir + 1
+         CALL SetErrStat( ErrID_Warn,'WaveNDir must be odd.  Changing the value to '//Num2LStr(InitInp%Waves%WaveNDir),ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+      ENDIF
 
          ! Now check that the WaveDirRange is less than 360 degrees (not sure why we would want that)
       IF ( InitInp%Waves%WaveDirRange > 360.0_ReKi ) THEN
@@ -2682,17 +2684,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! Check 2nd Order Waves section
       !-------------------------------------------------------------------------
 
-      !FIXME: Remove this when Waves2 is developed fully
+!      !FIXME: Remove this when Waves2 is developed fully
       ! For this release, we are not permitting any of the Waves2 items to be set to true.
-   IF ( InitInp%Waves2%WvMnDrift .OR. InitInp%Waves2%WvDiffQTF .OR. InitInp%Waves2%WvSumQTF ) THEN
+   IF ( InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
       CALL SetErrStat( ErrID_Fatal,'The Waves2 module is currently disabled in this release.  Future versions will support Waves2.',&
                         ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-      RETURN
-   END IF
-
-      ! Check that only one of the WvMnDrift or WvDiffQTF flags is set to true, not both
-   IF ( InitInp%Waves2%WvMnDrift .AND. InitInp%Waves2%WvDiffQTF ) THEN
-      CALL SetErrStat( ErrID_Fatal,'Only one of WvMnDrift or WvDiffQTF may be set to TRUE.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
       RETURN
    END IF
 
@@ -2785,10 +2781,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ELSE                                   ! The input must have been specified numerically.
 
-         READ (InitInp%Current%CurrSSDirChr,*,IOSTAT=ErrStat)  InitInp%Current%CurrSSDir
-         CALL CheckIOS ( ErrStat, "", 'CurrSSDir', NumType, .TRUE. )
+         READ (InitInp%Current%CurrSSDirChr,*,IOSTAT=ErrStat2)  InitInp%Current%CurrSSDir
+         CALL CheckIOS ( ErrStat2, "", 'CurrSSDir', NumType, .TRUE. )
 
-         IF ( ErrStat /= ErrID_None ) THEN
+         IF ( ErrStat2 /= ErrID_None ) THEN
             RETURN
          END IF
 
@@ -2904,6 +2900,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%WAMIT2%WAMITFile   = InitInp%WAMIT%WAMITFile
       END IF
       
+         ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
+         ! can only use uni-directional waves.
+      InitInp%WAMIT2%WaveMultiDir = InitInp%Waves%WaveMultiDir
+
    ELSE
       InitInp%WAMIT%WAMITFile    = ""
       InitInp%WAMIT2%WAMITFile   = ""     
@@ -2916,6 +2916,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( InitInp%HasWAMIT ) THEN
 
+      InitInp%WAMIT2%WAMITULEN = InitInp%WAMIT%WAMITULEN    ! Copy to the WAMIT2 module info
       IF ( InitInp%WAMIT%WAMITULEN < 0.0 ) THEN
          CALL SetErrStat( ErrID_Fatal,'WAMITULEN must be positive.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
@@ -2923,6 +2924,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    ELSE
 
       InitInp%WAMIT%WAMITULEN = 1.0
+      InitInp%WAMIT2%WAMITULEN = 1.0
 
    END IF
 
@@ -2971,10 +2973,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ELSE                                   ! The input must have been specified numerically.
 
-         READ (InitInp%WAMIT%Conv_Rdtn%RdtnDTChr,*,IOSTAT=ErrStat)  InitInp%WAMIT%Conv_Rdtn%RdtnDT
-         CALL CheckIOS ( ErrStat, "", 'RdtnDT', NumType, .TRUE. )
+         READ (InitInp%WAMIT%Conv_Rdtn%RdtnDTChr,*,IOSTAT=ErrStat2)  InitInp%WAMIT%Conv_Rdtn%RdtnDT
+         CALL CheckIOS ( ErrStat2, "", 'RdtnDT', NumType, .TRUE. )
 
-         IF ( ErrStat /= ErrID_None ) THEN
+         IF ( ErrStat2 /= ErrID_None ) THEN
             CALL SetErrStat( ErrID_Fatal,'RdtnDT must be numerical if not set to DEFAULT.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
             RETURN
          ENDIF 
@@ -2996,14 +2998,16 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    ! Data section for Floating platform force flags
    !-------------------------------------------------------------------------------------------------
 
+!FIXME: ADP -- the error handling in this section is broken.
+
    ! If DEFAULT was requested, then the required value has already been set by the calling program
    IF ( TRIM(InitInp%PtfmSgFChr) /= 'DEFAULT' )  THEN
 
-      READ (InitInp%PtfmSgFChr,*,IOSTAT=ErrStat)  InitInp%PtfmSgF
+      READ (InitInp%PtfmSgFChr,*,IOSTAT=ErrStat2)  InitInp%PtfmSgF
 
-      CALL CheckIOS ( ErrStat, "", 'PtfmSgF', NumType, .TRUE. )
+      CALL CheckIOS ( ErrStat2, "", 'PtfmSgF', NumType, .TRUE. )
 
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          RETURN
       END IF
 
@@ -3011,11 +3015,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( TRIM(InitInp%PtfmSwFChr) /= 'DEFAULT' )  THEN
 
-      READ (InitInp%PtfmSwFChr,*,IOSTAT=ErrStat)  InitInp%PtfmSwF
+      READ (InitInp%PtfmSwFChr,*,IOSTAT=ErrStat2)  InitInp%PtfmSwF
 
-      CALL CheckIOS ( ErrStat, "", 'PtfmSwF', NumType, .TRUE. )
+      CALL CheckIOS ( ErrStat2, "", 'PtfmSwF', NumType, .TRUE. )
 
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          RETURN
       END IF
 
@@ -3023,11 +3027,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( TRIM(InitInp%PtfmHvFChr) /= 'DEFAULT' )  THEN
 
-      READ (InitInp%PtfmHvFChr,*,IOSTAT=ErrStat)  InitInp%PtfmHvF
+      READ (InitInp%PtfmHvFChr,*,IOSTAT=ErrStat2)  InitInp%PtfmHvF
 
-      CALL CheckIOS ( ErrStat, "", 'PtfmHvF', NumType, .TRUE. )
+      CALL CheckIOS ( ErrStat2, "", 'PtfmHvF', NumType, .TRUE. )
 
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          RETURN
       END IF
 
@@ -3035,11 +3039,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( TRIM(InitInp%PtfmRFChr) /= 'DEFAULT' )  THEN
 
-      READ (InitInp%PtfmRFChr,*,IOSTAT=ErrStat)  InitInp%PtfmRF
+      READ (InitInp%PtfmRFChr,*,IOSTAT=ErrStat2)  InitInp%PtfmRF
 
-      CALL CheckIOS ( ErrStat, "", 'PtfmRF', NumType, .TRUE. )
+      CALL CheckIOS ( ErrStat2, "", 'PtfmRF', NumType, .TRUE. )
 
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          RETURN
       END IF
 
@@ -3047,11 +3051,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( TRIM(InitInp%PtfmPFChr) /= 'DEFAULT' )  THEN
 
-      READ (InitInp%PtfmPFChr,*,IOSTAT=ErrStat)  InitInp%PtfmPF
+      READ (InitInp%PtfmPFChr,*,IOSTAT=ErrStat2)  InitInp%PtfmPF
 
-      CALL CheckIOS ( ErrStat, "", 'PtfmPF', NumType, .TRUE. )
+      CALL CheckIOS ( ErrStat2, "", 'PtfmPF', NumType, .TRUE. )
 
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          RETURN
       END IF
 
@@ -3059,11 +3063,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( TRIM(InitInp%PtfmYFChr) /= 'DEFAULT' )  THEN
 
-      READ (InitInp%PtfmYFChr,*,IOSTAT=ErrStat)  InitInp%PtfmYF
+      READ (InitInp%PtfmYFChr,*,IOSTAT=ErrStat2)  InitInp%PtfmYF
 
-      CALL CheckIOS ( ErrStat, "", 'PtfmYF', NumType, .TRUE. )
+      CALL CheckIOS ( ErrStat2, "", 'PtfmYF', NumType, .TRUE. )
 
-      IF ( ErrStat /= ErrID_None ) THEN
+      IF ( ErrStat2 /= ErrID_None ) THEN
          RETURN
       END IF
 
@@ -3076,20 +3080,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       CALL SetErrStat( ErrID_Fatal,'All platform DOF parameters must be set to TRUE.  Future versions of HydroDyn will support values of TRUE,  FALSE, or DEFAULT.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
       RETURN
    END IF
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Second order Forces Flags (Waves2 Module)
-   !-------------------------------------------------------------------------------------------------
-   !  We don't have separate inputs for the second order force component flags, rather they are taken
-   !  from the platform section in the input file and copied into the InitInp%Waves2 derived type.
-
-   InitInp%Waves2%PtfmSgF2    =  InitInp%PtfmSgF
-   InitInp%Waves2%PtfmSwF2    =  InitInp%PtfmSwF
-   InitInp%Waves2%PtfmHvF2    =  InitInp%PtfmHvF
-   InitInp%Waves2%PtfmRF2     =  InitInp%PtfmRF
-   InitInp%Waves2%PtfmPF2     =  InitInp%PtfmPF
-   InitInp%Waves2%PtfmYF2     =  InitInp%PtfmYF
 
 
 
@@ -3114,13 +3104,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    ! Second order Forces due to Waves section (WAMIT2 Module)
    !-------------------------------------------------------------------------------------------------
 
-     !FIXME: For this release, we are not allowing 2nd order WAMIT (WAMIT2) usage.
-   IF ( InitInp%WAMIT2%MnDrift /= 0 .OR. InitInp%WAMIT2%NewmanApp /= 0 .OR. InitInp%WAMIT2%DiffQTF /= 0 .OR. InitInp%WAMIT2%SumQTF /= 0 ) THEN
-      CALL SetErrStat(ErrID_Fatal, 'All platform 2nd-order Floating Platform Forces must be turned off. '// & 
-                  'Future versions of HydroDyn will support their use.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-      RETURN
-   END IF
-   
    
       ! Check that we only specified one of MnDrift, NewmanApp, or DiffQTF
       !        (compared pairwise -- if any two are both true, we have a problem)
@@ -3186,8 +3169,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    END IF
 
 
-      ! Check that the min / max diff frequencies make sense if using DiffQTF
-   IF ( InitInp%WAMIT2%DiffQTF /= 0 ) THEN
+      ! Check that the min / max diff frequencies make sense if using any DiffQTF method
+   IF ( InitInp%WAMIT2%DiffQTF /= 0 .OR. InitInp%WAMIT2%MnDrift /= 0 .OR. InitInp%WAMIT2%NewmanApp /=0 ) THEN
       IF ( ( InitInp%WAMIT2%WvHiCOffD < InitInp%WAMIT2%WvLowCOffD ) .OR. ( InitInp%WAMIT2%WvLowCOffD < 0.0 ) ) THEN
          CALL SetErrStat( ErrID_Fatal,'WvHiCOffD must be larger than WvLowCOffD. Both must be positive.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
@@ -3816,11 +3799,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
          IF ( TRIM(InitInp%Morison%FilledGroups(I)%FillDensChr) /= 'DEFAULT' )  THEN
 
-            READ (InitInp%Morison%FilledGroups(I)%FillDensChr,*,IOSTAT=ErrStat)  InitInp%Morison%FilledGroups(I)%FillDens
+            READ (InitInp%Morison%FilledGroups(I)%FillDensChr,*,IOSTAT=ErrStat2)  InitInp%Morison%FilledGroups(I)%FillDens
 
-            CALL CheckIOS ( ErrStat, "", 'FillDens', NumType, .TRUE. )
+            CALL CheckIOS ( ErrStat2, "", 'FillDens', NumType, .TRUE. )
 
-            IF ( ErrStat /= ErrID_None ) THEN
+!FIXME: CALL SetErrStat
+            IF ( ErrStat2 /= ErrID_None ) THEN
                RETURN
             END IF
          ELSE
@@ -4000,24 +3984,38 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! First we need to extract module-specific output lists from the user-input list.
       ! Any unidentified channels will be attached to the HydroDyn module's output list.
    IF (  InitInp%NUserOutputs > 0 ) THEN
-      ALLOCATE ( foundMask(InitInp%NUserOutputs) , STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( foundMask(InitInp%NUserOutputs) , STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for temporary array: foundMask in the HydroDynInput_GetInput subroutine.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          
          RETURN
       END IF
       foundMask = .FALSE.
       ! Extract WAMIT list
-   InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList, foundMask, ErrStat, ErrMsg )
+   InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList,  foundMask, ErrStat2, ErrMsg2 )
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+
+      ! Extract WAMIT2 list
+   InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 )
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+
+      ! Extract Waves2 list
+   InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
    
       ! Extract Morison list
       !foundMask = .FALSE.
-   InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat, ErrMsg )
+   InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 )
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
    
       ! Attach remaining items to the HydroDyn list
       !foundMask = .FALSE.
-   InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat, ErrMsg )  
-   CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat, ErrMsg )
+   InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat2, ErrMsg2 )
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+   CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat2, ErrMsg2 )
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+   IF (ErrStat >= AbortErrLev ) RETURN
+
    DEALLOCATE(foundMask)
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
@@ -4032,8 +4030,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( InitInp%Morison%NumOuts > 0 ) THEN
 
          ! Create an  output list for validated outputs
-      ALLOCATE ( InitInp%Morison%ValidOutList(InitInp%Morison%NumOuts), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
+      ALLOCATE ( InitInp%Morison%ValidOutList(InitInp%Morison%NumOuts), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating valid output list array.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
       END IF
@@ -4062,6 +4060,23 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
       InitInp%Waves%WtrDpth      = InitInp%Morison%WtrDpth + InitInp%Morison%MSL2SWL ! Adjust for the MSL2SWL
       
+      ! Waves2
+      IF (InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
+         InitInp%Waves2%WtrDens     = InitInp%Waves%WtrDens
+         InitInp%Waves2%Gravity     = InitInp%Gravity
+         InitInp%Waves2%UnSum       = InitInp%UnSum
+         InitInp%Waves2%WtrDpth     = InitInp%Waves%WtrDpth
+         InitInp%Waves2%WaveStMod   = InitInp%Waves%WaveStMod
+         InitInp%Waves%NWaveElev    = InitInp%Waves%NWaveElev
+         CALL AllocAry( InitInp%Waves2%WaveElevxi, InitInp%Waves2%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+         CALL AllocAry( InitInp%Waves2%WaveElevyi, InitInp%Waves2%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+         IF ( ErrStat >= AbortErrLev ) RETURN 
+         InitInp%Waves2%WaveElevxi  = InitInp%Waves%WaveElevxi
+         InitInp%Waves2%WaveElevyi  = InitInp%Waves%WaveElevyi
+      ENDIF
+
       ! WAMIT
       InitInp%WAMIT%WtrDens      = InitInp%Waves%WtrDens
       InitInp%WAMIT%WaveMod      = InitInp%Waves%WaveMod
@@ -4079,16 +4094,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Morison%OutAll     = InitInp%OutAll
 
          ! Process the input geometry and generate the simulation mesh representation
-      CALL Morison_ProcessMorisonGeometry( InitInp%Morison, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN
-         RETURN
-      END IF
+      CALL Morison_ProcessMorisonGeometry( InitInp%Morison, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Set the number and global Z locations for the X and Y components of the current velocities
       InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes
 
-      ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Morison%NNodes), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Morison%NNodes), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for MorisonNodezi array.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
       END IF
@@ -4097,19 +4111,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
          ! Establish the number and locations where the wave kinematics will be computed
       InitInp%Waves%NWaveKin0   = InitInp%Morison%NNodes                          ! Number of points where the incident wave kinematics will be computed (-)
-      ALLOCATE ( InitInp%Waves%WaveKinxi0(InitInp%Waves%NWaveKin0), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( InitInp%Waves%WaveKinxi0(InitInp%Waves%NWaveKin0), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi0 array.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
 
          RETURN
       END IF
-      ALLOCATE ( InitInp%Waves%WaveKinyi0(InitInp%Waves%NWaveKin0), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( InitInp%Waves%WaveKinyi0(InitInp%Waves%NWaveKin0), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi0 array.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
       END IF
-      ALLOCATE ( InitInp%Waves%WaveKinzi0(InitInp%Waves%NWaveKin0), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( InitInp%Waves%WaveKinzi0(InitInp%Waves%NWaveKin0), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi0 array.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
       END IF
@@ -4119,6 +4133,33 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Waves%WaveKinzi0(I)      = InitInp%Morison%Nodes(I)%JointPos(3) - InitInp%Morison%MSL2SWL   ! zi-coordinates for points where the incident wave kinematics will be computed, adjusted to the still water level(meters)     
          InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi0(I)
       END DO
+
+
+            ! If we are using the Waves module, the node information must be copied over.
+      InitInp%Waves2%NWaveKin0   = InitInp%Waves%NWaveKin0                          ! Number of points where the incident wave kinematics will be computed (-)
+      IF ( InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
+         ALLOCATE ( InitInp%Waves2%WaveKinxi0(InitInp%Waves2%NWaveKin0), STAT = ErrStat2 )
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi0 array for Waves2 module.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+
+            RETURN
+         END IF
+         ALLOCATE ( InitInp%Waves2%WaveKinyi0(InitInp%Waves2%NWaveKin0), STAT = ErrStat2 )
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi0 array for Waves2 module.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+            RETURN
+         END IF
+         ALLOCATE ( InitInp%Waves2%WaveKinzi0(InitInp%Waves2%NWaveKin0), STAT = ErrStat2 )
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi0 array for Waves2 module.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+            RETURN
+         END IF
+
+         InitInp%Waves2%WaveKinxi0  = InitInp%Waves%WaveKinxi0
+         InitInp%Waves2%WaveKinyi0  = InitInp%Waves%WaveKinyi0
+         InitInp%Waves2%WaveKinzi0  = InitInp%Waves%WaveKinzi0
+
+      ENDIF
 
 END SUBROUTINE HydroDynInput_ProcessInitData
 

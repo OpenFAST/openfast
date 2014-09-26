@@ -32,16 +32,18 @@ MODULE HydroDyn
    USE HydroDyn_Types   
    USE NWTC_Library
    USE WAMIT
+   USE WAMIT2
    USE HydroDyn_Input
    USE HydroDyn_Output
    USE Current
+   USE Waves2
       
    IMPLICIT NONE
    
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.01.02a-gjh', '08-Jul-2014' )
+   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.02.00a-adp', '25-Sept-2014' )
 
     
    
@@ -105,6 +107,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       CHARACTER(1024)                        :: SummaryName                         ! name of the HydroDyn summary file   
       TYPE(HydroDyn_InitInputType)           :: InitLocal                           ! Local version of the initialization data, needed because the framework data (InitInp) is read-only
       TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves module initialization
+      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       LOGICAL                                :: hasWAMITOuts                        ! Are there any WAMIT-related outputs
       LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
@@ -120,6 +123,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       TYPE(Waves_ConstraintStateType)        :: Waves_z                             ! Waves module initial guess of the constraint states
       TYPE(Waves_OtherStateType)             :: WavesOtherState                     ! Waves module other/optimization states 
       TYPE(Waves_OutputType)                 :: Waves_y                             ! Waves module outputs   
+ 
+ 
       TYPE(Current_InputType)                :: Current_u                           ! Current module initial guess for the input; the input mesh is not defined because it is not used by the Current module
       TYPE(Current_ParameterType)            :: Current_p                           ! Current module parameters
       TYPE(Current_ContinuousStateType)      :: Current_x                           ! Current module initial continuous states
@@ -130,6 +135,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       
 !BJJ: TODO: I recommend you just put these in the main HydroDyn type(s) because otherwise you have to make local copies of these same variables in CalcOutput and/or UpdateStates anyway.
       TYPE(WAMIT_ConstraintStateType)        :: WAMIT_z                             ! Initial guess of the constraint states
+      TYPE(WAMIT2_ConstraintStateType)       :: WAMIT2_z                             ! Initial guess of the constraint states
+      TYPE(Waves2_ConstraintStateType)       :: Waves2_z                             ! Initial guess of the constraint states
       TYPE(Morison_ContinuousStateType)      :: Morison_x                           ! Morison continuous states
       TYPE(Morison_DiscreteStateType)        :: Morison_xd                          ! Morison module discrete states
       TYPE(Morison_ConstraintStateType)      :: Morison_z                           ! Morison  of the constraint states
@@ -292,7 +299,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
          ! Copy the WaveElevXY data in from the HydroDyn InitInp
 
       IF (ALLOCATED(InitInp%WaveElevXY)) THEN
-         CALL AllocAry( InitLocal%Waves%WaveElevXY, SIZE(InitInp%WaveElevXY, DIM=1),SIZE(InitInp%WaveElevXY, DIM=2), 'WaveElevXY', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
+         CALL AllocAry( InitLocal%Waves%WaveElevXY, SIZE(InitInp%WaveElevXY, DIM=1),SIZE(InitInp%WaveElevXY, DIM=2), 'WaveElevXY', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
          InitLocal%Waves%WaveElevXY =  InitInp%WaveElevXY
       ENDIF
    
@@ -337,19 +349,118 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       p%NStepWave    = Waves_InitOut%NStepWave
       p%WaveTime     = Waves_InitOut%WaveTime
       
-      !BJJ: this statement replaces the allocation, copy, and deallocation commented out afterwards. 
-      !     it does not actually copy the data (just moves the allocation to a different variable) so it should be much more efficient
       CALL MOVE_ALLOC( Waves_InitOut%WaveElev, p%WaveElev ) ! allocate p%WaveElev, set p%WaveElev = Waves_InitOut%WaveElev, and deallocate Waves_InitOut%WaveElev
-      !ALLOCATE ( p%WaveElev   (0:Waves_InitOut%NStepWave,InitLocal%Waves%NWaveElev  ) , STAT=ErrStat2 )
-      !IF ( ErrStat2 /= 0 )  THEN
-      !   CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElev array.',ErrStat,ErrMsg,'HydroDyn_Init')
-      !   CALL CleanUp()
-      !   RETURN         
-      !END IF
-      !p%WaveElev     = Waves_InitOut%WaveElev      
-      !IF(ALLOCATED( Waves_InitOut%WaveElev   ))  DEALLOCATE( Waves_InitOut%WaveElev   )
       
       OtherState%LastIndWave = 1
+      
+
+
+         !----------------------------------
+         ! Initialize Waves2 module
+         !----------------------------------
+
+
+      IF (InitLocal%Waves2%WvDiffQTFF .OR. InitLocal%Waves2%WvSumQTFF ) THEN
+            ! Set a few things from the Waves module output
+         InitLocal%Waves2%NStepWave   = Waves_InitOut%NStepWave
+         InitLocal%Waves2%NStepWave2  = Waves_InitOut%NStepWave2
+         InitLocal%Waves2%WaveDOmega  = Waves_InitOut%WaveDOmega
+         InitLocal%Waves2%WaveTime    = Waves_InitOut%WaveTime
+
+            ! Copy the WaveElevXY data in from the HydroDyn InitInp
+
+         IF (ALLOCATED(InitInp%WaveElevXY)) THEN
+            CALL AllocAry( InitLocal%Waves2%WaveElevXY, SIZE(InitInp%WaveElevXY, DIM=1),SIZE(InitInp%WaveElevXY, DIM=2), 'WaveElevXY', ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
+            InitLocal%Waves2%WaveElevXY =  InitInp%WaveElevXY
+         ENDIF
+   
+   
+         ALLOCATE ( InitLocal%Waves2%WaveElevC0(2,0:Waves_InitOut%NStepWave2) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElevC0 array for the Waves2 module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+         ALLOCATE ( InitLocal%Waves2%WaveDirArr(0:Waves_InitOut%NStepWave2) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveDirArr array for the Waves2 module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+
+         InitLocal%Waves2%WaveElevC0   = Waves_InitOut%WaveElevC0
+         InitLocal%Waves2%WaveDirArr   = Waves_InitOut%WaveDirArr
+          
+         CALL Waves2_Init(InitLocal%Waves2, u%Waves2, p%Waves2, x%Waves2, xd%Waves2, Waves2_z, OtherState%Waves2, &
+                                 y%Waves2, Interval, Waves2_InitOut, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+   
+  
+!print*,'SIZE(Waves2_InitOut%WaveDynP2D) after Init:   '// &
+!               TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=1)))//'x'//            &
+!               TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=2)))
+      
+         ! Verify that Waves2_Init() did not request a different Interval!
+      
+         IF ( p%DT /= Interval ) THEN
+            CALL SetErrStat(ErrID_Fatal,'Waves2 Module attempted to change timestep interval, but this is not allowed.  Waves2 Module must use the HydroDyn Interval.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+
+         ! If we calculated the wave elevation series data (for visualization purposes), add the second order corrections to the first order.
+         IF (ALLOCATED(InitInp%WaveElevXY)) THEN
+               ! Make sure the sizes of the two resulting arrays are identical...
+            IF ( SIZE(InitOut%WaveElevSeries,DIM=1) /= SIZE(Waves2_InitOut%WaveElevSeries2,DIM=1) .OR. &
+                 SIZE(InitOut%WaveElevSeries,DIM=2) /= SIZE(Waves2_InitOut%WaveElevSeries2,DIM=2)) THEN
+               CALL SetErrStat(ErrID_Fatal,' WaveElevSeries arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               DO I = 0,p%NStepWave
+                  DO J=1,SIZE(InitOut%WaveElevSeries,DIM=2)
+                     InitOut%WaveElevSeries(I,J)  =  Waves2_InitOut%WaveElevSeries2(I,J) + InitOut%WaveElevSeries(I,J)
+                  ENDDO
+               ENDDO
+            ENDIF
+         ENDIF
+
+
+         ! If we calculated wave elevations, it is now stored in p%WaveElev.  So we need to add the corrections.
+         IF (InitInp%Waves2%NWaveElev > 0 ) THEN
+               ! Make sure the sizes of the two resulting arrays are identical...
+            IF ( SIZE(p%WaveElev,DIM=1) /= SIZE(Waves2_InitOut%WaveElev2,DIM=1) .OR. &
+                 SIZE(p%WaveElev,DIM=2) /= SIZE(Waves2_InitOut%WaveElev2,DIM=2)) THEN
+               CALL SetErrStat(ErrID_Fatal,' WaveElev(NWaveElev) arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               DO I = 0,p%NStepWave
+                  DO J=1,SIZE(Waves2_InitOut%WaveElev2,DIM=2)
+                     p%WaveElev(I,J)  =  Waves2_InitOut%WaveElev2(I,J) + p%WaveElev(I,J)
+                  ENDDO
+               ENDDO
+            ENDIF
+         ENDIF
+
+         ! The acceleration, velocity, and dynamic pressures will get added to the parts passed to the morrison module later...
+
+      ENDIF
+
+
+
       
          ! Is there a WAMIT body? 
       
@@ -365,7 +476,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
          END IF
 
 
-      
          InitLocal%WAMIT%RhoXg        = Waves_InitOut%RhoXg
          InitLocal%WAMIT%NStepWave    = Waves_InitOut%NStepWave
          InitLocal%WAMIT%NStepWave2   = Waves_InitOut%NStepWave2
@@ -375,21 +485,73 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
          InitLocal%WAMIT%WaveTime     = Waves_InitOut%WaveTime    
 
          
-         !....................................
-         ! allocate InitLocal%WAMIT%WaveElevC0, 
-         ! set InitLocal%WAMIT%WaveElevC0 = Waves_InitOut%WaveElevC0, and 
-         ! deallocate Waves_InitOut%WaveElevC0 :
+            ! Copy Waves initialization output into the initialization input type for the WAMIT2 module
 
-!FIXME: this will be needed for the WAMIT2 module         
-         CALL MOVE_ALLOC( Waves_InitOut%WaveElevC0, InitLocal%WAMIT%WaveElevC0 ) 
-         CALL MOVE_ALLOC( Waves_InitOut%WaveDirArr, InitLocal%WAMIT%WaveDirArr )
+         ALLOCATE ( InitLocal%WAMIT2%WaveTime   (0:Waves_InitOut%NStepWave                    ) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveTime array for the WAMIT2 module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
                   
-         !IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-         !....................................
+         
+         InitLocal%WAMIT2%RhoXg       = Waves_InitOut%RhoXg
+         InitLocal%WAMIT2%NStepWave   = Waves_InitOut%NStepWave
+         InitLocal%WAMIT2%NStepWave2  = Waves_InitOut%NStepWave2
+         InitLocal%WAMIT2%WaveDirMin  = Waves_InitOut%WaveDirMin
+         InitLocal%WAMIT2%WaveDirMax  = Waves_InitOut%WaveDirMax
+         InitLocal%WAMIT2%WaveDOmega  = Waves_InitOut%WaveDOmega
+         InitLocal%WAMIT2%WaveTime    = Waves_InitOut%WaveTime
+         
+         
+
+         !-----------------------------------------
+         ! Copy the WaveElevC0 and WaveDirArr to the WAMIT and WAMIT2 modules
+         !-----------------------------------------
+
+         ALLOCATE ( InitLocal%WAMIT%WaveElevC0(2,0:Waves_InitOut%NStepWave2) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElevC0 array for the WAMIT module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+         ALLOCATE ( InitLocal%WAMIT2%WaveElevC0(2,0:Waves_InitOut%NStepWave2) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElevC0 array for the WAMIT2 module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+         ALLOCATE ( InitLocal%WAMIT%WaveDirArr(0:Waves_InitOut%NStepWave2) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveDirArr array for the WAMIT module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+         ALLOCATE ( InitLocal%WAMIT2%WaveDirArr(0:Waves_InitOut%NStepWave2) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveDirArr array for the WAMIT2 module.',ErrStat,ErrMsg,'HydroDyn_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+
+
+         InitLocal%WAMIT%WaveElevC0    = Waves_InitOut%WaveElevC0
+         InitLocal%WAMIT2%WaveElevC0   = Waves_InitOut%WaveElevC0
+         InitLocal%WAMIT%WaveDirArr    = Waves_InitOut%WaveDirArr
+         InitLocal%WAMIT2%WaveDirArr   = Waves_InitOut%WaveDirArr
+
+                  
+         IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
          
          
          
+            !-----------------------------------------
             ! Initialize the WAMIT Calculations 
+            !-----------------------------------------
            
          CALL WAMIT_Init(InitLocal%WAMIT, u%WAMIT, p%WAMIT, x%WAMIT, xd%WAMIT, WAMIT_z, OtherState%WAMIT, &
                                  y%WAMIT, Interval, InitOut%WAMIT, ErrStat2, ErrMsg2 )
@@ -424,68 +586,162 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
             CALL CleanUp()
             RETURN
          END IF
-      ELSE
-            ! Deallocate this because it is not needed for the Morison_Init work
-         ! IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
+
+
+
+            !-----------------------------------------
+            ! Initialize the WAMIT2 Calculations
+            !-----------------------------------------
+
+            ! Only call the WAMIT2_Init if one of the flags is set for a calculation
+         IF ( InitLocal%WAMIT2%MnDriftF .OR. InitLocal%WAMIT2%NewmanAppF .OR. InitLocal%WAMIT2%DiffQTFF .OR. InitLocal%WAMIT2%SumQTFF ) THEN
+
+            CALL WAMIT2_Init(InitLocal%WAMIT2, u%WAMIT2, p%WAMIT2, x%WAMIT2, xd%WAMIT2, WAMIT2_z, OtherState%WAMIT2, &
+                                    y%WAMIT2, Interval, InitOut%WAMIT2, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
+
+
+               ! Verify that WAMIT2_Init() did not request a different Interval!
+
+            IF ( p%DT /= Interval ) THEN
+               CALL SetErrStat(ErrID_Fatal,'WAMIT2 Module attempted to change timestep interval, but this is not allowed.  '// &
+                                          'WAMIT2 Module must use the HydroDyn Interval.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            END IF
+
+
+         ENDIF
+
+
       END IF
       
+
+
 
          ! Are there Morison elements?
        
       IF ( InitLocal%Morison%NMembers > 0 ) THEN
-         
+
          
                 ! Copy Waves initialization output into the initialization input type for the Morison module                              
          
          InitLocal%Morison%NStepWave    = Waves_InitOut%NStepWave
          
-         !....................................
-         ! allocate InitLocal%Morison%WaveAcc0, 
-         ! set InitLocal%Morison%WaveAcc0 = Waves_InitOut%WaveAcc0, and 
-         ! deallocate Waves_InitOut%WaveAcc0 :
          
          CALL MOVE_ALLOC( Waves_InitOut%WaveAcc0, InitLocal%Morison%WaveAcc0 )   
          
-         !IF(ALLOCATED( Waves_InitOut%WaveAcc0   ))  DEALLOCATE( Waves_InitOut%WaveAcc0   )         
-         !....................................
-         
-         
-         !....................................
-         ! allocate InitLocal%Morison%WaveDynP0, 
-         ! set InitLocal%Morison%WaveDynP0 = Waves_InitOut%WaveDynP0, and 
-         ! deallocate Waves_InitOut%WaveDynP0 :
-         
          CALL MOVE_ALLOC( Waves_InitOut%WaveDynP0, InitLocal%Morison%WaveDynP0 ) 
-         
-         !IF(ALLOCATED( Waves_InitOut%WaveDynP0  ))  DEALLOCATE( Waves_InitOut%WaveDynP0  )
-         !....................................
-         
-         
-         
-         !....................................
-         ! allocate InitLocal%Morison%WaveTime, 
-         ! set InitLocal%Morison%WaveTime = Waves_InitOut%WaveTime, and 
-         ! deallocate Waves_InitOut%WaveTime :
          
          CALL MOVE_ALLOC( Waves_InitOut%WaveTime, InitLocal%Morison%WaveTime ) 
          
-         !IF(ALLOCATED( Waves_InitOut%WaveTime   ))  DEALLOCATE( Waves_InitOut%WaveTime   )
-         !....................................
-         
-         
-         
-         !....................................
-         ! allocate InitLocal%Morison%WaveVel0, 
-         ! set InitLocal%Morison%WaveVel0 = Waves_InitOut%WaveVel0, and 
-         ! deallocate Waves_InitOut%WaveVel0 :
-         
          CALL MOVE_ALLOC( Waves_InitOut%WaveVel0, InitLocal%Morison%WaveVel0 ) 
 
-         !....................................
-         
+
+               ! If we did some second order wave kinematics corrections to the acceleration, velocity or
+               ! dynamic pressure using the Waves2 module, then we need to add these to the values that we
+               ! will be passing into the Morrison module.
+
+            ! Difference frequency results
+         IF ( p%Waves2%WvDiffQTFF ) THEN
+
+               ! Dynamic pressure -- difference frequency terms 
+            IF ( SIZE(InitLocal%Morison%WaveDynP0,DIM=1) /= SIZE(Waves2_InitOut%WaveDynP2D,DIM=1) .OR. &
+                 SIZE(InitLocal%Morison%WaveDynP0,DIM=2) /= SIZE(Waves2_InitOut%WaveDynP2D,DIM=2)) THEN
+               CALL SetErrStat(ErrID_Fatal, &
+                  ' WaveDynP0 arrays for first and second order wave elevations are of different sizes.  '//NewLine// &
+                  'Morrison: '// TRIM(Num2LStr(SIZE(InitLocal%Morison%WaveDynP0,DIM=1)))//'x'//          &
+                                 TRIM(Num2LStr(SIZE(InitLocal%Morison%WaveDynP0,DIM=2)))//NewLine//      &
+                  'Waves2:   '// TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=1)))//'x'//            &
+                                 TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=2))),                  &
+                  ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               InitLocal%Morison%WaveDynP0 = InitLocal%Morison%WaveDynP0 + Waves2_InitOut%WaveDynP2D
+            ENDIF
+  
+               ! Particle velocity -- difference frequency terms 
+            IF ( SIZE(InitLocal%Morison%WaveVel0,DIM=1) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=1) .OR. &
+                 SIZE(InitLocal%Morison%WaveVel0,DIM=2) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=2) .OR. &
+                 SIZE(InitLocal%Morison%WaveVel0,DIM=3) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=3)) THEN
+               CALL SetErrStat(ErrID_Fatal, &
+                  ' WaveVel arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               InitLocal%Morison%WaveVel0 = InitLocal%Morison%WaveVel0 + Waves2_InitOut%WaveVel2D
+            ENDIF
+
+
+               ! Particle acceleration -- difference frequency terms
+            IF ( SIZE(InitLocal%Morison%WaveAcc0,DIM=1) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=1) .OR. &
+                 SIZE(InitLocal%Morison%WaveAcc0,DIM=2) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=2) .OR. &
+                 SIZE(InitLocal%Morison%WaveAcc0,DIM=3) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=3)) THEN
+               CALL SetErrStat(ErrID_Fatal, &
+                  ' WaveAcc arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               InitLocal%Morison%WaveAcc0 = InitLocal%Morison%WaveAcc0 + Waves2_InitOut%WaveAcc2D
+            ENDIF
+
+         ENDIF ! second order wave kinematics difference frequency results
+
+            ! Sum frequency results
+         IF ( p%Waves2%WvSumQTFF ) THEN
+
+               ! Dynamic pressure -- sum frequency terms 
+            IF ( SIZE(InitLocal%Morison%WaveDynP0,DIM=1) /= SIZE(Waves2_InitOut%WaveDynP2S,DIM=1) .OR. &
+                 SIZE(InitLocal%Morison%WaveDynP0,DIM=2) /= SIZE(Waves2_InitOut%WaveDynP2S,DIM=2)) THEN
+               CALL SetErrStat(ErrID_Fatal, &
+                  ' WaveDynP0 arrays for first and second order wave elevations are of different sizes.  '//NewLine// &
+                  'Morrison: '// TRIM(Num2LStr(SIZE(InitLocal%Morison%WaveDynP0,DIM=1)))//'x'//          &
+                                 TRIM(Num2LStr(SIZE(InitLocal%Morison%WaveDynP0,DIM=2)))//NewLine//      &
+                  'Waves2:   '// TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=1)))//'x'//            &
+                                 TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=2))),                  &
+                  ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               InitLocal%Morison%WaveDynP0 = InitLocal%Morison%WaveDynP0 + Waves2_InitOut%WaveDynP2S
+            ENDIF
+
+               ! Particle velocity -- sum frequency terms 
+            IF ( SIZE(InitLocal%Morison%WaveVel0,DIM=1) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=1) .OR. &
+                 SIZE(InitLocal%Morison%WaveVel0,DIM=2) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=2) .OR. &
+                 SIZE(InitLocal%Morison%WaveVel0,DIM=3) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=3)) THEN
+               CALL SetErrStat(ErrID_Fatal, &
+                  ' WaveVel arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               InitLocal%Morison%WaveVel0 = InitLocal%Morison%WaveVel0 + Waves2_InitOut%WaveVel2S
+            ENDIF
+
+               ! Particle velocity -- sum frequency terms 
+            IF ( SIZE(InitLocal%Morison%WaveAcc0,DIM=1) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=1) .OR. &
+                 SIZE(InitLocal%Morison%WaveAcc0,DIM=2) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=2) .OR. &
+                 SIZE(InitLocal%Morison%WaveAcc0,DIM=3) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=3)) THEN
+               CALL SetErrStat(ErrID_Fatal, &
+                  ' WaveAcc arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
+               CALL CleanUp()
+               RETURN
+            ELSE
+               InitLocal%Morison%WaveAcc0 = InitLocal%Morison%WaveAcc0 + Waves2_InitOut%WaveAcc2S
+            ENDIF
+
+        ENDIF ! second order wave kinematics sum frequency results
+
+
+
+
          
             ! Clean up unneeded Waves_InitOut data
-         
             
             ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
             
@@ -495,7 +751,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
             InitLocal%Morison%OutSwtch     = 0
          END IF
         
-      
             ! Initialize the Morison Element Calculations 
       
          CALL Morison_Init(InitLocal%Morison, u%Morison, p%Morison, Morison_x, Morison_xd, Morison_z, OtherState%Morison, &
@@ -823,6 +1078,8 @@ CONTAINS
       
 
       CALL WAMIT_DestroyConstrState(   WAMIT_z,            ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')      
+      CALL WAMIT2_DestroyConstrState(  WAMIT2_z,           ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
+      CALL Waves2_DestroyConstrState(  Waves2_z,           ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')
       
       CALL Morison_DestroyContState(   Morison_x,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')      
       CALL Morison_DestroyDiscState(   Morison_xd,         ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init')      
@@ -956,6 +1213,8 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
          ! Allocate array of WAMIT inputs
          ! TODO: We should avoid allocating this at each time step if we can!
          
+!FIXME: Error handling appears to be broken here         
+
       ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat )
       IF (ErrStat /=0) THEN
          ErrMsg = ' Failed to allocate array Inputs_WAMIT.'
@@ -1011,16 +1270,17 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       REAL(ReKi)                           :: AllOuts(MaxHDOutputs)  
       
-      TYPE(WAMIT_InputType)             :: uLocal           ! Local copy of WAMIT inputs 
+      TYPE(WAMIT_InputType)               :: uLocal         ! Local copy of WAMIT inputs 
+      TYPE(WAMIT2_InputType)              :: uLocalW2       ! Local copy of WAMIT2 inputs
          ! Create dummy variables required by framework but which are not used by the module
          
-      !TYPE(WAMIT_ContinuousStateType) :: WAMIT_x           ! Initial continuous states
-      TYPE(WAMIT_ConstraintStateType) :: WAMIT_z           ! Initial guess of the constraint states
-      !TYPE(WAMIT_OtherStateType)      :: WAMITOtherState  ! Initial other/optimization states            
+      TYPE(WAMIT_ConstraintStateType)     :: WAMIT_z        ! Initial guess of the constraint states
+      TYPE(WAMIT2_ConstraintStateType)    :: WAMIT2_z       ! Initial guess of the constraint states
+      TYPE(Waves2_ConstraintStateType)    :: Waves2_z       ! Initial guess of the constraint states
      
-      TYPE(Morison_ContinuousStateType) :: Morison_x           ! Initial continuous states
-      TYPE(Morison_DiscreteStateType)   :: Morison_xd           ! Initial discrete states
-      TYPE(Morison_ConstraintStateType) :: Morison_z           ! Initial guess of the constraint states
+      TYPE(Morison_ContinuousStateType)   :: Morison_x      ! Initial continuous states
+      TYPE(Morison_DiscreteStateType)     :: Morison_xd     ! Initial discrete states
+      TYPE(Morison_ConstraintStateType)   :: Morison_z      ! Initial guess of the constraint states
       
          ! Initialize ErrStat
          
@@ -1035,6 +1295,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
          !-------------------------------------------------------------------
+         
+!FIXME: Error handling appears to be broken here.
          
          ! Determine the rotational angles from the direction-cosine matrix
       rotdisp = GetSmllRotAngs ( u%Mesh%Orientation(:,:,1), ErrStat, ErrMsg )
@@ -1073,12 +1335,50 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          
       END IF
       
+
+      IF ( u%WAMIT2%Mesh%Initialized ) THEN  ! Make sure we are using WAMIT2 / there is a valid mesh
+
+            ! Copy the inputs from the HD mesh into the WAMIT2 mesh
+         CALL MeshCopy( u%Mesh, u%WAMIT2%Mesh, MESH_UPDATECOPY, ErrStat, ErrMsg )
+            IF ( ErrStat > ErrID_Warn ) RETURN
+
+
+         CALL WAMIT2_CalcOutput( Time, u%WAMIT2, p%WAMIT2, x%WAMIT2, xd%WAMIT2,  &
+                                WAMIT2_z, OtherState%WAMIT2, y%WAMIT2, ErrStat, ErrMsg )
+
+            ! Add WAMIT2 forces to the HydroDyn output mesh
+         y%Mesh%Force (:,1) = y%Mesh%Force (:,1) + y%WAMIT2%Mesh%Force (:,1)
+         y%Mesh%Moment(:,1) = y%Mesh%Moment(:,1) + y%WAMIT2%Mesh%Moment(:,1)
+
+            ! Destroy local inputs
+         CALL WAMIT2_DestroyInput( uLocalW2,  ErrStat, ErrMsg )
+
+      END IF
+
+
+
+         ! Deal with any output from the Waves2 module....
+      IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
+
+            ! Waves2_CalcOutput is called only so that the wave elevations can be output.
+         CALL Waves2_CalcOutput( Time, u%Waves2, p%Waves2, x%Waves2, xd%Waves2,  &
+                                Waves2_z, OtherState%Waves2, y%Waves2, ErrStat, ErrMsg )
+
+      END IF
+
+
       IF ( u%Morison%LumpedMesh%Initialized ) THEN  ! Make sure we are using Morison / there is a valid mesh
          CALL Morison_CalcOutput( Time, u%Morison, p%Morison, Morison_x, Morison_xd,  &
                                 Morison_z, OtherState%Morison, y%Morison, ErrStat, ErrMsg )
       END IF
       
       
+      IF ( u%Morison%LumpedMesh%Initialized ) THEN  ! Make sure we are using Morison / there is a valid mesh
+         CALL Morison_CalcOutput( Time, u%Morison, p%Morison, Morison_x, Morison_xd,  &
+                                Morison_z, OtherState%Morison, y%Morison, ErrStat, ErrMsg )
+      END IF
+
+
          ! Integrate all the mesh loads onto the WAMIT reference Point (WRP) at (0,0,0)
       OtherState%F_Hydro = CalcLoadsAtWRP( y, u, OtherState%y_mapped, OtherState%AllHdroOrigin_position, OtherState%MrsnLumpedMesh_position, OtherState%MrsnDistribMesh_position, OtherState%HD_MeshMap, ErrStat, ErrMsg )
       
@@ -1122,6 +1422,13 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
             END DO
          END IF
          
+         IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
+            DO I=1, p%WAMIT2%NumOuts
+               y%WriteOutput(J) = y%WAMIT2%WriteOutput(I)
+               J = J + 1
+            END DO
+         END IF
+
          IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
             DO I=1, p%Morison%NumOuts
                y%WriteOutput(J) = y%Morison%WriteOutput(I)
@@ -1236,6 +1543,7 @@ SUBROUTINE HydroDyn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z
          ! Solve for the constraint states here:
       
       z_residual%DummyConstrState = 0.0_ReKi
+
 
 END SUBROUTINE HydroDyn_CalcConstrStateResidual
 

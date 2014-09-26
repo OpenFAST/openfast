@@ -76,6 +76,7 @@ typedef   ^                            ^                             CHARACTER(2
 #
 typedef   ^                            InitOutputType                WAMIT_InitOutputType     WAMIT                           -          -        -         "Initialization output from the WAMIT module"    -
 typedef   ^                            InitOutputType                WAMIT2_InitOutputType    WAMIT2                           -          -        -         "Initialization output from the WAMIT2 module"    -
+typedef   ^                            InitOutputType                Waves2_InitOutputType    Waves2                           -          -        -         "Initialization output from the Waves2 module"    -
 typedef   ^                            ^                             Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
 typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
@@ -98,12 +99,14 @@ typedef   ^                            HD_ModuleMapType              MeshMapType
 #
 typedef   ^                            ContinuousStateType           WAMIT_ContinuousStateType            WAMIT               -          -          -         "continuous states from the State Space radiation module"        -
 typedef   ^                            ContinuousStateType           WAMIT2_ContinuousStateType           WAMIT2              -          -          -         "continuous states from the State Space radiation module"        -
+typedef   ^                            ContinuousStateType           Waves2_ContinuousStateType           Waves2              -          -          -         "continuous states from the State Space radiation module"        -
 #
 #
 # Define discrete (nondifferentiable) states here:
 #
 typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               -          -          -         "discrete states from the convolution radiation module"        -
 typedef   ^                            DiscreteStateType             WAMIT2_DiscreteStateType             WAMIT2              -          -          -         "discrete states from the convolution radiation module"        -
+typedef   ^                            DiscreteStateType             Waves2_DiscreteStateType             Waves2              -          -          -         "discrete states from the convolution radiation module"        -
 #
 #
 # Define constraint states here:
@@ -116,6 +119,7 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 typedef   ^                            OtherStateType                WAMIT_OtherStateType     WAMIT                           -          -          -         "OtherState information from the WAMIT module"   -
 typedef   ^                            OtherStateType                WAMIT2_OtherStateType    WAMIT2                          -          -          -         "OtherState information from the WAMIT2 module"   -
+typedef   ^                            OtherStateType                Waves2_OtherStateType    Waves2                          -          -          -         "OtherState information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_OtherStateType   Morison                         -          -          -         "OtherState information from the Morison module"   -
 typedef   ^                            OtherStateType                INTEGER                  LastIndWave                     -          -          -         "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
 typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}        -          -         "The total forces and moments due to additional pre-load, stiffness, and damping"   -
@@ -134,6 +138,7 @@ typedef   ^                            ^                             DbKi       
 #
 typedef   ^                            ParameterType                 WAMIT_ParameterType      WAMIT                           -          -          -         "Parameter data for the WAMIT module"  -
 typedef   ^                            ParameterType                 WAMIT2_ParameterType     WAMIT2                          -          -          -         "Parameter data for the WAMIT2 module"  -
+typedef   ^                            ParameterType                 Waves2_ParameterType     Waves2                          -          -          -         "Parameter data for the Waves2 module"  -
 typedef   ^                            ^                             Morison_ParameterType    Morison                         -          -          -         "Parameter data for the Morison module"        -
 typedef   ^                            ^                             ReKi                     WaveTime                       {:}         -          -         "Array of time samples, (sec)"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -          -         "Number of data points in the wave kinematics arrays"        -
@@ -160,6 +165,7 @@ typedef   ^                            ^                             INTEGER    
 #
 typedef   ^                            InputType                     WAMIT_InputType          WAMIT                           -          -          -         "WAMIT module inputs" -
 typedef   ^                            InputType                     WAMIT2_InputType         WAMIT2                          -          -          -         "WAMIT2 module inputs" -
+typedef   ^                            InputType                     Waves2_InputType         Waves2                          -          -          -         "Waves2 module inputs" -
 typedef   ^                            ^                             Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
 typedef   ^                            InputType                     MeshType                 Mesh                            -          -          -         "Displacements at the WAMIT reference point in the inertial frame" -
 #
@@ -168,6 +174,7 @@ typedef   ^                            InputType                     MeshType   
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                   WAMIT_OutputType          WAMIT                           -          -          -         "WAMIT module outputs"  -
 typedef   ^                            OutputType                   WAMIT2_OutputType         WAMIT2                          -          -          -         "WAMIT2 module outputs"  -
+typedef   ^                            OutputType                   Waves2_OutputType         Waves2                          -          -          -         "Waves2 module outputs"  -
 typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
 typedef   ^                            OutputType                   MeshType                  Mesh                            -          -          -         "Point Loads at the WAMIT reference point in the inertial frame" -
 typedef   ^                            OutputType                   MeshType                  AllHdroOrigin                   -          -          -         "All HD-related loads integrated to the origin, (0,0,0) in the inertial frame" -

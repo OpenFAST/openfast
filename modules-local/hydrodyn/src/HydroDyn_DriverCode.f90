@@ -616,7 +616,7 @@ subroutine HD_DvrCleanup()
       call HydroDyn_End( u(1), p, x, xd, z, OtherState, y, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       
-      if (errStat) then !This assumes PRESENT(ErrID) is also .TRUE. :
+      if ( ErrStat /= ErrID_None ) then !This assumes PRESENT(ErrID) is also .TRUE. :
          if ( time < 0.0 ) then
             ErrMsg = 'at initialization'
          else if ( time > InitInData%TMax ) then

@@ -15,9 +15,12 @@ Source\WAMIT.f90
 Source\WAMIT_Interp.f90
 Source\WAMIT_Output.f90
 Source\WAMIT_Types.f90
+Source\WAMIT2.f90
+Source\WAMIT2_Output.f90
 Source\WAMIT2_Types.f90
 Source\Waves.f90
 Source\Waves_Types.f90
+Source\Waves2.f90
 Source\Waves2_Types.f90
 
 Source\RegistryFiles\Current.txt

@@ -794,7 +794,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 !   REAL(ReKi)                   :: WaveDynP0BInterp                                ! Temporary value interpolated from the WaveDynP0B (:,:) array (N/m^2)
    REAL(ReKi)                   :: WaveElev_Max                                    ! Maximum expected value of the instantaneous elevation of incident waves (meters)
    REAL(ReKi)                   :: WaveElev_Min                                    ! Minimum expected value of the instantaneous elevation of incident waves (meters)
-   REAL(ReKi), ALLOCATABLE      :: WaveElevxiPrime(:)                              ! Locations along the wave heading direction for points where the incident wave elevations can be output (meters)
    COMPLEX(ReKi)                :: WaveElevxiPrime0
    REAL(ReKi), ALLOCATABLE      :: WaveKinzi0Prime(:)                              ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
    INTEGER   , ALLOCATABLE      :: WaveKinPrimeMap(:)
@@ -884,20 +883,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       CALL WrScr ( ' Generating incident wave kinematics and current time history.' )
 
 
-
-
-
-     ! IF ( InitInp%NWaveElev > 0 ) THEN
-         ALLOCATE ( WaveElevxiPrime (InitInp%NWaveElev) , STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevxiPrime.',ErrStat,ErrMsg,'VariousWaves_Init')
-
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-
-
-      !END IF
 
 
 
@@ -1694,7 +1679,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             ENDDO
          ENDDO
 
-
             ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
             ! K = NStepWave2 (K is incrimented afterwards).
          IF ( K /= (InitOut%NStepWave2 ) )    CALL SetErrStat(ErrID_Fatal,  &
@@ -2066,7 +2050,6 @@ CONTAINS
 
    SUBROUTINE CleanUp( )
 
-      IF (ALLOCATED( WaveElevxiPrime ))   DEALLOCATE( WaveElevxiPrime,  STAT=ErrStatTmp)
       IF (ALLOCATED( WaveKinPrimeMap ))   DEALLOCATE( WaveKinPrimeMap,  STAT=ErrStatTmp)
       IF (ALLOCATED( WaveKinzi0Prime ))   DEALLOCATE( WaveKinzi0Prime,  STAT=ErrStatTmp)
       IF (ALLOCATED( WvSpreadCos2SArr ))  DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp)
