@@ -140,6 +140,4 @@ typedef     ^                 InputType         ReKi                 DummyInput 
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef     ^                 OutputType        CHARACTER(10)        WriteOutputHdr    {:}      -        -        ""    -
-typedef     ^                 ^                 CHARACTER(10)        WriteOutputUnt    {:}      -        -        ""    -
-typedef     ^                 ^                 ReKi                 WriteOutput       {:}      -        -        ""  -
+typedef     ^                 OutputType        ReKi                 WriteOutput       {:}      -        -        ""  -
