@@ -424,6 +424,11 @@ LOGICAL                               :: calcJacobian                           
       InitInData_HD%OutRootName   = p_FAST%OutFileRoot
       InitInData_HD%TMax          = p_FAST%TMax
       InitInData_HD%hasIce        = p_FAST%CompIce /= Module_None
+      
+         ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
+      InitInData_HD%PtfmLocationX = 0.0_ReKi  
+      InitInData_HD%PtfmLocationY = 0.0_ReKi
+      
 
       CALL HydroDyn_Init( InitInData_HD, HD_Input(1), p_HD,  x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, p_FAST%dt_module( MODULE_HD ), InitOutData_HD, ErrStat, ErrMsg )
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
