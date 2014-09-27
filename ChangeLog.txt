@@ -1,6 +1,9 @@
 			NWTC_Subs Change Log
 			--------------------
 
+Note: Newest entries are at the end of this document.
+
+====================================================================================
 2004-03-19  M. Buhl, J. Jonkman, B. Jonkman
  The first official release of NWTC_Subs.  So far, the only routines included
  are those needed by FAST, TurbSim, and WT_Perf.
@@ -547,7 +550,7 @@ o I changed Str2IntAry and IntAry2Str to use IntKi instead of 1-byte integers so
 o I added DLLTypePack and DLLTypeUnpack routines to pack/unpack the DLL_Type. These are called directly from the FAST Registry.
 
 ------------------------------
-v2.03.03a-bjj, 27-June3-2014. B. Jonkman & M. Buhl
+v2.03.03a-bjj, 27-June-2014. B. Jonkman & M. Buhl
 
 New Features:
 o added routine NWTC_gamma(): in Sys*.f90 (because gamma is an f08 feature)
@@ -587,6 +590,13 @@ o Updated Makefile to work with latest ModMesh_Mapping module.
 o added -NO_MESHMAPPING preprocessor compiler option, which can be used to avoid compiling with LAPACK routines (it omits the
   ModMesh_Mapping.f90 file/routines); otherwise, binary libraries of LAPACK and BLAS must be used (IVF can use the MKL library)
 ------------------------------
+
+v2.04.00a-bjj, 30-Sep-2014. B. Jonkman
+
++ added routine PSF, which used to be part of FFTModule.f90 in TurbSim and HydroDyn. Added ability to subtract instead of add when
+  searching for next closest number that is a product of small primes.
++ modified GetArgs so that the InputFile name must be the first non-switch argument. Also allows for return of last non-stwitch argument.
+
 
 
 
