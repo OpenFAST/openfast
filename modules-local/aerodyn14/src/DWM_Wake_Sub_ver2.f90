@@ -499,7 +499,6 @@ SUBROUTINE get_initial_condition( OS, p, u, y, induc_array, r_t, element_num, r_
     !USE     DWM_OutputType,               ONLY: OS%Mean_FFWS 
     !USE     read_upwind_result_file_data, ONLY: OS%Upwind_result%upwind_smoothWake
     !USE     BLADE,                        ONLY: R
-    USE ElastoDyn_Types                   
     
     TYPE(DWM_OtherStateType),      INTENT(INOUT)  :: OS
     TYPE(DWM_ParameterType),       INTENT(IN   )  :: p           ! Parameters
@@ -1419,7 +1418,6 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
 !...............................................................................
     !USE DWM_Wake_Deficit_Data, ONLY: OS%DWDD%ppR
     !USE filter_velocity_data
-    USE AeroDyn_Types
     USE InflowWind
     
     TYPE(DWM_OtherStateType),      INTENT(INOUT)  :: OS
