@@ -1,2 +1,0 @@
-@CALL UpdateWeb -nofiles
-
