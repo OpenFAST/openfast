@@ -4084,12 +4084,12 @@ Changes in compiling scripts:
   -- increased stack reserve size
 + The MAP dll no longer depends on python
 
-
   + added 64-bit version of FAST, MAP (dummy), and 5MW Offshore controller. This is useful for fixed-bottom and land-based turbines only. 64-bit MAP is unavailable.
 
+====================================================================================================================================
+FAST v8.09.00a-bjj 30-September-2014 B. Jonkman
++ fixed issue with wrong tower distributed with the Tripod model (Test20)
++ updated SubDyn and HydroDyn models
++ added DWM source code for compilation
 
 
-
-
-
-also look at changes in AeroDyn, SubDyn, HydroDyn, NWTC_Library commit logs
