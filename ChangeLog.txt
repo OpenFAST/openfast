@@ -1,6 +1,9 @@
       FAST Change Log
       ------------------
 
+Note: Newest entries are at the end of this document.
+
+====================================================================================
 Version 1.01
 8/3/96,NW  - Inserted subroutine list for this sourcecode file
 8/6/96,NW  - Changed N60PR array index to an integer index N60
