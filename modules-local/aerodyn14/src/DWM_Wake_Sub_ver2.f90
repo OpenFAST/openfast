@@ -1460,32 +1460,34 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
     END IF
 
     DO y_axis = NINT(y_0-radius_length),NINT(y_0+radius_length),1
-      DO z_axis = NINT(z_0-radius_length),NINT(z_0+radius_length),1
-        IF ( ((y_axis-y_0)**2+(z_axis-z_0)**2)**0.5 <= radius_length )  THEN
-          IF ( z_axis >= 10 )  THEN              !(make sure the circle does not exceed wind field)
+      IF (y_axis > p%WFLowerBd) THEN                                 ! add 9/25/2014
+        DO z_axis = NINT(z_0-radius_length),NINT(z_0+radius_length),1
+          IF ( ((y_axis-y_0)**2+(z_axis-z_0)**2)**0.5 <= radius_length )  THEN
+            IF ( z_axis >= 10 )  THEN              !(make sure the circle does not exceed wind field)
           
                  
-          u%IfW_Inputs%Position(1,1) = 0.0
-          u%IfW_Inputs%Position(2,1) = REAL(y_axis,ReKi)
-          u%IfW_Inputs%Position(3,1) = REAL(z_axis,ReKi)                                         
-          CALL IfW_CalcOutput( timestep, u%IfW_Inputs, p%IfW_Params, &
-                               x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, OS%IfW_OtherStates, &   ! States -- none in this case
-                               y%IfW_Outputs, ErrStat, ErrMsg )
-          temp_wind_velocity (:) = y%IfW_Outputs%Velocity(:,1)                          
+            u%IfW_Inputs%Position(1,1) = 0.0
+            u%IfW_Inputs%Position(2,1) = REAL(y_axis,ReKi)
+            u%IfW_Inputs%Position(3,1) = REAL(z_axis,ReKi)                                         
+            CALL IfW_CalcOutput( timestep, u%IfW_Inputs, p%IfW_Params, &
+                                 x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, OS%IfW_OtherStates, &   ! States -- none in this case
+                                 y%IfW_Outputs, ErrStat, ErrMsg )
+            temp_wind_velocity (:) = y%IfW_Outputs%Velocity(:,1)                          
           
-          !temp_filter_velocity(:) = temp_filter_velocity(:) + AD_WindVelocityWithDisturbance(  REAL(timestep,ReKi), A_u, A_p, A_x, A_xd, A_z, A_O, A_y, ErrStat, ErrMsg,&
+            !temp_filter_velocity(:) = temp_filter_velocity(:) + AD_WindVelocityWithDisturbance(  REAL(timestep,ReKi), A_u, A_p, A_x, A_xd, A_z, A_O, A_y, ErrStat, ErrMsg,&
                                                                                        !(/0.0,REAL(y_axis,ReKi),REAL(z_axis,ReKi)/) )
-          temp_filter_velocity(:) = temp_filter_velocity(:) + temp_wind_velocity(:)
+            temp_filter_velocity(:) = temp_filter_velocity(:) + temp_wind_velocity(:)
                                                                                        
                                                         !+  AD_GetUndisturbedWind ( (REAL(timestep,ReKi)), (/0.0,&             
                                                                                        !REAL(y_axis,ReKi),REAL(z_axis,ReKi)/), ErrStat)
                                                                 
                                                         !   AD_GetUndisturbedWind ( (REAL(timestep,ReKi)/20.0)-315.0, (/0.0,&             
                                                                                    !REAL(y_axis,ReKi),REAL(z_axis,ReKi)/), ErrStat)
-           number_counter = number_counter + 1
+            number_counter = number_counter + 1
+            END IF
           END IF
-        END IF
-      END DO
+        END DO
+      END IF
     END DO
 
     filter_velocity (1) = temp_filter_velocity(1) / number_counter
@@ -1579,7 +1581,7 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
     DO release_time = 1,simulation_time_length,1               ! wake center position at turbine plane
     wake_center (release_time,1,1) = 0
     wake_center (release_time,1,2) = 0
-    wake_center (release_time,1,3) = REAL(p%TurbRefHt)
+    wake_center (release_time,1,3) = REAL(p%HubHt)
     END DO
     
     x_step = Modified_U * (DWM_time_step*OS%meandering_data%scale_factor)
@@ -1600,7 +1602,7 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
                                                 
        u%IfW_Inputs%Position(1,1) = (0.0_ReKi)
        u%IfW_Inputs%Position(2,1) = (0.0_ReKi)
-       u%IfW_Inputs%Position(3,1) = (p%TurbRefHt)
+       u%IfW_Inputs%Position(3,1) = (p%HubHt)
 
        
        CALL IfW_CalcOutput( ( ((release_time-1)+1)*DWM_time_step*OS%meandering_data%scale_factor), u%IfW_Inputs, p%IfW_Params, &
@@ -1698,7 +1700,7 @@ FUNCTION shifted_velocity( ZTime, p, OS, y, z, upwind_mean_u, Uwake, WakeCenter,
     
     
     y0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/scale_factor)+1,2) !+ 2*P%RotorR*spacing*TAN(OS%skew_angle)
-    z0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/scale_factor)+1,3) - REAL(p%TurbRefHt-p%hub_height)
+    z0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/scale_factor)+1,3) !! - REAL(p%TurbRefHt-p%hub_height)
     
     Yshifted = y + 2*p%RotorR*spacing*TAN(angle*Pi/180)
     Zshifted = z
@@ -1849,7 +1851,7 @@ FUNCTION smooth_wake_shifted_velocity( OS, p, y_coor, z_coor, Uwake, WakeCenter,
     REAL       ::   unit                          ! single unit length  R/ppR
     
     y0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/OS%meandering_data%scale_factor)+1,2) !+ 2*P%RotorR*spacing*TAN(OS%skew_angle) 
-    z0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/OS%meandering_data%scale_factor)+1,3) - REAL(p%TurbRefHt-p%hub_height)
+    z0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/OS%meandering_data%scale_factor)+1,3) !!- REAL(p%TurbRefHt-p%hub_height)
     
     Yshifted = y_coor + 2*p%RotorR*spacing*TAN(angle*Pi/180)
     Zshifted = z_coor
@@ -1954,7 +1956,7 @@ FUNCTION TI_downstream_total (OS, p, y, spacing,angle,velocity_matrix)   ! name 
              z_axis_turbine = j
              
              wake_center_y=y%wake_position(i,cross_plane_position_ds,2) !+ 2*P%RotorR*spacing*TAN(OS%skew_angle)
-             wake_center_z=y%wake_position(i,cross_plane_position_ds,3) - REAL(p%TurbRefHt-p%hub_height,ReKi)
+             wake_center_z=y%wake_position(i,cross_plane_position_ds,3) !!- REAL(p%TurbRefHt-p%hub_height,ReKi)
              
              distance = ( (y_axis_turbine-wake_center_y)**2 + (z_axis_turbine-wake_center_z)**2)**0.5
              
@@ -2102,7 +2104,7 @@ FUNCTION smallscale_TI (OS, p, y, spacing,angle,velocity_matrix)
              z_axis_turbine = j
              
              wake_center_y=y%wake_position(i,cross_plane_position_ds,2) !+ 2*P%RotorR*spacing*TAN(OS%skew_angle)
-             wake_center_z=y%wake_position(i,cross_plane_position_ds,3) - REAL(p%TurbRefHt-p%hub_height)
+             wake_center_z=y%wake_position(i,cross_plane_position_ds,3) !!- REAL(p%TurbRefHt-p%hub_height)
              
              distance = ( (y_axis_turbine-wake_center_y)**2 + (z_axis_turbine-wake_center_z)**2)**0.5
              
@@ -2148,7 +2150,7 @@ SUBROUTINE read_parameter_file( p )
     
     READ(OPENNUM) p%hub_height, p%RotorR, p%NumWT, p%Uambient, &
                   p%TI_amb, p%r_domain, p%x_domain, p%p_p_r, &
-                  p%WakePosition_1, p%WakePosition_2, p%TurbRefHt, &
+                  p%WakePosition_1, p%WakePosition_2, p%WFLowerBd, &
                   p%Winddir 
     CLOSE(OPENNUM) ! close the file
     

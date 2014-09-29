@@ -177,7 +177,7 @@ typedef  ^                    ^                  ^                         TI_am
 typedef  ^                    ^                  ^                         TI_wake                       - - -  "" -
 typedef  ^                    ^                  ^                         hub_height                    - - -  "" -
 typedef  ^                    ^                  ^                         length_velocityU              - - -  "" -
-typedef  ^                    ^                  ^                         TurbRefHt                     - - -  "The Turbsim wind file reference height" -
+typedef  ^                    ^                  ^                         WFLowerBd                     - - -  "The lower bound height of the wind file" -
 typedef  ^                    ^                  ^                         Wind_file_Mean_u              - - -  "The mean velocity of the first turbine" -
 typedef  ^                    ^                  ^                         Winddir                       - - -  "" -
 typedef  ^                    ^                  ^                         air_density                   - - -  "air density" -
