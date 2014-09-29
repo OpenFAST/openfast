@@ -156,6 +156,7 @@
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv0,RR00,node_elem,dof_node,vvv0,mmm,mEta0,rho0)
        CALL BeamDyn_StaticElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
        CALL BeamDyn_StaticElasticForce(E100,RR00,kapa0,Stif0,cet0,Fc0,Fd0,Oe0,Pe0,Qe0)
+
        CALL MassMatrix(mmm,mEta,rho,Mi)
        CALL MassMatrix(mmm,mEta0,rho0,Mi0)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
@@ -163,6 +164,11 @@
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        CALL GravityLoads(mmm,mEta0,gravity,Fg0)
        CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,mmm,mEta,rho,A2,A3,A4,A5,A6,A7)
+DO i=1,6
+DO j=1,6
+WRITE(*,*), "A7",i,j,A7(i,j)
+ENDDO
+ENDDO
 !       Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
        Fd(:) = dt*(Fd + Fd0) + &
               &MATMUL(Mi,vvv-vvv0) + &

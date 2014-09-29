@@ -1,10 +1,10 @@
-   SUBROUTINE DynamicSolution_AM2(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,u0,&
+   SUBROUTINE DynamicSolution_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
                                   node_elem,dof_node,elem_total,dof_total,&
                                   node_total,ngp,niter,dt)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
-!   REAL(ReKi),        INTENT(IN   ):: uuN00(:)
-!   REAL(ReKi),        INTENT(IN   ):: vvN00(:)
+   REAL(ReKi),        INTENT(IN   ):: uuN00(:)
+   REAL(ReKi),        INTENT(IN   ):: vvN00(:)
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: gravity(:)
@@ -21,15 +21,15 @@
    REAL(ReKi),        INTENT(INOUT):: uuN(:)
    REAL(ReKi),        INTENT(INOUT):: vvN(:)
 
-   REAL(ReKi)                      :: uuN00(dof_total)
-   REAL(ReKi)                      :: vvN00(dof_total)
+!   REAL(ReKi)                      :: uuN00(dof_total)
+!   REAL(ReKi)                      :: vvN00(dof_total)
    REAL(ReKi)                      :: MassM(dof_total*2,dof_total*2)
    REAL(ReKi)                      :: RHS(dof_total*2)
-   REAL(ReKi)                      :: MassM_LU(dof_total-12,dof_total-12)
-   REAL(ReKi)                      :: RHS_LU(dof_total-12)
+   REAL(ReKi)                      :: MassM_LU(dof_total*2-12,dof_total*2-12)
+   REAL(ReKi)                      :: RHS_LU(dof_total*2-12)
    REAL(ReKi)                      :: F_PointLoad(dof_total)
    REAL(ReKi)                      :: feqv(dof_total-6)
-   REAL(ReKi)                      :: sol_temp(dof_total-12)
+   REAL(ReKi)                      :: sol_temp(dof_total*2-12)
    REAL(ReKi)                      :: sol(dof_total*2)
    REAL(ReKi)                      :: d
    REAL(ReKi)                      :: temp
@@ -43,12 +43,10 @@
    INTEGER(IntKi)                  :: k
 
    Eref = 0.0D0
-   uuN00(:) = uuN(:)
-   vvN00(:) = vvN(:)
+
    DO i=1,niter
        RHS(:) = 0.0D0
        MassM(:,:) = 0.0D0
-WRITE(*,*) "TEST"
        CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
                                       &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
 
@@ -72,6 +70,10 @@ WRITE(*,*) "TEST"
            ENDDO
        ENDDO
 
+!DO j=1,24
+!WRITE(*,*) "MassM_LU(j,j)",j,MassM_LU(j,j)
+!ENDDO
+STOP
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
