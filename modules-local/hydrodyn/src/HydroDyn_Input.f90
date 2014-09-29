@@ -2686,11 +2686,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 !      !FIXME: Remove this when Waves2 is developed fully
       ! For this release, we are not permitting any of the Waves2 items to be set to true.
-   IF ( InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
-      CALL SetErrStat( ErrID_Fatal,'The Waves2 module is currently disabled in this release.  Future versions will support Waves2.',&
-                        ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-      RETURN
-   END IF
+!   IF ( InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
+!      CALL SetErrStat( ErrID_Fatal,'The Waves2 module is currently disabled in this release.  Future versions will support Waves2.',&
+!                        ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+!      RETURN
+!   END IF
 
 
       ! Difference frequency cutoffs
@@ -3992,29 +3992,29 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
       foundMask = .FALSE.
       ! Extract WAMIT list
-   InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList,  foundMask, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+      InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList,  foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
 
-      ! Extract WAMIT2 list
-   InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+         ! Extract WAMIT2 list
+      InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
 
-      ! Extract Waves2 list
-   InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+         ! Extract Waves2 list
+      InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
    
       ! Extract Morison list
       !foundMask = .FALSE.
-   InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+      InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
    
       ! Attach remaining items to the HydroDyn list
       !foundMask = .FALSE.
-   InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-   CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-   IF (ErrStat >= AbortErrLev ) RETURN
+      InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+      CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+      IF (ErrStat >= AbortErrLev ) RETURN
 
    DEALLOCATE(foundMask)
    END IF

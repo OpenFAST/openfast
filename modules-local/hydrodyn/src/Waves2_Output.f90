@@ -67,7 +67,7 @@ MODULE Waves2_Output
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(9) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                 Wave1El2  , Wave2El2  , Wave3El2  , Wave4El2  , Wave5El2  , Wave6El2  , Wave7El2  , Wave8El2  , Wave9El2  /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(9) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(M)       ","(M)       ","(M)       ","(M)       ","(M)       ","(M)       ","(M)       ","(M)       ","(M)       "/)
+                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       "/)
    
 
    REAL(ReKi)               :: AllOuts(MaxWaves2Outputs)          ! Array of all possible outputs
@@ -235,13 +235,19 @@ SUBROUTINE Wvs2OUT_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
    CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    
+   CHARACTER(1024)                                 :: ErrMsgTmp           ! Temporary Error status
+   INTEGER(IntKi)                                  :: ErrStatTmp          ! Temporary Error message
+
+ 
    !-------------------------------------------------------------------------------------------------      
    ! Initialize local variables
    !-------------------------------------------------------------------------------------------------      
      
          
    ErrStat = ErrID_None         
+   ErrStatTmp  = ErrID_None         
    ErrMsg  = ""  
+   ErrMsgTmp   = ""  
       
   
 
@@ -250,32 +256,31 @@ SUBROUTINE Wvs2OUT_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
    ! Check that the variables in OutList are valid      
    !-------------------------------------------------------------------------------------------------      
       
-   
-   CALL Wvs2OUT_ChkOutLst( InitInp%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
-   IF ( ErrStat /= 0 ) RETURN
-   
+   CALL Wvs2OUT_ChkOutLst( InitInp%OutList(1:p%NumOuts), y, p, ErrStatTmp, ErrMsg )
+   CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Wvs2OUT_Init')
+   IF (ErrStat >= AbortErrLev ) RETURN
    
   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
       
-      ALLOCATE( y%WriteOutput( p%NumOuts ),  STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating space for WriteOutput array.'
-         ErrStat = ErrID_Fatal
+      ALLOCATE( y%WriteOutput( p%NumOuts ),  STAT = ErrStatTmp )
+      IF ( ErrStattmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Error allocating space for WriteOutput array.',ErrStat,ErrMsg,'Wvs2OUT_Init')
+         IF (ErrStat >= AbortErrLev ) RETURN
          RETURN
       END IF
       y%WriteOutput = 0.0_ReKi
       
-        ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-         ErrStat = ErrID_Fatal
+      ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts), STAT = ErrStatTmp )
+      IF ( ErrStattmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Error allocating space for WriteOutputHdr array.',ErrStat,ErrMsg,'Wvs2OUT_Init')
+         IF (ErrStat >= AbortErrLev ) RETURN
          RETURN
       END IF
       
-      ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-         ErrStat = ErrID_Fatal
+      ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts), STAT = ErrStatTmp )
+      IF ( ErrStattmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Error allocating space for WriteOutputUnt array.',ErrStat,ErrMsg,'Wvs2OUT_Init')
+         IF (ErrStat >= AbortErrLev ) RETURN
          RETURN
       END IF   
  
@@ -376,13 +381,13 @@ END DO
 IF ( GetWaves2Channels > 0 ) THEN
    
    count = 1
-   ! Test that num channels does not exceed max possible channels due to size of OutList
-   !ALLOCATE ( OutList(GetWAMITChannels) , STAT=ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      ErrMsg  = ' Error allocating memory for the OutList array in the GetWaves2Channels function.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+ !  ! Test that num channels does not exceed max possible channels due to size of OutList
+ !  ALLOCATE ( OutList(GetWaves2Channels) , STAT=ErrStat )
+ !  IF ( ErrStat /= 0 )  THEN
+ !     ErrMsg  = ' Error allocating memory for the OutList array in the GetWaves2Channels function.'
+ !     ErrStat = ErrID_Fatal
+ !     RETURN
+ !  END IF
    
    DO I = 1,NUserOutputs
       IF ( newFoundMask(I) ) THEN
@@ -421,6 +426,9 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
       ! Local variables.
    
+   CHARACTER(1024)                        :: ErrMsgTmp                                 ! Temporary error message
+   INTEGER(IntKi)                         :: ErrStatTmp                                ! Temporary error status
+ 
    INTEGER                                :: I                                         ! Generic loop-counting index.
    INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
@@ -441,7 +449,9 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
+   ErrStatTmp  = ErrID_None         
    ErrMsg  = "" 
+   ErrMsgTmp   = "" 
    
    InvalidOutput            = .FALSE.
 
@@ -450,14 +460,13 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! ALLOCATE the OutParam array
    !-------------------------------------------------------------------------------------------------    
-   ALLOCATE ( p%OutParam(p%NumOuts) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrMsg  = ' Error allocating memory for the OutParam array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
      
    
+   ALLOCATE ( p%OutParam(p%NumOuts) , STAT=ErrStatTmp )
+   IF ( ErrStatTmp /= 0 ) CALL SetErrStat(ErrID_Fatal,' Error allocating memory for the OutParam array.',ErrStat,ErrMsg,'Wvs2OUT_ChkOutLst')
+   IF ( ErrStat >= AbortErrLev ) RETURN
+         
+     
          
      
    DO I = 1,p%NumOuts
@@ -502,13 +511,13 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
          ELSE
             p%OutParam(I)%Units = ParamUnitsAry(Indx)
          END IF
-      ELSE
-         ErrMsg  = p%OutParam(I)%Name//' is not an available output channel.'
-         ErrStat = ErrID_Fatal
-
-         p%OutParam(I)%Units = 'INVALID'  
-         p%OutParam(I)%Indx  =  1
-         p%OutParam(I)%SignM =  0                              ! this will print all zeros
+!      ELSE
+!         ErrMsg  = p%OutParam(I)%Name//' is not an available output channel.'
+!         ErrStat = ErrID_Fatal
+!
+!         p%OutParam(I)%Units = 'INVALID'  
+!         p%OutParam(I)%Indx  =  1
+!         p%OutParam(I)%SignM =  0                              ! this will print all zeros
       END IF
       
    END DO

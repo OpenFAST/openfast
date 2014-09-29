@@ -245,6 +245,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
 
+
       !-----------------------------------------------------------------------------
       !> Before attempting to do any real calculations, we first check what was
       !! passed in through _InitInp_ to make sure it makes sense.  That routine will
@@ -346,6 +347,17 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Summation QTF
       p%WvSumQTFF             =  InitInp%WvSumQTFF            ! Flag for calculation
 
+
+         ! Initialize the channel outputs
+      p%NumOuts               =  InitInp%NumOuts
+      p%NumOutAll             =  InitInp%NumOutAll
+
+      CALL Wvs2OUT_Init( InitInp, y, p, InitOut, ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves2_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp
+         RETURN
+      END IF
 
 
       !--------------------------------------------------------------------------------
@@ -830,8 +842,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
       ENDIF    ! p%WvDiffQTFF
-
-
 
 
 
@@ -1337,27 +1347,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
 
-print*,'Size of WaveDynP2D inside of Waves2_Init routine: '//  &
-               TRIM(Num2LStr(SIZE(InitOut%WaveDynP2D,DIM=1)))//'x'//            &
-               TRIM(Num2LStr(SIZE(InitOut%WaveDynP2D,DIM=2)))
-
-
-
-      !--------------------------------------------------------------------------------
-      ! FAST channel output
-      !--------------------------------------------------------------------------------
-
-         p%NumOuts               =  InitInp%NumOuts
-         p%NumOutAll             =  InitInp%NumOutAll
-
-            ! Initialize the outputs
-         CALL Wvs2OUT_Init( InitInp, y, p, InitOut, ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves2_Init')
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
-            RETURN
-         END IF
-
 
 
          CALL  ExitFFT(FFT_Data, ErrStatTmp)
@@ -1373,6 +1362,9 @@ print*,'Size of WaveDynP2D inside of Waves2_Init routine: '//  &
          IF (ALLOCATED(TmpTimeSeries2))   DEALLOCATE(TmpTimeSeries2,    STAT=ErrStatTmp)
          IF (ALLOCATED(TmpFreqSeries))    DEALLOCATE(TmpFreqSeries,     STAT=ErrStatTmp)
          IF (ALLOCATED(TmpFreqSeries2))   DEALLOCATE(TmpFreqSeries2,    STAT=ErrStatTmp)
+
+
+         RETURN
 
 
    CONTAINS
@@ -2273,7 +2265,6 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
                                                   OtherState%LastIndWave, p%NStepWave + 1       ) &
                              + InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), OtherState%WaveElev2S(:,I), &
                                                   OtherState%LastIndWave, p%NStepWave + 1       )
-
 
 
          ! Map the calculated results into the AllOuts Array

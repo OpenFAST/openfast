@@ -617,6 +617,8 @@ subroutine HD_DvrCleanup()
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       
       if ( ErrStat /= ErrID_None ) then !This assumes PRESENT(ErrID) is also .TRUE. :
+         CALL WrScr(NewLine//NewLine//'Error status and messages fter execution:'//NewLine//'           ErrStat: '// &
+                     TRIM(Num2LStr(ErrStat))//NewLine//'   ErrMsg returned: '//TRIM(ErrMsg)//NewLine)
          if ( time < 0.0 ) then
             ErrMsg = 'at initialization'
          else if ( time > InitInData%TMax ) then
