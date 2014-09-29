@@ -1,6 +1,11 @@
 SubDyn Change Log
 ===============================================================================
 -------------------------------------------------------------------------------
+v1.01.01a         30-Sep-2014
+	Official FAST 8.09 public release
+-changed the shear area correction factor in the Timoshenko treatment, now aligned with Steinboeck et al. (2013)
+-fixed a bug in the ReduceKMdofs routine that was introduced when trying to remove non-Fortran-standard syntax. The bug was returning erroneous full FEM eigenvalues in the summary file, but did not affect any of the time-based output.
+-------------------------------------------------------------------------------
 v1.01.00a-rrd     30-Jun-2014
 	Official FAST 8.08 public release
 - added checks that NMOutputs <= 9 and that NOutCnt must be >= 1 and <= minimim(Ndiv+1,9)
