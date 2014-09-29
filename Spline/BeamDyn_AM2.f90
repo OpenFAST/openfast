@@ -14,11 +14,6 @@
 
    ! local variables
       
-   TYPE(BD_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
-   TYPE(BD_ContinuousStateType)                 :: k1          ! RK4 constant; see above
-   TYPE(BD_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
-   TYPE(BD_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
-   TYPE(BD_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
    TYPE(BD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
    TYPE(BD_InputType)                           :: u_interp    ! interpolated value of inputs 
    TYPE(BD_InputType)                           :: u_interp0    ! interpolated value of inputs 
@@ -55,12 +50,14 @@
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
 
+   x_tmp%q = x%q
+   x_tmp%dqdt = x%dqdt
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp0, t, ErrStat, ErrMsg )
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
    ! find x at t+dt
    CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
-   CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,u_interp0,&
+   CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,u_interp0,&
                              p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
                              p%node_total,p%ngp,p%niter,p%dt)
 

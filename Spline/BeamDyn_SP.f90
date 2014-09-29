@@ -381,6 +381,7 @@ INCLUDE 'BeamDyn_AM2.f90'
            temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
            temp_id2= (j-1)*p%dof_node
            x%dqdt(temp_id+3) = p%uuN0(temp_id2+1,i)*(3.1415926D+00/3.0D0)
+           x%dqdt(temp_id+5) = -3.1415926D+00/3.0D0
        ENDDO
    ENDDO
 !END initial condition
