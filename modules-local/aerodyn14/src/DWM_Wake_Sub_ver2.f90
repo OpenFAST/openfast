@@ -1581,7 +1581,7 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
     DO release_time = 1,simulation_time_length,1               ! wake center position at turbine plane
     wake_center (release_time,1,1) = 0
     wake_center (release_time,1,2) = 0
-    wake_center (release_time,1,3) = REAL(p%HubHt)
+    wake_center (release_time,1,3) = REAL(p%hub_height)
     END DO
     
     x_step = Modified_U * (DWM_time_step*OS%meandering_data%scale_factor)
@@ -1602,7 +1602,7 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
                                                 
        u%IfW_Inputs%Position(1,1) = (0.0_ReKi)
        u%IfW_Inputs%Position(2,1) = (0.0_ReKi)
-       u%IfW_Inputs%Position(3,1) = (p%HubHt)
+       u%IfW_Inputs%Position(3,1) = (p%hub_height)
 
        
        CALL IfW_CalcOutput( ( ((release_time-1)+1)*DWM_time_step*OS%meandering_data%scale_factor), u%IfW_Inputs, p%IfW_Params, &
