@@ -51,7 +51,10 @@ Utilities\SimulationToolbox\ConvertFASTVersions\CalculateYawAndPitchRates.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST7to8.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_0to3.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_3to8.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_8to9.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertHDto2_01_00.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertHDto2_02_00.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertSDto1_01_00.m
 
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\AD_Primary.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Blade.dat
@@ -62,6 +65,8 @@ Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\ED_Primary_v1.01.x
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.08.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SrvD_Primary_v1.01.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.01.00.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.02.00.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SDv1.01.x.dat
 
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_00.m
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_01.m
