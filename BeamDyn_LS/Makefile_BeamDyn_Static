@@ -38,8 +38,8 @@ MODNAME_DIR = .
 
 FC     = gfortran
 #FFLAGS = -O3 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none
-FFLAGS = -O3 -g -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
-LDFLAGS = -O3 -g -fbacktrace
+FFLAGS = -O3 -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
+LDFLAGS = -O3 -fbacktrace
 
    # Precision.
 
@@ -75,7 +75,7 @@ endif
 
    # Destination and RootName for executable
 
-OUTPUT_NAME = BeamDyn_AM2
+OUTPUT_NAME = BeamDyn_Static
 DEST_DIR    = .
 
    # Library files.
@@ -95,7 +95,7 @@ LIB_SOURCES =             \
 
 MODNAME_SOURCES   =             \
 	BeamDyn_SP.f90             \
-	Driver_BeamDyn_AM2.f90                \
+	Driver_BeamDyn_Static.f90                \
 	BeamDyn_Types.f90       \
 
 vpath %.f90 $(LIB_DIR) $(MODNAME_DIR)
@@ -131,10 +131,10 @@ BeamDyn_Types.f90:       Registry_BeamDyn.txt
 BeamDyn_Types.obj:       NWTC_Library.obj
 BeamDyn_SP.obj:             BeamDyn_Types.obj
 
-Driver_BeamDyn_AM2.obj:                BeamDyn_SP.obj           NWTC_Library.obj
+Driver_BeamDyn_Static.obj:                BeamDyn_SP.obj           NWTC_Library.obj
 
 
-#$(OUTPUT_NAME)$(EXE_EXT): Driver_Dynamic_AM2.obj
+#$(OUTPUT_NAME)$(EXE_EXT): Driver_Static_GL.obj
 
    # Make sure the destination directory for the intermediate files exist.
 
@@ -158,5 +158,5 @@ $(DEST_DIR)/$(OUTPUT_NAME)$(EXE_EXT): $(LIB_OBJS) $(MODNAME_OBJS) | $(INTER_DIR)
    # Cleanup afterwards.
 
 clean:
-	$(DEL_CMD) $(INTER_DIR)$(PATH_SEP)*.mod $(INTER_DIR)$(PATH_SEP)*.obj $(OUTPUT_NAME)$(EXE_EXT) BeamDyn_Types.f90 *.dat *.out
+	$(DEL_CMD) $(INTER_DIR)$(PATH_SEP)*.mod $(INTER_DIR)$(PATH_SEP)*.obj $(OUTPUT_NAME)$(EXE_EXT) BeamDyn_Types.f90
 
