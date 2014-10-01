@@ -370,11 +370,11 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
-   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
-   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
-   STOP
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
+!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
+!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
+!   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
