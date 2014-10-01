@@ -58,7 +58,7 @@ PROGRAM MAIN
    TYPE(BD_OtherStateType)          :: BD_OtherState
 
    TYPE(BD_InputType),ALLOCATABLE  :: BD_Input(:)
-   REAL(DbKi), ALLOCATABLE           :: BD_InputTimes(:)
+   REAL(DbKi),        ALLOCATABLE  :: BD_InputTimes(:)
 
    TYPE(BD_OutputType),ALLOCATABLE  :: BD_Output(:)
    REAL(DbKi),ALLOCATABLE             :: BD_OutputTimes(:)
@@ -273,8 +273,11 @@ PROGRAM MAIN
       CALL BD_DestroyOutput(BD_Output(i), ErrStat, ErrMsg )
    ENDDO
 
+   DEALLOCATE(BD_Input)
    DEALLOCATE(BD_InputTimes)
+   DEALLOCATE(BD_Output)
    DEALLOCATE(BD_OutputTimes)
+   DEALLOCATE(BD_InitInput%gravity)
 
    6000 FORMAT (ES12.5,6ES21.12)
    CLOSE (QiDisUnit)

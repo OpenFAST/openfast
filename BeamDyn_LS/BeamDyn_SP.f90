@@ -232,7 +232,7 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    p%uuN0(:,:) = 0.0D0
    DO i=1,p%node_elem
        temp_id = (i-1)*6
-       READ(8,*) p%uuN0(temp_id+1:temp_id+4,1)
+       READ(8,*) p%uuN0(temp_id+2,1),p%uuN0(temp_id+3,1),p%uuN0(temp_id+1,1),p%uuN0(temp_id+4,1)
        p%uuN0(temp_id+4,1) = p%uuN0(temp_id+4,1)*ACOS(-1.0D0)/180.0D0
    ENDDO
    DO i=1,p%node_elem
