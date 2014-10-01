@@ -99,6 +99,8 @@ INCLUDE 'GenerateDynamicElement_AM2.f90'
 INCLUDE 'DynamicSolution_AM2.f90'
 INCLUDE 'BeamDyn_AM2.f90'
 
+INCLUDE 'ComputeIniNodalCrvLS.f90'
+
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
@@ -223,45 +225,49 @@ INCLUDE 'BeamDyn_AM2.f90'
    CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
    DEALLOCATE(temp_w)
 
-   NodeInp = 'blade_test.inp'
+   NodeInp = 'blade_LS.inp'
    OPEN(UNIT = 8, FILE = NodeInp, STATUS = 'OLD', ACTION = 'READ')
-   READ(8,*) p%node_elem
+   READ(8,*) p%node_elem,p%blade_length
    CALL AllocAry(p%uuN0,p%node_elem*p%dof_node,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
    p%uuN0(:,:) = 0.0D0
    DO i=1,p%node_elem
        temp_id = (i-1)*6
        READ(8,*) p%uuN0(temp_id+1:temp_id+4,1)
+       p%uuN0(temp_id+4,1) = p%uuN0(temp_id+4,1)*ACOS(-1.0D0)/180.0D0
    ENDDO
-   CALL CrvComputeIniCrvLS(p%uuN0(:,1),)
-
+   DO i=1,p%node_elem
+       CALL ComputeIniNodalCrvLS(p%uuN0(:,1),p%node_elem,i,temp_POS)
+       temp_id = (i-1) * p%dof_node
+       p%uuN0(temp_id+4:temp_id+6,1) = temp_POS(1:3)
+   ENDDO
    DO i=1,p%elem_total
        IF(i == 1) THEN
            temp_id = 0
        ELSE
            temp_id = temp_id + InputFileData%kp_member(i-1) - 1
        ENDIF
-       DO j=1,p%node_elem
-           eta = (temp_GLL(j) + 1.0D0)/2.0D0
-           DO k=1,InputFileData%kp_member(i)-1
-               temp_id2 = temp_id + k
-               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
-                   DO m=1,4
-                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
-                   ENDDO
-                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
-                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
-                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
-                   temp_id2 = (j-1)*p%dof_node 
-                   p%uuN0(temp_id2+1,i) = temp_POS(1)
-                   p%uuN0(temp_id2+2,i) = temp_POS(2)
-                   p%uuN0(temp_id2+3,i) = temp_POS(3)
-                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
-                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
-                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
-                   EXIT
-               ENDIF
-           ENDDO
-       ENDDO
+!       DO j=1,p%node_elem
+!           eta = (temp_GLL(j) + 1.0D0)/2.0D0
+!           DO k=1,InputFileData%kp_member(i)-1
+!               temp_id2 = temp_id + k
+!               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+!                   DO m=1,4
+!                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+!                   ENDDO
+!                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+!                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+!                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
+!                   temp_id2 = (j-1)*p%dof_node 
+!                   p%uuN0(temp_id2+1,i) = temp_POS(1)
+!                   p%uuN0(temp_id2+2,i) = temp_POS(2)
+!                   p%uuN0(temp_id2+3,i) = temp_POS(3)
+!                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
+!                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
+!                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
+!                   EXIT
+!               ENDIF
+!           ENDDO
+!       ENDDO
        DO j=1,p%ngp
            eta = (temp_GL(j) + 1.0D0)/2.0D0
            DO k=1,InputFileData%kp_member(i)-1
@@ -368,7 +374,7 @@ INCLUDE 'BeamDyn_AM2.f90'
    WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
    WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
    WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
-!   STOP
+   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
