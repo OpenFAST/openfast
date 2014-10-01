@@ -21,8 +21,6 @@
    REAL(ReKi),        INTENT(INOUT):: uuN(:)
    REAL(ReKi),        INTENT(INOUT):: vvN(:)
 
-!   REAL(ReKi)                      :: uuN00(dof_total)
-!   REAL(ReKi)                      :: vvN00(dof_total)
    REAL(ReKi)                      :: MassM(dof_total*2,dof_total*2)
    REAL(ReKi)                      :: RHS(dof_total*2)
    REAL(ReKi)                      :: MassM_LU(dof_total*2-12,dof_total*2-12)
@@ -83,6 +81,7 @@ DO j=1,24
 WRITE(*,*) "sol_temp(j)",j,sol_temp(j)
 ENDDO
 !STOP
+WRITE(*,*) "TEST4"
        temp = Norm(feqv)
        sol(:) = 0.0D0
        DO j=1,dof_total-6
