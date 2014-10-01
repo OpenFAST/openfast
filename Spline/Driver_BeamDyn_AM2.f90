@@ -110,7 +110,7 @@ PROGRAM MAIN
 
    ! define polynomial-order for ModName_Input_ExtrapInterp and ModName_Output_ExtrapInterp
    ! Must be 0, 1, or 2
-   BD_interp_order = 2 
+   BD_interp_order = 0
 
    !Module1: allocate Input and Output arrays; used for interpolation and extrapolation
    ALLOCATE(BD_Input(BD_interp_order + 1)) 
@@ -187,8 +187,8 @@ PROGRAM MAIN
 !  step endpionts and midpoint.
 
       CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 
 
 !     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
