@@ -540,7 +540,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !! and pressure can be written in generic form as:
       !!
       !! \f$
-      !!    V^{(2)-}(t) =  2  \Re \left[ \sum_{\mu^-=1}^{\frac{N}{2}} H^-(\omega_{\mu^-})
+      !!    V^{(2)-}(t) =  2  \Re \left[ \sum_{\mu^-=1}^{\frac{N}{2}-1} H^-(\omega_{\mu^-})
       !!                      \exp(\imath \omega_{\mu^-} t) \right]
       !!                =  2  \operatorname{IFFT}\left[H^-\right]     \f$
       !!
@@ -667,7 +667,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
                !> * \f$ \mu^- = n -m \f$
-            DO mu_minus=1,InitInp%NStepWave2
+            DO mu_minus=1,InitInp%NStepWave2-1
 
                   ! The frequency we are dealing with
                   !> * \f$ \omega^- = \mu^- \Delta \omega \f$
@@ -1376,7 +1376,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !! calculations.
       !!
       !! \f$
-      !!    \eta^{(2)-}(t) =  2  \Re \left[ \sum_{\mu^-=1}^{\frac{N}{2}} H^-(\omega_{\mu^-})
+      !!    \eta^{(2)-}(t) =  2  \Re \left[ \sum_{\mu^-=1}^{\frac{N}{2}-1} H^-(\omega_{\mu^-})
       !!                         \exp(\imath \omega_{\mu^-} t) \right]
       !!                   =  \operatorname{IFFT}\left[2 H^-\right]     \f$
       !!
@@ -1417,7 +1417,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
             ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
             !> * \f$ \mu^- = n -m \f$
-         DO mu_minus=1,InitInp%NStepWave2
+         DO mu_minus=1,InitInp%NStepWave2-1
 
                ! The frequency we are dealing with
                !> * \f$ \omega^- = \mu^- \Delta \omega \f$
