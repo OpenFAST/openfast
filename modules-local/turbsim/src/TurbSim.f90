@@ -72,6 +72,7 @@ REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)     ! The turbulence PSD
 REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)     ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
 REAL(ReKi), ALLOCATABLE          :: U           (:)         ! The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi), ALLOCATABLE          :: HWindDir    (:)         ! A profile of horizontal wind angle (NPoints) (measure of wind direction with height)
+REAL(ReKi), ALLOCATABLE          :: VWindDir    (:)         ! A profile of vretical wind angle (NPoints) (measure of wind vertical angle with height)
 
 REAL(ReKi)                       :: CPUtime                 ! Contains the number of seconds since the start of the program
 
@@ -148,11 +149,15 @@ CALL CheckError()
    ! Wind Direction:
 CALL AllocAry(HWindDir, SIZE(p%grid%Z), 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
 CALL CheckError()
-   
-CALL getDirectionProfile(p, p%grid%Z, HWindDir, ErrStat, ErrMsg)
+
+CALL AllocAry(VWindDir, SIZE(p%grid%Z), 'VWindDir (vertical wind angle profile)', ErrStat, ErrMsg )             ! Allocate the array for the vertical wind profile      
+CALL CheckError()
+
+CALL getDirectionProfile(p, p%grid%Z, HWindDir, VWindDir, ErrStat, ErrMsg)
 CALL CheckError()
    
 p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx )
+p%met%HH_VFlowAng = VWindDir( p%grid%HubIndx )
 
 !..................................................................................................................................
 ! Calculate remaining parameters required for simulation:
@@ -174,7 +179,7 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
 END IF
 
            
-CALL WrSum_SpecModel( p, U, HWindDir, ErrStat, ErrMsg )
+CALL WrSum_SpecModel( p, U, HWindDir, VWindDir, ErrStat, ErrMsg )
 CALL CheckError()
 
 
@@ -200,6 +205,9 @@ IF ( ALLOCATED( p%met%Ustar_profile ) )  DEALLOCATE( p%met%Ustar_profile   )
 
 !IF ( ALLOCATED( p%usr%f            ) )  DEALLOCATE( p%usr%f               ) bjj: do we need to keep these for phase angles?
 IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S               )
+IF ( ALLOCATED( p%usr%meanU         ) )  DEALLOCATE( p%usr%meanU           )
+IF ( ALLOCATED( p%usr%meanDir       ) )  DEALLOCATE( p%usr%meanDir         )
+IF ( ALLOCATED( p%usr%meanVAng      ) )  DEALLOCATE( p%usr%meanVAng        )
 
 !..................................................................................................................................
 ! Get the phase angles
@@ -273,16 +281,17 @@ IF ( p%WrFile(FileExt_DAT) )  THEN
    CALL CheckError()
 END IF
 
+
 !..................................................................................................................................
-! Add mean wind to u' components and rotate to inertial reference  
-!  frame coordinate system
+! Add mean wind to u' components and rotate to inertial reference frame coordinate system
 !..................................................................................................................................
-CALL AddMeanAndRotate(p, V, U, HWindDir)
+CALL AddMeanAndRotate(p, V, U, HWindDir, VWindDir)
 
    ! Deallocate memory for the matrix of the steady, u-component winds.
 
-IF ( ALLOCATED( U        ) )  DEALLOCATE( U        )
-IF ( ALLOCATED( HWindDir ) )  DEALLOCATE( HWindDir )
+IF ( ALLOCATED( U              ) )  DEALLOCATE( U              )
+IF ( ALLOCATED( HWindDir       ) )  DEALLOCATE( HWindDir       )
+IF ( ALLOCATED( VWindDir       ) )  DEALLOCATE( VWindDir       )
 
 !..................................................................................................................................
 ! Generate coherent turbulence if desired:
@@ -319,19 +328,11 @@ IF ( p%WrFile(FileExt_UVW) )  THEN
    CALL WrFormattedFF(p%RootName, p%grid, p%UHub, V)
 ENDIF ! ( WrFile(FileExt_UVW) )
 
-
-
 !..................................................................................................................................
 ! End:
 !..................................................................................................................................
 
 IF ( ALLOCATED( V  ) )  DEALLOCATE( V )
-
-
-!WRITE ( p%US, '(/"Nyquist frequency of turbulent wind field =      ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * p%grid%TimeStep)
-!IF ( CohStr_EventTimeStep > 0.0_ReKi ) THEN
-!   WRITE ( p%US, '( "Nyquist frequency of coherent turbulent events = ",F8.3, " Hz")' ) 1.0_ReKi / (2.0_ReKi * CohStr_EventTimeStep)
-!ENDIF
 
 
    ! Request CPU-time used.
@@ -356,6 +357,7 @@ SUBROUTINE CheckError()
          IF (ALLOCATED(V          )) DEALLOCATE(V          )
          IF (ALLOCATED(U          )) DEALLOCATE(U          )
          IF (ALLOCATED(HWindDir   )) DEALLOCATE(HWindDir   )
+         IF (ALLOCATED(VWindDir   )) DEALLOCATE(VWindDir   )
          
          
          WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(ErrMSg)

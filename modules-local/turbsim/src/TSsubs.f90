@@ -474,225 +474,6 @@ CONTAINS
 END SUBROUTINE CalcFourierCoeffs
 
 !=======================================================================
-!> This subroutine computes the coherence between two points on the grid,
-!! forms the cross spectrum matrix, and returns the complex
-!! Fourier coefficients of the simulated velocity (wind speed).
-SUBROUTINE CalcFourierCoeffs_old( p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
-
-IMPLICIT                      NONE
-
-   ! Passed variables
-TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< TurbSim parameters
-REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
-REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
-REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
-INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
-CHARACTER(*),                INTENT(OUT)    :: ErrMsg
-
-   
-   ! Internal variables
-
-REAL(ReKi), ALLOCATABLE       :: TRH (:)        ! The transfer function matrix.  
-REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
-REAL(ReKi), ALLOCATABLE       :: DistU(:)
-REAL(ReKi), ALLOCATABLE       :: DistZMExp(:)
-REAL(ReKi)                    :: dY             ! the lateral distance between two points
-REAL(ReKi)                    :: UM             ! The mean wind speed of the two points
-REAL(ReKi)                    :: ZM             ! The mean height of the two points
-
-
-
-INTEGER                       :: J
-INTEGER                       :: I
-INTEGER                       :: IFreq
-INTEGER                       :: Indx
-INTEGER                       :: IVec, IVec_End ! wind component, 1=u, 2=v, 3=w
-                              
-INTEGER(IntKi)                :: ErrStat2
-CHARACTER(MaxMsgLen)          :: ErrMsg2
-
-ErrStat = ErrID_None
-ErrMsg  = ""
-! ------------ arrays allocated -------------------------
-
-
-CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-CALL AllocAry( DistZMExp, p%grid%NPacked, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-CALL AllocAry( TRH,       p%grid%NPacked,       'TRH coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-IF (ErrStat >= AbortErrLev) THEN
-   CALL Cleanup()
-   RETURN
-END IF
-
-
-
-!--------------------------------------------------------------------------------
-! Calculate the distances and other parameters that don't change with frequency
-!---------------------------------------------------------------------------------
-
-   ! Calculate Dist array (distance between points I and J)
-IF ( .NOT. PeriodicY ) THEN
-   Indx=0
-   DO J=1,p%grid%NPoints
-      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
-         Indx = Indx + 1
-         Dist(Indx)= SQRT( ( p%grid%Y(I) - p%grid%Y(J) )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
-      END DO ! I
-   END DO ! J
-ELSE  
-   ! bjj need to test ths more!!!
-   Indx=0
-   DO J=1,p%grid%NPoints
-      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
-      
-         Indx = Indx + 1
-         dY = p%grid%Y(I) - p%grid%Y(J)
-         IF (dY > 0.5*p%grid%GridWidth ) THEN
-            dY = dY - p%grid%GridWidth - p%grid%GridRes_Y
-         ELSE IF (dY < -0.5*p%grid%GridWidth ) THEN
-            dY = dY + p%grid%GridWidth + p%grid%GridRes_Y
-         END IF
-
-         Dist(Indx)= SQRT( ( dY )**2  + ( p%grid%Z(I) - p%grid%Z(J) )**2 )
-
-      END DO
-   END DO
-END IF
-
-
-   ! Compute the DistZMExp term, i.e., -(r/z_m)^CohExp
-IF ( p%met%IsIECModel .OR. EqualRealNos( p%met%COHEXP, 0.0_ReKi ) ) THEN
-   DistZMExp = -1.0_ReKi      ! value for entire array
-ELSE   
-   Indx=0
-   DO J=1,p%grid%NPoints
-      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
-      
-         Indx            = Indx + 1
-         ZM              = 0.5*( p%grid%Z(I) + p%grid%Z(J) )
-         DistZMExp(Indx) = -1.0_ReKi*( Dist(Indx)/ZM )**p%met%COHEXP     ! Note: 0**0 = 1      
-      END DO ! I  
-   END DO ! J              
-END IF
-
-! Compute the DistU term, i.e., (r/u): u is uHub for IEC; u is average u for other models
-IF ( p%met%IsIECModel ) THEN
-   Indx=0
-   DO J=1,p%grid%NPoints
-      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side 
-         Indx = Indx + 1
-         DistU(Indx) = Dist(Indx)/p%UHub
-      END DO ! I  
-   END DO ! J        
-ELSE
-   Indx=0
-   DO J=1,p%grid%NPoints
-      DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side      
-         Indx        = Indx + 1
-         UM          = 0.5*( U(I) + U(J) )
-         DistU(Indx) = Dist(Indx)/UM
-      END DO ! I  
-   END DO ! J 
-END IF
-
-
-IF ( p%met%IsIECmodel ) THEN
-   IVec_End = 1
-ELSEIF (p%met%TurbModel_ID == SpecModel_TimeSer) THEN
-   IVec_End = 1  ! no coherence for any component -- fix this after more checking
-print *, 'check coherence with TimeSer model'   
-ELSE
-   IVec_End = 3
-END IF
-V(:,:,:) = 0.0_ReKi    ! initialize the matrix (will contain coefficients at the end of this routine)
-
-DO IVec = 1,IVec_End
-
-   CALL WrScr ( '    '//Comp(IVec)//'-component matrices' )
-
-   !--------------------------------------------------------------------------------
-   ! Calculate the coherence, Veers' H matrix (CSDs), and the fourier coefficients
-   !---------------------------------------------------------------------------------
-
-   DO IFREQ = 1,p%grid%NumFreq
-
-      !---------------------------------------------------
-      ! Calculate the coherence and Veers' H matrix (CSDs)
-      !---------------------------------------------------
-         ! -----------------------------------------------
-         ! Create the coherence matrix for this frequency
-         ! -----------------------------------------------
-      Indx = 1
-      DO J = 1,p%usr%NPoints-1
-      
-         TRH(Indx) =  1.0_ReKi
-         Indx = Indx + 1
-      
-         DO I=J+1,p%grid%NPoints
-            TRH(Indx) = 0.0_ReKi
-            Indx = Indx + 1
-         END DO
-      
-      END DO !I
-
-         
-      DO J=max(1, p%usr%NPoints),p%grid%NPoints
-         DO I=J,p%grid%NPoints
-
-               TRH(Indx) = EXP( p%met%InCDec(IVec) * DistZMExp(Indx)* &
-                           SQRT( (p%grid%Freq(IFreq)*DistU(Indx) )**2 + (p%met%InCohB(IVec)*Dist(Indx))**2 ) )
-               
-               Indx = Indx  + 1
-
-         ENDDO ! I
-      ENDDO ! J
-      
-!call wrmatrix( trh, 77, 'ES15.5' )
-
-      CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )       
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-      CALL H2Coeffs( IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
-   ENDDO !IFreq
-
-ENDDO !IVec
-
-
-   ! this is for identity coherence:
-DO IVec = IVec_End+1,3
-     
-      ! -----------------------------------------------------------------------------------
-      !  The coherence is the Identity (as is Cholesky Factorization); 
-      !    the Veers' H matrix calculated in EyeCoh2H:
-      ! -----------------------------------------------------------------------------------
-      
-   DO IFREQ = 1,p%grid%NumFreq
-      CALL EyeCoh2H(  IVec, IFreq, TRH, S,              p%grid%NPoints )   
-      CALL H2Coeffs(  IVec, IFreq, TRH, PhaseAngles, V, p%grid%NPoints )
-   ENDDO !IFreq
-      
-END DO
-
-CALL Cleanup()
-
-RETURN
-!............................................
-CONTAINS
-   SUBROUTINE Cleanup()
-
-      IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
-      IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
-      IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
-      IF ( ALLOCATED( TRH       ) ) DEALLOCATE( TRH       )
-   END SUBROUTINE Cleanup
-!............................................
-END SUBROUTINE CalcFourierCoeffs_old
-!=======================================================================
 !> This subroutine returns the complex Fourier coefficients (packed in a
 !! real array) of the simulated velocity (wind/water speed). It returns
 !! values FOR ONLY the velocity components that use the API method for
@@ -1192,7 +973,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    INTEGER(IntKi)                   :: LastIndex(2)                     ! Index for the last (Freq, Ht) used in models that interpolate/extrapolate user-input spectra or time series
    
    INTEGER(IntKi)                   :: IVec                             ! loop counter for velocity components
-   INTEGER(IntKi)                   :: IPoint, iPointIndx               ! loop counter for grid points
+   INTEGER(IntKi)                   :: IPoint, iPointUsr                ! loop counter for grid points
    
    REAL(ReKi),   ALLOCATABLE        :: SSVS (:,:)                       ! A temporary work array (NumFreq,3) that holds a single-sided velocity spectrum.
    REAL(ReKi)                       :: DUDZ                             ! The steady u-component wind shear for the grid  [used in Hydro models only].
@@ -1313,15 +1094,15 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
       CASE ( SpecModel_TimeSer ) 
          
-         DO iPointIndx = 1,p%usr%NPoints
+         DO iPointUsr = 1,p%usr%NPoints
       
-            iPoint = iPointIndx
-            IF (iPointIndx == p%usr%RefPtID ) THEN
-               iPoint = p%usr%NPoints
-            ELSEIF (iPointIndx == p%usr%NPoints) THEN
+            iPoint = iPointUsr 
+            IF (iPointUsr == p%usr%RefPtID ) THEN
+               iPoint = p%usr%NPoints !this is the point on the grid
+            ELSEIF (iPointUsr  == p%usr%NPoints) THEN
                iPoint = p%usr%RefPtID
             END IF
-            S(1:p%usr%nFreq,IPoint,:) = p%usr%S(:,IPoint,:)*HalfDelF 
+            S(1:p%usr%nFreq,IPoint,:) = p%usr%S(:,iPointUsr,:)*HalfDelF 
          END DO
          if (p%usr%nFreq < p%grid%NumFreq) then
             S(p%usr%nFreq+1:, : , :) = 0.0_ReKi  !bjj: fill this in another way for extrapolation (use different model??)
@@ -1452,7 +1233,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    INTEGER(IntKi)                                 :: HubIndx_Z                       ! Index into Z dimension of grid for hub location
    
    INTEGER(IntKi)                                 :: NumSteps2                       ! one-half the number of steps
-   INTEGER(IntKi)                                 :: iPoint, iPointIndx              ! loop counter for points
+   INTEGER(IntKi)                                 :: iPoint, iPointUsr               ! loop counter for points
    
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
@@ -1585,17 +1366,17 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%TwrPtIndx  = 0
    
    ! (2) the rectangular grid:
-   DO iPointIndx = 1,p_usr%NPoints
+   DO iPointUsr = 1,p_usr%NPoints
       
-      iPoint = iPointIndx
-      IF (iPointIndx == p_usr%RefPtID ) THEN
+      iPoint = iPointUsr
+      IF (iPointUsr == p_usr%RefPtID ) THEN
          iPoint = p_usr%NPoints
-      ELSEIF (iPointIndx == p_usr%NPoints) THEN
+      ELSEIF (iPointUsr == p_usr%NPoints) THEN
          iPoint = p_usr%RefPtID
       END IF
       
          ! Is this point on the regularly-spaced grid?   
-      TmpIndex = IndexOnGrid( p_grid, p_usr%pointyi(iPoint), p_usr%pointzi(iPoint) )
+      TmpIndex = IndexOnGrid( p_grid, p_usr%pointyi(iPointUsr), p_usr%pointzi(iPointUsr) )
       
       IF ( TmpIndex > 0 ) THEN
          p_grid%GridPtIndx( TmpIndex ) = iPoint
@@ -1604,7 +1385,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       ELSE
             ! Is this point on the tower?   
          IF ( NTwrPts > 0 ) THEN
-            TmpIndex = IndexOnTower( p_grid, p_usr%pointyi(iPoint), p_usr%pointzi(iPoint) )
+            TmpIndex = IndexOnTower( p_grid, p_usr%pointyi(iPointUsr), p_usr%pointzi(iPointUsr) )
             
             IF ( TmpIndex > 0 ) THEN
                p_grid%TwrPtIndx( TmpIndex ) = iPoint    
@@ -1641,16 +1422,16 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    IF ( .NOT. p_grid%HubOnGrid ) THEN
       GenerateExtraHubPoint = .TRUE.      
       ! Is it a user-defined point?
-      DO iPointIndx = 1,p_usr%NPoints
+      DO iPointUsr = 1,p_usr%NPoints
       
-         iPoint = iPointIndx
-         IF (iPointIndx == p_usr%RefPtID ) THEN
+         iPoint = iPointUsr
+         IF (iPointUsr == p_usr%RefPtID ) THEN
             iPoint = p_usr%NPoints
-         ELSEIF (iPointIndx == p_usr%NPoints) THEN
+         ELSEIF (iPointUsr == p_usr%NPoints) THEN
             iPoint = p_usr%RefPtID
          END IF
       
-         IF ( EqualRealNos( p_usr%pointyi(iPoint), 0.0_ReKi ) .AND. EqualRealNos( p_usr%pointzi(iPoint), p_grid%HubHt ) ) THEN
+         IF ( EqualRealNos( p_usr%pointyi(iPointUsr), 0.0_ReKi ) .AND. EqualRealNos( p_usr%pointzi(iPointUsr), p_grid%HubHt ) ) THEN
             p_grid%HubIndx = iPoint
             GenerateExtraHubPoint = .FALSE.
             EXIT  ! we found it
@@ -1672,17 +1453,17 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
    
    ! (1) User-defined points 
-   DO iPointIndx = 1,p_usr%NPoints
+   DO iPointUsr = 1,p_usr%NPoints
       
-      iPoint = iPointIndx
-      IF (iPointIndx == p_usr%RefPtID ) THEN
+      iPoint = iPointUsr
+      IF (iPointUsr == p_usr%RefPtID ) THEN
          iPoint = p_usr%NPoints
-      ELSEIF (iPointIndx == p_usr%NPoints) THEN
+      ELSEIF (iPointUsr == p_usr%NPoints) THEN
          iPoint = p_usr%RefPtID
       END IF
       
-      p_grid%y(iPoint) = p_usr%pointyi(iPoint)
-      p_grid%z(iPoint) = p_usr%pointzi(iPoint)      
+      p_grid%y(iPoint) = p_usr%pointyi(iPointUsr)
+      p_grid%z(iPoint) = p_usr%pointzi(iPointUsr)      
    END DO   
 
    
@@ -1734,7 +1515,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       
       
       DO IZ = 1,NTwrIndx
-         IF ( p_grid%TwrPtIndx(IZ) == 0 ) THEN
+         IF ( p_grid%TwrPtIndx(IZ) < 1 ) THEN
             iPoint = iPoint + 1
             
             p_grid%Y(iPoint)     = 0.0_ReKi
@@ -1839,7 +1620,7 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
    REAL(ReKi)                  , INTENT(  OUT) :: PhaseAngles(p%grid%NPoints,p%grid%NumFreq,3)   !< phases
 
       ! local variables
-   INTEGER(IntKi)                              :: iPoint, iPointIndx                             ! points that have phases defined already 
+   INTEGER(IntKi)                              :: iPoint, iPointUsr                              ! points that have phases defined already 
    
 
       ! generate random phases for all the points
@@ -1852,15 +1633,15 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
       
          ! note: setting the phase angles this way assumes that p%usr%f(1:p%usr%nFreq) = p%grid%f(1:p%usr%nFreq) [i.e., TMax, AnalysisTime are equal]; 
          ! however, the simulated time series may have more frequencies and/or smaller time step than the user time-series input file.
-      DO iPointIndx = 1,p%usr%NPoints
+      DO iPointUsr = 1,p%usr%NPoints
       
-         iPoint = iPointIndx
-         IF (iPointIndx == p%usr%RefPtID ) THEN
+         iPoint = iPointUsr
+         IF (iPointUsr == p%usr%RefPtID ) THEN
             iPoint = p%usr%NPoints
-         ELSEIF (iPointIndx == p%usr%NPoints) THEN
+         ELSEIF (iPointUsr == p%usr%NPoints) THEN
             iPoint = p%usr%RefPtID
          END IF
-         PhaseAngles(iPoint,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,iPoint,:)
+         PhaseAngles(iPoint,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,iPointUsr,:)
       END DO
       
    END IF   
@@ -1946,7 +1727,6 @@ SUBROUTINE CalculateStresses(v, uv, uw, vw, TKE, CTKE )
 END SUBROUTINE CalculateStresses
 !=======================================================================
 !> Scale the velocity aligned along the sreamwise direction.
-!!
 SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
 
 
@@ -2192,9 +1972,8 @@ SUBROUTINE TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
    END IF    
          
 END SUBROUTINE TimeSeriesScaling_ReynoldsStress
-
 !=======================================================================
-SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
+SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir, VWindDir)
 
       ! passed variables
    TYPE(TurbSim_ParameterType), INTENT(IN)     ::  p                 !< parameters 
@@ -2202,6 +1981,7 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
                                                                      !! on output, aligned in the inertial reference frame with mean velocities added
    REAL(ReKi),                  INTENT(IN)     ::  U       (:)       !< profile of steady wind speed
    REAL(ReKi),                  INTENT(IN)     ::  HWindDir(:)       !< profile of horizontal wind direction
+   REAL(ReKi),                  INTENT(IN)     ::  VWindDir(:)       !< profile of vertical wind direction
                                                                                                                                           
       ! local variables                                                                     
    REAL(ReKi)                                  ::  v3(3)             ! temporary 3-component array containing velocity
@@ -2214,16 +1994,15 @@ SUBROUTINE AddMeanAndRotate(p, V, U, HWindDir)
    !..............................................................................
    ! Add mean wind to u' components and rotate to inertial reference  
    !  frame coordinate system
-   !..............................................................................
+   !..............................................................................        
    DO IPoint=1,p%grid%Npoints   
-
       DO ITime=1,p%grid%NumSteps
 
             ! Add mean wind speed to the streamwise component and
             ! Rotate the wind to the X-Y-Z (inertial) reference frame coordinates:
             
-         v3 = V(ITime,IPoint,:)
-         CALL CalculateWindComponents( v3, U(IPoint), HWindDir(IPoint), p%met%VFlowAng, V(ITime,IPoint,:) )
+         v3 = V(ITime,IPoint,:) 
+         CALL CalculateWindComponents( v3, U(IPoint), HWindDir(IPoint), VWindDir(IPoint), V(ITime,IPoint,:) )
                         
       ENDDO ! ITime
          
@@ -2428,6 +2207,14 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    real(reki),         allocatable             :: work (:)                     ! working array for converting fourier coefficients to spectra
    real(reki)                                  :: Re, Im                       ! real and imaginary parts of complex variable returned from fft
    
+   REAL(ReKi)                                  :: meanU                        ! mean value of the U component
+   REAL(ReKi)                                  :: meanV                        ! mean value of the V component
+   REAL(ReKi)                                  :: meanW                        ! mean value of the W component
+
+   REAL(ReKi)                                  :: cosH, sinH                   ! cosine and sin of horizontal angles
+   REAL(ReKi)                                  :: cosV, sinV                   ! cosine and sin of vertical angles
+   REAL(ReKi)                                  :: rotateMatrix(3,3)            ! rotation matrix to align 
+   
    INTEGER(IntKi)                              :: Indx                         ! generic index
    INTEGER(IntKi)                              :: iFreq                        ! loop counter for frequency 
    INTEGER(IntKi)                              :: iVec                         ! loop counter for velocity components
@@ -2445,15 +2232,10 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
       ! BJJ: consider putting the call to PSF in the reading part
    p%usr%nFreq  = PSF ( p%usr%NTimes/2, 9, .TRUE.)
    NumSteps     = p%usr%nFreq*2
-   
-
-print *, 'NTimes   =', p%usr%NTimes
-print *, 'NumFreq  =', p%usr%nFreq   
-print *, 'NumSteps =', NumSteps   
-
-      
+         
    CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,p%usr%nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%meanDir,                 p%usr%NPoints,            'meanDir',    ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%meanVAng,                p%usr%NPoints,            'meanVAng',   ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%f,          p%usr%nFreq ,                          'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
    CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
@@ -2464,31 +2246,69 @@ print *, 'NumSteps =', NumSteps
       RETURN
    END IF
    
-   
-      ! calculate wind direction (before removing mean below):
-   p%usr%meanDir = 0.0_ReKi
-   DO iPoint = 1, p%usr%NPoints
-      p%usr%meanDir(iPoint) = p%usr%meanDir(iPoint) + atan2( p%usr%v(iFreq,iPoint,2), p%usr%v(iFreq,iPoint,1) ) !sum the angles
+   !.......................................................................   
+   ! calculate wind direction in radians (before rotating or removing mean):
+   !.......................................................................   
+      
+   DO iPoint = 1, p%usr%NPoints     
+      meanU = sum(p%usr%v(:,iPoint,1))/p%usr%NTimes
+      meanV = sum(p%usr%v(:,iPoint,2))/p%usr%NTimes
+      meanW = sum(p%usr%v(:,iPoint,3))/p%usr%NTimes
+      
+      p%usr%meanDir( iPoint) = atan2( meanV, meanU )
+      p%usr%meanVAng(iPoint) = atan2( meanW, sqrt( meanU**2 + meanV**2 ) )
    END DO
-   p%usr%meanDir = p%usr%meanDir * R2D / p%usr%nFreq ! average of the angles in degrees
    
+   !.......................................................................   
+   ! rotate inputs based on angles at reference point:
+   !.......................................................................   
+            
+   DO iPoint = 1, p%usr%NPoints 
+      
+      cosH = cos(p%usr%meanDir(  iPoint ) )
+      sinH = sin(p%usr%meanDir(  iPoint ) )
+      cosV = cos(p%usr%meanVAng( iPoint ) )
+      sinV = sin(p%usr%meanVAng( iPoint ) )
    
-      ! calculate and remove the mean wind components:         
+      rotateMatrix(1,1) =  cosH*cosV
+      rotateMatrix(2,1) = -sinH
+      rotateMatrix(3,1) = -cosH*sinV
+   
+      rotateMatrix(1,2) =  sinH*cosV
+      rotateMatrix(2,2) =  cosH
+      rotateMatrix(3,2) = -sinH*sinV
+   
+      rotateMatrix(1,3) =       sinV
+      rotateMatrix(2,3) = 0.0_ReKi
+      rotateMatrix(3,3) =       cosV
+                        
+      DO iFreq = 1, p%usr%NFreq
+         p%usr%v(iFreq,iPoint,:) = MATMUL( rotateMatrix,  p%usr%v(iFreq,iPoint,:) )
+      END DO      
+      
+   END DO
+   
+   ! now convert angles to degrees:
+   p%usr%meanDir  = p%usr%meanDir  * R2D
+   p%usr%meanVAng = p%usr%meanVAng * R2D
+         
+   
+   !.......................................................................   
+   ! calculate and remove the mean wind components:         
+   !.......................................................................   
    DO iVec = 1,p%usr%nComp
       DO iPoint = 1, p%usr%NPoints
          p%usr%meanU(iPoint,iVec) = SUM( p%usr%v(:,iPoint,iVec), 1 ) / p%usr%NTimes
-         p%usr%v(:,iPoint,iVec)   =      p%usr%v(:,iPoint,iVec)    -   p%usr%meanU(iPoint,iVec)
+         p%usr%v(:,  iPoint,iVec) =      p%usr%v(:,iPoint,iVec)    -   p%usr%meanU(iPoint,iVec)
       END DO
    END DO
                
    
-
-   
-   
-   
+   !.......................................................................   
    ! compute forward fft to get real and imaginary parts      
    ! S = Re^2 + Im^2 
    ! PhaseAngle = acos( Re / S )
+   !.......................................................................   
    
    
    CALL InitFFT( NumSteps, FFT_Data, NormalizeIn=.TRUE., ErrStat=ErrStat2 )
@@ -2513,8 +2333,6 @@ print *, 'NumSteps =', NumSteps
                IF (ErrStat >= AbortErrLev) EXIT
             END IF
             
-
-        
             
          DO iFreq = 1,p%usr%nFreq-1
             Indx = iFreq*2
@@ -2608,6 +2426,8 @@ SUBROUTINE TS_End(p, OtherSt_RandNum)
 
    IF ( ALLOCATED( p%usr%meanU         ) )  DEALLOCATE( p%usr%meanU         )
    IF ( ALLOCATED( p%usr%meanDir       ) )  DEALLOCATE( p%usr%meanDir       )
+   IF ( ALLOCATED( p%usr%meanVAng      ) )  DEALLOCATE( p%usr%meanVAng      )
+   
    IF ( ALLOCATED( p%usr%f             ) )  DEALLOCATE( p%usr%f             )
    IF ( ALLOCATED( p%usr%S             ) )  DEALLOCATE( p%usr%S             )
    IF ( ALLOCATED( p%usr%phaseAngles   ) )  DEALLOCATE( p%usr%phaseAngles   )

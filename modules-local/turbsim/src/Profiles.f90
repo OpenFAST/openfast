@@ -327,13 +327,14 @@ END SUBROUTINE getVelocityProfile
 !=======================================================================
 !>  This subroutine sets the direction in degrees at each height in meters 
 !!  specified by the input array Ht.
-SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
+SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, VAngleProfile, ErrStat, ErrMsg )
   
    IMPLICIT                              NONE
 
    TYPE(TurbSim_ParameterType),INTENT(IN)    :: P                           !< TurbSim parameters  
    REAL(ReKi),                 INTENT(IN)    :: Ht(:)                       !< Array of heights (meters) where wind speed should be calculated
    REAL(ReKi)    ,             intent(  out) :: DirectionProfile(:)         !< Wind direction at Ht
+   REAL(ReKi)    ,             intent(  out) :: VAngleProfile(:)            !< Vertical Wind angle at Ht
    INTEGER(IntKi),             intent(  out) :: ErrStat                     !< Error level
    CHARACTER(*),               intent(  out) :: ErrMsg                      !< Message describing error
 
@@ -383,7 +384,7 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
 
             DirectionProfile(J) = p%met%HFlowAng - (DirectionProfile(J) - tmpWD(1)) ! This is the counter-clockwise angle of the wind
          ENDDO
-
+         VAngleProfile = p%met%VFlowAng
 
       CASE ( 'USR' )
 
@@ -431,7 +432,8 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
          
 !bjj: TODO: See if we can get this to have direction of HFlowAng at hub height.
          DirectionProfile = p%met%HFlowAng + DirectionProfile  ! This is the counter-clockwise angle of the wind
-
+         VAngleProfile    = p%met%VFlowAng
+         
       CASE ('TS')
          
          DO J = 1,SIZE(Ht)
@@ -440,8 +442,10 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
          
             IF ( Ht(J) <= p%usr%pointzi(1) ) THEN
                DirectionProfile(J) = p%usr%meanDir(1)
+               VAngleProfile(J)    = p%usr%meanVAng(1)
             ELSEIF ( Ht(J) >= p%usr%pointzi(p%usr%NPoints) ) THEN
                DirectionProfile(J) = p%usr%meanDir(p%usr%NPoints)
+               VAngleProfile(J)    = p%usr%meanVAng(p%usr%NPoints)
             ELSE
                ! Find the two points between which the height lies
 
@@ -463,7 +467,25 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
                         tmpWD(2) = p%usr%meanDir(IZ  )
                      ENDIF
 
-                     DirectionProfile(J) = (Ht(J) - p%usr%pointzi(IZm1)) * ( tmpWD(1) - tmpWD(2) ) / ( p%usr%pointzi(IZm1) - p%usr%pointzi(IZ) ) + tmpWD(1)                  
+                     DirectionProfile(J) = (Ht(J) - p%usr%pointzi(IZm1)) * ( tmpWD(1) - tmpWD(2) ) / ( p%usr%pointzi(IZm1) - p%usr%pointzi(IZ) ) + tmpWD(1)    
+                     
+                     
+                        ! Let's just do a linear interpolation for now
+                     !we need to check if the angle goes through 360, before we do the interpolation
+                     diff = p%usr%meanVAng(IZm1) - p%usr%meanVAng(IZ)
+                     IF ( diff > 180. ) THEN
+                        tmpWD(1) = p%usr%meanVAng(IZm1)
+                        tmpWD(2) = p%usr%meanVAng(IZ  ) + 360.
+                     ELSEIF ( diff < -180. ) THEN
+                        tmpWD(1) = p%usr%meanVAng(IZm1) + 360.
+                        tmpWD(2) = p%usr%meanVAng(IZ  )
+                     ELSE
+                        tmpWD(1) = p%usr%meanVAng(IZm1)
+                        tmpWD(2) = p%usr%meanVAng(IZ  )
+                     ENDIF
+                                          
+                     VAngleProfile(J)    = (Ht(J) - p%usr%pointzi(IZm1)) * ( tmpWD(1) - tmpWD(2) ) / ( p%usr%pointzi(IZm1) - p%usr%pointzi(IZ) ) + tmpWD(1)
+                     
                      EXIT
                   ENDIF
                ENDDO
@@ -473,11 +495,13 @@ SUBROUTINE getDirectionProfile( p, Ht, DirectionProfile, ErrStat, ErrMsg )
          END DO
 
          DirectionProfile = p%met%HFlowAng + DirectionProfile  ! This is the counter-clockwise angle of the wind         
+         VAngleProfile    = p%met%VFlowAng + VAngleProfile
          
       CASE DEFAULT   
 
          DirectionProfile = p%met%HFlowAng
-   
+         VAngleProfile    = p%met%VFlowAng
+         
    END SELECT
 
 RETURN

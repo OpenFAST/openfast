@@ -550,14 +550,13 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    CALL ReadVar( UI, InFile, ProfileFile, "ProfileFile", 'Name of the input file for profiles used with WindProfileType="USR" or TurbModel="USRVKM"',ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
    IF ( PathIsRelative( ProfileFile ) ) ProfileFile = TRIM(PriPath)//TRIM(ProfileFile)
-      
-      
+            
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
    ! ------------ Read in the reference wind speed. -----------------------------------------------------
-   IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. p%met%WindProfileType(1:1) == 'U' ! p%IEC%IEC_WindType > IEC_ETM == EWM models   
+   IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. INDEX('TU',p%met%WindProfileType(1:1)) > 0 ! p%IEC%IEC_WindType > IEC_ETM == EWM models   
    CALL ReadRVarDefault( UI, InFile, p%met%URef, "URef", "Reference wind speed [m/s]", UnEc, getDefaultURef, ErrStat2, ErrMsg2, &
                      IGNORE=IsUnusedParameter ) ! p%IEC%IEC_WindType > IEC_ETM == EWM models
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
@@ -669,10 +668,10 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
          ! Calculate URef, which is UHub:
          ! note that the 2 "ref" values in the subroutine arguments aren't used for the USR wind profile type.
          ! (also, we do not necessarially know PLExp, yet, so we can't call this routine when we have "PL" or "IEC" wind profile types.)
-      CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2) 
+      CALL getVelocity(p, p%met%URef, p%met%RefHt, p%met%RefHt, tmp, ErrStat2, ErrMsg2) 
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
          
-      p%met%RefHt = p%grid%HubHt         
+     !p%met%RefHt = p%grid%HubHt         bjj changed this on 23-sep-2014
       p%met%URef  = tmp      
    ELSEIF( p%IEC%IEC_WindType > IEC_ETM ) THEN !i.e., any of the EWM models: IEC_EWM1, IEC_EWM50, IEC_EWM100 
       p%met%RefHt = p%grid%HubHt
@@ -680,9 +679,9 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    ENDIF   
       
       ! check that RefHt and URef are appropriate values:
-   IF ( p%met%RefHt <=  0.0 )  CALL SetErrStat( ErrID_Fatal, 'The reference height must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')         
+   IF ( p%met%RefHt <=  0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'The reference height must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')         
    IF ( .NOT. getDefaultURef ) THEN
-      IF ( p%met%URef <=  0.0 )  CALL SetErrStat( ErrID_Fatal, 'The reference wind speed must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')
+      IF ( p%met%URef <=  0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'The reference wind speed must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
    
    
@@ -701,13 +700,13 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2", ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      ! ------------ Read in the site latitude, LATITUDE. ---------------------------------------------   
+      ! ------------ Read in the site latitude, LATITUDE ---------------------------------------------   
    IsUnusedParameter =  p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ! Used to caluculte z0 in ModVKM model; also used for default ZI
    CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                                        IGNORE=IsUnusedParameter)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
             
-      ! ------------ Read in the gradient Richardson number, RICH_NO. ---------------------------------------------
+      ! ------------ Read in the gradient Richardson number, RICH_NO ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%Rich_No, "RICH_NO", "Gradient Richardson number",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
@@ -720,7 +719,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
             p%met%Rich_No = 0.02
             CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
          ENDIF
-      ELSEIF ( p%met%TurbModel_ID == SpecModel_USER .OR. p%met%TurbModel_ID == SpecModel_USRVKM .OR. p%met%TurbModel_ID == SpecModel_TimeSer ) THEN
+      ELSEIF ( p%met%TurbModel_ID == SpecModel_USRVKM ) THEN
          IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.0_ReKi) ) THEN
             CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'ReadInputFile')
             p%met%Rich_No = 0.0
@@ -2003,8 +2002,8 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    WRITE (p%US,FormStr)  'TI(w)', 100.0*TI(3), ' %'
 
    WRITE (p%US,'()')
-   WRITE (p%US,FormStr)  'Height Offset', ( p%grid%HubHt - p%grid%GridHeight / 2.0 - p%grid%Z(1) ),  ' m'
-   WRITE (p%US,FormStr)  'Grid Base    ', p%grid%Z(1),                                               ' m'
+   WRITE (p%US,FormStr)  'Height Offset', ( p%grid%HubHt - p%grid%GridHeight / 2.0 - p%grid%Zbottom ),  ' m'
+   WRITE (p%US,FormStr)  'Grid Base    ', p%grid%Zbottom,                                                  ' m'
    
    WRITE (p%US,'()'   )
    WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
@@ -2476,7 +2475,7 @@ SUBROUTINE WrSum_UserInput( p_met, p_usr, US  )
          WRITE (US,"(A)") '  ------   ----------   ----------------'
      
          DO I=p_met%NumUSRz,1,-1
-            WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X)") p_met%USR_Z(I), p_met%USR_U(I), p_met%USR_WindDir(I)      
+            WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2)") p_met%USR_Z(I), p_met%USR_U(I), p_met%USR_WindDir(I)      
          ENDDO   
       ENDIF
       
@@ -2485,12 +2484,12 @@ SUBROUTINE WrSum_UserInput( p_met, p_usr, US  )
    IF ( p_usr%nPoints > 0 ) THEN
       WRITE (US,"( // 'Profiles from User-Defined Time-Series Input:' / )")
    
-      WRITE (US,"(A)") '  Height   Wind Speed   Horizontal Angle'
-      WRITE (US,"(A)") '   (m)        (m/s)          (deg)      '
-      WRITE (US,"(A)") '  ------   ----------   ----------------'
+      WRITE (US,"(A)") '  Height   Wind Speed   Horizontal Angle   Vertical Angle'
+      WRITE (US,"(A)") '   (m)        (m/s)          (deg)              (deg)    '
+      WRITE (US,"(A)") '  ------   ----------   ----------------   --------------'
      
       DO I=p_usr%nPoints,1,-1
-         WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,6X)") p_usr%pointzi(I), p_usr%meanU(I,1), p_usr%meanDir(I)      
+         WRITE (US,"( 1X,F7.2, 2X,F9.2,2X, 3X,F10.2,10x,F10.2)") p_usr%pointzi(I), p_usr%meanU(I,1), p_usr%meanDir(I), p_usr%meanVAng(I)    
       END DO   
       
    END IF
@@ -2498,10 +2497,11 @@ SUBROUTINE WrSum_UserInput( p_met, p_usr, US  )
 
 END SUBROUTINE WrSum_UserInput
 !=======================================================================
-SUBROUTINE WrSum_SpecModel(p, U, HWindDir, ErrStat, ErrMsg  )
+SUBROUTINE WrSum_SpecModel(p, U, HWindDir, VWindDir, ErrStat, ErrMsg  )
 
    TYPE(TurbSim_ParameterType),     INTENT(INout) :: p                    ! parameters for TurbSim  !BJJ: FIX THIS!!! TODO: create equivalent plExp elsewhere
    REAL(ReKi),                      INTENT(IN)    :: HWindDir(:)          ! profile of horizontal wind direction
+   REAL(ReKi),                      INTENT(IN)    :: VWindDir(:)          ! profile of vertical wind direction
    REAL(ReKi),                      INTENT(IN)    :: U       (:)          ! profile of steady wind speed
 
    INTEGER(IntKi),                  intent(  out) :: ErrStat              ! Error level
@@ -2512,10 +2512,6 @@ SUBROUTINE WrSum_SpecModel(p, U, HWindDir, ErrStat, ErrMsg  )
 
    REAL(ReKi)              ::  HalfRotDiam                           ! Half of the rotor diameter
    
-   REAL(ReKi)              ::  CVFA                                  ! Cosine of the vertical flow angle
-   REAL(ReKi)              ::  SVFA                                  ! Sine of the vertical flow angle
-   REAL(ReKi)              ::  CHFA                                  ! Cosine of the horizontal flow angle
-   REAL(ReKi)              ::  SHFA                                  ! Sine of the horizontal flow angle
       
    
    REAL(ReKi)              ::  UTmp                                  ! The best fit of observed peak Uh at het height vs jet height
@@ -2720,28 +2716,23 @@ WRITE(p%US,FormStr)  'Horizontal =', p%met%HFlowAng
 WRITE(p%US,"(/'Mean Wind Speed Profile:')")
 
 IF ( ALLOCATED( p%met%ZL_profile ) .AND. ALLOCATED( p%met%Ustar_profile ) ) THEN
-   WRITE(p%US,"(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)   z/L(z)    u*(z)')")
-   WRITE(p%US,"(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)       (-)      (m/s)')")
-   WRITE(p%US,"(  '   ------    ----------   ----------------  ----------   ----------   ----------   ------   ------')")
+   WRITE(p%US,"(/,'   Height    Wind Speed   Horizontal Angle  Vertical Angle  U-comp (X)   V-comp (Y)   W-comp (Z)   z/L(z)    u*(z)')")
+   WRITE(p%US,"(  '     (m)        (m/s)         (degrees)       (degrees)       (m/s)        (m/s)        (m/s)       (-)      (m/s)')")
+   WRITE(p%US,"(  '   ------    ----------   ----------------  --------------  ----------   ----------   ----------   ------   ------')")
 
-   FormStr = '(1X,F8.1,1X,F11.2,5x,F11.2,4x,3(2X,F8.2,3X),2(1X,F8.3))'
+   FormStr = '(1X,F8.1,1X,F11.2,2(5x,F11.2),4x,3(2X,F8.2,3X),2(1X,F8.3))'
 ELSE
-   WRITE(p%US,"(/,'   Height    Wind Speed   Horizontal Angle  U-comp (X)   V-comp (Y)   W-comp (Z)')")
-   WRITE(p%US,"(  '     (m)        (m/s)         (degrees)       (m/s)        (m/s)        (m/s)   ')")
-   WRITE(p%US,"(  '   ------    ----------   ----------------  ----------   ----------   ----------')")
+   WRITE(p%US,"(/,'   Height    Wind Speed   Horizontal Angle  Vertical Angle  U-comp (X)   V-comp (Y)   W-comp (Z)')")
+   WRITE(p%US,"(  '     (m)        (m/s)         (degrees)       (degrees)       (m/s)        (m/s)        (m/s)   ')")
+   WRITE(p%US,"(  '   ------    ----------   ----------------  --------------  ----------   ----------   ----------')")
 
-   FormStr = '(1X,F8.1,1X,F11.2,5x,F11.2,4x,3(2X,F8.2,3X))'
+   FormStr = '(1X,F8.1,1X,F11.2,2(5x,F11.2),4x,3(2X,F8.2,3X))'
 ENDIF
 
 
 
    ! Get the angles to rotate the wind components from streamwise orientation to the X-Y-Z grid at the Hub
             
-CVFA = COS( p%met%VFlowAng*D2R )
-SVFA = SIN( p%met%VFlowAng*D2R ) 
-CHFA = COS( p%met%HH_HFlowAng*D2R )
-SHFA = SIN( p%met%HH_HFlowAng*D2R )
-
 HubPr = .NOT. p%grid%HubOnGrid     !If the hub height is not on the z-grid, print it, too.
 
 
@@ -2753,66 +2744,56 @@ DO JZ = p%grid%NumGrid_Z,1, -1
    
    IF ( HubPr  .AND. ( p%grid%Z(IZ) < p%grid%HubHt ) ) THEN
          
-      CHFA = COS( HWindDir(p%grid%HubIndx)*D2R )
-      SHFA = SIN( HWindDir(p%grid%HubIndx)*D2R )
+      CALL writeLine( p%grid%HubIndx )      
          
-      IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
-            
-         WRITE(p%US,FormStr)  p%grid%Z(p%grid%HubIndx), U(p%grid%HubIndx), HWindDir(p%grid%HubIndx), &
-                            U(p%grid%HubIndx)*CHFA*CVFA, U(p%grid%HubIndx)*SHFA*CVFA, U(p%grid%HubIndx)*SVFA, &
-                            p%met%ZL_profile(p%grid%HubIndx), p%met%Ustar_profile(p%grid%HubIndx)
-      ELSE
-         WRITE(p%US,FormStr)  p%grid%Z(p%grid%HubIndx), U(p%grid%HubIndx), HWindDir(p%grid%HubIndx), &
-                            U(p%grid%HubIndx)*CHFA*CVFA, U(p%grid%HubIndx)*SHFA*CVFA, U(p%grid%HubIndx)*SVFA
-      ENDIF
-   
       HubPr = .FALSE. ! we've printed the hub values, so we don't need to check this anymore
    ENDIF
    
-   CHFA = COS( HWindDir(IZ)*D2R )
-   SHFA = SIN( HWindDir(IZ)*D2R )
-
-   IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
-      WRITE(p%US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                           p%met%ZL_profile(IZ), p%met%Ustar_profile(IZ)
-   ELSE
-      WRITE(p%US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-   ENDIF
-
+   CALL writeLine( IZ )
+   
 ENDDO ! JZ
    
    ! Write out the tower points   
 DO JZ = 2, SIZE(p%grid%TwrPtIndx)
-   IZ =  p%grid%TwrPtIndx(JZ)
-   
-   CHFA = COS( HWindDir(IZ)*D2R )
-   SHFA = SIN( HWindDir(IZ)*D2R )
-
-   IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
-      WRITE(p%US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA, &
-                           p%met%ZL_profile(IZ), p%met%Ustar_profile(IZ)
-   ELSE
-      WRITE(p%US,FormStr)  p%grid%Z(IZ), U(IZ), HWindDir(IZ), U(IZ)*CHFA*CVFA, U(IZ)*SHFA*CVFA, U(IZ)*SVFA
-   ENDIF
-
+   CALL writeLine( p%grid%TwrPtIndx(JZ) )
 ENDDO ! JZ
 
+!..................................................
+CONTAINS
+   SUBROUTINE writeLine(Indx)
 
+      INTEGER(IntKi), INTENT(IN) ::  Indx
+   
+      REAL(ReKi)                 ::  CVFA                                  ! Cosine of the vertical flow angle
+      REAL(ReKi)                 ::  SVFA                                  ! Sine of the vertical flow angle
+      REAL(ReKi)                 ::  CHFA                                  ! Cosine of the horizontal flow angle
+      REAL(ReKi)                 ::  SHFA                                  ! Sine of the horizontal flow angle
+   
+      CHFA = COS( HWindDir(Indx)*D2R )
+      SHFA = SIN( HWindDir(Indx)*D2R )
+   
+      CVFA = COS( VWindDir(Indx)*D2R )
+      SVFA = SIN( VWindDir(Indx)*D2R ) 
+   
+   
+      IF ( ALLOCATED( p%met%ZL_profile ) ) THEN
+         WRITE(p%US,FormStr)  p%grid%Z(Indx), U(Indx), HWindDir(Indx), VWindDir(Indx), U(Indx)*CHFA*CVFA, U(Indx)*SHFA*CVFA, U(Indx)*SVFA, &
+                              p%met%ZL_profile(Indx), p%met%Ustar_profile(Indx)
+      ELSE
+         WRITE(p%US,FormStr)  p%grid%Z(Indx), U(Indx), HWindDir(Indx), VWindDir(Indx), U(Indx)*CHFA*CVFA, U(Indx)*SHFA*CVFA, U(Indx)*SVFA
+      ENDIF   
+   END SUBROUTINE writeLine 
+   
 END SUBROUTINE WrSum_SpecModel
 !=======================================================================
 SUBROUTINE WrHH_ADtxtfile(p, V, TurbInt, ErrStat, ErrMsg)
 
-   TYPE(TurbSim_ParameterType), INTENT(IN)    ::  p                   !< parameters 
+   TYPE(TurbSim_ParameterType), INTENT(IN)    :: p                    !< parameters 
    REAL(ReKi),                  INTENT(IN)    :: V     (:,:,:)        !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
    REAL(ReKi),                  INTENT(IN)    :: TurbInt              !< IEC target Turbulence Intensity 
    INTEGER(IntKi),              intent(  out) :: ErrStat              !< Error level
    CHARACTER(*),                intent(  out) :: ErrMsg               !< Message describing error
 
-
-   REAL(ReKi)              ::  CVFA                            ! Cosine of the vertical flow angle
-   REAL(ReKi)              ::  SVFA                            ! Sine of the vertical flow angle
-   REAL(ReKi)              ::  CHFA                            ! Cosine of the horizontal flow angle
-   REAL(ReKi)              ::  SHFA                            ! Sine of the horizontal flow angle
 
    REAL(ReKi)              :: V_Inertial(3)                    ! U,V,W components (inertial)
    REAL(ReKi)              :: UH                               ! horizontal wind speed (U+V components)
@@ -2823,11 +2804,6 @@ SUBROUTINE WrHH_ADtxtfile(p, V, TurbInt, ErrStat, ErrMsg)
 
    
    
-   CHFA = COS( p%met%HH_HFlowAng*D2R )
-   SHFA = SIN( p%met%HH_HFlowAng*D2R )
-
-   CVFA = COS( p%met%VFlowAng*D2R )
-   SVFA = SIN( p%met%VFlowAng*D2R )
 
    CALL GetNewUnit( UAHH, ErrStat, ErrMsg)
    CALL OpenFOutFile ( UAHH, TRIM( p%RootName)//'.hh', ErrStat, ErrMsg )
@@ -2852,7 +2828,7 @@ ENDIF
       
       Time = p%grid%TimeStep*( IT - 1 )
             
-      CALL CalculateWindComponents(V(IT,p%grid%HubIndx,:), p%UHub, p%met%HH_HFlowAng, p%met%VFlowAng, V_Inertial, UH)      
+      CALL CalculateWindComponents(V(IT,p%grid%HubIndx,:), p%UHub, p%met%HH_HFlowAng, p%met%HH_VFlowAng, V_Inertial, UH)      
       
       WRITE (UAHH,'(F8.3,3F8.2,3F8.3,F8.2)')  Time, UH, -1.0*R2D*ATAN2( V_Inertial(2) , V_Inertial(1) ), &
                                                     V_Inertial(3), 0.0, p%met%PLExp, 0.0, 0.0 
@@ -2906,7 +2882,7 @@ SUBROUTINE WrHH_binary(p, V, ErrStat, ErrMsg)
       
       Time = p%grid%TimeStep*( IT - 1 )
       
-      CALL CalculateWindComponents(V(IT,p%grid%HubIndx,:), p%UHub, p%met%HH_HFlowAng, p%met%VFlowAng, V_Inertial, UH, UT)
+      CALL CalculateWindComponents(V(IT,p%grid%HubIndx,:), p%UHub, p%met%HH_HFlowAng, p%met%HH_VFlowAng, V_Inertial, UH, UT)
       CALL CalculateStresses(      V(IT,p%grid%HubIndx,:), uv, uw, vw, TKE, CTKE )
       
       WRITE (UGTP)  REAL(Time,SiKi), REAL(V_Inertial(1),SiKi), REAL(UH,SiKi), REAL(UT,SiKi), &      
@@ -2968,7 +2944,7 @@ SUBROUTINE WrHH_text(p, V, ErrStat, ErrMsg)
       
       Time = p%grid%TimeStep*( IT - 1 )
       
-      CALL CalculateWindComponents(V(IT,p%grid%HubIndx,:), p%UHub, p%met%HH_HFlowAng, p%met%VFlowAng, V_Inertial, UH, UT)
+      CALL CalculateWindComponents(V(IT,p%grid%HubIndx,:), p%UHub, p%met%HH_HFlowAng, p%met%HH_VFlowAng, V_Inertial, UH, UT)
       CALL CalculateStresses(      V(IT,p%grid%HubIndx,:), uv, uw, vw, TKE, CTKE )
       
                              
@@ -3165,8 +3141,8 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
    CHFA = COS( p%met%HH_HFlowAng*D2R )
    SHFA = SIN( p%met%HH_HFlowAng*D2R )
 
-   CVFA = COS( p%met%VFlowAng*D2R )
-   SVFA = SIN( p%met%VFlowAng*D2R )
+   CVFA = COS( p%met%HH_VFlowAng*D2R )
+   SVFA = SIN( p%met%HH_VFlowAng*D2R )
 
    DO IT=1,p%grid%NumSteps
 
@@ -3388,7 +3364,7 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
       ! Calculate standard deviations for each grid point.  Write them to summary file.
 
    WRITE(p%US,"(//,'Grid Point Variance Summary:',/)")
-   WRITE(p%US,"(3X,'Y-coord',"//TRIM(Num2LStr(p%grid%NumGrid_Y))//"F8.2)")  p%grid%Y(1:p%grid%NumGrid_Y)
+   WRITE(p%US,"(3X,'Y-coord',"//TRIM(Num2LStr(p%grid%NumGrid_Y))//"F8.2)")  p%grid%Y( p%grid%GridPtIndx(1:p%grid%NumGrid_Y) )
 
 
    UTmp = 0
@@ -3416,7 +3392,7 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
          ENDDO ! IY
 
-         WRITE(p%US,"(F9.2,1X,"//TRIM(Num2LStr(p%grid%NumGrid_Y))//"F8.3)") p%grid%Z( p%grid%GridPtIndx((IZ-1)*p%grid%NumGrid_Y+1) ), SDary(1:p%grid%NumGrid_Y)
+         WRITE(p%US,"(F9.2,1X,"//TRIM(Num2LStr(p%grid%NumGrid_Y))//"F8.3)") p%grid%Z( p%grid%GridPtIndx( (IZ-1)*p%grid%NumGrid_Y+1 ) ), SDary(1:p%grid%NumGrid_Y)
 
          IF ( IVec == 1 ) THEN
             UTmp = UTmp + SUM( SDary )
@@ -4070,7 +4046,7 @@ SUBROUTINE GetDefaultSCMod( TurbModel_ID, SCMod )
    
    
    SELECT CASE (TurbModel_ID)
-      CASE ( SpecModel_IECKAI, SpecModel_IECVKM, SpecModel_MODVKM )
+      CASE ( SpecModel_IECKAI, SpecModel_IECVKM, SpecModel_MODVKM, SpecModel_USRVKM)
          SCMod(1)   = CohMod_IEC
          SCMod(2:3) = CohMod_NONE
       
@@ -4620,6 +4596,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
 
       END SELECT
 
+         !note that the IEC models specify their coherence parameters elsewhere... in CalcIECScalingParams()
 
 !      IF ( p%met%IsIECModel ) THEN we'll get the defaults from CalcIECScalingParams
          
@@ -5186,7 +5163,7 @@ SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_I
 
    ENDIF
    
-   InCohB(:)    = 0.12/p_IEC%LC
+   InCohB  =  (/ 0.12_ReKi/p_IEC%LC, 0.0_ReKi, 0.0_ReKi /)
          
    
       ! Set Lambda for Modified von Karman model:

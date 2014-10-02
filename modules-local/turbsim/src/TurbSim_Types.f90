@@ -200,6 +200,7 @@ use NWTC_Library
 
       
       REAL(ReKi)                   :: HH_HFlowAng                              ! Horizontal flow angle at the hub (may be different than HFlowAng if using direction profile).
+      REAL(ReKi)                   :: HH_VFlowAng                              ! Vertical flow angle at the hub (may be different than VFlowAng if using vertical angle profile (i.e., user-defined time-series)).
       REAL(ReKi)                   :: HFlowAng                                 ! Horizontal flow angle
       REAL(ReKi)                   :: VFlowAng                                 ! Vertical flow angle
                   
@@ -257,10 +258,11 @@ use NWTC_Library
       real(reki),     allocatable  :: t(:)
       real(reki),     allocatable  :: v(:,:,:)                                ! velocity time series; size: nTimes, nPoints, { 2 if .not. containsW | 3 otherwise }
       
-      real(reKi),     allocatable  :: meanU(:,:)                              ! mean velocity; size: nPoints, nComp
-      real(reKi),     allocatable  :: meanDir(:)                              ! mean direction; size: nPoints
+      real(reKi),     allocatable  :: meanU(:,:)                              ! mean velocity; size: nPoints, nComp [m/s]
+      real(reKi),     allocatable  :: meanDir(:)                              ! mean horizontal direction; size: nPoints [degrees]
+      real(reKi),     allocatable  :: meanVAng(:)                             ! mean vertical angle; size: nPoints [degrees]      
       real(reKi),     allocatable  :: S(:,:,:)                                ! spectra;   size: nFreq, nPoints, nComp
-      real(reKi),     allocatable  :: f(:)                                    ! frequency; size: nFreq
+      real(reKi),     allocatable  :: f(:)                                    ! frequency; size: nFreq [Hz]
       real(reKi),     allocatable  :: phaseAngles(:,:,:)
       
    END TYPE UserTSSpec_ParameterType
