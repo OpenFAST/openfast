@@ -51,7 +51,7 @@ True          Clockwise       - Clockwise rotation looking downwind? (used only 
 "none"        PC_UV           - Hub mean u'v' Reynolds stress [m^2/s^2] (or "default" or "none")
 "none"        PC_VW           - Hub mean v'w' Reynolds stress [m^2/s^2] (or "default" or "none")
 
---------Spatial Coherence Models---------------------------------
+--------Spatial Coherence Parameters----------------------------
 default       SCMod1           - u-component coherence model ("GENERAL","IEC","API","NONE", or "default")
 default       SCMod2           - v-component coherence model ("GENERAL","NONE", or "default")
 default       SCMod3           - w-component coherence model ("GENERAL","NONE", or "default")
