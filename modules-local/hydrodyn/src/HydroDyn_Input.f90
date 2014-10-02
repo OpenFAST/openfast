@@ -3991,7 +3991,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
       foundMask = .FALSE.
-      ! Extract WAMIT list
+         ! Extract WAMIT list
       InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList,  foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
 
@@ -4003,20 +4003,20 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
    
-      ! Extract Morison list
-      !foundMask = .FALSE.
+         ! Extract Morison list
+         !foundMask = .FALSE.
       InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
    
-      ! Attach remaining items to the HydroDyn list
-      !foundMask = .FALSE.
+         ! Attach remaining items to the HydroDyn list
+         !foundMask = .FALSE.
       InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
       CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
       IF (ErrStat >= AbortErrLev ) RETURN
 
-   DEALLOCATE(foundMask)
+      DEALLOCATE(foundMask)
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    
@@ -4067,7 +4067,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Waves2%UnSum       = InitInp%UnSum
          InitInp%Waves2%WtrDpth     = InitInp%Waves%WtrDpth
          InitInp%Waves2%WaveStMod   = InitInp%Waves%WaveStMod
-         InitInp%Waves%NWaveElev    = InitInp%Waves%NWaveElev
+         InitInp%Waves2%NWaveElev   = InitInp%Waves%NWaveElev
          CALL AllocAry( InitInp%Waves2%WaveElevxi, InitInp%Waves2%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
          CALL AllocAry( InitInp%Waves2%WaveElevyi, InitInp%Waves2%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2)

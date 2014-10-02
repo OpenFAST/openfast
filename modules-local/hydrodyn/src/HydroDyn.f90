@@ -351,6 +351,17 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       
       CALL MOVE_ALLOC( Waves_InitOut%WaveElev, p%WaveElev ) ! allocate p%WaveElev, set p%WaveElev = Waves_InitOut%WaveElev, and deallocate Waves_InitOut%WaveElev
       
+         ! Copy the first order wave elevation information to p%WaveElev1 so that we can output the total, first, and second order wave elevation separately
+      ALLOCATE ( p%WaveElev1   (0:Waves_InitOut%NStepWave, p%NWaveElev ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElev1 array.',ErrStat,ErrMsg,'HydroDyn_Init')
+         CALL CleanUp()
+         RETURN         
+      END IF
+      p%WaveElev1 =  p%WaveElev
+
+
+
       OtherState%LastIndWave = 1
       
 
@@ -438,15 +449,15 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
          ! If we calculated wave elevations, it is now stored in p%WaveElev.  So we need to add the corrections.
          IF (InitInp%Waves2%NWaveElev > 0 ) THEN
                ! Make sure the sizes of the two resulting arrays are identical...
-            IF ( SIZE(p%WaveElev,DIM=1) /= SIZE(InitOut%Waves2%WaveElev2,DIM=1) .OR. &
-                 SIZE(p%WaveElev,DIM=2) /= SIZE(InitOut%Waves2%WaveElev2,DIM=2)) THEN
+            IF ( SIZE(p%WaveElev,DIM=1) /= SIZE(p%Waves2%WaveElev2,DIM=1) .OR. &
+                 SIZE(p%WaveElev,DIM=2) /= SIZE(p%Waves2%WaveElev2,DIM=2)) THEN
                CALL SetErrStat(ErrID_Fatal,' WaveElev(NWaveElev) arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,'HydroDyn_Init')
                CALL CleanUp()
                RETURN
             ELSE
                DO I = 0,p%NStepWave
-                  DO J=1,SIZE(InitOut%Waves2%WaveElev2,DIM=2)
-                     p%WaveElev(I,J)  =  InitOut%Waves2%WaveElev2(I,J) + p%WaveElev(I,J)
+                  DO J=1,SIZE(p%Waves2%WaveElev2,DIM=2)
+                     p%WaveElev(I,J)  =  p%Waves2%WaveElev2(I,J) + p%WaveElev(I,J)
                   ENDDO
                ENDDO
             ENDIF
@@ -1261,7 +1272,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
 
       INTEGER                                            :: I, J        ! Generic counters
       
-      REAL(ReKi)                           :: WaveElev (p%NWaveElev)                  ! Instantaneous elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
+      REAL(ReKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
+      REAL(ReKi)                           :: WaveElev1(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       
       REAL(ReKi)                           :: q(6), qdot(6), qdotsq(6), qdotdot(6)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
@@ -1329,6 +1341,10 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          
             ! Destroy local inputs
          CALL WAMIT_DestroyInput( uLocal,  ErrStat, ErrMsg )
+
+            ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
+         OtherState%F_Waves   = OtherState%WAMIT%F_Waves1
+
          
       END IF
       
@@ -1350,8 +1366,10 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
             ! Destroy local inputs
          CALL WAMIT2_DestroyInput( uLocalW2,  ErrStat, ErrMsg )
 
-      END IF
+            ! Add the second order WAMIT forces to the first order WAMIT forces for the total
+         OtherState%F_Waves   =  OtherState%F_Waves   +  OtherState%WAMIT2%F_Waves2
 
+      END IF
 
 
          ! Deal with any output from the Waves2 module....
@@ -1380,11 +1398,14 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
       OtherState%F_Hydro = CalcLoadsAtWRP( y, u, OtherState%y_mapped, OtherState%AllHdroOrigin_position, OtherState%MrsnLumpedMesh_position, OtherState%MrsnDistribMesh_position, OtherState%HD_MeshMap, ErrStat, ErrMsg )
       
       
-         ! Compute the wave elevations at the requested output locations for this time
+         ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
          
       DO I=1,p%NWaveElev   
-         WaveElev(I) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev(:,I), &
-                                    OtherState%LastIndWave, p%NStepWave + 1       )
+         WaveElev1(I)   = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev1(:,I),          &
+                                    OtherState%LastIndWave, p%NStepWave + 1       )                      
+         WaveElev(I)    = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev(:,I), &
+                                    OtherState%Waves2%LastIndWave, p%NStepWave + 1       )
+
       END DO
       
       
@@ -1399,8 +1420,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
       
       
          ! Map calculated results into the AllOuts Array
-         
-      CALL HDOut_MapOutputs( Time, y, p%NWaveElev, WaveElev, OtherState%F_PtfmAdd, OtherState%F_Hydro, q, qdot, qdotdot, AllOuts, ErrStat, ErrMsg )
+      CALL HDOut_MapOutputs( Time, y, p%NWaveElev, WaveElev, WaveElev1, OtherState%F_PtfmAdd, OtherState%F_Waves, OtherState%F_Hydro, q, qdot, qdotdot, AllOuts, ErrStat, ErrMsg )
       
       DO I = 1,p%NumOuts
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )

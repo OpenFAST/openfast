@@ -292,7 +292,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !> Initialize the NWTC Subroutine Library and display the information about this module.
 
       CALL NWTC_Init() ! WAMIT2_ProgDesc%Name, '('//WAMIT2_ProgDesc%Ver//','//WAMIT2_ProgDesc%Date//')', EchoLibVer = .FALSE. )
-      CALL DispNVD( WAMIT2_ProgDesc )
+      !CALL DispNVD( WAMIT2_ProgDesc )
 
 
 
@@ -775,14 +775,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    !!
    !! The single summation equation used here is given by
    !! \f$  {F_{{ex}~k}^{{-}(2)}} = \Re \left( \sum\limits_{m=0}^{N/2}
-   !!                                        {a_m} {a_m^*} F_k^{-}(\omega_m, \beta_m)\right)  \f$
+   !!                                        {a_m} {a_m^*} F_k^{-}(\omega_m, \beta_m)\right) \cdot\Delta\omega  \f$
    !!      for \f$\quad k=1,2,\ldots,6,      \f$
    !!
    !! where \f$ k \f$ indicates the index to the load component,  \f$ {F_{{ex}~k}^{{-}(2)}} \f$ is the resulting time
    !! independent mean drift force, and \f$ a_m \f$ and \f$ a_m^* \f$ are the complex wave amplitude and its complex conjugate for
    !! the \f$ m^{th} \f$ frequency.  Note the lack of time dependence in this equation: the mean drift is the average drift
    !! force over the entire simulation. Note also that \f$ F_k^{-} (\omega_m, \beta_m) \f$ is the dimensionalized real valued
-   !! diagonal of the QTF read from the WAMIT file and interpolated for the \f$ m^{th} \f$ wave frequency.
+   !! diagonal of the QTF read from the WAMIT file and interpolated for the \f$ m^{th} \f$ wave frequency.  Note that this is
+   !! is a numerical integral, so the \f$ \Delta\omega \f$ term is necessary.
    !!
    !! Since the frequency range of the QTF has not yet been checked, we will do that now.
    !!
@@ -1070,7 +1071,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !> 5.  Calculate the mean drift force
          !! The single summation equation used here is given by
          !! \f$  {F_{{ex}~k}^{{-}(2)}} = \Re \left( \sum\limits_{m=0}^{N/2}
-         !!                                        {A_m} {A_m^*} F_k^{-}(\omega_m, \beta_m)\right) \f$
+         !!                                        {A_m} {A_m^*} F_k^{-}(\omega_m, \beta_m)\right) \cdot\Delta\omega \f$
          !!      for \f$\quad k=1,2,\ldots,6,      \f$
 
 
@@ -1623,7 +1624,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                   ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
-               IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
+               IF ( (Omega1 >= MAX(InitInp%WvLowCOffD,InitInp%WvLowCOff)) .AND. (Omega1 <= MIN(InitInp%WvHiCOffD,InitInp%WvHiCOff)) ) THEN
 
                      ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
                   IF ( NewmanAppData%DataIs3D ) THEN
@@ -1792,7 +1793,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    !!              2 \cdot \sum\limits_{\mu^{-}=1}^{N/2-1} H_{\mu^{-}} \mathrm{e}^{i(\omega_{\mu^{-}})t}  \right)\qquad  \f$,
    !! for \f$  \qquad k=1,2,\ldots,6 \qquad\f$
    !! where  \f$ \qquad
-   !!             H_{\mu^{-}} = \sum\limits_{n=0}^{N/2-\mu^{-}} A_{\mu^{-}+n} A_n^* F_k^{-}(\omega_{\mu^{-}+n},\omega_n), \qquad \f$
+   !!             H_{\mu^{-}} = \frac{1}{2} \sum\limits_{n=0}^{N/2-\mu^{-}} A_{\mu^{-}+n} A_n^* F_k^{-}(\omega_{\mu^{-}+n},\omega_n), \qquad \f$
    !!   for \f$ \qquad\quad 1\le\mu^{-}\le N-1 \f$.
    !!
    !! Note that \f$ k \f$ indicates the index to the load component,  \f$ {F_{{ex}~k}^{{-}(2)}} \f$ is the resulting second order
@@ -2202,13 +2203,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    !!      for   \f$\quad k=1,2,\ldots,6 \qquad\f$
    !!
    !!   where  \f$
-   !!             H_{\mu^{+}} = \sum\limits_{n=1}^{\left\lfloor\frac{\mu^{+}-1}{2}\right\rfloor}
-   !!                                     A_n A_{\mu^{+}-n} F_k^{+}(\omega_n,\omega_{\mu^{+}-n}),\f$
+   !!             H_{\mu^{+}} = \sum\limits_{n=1}^{\left\lfloor\frac{\mu^{+}-n}{2}\right\rfloor}
+   !!                                     A_n A_{\mu^{+}-n} F_k^{+}(\omega_n,\omega_{\mu^{+}-1}),\f$
    !!                                                                for \f$ 2\leq \mu^{+}\leq N/2+1 \f$
    !!
    !!    and   \f$
-   !!             H_{\mu^{+}} = \displaystyle\sum\limits_{n=\mu^{+}-N}^{\left\lfloor\frac{\mu^{+}-1}{2}\right\rfloor}
-   !!                                     A_n A_{\mu^{+}-n} F_k^{+}(\omega_n,\omega_{\mu^{+}-n}),\f$
+   !!             H_{\mu^{+}} = \displaystyle\sum\limits_{n=\mu^{+}-N}^{\left\lfloor\frac{\mu^{+}-n}{2}\right\rfloor}
+   !!                                     A_n A_{\mu^{+}-n} F_k^{+}(\omega_n,\omega_{\mu^{+}-1}),\f$
    !!                                                                for \f$ N/2+2\leq\mu^{+}\leq N \f$
    !!
    !!    where \f$ \mu^{+} = m + n \f$, \f$ \lfloor x \rfloor \f$ represents the floor function given by
@@ -2234,8 +2235,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    !!      for   \f$ k=1,2,\ldots,6 \f$
    !!
    !!   where  \f$
-   !!             H_{\mu^{+}} = \sum\limits_{n=1}^{\left\lfloor\frac{\mu^{+}-1}{2}\right\rfloor}
-   !!                                     A_n A_{\mu^{+}-n} F_k^{+}(\omega_n,\omega_{\mu^{+}-n}), \f$
+   !!             H_{\mu^{+}} = \sum\limits_{n=1}^{\left\lfloor\frac{\mu^{+}-n}{2}\right\rfloor}
+   !!                                     A_n A_{\mu^{+}-n} F_k^{+}(\omega_n,\omega_{\mu^{+}-1}), \f$
    !!                                                                for \f$ 2\le \mu^{+}\le N/2 \f$
    !!
    !!
@@ -2556,15 +2557,16 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                !      1.0          Pi          10
                ! so, we don't need a really small WaveDT
 
-            IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveDOmega ) THEN
-               CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
-                        'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
-                        '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
-                        TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveDOmega))// &
-                        ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
-                        'radians/second corresponds to a wavelength of ~1 meter.',&
-                        ErrStat,ErrMsg,'SumQTF_InitCalc')
-            ENDIF
+      !This section has been removed since it is kind of annoying.
+      !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveDOmega ) THEN
+      !         CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
+      !                  'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
+      !                  '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
+      !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveDOmega))// &
+      !                  ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
+      !                  'radians/second corresponds to a wavelength of ~1 meter.',&
+      !                  ErrStat,ErrMsg,'SumQTF_InitCalc')
+      !      ENDIF
 
 
 

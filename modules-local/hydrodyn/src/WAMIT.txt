@@ -77,7 +77,7 @@ typedef   ^                            OtherStateType                INTEGER    
 typedef   ^                            ^                             SS_Rad_OtherStateType    SS_Rdtn                         -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OtherStateType Conv_Rdtn                       -              -         -         ""   -
 typedef   ^                            ^                             ReKi                     F_HS                            {6}            -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_Waves                         {6}            -         -         ""   -
+typedef   ^                            ^                             ReKi                     F_Waves1                        {6}            -         -         ""   -
 typedef   ^                            ^                             ReKi                     F_Rdtn                          {6}            -         -         ""   -
 typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}            -         -         ""   -
 typedef   ^                            ^                             ReKi                     F_PtfmAM                        {6}            -         -         ""   -

@@ -48,7 +48,7 @@ MODULE Waves2
    PRIVATE
 
 !   INTEGER(IntKi), PARAMETER                             :: DataFormatID = 1  !< Update this value if the data types change (used in Waves2_Pack)
-   TYPE(ProgDesc), PARAMETER                             :: Waves2_ProgDesc = ProgDesc( 'Waves2', 'v1.00.00-adp', '25-Sept-2014' )
+   TYPE(ProgDesc), PARAMETER                             :: Waves2_ProgDesc = ProgDesc( 'Waves2', 'v1.00.00b-adp', '30-Sept-2014' )
                                                                               !< This holds the name of the program, version info, and date.
                                                                               !! It is used by the DispNVD routine in the library and as header
                                                                               !! information in output files.
@@ -241,7 +241,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Initialize the NWTC Subroutine Library and display the information about this module.
 
       CALL NWTC_Init( )
-      CALL DispNVD( Waves2_ProgDesc )
+      !CALL DispNVD( Waves2_ProgDesc )
 
 
 
@@ -452,8 +452,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !--------------------------------------------------------------------------------
 
 
-      ALLOCATE ( OtherState%WaveElev2D (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array OtherState%WaveElev2D.', ErrStat,ErrMsg,'Waves2_Init')
+      ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveElev2.', ErrStat,ErrMsg,'Waves2_Init')
 
       ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,'Waves2_Init')
@@ -463,9 +463,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
       ALLOCATE ( InitOut%WaveDynP2D (0:InitInp%NStepWave,InitInp%NWaveKin0  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2D.', ErrStat,ErrMsg,'Waves2_Init')
-
-      ALLOCATE ( OtherState%WaveElev2S (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array OtherState%WaveElev2S.', ErrStat,ErrMsg,'Waves2_Init')
 
       ALLOCATE ( InitOut%WaveVel2S  (0:InitInp%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2S.',  ErrStat,ErrMsg,'Waves2_Init')
@@ -484,11 +481,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          !Initialize the output arrays to zero.  We will only fill it in for the points we calculate.
-      OtherState%WaveElev2D =  0.0_ReKi
-      InitOut%WaveVel2D  =  0.0_ReKi
-      InitOut%WaveAcc2D  =  0.0_ReKi
-      InitOut%WaveDynP2D =  0.0_ReKi
-      OtherState%WaveElev2S =  0.0_ReKi
+      p%WaveElev2          =  0.0_ReKi
+      InitOut%WaveVel2D    =  0.0_ReKi
+      InitOut%WaveAcc2D    =  0.0_ReKi
+      InitOut%WaveDynP2D   =  0.0_ReKi
       InitOut%WaveVel2S  =  0.0_ReKi
       InitOut%WaveAcc2S  =  0.0_ReKi
       InitOut%WaveDynP2S =  0.0_ReKi
@@ -626,7 +622,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                CALL CleanUp()
                RETURN
             END IF
-            InitOut%WaveElev2(:,I) = TmpTimeSeries(:)
+            p%WaveElev2(:,I) = TmpTimeSeries(:)
          ENDDO    ! Wave elevation points requested
 
 
@@ -981,7 +977,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                RETURN
             END IF
                ! Add to the series since the difference is already included
-            InitOut%WaveElev2(:,I) = InitOut%WaveElev2(:,I) + TmpTimeSeries(:)
+            p%WaveElev2(:,I) = p%WaveElev2(:,I) + TmpTimeSeries(:)
          ENDDO    ! Wave elevation points requested
 
 
@@ -2238,11 +2234,9 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
 
          ! Local Variables:
       INTEGER(IntKi)                                     :: I                          ! Generic index
-      INTEGER(IntKi)                                     :: J                          ! Generic index
-      INTEGER(IntKi)                                     :: K                          ! Generic index
+      REAL(ReKi)                                         :: WaveElev2Temp(p%NWaveElev)
       REAL(ReKi)                                         :: AllOuts(MaxWaves2Outputs)
 
-      REAL(ReKi)                                         :: WaveElev2(p%NWaveElev)     ! Instantaneous second order correction to the elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
  
 
          ! Initialize ErrStat
@@ -2255,20 +2249,16 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
 
          ! Abort if the Waves2 module did not calculate anything 
 
-      IF ( .NOT. ( ALLOCATED ( OtherState%WaveElev2S ) .OR. ALLOCATED ( OtherState%WaveElev2D ) ) )  RETURN 
+      IF ( .NOT. ALLOCATED ( p%WaveElev2 ) )  RETURN
 
 
-
-         ! Compute the 2nd order load contribution from incident waves:
-
-      WaveElev2 = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), OtherState%WaveElev2D(:,I), &
-                                                  OtherState%LastIndWave, p%NStepWave + 1       ) &
-                             + InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), OtherState%WaveElev2S(:,I), &
-                                                  OtherState%LastIndWave, p%NStepWave + 1       )
-
+      DO I=1,p%NWaveElev
+         WaveElev2Temp  = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev2(:,I), &
+                                                     OtherState%LastIndWave, p%NStepWave + 1       )
+      ENDDO
 
          ! Map the calculated results into the AllOuts Array
-      CALL Wvs2Out_MapOutputs(Time, y, p%NWaveElev, WaveElev2, AllOuts, ErrStat, ErrMsg)
+      CALL Wvs2Out_MapOutputs(Time, y, p%NWaveElev, WaveElev2Temp, AllOuts, ErrStat, ErrMsg)
 
 
 

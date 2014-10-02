@@ -1476,7 +1476,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
          ! Compute the load contribution from incident waves (i.e., the diffraction problem):
 
       DO I = 1,6     ! Loop through all wave excitation forces and moments
-         OtherState%F_Waves(I) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveExctn(:,I), &
+         OtherState%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveExctn(:,I), &
                                                   OtherState%LastIndWave, p%NStepWave + 1       )
       END DO          ! I - All wave excitation forces and moments
       
@@ -1557,10 +1557,10 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       
          ! Compute outputs here:
       DO I=1,3
-         y%Mesh%Force(I,1)    = OtherState%F_PtfmAM(I) + OtherState%F_Rdtn(I)   + OtherState%F_Waves(I)   + OtherState%F_HS(I)    + OtherState%F_PtfmAdd(I)    
+         y%Mesh%Force(I,1)    = OtherState%F_PtfmAM(I) + OtherState%F_Rdtn(I)   + OtherState%F_Waves1(I)   + OtherState%F_HS(I)    + OtherState%F_PtfmAdd(I)    
       END DO
       DO I=1,3
-         y%Mesh%Moment(I,1)   = OtherState%F_PtfmAM(I+3) + OtherState%F_Rdtn(I+3) + OtherState%F_Waves(I+3) + OtherState%F_HS(I+3)  + OtherState%F_PtfmAdd(I+3)   
+         y%Mesh%Moment(I,1)   = OtherState%F_PtfmAM(I+3) + OtherState%F_Rdtn(I+3) + OtherState%F_Waves1(I+3) + OtherState%F_HS(I+3)  + OtherState%F_PtfmAdd(I+3)   
       END DO
       
       
@@ -1570,7 +1570,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       
       
          ! Map calculated results into the AllOuts Array
-      CALL WMTOut_MapOutputs(Time, y, OtherState%F_Waves, OtherState%F_HS, OtherState%F_Rdtn, OtherState%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
+      CALL WMTOut_MapOutputs(Time, y, OtherState%F_Waves1, OtherState%F_HS, OtherState%F_Rdtn, OtherState%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
       
 
               ! Put the output data in the OutData array

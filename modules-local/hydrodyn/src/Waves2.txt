@@ -68,7 +68,6 @@ typedef     ^                 ^                 INTEGER              NumOutAll  
 #
 typedef     ^                 InitOutputType    CHARACTER(10)        WriteOutputHdr    {:}      -        -        ""    -
 typedef     ^                 ^                 CHARACTER(10)        WriteOutputUnt    {:}      -        -        ""    -
-typedef     ^                 ^                 ReKi                 WaveElev2         {:}{:}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 typedef     ^                 ^                 ReKi                 WaveElevSeries2   {:}{:}   -        -        "" (m)
 #                                                                                                                 "Instantaneous elevation time-series at each of the points given by WaveElevXY.  Used for making movies of the waves. First index is the timestep. Second index is XY point number corresponding to second index of WaveElevXY." (m)
 typedef     ^                 ^                 ReKi                 WaveAcc2D         {:}{:}{:} -       -        "" (m/s^2)
@@ -103,11 +102,6 @@ typedef     ^              ConstraintStateType  ReKi                 DummyConstr
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
 typedef     ^              OtherStateType       INTEGER              DummyOtherState   -        -        -        "Remove this variable if you have other states" -
-typedef     ^                 ^                 ReKi                 E_Waves2          {9}      -        -        "2nd order wave elevation corrections for each of NWaveElev points"   -
-typedef     ^                 ^                 ReKi                 WaveElev2D        {:}{:}   -        -        "" (m)
-#                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
-typedef     ^                 ^                 ReKi                 WaveElev2S        {:}{:}   -        -        "" (m)
-#                                                                                                                 "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 typedef     ^                ^                  INTEGER              LastIndWave       -        -        -        "Index for last interpolation step of 2nd order forces"   -
 
 
@@ -121,6 +115,11 @@ typedef     ^                 ^                 INTEGER              NWaveElev  
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 typedef     ^                 ^                 ReKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
+typedef     ^                 ^                 ReKi                 WaveElev2         {:}{:}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
+#typedef     ^                 ^                 ReKi                 WaveElev2D        {:}{:}   -        -        "" (m)
+#                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
+#typedef     ^                 ^                 ReKi                 WaveElev2S        {:}{:}   -        -        "" (m)
+#                                                                                                                 "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 typedef     ^                 ^                 OutParmType          OutParam          {:}      -        -        ""        -
 typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""        -
 typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
