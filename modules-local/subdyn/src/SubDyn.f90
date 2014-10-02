@@ -696,7 +696,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       REAL(ReKi)                                   :: Y1(6)
       INTEGER(IntKi)                               :: startDOF
       REAL(ReKi)                                   :: DCM(3,3),junk(6,p%NNodes_L)  
-      REAL(ReKi)                                   :: HydroForces(6*p%NNodes_I),HydroTP(6)  !Forces from all interface nodes listed in one big array and those translated to TP ref point
+      REAL(ReKi)                                   :: HydroForces(6*p%NNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
 
       TYPE(SD_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)                               :: ErrStat2    ! Error status of the operation (occurs after initial error)
@@ -840,19 +840,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! ---------------------------------------------------------------------------------
       
       ! Eq. 15: Y1 = -(C1*x + D1*u + FY)  [note the negative sign!!!!]
-      
-      IF ( p%qml > 0) THEN
-      
-         Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                                               &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
-                 + matmul(p%KBB,   OtherState%u_TP) + matmul(p%D1_13, OtherState%udotdot_TP) + matmul(p%D1_14, OtherState%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 + p%FY )                                                                                                           !    + Fy(1) )
-                  
-      ELSE ! No retained modes, so there are no states
-         Y1 = -( matmul(p%KBB,   OtherState%u_TP) + matmul(p%MBB, OtherState%udotdot_TP) + matmul(p%D1_14, OtherState%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 + p%FY )                                                                                                           !    + Fy(1) )
-
-      END IF
-      
+        
       !NEED TO ADD HYDRODYNAMIC FORCES AT THE Interface NODES
         !Aggregate the forces and moments at the interface nodes to the reference point
         !TODO: where are these HydroTP, HydroForces documented?
@@ -866,11 +854,25 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          
       ENDDO
                 
-      HydroTP =  matmul(transpose(p%TI),HydroForces) 
+      !HydroTP =  matmul(transpose(p%TI),HydroForces) ! (6,1) calculated below
       
-      ! values on the interface mesh tare Y1 (SubDyn forces) + Hydrodynamic forces
-      y%Y1Mesh%Force (:,1) = Y1(1:3) + HydroTP(1:3)  
-      y%Y1Mesh%Moment(:,1) = Y1(4:6) + HydroTP(4:6)
+      IF ( p%qml > 0) THEN
+      
+         Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                                               &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
+                 + matmul(p%KBB,   OtherState%u_TP) + matmul(p%D1_13, OtherState%udotdot_TP) + matmul(p%D1_14, OtherState%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
+                 + matmul(p%D1_15, HydroForces) + p%FY )                                                                                                           !    + D1(1,5)*u(5) + Fy(1) )
+                  
+      ELSE ! No retained modes, so there are no states
+         Y1 = -( matmul(p%KBB,   OtherState%u_TP) + matmul(p%MBB, OtherState%udotdot_TP) + matmul(p%D1_14, OtherState%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
+                 + matmul(p%D1_15, HydroForces)+ p%FY )                                                                                                           !    + D1(1,5)*u(5) + Fy(1) )
+
+      END IF
+      
+
+      
+      ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
+      y%Y1Mesh%Force (:,1) = Y1(1:3) 
+      y%Y1Mesh%Moment(:,1) = Y1(4:6) 
 
             
    !________________________________________
@@ -3728,6 +3730,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
       
    TI_transpose =  TRANSPOSE(p%TI) 
    
+   
 
         ! Store FGL for later processes
    IF (p%SttcSolve) THEN     
@@ -3738,13 +3741,15 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
    p%PhiRb_TI = MATMUL(PhiRb, p%TI)
    
    
-   !..............
-   ! equation 9:
-   !..............
+   !...............................
+   ! equation 46-47 (used to be 9):
+   !...............................
    
    p%MBB = MATMUL( MATMUL( TI_transpose, MBBb ), p%TI) != MBBt
    p%KBB = MATMUL( MATMUL( TI_transpose, KBBb ), p%TI) != KBBt
 
+   p%D1_15=-TI_transpose  !this is 6x6NIN
+   
    IF ( p%NModes > 0 ) THEN ! These values don't exist for DOFM=0; i.e., p%NModes == 0
       
       p%MBM = MATMUL( TI_transpose, MBmb )                != MBMt    
@@ -3875,6 +3880,7 @@ SUBROUTINE AllocParameters(p, DOFM, ErrStat, ErrMsg)
    CALL AllocAry( p%TI,            p%DOFI,  6,     'p%TI',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
                                                                        
    CALL AllocAry( p%D1_14,         TPdofL, p%DOFL, 'p%D1_14',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+   CALL AllocAry( p%D1_15,         6,      p%DOFI, 'p%D1_15',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%FY,            TPdofL,         'p%FY',            ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%PhiRb_TI,      p%DOFL, TPdofL, 'p%PhiRb_TI',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    
