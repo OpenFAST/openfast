@@ -3991,6 +3991,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
       foundMask = .FALSE.
+         ! Extract Waves2 list
+      InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+   
          ! Extract WAMIT list
       InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList,  foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
@@ -3999,10 +4003,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
 
-         ! Extract Waves2 list
-      InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
-   
          ! Extract Morison list
          !foundMask = .FALSE.
       InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 )

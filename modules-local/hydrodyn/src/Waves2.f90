@@ -2253,7 +2253,7 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
 
 
       DO I=1,p%NWaveElev
-         WaveElev2Temp  = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev2(:,I), &
+         WaveElev2Temp(I)  = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev2(:,I), &
                                                      OtherState%LastIndWave, p%NStepWave + 1       )
       ENDDO
 

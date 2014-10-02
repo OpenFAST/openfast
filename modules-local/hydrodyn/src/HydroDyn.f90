@@ -1305,6 +1305,15 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
          !-------------------------------------------------------------------
          
+         ! Deal with any output from the Waves2 module....
+      IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
+
+            ! Waves2_CalcOutput is called only so that the wave elevations can be output (if requested).
+         CALL Waves2_CalcOutput( Time, u%Waves2, p%Waves2, x%Waves2, xd%Waves2,  &
+                                Waves2_z, OtherState%Waves2, y%Waves2, ErrStat, ErrMsg )
+
+      END IF
+
 !FIXME: Error handling appears to be broken here.
 
          ! Determine the rotational angles from the direction-cosine matrix
@@ -1372,15 +1381,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
       END IF
 
 
-         ! Deal with any output from the Waves2 module....
-      IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
-
-            ! Waves2_CalcOutput is called only so that the wave elevations can be output (if requested).
-         CALL Waves2_CalcOutput( Time, u%Waves2, p%Waves2, x%Waves2, xd%Waves2,  &
-                                Waves2_z, OtherState%Waves2, y%Waves2, ErrStat, ErrMsg )
-
-      END IF
-
 
       IF ( u%Morison%LumpedMesh%Initialized ) THEN  ! Make sure we are using Morison / there is a valid mesh
          CALL Morison_CalcOutput( Time, u%Morison, p%Morison, Morison_x, Morison_xd,  &
@@ -1432,6 +1432,13 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          
          J = p%NumOuts + 1        
          
+         IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
+            DO I=1, p%Waves2%NumOuts
+               y%WriteOutput(J) = y%Waves2%WriteOutput(I)
+               J = J + 1
+            END DO
+         END IF
+
          IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
             DO I=1, p%WAMIT%NumOuts
                y%WriteOutput(J) = y%WAMIT%WriteOutput(I)

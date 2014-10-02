@@ -511,13 +511,13 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
          ELSE
             p%OutParam(I)%Units = ParamUnitsAry(Indx)
          END IF
-!      ELSE
-!         ErrMsg  = p%OutParam(I)%Name//' is not an available output channel.'
-!         ErrStat = ErrID_Fatal
-!
-!         p%OutParam(I)%Units = 'INVALID'  
-!         p%OutParam(I)%Indx  =  1
-!         p%OutParam(I)%SignM =  0                              ! this will print all zeros
+      ELSE
+         ErrMsg  = p%OutParam(I)%Name//' is not an available output channel.'
+         ErrStat = ErrID_Fatal
+
+         p%OutParam(I)%Units = 'INVALID'  
+         p%OutParam(I)%Indx  =  1
+         p%OutParam(I)%SignM =  0                              ! this will print all zeros
       END IF
       
    END DO

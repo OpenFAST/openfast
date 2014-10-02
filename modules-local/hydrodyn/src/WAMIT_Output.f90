@@ -343,17 +343,22 @@ FUNCTION   GetWAMITChannels    ( NUserOutputs, UserOutputs, OutList, foundMask, 
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
    LOGICAL                                :: InvalidOutput(MaxWAMITOutputs)                        ! This array determines if the output channel is valid for this configuration
    LOGICAL                                :: CheckOutListAgain
-   
+  
+   LOGICAL                                :: newFoundMask (NUserOutputs)              ! A Mask indicating whether a user requested channel belongs to a modules output channels.
+  
        ! Initialize ErrStat
          
    ErrStat = ErrID_None         
    ErrMsg  = "" 
    GetWAMITChannels = 0
    
+   newFoundMask   =  .FALSE.
+
+
     DO I = 1,NUserOutputs
       IF (.NOT. foundMask(I) ) THEN
       OutListTmp         = UserOutputs(I)
-      foundMask(I)       = .FALSE.
+!      foundMask(I)       = .FALSE.
       CheckOutListAgain  = .FALSE.
       
       ! Reverse the sign (+/-) of the output channel if the user prefixed the
@@ -382,6 +387,7 @@ FUNCTION   GetWAMITChannels    ( NUserOutputs, UserOutputs, OutList, foundMask, 
       END IF
       
       IF ( Indx > 0 ) THEN     
+            newfoundMask(I) = .TRUE.
             foundMask(I) = .TRUE.
             GetWAMITChannels = GetWAMITChannels + 1
         
@@ -404,7 +410,7 @@ IF ( GetWAMITChannels > 0 ) THEN
    END IF
    
    DO I = 1,NUserOutputs
-      IF ( foundMask(I) ) THEN
+      IF ( newfoundMask(I) ) THEN
          OutList(count) = UserOutputs(I)
          count = count + 1
       END IF
