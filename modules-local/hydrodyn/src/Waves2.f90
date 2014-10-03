@@ -48,7 +48,7 @@ MODULE Waves2
    PRIVATE
 
 !   INTEGER(IntKi), PARAMETER                             :: DataFormatID = 1  !< Update this value if the data types change (used in Waves2_Pack)
-   TYPE(ProgDesc), PARAMETER                             :: Waves2_ProgDesc = ProgDesc( 'Waves2', 'v1.00.00b-adp', '30-Sept-2014' )
+   TYPE(ProgDesc), PARAMETER                             :: Waves2_ProgDesc = ProgDesc( 'Waves2', 'v1.00.00c-adp', '03-Oct-2014' )
                                                                               !< This holds the name of the program, version info, and date.
                                                                               !! It is used by the DispNVD routine in the library and as header
                                                                               !! information in output files.
@@ -367,7 +367,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Norm.',ErrStat,ErrMsg,'Waves2_Init')
 
       DO I=0,InitInp%NStepWave2
-         WaveElevC0Norm(I) = CMPLX( InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I) ) / SQRT(REAL(InitInp%NStepWave2))
+         WaveElevC0Norm(I) = CMPLX( InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I) ) / REAL(InitInp%NStepWave2)
       ENDDO
 
       !--------------------------------------------------------------------------------
@@ -532,7 +532,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ! Setup the FFT working arrays
       !--------------------------------------------------------------------------------
 
-      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
+      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'VariousWaves_Init')
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -741,8 +741,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                         ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
                         ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
-!                     WaveElevC_n = CMPLX( InitInp%WaveElevC0(1,n), InitInp%WaveElevC0(2,n)) / InitInp%NStepWave2
-!                     WaveElevC_m = CMPLX( InitInp%WaveElevC0(1,m), InitInp%WaveElevC0(2,m)) / InitInp%NStepWave2
                      WaveElevC_n =  WaveElevC0Norm(n)
                      WaveElevC_m =  WaveElevC0Norm(m)
 
@@ -1110,7 +1108,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
                      ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
-!                  WaveElevC_n = CMPLX( InitInp%WaveElevC0(1,n), InitInp%WaveElevC0(2,n)) / InitInp%NStepWave2
                   WaveElevC_n =  WaveElevC0Norm(n)
  
 
@@ -1216,8 +1213,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                         ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
                         ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
-!                     WaveElevC_n = CMPLX( InitInp%WaveElevC0(1,n), InitInp%WaveElevC0(2,n)) / InitInp%NStepWave2
-!                     WaveElevC_m = CMPLX( InitInp%WaveElevC0(1,m), InitInp%WaveElevC0(2,m)) / InitInp%NStepWave2
                      WaveElevC_n =  WaveElevC0Norm(n)
                      WaveElevC_m =  WaveElevC0Norm(m)
  
@@ -1448,13 +1443,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   D_minus     =  TransFuncD_minus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
-                     !!    \f$ L^-_{nm} = \frac{1}{4} \left[ 
+                     !!    \f$ L^-_{nm} = \frac{1}{8} \left[ 
                      !!             \frac{D^-_{nm} - |\vec{k}_n| |\vec{k}_m| \cos(\theta_n - \theta_m) - R_n R_m}{\sqrt{R_n R_m}}
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_minus routine.
 
-                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_ReKi
+                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 8.0_ReKi !4.0_ReKi
 
                      ! Calculate the terms \f$ n,m \f$ necessary for calculations
 
@@ -1476,8 +1471,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
                      ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
-!                  WaveElevC_n = CMPLX( InitInp%WaveElevC0(1,n), InitInp%WaveElevC0(2,n)) / InitInp%NStepWave2
-!                  WaveElevC_m = CMPLX( InitInp%WaveElevC0(1,m), InitInp%WaveElevC0(2,m)) / InitInp%NStepWave2
                   WaveElevC_n =  WaveElevC0Norm(n)
                   WaveElevC_m =  WaveElevC0Norm(m)
  
@@ -1570,13 +1563,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                D_plus      =  TransFuncD_plus(n,n,k_n,k_n,R_n,R_n)
 
                   !> Calculate the value of 
-                  !!    \f$ L^+_{nn} = \frac{1}{4} \left[ 
+                  !!    \f$ L^+_{nn} = \frac{1}{8} \left[ 
                   !!             \frac{D^+_{nn} - |\vec{k}_n| |\vec{k}_n| \cos(\theta_n - \theta_n) + R_n R_n}{\sqrt{R_n R_n}}
                   !!          +  (R_n+R_n) \right]
-                  !!       =  \frac{1}{4} \left[ \frac{ D^+_{nn} - |\vec{k}_n|^2 + R_n^2 }{ R_n } + 2 R_n \right] \f$
+                  !!       =  \frac{1}{8} \left[ \frac{ D^+_{nn} - |\vec{k}_n|^2 + R_n^2 }{ R_n } + 2 R_n \right] \f$
                   !!
                   !!    The value of \f$ D^+_{nn} \f$ is found from by the ::TransFuncD_plus routine.
-               L_plus  =  (( D_plus - k_n * k_n + R_n * R_n )/R_n + 2.0_ReKi * R_n ) / 4.0_ReKi
+               L_plus  =  (( D_plus - k_n * k_n + R_n * R_n )/R_n + 2.0_ReKi * R_n ) / 8.0_ReKi !4.0_ReKi
 
                   !> Calculate the dot product of the wavenumbers with the (x,y) location
                   !! This is given by:
@@ -1593,7 +1586,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                   ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
                   ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
-!               WaveElevC_n = CMPLX( InitInp%WaveElevC0(1,n), InitInp%WaveElevC0(2,n)) / InitInp%NStepWave2
                WaveElevC_n =  WaveElevC0Norm(n)
  
                  !> ### Calculate the array of \f$ K^+(\omega_n) \f$ for the first term of the velocity, acceleration, and pressure. ###
@@ -1639,12 +1631,12 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   D_plus      =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
-                     !!    \f$ L^+_{nm} = \frac{1}{4} \left[ 
+                     !!    \f$ L^+_{nm} = \frac{1}{8} \left[ 
                      !!             \frac{D^+_{nm} - |\vec{k}_n| |\vec{k}_m| \cos(\theta_n - \theta_m) + R_n R_m}{\sqrt{R_n R_m}}
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_plus routine.
-                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_ReKi
+                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 8.0_ReKi !4.0_ReKi
 
                      !> Calculate the dot product of the wavenumbers with the (x,y) location
                      !! This is given by:
@@ -1663,8 +1655,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
                      ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
-!                  WaveElevC_n = CMPLX( InitInp%WaveElevC0(1,n), InitInp%WaveElevC0(2,n)) / InitInp%NStepWave2
-!                  WaveElevC_m = CMPLX( InitInp%WaveElevC0(1,m), InitInp%WaveElevC0(2,m)) / InitInp%NStepWave2
                   WaveElevC_n =  WaveElevC0Norm(n)
                   WaveElevC_m =  WaveElevC0Norm(m)
  
@@ -1708,7 +1698,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !! The equation is given by:
       !!
       !! \f$ B_{nm}^-(z, \omega_n, \omega_m, \theta_n, \theta_m) =\frac{g^2}{\omega_n \omega_m}
-      !!             \cdot    \frac{1}{4} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
+      !!             \cdot    \frac{1}{8} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
       !!                      \frac{D_{nm}^-}{\omega_n - \omega_m}   \f$
       !!
       FUNCTION TransFuncB_minus(n,m,k_n,k_m,z)
@@ -1757,8 +1747,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Calculation of B_minus
-            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_ReKi * Omega_n * Omega_m ) &
-                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_minus / ( Omega_n - Omega_m )
+            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 8.0_ReKi * Omega_n * Omega_m ) &          
+                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_minus / ( Omega_n - Omega_m )       ! 4.0_ReKi
 
 
          ENDIF
@@ -1774,7 +1764,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !! The equation is given by:
       !!
       !! \f$ B_{nm}^+(z, \omega_n, \omega_m, \theta_n, \theta_m) =\frac{g^2}{\omega_n \omega_m}
-      !!             \cdot    \frac{1}{4} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
+      !!             \cdot    \frac{1}{8} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
       !!                      \frac{D_{nm}^+}{\omega_n + \omega_m}   \f$
       !!
       FUNCTION TransFuncB_plus(n,m,k_n,k_m,z)
@@ -1823,8 +1813,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Calculation of B_plus
-            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_ReKi * Omega_n * Omega_m ) &
-                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_plus / ( Omega_n + Omega_m )
+            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 8.0_ReKi * Omega_n * Omega_m ) &
+                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_plus / ( Omega_n + Omega_m )        ! 4.0_ReKi
 
 
          ENDIF
