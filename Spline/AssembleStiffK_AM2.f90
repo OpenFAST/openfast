@@ -11,7 +11,7 @@
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Nodes per element
    INTEGER(IntKi),INTENT(IN   ):: dof_elem ! Degrees of freedom per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   REAL(ReKi),    INTENT(  OUT):: GlobalK(:,:) ! Global stiffness matrix
+   REAL(ReKi),    INTENT(INOUT):: GlobalK(:,:) ! Global stiffness matrix
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
