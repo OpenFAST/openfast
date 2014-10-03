@@ -129,7 +129,7 @@ PROGRAM MAIN
     OPEN(unit = QiDisUnit, file = 'QiDisp_Static.out', status = 'REPLACE',ACTION = 'WRITE')
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
-   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'Twist.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
