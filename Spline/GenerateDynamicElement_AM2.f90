@@ -18,8 +18,8 @@
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
-   REAL(ReKi),        INTENT(  OUT):: MassM(:,:) ! Mass matrix 
-   REAL(ReKi),        INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B  
+   REAL(ReKi),        INTENT(INOUT):: MassM(:,:) ! Mass matrix 
+   REAL(ReKi),        INTENT(INOUT):: RHS(:) ! Right hand side of the equation Ax=B  
 
 !   REAL(ReKi),        ALLOCATABLE  :: Nuu0(:) ! Nodal initial position for each element
 !   REAL(ReKi),        ALLOCATABLE  :: Nuuu(:) ! Nodal displacement of Mass 1 for each element

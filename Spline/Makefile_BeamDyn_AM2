@@ -37,12 +37,13 @@ MODNAME_DIR = .
    # Name of compiler to use and flags to use.
 
 FC     = gfortran
+OPT    = 
 #FFLAGS = -O3 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none
 #FFLAGS = -O3 -g -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
 #LDFLAGS = -O3 -g -fbacktrace
 #FFLAGS = -g -O2 -m32 -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8 #-fcheck=bounds
-FFLAGS = -O2 -m32 -fdefault-real-8 -fdefault-double-8 -fbacktrace -ffree-line-length-none -x f95-cpp-input -Wsurprising 
-LDFLAGS = -O2 -m32 -fbacktrace
+FFLAGS = $(OPT) -m32 -fdefault-real-8 -fdefault-double-8 -fbacktrace -ffree-line-length-none -x f95-cpp-input -Wsurprising 
+LDFLAGS = $(OPT) -m32 -fbacktrace
 
    # Precision.
 
@@ -144,7 +145,7 @@ NWTC_LAPACK.obj:            NWTC_Base.obj
 
 BeamDyn_Types.f90:       Registry_BeamDyn.txt
 BeamDyn_Types.obj:       NWTC_Library.obj
-BeamDyn_SP.obj: BeamDyn_Types.obj DynamicSolution_AM2.f90 GenerateDynamicElement_AM2.f90
+BeamDyn_SP.obj: BeamDyn_Types.obj DynamicSolution_AM2.f90 GenerateDynamicElement_AM2.f90 *.f90
 
 Driver_BeamDyn_AM2.obj: BeamDyn_SP.obj NWTC_Library.obj 
 
