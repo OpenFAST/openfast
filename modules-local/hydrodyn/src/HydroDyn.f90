@@ -445,9 +445,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
             ENDIF
          ENDIF
 
-
          ! If we calculated wave elevations, it is now stored in p%WaveElev.  So we need to add the corrections.
-         IF (InitInp%Waves2%NWaveElev > 0 ) THEN
+         IF (p%Waves2%NWaveElev > 0 ) THEN
                ! Make sure the sizes of the two resulting arrays are identical...
             IF ( SIZE(p%WaveElev,DIM=1) /= SIZE(p%Waves2%WaveElev2,DIM=1) .OR. &
                  SIZE(p%WaveElev,DIM=2) /= SIZE(p%Waves2%WaveElev2,DIM=2)) THEN
@@ -1404,7 +1403,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          WaveElev1(I)   = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev1(:,I),          &
                                     OtherState%LastIndWave, p%NStepWave + 1       )                      
          WaveElev(I)    = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev(:,I), &
-                                    OtherState%Waves2%LastIndWave, p%NStepWave + 1       )
+                                    OtherState%LastIndWave, p%NStepWave + 1       )
 
       END DO
       
