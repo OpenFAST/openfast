@@ -50,8 +50,9 @@
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
 
-   x_tmp%q = x%q
-   x_tmp%dqdt = x%dqdt
+!   x_tmp%q = x%q
+!   x_tmp%dqdt = x%dqdt
+   CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp0, t, ErrStat, ErrMsg )
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )

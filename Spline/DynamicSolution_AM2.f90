@@ -33,8 +33,8 @@
    REAL(ReKi)                      :: temp
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: Eref
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
-   INTEGER(IntKi)                  :: indx(dof_total-12)
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
+   INTEGER(IntKi)                  :: indx(dof_total*2-12)
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: i
    INTEGER(IntKi)                  :: j
@@ -77,28 +77,25 @@ WRITE(*,*) "niter = ",i
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
-DO j=1,24
-WRITE(*,*) "sol_temp(j)",j,sol_temp(j)
-ENDDO
-!STOP
-WRITE(*,*) "TEST4"
        temp = Norm(feqv)
+WRITE(*,*) "Residual: ", temp
        sol(:) = 0.0D0
        DO j=1,dof_total-6
            sol(j+6) = sol_temp(j)
            sol(j+dof_total+6) = sol_temp(j+dof_total-6)
        ENDDO
-       IF(i==1) Eref = TOLF * DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
+       IF(i==1) Eref = ABS(TOLF * DOT_PRODUCT(sol_temp(1:dof_total-6),feqv))
+IF(i==1) WRITE(*,*) "Eref: ",Eref
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
-           Enorm = DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
+           Enorm = ABS(DOT_PRODUCT(sol_temp(1:dof_total-6),feqv))
+WRITE(*,*) "Enorm: ",Enorm
            IF(Enorm .GT. Eref/TOLF) THEN
-               WRITE(*,*) "Solution is diverging, exit N-R"
+!               WRITE(*,*) "Solution is diverging, exit N-R"
            ELSEIF(Enorm .LE. Eref) THEN
                RETURN
            ENDIF
        ENDIF
-!WRITE(*,*) "Eref",Eref
        CALL UpdateConfiguration(sol(1:dof_total),uuN,node_total,dof_node)
        CALL UpdateConfiguration_AM2(sol(dof_total+1:dof_total*2),vvN,node_total,dof_node)
 

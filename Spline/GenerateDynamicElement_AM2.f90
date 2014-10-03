@@ -161,13 +161,13 @@
 
        CALL ElemNodalDispGL(vvN,node_elem,dof_node,nelem,Nvvv)
        CALL ElemNodalDispGL(vvN00,node_elem,dof_node,nelem,Nvvv0)
-WRITE(*,*) "TEST1"
+!WRITE(*,*) "TEST1"
 
        CALL ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
                              &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&
                              &ngp,dt,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
 
-WRITE(*,*) "TEST3"
+!WRITE(*,*) "TEST3"
 
        CALL AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_node,&
                               &elm11,elm12,elm21,elm22,MassM)

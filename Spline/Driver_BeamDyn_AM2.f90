@@ -83,22 +83,26 @@ PROGRAM MAIN
    Integer(IntKi)                     :: num_dof
    INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
 
+   REAL(ReKi):: temp_H(3,3)
+   INTEGER(IntKi),PARAMETER:: QiHUnit = 30
+
 
 
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
+OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
 
    t_initial = 0.0D+00
-   t_final   = 0.6D+01
+   t_final   = 4.0D+00
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 1.0D-03
+   dt_global = 1.0D-02
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -110,7 +114,7 @@ PROGRAM MAIN
 
    ! define polynomial-order for ModName_Input_ExtrapInterp and ModName_Output_ExtrapInterp
    ! Must be 0, 1, or 2
-   BD_interp_order = 0
+   BD_interp_order = 2
 
    !Module1: allocate Input and Output arrays; used for interpolation and extrapolation
    ALLOCATE(BD_Input(BD_interp_order + 1)) 
@@ -182,13 +186,13 @@ PROGRAM MAIN
    
    DO n_t_global = 0, n_t_final
 
-
+WRITE(*,*) "Time Step: ", n_t_global
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
       CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 
 
 !     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -218,10 +222,12 @@ PROGRAM MAIN
 
       ENDDO
 
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
-      
+      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%dqdt(BD_Parameter%dof_total-5),BD_ContinuousState%dqdt(BD_Parameter%dof_total-4),&
+                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-3),BD_ContinuousState%dqdt(BD_Parameter%dof_total-2),&
+                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-1),BD_ContinuousState%dqdt(BD_Parameter%dof_total)
+CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
+WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
+                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
 !      WRITE(QiDisUnit,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
@@ -282,6 +288,8 @@ PROGRAM MAIN
    6000 FORMAT (ES12.5,6ES21.12)
    CLOSE (QiDisUnit)
 
+7000 FORMAT (ES12.5,9ES21.12)
+CLOSE (QiHUnit)
 
 END PROGRAM MAIN
 

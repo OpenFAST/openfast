@@ -103,7 +103,7 @@
    INTEGER(IntKi)              :: temp_id2
    INTEGER(IntKi)              :: allo_stat
 
- WRITE(*,*) "TEST2"
+! WRITE(*,*) "TEST2"
 !i   ALLOCATE(gp(ngp), STAT = allo_stat)
 !i   IF(allo_stat/=0) GOTO 9999
 !i   gp = 0.0D0

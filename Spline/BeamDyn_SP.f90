@@ -23,6 +23,8 @@ MODULE BeamDyn_SP
    PUBLIC :: BeamDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvMatrixR                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvCompose                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
 
 CONTAINS
 
@@ -373,7 +375,7 @@ INCLUDE 'BeamDyn_AM2.f90'
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
    x%dqdt = 0.0D0
 
-   p%niter = 20
+   p%niter = 100
 
 ! For AM2, initial Condition
    DO i=1,p%elem_total

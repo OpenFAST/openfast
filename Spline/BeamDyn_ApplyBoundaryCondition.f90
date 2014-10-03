@@ -8,7 +8,6 @@
    REAL(ReKi)                                   :: temp_R(3,3)
    REAL(ReKi)                                   :: temp_rot(3)
 
-
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)
 
    temp_R(:,:) = 0.0D0
