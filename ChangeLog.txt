@@ -1,5 +1,6 @@
 AeroDyn Change Log
 ------------------
+(most recent content is at the bottom of this file)
 
 AeroDyn v3.30
  Added capability to read turbulence files in AeroDyn.
@@ -794,14 +795,10 @@ v14.02.01c-bjj   30-Jun-2014   B. Jonkman
 + modified reading of MulTabLoc to hopefully mimic FAST v7.02 behavior (not tested, but definitely was a problem in previous release)
 + renamed output files <RootName>.elm is now <RootName>.AD.out and <RootName>.opt is now <RootName>.AD.sum
 
+v14.03.00a-bjj 30-Sep-2014  B. Jonkman
++ added source code for DWM (feature available only through driver distributed by UMass)
++ fixed some constants so compiling in double precision is easier
++ fixed potentially uninitialized variable for tower aerodynamics
 
-
-
-
--------------------------------------------------------------------------------
-To do:
-
- Add INTENT to all passed parameters.
- Describe all variables on declaration statements.
 
 =================== END ====================
