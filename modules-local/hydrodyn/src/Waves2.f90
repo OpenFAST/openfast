@@ -362,7 +362,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
 
-         ! The wave elevation information in frequency space -- we need to normalize this by sqrt(NStepWave2)
+         ! The wave elevation information in frequency space -- we need to normalize this by NStepWave2
       ALLOCATE ( WaveElevC0Norm(0:InitInp%NStepWave2) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Norm.',ErrStat,ErrMsg,'Waves2_Init')
 
@@ -766,9 +766,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                   ENDDO ! m loop
 
+
                ENDIF ! Check to see if WvLowCOffD <= mu_minus <= WvHiCOffD
 
             ENDDO ! mu_minus loop (diff frequency)
+
+                  !  Divide by two for the single sided FFT given in the documentation.
+            WaveVel2xCDiff =  WaveVel2xCDiff / 2.0_Reki
+            WaveVel2yCDiff =  WaveVel2yCDiff / 2.0_Reki
+            WaveVel2zCDiff =  WaveVel2zCDiff / 2.0_Reki
+            WaveAcc2xCDiff =  WaveAcc2xCDiff / 2.0_Reki
+            WaveAcc2yCDiff =  WaveAcc2yCDiff / 2.0_Reki
+            WaveAcc2zCDiff =  WaveAcc2zCDiff / 2.0_Reki
+            WaveDynP2CDiff =  WaveDynP2CDiff / 2.0_Reki
+
+
 
 
                !> ### Apply the inverse FFT to each of the components to get the time domain result ###
@@ -790,6 +802,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL ApplyFFT_cx(  WaveDynP2Diff(:),  WaveDynP2CDiff(:), FFT_Data, ErrStatTmp )
                CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,'Waves2_Init')
 
+
+
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
@@ -797,27 +811,27 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Copy the results to the output
-            InitOut%WaveVel2D(:,I,1) =  2.0_ReKi * WaveVel2xDiff(:)     ! x-component of velocity
-            InitOut%WaveVel2D(:,I,2) =  2.0_ReKi * WaveVel2yDiff(:)     ! y-component of velocity
-            InitOut%WaveVel2D(:,I,3) =  2.0_ReKi * WaveVel2zDiff(:)     ! z-component of velocity
+            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),1) =  2.0_ReKi * WaveVel2xDiff(:)     ! x-component of velocity
+            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),2) =  2.0_ReKi * WaveVel2yDiff(:)     ! y-component of velocity
+            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),3) =  2.0_ReKi * WaveVel2zDiff(:)     ! z-component of velocity
 
-            InitOut%WaveAcc2D(:,I,1) =  2.0_ReKi * WaveAcc2xDiff(:)     ! x-component of acceleration
-            InitOut%WaveAcc2D(:,I,2) =  2.0_ReKi * WaveAcc2yDiff(:)     ! y-component of acceleration
-            InitOut%WaveAcc2D(:,I,3) =  2.0_ReKi * WaveAcc2zDiff(:)     ! z-component of acceleration
+            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),1) =  2.0_ReKi * WaveAcc2xDiff(:)     ! x-component of acceleration
+            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),2) =  2.0_ReKi * WaveAcc2yDiff(:)     ! y-component of acceleration
+            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),3) =  2.0_ReKi * WaveAcc2zDiff(:)     ! z-component of acceleration
 
-            InitOut%WaveDynP2D(:,I)  =  2.0_ReKi * WaveDynP2Diff(:)     ! Dynamic pressure
+            InitOut%WaveDynP2D(:,WaveKinPrimeMap(I))  =  2.0_ReKi * WaveDynP2Diff(:)     ! Dynamic pressure
 
 
                ! Copy the first point to the last to make it easier.
-            InitOut%WaveVel2D(InitInp%NStepWave,I,1)   =  WaveVel2xDiff(0)
-            InitOut%WaveVel2D(InitInp%NStepWave,I,2)   =  WaveVel2yDiff(0)
-            InitOut%WaveVel2D(InitInp%NStepWave,I,3)   =  WaveVel2zDiff(0)
+            InitOut%WaveVel2D(InitInp%NStepWave,WaveKinPrimeMap(I),1)   =  WaveVel2xDiff(0)
+            InitOut%WaveVel2D(InitInp%NStepWave,WaveKinPrimeMap(I),2)   =  WaveVel2yDiff(0)
+            InitOut%WaveVel2D(InitInp%NStepWave,WaveKinPrimeMap(I),3)   =  WaveVel2zDiff(0)
 
-            InitOut%WaveAcc2D(InitInp%NStepWave,I,1)   =  WaveAcc2xDiff(0)
-            InitOut%WaveAcc2D(InitInp%NStepWave,I,2)   =  WaveAcc2yDiff(0)
-            InitOut%WaveAcc2D(InitInp%NStepWave,I,3)   =  WaveAcc2zDiff(0)
+            InitOut%WaveAcc2D(InitInp%NStepWave,WaveKinPrimeMap(I),1)   =  WaveAcc2xDiff(0)
+            InitOut%WaveAcc2D(InitInp%NStepWave,WaveKinPrimeMap(I),2)   =  WaveAcc2yDiff(0)
+            InitOut%WaveAcc2D(InitInp%NStepWave,WaveKinPrimeMap(I),3)   =  WaveAcc2zDiff(0)
 
-            InitOut%WaveDynP2D(InitInp%NStepWave,I)    =  WaveDynP2Diff(0)
+            InitOut%WaveDynP2D(InitInp%NStepWave,WaveKinPrimeMap(I))    =  WaveDynP2Diff(0)
 
 
          ENDDO    ! I=1,NWaveKin0Prime loop end
@@ -1032,7 +1046,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             WaveDynP2CSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
 
 
-
                !---------------
                !> ### First term ###
                !! This term is only the FFT over the diagonal elements where \f$ \omega_n = \omega_m \f$
@@ -1079,6 +1092,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      ! Get value for \f$ B+ \f$ for the n,m index pair
                   B_plus  =  TransFuncB_plus( n, n, k_n, k_n, WaveKinzi0Prime(I) )
 
+
                      !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by ::TransFuncB_plus)
                      ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                      !> * \f$ _x{U}_{nn}^+ = B_{nn}^+ 2 k_n \cos \theta_n \f$
@@ -1110,7 +1124,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      ! shift associated with the (x,y) location is accounted for by the WaveElevxyPrime0 variable.
                   WaveElevC_n =  WaveElevC0Norm(n)
  
-
                      !> Velocity terms:
                      !!    *  \f$ K^+(\omega_n) =  A_n A_n U_{nn}^+         \exp\left(-\imath 2 \vec{k_n} \cdot\vec{x}\right) \f$
                   WaveVel2xCSumT1(mu_plus)   =  WaveElevC_n * WaveElevC_n * Ux_nm_plus * WaveElevxyPrime0
@@ -1130,7 +1143,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                ENDIF ! Check to see if WvLowCOffS <= mu_plus <= WvHiCOffS
 
-            ENDDO ! n loop (diff frequency)
+            ENDDO ! n loop (sum frequency)
 
                ! NOTE: The IFFT of the these terms is performed below.
 
@@ -1152,7 +1165,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                Omega_plus =  mu_plus * InitInp%WaveDOmega
 
                IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
-
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
                   DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_ReKi )
                         ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
@@ -1243,6 +1255,25 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ENDDO ! mu_plus loop (diff frequency)
 
 
+                  !  Divide by two for the single sided FFT given in the documentation.
+            WaveVel2xCSumT1 =  WaveVel2xCSumT1 / 2.0_Reki
+            WaveVel2yCSumT1 =  WaveVel2yCSumT1 / 2.0_Reki
+            WaveVel2zCSumT1 =  WaveVel2zCSumT1 / 2.0_Reki
+            WaveAcc2xCSumT1 =  WaveAcc2xCSumT1 / 2.0_Reki
+            WaveAcc2yCSumT1 =  WaveAcc2yCSumT1 / 2.0_Reki
+            WaveAcc2zCSumT1 =  WaveAcc2zCSumT1 / 2.0_Reki
+            WaveDynP2CSumT1 =  WaveDynP2CSumT1 / 2.0_Reki
+            WaveVel2xCSumT2 =  WaveVel2xCSumT2 / 2.0_Reki
+            WaveVel2yCSumT2 =  WaveVel2yCSumT2 / 2.0_Reki
+            WaveVel2zCSumT2 =  WaveVel2zCSumT2 / 2.0_Reki
+            WaveAcc2xCSumT2 =  WaveAcc2xCSumT2 / 2.0_Reki
+            WaveAcc2yCSumT2 =  WaveAcc2yCSumT2 / 2.0_Reki
+            WaveAcc2zCSumT2 =  WaveAcc2zCSumT2 / 2.0_Reki
+            WaveDynP2CSumT2 =  WaveDynP2CSumT2 / 2.0_Reki
+
+
+
+
                !> ### Apply the inverse FFT to the first and second terms of each of the components to get the time domain result ###
                !> *   \f$ V^{(2)+}(t)  =  \operatorname{IFFT}\left[K^+\right]
                !!                      + 2\operatorname{IFFT}\left[H^+\right]     \f$
@@ -1287,21 +1318,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Add the results to the output
-            InitOut%WaveVel2S(:,I,1) =  WaveVel2xSumT1(:) +  2.0_ReKi * WaveVel2xSumT2(:)     ! x-component of velocity
-            InitOut%WaveVel2S(:,I,2) =  WaveVel2ySumT1(:) +  2.0_ReKi * WaveVel2ySumT2(:)     ! y-component of velocity
-            InitOut%WaveVel2S(:,I,3) =  WaveVel2zSumT1(:) +  2.0_ReKi * WaveVel2zSumT2(:)     ! z-component of velocity
+            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),1) =  WaveVel2xSumT1(:) +  2.0_ReKi * WaveVel2xSumT2(:)     ! x-component of velocity
+            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),2) =  WaveVel2ySumT1(:) +  2.0_ReKi * WaveVel2ySumT2(:)     ! y-component of velocity
+            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),3) =  WaveVel2zSumT1(:) +  2.0_ReKi * WaveVel2zSumT2(:)     ! z-component of velocity
 
-            InitOut%WaveAcc2S(:,I,1) =  WaveAcc2xSumT1(:) +  2.0_ReKi * WaveAcc2xSumT2(:)     ! x-component of acceleration
-            InitOut%WaveAcc2S(:,I,2) =  WaveAcc2ySumT1(:) +  2.0_ReKi * WaveAcc2ySumT2(:)     ! y-component of acceleration
-            InitOut%WaveAcc2S(:,I,3) =  WaveAcc2zSumT1(:) +  2.0_ReKi * WaveAcc2zSumT2(:)     ! z-component of acceleration
+            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),1) =  WaveAcc2xSumT1(:) +  2.0_ReKi * WaveAcc2xSumT2(:)     ! x-component of acceleration
+            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),2) =  WaveAcc2ySumT1(:) +  2.0_ReKi * WaveAcc2ySumT2(:)     ! y-component of acceleration
+            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),3) =  WaveAcc2zSumT1(:) +  2.0_ReKi * WaveAcc2zSumT2(:)     ! z-component of acceleration
 
-            InitOut%WaveDynP2S(:,I)  =  WaveDynP2SumT1(:) +  2.0_ReKi * WaveDynP2SumT2(:)     ! Dynamic pressure
+            InitOut%WaveDynP2S(:,WaveKinPrimeMap(I))  =  WaveDynP2SumT1(:) +  2.0_ReKi * WaveDynP2SumT2(:)     ! Dynamic pressure
 
 
                ! Copy the first point to the last to make it easier.
-            InitOut%WaveVel2S(InitInp%NStepWave,I,:)   =  InitOut%WaveVel2S(0,I,:)
-            InitOut%WaveAcc2S(InitInp%NStepWave,I,:)   =  InitOut%WaveAcc2S(0,I,:)
-            InitOut%WaveDynP2S(InitInp%NStepWave,I)    =  InitOut%WaveDynP2S(0,I)
+            InitOut%WaveVel2S(InitInp%NStepWave,WaveKinPrimeMap(I),:)     =  InitOut%WaveVel2S(0,WaveKinPrimeMap(I),:)
+            InitOut%WaveAcc2S(InitInp%NStepWave,WaveKinPrimeMap(I),:)     =  InitOut%WaveAcc2S(0,WaveKinPrimeMap(I),:)
+            InitOut%WaveDynP2S(InitInp%NStepWave,WaveKinPrimeMap(I))    =  InitOut%WaveDynP2S(0,WaveKinPrimeMap(I))
 
 
          ENDDO    ! I=1,NWaveKin0Prime loop end
@@ -1367,6 +1398,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF (ALLOCATED(TmpTimeSeries2))   DEALLOCATE(TmpTimeSeries2,    STAT=ErrStatTmp)
          IF (ALLOCATED(TmpFreqSeries))    DEALLOCATE(TmpFreqSeries,     STAT=ErrStatTmp)
          IF (ALLOCATED(TmpFreqSeries2))   DEALLOCATE(TmpFreqSeries2,    STAT=ErrStatTmp)
+
 
 
          RETURN
@@ -1443,13 +1475,14 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   D_minus     =  TransFuncD_minus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
-                     !!    \f$ L^-_{nm} = \frac{1}{8} \left[ 
+                     !!    \f$ L^-_{nm} = \frac{1}{4} \left[ 
                      !!             \frac{D^-_{nm} - |\vec{k}_n| |\vec{k}_m| \cos(\theta_n - \theta_m) - R_n R_m}{\sqrt{R_n R_m}}
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_minus routine.
 
-                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 8.0_ReKi !4.0_ReKi
+                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_ReKi !4.0_ReKi
+
 
                      ! Calculate the terms \f$ n,m \f$ necessary for calculations
 
@@ -1486,6 +1519,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ENDIF ! Check to see if WvLowCOffD <= mu_minus <= WvHiCOffD
 
          ENDDO ! mu_minus loop (diff frequency)
+
+
+                  !  Divide by two for the single sided FFT given in the documentation.
+            TmpFreqSeries = TmpFreqSeries / 2.0_Reki
 
 
             !> ### Apply the inverse FFT to each of the components to get the time domain result ###
@@ -1563,13 +1600,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                D_plus      =  TransFuncD_plus(n,n,k_n,k_n,R_n,R_n)
 
                   !> Calculate the value of 
-                  !!    \f$ L^+_{nn} = \frac{1}{8} \left[ 
+                  !!    \f$ L^+_{nn} = \frac{1}{4} \left[ 
                   !!             \frac{D^+_{nn} - |\vec{k}_n| |\vec{k}_n| \cos(\theta_n - \theta_n) + R_n R_n}{\sqrt{R_n R_n}}
                   !!          +  (R_n+R_n) \right]
-                  !!       =  \frac{1}{8} \left[ \frac{ D^+_{nn} - |\vec{k}_n|^2 + R_n^2 }{ R_n } + 2 R_n \right] \f$
+                  !!       =  \frac{1}{4} \left[ \frac{ D^+_{nn} - |\vec{k}_n|^2 + R_n^2 }{ R_n } + 2 R_n \right] \f$
                   !!
                   !!    The value of \f$ D^+_{nn} \f$ is found from by the ::TransFuncD_plus routine.
-               L_plus  =  (( D_plus - k_n * k_n + R_n * R_n )/R_n + 2.0_ReKi * R_n ) / 8.0_ReKi !4.0_ReKi
+               L_plus  =  (( D_plus - k_n * k_n + R_n * R_n )/R_n + 2.0_ReKi * R_n ) / 4.0_ReKi
 
                   !> Calculate the dot product of the wavenumbers with the (x,y) location
                   !! This is given by:
@@ -1631,12 +1668,12 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   D_plus      =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
-                     !!    \f$ L^+_{nm} = \frac{1}{8} \left[ 
+                     !!    \f$ L^+_{nm} = \frac{1}{4} \left[ 
                      !!             \frac{D^+_{nm} - |\vec{k}_n| |\vec{k}_m| \cos(\theta_n - \theta_m) + R_n R_m}{\sqrt{R_n R_m}}
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_plus routine.
-                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 8.0_ReKi !4.0_ReKi
+                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_ReKi
 
                      !> Calculate the dot product of the wavenumbers with the (x,y) location
                      !! This is given by:
@@ -1670,6 +1707,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ENDDO ! mu_plus loop (diff frequency)
 
 
+                  !  Divide by two for the single sided FFT given in the documentation.
+            TmpFreqSeries  = TmpFreqSeries / 2.0_Reki
+            TmpFreqSeries2 = TmpFreqSeries2 / 2.0_Reki
+
             !> ## Apply the inverse FFT to the first and second terms to get the time domain result ##
             !> *   \f$ \eta^{(2)+}(t)  =  \operatorname{IFFT}\left[K^+\right]
             !!                         + 2\operatorname{IFFT}\left[H^+\right]     \f$
@@ -1698,7 +1739,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !! The equation is given by:
       !!
       !! \f$ B_{nm}^-(z, \omega_n, \omega_m, \theta_n, \theta_m) =\frac{g^2}{\omega_n \omega_m}
-      !!             \cdot    \frac{1}{8} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
+      !!             \cdot    \frac{1}{4} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
       !!                      \frac{D_{nm}^-}{\omega_n - \omega_m}   \f$
       !!
       FUNCTION TransFuncB_minus(n,m,k_n,k_m,z)
@@ -1747,8 +1788,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Calculation of B_minus
-            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 8.0_ReKi * Omega_n * Omega_m ) &          
-                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_minus / ( Omega_n - Omega_m )       ! 4.0_ReKi
+            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_ReKi * Omega_n * Omega_m ) &          
+                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_minus / ( Omega_n - Omega_m )
 
 
          ENDIF
@@ -1760,11 +1801,11 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
 
-      !> This function calculates the term \f$ B^+_{nm} \f$ used in calculating the veloicty, acceleration, and dynamic pressure terms.
+      !> This function calculates the term \f$ B^+_{nm} \f$ used in calculating the velocity, acceleration, and dynamic pressure terms.
       !! The equation is given by:
       !!
       !! \f$ B_{nm}^+(z, \omega_n, \omega_m, \theta_n, \theta_m) =\frac{g^2}{\omega_n \omega_m}
-      !!             \cdot    \frac{1}{8} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
+      !!             \cdot    \frac{1}{4} \frac{\cosh\left[k_{nm}^-(h+z)\right]}{\cosh\left[k_{nm}^-(h)\right]}
       !!                      \frac{D_{nm}^+}{\omega_n + \omega_m}   \f$
       !!
       FUNCTION TransFuncB_plus(n,m,k_n,k_m,z)
@@ -1790,10 +1831,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
             TransFuncB_plus  = 0.0_ReKi
 
-         ELSEIF ( n==m ) THEN
-
-               ! If the frequencies are the same, we get a zero in the denominator.  These should be defined as zero.
-            TransFuncB_plus  = 0.0_ReKi
 
          ELSE
 
@@ -1811,10 +1848,9 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                ! Transfer function D_plus
             D_plus     =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
-
                ! Calculation of B_plus
-            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 8.0_ReKi * Omega_n * Omega_m ) &
-                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_plus / ( Omega_n + Omega_m )        ! 4.0_ReKi
+            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_ReKi * Omega_n * Omega_m ) &
+                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_plus / ( Omega_n + Omega_m )
 
 
          ENDIF
