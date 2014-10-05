@@ -2717,8 +2717,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    END IF
 
       ! Check that the order given makes sense. 
-   IF ( InitInp%Waves2%WvLowCOffS >= InitInp%Waves2%WvHiCOffD ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WvLowCOffS must be less than WvHiCOffD.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
+   IF ( InitInp%Waves2%WvLowCOffS >= InitInp%Waves2%WvHiCOffS ) THEN
+      CALL SetErrStat( ErrID_Fatal,'WvLowCOffS must be less than WvHiCOffS.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
       RETURN
    END IF
 
