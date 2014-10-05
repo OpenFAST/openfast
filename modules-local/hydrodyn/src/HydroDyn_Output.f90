@@ -548,6 +548,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
             ErrStat = ErrID_Fatal
             RETURN
          END IF
+         y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complaing about uninitialized memory access (was harmless)
          
                   
             ! Initialize the HD-level Hdr and Unt elements
