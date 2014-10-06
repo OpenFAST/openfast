@@ -75,6 +75,7 @@ PROGRAM MAIN
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
+   Integer(IntKi)                     :: k               ! counter for various loops
 
    REAL(DbKi)                         :: exact           ! exact solution
    REAL(DbKi)                         :: rms_error       ! rms error
@@ -127,15 +128,17 @@ PROGRAM MAIN
    !  defined coupling interval.
    ! -------------------------------------------------------------------------
     OPEN(unit = QiDisUnit, file = 'QiDisp_Static.out', status = 'REPLACE',ACTION = 'WRITE')
+    
 
-!   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
    BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
 !   BD_InitInput%InputFile = 'Twist.inp'
+!   BD_InitInput%InputFile = 'CX_100_geo.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
    BD_InitInput%gravity(1) = 0.0D0 !-9.80665
-   BD_InitInput%gravity(2) = 0.0D0 
-   BD_InitInput%gravity(3) = 0.0D0 
+   BD_InitInput%gravity(2) = -9.80665 
+   BD_InitInput%gravity(3) = 0.0!9.80665 
 
    CALL BeamDyn_Init(BD_InitInput        &
                    , BD_Input(1)         &
@@ -160,7 +163,7 @@ PROGRAM MAIN
    ! order = SIZE(Mod1_Input)
    DO i = 1, BD_interp_order + 1  
       BD_InputTimes(i) = t_initial - (i - 1) * dt_global
-      BD_OutputTimes(i) = t_initial - (i - 1) * dt_global
+      BD_OutputTimes(i) = t_initial - (i - 1) * dt_global 
    ENDDO
 
    DO i = 1, BD_interp_order
@@ -228,9 +231,50 @@ PROGRAM MAIN
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
    ENDDO
+   
 
-   WRITE(QiDisUnit,6000) t_global,&
-                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total)!,&
+     WRITE(QiDisUnit,*) 'Initial Nodal Configurations (uuN0):'
+   WRITE(QiDisUnit,*) '=========================================='
+   DO i=1,BD_Parameter%elem_total
+       WRITE(QiDisUnit,*) 'Member #: ',i
+       DO j=1,BD_Parameter%node_elem
+           k = (j - 1) * BD_Parameter%dof_node
+           WRITE(QiDisUnit,3000) BD_Parameter%uuN0(k+1,i),BD_Parameter%uuN0(k+2,i),BD_Parameter%uuN0(k+3,i),&
+                              &BD_Parameter%uuN0(k+4,i),BD_Parameter%uuN0(k+5,i),BD_Parameter%uuN0(k+6,i)
+       ENDDO
+   ENDDO
+  
+      WRITE(QiDisUnit,*) 'Nodal Displacements (uuNf):'
+   WRITE(QiDisUnit,*) '=========================================='
+   DO i=1,BD_Parameter%node_total
+       WRITE(QiDisUnit,1000) i,BD_ContinuousState%q(i+5*(i-1)), BD_ContinuousState%q(i+1+5*(i-1)), &
+&BD_ContinuousState%q(i+2+5*(i-1)), BD_ContinuousState%q(i+3+5*(i-1)), BD_ContinuousState%q(i+4+5*(i-1)), &
+&BD_ContinuousState%q(i+5+5*(i-1))
+   ENDDO
+   
+   WRITE(QiDisUnit,*) 'Root Forces'
+   WRITE(QiDisUnit,*) '=========================================='
+   WRITE(QiDisUnit,1000) 1,BD_OutPut(1)%BldForce%Force(1,1),BD_OutPut(1)%BldForce%Force(2,1),BD_OutPut(1)%BldForce%Force(3,1),&
+   &BD_OutPut(1)%BldForce%Moment(1,1),BD_OutPut(1)%BldForce%Moment(2,1),BD_OutPut(1)%BldForce%Moment(3,1)
+   
+
+!      WRITE(QiDisUnit,*) 'Nodal Displacements (uuNf):'
+!   WRITE(QiDisUnit,*) '=========================================='
+!   DO i=1,BD_Parameter%node_total
+!       WRITE(QiDisUnit,1000) i,BD_ContinuousState%q(i+5*(i-1)), BD_ContinuousState%q(i+1+5*(i-1)), &
+!&BD_ContinuousState%q(i+2+5*(i-1)), BD_ContinuousState%q(i+3+5*(i-1)), BD_ContinuousState%q(i+4+5*(i-1)), &
+!&BD_ContinuousState%q(i+5+5*(i-1))
+!   ENDDO
+   
+!   WRITE(QiDisUnit,*) 'Nodal Displacements (uuNf):'
+!   WRITE(QiDisUnit,*) '=========================================='
+!   DO i=1,BD_Parameter%node_total+2
+!       WRITE(QiDisUnit,1000) i,BD_OutPut(1)%BldMotion%TranslationDisp(1,i),BD_OutPut(1)%BldMotion%TranslationDisp(2,i),&
+!&BD_OutPut(1)%BldMotion%TranslationDisp(3,i), BD_ContinuousState%q(i+3+5*(i-1)), BD_ContinuousState%q(i+4+5*(i-1)), &
+!&BD_ContinuousState%q(   
+   
+!   WRITE(QiDisUnit,6000) t_global,&
+!                          &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),&
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
@@ -267,6 +311,9 @@ PROGRAM MAIN
    DEALLOCATE(BD_OutputTimes)
 
    6000 FORMAT (ES12.5,6ES21.12)
+      1000 FORMAT (' ',I5.2,6ES21.12)
+   2000 FORMAT (' ',7ES21.12)
+   3000 FORMAT (' ',6ES21.12)
    CLOSE (QiDisUnit)
 
 
@@ -322,8 +369,50 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
    u%RootMotion%RotationAcc(:,:)   = 0.0D0
                      
 !   u%PointLoad%Force(2,p%node_total)  = 4.0D+05 !6.0D+02
-   u%PointLoad%Force(3,p%node_total)  = 6.0D+00
-!   u%PointLoad%Moment(1,p%node_total)  = 6.0D+02
+
+!   u%PointLoad%Force(3,p%node_elem)  = 1.69D+04
+!   u%PointLoad%Force(3,p%node_elem+(p%node_elem-1)*1)  = 5.47D+03
+!   u%PointLoad%Force(3,p%node_elem+(p%node_elem-1)*2)  = 5.59D+03
+
+
+!   u%PointLoad%Force(3,p%node_elem)  = 1.37D+04
+!   u%PointLoad%Force(3,p%node_elem+(p%node_elem-1)*1)  = 4.44D+03
+!   u%PointLoad%Force(3,p%node_elem+(p%node_elem-1)*2)  = 4.54D+03
+
+
+!   u%PointLoad%Force(3,p%node_elem)  = -4000.0E+03 !Twisted beam
+!   u%PointLoad%Force(3,p%node_elem)  = 5.0E+02 !Curved 600m beam
+!   u%PointLoad%Moment(2,p%node_elem)  = -33.2272
+!      u%PointLoad%Moment(1,p%node_elem)  = -1141.59 !Curved straight equivalent load
+   ! p%F_ext(p%dof_total-3) = 2.0E+03
+! p%F_ext(p%dof_total-1) = -132.864 !Curved straight equivalent load
+! p%F_ext(p%dof_total-2) = 4.56636E+03 !Curved straight equivalent load
+
+
+ 
+   u%PointLoad%Force(3,p%node_total-3*p%node_elem)  = 16.9E+03 !cx-100 Static Flap @3.00m
+   u%PointLoad%Force(3,p%node_total-2*p%node_elem)  = 5.47E+03 !cx-100 Static Flap @5.81m
+   u%PointLoad%Force(3,p%node_total-p%node_elem)  = 5.59E+03 !cx-100 Static Flap @7.26m 
+!    u%PointLoad%Force(3,p%node_total)  = 600 !Curved Beam
+!        u%PointLoad%Force(3,p%node_total)  = -4E+06 !Twisted Beam
+!            u%PointLoad%Force(3,p%node_total)  = -4E+06 !Siemens BHawC Static
+!   u%PointLoad%Force(3,p%node_total/2)  = 4.15D+04 !Siemens Static Flap @42.5m
+!      u%PointLoad%Force(2,p%node_total/2)  = 1339 !Siemens Static Flap @42.5m
+!    u%PointLoad%Force(3,p%node_elem)  = 3.17D+04 !Siemens Static Flap STP @42.5m
+!    u%PointLoad%Force(3,19)  = -6.2D+03 !Siemens Static Flap STP @51.0m 60th order
+!    u%PointLoad%Moment(2,37)  = 491 !Siemens Static Flap STP @51.0m 60th order
+!    u%PointLoad%Force(1,14)  = 11.4D+03 !Siemens Static Flap torque @42.5
+
+!    u%PointLoad%Force(3,p%node_total)  = -3D+07 !Stepped beam
+
+!      u%PointLoad%Force(2,11)  = 1.54729D+03
+!   u%PointLoad%Force(3,21)  = 5.10162D+03
+!      u%PointLoad%Force(2,21)  = 0.500514D+03
+!   u%PointLoad%Force(3,31)  = 5.21354D+03
+   !      u%PointLoad%Force(2,21)  = 0.500514D+03
+
+!   u%PointLoad%Moment(1,p%node_total)  = 175.7
+!      u%PointLoad%Moment(2,1)  = -4.496D+04
 !   u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad

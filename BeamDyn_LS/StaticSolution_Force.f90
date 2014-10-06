@@ -33,7 +33,6 @@
 
 
    RHS = 0.0D0
-
    CALL GenerateStaticElement_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                      elem_total,node_elem,dof_node,ngp,RHS)
    DO j=1,node_total
