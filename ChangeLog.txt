@@ -9,7 +9,7 @@ v2.02 (September 2014)
 •	Minor changes in Morison module to allow for compiling in double precision
 •	Minor fixes for error handling of the driver code.
 •	Fixed some of the error handling inside the HydroDyn_Init routine
-•	Fixed some of the error handling inside the HydroDyn_I
+•	Fixed some of the error handling inside HydroDyn_Input.f90
 •	Fixed bug with multidirectional waves for single wave direction (WaveNDir = 1, or WaveDirSpread = 0)
 
 v2.01 (June 2014)
