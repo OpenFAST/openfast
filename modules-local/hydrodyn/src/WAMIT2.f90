@@ -3579,13 +3579,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Now we need to figure out if the zero frequency was given in the file.  If so, we change NumWvFreq1 to
-         ! NumWvFreq1+1.  If not, change to NumWvFreq1+2.  We will add on the inifinite frequency value as a copy
-         ! of the highest frequency read in with and set the frequency value to HUGE.  The frequency values need
-         ! to be adjusted accordingly and stored.
+         ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and 
+         ! zero out all values not in the input frequency range. The inifinite frequency value will be set to HUGE
+         ! and we'll add/subtract epsilon to the non-zero frequencies entered so that we can achieve a step 
+         ! change for zeroing the values outside the input frequency range.
       IF (HaveZeroFreq1) THEN
-         Data3D%NumWvFreq1 = Data3D%NumWvFreq1+1
-      ELSE
          Data3D%NumWvFreq1 = Data3D%NumWvFreq1+2
+      ELSE
+         Data3D%NumWvFreq1 = Data3D%NumWvFreq1+4
       ENDIF
 
          ! Now allocate the array for holding the WvFreq1
@@ -3603,13 +3604,18 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Populate the wave frequencies with what we read in
       IF (HaveZeroFreq1) THEN
-         Data3D%WvFreq1( Data3D%NumWvFreq1 )    = HUGE(1.0_ReKi)
-         Data3D%WvFreq1( 1:Data3D%NumWvFreq1-1) = TmpWvFreq1
+         Data3D%WvFreq1( 1:Data3D%NumWvFreq1-2) = TmpWvFreq1
       ELSE
+            ! add the two points for step-change before first entered frequency 
          Data3D%WvFreq1( 1 )                    = 0.0_ReKi
-         Data3D%WvFreq1( Data3D%NumWvFreq1 )    = HUGE(1.0_ReKi)
-         Data3D%WvFreq1( 2:Data3D%NumWvFreq1-1) = TmpWvFreq1
+         Data3D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         
+         Data3D%WvFreq1( 3:Data3D%NumWvFreq1-2) = TmpWvFreq1
       ENDIF
+      
+         ! add the two points for step-change after last entered frequency
+      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = TmpWvFreq1(Data3D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_ReKi)
 
 
 
@@ -3713,7 +3719,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ENDIF
 
             ! Find which force component this belongs to
-         TmpCoord(4) = INT(RawData3D(I,4))
+         TmpCoord(4) = INT(RawData3D(I,4))  !bjj: nint???
 
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
@@ -3824,19 +3830,19 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
       !----------------------------------------------------------------------------------
-      !> Since we added the \f$ omega = 0 \f$ term if it did not exist, and added the infinite
-      !! frequency term on the end of the array, we need to populate those.
+      !> We added two frequencies for the \f$ omega = 0 \f$ term if it did not exist, 
+      !! and added two frequencies for the infinite frequency term on the end of the array,
+      !! to create step changes outside the entered frequency ranges. We need to populate 
+      !! the these new terms (set to zero).
       !----------------------------------------------------------------------------------
 
-      IF (HaveZeroFreq1) THEN
-         Data3D%DataSet(Data3D%NumWvFreq1,:,:,:)   = Data3D%DataSet(Data3D%NumWvFreq1-1,:,:,:)        ! Set the data for the infinite frequency
-         Data3D%DataMask(Data3D%NumWvFreq1,:,:,:)  = Data3D%DataMask(Data3D%NumWvFreq1-1,:,:,:)       ! Set the mask for the infinite frequency
-      ELSE
-         Data3D%DataSet(1,:,:,:)                   = CMPLX(0.0_ReKi,0.0_ReKi)                         ! Set the values for the zero frequency to zero
-         Data3D%DataMask(1,:,:,:)                  = .TRUE.                                           ! Set the mask for the zero frequency (we set this rather than copy)
-         Data3D%DataSet(Data3D%NumWvFreq1,:,:,:)   = Data3D%DataSet(Data3D%NumWvFreq1-1,:,:,:)        ! Set the data for the infinite frequency
-         Data3D%DataMask(Data3D%NumWvFreq1,:,:,:)  = Data3D%DataMask(Data3D%NumWvFreq1-1,:,:,:)       ! Set the mask for the infinite frequency
-      ENDIF
+      IF (.NOT. HaveZeroFreq1) THEN
+         Data3D%DataSet( 1:2,:,:,:)  = CMPLX(0.0_ReKi,0.0_ReKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data3D%DataMask(1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
+      ENDIF      
+      Data3D%DataSet( Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data3D%DataMask(Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
+            
 
 
       !----------------------------------------------------------------------------------
@@ -4270,19 +4276,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Now we need to figure out if the zero frequency was given in the file.  If so, we change NumWvFreq1 to
-         ! NumWvFreq1+1.  If not, change to NumWvFreq1+2.  We will add on the inifinite frequency value as a copy
-         ! of the highest frequency read in with and set the frequency value to HUGE.  The frequency values need
-         ! to be adjusted accordingly and stored.
+         ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and 
+         ! zero out all values not in the input frequency range. The inifinite frequency value will be set to HUGE
+         ! and we'll add/subtract epsilon to the non-zero frequencies entered so that we can achieve a step 
+         ! change for zeroing the values outside the input frequency range.
       IF (HaveZeroFreq1) THEN
-         Data4D%NumWvFreq1 = Data4D%NumWvFreq1+1
-      ELSE
          Data4D%NumWvFreq1 = Data4D%NumWvFreq1+2
-      ENDIF
-
-      IF (HaveZeroFreq2) THEN
-         Data4D%NumWvFreq2 = Data4D%NumWvFreq2+1
       ELSE
+         Data4D%NumWvFreq1 = Data4D%NumWvFreq1+4
+      ENDIF
+      
+         ! Do the same for NumWvFreq2 as we did for NumWvFreq1
+      IF (HaveZeroFreq2) THEN
          Data4D%NumWvFreq2 = Data4D%NumWvFreq2+2
+      ELSE
+         Data4D%NumWvFreq2 = Data4D%NumWvFreq2+4
       ENDIF
 
          ! Now allocate the array for holding the WvFreq1
@@ -4315,23 +4323,35 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Populate the wave frequencies with what we read in
       IF (HaveZeroFreq1) THEN
-         Data4D%WvFreq1( Data4D%NumWvFreq1 )    = HUGE(1.0_ReKi)
-         Data4D%WvFreq1( 1:Data4D%NumWvFreq1-1) = TmpWvFreq1
+         Data4D%WvFreq1( 1:Data4D%NumWvFreq1-2) = TmpWvFreq1
       ELSE
+            ! add the two points for step-change before the first entered frequency 
          Data4D%WvFreq1( 1 )                    = 0.0_ReKi
-         Data4D%WvFreq1( Data4D%NumWvFreq1 )    = HUGE(1.0_ReKi)
-         Data4D%WvFreq1( 2:Data4D%NumWvFreq1-1) = TmpWvFreq1
+         Data4D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         
+         Data4D%WvFreq1( 3:Data4D%NumWvFreq1-2) = TmpWvFreq1
       ENDIF
+      
+         ! add the two points for step-change after last entered frequency
+      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = TmpWvFreq1(Data4D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
+      Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_ReKi)
+                     
 
+      
       IF (HaveZeroFreq2) THEN
-         Data4D%WvFreq2( Data4D%NumWvFreq2 )    = HUGE(1.0_ReKi)
-         Data4D%WvFreq2( 1:Data4D%NumWvFreq2-1) = TmpWvFreq2
+         Data4D%WvFreq2( 1:Data4D%NumWvFreq2-2) = TmpWvFreq2
       ELSE
+            ! add the two points for step-change before the first entered frequency 
          Data4D%WvFreq2( 1 )                    = 0.0_ReKi
-         Data4D%WvFreq2( Data4D%NumWvFreq2 )    = HUGE(1.0_ReKi)
-         Data4D%WvFreq2( 2:Data4D%NumWvFreq2-1) = TmpWvFreq2
+         Data4D%WvFreq2( 2 )                    = MAX( TmpWvFreq2(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         
+         Data4D%WvFreq1( 3:Data4D%NumWvFreq2-2) = TmpWvFreq2
       ENDIF
-
+      
+         ! add the two points for step-change after last entered frequency
+      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = TmpWvFreq2(Data4D%NumWvFreq2-2) + EPSILON(0.0_ReKi)
+      Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_ReKi)
+      
 
 
 
@@ -4594,32 +4614,26 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
       !----------------------------------------------------------------------------------
-      !> Since we added the \f$ \omega = 0 \f$ term if it did not exist, and added the infinite
-      !! frequency term on the end of the array, we need to populate those.
+      !> We added two frequencies for the \f$ omega = 0 \f$ term if it did not exist, 
+      !! and added two frequencies for the infinite frequency term on the end of the array,
+      !! to create step changes outside the entered frequency ranges. We need to populate 
+      !! the these new terms (set to zero).
       !----------------------------------------------------------------------------------
 
-      IF (HaveZeroFreq1) THEN
-         Data4D%DataSet(Data4D%NumWvFreq1,:,:,:,:)   = Data4D%DataSet(Data4D%NumWvFreq1-1,:,:,:,:)        ! Set the data for the infinite frequency
-         Data4D%DataMask(Data4D%NumWvFreq1,:,:,:,:)  = Data4D%DataMask(Data4D%NumWvFreq1-1,:,:,:,:)       ! Set the mask for the infinite frequency
-      ELSE
-         Data4D%DataSet(1,:,:,:,:)                   = CMPLX(0.0_ReKi,0.0_ReKi)                           ! Set the values for the zero frequency to zero
-         Data4D%DataMask(1,:,:,:,:)                  = .TRUE.                                             ! Set the mask for the zero frequency (set this rather than copy)
-         Data4D%DataSet(Data4D%NumWvFreq1,:,:,:,:)   = Data4D%DataSet(Data4D%NumWvFreq1-1,:,:,:,:)        ! Set the data for the infinite frequency
-         Data4D%DataMask(Data4D%NumWvFreq1,:,:,:,:)  = Data4D%DataMask(Data4D%NumWvFreq1-1,:,:,:,:)       ! Set the mask for the infinite frequency
-      ENDIF
+      IF (.NOT. HaveZeroFreq1) THEN
+         Data4D%DataSet( 1:2,:,:,:,:)  = CMPLX(0.0_ReKi,0.0_ReKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data4D%DataMask(1:2,:,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
+      ENDIF      
+      Data4D%DataSet( Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data4D%DataMask(Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
 
-      IF (HaveZeroFreq2) THEN
-         Data4D%DataSet(:,Data4D%NumWvFreq2,:,:,:)   = Data4D%DataSet(:,Data4D%NumWvFreq2-1,:,:,:)        ! Set the data for the infinite frequency
-         Data4D%DataMask(:,Data4D%NumWvFreq2,:,:,:)  = Data4D%DataMask(:,Data4D%NumWvFreq2-1,:,:,:)       ! Set the mask for the infinite frequency
-      ELSE
-         Data4D%DataSet(:,1,:,:,:)                   = CMPLX(0.0_ReKi,0.0_ReKi)                           ! Set the values for the zero frequency to zero
-         Data4D%DataMask(:,1,:,:,:)                  = .TRUE.                                             ! Set the mask for the zero frequency (set this rather than copy)
-         Data4D%DataSet(:,Data4D%NumWvFreq2,:,:,:)   = Data4D%DataSet(:,Data4D%NumWvFreq2-1,:,:,:)        ! Set the data for the infinite frequency
-         Data4D%DataMask(:,Data4D%NumWvFreq2,:,:,:)  = Data4D%DataMask(:,Data4D%NumWvFreq2-1,:,:,:)       ! Set the mask for the infinite frequency
-      ENDIF
-
-
-
+      IF (.NOT. HaveZeroFreq2) THEN
+         Data4D%DataSet( :,1:2,:,:,:)  = CMPLX(0.0_ReKi,0.0_ReKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data4D%DataMask(:,1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
+      ENDIF      
+      Data4D%DataSet( :,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data4D%DataMask(:,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
+            
 
       !----------------------------------------------------------------------------------
       !> Find out if the data is sparse or full.  Verification that the requested component
