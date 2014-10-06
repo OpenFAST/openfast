@@ -1040,7 +1040,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF (ErrStat >= AbortErrLev) RETURN
 
          MnDriftData%DataIs3D = .TRUE.       ! Set flag to indicate we now have the 3D data.
-
+         
       ENDIF
 
 
@@ -1081,7 +1081,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate temporary array for interpolation of 3D QTF data.', &
                                                 ErrStat, ErrMsg, 'MnDrift_InitCalc')
       ELSE
-         ALLOCATE( TmpData4D(MnDriftData%Data4D%NumWvFreq1,MnDriftData%Data4D%NumWvFreq1,MnDriftData%Data4D%NumWvDir1,MnDriftData%Data4D%NumWvDir2),STAT=ErrStatTmp )
+         ALLOCATE( TmpData4D(MnDriftData%Data4D%NumWvFreq1,MnDriftData%Data4D%NumWvFreq2,MnDriftData%Data4D%NumWvDir1,MnDriftData%Data4D%NumWvDir2),STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate temporary array for interpolation of 4D QTF data.', &
                                                 ErrStat, ErrMsg, 'MnDrift_InitCalc')
       ENDIF
@@ -1108,9 +1108,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             LastIndex4 = (/0,0,0,0/)
 
                ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
-            IF (MnDriftData%DataIs3D)     TmpData3D = MnDriftData%Data3D%DataSet(:,:,:,I)
-            IF (MnDriftData%DataIs4D)     TmpData4D = MnDriftData%Data4D%DataSet(:,:,:,:,I)
-
+            IF (MnDriftData%DataIs3D) THEN
+               TmpData3D = MnDriftData%Data3D%DataSet(:,:,:,I)
+            ELSE
+               TmpData4D = MnDriftData%Data4D%DataSet(:,:,:,:,I)
+            END IF
+            
 
             DO J=1,InitInp%NStepWave2
 
@@ -1494,7 +1497,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF (ErrStat >= AbortErrLev) RETURN
 
          NewmanAppData%DataIs3D = .TRUE.       ! Set flag to indicate we now have the 3D data.
-
+       
       ENDIF
 
 
@@ -1613,8 +1616,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             LastIndex4 = (/0,0,0,0/)
 
                ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
-            IF (NewmanAppData%DataIs3D)     TmpData3D = NewmanAppData%Data3D%DataSet(:,:,:,I)
-            IF (NewmanAppData%DataIs4D)     TmpData4D = NewmanAppData%Data4D%DataSet(:,:,:,:,I)
+            IF (NewmanAppData%DataIs3D) THEN
+               TmpData3D = NewmanAppData%Data3D%DataSet(:,:,:,I)
+            ELSE
+               TmpData4D = NewmanAppData%Data4D%DataSet(:,:,:,:,I)
+            END IF
+            
 
             DO J=1,InitInp%NStepWave2
 
@@ -3614,7 +3621,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = TmpWvFreq1(Data3D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
       Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_ReKi)
 
 
@@ -4333,7 +4340,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = TmpWvFreq1(Data4D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
+      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
       Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_ReKi)
                      
 
@@ -4345,11 +4352,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          Data4D%WvFreq2( 1 )                    = 0.0_ReKi
          Data4D%WvFreq2( 2 )                    = MAX( TmpWvFreq2(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
          
-         Data4D%WvFreq1( 3:Data4D%NumWvFreq2-2) = TmpWvFreq2
+         Data4D%WvFreq2( 3:Data4D%NumWvFreq2-2) = TmpWvFreq2
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = TmpWvFreq2(Data4D%NumWvFreq2-2) + EPSILON(0.0_ReKi)
+      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + EPSILON(0.0_ReKi)
       Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_ReKi)
       
 
