@@ -1121,8 +1121,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   ! Calculate the frequency
                Omega1 = J * InitInp%WaveDOmega
 
-                  ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
-               IF ( (Omega1 >= InitInp%WvLowCOffD) .AND. (Omega1 <= InitInp%WvHiCOffD) ) THEN
+
+                  ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
+                  ! is done only for efficiency. 
+               IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
                      ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
                   IF ( MnDriftData%DataIs3D ) THEN
@@ -1864,13 +1866,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF ( MINVAL( DiffQTFData%Data4D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(DiffQTFData%Filename)// &
-                           ' is above the low frequency cutoff set by the maximum of WvLowCOffD and WvLowCOff.', &
+                           ' is above the low frequency cutoff set by WvLowCOffD.', &
                            ErrStat,ErrMsg,'DiffQTF_InitCalc')
          ENDIF
          IF ( MINVAL( DiffQTFData%Data4D%WvFreq2 ) > InitInp%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(DiffQTFData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(DiffQTFData%Filename)// &
-                           ' is above the low frequency cutoff set by the maximum of WvLowCOffD and WvLowCOff.', &
+                           ' is above the low frequency cutoff set by WvLowCOffD.', &
                            ErrStat,ErrMsg,'DiffQTF_InitCalc')
          ENDIF
 
@@ -1879,13 +1881,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF ( MAXVAL(DiffQTFData%Data4D%WvFreq1) < InitInp%WvHiCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(DiffQTFData%Filename)// &
-                           ' is below the high frequency cutoff set by the minimum of WvHiCOffD and WvHiCOff.', &
+                           ' is below the high frequency cutoff set by WvHiCOffD.', &
                            ErrStat,ErrMsg,'DiffQTF_InitCalc')
          ENDIF
          IF ( MAXVAL(DiffQTFData%Data4D%WvFreq2) < InitInp%WvHiCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(DiffQTFData%Filename)// &
-                           ' is below the high frequency cutoff set by the minimum of WvHiCOffD and WvHiCOff.', &
+                           ' is below the high frequency cutoff set by WvHiCOffD.', &
                            ErrStat,ErrMsg,'DiffQTF_InitCalc')
          ENDIF
 

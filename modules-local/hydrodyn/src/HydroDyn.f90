@@ -565,7 +565,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
          InitLocal%WAMIT2%WaveDirArr   = Waves_InitOut%WaveDirArr
 
 
-         IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
 
 
 
@@ -761,7 +760,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
 
 
 
-            ! Clean up unneeded Waves_InitOut data
 
             ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
             
@@ -844,13 +842,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
             ! Write the data
             DO I = -1*Waves_InitOut%NStepWave2+1,Waves_InitOut%NStepWave2
                WaveNmbr   = WaveNumber ( I*Waves_InitOut%WaveDOmega, InitLocal%Gravity, InitLocal%Waves%WtrDpth )
-               IF ( InitLocal%HasWAMIT ) THEN
-                  WRITE( InitLocal%UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*Waves_InitOut%WaveDOmega, &
-                         InitLocal%WAMIT%WaveDirArr(ABS(I)),  InitLocal%WAMIT%WaveElevC0( 1,ABS(I ) ) ,   InitLocal%WAMIT%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
-               ELSE
-                  WRITE( InitLocal%UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*Waves_InitOut%WaveDOmega, &
-                         Waves_InitOut%WaveDirArr(ABS(I)),  Waves_InitOut%WaveElevC0( 1,ABS(I ) ) ,   Waves_InitOut%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
-               END IF
+               WRITE( InitLocal%UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*Waves_InitOut%WaveDOmega, &
+                      Waves_InitOut%WaveDirArr(ABS(I)),  Waves_InitOut%WaveElevC0( 1,ABS(I ) ) ,   Waves_InitOut%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
             END DO
          END IF
       

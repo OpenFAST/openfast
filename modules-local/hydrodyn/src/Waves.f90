@@ -1636,7 +1636,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !!
       !!  When complete, we deallocate the _WvSpreadThetas_ array that was used to store the assigned directions.
 
-      IF ( InitInp%WaveMultiDir )   THEN     ! Multi-directional waves in use
+      IF ( InitInp%WaveMultiDir .AND. InitInp%WaveNDir > 1 )   THEN     ! Multi-directional waves in use
 
 
             ! Allocate the index array for each group of frequencies.  This array is used to randomize the directions
@@ -1695,7 +1695,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             !  Deallocate it here after we have completed all the calculations involving it.
          IF(ALLOCATED( WvTheta ))            DEALLOCATE( WvTheta )
 
-      ELSE     ! Not multi-directional waves
+      ELSE     ! Not really multi-directional waves
 
             ! Since we do not have multi-directional waves, we must set the wave direction array to the single wave heading.
          InitOut%WaveDirArr   = InitInp%WaveDir
@@ -2029,7 +2029,11 @@ CONTAINS
 
       ErrStatLcl  = ErrID_None
 
-      DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+         ! Zero out the temporary array.
+      tmpComplexArr  = CMPLX(0.0_ReKi,0.0_ReKi)
+
+         ! Loop through the positive frequency components (including zero).  Skip the last point since that is zero by definition.
+      DO I = 0,InitOut%NStepWave2-1
 
          Omega             = I*       InitOut%WaveDOmega
          WaveNmbr          = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
