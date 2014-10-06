@@ -240,6 +240,7 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
        temp_id = (i-1) * p%dof_node
        p%uuN0(temp_id+4:temp_id+6,1) = temp_POS(1:3)
    ENDDO
+   p%ngp        = p%node_elem - 1
    DO i=1,p%elem_total
        IF(i == 1) THEN
            temp_id = 0

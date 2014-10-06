@@ -104,7 +104,6 @@
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
-       
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
        CALL MassMatrix(mmm,mEta,rho,Mi)
