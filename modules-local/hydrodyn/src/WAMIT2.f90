@@ -3565,7 +3565,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! load component direction must be between 1 and 6 (translational: 1,2,3; rotational: 4,5,6).
       Data3D%LoadComponents = .FALSE.
       DO I=1,K
-         IF ( INT(TmpRealArr(I)) < 1 .OR. INT(TmpRealArr(K)) > 6 ) THEN
+         IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6 ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename3D)// &
                   ' must be between 1 and 6.', ErrStat,ErrMsg,'Read_DataFile3D')
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -3575,7 +3575,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL CleanUp
             RETURN
          ENDIF
-         Data3D%LoadComponents(INT(TmpRealArr(I))) = .TRUE.
+         Data3D%LoadComponents(NINT(TmpRealArr(I))) = .TRUE.
       ENDDO
 
 
@@ -3726,7 +3726,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ENDIF
 
             ! Find which force component this belongs to
-         TmpCoord(4) = INT(RawData3D(I,4))  !bjj: nint???
+         TmpCoord(4) = NINT(RawData3D(I,4))
 
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
@@ -4263,7 +4263,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! load component direction must be between 1 and 6 (translational: 1,2,3; rotational: 4,5,6).
       Data4D%LoadComponents = .FALSE.
       DO I=1,K
-         IF ( INT(TmpRealArr(I)) < 1 .OR. INT(TmpRealArr(K)) > 6 ) THEN
+         IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6 ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename4D)// &
                   ' must be between 1 and 6.', ErrStat,ErrMsg,'Read_DataFile4D')
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4274,7 +4274,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL CleanUp
             RETURN
          ENDIF
-         Data4D%LoadComponents(INT(TmpRealArr(I))) = .TRUE.
+         Data4D%LoadComponents(NINT(TmpRealArr(I))) = .TRUE.
       ENDDO
 
 
@@ -4481,7 +4481,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ENDIF
 
             ! Find which force component this belongs to
-         TmpCoord(5) = INT(RawData4D(I,5))
+         TmpCoord(5) = NINT(RawData4D(I,5))
 
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
@@ -4515,7 +4515,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                  .NOT. EqualRealNos(AIMAG(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )), &
                         InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)))  THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//'of '//TRIM(Filename4D)// &
-                        ' contains different values for the real and imaginary part (columns 7 and 8) than was '// &
+                        ' contains different values for the real and imaginary part (columns 8 and 9) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction.', &
                         ErrStat, ErrMsg, 'Read_DataFile4D' )
                IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
