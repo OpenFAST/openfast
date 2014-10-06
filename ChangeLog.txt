@@ -1,3 +1,17 @@
+v2.02 (September 2014)
+•	Added second order wave kinematics for strip theory calculations
+•	Added second order force calculations using potential flow (second order hydrodynamic coefficients must be supplied using WAMIT)
+•	Changed input file: the second order wave kinematics using strip theory does not allow for a mean drift calcualtion.
+•	Added output channels for first and second order wave elevations (Wave1Elv1, Wave1Elv2, Wave2Elv1, Wave2Elv2,... etc)
+•	Added output channels for first and second order forces using potential flow (WaveF1xi, WaveF2xi,... etc)
+•	Fixed bug in output channel handling when compiled with gfortran
+•	Added runtime performance monitoring to the driver code
+•	Minor changes in Morison module to allow for compiling in double precision
+•	Minor fixes for error handling of the driver code.
+•	Fixed some of the error handling inside the HydroDyn_Init routine
+•	Fixed some of the error handling inside the HydroDyn_I
+•	Fixed bug with multidirectional waves for single wave direction (WaveNDir = 1, or WaveDirSpread = 0)
+
 v2.01 (June 2014)
 •	Enabled the MSL2SWL parameter
 •	Combined dynamic pressure loads into interial loads
