@@ -390,12 +390,12 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
 
 
  
-   u%PointLoad%Force(3,p%node_total-3*p%node_elem)  = 16.9E+03 !cx-100 Static Flap @3.00m
-   u%PointLoad%Force(3,p%node_total-2*p%node_elem)  = 5.47E+03 !cx-100 Static Flap @5.81m
-   u%PointLoad%Force(3,p%node_total-p%node_elem)  = 5.59E+03 !cx-100 Static Flap @7.26m 
+!   u%PointLoad%Force(3,p%node_total-3*p%node_elem)  = 16.9E+03 !cx-100 Static Flap @3.00m
+!   u%PointLoad%Force(3,p%node_total-2*p%node_elem)  = 5.47E+03 !cx-100 Static Flap @5.81m
+!   u%PointLoad%Force(3,p%node_total-p%node_elem)  = 5.59E+03 !cx-100 Static Flap @7.26m 
 !    u%PointLoad%Force(3,p%node_total)  = 600 !Curved Beam
 !        u%PointLoad%Force(3,p%node_total)  = -4E+06 !Twisted Beam
-!            u%PointLoad%Force(3,p%node_total)  = -4E+06 !Siemens BHawC Static
+            u%PointLoad%Force(3,p%node_total)  = +5.0D+04 !Siemens BHawC Static
 !   u%PointLoad%Force(3,p%node_total/2)  = 4.15D+04 !Siemens Static Flap @42.5m
 !      u%PointLoad%Force(2,p%node_total/2)  = 1339 !Siemens Static Flap @42.5m
 !    u%PointLoad%Force(3,p%node_elem)  = 3.17D+04 !Siemens Static Flap STP @42.5m

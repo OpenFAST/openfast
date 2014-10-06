@@ -27,7 +27,7 @@
    REAL(ReKi)                      :: Eref
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: temp
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-10
    REAL(ReKi)                      :: d
    INTEGER(IntKi)                  :: indx(dof_total-6)
    INTEGER(IntKi)                  :: i
@@ -42,13 +42,7 @@
        RHS(:)     = 0.0D0
        CALL BeamDyn_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
                                           elem_total,node_elem,dof_node,ngp,StifK,RHS)
-!       temp_count = 0
-!       DO j=1,dof_total
-!           DO k=1,dof_total
-!               IF(ABS(StifK(j,k)) .LT. 1.0D-00) temp_count = temp_count + 1
-!           ENDDO
-!       ENDDO 
-!       WRITE(13,*) i,temp_count,dof_total,temp_count/dof_total 
+WRITE(*,*) "niter = ",i
 
        DO j=1,node_total
            temp_id = (j-1)*dof_node
@@ -83,9 +77,11 @@
 !           IF(Enorm .LE. Eref) RETURN
 !       ENDIF
        IF(i==1) Eref = TOLF * DOT_PRODUCT(ui_temp,feqv)
+       IF(i==1) WRITE(*,*) "Eref = ", Eref
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
            Enorm = DOT_PRODUCT(ui_temp,feqv)
+           WRITE(*,*) "Enorm = ", Enorm
            IF(Enorm .GT. Eref/TOLF) THEN
                WRITE(*,*) "Solution is diverging, exit N-R"
                piter=niter 
