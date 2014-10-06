@@ -196,12 +196,12 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    ENDDO
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
    p%member_length(:,:) = 0.0D0
-   CALL AllocAry(p%segment_length,InputFileData%kp_total-1,3,'segment length array',ErrStat2,ErrMsg2)
+   CALL AllocAry(p%segment_length,16,3,'segment length array',ErrStat2,ErrMsg2)
    p%segment_length(:,:) = 0.0D0
    p%blade_length = 0.0D0
 
-   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
-                               p%segment_length,p%member_length,p%blade_length)
+!   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
+!                               p%segment_length,p%member_length,p%blade_length)
    p%elem_total = InputFileData%member_total
    p%node_elem  = InputFileData%order_elem + 1       ! node per element
    p%ngp        = p%node_elem - 1
@@ -209,12 +209,6 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    temp_int     = p%node_elem * p%dof_node
 
 
-   CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
-   temp_GLL(:) = 0.0D0
-   CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
-   temp_w(:) = 0.0D0
-   CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
-   DEALLOCATE(temp_w)
 
    CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2) 
    temp_L2(:,:) = 0.0D0
@@ -228,6 +222,15 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    NodeInp = 'blade_LS.inp'
    OPEN(UNIT = 8, FILE = NodeInp, STATUS = 'OLD', ACTION = 'READ')
    READ(8,*) p%node_elem,p%blade_length
+
+   CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
+   temp_GLL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
+   temp_w(:) = 0.0D0
+   CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
+   temp_GLL(:) = (temp_GLL(:)+1.0D0)/2.0D0
+   DEALLOCATE(temp_w)
+
    CALL AllocAry(p%uuN0,p%node_elem*p%dof_node,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
    p%uuN0(:,:) = 0.0D0
    DO i=1,p%node_elem
@@ -241,6 +244,10 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
        p%uuN0(temp_id+4:temp_id+6,1) = temp_POS(1:3)
    ENDDO
    p%ngp        = p%node_elem - 1
+   DO i=1,16
+       p%segment_length(i,1) = (temp_GLL(i+1)-temp_GLL(i))*p%blade_length
+   ENDDO 
+   
    DO i=1,p%elem_total
        IF(i == 1) THEN
            temp_id = 0
