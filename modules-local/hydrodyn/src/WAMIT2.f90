@@ -1296,50 +1296,50 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
-         IF ( MINVAL( NewmanAppData%Data3D%WvFreq1 ) > MAX(InitInp%WvLowCOff,InitInp%WvLowCOffD) ) THEN
+         IF ( MINVAL( NewmanAppData%Data3D%WvFreq1 ) > InitInp%WvLowCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(NewmanAppData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(NewmanAppData%Filename)// &
-                           ' is above the low frequency cutoff set by the maximum of WvLowCOffD and WvLowCOff.', &
+                           ' is above the low frequency cutoff set by WvLowCOff.', &
                            ErrStat,ErrMsg,'NewmanApp_InitCalc')
          ENDIF
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(NewmanAppData%Data3D%WvFreq1 ) < MIN(InitInp%WvHiCOff,InitInp%WvHiCOffD) ) THEN
+         IF ( MAXVAL(NewmanAppData%Data3D%WvFreq1 ) < InitInp%WvHiCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(NewmanAppData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(NewmanAppData%Filename)// &
-                           ' is below the high frequency cutoff set by the minimum of WvHiCOffD and WvHiCOff.', &
+                           ' is below the high frequency cutoff set by WvHiCOff.', &
                            ErrStat,ErrMsg,'NewmanApp_InitCalc')
          ENDIF
 
       ELSE IF ( NewmanAppData%DataIs4D ) THEN   ! only check if not 3D data. If there is 3D data, we default to using it for calculations
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( NewmanAppData%Data4D%WvFreq1 ) > MAX(InitInp%WvLowCOff,InitInp%WvLowCOffD) ) THEN
+         IF ( MINVAL( NewmanAppData%Data4D%WvFreq1 ) > InitInp%WvLowCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(NewmanAppData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(NewmanAppData%Filename)// &
-                           ' is above the low frequency cutoff set by the maximum of WvLowCOffD and WvLowCOff.', &
+                           ' is above the low frequency cutoff set by WvLowCOff.', &
                            ErrStat,ErrMsg,'NewmanApp_InitCalc')
          ENDIF
-         IF ( MINVAL( NewmanAppData%Data4D%WvFreq2 ) > MAX(InitInp%WvLowCOff,InitInp%WvLowCOffD) ) THEN
+         IF ( MINVAL( NewmanAppData%Data4D%WvFreq2 ) > InitInp%WvLowCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(NewmanAppData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(NewmanAppData%Filename)// &
-                           ' is above the low frequency cutoff set by the maximum of WvLowCOffD and WvLowCOff.', &
+                           ' is above the low frequency cutoff set by WvLowCOff.', &
                            ErrStat,ErrMsg,'NewmanApp_InitCalc')
          ENDIF
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq1) < MIN(InitInp%WvHiCOff,InitInp%WvHiCOffD) ) THEN
+         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq1) < InitInp%WvHiCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(NewmanAppData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(NewmanAppData%Filename)// &
-                           ' is below the high frequency cutoff set by the minimum of WvHiCOffD and WvHiCOff.', &
+                           ' is below the high frequency cutoff set by WvHiCOff.', &
                            ErrStat,ErrMsg,'NewmanApp_InitCalc')
          ENDIF
-         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq2) < MIN(InitInp%WvHiCOff,InitInp%WvHiCOffD) ) THEN
+         IF ( MAXVAL(NewmanAppData%Data4D%WvFreq2) < InitInp%WvHiCOff ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(NewmanAppData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(NewmanAppData%Filename)// &
-                           ' is below the high frequency cutoff set by the minimum of WvHiCOffD and WvHiCOff.', &
+                           ' is below the high frequency cutoff set by WvHiCOff.', &
                            ErrStat,ErrMsg,'NewmanApp_InitCalc')
          ENDIF
 
@@ -1624,7 +1624,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                   ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
-               IF ( (Omega1 >= MAX(InitInp%WvLowCOffD,InitInp%WvLowCOff)) .AND. (Omega1 <= MIN(InitInp%WvHiCOffD,InitInp%WvHiCOff)) ) THEN
+               IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
                      ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
                   IF ( NewmanAppData%DataIs3D ) THEN
@@ -2495,9 +2495,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
-               ! so we cannot overun the end of the array.  The floor function is just in case NStepWave2 is
-               ! an odd number
-            DO J=1,FLOOR(REAL(InitInp%NStepWave2)/2.0_ReKi)
+               ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
+               ! floor function is just in case (NStepWave2 - 1) is an odd number
+            DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_ReKi)
 
                   ! The frequency
                Omega1   = J * InitInp%WaveDOmega

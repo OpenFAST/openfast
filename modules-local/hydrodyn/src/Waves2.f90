@@ -558,6 +558,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
       IF(p%WvDiffQTFF) THEN
 
+            ! Tell our nice users what is about to happen that may take a while:
+         CALL WrScr ( ' Calculating second order difference frequency wave kinematics.' )
+
+
          !--------------------------------------------------------------------------------
          ! Setup arrays for the calculations
          !--------------------------------------------------------------------------------
@@ -886,6 +890,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
       IF(p%WvSumQTFF) THEN
+
+            ! Tell our nice users what is about to happen that may take a while:
+         CALL WrScr ( ' Calculating second order sum frequency wave kinematics.' )
+
 
          !--------------------------------------------------------------------------------
          ! Setup arrays for the calculations
