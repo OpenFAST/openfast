@@ -45,7 +45,7 @@
    DO i=1,niter
        RHS(:) = 0.0D0
        MassM(:,:) = 0.0D0
-WRITE(*,*) "niter = ",i
+!WRITE(*,*) "niter = ",i
        CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
                                       &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
 
@@ -69,28 +69,22 @@ WRITE(*,*) "niter = ",i
            ENDDO
        ENDDO
 
-DO j=1,18
-!WRITE(*,*) "MassM(j,j)",j,MassM(j+18,j+18)
-WRITE(*,*) "RHS(j)",j,RHS(j)
-ENDDO
-STOP
-!WRITE(*,*) "TEST"
+       temp = Norm(RHS_LU)
+WRITE(*,*) "Residual: ", temp
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
-       temp = Norm(feqv)
-WRITE(*,*) "Residual: ", temp
        sol(:) = 0.0D0
        DO j=1,dof_total-6
            sol(j+6) = sol_temp(j)
            sol(j+dof_total+6) = sol_temp(j+dof_total-6)
        ENDDO
        IF(i==1) Eref = TOLF * DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
-IF(i==1) WRITE(*,*) "Eref: ",Eref
+!IF(i==1) WRITE(*,*) "Eref: ",Eref
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
            Enorm = DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
-WRITE(*,*) "Enorm: ",Enorm
+!WRITE(*,*) "Enorm: ",Enorm
            IF(Enorm .GT. Eref/TOLF) THEN
 !               WRITE(*,*) "Solution is diverging, exit N-R"
            ELSEIF(Enorm .LE. Eref) THEN
