@@ -191,8 +191,10 @@
        F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) + &
                 &MATMUL(temp_H0,uuu(4:6)-uuu0(4:6)) - &
                 &dt*(vvv(4:6)+vvv0(4:6))
-!DO i=1,3
-!WRITE(*,*) "temp(i) = ",i,MATMUL(temp_H,uuu(4:6)-uuu0(4:6))
+!DO i=1,6
+!DO j=1,6
+!WRITE(*,*) "Stif(i,j) = ",i,j,Stif(i,j)
+!ENDDO
 !ENDDO
        DO i=1,node_elem
            DO j=1,node_elem
@@ -214,7 +216,7 @@
            ENDDO
        ENDDO
 !DO i=1,18
-!WRITE(*,*) "elm11",i,elm11(4,i)
+!WRITE(*,*) "elm21",i,elm21(i,1)
 !ENDDO
        DO i=1,node_elem
            DO j=1,dof_node
