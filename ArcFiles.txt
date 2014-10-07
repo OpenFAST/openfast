@@ -65,7 +65,7 @@ Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\ED_Primary_v1.01.x
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.08.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SrvD_Primary_v1.01.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.01.00.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.02.00.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.02.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SDv1.01.x.dat
 
 Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_00.m

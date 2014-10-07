@@ -4089,7 +4089,7 @@ Changes in compiling scripts:
 ====================================================================================================================================
 FAST v8.09.00a-bjj 30-September-2014 B. Jonkman
 + fixed issue with wrong tower distributed with the Tripod model (Test20)
-+ updated SubDyn and HydroDyn models
++ updated SubDyn and HydroDyn models (WAMIT2 and Waves2 modules)
 + added DWM source code for compilation
 
 
