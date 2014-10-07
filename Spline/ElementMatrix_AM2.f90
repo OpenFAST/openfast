@@ -191,7 +191,9 @@
        F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) + &
                 &MATMUL(temp_H0,uuu(4:6)-uuu0(4:6)) - &
                 &dt*(vvv(4:6)+vvv0(4:6))
-
+!DO i=1,3
+!WRITE(*,*) "temp(i) = ",i,MATMUL(temp_H,uuu(4:6)-uuu0(4:6))
+!ENDDO
        DO i=1,node_elem
            DO j=1,node_elem
                DO m=1,dof_node

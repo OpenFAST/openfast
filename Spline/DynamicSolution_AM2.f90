@@ -70,7 +70,8 @@ WRITE(*,*) "niter = ",i
        ENDDO
 
 DO j=1,18
-WRITE(*,*) "MassM(j,j)",j,MassM(j+18,j)
+!WRITE(*,*) "MassM(j,j)",j,MassM(j+18,j+18)
+WRITE(*,*) "RHS(j)",j,RHS(j)
 ENDDO
 STOP
 !WRITE(*,*) "TEST"
