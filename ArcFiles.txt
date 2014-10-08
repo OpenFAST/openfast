@@ -3,8 +3,7 @@ Disclaimer.txt
 license.txt
 NOTICE.txt
 
-Documentation\58093.pdf
-Documentation\SUBDYN_README.pdf
+Documentation\SubDyn_Manual.pdf
 Documentation\SubDynOutListParameters.xlsx
 
 Source\SubDyn_Driver.f90

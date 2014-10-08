@@ -8,6 +8,7 @@ IF "%COMPUTERNAME%"=="APLATT-21846S" GOTO APLATT-21846S
 IF "%COMPUTERNAME%"=="BJONKMAN-23080S" GOTO BJONKMAN-23080S
 IF "%COMPUTERNAME%"=="MBUHL-20665S" GOTO MBUHL-20665S
 IF "%COMPUTERNAME%"=="GHAYMAN-17919S" GOTO GHAYMAN-17919S
+IF "%COMPUTERNAME%"=="GHAYMAN-26326S" GOTO GHAYMAN-26326S
 IF "%COMPUTERNAME%"=="MMM" GOTO GHAYMAN-17919S
 
 :APLATT-21846S
@@ -34,6 +35,11 @@ GOTO CheckSyntax
 @SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
 GOTO CheckSyntax
 
+:GHAYMAN-26326S
+@SET WINZIP="C:\Program Files\WinZip\WZZip"
+@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
+@SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
+GOTO CheckSyntax
 ::=======================================================================================================
 
 :CheckSyntax
