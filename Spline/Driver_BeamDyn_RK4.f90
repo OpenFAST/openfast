@@ -91,7 +91,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D+00
-   t_final   = 1.2D+01
+   t_final   = 0.6D+01
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -128,8 +128,9 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
     OPEN(unit = QiDisUnit, file = 'QiDisp_RK4.out', status = 'REPLACE',ACTION = 'WRITE')
 
-   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
+!   BD_InitInput%InputFile = 'CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
    BD_InitInput%gravity(1) = 0.0D0 !-9.80665
