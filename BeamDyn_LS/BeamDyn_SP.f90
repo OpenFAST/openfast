@@ -183,46 +183,13 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    p%gravity(2) = InitInp%gravity(1)
    p%gravity(3) = InitInp%gravity(2)
 
-   CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
-   SP_Coef(:,:,:) = 0.0D0
 
-   temp_id = 0
-   temp_id2 = 0
-   DO i=1,InputFileData%member_total
-       IF(i == 1) temp_id = 1 
-       temp_id2= temp_id + InputFileData%kp_member(i) - 1
-       CALL ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(temp_id:temp_id2,1:4),SP_Coef(temp_id:temp_id2-1,1:4,1:4))
-       temp_id = temp_id2
-   ENDDO
-   CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
-   p%member_length(:,:) = 0.0D0
-   CALL AllocAry(p%segment_length,16,3,'segment length array',ErrStat2,ErrMsg2)
-   p%segment_length(:,:) = 0.0D0
-   p%blade_length = 0.0D0
-
-!   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
-!                               p%segment_length,p%member_length,p%blade_length)
-   p%elem_total = InputFileData%member_total
-   p%node_elem  = InputFileData%order_elem + 1       ! node per element
-   p%ngp        = p%node_elem - 1
+   p%elem_total = 1
    p%dof_node   = 6
-   temp_int     = p%node_elem * p%dof_node
-
-
-
-   CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2) 
-   temp_L2(:,:) = 0.0D0
-   CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2) 
-   temp_GL(:) = 0.0D0
-   CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
-   temp_w(:) = 0.0D0
-   CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
-   DEALLOCATE(temp_w)
-
    NodeInp = 'blade_LS.inp'
    OPEN(UNIT = 8, FILE = NodeInp, STATUS = 'OLD', ACTION = 'READ')
    READ(8,*) p%node_elem,p%blade_length
-
+   p%ngp = p%node_elem -1 
    CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
    temp_GLL(:) = 0.0D0
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
@@ -230,6 +197,16 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
    temp_GLL(:) = (temp_GLL(:)+1.0D0)/2.0D0
    DEALLOCATE(temp_w)
+
+   CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2)
+   temp_GL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
+   temp_w(:) = 0.0D0
+   CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
+   DEALLOCATE(temp_w)
+   DO i=1,p%ngp
+       temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
+   ENDDO
 
    CALL AllocAry(p%uuN0,p%node_elem*p%dof_node,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
    p%uuN0(:,:) = 0.0D0
@@ -243,83 +220,7 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
        temp_id = (i-1) * p%dof_node
        p%uuN0(temp_id+4:temp_id+6,1) = temp_POS(1:3)
    ENDDO
-   p%ngp        = p%node_elem - 1
-   DO i=1,16
-       p%segment_length(i,1) = (temp_GLL(i+1)-temp_GLL(i))*p%blade_length
-   ENDDO 
    
-   DO i=1,p%elem_total
-       IF(i == 1) THEN
-           temp_id = 0
-       ELSE
-           temp_id = temp_id + InputFileData%kp_member(i-1) - 1
-       ENDIF
-!       DO j=1,p%node_elem
-!           eta = (temp_GLL(j) + 1.0D0)/2.0D0
-!           DO k=1,InputFileData%kp_member(i)-1
-!               temp_id2 = temp_id + k
-!               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
-!                   DO m=1,4
-!                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
-!                   ENDDO
-!                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
-!                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
-!                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
-!                   temp_id2 = (j-1)*p%dof_node 
-!                   p%uuN0(temp_id2+1,i) = temp_POS(1)
-!                   p%uuN0(temp_id2+2,i) = temp_POS(2)
-!                   p%uuN0(temp_id2+3,i) = temp_POS(3)
-!                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
-!                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
-!                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
-!                   EXIT
-!               ENDIF
-!           ENDDO
-!       ENDDO
-       DO j=1,p%ngp
-           eta = (temp_GL(j) + 1.0D0)/2.0D0
-           DO k=1,InputFileData%kp_member(i)-1
-               temp_id2 = temp_id + k
-               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
-                   DO m=1,4
-                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
-                   ENDDO
-                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
-                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
-                   temp_id2 = (i-1)*p%ngp+j+1
-                   temp_L2(1:3,temp_id2) = temp_POS(1:3)
-                   EXIT
-               ENDIF
-           ENDDO
-       ENDDO
-   ENDDO
-   temp_L2(1:3,1) = p%uuN0(1:3,1)
-   temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
-
-   DEALLOCATE(temp_GLL)
-
-   CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2) 
-   temp_ratio(:,:) = 0.0D0
-
-   DO i=1,p%ngp
-       temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
-   ENDDO
-
-   DO i=1,p%elem_total
-       IF(i .EQ. 1) THEN
-           DO j=1,p%ngp
-               temp_ratio(j,i) = temp_GL(j)*p%member_length(i,2)
-           ENDDO
-       ELSE
-           DO j=1,i-1
-               temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
-           ENDDO
-           DO j=1,p%ngp
-               temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
-           ENDDO
-       ENDIF
-   ENDDO
-
    CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2) 
    p%Stif0_GL(:,:,:) = 0.0D0
    CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2) 
@@ -328,21 +229,21 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
        DO j=1,p%ngp
            temp_id = (i-1)*p%ngp+j
            DO k=1,InputFileData%InpBl%station_total
-               IF(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
-                   IF(ABS(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k)) <= EPS) THEN
+               IF(temp_GL(j) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
+                   IF(ABS(temp_GL(j) - InputFileData%InpBl%station_eta(k)) <= EPS) THEN
                        p%Stif0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%stiff0(1:6,1:6,k)
                        p%Mass0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%mass0(1:6,1:6,k)
                    ELSE 
                        temp66(:,:) = 0.0D0
                        temp66(1:6,1:6) = (InputFileData%InpBl%stiff0(1:6,1:6,k)-InputFileData%InpBl%stiff0(1:6,1:6,k-1)) / &
                                          (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
-                       p%Stif0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                       p%Stif0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_GL(j) + &
                                                      InputFileData%InpBl%stiff0(1:6,1:6,k-1) - &
                                                      temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
                        temp66(:,:) = 0.0D0
                        temp66(1:6,1:6) = (InputFileData%InpBl%mass0(1:6,1:6,k)-InputFileData%InpBl%mass0(1:6,1:6,k-1)) / &
                                          (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
-                       p%Mass0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                       p%Mass0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_GL(j) + &
                                                      InputFileData%InpBl%mass0(1:6,1:6,k-1) - &
                                                      temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
                    ENDIF
@@ -353,7 +254,6 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    ENDDO
 
    DEALLOCATE(temp_GL)
-   DEALLOCATE(temp_ratio)
 
    WRITE(*,*) "Finished Read Input"
    WRITE(*,*) "member_total = ", InputFileData%member_total
@@ -401,16 +301,6 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
 
    p%niter = 20
 
-! For AM2, initial Condition
-   DO i=1,p%elem_total
-       DO j=1,p%node_elem
-           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
-           temp_id2= (j-1)*p%dof_node
-           x%dqdt(temp_id+3) = p%uuN0(temp_id2+1,i)*(3.1415926D+00/3.0D0)
-           x%dqdt(temp_id+5) = -3.1415926D+00/3.0D0
-       ENDDO
-   ENDDO
-!END initial condition
 
    ! Define system output initializations (set up mesh) here:
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
