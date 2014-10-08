@@ -7,13 +7,16 @@ NOTICE.txt
 
 Documentation\MorisonOutListParameters.xlsx
 Documentation\WAMITOutListParameters.xlsx
+Documentation\WAMIT2OutListParameters.xlsx
+Documentation\Waves2OutListParameters.xlsx
 Documentation\HydroDynOutListParameters.xlsx
 Documentation\HydroDyn_Manual.pdf
 
 Source\HydroDyn_DriverCode.f90
 Source\RegistryFiles\CreateTypes.bat 
-Source\RegistryFiles\include\Registry_NWTC_Library.txt 
-Source\dependencies\NetLib\NWTC_LAPACK.f90    
+Source\dependencies\NetLib\NWTC_LAPACK.f90  
+Source\dependencies\NetLib\NWTC_FFTPACK.f90  
+Source\dependencies\NetLib\fftpack4.1.f
 Source\dependencies\NWTC_Library\DoubPrec.f90  
 Source\dependencies\NWTC_Library\ModMesh.f90  
 Source\dependencies\NWTC_Library\ModMesh_Mapping.f90  
@@ -78,10 +81,14 @@ CertTest\Test_001.dvr
 CertTest\Test_001.dat
 CertTest\Test_002.dvr
 CertTest\Test_002.dat
+CertTest\Test_003.dvr
+CertTest\Test_003.dat
 CertTest\NREL_Results\Test_001.HD.out
 CertTest\NREL_Results\Test_001.HD.sum
 CertTest\NREL_Results\Test_002.HD.out
 CertTest\NREL_Results\Test_002.HD.sum
+CertTest\NREL_Results\Test_003.HD.out
+CertTest\NREL_Results\Test_003.HD.sum
 
 Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_01_00.m  
 Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_02_00.m  
