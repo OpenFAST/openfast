@@ -213,6 +213,7 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    DO i=1,p%node_elem
        temp_id = (i-1)*6
        READ(8,*) p%uuN0(temp_id+2,1),p%uuN0(temp_id+3,1),p%uuN0(temp_id+1,1),p%uuN0(temp_id+4,1)
+WRITE(*,*) p%uuN0(temp_id+1:temp_id+4,1)
        p%uuN0(temp_id+4,1) = p%uuN0(temp_id+4,1)*ACOS(-1.0D0)/180.0D0
    ENDDO
    DO i=1,p%node_elem
@@ -256,32 +257,6 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    DEALLOCATE(temp_GL)
 
    WRITE(*,*) "Finished Read Input"
-   WRITE(*,*) "member_total = ", InputFileData%member_total
-   WRITE(*,*) "gravity = ", p%gravity
-   DO i=1,InputFileData%member_total
-       DO j=1,InputFileData%kp_member(i)
-           WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(j,:)
-       ENDDO
-   ENDDO
-   DO i=1,InputFiledata%member_total
-       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
-!       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
-       DO j=1,p%node_elem
-           WRITE(*,*) "Nodal Position:",j
-           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
-           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
-       ENDDO
-   ENDDO
-   WRITE(*,*) "Blade Length: ", p%blade_length
-   WRITE(*,*) "node_elem: ", p%node_elem
-!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
-!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
-!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
-
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
-!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
-!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
 !   STOP
    ! Define parameters here:
 
@@ -302,6 +277,7 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    p%niter = 20
 
 
+WRITE(*,*) "node_total = ",p%node_total
    ! Define system output initializations (set up mesh) here:
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
                    ,IOS              = COMPONENT_INPUT        &
@@ -418,14 +394,15 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
        ENDDO
    ENDDO
 
-   DO i=1,p%ngp*p%elem_total+2
-       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
-                              ,INode   = i            &
-                              ,Pos     = temp_L2(:,i) &
-                              ,ErrStat = ErrStat      &
-                              ,ErrMess = ErrMsg       )
-   ENDDO
+!   DO i=1,p%ngp*p%elem_total+2
+!       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+!                              ,INode   = i            &
+!                              ,Pos     = temp_L2(:,i) &
+!                              ,ErrStat = ErrStat      &
+!                              ,ErrMess = ErrMsg       )
+!   ENDDO
 
+WRITE(*,*) "TEST1"
    CALL MeshCommit ( Mesh    = u%RootMotion    &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
@@ -490,7 +467,6 @@ INCLUDE 'ComputeIniNodalCrvLS.f90'
    y%BldForce%RemapFlag = .True.
    y%BldMotion%RemapFlag = .True.
    u%RootMotion%RemapFlag = .True.
-
 
    END SUBROUTINE BeamDyn_Init
 

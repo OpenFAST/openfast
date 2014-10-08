@@ -137,7 +137,7 @@ PROGRAM MAIN
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
    BD_InitInput%gravity(1) = 0.0D0 !-9.80665
-   BD_InitInput%gravity(2) = -9.80665 
+   BD_InitInput%gravity(2) = 0.0   !-9.80665 
    BD_InitInput%gravity(3) = 0.0!9.80665 
 
    CALL BeamDyn_Init(BD_InitInput        &
