@@ -573,9 +573,9 @@ INCLUDE 'BeamDyn_AM2.f90'
    y%BldMotion%RotationAcc(:,:)     = 0.0D0
 
    ! set remap flags to true
-!   y%BldForce%RemapFlag = .True.
-!   y%BldMotion%RemapFlag = .True.
-!   u%RootMotion%RemapFlag = .True.
+   y%BldForce%RemapFlag = .True.
+   y%BldMotion%RemapFlag = .True.
+   u%RootMotion%RemapFlag = .True.
 
 
    END SUBROUTINE BeamDyn_Init
