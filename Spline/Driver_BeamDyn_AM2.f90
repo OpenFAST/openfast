@@ -103,7 +103,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 1.0D-02
+   dt_global = 0.5D-02
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -193,8 +193,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 !  step endpionts and midpoint.
 
       CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + .5*dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 
 
 !     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -224,7 +225,7 @@ WRITE(*,*) "Time Step: ", n_t_global
 
       ENDDO
 
-IF(n_t_global .EQ. 151) STOP
+!IF(n_t_global .EQ. 151) STOP
 !      IF(n_t_global .GE. 149) THEN
 !      DO i=1,BD_Parameter%dof_total
 !          WRITE(*,*) BD_ContinuousState%dqdt(i)  
