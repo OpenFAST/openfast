@@ -70,7 +70,7 @@
        ENDDO
 
        temp = Norm(RHS_LU)
-WRITE(*,*) "Residual: ", temp
+!WRITE(*,*) "Residual: ", temp
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
@@ -79,8 +79,12 @@ WRITE(*,*) "Residual: ", temp
            sol(j+6) = sol_temp(j)
            sol(j+dof_total+6) = sol_temp(j+dof_total-6)
        ENDDO
+!DO j=1,24
+!WRITE(*,*) "sol(j) = ",j,sol(j)
+!WRITE(*,*) "feqv(j) = ",j,feqv(j)
+!ENDDO
        IF(i==1) Eref = TOLF * DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
-!IF(i==1) WRITE(*,*) "Eref: ",Eref
+IF(i==1) WRITE(*,*) "Eref: ",Eref
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
            Enorm = DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
