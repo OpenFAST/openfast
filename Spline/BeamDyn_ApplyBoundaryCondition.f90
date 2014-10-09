@@ -16,6 +16,7 @@
    CALL CrvExtractCrv(temp_R,temp_rot)
    x%q(4:6) = temp_rot(1:3)
 
+
    x%dqdt(1:3) = u%RootMotion%TranslationVel(1:3,1)
    x%dqdt(4:6) = u%Rootmotion%RotationVel(1:3,1)
 

@@ -101,6 +101,7 @@ INCLUDE 'ElementMatrix_AM2.f90'
 INCLUDE 'GenerateDynamicElement_AM2.f90'
 INCLUDE 'DynamicSolution_AM2.f90'
 INCLUDE 'BeamDyn_AM2.f90'
+INCLUDE 'BeamDyn_BoundaryAM2.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
