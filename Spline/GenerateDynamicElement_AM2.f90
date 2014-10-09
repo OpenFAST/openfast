@@ -145,6 +145,9 @@
        Nuu0(:) = uuN0(:,nelem)
        CALL ElemNodalDispGL(uuN,node_elem,dof_node,nelem,Nuuu)
        CALL ElemNodalDispGL(uuN00,node_elem,dof_node,nelem,Nuuu0)
+!DO j=1,18
+WRITE(*,*) "u(j) = ",5,Nuuu(5)
+!ENDDO
        temp_id = (nelem-1)*ngp
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
@@ -161,7 +164,6 @@
 
        CALL ElemNodalDispGL(vvN,node_elem,dof_node,nelem,Nvvv)
        CALL ElemNodalDispGL(vvN00,node_elem,dof_node,nelem,Nvvv0)
-!WRITE(*,*) "TEST1"
 
        CALL ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
                              &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&

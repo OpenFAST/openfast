@@ -84,6 +84,7 @@ PROGRAM MAIN
    INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
 
    REAL(ReKi):: temp_H(3,3)
+   REAL(ReKi):: temp_cc(3)
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
 
 
@@ -187,6 +188,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    DO n_t_global = 0, n_t_final
 
 WRITE(*,*) "Time Step: ", n_t_global
+!IF(n_t_global == 1) STOP 
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
@@ -222,14 +224,22 @@ WRITE(*,*) "Time Step: ", n_t_global
 
       ENDDO
 
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%dqdt(BD_Parameter%dof_total-5),BD_ContinuousState%dqdt(BD_Parameter%dof_total-4),&
-                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-3),BD_ContinuousState%dqdt(BD_Parameter%dof_total-2),&
-                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-1),BD_ContinuousState%dqdt(BD_Parameter%dof_total)
-CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
-WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
-                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
+IF(n_t_global .EQ. 151) STOP
+!      IF(n_t_global .GE. 149) THEN
+!      DO i=1,BD_Parameter%dof_total
+!          WRITE(*,*) BD_ContinuousState%dqdt(i)  
+!      ENDDO
+!      ENDIF
+      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
+                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
+                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+!CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
+!WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
+!                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
+!CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
 !      WRITE(QiDisUnit,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+!                           &temp_cc(1:3)
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
