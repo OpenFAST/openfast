@@ -470,7 +470,6 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
             CALL TimeSeriesToSpectra( p, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
 
-print *, 'check the default values of all the rest of the inputs for the TIMESR model!!!'                  
          CASE DEFAULT
    !BONNIE: todo: add the UsrVKM model to this list when the model is complete 
             CALL SetErrStat( ErrID_Fatal, 'The turbulence model must be one of the following: "IECKAI", "IECVKM", "SMOOTH",' &
