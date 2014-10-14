@@ -764,13 +764,11 @@ integer                          :: Indx, J, I, NPts
       ! -------------------------------------------------------------
       ! Create the lower triangular matrix, H, from Veer's method
       ! -------------------------------------------------------------
-
-   !!!!!!!!!!!!!!!!!!!!!!!!
-   !!bjj fix this
-   !!!!!!!!!!!!!!!!!!!!!!!!
    
    Indx = 1
    DO J = 1,p%usr%NPoints-1  ! Column               
+      ! use identity coherence for the user-input time series:
+      
       !Indx = p%grid%NPoints*(J-1) - J*(J-1)/2 + J !Index of H(J,J)
       
       TRH(Indx) =  SQRT( ABS( S(IFreq,J,IVec) ) )
@@ -800,9 +798,7 @@ integer                          :: Indx, J, I, NPts
 
       ENDDO !I
    ENDDO !J
-   
-   
-   
+         
 
 END SUBROUTINE Coh2H
 !=======================================================================
@@ -856,7 +852,7 @@ END SUBROUTINE H2Coeffs
 !=======================================================================
 !> This routine takes the Fourier coefficients and converts them to velocity
 !! note that the resulting time series has zero mean.
-SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, ErrStat, ErrMsg )
+SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, NUsrPoints, ErrStat, ErrMsg )
 
 
    !USE NWTC_FFTPACK
@@ -867,6 +863,7 @@ SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, ErrStat, ErrMsg )
    ! passed variables
    INTEGER(IntKi),   INTENT(IN)     :: NumSteps                     !< Size of dimension 1 of V (number of time steps)
    INTEGER(IntKi),   INTENT(IN)     :: NPoints                      !< Size of dimension 2 of V (number of grid points)
+   INTEGER(IntKi),   INTENT(IN)     :: NUsrPoints                   !< number of user-defined time series
 
    REAL(ReKi),       INTENT(INOUT)  :: V     (NumSteps,NPoints,3)   !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
 
@@ -919,14 +916,22 @@ DO IVec=1,3
 
       Work(1) = 0.0_ReKi
 
-      DO ITime = 2,NumSteps-1
+!      DO ITime = 2,NumSteps-1
+      DO ITime = 2,NumSteps
          Work(ITime) = V(ITime-1, IPoint, IVec)
       ENDDO ! ITime
 
+      IF (iPoint > NUsrPoints) THEN
+         ! BJJ: we can't override this for the user-input spectra or we don't get the correct time series out.
+         ! Per JMJ, I will keep this here for the other points, but I personally think it could be skipped, too.
+         
          ! Now, let's add a complex zero to the end to set the power in the Nyquist
          ! frequency to zero.
-
-      Work(NumSteps) = 0.0
+         
+         Work(NumSteps) = 0.0
+      END IF
+      
+      
 
          ! perform FFT
 
@@ -1102,22 +1107,23 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
             ELSEIF (iPointUsr  == p%usr%NPoints) THEN
                iPoint = p%usr%RefPtID
             END IF
-            S(1:p%usr%nFreq,IPoint,:) = p%usr%S(:,iPointUsr,:)*HalfDelF 
+            
+            CALL Spec_TimeSer_Extrap ( p, p%grid%Z(iPoint), U(iPoint), SSVS )            
+            SSVS(1:p%usr%nFreq,:) = p%usr%S(:,iPointUsr,:)                         
+                        
+            S(:,iPoint,:) = SSVS*HalfDelF
          END DO
-         if (p%usr%nFreq < p%grid%NumFreq) then
-            S(p%usr%nFreq+1:, : , :) = 0.0_ReKi  !bjj: fill this in another way for extrapolation (use different model??)
-         end if
          
-         DO IPoint=1+p%usr%NPoints,p%grid%NPoints
-            CALL Spec_TimeSer   ( p, p%grid%Z(IPoint), LastIndex, SSVS )
-            S(:,IPoint,:) = SSVS*HalfDelF               
-         ENDDO             
-      
+         
+         DO iPoint=1+p%usr%NPoints,p%grid%NPoints
+            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )            
+            S(:,iPoint,:) = SSVS*HalfDelF               
+         ENDDO                  
          
       CASE ( SpecModel_USRVKM )
-         DO IPoint=1,p%grid%NPoints
-            CALL Spec_vonKrmn   ( P, p%grid%Z(IPoint), U(IPoint), SSVS )
-            S(:,IPoint,:) = SSVS*HalfDelF               
+         DO iPoint=1,p%grid%NPoints
+            CALL Spec_vonKrmn   ( P, p%grid%Z(iPoint), U(iPoint), SSVS )
+            S(:,iPoint,:) = SSVS*HalfDelF               
          ENDDO       
          
          
@@ -1250,7 +1256,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
       ! Calculate Total time and NumSteps.
       ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
-!bjj: I have no idea why this is necessary, so I'm removing it for now:      ! Make sure it is a multiple of 2 too.
+!bjj: I have no idea why it is necessary to be a factor of 4, so I'm removing it for now:      ! Make sure it is a multiple of 2 too.
 
    IF ( p_grid%Periodic ) THEN
       p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
@@ -1281,7 +1287,16 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%NumFreq = p_grid%NumSteps / 2
    DelF           = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
       
+      ! quick check that the frequency contents are the same as the user-input time series. (necessary because we want to keep the exact time series)  
+   IF (p_usr%NPoints > 0) THEN
+      IF ( .NOT. EqualRealNos( DelF, p_usr%f(1) ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'Delta frequency in the user-input time series must be the same as the delta frequency in the simulated series. '//&
+            'Change AnalysisTime or number of rows entered in user-defined time series file.', ErrStat, ErrMsg,'CreateGrid')
+         RETURN
+      END IF      
+   END IF
    
+            
    CALL AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
       IF (ErrStat >= AbortErrLev) RETURN
@@ -1641,10 +1656,13 @@ SUBROUTINE SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
          ELSEIF (iPointUsr == p%usr%NPoints) THEN
             iPoint = p%usr%RefPtID
          END IF
-         PhaseAngles(iPoint,1:p%usr%nFreq,:) = p%usr%phaseAngles(:,iPointUsr,:)
+         PhaseAngles(iPoint,1:p%usr%nFreq,1:p%usr%nComp) = p%usr%phaseAngles(:,iPointUsr,:)
       END DO
       
    END IF   
+   
+   ! nyquist frequency must be real, thus phase angle must be 0:
+   PhaseAngles(:,p%grid%NumFreq,:) = 0.0_ReKi
 
 END SUBROUTINE SetPhaseAngles
 !=======================================================================
@@ -2213,10 +2231,12 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
 
    REAL(ReKi)                                  :: cosH, sinH                   ! cosine and sin of horizontal angles
    REAL(ReKi)                                  :: cosV, sinV                   ! cosine and sin of vertical angles
-   REAL(ReKi)                                  :: rotateMatrix(3,3)            ! rotation matrix to align 
+   REAL(ReKi)                                  :: rotateMatrix(3,3)            ! rotation matrix to align with direction of mean velocity
+   REAL(ReKi)                                  :: uvw(3)                       ! temporary array to hold 3 velocity components in case < 3 were entered
    
    INTEGER(IntKi)                              :: Indx                         ! generic index
    INTEGER(IntKi)                              :: iFreq                        ! loop counter for frequency 
+   INTEGER(IntKi)                              :: iTime                        ! loop counter for time 
    INTEGER(IntKi)                              :: iVec                         ! loop counter for velocity components
    INTEGER(IntKi)                              :: iPoint                       ! loop counter for grid points
    INTEGER(IntKi)                              :: NumSteps                     ! number of time steps
@@ -2249,11 +2269,21 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    !.......................................................................   
    ! calculate wind direction in radians (before rotating or removing mean):
    !.......................................................................   
+   
+   meanV = 0.0_ReKi
+   meanW = 0.0_ReKi
       
    DO iPoint = 1, p%usr%NPoints     
       meanU = sum(p%usr%v(:,iPoint,1))/p%usr%NTimes
-      meanV = sum(p%usr%v(:,iPoint,2))/p%usr%NTimes
-      meanW = sum(p%usr%v(:,iPoint,3))/p%usr%NTimes
+      
+      if (p%usr%nComp > 1 ) then
+         meanV = sum(p%usr%v(:,iPoint,2))/p%usr%NTimes
+         
+         if ( p%usr%nComp > 2 ) then      
+            meanW = sum(p%usr%v(:,iPoint,3))/p%usr%NTimes
+         end if
+         
+      end if
       
       p%usr%meanDir( iPoint) = atan2( meanV, meanU )
       p%usr%meanVAng(iPoint) = atan2( meanW, sqrt( meanU**2 + meanV**2 ) )
@@ -2262,7 +2292,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    !.......................................................................   
    ! rotate inputs based on angles at reference point:
    !.......................................................................   
-            
+   uvw = 0.0_ReKi
    DO iPoint = 1, p%usr%NPoints 
       
       cosH = cos(p%usr%meanDir(  iPoint ) )
@@ -2281,9 +2311,11 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
       rotateMatrix(1,3) =       sinV
       rotateMatrix(2,3) = 0.0_ReKi
       rotateMatrix(3,3) =       cosV
-                        
-      DO iFreq = 1, p%usr%NFreq
-         p%usr%v(iFreq,iPoint,:) = MATMUL( rotateMatrix,  p%usr%v(iFreq,iPoint,:) )
+                                 
+      DO iTime = 1, p%usr%nTimes
+         uvw(1:p%usr%nComp) = p%usr%v(iTime,iPoint,:)
+         uvw = MATMUL( rotateMatrix, uvw )
+         p%usr%v(iTime,iPoint,:) = uvw(1:p%usr%nComp)
       END DO      
       
    END DO
@@ -2345,27 +2377,20 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
                p%usr%PhaseAngles(iFreq,iPoint,iVec) = atan2( Im, Re ) ! this gives us the angles in range -pi to pi
                if ( p%usr%PhaseAngles(iFreq,iPoint,iVec) < 0.0_ReKi  ) then ! we want it in the range 0 to 2pi
                   p%usr%PhaseAngles(iFreq,iPoint,iVec) = TwoPi + p%usr%PhaseAngles(iFreq,iPoint,iVec)
-               end if
-            
-               !   ! get phase angle in range 0-pi
-               !p%usr%PhaseAngles(iFreq,iPoint,iVec) = acos( Re / SQRT(p%usr%S( iFreq,iPoint,iVec)) )
-               !   !bjj: get in correct quadrant; phase angle in range 0-2pi
-               !if (Im < 0.0_ReKi) then
-               !      p%usr%PhaseAngles(iFreq,iPoint,iVec) = TwoPi - p%usr%PhaseAngles(iFreq,iPoint,iVec)
-               !end if               
+               end if                       
             ELSE
                p%usr%PhaseAngles(iFreq,iPoint,iVec) = 0.0_ReKi
             END IF                     
          END DO
                            
-         p%usr%S(          p%usr%nFreq,iPoint,iVec) = 0.0_ReKi !work(p%usr%nFreq)**2  ! this frequency doesn't seem to get used in the code, so I'm going to set it to zero. work(p%usr%nFreq)**2 is not the value we want.
+         p%usr%S(          p%usr%nFreq,iPoint,iVec) = work(NumSteps)**2 !0.0_ReKi !work(NumSteps)**2  ! this frequency doesn't seem to get used in the code, so I'm going to set it to zero. <<< bjj: will be used for extrapolation      
          p%usr%PhaseAngles(p%usr%nFreq,iPoint,iVec) = 0.0_ReKi         
 
       ENDDO ! IPoint
    ENDDO ! IVec 
    
    ! calculate associated frequencies:
-   p%usr%f(1) = 1.0_ReKi / ( (NumSteps -1) * ( p%usr%t(2) - p%usr%t(1) ) )
+   p%usr%f(1) = 1.0_ReKi / ( NumSteps * ( p%usr%t(2) - p%usr%t(1) ) )
    do iFreq=2,p%usr%nFreq
       p%usr%f(iFreq) = p%usr%f(1) * iFreq
    end do

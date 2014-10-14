@@ -460,7 +460,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
             p%met%TMName = 'User-input time series'
             p%met%TurbModel_ID = SpecModel_TimeSer 
             
-            CALL ReadUSRTimeSeries(UserFile, p, UnEc, ErrStat2, ErrMsg2)
+            CALL GetUSRTimeSeries(UserFile, p, UnEc, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
@@ -559,9 +559,10 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    CALL ReadRVarDefault( UI, InFile, p%met%URef, "URef", "Reference wind speed [m/s]", UnEc, getDefaultURef, ErrStat2, ErrMsg2, &
                      IGNORE=IsUnusedParameter ) ! p%IEC%IEC_WindType > IEC_ETM == EWM models
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
-
+      
    getDefaultURef = getDefaultURef .AND. .NOT. IsUnusedParameter
-            
+   
+   
    ! ------------ Read in the jet height -------------------------------------------------------------
    IsUnUsedParameter = TRIM(p%met%WindProfileType) /= 'JET'
    CALL ReadRVarDefault( UI, InFile, p%met%ZJetMax, "ZJetMax", "Jet height [m]", UnEc, getDefaultZJetMax, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
@@ -600,7 +601,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       CASE ( 'USR' )
          !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>         
          ! Get parameters for USR wind profile (so that we can use these parameters to get the wind speed later):
-            CALL GetUSR( ProfileFile, p%met, UnEc, ErrStat2, ErrMsg2 )
+            CALL GetUSRProfiles( ProfileFile, p%met, UnEc, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<         
          
@@ -638,9 +639,15 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    END IF
    
    
-   IF ( getDefaultURef .AND. TRIM(p%met%WindProfileType) /= 'JET' ) THEN
-      ! Also note that if we specify a "default for Ustar , we cannot enter "default" for URef. Otherwise, we get circular logic. Will check for that later.
-      CALL SetErrStat( ErrID_Fatal, 'URef can be "default" for only the "JET" WindProfileType.', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( getDefaultURef ) THEN
+      IF ( p%usr%NPoints > 0 ) THEN
+         p%met%RefHt = p%usr%pointzi(p%usr%RefPtID)
+         p%met%URef  = p%usr%meanU(p%usr%RefPtID,1)
+         getDefaultURef = .FALSE.
+      ELSEIF( TRIM(p%met%WindProfileType) /= 'JET' ) THEN
+         ! Also note that if we specify a "default for Ustar , we cannot enter "default" for URef. Otherwise, we get circular logic. Will check for that later.
+         CALL SetErrStat( ErrID_Fatal, 'URef can be "default" for only the "JET" WindProfileType.', ErrStat, ErrMsg, 'ReadInputFile')
+      END IF
    END IF
          
    IF ( p%met%Z0 <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The surface roughness length must be a positive number or "default".', ErrStat, ErrMsg, 'ReadInputFile')
@@ -856,9 +863,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
                                             ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%VWskip )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
 
-      
-!set SCMod here!!!!      
-      
+            
    !===============================================================================================================================
    ! Read the spatial coherence model section. 
    !===============================================================================================================================
@@ -1154,7 +1159,7 @@ DescStr = 'This full-field file was '//TRIM(DescStr)
 RETURN
 END SUBROUTINE OpenSummaryFile
 !=======================================================================
-SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
+SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
 
    IMPLICIT                              NONE
 
@@ -1171,7 +1176,7 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
    
-   CHARACTER(200)                                 :: LINE
+!   CHARACTER(200)                                 :: LINE
                                                   
    REAL(ReKi)                                     :: L_Usr_Tmp
    REAL(ReKi)                                     :: Sigma_USR_Tmp
@@ -1191,9 +1196,9 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
    
    U_in = -1
    CALL GetNewUnit( U_in, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
    CALL OpenFInpFile( U_in, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
       
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(U_in)
@@ -1202,40 +1207,40 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
                
    DO I=1,3
       CALL ReadCom( U_in, FileName, "Header line "//trim(num2lstr(I))//" for user-defined profiles", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
    END DO
    
    
       ! ---------- Read the size of the arrays --------------------------------------------
    CALL ReadVar( U_in, FileName, p_met%NumUSRz, "NumUSRz", "Number of heights in the user-defined profiles", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
 
    IF ( p_met%NumUSRz < 1 ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'The number of heights specified in the user-defined profiles must be at least 1.', ErrStat, ErrMsg, 'GetUSR')
+      CALL SetErrStat( ErrID_Fatal, 'The number of heights specified in the user-defined profiles must be at least 1.', ErrStat, ErrMsg, 'GetUSRProfiles')
    ENDIF
 
    DO I=1,3
          ! ---------- Read the scaling for the standard deviations --------------------------------------------
       CALL ReadVar( U_in, FileName, p_met%USR_StdScale(I), "USR_StdScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
 
 
       IF ( p_met%USR_StdScale(I) <= 0. ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The scaling value for the user-defined standard deviation profile must be positive.', ErrStat, ErrMsg, 'GetUSR')
+         CALL SetErrStat( ErrID_Fatal, 'The scaling value for the user-defined standard deviation profile must be positive.', ErrStat, ErrMsg, 'GetUSRProfiles')
       ENDIF
    ENDDO
 
       ! Allocate the data arrays
-   CALL AllocAry(p_met%USR_Z,       p_met%NumUSRz, 'USR_Z (user-defined height)',               ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry(p_met%USR_U,       p_met%NumUSRz, 'USR_U (user-defined wind speed)',           ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-   CALL AllocAry(p_met%USR_WindDir, p_met%NumUSRz, 'USR_WindDir (user-defined wind direction)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+   CALL AllocAry(p_met%USR_Z,       p_met%NumUSRz, 'USR_Z (user-defined height)',               ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+   CALL AllocAry(p_met%USR_U,       p_met%NumUSRz, 'USR_U (user-defined wind speed)',           ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+   CALL AllocAry(p_met%USR_WindDir, p_met%NumUSRz, 'USR_WindDir (user-defined wind direction)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
 
 
    IF ( p_met%TurbModel_ID == SpecModel_USRVKM ) THEN
       ReadSigL = .TRUE.
 
-      CALL AllocAry(p_met%USR_Sigma, p_met%NumUSRz, 'USR_Sigma (user-defined sigma)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
-      CALL AllocAry(p_met%USR_L,     p_met%NumUSRz, 'USR_L (user-defined length scale)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+      CALL AllocAry(p_met%USR_Sigma, p_met%NumUSRz, 'USR_Sigma (user-defined sigma)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+      CALL AllocAry(p_met%USR_L,     p_met%NumUSRz, 'USR_L (user-defined length scale)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
       
    ELSE
       ReadSigL = .FALSE.
@@ -1249,7 +1254,7 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
       CALL ReadCom( U_in, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSR')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
 
    ENDDO
 
@@ -1262,16 +1267,16 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
       ENDIF
 
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Could not read entire user-defined variable list on line '//Int2LStr(I)//'.', ErrStat, ErrMsg, 'GetUSR')
+         CALL SetErrStat( ErrID_Fatal, 'Could not read entire user-defined variable list on line '//Int2LStr(I)//'.', ErrStat, ErrMsg, 'GetUSRProfiles')
          CLOSE(U_in)
          RETURN
       ENDIF
 
       IF ( ReadSigL ) THEN
          IF ( p_met%USR_Sigma(I) <= REAL( 0., ReKi ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The standard deviation must be a positive number.', ErrStat, ErrMsg, 'GetUSR')
+            CALL SetErrStat( ErrID_Fatal, 'The standard deviation must be a positive number.', ErrStat, ErrMsg, 'GetUSRProfiles')
          ELSEIF ( p_met%USR_L(I) <= REAL( 0., ReKi ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The length scale must be a positive number.', ErrStat, ErrMsg, 'GetUSR')
+            CALL SetErrStat( ErrID_Fatal, 'The length scale must be a positive number.', ErrStat, ErrMsg, 'GetUSRProfiles')
          ENDIF
       ENDIF
       
@@ -1294,7 +1299,7 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
                Indx = J+1
                EXIT
             ELSEIF ( p_met%USR_Z(I) == p_met%USR_Z(J) ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'User-defined values must contain unique heights.', ErrStat, ErrMsg, 'GetUSR')
+               CALL SetErrStat( ErrID_Fatal, 'User-defined values must contain unique heights.', ErrStat, ErrMsg, 'GetUSRProfiles')
                CLOSE(U_in)
                RETURN
             ENDIF
@@ -1332,7 +1337,7 @@ SUBROUTINE GetUSR(FileName, p_met, UnEc, ErrStat, ErrMsg)
 
    CLOSE(U_in)
 
-END SUBROUTINE GetUSR
+END SUBROUTINE GetUSRProfiles
 !=======================================================================
 !> Read the input file for user-defined spectra.
 SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
@@ -1514,7 +1519,7 @@ END SUBROUTINE GetUSRSpec
 
 !=======================================================================
 !> Read the input file for user-defined time series
-SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
+SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
 
    IMPLICIT NONE
 
@@ -1525,6 +1530,8 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CHARACTER(*),                    INTENT(IN)    :: FileName                       !< Name of the input file
 
       ! local variables
+   real(reKi)                                     :: tmpAry(2)
+   real(ReKi)                                     :: dt                             ! difference between consecutive times entered in the file (must be constant)
    INTEGER(IntKi), PARAMETER                      :: NumLinesBeforeTS = 11          ! Number of lines in the input file before the time series start (need to add nPoint lines). IMPORTANT:  any changes to the number of lines in the header must be reflected here
       
    INTEGER(IntKi)                                 :: UnIn                           ! unit number for reading input file
@@ -1536,7 +1543,6 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
    CHARACTER(200)                                 :: FormStr          
    CHARACTER(1)                                   :: tmpChar          
-   real(reKi)                                     :: tmpAry(2)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1544,10 +1550,10 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       ! --------- Open the file ---------------
 
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
       
    CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1561,17 +1567,17 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
    do i=1,3
       CALL ReadCom( UnIn, FileName, "Header #"//TRIM(Num2Lstr(i))//"for user time-series input", ErrStat2, ErrMsg2, UnEc )   
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
    end do
       
    CALL ReadVar( UnIn, FileName, p%usr%nComp, 'nComp', 'How many velocity components will be input? (1=u component only; 2=u&v components; 3=u,v,and w)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
          
    CALL ReadVar( UnIn, FileName, p%usr%nPoints, 'nPoints', 'Number of time series points contained in this file', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
          
    CALL ReadVar( UnIn, FileName, p%usr%RefPtID, 'RefPtID', 'Index of the reference point (1-nPoints)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1579,14 +1585,14 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    END IF
          
    IF ( p%usr%RefPtID < 1 .OR. p%usr%RefPtID > p%usr%nPoints ) THEN
-      CALL SetErrStat(ErrID_Fatal, 'RefPtID must be between 1 and nPoints (inclusive).', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrID_Fatal, 'RefPtID must be between 1 and nPoints (inclusive).', ErrStat, ErrMsg, 'GetUSRTimeSeries')
       CALL Cleanup()
       RETURN
    END IF
          
    
-   CALL AllocAry(p%usr%Pointyi, p%usr%nPoints, 'Pointyi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
-   CALL AllocAry(p%usr%Pointzi, p%usr%nPoints, 'Pointzi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%Pointyi, p%usr%nPoints, 'Pointyi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   CALL AllocAry(p%usr%Pointzi, p%usr%nPoints, 'Pointzi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1595,12 +1601,12 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       
    do i=1,2
       CALL ReadCom( UnIn, FileName, "Point location header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
    end do
       
    do iPoint=1,p%usr%nPoints
       CALL ReadAry( UnIn, FileName, TmpAry, 2, "point"//trim(Num2Lstr(iPoint)), "locations of points", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
          
       p%usr%Pointyi(iPoint) = TmpAry(1)
       p%usr%Pointzi(iPoint) = TmpAry(2)         
@@ -1609,7 +1615,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
          
    do i=1,3
       CALL ReadCom( UnIn, FileName, "Time Series header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
    end do      
       
    IF (ErrStat >= AbortErrLev) THEN
@@ -1634,7 +1640,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CALL WrScr( '   Found '//TRIM(Num2LStr(p%usr%NTimes))//' lines of time-series data.' )
    
    IF (p%usr%NTimes < 2) THEN
-      CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+      CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
       CALL Cleanup()
       RETURN
    END IF
@@ -1642,7 +1648,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       ! now rewind and skip the first few lines. 
    REWIND( UnIn, IOSTAT=ErrStat2 )  
       IF (ErrStat2 /= 0_IntKi ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, 'ReadUSRTimeSeries')   
+         CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, 'GetUSRTimeSeries')   
          CALL Cleanup()
       END IF 
 
@@ -1654,14 +1660,14 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    !.......
    
    if (p%usr%nComp < 1 .OR. p%usr%nComp > 3) then
-      CALL SetErrStat( ErrID_Fatal, 'Number of velocity components in file must be 1, 2 or 3.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')   
+      CALL SetErrStat( ErrID_Fatal, 'Number of velocity components in file must be 1, 2 or 3.', ErrStat, ErrMsg, 'GetUSRTimeSeries')   
       CALL Cleanup()
    END IF 
    
    
    
-   CALL AllocAry(p%usr%t, p%usr%nTimes,                             't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
-   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, p%usr%nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   CALL AllocAry(p%usr%t, p%usr%nTimes,                             't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, p%usr%nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1671,7 +1677,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    DO i=1,p%usr%nTimes
       READ( UnIn, *, IOSTAT=ErrStat2 ) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
       IF (ErrStat2 /=0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
          CALL Cleanup()
          RETURN
       END IF      
@@ -1693,7 +1699,7 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    do i=2,p%usr%nPoints
       do j=1,i-1
          IF ( EqualRealNos( p%usr%Pointyi(i), p%usr%Pointyi(j) ) .AND. EqualRealNos( p%usr%Pointzi(i), p%usr%Pointzi(j) ) ) THEN            
-            CALL SetErrStat(ErrID_Fatal, 'Locations of points specified in the user time-series input file must be unique.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+            CALL SetErrStat(ErrID_Fatal, 'Locations of points specified in the user time-series input file must be unique.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
             CALL Cleanup()
             RETURN
          END IF
@@ -1701,20 +1707,36 @@ SUBROUTINE ReadUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       
       !bjj: fix this in the future. Currently the interpolation routine won't work if z is not ordered properly. Also, interpolation doesn't take y into account, so we may want to fix that.
       IF ( p%usr%Pointzi(i) < p%usr%Pointzi(i-1) ) THEN
-         CALL SetErrStat(ErrID_Fatal, 'The current implementation of user time-series input requires that the points be entered in the order of increasing height.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+         CALL SetErrStat(ErrID_Fatal, 'The current implementation of user time-series input requires that the points be entered in the order of increasing height.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
          CALL Cleanup()
          RETURN
       END IF      
    end do
    
+
    
-      ! a little bit of error checking:
-   DO i = 2,p%usr%nTimes
-      IF (.NOT. EqualRealNos( p%usr%t(i-1) + p%grid%TimeStep, p%usr%t(i) ) ) THEN
-         call SetErrStat(ErrID_Fatal, 'the delta time in the file must be constant and must be equal to input file variable TimeStep.', ErrStat, ErrMsg, 'ReadUSRTimeSeries')
+   !DO i = 2,p%usr%nTimes
+   !   IF (.NOT. EqualRealNos( p%usr%t(i-1) + p%grid%TimeStep, p%usr%t(i) ) ) THEN
+   !      call SetErrStat(ErrID_Fatal, 'the delta time in the file must be constant and must be equal to input file variable TimeStep.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   !      EXIT
+   !   END IF
+   !END DO
+   
+      ! check for constant delta t:
+   
+   dt = p%usr%t(2) - p%usr%t(1)
+   
+   DO i = 3,p%usr%nTimes
+      IF (.NOT. EqualRealNos( p%usr%t(i-1) + dt, p%usr%t(i) ) ) THEN
+         call SetErrStat(ErrID_Fatal, 'The time between each row in the file must be constant.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
          EXIT
       END IF
    END DO
+   
+   
+   if ( .NOT. EqualRealNos( dt, p%grid%TimeStep ) ) THEN
+      call SetErrStat(ErrID_Fatal, 'In this version of TurbSim, TimeStep must be the same as the delta time in the user-input time series file.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   end if
    
    
    
@@ -1730,7 +1752,7 @@ CONTAINS
    
    END SUBROUTINE Cleanup
 !...............................................
-END SUBROUTINE ReadUSRTimeSeries 
+END SUBROUTINE GetUSRTimeSeries 
 !=======================================================================
 SUBROUTINE ReadCVarDefault ( UnIn, Fil, CharVar, VarName, VarDescr, UnEc, Def, ErrStat, ErrMsg, IGNORE )
 
@@ -2692,6 +2714,7 @@ WRITE(p%US,FormStr )             "Nyquist frequency of turbulent wind field     
 WRITE(p%US,'()')                                                                                                 ! A BLANK LINE
 WRITE(p%US,FormStr1)             "Number of time steps in the FFT                 ", p%grid%NumSteps,           ""       
 WRITE(p%US,FormStr1)             "Number of time steps output                     ", p%grid%NumOutSteps,        ""          
+WRITE(p%US,FormStr1)             "Number of points simulated                      ", p%grid%NPoints,            ""          
 
 
 IF (p%met%KHtest) THEN

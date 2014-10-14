@@ -615,98 +615,75 @@ END SUBROUTINE Spec_NWTCUP
 !=======================================================================
 !> This routine gets velocity spectra for each of 3 wind components (u,v,w)
 !! by 2-D interpolation.
-SUBROUTINE Spec_TimeSer ( p, Ht, LastIndex, Spec )
+SUBROUTINE Spec_TimeSer ( p, Ht, Ucmp, LastIndex, Spec )
 
 
          ! Passed variables
    TYPE(TurbSim_ParameterType), INTENT(IN   ) :: p                       !< Input: turbsim parameters
    REAL(ReKi),                  INTENT(IN   ) :: Ht                      !< Input: height for which spectra are requested
+   REAL(ReKi),                  INTENT(IN   ) :: Ucmp                    !< Input: wind speed for which spectra are requested (used for missing components)
    INTEGER(IntKi),              INTENT(INOUT) :: LastIndex(2)            !< Index for the last (Freq, Ht) used
    REAL(ReKi),                  INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum (Frequency, component)
          ! Local variables
    REAL(ReKi)                                 :: InCoord(2)              ! Arranged as (Freq, Ht)
    INTEGER(IntKi)                             :: i                       ! loop counters
    
-         
+               
+
 !bjj: fix me!!! (make use of nComp and height )                             
-      
+
+   CALL Spec_TimeSer_Extrap ( p, Ht, Ucmp, Spec )
+
+
    InCoord(2) = Ht
    
-   DO I=1,p%grid%NumFreq
+   DO I=1,p%usr%nFreq !p%grid%NumFreq 
       
-      InCoord(1) = p%grid%Freq(i)
-      
-         ! this routine will return 0 for Spec(:,p%usr%nComp+1:3) [if p%usr%nComp < 3]
-      CALL UserSpec_Interp2D( InCoord, p%usr, LastIndex, Spec(I,:) )
+      InCoord(1) = p%grid%Freq(i)      
+      CALL UserSpec_Interp2D( InCoord, p%usr, LastIndex, Spec(I,:) )  ! sets only Spec(1:p%usr%nFreq, 1:p%usr%nComp) values
       
    ENDDO ! I
-
+      
    RETURN      
       
-                        
-      
-   !END DO
-   
+                           
 END SUBROUTINE Spec_TimeSer
 !=======================================================================
-!> This routine linearly interpolates data from an input file that 
-!! specifies the velocity spectra for each of 3 wind components (u,v,w)
-SUBROUTINE Spec_UserSpec ( p, Spec )
+!< This routine adds high-frequency content to user-supplied data, 
+!! using the model specified in p%usr%TurbModel_ID
+SUBROUTINE Spec_TimeSer_Extrap ( p, Ht, Ucmp, Spec )
 
-
-   IMPLICIT                NONE
 
          ! Passed variables
-   type(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
-   REAL(ReKi),                   INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum
-
-      ! Internal variables
-
-   REAL(ReKi)            :: Tmp
+   TYPE(TurbSim_ParameterType), INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                  INTENT(IN   ) :: Ht                      !< Input: height for which spectra are requested
+   REAL(ReKi),                  INTENT(IN   ) :: Ucmp                    !< Input: wind speed for which spectra are requested (used for missing components)
+   REAL(ReKi),                  INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum (Frequency, component)
 
 
-   INTEGER               :: I
-   INTEGER               :: Indx
-   INTEGER               :: J
-   INTEGER,PARAMETER     :: iPoint = 1
+   IF ( p%usr%nComp < 3 .OR. p%usr%nFreq < p%grid%NumFreq ) THEN
+         
+      SELECT CASE ( p%usr%TurbModel_ID )
+         CASE ( SpecModel_IECKAI ) ! IECKAI has uniform spectra (does not vary with height or velocity)
+            CALL Spec_IECKAI  ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, Spec )
+            
+         CASE ( SpecModel_IECVKM )  ! IECVKM has uniform spectra (does not vary with height or velocity)
+            CALL Spec_IECVKM  ( p%UHub, p%IEC%SigmaIEC(1), p%IEC%IntegralScale, p%grid%Freq, p%grid%NumFreq, Spec )
+                                    
+         CASE ( SpecModel_API )
+            CALL Spec_API ( p, Ht, Spec )
+                              
+         CASE ( SpecModel_SMOOTH )
+               CALL Spec_SMOOTH   ( p, Ht, Ucmp, Spec )
+                                                               
+         CASE DEFAULT
+            Spec = 0.0_ReKi ! whole matrix is zero
+            
+         END SELECT          
+                                 
+   END IF
 
-      ! --------- Interpolate to the desired frequencies ---------------
-
-   Indx = 1;
-
-   DO I=1,p%grid%NumFreq
-
-      IF ( p%grid%Freq(I) <= p%usr%f(1) ) THEN
-         Spec(I,:) = p%usr%S(1,iPoint,:)
-      ELSEIF ( p%grid%Freq(I) >= p%usr%f(p%usr%nFreq) ) THEN
-         Spec(I,:) = p%usr%S(p%usr%nFreq,iPoint,:)
-      ELSE
-
-            ! Find the two points between which the frequency lies
-
-         DO J=(Indx+1),p%usr%nFreq
-            IF ( p%grid%Freq(I) <= p%usr%f(J) ) THEN
-               Indx = J-1
-
-                  ! Let's just do a linear interpolation for now
-
-               Tmp  = (p%grid%Freq(I) - p%usr%f(Indx)) / ( p%usr%f(Indx) - p%usr%f(J) )
-
-               Spec(I,:) = Tmp * ( p%usr%S(Indx,iPoint,:) - p%usr%S(J,iPoint,:) ) + p%usr%S(Indx,iPoint,:)
-
-               EXIT
-            ENDIF
-         ENDDO ! J
-
-      ENDIF
-
-   ENDDO ! I
-
-   RETURN
-
-
-END SUBROUTINE Spec_UserSpec
-
+END SUBROUTINE Spec_TimeSer_Extrap
 !=======================================================================
 !< This routine linearly interpolates the p%usr spectral data. It is
 !! set for a 2-d interpolation on frequency and height of the input point.
@@ -783,7 +760,7 @@ SUBROUTINE UserSpec_Interp2D( InCoord, p_usr, LastIndex, OutSpec )
    N     = N / REAL( SIZE(N), ReKi )  ! normalize
             
       
-   do i = 1,size(p_usr%S,3)
+   do i = 1,p_usr%nComp
       u(1)  = p_usr%S( Indx_Hi(1), Indx_Lo(2), i )
       u(2)  = p_usr%S( Indx_Hi(1), Indx_Hi(2), i )
       u(3)  = p_usr%S( Indx_Lo(1), Indx_Hi(2), i )
@@ -794,6 +771,63 @@ SUBROUTINE UserSpec_Interp2D( InCoord, p_usr, LastIndex, OutSpec )
    
          
 END SUBROUTINE UserSpec_Interp2D
+!=======================================================================
+!> This routine linearly interpolates data from an input file that 
+!! specifies the velocity spectra for each of 3 wind components (u,v,w)
+SUBROUTINE Spec_UserSpec ( p, Spec )
+
+   IMPLICIT                NONE
+
+         ! Passed variables
+   type(TurbSim_ParameterType) , INTENT(IN   ) :: p                       !< Input: turbsim parameters
+   REAL(ReKi),                   INTENT(  OUT) :: Spec   (:,:)            !< Output: target spectrum
+
+      ! Internal variables
+
+   REAL(ReKi)            :: Tmp
+
+
+   INTEGER               :: I
+   INTEGER               :: Indx
+   INTEGER               :: J
+   INTEGER,PARAMETER     :: iPoint = 1
+
+      ! --------- Interpolate to the desired frequencies ---------------
+
+   Indx = 1;
+
+   DO I=1,p%grid%NumFreq
+
+      IF ( p%grid%Freq(I) <= p%usr%f(1) ) THEN
+         Spec(I,:) = p%usr%S(1,iPoint,:)
+      ELSEIF ( p%grid%Freq(I) >= p%usr%f(p%usr%nFreq) ) THEN
+         Spec(I,:) = p%usr%S(p%usr%nFreq,iPoint,:)
+      ELSE
+
+            ! Find the two points between which the frequency lies
+
+         DO J=(Indx+1),p%usr%nFreq
+            IF ( p%grid%Freq(I) <= p%usr%f(J) ) THEN
+               Indx = J-1
+
+                  ! Let's just do a linear interpolation for now
+
+               Tmp  = (p%grid%Freq(I) - p%usr%f(Indx)) / ( p%usr%f(Indx) - p%usr%f(J) )
+
+               Spec(I,:) = Tmp * ( p%usr%S(Indx,iPoint,:) - p%usr%S(J,iPoint,:) ) + p%usr%S(Indx,iPoint,:)
+
+               EXIT
+            ENDIF
+         ENDDO ! J
+
+      ENDIF
+
+   ENDDO ! I
+
+   RETURN
+
+
+END SUBROUTINE Spec_UserSpec
 !=======================================================================
 !> This subroutine defines the 3-D turbulence spectrum that can be expected over flat,
 !! homogeneous terrain as developed by RISO authors Hojstrup, Olesen, and Larsen.

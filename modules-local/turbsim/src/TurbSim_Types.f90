@@ -3,7 +3,7 @@ MODULE TurbSim_Types
 
 use NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.00a-bjj', '9-Oct-2014' )
+   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.01a-bjj', '14-Oct-2014' )
 
    LOGICAL,        PARAMETER :: MVK         = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
    LOGICAL,        PARAMETER :: PeriodicY   = .FALSE. !.TRUE.
@@ -264,6 +264,8 @@ use NWTC_Library
       real(reKi),     allocatable  :: S(:,:,:)                                ! spectra;   size: nFreq, nPoints, nComp
       real(reKi),     allocatable  :: f(:)                                    ! frequency; size: nFreq [Hz]
       real(reKi),     allocatable  :: phaseAngles(:,:,:)
+      
+      INTEGER(IntKi)               :: TurbModel_ID   = SpecModel_NONE          ! Integer value of spectral model (see SpecModel enum) for filling in high-frequency content; not all SpecModel values are valid here
       
    END TYPE UserTSSpec_ParameterType
    
