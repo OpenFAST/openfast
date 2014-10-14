@@ -193,8 +193,10 @@ WRITE(*,*) "Time Step: ", n_t_global
 !  step endpionts and midpoint.
 
       CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + .5*dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + .5*dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 !      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 
 
@@ -225,18 +227,19 @@ WRITE(*,*) "Time Step: ", n_t_global
 
       ENDDO
 
-IF(n_t_global .EQ. 301) STOP
+!IF(n_t_global .EQ. 301) STOP
 !      IF(n_t_global .GE. 149) THEN
 !      DO i=1,BD_Parameter%dof_total
 !          WRITE(*,*) BD_ContinuousState%dqdt(i)  
 !      ENDDO
 !      ENDIF
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+!      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
 !CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
-!WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
-!                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
+CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
+WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
+                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
 !CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
 !      WRITE(QiDisUnit,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
