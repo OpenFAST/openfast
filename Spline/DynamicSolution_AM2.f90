@@ -88,7 +88,7 @@ IF(i==1) WRITE(*,*) "Eref: ",Eref
        IF(i .GT. 1) THEN
            Enorm = 0.0D0 
            Enorm = DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
-!WRITE(*,*) "Enorm: ",Enorm
+WRITE(*,*) "Enorm: ",Enorm
            IF(Enorm .GT. Eref/TOLF) THEN
 !               WRITE(*,*) "Solution is diverging, exit N-R"
            ELSEIF(Enorm .LE. Eref) THEN

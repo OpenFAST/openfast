@@ -58,6 +58,7 @@
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
    ! find x at t+dt
    CALL BeamDyn_BoundaryAM2(x,u_interp,t,ErrStat,ErrMsg)
+!   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
    CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,u_interp0,&
                              p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
                              p%node_total,p%ngp,p%niter,p%dt)
