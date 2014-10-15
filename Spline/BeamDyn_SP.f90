@@ -23,6 +23,7 @@ MODULE BeamDyn_SP
    PUBLIC :: BeamDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvMatrixR                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvCompose                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvCompose_temp                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
