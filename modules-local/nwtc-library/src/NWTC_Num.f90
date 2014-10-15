@@ -1957,7 +1957,16 @@ CONTAINS
 
    RETURN
    END SUBROUTINE MPi2Pi
+!=======================================================================
+   FUNCTION TwoNorm(v)
    
+      ! this function returns the 2-norm of a vector v
+      REAL(ReKi), INTENT(IN)  :: v(:)      
+      REAL(ReKi)              :: TwoNorm      
+      
+      TwoNorm = sqrt( sum( v**2 ) )
+      
+   END FUNCTION
 !=======================================================================
    FUNCTION PSF ( Npsf, NumPrimes, subtract )
 
@@ -2048,7 +2057,155 @@ CONTAINS
 
     RETURN
     END FUNCTION PSF   
+!=======================================================================  
+   FUNCTION Quaternion_Conjugate(q)
+
+      ! This function computes the conjugate of a quaternion, q
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 6
    
+   TYPE(Quaternion), INTENT(IN)    :: q     
+   
+   TYPE(Quaternion)                :: Quaternion_Conjugate
+   
+      
+   Quaternion_Conjugate%q0 =  q%q0 
+   Quaternion_Conjugate%v  = -q%v
+      
+   END FUNCTION Quaternion_Conjugate   
+!=======================================================================  
+   FUNCTION Quaternion_Norm(q)
+
+      ! This function computes the 2-norm of a quaternion, q
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 5
+   
+   TYPE(Quaternion), INTENT(IN)    :: q     
+   
+   REAL(ReKi)                      :: Quaternion_Norm
+   
+      
+   Quaternion_Norm = sqrt( q%q0**2 + sum(q%v**2) )
+   
+   
+   END FUNCTION Quaternion_Norm   
+!=======================================================================  
+   FUNCTION Quaternion_Power(q,alpha)
+
+      ! This function computes the quaternion, q, raised to an arbitrary
+      ! real exponent, alpha.
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 7-8
+   
+   TYPE(Quaternion), INTENT(IN)    :: q     
+   REAL(ReKi)      , INTENT(IN)    :: alpha
+   
+   TYPE(Quaternion)                :: Quaternion_Power
+   
+   
+      ! local variables
+   REAL(ReKi)                      :: greek   ! the product of alpha and theta
+   REAL(ReKi)                      :: n(3)
+   REAL(ReKi)                      :: q_norm
+   REAL(ReKi)                      :: q_norm_power
+   REAL(ReKi)                      :: theta
+      
+   
+   q_norm       = Quaternion_Norm( q )     
+   theta        = acos( q%q0 / q_norm )
+   n            = q%v / TwoNorm(q%v)
+   
+   greek        = alpha * theta
+   q_norm_power = q_norm ** alpha
+   
+   Quaternion_Power%q0 =  q_norm_power * cos( greek )
+   Quaternion_Power%v  =  q_norm_power * sin( greek ) * n
+      
+   END FUNCTION Quaternion_Power   
+!=======================================================================  
+   FUNCTION Quaternion_Product(p, q)
+
+      ! This function computes the product of two quaternions, p and q
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 4
+   
+   TYPE(Quaternion), INTENT(IN)    :: p      
+   TYPE(Quaternion), INTENT(IN)    :: q     
+   
+   TYPE(Quaternion)                :: Quaternion_Product
+   
+      
+   Quaternion_Product%q0 = p%q0 * q%q0 - DOT_PRODUCT(p%v, q%v)
+   Quaternion_Product%v  = p%q0*q%v + q%q0*p%v + CROSS_PRODUCT( p%v, q%v ) 
+   
+   
+   END FUNCTION Quaternion_Product   
+!=======================================================================  
+   FUNCTION Quaternion_to_DCM(q)
+
+      ! This function converts a quaternion to an equivalent direction cosine matrix
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 9-17
+   
+   TYPE(Quaternion), INTENT(IN)    :: q     
+   
+   REAL(ReKi)                      :: Quaternion_to_DCM (3,3)
+   
+      ! local variables (products of quaternion terms)
+   REAL(ReKi)                      :: q0q0, q0q1, q0q2, q0q3
+   REAL(ReKi)                      :: q1q1, q1q2, q1q3 
+   REAL(ReKi)                      :: q2q2, q2q3
+   REAL(ReKi)                      :: q3q3
+   
+   q0q0 = q%q0**2
+   q0q1 = q%q0      * q%v(1)
+   q0q2 = q%q0      * q%v(2)
+   q0q3 = q%q0      * q%v(3)
+   
+   q1q1 = q%v(1)**2
+   q1q2 = q%v(1)    * q%v(2)
+   q1q3 = q%v(1)    * q%v(3)
+
+   q2q2 = q%v(2)**2
+   q2q3 = q%v(2)    * q%v(3)
+   
+   q3q3 = q%v(2)**2
+   
+   
+   Quaternion_to_DCM(1,1) =          q0q0 +          q1q1 - q2q2 - q3q3  ! Eq.  9
+   Quaternion_to_DCM(1,2) = 2.0_ReKi*q1q2 + 2.0_ReKi*q0q3                ! Eq. 10
+   Quaternion_to_DCM(1,3) = 2.0_ReKi*q1q3 + 2.0_ReKi*q0q2                ! Eq. 11
+
+   Quaternion_to_DCM(2,1) = 2.0_ReKi*q1q2 - 2.0_ReKi*q0q3                ! Eq. 12
+   Quaternion_to_DCM(2,2) =          q0q0 -          q1q1 + q2q2 - q3q3  ! Eq. 13
+   Quaternion_to_DCM(2,3) = 2.0_ReKi*q2q3 +          q0q1                ! Eq. 14
+   
+   
+   Quaternion_to_DCM(3,1) = 2.0_ReKi*q1q3 +          q0q2                ! Eq. 15
+   Quaternion_to_DCM(3,2) = 2.0_ReKi*q2q3 -          q0q1                ! Eq. 16 
+   Quaternion_to_DCM(3,3) =          q0q0 -          q1q1 - q2q2 + q3q3  ! Eq. 17
+   
+   
+   END FUNCTION Quaternion_to_DCM   
+!=======================================================================  
+   FUNCTION DCM_to_Quaternion(DCM)
+
+      ! This function converts a direction cosine matrix to an equivalent quaternion 
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 18-21
+   
+   REAL(ReKi)      , INTENT(IN)    :: DCM (3,3)          ! Direction cosine matrix
+   TYPE(Quaternion)                :: DCM_to_Quaternion        
+   
+         
+   DCM_to_Quaternion%q0   =      0.5_ReKi * sqrt( 1.0_ReKi + DCM(1,1) + DCM(2,2) + DCM(3,3) )                         ! Eq. 18
+   DCM_to_Quaternion%v(1) = sign(0.5_ReKi * sqrt( 1.0_ReKi + DCM(1,1) - DCM(2,2) - DCM(3,3) ) , DCM(2,3) - DCM(3,2) ) ! Eq. 19
+   DCM_to_Quaternion%v(2) = sign(0.5_ReKi * sqrt( 1.0_ReKi - DCM(1,1) + DCM(2,2) - DCM(3,3) ) , DCM(3,1) - DCM(1,3) ) ! Eq. 20
+   DCM_to_Quaternion%v(3) = sign(0.5_ReKi * sqrt( 1.0_ReKi - DCM(1,1) - DCM(2,2) + DCM(3,3) ) , DCM(1,2) - DCM(2,1) ) ! Eq. 21
+
+   
+   
+   END FUNCTION DCM_to_Quaternion
 !=======================================================================         
    SUBROUTINE RegCubicSplineInit ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 

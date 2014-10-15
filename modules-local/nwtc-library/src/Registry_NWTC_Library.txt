@@ -35,6 +35,9 @@ usefrom     ^               ^            IntKi                 FileIndx  {:}
 usefrom     ^               ^            CHARACTER(1024)       FileList  {:}
 usefrom     ^               ^            CHARACTER(512)        Lines     {:}
 
+usefrom   NWTC_Library    Quaternion     ReKi                  q0
+usefrom     ^               ^            ReKi                  v  {3}
+
 #BJJ: the following two types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
 usefrom   NWTC_Library    MapType        IntKi                 OtherMesh_Element
 usefrom     ^               ^            ReKi                  distance           -
