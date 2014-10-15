@@ -26,9 +26,9 @@ ifeq ($(OS),Windows_NT)
    REGISTRY = Registry
 else
 #   LIB_DIR = $(HOME)/PC/CAEtools/Miscellaneous/NWTC_Library/trunk/source
-   LIB_DIR    = /Users/qwang2/Desktop/BeamDyn/SVN/BJonkman/Source/dependencies/NWTC_Library/
-   REGISTRY   = /Users/qwang2/Desktop/BeamDyn/SVN/BJonkman/Source/dependencies/registry.exe
-   NETLIB_DIR = /Users/qwang2/Desktop/BeamDyn/SVN/BJonkman/Source/dependencies/NetLib/
+#   LIB_DIR    = /Users/qwang2/Desktop/BeamDyn/SVN/BJonkman/Source/dependencies/NWTC_Library/
+#   REGISTRY   = /Users/qwang2/Desktop/BeamDyn/SVN/BJonkman/Source/dependencies/registry.exe
+#   NETLIB_DIR = /Users/qwang2/Desktop/BeamDyn/SVN/BJonkman/Source/dependencies/NetLib/
    LIB_DIR    = /Users/mspragu2/SVN/BJonkman/Source/dependencies/NWTC_Library/
    REGISTRY   = /Users/mspragu2/SVN/BJonkman/Source/dependencies/registry.exe
    NETLIB_DIR = /Users/mspragu2/SVN/BJonkman/Source/dependencies/NetLib/
