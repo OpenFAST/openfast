@@ -104,6 +104,9 @@ INCLUDE 'DynamicSolution_AM2.f90'
 INCLUDE 'BeamDyn_AM2.f90'
 INCLUDE 'BeamDyn_BoundaryAM2.f90'
 INCLUDE 'CrvCompose_temp.f90'
+INCLUDE 'CrvCompose_temp2.f90'
+INCLUDE 'CrvCompose_Check.f90'
+INCLUDE 'RescaleCheck.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -669,19 +672,19 @@ INCLUDE 'CrvCompose_temp.f90'
    IF(p%analysis_type == 2) THEN
 !       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       DO i=2,p%node_total
-           temp_id = (i-1)*6
-           temp_pp(:) = 0.0D0
-           temp_qq(:) = 0.0D0
-           temp_rr(:) = 0.0D0
-           DO j=1,3
-               temp_pp(j) = x%q(temp_id+3+j)
-           ENDDO
-           CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
-           DO j=1,3
-               x%q(temp_id+3+j) = temp_rr(j)
-           ENDDO
-       ENDDO
+!       DO i=2,p%node_total
+!           temp_id = (i-1)*6
+!           temp_pp(:) = 0.0D0
+!           temp_qq(:) = 0.0D0
+!           temp_rr(:) = 0.0D0
+!           DO j=1,3
+!               temp_pp(j) = x%q(temp_id+3+j)
+!           ENDDO
+!           CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+!           DO j=1,3
+!               x%q(temp_id+3+j) = temp_rr(j)
+!           ENDDO
+!       ENDDO
    ELSEIF(p%analysis_type == 1) THEN
        CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 DO i=5,0,-1            
