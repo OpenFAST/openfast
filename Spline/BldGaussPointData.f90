@@ -62,7 +62,7 @@
    ENDDO
    rot_temp = 0.0D0
    rot0_temp = 0.0D0
-   CALL CrvCompose(rot_temp,rotu_temp,rrr,0)
+   CALL CrvCompose_temp(rot_temp,rotu_temp,rrr,0)
    DO i=1,3
        uuu(i+3) = rot_temp(i)
        rot0_temp(i) = uu0(i+3)
@@ -70,7 +70,7 @@
 
    cc = 0.0D0
    RR0 = 0.0D0
-   CALL CrvCompose(cc,rot_temp,rot0_temp,0)
+   CALL CrvCompose_temp(cc,rot_temp,rot0_temp,0)
    CALL CrvMatrixR(cc,RR0)
 
    tempR6 = 0.0D0
