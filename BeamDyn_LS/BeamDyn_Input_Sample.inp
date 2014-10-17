@@ -2,7 +2,7 @@
 Sample
 ---------------------- SIMULATION CONTROL --------------------------------------
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
-1         analysis_type  - 0: Rigid Body analysis; 1: Static analysis; 2: Dynamic analysis
+2         analysis_type  - 0: Rigid Body analysis; 1: Static analysis; 2: Dynamic analysis
 ---------------------- GEOMETRY PARAMETER --------------------------------------
 1    member_total    - Total number of member (-)
 3    kp_total        - Total number of key point (-)

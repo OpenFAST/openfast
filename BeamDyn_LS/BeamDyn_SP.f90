@@ -100,6 +100,7 @@ INCLUDE 'DynamicSolution_AM2.f90'
 INCLUDE 'BeamDyn_AM2.f90'
 
 INCLUDE 'ComputeIniNodalCrvLS.f90'
+INCLUDE 'ComputeIniGPLS.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -394,15 +395,27 @@ WRITE(*,*) "node_total = ",p%node_total
        ENDDO
    ENDDO
 
-!   DO i=1,p%ngp*p%elem_total+2
-!       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
-!                              ,INode   = i            &
-!                              ,Pos     = temp_L2(:,i) &
-!                              ,ErrStat = ErrStat      &
-!                              ,ErrMess = ErrMsg       )
-!   ENDDO
+   CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
+   temp_L2(:,:) = 0.0D0
 
-WRITE(*,*) "TEST1"
+   DO i=1,p%ngp
+       CALL ComputeIniGPLS(p%uuN0(:,1),p%node_elem,i,temp_POS)
+       temp_id = i+1
+       temp_L2(1:3,temp_id) = temp_POS(1:3)
+   ENDDO
+   temp_L2(1:3,1) = p%uuN0(1:3,1)
+   temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(p%dof_total-5:p%dof_total-3,1)
+DO i=1,18
+WRITE(*,*) "GP: ", temp_L2(:,i)
+ENDDO
+   DO i=1,p%ngp*p%elem_total+2
+       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                              ,INode   = i            &
+                              ,Pos     = temp_L2(:,i) &
+                              ,ErrStat = ErrStat      &
+                              ,ErrMess = ErrMsg       )
+   ENDDO
+
    CALL MeshCommit ( Mesh    = u%RootMotion    &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
