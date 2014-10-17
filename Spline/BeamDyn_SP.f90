@@ -103,10 +103,13 @@ INCLUDE 'GenerateDynamicElement_AM2.f90'
 INCLUDE 'DynamicSolution_AM2.f90'
 INCLUDE 'BeamDyn_AM2.f90'
 INCLUDE 'BeamDyn_BoundaryAM2.f90'
+<<<<<<< HEAD
 INCLUDE 'CrvCompose_temp.f90'
 INCLUDE 'CrvCompose_temp2.f90'
 INCLUDE 'CrvCompose_Check.f90'
 INCLUDE 'RescaleCheck.f90'
+=======
+>>>>>>> parent of 62c6148... 15OCT14
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
