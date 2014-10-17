@@ -36,7 +36,7 @@
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: Eref
    REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
-   INTEGER(IntKi)                  :: indx(dof_total-12)
+   INTEGER(IntKi)                  :: indx(dof_total*2-12)
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: i
    INTEGER(IntKi)                  :: j
@@ -79,9 +79,9 @@ WRITE(*,*) "niter = ",i
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
-DO j=1,24
-WRITE(*,*) "sol_temp(j)",j,sol_temp(j)
-ENDDO
+!DO j=1,24
+!WRITE(*,*) "sol_temp(j)",j,sol_temp(j)
+!ENDDO
 !STOP
        temp = Norm(feqv)
        sol(:) = 0.0D0
