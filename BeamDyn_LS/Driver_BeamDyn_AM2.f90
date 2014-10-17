@@ -186,10 +186,10 @@ PROGRAM MAIN
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
-
+      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global   , BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
+WRITE(*,*) "Time Step: ", n_t_global
 
 !     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
 !                             BD_ConstraintState, &
@@ -285,7 +285,7 @@ END PROGRAM MAIN
 
 
 !SUBROUTINE BD_InputSolve( u, y, p, ErrStat, ErrMsg)
-SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
+SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
  
    USE BeamDyn_SP
    USE BeamDyn_Types
@@ -294,6 +294,7 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
 
    REAL(DbKi),                     INTENT(IN   ) :: t
    TYPE(BD_InputType),           INTENT(INOUT) :: u
+   TYPE(BD_ParameterType),           INTENT(IN) :: p
    REAL(DbKi),                     INTENT(INOUT) :: ut
 
 
@@ -325,23 +326,32 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    u%RootMotion%TranslationAcc(:,:)   = 0.0D0
 
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
-   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
-   CALL CrvMatrixR(temp_rr,temp_R)
-   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
+!   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+!   CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+!   CALL CrvMatrixR(temp_rr,temp_R)
+DO i=1,3
+   u%RootMotion%Orientation(i,i,1) = 1.0
+ENDDO
 
-   u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
+!   u%RootMotion%RotationVel(:,:) = 0.0D0
+!   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
 
    u%RootMotion%RotationAcc(:,:) = 0.0D0
 
    ! Point mesh: PointLoad
-   u%PointLoad%Force(:,:)  = 0.0D0
-   u%PointLoad%Moment(:,:) = 0.0D0
+!   u%PointLoad%Force(:,:)  = 0.0D0
+!   u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad
    u%DistrLoad%Force(:,:)  = 0.0D0
    u%DistrLoad%Moment(:,:) = 0.0D0
+   
+   ! LINE2 mesh: DistrLoad
+   DO i = 1, p%ngp*p%elem_total+2
+       u%DistrLoad%Force(3,i)  = 1.00D+01!*sin(t)
+ !      u%DistrLoad%Force(2,i)  = 1.0D+03
+!       u%DistrLoad%Moment(:,i) = 0.0D0
+   ENDDO   
 
    ut = t
 
