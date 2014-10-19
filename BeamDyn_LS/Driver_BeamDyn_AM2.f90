@@ -98,7 +98,7 @@ PROGRAM MAIN
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 5.0D-04
+   dt_global = 1.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -348,7 +348,7 @@ ENDDO
    
    ! LINE2 mesh: DistrLoad
    DO i = 1, p%ngp*p%elem_total+2
-       u%DistrLoad%Force(3,i)  = 1.00D+01!*sin(t)
+       u%DistrLoad%Force(3,i)  = 1.00D-01!*sin(t)
  !      u%DistrLoad%Force(2,i)  = 1.0D+03
 !       u%DistrLoad%Moment(:,i) = 0.0D0
    ENDDO   
