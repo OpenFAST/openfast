@@ -53,10 +53,7 @@ state-space form to support its coupling within the
 modular framework of the FAST wind turbine
 computer-aided-engineering (CAE) tool. Different time integration
 schemes (implicit and explicit) are implemented and examined for wind
-turbine analysis.  Numerical examples and discussion on the efficiency and
-accuracy of time and space discretization will be presented in the final
-paper. A validation example of a realistic wind turbine blade will also be
-presented.}     
+turbine analysis.  Numerical examples are presented to show the capability of this new beam solver. A validation example of a realistic wind turbine blade CX-100 is also presented. Some practical procedures on modeling wind turbines are discussed.}     
 \end{abstract}
 
 \section{Introduction} Wind power installations in the U.S. have exceeded 60
@@ -184,7 +181,7 @@ $\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and
 curvatures, respectively. $\underline{\omega}$ is the angular velocity
 vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
 $\underline{\omega} =
-axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}})$. The 1D
+axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}}^T)$. The 1D
 strain measures are defined as
 \begin{equation}
     \label{1DStrain}
@@ -195,12 +192,11 @@ strain measures are defined as
     =
     \begin{Bmatrix}
         \vec{x}^\prime_0 + \vec{u}^\prime - (\tens{R} ~\tens{R}_0) \bar{\imath}_1 \\
-        \vec{k} + \tens{R}~ \vec{k}_i
+        \vec{k}
     \end{Bmatrix}
 \end{equation}
-where $\vec{k} = \text{axial} (\tens{R}^\prime \tens{R}^T)$ is the sectional
-curvature vector resolved in the inertial basis, $\vec{k}_i$ is the
-corresponding initial curvature vector, and $\bar{\imath}_1$ is the unit
+where $\vec{k} = \text{axial} [(\tens{R R_0})^\prime (\tens{R R_0})^T]$ is the sectional
+curvature vector resolved in the inertial basis and $\bar{\imath}_1$ is the unit
 vector along $x_1$ direction in the inertial basis. It is noted that the
 three sets of equations, including equations of motion
 Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2}, constitutive equations
@@ -383,16 +379,196 @@ Eq.~\eqref{StateSpaceGov-1} and \eqref{StateSpaceGov-2}, can be solved with
 any number of first-order ordinary differential equations (ODE) integrators
 for first-order-in-time systems. 
 
- 
- \section{Content of Full Paper} In the full paper, we will provide more
-details of the theoretical derivations along with various numerical
-examples. Different time integration schemes, including explicit and
-implicit methods, will be implemented and examined in the numerical studies.
-Moreover, we will briefly introduce the format of the current code, which is
-in accordance to the FAST modularization framework. Finally,  BeamDyn
-will be validated against experimental data for a realistic wind turbine
-blade.
+\section{Numerical Examples}
 
+\subsection{Initially twisted/curved beams}
+
+A initial twisted beam is examined first. A straight beam ($k_2=k_3=0$) with an initial twist ($k_1\neq 0$) is shown in Figure~\ref{Twist1}. The beam is linearly twisted from 0 degree twist at the root to 90 degree at the tip, and the twist is in the positive $\theta_1$ direction.
+\begin{figure}
+\centering
+\includegraphics[width=5.0in]{\directory Twist1.eps}
+\caption{Sketch of a initially twisted beam} 
+\label{Twist1}
+\end{figure}
+ Table~\ref{E1Property} shows the material properties for A36 steel, the geometry, and force applied to the beam. The height and base values reported in the table are the height and base of the rectangular cross-section. 
+ \begin{table}
+\caption{\label{E1Property} Properties for twisted beam}
+\begin{center}
+    \begin{tabular}{| l | l |}
+    	\hline
+    	Property               & Value   \\ \hline
+    	Elastic Modulus                      & 200 GPa \\ \hline
+    	Shear Modulus                      & 79.3 GPa \\ \hline
+    	Height                      & 0.5 m   \\ \hline
+    	Base                      & 0.25 m  \\ \hline
+    	Length                      & 10 m    \\ \hline
+    	Force                      & 4000 kN \\ \hline
+    \end{tabular}
+\end{center}
+\end{table}
+The beam discretized using one 20\textsuperscript{th}-order LSFE. The results for the twisted beam are shown in Table~\ref{E1u} and compared to the baseline results obtained from a solid ANSYS model. It can be seen that the error between the BeamDyn simulation and the ANSYS baseline solution are very close. 
+\begin{table}
+\caption{\label{E1u} Comparison of tip displacements of a initially twisted beam} 
+\begin{center} 
+    \begin{tabular}{| l | l | l | l | l | l | l |}
+    	\hline
+    	        & $u_1$ (m) & $u_2$ (m) & $u_3$ (m)  \\ \hline
+    	BeamDyn  & -1.132727     & -1.715123       & -3.578671      \\  \hline
+    	ANSYS   & -1.134192     & -1.714467      & -3.584232     \\ \hline
+    	Percent Error   & 0.129     & 0.038      & 0.155     \\ \hline
+    \end{tabular}
+\end{center}
+\end{table} 
+
+Next a beam with initial curvature is examined. It is clear that the initial curvature plays a major role in the distribution of the elastic forces within the beam. As such it is very important to ensure that BeamDyn is capable of modeling this effect properly. A benchmark problem for a curved beam is the case proposed by Bathe \cite{Bathe1979}, and is used here as a verification case. Figure~\ref{E1Curved} shows the configuration of the cantilevered curved beam. The beam is in the $x_1$, $x_2$ plane, and in the positive $x_1$ direction and negative $x_2$ direction. A force of 600 lbs is applied in the positive $x_3$ direction. The beam is defined by the 45 degree arc of a 100 inch radius centered at 100 inches in the negative $x_2$ direction.  The geometry of the cross section for the curved beam is square, and the material properties can be found in \cite{Bathe1979}. 
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory E1Curved.eps}
+\caption{Sketch of a initially curveded beam} 
+\label{E1Curved}
+\end{figure}
+The beam is discretized by one 20\textsuperscript{th}-order LSFE. The results for this static analysis are shown in Table~\ref{E1CurvedDisp} and compared to the results published in Bathe \cite{Bathe1979}.
+
+\begin{table}
+\caption{\label{E1CurvedDisp} Comparison of tip displacements of a initially curved beam } 
+\begin{center}
+    \begin{tabular}{| l | l | l | l | l | l | l |}
+    	\hline
+    	        & $u_1$ (inch) & $u_2$ (inch) & $u_3$ (inch)  \\ \hline
+    	BeamDyn (one-LSFE) & -23.6     & 13.4       & 53.3      \\  \hline
+    	Published   & -23.5     & 13.4       & 53.4     \\ \hline
+    \end{tabular}
+\end{center}
+\end{table} 
+
+It can be seen from these results that the simulations from BeamDyn for a initially curved beam match quite well with the published results. Through these two numerical cases, it can therefore be said that BeamDyn is capable of modeling beams with initial twist and curvatures.
+
+\subsection{Static analysis of CX-100 blade}
+The main utility of BeamDyn will be to analyze anisotropic wind turbine blades, therefore the CX-100 will be analyzed and serve as a validation case. The CX-100 was chosen because it is a well characterized blade with a wealth of publicly available data regarding the construction and material properties of the blade. The CX-100 is a 9 m blade designed by Sandia National Laboratory \cite{paquette2006modeling}.
+
+The VABS cross-sectional properties for this beam were provided by Dr.\ D.J.\ Luscher of Los Alamos National Laboratory. Dr.\ Luscher conducted a similar study with a finite element code based on GEBT theory, called NLBeam \cite{Luscher:2013}. The cross-sectional properties were provided at 40 points along the beam. A typical stiffness matrix is shown at 2.2 m along the span of the blade, and is given by
+
+\begin{align*}
+C =10^3 \times \begin{bmatrix}
+	193,000 & -75.4   & 12.2   & -75.2  & -1970    & -3500    \\
+	-75.4  & 19,500 & 4,760   & 62.6  & 67.3    & 11.3    \\
+	12.2  & 4,760   & 7,210 & -450  & 17.0    & 2.68    \\
+	-75.2  & 62.6   & -450   & 518 & 1.66    & -1.11    \\
+	-1,970  & 67.3   & 17.0   & 1.66  & 2,280 & -879    \\
+	-3,500  & 11.6   & 2.68   & -1.11  & -875    & 4,240
+\end{bmatrix}
+\end{align*}
+
+
+Figure~\ref{CX100Sketch} \cite{paquette2006modeling} shows the different material lay-ups for the CX-100 blade. Each color represents a section with unique material properties. This figure also shows the geometry of the blade. Figure~\ref{CX100Setup} \cite{paquette2006modeling} shows the test configuration for the static test performed at the National Wind Technology Center (NWTC) in Boulder, Colorado. The whiffle-tree configuration applies the load at 3.00 m, 5.81 m, and 7.26 m from the root of the blade to achieve a maximum root moment of 128.6 kN m. The loads and positions are given in Table~\ref{CX100Load} below.
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory CX100Sketch.eps}
+\caption{Material layup and geometry of CX-100 wind turbine blade} 
+\label{CX100Sketch}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=5.0in]{\directory CX100Setup.eps}
+\caption{Test configuration for static pull test conducted at the NWTC \cite{paquette2006modeling}} 
+\label{CX100Setup}
+\end{figure}
+
+\begin{table} 
+\caption{\label{CX100Load}Positions and applied loads in CX-100 static loads test at NWTC  } 
+\begin{center}
+    \begin{tabular}{| l | l |l |}
+    	\hline
+    	 Saddle \# &     Position (m) & Applied load(kN)  \\ \hline
+    1&	3.00 & 16.9         \\  \hline
+    2&	5.81   & 5.47         \\ \hline
+    3&	    	7.26   & 5.59         \\ \hline
+    \end{tabular}
+\end{center}
+\end{table}
+
+The displacements, $u_3$, at each of the load points were tracked for the experiment and are given in Table~\ref{CX100Results}. The BeamDyn simulation was completed using four 7\textsuperscript{th}-order LSFEs and the results are also given in Table~\ref{CX100Results}.
+
+\begin{table}
+\caption{\label{CX100Results}Experimental and BeamDyn simulation results for CX-100 static test  } 
+\begin{center}
+    \begin{tabular}{| l | l | l | l |}
+    	\hline
+    	             & $u_3$ at saddle \#1 (m) & $u_3$ at saddle \#2 (m) & $u_3$ at saddle \#3 (m) \\ \hline
+    	Experimental & 0.083530             & 0.381996               & 0.632460             \\ \hline
+    	BeamDyn      & 0.072056               & 0.381074                & 0.698850           \\ \hline
+    	    	Percent error      &        13.74        & 0.24                & 10.5           \\ \hline
+    \end{tabular}
+\end{center}
+\end{table} 
+The displacements are plotted in Figure~\ref{CX100Disp}. The maximum tip displacement for the experimental data is 1.03 m, while the maximum tip displacement for the BeamDyn simulation in 1.12 m. This discrepancy is explained in \cite{Luscher:2013} as a difference in the rigidity of the boundary condition when calculating the 2-D sectional properties with VABS. It stands to reason that since we are using the same sectional properties the same errors would be evident, and we experience the same overall effect as the results published in \cite{Luscher:2013}. It should also be noted that the tip displacement was not measured in the experiment but was extrapolated based on the recoded data at 3.00 m, 5.81 m, and 7.26 m. Overall the results are in good agreement.
+
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory CX100Disp.eps}
+\caption{Displacement $u_3$ along the length of the blade for experimental data and BeamDyn simulation} 
+\label{CX100Disp}
+\end{figure}
+
+Next a convergence study of the tip displacements is completed for the CX-100 blade in BeamDyn. Figure~\ref{CX100conv3} shows the error as a function of the number of nodes. The percentage error is calculated against the experimental data in Table~\ref{CX100Results}. It can be seen that the convergence rate is not exponential as desired. This is likely a function of the sharp gradients in the sectional constants. Next we mesh this blade so the element boundaries coincide with the locations where the sectional properties are defined. It was stated before that the cross-sectional properties for the CX-100 blade are given at 40 locations along the length of the blade. In order to have an element coincide with each sectional property, we must use thirty-nine LSFEs. Just as we have for the previous simulation, with two-LSFEs, the error in this simulation is found by assigning the benchmark solution as a highly refined solution in BeamDyn. Figure~\ref{CX100elem2} shows the results of this simulation. Each circle on the plot indicates an additional order of the LSFE, i.e.\ the maximum LSFE order is six. It can be seen that we have achieved spectral convergence with this simulation, albeit with many elements. It can therefore be stated that for composite beams with sharp gradients in the cross-sectional stiffness matrix the spectral convergence is compromised. It should be noted here that while the spectral convergence suffers as a result of sharp gradients in the cross-sectional stiffness matrix the simulations still return reasonable results, so the utility of BeamDyn is not compromised in this sense.
+  
+
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory CX100conv3.eps}
+\caption{Error in $u_3$ as a function of the number of nodes} 
+\label{CX100conv3}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory CX100elem2.eps}
+\caption{Error in $u_3$ compared to a highly refined solution in BeamDyn as a function of the number of nodes for thirty-nine 1\textsuperscript{st} to 6\textsuperscript{th}-order LSFEs coincident with sectional properties} 
+\label{CX100elem2}
+\end{figure}
+
+\subsection{Dynamics of CX-100 blade}
+The final test case is to illustrate that BeamDyn is capable of accurately analyzing dynamic movement. Here the CX-100 blade is given a constant rotational velocity and a gravity force load is applied. A boundary condition is specified where the blade is allowed to rotate about the node located at its root. This test case is analyzed in both BeamDyn and Dymore. The beam is discretized by one 8\textsuperscript{th}-order element in BeamDyn, and forty 3\textsuperscript{rd}-order elements in Dymore. The angular velocity of the blade is $\frac{\pi}{3}$ rad/s. The time integrator for the dynamic case is a Runge-Kutta fourth-order method, and the time step size is $5 \times 10^{-5}$ s. The time integrator for Dymore is the generalized-alpha time integrator, with a time step size of $1 \times 10^{-3}$ s. The total simulation time in both BeamDyn and Dymore is 6 s.
+
+Figure~\ref{E3U} shows the time history for all displacements and rotations given by the BeamDyn and Dymore. For the most part the displacements are in good agreement, and the root mean square error for $u_3$ is 0.0335 which is given by
+\begin{equation}
+\varepsilon_{RMS}=\sqrt{\frac{\sum_{k=0}^{n_{max}}[u_3^k-u_b(t^k)]^2}{\sum_{k=0}^{n_{max}}[u_b(t^k)]^2}}
+\end{equation} 
+where, $u_b(t)$ is the benchmark solution and is given by the Dymore solution.
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \qquad
+\subfloat[$u_2$]{\label{E3U:u2}\includegraphics[width=3.0in]{\directory  E3Tipu2.eps}} \\
+\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \qquad
+\subfloat[$p_1$]{\label{E3U:p1}\includegraphics[width=3.0 in]{\directory  E3Tipp1.eps}} \\
+\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \qquad
+\subfloat[$p_3$]{\label{E3U:p3}\includegraphics[width=3.0 in]{\directory  E3Tipp3.eps}} \\
+\end{tabular}
+\caption{Tip displacement and rotation histories of a CX-100 blade rotating at a constant speen}
+\label{E3U}
+\end{figure} 
+Figure~\ref{E3RootM2} shows the root force for the no gravity load applied and gravity load applied cases. It can be seen that the root forces are higher for the case where the gravity force is applied, as expected.
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory E3RootM2.eps}
+\caption{Root force for dynamic simulation of BeamDyn with gravity load and without gravity load} 
+\label{E3RootM2}
+\end{figure}
+
+ \section{Conclusion}
+  In this paper, we reported the latest development of BeamDyn, a beam solver in FAST modularization framework. The geometrically exact beam theory has been reformulated into the first-order state-space form so first-order time integrators, as required by FAST framework, can be applied to discretize the problem in the time domain. Numerical examples are provided to validate the capability of BeamDyn against initially curved/twisted beams. A validation example is also presented where the numerical results are compared with experimental data. Good agreement can be observed. Finally, we studied the dynamic behavior of this realistic CX-100 wind turbine blade by prescribing a rotation at its root. Different time integrators are examined.
+  
+\section*{Acknowledgments} 
+
+This work was supported by the U.S. Department of Energy under Contract No.\
+DE-AC36-08-GO28308 with the National Renewable Energy Laboratory. Support
+was partially provided through a Laboratory Directed Research and Development grant
+\textit{High-Fidelity Computational Modeling of Wind-Turbine Structural
+Dynamics}.
+  
+  
 
 \bibliographystyle{aiaa}
 \bibliography{references}
