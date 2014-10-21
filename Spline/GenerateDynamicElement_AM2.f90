@@ -146,7 +146,7 @@
        CALL ElemNodalDispGL(uuN,node_elem,dof_node,nelem,Nuuu)
        CALL ElemNodalDispGL(uuN00,node_elem,dof_node,nelem,Nuuu0)
 !DO j=1,18
-WRITE(*,*) "u(j) = ",5,Nuuu(5)
+!WRITE(*,*) "u(j) = ",5,Nuuu(5)
 !ENDDO
        temp_id = (nelem-1)*ngp
        DO j=1,ngp

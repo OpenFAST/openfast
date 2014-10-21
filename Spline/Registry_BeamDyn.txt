@@ -35,6 +35,7 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
 typedef BeamDyn/BD OtherStateType ReKi DummyOtherState  - - - "A variable, replace if you have Other States"
+typedef BeamDyn/BD OtherStateType IntKi Rescale_counter  - - - "A variable, replace if you have Other States"
 
 # ..... Parameters
 # ................................................................................................................

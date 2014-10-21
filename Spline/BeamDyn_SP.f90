@@ -102,14 +102,12 @@ INCLUDE 'ElementMatrix_AM2.f90'
 INCLUDE 'GenerateDynamicElement_AM2.f90'
 INCLUDE 'DynamicSolution_AM2.f90'
 INCLUDE 'BeamDyn_AM2.f90'
+INCLUDE 'BeamDyn_BoundaryPre.f90'
 INCLUDE 'BeamDyn_BoundaryAM2.f90'
-<<<<<<< HEAD
 INCLUDE 'CrvCompose_temp.f90'
 INCLUDE 'CrvCompose_temp2.f90'
 INCLUDE 'CrvCompose_Check.f90'
 INCLUDE 'RescaleCheck.f90'
-=======
->>>>>>> parent of 62c6148... 15OCT14
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -364,10 +362,10 @@ INCLUDE 'RescaleCheck.f90'
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
-   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
-   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
+!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
+!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
 !   STOP
    ! Define parameters here:
 
@@ -587,6 +585,7 @@ INCLUDE 'RescaleCheck.f90'
    y%BldMotion%RemapFlag = .True.
    u%RootMotion%RemapFlag = .True.
 
+   OtherState%Rescale_counter = 0
 
    END SUBROUTINE BeamDyn_Init
 
