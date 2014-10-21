@@ -64,6 +64,7 @@ IMPLICIT NONE
 ! =========  BD_OtherStateType  =======
   TYPE, PUBLIC :: BD_OtherStateType
     REAL(ReKi)  :: DummyOtherState      ! A variable, replace if you have Other States [-]
+    INTEGER(IntKi)  :: Rescale_counter      ! A variable, replace if you have Other States [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  BD_ParameterType  =======
@@ -747,6 +748,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
+   DstOtherStateData%Rescale_counter = SrcOtherStateData%Rescale_counter
  END SUBROUTINE BD_CopyOtherState
 
  SUBROUTINE BD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -794,11 +796,14 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Re_BufSz   = Re_BufSz   + 1  ! DummyOtherState
+  Int_BufSz  = Int_BufSz  + 1  ! Rescale_counter
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
   IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%DummyOtherState )
   Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%Rescale_counter )
+  Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE BD_PackOtherState
 
  SUBROUTINE BD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -836,6 +841,8 @@ ENDIF
   Int_BufSz  = 0
   OutData%DummyOtherState = ReKiBuf ( Re_Xferred )
   Re_Xferred   = Re_Xferred   + 1
+  OutData%Rescale_counter = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
