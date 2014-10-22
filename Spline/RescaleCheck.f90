@@ -20,7 +20,7 @@
        temp_rr(1:3) = x%q(temp_id+4:temp_id+6)
        temp_norm(i) = Norm(temp_rr)
    ENDDO
-WRITE(*,*) temp_norm
+!WRITE(*,*) temp_norm
    temp_min = MINVAL(temp_norm)
 !   temp_min = temp_norm(1)
    IF(temp_min .GE. 4.0D0) THEN

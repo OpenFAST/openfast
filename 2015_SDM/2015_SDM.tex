@@ -339,7 +339,7 @@ To derive the state-space form of the governing equations,  $\vec{x}(t)$ is intr
     \vec{v}(t)
     \end{Bmatrix} 
 \end{equation}
-It is noted that the second component of $\vec{x}(t)$ is not $\vec{\dot{q}}$ but $\vec{v}$ in that the angular velocity $\vec{\omega}$ cannot be calculated as time derivative of the rotation parameter $\vec{p}$. Substituting the discretized quantities in Eqs.~\eqref{DiscretizedDisp} to \eqref{DiscretizedAcc} into Eq.~\eqref{StateSpaceX} and using the relation
+It is noted that the second component of $\vec{x}(t)$ is not $\vec{\dot{q}}$ but $\vec{v}$ in that the angular velocity $\vec{\omega}$ cannot be calculated as time derivative of the rotation parameter $\vec{p}$. The angular velocity is related to the rotation parameter by the tangent matrix as $\omega = \tens{H}(p) \dot{\vec{p}}$. Substituting the discretized quantities in Eqs.~\eqref{DiscretizedDisp} to \eqref{DiscretizedAcc} into Eq.~\eqref{StateSpaceX} and using the relation
 \begin{equation}
     \label{AccVel}
     \vec{a} = \vec{\dot{v}} = \begin{Bmatrix}
@@ -350,25 +350,29 @@ It is noted that the second component of $\vec{x}(t)$ is not $\vec{\dot{q}}$ but
 The state-space form can be obtained as
 \begin{align}
     \label{StateSpaceGov-1}
-    \dot{\hat{\vec{x}}}(t) &= \mathfrak{f}(\hat{\vec{x}}(t),t) \\
+    \tens{A} ~\dot{\hat{\vec{x}}}(t) &= \mathfrak{f}(\hat{\vec{x}}(t),t) \\
     \label{StateSpaceGov-2}
     \hat{\vec{x}}(0) &= \hat{\vec{x}}_0
 \end{align}
 where
 \begin{align}
     \label{StateSpaceGov-3}
-    \mathfrak{f}(\hat{\vec{x}}(t),t) &= \tens{A}^{-1} (\hat{\vec{x}}(t)) \vec{b}(\hat{\vec{x}}(t),t) \\
-    \label{StateSpaceGov-4}
     \tens{A} (\hat{\vec{x}}(t)) &= \begin{bmatrix}
-    \tens{I} & \tens{0} \\
+    \tens{D} & \tens{0} \\
     \tens{0} & \tens{M}
     \end{bmatrix}  \\
+    \label{StateSpaceGov-4}
+    \tens{D} (\hat{\vec{x}}(t)) &= \int_0^l \tens{N}^T \begin{bmatrix}
+    \tens{I}_3 & \tens{0} \\
+    \tens{0} & \tens{H}
+    \end{bmatrix} 
+    \tens{N}~dx_1 \\
     \label{StateSpaceGov-5}
-    \vec{b}(\hat{\vec{x}}(t),t) &= \begin{Bmatrix}
-    \dot{\hat{\vec{q}}} \\
+    \mathfrak{f}(\hat{\vec{x}}(t),t) &=  \begin{Bmatrix}
+    \int_0^l \tens{N}^T \vec{v}~dx_1 \\
     \vec{F}(\hat{\vec{x}}(t),t)
     \end{Bmatrix} \\
-    \label{StateSpaceGov-6}
+    \label{StateSpaceGov-7}
     \hat{\vec{x}}_0 &= \begin{Bmatrix}
     \hat{\vec{q}}_0 \\
     \hat{\vec{v}}_0
