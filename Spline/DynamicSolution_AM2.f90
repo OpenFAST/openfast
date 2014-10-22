@@ -33,7 +33,7 @@
    REAL(ReKi)                      :: temp
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: Eref
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
    INTEGER(IntKi)                  :: indx(dof_total*2-12)
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: i
