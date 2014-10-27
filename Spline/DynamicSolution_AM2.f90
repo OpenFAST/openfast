@@ -33,7 +33,7 @@
    REAL(ReKi)                      :: temp
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: Eref
-   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-04
+   REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
    INTEGER(IntKi)                  :: indx(dof_total*2-12)
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: i
@@ -70,7 +70,7 @@
        ENDDO
 
        temp = Norm(RHS_LU)
-!WRITE(*,*) "Residual: ", temp
+!WRITE(*,*) i, temp
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 

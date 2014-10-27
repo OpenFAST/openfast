@@ -66,8 +66,8 @@ computer-aided-engineering (CAE) tools that are capable of analyzing wind
 turbine blades in an accurate and efficient manner. Although modern
 computers enable three-dimensional (3D) analysis
 of a fully resolved blade, such analyses are too
-expensive for iterative design. More importantly, modern composite wind
-turbine blades are very well suited to nonlinear beam models, which can
+expensive for iterative design. More importantly, composite wind
+turbine blades are well represented as nonlinear beam models, which can
 capture with high-fidelity the deformation response under realistic
 operating conditions, and in a small fraction of the time required by a
 fully resolved 3D simulation. 
@@ -82,7 +82,7 @@ beams is more complicated than isotropic beams due to the elastic coupling
 effects.  The geometrically exact beam theory (GEBT), first proposed by
 Reissner\cite{Ressiner1973}, is a beam-deformation model capable of
 enabling efficient analysis of highly flexible composite structures.
-GEBT has demonstrated its efficacy in helicopter rotor analysis.
+GEBT has demonstrated its efficacy in helicopter rotor analysis \cite{Hodges:2007}. 
 Simo\cite{Simo1985} and Simo and Vu-Quoc\cite{Simo1986} extended Reissner's
 initial work to include 3D dynamic problems. Jeleni\'c and
 Crisfield\cite{Crisfield1999} derived a finite-element (FE) method that
@@ -92,7 +92,7 @@ implemented this theory for static\cite{Ibrahim1995} and
 dynamic\cite{Ibrahim1998} analysis. Readers are referred to
 Hodges\cite{HodgesBeamBook}, where comprehensive derivations and discussions
 on nonlinear composite-beam theories can be found. Recently, a mixed
-formulation of GEBT along with the numerical implementation was presented by
+ FE formulation of GEBT along with the numerical implementation was presented by
 Yu and Blair\cite{YuGEBT}.  
 
 FAST is a CAE tool developed by the National Renewable Energy Laboratory
@@ -203,7 +203,7 @@ Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2}, constitutive equations
 Eq.~\eqref{ConstitutiveMass} and \eqref{ConstitutiveStiff}, and kinematical
 equations Eq.~\eqref{1DStrain}, provided a full mathematical description of elasticity problems. 
 
-For a displacement-based finite element implementation, there are six
+For a displacement-based finite-element implementation, there are six
 degree-of-freedoms at each node: three displacement components and three
 rotation components. Here, we use $\vec{q}$ to denote the elemental
 displacement array as $\underline{q}^T=\left[
@@ -410,7 +410,7 @@ A initial twisted beam is examined first. A straight beam ($k_2=k_3=0$) with an 
     \end{tabular}
 \end{center}
 \end{table}
-The beam discretized using one 20\textsuperscript{th}-order LSFE. The results for the twisted beam are shown in Table~\ref{E1u} and compared to the baseline results obtained from a solid ANSYS model. It can be seen that the error between the BeamDyn simulation and the ANSYS baseline solution are very close. 
+The beam discretized using one 20\textsuperscript{th}-order LSFE. The results for the twisted beam are shown in Table~\ref{E1u} and compared to the baseline results obtained from a 3D solid ANSYS model. It can be seen that the error between the BeamDyn simulation and the ANSYS baseline solution are very close. 
 \begin{table}
 \caption{\label{E1u} Comparison of tip displacements of a initially twisted beam} 
 \begin{center} 
@@ -424,23 +424,23 @@ The beam discretized using one 20\textsuperscript{th}-order LSFE. The results fo
 \end{center}
 \end{table} 
 
-Next a beam with initial curvature is examined. It is clear that the initial curvature plays a major role in the distribution of the elastic forces within the beam. As such it is very important to ensure that BeamDyn is capable of modeling this effect properly. A benchmark problem for a curved beam is the case proposed by Bathe \cite{Bathe1979}, and is used here as a verification case. Figure~\ref{E1Curved} shows the configuration of the cantilevered curved beam. The beam is in the $x_1$, $x_2$ plane, and in the positive $x_1$ direction and negative $x_2$ direction. A force of 600 lbs is applied in the positive $x_3$ direction. The beam is defined by the 45 degree arc of a 100 inch radius centered at 100 inches in the negative $x_2$ direction.  The geometry of the cross section for the curved beam is square, and the material properties can be found in \cite{Bathe1979}. 
+Next a beam with initial curvature is examined. It is clear that the initial curvature plays a major role in the distribution of the elastic forces within the beam. As such it is very important to ensure that BeamDyn is capable of modeling this effect properly. A benchmark problem for a curved beam is the case proposed by Bathe \cite{Bathe1979}, and is used here for verification. Figure~\ref{E1Curved} shows the configuration of the cantilevered curved beam. The beam is in the $x_1$, $x_2$ plane, and in the positive $x_1$ direction and negative $x_2$ direction. A force of 600 lbs is applied in the positive $x_3$ direction. The beam is defined by the 45 degree arc of a 100 inch radius centered at 100 inches in the negative $x_2$ direction.  The geometry of the cross section for the curved beam is square, and the material properties can be found in \cite{Bathe1979}. 
 \begin{figure}
 \centering
-\includegraphics[width=3.0in]{\directory E1Curved.eps}
+\includegraphics[width=2.5in]{\directory E1Curved.eps}
 \caption{Sketch of a initially curveded beam} 
 \label{E1Curved}
 \end{figure}
-The beam is discretized by one 20\textsuperscript{th}-order LSFE. The results for this static analysis are shown in Table~\ref{E1CurvedDisp} and compared to the results published in Bathe \cite{Bathe1979}.
+The beam is discretized by one 5\textsuperscript{th}-order LSFE. The results for this static analysis are shown in Table~\ref{E1CurvedDisp} and compared to the results published in Bathe \cite{Bathe1979}.
 
 \begin{table}
-\caption{\label{E1CurvedDisp} Comparison of tip displacements of a initially curved beam } 
+\caption{\label{E1CurvedDisp} Comparison of tip displacements of an initially curved beam } 
 \begin{center}
     \begin{tabular}{| l | l | l | l | l | l | l |}
     	\hline
     	        & $u_1$ (inch) & $u_2$ (inch) & $u_3$ (inch)  \\ \hline
-    	BeamDyn (one-LSFE) & -23.6     & 13.4       & 53.3      \\  \hline
-    	Published   & -23.5     & 13.4       & 53.4     \\ \hline
+    	BeamDyn (one-LSFE) & -23.7     & 13.5       & 53.4      \\  \hline
+    	Bathe-Bolourchi \cite{Bathe1979}   & -23.5     & 13.4       & 53.4     \\ \hline
     \end{tabular}
 \end{center}
 \end{table} 
@@ -468,7 +468,7 @@ Figure~\ref{CX100Sketch} \cite{paquette2006modeling} shows the different materia
 \begin{figure}
 \centering
 \includegraphics[width=3.0in]{\directory CX100Sketch.eps}
-\caption{Material layup and geometry of CX-100 wind turbine blade} 
+\caption{Material layup and geometry of CX-100 wind turbine blade\cite{paquette2006modeling}} 
 \label{CX100Sketch}
 \end{figure}
 

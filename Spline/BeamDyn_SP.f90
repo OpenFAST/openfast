@@ -383,7 +383,7 @@ INCLUDE 'RescaleCheck.f90'
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
    x%dqdt = 0.0D0
 
-   p%niter = 20
+   p%niter = 80
 
 ! For AM2, initial Condition
    DO i=1,p%elem_total
