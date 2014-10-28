@@ -29,12 +29,12 @@
 Modular Framework}
 
 
-\author[1]{Qi Wang\thanks{Research Engineer, National Wind Technology Center, AIAA Senior Member. Email: Qi.Wang2@nrel.gov}}
+\author[1]{Qi Wang\thanks{Research Engineer, National Wind Technology Center, AIAA Member. Email: Qi.Wang2@nrel.gov}}
 \author[2]{Nick Johnson\thanks{Graduate Research Assistant, Department of
 Mechanical Engineering.}}
  \author[1]{Michael A. Sprague\thanks{Senior Research Scientist, 
 Computational Science Center.}}
- \author[1]{Jason Jonkman\thanks{Senior Engineer, National Wind Technology Center.}}
+ \author[1]{Jason Jonkman\thanks{Senior Engineer, National Wind Technology Center, AIAA Professional Member.}}
  \affil[1]{National Renewable Energy Laboratory, Golden, CO 80401}
  \affil[2]{Colorado School of Mines, Golden, CO 80401}
  
@@ -59,14 +59,13 @@ turbine analysis.  Numerical examples are presented to show the capability of th
 \section{Introduction} Wind power installations in the U.S. have exceeded 60
 GW, and have become an increasingly important part of the overall energy
 portfolio. In recent years, the size of wind turbines has also increased in
-the quest for economies of scale.  Larger wind turbine blades result in
-structures that are highly flexible.  To ensure the performance and
+the quest for economies of scale.   To ensure the performance and
 reliability of wind turbines, it is crucial to make use of
 computer-aided-engineering (CAE) tools that are capable of analyzing wind
 turbine blades in an accurate and efficient manner. Although modern
 computers enable three-dimensional (3D) analysis
 of a fully resolved blade, such analyses are too
-expensive for iterative design. More importantly, composite wind
+expensive for iterative and probabilistic design. More importantly, composite wind
 turbine blades are well represented as nonlinear beam models, which can
 capture with high-fidelity the deformation response under realistic
 operating conditions, and in a small fraction of the time required by a
@@ -111,7 +110,7 @@ implementation of the geometrically exact beam theory using Legendre
 spectral finite elements is presented. The theory is reformulated in a
 nonlinear state-space form for the purpose of integrating with the FAST
 framework, thereby introducing an optional high-fidelity beam model as an
-alternative to the current beam model. This work builds on previous efforts
+alternative to the current beam model. The first-order time integrators, including the explicit 4th-order Runge-Kutta (RK4) and implicit 2nd-order Adams-Moulton (AM2), are examined and integrated. This work builds on previous efforts
 that showed the implementation GEBT and spatial discretization executed
 using Legendre spectral finite elements
 (LSFEs)\cite{Wang:GEBT2013,Wang:SFE2013,Wang:GEBT2014,Sprague:FAST2014} for
@@ -127,7 +126,7 @@ composite wind turbine blades.
 
 \section{Geometrically Exact Beam Theory}
 
-This section reviews the geometric exact beam theory for completeness of this paper. The content of this section can be found in many other papers and textbooks.
+For completeness, this section briefly reviews the geometric exact beam theory. Further details on the content of this section can be found in many other papers and textbooks.
 Figure~\ref{Kinematics} shows a beam in its initial undeformed
 and deformed states. A reference frame $\mathbf{b}_i$ is introduced along the
 beam axis for the undeformed state; a frame $\mathbf{B}_i$ is introduced
@@ -144,7 +143,7 @@ In this paper, we use matrix notation to denote vectorial or vectorial-like quan
 	\label{GovernGEBT-2}
 	\dot{\underline{g}} + \dot{\tilde{u}} \underline{h} - \underline{M}^\prime + (\tilde{x}_0^\prime + \tilde{u}^\prime)^T \underline{F} &= \underline{m}
 \end{align}
-where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are the beam's sectional forces and moments, respectively; $\vec{u}$ is the 1D displacement of the reference line; $\vec{x}_0$ is the position vector of a point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the distributed force and moment applied to the beam structure.  Notation $(\bullet)^\prime$ indicates a derivative with respect to the beam axis $x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The tilde operator $(\skew{\bullet})$ defines a second-order, skew-symmetric tensor corresponding to the given vector. In the literature, it is also termed as "cross-product matrix". For example,
+where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are the beam's sectional force and moment resultants, respectively; $\vec{u}$ is the 1D displacement of the reference line; $\vec{x}_0$ is the position vector of a point along the beam's reference line; $\vec{f}$ and $\vec{m}$ are the distributed force and moment applied to the beam structure.  Notation $(\bullet)^\prime$ indicates a derivative with respect to the beam axis $x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The tilde operator $(\skew{\bullet})$ defines a second-order, skew-symmetric tensor corresponding to the given vector. In the literature, it is also termed as "cross-product matrix". For example,
 \[
 	\skew{n} = 
 	     		\begin{bmatrix}
@@ -181,8 +180,22 @@ $\underline{\epsilon}$ and $\underline{\kappa}$ are the 1D strains and
 curvatures, respectively. $\underline{\omega}$ is the angular velocity
 vector that is defined by the rotation tensor $\underline{\underline{R}}$ as
 $\underline{\omega} =
-axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}}^T)$. The 1D
-strain measures are defined as
+axial(\dot{\underline{\underline{R}}}~\underline{\underline{R}}^T)$. The axial vector $\vec{a}$ associated with a second-order tensor $\tens{A}$ is denoted $\vec{a}=axial(\tens{A})$ and its components are defined as
+\begin{equation}
+    \label{axial}
+    \vec{a} = axial(\tens{A})=\begin{Bmatrix}
+    a_1 \\
+    a_2 \\
+    a_3
+    \end{Bmatrix}
+    =\frac{1}{2}
+    \begin{Bmatrix}
+    A_{32}-A_{23} \\
+    A_{13}-A_{31} \\
+    A_{21}-A_{12}
+    \end{Bmatrix}
+\end{equation}
+The 1D strain measures are defined as
 \begin{equation}
     \label{1DStrain}
     \begin{Bmatrix}
@@ -195,7 +208,7 @@ strain measures are defined as
         \vec{k}
     \end{Bmatrix}
 \end{equation}
-where $\vec{k} = \text{axial} [(\tens{R R_0})^\prime (\tens{R R_0})^T]$ is the sectional
+where $\vec{k} = axial [(\tens{R R_0})^\prime (\tens{R R_0})^T]$ is the sectional
 curvature vector resolved in the inertial basis and $\bar{\imath}_1$ is the unit
 vector along $x_1$ direction in the inertial basis. It is noted that the
 three sets of equations, including equations of motion
@@ -215,18 +228,21 @@ finite-element analysis, the discretized form of
 displacement, velocity, and acceleration are written as
 \begin{align}
 	\label{DiscretizedDisp}
-	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\underline{q}^T = \left[ \underline{u}^T~~\underline{p}^T \right] \\
+	\underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~~~~~\underline{q}^T = \left[ \underline{u}^T~~\underline{p}^T \right] \\
 	\label{DiscretizedVel}
-	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\underline{v}^T = \left[\underline{\dot{u}}^T~~\underline{\omega}^T \right] \\
+	\underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~~~~~\underline{v}^T = \left[\underline{\dot{u}}^T~~\underline{\omega}^T \right] \\
 	\label{DiscretizedAcc}
-	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\underline{a}^T = \left[ \ddot{\underline{u}}^T~~\dot{\underline{\omega}}^T \right]	
+	\underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~~~~~\underline{a}^T = \left[ \ddot{\underline{u}}^T~~\dot{\underline{\omega}}^T \right]	
 \end{align}
 where $\tens{N}$ is the shape function matrix and $(\hat{\cdot})$ denotes a
 column matrix of nodal values.
 
-To accommodate the FAST modular framework, the governing equations 
+\section{State-space formulation}
+NREL recently has put considerable effort into improving overall modularity of FAST.  The benefits of this modularization framework include, but not limited to, improving numerical performance and robustness and enhancing the flexibility and expandability to enable further developments of functionality, etc. The modules in the new modularization framework of FAST are coupled in two ways in the time domain: loose coupling and tight coupling. In the loose coupling scheme, data are exchanged between the modules at each coupling step, but each module tracks its own states and integrates its own equations with its own solver. The previous versions of FAST, before v8.0, used this scheme. In a tightly coupled time-integration scheme, each module sets up its own equations, but the states are tracked and integrated by a solver common to all of the modules. The new FAST modularization allows for both loose and tight coupling. More details on the FAST modularization framework along with its initial assessment of the numerical stability, numerical accuracy, and computational performance of various coupling schemes can be found in \cite{Jonkman:2013,Sprague:2013,Sprague:FAST2014}. 
+
+To accommodate the tight coupling scheme in the FAST modular framework, the governing equations 
 \eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} need to be reformulated
-into a state-space form. Firstly we recast these equations in compact form
+into a state-space form. Firstly, we recast these equations in compact form
 as
 \begin{equation}
     \label{CompactGovernGEBT}
@@ -383,7 +399,55 @@ Eq.~\eqref{StateSpaceGov-1} and \eqref{StateSpaceGov-2}, can be solved with
 any number of first-order ordinary differential equations (ODE) integrators
 for first-order-in-time systems. 
 
-\section{Numerical Examples}
+\section{Implementation of BeamDyn}
+The state-space form of GEBT has been numerically implemented into a beam solver, called BeamDyn. The inputs to BeamDyn are split into two parts: one from the users and the other from FAST driver code. The inputs from the users are described as follows
+\begin{enumerate}
+    \item Key points that defined the geometry of the beam; 
+    \item Sectional constants for a 1D beam model;
+    \item Finite-element mesh information: order of element;
+    \item Selection of statics or dynamics;
+    \item Time integrators: RK4, AM2, or Generalized-$\alpha$ (for loosing coupling only);
+\end{enumerate}
+Other information needed for the dynamic analysis is from FAST driver code, including gravity vector, time step size, and initial conditions, including initial positions and motions of the beam, in Eq.~\eqref{StateSpaceGov-2}, and the externally applied loads.  For the whole turbine analysis, the BeamDyn module will return the kinematical quantities, displacements and rotation tensors, as well as forces to FAST for aeroelastic and control analysis.
+
+The implementation of GEBT with RK4 is straight forward. However, for AM2 scheme, a linearization is required due to its implicitly nature. By applying the trapezoidal rule, the state-space form in Eq.~\eqref{StateSpaceGov-1} can be recast as
+\begin{equation}
+    \label{AM2-Govn}
+    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k})+\tens{A}_k \hat{\vec{x}}_{k+1} - \Delta t \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1}) = \tens{A}_k \hat{\vec{x}}_{k} + \Delta t \mathfrak{f}(\hat{\vec{x}}_{k},t_{k}) 
+\end{equation}
+where the footnote denotes the discretized time-step at where the value evaluated and $\Delta t$ is the time step size. A linearization is needed to solve this nonlinear equation. The linearized equation is as follows
+\begin{equation}
+    \label{AM2-Linearized}
+    \begin{bmatrix}
+    \hat{\tens{K}}_1 & \hat{\tens{C}}_1 \\
+    \hat{\tens{K}}_2 & \hat{\tens{C}}_2
+    \end{bmatrix}
+    \begin{Bmatrix}
+    \Delta \hat{\vec{q}} \\
+    \Delta \hat{\vec{v}}
+    \end{Bmatrix}
+    =
+    \begin{Bmatrix}
+    \hat{\vec{F}}_1 \\
+    \hat{\vec{F}}_2
+    \end{Bmatrix}
+\end{equation}
+The coefficient matrix are written as
+\begin{align}
+    \label{Linear-K1}
+    \hat{\tens{K}}_1 &= \int_0^l \tens{N}^T\tens{K}_1~\tens{N}~dx_1 \\
+    \label{Linear-C1} 
+    \hat{\tens{C}}_1 &= \int_0^l \tens{N}^T\tens{C}_1~\tens{N}~dx_1 \\
+    \label{Linear-K2}
+    \hat{\tens{K}}_2 &= \int_0^l \left[ \tens{N}^T (\tens{A}_2 - \tens{A}_3 + \Delta t \tens{A}_5 + \Delta t \mathcal{Q}) \tens{N} + \tens{N}^T \Delta t \tens{\mathcal{P}}~ \tens{N}^\prime + \tens{N}^{\prime T} \Delta t \tens{\mathcal{S}}~ \tens{N}^\prime + \tens{N}^T \Delta t \tens{\mathcal{O}}~ \tens{N} \right]~dx_1 \\
+    \label{Linear-C2}
+    
+\end{align}
+
+One major difficulty in implementing geometrically nonlinear theory is the three-dimensional (3D) rotations. As discussed in many articles \cite{Crisfield:1999,Bauchau:2010,Bottasso:1998}, there will be a singular point for any type of vectorial parameterizations. To overcome this singularity point, algorithm proposed by Crisfield and Jeleni\'c \cite{Crisfield:1999}, in which the relative rotations are interpolated instead of the total rotations in one element, is adopted. Although the magnitude of the total rotation may be very big, it is reasonable to assume that the relative rotation in one element is smaller than $\pi$. In the time domain, one need to make sure that all the nodes rescaled at the same time so the highly-nonlinear governing equations in Eq.~\eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} are linearized about the correct point.
+
+
+\section{BeamDyn Verification and Validation}
 
 \subsection{Initially twisted/curved beams}
 
