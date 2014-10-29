@@ -3,22 +3,28 @@
 !  PROGRAM: InflowWind_Driver  - This program tests the inflow wind module
 !
 !****************************************************************************
-!
-!..................................................................................................................................
+!**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2013  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
 !
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!     http://www.apache.org/licenses/LICENSE-2.0
 !
-!    You should have received a copy of the GNU General Public License along with InflowWind.
-!    If not, see <http://www.gnu.org/licenses/>.
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
 !
+!**********************************************************************************************************************************
+! File last committed: $Date: 2014-07-29 13:30:04 -0600 (Tue, 29 Jul 2014) $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !**********************************************************************************************************************************
 
 PROGRAM InflowWind_Driver
@@ -27,8 +33,8 @@ PROGRAM InflowWind_Driver
    USE InflowWind
 !   USE InflowWind_Module_Types
    USE InflowWind_Types
-   USE IfW_Driver_Types    ! Contains types and routines for handling the input arguments
-   USE IfW_Driver_Subs     ! Contains subroutines for the driver program
+   USE InflowWind_Driver_Types    ! Contains types and routines for handling the input arguments
+   USE InflowWind_Driver_Subs     ! Contains subroutines for the driver program
 
    IMPLICIT NONE
 
@@ -37,20 +43,20 @@ PROGRAM InflowWind_Driver
 
 
       ! Types needed here (from InflowWind module)
-   TYPE( IfW_InitInputType )                          :: IfW_InitInputData       ! Data for initialization -- this is where the input info goes
-   TYPE( IfW_InputType )                              :: IfW_InputData           ! input     -- contains xyz coords of interest
-   TYPE( IfW_ParameterType )                          :: IfW_ParamData           ! Parameters
-   TYPE( IfW_ContinuousStateType )                    :: IfW_ContStateData       ! Continous State Data  (not used here)
-   TYPE( IfW_DiscreteStateType )                      :: IfW_DiscStateData       ! Discrete State Data   (not used here)
-   TYPE( IfW_ConstraintStateType )                    :: IfW_ConstrStateData     ! Constraint State Data (not used here)
-   TYPE( IfW_OtherStateType )                         :: IfW_OtherStateData      ! Other State Data      (might use at some point)
-   TYPE( IfW_OutputType )                             :: IfW_OutputData          ! Output Data -- contains the velocities at xyz
-   TYPE( IfW_InitOutputType )                         :: IfW_InitOutData         ! Output Data -- contains the names and units
+   TYPE(InflowWind_InitInputType)                     :: InflowWind_InitInputData       ! Data for initialization -- this is where the input info goes
+   TYPE(InflowWind_InputType)                         :: InflowWind_InputData           ! input     -- contains xyz coords of interest
+   TYPE(InflowWind_ParameterType)                     :: InflowWind_ParamData           ! Parameters
+   TYPE(InflowWind_ContinuousStateType)               :: InflowWind_ContStateData       ! Continous State Data  (not used here)
+   TYPE(InflowWind_DiscreteStateType)                 :: InflowWind_DiscStateData       ! Discrete State Data   (not used here)
+   TYPE(InflowWind_ConstraintStateType)               :: InflowWind_ConstrStateData     ! Constraint State Data (not used here)
+   TYPE(InflowWind_OtherStateType)                    :: InflowWind_OtherStateData      ! Other State Data      (might use at some point)
+   TYPE(InflowWind_OutputType)                        :: InflowWind_OutputData          ! Output Data -- contains the velocities at xyz
+   TYPE(InflowWind_InitOutputType)                    :: InflowWind_InitOutData         ! Output Data -- contains the names and units
 
 
       ! Local variables for this code
-   TYPE( IfW_Driver_ArgFlags )                        :: SettingsFlags           ! Flags indicating which arguments were specified
-   TYPE( IfW_Driver_Args )                            :: Settings                ! Arguments passed in
+   TYPE( InflowWind_Driver_ArgFlags )                 :: SettingsFlags           ! Flags indicating which arguments were specified
+   TYPE( InflowWind_Driver_Args )                     :: Settings                ! Arguments passed in
    REAL( DbKi )                                       :: TimeStepSize            ! Initial timestep (the glue code dictates this)
    REAL( DbKi )                                       :: Timer(1:2)              ! Keep track of how long this takes to run
    REAL( DbKi )                                       :: TimeNow                 ! The current time
@@ -146,26 +152,26 @@ PROGRAM InflowWind_Driver
 
       ! Set the input file name and verify it exists
 
-   IfW_InitInputData%WindFileName      = Settings%WindFileName
+   InflowWind_InitInputData%InputFileName      = Settings%InputFileName
 
-   INQUIRE( file=Settings%WindFileName, exist=TempFileExist )
-   IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find input file "//TRIM(Settings%WindFileName))
+   INQUIRE( file=Settings%InputFileName, exist=TempFileExist )
+   IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find InflowWind input file "//TRIM(Settings%InputFileName))
 
 
       ! In the event things are not specified on the input line, use the following
 
-   IfW_InitInputData%ReferenceHeight   = 80.                      ! meters  -- default
-   IfW_InitInputData%Width             = 100.                     ! meters
-   IfW_InitInputData%WindFileType      = DEFAULT_WindNumber       ! This must be preset before calling the initialization.
+   InflowWind_InitInputData%ReferenceHeight   = 80.                      ! meters  -- default
+   InflowWind_InitInputData%Width             = 100.                     ! meters
+   InflowWind_InitInputData%WindFileType      = DEFAULT_WindNumber       ! This must be preset before calling the initialization.
    TimeStepSize                        = 10                       !seconds
 
 
 
       ! If they are specified by input arguments, use the following
 
-   IF ( SettingsFlags%Height )         IfW_InitInputData%ReferenceHeight = Settings%Height
-   IF ( SettingsFlags%Width )          IfW_InitInputData%Width           = Settings%Width
-   IF ( SettingsFlags%WindFileType )   IfW_InitInputData%WindFileType    = Settings%WindFileType
+   IF ( SettingsFlags%Height )         InflowWind_InitInputData%ReferenceHeight = Settings%Height
+   IF ( SettingsFlags%Width )          InflowWind_InitInputData%Width           = Settings%Width
+   IF ( SettingsFlags%WindFileType )   InflowWind_InitInputData%WindFileType    = Settings%WindFileType
    IF ( SettingsFlags%TRes )           TimeStepSize                      = Settings%Tres
 
 
@@ -195,11 +201,11 @@ PROGRAM InflowWind_Driver
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Initialize the Module -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
-   !  Initialize the IfW module --> it will initialize all its pieces
+   !  Initialize the InflowWind module --> it will initialize all its pieces
 
-   CALL IfW_Init( IfW_InitInputData, IfW_InputData, IfW_ParamData, &
-                  IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
-                  IfW_OutputData,    TimeStepSize,  IfW_InitOutData, ErrStat, ErrMsg )
+   CALL InflowWind_Init( InflowWind_InitInputData, InflowWind_InputData, InflowWind_ParamData, &
+                  InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
+                  InflowWind_OutputData,    TimeStepSize,  InflowWind_InitOutData, ErrStat, ErrMsg )
 
 
       ! Make sure no errors occured that give us reason to terminate now.
@@ -316,7 +322,7 @@ PROGRAM InflowWind_Driver
       ! FIXME: add in a flag to allow for specifying to print out all points.
    IF ( (NumTotalPoints == 1 ) .AND. .NOT. (SettingsFlags%XRange .OR. SettingsFlags%YRange .OR. SettingsFlags%ZRange )) THEN
       CALL WrScr(NewLine//'No points were specified to check. Returning only the hub height at t=0.')
-      PositionFullSet( 3, 1, 1, 1, :)  = IfW_InitInputData%ReferenceHeight
+      PositionFullSet( 3, 1, 1, 1, :)  = InflowWind_InitInputData%ReferenceHeight
    ENDIF
 
 
@@ -361,18 +367,18 @@ PROGRAM InflowWind_Driver
 
 
          ! Copy the data into the array to pass in (this allocates the array)
-      CALL AllocAry( IfW_InputData%Position, SIZE(Position, 1), SIZE(Position, 2), &
-                     'Position array in IfW_InputData', ErrStat, ErrMsg )
-      IfW_InputData%Position = Position
+      CALL AllocAry( InflowWind_InputData%Position, SIZE(Position, 1), SIZE(Position, 2), &
+                     'Position array in InflowWind_InputData', ErrStat, ErrMsg )
+      InflowWind_InputData%Position = Position
 
-         ! No need to allocate the IfW_OutputData%Velocity array.  That happens in CalcOutput
+         ! No need to allocate the InflowWind_OutputData%Velocity array.  That happens in CalcOutput
 
          ! Call the Calculate routine and pass in the Position information
-      CALL IfW_CalcOutput( TimeNow, IfW_InputData, IfW_ParamData, &
-                           IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, & ! States -- not used
-                           IfW_OtherStateData, IfW_OutputData, ErrStat, ErrMsg)
+      CALL InflowWind_CalcOutput( TimeNow, InflowWind_InputData, InflowWind_ParamData, &
+                           InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, & ! States -- not used
+                           InflowWind_OtherStateData, InflowWind_OutputData, ErrStat, ErrMsg)
 
-      Velocity = IfW_OutputData%Velocity
+      Velocity = InflowWind_OutputData%Velocity
          ! Check that things ran correctly
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
@@ -442,9 +448,9 @@ PROGRAM InflowWind_Driver
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
 
-   CALL IfW_End(  IfW_InputData, IfW_ParamData, &
-                  IfW_ContStateData, IfW_DiscStateData, IfW_ConstrStateData, IfW_OtherStateData, &
-                  IfW_OutputData, ErrStat, ErrMsg )
+   CALL InflowWind_End(  InflowWind_InputData, InflowWind_ParamData, &
+                  InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
+                  InflowWind_OutputData, ErrStat, ErrMsg )
 
 
       ! Close the points file

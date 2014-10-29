@@ -1,26 +1,32 @@
 !**********************************************************************************************************************************
 !
-!  MODULE: IfW_Driver_Subs  - This module contains subroutines used by the InflowWind Driver program
+!  MODULE: InflowWind_Driver_Subs  - This module contains subroutines used by the InflowWind Driver program
 !
 !**********************************************************************************************************************************
-!
-!..................................................................................................................................
+!**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2013  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
-!    InflowWind is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
 !
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!     http://www.apache.org/licenses/LICENSE-2.0
 !
-!    You should have received a copy of the GNU General Public License along with InflowWind.
-!    If not, see <http://www.gnu.org/licenses/>.
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
 !
 !**********************************************************************************************************************************
-MODULE Ifw_Driver_Subs
+! File last committed: $Date: 2014-07-29 13:30:04 -0600 (Tue, 29 Jul 2014) $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
+MODULE InflowWind_Driver_Subs
 
    USE NWTC_Library
    IMPLICIT NONE
@@ -92,13 +98,13 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
       !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
 
    USE NWTC_Library
-   USE IfW_Driver_Types
+   USE InflowWind_Driver_Types
 
    IMPLICIT NONE
 
       ! Storing the arguments
-   TYPE( IfW_Driver_ArgFlags ),        INTENT(  OUT)  :: SettingsFlags        ! Flags indicating which arguments were specified
-   TYPE( IfW_Driver_Args ),            INTENT(  OUT)  :: Settings             ! Arguments passed in
+   TYPE( InflowWind_Driver_ArgFlags ),        INTENT(  OUT)  :: SettingsFlags        ! Flags indicating which arguments were specified
+   TYPE( InflowWind_Driver_Args ),            INTENT(  OUT)  :: Settings             ! Arguments passed in
 
       ! Error Handling
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
@@ -121,7 +127,7 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
 
       ! exit if we don't have enough
    IF (InputArgs == 0) THEN
-      ErrMsg   = "Insufficient Arguments."
+      ErrMsg   = "Insufficient Arguments.  Use option "//SwChar//"help for help menu."
       ErrStat  = ErrID_Fatal     ! Cannot continue
       RETURN
    ENDIF
@@ -152,11 +158,11 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
 
             ! since there is no switch character, assume it is the filename, unless we already set one
          IF ( FileNameGiven ) THEN
-            ErrMsg   = "Multiple input filenames given: "//TRIM(Settings%WindFileName)//", "//TRIM(arg)
+            ErrMsg   = "Multiple input filenames given: "//TRIM(Settings%InputFileName)//", "//TRIM(arg)
             ErrStat  = ErrID_Fatal
             RETURN
          ELSE
-            Settings%WindFileName = TRIM(arg)
+            Settings%InputFileName = TRIM(arg)
             FileNameGiven = .TRUE.
          ENDIF
 
@@ -213,14 +219,14 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
 
       USE NWTC_Library
-      USE IfW_Driver_Types
+      USE InflowWind_Driver_Types
       USE InflowWind_Types
 
       IMPLICIT NONE
 
          ! Storing the arguments
-      TYPE( IfW_Driver_ArgFlags ),        INTENT(INOUT)  :: SettingsFlags        ! Flags indicating which arguments were specified
-      TYPE( IfW_Driver_Args ),            INTENT(INOUT)  :: Settings             ! Arguments passed in
+      TYPE( InflowWind_Driver_ArgFlags ),        INTENT(INOUT)  :: SettingsFlags        ! Flags indicating which arguments were specified
+      TYPE( InflowWind_Driver_Args ),            INTENT(INOUT)  :: Settings             ! Arguments passed in
 
       CHARACTER(*),                       INTENT(IN   )  :: ThisArg              ! The current argument
 
@@ -641,7 +647,7 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          Settings%PointsFileName = ThisArg(Delim1+1:Delim2-1)
 
       ELSE
-         ErrMsg  = TRIM(ErrMsg)//NewLine//"Unrecognized option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring."
+         ErrMsg  = TRIM(ErrMsg)//NewLine//"Unrecognized option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options."
          ErrStat = ErrID_Warn
       ENDIF
 
@@ -657,4 +663,4 @@ END SUBROUTINE RetrieveArgs
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-END MODULE Ifw_Driver_Subs
+END MODULE InflowWind_Driver_Subs
