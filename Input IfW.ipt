@@ -4,10 +4,10 @@ This is a sample Inflow-Wind input file.
 False                Echo           - Echo input data to <RootName>.ech (flag)
   6                  WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined)
  0.0                 PropogationDir - Direction of wind propogation (meteorological direction)
- 9                   WindVelList    - Number of points to output the wind velocity at
- 0,1,2,3,4,5,6,7,8,9 WindVxiList    - Coordinate list in inertial X direction (m)
- 0,1,2,3,4,5,6,7,8,9 WindVyiList    - Coordinate list in inertial Y direction (m)
- 0,1,2,3,4,5,6,7,8,9 WindVziList    - Coordinate list in inertial Z direction (m)
+ 9                   NWindVel       - Number of points to output the wind velocity (0 to 9)
+ 0,1,2,3,4,5,6,7,8,9 WindVxiList    - List of coordinates in the inertial X direction (m)
+ 0,1,2,3,4,5,6,7,8,9 WindVyiList    - List of coordinates in the inertial Y direction (m)
+ 0,1,2,3,4,5,6,7,8,9 WindVziList    - List of coordinates in the inertial Z direction (m)
 ================== Parameters for Steady Wind Conditions [used only for WindType = 1] =========================
  10.0                HWindSpeed     - Horizontal windspeed
  90.0                RefHt          - Reference height for horizontal wind speed
@@ -15,9 +15,9 @@ False                Echo           - Echo input data to <RootName>.ech (flag)
 ================== Parameters for Uniform wind file   [used only for WindType = 2] ============================
 ""                   Filename       - Filename of time series data for uniform wind field.
  90.0                RefHt          - Reference height for horizontal wind speed
-================== Parameters for Binary TurbSim Full=Field files   [used only for WindType = 3] ==============
+================== Parameters for Binary TurbSim Full-Field files   [used only for WindType = 3] ==============
 ""                   Filename       - Name of the Full field wind file to use (.bts)
-================== Parameters for Binary Bladed=style Full=Field files   [used only for WindType = 4] =========
+================== Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4] =========
 ""                   FilenameRoot   - Name of the Full field wind file to use (.wnd, .sum)
  T                   TowerFile      - Have tower file (.twr) [flag]
 ================== Parameters for coherent turbulence [Only used with WindType = 3 or 4] ======================
