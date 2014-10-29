@@ -24,7 +24,7 @@
 !
 !**********************************************************************************************************************************
 
-MODULE Ifw_Driver_Types
+MODULE InflowWind_Driver_Types
 
    USE NWTC_Library
    USE InflowWind_Types
@@ -32,7 +32,7 @@ MODULE Ifw_Driver_Types
    IMPLICIT NONE
 
       ! This contains flags to note if the settings were made.
-   TYPE     :: IfW_Driver_ArgFlags
+   TYPE     :: InflowWind_Driver_ArgFlags
       LOGICAL                 :: WindFileType   = .FALSE.      ! specified a windfiletype
       LOGICAL                 :: Height         = .FALSE.      ! specified a height
       LOGICAL                 :: Width          = .FALSE.      ! specified a width
@@ -48,11 +48,11 @@ MODULE Ifw_Driver_Types
       LOGICAL                 :: Summary        = .FALSE.      ! create a summary file?
       LOGICAL                 :: fft            = .FALSE.      ! do an FFT
       LOGICAL                 :: PointsFile     = .FALSE.      ! points file specified
-   END TYPE    IfW_Driver_ArgFlags
+   END TYPE    InflowWind_Driver_ArgFlags
 
 
       ! This contains all the settings (possible passed in arguments).
-   TYPE     :: IfW_Driver_Args
+   TYPE     :: InflowWind_Driver_Args
       INTEGER                 :: WindFileType   = DEFAULT_WINDNumber ! the kind of windfile     -- set default to simplify things later
       REAL( ReKi )            :: Height                        ! Reference height
       REAL( ReKi )            :: Width                         ! Reference width
@@ -66,8 +66,8 @@ MODULE Ifw_Driver_Types
       REAL( DbKi )            :: TRes                          ! resolution of time
       REAL( ReKi )            :: fft(1:3)                      ! Coords to do an FFT
       CHARACTER(1024)         :: PointsFileName                ! Filename of points file
-      CHARACTER(1024)         :: WindFileName                  ! Filename of file to process
-   END TYPE    IfW_Driver_Args
+      CHARACTER(1024)         :: InputFileName                  ! Filename of file to process
+   END TYPE    InflowWind_Driver_Args
 
 
-END MODULE IfW_Driver_Types
+END MODULE InflowWind_Driver_Types

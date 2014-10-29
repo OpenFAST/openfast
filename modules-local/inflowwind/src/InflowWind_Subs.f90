@@ -11,15 +11,9 @@ MODULE InflowWind_Subs
 ! 14 Nov 2011    v1.00.01b-bjj                              B. Jonkman
 !  1 Aug 2012    v1.01.00a-bjj                              B. Jonkman
 ! 10 Aug 2012    v1.01.00b-bjj                              B. Jonkman
-!----------------------------------------------------------------------------------------------------
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!----------------------------------------------------------------------------------------------------
-!
-!..................................................................................................................................
+!**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2013  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -35,6 +29,10 @@ MODULE InflowWind_Subs
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
 !**********************************************************************************************************************************
 
    USE                              NWTC_Library
@@ -63,21 +61,21 @@ SUBROUTINE GetWindType( ParamData, ErrStat, ErrMsg )
 !  This subroutine checks the file FileName to see what kind of wind file we are using.  Used when
 !  the wind file type is unknown.
 !----------------------------------------------------------------------------------------------------
-!FIXME: may want to change this to a subroutine that sets stuff in the passed IfW_ParameterType variable
+!FIXME: may want to change this to a subroutine that sets stuff in the passed InflowWind_ParameterType variable
 
    IMPLICIT             NONE
 
 
       ! Passed Variables:
 
-   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
+   TYPE(InflowWind_ParameterType),  INTENT(INOUT)     :: ParamData
    INTEGER(IntKi),                  INTENT(  OUT)     :: ErrStat
    CHARACTER(*),                    INTENT(  OUT)     :: ErrMsg
 
 
       ! Local Variables:
 
-   INTEGER                                            :: IND
+   INTEGER(IntKi)                                     :: IND
    LOGICAL                                            :: Exists
 
    CHARACTER(1024)                                    :: FileName       ! Temporary name holder
@@ -185,9 +183,9 @@ END SUBROUTINE GetWindType
 !!
 !!       ! Passed variables
 !!
-!!    TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
+!!    TYPE(InflowWind_ParameterType),  INTENT(INOUT)     :: ParamData
 !!
-!!    INTEGER,                         INTENT(OUT)       :: ErrStat
+!!    INTEGER(IntKi),                  INTENT(OUT)       :: ErrStat
 !!    CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
 !!
 !!    REAL(ReKi),                      INTENT(IN)        :: LinPerturbations(7)
@@ -231,7 +229,7 @@ END SUBROUTINE GetWindType
 !!
 !!    REAL(ReKi), INTENT(IN)     :: Time
 !!    REAL(ReKi), INTENT(IN)     :: InpPosition(3)
-!!    INTEGER, INTENT(OUT)       :: ErrStat
+!!    INTEGER(IntKi), INTENT(OUT)       :: ErrStat
 !!
 !!       ! Function definition
 !!    REAL(ReKi)                 :: InflowWind_ADhack_diskVel(3)
@@ -239,8 +237,8 @@ END SUBROUTINE GetWindType
 !!       ! Local variables
 !!    TYPE(InflIntrpOut)         :: NewVelocity             ! U, V, W velocities
 !!    REAL(ReKi)                 :: Position(3)
-!!    INTEGER                    :: IY
-!!    INTEGER                    :: IZ
+!!    INTEGER(IntKi)                    :: IY
+!!    INTEGER(IntKi)                    :: IZ
 !!
 !!
 !!    ErrStat = 0
@@ -349,9 +347,9 @@ END SUBROUTINE GetWindType
 !
 !      ! Passed variables
 !
-!   TYPE( IfW_ParameterType),        INTENT(INOUT)     :: ParamData
+!   TYPE(InflowWind_ParameterType),  INTENT(INOUT)     :: ParamData
 !
-!   INTEGER,                         INTENT(OUT)       :: ErrStat
+!   INTEGER(IntKi),                         INTENT(OUT)       :: ErrStat
 !   CHARACTER(*),                    INTENT(OUT)       :: ErrMsg
 !
 !      ! Function definition
@@ -400,7 +398,7 @@ END MODULE InflowWind_Subs
 !!       REAL(ReKi),       INTENT(IN)  :: EndTime
 !!       REAL(ReKi),       INTENT(IN)  :: delta_time
 !!       REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
-!!       INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
+!!       INTEGER(IntKi),          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
 !!
 !!          ! function definition
 !!       REAL(ReKi)                    :: InflowWind_GetMean(3)      ! MEAN U, V, W
@@ -408,8 +406,8 @@ END MODULE InflowWind_Subs
 !!          ! local variables
 !!       REAL(ReKi)                    :: Time
 !!       REAL(DbKi)                    :: SumVel(3)
-!!       INTEGER                       :: I
-!!       INTEGER                       :: Nt
+!!       INTEGER(IntKi)                       :: I
+!!       INTEGER(IntKi)                       :: Nt
 !!
 !!       TYPE(InflIntrpOut)            :: NewVelocity             ! U, V, W velocities
 !!
@@ -448,7 +446,7 @@ END MODULE InflowWind_Subs
 !!       REAL(ReKi),       INTENT(IN)  :: EndTime
 !!       REAL(ReKi),       INTENT(IN)  :: delta_time
 !!       REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
-!!       INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
+!!       INTEGER(IntKi),          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
 !!
 !!          ! function definition
 !!       REAL(ReKi)                    :: InflowWind_GetStdDev(3)    ! STD U, V, W
@@ -458,8 +456,8 @@ END MODULE InflowWind_Subs
 !!       REAL(ReKi), ALLOCATABLE       :: Velocity(:,:)
 !!       REAL(DbKi)                    :: SumAry(3)
 !!       REAL(DbKi)                    :: MeanVel(3)
-!!       INTEGER                       :: I
-!!       INTEGER                       :: Nt
+!!       INTEGER(IntKi)                       :: I
+!!       INTEGER(IntKi)                       :: Nt
 !!
 !!       TYPE(InflIntrpOut)            :: NewVelocity             ! U, V, W velocities
 !!
@@ -537,7 +535,7 @@ END MODULE InflowWind_Subs
 !!       REAL(ReKi),       INTENT(IN)  :: EndTime
 !!       REAL(ReKi),       INTENT(IN)  :: delta_time
 !!       REAL(ReKi),       INTENT(IN)  :: InputPosition(3)        ! X, Y, Z positions
-!!       INTEGER,          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
+!!       INTEGER(IntKi),          INTENT(OUT) :: ErrStat                 ! Return 0 if no error; non-zero otherwise
 !!
 !!          ! function definition
 !!       REAL(ReKi)                    :: InflowWind_GetTI(3)        ! TI U, V, W
@@ -547,8 +545,8 @@ END MODULE InflowWind_Subs
 !!       REAL(ReKi), ALLOCATABLE       :: Velocity(:,:)
 !!       REAL(DbKi)                    :: SumAry(3)
 !!       REAL(DbKi)                    :: MeanVel(3)
-!!       INTEGER                       :: I
-!!       INTEGER                       :: Nt
+!!       INTEGER(IntKi)                       :: I
+!!       INTEGER(IntKi)                       :: Nt
 !!
 !!       TYPE(InflIntrpOut)            :: NewVelocity             ! U, V, W velocities
 !!
