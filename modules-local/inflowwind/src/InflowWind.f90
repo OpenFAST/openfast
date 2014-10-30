@@ -1,5 +1,5 @@
 !**********************************************************************************************************************************
-! $Id$
+! $Id: InflowWind.f90 125 2014-10-29 22:28:35Z aplatt $
 !
 ! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
 ! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
@@ -17,7 +17,7 @@
 !
 !..................................................................................................................................
 ! Files with this module:
-!  InflowWind_Subs.f90
+!!!!!  InflowWind_Subs.f90
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
 !**********************************************************************************************************************************
 ! LICENSING
@@ -38,8 +38,8 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
+! File last committed: $Date: 2014-10-29 16:28:35 -0600 (Wed, 29 Oct 2014) $
+! (File) Revision #: $Rev: 125 $
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
 MODULE InflowWind
@@ -68,7 +68,8 @@ MODULE InflowWind
       ! The subroutines
       !-------------------------------------------------------------------------------------------------
 
-   USE                              InflowWind_Subs             ! all the subroutines live here now.
+!FIXME: may be able to remove this.  It isn't necessary anymore.
+!   USE                              InflowWind_Subs             ! all the subroutines live here now.
 
 
 
