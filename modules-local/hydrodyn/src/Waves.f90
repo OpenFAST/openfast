@@ -80,51 +80,6 @@ MODULE Waves
 
 CONTAINS
 
-  !=======================================================================
-   FUNCTION InterpWrappedStpReal( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
-
-      ! Function declaration.
-
-   REAL(ReKi)                   :: InterpWrappedStpReal                                   ! This function.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-   REAL(ReKi)                   :: XVal                                           ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   InterpWrappedStpReal = InterpStpReal( XVal, XAry, YAry, Ind, AryLen )
-   
-   
-   END FUNCTION InterpWrappedStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
 !=======================================================================
 
    FUNCTION WavePkShpDefault ( Hs, Tp )
