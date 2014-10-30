@@ -595,6 +595,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    INTEGER(IntKi)            :: n, n1, n2                      ! temporary space for node numbers
    REAL(ReKi)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
    REAL(ReKi)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
+   REAL(ReKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
    REAL(ReKi)                :: TmpVec(3)
    REAL(ReKi)                :: RotationMatrix(3,3)
 
@@ -668,23 +669,35 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
       do i=1, Dest%Nnodes
          if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-
+                  
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-
-            ! Get the closest node (node closest in the projection)
-            ! We can't interpolate the DCM, so we'll use the nearest neighbor.
-         ! MeshMap%MapMotions(i)%shape_fn(1)*FieldValueN1 + MeshMap%MapMotions(i)%shape_fn(2)*FieldValueN2
-
-         IF ( NINT( MeshMap%MapMotions(i)%shape_fn(2) ) == 0 ) THEN
-            n = n1
-         ELSE
-            n = n2
-         END IF
-
-         Dest%Orientation(:,:,i) = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n) ) )&
-                                          , Src%Orientation(:,:,n) )
+    
+            ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
+         RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n1) ) )&
+                                 , Src%Orientation(:,:,n1) )
+         
+         CALL DCM_logmap( RotationMatrix, FieldValue(:,1), ErrStat, ErrMsg )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+            ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
+         RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n2) ) )&
+                                 , Src%Orientation(:,:,n2) )
+         
+         CALL DCM_logmap( RotationMatrix, FieldValue(:,2), ErrStat, ErrMsg )                  
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+         
+         
+            ! interpolate tensors: 
+         TmpVec =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+                  + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
+                  
+            ! convert back to DCM:
+         Dest%Orientation(:,:,i) = DCM_exp( TmpVec )               
+      
       end do
 
    endif
@@ -1668,8 +1681,9 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
                DisplacedPosition =       SrcDisp%TranslationDisp(:,i) + SrcDisp%Position(:,i) &
                                        - ( DestDisp%TranslationDisp(:,MeshMap%MapLoads(i)%OtherMesh_Element) &
                                          + DestDisp%Position(       :,MeshMap%MapLoads(i)%OtherMesh_Element) )                              
-               ! calculation torque vector based on offset force: torque = couple_arm X Force               
-               torque = CROSS_PRODUCT( DisplacedPosition, Src%Force(:,i) / LoadsScaleFactor )
+               ! calculation torque vector based on offset force: torque = couple_arm X Force   
+               torque = Src%Force(:,i) / LoadsScaleFactor !not torque yet, but we're doing this cross product in two step to avoid tempoary memory storage
+               torque = CROSS_PRODUCT( DisplacedPosition, torque )
                Dest%Moment(:,MeshMap%MapLoads(i)%OtherMesh_Element) = Dest%Moment(:,MeshMap%MapLoads(i)%OtherMesh_Element) + torque                                             
          enddo
       !endif      
@@ -1973,7 +1987,8 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
                DisplacedPosition =   Src%Position(:,i)     +  SrcDisp%TranslationDisp(:,i)     &
                                   - Dest%Position(:,jNode) - DestDisp%TranslationDisp(:,jNode)  
                               
-               torque = CROSS_PRODUCT( DisplacedPosition, (Src%Force(:,i)/LoadsScaleFactor) )               
+               torque = Src%Force(:,i) / LoadsScaleFactor !not torque yet, but we're doing this cross product in two step to avoid tempoary memory storage
+               torque = CROSS_PRODUCT( DisplacedPosition, torque )               
                Dest%Moment(:,jNode) = Dest%Moment(:,jNode) + torque*MeshMap%MapLoads(i)%shape_fn(j)            
             END DO !j
             
@@ -2823,6 +2838,7 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
 !  REAL(ReKi) :: n1_n2_vector(3) ! vector going from node 1 to node 2 in a Line2 element
    REAL(ReKi) :: pCrossf(3)      ! a temporary vector storing cross product of positions with forces
    REAL(ReKi) :: p1(3), p2(3)    ! temporary position vectors
+   REAL(ReKi) :: dp(3)           ! a temporary vector storing p2-p1
 
    INTEGER(IntKi) :: i
    INTEGER(IntKi) :: nnodes
@@ -2920,7 +2936,9 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
                p2 = p2 + Line2_Src%TranslationDisp(:,n2)
             END IF
 
-            pCrossf = 0.5*det_jac_Ovr3 *cross_product( p2-p1, (Line2_Src%Force(:,n1)/LoadsScaleFactor) + (Line2_Src%Force(:,n2)/LoadsScaleFactor))
+            dp = p2-p1
+            pCrossf = (Line2_Src%Force(:,n1)/LoadsScaleFactor) + (Line2_Src%Force(:,n2)/LoadsScaleFactor) !temp storage of f to avoid array creating in cross_product
+            pCrossf = 0.5*det_jac_Ovr3 *cross_product( dp, pCrossf)
 
             Point_Dest%Moment(:,n1) = Point_Dest%Moment(:,n1) + pCrossf
             Point_Dest%Moment(:,n2) = Point_Dest%Moment(:,n2) - pCrossf

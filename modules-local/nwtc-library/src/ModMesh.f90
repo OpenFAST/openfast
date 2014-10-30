@@ -49,6 +49,7 @@ MODULE ModMesh
 
    USE ModMesh_Types
    IMPLICIT NONE
+!   INTEGER :: DEBUG_UNIT = 74
 
    INTEGER, PARAMETER :: BUMPUP = 64  ! do not set to less than 2
 
@@ -2122,14 +2123,15 @@ CONTAINS
     CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
                                                                      
       ! local variables                                              
+    INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
     REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
     REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
-    INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-    INTEGER(IntKi)                      :: node                      ! node counter
                                                                      
     REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
-    REAL(ReKi)                          :: SmllRotAngs(3,order+1)    ! for extrapolation of orientations: small rotational angles of the DCMs for each mesh
-    REAL(ReKi)                          :: SmllRotAngs_out(3)        ! for extrapolation of orientations: extrapolated small rotational angles of the DCMs
+    REAL(ReKi)                          :: tensor(3, order+1)        ! for extrapolation of orientations 
+    REAL(ReKi)                          :: tensor_interp(3)          ! for extrapolation of orientations    
+    
+    INTEGER(IntKi)                      :: node                      ! node counter
 
        ! Initialize ErrStat
        ErrStat = ErrID_None
@@ -2190,28 +2192,27 @@ CONTAINS
       END IF
 
       IF ( ALLOCATED(u1%Orientation) ) THEN
-         !ErrStat=ErrID_Info
-         !ErrMsg='Orientations not implemented in MeshExtrapInterp1; using nearest neighbor approach instead.'
-
-         !IF ( t_out < t(2)*0.5) THEN !it's closer to t(1)
-         !   u_out%Orientation = u1%Orientation
-         !ELSEIF ( t_out <= t(2) ) THEN
-         !   u_out%Orientation = u2%Orientation
-         !ELSE                        
-            DO node=1,u_out%Nnodes
-
-               SmllRotAngs(:,1) = GetSmllRotAngs ( u1%Orientation(:,:,node), ErrStat, ErrMsg )               
-               SmllRotAngs(:,2) = GetSmllRotAngs ( u2%Orientation(:,:,node), ErrStat, ErrMsg )               
-                                             
-               SmllRotAngs_out  = SmllRotAngs(:,1) + (SmllRotAngs(:,2) - SmllRotAngs(:,1)) * scaleFactor                
-! u_out%Orientation(:,:,node) =                
-               CALL SmllRotTrans( 'Mesh Orientation Extrapolation', SmllRotAngs_out(1), SmllRotAngs_out(2), SmllRotAngs_out(3), u_out%Orientation(:,:,node), ' ', ErrStat, ErrMsg )
-               
-            END DO
-            ErrStat = ErrID_None
-            ErrMsg  = ""
-
-         !END IF
+                  
+         DO node=1,u_out%Nnodes
+            
+            CALL DCM_logmap ( u1%Orientation(:,:,node), tensor(:,1), ErrStat, ErrMsg )
+               IF (ErrStat >= AbortErrLev ) THEN 
+                  ErrMsg = 'MeshExtrapInterp1:'//TRIM(ErrMsg)
+                  RETURN
+               END IF
+            CALL DCM_logmap ( u2%Orientation(:,:,node), tensor(:,2), ErrStat, ErrMsg )
+               IF (ErrStat >= AbortErrLev ) THEN 
+                  ErrMsg = 'MeshExtrapInterp1:'//TRIM(ErrMsg)
+                  RETURN
+               END IF
+                                    
+            CALL DCM_SetLogMapForInterp( tensor )            
+                      
+            tensor_interp  = tensor(:,1) + (tensor(:,2) - tensor(:,1)) * scaleFactor            
+                                                
+            u_out%Orientation(:,:,node) = DCM_exp( tensor_interp )                              
+         END DO                     
+         
       END IF
 
    END SUBROUTINE MeshExtrapInterp1
@@ -2233,15 +2234,15 @@ CONTAINS
     CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
                                                                      
       ! local variables                                              
-    REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-    REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
     INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
-    INTEGER(IntKi)                      :: node                      ! node counter
-                                                                     
-    REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
-    REAL(ReKi)                          :: SmllRotAngs(3,order+1)    ! for extrapolation of orientations: small rotational angles of the DCMs for each mesh
-    REAL(ReKi)                          :: SmllRotAngs_out(3)        ! for extrapolation of orientations: extrapolated small rotational angles of the DCMs
+
+    REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+    REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd                                                                     
+    REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation    
+    REAL(ReKi)                          :: tensor(3, order+1)        ! for extrapolation of orientations 
+    REAL(ReKi)                          :: tensor_interp(3)          ! for extrapolation of orientations 
     
+    INTEGER(IntKi)                      :: node                      ! node counter
     
     
          ! Initialize ErrStat
@@ -2340,238 +2341,43 @@ CONTAINS
       END IF
 
       IF ( ALLOCATED(u1%Orientation) ) THEN
-         !ErrStat=ErrID_Info
-         !ErrMsg=' Orientations are not implemented in MeshExtrapInterp2; using nearest neighbor approach instead.'
-
-         !IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
-         !   u_out%Orientation = u1%Orientation
-         !ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
-         !   u_out%Orientation = u2%Orientation
-         !ELSEIF ( t_out <= t(3) ) THEN
-         !   u_out%Orientation = u3%Orientation
-         !ELSE
+                     
+         DO node=1,u_out%Nnodes
+            CALL DCM_logmap ( u1%Orientation(:,:,node), tensor(:,1), ErrStat, ErrMsg )
+               IF (ErrStat >= AbortErrLev ) THEN 
+                  ErrMsg = 'MeshExtrapInterp2:'//TRIM(ErrMsg)
+                  RETURN
+               END IF
+            CALL DCM_logmap ( u2%Orientation(:,:,node), tensor(:,2), ErrStat, ErrMsg )
+               IF (ErrStat >= AbortErrLev ) THEN 
+                  ErrMsg = 'MeshExtrapInterp2:'//TRIM(ErrMsg)
+                  RETURN
+               END IF
+            CALL DCM_logmap ( u3%Orientation(:,:,node), tensor(:,3), ErrStat, ErrMsg )
+               IF (ErrStat >= AbortErrLev ) THEN 
+                  ErrMsg = 'MeshExtrapInterp2:'//TRIM(ErrMsg)
+                  RETURN
+               END IF
+! call WrReAryFileNR ( DEBUG_UNIT, (/ REAL(tin,ReKi), REAL(tin_out,ReKi) /), 'F15.5,1x', ErrStat, ErrMsg  )
+! call WrReAryFileNR ( DEBUG_UNIT, tensor(:,1), 'F15.5,1x', ErrStat, ErrMsg  )
+! call WrReAryFileNR ( DEBUG_UNIT, tensor(:,2), 'F15.5,1x', ErrStat, ErrMsg  )
+! call WrReAryFileNR ( DEBUG_UNIT, tensor(:,3), 'F15.5,1x', ErrStat, ErrMsg  )
             
-            DO node=1,u_out%Nnodes
-               SmllRotAngs(:,1) = GetSmllRotAngs ( u1%Orientation(:,:,node), ErrStat, ErrMsg )               
-               SmllRotAngs(:,2) = GetSmllRotAngs ( u2%Orientation(:,:,node), ErrStat, ErrMsg )               
-               SmllRotAngs(:,3) = GetSmllRotAngs ( u3%Orientation(:,:,node), ErrStat, ErrMsg )            
+!            CALL SetAnglesForInterp( tensor )
+            CALL DCM_SetLogMapForInterp( tensor )
                                               
-               SmllRotAngs_out =   SmllRotAngs(:,1) &
-                               + ( t(3)**2 * (SmllRotAngs(:,1) - SmllRotAngs(:,2)) + t(2)**2*(-SmllRotAngs(:,1) + SmllRotAngs(:,3)) )*scaleFactor &
-                               + ( (t(2)-t(3))*SmllRotAngs(:,1) + t(3)*SmllRotAngs(:,2) - t(2)*SmllRotAngs(:,3) )*scaleFactor * t_out
-               
-! u_out%Orientation(:,:,node) =                
-               CALL SmllRotTrans( 'Mesh Orientation Extrapolation', SmllRotAngs_out(1), SmllRotAngs_out(2), SmllRotAngs_out(3), u_out%Orientation(:,:,node), ' ', ErrStat, ErrMsg )
-               
-            END DO
-            ErrStat = ErrID_None
-            ErrMsg  = ""
-                                    
-         !END IF
+            tensor_interp =   tensor(:,1) &
+                              + ( t(3)**2 * (tensor(:,1) - tensor(:,2)) + t(2)**2*(-tensor(:,1) + tensor(:,3)) )*scaleFactor &
+                              + ( (t(2)-t(3))*tensor(:,1) + t(3)*tensor(:,2) - t(2)*tensor(:,3) )*scaleFactor * t_out
+            u_out%Orientation(:,:,node) = DCM_exp( tensor_interp )  
+! write(DEBUG_UNIT,'(50(F15.5,1x))') tensor_interp ,  tensor, tensor_interp, u3%Orientation(:,:,node),  u_out%Orientation(:,:,node) !bjj: adding the "small rot angles" columns so I don't have to redo Matlab debugging code         
+
+         END DO
+ 
+                                                
       END IF
 
    END SUBROUTINE MeshExtrapInterp2
-
-   !...............................................................................................................................
-    SUBROUTINE MeshExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )
-   
-   ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
-   ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-   !
-   !  expressions below based on either
-   !
-   !  f(t) = a
-   !  f(t) = a + b * t, or
-   !  f(t) = a + b * t + c * t**2
-   !
-   !  where a, b and c are determined as the solution to
-   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-
-
-    TYPE(MeshType),      INTENT(INOUT)  :: u(:)          ! Inputs at t1 > t2 > t3
-    REAL(DbKi),          INTENT(IN   )  :: tin(:)        ! Times associated with the inputs
-    TYPE(MeshType),      INTENT(INOUT)  :: u_out         ! Inputs at tin_out
-    REAL(DbKi),          INTENT(IN   )  :: tin_out       ! time to be extrap/interp'd to
-    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat       ! Error status of the operation
-    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-      ! local variables
-    REAL(DbKi)                          :: t(SIZE(tin))  ! Times associated with the inputs
-    REAL(DbKi)                          :: t_out         ! Time to which to be extrap/interpd
-    INTEGER(IntKi)                      :: order         ! order of polynomial fit (max 2)
-
-    REAL(DbKi)                          :: scaleFactor   ! temporary for extrapolation/interpolation
-
-    ! Initialize ErrStat
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-       ! we'll subtract a constant from the times to resolve some
-       ! numerical issues when t gets large (and to simplify the equations)
-    t = tin - tin(1)
-    t_out = tin_out - tin(1)
-
-    if ( size(t) .ne. size(u)) then
-       ErrStat = ErrID_Fatal
-       ErrMsg = ' Error in MeshExtrapInterp: size(t) must equal size(u).'
-       RETURN
-    end if
-
-   order = SIZE(u) - 1
-
-   SELECT CASE ( order )
-   CASE ( 0 )
-      CALL MeshCopy(u(1), u_out, MESH_UPDATECOPY, ErrStat, ErrMsg )
-   CASE ( 1 )
-
-      IF ( EqualRealNos( t(1), t(2) ) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-         RETURN
-      END IF
-
-      scaleFactor = t_out / t(2)
-
-      IF ( ALLOCATED(u(1)%Force) ) THEN
-         u_out%Force = u(1)%Force + (u(2)%Force - u(1)%Force) * scaleFactor
-      END IF
-      IF ( ALLOCATED(u(1)%Moment) ) THEN
-         u_out%Moment = u(1)%Moment + (u(2)%Moment - u(1)%Moment) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%TranslationDisp) ) THEN
-         u_out%TranslationDisp = u(1)%TranslationDisp + (u(2)%TranslationDisp - u(1)%TranslationDisp) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%RotationVel) ) THEN
-         u_out%RotationVel = u(1)%RotationVel + (u(2)%RotationVel - u(1)%RotationVel) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%TranslationVel) ) THEN
-         u_out%TranslationVel = u(1)%TranslationVel + (u(2)%TranslationVel - u(1)%TranslationVel) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%RotationAcc) ) THEN
-         u_out%RotationAcc = u(1)%RotationAcc + (u(2)%RotationAcc - u(1)%RotationAcc) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%TranslationAcc) ) THEN
-         u_out%TranslationAcc = u(1)%TranslationAcc + (u(2)%TranslationAcc - u(1)%TranslationAcc) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%Scalars) ) THEN
-         u_out%Scalars = u(1)%Scalars + (u(2)%Scalars - u(1)%Scalars) * scaleFactor
-      END IF
-
-      IF ( ALLOCATED(u(1)%Orientation) ) THEN
-         ErrStat=ErrID_Info
-         ErrMsg='Orientations not implemented in MeshExtrapInterp; using nearest neighbor approach instead.'
-
-         IF (scaleFactor < 0.5) THEN
-            u_out%Orientation = u(1)%Orientation
-         ELSE
-            u_out%Orientation = u(2)%Orientation
-         END IF
-      END IF
-   CASE ( 2 )
-
-      IF ( EqualRealNos( t(1), t(2) ) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-         RETURN
-      END IF
-      IF ( EqualRealNos( t(2), t(3) ) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp: t(2) must not equal t(3) to avoid a division-by-zero error.'
-         RETURN
-      END IF
-      IF ( EqualRealNos( t(1), t(3) ) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
-         RETURN
-      END IF
-
-      scaleFactor = 1.0_DbKi / ( t(2) * t(3) * (t(2) - t(3)) )
-
-      IF ( ALLOCATED(u(1)%Force) ) THEN
-
-         u_out%Force =   u(1)%Force &
-                       + ( t(3)**2 * (u(1)%Force - u(2)%Force) + t(2)**2*(-u(1)%Force + u(3)%Force) ) * scaleFactor * t_out &
-                       + ( (t(2)-t(3))*u(1)%Force + t(3)*u(2)%Force - t(2)*u(3)%Force ) *scaleFactor * t_out**2
-
-      END IF
-      IF ( ALLOCATED(u(1)%Moment) ) THEN
-         u_out%Moment =   u(1)%Moment &
-                       + ( t(3)**2 * (u(1)%Moment - u(2)%Moment) + t(2)**2*(-u(1)%Moment + u(3)%Moment) ) * scaleFactor * t_out &
-                       + ( (t(2)-t(3))*u(1)%Moment + t(3)*u(2)%Moment - t(2)*u(3)%Moment ) *scaleFactor * t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%TranslationDisp) ) THEN
-         u_out%TranslationDisp =   u(1)%TranslationDisp &
-                               + ( t(3)**2 * ( u(1)%TranslationDisp - u(2)%TranslationDisp) &
-                                 + t(2)**2 * (-u(1)%TranslationDisp + u(3)%TranslationDisp) ) * scaleFactor * t_out &
-                               + ( (t(2)-t(3))*u(1)%TranslationDisp + t(3)*u(2)%TranslationDisp &
-                                                                    - t(2)*u(3)%TranslationDisp )*scaleFactor*t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%RotationVel) ) THEN
-         u_out%RotationVel =   u(1)%RotationVel &
-                           + ( t(3)**2 * ( u(1)%RotationVel - u(2)%RotationVel) &
-                             + t(2)**2 * (-u(1)%RotationVel + u(3)%RotationVel) ) * scaleFactor * t_out &
-                           + ( (t(2)-t(3))*u(1)%RotationVel + t(3)*u(2)%RotationVel &
-                                                            - t(2)*u(3)%RotationVel )*scaleFactor*t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%TranslationVel) ) THEN
-         u_out%TranslationVel =   u(1)%TranslationVel &
-                              + ( t(3)**2 * ( u(1)%TranslationVel - u(2)%TranslationVel) &
-                                + t(2)**2 * (-u(1)%TranslationVel + u(3)%TranslationVel) ) * scaleFactor * t_out &
-                              + ( (t(2)-t(3))*u(1)%TranslationVel + t(3)*u(2)%TranslationVel &
-                                                                  - t(2)*u(3)%TranslationVel )*scaleFactor*t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%RotationAcc) ) THEN
-         u_out%RotationVel =   u(1)%RotationVel &
-                             + ( t(3)**2 * ( u(1)%RotationVel  - u(2)%RotationVel) &
-                                + t(2)**2 * (-u(1)%RotationVel + u(3)%RotationVel) ) * scaleFactor * t_out &
-                             + ( (t(2)-t(3))*u(1)%RotationVel  + t(3)*u(2)%RotationVel &
-                                                               - t(2)*u(3)%RotationVel )*scaleFactor*t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%TranslationAcc) ) THEN
-         u_out%TranslationAcc =   u(1)%TranslationAcc &
-                              + ( t(3)**2 * ( u(1)%TranslationAcc - u(2)%TranslationAcc) &
-                                + t(2)**2 * (-u(1)%TranslationAcc + u(3)%TranslationAcc) ) * scaleFactor * t_out &
-                              + ( (t(2)-t(3))*u(1)%TranslationAcc + t(3)*u(2)%TranslationAcc &
-                                                                  - t(2)*u(3)%TranslationAcc )*scaleFactor*t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%Scalars) ) THEN
-         u_out%Scalars =   u(1)%Scalars &
-                       + ( t(3)**2 * (u(1)%Scalars - u(2)%Scalars) + t(2)**2*(-u(1)%Scalars + u(3)%Scalars) )*scaleFactor * t_out &
-                       + ( (t(2)-t(3))*u(1)%Scalars + t(3)*u(2)%Scalars - t(2)*u(3)%Scalars )*scaleFactor * t_out**2
-      END IF
-
-      IF ( ALLOCATED(u(1)%Orientation) ) THEN
-         ErrStat=ErrID_Info
-         ErrMsg=' Orientations are not implemented in MeshExtrapInterp; using nearest neighbor approach instead.'
-
-         IF ( t_out < 0.5_DbKi*(t(2)+t(1)) ) THEN
-            u_out%Orientation = u(1)%Orientation
-         ELSEIF ( t_out < 0.5_DbKi*(t(3)+t(2)) ) THEN
-            u_out%Orientation = u(2)%Orientation
-         ELSE
-            u_out%Orientation = u(3)%Orientation
-         END IF
-
-      END IF
-   CASE DEFAULT
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error in MeshExtrapInterp: size(u) must be less than 4 (order must be less than 3).'
-   END SELECT
-
-
- END SUBROUTINE MeshExtrapInterp
 
 END MODULE ModMesh
 
