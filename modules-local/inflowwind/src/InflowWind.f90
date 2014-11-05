@@ -48,7 +48,6 @@ MODULE InflowWind
    USE                              InflowWind_Types   
    !FIXME: this file will replace SharedInflowDefs when I can get it to work with the framework registry generator.
    USE                              NWTC_Library
-   USE                              InflowWind_Input
 
       !-------------------------------------------------------------------------------------------------
       ! The included wind modules
@@ -143,6 +142,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
          ! Local variables
 
+      TYPE(InflowWind_InputFile)                            :: InputFileData     !< Data from input file
+
       TYPE(IfW_HHWind_InitInputType)                        :: HH_InitData       !< initialization info
       TYPE(IfW_HHWind_InputType)                            :: HH_InitGuess      !< input positions.
       TYPE(IfW_HHWind_ContinuousStateType)                  :: HH_ContStates     !< Unused
@@ -181,6 +182,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       ErrMsg  = ""
 
 
+         ! Set a few variables.
+
+      ParamData%DT            = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
+      CALL NWTC_Init()                                   ! This might not be needed
+      CALL DispNVD( IfW_Ver )                            ! This might be changed later
+
+
+
          ! check to see if we are already initialized. Return if it has.
          ! If for some reason a different type of windfile should be used, then call InflowWind_End first, then reinitialize.
 
@@ -197,14 +206,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
          ! Set the names of the files based on the inputfilename
       ParamData%InputFileName = InitData%InputFileName
-      CALL GetRoot( ParamData%InputFileName, ParamData%RootName )
-      ParamData%EchoName      = TRIM(ParamData%RootName)//".IfW.ech"
-!      ParamData%SummaryName   = TRIM(ParamData%RootName)//".IfW.sum"
+      CALL GetRoot( ParamData%InputFileName, ParamData%RootFileName )
+      ParamData%EchoFileName  = TRIM(ParamData%RootFileName)//".IfW.ech"
+!      ParamData%SummaryName   = TRIM(ParamData%RootFileName)//".IfW.sum"
 
 
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
 
-      CALL InflowWindInput_GetInput(InitData,InitOutData,ParamData,TmpErrStat,TmpErrMsg)
+      CALL InflowWind_ReadInput( ParamData%InputFileName, ParamData%EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -214,16 +223,29 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
 
 
-         !----------------------------------------------------------------------------------------------
-         ! Define the parameters
-         !----------------------------------------------------------------------------------------------
 
-!      ParamData%DT            = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
+         ! Validate the InflowWind input file information.
+
+      CALL InflowWind_ValidateInput( InputFileData, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      IF ( ErrStat>= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+
+
+
+
+
+
+!         !----------------------------------------------------------------------------------------------
+!         ! Define the parameters
+!         !----------------------------------------------------------------------------------------------
+!
 !      ParamData%WindFileType  = InitData%WindFileType
 !      ParamData%WindFileName  = InitData%WindFileName
 !
-!      CALL NWTC_Init()                                   ! This might not be needed
-!      CALL DispNVD( IfW_Ver )                            ! This might be changed later
 !
 !
 !
@@ -290,7 +312,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !
 !      SELECT CASE ( ParamData%WindFileType )
 !
-!         CASE (HH_WindNumber)
+!         CASE (Uniform_WindNumber)
 !
 !            HH_InitData%ReferenceHeight = InitData%ReferenceHeight
 !            HH_InitData%Width           = InitData%Width
@@ -377,7 +399,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!            END IF
 !
 !
-!         CASE (UD_WindNumber)
+!         CASE (User_WindNumber)
 !
 !               !FIXME: remove this error message when we add UD_Wind in
 !            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the UD_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )                  
@@ -428,12 +450,17 @@ CONTAINS
 
    SUBROUTINE CleanUp()
 
-      !FIXME: add in stuff that we need to dispose of here
+      ! add in stuff that we need to dispose of here
+      CALL InflowWind_DestroyInputFile( InputFileData, TmpErrsTat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+
 !      CALL InflowWind_DestroyInitInput( InitLocal,  TmpErrStat, TmpErrMsg );  CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
 
 
    END SUBROUTINE CleanUp
      
+
+  
 END SUBROUTINE InflowWind_Init
 
 
@@ -501,7 +528,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       INTEGER(IntKi)                                           :: TmpErrStat
       CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg            ! temporary error message
 
-
+!FIXME/TODO:  Need to add the wrapping layer for the Coordinate tranformations.  When this is added, the UniformWind will need to be modified so that a warning is given when the global PropogationDir and the wind-direction within the file are both non-zero.
 
          ! Initialize ErrStat
       ErrStat  = ErrID_None
@@ -516,7 +543,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
          ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
       SELECT CASE ( ParamData%WindFileType )
-         CASE (HH_WindNumber)
+         CASE (Uniform_WindNumber)
 
                ! Allocate the position array to pass in
             CALL AllocAry( HH_InData%Position, 3, SIZE(InputData%Position,2), &
@@ -563,7 +590,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !               OutputData%Velocity(:,PointCounter) = FF_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
 
 
-!         CASE (UD_WindNumber)
+!         CASE (User_WindNumber)
 
 !               OutputData%Velocity(:,PointCounter) = UsrWnd_GetWindSpeed( Time, InputData%Position(:,PointCounter), ErrStat )!, ErrMsg)
 
@@ -684,7 +711,7 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
 
       SELECT CASE ( ParamData%WindFileType )
 
-         CASE (HH_WindNumber)
+         CASE (Uniform_WindNumber)
             CALL IfW_HHWind_End( HH_InitData,   ParamData%HHWind,                                        &
                                  HH_ContStates, HH_DiscStates,    HH_ConstrStates,  OtherStates%HHWind,  &
                                  HH_OutData,    ErrStat,          ErrMsg )
@@ -694,7 +721,7 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
                                  FF_ContStates, FF_DiscStates,    FF_ConstrStates,  OtherStates%FFWind,  &
                                  FF_OutData,    ErrStat,          ErrMsg )
 
-!         CASE (UD_WindNumber)
+!         CASE (User_WindNumber)
 !            CALL UsrWnd_Terminate( ErrStat )
 
 !         CASE (FD_WindNumber)
@@ -964,7 +991,7 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
    ErrStat = ErrID_None
 
    SELECT CASE ( ParamData%WindFileType )
-      CASE (HH_WindNumber)
+      CASE (Uniform_WindNumber)
 
          !-------------------------------------------------------------------------------------------------
          ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
@@ -1046,6 +1073,803 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
 END FUNCTION WindInf_ADhack_diskVel
 
 
+
+
+!====================================================================================================
+SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat, ErrMsg )
+!     The routine prints out warning messages if the user has requested invalid output channel names
+!     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
+!----------------------------------------------------------------------------------------------------
+   INTEGER(IntKi),                     INTENT(IN   )  :: NUserOutputs         !< Number of user-specified output channels
+   CHARACTER(10),                      INTENT(IN   )  :: UserOutputs(:)       !< An array holding the names of the requested output channels.
+   LOGICAL,                            INTENT(IN   )  :: foundMask(:)         !< A mask indicating whether a user requested channel belongs to a module's output channels.
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+
+
+  INTEGER(IntKi)                                      :: I                    !< Generic loop counter
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   DO I = 1, NUserOutputs
+      IF (.NOT. foundMask(I)) THEN
+         ErrMsg  = ' A requested output channel is invalid'
+         CALL ProgWarn( 'The requested output channel is invalid: ' // UserOutputs(I) )
+         ErrStat = ErrID_Warn
+      END IF
+   END DO
+
+
+
+END SUBROUTINE PrintBadChannelWarning
+
+
+!====================================================================================================
+SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
+!     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to
+!     any existing echo information
+!----------------------------------------------------------------------------------------------------
+   LOGICAL,                       INTENT( IN    )   :: EchoFlag             ! local version of echo flag
+   INTEGER,                       INTENT( IN    )   :: UnEcho               !  echo unit number
+
+
+      ! Close this module's echo file
+
+   IF ( EchoFlag ) THEN
+    CLOSE(UnEcho)
+   END IF
+
+
+
+END SUBROUTINE CleanupEchoFile
+
+
+
+
+!====================================================================================================
+SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
+!     This public subroutine reads the input required for InflowWind from the file whose name is an
+!     input parameter.
+!----------------------------------------------------------------------------------------------------
+
+
+      ! Passed variables
+   CHARACTER(*),                       INTENT(IN   )  :: InputFileName
+   CHARACTER(*),                       INTENT(IN   )  :: EchoFileName
+   TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData            !< The data for initialization
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Returned error status  from this subroutine 
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Returned error message from this subroutine
+
+
+      ! Local variables
+!   INTEGER(IntKi)                                     :: I                    !< Generic loop counter
+
+   LOGICAL                                            :: EchoFlag             !< Are we echoing info?
+   INTEGER(IntKi)                                     :: UnitInput            !< Unit number for the input file
+   INTEGER(IntKi)                                     :: UnitEcho             !< The local unit number for this module's echo file
+   CHARACTER(1024)                                    :: TmpPath              !< Temporary storage for relative path name
+   CHARACTER(1024)                                    :: TmpFmt               !< Temporary storage for format statement
+   CHARACTER(35)                                      :: Frmt                 !< Output format for logical parameters. (matches NWTC Subroutine Library format)
+ 
+
+      ! Temoporary messages
+   INTEGER(IntKi)                                     :: TmpErrStat
+   CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg
+
+
+      ! Initialize local data
+
+   UnitEcho    = -1
+   Frmt           = "( 2X, L11, 2X, A, T30, ' - ', A )"
+   ErrStat        = ErrID_None
+   ErrMsg         = ""
+   EchoFlag       = .FALSE.  ! initialize for error handling (cleanup() routine)
+
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! Open the file
+   !-------------------------------------------------------------------------------------------------
+
+   CALL GetNewUnit( UnitInput, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+
+   CALL OpenFInpFile( UnitInput, TRIM(InputFileName), TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+   CALL WrScr( ' Opening InflowWind input file:  '//InputFileName )
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! File header
+   !-------------------------------------------------------------------------------------------------
+
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file header line 1', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file header line 2', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+     ! Echo Input Files.
+
+   CALL ReadVar ( UnitInput, InputFileName, EchoFLag, 'Echo', 'Echo Input', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
+      ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
+      ! which we must store, set, and then replace on error or completion.
+
+   IF ( EchoFlag ) THEN
+
+      CALL OpenEcho ( UnitEcho, TRIM(EchoFileName), TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      REWIND(UnitInput)
+
+
+         ! The input file was already successfully read through up to this point, so we shouldn't have any read
+         ! errors in the first four lines.  So, we won't worry about checking the error status here.
+
+      CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file header line 1', TmpErrStat, TmpErrMsg, UnitEcho )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+
+      CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file header line 2', TmpErrStat, TmpErrMsg, UnitEcho )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+
+      CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+
+         ! Echo Input Files.
+
+      CALL ReadVar ( UnitInput, InputFileName, EchoFlag, 'Echo', 'Echo the input file data', TmpErrStat, TmpErrMsg, UnitEcho )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+
+   END IF
+
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read general section with wind type, direction, and output point list (applies to all wind types)
+   !-------------------------------------------------------------------------------------------------
+
+
+      ! Read WindType
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%WindFileType, 'WindType', &
+               'switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; '//&
+               '4=binary Bladed-style FF; 5=HAWC format; 6=User defined)', &
+               TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+      ! Read PropogationDir
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%PropogationDir, 'PropogationDir', &
+               'Direction of wind propogation (meteoroligical direction)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+      ! Read the number of points for the wind velocity output
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%NWindVel, 'NWindVel', &
+               'Number of points to output the wind velocity (0 to 9)', &
+               TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+      ! Before proceeding, make sure that NWindVel makes sense
+   IF ( InputFileData%NWindVel < 0 .OR. InputFileData%NwindVel > 9 ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'NWindVel must be greater than or equal to zero and less than 10.', &
+                        ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+      CALL CleanUp()
+      RETURN
+   ELSE
+
+      ! Allocate space for the output location arrays:
+      CALL AllocAry( InputFileData%WindVxiList, InputFileData%NWindVel, 'WindVxiList', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+      CALL AllocAry( InputFileData%WindVyiList, InputFileData%NWindVel, 'WindVyiList', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+      CALL AllocAry( InputFileData%WindVziList, InputFileData%NWindVel, 'WindVziList', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      ENDIF 
+   ENDIF
+
+      ! Read in the values of WindVxiList
+   CALL ReadAry( UnitInput, InputFileName, InputFileData%WindVxiList, InputFileData%NWindVel, 'WindVxiList', &
+               'List of coordinates in the inertial X direction (m)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+   
+      ! Read in the values of WindVxiList
+   CALL ReadAry( UnitInput, InputFileName, InputFileData%WindVyiList, InputFileData%NWindVel, 'WindVyiList', &
+               'List of coordinates in the inertial Y direction (m)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+   
+      ! Read in the values of WindVziList
+   CALL ReadAry( UnitInput, InputFileName, InputFileData%WindVziList, InputFileData%NWindVel, 'WindVziList', &
+               'List of coordinates in the inertial Z direction (m)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+   
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for Steady Wind Conditions [used only for WindType = 1]_ section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+      ! Read HWindSpeed
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Steady_HWindSpeed, 'HWindSpeed', &
+                  'Horizontal windspeed for steady wind', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+      ! Read RefHt
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Steady_RefHt, 'RefHt', &
+                  'Reference height for horizontal wind speed for steady wind', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+      ! Read PLexp
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Steady_PLexp, 'PLexp', &
+                  'Power law exponent for steady wind', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for Uniform wind file [used only for WindType = 2]_ section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+!FIXME: change name from HH to UniformWind or something
+      ! Read HHWindFile
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Uniform_FileName, 'WindFileName', &
+                  'Filename of time series data for uniform wind field', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+      ! Read RefHt
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Uniform_RefHt, 'RefHt', &
+                  'Reference height for uniform wind file', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for Binary TurbSim Full-Field files [used only for WindType = 3]_ section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read FFWindFile
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%TSFF_FileName, 'FileName', &
+               'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for Binary Bladed-style Full-Field files [used only for WindType = 4]_ section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+!FIXME: change when have the bladedstyle module assembled
+      ! Read BladedStyle%WindFileName
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+!   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_FileName, 'FileName', &
+!               'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+!FIXME: change when have the bladedstyle module assembled
+      ! Read TowerFileFlag
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+!   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_TowerFile, 'TowerFileFlag', &
+!               'Have tower file (.twr) [flag]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for coherent turbulence [used only for WindType = 3 or 4]_ section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read CT_Flag
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_CoherentTurb, 'CTTS_CoherentTurbFlag', &
+               'Flag to coherent turbulence', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+!FIXME: change when have the CT module assembled
+      ! Read CTWind%WindFileName
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+!   CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_FileName, 'CTTS_FileName', &
+!               'Name of coherent turbulence file', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+!FIXME: change when have the CT module assembled
+      ! Read CTWind%PathName
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+!   CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_Path, 'CTTS_Path', &
+!               'Path to coherent turbulence binary files', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF 
+
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for HAWC-formatted binary files [used only for WindType = 5]_ section
+   !-------------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_FileName_u
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_FileName_u, 'HAWC_FileName_u', &
+               'Name of the file containing the u-component fluctuating wind', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_FileName_v
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_FileName_v, 'HAWC_FileName_v', &
+               'Name of the file containing the v-component fluctuating wind', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_FileName_w
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_FileName_w, 'HAWC_FileName_w', &
+               'Name of the file containing the w-component fluctuating wind', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_nx
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_nx, 'HAWC_nx', &
+               'Number of grids in the x direction (in the 3 files above)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_ny
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_ny, 'HAWC_ny', &
+               'Number of grids in the y direction (in the 3 files above)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_nz
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_nz, 'HAWC_nz', &
+               'Number of grids in the z direction (in the 3 files above)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_dx
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_dx, 'HAWC_dx', &
+               'Number of grids in the x direction (in the 3 files above)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_dy
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_dy, 'HAWC_dy', &
+               'Number of grids in the y direction (in the 3 files above)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_dz
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_dz, 'HAWC_dz', &
+               'Number of grids in the z direction (in the 3 files above)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_RefHt
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_RefHt, 'HAWC_RefHt', &
+               'Reference (hub) height of the grid', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+
+      !----------------------------------------------------------------------------------------------
+      !> Read the _Scaling parameters for turbulence (HAWC-format files) [used only for WindType = 5]_ subsection
+      !----------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_ScaleMethod
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_ScaleMethod, 'HAWC_ScaleMethod', &
+               'Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling '// &
+               'factor based on a desired standard deviation]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_SFx
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SFx, 'HAWC_SFx', &
+               'Turbulence scaling factor for the x direction [ScaleMethod=1]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_SFy
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SFy, 'HAWC_SFy', &
+               'Turbulence scaling factor for the y direction [ScaleMethod=1]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_SFz
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SFz, 'HAWC_SFz', &
+               'Turbulence scaling factor for the z direction [ScaleMethod=1]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_SigmaFx
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SigmaFx, 'HAWC_SigmaFx', &
+               'Turbulence standard deviation to calculate scaling from in x direction [ScaleMethod=2]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_SigmaFy
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SigmaFy, 'HAWC_SigmaFy', &
+               'Turbulence standard deviation to calculate scaling from in y direction [ScaleMethod=2]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_SigmaFz
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_SigmaFz, 'HAWC_SigmaFz', &
+               'Turbulence standard deviation to calculate scaling from in z direction [ScaleMethod=2]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+!FIXME:  TStart has no comment
+      ! Read HAWC_TStart
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_TStart, 'HAWC_TStart', &
+               '', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+!FIXME:  TStart has no comment
+      ! Read HAWC_TEnd
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_TEnd, 'HAWC_TEnd', &
+               '', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+      !----------------------------------------------------------------------------------------------
+      !> Read the _Mean wind profile paramters (added to HAWC-format files) [used only for WindType = 5]_ subsection
+      !----------------------------------------------------------------------------------------------
+
+      ! Section separator line
+   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_URef
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_URef, 'HAWC_URef', &
+               'Mean u-component wind speed at the reference height', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_ProfileType
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_ProfileType, 'HAWC_ProfileType', &
+               'Wind profile type ("LOG"=logarithmic, "PL"=power law, or "UD"=user defined)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_PLExp
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_PLExp, 'HAWC_PLExp', &
+               'Power law exponent (used for PL wind profile type only)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+      ! Read HAWC_Z0
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_Z0, 'HAWC_Z0', &
+               'Surface roughness length (used for LOG wind profile type only)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
+
+
+
+
+!FIXME: read the outlist
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! This is the end of the input file
+   !-------------------------------------------------------------------------------------------------
+
+   CALL Cleanup()
+
+   RETURN
+
+      CONTAINS
+         !..............................
+         SUBROUTINE Cleanup()
+   
+   
+               ! Close input file
+            CLOSE ( UnitInput )
+   
+               ! Cleanup the Echo file and global variables
+            CALL CleanupEchoFile( EchoFlag, UnitEcho )
+   
+   
+         END SUBROUTINE Cleanup
+
+END SUBROUTINE InflowWind_ReadInput
+
+
+!====================================================================================================
+SUBROUTINE InflowWind_ValidateInput( InputFileData, ErrStat, ErrMsg )
+!     This private subroutine verifies the input required for InflowWind is correctly specified.
+!----------------------------------------------------------------------------------------------------
+
+
+      ! Passed variables
+
+   TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< The data for initialization
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
+
+
+      ! Temporary variables
+   INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
+   CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg            !< Temporary error message for subroutine and function calls
+
+      ! Local variables
+
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+
+!FIXME: Setup a case structure testing on InputFileData%WindType.
+   CALL Steady_ValidateInput()
+   CALL Uniform_ValidateInput()
+   CALL TSFF_ValidateInput()
+   CALL BSFF_ValidateInput()
+   CALL HAWC_ValidateInput()
+
+   IF ( InputFileData%CTTS_CoherentTurb ) THEN
+      CALL CTTS_ValidateInput()
+   ENDIF
+
+
+   CALL SetErrStat(ErrID_Fatal,' This subroutine has not been written yet.',ErrStat,ErrMsg,'InflowWind_ValidateInput')
+
+
+CONTAINS
+   SUBROUTINE Steady_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'Steady_ValidateInput')
+   END SUBROUTINE Steady_ValidateInput
+
+   SUBROUTINE Uniform_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'Uniform_ValidateInput')
+   END SUBROUTINE Uniform_ValidateInput
+
+   SUBROUTINE TSFF_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'TSFF_ValidateInput')
+   END SUBROUTINE TSFF_ValidateInput
+
+   SUBROUTINE BSFF_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'BSFF_ValidateInput')
+   END SUBROUTINE BSFF_ValidateInput
+
+   SUBROUTINE HAWC_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'HAWC_ValidateInput')
+   END SUBROUTINE HAWC_ValidateInput
+
+   SUBROUTINE CTTS_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'CTTS_ValidateInput')
+   END SUBROUTINE CTTS_ValidateInput
+
+END SUBROUTINE InflowWind_ValidateInput
+
+ 
 
 
 !====================================================================================================
