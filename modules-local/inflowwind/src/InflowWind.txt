@@ -11,18 +11,15 @@
 # keyword <InflowWind[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
 ###################################################################################################################################
 
-usefrom IfW_FFWind.txt
+#usefrom IfW_FFWind.txt
 usefrom IfW_UniformWind.txt
 usefrom IfW_HAWCWind.txt
 include Registry_NWTC_Library.txt
 
 #FIXME: remove the following and use the new ones. 
-#param    InflowWind/InflowWind   -                 IntKi            DEFAULT_WindNumber -     -1    -     "Undetermined wind type; calls internal routine to guess what type it is"     -
-param    InflowWind/InflowWind   -                 IntKi             HH_WindNumber     -     -1     -     "Hub-Height wind file"                                                        -
-param    ^                       -                 IntKi             FF_WindNumber     -     -2     -     "Binary full-field wind file"                                                 -
-param    ^                       -                 IntKi             UD_WindNumber     -     -3     -     "User-defined wind"                                                           -
-param    ^                       -                 IntKi             FD_WindNumber     -     -4     -     "4-dimensional wind (LES)"                                                    -
-param    ^                       -                 IntKi             CTP_WindNumber    -     -5     -     "Coherent turbulence wind field (superimpose KH billow on background wind)"   -
+#param    InflowWind/InflowWind   -                 IntKi             HH_WindNumber     -     -1     -     "Hub-Height wind file"                                                        -
+param    InflowWind/InflowWind   -                 IntKi             FF_WindNumber     -     -2     -     "Binary full-field wind file"                                                 -
+param    InflowWind/InflowWind   -                 IntKi             CTP_WindNumber    -     -5     -     "Coherent turbulence wind field (superimpose KH billow on background wind)"   -
 
 param    InflowWind/InflowWind   -                 IntKi             Undef_WindNumber     -     0     -     "This is the code for an undefined WindFileType"                           -
 param    ^                       -                 IntKi             Steady_WindNumber    -     1     -     "Steady wind.  Calculated internally."                                     -
@@ -104,7 +101,7 @@ typedef  ^                       InitOutputType    CHARACTER(10)     WriteOutput
 typedef  ^                       ^                 CHARACTER(10)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
 typedef  ^                       ^                 ReKi              HubHeight         -     -     -     "Height of the hub"                                      meters
-typedef  ^                       ^        IfW_FFWind_InitOutputType  FFWind            -     -     -     "FFWind InitOutput info"                                 -
+#typedef  ^                       ^        IfW_FFWind_InitOutputType  FFWind            -     -     -     "FFWind InitOutput info"                                 -
 typedef  ^                       ^        IfW_UniformWind_InitOutputType  UniformWind            -     -     -     "UniformWind InitOutput info"                                 -
 
 
@@ -112,7 +109,7 @@ typedef  ^                       ^        IfW_UniformWind_InitOutputType  Unifor
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
-typedef  ^                       ^      IfW_FFWind_OtherStateType    FFWind            -     -     -     "OtherStates from FFWind"                                -
+#typedef  ^                       ^      IfW_FFWind_OtherStateType    FFWind            -     -     -     "OtherStates from FFWind"                                -
 typedef  ^                       ^      IfW_UniformWind_OtherStateType    UniformWind            -     -     -     "OtherStates from UniformWind"                                -
 
 
@@ -146,7 +143,7 @@ typedef  ^                       ^                 ReKi              WindVziList
 typedef  ^                       ^                 ReKi              HWindSpeed        -     -     -     "Horizontal windspeed for steady wind conditions"        -
 typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height for horizontal wind speed for steady wind"   -
 typedef  ^                       ^                 ReKi              PLexp             -     -     -     "Power law exponent"                                     -
-typedef  ^                       ^       IfW_FFWind_ParameterType    FFWind            -     -     -     "Parameters from FFWind"                                 -
+#typedef  ^                       ^       IfW_FFWind_ParameterType    FFWind            -     -     -     "Parameters from FFWind"                                 -
 typedef  ^                       ^       IfW_UniformWind_ParameterType    UniformWind            -     -     -     "Parameters from UniformWind"                                 -
 typedef  ^                       ^       IfW_HAWCWind_ParameterType  HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
 

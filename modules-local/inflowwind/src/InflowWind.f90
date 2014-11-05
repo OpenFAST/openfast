@@ -46,29 +46,20 @@ MODULE InflowWind
 
 
    USE                              InflowWind_Types   
-   !FIXME: this file will replace SharedInflowDefs when I can get it to work with the framework registry generator.
    USE                              NWTC_Library
 
       !-------------------------------------------------------------------------------------------------
       ! The included wind modules
       !-------------------------------------------------------------------------------------------------
 
-   USE                              IfW_UniformWind_Types           ! Types for IfW_UniformWind
-   USE                              IfW_UniformWind                 ! hub-height text wind files
-   USE                              IfW_FFWind_Types           ! Types for IfW_FFWind
-   USE                              IfW_FFWind                 ! full-field binary wind files
+   USE                              IfW_UniformWind_Types      ! Types for IfW_UniformWind
+   USE                              IfW_UniformWind            ! uniform wind files (text)
+!   USE                              IfW_FFWind_Types           ! Types for IfW_FFWind
+!   USE                              IfW_FFWind                 ! full-field binary wind files
 !   USE                              HAWCWind                   ! full-field binary wind files in HAWC format
 !   USE                              FDWind                     ! 4-D binary wind files
 !   USE                              CTWind                     ! coherent turbulence from KH billow - binary file superimposed on another wind type
 !   USE                              UserWind                   ! user-defined wind module
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! The subroutines
-      !-------------------------------------------------------------------------------------------------
-
-!FIXME: may be able to remove this.  It isn't necessary anymore.
-!   USE                              InflowWind_Subs             ! all the subroutines live here now.
 
 
 
@@ -96,29 +87,24 @@ MODULE InflowWind
 
 
       ! Not coded
-
-!   PUBLIC :: InflowWind_JacobianPInput                         ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-!   PUBLIC :: InflowWind_JacobianPContState                     ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the continuous states (x)
-!   PUBLIC :: InflowWind_JacobianPDiscState                     ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the discrete states (xd)
-!   PUBLIC :: InflowWind_JacobianPConstrState                   ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations all with respect to the constraint states (z)
+   !NOTE: Jacobians have not been coded.
 
 
 
 CONTAINS
 !====================================================================================================
-SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,                          &
+!> This routine is called at the start of the simulation to perform initialization steps.
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+!! Since this module acts as an interface to other modules, on some things are set before initiating
+!! calls to the lower modules.
+!----------------------------------------------------------------------------------------------------
+SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,                   &
                      ContStates, DiscStates,    ConstrStateGuess,    OtherStates,   &
                      OutData,    TimeInterval,  InitOutData,                        &
                      ErrStat,    ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps.
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
-! Since this module acts as an interface to other modules, on some things are set before initiating
-! calls to the lower modules.
-!----------------------------------------------------------------------------------------------------
 
 
-!      USE CTWind
 
          ! Initialization data and guesses
 
@@ -151,12 +137,12 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       TYPE(IfW_UniformWind_ConstraintStateType)                  :: Uniform_ConstrStates   !< Unused
       TYPE(IfW_UniformWind_OutputType)                           :: Uniform_OutData        !< output velocities
 
-      TYPE(IfW_FFWind_InitInputType)                        :: FF_InitData       !< initialization info
-      TYPE(IfW_FFWind_InputType)                            :: FF_InitGuess      !< input positions.
-      TYPE(IfW_FFWind_ContinuousStateType)                  :: FF_ContStates     !< Unused
-      TYPE(IfW_FFWind_DiscreteStateType)                    :: FF_DiscStates     !< Unused
-      TYPE(IfW_FFWind_ConstraintStateType)                  :: FF_ConstrStates   !< Unused
-      TYPE(IfW_FFWind_OutputType)                           :: FF_OutData        !< output velocities
+!      TYPE(IfW_FFWind_InitInputType)                        :: FF_InitData       !< initialization info
+!      TYPE(IfW_FFWind_InputType)                            :: FF_InitGuess      !< input positions.
+!      TYPE(IfW_FFWind_ContinuousStateType)                  :: FF_ContStates     !< Unused
+!      TYPE(IfW_FFWind_DiscreteStateType)                    :: FF_DiscStates     !< Unused
+!      TYPE(IfW_FFWind_ConstraintStateType)                  :: FF_ConstrStates   !< Unused
+!      TYPE(IfW_FFWind_OutputType)                           :: FF_OutData        !< output velocities
 
 
 !     TYPE(CT_Backgr)                                        :: BackGrndValues
@@ -500,12 +486,12 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       TYPE(IfW_UniformWind_ConstraintStateType)                     :: Uniform_ConstrStates   !< Unused
       TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
-      TYPE(IfW_FFWind_InitInputType)                           :: FF_InitData       !< initialization info
-      TYPE(IfW_FFWind_InputType)                               :: FF_InData         !< input positions.
-      TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
-      TYPE(IfW_FFWind_DiscreteStateType)                       :: FF_DiscStates     !< Unused
-      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
-      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
+!      TYPE(IfW_FFWind_InitInputType)                           :: FF_InitData       !< initialization info
+!      TYPE(IfW_FFWind_InputType)                               :: FF_InData         !< input positions.
+!      TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
+!      TYPE(IfW_FFWind_DiscreteStateType)                       :: FF_DiscStates     !< Unused
+!      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
+!      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
 
 
 
@@ -513,14 +499,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !NOTE: It isn't entirely clear what the purpose of Height is. Does it sometimes occur that Height  /= ParamData%ReferenceHeight???
       REAL(ReKi)                                               :: Height            ! Retrieved from FF
       REAL(ReKi)                                               :: HalfWidth         ! Retrieved from FF
-
-
-         ! Sub modules use the InflIntrpOut derived type to store the wind information
-!      TYPE(CT_Backgr)                                          :: BackGrndValues
-!      TYPE(InflIntrpOut)                                       :: CTWindSpeed       ! U, V, W velocities to superimpose on background wind
-!      TYPE(InflIntrpOut)                                       :: TempWindSpeed     ! U, V, W velocities returned
-!      REAL(ReKi)                                               :: CTWindSpeed(3)     ! U, V, W velocities to superimpose on background wind
-!      REAL(ReKi)                                               :: TempWindSpeed(3)   ! Temporary U, V, W velocities
 
 
 
@@ -565,26 +543,26 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ErrStat >= AbortErrLev ) RETURN
             
 
-         CASE (FF_WindNumber)
-
-               ! Allocate the position array to pass in
-            CALL AllocAry( FF_InData%Position, 3, SIZE(InputData%Position,2), &
-                           "Position grid for passing to IfW_FFWind_CalcOutput", TmpErrStat, TmpErrMsg )
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )                  
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
-            ! Copy positions over
-            FF_InData%Position   = InputData%Position
-
-            CALL  IfW_FFWind_CalcOutput(  Time,          FF_InData,     ParamData%FFWind,                         &
-                                          FF_ContStates, FF_DiscStates, FF_ConstrStates,     OtherStates%FFWind,  &
-                                          FF_OutData,    TmpErrStat,    TmpErrMsg)
-
-               ! Copy the velocities over
-            OutputData%Velocity  = FF_OutData%Velocity
-
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )                  
-            IF ( ErrStat >= AbortErrLev ) RETURN                       
+!         CASE (FF_WindNumber)
+!
+!               ! Allocate the position array to pass in
+!            CALL AllocAry( FF_InData%Position, 3, SIZE(InputData%Position,2), &
+!                           "Position grid for passing to IfW_FFWind_CalcOutput", TmpErrStat, TmpErrMsg )
+!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )                  
+!            IF ( ErrStat >= AbortErrLev ) RETURN
+!
+!            ! Copy positions over
+!            FF_InData%Position   = InputData%Position
+!
+!            CALL  IfW_FFWind_CalcOutput(  Time,          FF_InData,     ParamData%FFWind,                         &
+!                                          FF_ContStates, FF_DiscStates, FF_ConstrStates,     OtherStates%FFWind,  &
+!                                          FF_OutData,    TmpErrStat,    TmpErrMsg)
+!
+!               ! Copy the velocities over
+!            OutputData%Velocity  = FF_OutData%Velocity
+!
+!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )                  
+!            IF ( ErrStat >= AbortErrLev ) RETURN                       
             
             
 !               OutputData%Velocity(:,PointCounter) = FF_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
@@ -691,11 +669,11 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
       TYPE(IfW_UniformWind_ConstraintStateType)                     :: Uniform_ConstrStates   !< Unused
       TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
-      TYPE(IfW_FFWind_InputType)                               :: FF_InitData       !< input positions.
-      TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
-      TYPE(IfW_FFWind_DiscreteStateType)                       :: FF_DiscStates     !< Unused
-      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
-      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
+!      TYPE(IfW_FFWind_InputType)                               :: FF_InitData       !< input positions.
+!      TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
+!      TYPE(IfW_FFWind_DiscreteStateType)                       :: FF_DiscStates     !< Unused
+!      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
+!      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
 
 
 !     TYPE(CT_Backgr)                                           :: BackGrndValues
@@ -716,11 +694,11 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
                                  Uniform_ContStates, Uniform_DiscStates,    Uniform_ConstrStates,  OtherStates%UniformWind,  &
                                  Uniform_OutData,    ErrStat,          ErrMsg )
 
-         CASE (FF_WindNumber)
-            CALL IfW_FFWind_End( FF_InitData,   ParamData%FFWind,                                        &
-                                 FF_ContStates, FF_DiscStates,    FF_ConstrStates,  OtherStates%FFWind,  &
-                                 FF_OutData,    ErrStat,          ErrMsg )
-
+!         CASE (FF_WindNumber)
+!            CALL IfW_FFWind_End( FF_InitData,   ParamData%FFWind,                                        &
+!                                 FF_ContStates, FF_DiscStates,    FF_ConstrStates,  OtherStates%FFWind,  &
+!                                 FF_OutData,    ErrStat,          ErrMsg )
+!
 !         CASE (User_WindNumber)
 !            CALL UsrWnd_Terminate( ErrStat )
 
@@ -1031,14 +1009,18 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
                   OtherStates%UniformWind%TimeIndex = OtherStates%UniformWind%TimeIndex + 1
 
                ELSE
-                  P           = ( Time - OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex) )/( OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex+1) &
+                  P           =  ( Time - OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex) )/     &
+                                 ( OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex+1)             &
                                  - OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex) )
-                  V_tmp       = ( OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex+1) - OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex) )*P  &
-                                + OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex)
-                  Delta_tmp   = ( OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex+1) - OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex) )*P  &
-                                + OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex)
-                  VZ_tmp      = ( OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex+1) - OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex) )*P  &
-                                + OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex)
+                  V_tmp       =  ( OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex+1)           &
+                                 - OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex) )*P         &
+                                 + OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex)
+                  Delta_tmp   =  ( OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex+1)           &
+                                 - OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex) )*P         &
+                                 + OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex)
+                  VZ_tmp      =  ( OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex+1)           &
+                                 - OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex) )*P  &
+                                 + OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex)
                   EXIT
 
                END IF
@@ -1057,10 +1039,10 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
 
 
 
-      CASE (FF_WindNumber)
-
-         WindInf_ADhack_diskVel(1)   = OtherStates%FFWind%MeanFFWS
-         WindInf_ADhack_diskVel(2:3) = 0.0
+!      CASE (FF_WindNumber)
+!
+!         WindInf_ADhack_diskVel(1)   = OtherStates%FFWind%MeanFFWS
+!         WindInf_ADhack_diskVel(2:3) = 0.0
 
       CASE DEFAULT
          ErrStat = ErrID_Fatal
@@ -1071,58 +1053,6 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
    RETURN
 
 END FUNCTION WindInf_ADhack_diskVel
-
-
-
-
-!====================================================================================================
-SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat, ErrMsg )
-!     The routine prints out warning messages if the user has requested invalid output channel names
-!     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
-!----------------------------------------------------------------------------------------------------
-   INTEGER(IntKi),                     INTENT(IN   )  :: NUserOutputs         !< Number of user-specified output channels
-   CHARACTER(10),                      INTENT(IN   )  :: UserOutputs(:)       !< An array holding the names of the requested output channels.
-   LOGICAL,                            INTENT(IN   )  :: foundMask(:)         !< A mask indicating whether a user requested channel belongs to a module's output channels.
-   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
-
-
-  INTEGER(IntKi)                                      :: I                    !< Generic loop counter
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   DO I = 1, NUserOutputs
-      IF (.NOT. foundMask(I)) THEN
-         ErrMsg  = ' A requested output channel is invalid'
-         CALL ProgWarn( 'The requested output channel is invalid: ' // UserOutputs(I) )
-         ErrStat = ErrID_Warn
-      END IF
-   END DO
-
-
-
-END SUBROUTINE PrintBadChannelWarning
-
-
-!====================================================================================================
-SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
-!     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to
-!     any existing echo information
-!----------------------------------------------------------------------------------------------------
-   LOGICAL,                       INTENT( IN    )   :: EchoFlag             ! local version of echo flag
-   INTEGER,                       INTENT( IN    )   :: UnEcho               !  echo unit number
-
-
-      ! Close this module's echo file
-
-   IF ( EchoFlag ) THEN
-    CLOSE(UnEcho)
-   END IF
-
-
-
-END SUBROUTINE CleanupEchoFile
 
 
 
@@ -1143,9 +1073,6 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 
       ! Local variables
-!   INTEGER(IntKi)                                     :: I                    !< Generic loop counter
-
-   LOGICAL                                            :: EchoFlag             !< Are we echoing info?
    INTEGER(IntKi)                                     :: UnitInput            !< Unit number for the input file
    INTEGER(IntKi)                                     :: UnitEcho             !< The local unit number for this module's echo file
    CHARACTER(1024)                                    :: TmpPath              !< Temporary storage for relative path name
@@ -1160,11 +1087,11 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
       ! Initialize local data
 
-   UnitEcho    = -1
-   Frmt           = "( 2X, L11, 2X, A, T30, ' - ', A )"
-   ErrStat        = ErrID_None
-   ErrMsg         = ""
-   EchoFlag       = .FALSE.  ! initialize for error handling (cleanup() routine)
+   UnitEcho                = -1
+   Frmt                    = "( 2X, L11, 2X, A, T30, ' - ', A )"
+   ErrStat                 = ErrID_None
+   ErrMsg                  = ""
+   InputFileData%EchoFlag  = .FALSE.  ! initialize for error handling (cleanup() routine)
 
 
 
@@ -1214,7 +1141,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
      ! Echo Input Files.
 
-   CALL ReadVar ( UnitInput, InputFileName, EchoFLag, 'Echo', 'Echo Input', TmpErrStat, TmpErrMsg )
+   CALL ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo Input', TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1225,7 +1152,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
       ! which we must store, set, and then replace on error or completion.
 
-   IF ( EchoFlag ) THEN
+   IF ( InputFileData%EchoFlag ) THEN
 
       CALL OpenEcho ( UnitEcho, TRIM(EchoFileName), TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
@@ -1251,7 +1178,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
          ! Echo Input Files.
 
-      CALL ReadVar ( UnitInput, InputFileName, EchoFlag, 'Echo', 'Echo the input file data', TmpErrStat, TmpErrMsg, UnitEcho )
+      CALL ReadVar ( UnitInput, InputFileName, InputFileData%EchoFlag, 'Echo', 'Echo the input file data', TmpErrStat, TmpErrMsg, UnitEcho )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput' )
 
    END IF
@@ -1429,7 +1356,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    END IF
 
-      ! Read FFWindFile
+      ! Read TSFFWind info
    CALL ReadVar( UnitInput, InputFileName, InputFileData%TSFF_FileName, 'FileName', &
                'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
@@ -1791,7 +1718,9 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
             CLOSE ( UnitInput )
    
                ! Cleanup the Echo file and global variables
-            CALL CleanupEchoFile( EchoFlag, UnitEcho )
+            IF ( InputFileData%EchoFlag ) THEN
+               CLOSE(UnitEcho)
+            END IF
    
    
          END SUBROUTINE Cleanup
@@ -1869,13 +1798,42 @@ CONTAINS
 
 END SUBROUTINE InflowWind_ValidateInput
 
+
  
+ 
+!====================================================================================================
+SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat, ErrMsg )
+!     The routine prints out warning messages if the user has requested invalid output channel names
+!     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
+!----------------------------------------------------------------------------------------------------
+   INTEGER(IntKi),                     INTENT(IN   )  :: NUserOutputs         !< Number of user-specified output channels
+   CHARACTER(10),                      INTENT(IN   )  :: UserOutputs(:)       !< An array holding the names of the requested output channels.
+   LOGICAL,                            INTENT(IN   )  :: foundMask(:)         !< A mask indicating whether a user requested channel belongs to a module's output channels.
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+
+
+  INTEGER(IntKi)                                      :: I                    !< Generic loop counter
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   DO I = 1, NUserOutputs
+      IF (.NOT. foundMask(I)) THEN
+         ErrMsg  = ' A requested output channel is invalid'
+         CALL ProgWarn( 'The requested output channel is invalid: ' // UserOutputs(I) )
+         ErrStat = ErrID_Warn
+      END IF
+   END DO
+
+
+
+END SUBROUTINE PrintBadChannelWarning
+
+
+
+
 
 
 !====================================================================================================
 END MODULE InflowWind
-
-!!----Removed during conversion to new framework: may put back in as part of OtherStates
-!!       PUBLIC                         :: InflowWind_GetMean        ! function to get the mean wind speed at a point in space
-!!       PUBLIC                         :: InflowWind_GetStdDev      ! function to calculate standard deviation at a point in space
-!!       PUBLIC                         :: InflowWind_GetTI          ! function to get TI at a point in space
