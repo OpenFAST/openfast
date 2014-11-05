@@ -53,7 +53,7 @@ MODULE InflowWind_Driver_Types
 
       ! This contains all the settings (possible passed in arguments).
    TYPE     :: InflowWind_Driver_Args
-      INTEGER                 :: WindFileType   = DEFAULT_WINDNumber ! the kind of windfile     -- set default to simplify things later
+      INTEGER                 :: WindFileType   = Undef_WINDNumber   ! the kind of windfile     -- set default to simplify things later
       REAL( ReKi )            :: Height                        ! Reference height
       REAL( ReKi )            :: Width                         ! Reference width
       REAL( ReKi )            :: XRange(1:2)                   ! range of x

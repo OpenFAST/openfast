@@ -53,8 +53,8 @@ MODULE InflowWind
       ! The included wind modules
       !-------------------------------------------------------------------------------------------------
 
-   USE                              IfW_HHWind_Types           ! Types for IfW_HHWind
-   USE                              IfW_HHWind                 ! hub-height text wind files
+   USE                              IfW_UniformWind_Types           ! Types for IfW_UniformWind
+   USE                              IfW_UniformWind                 ! hub-height text wind files
    USE                              IfW_FFWind_Types           ! Types for IfW_FFWind
    USE                              IfW_FFWind                 ! full-field binary wind files
 !   USE                              HAWCWind                   ! full-field binary wind files in HAWC format
@@ -144,12 +144,12 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       TYPE(InflowWind_InputFile)                            :: InputFileData     !< Data from input file
 
-      TYPE(IfW_HHWind_InitInputType)                        :: HH_InitData       !< initialization info
-      TYPE(IfW_HHWind_InputType)                            :: HH_InitGuess      !< input positions.
-      TYPE(IfW_HHWind_ContinuousStateType)                  :: HH_ContStates     !< Unused
-      TYPE(IfW_HHWind_DiscreteStateType)                    :: HH_DiscStates     !< Unused
-      TYPE(IfW_HHWind_ConstraintStateType)                  :: HH_ConstrStates   !< Unused
-      TYPE(IfW_HHWind_OutputType)                           :: HH_OutData        !< output velocities
+      TYPE(IfW_UniformWind_InitInputType)                        :: Uniform_InitData       !< initialization info
+      TYPE(IfW_UniformWind_InputType)                            :: Uniform_InitGuess      !< input positions.
+      TYPE(IfW_UniformWind_ContinuousStateType)                  :: Uniform_ContStates     !< Unused
+      TYPE(IfW_UniformWind_DiscreteStateType)                    :: Uniform_DiscStates     !< Unused
+      TYPE(IfW_UniformWind_ConstraintStateType)                  :: Uniform_ConstrStates   !< Unused
+      TYPE(IfW_UniformWind_OutputType)                           :: Uniform_OutData        !< output velocities
 
       TYPE(IfW_FFWind_InitInputType)                        :: FF_InitData       !< initialization info
       TYPE(IfW_FFWind_InputType)                            :: FF_InitGuess      !< input positions.
@@ -314,13 +314,13 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !
 !         CASE (Uniform_WindNumber)
 !
-!            HH_InitData%ReferenceHeight = InitData%ReferenceHeight
-!            HH_InitData%Width           = InitData%Width
-!            HH_InitData%WindFileName    = ParamData%WindFileName
+!            Uniform_InitData%ReferenceHeight = InitData%ReferenceHeight
+!            Uniform_InitData%Width           = InitData%Width
+!            Uniform_InitData%WindFileName    = ParamData%WindFileName
 !
-!            CALL IfW_HHWind_Init(HH_InitData,   HH_InitGuess,  ParamData%HHWind,                         &
-!                                 HH_ContStates, HH_DiscStates, HH_ConstrStates,     OtherStates%HHWind,  &
-!                                 HH_OutData,    TimeInterval,  InitOutData%HHWind,  TmpErrStat,          TmpErrMsg)
+!            CALL IfW_UniformWind_Init(Uniform_InitData,   Uniform_InitGuess,  ParamData%UniformWind,                         &
+!                                 Uniform_ContStates, Uniform_DiscStates, Uniform_ConstrStates,     OtherStates%UniformWind,  &
+!                                 Uniform_OutData,    TimeInterval,  InitOutData%UniformWind,  TmpErrStat,          TmpErrMsg)
 !
 !               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )                  
 !               IF ( ErrStat >= AbortErrLev ) RETURN
@@ -329,22 +329,22 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !              ! Copy Relevant info over to InitOutData
 !
 !                  ! Allocate and copy over the WriteOutputHdr info
-!               CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%HHWind%WriteOutputHdr,1), &
+!               CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%UniformWind%WriteOutputHdr,1), &
 !                              'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
 !                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )                  
 !                  IF ( ErrStat >= AbortErrLev ) RETURN
-!               InitOutData%WriteOutputHdr    =  InitOutData%HHWind%WriteOutputHdr
+!               InitOutData%WriteOutputHdr    =  InitOutData%UniformWind%WriteOutputHdr
 !
 !                  ! Allocate and copy over the WriteOutputUnt info
-!               CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%HHWind%WriteOutputUnt,1), &
+!               CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%UniformWind%WriteOutputUnt,1), &
 !                              'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
 !                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )                  
 !                  IF ( ErrStat >= AbortErrLev ) RETURN
 !
-!               InitOutData%WriteOutputUnt    =  InitOutData%HHWind%WriteOutputUnt
+!               InitOutData%WriteOutputUnt    =  InitOutData%UniformWind%WriteOutputUnt
 !
 !                  ! Copy the hub height info over
-!               InitOutData%HubHeight         =  InitOutData%HHWind%HubHeight
+!               InitOutData%HubHeight         =  InitOutData%UniformWind%HubHeight
 !
 !!           IF (CT_Flag) CALL CT_SetRefVal(FileInfo%ReferenceHeight, 0.5*FileInfo%Width, ErrStat)  !FIXME: check if this was originally used
 !!           IF (ErrStat == ErrID_None .AND. ParamData%CT_Flag) &
@@ -493,12 +493,12 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
          ! Local variables
 
-      TYPE(IfW_HHWind_InitInputType)                           :: HH_InitData       !< initialization info
-      TYPE(IfW_HHWind_InputType)                               :: HH_InData         !< input positions.
-      TYPE(IfW_HHWind_ContinuousStateType)                     :: HH_ContStates     !< Unused
-      TYPE(IfW_HHWind_DiscreteStateType)                       :: HH_DiscStates     !< Unused
-      TYPE(IfW_HHWind_ConstraintStateType)                     :: HH_ConstrStates   !< Unused
-      TYPE(IfW_HHWind_OutputType)                              :: HH_OutData        !< output velocities
+      TYPE(IfW_UniformWind_InitInputType)                           :: Uniform_InitData       !< initialization info
+      TYPE(IfW_UniformWind_InputType)                               :: Uniform_InData         !< input positions.
+      TYPE(IfW_UniformWind_ContinuousStateType)                     :: Uniform_ContStates     !< Unused
+      TYPE(IfW_UniformWind_DiscreteStateType)                       :: Uniform_DiscStates     !< Unused
+      TYPE(IfW_UniformWind_ConstraintStateType)                     :: Uniform_ConstrStates   !< Unused
+      TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
       TYPE(IfW_FFWind_InitInputType)                           :: FF_InitData       !< initialization info
       TYPE(IfW_FFWind_InputType)                               :: FF_InData         !< input positions.
@@ -546,20 +546,20 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          CASE (Uniform_WindNumber)
 
                ! Allocate the position array to pass in
-            CALL AllocAry( HH_InData%Position, 3, SIZE(InputData%Position,2), &
-                           "Position grid for passing to IfW_HHWind_CalcOutput", TmpErrStat, TmpErrMsg )
+            CALL AllocAry( Uniform_InData%Position, 3, SIZE(InputData%Position,2), &
+                           "Position grid for passing to IfW_UniformWind_CalcOutput", TmpErrStat, TmpErrMsg )
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )                  
             IF ( ErrStat >= AbortErrLev ) RETURN
 
                ! Copy positions over
-            HH_InData%Position   = InputData%Position
+            Uniform_InData%Position   = InputData%Position
 
-            CALL  IfW_HHWind_CalcOutput(  Time,          HH_InData,     ParamData%HHWind,                         &
-                                          HH_ContStates, HH_DiscStates, HH_ConstrStates,     OtherStates%HHWind,  &
-                                          HH_OutData,    TmpErrStat,    TmpErrMsg)            
+            CALL  IfW_UniformWind_CalcOutput(  Time,          Uniform_InData,     ParamData%UniformWind,                         &
+                                          Uniform_ContStates, Uniform_DiscStates, Uniform_ConstrStates,     OtherStates%UniformWind,  &
+                                          Uniform_OutData,    TmpErrStat,    TmpErrMsg)            
             
                ! Copy the velocities over
-            OutputData%Velocity  = HH_OutData%Velocity
+            OutputData%Velocity  = Uniform_OutData%Velocity
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )                  
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -685,11 +685,11 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
 
          ! Local variables
 
-      TYPE(IfW_HHWind_InputType)                               :: HH_InitData       !< input positions.
-      TYPE(IfW_HHWind_ContinuousStateType)                     :: HH_ContStates     !< Unused
-      TYPE(IfW_HHWind_DiscreteStateType)                       :: HH_DiscStates     !< Unused
-      TYPE(IfW_HHWind_ConstraintStateType)                     :: HH_ConstrStates   !< Unused
-      TYPE(IfW_HHWind_OutputType)                              :: HH_OutData        !< output velocities
+      TYPE(IfW_UniformWind_InputType)                               :: Uniform_InitData       !< input positions.
+      TYPE(IfW_UniformWind_ContinuousStateType)                     :: Uniform_ContStates     !< Unused
+      TYPE(IfW_UniformWind_DiscreteStateType)                       :: Uniform_DiscStates     !< Unused
+      TYPE(IfW_UniformWind_ConstraintStateType)                     :: Uniform_ConstrStates   !< Unused
+      TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
       TYPE(IfW_FFWind_InputType)                               :: FF_InitData       !< input positions.
       TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
@@ -712,9 +712,9 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
       SELECT CASE ( ParamData%WindFileType )
 
          CASE (Uniform_WindNumber)
-            CALL IfW_HHWind_End( HH_InitData,   ParamData%HHWind,                                        &
-                                 HH_ContStates, HH_DiscStates,    HH_ConstrStates,  OtherStates%HHWind,  &
-                                 HH_OutData,    ErrStat,          ErrMsg )
+            CALL IfW_UniformWind_End( Uniform_InitData,   ParamData%UniformWind,                                        &
+                                 Uniform_ContStates, Uniform_DiscStates,    Uniform_ConstrStates,  OtherStates%UniformWind,  &
+                                 Uniform_OutData,    ErrStat,          ErrMsg )
 
          CASE (FF_WindNumber)
             CALL IfW_FFWind_End( FF_InitData,   ParamData%FFWind,                                        &
@@ -1000,45 +1000,45 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
 
 
             ! Let's check the limits.
-         IF ( Time <= OtherStates%HHWind%Tdata(1) .OR. OtherStates%HHWind%NumDataLines == 1 )  THEN
+         IF ( Time <= OtherStates%UniformWind%Tdata(1) .OR. OtherStates%UniformWind%NumDataLines == 1 )  THEN
 
-            OtherStates%HHWind%TimeIndex      = 1
-            V_tmp         = OtherStates%HHWind%V      (1)
-            Delta_tmp     = OtherStates%HHWind%Delta  (1)
-            VZ_tmp        = OtherStates%HHWind%VZ     (1)
+            OtherStates%UniformWind%TimeIndex      = 1
+            V_tmp         = OtherStates%UniformWind%V      (1)
+            Delta_tmp     = OtherStates%UniformWind%Delta  (1)
+            VZ_tmp        = OtherStates%UniformWind%VZ     (1)
 
-         ELSE IF ( Time >= OtherStates%HHWind%Tdata(OtherStates%HHWind%NumDataLines) )  THEN
+         ELSE IF ( Time >= OtherStates%UniformWind%Tdata(OtherStates%UniformWind%NumDataLines) )  THEN
 
-            OtherStates%HHWind%TimeIndex = OtherStates%HHWind%NumDataLines - 1
-            V_tmp                 = OtherStates%HHWind%V      (OtherStates%HHWind%NumDataLines)
-            Delta_tmp             = OtherStates%HHWind%Delta  (OtherStates%HHWind%NumDataLines)
-            VZ_tmp                = OtherStates%HHWind%VZ     (OtherStates%HHWind%NumDataLines)
+            OtherStates%UniformWind%TimeIndex = OtherStates%UniformWind%NumDataLines - 1
+            V_tmp                 = OtherStates%UniformWind%V      (OtherStates%UniformWind%NumDataLines)
+            Delta_tmp             = OtherStates%UniformWind%Delta  (OtherStates%UniformWind%NumDataLines)
+            VZ_tmp                = OtherStates%UniformWind%VZ     (OtherStates%UniformWind%NumDataLines)
 
          ELSE
 
               ! Let's interpolate!
 
-            OtherStates%HHWind%TimeIndex = MAX( MIN( OtherStates%HHWind%TimeIndex, OtherStates%HHWind%NumDataLines-1 ), 1 )
+            OtherStates%UniformWind%TimeIndex = MAX( MIN( OtherStates%UniformWind%TimeIndex, OtherStates%UniformWind%NumDataLines-1 ), 1 )
 
             DO
 
-               IF ( Time < OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex) )  THEN
+               IF ( Time < OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex) )  THEN
 
-                  OtherStates%HHWind%TimeIndex = OtherStates%HHWind%TimeIndex - 1
+                  OtherStates%UniformWind%TimeIndex = OtherStates%UniformWind%TimeIndex - 1
 
-               ELSE IF ( Time >= OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex+1) )  THEN
+               ELSE IF ( Time >= OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex+1) )  THEN
 
-                  OtherStates%HHWind%TimeIndex = OtherStates%HHWind%TimeIndex + 1
+                  OtherStates%UniformWind%TimeIndex = OtherStates%UniformWind%TimeIndex + 1
 
                ELSE
-                  P           = ( Time - OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex) )/( OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex+1) &
-                                 - OtherStates%HHWind%Tdata(OtherStates%HHWind%TimeIndex) )
-                  V_tmp       = ( OtherStates%HHWind%V(      OtherStates%HHWind%TimeIndex+1) - OtherStates%HHWind%V(      OtherStates%HHWind%TimeIndex) )*P  &
-                                + OtherStates%HHWind%V(      OtherStates%HHWind%TimeIndex)
-                  Delta_tmp   = ( OtherStates%HHWind%Delta(  OtherStates%HHWind%TimeIndex+1) - OtherStates%HHWind%Delta(  OtherStates%HHWind%TimeIndex) )*P  &
-                                + OtherStates%HHWind%Delta(  OtherStates%HHWind%TimeIndex)
-                  VZ_tmp      = ( OtherStates%HHWind%VZ(     OtherStates%HHWind%TimeIndex+1) - OtherStates%HHWind%VZ(     OtherStates%HHWind%TimeIndex) )*P  &
-                                + OtherStates%HHWind%VZ(     OtherStates%HHWind%TimeIndex)
+                  P           = ( Time - OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex) )/( OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex+1) &
+                                 - OtherStates%UniformWind%Tdata(OtherStates%UniformWind%TimeIndex) )
+                  V_tmp       = ( OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex+1) - OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex) )*P  &
+                                + OtherStates%UniformWind%V(      OtherStates%UniformWind%TimeIndex)
+                  Delta_tmp   = ( OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex+1) - OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex) )*P  &
+                                + OtherStates%UniformWind%Delta(  OtherStates%UniformWind%TimeIndex)
+                  VZ_tmp      = ( OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex+1) - OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex) )*P  &
+                                + OtherStates%UniformWind%VZ(     OtherStates%UniformWind%TimeIndex)
                   EXIT
 
                END IF
@@ -1398,7 +1398,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
 !FIXME: change name from HH to UniformWind or something
-      ! Read HHWindFile
+      ! Read UniformWindFile
    CALL ReadVar( UnitInput, InputFileName, InputFileData%Uniform_FileName, 'WindFileName', &
                   'Filename of time series data for uniform wind field', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
