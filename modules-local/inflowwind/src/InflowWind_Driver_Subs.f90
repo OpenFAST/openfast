@@ -58,12 +58,11 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("")
    CALL WrScr("       where:     <filename>     -- Name of wind file")
    CALL WrScr("     options:     "//SwChar//"type[<type>]  -- type of the file, where <type> is               [N/A]")
-   CALL WrScr("                                    HH    -- HubHeight                                   ")
+   CALL WrScr("                                 Uniform  -- Uniform                                     ")
    CALL WrScr("                                    FF    -- Full Field                                  ")
-   CALL WrScr("                                    UD    -- User Defined                                ")
-   CALL WrScr("                                    FD    -- 4-dimensional (.les)                        ")
-   CALL WrScr("                                    CTP   -- Coherent turbulence wind field on top of another")
+!   CALL WrScr("                                    CTP   -- Coherent turbulence wind field on top of another")
    CALL WrScr("                                    HAWC  -- HAWC formatted file                         ")
+   CALL WrScr("                                    User  -- User Defined                                ")
    CALL WrScr("                  "//SwChar//"height[#]     -- height of the hub                         ")
    CALL WrScr("                  "//SwChar//"width[#]      -- width of the windfield                    ")
    CALL WrScr("                  "//SwChar//"x[#:#]        -- range of x (#'s are reals)                      [N/A]")
@@ -277,29 +276,29 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
          ! "type[#]"
       IF    ( ThisArg(1:Delim1) == "type["      ) THEN
          SELECT CASE (ThisArg(Delim1+1:Delim2-1))
-            CASE ('HH')    ! hub height
+            CASE ('Steady')    ! hub height
                SettingsFlags%WindFileType = .TRUE.
-               Settings%WindFileType      = HH_WindNumber
+               Settings%WindFileType      = Steady_WindNumber
+
+            CASE ('Uniform')    ! hub height
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = Uniform_WindNumber
 
             CASE ('FF')    ! full field
                SettingsFlags%WindFileType = .TRUE.
                Settings%WindFileType      = FF_WindNumber
 
-            CASE ('UD')    ! User Defined
-               SettingsFlags%WindFileType = .TRUE.
-               Settings%WindFileType      = UD_WindNumber
-
-            CASE ('FD')    ! Four dimen
-               SettingsFlags%WindFileType = .TRUE.
-               Settings%WindFileType      = FD_WindNumber
-
-            CASE ('CTP')   ! coherent turbulence
-               SettingsFlags%WindFileType = .TRUE.
-               Settings%WindFileType      = CTP_WindNumber
+!            CASE ('CTP')   ! coherent turbulence
+!               SettingsFlags%WindFileType = .TRUE.
+!               Settings%WindFileType      = CTP_WindNumber
 
             CASE ('HAWC')  ! HAWC compatible
                SettingsFlags%WindFileType = .TRUE.
                Settings%WindFileType      = HAWC_WindNumber
+
+            CASE ('User')    ! User Defined
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = User_WindNumber
 
             CASE DEFAULT
                ErrMsg   = "Invalid wind type. Ignoring option: '"//SwChar//TRIM(ThisArg)//"'."
