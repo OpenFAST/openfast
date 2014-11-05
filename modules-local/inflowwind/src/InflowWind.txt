@@ -12,7 +12,7 @@
 ###################################################################################################################################
 
 usefrom IfW_FFWind.txt
-usefrom IfW_HHWind.txt
+usefrom IfW_UniformWind.txt
 usefrom IfW_HAWCWind.txt
 include Registry_NWTC_Library.txt
 
@@ -105,7 +105,7 @@ typedef  ^                       ^                 CHARACTER(10)     WriteOutput
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
 typedef  ^                       ^                 ReKi              HubHeight         -     -     -     "Height of the hub"                                      meters
 typedef  ^                       ^        IfW_FFWind_InitOutputType  FFWind            -     -     -     "FFWind InitOutput info"                                 -
-typedef  ^                       ^        IfW_HHWind_InitOutputType  HHWind            -     -     -     "HHWind InitOutput info"                                 -
+typedef  ^                       ^        IfW_UniformWind_InitOutputType  UniformWind            -     -     -     "UniformWind InitOutput info"                                 -
 
 
 # Define any data that are not considered actual states here:
@@ -113,7 +113,7 @@ typedef  ^                       ^        IfW_HHWind_InitOutputType  HHWind     
 #   at a given time, etc.)
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
 typedef  ^                       ^      IfW_FFWind_OtherStateType    FFWind            -     -     -     "OtherStates from FFWind"                                -
-typedef  ^                       ^      IfW_HHWind_OtherStateType    HHWind            -     -     -     "OtherStates from HHWind"                                -
+typedef  ^                       ^      IfW_UniformWind_OtherStateType    UniformWind            -     -     -     "OtherStates from UniformWind"                                -
 
 
 
@@ -147,7 +147,7 @@ typedef  ^                       ^                 ReKi              HWindSpeed 
 typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height for horizontal wind speed for steady wind"   -
 typedef  ^                       ^                 ReKi              PLexp             -     -     -     "Power law exponent"                                     -
 typedef  ^                       ^       IfW_FFWind_ParameterType    FFWind            -     -     -     "Parameters from FFWind"                                 -
-typedef  ^                       ^       IfW_HHWind_ParameterType    HHWind            -     -     -     "Parameters from HHWind"                                 -
+typedef  ^                       ^       IfW_UniformWind_ParameterType    UniformWind            -     -     -     "Parameters from UniformWind"                                 -
 typedef  ^                       ^       IfW_HAWCWind_ParameterType  HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
 
 # ..... Inputs ....................................................................................................................
