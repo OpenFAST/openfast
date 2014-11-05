@@ -162,7 +162,6 @@ PROGRAM InflowWind_Driver
 
    InflowWind_InitInputData%ReferenceHeight   = 80.                      ! meters  -- default
    InflowWind_InitInputData%Width             = 100.                     ! meters
-   InflowWind_InitInputData%WindFileType      = DEFAULT_WindNumber       ! This must be preset before calling the initialization.
    TimeStepSize                        = 10                       !seconds
 
 
@@ -171,7 +170,6 @@ PROGRAM InflowWind_Driver
 
    IF ( SettingsFlags%Height )         InflowWind_InitInputData%ReferenceHeight = Settings%Height
    IF ( SettingsFlags%Width )          InflowWind_InitInputData%Width           = Settings%Width
-   IF ( SettingsFlags%WindFileType )   InflowWind_InitInputData%WindFileType    = Settings%WindFileType
    IF ( SettingsFlags%TRes )           TimeStepSize                      = Settings%Tres
 
 
