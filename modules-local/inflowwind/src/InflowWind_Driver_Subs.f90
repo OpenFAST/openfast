@@ -284,9 +284,13 @@ SUBROUTINE RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
                SettingsFlags%WindFileType = .TRUE.
                Settings%WindFileType      = Uniform_WindNumber
 
-            CASE ('FF')    ! full field
+            CASE ('TSFF')    ! full field
                SettingsFlags%WindFileType = .TRUE.
-               Settings%WindFileType      = FF_WindNumber
+               Settings%WindFileType      = TSFF_WindNumber
+
+            CASE ('BladedFF')    ! full field
+               SettingsFlags%WindFileType = .TRUE.
+               Settings%WindFileType      = BladedFF_WindNumber
 
 !            CASE ('CTP')   ! coherent turbulence
 !               SettingsFlags%WindFileType = .TRUE.

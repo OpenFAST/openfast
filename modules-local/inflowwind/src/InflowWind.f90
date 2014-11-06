@@ -67,7 +67,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v2.00.01c-bjj', '30-Sep-2014' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.00.01a-adp', '01-Nov-2014' )
 
 
 
@@ -130,13 +130,13 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       TYPE(InflowWind_InputFile)                            :: InputFileData     !< Data from input file
 
-      TYPE(IfW_UniformWind_InitInputType)                        :: Uniform_InitData       !< initialization info
-      TYPE(IfW_UniformWind_InputType)                            :: Uniform_InitGuess      !< input positions.
-      TYPE(IfW_UniformWind_ContinuousStateType)                  :: Uniform_ContStates     !< Unused
-      TYPE(IfW_UniformWind_DiscreteStateType)                    :: Uniform_DiscStates     !< Unused
-      TYPE(IfW_UniformWind_ConstraintStateType)                  :: Uniform_ConstrStates   !< Unused
-      TYPE(IfW_UniformWind_OutputType)                           :: Uniform_OutData        !< output velocities
-
+!      TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData       !< initialization info
+!      TYPE(IfW_UniformWind_InputType)                       :: Uniform_InitGuess      !< input positions.
+!      TYPE(IfW_UniformWind_ContinuousStateType)             :: Uniform_ContStates     !< Unused
+!      TYPE(IfW_UniformWind_DiscreteStateType)               :: Uniform_DiscStates     !< Unused
+!      TYPE(IfW_UniformWind_ConstraintStateType)             :: Uniform_ConstrStates   !< Unused
+!      TYPE(IfW_UniformWind_OutputType)                      :: Uniform_OutData        !< output velocities
+!
 !      TYPE(IfW_FFWind_InitInputType)                        :: FF_InitData       !< initialization info
 !      TYPE(IfW_FFWind_InputType)                            :: FF_InitGuess      !< input positions.
 !      TYPE(IfW_FFWind_ContinuousStateType)                  :: FF_ContStates     !< Unused
@@ -148,15 +148,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !     TYPE(CT_Backgr)                                        :: BackGrndValues
 
 
-!NOTE: It isn't entirely clear what the purpose of Height is. Does it sometimes occur that Height  /= ParamData%ReferenceHeight???
-      REAL(ReKi)                                            :: Height            !< Retrieved from FF
-      REAL(ReKi)                                            :: HalfWidth         !< Retrieved from FF
+!REMOVE: NOTE: It isn't entirely clear what the purpose of Height is. Does it sometimes occur that Height  /= ParamData%ReferenceHeight???
+!REMOVE:      REAL(ReKi)                                            :: Height            !< Retrieved from FF
+!REMOVE:      REAL(ReKi)                                            :: HalfWidth         !< Retrieved from FF
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                        :: TmpErrStat
       CHARACTER(LEN(ErrMsg))                                :: TmpErrMsg         !< temporary error message
 
-!NOTE: I may need to revamp how data is passed to the lower modules. Might need to do that before going any further.
 
 
 
@@ -194,14 +193,23 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       ParamData%InputFileName = InitData%InputFileName
       CALL GetRoot( ParamData%InputFileName, ParamData%RootFileName )
       ParamData%EchoFileName  = TRIM(ParamData%RootFileName)//".IfW.ech"
-!      ParamData%SummaryName   = TRIM(ParamData%RootFileName)//".IfW.sum"
+      ParamData%SumFileName   = TRIM(ParamData%RootFileName)//".IfW.sum"
 
 
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
 
-      CALL InflowWind_ReadInput( ParamData%InputFileName, ParamData%EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
-      IF ( ErrStat >= AbortErrLev ) THEN
+      IF ( InitData%UseInputFile ) THEN
+         CALL InflowWind_ReadInput( ParamData%InputFileName, ParamData%EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+      ELSE
+            !  In the future we will make it possible to just copy the data from the InitData%PassedFileData (of derived type
+            !  InflowWind_InputFile), and run things as normal using that data.  For now though, we will not allow this.
+         CALL SetErrStat(ErrID_Fatal,' The UseInputFile flag cannot be set to .FALSE. at present.  This feature is not '// &
+               'presently supported.',ErrStat,ErrMsg,'InflowWind_Init')
          CALL Cleanup()
          RETURN
       ENDIF
@@ -229,7 +237,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !         ! Define the parameters
 !         !----------------------------------------------------------------------------------------------
 !
-!      ParamData%WindFileType  = InitData%WindFileType
+!      ParamData%WindType  = InitData%WindType
 !      ParamData%WindFileName  = InitData%WindFileName
 !
 !
@@ -249,12 +257,12 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !         ! Get default wind type, based on file name, if requested. Otherwise store what we are given for the type
 !         !----------------------------------------------------------------------------------------------
 !
-!      IF ( InitData%WindFileType == DEFAULT_WindNumber ) THEN
+!      IF ( InitData%WindType == DEFAULT_WindNumber ) THEN
 !         CALL GetWindType( ParamData, TmpErrStat, TmpErrMsg )
 !            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )                  
 !            IF ( ErrStat >= AbortErrLev ) RETURN
 !      ELSE
-!         ParamData%WindFileType = InitData%WindFileType
+!         ParamData%WindType = InitData%WindType
 !      END IF
 !
 !
@@ -263,7 +271,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !         ! Initialize the CTWind module and initialize the module of the other wind type.
 !         !----------------------------------------------------------------------------------------------
 !
-!      IF ( ParamData%WindFileType == CTP_WindNumber ) THEN
+!      IF ( ParamData%WindType == CTP_WindNumber ) THEN
 !
 !!FIXME: remove this error message when we add CTP_Wind in
 !            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the CTP_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )                  
@@ -275,14 +283,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!   !FIXME: cannot call IfW_End here -- requires InitData to be INOUT. Not allowed by framework.
 !!   !         CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
 !!   !                       OutData, ErrStat, ErrMsg )
-!!            ParamData%WindFileType = Undef_Wind
+!!            ParamData%WindType = Undef_Wind
 !!            ErrStat  = 1
 !!            RETURN
 !!         END IF
 !!
 !!   !FIXME: check this
 !!         ParamData%WindFileName = BackGrndValues%WindFile
-!!         ParamData%WindFileType = BackGrndValues%WindFileType
+!!         ParamData%WindType = BackGrndValues%WindType
 !!   !      CT_Flag  = BackGrndValues%CoherentStr
 !!         ParamData%CT_Flag  = BackGrndValues%CoherentStr    ! This might be wrong
 !
@@ -296,7 +304,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !         ! Initialize based on the wind type
 !         !----------------------------------------------------------------------------------------------
 !
-!      SELECT CASE ( ParamData%WindFileType )
+!      SELECT CASE ( ParamData%WindType )
 !
 !         CASE (Uniform_WindNumber)
 !
@@ -428,6 +436,10 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !      InitOutData%Ver   = IfW_Ver
 
 
+
+!FIXME: remove this when done with writing InflowWind_Init
+CALL SetErrStat(ErrID_Fatal,' Routine not complete yet.',ErrStat,ErrMsg,'InflowWind_Init')
+
       RETURN
 
       
@@ -520,7 +532,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
-      SELECT CASE ( ParamData%WindFileType )
+      SELECT CASE ( ParamData%WindType )
          CASE (Uniform_WindNumber)
 
                ! Allocate the position array to pass in
@@ -687,7 +699,7 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
 
          ! End the sub-modules (deallocates their arrays and closes their files):
 
-      SELECT CASE ( ParamData%WindFileType )
+      SELECT CASE ( ParamData%WindType )
 
          CASE (Uniform_WindNumber)
             CALL IfW_UniformWind_End( Uniform_InitData,   ParamData%UniformWind,                                        &
@@ -722,7 +734,7 @@ SUBROUTINE InflowWind_End( InitData, ParamData, ContStates, DiscStates, ConstrSt
 
 
          ! Reset the wind type so that the initialization routine must be called
-      ParamData%WindFileType = Undef_WindNumber
+      ParamData%WindType = Undef_WindNumber
       ParamData%Initialized = .FALSE.
       ParamData%CT_Flag  = .FALSE.
 
@@ -968,7 +980,7 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
 
    ErrStat = ErrID_None
 
-   SELECT CASE ( ParamData%WindFileType )
+   SELECT CASE ( ParamData%WindType )
       CASE (Uniform_WindNumber)
 
          !-------------------------------------------------------------------------------------------------
@@ -1110,6 +1122,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
 
+      ! Tell the users what we are doing... though this part should be rather quick.
    CALL WrScr( ' Opening InflowWind input file:  '//InputFileName )
 
 
@@ -1191,7 +1204,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 
       ! Read WindType
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%WindFileType, 'WindType', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%WindType, 'WindType', &
                'switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; '//&
                '4=binary Bladed-style FF; 5=HAWC format; 6=User defined)', &
                TmpErrStat, TmpErrMsg, UnitEcho )
@@ -1378,22 +1391,18 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    END IF
 
-!FIXME: change when have the bladedstyle module assembled
       ! Read BladedStyle%WindFileName
-   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
-!   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_FileName, 'FileName', &
-!               'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_FileName, 'FileName', &
+               'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
       RETURN
    ENDIF 
 
-!FIXME: change when have the bladedstyle module assembled
       ! Read TowerFileFlag
-   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
-!   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_TowerFile, 'TowerFileFlag', &
-!               'Have tower file (.twr) [flag]', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_TowerFile, 'TowerFileFlag', &
+               'Have tower file (.twr) [flag]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
@@ -1414,7 +1423,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read CT_Flag
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_CoherentTurb, 'CTTS_CoherentTurbFlag', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%CT_CoherentTurb, 'CT_CoherentTurbFlag', &
                'Flag to coherent turbulence', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
@@ -1422,22 +1431,18 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    ENDIF 
 
-!FIXME: change when have the CT module assembled
       ! Read CTWind%WindFileName
-   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
-!   CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_FileName, 'CTTS_FileName', &
-!               'Name of coherent turbulence file', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%CT_FileName, 'CT_FileName', &
+               'Name of coherent turbulence file', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
       RETURN
    ENDIF 
 
-!FIXME: change when have the CT module assembled
       ! Read CTWind%PathName
-   CALL ReadCom( UnitInput, InputFileName, 'InflowWind input file separator line', TmpErrStat, TmpErrMsg, UnitEcho )
-!   CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_Path, 'CTTS_Path', &
-!               'Path to coherent turbulence binary files', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%CT_Path, 'CT_Path', &
+               'Path to coherent turbulence binary files', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
@@ -1729,9 +1734,8 @@ END SUBROUTINE InflowWind_ReadInput
 
 
 !====================================================================================================
+!> This private subroutine verifies the input required for InflowWind is correctly specified.
 SUBROUTINE InflowWind_ValidateInput( InputFileData, ErrStat, ErrMsg )
-!     This private subroutine verifies the input required for InflowWind is correctly specified.
-!----------------------------------------------------------------------------------------------------
 
 
       ! Passed variables
@@ -1755,16 +1759,42 @@ SUBROUTINE InflowWind_ValidateInput( InputFileData, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
+   SELECT CASE ( InputFileData%WindType )
 
-!FIXME: Setup a case structure testing on InputFileData%WindType.
-   CALL Steady_ValidateInput()
-   CALL Uniform_ValidateInput()
-   CALL TSFF_ValidateInput()
-   CALL BSFF_ValidateInput()
-   CALL HAWC_ValidateInput()
 
-   IF ( InputFileData%CTTS_CoherentTurb ) THEN
-      CALL CTTS_ValidateInput()
+      CASE ( Steady_WindNumber )
+         CALL Steady_ValidateInput()
+
+      CASE ( Uniform_WindNumber )
+         CALL Uniform_ValidateInput()
+
+      CASE ( TSFF_WindNumber )
+         CALL TSFF_ValidateInput()
+
+      CASE ( BladedFF_WindNumber )
+         CALL BladedFF_ValidateInput()
+
+      CASE ( HAWC_WindNumber )
+         CALL HAWC_ValidateInput()
+
+      CASE ( User_WindNumber )
+         CALL User_ValidateInput()
+
+      CASE DEFAULT
+         CALL SetErrStat(ErrID_Fatal,' Invalid WindType specified.  Only values of '//   &
+               TRIM(Num2LStr( Steady_WindNumber    ))//','// &
+               TRIM(Num2LStr( Uniform_WindNumber   ))//','// &
+               TRIM(Num2LStr( TSFF_WindNumber      ))//','// &
+               TRIM(Num2LStr( BladedFF_WindNumber  ))//','// &
+               TRIM(Num2LStr( HAWC_WindNumber      ))//', or'// &
+               TRIM(Num2LStr( User_WindNumber      ))//' are supported.', &
+               ErrStat,ErrMsg,'InflowWind_ValidateInput')
+
+      END SELECT
+
+
+   IF ( InputFileData%CT_CoherentTurb ) THEN
+      CALL CT_ValidateInput()
    ENDIF
 
 
@@ -1784,17 +1814,21 @@ CONTAINS
       CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'TSFF_ValidateInput')
    END SUBROUTINE TSFF_ValidateInput
 
-   SUBROUTINE BSFF_ValidateInput()
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'BSFF_ValidateInput')
-   END SUBROUTINE BSFF_ValidateInput
+   SUBROUTINE BladedFF_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'BladedFF_ValidateInput')
+   END SUBROUTINE BladedFF_ValidateInput
 
    SUBROUTINE HAWC_ValidateInput()
       CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'HAWC_ValidateInput')
    END SUBROUTINE HAWC_ValidateInput
 
-   SUBROUTINE CTTS_ValidateInput()
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'CTTS_ValidateInput')
-   END SUBROUTINE CTTS_ValidateInput
+   SUBROUTINE User_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'User_ValidateInput')
+   END SUBROUTINE User_ValidateInput
+
+   SUBROUTINE CT_ValidateInput()
+      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'CT_ValidateInput')
+   END SUBROUTINE CT_ValidateInput
 
 END SUBROUTINE InflowWind_ValidateInput
 
@@ -1802,9 +1836,10 @@ END SUBROUTINE InflowWind_ValidateInput
  
  
 !====================================================================================================
+!> The routine prints out warning messages if the user has requested invalid output channel names
+!! The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
+!FIXME: revamp this routine.
 SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat, ErrMsg )
-!     The routine prints out warning messages if the user has requested invalid output channel names
-!     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
 !----------------------------------------------------------------------------------------------------
    INTEGER(IntKi),                     INTENT(IN   )  :: NUserOutputs         !< Number of user-specified output channels
    CHARACTER(10),                      INTENT(IN   )  :: UserOutputs(:)       !< An array holding the names of the requested output channels.
