@@ -194,17 +194,21 @@ PROGRAM InflowWind_Driver
       !check that the FFT file can be made, if requested as output
       ! FIXME: this feature does not currently exist. It should be written sometime.
 
-
+!FIXME: this section is junk for testing:
+!InflowWind_InitInputData%UseInputFile=.FALSE.
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Initialize the Module -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
    !  Initialize the InflowWind module --> it will initialize all its pieces
 
+   CALL WrScr('Calling InflowWind_Init...')
+
    CALL InflowWind_Init( InflowWind_InitInputData, InflowWind_InputData, InflowWind_ParamData, &
                   InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
                   InflowWind_OutputData,    TimeStepSize,  InflowWind_InitOutData, ErrStat, ErrMsg )
 
+   CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//TRIM(ErrMsg)//NewLine)
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN

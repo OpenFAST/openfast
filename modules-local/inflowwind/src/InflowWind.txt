@@ -16,10 +16,6 @@ usefrom IfW_UniformWind.txt
 usefrom IfW_HAWCWind.txt
 include Registry_NWTC_Library.txt
 
-#FIXME: remove the following and use the new ones. 
-#param    InflowWind/InflowWind   -                 IntKi             HH_WindNumber     -     -1     -     "Hub-Height wind file"                                                        -
-param    InflowWind/InflowWind   -                 IntKi             FF_WindNumber     -     -2     -     "Binary full-field wind file"                                                 -
-param    InflowWind/InflowWind   -                 IntKi             CTP_WindNumber    -     -5     -     "Coherent turbulence wind field (superimpose KH billow on background wind)"   -
 
 param    InflowWind/InflowWind   -                 IntKi             Undef_WindNumber     -     0     -     "This is the code for an undefined WindFileType"                           -
 param    ^                       -                 IntKi             Steady_WindNumber    -     1     -     "Steady wind.  Calculated internally."                                     -
@@ -35,7 +31,7 @@ param    ^                       -                 IntKi             User_WindNu
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data ...................................................................................................
 typedef  InflowWind/InflowWind   InflowWind_InputFile   LOGICAL      EchoFlag          -     -     -     "Echo the input file"                                    -
-typedef  ^                       ^                 IntKi             WindFileType      -     0     -     "Type of windfile"                                       -
+typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of windfile"                                       -
 typedef  ^                       ^                 ReKi              PropogationDir    -     -     -     "Direction of wind propogation (meteorological direction)"
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points to output the wind velocity (0 to 9)"
 typedef  ^                       ^                 ReKi              WindVxiList       :     -     -     "List of X coordinates for wind velocity measurements"   meters
@@ -49,9 +45,9 @@ typedef  ^                       ^                 ReKi              Uniform_Ref
 typedef  ^                       ^                 CHARACTER(1024)   TSFF_FileName     -     -     -     "TurbSim Full-Field -- filename"                         -
 typedef  ^                       ^                 CHARACTER(1024)   Bladed_FileName   -     -     -     "Bladed-style Full-Field -- filename"                    -
 typedef  ^                       ^                 LOGICAL           Bladed_TowerFile  -     -     -     "Bladed-style Full-Field -- tower file exists"           -
-typedef  ^                       ^                 LOGICAL           CTTS_CoherentTurb -     -     -     "Coherent turbulence data exists"                        -
-typedef  ^                       ^                 CHARACTER(1024)   CTTS_FileName     -     -     -     "Name of coherent turbulence file"                       -
-typedef  ^                       ^                 CHARACTER(1024)   CTTS_Path         -     -     -     "Path to coherent turbulence binary data files"          -
+typedef  ^                       ^                 LOGICAL           CT_CoherentTurb   -     -     -     "Coherent turbulence data exists"                        -
+typedef  ^                       ^                 CHARACTER(1024)   CT_FileName       -     -     -     "Name of coherent turbulence file"                       -
+typedef  ^                       ^                 CHARACTER(1024)   CT_Path           -     -     -     "Path to coherent turbulence binary data files"          -
 typedef  ^                       ^                 CHARACTER(1024)   HAWC_FileName_u   -     -     -     "HAWC -- u component binary data file name"              -
 typedef  ^                       ^                 CHARACTER(1024)   HAWC_FileName_v   -     -     -     "HAWC -- v component binary data file name"              -
 typedef  ^                       ^                 CHARACTER(1024)   HAWC_FileName_w   -     -     -     "HAWC -- w component binary data file name"              -
@@ -87,12 +83,7 @@ typedef  ^                       ^                 DbKi              DT         
 typedef  ^                       ^                 ReKi              ReferenceHeight   -     -     -     "Hub height of the turbine"                                                   meters
 typedef  ^                       ^                 ReKi              Width             -     -     -     "Width of the wind field to use"                                              meters
 typedef  ^                       ^                 LOGICAL           UseInputFile      -  .TRUE.   -     "Should we read everthing from an input file, or do we get it some other way" -
-
-#typedef  ^                       InitInputType     CHARACTER(1024)   WindFileName      -     -     -     "Name of the wind file to use"                                                -
-#typedef  ^                       ^                 CHARACTER(1024)   OutRootName       -     -     -     "Rootname of the inflow wind file (supplied by driver, used to set output name"     -
-#typedef  ^                       ^                 LOGICAL           Echo              -     -     -     "Echo the input to a file"                                                    -
-#FIXME: remove WindFileType
-#typedef  ^                       ^                 IntKi             WindFileType      -     0     -     "Type of windfile"                                                            -
+typedef  ^                       ^              InflowWind_InputFile PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
 
 
 
@@ -101,8 +92,8 @@ typedef  ^                       InitOutputType    CHARACTER(10)     WriteOutput
 typedef  ^                       ^                 CHARACTER(10)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
 typedef  ^                       ^                 ReKi              HubHeight         -     -     -     "Height of the hub"                                      meters
-#typedef  ^                       ^        IfW_FFWind_InitOutputType  FFWind            -     -     -     "FFWind InitOutput info"                                 -
-typedef  ^                       ^        IfW_UniformWind_InitOutputType  UniformWind            -     -     -     "UniformWind InitOutput info"                                 -
+#typedef  ^                       ^        IfW_FFWind_InitOutputType FFWind            -     -     -     "FFWind InitOutput info"                                 -
+typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                                 -
 
 
 # Define any data that are not considered actual states here:
@@ -130,8 +121,6 @@ typedef  ^                       ^                 LOGICAL           Initialized
 typedef  ^                       ^                 LOGICAL           CT_Flag           -  .FALSE.  -     "determines if coherent turbulence is used"              -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              PropogationDir    -     -     -     "Direction of wind propogation"                          degrees
-#FIXME: Remove WindFileType
-typedef  ^                       ^                 IntKi             WindFileType      -     0     -     "Type of windfile -- set to Undef_Wind initially"        -
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of wind -- set to Undef_Wind initially"            -
 typedef  ^                       ^                 ReKi              ReferenceHeight   -     -     -     "Height of the wind turbine"                             meters
 typedef  ^                       ^                 ReKi              Width             -     -     -     "Width of the wind array"                                meters
@@ -143,9 +132,12 @@ typedef  ^                       ^                 ReKi              WindVziList
 typedef  ^                       ^                 ReKi              HWindSpeed        -     -     -     "Horizontal windspeed for steady wind conditions"        -
 typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height for horizontal wind speed for steady wind"   -
 typedef  ^                       ^                 ReKi              PLexp             -     -     -     "Power law exponent"                                     -
-#typedef  ^                       ^       IfW_FFWind_ParameterType    FFWind            -     -     -     "Parameters from FFWind"                                 -
-typedef  ^                       ^       IfW_UniformWind_ParameterType    UniformWind            -     -     -     "Parameters from UniformWind"                                 -
-typedef  ^                       ^       IfW_HAWCWind_ParameterType  HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
+#typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
+#typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
+typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
+typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
+#typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
+#typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
