@@ -1,6 +1,6 @@
    SUBROUTINE DynamicSolution_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
                                   node_elem,dof_node,elem_total,dof_total,&
-                                  node_total,ngp,niter,dt)
+                                  node_total,ngp,niter,nr_counter,dt)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuN00(:)
@@ -20,6 +20,7 @@
    INTEGER(IntKi),    INTENT(IN   ):: niter
    REAL(ReKi),        INTENT(INOUT):: uuN(:)
    REAL(ReKi),        INTENT(INOUT):: vvN(:)
+   INTEGER(IntKi),    INTENT(INOUT):: nr_counter
 
    REAL(ReKi)                      :: MassM(dof_total*2,dof_total*2)
    REAL(ReKi)                      :: RHS(dof_total*2)
@@ -34,6 +35,7 @@
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: Eref
    REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
+   REAL(ReKi),            PARAMETER:: TOLF1 = 5.0D-04
    INTEGER(IntKi)                  :: indx(dof_total*2-12)
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: i
@@ -70,7 +72,12 @@
        ENDDO
 
        temp = Norm(RHS_LU)
-!WRITE(*,*) i, temp
+WRITE(*,*) i, temp
+IF(temp .LT. TOLF1) THEN
+   nr_counter = i
+!   WRITE(*,*) i
+   RETURN
+ENDIF
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
@@ -83,18 +90,16 @@
 !WRITE(*,*) "sol(j) = ",j,sol(j)
 !WRITE(*,*) "feqv(j) = ",j,feqv(j)
 !ENDDO
-       IF(i==1) Eref = TOLF * DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
-!IF(i==1) WRITE(*,*) "Eref: ",Eref
-       IF(i .GT. 1) THEN
-           Enorm = 0.0D0 
-           Enorm = DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
-!WRITE(*,*) "Enorm: ",Enorm
-           IF(Enorm .GT. Eref/TOLF) THEN
-!               WRITE(*,*) "Solution is diverging, exit N-R"
-           ELSEIF(Enorm .LE. Eref) THEN
-               RETURN
-           ENDIF
-       ENDIF
+
+!       IF(i==1) Eref = TOLF * DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
+!       IF(i .GT. 1) THEN
+!           Enorm = 0.0D0 
+!           Enorm = DOT_PRODUCT(sol_temp(1:dof_total-6),feqv)
+!           IF(Enorm .GT. Eref/TOLF) THEN
+!           ELSEIF(Enorm .LE. Eref) THEN
+!               RETURN
+!           ENDIF
+!       ENDIF
        CALL UpdateConfiguration(sol(1:dof_total),uuN,node_total,dof_node)
        CALL UpdateConfiguration_AM2(sol(dof_total+1:dof_total*2),vvN,node_total,dof_node)
 
