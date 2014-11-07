@@ -206,7 +206,7 @@ SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 !      CALL NodeLocGL(dloc,xl,elem_length,p%node_elem,p%elem_total)
 
-      CALL BDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
+      CALL BeamDyn_gen_gll_LSGL(p%node_elem-1,GLL_temp,w_temp)
       CALL NodeLoc(dloc,xl,elem_length,GLL_temp,p%node_elem-1,p%elem_total,p%node_total,blength)
 
       DO i=1,p%node_total
@@ -505,7 +505,7 @@ SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residu
 END SUBROUTINE BDyn_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BDyn_gen_gll_LSGL(N, x, w)
+subroutine BeamDyn_gen_gll_LSGL(N, x, w)
 !
 ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
 !
@@ -581,7 +581,7 @@ subroutine BDyn_gen_gll_LSGL(N, x, w)
 
    enddo
 
-end subroutine BDyn_gen_gll_LSGL
+end subroutine BeamDyn_gen_gll_LSGL
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................

@@ -35,7 +35,7 @@
    REAL(ReKi)                      :: Enorm
    REAL(ReKi)                      :: Eref
    REAL(ReKi),            PARAMETER:: TOLF = 1.0D-03
-   REAL(ReKi),            PARAMETER:: TOLF1 = 5.0D-04
+   REAL(ReKi),            PARAMETER:: TOLF1 = 1.0D-04
    INTEGER(IntKi)                  :: indx(dof_total*2-12)
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: i
@@ -72,14 +72,21 @@
        ENDDO
 
        temp = Norm(RHS_LU)
-WRITE(*,*) i, temp
-IF(temp .LT. TOLF1) THEN
+!WRITE(*,*) i, temp
+!IF(temp .LT. TOLF1) THEN
+IF(i .EQ. niter) THEN
    nr_counter = i
 !   WRITE(*,*) i
    RETURN
 ENDIF
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
+
+temp = MAXVAL(ABS(sol_temp))
+WRITE(*,*) i,temp
+!DO j=1,24
+!   WRITE(*,*) sol_temp(j)
+!ENDDO
 
        sol(:) = 0.0D0
        DO j=1,dof_total-6

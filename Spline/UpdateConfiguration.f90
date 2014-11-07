@@ -19,12 +19,13 @@
        rot_temp  = 0.0D0
        DO j=1,3
            uf(temp_id+j) = uf(temp_id+j) + uinc(temp_id+j)
+           uf(temp_id+j+3) = uf(temp_id+j+3) + uinc(temp_id+j+3)
            rotf_temp(j)  = uf(temp_id+3+j)
            roti_temp(j)  = uinc(temp_id+3+j)
        ENDDO
        CALL CrvCompose_temp(rot_temp,roti_temp,rotf_temp,0)
        DO j=1,3
-           uf(temp_id+3+j) = rot_temp(j)
+!           uf(temp_id+3+j) = rot_temp(j)
        ENDDO
    ENDDO
 
