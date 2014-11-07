@@ -53,13 +53,13 @@
                       &elem_total,node_elem,dof_node,ngp,&
                       &StifK,RHS,MassM,DampG)
 !       k=0
-!       DO j=1,dof_total
-!           WRITE(*,*) "j=",j
-!           WRITE(*,*) "RHS(j)=",RHS(j)
+       DO j=1,dof_total
+           WRITE(*,*) "j=",j
+           WRITE(*,*) "RHS(j)=",RHS(j)
 !           WRITE(*,*) StifK(j,1+k),StifK(j,2+k),StifK(j,3+k),StifK(j,4+k),StifK(j,5+k),StifK(j,6+k)
 !           WRITE(*,*) MassM(j,1+k),MassM(j,2+k),MassM(j,3+k),MassM(j,4+k),MassM(j,5+k),MassM(j,6+k)
 !           WRITE(*,*) DampG(j,1+k),DampG(j,2+k),DampG(j,3+k),DampG(j,4+k),DampG(j,5+k),DampG(j,6+k)
-!       ENDDO
+       ENDDO
 !       STOP
        StifK = MassM + coef(7) * DampG + coef(8) * StifK
        RHS = RHS + F_ext
@@ -79,7 +79,7 @@
                StifK_LU(j,k) = StifK(j+6,k+6)
            ENDDO
        ENDDO
-       CALL Norm(dof_total-6,feqv,errf)
+!       CALL Norm(dof_total-6,feqv,errf)
 !       WRITE(*,*) "NORM(feqv) = ", errf
        
 !       CALL CGSolver(RHS,StifK,ai,bc,dof_total)

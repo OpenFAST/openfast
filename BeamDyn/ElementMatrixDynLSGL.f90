@@ -53,7 +53,7 @@
    elg = 0.0D0
    elm = 0.0D0
    
-   CALL BDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BeamDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
 !   CALL BldSet1DGaussPointScheme(ngp,gp,gw)
    CALL BldGaussPointWeight(ngp,gp,gw)
    DO igp=1,ngp

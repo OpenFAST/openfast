@@ -19,6 +19,7 @@
    REAL(ReKi)              :: temp_B(3,3)
    REAL(ReKi)              :: temp_B0(3,3)
    REAL(ReKi)              :: temp_H0(3,3)
+   REAL(ReKi)              :: temp_H(3,3)
    REAL(ReKi)              :: vel(3)
    REAL(ReKi)              :: omega(3)
    REAL(ReKi)              :: vel0(3)
@@ -32,7 +33,9 @@
    CALL CrvMatrixB(uuu(4:6),uuu(4:6),temp_B)
    CALL CrvMatrixB(uuu(4:6),uuu0(4:6),temp_B0)
    CALL CrvMatrixH(uuu0(4:6),temp_H0)
-   temp_B(:,:) = temp_B(:,:) - temp_B0(:,:) + temp_H0(:,:)
+   CALL CrvMatrixH(uuu(4:6),temp_H)
+   temp_B(:,:) = temp_B(:,:) + temp_H(:,:) - temp_B0(:,:) + temp_H0(:,:)
+!   temp_B(:,:) = temp_B(:,:) - temp_B0(:,:) + temp_H0(:,:)
    A6(4:6,4:6) = temp_B(1:3,1:3)
 
    A7(:,:) = 0.0D0
