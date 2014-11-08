@@ -420,6 +420,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
 
          InitLocal%Waves2%WaveElevC0   = Waves_InitOut%WaveElevC0
          InitLocal%Waves2%WaveDirArr   = Waves_InitOut%WaveDirArr
+!bjj: note that this doesn't get called if .not. (InitLocal%Waves2%WvDiffQTFF .OR. InitLocal%Waves2%WvSumQTFF), so p%waves2%* never get set
+! however, they get queried later in the code!!!!
 
          CALL Waves2_Init(InitLocal%Waves2, u%Waves2, p%Waves2, x%Waves2, xd%Waves2, Waves2_z, OtherState%Waves2, &
                                  y%Waves2, Interval, InitOut%Waves2, ErrStat2, ErrMsg2 )
@@ -477,6 +479,13 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
 
          ! The acceleration, velocity, and dynamic pressures will get added to the parts passed to the morrison module later...
 
+      ELSE
+               ! these need to be set to zero since we don't have a UseWaves2 flag:
+            p%Waves2%NWaveElev  = 0
+            p%Waves2%WvDiffQTFF = .FALSE.
+            p%Waves2%WvSumQTFF  = .FALSE.
+            p%Waves2%NumOuts    = 0
+            
       ENDIF
 
 
@@ -632,7 +641,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
                CALL CleanUp()
                RETURN
             END IF
-
+            
+         ELSE
+            
+            p%WAMIT2%NumOuts = 0  !This doesn't get initialized if we don't call WAMIT2_Init
 
          ENDIF
 
@@ -1309,7 +1321,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
          !-------------------------------------------------------------------
-         
+!bjj: if these are false in the input file, the parameter verions of these variables don't get set:
+
          ! Deal with any output from the Waves2 module....
       IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
 
