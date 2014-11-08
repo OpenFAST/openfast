@@ -1257,7 +1257,7 @@ CONTAINS
                                                  , TranslationAcc_l  & ! If true, allocate TranslationAcc field
                                                  , RotationAcc_l       ! If true, allocate RotationAcc field
      INTEGER(IntKi)                             :: nScalars_l          ! If > 0, alloc n Scalars
-     INTEGER i, j, k
+     INTEGER i, j, k, ErrStat2
 
 
      
@@ -1291,8 +1291,8 @@ CONTAINS
                DestMesh%ElemTable(i)%maxelem = SrcMesh%ElemTable(i)%maxelem
                DestMesh%ElemTable(i)%XElement = SrcMesh%ElemTable(i)%XElement
 
-               ALLOCATE(DestMesh%ElemTable(i)%Elements(DestMesh%ElemTable(i)%maxelem),STAT=ErrStat)
-               IF (ErrStat /=0) THEN
+               ALLOCATE(DestMesh%ElemTable(i)%Elements(DestMesh%ElemTable(i)%maxelem),STAT=ErrStat2)
+               IF (ErrStat2 /=0) THEN
                   ErrStat = ErrID_Fatal
                   ErrMess=' MeshCopy: Error allocating ElemTable%Elements.'
                   RETURN !Early return
@@ -1300,8 +1300,8 @@ CONTAINS
 
                DO j = 1,DestMesh%ElemTable(i)%nelem
 
-                  ALLOCATE(DestMesh%ElemTable(i)%Elements(j)%ElemNodes(size(SrcMesh%ElemTable(i)%Elements(j)%ElemNodes)),STAT=ErrStat)
-                  IF (ErrStat /=0) THEN
+                  ALLOCATE(DestMesh%ElemTable(i)%Elements(j)%ElemNodes(size(SrcMesh%ElemTable(i)%Elements(j)%ElemNodes)),STAT=ErrStat2)
+                  IF (ErrStat2 /=0) THEN
                      ErrStat = ErrID_Fatal
                      ErrMess=' MeshCopy: Error allocating ElemTable%ElemNodes.'
                      RETURN !Early return
@@ -1325,8 +1325,8 @@ CONTAINS
 
             IF ( SrcMesh%Committed ) THEN
 
-               ALLOCATE(DestMesh%ElemList(DestMesh%maxelemlist))
-               IF (ErrStat /=0) THEN
+               ALLOCATE(DestMesh%ElemList(DestMesh%maxelemlist),Stat=ErrStat2)
+               IF (ErrStat2 /=0) THEN
                   ErrStat = ErrID_Fatal
                   ErrMess=' MeshCopy: Error allocating ElemList.'
                   RETURN !Early return
@@ -1412,6 +1412,7 @@ CONTAINS
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
             ErrMess = "MeshCopy: MESH_UPDATECOPY of meshes with different numbers of nodes."
+            RETURN
          ENDIF
                   
       ELSE IF ( CtrlCode .EQ. MESH_UPDATEREFERENCE ) THEN
@@ -1419,6 +1420,7 @@ CONTAINS
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
             ErrMess = "MeshCopy:MESH_UPDATEREFERENCE of meshes with different numbers of nodes."
+            RETURN
          ENDIF         ! if we have a different number of nodes or different element connectivity, we'll have to redo this
          
          DestMesh%Position       = SrcMesh%Position
@@ -2146,13 +2148,13 @@ CONTAINS
 
        if ( size(t) .ne. order+1) then
           ErrStat = ErrID_Fatal
-          ErrMsg = ' Error in MeshExtrapInterp1: size(t) must equal 2.'
+          ErrMsg = 'MeshExtrapInterp1: size(t) must equal 2.'
           RETURN
        end if
 
       IF ( EqualRealNos( t(1), t(2) ) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
+         ErrMsg  = 'MeshExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
          RETURN
       END IF
 
@@ -2261,23 +2263,23 @@ CONTAINS
 
       if ( size(t) .ne. order+1) then
          ErrStat = ErrID_Fatal
-         ErrMsg = ' Error in MeshExtrapInterp2: size(t) must equal 2.'
+         ErrMsg = 'MeshExtrapInterp2: size(t) must equal 2.'
          RETURN
       end if
 
       IF ( EqualRealNos( t(1), t(2) ) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
+         ErrMsg  = 'MeshExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
          RETURN
       END IF
       IF ( EqualRealNos( t(2), t(3) ) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
+         ErrMsg  = 'MeshExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
          RETURN
       END IF
       IF ( EqualRealNos( t(1), t(3) ) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in MeshExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
+         ErrMsg  = 'MeshExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
          RETURN
       END IF
 
