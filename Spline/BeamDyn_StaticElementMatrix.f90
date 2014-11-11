@@ -34,6 +34,7 @@
    REAL(ReKi)                  :: uuu(6)
    REAL(ReKi)                  :: uup(3)
    REAL(ReKi)                  :: vvv(6)
+   REAL(ReKi)                  :: vvp(6)
    REAL(ReKi)                  :: Jacobian
    REAL(ReKi)                  :: gpr
    REAL(ReKi)                  :: Fc(6)
@@ -69,7 +70,7 @@
        mEta(2)      =-EMass0_GL(1,6,igp)
        mEta(3)      = EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
-       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
+       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        Fd(:) = Fd(:) - Fg(:) - Distr_GL(:,igp)
 

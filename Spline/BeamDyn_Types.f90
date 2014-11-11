@@ -84,8 +84,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: dof_total      ! Total number of dofs [-]
     INTEGER(IntKi)  :: ngp      ! Number of Gauss points [-]
     INTEGER(IntKi)  :: analysis_type      ! analysis_type flag [-]
+    INTEGER(IntKi)  :: damp_flag      ! damping flag [-]
     INTEGER(IntKi)  :: niter      ! analysis_type flag [-]
     REAL(DbKi)  :: dt      ! module dt [s]
+    REAL(ReKi)  :: beta      ! Damping Coefficient [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -113,6 +115,8 @@ IMPLICIT NONE
 ! =========  BD_InputFile  =======
   TYPE, PUBLIC :: BD_InputFile
     INTEGER(IntKi)  :: analysis_type      ! Analysis Type: 0-Rigid, 1-Static, 2-Dynamic [-]
+    REAL(ReKi)  :: beta      ! Damping Coefficient [-]
+    INTEGER(IntKi)  :: damp_flag      ! Damping Flag: 0-No Damping, 1-Damped [-]
     INTEGER(IntKi)  :: member_total      ! Total number of members [-]
     INTEGER(IntKi)  :: kp_total      ! Total number of key point [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: kp_member      ! Total number of key point [-]
@@ -968,8 +972,10 @@ ENDIF
    DstParamData%dof_total = SrcParamData%dof_total
    DstParamData%ngp = SrcParamData%ngp
    DstParamData%analysis_type = SrcParamData%analysis_type
+   DstParamData%damp_flag = SrcParamData%damp_flag
    DstParamData%niter = SrcParamData%niter
    DstParamData%dt = SrcParamData%dt
+   DstParamData%beta = SrcParamData%beta
  END SUBROUTINE BD_CopyParam
 
  SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1048,8 +1054,10 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! dof_total
   Int_BufSz  = Int_BufSz  + 1  ! ngp
   Int_BufSz  = Int_BufSz  + 1  ! analysis_type
+  Int_BufSz  = Int_BufSz  + 1  ! damp_flag
   Int_BufSz  = Int_BufSz  + 1  ! niter
   Db_BufSz   = Db_BufSz   + 1  ! dt
+  Re_BufSz   = Re_BufSz   + 1  ! beta
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1093,10 +1101,14 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%analysis_type )
   Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%damp_flag )
+  Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%niter )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%dt )
   Db_Xferred   = Db_Xferred   + 1
+  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%beta )
+  Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE BD_PackParam
 
  SUBROUTINE BD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1184,10 +1196,14 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   OutData%analysis_type = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
+  OutData%damp_flag = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
   OutData%niter = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%dt = DbKiBuf ( Db_Xferred )
   Db_Xferred   = Db_Xferred   + 1
+  OutData%beta = ReKiBuf ( Re_Xferred )
+  Re_Xferred   = Re_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -1858,6 +1874,8 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
    DstinputfileData%analysis_type = SrcinputfileData%analysis_type
+   DstinputfileData%beta = SrcinputfileData%beta
+   DstinputfileData%damp_flag = SrcinputfileData%damp_flag
    DstinputfileData%member_total = SrcinputfileData%member_total
    DstinputfileData%kp_total = SrcinputfileData%kp_total
 IF (ALLOCATED(SrcinputfileData%kp_member)) THEN
@@ -1949,6 +1967,8 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Int_BufSz  = Int_BufSz  + 1  ! analysis_type
+  Re_BufSz   = Re_BufSz   + 1  ! beta
+  Int_BufSz  = Int_BufSz  + 1  ! damp_flag
   Int_BufSz  = Int_BufSz  + 1  ! member_total
   Int_BufSz  = Int_BufSz  + 1  ! kp_total
   Int_BufSz   = Int_BufSz   + SIZE( InData%kp_member )  ! kp_member 
@@ -1965,6 +1985,10 @@ ENDIF
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%analysis_type )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%beta )
+  Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%damp_flag )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%member_total )
   Int_Xferred   = Int_Xferred   + 1
@@ -2035,6 +2059,10 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   OutData%analysis_type = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  OutData%beta = ReKiBuf ( Re_Xferred )
+  Re_Xferred   = Re_Xferred   + 1
+  OutData%damp_flag = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%member_total = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1

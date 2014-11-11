@@ -1,4 +1,5 @@
    SUBROUTINE GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
+                                        &damp_flag,beta,&
                                         &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -14,6 +15,8 @@
    REAL(DbKi),        INTENT(IN   ):: dt       ! Velocity of Mass 1: m/s
    TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
    TYPE(BD_InputType),INTENT(IN   ):: u0          ! Inputs at t
+   INTEGER(IntKi),    INTENT(IN   ):: damp_flag ! Total number of elements
+   REAL(ReKi),        INTENT(IN   ):: beta
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
@@ -167,7 +170,8 @@
 
        CALL ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
                              &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&
-                             &ngp,dt,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
+                             &ngp,dt,node_elem,dof_node,damp_flag,beta,&
+                             &elf1,elf2,elm11,elm12,elm21,elm22)
 
 !WRITE(*,*) "TEST3"
 

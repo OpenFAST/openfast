@@ -30,7 +30,13 @@
 !   temp_qq(:) = 0.0D0
 !   CALL CrvCompose_temp(x%q(4:6),temp_pp,temp_qq,0)
 
-   x%dqdt(1:3) = u%RootMotion%TranslationVel(1:3,1)
-   x%dqdt(4:6) = u%Rootmotion%RotationVel(1:3,1)
+!------------------
+!  Rotating beam
+!------------------
+!   x%dqdt(1:3) = u%RootMotion%TranslationVel(1:3,1)
+!   x%dqdt(4:6) = u%Rootmotion%RotationVel(1:3,1)
+!------------------
+! End rotating beam
+!------------------
 
    END SUBROUTINE BeamDyn_BoundaryAM2
