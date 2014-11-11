@@ -108,6 +108,7 @@ INCLUDE 'CrvCompose_temp.f90'
 INCLUDE 'CrvCompose_temp2.f90'
 INCLUDE 'CrvCompose_Check.f90'
 INCLUDE 'RescaleCheck.f90'
+INCLUDE 'DissipativeForce.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -181,6 +182,8 @@ INCLUDE 'RescaleCheck.f90'
 
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
    p%analysis_type  = InputFileData%analysis_type
+   p%damp_flag  = InputFileData%damp_flag
+   p%beta  = InputFileData%beta
 
    CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
    p%gravity(:) = 0.0D0
@@ -388,10 +391,10 @@ INCLUDE 'RescaleCheck.f90'
 ! For AM2, initial Condition
    DO i=1,p%elem_total
        DO j=1,p%node_elem
-           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
-           temp_id2= (j-1)*p%dof_node
-           x%dqdt(temp_id+3) = p%uuN0(temp_id2+1,i)*(3.1415926D+00/3.0D0)
-           x%dqdt(temp_id+5) = -3.1415926D+00/3.0D0
+!           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
+!           temp_id2= (j-1)*p%dof_node
+!           x%dqdt(temp_id+3) = p%uuN0(temp_id2+1,i)*(3.1415926D+00/3.0D0)
+!           x%dqdt(temp_id+5) = -3.1415926D+00/3.0D0
        ENDDO
    ENDDO
 !END initial condition

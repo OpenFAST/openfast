@@ -1,4 +1,5 @@
    SUBROUTINE DynamicSolution_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
+                                  damp_flag,beta,&
                                   node_elem,dof_node,elem_total,dof_total,&
                                   node_total,ngp,niter,nr_counter,dt)
 
@@ -18,6 +19,8 @@
    INTEGER(IntKi),    INTENT(IN   ):: node_total
    INTEGER(IntKi),    INTENT(IN   ):: ngp
    INTEGER(IntKi),    INTENT(IN   ):: niter
+   INTEGER(IntKi),    INTENT(IN   ):: damp_flag
+   REAL(ReKi),        INTENT(IN   ):: beta
    REAL(ReKi),        INTENT(INOUT):: uuN(:)
    REAL(ReKi),        INTENT(INOUT):: vvN(:)
    INTEGER(IntKi),    INTENT(INOUT):: nr_counter
@@ -27,6 +30,7 @@
    REAL(ReKi)                      :: MassM_LU(dof_total*2-12,dof_total*2-12)
    REAL(ReKi)                      :: RHS_LU(dof_total*2-12)
    REAL(ReKi)                      :: F_PointLoad(dof_total)
+   REAL(ReKi)                      :: F_PointLoad0(dof_total)
    REAL(ReKi)                      :: feqv(dof_total-6)
    REAL(ReKi)                      :: sol_temp(dof_total*2-12)
    REAL(ReKi)                      :: sol(dof_total*2)
@@ -49,14 +53,21 @@
        MassM(:,:) = 0.0D0
 !WRITE(*,*) "niter = ",i
        CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
+                                      &damp_flag,beta,&
                                       &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
 
        DO j=1,node_total
            temp_id = (j-1)*dof_node
            F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
            F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
+           F_PointLoad0(temp_id+1:temp_id+3) = u0%PointLoad%Force(1:3,j)
+           F_PointLoad0(temp_id+4:temp_id+6) = u0%PointLoad%Moment(1:3,j)
+!           WRITE(*,*) F_PointLoad(temp_id+1:temp_id+3)
+!           WRITE(*,*) F_PointLoad(temp_id+4:temp_id+6)
        ENDDO
-       RHS(dof_total+1:dof_total*2) = RHS(dof_total+1:dof_total*2) + F_PointLoad(1:dof_total)
+       RHS(dof_total+1:dof_total*2) = RHS(dof_total+1:dof_total*2) + &
+                                     &dt*F_PointLoad(1:dof_total)  + &
+                                     &dt*F_PointLoad0(1:dof_total)
 
        feqv(:) = 0.0D0
        DO j=1,dof_total-6
@@ -73,8 +84,8 @@
 
        temp = Norm(RHS_LU)
 !WRITE(*,*) i, temp
-!IF(temp .LT. TOLF1) THEN
-IF(i .EQ. niter) THEN
+IF(temp .LT. TOLF1) THEN
+!IF(i .EQ. niter) THEN
    nr_counter = i
 !   WRITE(*,*) i
    RETURN

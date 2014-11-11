@@ -63,6 +63,7 @@
 !WRITE(*,*) "scale",OtherState%Rescale_counter
    CALL BeamDyn_BoundaryAM2(x,u_interp,t+p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
    CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,u_interp0,&
+                             p%damp_flag,p%beta,&
                              p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
                              p%node_total,p%ngp,p%niter,OtherState%NR_counter,p%dt)
    CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)

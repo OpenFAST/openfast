@@ -96,14 +96,15 @@ PROGRAM MAIN
 OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
 
    t_initial = 0.0D+00
-   t_final   = 6.0D+00
+   t_final   = 1.0D+00
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 1.0D-04
+!   dt_global = 1.0D-03
+   dt_global = 5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -135,7 +136,8 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
-   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
@@ -190,13 +192,13 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    DO n_t_global = 0, n_t_final
 
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 1) STOP 
+!IF(n_t_global == 1) STOP 
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
 !      CALL BD_InputSolve( t_global + .5*dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
 !      CALL BD_InputSolve( t_global + dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
 !      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
@@ -314,7 +316,7 @@ END PROGRAM MAIN
 
 
 !SUBROUTINE BD_InputSolve( u, y, p, ErrStat, ErrMsg)
-SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
+SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
  
    USE BeamDyn_SP
    USE BeamDyn_Types
@@ -324,6 +326,7 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    REAL(DbKi),                     INTENT(IN   ) :: t
    TYPE(BD_InputType),           INTENT(INOUT) :: u
    REAL(DbKi),                     INTENT(INOUT) :: ut
+   TYPE(BD_ParameterType),           INTENT(IN   ) :: p
 
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
@@ -354,18 +357,43 @@ SUBROUTINE BD_InputSolve( t, u, ut, ErrStat, ErrMsg)
    u%RootMotion%TranslationAcc(:,:)   = 0.0D0
 
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+   temp_pp(2) = 0.0D0
    CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
    CALL CrvMatrixR(temp_rr,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
 
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
+   
+!------------------
+!  Rotating beam
+!------------------
+!   u%RootMotion%Orientation(:,:,:) = 0.0D0
+!   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+!   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
+!   CALL CrvMatrixR(temp_rr,temp_R)
+!   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
+!
+!   u%RootMotion%RotationVel(:,:) = 0.0D0
+!   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
+!------------------
+! End rotating beam
+!------------------
 
    u%RootMotion%RotationAcc(:,:) = 0.0D0
 
    ! Point mesh: PointLoad
-   u%PointLoad%Force(:,:)  = 0.0D0
+   IF(t .LE. 2.5D-02) THEN
+       u%PointLoad%Force(2,p%node_total) = 1.6D+05*t 
+!       u%PointLoad%Force(3,p%node_total) = 1.6D+05*t 
+   ELSEIF(t .GT. 2.5D-02 .AND. t .LE. 5.0D-02) THEN
+       u%PointLoad%Force(2,p%node_total) = -1.6D+05*t+8000 
+!       u%PointLoad%Force(3,p%node_total) = -1.6D+05*t+8000
+   ELSE 
+       u%PointLoad%Force(2,p%node_total) = 0.0D0
+       u%PointLoad%Force(3,p%node_total) = 0.0D0
+   ENDIF
+
+!   u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad

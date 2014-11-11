@@ -1,6 +1,7 @@
    SUBROUTINE ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,&
                                &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,DistrLoad_GL0,&
-                               &ngp,dt,node_elem,dof_node,elf1,elf2,elm11,elm12,elm21,elm22)
+                               &ngp,dt,node_elem,dof_node,damp_flag,beta,&
+                               &elf1,elf2,elm11,elm12,elm21,elm22)
                            
    !-------------------------------------------------------------------------------
    ! This subroutine total element forces and mass matrices
@@ -29,6 +30,8 @@
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),INTENT(IN   ):: damp_flag ! Degrees of freedom per node
+   REAL(ReKi),INTENT(IN   )    :: beta
 
 !   REAL(ReKi),ALLOCATABLE      :: gp(:) ! Gauss points
 !   REAL(ReKi),ALLOCATABLE      :: gw(:) ! Gauss point weights
@@ -67,6 +70,8 @@
    REAL(ReKi)                  :: Fg0(6)
    REAL(ReKi)                  :: vvv(6)
    REAL(ReKi)                  :: vvv0(6)
+   REAL(ReKi)                  :: vvp(6)
+   REAL(ReKi)                  :: vvp0(6)
    REAL(ReKi)                  :: mmm
    REAL(ReKi)                  :: mEta(3)
    REAL(ReKi)                  :: rho(3,3)
@@ -93,6 +98,22 @@
    REAL(ReKi)                  :: temp_H(3,3)
    REAL(ReKi)                  :: temp_H0(3,3)
    REAL(ReKi)                  :: uup0(3)
+   REAL(ReKi)                  :: Sd(6,6)
+   REAL(ReKi)                  :: Sd0(6,6)
+   REAL(ReKi)                  :: Od(6,6)
+   REAL(ReKi)                  :: Od0(6,6)
+   REAL(ReKi)                  :: Pd(6,6)
+   REAL(ReKi)                  :: Pd0(6,6)
+   REAL(ReKi)                  :: Qd(6,6)
+   REAL(ReKi)                  :: Qd0(6,6)
+   REAL(ReKi)                  :: betaC(6,6)
+   REAL(ReKi)                  :: betaC0(6,6)
+   REAL(ReKi)                  :: Gd(6,6)
+   REAL(ReKi)                  :: Gd0(6,6)
+   REAL(ReKi)                  :: Xd(6,6)
+   REAL(ReKi)                  :: Xd0(6,6)
+   REAL(ReKi)                  :: Yd(6,6)
+   REAL(ReKi)                  :: Yd0(6,6)
 
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
@@ -158,10 +179,14 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        mEta0(:) = mEta(:)
        rho0(:,:) = rho(:,:)
-       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,mmm,mEta,rho)
-       CALL BldGaussPointDataMass(hhx,hpx,Nvvv0,RR00,node_elem,dof_node,vvv0,mmm,mEta0,rho0)
+       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
+       CALL BldGaussPointDataMass(hhx,hpx,Nvvv0,RR00,node_elem,dof_node,vvv0,vvp0,mmm,mEta0,rho0)
        CALL BeamDyn_StaticElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
        CALL BeamDyn_StaticElasticForce(E100,RR00,kapa0,Stif0,cet0,Fc0,Fd0,Oe0,Pe0,Qe0)
+       IF(damp_flag .NE. 0) THEN
+           CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
+           CALL DissipativeForce(beta,Stif0,vvv0,vvp0,E10,Fc0,Fd0,Sd0,Od0,Pd0,Qd0,betaC0,Gd0,Xd0,Yd0)
+       ENDIF
 
        CALL MassMatrix(mmm,mEta,rho,Mi)
        CALL MassMatrix(mmm,mEta0,rho0,Mi0)
@@ -170,13 +195,7 @@
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        CALL GravityLoads(mmm,mEta0,gravity,Fg0)
        CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,mmm,mEta,rho,A2,A3,A4,A5,A6,A7)
-!DO i=1,6
-!DO j=1,6
-!WRITE(*,*), "A6",i,j,A6(i,j)
-!ENDDO
-!ENDDO
 
-!       Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
        Fd(:) = dt*(Fd + Fd0) + &
               &MATMUL(Mi,vvv-vvv0) + &
               &MATMUL(Mi0,vvv-vvv0) + &
@@ -191,11 +210,7 @@
        F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) + &
                 &MATMUL(temp_H0,uuu(4:6)-uuu0(4:6)) - &
                 &dt*(vvv(4:6)+vvv0(4:6))
-!DO i=1,6
-!DO j=1,6
-!WRITE(*,*) "Stif(i,j) = ",i,j,Stif(i,j)
-!ENDDO
-!ENDDO
+
        DO i=1,node_elem
            DO j=1,node_elem
                DO m=1,dof_node
@@ -211,6 +226,18 @@
                                                  &hpx(i)*dt*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
                                                  &hhx(i)*(Mi(m,n)+Mi0(m,n)+dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
+                       IF(damp_flag .NE. 0) THEN
+                           elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
+                                                     &hhx(i)*dt*Pd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hhx(i)*dt*Qd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*Sd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*Od(m,n)*hhx(j)*Jacobian*gw(igp)  
+                           elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
+                                                     &hhx(i)*dt*Xd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hhx(i)*dt*Yd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*Gd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*betaC(m,n)*hpx(j)*Jacobian*gw(igp) 
+                       ENDIF
                    ENDDO
                ENDDO
            ENDDO
