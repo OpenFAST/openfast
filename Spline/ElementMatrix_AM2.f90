@@ -185,7 +185,7 @@
        CALL BeamDyn_StaticElasticForce(E100,RR00,kapa0,Stif0,cet0,Fc0,Fd0,Oe0,Pe0,Qe0)
        IF(damp_flag .NE. 0) THEN
            CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
-           CALL DissipativeForce(beta,Stif0,vvv0,vvp0,E10,Fc0,Fd0,Sd0,Od0,Pd0,Qd0,betaC0,Gd0,Xd0,Yd0)
+           CALL DissipativeForce(beta,Stif0,vvv0,vvp0,E100,Fc0,Fd0,Sd0,Od0,Pd0,Qd0,betaC0,Gd0,Xd0,Yd0)
        ENDIF
 
        CALL MassMatrix(mmm,mEta,rho,Mi)
