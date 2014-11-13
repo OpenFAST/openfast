@@ -208,13 +208,12 @@ PROGRAM InflowWind_Driver
                   InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
                   InflowWind_OutputData,    TimeStepSize,  InflowWind_InitOutData, ErrStat, ErrMsg )
 
-   CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//TRIM(ErrMsg)//NewLine)
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL ProgAbort( ErrMsg )
    ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
+   CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//TRIM(ErrMsg)//NewLine)
    ENDIF
 
 
