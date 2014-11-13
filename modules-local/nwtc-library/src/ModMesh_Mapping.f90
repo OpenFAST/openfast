@@ -673,7 +673,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-    
+#ifdef __ORIGINAL_LOGMAP    
             ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
          RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n1) ) )&
                                  , Src%Orientation(:,:,n1) )
@@ -698,6 +698,34 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
             ! convert back to DCM:
          Dest%Orientation(:,:,i) = DCM_exp( TmpVec )               
       
+         
+#else         
+!this should be equivalent, with one less matrix multiply
+         
+            ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
+         RotationMatrix = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
+         
+         CALL DCM_logmap( RotationMatrix, FieldValue(:,1), ErrStat, ErrMsg )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+            ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
+         RotationMatrix = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
+         
+         CALL DCM_logmap( RotationMatrix, FieldValue(:,2), ErrStat, ErrMsg )                  
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+         
+         
+            ! interpolate tensors: 
+         TmpVec =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+                  + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
+                  
+            ! convert back to DCM:
+         Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), DCM_exp( TmpVec )  )
+         
+#endif         
+         
       end do
 
    endif
@@ -1671,7 +1699,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       
       
       ! M_d += torque
-      !if ( Dest%FieldMask(MASKID_FORCE) ) then
+      if ( Dest%FieldMask(MASKID_MOMENT) ) then
          
             ! if the distance (which can never be less than zero) is greater than "zero" and there is a
             ! force in the source mesh, then we need to add a moment to the destination mesh to account
@@ -1686,7 +1714,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
                torque = CROSS_PRODUCT( DisplacedPosition, torque )
                Dest%Moment(:,MeshMap%MapLoads(i)%OtherMesh_Element) = Dest%Moment(:,MeshMap%MapLoads(i)%OtherMesh_Element) + torque                                             
          enddo
-      !endif      
+      endif      
       
    end if
    

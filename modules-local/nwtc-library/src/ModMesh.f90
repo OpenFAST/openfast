@@ -638,11 +638,39 @@ CONTAINS
             IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationDisp = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
-         !   ErrStat = ErrID_Info
-         !   ErrMess = ' MeshCreate: Meshes with motion fields must also contain the TranslationDisp field.'
+            !CALL SetErrStat(ErrID_Info, 'Meshes with motion fields must also contain the TranslationDisp field.',ErrStat,ErrMsg,'MeshCreate')
          ENDIF
 
+         IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONVEL)) THEN
+            CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%TranslationVel = 0.
+            BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
+            !CALL SetErrStat(ErrID_Info, 'Meshes with motion fields must also contain the TranslationVel field.',ErrStat,ErrMsg,'MeshCreate')
+         ENDIF
+         
+         IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONACC)) THEN
+            CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%TranslationAcc = 0.
+            BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
+            !CALL SetErrStat(ErrID_Info, 'Meshes with motion fields must also contain the TranslationAcc field.',ErrStat,ErrMsg,'MeshCreate')
+         ENDIF
+                           
       END IF
+      
+      IF ( IsLoad .AND. IOS == COMPONENT_INPUT ) THEN
+               
+         IF ( .NOT. BlankMesh%FieldMask(MASKID_MOMENT)) THEN
+            CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat, ErrMess )
+            IF (ErrStat >= AbortErrLev) RETURN
+            BlankMesh%Moment = 0.
+            BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
+            !CALL SetErrStat(ErrID_Info, 'Meshes with load fields must also contain the Moment field.',ErrStat,ErrMsg,'MeshCreate')
+         ENDIF               
+         
+      END IF
+      
 
       RETURN
 
