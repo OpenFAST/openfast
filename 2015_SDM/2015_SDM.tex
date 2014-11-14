@@ -239,9 +239,9 @@ into a state-space form. First, these equations are recast in compact form
 as
 \begin{equation}
     \label{CompactGovernGEBT}
-    \underline{\mathcal{F}}^I - \underline{\mathcal{F}}^{C\prime} + \underline{\mathcal{F}}^D = \underline{\mathcal{F}}^{ext}
+    \underline{\mathcal{F}}^I - (\underline{\mathcal{F}}^{C})^\prime + \underline{\mathcal{F}}^D = \underline{\mathcal{F}}^{ext}
 \end{equation}
-where $\underline{\mathcal{F}}^I, \underline{\mathcal{F}}^C$ and $\underline{\mathcal{F}}^D$, and $\underline{\mathcal{F}}^{ext}$ are the inertial forces, elastic forces, and externally applied forces, respectively; their definitions are
+where $\underline{\mathcal{F}}^I, \underline{\mathcal{F}}^C$ and $\underline{\mathcal{F}}^D$, and $\underline{\mathcal{F}}^{ext}$ are the inertial force term, two elastic force terms, and externally applied force term, respectively; their definitions are
 \begin{align}
     \label{InertialForce}
     \underline{\mathcal{F}}^I &= \begin{Bmatrix}
@@ -404,10 +404,13 @@ The state-space form of GEBT was numerically implemented into a beam solver, cal
 Information that comes from FAST driver code include the gravity vector, time step size, initial conditions, and the externally applied loads.  For whole turbine analysis, the BeamDyn module will return kinematical quantities, displacements and rotation tensors, as well as reaction force and moment resultants to FAST for aeroelastic and control analysis.
 
 The implementation of GEBT with RK4 is straightforward; however, for the AM2 scheme, a linearization is required because of its implicit nature. By applying the trapezoidal rule, the state-space form in Eq.~\eqref{StateSpaceGov-1} can be recast as
+{\color{red}
 \begin{equation}
     \label{AM2-Govn}
-    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k})+\tens{A}_k \hat{\vec{x}}_{k+1} - \Delta t \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1}) = \tens{A}_k \hat{\vec{x}}_{k} + \Delta t \mathfrak{f}(\hat{\vec{x}}_{k},t_{k}) 
+%    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k})+\tens{A}_k \hat{\vec{x}}_{k+1} - \Delta t \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1}) = \tens{A}_k \hat{\vec{x}}_{k} + \Delta t \mathfrak{f}(\hat{\vec{x}}_{k},t_{k})
+    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k} - \frac{\Delta t}{2} \vec{\dot{\hat{x}}}) =  \frac{\Delta t}{2} \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1})  
 \end{equation}
+}
 where the footnote denotes the discretized time step in which the value is evaluated, and $\Delta t$ is the time step size. A linearization is needed to solve this nonlinear equation. The linearized equation is as follows
 \begin{equation}
     \label{AM2-Linearized}
@@ -432,23 +435,30 @@ The coefficient matrices are written as
     \label{Linear-C1} 
     \hat{\tens{C}}_1 &= \int_0^l \tens{N}^T\tens{C}_1~\tens{N}~dx_1 \\
     \label{Linear-K2}
-    \hat{\tens{K}}_2 &= \int_0^l \left[ \tens{N}^T (\tens{A}_2 - \tens{A}_3 + \Delta t \tens{A}_5 + \Delta t \mathcal{Q}) \tens{N} + \tens{N}^T \Delta t \tens{\mathcal{P}}~ \tens{N}^\prime + \tens{N}^{\prime T} \Delta t \tens{\mathcal{S}}~ \tens{N}^\prime + \tens{N}^T \Delta t \tens{\mathcal{O}}~ \tens{N} \right]~dx_1 \\
+    \hat{\tens{K}}_2 &= \int_0^l  \tens{N}^T (\tens{A}_2 - \tens{A}_3 + \frac{\Delta t}{2} \tens{A}_1 + \frac{\Delta t}{2} \tens{A}_5 + \frac{\Delta t}{2} \mathcal{Q}) \tens{N}~dx_1 \nonumber \\
+    &+ \int_0^l \left( \tens{N}^T \frac{\Delta t}{2} \tens{\mathcal{P}}~ \tens{N}^\prime + \tens{N}^{\prime T} \frac{\Delta t}{2} \tens{\mathcal{S}}~ \tens{N}^\prime + \tens{N}^T \frac{\Delta t}{2} \tens{\mathcal{O}}~ \tens{N}\right) ~dx_1 \\
     \label{Linear-C2}
-    \hat{\tens{C}}_2 &= \int_0^l \tens{N}^T (\tens{\mathfrak{M}}+\tens{\mathfrak{M}}_k+\Delta t \tens{A}_4)~\tens{N}~dx_1
+    \hat{\tens{C}}_2 &= \int_0^l \tens{N}^T (\tens{\mathfrak{M}}+\frac{\Delta t}{2} \tens{A}_4)~\tens{N}~dx_1
 \end{align}
 where the newly introduced matrices are
 \begin{align}
    \label{K1}
    \tens{K}_1 &=
    \begin{bmatrix}
-   2 \tens{I}_3 & \tens{0} \\
-   \tens{0} & \tens{B} + \tens{H} - \tens{B}_k + \tens{H}_k
+   \tens{I}_3 & \tens{0} \\
+   \tens{0} & \tens{B}(\vec{p},\vec{p}) + \tens{H} - \tens{B}(\vec{p},\vec{p}_k) -\frac{\Delta t}{2} \tens{B}(\vec{p},\vec{\dot{p}}_k)
    \end{bmatrix} \\
    \label{C1}
    \tens{C}_1 &=
-   \begin{bmatrix}
+   -\frac{\Delta t}{2} \begin{bmatrix}
    \tens{I}_3 & \tens{0} \\
    \tens{0} & \tens{I}_3 
+   \end{bmatrix} \\
+   \label{A1}
+   \tens{A}_1 &=
+    \begin{bmatrix}
+   \tens{0} & m \dot{\tilde{\omega}}_k \tilde{\eta}^T \\
+   \tens{0} & m \ddot{\tilde{u}}_k \tilde{\eta}+\tens{\rho} \dot{\tilde{\omega}}_k-\widetilde{\tens{\rho}{\dot{\vec{\omega}}_k}}
    \end{bmatrix} \\
    \label{A2}
    \tens{A}_2 &=
@@ -509,12 +519,12 @@ An initially twisted beam was examined first. A straight beam ($k_2=k_3=0$) with
     \begin{tabular}{| l | l |}
     	\hline
     	Property               & Value   \\ \hline
-    	Elastic Modulus                      & 200 gigapascals (GPa) \\ \hline
+    	Elastic Modulus                      & 200 GPa \\ \hline
     	Shear Modulus                      & 79.3 GPa \\ \hline
-    	Height                      & 0.5 meters (m)   \\ \hline
+    	Height                      & 0.5 m   \\ \hline
     	Base                      & 0.25 m  \\ \hline
     	Length                      & 10 m    \\ \hline
-    	Force                      & 4000 kilonewtons (kN) \\ \hline
+    	Force                      & 4000 kN \\ \hline
     \end{tabular}
 \end{center}
 \end{table}
@@ -527,7 +537,7 @@ The beam was discretized using a seventh-order LSFE. It is widely known that the
     	        & $u_1$ (m) & $u_2$ (m) & $u_3$ (m)  \\ \hline
     	BeamDyn  & -1.132727     & -1.715123       & -3.578671      \\  \hline
     	ANSYS   & -1.134192     & -1.714467      & -3.584232     \\ \hline
-    	Percent Error   & 0.129     & 0.038      & 0.155     \\ \hline
+    	Percent Error   & 0.129\%     & 0.038\%      & 0.155\%     \\ \hline
     \end{tabular}
 \end{center}
 \end{table} 
@@ -571,7 +581,7 @@ C =10^3 \times \begin{bmatrix}
 \end{align*}
 where the units associated with stiffness values are $C_{ij}$ ($N$), $C_{i,j+3}$ ($N \cdot m$), and $C_{i+3,j+3}$ ($N \cdot m^2$) for $i,j = 1,2,3$.
 
-Figure~\ref{CX100Sketch} \cite{paquette2006modeling} shows the various material layups and the geometry of the CX-100 blade. Each color represents a section with unique material properties. Figure~\ref{normalized1} shows the normalized bending stiffness along the length of the blade where sharp gradient in the beam axial direction can be observed. The graph shows that the bending stiffness jumped to about 10\% of its root value in under 10\% of the blade length.
+Figure~\ref{CX100Sketch} shows the various material layups and the geometry of the CX-100 blade. Each color represents a section with unique material properties. Figure~\ref{normalized1} shows the normalized bending stiffness along the length of the blade where sharp gradient in the beam axial direction can be observed. The graph shows that the bending stiffness jumped to about 10\% of its root value in under 10\% of the blade length.
 
 \begin{figure}
 \centering
@@ -587,7 +597,7 @@ Figure~\ref{CX100Sketch} \cite{paquette2006modeling} shows the various material 
 \label{normalized1}
 \end{figure}
 
-Figure~\ref{CX100Setup} \cite{paquette2006modeling} shows the test configuration for the static test performed at the National Wind Technology Center (NWTC) in Boulder, Colorado. The whiffle-tree configuration applied the load at 3.00 m, 5.81 m, and 7.26 m from the root of the blade to achieve a maximum root moment of 128.6 kN m. The loads and positions are given in Table~\ref{CX100Load} below.
+Figure~\ref{CX100Setup} shows the test configuration for the static test performed at the National Wind Technology Center (NWTC) in Boulder, Colorado. The whiffle-tree configurationof the test apparatus applied the load at 3.00 m, 5.81 m, and 7.26 m from the root of the blade to achieve a maximum root moment of 128.6 kN m. The loads and positions are given in Table~\ref{CX100Load} below.
 
 
 \begin{figure}
@@ -602,7 +612,7 @@ Figure~\ref{CX100Setup} \cite{paquette2006modeling} shows the test configuration
 \begin{center}
     \begin{tabular}{| l | l |l |}
     	\hline
-    	 Saddle \# &     Position (m) & Applied Load (kN)  \\ \hline
+    	 Saddle \# &     Radial Position (m) & Applied Load (kN)  \\ \hline
     1&	3.00 & 16.9         \\  \hline
     2&	5.81   & 5.47         \\ \hline
     3&	    	7.26   & 5.59         \\ \hline
@@ -620,7 +630,7 @@ The displacements, $u_3$, at each of the load points were tracked for the experi
     	             & $u_3$ at saddle \#1 (m) & $u_3$ at saddle \#2 (m) & $u_3$ at saddle \#3 (m) \\ \hline
     	Experimental & 0.083530             & 0.381996               & 0.632460             \\ \hline
     	BeamDyn      & 0.072056               & 0.381074                & 0.698850           \\ \hline
-    	    	Percent Error      &        13.74        & 0.24                & 10.5           \\ \hline
+    	    	Percent Error      &        13.74\%        & 0.24\%                & 10.5\%           \\ \hline
     \end{tabular}
 \end{center}
 \end{table} 
@@ -639,22 +649,22 @@ Next, a convergence study of the tip displacements was completed for the CX-100 
 \begin{figure}
 \centering
 \includegraphics[width=3.0in]{\directory CX100conv3.eps}
-\caption{Error in $u_3$ as a function of the number of nodes.} 
+\caption{ Percent error in $u_3$ as a function of the number of nodes.} 
 \label{CX100conv3}
 \end{figure}
 
 \begin{figure}
 \centering
 \includegraphics[width=3.0in]{\directory CX100elem2.eps}
-\caption{Error in $u_3$ compared to a highly refined solution in BeamDyn as a function of the number of nodes for 39 first- to sixth-order LSFEs, coincident with sectional properties.} 
+\caption{Percent error in $u_3$ compared to a highly refined solution in BeamDyn as a function of the number of nodes for 39 first- to sixth-order LSFEs, coincident with sectional properties.} 
 \label{CX100elem2}
 \end{figure}
 
 \subsection{Dynamics of the CX-100 Blade}
 
-The final test case illustrates that BeamDyn is capable of accurately analyzing dynamic movement. In this analysis, the CX-100 blade was given a constant rotational velocity while a gravity force load was applied. A boundary condition was specified such that the blade was allowed to rotate about the node located at its root. This test case was analyzed in both BeamDyn and Dymore, a finite-element-based multibody dynamics code based on the same beam theory. The beam was discretized by a eighth-order element in BeamDyn, and 40 third-order elements in Dymore. The angular velocity of the blade was $\frac{\pi}{3}$ rad/s. The time integrator for the dynamic case was a Runge-Kutta fourth-order method, and the time step size was $5 \times 10^{-5}$ s. The time integrator for Dymore was the generalized-alpha time integrator, with a time step size of $1 \times 10^{-3}$ s. The total simulation time in both BeamDyn and Dymore was 6 s so that the blade rotated a whole circle.
+The final test case illustrates that BeamDyn is capable of accurately analyzing dynamic movement. In this analysis, the CX-100 blade was given a constant rotational velocity. A boundary condition was specified such that the blade was allowed to rotate about the node located at its root. This test case was analyzed in both BeamDyn and Dymore, a finite-element-based multibody dynamics code based on the same beam theory. The beam was discretized by a eighth-order element in BeamDyn, and 40 third-order elements in Dymore. The angular velocity of the blade was $\frac{\pi}{3}$ rad/s. The time integrator for the dynamic case was a Runge-Kutta fourth-order method, and the time step size was $5 \times 10^{-5}$ s. The time integrator for Dymore was the generalized-alpha method, with a time step size of $1 \times 10^{-3}$ s. The total simulation time in both BeamDyn and Dymore was 6 s so that the blade rotated a whole circle.
 
-Figure~\ref{E3U} shows the time history for all displacements and rotations given by BeamDyn and Dymore. The displacements mostly agree, and the root-mean-square error for $u_3$ is 0.0335. The error was calculated using
+Figure~\ref{E3U} shows the time histories for the axial ($u_1$) and vertical displacements ($u_3$), and the rotation parameter $p_2$ about the rotating axis given by BeamDyn and Dymore. It can be observed that these quantities are in good agreements and BeamDyn properly handled the rescaling operation, which eliminates the singular point in the rotation parameterization. {\color{red} One explanation to the tiny differences between the two data sets is that in the generalized-alpha method used in Dymore, numerical damping was introduced and this effected on the accuracy of the results.} {\color{red} The root-mean-square error, which aggregates the magnitudes of the errors in predictions for various times into a single measure of predictive performance, for $u_3$ is 0.0335.} The error was calculated using
 \begin{equation}
 \varepsilon_{RMS}=\sqrt{\frac{\sum_{k=0}^{n_{max}}[u_3^k-u_b(t^k)]^2}{\sum_{k=0}^{n_{max}}[u_b(t^k)]^2}}
 \end{equation} 
@@ -662,17 +672,12 @@ where $u_b(t)$ is the benchmark solution as given by Dymore.
 \begin{figure}
     \centering
     \begin{tabular}{c}
-    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \qquad
-\subfloat[$u_2$]{\label{E3U:u2}\includegraphics[width=3.0in]{\directory  E3Tipu2.eps}} \\
-\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \qquad
-\subfloat[$p_1$]{\label{E3U:p1}\includegraphics[width=3.0 in]{\directory  E3Tipp1.eps}} \\
-\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \qquad
-\subfloat[$p_3$]{\label{E3U:p3}\includegraphics[width=3.0 in]{\directory  E3Tipp3.eps}} \\
-\end{tabular}
+    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \\
+\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \\\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \\\end{tabular}
 \caption{Tip displacement and rotation histories of a CX-100 blade rotating at a constant speed.}
 \label{E3U}
 \end{figure} 
-Figure~\ref{E3RootM2} shows the root forces in the no-gravity-load-applied and gravity-load-applied cases. As expected, the root forces were higher for the case where the gravity force was applied.
+Figure~\ref{E3RootM2} shows the root forces in the no-gravity-load-applied and gravity-load-applied cases. As expected, the root forces were higher for the case where the gravity force was applied. {\color{red} The forces, along with the displacements and rotations, will be returned to FAST for further whole turbine analysis.}
 \begin{figure}
 \centering
 \includegraphics[width=3.0in]{\directory E3RootM2.eps}
@@ -681,7 +686,15 @@ Figure~\ref{E3RootM2} shows the root forces in the no-gravity-load-applied and g
 \end{figure}
 
  \section{Summary}
-  This paper reported on the development of BeamDyn, a beam solver in the FAST modularization framework. Geometrically exact beam theory has been reformulated into the first-order state-space form so that first-order time integrators, as required by FAST framework for tight-coupling analysis, can be applied to discretize the problem in the time domain. Numerical examples are provided to validate the capability of BeamDyn in analyzing initially curved/twisted beams. A validation example is also presented where the numerical results are compared with experimental data. In all the cases, good agreement was observed. Finally, the dynamic behavior of the CX-100 wind turbine blade was studied by prescribing a rotation at its root. The convergence rate for analysis of realistic wind turbine blade is discussed. Future work includes the proposal of a practical approach to smooth the geometry and sectional constraints to help achieve the expected exponential convergence rate. In addition, this module will be coupled to FAST and verification and validation will be conducted on the full wind turbine system. 
+  This paper reported on the development of BeamDyn, a beam solver in the FAST modularization framework. Geometrically exact beam theory has been reformulated into the first-order state-space form so that first-order time integrators, as required by FAST framework for tight-coupling analysis, can be applied to discretize the problem in the time domain. Numerical examples are provided to validate the capability of BeamDyn in analyzing initially curved/twisted beams. A validation example is also presented where the numerical results are compared with experimental data. Finally, the dynamic behavior of the CX-100 wind turbine blade was studied by prescribing a rotation at its root. In all the cases, good agreement was observed.  The convergence rate for analysis of realistic wind turbine blade is discussed. {\color{red} The features of BeamDyn can be summarized as follows:
+  \begin{enumerate}
+  \item Based on geometrically exact beam theory, BeamDyn is capable of dealing with geometric nonlinear beam problem with arbitrary magnitude of displacements and rotations
+  \item Along with a preprocessor like PreComp and VABS, BeamDyn takes all the elastic coupling effects into account
+  \item The governing equations are reformulated into state-space form, thus, it can be easily integrated into FAST for tight-coupling analysis
+  \item The space is discretized by spectral finite elements, which is a p-version finite element, so that exponential convergence rate can be expected for smooth field
+  \item Different time integrators have been implemented in BeamDyn; users will have options based on their needs.
+  \end{enumerate}}
+   Future work includes the proposal of a practical approach to smooth the geometry and sectional constraints to help achieve the expected exponential convergence rate. In addition, this module will be coupled to FAST and verification and validation will be conducted on the full wind turbine system. 
   
 \section*{Acknowledgments} 
 
