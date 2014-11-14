@@ -96,7 +96,7 @@ PROGRAM MAIN
 OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
 
    t_initial = 0.0D+00
-   t_final   = 6.0D+00
+   t_final   = 1.0D+00
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -104,7 +104,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 1.0D-02
+   dt_global = 0.5D0*5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -136,8 +136,8 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
-   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
-!   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
@@ -372,14 +372,15 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
 !------------------
 !  Rotating beam
 !------------------
-   u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
-   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
-   CALL CrvMatrixR(temp_rr,temp_R)
-   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
-
-   u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
+!   u%RootMotion%Orientation(:,:,:) = 0.0D0
+!   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+!   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
+!   CALL CrvMatrixR(temp_rr,temp_R)
+!   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
+!
+!   u%RootMotion%RotationVel(:,:) = 0.0D0
+!   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
+!   u%PointLoad%Force(:,:)  = 0.0D0
 !------------------
 ! End rotating beam
 !------------------
@@ -390,21 +391,20 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
 !  Damping beam in Dymore
 !------------------------
    ! Point mesh: PointLoad
-!   IF(t .LE. 2.5D-02) THEN
-!       u%PointLoad%Force(2,p%node_total) = 1.6D+05*t 
-!       u%PointLoad%Force(3,p%node_total) = 1.6D+05*t 
-!   ELSEIF(t .GT. 2.5D-02 .AND. t .LE. 5.0D-02) THEN
-!       u%PointLoad%Force(2,p%node_total) = -1.6D+05*t+8000 
-!       u%PointLoad%Force(3,p%node_total) = -1.6D+05*t+8000
-!   ELSE 
-!       u%PointLoad%Force(2,p%node_total) = 0.0D0
-!       u%PointLoad%Force(3,p%node_total) = 0.0D0
-!   ENDIF
+   IF(t .LE. 2.5D-02) THEN
+       u%PointLoad%Force(2,p%node_total) = 1.6D+05*t 
+       u%PointLoad%Force(3,p%node_total) = 1.6D+05*t 
+   ELSEIF(t .GT. 2.5D-02 .AND. t .LE. 5.0D-02) THEN
+       u%PointLoad%Force(2,p%node_total) = -1.6D+05*t+8000 
+       u%PointLoad%Force(3,p%node_total) = -1.6D+05*t+8000
+   ELSE 
+       u%PointLoad%Force(2,p%node_total) = 0.0D0
+       u%PointLoad%Force(3,p%node_total) = 0.0D0
+   ENDIF
 !----------------------------
 !  END Damping beam in Dymore
 !----------------------------
 
-   u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad

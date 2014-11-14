@@ -3,7 +3,7 @@ Sample
 ---------------------- SIMULATION CONTROL --------------------------------------
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
 2         analysis_type  - 0: Rigid Body analysis; 1: Static analysis; 2: Dynamic analysis
-1         damp_flag      - 0: No damping; 1: damped
+0         damp_flag      - 0: No damping; 1: damped
 ---------------------- GEOMETRY PARAMETER --------------------------------------
 1    member_total    - Total number of member (-)
 3    kp_total        - Total number of key point (-)
@@ -17,7 +17,7 @@ kp_xb  kp_yb   kp_zb    initial_twist
 5  order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
 "Damp_Test_1.inp"    BldFile - Name of file containing properties for blade 
-2.0E-04
+0.0E-04
 
 
 "Composite_Uniform_2.inp"    BldFile - Name of file containing properties for blade 
