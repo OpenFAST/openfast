@@ -1,4 +1,5 @@
-   SUBROUTINE DynamicSolution_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
+   SUBROUTINE DynamicSolution_AM2(uuN0,uuN,vvN,uuN00,vvN00,uud0,vvd0,&
+                                  Stif0,Mass0,gravity,u,&
                                   damp_flag,beta,&
                                   node_elem,dof_node,elem_total,dof_total,&
                                   node_total,ngp,niter,nr_counter,dt)
@@ -6,12 +7,13 @@
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuN00(:)
    REAL(ReKi),        INTENT(IN   ):: vvN00(:)
+   REAL(ReKi),        INTENT(IN   ):: uud0(:)
+   REAL(ReKi),        INTENT(IN   ):: vvd0(:)
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: gravity(:)
    REAL(DbKi),        INTENT(IN   ):: dt
    TYPE(BD_InputType),INTENT(IN   ):: u
-   TYPE(BD_InputType),INTENT(IN   ):: u0
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
    INTEGER(IntKi),    INTENT(IN   ):: elem_total
@@ -20,7 +22,7 @@
    INTEGER(IntKi),    INTENT(IN   ):: ngp
    INTEGER(IntKi),    INTENT(IN   ):: niter
    INTEGER(IntKi),    INTENT(IN   ):: damp_flag
-   REAL(ReKi),        INTENT(IN   ):: beta
+   REAL(ReKi),        INTENT(IN   ):: beta(:)
    REAL(ReKi),        INTENT(INOUT):: uuN(:)
    REAL(ReKi),        INTENT(INOUT):: vvN(:)
    INTEGER(IntKi),    INTENT(INOUT):: nr_counter
@@ -52,7 +54,8 @@
        RHS(:) = 0.0D0
        MassM(:,:) = 0.0D0
 !WRITE(*,*) "niter = ",i
-       CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,Stif0,Mass0,gravity,u,u0,&
+       CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,uud0,vvd0,&
+                                      &Stif0,Mass0,gravity,u,&
                                       &damp_flag,beta,&
                                       &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
 
@@ -60,14 +63,9 @@
            temp_id = (j-1)*dof_node
            F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
            F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
-           F_PointLoad0(temp_id+1:temp_id+3) = u0%PointLoad%Force(1:3,j)
-           F_PointLoad0(temp_id+4:temp_id+6) = u0%PointLoad%Moment(1:3,j)
-!           WRITE(*,*) F_PointLoad(temp_id+1:temp_id+3)
-!           WRITE(*,*) F_PointLoad(temp_id+4:temp_id+6)
        ENDDO
        RHS(dof_total+1:dof_total*2) = RHS(dof_total+1:dof_total*2) + &
-                                     &dt*F_PointLoad(1:dof_total)  + &
-                                     &dt*F_PointLoad0(1:dof_total)
+                                     &0.5D0*dt*F_PointLoad(1:dof_total)
 
        feqv(:) = 0.0D0
        DO j=1,dof_total-6

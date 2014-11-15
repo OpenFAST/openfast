@@ -1,4 +1,4 @@
-   SUBROUTINE AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,m00,mEta,rho,&
+   SUBROUTINE AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,m00,mEta,rho,dt,&
                                     &A1,A2,A3,A4,A5,A6,A7)
 
    REAL(ReKi),INTENT(IN   ):: uuu(:)
@@ -10,6 +10,7 @@
    REAL(ReKi),INTENT(IN   ):: m00
    REAL(ReKi),INTENT(IN   ):: mEta(:)
    REAL(ReKi),INTENT(IN   ):: rho(:,:)
+   REAL(DbKi),INTENT(IN   ):: dt
    REAL(ReKi),INTENT(  OUT):: A1(:,:)
    REAL(ReKi),INTENT(  OUT):: A2(:,:)
    REAL(ReKi),INTENT(  OUT):: A3(:,:)
@@ -37,7 +38,7 @@
    CALL CrvMatrixB(uuu(4:6),uuu(4:6),temp_B)
    CALL CrvMatrixH(uuu(4:6),temp_H)
    CALL CrvMatrixB(uuu(4:6),uuu0(4:6),temp_B0)
-   CALL CrvMatrixB(ud0(4:6),temp_Bd0)
+   CALL CrvMatrixB(uuu(4:6),uud0(4:6),temp_Bd0)
    temp_B(:,:) = temp_B(:,:) + temp_H(:,:) - temp_B0(:,:) - 0.5D0*dt*temp_Bd0(:,:)
 !   temp_B(:,:) = temp_B(:,:) - temp_B0(:,:) + temp_H0(:,:)
    A6(4:6,4:6) = temp_B(1:3,1:3)

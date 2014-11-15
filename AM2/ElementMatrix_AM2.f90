@@ -134,7 +134,7 @@
        CALL MassMatrix(mmm,mEta,rho,Mi)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
-       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,mmm,mEta,rho,A1,A2,A3,A4,A5,A6,A7)
+       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,mmm,mEta,rho,dt,A1,A2,A3,A4,A5,A6,A7)
 
        Fd(:) = MATMUL(Mi,vvv-vvv0-0.5D0*dt*vvd0) + &
               &0.5D0*dt*Fb + &
@@ -147,10 +147,10 @@
 
        CALL CrvMatrixH(uuu(4:6),temp_H)
        CALL CrvMatrixH(uuu0(4:6),temp_H0)
-       F1(1:3) = -dt*(vvv(1:3)+vvv0(1:3)) - 2.0D0*(uuu0(1:3)-uuu(1:3))
-       F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) + &
-                &MATMUL(temp_H0,uuu(4:6)-uuu0(4:6)) - &
-                &dt*(vvv(4:6)+vvv0(4:6))
+       F1(1:3) = uuu(1:3) - uuu0(1:3) - 0.5D0*dt*(vvv(1:3)+vvv0(1:3))
+       F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) - &
+                &0.5D0*dt*MATMUL(temp_H,uud0(4:6)) - &
+                &0.5D0*dt*vvv(4:6)
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -159,25 +159,25 @@
                    DO n=1,dof_node
                        temp_id2 = (j-1)*dof_node+n
                        elm11(temp_id1,temp_id2) = elm11(temp_id1,temp_id2) + hhx(i)*A6(m,n)*hhx(j)*Jacobian*gw(igp)
-                       elm12(temp_id1,temp_id2) = elm12(temp_id1,temp_id2) - dt* hhx(i)*A7(m,n)*hhx(j)*Jacobian*gw(igp)
+                       elm12(temp_id1,temp_id2) = elm12(temp_id1,temp_id2) + hhx(i)*A7(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
-                                                 &hhx(i)*(A2(m,n)-A3(m,n)+dt*A5(m,n)+dt*Qe(m,n))*hhx(j)*Jacobian*gw(igp) + &
-                                                 &hhx(i)*dt*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                 &hpx(i)*dt*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                 &hpx(i)*dt*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
+                                                 &hhx(i)*(A2(m,n)-A3(m,n)+0.5D0*dt*(-A1(m,n)+A5(m,n)+Qe(m,n)))*hhx(j)*Jacobian*gw(igp) + &
+                                                 &hhx(i)*0.5D0*dt*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*0.5D0*dt*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*0.5D0*dt*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
-                                                 &hhx(i)*(Mi(m,n)+Mi0(m,n)+dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
+                                                 &hhx(i)*(Mi(m,n)+0.5D0*dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
                        IF(damp_flag .NE. 0) THEN
                            elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
-                                                     &hhx(i)*dt*Pd(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                     &hhx(i)*dt*Qd(m,n)*hhx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*dt*Sd(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*dt*Od(m,n)*hhx(j)*Jacobian*gw(igp)  
+                                                     &hhx(i)*0.5D0*dt*Pd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hhx(i)*0.5D0*dt*Qd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*0.5D0*dt*Sd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*0.5D0*dt*Od(m,n)*hhx(j)*Jacobian*gw(igp)  
                            elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
-                                                     &hhx(i)*dt*Xd(m,n)*hhx(j)*Jacobian*gw(igp) + &
-                                                     &hhx(i)*dt*Yd(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*dt*Gd(m,n)*hhx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*dt*betaC(m,n)*hpx(j)*Jacobian*gw(igp) 
+                                                     &hhx(i)*0.5D0*dt*Xd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hhx(i)*0.5D0*dt*Yd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*0.5D0*dt*Gd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*0.5D0*dt*betaC(m,n)*hpx(j)*Jacobian*gw(igp) 
                        ENDIF
                    ENDDO
                ENDDO
@@ -196,21 +196,5 @@
        ENDDO
    ENDDO
 
-!   DEALLOCATE(gp)
-!   DEALLOCATE(gw)
-!   DEALLOCATE(hhx)
-!   DEALLOCATE(hpx)
-!   DEALLOCATE(GLL_temp)
-!   DEALLOCATE(w_temp)
-
-
-!   9999 IF(allo_stat/=0) THEN
-!            IF(ALLOCATED(gp))  DEALLOCATE(gp)
-!            IF(ALLOCATED(gw))  DEALLOCATE(gw)
-!            IF(ALLOCATED(hhx)) DEALLOCATE(hhx)
-!            IF(ALLOCATED(hpx)) DEALLOCATE(hpx)
-!            IF(ALLOCATED(GLL_temp)) DEALLOCATE(GLL_temp)
-!            IF(ALLOCATED(w_temp)) DEALLOCATE(w_temp)
-!        ENDIF
 
    END SUBROUTINE ElementMatrix_AM2

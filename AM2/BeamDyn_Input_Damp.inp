@@ -17,7 +17,7 @@ kp_xb  kp_yb   kp_zb    initial_twist
 5  order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
 "Damp_Test_1.inp"    BldFile - Name of file containing properties for blade 
-0.0E-04
+0.0E-04 0.0E-04 0.0E-04 0.0E-04 0.0E-04 0.0E-04
 
 
 "Composite_Uniform_2.inp"    BldFile - Name of file containing properties for blade 

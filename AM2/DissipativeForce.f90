@@ -1,7 +1,7 @@
    SUBROUTINE DissipativeForce(beta,Stiff,vvv,vvp,E1,Fc,Fd,&
                               &Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
 
-   REAL(ReKi),INTENT(IN   ):: beta
+   REAL(ReKi),INTENT(IN   ):: beta(:)
    REAL(ReKi),INTENT(IN   ):: Stiff(:,:)
    REAL(ReKi),INTENT(IN   ):: vvv(:)
    REAL(ReKi),INTENT(IN   ):: vvp(:)
@@ -27,6 +27,8 @@
    REAL(ReKi)              :: b11(3,3)
    REAL(ReKi)              :: b12(3,3)
    REAL(ReKi)              :: alpha(3,3)
+   REAL(ReKi)              :: temp_b(6,6)
+   INTEGER(IntKi)          :: i
 
    ome(1:3) = vvv(4:6)
    !---------------------------
@@ -38,8 +40,12 @@
    !---------------------------
    ! Compute damping matrix
    !---------------------------
+   temp_b(:,:) = 0.0D0
+   DO i=1,6
+       temp_b(i,i) = beta(i)
+   ENDDO
    betaC(:,:) = 0.0D0
-   betaC(1:6,1:6) = beta * Stiff(:,:)
+   betaC(1:6,1:6) = MATMUL(temp_b,Stiff(:,:))
    D11(1:3,1:3) = betaC(1:3,1:3)
    D12(1:3,1:3) = betaC(1:3,4:6)
    D21(1:3,1:3) = betaC(4:6,1:3)
