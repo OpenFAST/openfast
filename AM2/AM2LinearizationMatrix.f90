@@ -1,14 +1,16 @@
-   SUBROUTINE AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,m00,mEta,rho,&
-                                    &A2,A3,A4,A5,A6,A7)
+   SUBROUTINE AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,m00,mEta,rho,&
+                                    &A1,A2,A3,A4,A5,A6,A7)
 
    REAL(ReKi),INTENT(IN   ):: uuu(:)
    REAL(ReKi),INTENT(IN   ):: vvv(:)
    REAL(ReKi),INTENT(IN   ):: uuu0(:)
    REAL(ReKi),INTENT(IN   ):: vvv0(:)
+   REAL(ReKi),INTENT(IN   ):: uud0(:)
+   REAL(ReKi),INTENT(IN   ):: vvd0(:)
    REAL(ReKi),INTENT(IN   ):: m00
    REAL(ReKi),INTENT(IN   ):: mEta(:)
    REAL(ReKi),INTENT(IN   ):: rho(:,:)
-!   REAL(ReKi),INTENT(  OUT):: A1(:,:)
+   REAL(ReKi),INTENT(  OUT):: A1(:,:)
    REAL(ReKi),INTENT(  OUT):: A2(:,:)
    REAL(ReKi),INTENT(  OUT):: A3(:,:)
    REAL(ReKi),INTENT(  OUT):: A4(:,:)
@@ -18,36 +20,37 @@
 
    REAL(ReKi)              :: temp_B(3,3)
    REAL(ReKi)              :: temp_B0(3,3)
-   REAL(ReKi)              :: temp_H0(3,3)
+   REAL(ReKi)              :: temp_Bd0(3,3)
    REAL(ReKi)              :: temp_H(3,3)
    REAL(ReKi)              :: vel(3)
    REAL(ReKi)              :: omega(3)
    REAL(ReKi)              :: vel0(3)
    REAL(ReKi)              :: omega0(3)
+   REAL(ReKi)              :: acc0(3)
+   REAL(ReKi)              :: omed0(3)
    INTEGER(IntKi)          :: i
 
    A6(:,:) = 0.0D0
    DO i=1,3
-       A6(i,i) = 2.0D0
+       A6(i,i) = 1.0D0
    ENDDO
    CALL CrvMatrixB(uuu(4:6),uuu(4:6),temp_B)
-   CALL CrvMatrixB(uuu(4:6),uuu0(4:6),temp_B0)
-   CALL CrvMatrixH(uuu0(4:6),temp_H0)
    CALL CrvMatrixH(uuu(4:6),temp_H)
-   temp_B(:,:) = temp_B(:,:) + temp_H(:,:) - temp_B0(:,:) + temp_H0(:,:)
+   CALL CrvMatrixB(uuu(4:6),uuu0(4:6),temp_B0)
+   CALL CrvMatrixB(ud0(4:6),temp_Bd0)
+   temp_B(:,:) = temp_B(:,:) + temp_H(:,:) - temp_B0(:,:) - 0.5D0*dt*temp_Bd0(:,:)
 !   temp_B(:,:) = temp_B(:,:) - temp_B0(:,:) + temp_H0(:,:)
    A6(4:6,4:6) = temp_B(1:3,1:3)
 
    A7(:,:) = 0.0D0
    DO i=1,6
-       A7(i,i) = 1.0D0
+       A7(i,i) = -0.5D0*dt*1.0D0
    ENDDO
-
-!   A1(:,:) = 0.0D0
-!   CALL MassMatrix(m00,mEta,rho,A1)
 
    vel(1:3) = vvv(1:3)
    omega(1:3) = vvv(4:6)
+   acc0(1:3) = vvd0(1:3)
+   omed0(1:3) = vvd0(4:6)
    vel0(1:3) = vvv0(1:3)
    omega0(1:3) = vvv0(4:6)
 
@@ -63,6 +66,12 @@
                 &MATMUL(rho,Tilde(omega0)) - &
                 &Tilde(MATMUL(rho,omega0))
 
+   A1(:,:) = 0.0D0
+   A1(1:3,4:6) = MATMUL(Tilde(omed0),TRANSPOSE(Tilde(mEta)))
+   A1(4:6,4:6) = MATMUL(Tilde(acc0),Tilde(mEta)) + &
+                &MATMUL(rho,Tilde(omed0)) - &
+                &Tilde(MATMUL(rho,omed0))
+   
    A4(:,:) = 0.0D0
    A4(1:3,4:6) = TRANSPOSE(Tilde(MATMUL(Tilde(omega),mEta))) + &
                 &MATMUL(Tilde(omega),TRANSPOSE(Tilde(mEta)))
