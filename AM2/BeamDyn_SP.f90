@@ -109,6 +109,10 @@ INCLUDE 'CrvCompose_temp2.f90'
 INCLUDE 'CrvCompose_Check.f90'
 INCLUDE 'RescaleCheck.f90'
 INCLUDE 'DissipativeForce.f90'
+INCLUDE 'BldGaussPointDataXdot.f90'
+INCLUDE 'Solution_CCSD.f90'
+INCLUDE 'GenerateDynamicElement_CCSD.f90'
+INCLUDE 'ElementMatrix_CCSD.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -183,7 +187,8 @@ INCLUDE 'DissipativeForce.f90'
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
    p%analysis_type  = InputFileData%analysis_type
    p%damp_flag  = InputFileData%damp_flag
-   p%beta  = InputFileData%beta
+   CALL AllocAry(p%beta,6,'Gravity vector',ErrStat2,ErrMsg2)
+   p%beta(:)  = InputFileData%beta(:)
 
    CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
    p%gravity(:) = 0.0D0

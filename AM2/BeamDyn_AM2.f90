@@ -15,6 +15,7 @@
    ! local variables
       
    TYPE(BD_ContinuousStateType)                 :: xdot       ! Holds temporary modification to x
+   TYPE(BD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
    TYPE(BD_InputType)                           :: u_interp    ! interpolated value of inputs 
    TYPE(BD_InputType)                           :: u_interp0    ! interpolated value of inputs 
    INTEGER(IntKi)                               :: flag_scale
@@ -41,25 +42,34 @@
                  , ErrMess  = ErrMsg               )
 
    CALL MeshCopy ( SrcMesh  = u(1)%RootMotion     &
-                 , DestMesh = u_interp0%RootMotion&
+                 , DestMesh = u_interp0%RootMotion &
+                 , CtrlCode = MESH_NEWCOPY        &
+                 , ErrStat  = ErrStat             &
+                 , ErrMess  = ErrMsg               )
+   CALL MeshCopy ( SrcMesh  = u(1)%PointLoad      &
+                 , DestMesh = u_interp0%PointLoad &
                  , CtrlCode = MESH_NEWCOPY        &
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
    CALL MeshCopy ( SrcMesh  = u(1)%DistrLoad      &
-                 , DestMesh = u_interp0%DistrLoad &
+                 , DestMesh = u_interp0%DistrLoad  &
                  , CtrlCode = MESH_NEWCOPY        &
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
 
+   CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
+   CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
+   CALL BD_Input_ExtrapInterp( u, utimes, u_interp0, t, ErrStat, ErrMsg )
    ! find x at t+dt
    CALL BeamDyn_BoundaryAM2(x,u_interp,t+p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
-   CALL BeamDyn_CalcContStateDeriv(t,u,p,x,xd,z,OtherState,xdot,ErrStat,ErrMsg)
+   CALL BeamDyn_CalcContStateDeriv(t,u_interp0,p,x,xd,z,OtherState,xdot,ErrStat,ErrMsg)
 
-   CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,u_interp0,&
-                             p%damp_flag,p%beta,&
-                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
+   CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,xdot%q,xdot%dqdt,&
+                             p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,             &
+                             p%damp_flag,p%beta,                                   &
+                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,      &
                              p%node_total,p%ngp,p%niter,OtherState%NR_counter,p%dt)
    CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 
@@ -75,10 +85,13 @@
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
 
-   CALL MeshDestroy ( u_interp0%RootMotion       &
+   CALL MeshDestroy ( u_interp0%RootMotion        &
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
-   CALL MeshDestroy ( u_interp0%DistrLoad        &
+   CALL MeshDestroy ( u_interp0%PointLoad        &
+                    , ErrStat  = ErrStat         &
+                    , ErrMess  = ErrMsg           )
+   CALL MeshDestroy ( u_interp0%DistrLoad         &
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
 

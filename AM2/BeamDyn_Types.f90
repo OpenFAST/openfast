@@ -87,7 +87,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: damp_flag      ! damping flag [-]
     INTEGER(IntKi)  :: niter      ! analysis_type flag [-]
     REAL(DbKi)  :: dt      ! module dt [s]
-    REAL(ReKi)  :: beta      ! Damping Coefficient [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: beta      ! Damping Coefficient [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -115,7 +115,7 @@ IMPLICIT NONE
 ! =========  BD_InputFile  =======
   TYPE, PUBLIC :: BD_InputFile
     INTEGER(IntKi)  :: analysis_type      ! Analysis Type: 0-Rigid, 1-Static, 2-Dynamic [-]
-    REAL(ReKi)  :: beta      ! Damping Coefficient [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: beta      ! Damping Coefficient [-]
     INTEGER(IntKi)  :: damp_flag      ! Damping Flag: 0-No Damping, 1-Damped [-]
     INTEGER(IntKi)  :: member_total      ! Total number of members [-]
     INTEGER(IntKi)  :: kp_total      ! Total number of key point [-]
@@ -975,7 +975,19 @@ ENDIF
    DstParamData%damp_flag = SrcParamData%damp_flag
    DstParamData%niter = SrcParamData%niter
    DstParamData%dt = SrcParamData%dt
+IF (ALLOCATED(SrcParamData%beta)) THEN
+   i1_l = LBOUND(SrcParamData%beta,1)
+   i1_u = UBOUND(SrcParamData%beta,1)
+   IF (.NOT. ALLOCATED(DstParamData%beta)) THEN 
+      ALLOCATE(DstParamData%beta(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%beta.'
+         RETURN
+      END IF
+   END IF
    DstParamData%beta = SrcParamData%beta
+ENDIF
  END SUBROUTINE BD_CopyParam
 
  SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1003,6 +1015,9 @@ IF (ALLOCATED(ParamData%segment_length)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%member_length)) THEN
    DEALLOCATE(ParamData%member_length)
+ENDIF
+IF (ALLOCATED(ParamData%beta)) THEN
+   DEALLOCATE(ParamData%beta)
 ENDIF
  END SUBROUTINE BD_DestroyParam
 
@@ -1057,7 +1072,7 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! damp_flag
   Int_BufSz  = Int_BufSz  + 1  ! niter
   Db_BufSz   = Db_BufSz   + 1  ! dt
-  Re_BufSz   = Re_BufSz   + 1  ! beta
+  Re_BufSz    = Re_BufSz    + SIZE( InData%beta )  ! beta 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1107,8 +1122,10 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%dt )
   Db_Xferred   = Db_Xferred   + 1
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%beta )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( ALLOCATED(InData%beta) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%beta))-1 ) =  PACK(InData%beta ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%beta)
+  ENDIF
  END SUBROUTINE BD_PackParam
 
  SUBROUTINE BD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1202,8 +1219,12 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   OutData%dt = DbKiBuf ( Db_Xferred )
   Db_Xferred   = Db_Xferred   + 1
-  OutData%beta = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( ALLOCATED(OutData%beta) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%beta,1))); mask1 = .TRUE.
+    OutData%beta = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%beta))-1 ),mask1,OutData%beta)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%beta)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -1874,7 +1895,19 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
    DstinputfileData%analysis_type = SrcinputfileData%analysis_type
+IF (ALLOCATED(SrcinputfileData%beta)) THEN
+   i1_l = LBOUND(SrcinputfileData%beta,1)
+   i1_u = UBOUND(SrcinputfileData%beta,1)
+   IF (.NOT. ALLOCATED(DstinputfileData%beta)) THEN 
+      ALLOCATE(DstinputfileData%beta(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_Copyinputfile: Error allocating DstinputfileData%beta.'
+         RETURN
+      END IF
+   END IF
    DstinputfileData%beta = SrcinputfileData%beta
+ENDIF
    DstinputfileData%damp_flag = SrcinputfileData%damp_flag
    DstinputfileData%member_total = SrcinputfileData%member_total
    DstinputfileData%kp_total = SrcinputfileData%kp_total
@@ -1920,6 +1953,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(inputfileData%beta)) THEN
+   DEALLOCATE(inputfileData%beta)
+ENDIF
 IF (ALLOCATED(inputfileData%kp_member)) THEN
    DEALLOCATE(inputfileData%kp_member)
 ENDIF
@@ -1967,7 +2003,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Int_BufSz  = Int_BufSz  + 1  ! analysis_type
-  Re_BufSz   = Re_BufSz   + 1  ! beta
+  Re_BufSz    = Re_BufSz    + SIZE( InData%beta )  ! beta 
   Int_BufSz  = Int_BufSz  + 1  ! damp_flag
   Int_BufSz  = Int_BufSz  + 1  ! member_total
   Int_BufSz  = Int_BufSz  + 1  ! kp_total
@@ -1986,8 +2022,10 @@ ENDIF
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%analysis_type )
   Int_Xferred   = Int_Xferred   + 1
-  IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) =  (InData%beta )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( ALLOCATED(InData%beta) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%beta))-1 ) =  PACK(InData%beta ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%beta)
+  ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%damp_flag )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%member_total )
@@ -2060,8 +2098,12 @@ ENDIF
   Int_BufSz  = 0
   OutData%analysis_type = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
-  OutData%beta = ReKiBuf ( Re_Xferred )
-  Re_Xferred   = Re_Xferred   + 1
+  IF ( ALLOCATED(OutData%beta) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%beta,1))); mask1 = .TRUE.
+    OutData%beta = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%beta))-1 ),mask1,OutData%beta)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%beta)
+  ENDIF
   OutData%damp_flag = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%member_total = IntKiBuf ( Int_Xferred )

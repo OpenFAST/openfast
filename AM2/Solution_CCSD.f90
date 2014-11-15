@@ -22,7 +22,7 @@
    INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
    INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
-   TYPE(BD_ContinuousStateType), INTENT(  OUT):: xdot
+   TYPE(BD_ContinuousStateType), INTENT(INOUT):: xdot
 
    ! Local variables
    
@@ -61,12 +61,16 @@
            MassM_LU(j+dof_total-6,k+dof_total-6) = MassM(j+dof_total+6,k+dof_total+6)
        ENDDO
    ENDDO
-   sol_temp(:) = 0.0D0
-   CALL ludcmp(MassM,dof_total*2-12,indx,d)
-   CALL lubksb(MassM,dof_total*2-12,indx,RHS,sol_temp)
 
-   xdot%q = 0.0D0
-   xdot%dqdt = 0.0D0
+DO j=1,60
+WRITE(*,*) j,MassM_LU(j,j)
+ENDDO
+   sol_temp(:) = 0.0D0
+   CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
+   CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
+
+   xdot%q(:) = 0.0D0
+   xdot%dqdt(:) = 0.0D0
    DO j=1,dof_total-6
        xdot%q(j+6)    = sol_temp(j)
        xdot%dqdt(j+6) = sol_temp(dof_total-6+j)

@@ -104,7 +104,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 0.5D0*5.0D-04
+   dt_global = 5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 

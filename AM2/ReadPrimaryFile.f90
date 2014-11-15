@@ -85,7 +85,9 @@
    !---------------------- BLADE PARAMETER ----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )
-   CALL ReadVar ( UnIn, InputFile, InputFileData%beta, 'beta', 'Damping Coefficient', ErrStat2, ErrMsg2, UnEc )
+   CALL AllocAry(InputFileData%beta,6,'Number of key point in each member',ErrStat2,ErrMsg2)
+   READ(UnIn,*) InputFileData%beta(1:6)
+!   CALL ReadVar ( UnIn, InputFile, InputFileData%beta, 'beta', 'Damping Coefficient', ErrStat2, ErrMsg2, UnEc )
 
 
    END SUBROUTINE ReadPrimaryFile

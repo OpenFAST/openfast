@@ -10,7 +10,7 @@
    TYPE(BD_DiscreteStateType),   INTENT(IN   ):: xd          ! Discrete states at t
    TYPE(BD_ConstraintStateType), INTENT(IN   ):: z           ! Constraint states at t
    TYPE(BD_OtherStateType),      INTENT(INOUT):: OtherState  ! Other/optimization states
-   TYPE(BD_ContinuousStateType), INTENT(  OUT):: xdot        ! Continuous state derivatives at t
+   TYPE(BD_ContinuousStateType), INTENT(INOUT):: xdot        ! Continuous state derivatives at t
    INTEGER(IntKi),               INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -26,7 +26,6 @@
                      &p%damp_flag,p%beta,&
                      &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                      &xdot)
-
 
    CALL ComputeUDN(1,p%dof_node,x%dqdt(1:6),x%q(1:6),xdot%q(1:6))
    DO j=1,3

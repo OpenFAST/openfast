@@ -63,7 +63,7 @@ typedef      ^            ^       ^     analysis_type  - - -  "analysis_type fla
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
 typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
-typedef      ^            ^      ReKi   beta   - - -  "Damping Coefficient" -
+typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -85,7 +85,7 @@ typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     - 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
 typedef BeamDyn/BD    BD_InputFile    IntKi    analysis_type    - - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
-typedef BeamDyn/BD    BD_InputFile    ReKi     beta             - - - "Damping Coefficient" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     beta             {:} - - "Damping Coefficient" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
 typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total number of members" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
