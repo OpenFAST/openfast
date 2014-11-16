@@ -71,6 +71,9 @@
                               &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                               &ngp,node_elem,dof_node,damp_flag,beta,&
                               &elf1,elf2,elm11,elm22)
+!DO j=1,18
+!WRITE(*,*) j,elm11(1,j)
+!ENDDO
 
 
        CALL AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_node,&

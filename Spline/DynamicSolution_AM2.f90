@@ -58,6 +58,7 @@
 
        DO j=1,node_total
            temp_id = (j-1)*dof_node
+!WRITE(*,*) u%PointLoad%Force(:,j)
            F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
            F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
            F_PointLoad0(temp_id+1:temp_id+3) = u0%PointLoad%Force(1:3,j)
@@ -65,6 +66,7 @@
 !           WRITE(*,*) F_PointLoad(temp_id+1:temp_id+3)
 !           WRITE(*,*) F_PointLoad(temp_id+4:temp_id+6)
        ENDDO
+!STOP
        RHS(dof_total+1:dof_total*2) = RHS(dof_total+1:dof_total*2) + &
                                      &dt*F_PointLoad(1:dof_total)  + &
                                      &dt*F_PointLoad0(1:dof_total)

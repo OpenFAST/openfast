@@ -62,9 +62,9 @@
        ENDDO
    ENDDO
 
-DO j=1,60
-WRITE(*,*) j,MassM_LU(j,j)
-ENDDO
+!DO j=1,60
+!WRITE(*,*) j,MassM_LU(j,j)
+!ENDDO
    sol_temp(:) = 0.0D0
    CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
    CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)

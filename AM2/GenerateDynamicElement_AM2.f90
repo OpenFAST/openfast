@@ -31,6 +31,7 @@
    REAL(ReKi)                      :: Nuuu0(dof_node*node_elem) ! Nodal displacement of Mass 1 for each element
    REAL(ReKi)                      :: Nrr0(3*node_elem) ! Nodal rotation parameters for initial position 
    REAL(ReKi)                      :: Nrrr(3*node_elem) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi)                      :: Nrrr0(3*node_elem) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi)                      :: Nvvv(dof_node*node_elem) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi)                      :: Nvvv0(dof_node*node_elem) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi)                      :: Nuud0(dof_node*node_elem) ! Nodal velocity of Mass 1: m/s for each element
@@ -70,13 +71,14 @@
        
        CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
        CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
+       CALL NodalRelRotGL(Nuuu0,node_elem,dof_node,Nrrr0)
 
        CALL ElemNodalDispGL(vvN,node_elem,dof_node,nelem,Nvvv)
        CALL ElemNodalDispGL(vvN00,node_elem,dof_node,nelem,Nvvv0)
        CALL ElemNodalDispGL(uud0,node_elem,dof_node,nelem,Nuud0)
        CALL ElemNodalDispGL(vvd0,node_elem,dof_node,nelem,Nvvd0)
 
-       CALL ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nvvv,Nvvv0,Nuud0,Nvvd0,&
+       CALL ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,Nuud0,Nvvd0,&
                              &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                              &ngp,dt,node_elem,dof_node,damp_flag,beta,&
                              &elf1,elf2,elm11,elm12,elm21,elm22)
